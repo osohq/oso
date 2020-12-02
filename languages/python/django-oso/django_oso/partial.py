@@ -41,14 +41,14 @@ def partial_to_query_filter(partial: Expression, model: Model, **kwargs):
 
 
 COMPARISONS = {
-    "Unify": lambda q, f, v: Q(**{f: v}),
-    "Eq": lambda q, f, v: Q(**{f: v}),
-    "Neq": lambda q, f, v: ~Q(**{f: v}),
-    "Geq": lambda q, f, v: Q(**{f"{f}__gte": v}),
-    "Gt": lambda q, f, v: Q(**{f"{f}__gt": v}),
-    "Leq": lambda q, f, v: Q(**{f"{f}__leq": v}),
-    "Lt": lambda q, f, v: Q(**{f"{f}__lt": v}),
-    "In": lambda q, f, v: Q(**{f"{f}__in": v}),
+    "Unify": lambda f, v: Q(**{f: v}),
+    "Eq": lambda f, v: Q(**{f: v}),
+    "Neq": lambda f, v: ~Q(**{f: v}),
+    "Geq": lambda f, v: Q(**{f"{f}__gte": v}),
+    "Gt": lambda f, v: Q(**{f"{f}__gt": v}),
+    "Leq": lambda f, v: Q(**{f"{f}__leq": v}),
+    "Lt": lambda f, v: Q(**{f"{f}__lt": v}),
+    "In": lambda f, v: Q(**{f"{f}__in": v}),
 }
 
 
@@ -96,13 +96,13 @@ def compare_expr(expr: Expression, _model: Model, path=(), **kwargs):
     (left, right) = expr.args
     left_path = dot_path(left)
     if left_path:
-        return COMPARISONS[expr.operator](q, "__".join(path + left_path), right)
+        return COMPARISONS[expr.operator]("__".join(path + left_path), right)
     else:
         if isinstance(right, Model):
             right = right.pk
         else:
             raise UnsupportedError(f"Unsupported comparison: {expr}")
-        return COMPARISONS[expr.operator](q, "__".join(path + ("pk",)), right)
+        return COMPARISONS[expr.operator]("__".join(path + ("pk",)), right)
 
 
 def in_expr(expr: Expression, model: Model, path=(), **kwargs):
@@ -118,13 +118,13 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
             from django.db.models import Count, Subquery
 
             count = Count("__".join(right_path))
-            filter = COMPARISONS["Gt"](Q(), "__".join(right_path + ("count",)), 0)
+            filter = COMPARISONS["Gt"]("__".join(right_path + ("count",)), 0)
             subquery = Subquery(
                 model.objects.annotate(count).filter(filter).values("pk")
             )
 
-            return COMPARISONS["In"](q, "pk", subquery)
+            return COMPARISONS["In"]("pk", subquery)
         else:
             return translate_expr(left, model, path=right_path, **kwargs)
     else:
-        return COMPARISONS["Unify"](q, "__".join(right_path), left)
+        return COMPARISONS["Unify"]("__".join(right_path), left)
