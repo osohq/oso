@@ -15,7 +15,6 @@ from polar.exceptions import (
 
 from .test_api_externals import (
     Http,
-    PathMapper,
     Widget,
     DooDad,
     Actor,

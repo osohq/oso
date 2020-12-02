@@ -26,6 +26,7 @@ class Http:
         field_str = ", ".join(x for x in [host_str, path_str, query_str] if x)
         return f"Http({field_str})"
 
+
 @polar_class
 class PathMapper:
     """Map from a template string with capture groups of the form

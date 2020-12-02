@@ -95,7 +95,8 @@ def test_authorize_scalar_attribute_condition(session, oso, fixture_data):
     oso.load_str(
         """allow(actor: User, "read", post: Post) if
                 actor.is_moderator = true
-                and post.created_by.is_banned = true;""")
+                and post.created_by.is_banned = true;"""
+    )
 
     foo = session.query(User).filter(User.username == "foo").first()
 
