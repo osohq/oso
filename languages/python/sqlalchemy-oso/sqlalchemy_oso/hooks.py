@@ -26,6 +26,7 @@ import functools
 from typing import Any, Callable
 
 from sqlalchemy.event import listen, remove
+from sqlalchemy import event
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm import aliased, sessionmaker, Session
 from sqlalchemy import orm
@@ -35,27 +36,26 @@ from oso import Oso
 from sqlalchemy_oso.auth import authorize_model_filter
 
 
-def enable_hooks(
-    target,
-    oso,
-    user,
-    action,
-):
-    """Enable all SQLAlchemy hooks."""
-    return enable_before_compile(target, oso, user, action)
-
-
-def enable_before_compile(target, oso, user, action):
+@event.listens_for(Query, "before_compile", retval=True)
+def before_compile(query):
     """Enable before compile hook."""
-    auth = functools.partial(authorize_query, oso=oso, user=user, action=action)
-
-    listen(target, "before_compile", auth, retval=True)
-
-    return lambda: remove(target, "before_compile", auth)
+    return _authorize_query(query)
 
 
-def authorize_query(query: Query, oso, user, action) -> Query:
+def _authorize_query(query: Query) -> Query:
     """Authorize an existing query with an oso instance, user and action."""
+    # Get the query session.
+    session = query.session
+
+    # Check whether this is an oso session.
+    if not isinstance(session, AuthorizedSessionBase):
+        # Not an authorized session.
+        return None
+
+    oso = session.oso_context['oso']
+    user = session.oso_context['user']
+    action = session.oso_context['action']
+
     # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
     # on queries that have already been made.  If a query has a LIMIT or OFFSET
     # applied, SQLAlchemy will by default throw an error if filters are applied.
@@ -76,16 +76,6 @@ def authorize_query(query: Query, oso, user, action) -> Query:
             query = query.filter(authorized_filter)
 
     return query
-
-
-def make_authorized_query_cls(oso, user, action, query_base_cls=None) -> Query:
-    query_base_cls = query_base_cls or Query
-
-    class AuthorizedQuery(query_base_cls):
-        """Query object that always applies authorization for ORM entities."""
-
-    enable_hooks(AuthorizedQuery, oso, user, action)
-    return AuthorizedQuery
 
 
 def authorized_sessionmaker(get_oso, get_user, get_action, class_=None, **kwargs):
@@ -158,13 +148,15 @@ class AuthorizedSessionBase(object):
         self._oso_user = user
         self._oso_action = action
 
-        query_cls = make_authorized_query_cls(
-            oso, user, action, options.pop("query_cls", None)
-        )
-        options["query_cls"] = query_cls
-
         super().__init__(**options)
 
+    @property
+    def oso_context(self):
+        return {
+            'oso': self._oso,
+            'user': self._oso_user,
+            'action': self._oso_action
+        }
 
 class AuthorizedSession(AuthorizedSessionBase, Session):
     pass
