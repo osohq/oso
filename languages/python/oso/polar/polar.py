@@ -3,18 +3,10 @@
 from datetime import datetime, timedelta
 import os
 from pathlib import Path
-from pprint import pprint
 import sys
-
-try:
-    import readline
-except:
-    pass
-
-from _polar_lib import lib
+from typing import Dict
 
 from .exceptions import (
-    PolarApiError,
     PolarRuntimeError,
     InlineQueryFailedError,
     ParserError,
@@ -22,11 +14,10 @@ from .exceptions import (
     PolarFileNotFoundError,
     InvalidQueryTypeError,
 )
-from .ffi import Polar as FfiPolar, Query as FfiQuery
+from .ffi import Polar as FfiPolar
 from .host import Host
-from .query import Query, QueryResult
+from .query import Query
 from .predicate import Predicate
-from .variable import Variable
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
@@ -57,7 +48,7 @@ def print_error(error):
     print(error)
 
 
-CLASSES = {}
+CLASSES: Dict[str, type] = {}
 
 
 class Polar:

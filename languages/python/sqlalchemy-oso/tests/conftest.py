@@ -1,14 +1,12 @@
 import pytest
 
 from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 
 from oso import Oso
-from sqlalchemy_oso.auth import authorize_model, register_models
+from sqlalchemy_oso.auth import register_models
 
-from .models import *
+from .models import ModelBase, Post, User
 
 
 def print_query(query):

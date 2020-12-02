@@ -75,7 +75,6 @@ assert list(oso.query_rule("testRest"))
 assert list(oso.query_rule("testMatches", A("hello")))
 assert list(oso.query_rule("testMethodCalls", A("hello"), B.C("hello")))
 assert list(oso.query_rule("testOr"))
-assert list(oso.query_rule("testHttpAndPathMapper"))
 assert list(oso.query_rule("testUnifyClass", A))
 
 # Test that cut doesn't return anything.

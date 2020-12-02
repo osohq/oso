@@ -2,11 +2,10 @@ from django.db.models import Q, Model
 from django.apps import apps
 
 from polar.expression import Expression
-from polar.variable import Variable
-from polar.exceptions import UnsupportedError, UnexpectedPolarTypeError
+from polar.exceptions import UnsupportedError
 from polar.partial import dot_path
 
-from .oso import polar_model_name, django_model_name
+from .oso import django_model_name
 
 
 def partial_to_query_filter(partial: Expression, model: Model, **kwargs):

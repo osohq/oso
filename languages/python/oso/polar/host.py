@@ -3,7 +3,6 @@
 from math import inf, isnan, nan
 
 from .exceptions import (
-    PolarApiError,
     PolarRuntimeError,
     UnregisteredClassError,
     DuplicateClassAliasError,

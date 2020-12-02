@@ -1,6 +1,5 @@
 import codecs
 import os
-import sys
 from setuptools import setup, find_packages
 from os import path
 
@@ -49,7 +48,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "License :: OSI Approved :: Apache Software License",
     ],
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests", "tests.*"]),
     python_requires=">=3.6",
     setup_requires=["cffi>=1.0.0", "wheel"],
     cffi_modules=["polar/build.py:ffibuilder"],

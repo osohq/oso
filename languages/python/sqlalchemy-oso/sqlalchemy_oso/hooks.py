@@ -27,11 +27,11 @@ from typing import Any, Callable
 
 from sqlalchemy.event import listen, remove
 from sqlalchemy.orm.query import Query
-from sqlalchemy.orm import aliased, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from oso import Oso
 
-from sqlalchemy_oso.auth import authorize_model, authorize_model_filter
+from sqlalchemy_oso.auth import authorize_model_filter
 
 
 def enable_hooks(
