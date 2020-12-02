@@ -1,14 +1,10 @@
 import { Polar } from './Polar';
-import { Http } from './Http';
-import { PathMapper } from './PathMapper';
 import type { Options } from './types';
 
 /** The oso authorization API. */
 export class Oso extends Polar {
   constructor(opts: Options = {}) {
     super(opts);
-    this.registerClass(Http);
-    this.registerClass(PathMapper);
   }
 
   /**

@@ -7,8 +7,6 @@ module Oso
   class Oso < Polar::Polar
     def initialize
       super
-      register_class(Http, name: 'Http')
-      register_class(PathMapper, name: 'PathMapper')
     end
 
     # Query the knowledge base to determine whether an actor is allowed to

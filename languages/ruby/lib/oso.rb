@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
-require 'oso/http'
 require 'oso/oso'
-require 'oso/path_mapper'
 require 'oso/polar'
 require 'oso/version'
 

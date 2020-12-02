@@ -16,7 +16,7 @@ class A {
 }
 oso.registerClass(A);
 
-class D extends A {}
+class D extends A { }
 
 namespace B {
   export class C {
@@ -91,7 +91,6 @@ oso.registerClass(E);
       ).done,
       (await oso.queryRule('testOr').next()).done,
       (await oso.queryRule('testUnifyClass', A).next()).done,
-      (await oso.queryRule('testHttpAndPathMapper').next()).done,
     ].some(v => v)
   )
     throw new Error();

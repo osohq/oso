@@ -72,10 +72,6 @@ testCut() if
     and cut
     and x == 3;
 
-testHttpAndPathMapper() if
-    new Http("foo", "/", {x: 1}).hostname = "foo"
-    and new PathMapper("/foo/{id}/bar/{ego}").map("/foo/1/bar/2") matches {id: "1", ego: "2"};
-
 testUnifyClass(A);
 
 testUnspecializedRuleOrder(_x, _y, z) if z = 3;

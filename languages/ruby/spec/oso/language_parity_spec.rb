@@ -73,7 +73,6 @@ oso.query_rule('testRest').next
 oso.query_rule('testMatches', A.new('hello')).next
 oso.query_rule('testMethodCalls', A.new('hello'), B::C.new('hello')).next
 oso.query_rule('testOr').next
-oso.query_rule('testHttpAndPathMapper').next
 oso.query_rule('testUnifyClass', A).next
 
 # Test that cut doesn't return anything.

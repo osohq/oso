@@ -81,8 +81,6 @@ class Test {
     // Test that cut doesn't return anything.
     assert o.queryRule("testCut").results().isEmpty();
 
-    assert !o.queryRule("testHttpAndPathMapper").results().isEmpty();
-
     // Test we can unify against a class
     assert !o.queryRule("testUnifyClass", A.class).results().isEmpty();
 
