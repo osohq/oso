@@ -1,27 +1,4 @@
-"""SQLAlchemy hooks that transparently enable oso on SQLAlchemy operations.
-
-There are several potential interfaces to integrate oso with SQLAlchemy:
-
-    - :py:func:`authorized_sessionmaker`: (**recommended**) Session factory that
-       creates a session that applies authorization on every query.
-    - :py:func:`enable_hooks`: Globally enable oso on all queries.
-    - :py:func:`make_authorized_query_cls`: Make a query class that is
-       authorized before execution.
-
-.. note::
-
-    If using any API besides :py:func:`authorized_sessionmaker`, ensure you set
-    ``enable_baked_queries=False`` on the session. Query caching can interfere
-    with authorization.
-
-    It is recommended to scope authorization context (the oso instance, user and
-    action) to a single session.  Otherwise, the identity map (SQLAlchemy's
-    cache of retrieved objects) may contain objects that were authorized for a
-    previous user. This could cause incorrect behavior.
-
-    :py:func:`authorized_sessionmaker` will enforce this.  If the authorization
-    context changes during the session, an Exception will be raised.
-"""
+"""SQLAlchemy session classes and factories for oso."""
 import functools
 from typing import Any, Callable
 
@@ -52,9 +29,9 @@ def _authorize_query(query: Query) -> Query:
         # Not an authorized session.
         return None
 
-    oso = session.oso_context["oso"]
-    user = session.oso_context["user"]
-    action = session.oso_context["action"]
+    oso = session.oso_context['oso']
+    user = session.oso_context['user']
+    action = session.oso_context['action']
 
     # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
     # on queries that have already been made.  If a query has a LIMIT or OFFSET
@@ -84,6 +61,7 @@ def authorized_sessionmaker(get_oso, get_user, get_action, class_=None, **kwargs
     :param get_oso: Callable that return oso instance to use for authorization.
     :param get_user: Callable that returns user for an authorization request.
     :param get_action: Callable that returns action for the authorization request.
+    :param class_: Base class to use for sessions.
 
     All other positional and keyword arguments are passed through to
     :py:func:`sqlalchemy.orm.session.sessionmaker` unchanged.
@@ -115,6 +93,9 @@ def scoped_session(get_oso, get_user, get_action, scopefunc=None, **kwargs):
 
     Uses authorized_sessionmaker as the factory.
 
+    :param get_oso: Callable that return oso instance to use for authorization.
+    :param get_user: Callable that returns user for an authorization request.
+    :param get_action: Callable that returns action for the authorization request.
     :param scopefunc: Additional scope function to use for scoping sessions.
                       Output will be combined with the oso, action and user objects.
     :param kwargs: Additional keyword arguments to pass to
@@ -131,11 +112,12 @@ def scoped_session(get_oso, get_user, get_action, scopefunc=None, **kwargs):
 
 
 class AuthorizedSessionBase(object):
-    """Session that uses oso authorization for queries."""
+    """Mixin for SQLAlchemy Session that uses oso authorization for queries."""
 
     def __init__(self, oso: Oso, user, action, **options):
         """Create an authorized session using ``oso``.
 
+        :param oso: The oso instance to use for authorization.
         :param user: The user to perform authorization for.
         :param action: The action to authorize.
         :param options: Additional keyword arguments to pass to ``Session``.
@@ -152,8 +134,12 @@ class AuthorizedSessionBase(object):
 
     @property
     def oso_context(self):
-        return {"oso": self._oso, "user": self._oso_user, "action": self._oso_action}
-
+        return {
+            'oso': self._oso,
+            'user': self._oso_user,
+            'action': self._oso_action
+        }
 
 class AuthorizedSession(AuthorizedSessionBase, Session):
+    """AuthorizedSession that uses oso. Queries on this session only return authorized objects."""
     pass

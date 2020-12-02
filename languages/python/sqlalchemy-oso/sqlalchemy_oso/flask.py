@@ -9,7 +9,7 @@ except ImportError:
     )
     raise
 
-from sqlalchemy_oso.hooks import authorized_sessionmaker, scoped_session
+from sqlalchemy_oso.session import authorized_sessionmaker, scoped_session
 
 
 class AuthorizedSQLAlchemy(SQLAlchemy):

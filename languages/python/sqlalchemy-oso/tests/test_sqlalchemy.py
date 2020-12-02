@@ -3,7 +3,7 @@ import pytest
 
 from sqlalchemy.orm import aliased, sessionmaker, Query
 
-from sqlalchemy_oso.hooks import (
+from sqlalchemy_oso.session import (
     authorized_sessionmaker,
     scoped_session,
     AuthorizedSession,
