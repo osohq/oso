@@ -88,7 +88,7 @@ def make_authorized_query_cls(oso, user, action, query_base_cls=None) -> Query:
     return AuthorizedQuery
 
 
-def authorized_sessionmaker(get_oso, get_user, get_action, **kwargs):
+def authorized_sessionmaker(get_oso, get_user, get_action, class_=None, **kwargs):
     """Session factory for sessions with oso authorization applied.
 
     :param get_oso: Callable that return oso instance to use for authorization.
@@ -98,11 +98,14 @@ def authorized_sessionmaker(get_oso, get_user, get_action, **kwargs):
     All other positional and keyword arguments are passed through to
     :py:func:`sqlalchemy.orm.session.sessionmaker` unchanged.
     """
+    if class_ is None:
+        class_ = Session
+
     # oso, user and action must remain unchanged for the entire session.
     # If they change before a query runs, an error is thrown.
     # This is to prevent objects that are unauthorized from ending up in the
     # session's identity map.
-    class Sess(AuthorizedSession):
+    class Sess(AuthorizedSessionBase, class_):
         def __init__(self, **options):
             options.setdefault("oso", get_oso())
             options.setdefault("user", get_user())
@@ -117,7 +120,7 @@ def authorized_sessionmaker(get_oso, get_user, get_action, **kwargs):
     return sessionmaker(class_=session, **kwargs)
 
 
-def scoped_session(get_oso, get_action, get_user, scopefunc=None, **kwargs):
+def scoped_session(get_oso, get_user, get_action, scopefunc=None, **kwargs):
     """Return a scoped session maker that uses the user and action as part of the scope function.
 
     Uses authorized_sessionmaker as the factory.
@@ -132,7 +135,7 @@ def scoped_session(get_oso, get_action, get_user, scopefunc=None, **kwargs):
     def _scopefunc():
         return (get_oso(), get_action(), get_user(), scopefunc())
 
-    factory = authorized_sessionmaker(get_oso, get_action, get_user, **kwargs)
+    factory = authorized_sessionmaker(get_oso, get_user, get_action, **kwargs)
 
     return orm.scoped_session(factory, scopefunc=_scopefunc)
 
