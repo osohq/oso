@@ -14,11 +14,6 @@ def polar_model_name(model) -> str:
     return model.__name__
 
 
-def sqlalchemy_model_name(tag: str) -> str:
-    """Return sqlalchemy model name for polar class name."""
-    return tag
-
-
 def null_query(session: Session, model) -> Query:
     """Return an intentionally empty query."""
     # TODO (dhatch): Make this not hit the database.
