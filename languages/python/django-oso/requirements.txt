@@ -1,2 +1,2 @@
-oso~=0.8.2
-django~=3.0
+oso~=0.8
+django>=2.2
