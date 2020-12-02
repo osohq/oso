@@ -4,9 +4,6 @@ from django_oso.models import AuthorizedModel
 
 
 class User(models.Model):
-    import pdb
-
-    # pdb.set_trace()
     username = models.CharField(max_length=255)
     is_moderator = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
