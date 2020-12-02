@@ -223,11 +223,9 @@ def test_null_with_partial(rf):
     authorize_filter = authorize_model(request, Post)
     assert str(authorize_filter) == "(AND: ('option', None))"
     authorized_posts = Post.objects.filter(authorize_filter)
-    assert (
-        str(authorized_posts.query)
-        == ('SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", ' +
-            '"test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id" FROM' +
-            ' "test_app_post" WHERE "test_app_post"."option" IS NULL'
-            )
+    assert str(authorized_posts.query) == (
+        'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", '
+        + '"test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id" FROM'
+        + ' "test_app_post" WHERE "test_app_post"."option" IS NULL'
     )
     assert authorized_posts.count() == 1
