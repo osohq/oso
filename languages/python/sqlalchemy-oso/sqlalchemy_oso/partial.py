@@ -42,9 +42,6 @@ def translate_and(expression: Expression, session: Session, model, get_model):
     expr = and_()
     for expression in expression.args:
         translated = translate_expr(expression, session, model, get_model)
-        if translated is None:
-            continue
-
         expr = expr & translated
 
     return expr

@@ -49,9 +49,6 @@ def authorize_model(oso: Oso, actor, action, session: Session, model) -> Query:
     :param model: The model to authorize, must be a SQLAlchemy model.
     """
     filters = authorize_model_filter(oso, actor, action, session, model)
-    if filters is None:
-        return session.query(model)
-
     return session.query(model).filter(filters)
 
 
@@ -86,7 +83,7 @@ def authorize_model_filter(oso: Oso, actor, action, session: Session, model):
         )
         if combined_filter is None:
             combined_filter = filter
-        elif filter is not None:
+        else:
             combined_filter = combined_filter | filter
 
     if not has_result:
