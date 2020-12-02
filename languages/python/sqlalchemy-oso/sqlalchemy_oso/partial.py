@@ -49,6 +49,7 @@ def translate_and(expression: Expression, session: Session, model, get_model):
 
     return expr
 
+
 def translate_isa(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "Isa"
     left, right = expression.args
@@ -64,6 +65,7 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
         return sql.false()
     else:
         return None
+
 
 def translate_compare(expression: Expression, session: Session, model, get_model):
     left = expression.args[0]

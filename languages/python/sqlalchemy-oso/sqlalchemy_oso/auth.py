@@ -13,9 +13,11 @@ def polar_model_name(model) -> str:
     """Return polar class name for SQLAlchemy model."""
     return model.__name__
 
+
 def sqlalchemy_model_name(tag: str) -> str:
     """Return sqlalchemy model name for polar class name."""
     return tag
+
 
 def null_query(session: Session, model) -> Query:
     """Return an intentionally empty query."""
@@ -79,7 +81,9 @@ def authorize_model_filter(oso: Oso, actor, action, session: Session, model):
         has_result = True
 
         resource_partial = result["bindings"]["resource"]
-        filter = partial_to_filter(resource_partial, session, model, get_model=oso.get_class)
+        filter = partial_to_filter(
+            resource_partial, session, model, get_model=oso.get_class
+        )
         if combined_filter is None:
             combined_filter = filter
         elif filter is not None:

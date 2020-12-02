@@ -406,7 +406,7 @@ def test_partial_subfield_isa(session, oso, tag_nested_many_many_test_fixture):
         """
     )
 
-    user = tag_nested_many_many_test_fixture['user']
+    user = tag_nested_many_many_test_fixture["user"]
     posts = authorize_model(oso, user, "read", session, Post)
     # Should only get posts created by user.
     posts = posts.all()
@@ -414,6 +414,7 @@ def test_partial_subfield_isa(session, oso, tag_nested_many_many_test_fixture):
         assert post.created_by.username == "user"
 
     assert len(posts) == 4
+
 
 # TODO test_nested_relationship_single_many
 # TODO test_nested_relationship_single_single
