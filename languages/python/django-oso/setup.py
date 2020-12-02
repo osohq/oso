@@ -49,7 +49,7 @@ setup(
         "License :: OSI Approved :: Apache Software License",
     ],
     url="https://www.osohq.com/",
-    packages=find_packages(exclude="tests"),
+    packages=find_packages(exclude=["tests", "tests.*"]),
     python_requires=">=3.6",
     install_requires=install_requires,
     # List additional groups of dependencies here (e.g. development

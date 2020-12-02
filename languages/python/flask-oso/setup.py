@@ -48,7 +48,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "License :: OSI Approved :: Apache Software License",
     ],
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests", "tests.*"]),
     python_requires=">=3.6",
     install_requires=install_requires,
     # List additional groups of dependencies here (e.g. development
