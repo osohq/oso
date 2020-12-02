@@ -48,6 +48,7 @@ COMPARISONS = {
     "Gt": lambda q, f, v: Q(**{f"{f}__gt": v}),
     "Leq": lambda q, f, v: Q(**{f"{f}__leq": v}),
     "Lt": lambda q, f, v: Q(**{f"{f}__lt": v}),
+    "In": lambda q, f, v: Q(**{f"{f}__in": v}),
 }
 
 
@@ -55,14 +56,14 @@ def translate_expr(expr: Expression, model: Model, **kwargs):
     """Translate a Polar expression to a Django Q object."""
     assert isinstance(expr, Expression), "expected a Polar expression"
 
-    if expr.operator in COMPARISONS:
-        return compare_expr(expr, model, **kwargs)
-    elif expr.operator == "And":
+    if expr.operator == "And":
         return and_expr(expr, model, **kwargs)
     elif expr.operator == "Isa":
         return isa_expr(expr, model, **kwargs)
     elif expr.operator == "In":
         return in_expr(expr, model, **kwargs)
+    elif expr.operator in COMPARISONS:
+        return compare_expr(expr, model, **kwargs)
     else:
         raise UnsupportedError(f"Unimplemented partial operator {expr.operator}")
 
@@ -113,6 +114,17 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
     right_path = path + right_path
 
     if isinstance(left, Expression):
-        return translate_expr(left, model, path=right_path, **kwargs)
+        if left.operator == "And" and not left.args:
+            from django.db.models import Count, Subquery
+
+            count = Count("__".join(right_path))
+            filter = COMPARISONS["Gt"](Q(), "__".join(right_path + ("count",)), 0)
+            subquery = Subquery(
+                model.objects.annotate(count).filter(filter).values("pk")
+            )
+
+            return COMPARISONS["In"](q, "pk", subquery)
+        else:
+            return translate_expr(left, model, path=right_path, **kwargs)
     else:
         return COMPARISONS["Unify"](q, "__".join(right_path), left)
