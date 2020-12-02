@@ -69,7 +69,7 @@ def authorize_model_filter(oso: Oso, actor, action, session: Session, model):
     # TODO (dhatch): More robust name mapping?
     assert class_mapper(model), f"Expected a model; received: {model}"
 
-    partial_resource = Partial("resource", TypeConstraint(model.__name__))
+    partial_resource = Partial("resource", TypeConstraint(polar_model_name(model.__name__)))
     results = oso.query_rule("allow", actor, action, partial_resource)
 
     combined_filter = None
