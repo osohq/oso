@@ -95,6 +95,7 @@ def fixture_data(session, post_fixtures):
 def db_uri():
     return "sqlite:///:memory:"
 
+
 @pytest.fixture
 def engine(db_uri):
     engine = create_engine(db_uri)

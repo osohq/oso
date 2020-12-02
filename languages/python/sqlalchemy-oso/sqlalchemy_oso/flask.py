@@ -3,21 +3,22 @@ try:
     from flask_sqlalchemy import SQLAlchemy, SignallingSession
 except ImportError:
     import warnings
-    warnings.warn("Missing depenedencies for Flask. Install sqlalchemy-oso with the flask extra.")
+
+    warnings.warn(
+        "Missing depenedencies for Flask. Install sqlalchemy-oso with the flask extra."
+    )
     raise
 
 from sqlalchemy_oso.hooks import authorized_sessionmaker, scoped_session
+
 
 class AuthorizedSQLAlchemy(SQLAlchemy):
     """flask_sqlalchemy ``SQLAlchemy`` subclass that uses oso.
 
     Creates sessions with oso authorization applied.
     """
-    def __init__(self,
-                 get_oso,
-                 get_user,
-                 get_action,
-                 **kwargs):
+
+    def __init__(self, get_oso, get_user, get_action, **kwargs):
         self._get_oso = get_oso
         self._get_user = get_user
         self._get_action = get_action
@@ -28,7 +29,8 @@ class AuthorizedSQLAlchemy(SQLAlchemy):
             get_oso=self._get_oso,
             get_user=self._get_user,
             get_action=self._get_action,
-            **options)
+            **options
+        )
 
     def create_scoped_session(self, options=None):
         if options is None:
@@ -52,4 +54,5 @@ class AuthorizedSQLAlchemy(SQLAlchemy):
             get_action=self._get_action,
             class_=SignallingSession,
             db=self,
-            **options)
+            **options
+        )

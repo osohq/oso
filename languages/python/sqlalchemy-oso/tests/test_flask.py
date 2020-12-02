@@ -8,10 +8,12 @@ from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
 
 from .models import *
 
+
 @pytest.fixture
 def db_uri(tmp_path):
     tempfile = tmp_path / "db.sqlite"
-    return f'sqlite:///{tempfile}'
+    return f"sqlite:///{tempfile}"
+
 
 @pytest.fixture
 def flask_app(db_uri):
@@ -19,19 +21,21 @@ def flask_app(db_uri):
     app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
     return app
 
+
 @pytest.fixture
 def ctx(flask_app):
     with flask_app.app_context() as ctx:
         yield ctx
 
+
 @pytest.fixture
 def sqlalchemy(flask_app, oso):
     sqlalchemy = AuthorizedSQLAlchemy(
-        get_oso=lambda: oso,
-        get_user=lambda: "user",
-        get_action=lambda: "read")
+        get_oso=lambda: oso, get_user=lambda: "user", get_action=lambda: "read"
+    )
     sqlalchemy.init_app(flask_app)
     return sqlalchemy
+
 
 def test_authorized_sqlalchemy(ctx, flask_app, oso, sqlalchemy, post_fixtures):
     oso.load_str('allow("user", "read", post: Post) if post.id = 0;')

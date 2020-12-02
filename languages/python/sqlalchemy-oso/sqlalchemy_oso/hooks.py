@@ -52,9 +52,9 @@ def _authorize_query(query: Query) -> Query:
         # Not an authorized session.
         return None
 
-    oso = session.oso_context['oso']
-    user = session.oso_context['user']
-    action = session.oso_context['action']
+    oso = session.oso_context["oso"]
+    user = session.oso_context["user"]
+    action = session.oso_context["action"]
 
     # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
     # on queries that have already been made.  If a query has a LIMIT or OFFSET
@@ -152,11 +152,8 @@ class AuthorizedSessionBase(object):
 
     @property
     def oso_context(self):
-        return {
-            'oso': self._oso,
-            'user': self._oso_user,
-            'action': self._oso_action
-        }
+        return {"oso": self._oso, "user": self._oso_user, "action": self._oso_action}
+
 
 class AuthorizedSession(AuthorizedSessionBase, Session):
     pass
