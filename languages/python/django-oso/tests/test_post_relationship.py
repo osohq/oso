@@ -507,7 +507,14 @@ def test_empty_constraints_in_becomes_count_gt_0(tag_nested_many_many_fixtures):
     posts = Post.objects.filter(authorize_filter)
     assert (
         str(posts.query)
-        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level", "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation" FROM "test_app2_post" WHERE "test_app2_post"."id" IN (SELECT U0."id" FROM "test_app2_post" U0 LEFT OUTER JOIN "test_app2_post_tags" U1 ON (U0."id" = U1."post_id") GROUP BY U0."id", U0."contents", U0."access_level", U0."created_by_id", U0."needs_moderation" HAVING COUNT(U1."tag_id") > 0)'
+        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
+        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
+        + ' FROM "test_app2_post"'
+        + ' WHERE "test_app2_post"."id" IN'
+        + ' (SELECT U0."id"'
+        + ' FROM "test_app2_post" U0 LEFT OUTER JOIN "test_app2_post_tags" U1 ON (U0."id" = U1."post_id")'
+        + ' GROUP BY U0."id", U0."contents", U0."access_level", U0."created_by_id", U0."needs_moderation"'
+        + ' HAVING COUNT(U1."tag_id") > 0)'
     )
     assert len(posts) == 4
     assert tag_nested_many_many_fixtures["not_tagged_post"] not in posts
@@ -528,7 +535,14 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
     posts = Post.objects.filter(authorize_filter)
     assert (
         str(posts.query)
-        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level", "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation" FROM "test_app2_post" INNER JOIN "test_app2_post_tags" ON ("test_app2_post"."id" = "test_app2_post_tags"."post_id") INNER JOIN "test_app2_tag" ON ("test_app2_post_tags"."tag_id" = "test_app2_tag"."id") WHERE "test_app2_tag"."name" = bloop'
+        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
+        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
+        + ' FROM "test_app2_post"'
+        + ' INNER JOIN "test_app2_post_tags"'
+        + ' ON ("test_app2_post"."id" = "test_app2_post_tags"."post_id")'
+        + ' INNER JOIN "test_app2_tag"'
+        + ' ON ("test_app2_post_tags"."tag_id" = "test_app2_tag"."id")'
+        + ' WHERE "test_app2_tag"."name" = bloop'
     )
     assert len(posts) == 0
 

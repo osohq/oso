@@ -92,7 +92,6 @@ def and_expr(expr: Expression, model: Model, **kwargs):
 
 
 def compare_expr(expr: Expression, _model: Model, path=(), **kwargs):
-    q = Q()
     (left, right) = expr.args
     left_path = dot_path(left)
     if left_path:
@@ -107,7 +106,6 @@ def compare_expr(expr: Expression, _model: Model, path=(), **kwargs):
 
 def in_expr(expr: Expression, model: Model, path=(), **kwargs):
     assert expr.operator == "In"
-    q = Q()
     (left, right) = expr.args
     right_path = dot_path(right)
     assert right_path, "RHS of in must be a dot lookup"
