@@ -1090,12 +1090,20 @@ mod test {
     fn test_partial_negated_isa() -> TestResult {
         let p = Polar::new();
         p.load_str(
-            r#"f(x) if not x matches Foo{} or not g(x);
+            r#"f(x) if (not x matches Foo{} or not g(x)) and x = 1;
                g(_: Bar);"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "not _this matches Foo{}");
-        assert_partial_expression!(next_binding(&mut q)?, "a", "not _this matches Bar{}");
+        assert_partial_expression!(
+            next_binding(&mut q)?,
+            "a",
+            "not _this matches Foo{} and _this = 1"
+        );
+        assert_partial_expression!(
+            next_binding(&mut q)?,
+            "a",
+            "not _this matches Bar{} and _this = 1"
+        );
         assert_query_done!(q);
         Ok(())
     }
