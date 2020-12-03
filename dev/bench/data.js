@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606946732795,
+  "lastUpdate": 1607009192623,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -16053,6 +16053,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 7852,
             "range": "± 531",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cff879dc0f0056569ad2ed70176d98e840f959c2",
+          "message": "Add support for subfield isa to SQLAlchemy. (#566)\n\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-12-03T10:15:36-05:00",
+          "tree_id": "974c3b487f4446586fab3f9d4b18c2acb7f05e58",
+          "url": "https://github.com/osohq/oso/commit/cff879dc0f0056569ad2ed70176d98e840f959c2"
+        },
+        "date": 1607009190892,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 39115,
+            "range": "± 1521",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 1644322,
+            "range": "± 7402",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 7881310,
+            "range": "± 39234",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 15666552,
+            "range": "± 306354",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 793,
+            "range": "± 45",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2083,
+            "range": "± 73",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 51358,
+            "range": "± 1111",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 397970,
+            "range": "± 6031",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 15653,
+            "range": "± 554",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 15652,
+            "range": "± 597",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 15618,
+            "range": "± 607",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 15605,
+            "range": "± 569",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 12559,
+            "range": "± 423",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5275,
+            "range": "± 480",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 6394,
+            "range": "± 1642",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 7683,
+            "range": "± 180",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 23700,
+            "range": "± 1717",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 5110,
+            "range": "± 91",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 9912,
+            "range": "± 193",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 5479,
+            "range": "± 91",
             "unit": "ns/iter"
           }
         ]
