@@ -396,9 +396,7 @@ def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
     assert len(posts) == 1
 
 
-def test_empty_constraints_in_becomes_count_gt_0(
-    session, oso, tag_nested_many_many_test_fixture
-):
+def test_empty_constraints_in(session, oso, tag_nested_many_many_test_fixture):
     oso.load_str("""allow(_, "read", post: Post) if _tag in post.tags;""")
     user = tag_nested_many_many_test_fixture["user"]
     posts = authorize_model(oso, user, "read", session, Post)

@@ -490,7 +490,7 @@ def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
 
 
 @pytest.mark.django_db
-def test_empty_constraints_in_becomes_count_gt_0(tag_nested_many_many_fixtures):
+def test_empty_constraints_in(tag_nested_many_many_fixtures):
     """Test that ``unbound in partial.field`` without any further constraints
     on unbound translates into a check that COUNT(partial.field) > 0."""
     Oso.load_str(
