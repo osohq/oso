@@ -72,8 +72,10 @@ def translate_compare(expression: Expression, session: Session, model, get_model
         assert inspect(right)
         assert isinstance(right, model)
 
-        if not expression.operator in ('Eq', 'Unify'):
-            raise UnsupportedError(f"Comparing model only supported with Eq or Unify not: {expression.operator}")
+        if not expression.operator in ("Eq", "Unify"):
+            raise UnsupportedError(
+                f"Comparing model only supported with Eq or Unify not: {expression.operator}"
+            )
 
         primary_keys = [pk.name for pk in inspect(model).primary_key]
         pk_filter = None
@@ -88,7 +90,10 @@ def translate_compare(expression: Expression, session: Session, model, get_model
 
     path, field_name = path[:-1], path[-1]
     return translate_dot(
-        path, session, model, functools.partial(emit_compare, field_name, value, expression.operator)
+        path,
+        session,
+        model,
+        functools.partial(emit_compare, field_name, value, expression.operator),
     )
 
 
@@ -154,6 +159,7 @@ COMPARISONS = {
     "Leq": lambda p, v: p <= v,
     "Lt": lambda p, v: p < v,
 }
+
 
 def emit_compare(field_name, value, operator, session, model):
     """Emit a comparison operation comparing the value of ``field_name`` on ``model`` to ``value``."""
