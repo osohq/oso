@@ -203,7 +203,7 @@ html_favicon = "favicon.ico"
 
 # --- doctest options ----
 
-doctest_test_doctest_blocks = ""
+doctest_test_doctest_blocks = "default"
 
 lexers["node"] = lexer.NodeShellLexer()
 lexers["polar"] = lexer.PolarLexer()

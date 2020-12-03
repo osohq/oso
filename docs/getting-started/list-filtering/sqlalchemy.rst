@@ -6,6 +6,16 @@ The ``sqlalchemy-oso`` library can enforce policies over SQLAlchemy models.
 This allows policies to control access to collections of objects without
 needing to authorize each object individually.
 
+Installation
+============
+
+The oso SQLAlchemy integration is available on `PyPI`_ and can be installed using
+``pip``::
+
+    $ pip install sqlalchemy-oso
+
+.. _PyPI: https://pypi.org/project/sqlalchemy-oso/
+
 Usage
 =====
 
@@ -44,6 +54,12 @@ are translated into SQLAlchemy expressions and applied to the query before
 retrieving objects from the database.
 
 .. _Session: https://docs.sqlalchemy.org/en/13/orm/session_api.html#sqlalchemy.orm.session.Session
+
+**Using with Flask**
+
+``sqlalchemy-oso`` has built in support for using with the popular
+``flask_sqlalchemy`` library.  See
+:py:class:`sqlalchemy_oso.flask.AuthorizedSQLAlchemy`.
 
 Example
 =======
@@ -279,5 +295,10 @@ action:
 
 - application method calls
 - arithmetic operators
+
+API Reference
+=============
+
+See :doc:`/using/frameworks/sqlalchemy` for API documentation.
 
 .. _Slack: http://join-slack.osohq.com/

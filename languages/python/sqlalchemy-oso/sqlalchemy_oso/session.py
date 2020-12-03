@@ -14,7 +14,7 @@ from sqlalchemy_oso.auth import authorize_model_filter
 
 
 @event.listens_for(Query, "before_compile", retval=True)
-def before_compile(query):
+def _before_compile(query):
     """Enable before compile hook."""
     return _authorize_query(query)
 
@@ -63,7 +63,7 @@ def authorized_sessionmaker(get_oso, get_user, get_action, class_=None, **kwargs
     :param get_action: Callable that returns action for the authorization request.
     :param class_: Base class to use for sessions.
 
-    All other positional and keyword arguments are passed through to
+    All other keyword arguments are passed through to
     :py:func:`sqlalchemy.orm.session.sessionmaker` unchanged.
     """
     if class_ is None:
@@ -91,7 +91,9 @@ def authorized_sessionmaker(get_oso, get_user, get_action, class_=None, **kwargs
 def scoped_session(get_oso, get_user, get_action, scopefunc=None, **kwargs):
     """Return a scoped session maker that uses the user and action as part of the scope function.
 
-    Uses authorized_sessionmaker as the factory.
+    Use in place of sqlalchemy's scoped_session_
+
+    Uses :py:func:`authorized_sessionmaker` as the factory.
 
     :param get_oso: Callable that return oso instance to use for authorization.
     :param get_user: Callable that returns user for an authorization request.
@@ -100,6 +102,8 @@ def scoped_session(get_oso, get_user, get_action, scopefunc=None, **kwargs):
                       Output will be combined with the oso, action and user objects.
     :param kwargs: Additional keyword arguments to pass to
                    authorized_sessionmaker.
+
+    .. _scoped_session: https://docs.sqlalchemy.org/en/13/orm/contextual.html
     """
     scopefunc = scopefunc or (lambda: None)
 
@@ -112,7 +116,13 @@ def scoped_session(get_oso, get_user, get_action, scopefunc=None, **kwargs):
 
 
 class AuthorizedSessionBase(object):
-    """Mixin for SQLAlchemy Session that uses oso authorization for queries."""
+    """Mixin for SQLAlchemy Session that uses oso authorization for queries.
+
+    Can be used to create a custom session class that uses oso::
+
+        class MySession(AuthorizedSessionBase, sqlalchemy.orm.Session):
+            pass
+    """
 
     def __init__(self, oso: Oso, user, action, **options):
         """Create an authorized session using ``oso``.
@@ -138,6 +148,11 @@ class AuthorizedSessionBase(object):
 
 
 class AuthorizedSession(AuthorizedSessionBase, Session):
-    """AuthorizedSession that uses oso. Queries on this session only return authorized objects."""
+    """SQLAlchemy session that uses oso for authorization.
 
+    Queries on this session only return authorized objects.
+
+    Usually :py:func:`authorized_sessionmaker` is used instead of directly
+    instantiating the session.
+    """
     pass
