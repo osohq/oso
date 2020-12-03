@@ -104,9 +104,11 @@ def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
         else:
             return Q(pk__in=[])
 
-        if expr.operator not in ('Eq', 'Unify'):
-            raise UnsupportedError(f"Unsupported comparison: {expr}. Models can only be compared"
-                                   " with `=` or `==`")
+        if expr.operator not in ("Eq", "Unify"):
+            raise UnsupportedError(
+                f"Unsupported comparison: {expr}. Models can only be compared"
+                " with `=` or `==`"
+            )
 
         return COMPARISONS[expr.operator](q, "__".join(path + ("pk",)), right)
 
