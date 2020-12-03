@@ -1,4 +1,4 @@
-.PHONY: build test test-requirements fmt
+.PHONY: build test test-requirements fmt lint
 build:
 	rm -rf build
 	python setup.py develop
@@ -15,6 +15,9 @@ test: test-requirements
 
 fmt:
 	black .
+
+lint:
+	flake8 .
 
 package:
 	python setup.py sdist bdist_wheel

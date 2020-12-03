@@ -1,4 +1,4 @@
-.PHONY: build test test-requirements fmt
+.PHONY: build test test-requirements fmt lint
 build:
 	rm -rf build
 	rm -f _polar_lib.abi3.so
@@ -20,6 +20,9 @@ fmt:
 
 typecheck:
 	mypy oso polar tests
+
+lint:
+	flake8 .
 
 package:
 	python setup.py sdist bdist_wheel

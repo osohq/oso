@@ -1,9 +1,8 @@
-DIRS := oso django-oso sqlalchemy-oso flask-oso
-
-lint: lint-requirements typecheck $(DIRS)
-
-$(DIRS):
-	cd $@ && flake8 .
+lint: lint-requirements typecheck
+	$(MAKE) -C oso lint
+	$(MAKE) -C django-oso lint
+	$(MAKE) -C sqlalchemy-oso lint
+	$(MAKE) -C flask-oso lint
 
 typecheck:
 	$(MAKE) -C oso typecheck
@@ -15,4 +14,4 @@ lint-requirements: .make.lint-requirements.installed
 	pip install -r requirements-lint.txt
 	touch $@
 
-.PHONY: lint lint-requirements $(DIRS)
+.PHONY: lint lint-requirements typecheck
