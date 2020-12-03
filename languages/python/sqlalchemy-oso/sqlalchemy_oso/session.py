@@ -1,11 +1,7 @@
 """SQLAlchemy session classes and factories for oso."""
-import functools
-from typing import Any, Callable
-
-from sqlalchemy.event import listen, remove
 from sqlalchemy import event
 from sqlalchemy.orm.query import Query
-from sqlalchemy.orm import aliased, sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import orm
 
 from oso import Oso

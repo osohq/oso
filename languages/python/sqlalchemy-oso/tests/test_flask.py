@@ -1,13 +1,13 @@
 import pytest
 
-flask = pytest.importorskip("flask")
-flask_sqlalchemy = pytest.importorskip("flask_sqlalchemy")
-
 from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer
 from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
 
-from .models import *
+from .models import Post, ModelBase
+
+flask = pytest.importorskip("flask")
+flask_sqlalchemy = pytest.importorskip("flask_sqlalchemy")
 
 
 @pytest.fixture

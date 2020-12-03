@@ -1,7 +1,7 @@
 """Test hooks & SQLAlchemy API integrations."""
 import pytest
 
-from sqlalchemy.orm import aliased, sessionmaker, Query
+from sqlalchemy.orm import aliased, Query
 
 from sqlalchemy_oso.session import (
     authorized_sessionmaker,
@@ -129,16 +129,12 @@ def test_hooks_alias(session, oso, fixture_data):
 
     session.configure(query_cls=LocalQueryClass)
 
-    try:
+    post_alias = aliased(Post)
 
-        post_alias = aliased(Post)
+    query = session.query(post_alias)
 
-        query = session.query(post_alias)
-
-        # Fine with hooks if you don't authorize it.
-        assert query.count() == 1
-    finally:
-        disable()
+    # Fine with hooks if you don't authorize it.
+    assert query.count() == 1
 
 
 def test_authorized_sessionmaker_relationship(engine, oso, fixture_data):

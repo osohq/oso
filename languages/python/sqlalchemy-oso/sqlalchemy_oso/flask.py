@@ -43,14 +43,6 @@ class AuthorizedSQLAlchemy(SQLAlchemy):
         self._get_action = get_action
         super().__init__(**kwargs)
 
-    def create_session(self, options):
-        return authorized_sessionmaker(
-            get_oso=self._get_oso,
-            get_user=self._get_user,
-            get_action=self._get_action,
-            **options
-        )
-
     def create_scoped_session(self, options=None):
         if options is None:
             options = {}
