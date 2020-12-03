@@ -39,3 +39,5 @@ Other bugs & improvements
 
 - ``matches`` operations on fields of partials are now handled correctly in the
   SQLAlchemy adapter. Previously these operations would result in an error.
+- The SQLAlchemy list filtering adapter now supports all comparisons. Previously
+  comparisons other than ``==`` or ``=`` would cause an error.

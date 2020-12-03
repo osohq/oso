@@ -279,6 +279,5 @@ action:
 
 - application method calls
 - arithmetic operators
-- comparison operators
 
 .. _Slack: http://join-slack.osohq.com/

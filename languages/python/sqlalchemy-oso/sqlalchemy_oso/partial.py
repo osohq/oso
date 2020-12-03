@@ -23,7 +23,7 @@ def partial_to_filter(expression: Expression, session: Session, model, get_model
 # Returns None or the translated expression.
 def translate_expr(expression: Expression, session: Session, model, get_model):
     assert isinstance(expression, Expression)
-    if expression.operator == "Eq" or expression.operator == "Unify":
+    if expression.operator in COMPARISONS:
         return translate_compare(expression, session, model, get_model)
     elif expression.operator == "Isa":
         return translate_isa(expression, session, model, get_model)
@@ -70,6 +70,13 @@ def translate_compare(expression: Expression, session: Session, model, get_model
     else:
         assert left == Variable("_this")
         assert inspect(right)
+        assert isinstance(right, model)
+
+        if expression.operator not in ("Eq", "Unify"):
+            raise UnsupportedError(
+                f"Unsupported comparison: {expression}. Models can only be compared"
+                " with `=` or `==`"
+            )
 
         primary_keys = [pk.name for pk in inspect(model).primary_key]
         pk_filter = None
@@ -84,7 +91,10 @@ def translate_compare(expression: Expression, session: Session, model, get_model
 
     path, field_name = path[:-1], path[-1]
     return translate_dot(
-        path, session, model, functools.partial(emit_compare, field_name, value)
+        path,
+        session,
+        model,
+        functools.partial(emit_compare, field_name, value, expression.operator),
     )
 
 
@@ -141,10 +151,21 @@ def get_relationship(model, field_name: str):
     return (property, model, relationship.uselist)
 
 
-def emit_compare(field_name, value, session, model):
+COMPARISONS = {
+    "Unify": lambda p, v: p == v,
+    "Eq": lambda p, v: p == v,
+    "Neq": lambda p, v: p != v,
+    "Geq": lambda p, v: p >= v,
+    "Gt": lambda p, v: p > v,
+    "Leq": lambda p, v: p <= v,
+    "Lt": lambda p, v: p < v,
+}
+
+
+def emit_compare(field_name, value, operator, session, model):
     """Emit a comparison operation comparing the value of ``field_name`` on ``model`` to ``value``."""
     property = getattr(model, field_name)
-    return property == value
+    return COMPARISONS[operator](property, value)
 
 
 def emit_subexpression(sub_expression: Expression, get_model, session: Session, model):
