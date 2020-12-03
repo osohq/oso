@@ -68,26 +68,17 @@ impl Inverter {
 }
 
 struct PartialInverter {
-    pub new_bindings: BindingStack,
     csps: HashMap<Symbol, usize>,
 }
 
 impl PartialInverter {
     pub fn new(csps: HashMap<Symbol, usize>) -> Self {
-        Self {
-            csps,
-            new_bindings: vec![],
-        }
+        Self { csps }
     }
 
     fn invert_partial(&mut self, p: &Partial) -> Partial {
         let csp = self.csps.get(&p.variable).unwrap_or(&0);
-        let partial = p.clone_with_constraints(p.inverted_constraints(*csp));
-        self.new_bindings.push(Binding(
-            partial.variable.clone(),
-            Term::new_temporary(Value::Partial(partial.clone())),
-        ));
-        partial
+        p.clone_with_constraints(p.inverted_constraints(*csp))
     }
 }
 
@@ -104,10 +95,10 @@ impl Folder for PartialInverter {
 /// Invert all partials in `bindings` and return them.
 fn invert_partials(bindings: BindingStack, csps: HashMap<Symbol, usize>) -> BindingStack {
     let mut inverter = PartialInverter::new(csps);
-    for Binding(_, value) in bindings.iter() {
-        inverter.fold_term(value.clone());
-    }
-    inverter.new_bindings
+    bindings
+        .into_iter()
+        .map(|Binding(var, value)| Binding(var, inverter.fold_term(value)))
+        .collect()
 }
 
 /// Only keep latest bindings.

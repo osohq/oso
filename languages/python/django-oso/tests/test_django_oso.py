@@ -229,3 +229,22 @@ def test_null_with_partial(rf):
         + ' "test_app_post" WHERE "test_app_post"."option" IS NULL'
     )
     assert authorized_posts.count() == 1
+
+
+@pytest.mark.django_db
+def test_negated_matches_with_partial(rf):
+    from test_app.models import Post
+
+    Post(name="test", is_private=False, timestamp=1).save()
+    Oso.load_str("allow(_, _, post) if not post matches test_app::Post;")
+    request = rf.get("/")
+    request.user = "test_user"
+
+    authorize_filter = authorize_model(request, Post)
+    assert str(authorize_filter) == (
+        "(AND: (NOT (AND: ('pk__in', []))),"
+        + " (NOT (AND: (NOT (AND: ('pk__in', []))))))"
+    )
+    print(authorize_filter)
+    authorized_posts = Post.objects.filter(authorize_filter)
+    assert authorized_posts.count() == 0

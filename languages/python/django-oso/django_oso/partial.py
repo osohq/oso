@@ -8,6 +8,7 @@ from polar.partial import dot_path
 from .oso import django_model_name
 
 
+TRUE_FILTER = ~Q(pk__in=[])
 FALSE_FILTER = Q(pk__in=[])
 
 COMPARISONS = {
@@ -69,6 +70,8 @@ def translate_expr(expr: Expression, model: Model, **kwargs):
         return isa_expr(expr, model, **kwargs)
     elif expr.operator == "In":
         return in_expr(expr, model, **kwargs)
+    elif expr.operator == "Not":
+        return not_expr(expr, model, **kwargs)
     else:
         raise UnsupportedError(f"Unimplemented partial operator {expr.operator}")
 
@@ -79,11 +82,10 @@ def isa_expr(expr: Expression, model: Model, **kwargs):
         model = getattr(model, attr).field.related_model
     constraint_type = apps.get_model(django_model_name(right.tag))
     assert not right.fields, "Unexpected fields in matches expression"
-    return None if issubclass(model, constraint_type) else FALSE_FILTER
+    return TRUE_FILTER if issubclass(model, constraint_type) else FALSE_FILTER
 
 
 def and_expr(expr: Expression, model: Model, **kwargs):
-    assert expr.operator == "And"
     q = Q()
     for arg in expr.args:
         expr = translate_expr(arg, model, **kwargs)
@@ -113,7 +115,6 @@ def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
 
 
 def in_expr(expr: Expression, model: Model, path=(), **kwargs):
-    assert expr.operator == "In"
     (left, right) = expr.args
     right_path = dot_path(right)
     assert right_path, "RHS of in must be a dot lookup"
@@ -133,3 +134,8 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
             return translate_expr(left, model, path=right_path, **kwargs)
     else:
         return COMPARISONS["Unify"]("__".join(right_path), left)
+
+
+def not_expr(expr: Expression, model: Model, **kwargs):
+    q = translate_expr(expr.args[0], model, **kwargs)
+    return ~q
