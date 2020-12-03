@@ -1,4 +1,4 @@
-from django.db.models import Q, Model
+from django.db.models import Q, Model, Count, Subquery
 from django.apps import apps
 
 from polar.expression import Expression
@@ -112,8 +112,7 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
 
     if isinstance(left, Expression):
         if left.operator == "And" and not left.args:
-            from django.db.models import Count, Subquery
-
+            # An unconstrained partial is in a list if the list is non-empty.
             count = Count("__".join(right_path))
             filter = COMPARISONS["Gt"]("__".join(right_path + ("count",)), 0)
             subquery = Subquery(
