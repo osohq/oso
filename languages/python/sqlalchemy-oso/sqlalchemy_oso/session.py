@@ -155,4 +155,5 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
     Usually :py:func:`authorized_sessionmaker` is used instead of directly
     instantiating the session.
     """
+
     pass
