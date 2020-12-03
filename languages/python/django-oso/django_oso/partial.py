@@ -18,8 +18,11 @@ COMPARISONS = {
     "Gt": lambda f, v: Q(**{f"{f}__gt": v}),
     "Leq": lambda f, v: Q(**{f"{f}__leq": v}),
     "Lt": lambda f, v: Q(**{f"{f}__lt": v}),
-    "In": lambda f, v: Q(**{f"{f}__in": v}),
 }
+
+
+def contained_in(f, v):
+    return Q(**{f"{f}__in": v})
 
 
 def partial_to_query_filter(partial: Expression, model: Model, **kwargs):
@@ -58,14 +61,14 @@ def translate_expr(expr: Expression, model: Model, **kwargs):
     """Translate a Polar expression to a Django Q object."""
     assert isinstance(expr, Expression), "expected a Polar expression"
 
-    if expr.operator == "And":
+    if expr.operator in COMPARISONS:
+        return compare_expr(expr, model, **kwargs)
+    elif expr.operator == "And":
         return and_expr(expr, model, **kwargs)
     elif expr.operator == "Isa":
         return isa_expr(expr, model, **kwargs)
     elif expr.operator == "In":
         return in_expr(expr, model, **kwargs)
-    elif expr.operator in COMPARISONS:
-        return compare_expr(expr, model, **kwargs)
     else:
         raise UnsupportedError(f"Unimplemented partial operator {expr.operator}")
 
@@ -118,7 +121,7 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
                 model.objects.annotate(count).filter(filter).values("pk")
             )
 
-            return COMPARISONS["In"]("pk", subquery)
+            return contained_in("pk", subquery)
         else:
             return translate_expr(left, model, path=right_path, **kwargs)
     else:
