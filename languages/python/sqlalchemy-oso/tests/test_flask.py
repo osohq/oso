@@ -4,6 +4,7 @@ flask = pytest.importorskip("flask")
 flask_sqlalchemy = pytest.importorskip("flask_sqlalchemy")
 
 from sqlalchemy.orm import Session
+from sqlalchemy import Column, Integer
 from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
 
 from .models import *
@@ -57,3 +58,32 @@ def test_authorized_sqlalchemy(ctx, flask_app, oso, sqlalchemy, post_fixtures):
 
     with flask_app.app_context():
         assert sqlalchemy.session.query(Post).count() == 1
+
+
+def test_flask_model(ctx, flask_app, oso, sqlalchemy):
+    class TestModel(sqlalchemy.Model):
+        id = Column(Integer, primary_key=True)
+
+    sqlalchemy.create_all()
+    sqlalchemy.session.add(TestModel(id=1))
+    sqlalchemy.session.add(TestModel(id=2))
+    sqlalchemy.session.commit()
+
+    oso.register_class(TestModel)
+
+    oso.load_str("allow(_, _, tm: TestModel) if tm.id = 1;")
+
+    authorized = sqlalchemy.session.query(TestModel).all()
+    assert len(authorized) == 1
+    assert authorized[0].id == 1
+
+    authorized = TestModel.query.all()
+    assert len(authorized) == 1
+    assert authorized[0].id == 1
+
+    oso.load_str("allow(_, _, tm: TestModel) if tm.id = 2;")
+
+    authorized = TestModel.query.all()
+    assert len(authorized) == 2
+    assert authorized[0].id == 1
+    assert authorized[1].id == 2
