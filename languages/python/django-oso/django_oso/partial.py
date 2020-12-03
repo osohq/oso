@@ -51,11 +51,7 @@ def partial_to_query_filter(partial: Expression, model: Model, **kwargs):
         Q(is_private=False)
     """
 
-    q = translate_expr(partial, model, **kwargs)
-    if q is None:
-        return Q()
-
-    return q
+    return translate_expr(partial, model, **kwargs)
 
 
 def translate_expr(expr: Expression, model: Model, **kwargs):
@@ -90,9 +86,7 @@ def and_expr(expr: Expression, model: Model, **kwargs):
     assert expr.operator == "And"
     q = Q()
     for arg in expr.args:
-        expr = translate_expr(arg, model, **kwargs)
-        if expr:
-            q = q & expr
+        q &= translate_expr(arg, model, **kwargs)
     return q
 
 
