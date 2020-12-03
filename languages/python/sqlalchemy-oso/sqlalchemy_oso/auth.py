@@ -9,6 +9,11 @@ from sqlalchemy.sql import expression as sql
 from sqlalchemy_oso.partial import partial_to_filter
 
 
+def polar_model_name(model) -> str:
+    """Return polar class name for SQLAlchemy model."""
+    return model.__name__
+
+
 def null_query(session: Session, model) -> Query:
     """Return an intentionally empty query."""
     # TODO (dhatch): Make this not hit the database.
@@ -39,9 +44,6 @@ def authorize_model(oso: Oso, actor, action, session: Session, model) -> Query:
     :param model: The model to authorize, must be a SQLAlchemy model.
     """
     filters = authorize_model_filter(oso, actor, action, session, model)
-    if filters is None:
-        return session.query(model)
-
     return session.query(model).filter(filters)
 
 
@@ -62,7 +64,7 @@ def authorize_model_filter(oso: Oso, actor, action, session: Session, model):
     # TODO (dhatch): More robust name mapping?
     assert class_mapper(model), f"Expected a model; received: {model}"
 
-    partial_resource = Partial("resource", TypeConstraint(model.__name__))
+    partial_resource = Partial("resource", TypeConstraint(polar_model_name(model)))
     results = oso.query_rule("allow", actor, action, partial_resource)
 
     combined_filter = None
@@ -71,10 +73,12 @@ def authorize_model_filter(oso: Oso, actor, action, session: Session, model):
         has_result = True
 
         resource_partial = result["bindings"]["resource"]
-        filter = partial_to_filter(resource_partial, session, model)
+        filter = partial_to_filter(
+            resource_partial, session, model, get_model=oso.get_class
+        )
         if combined_filter is None:
             combined_filter = filter
-        elif filter is not None:
+        else:
             combined_filter = combined_filter | filter
 
     if not has_result:
