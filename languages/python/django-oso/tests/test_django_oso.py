@@ -249,8 +249,9 @@ def test_null_with_partial(rf):
     authorized_posts = Post.objects.filter(authorize_filter)
     assert str(authorized_posts.query) == (
         'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", '
-        + '"test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id" FROM'
-        + ' "test_app_post" WHERE "test_app_post"."option" IS NULL'
+        + '"test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"'
+        + ' FROM "test_app_post"'
+        + ' WHERE "test_app_post"."option" IS NULL'
     )
     assert authorized_posts.count() == 1
 
@@ -260,10 +261,17 @@ def test_negated_matches_with_partial(rf):
     from test_app.models import Post
 
     Post(name="test", is_private=False, timestamp=1).save()
-    Oso.load_str("allow(_, _, post) if not post matches test_app::Post;")
+    Oso.load_str(
+        """
+        allow(1, _, post) if not post matches test_app::Post;
+        allow(2, _, post) if not post matches test_app::User;
+        allow(3, _, post) if not post.created_by matches test_app::User;
+        allow(4, _, post) if not post.created_by matches test_app::Post;
+        """
+    )
     request = rf.get("/")
-    request.user = "test_user"
 
+    request.user = 1
     authorize_filter = authorize_model(request, Post)
     assert str(authorize_filter) == (
         "(AND: (NOT (AND: ('pk__in', []))),"
@@ -274,3 +282,36 @@ def test_negated_matches_with_partial(rf):
     with pytest.raises(EmptyResultSet):
         str(authorized_posts.query)
     assert authorized_posts.count() == 0
+
+    request.user = 2
+    authorize_filter = authorize_model(request, Post)
+    assert str(authorize_filter) == ("(NOT (AND: ('pk__in', [])))")
+    authorized_posts = Post.objects.filter(authorize_filter)
+    assert str(authorized_posts.query) == (
+        'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", '
+        + '"test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"'
+        + ' FROM "test_app_post"'
+    )
+    assert authorized_posts.count() == 1
+
+    request.user = 3
+    authorize_filter = authorize_model(request, Post)
+    assert str(authorize_filter) == (
+        "(AND: (NOT (AND: ('pk__in', []))), (NOT (AND: (NOT (AND: ('pk__in', []))))))"
+    )
+    authorized_posts = Post.objects.filter(authorize_filter)
+    # For some reason, this only seems to be raised when stringifying.
+    with pytest.raises(EmptyResultSet):
+        str(authorized_posts.query)
+    assert authorized_posts.count() == 0
+
+    request.user = 4
+    authorize_filter = authorize_model(request, Post)
+    assert str(authorize_filter) == ("(AND: (NOT (AND: ('pk__in', []))))")
+    authorized_posts = Post.objects.filter(authorize_filter)
+    assert str(authorized_posts.query) == (
+        'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", '
+        + '"test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"'
+        + ' FROM "test_app_post"'
+    )
+    assert authorized_posts.count() == 1
