@@ -8,6 +8,21 @@ from polar.partial import dot_path
 from .oso import django_model_name
 
 
+FALSE_FILTER = Q(pk__in=[])
+TRUE_FILTER = ~Q(pk__in=[])
+
+COMPARISONS = {
+    "Unify": lambda f, v: Q(**{f: v}),
+    "Eq": lambda f, v: Q(**{f: v}),
+    "Neq": lambda f, v: ~Q(**{f: v}),
+    "Geq": lambda f, v: Q(**{f"{f}__gte": v}),
+    "Gt": lambda f, v: Q(**{f"{f}__gt": v}),
+    "Leq": lambda f, v: Q(**{f"{f}__leq": v}),
+    "Lt": lambda f, v: Q(**{f"{f}__lt": v}),
+    "In": lambda f, v: Q(**{f"{f}__in": v}),
+}
+
+
 def partial_to_query_filter(partial: Expression, model: Model, **kwargs):
     """
     Convert a partial expression to a django query ``Q`` object.
@@ -40,18 +55,6 @@ def partial_to_query_filter(partial: Expression, model: Model, **kwargs):
     return q
 
 
-COMPARISONS = {
-    "Unify": lambda f, v: Q(**{f: v}),
-    "Eq": lambda f, v: Q(**{f: v}),
-    "Neq": lambda f, v: ~Q(**{f: v}),
-    "Geq": lambda f, v: Q(**{f"{f}__gte": v}),
-    "Gt": lambda f, v: Q(**{f"{f}__gt": v}),
-    "Leq": lambda f, v: Q(**{f"{f}__leq": v}),
-    "Lt": lambda f, v: Q(**{f"{f}__lt": v}),
-    "In": lambda f, v: Q(**{f"{f}__in": v}),
-}
-
-
 def translate_expr(expr: Expression, model: Model, **kwargs):
     """Translate a Polar expression to a Django Q object."""
     assert isinstance(expr, Expression), "expected a Polar expression"
@@ -74,13 +77,7 @@ def isa_expr(expr: Expression, model: Model, **kwargs):
         model = getattr(model, attr).field.related_model
     constraint_type = apps.get_model(django_model_name(right.tag))
     assert not right.fields, "Unexpected fields in matches expression"
-
-    if not issubclass(model, constraint_type):
-        # Always false.
-        return Q(pk__in=[])
-    else:
-        # Always true.
-        return None
+    return TRUE_FILTER if issubclass(model, constraint_type) else FALSE_FILTER
 
 
 def and_expr(expr: Expression, model: Model, **kwargs):
