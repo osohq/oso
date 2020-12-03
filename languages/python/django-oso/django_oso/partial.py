@@ -102,12 +102,11 @@ def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
         if isinstance(right, model):
             right = right.pk
         else:
-            # QUESTION: Should this just return an empty set? Similar to how invalid isa
-            # returns empty set.
-            raise UnsupportedError(f"Unsupported comparison: {expr}")
+            return Q(pk__in=[])
 
-        if not expr.operator in ('Eq', 'Unify'):
-            raise UnsupportedError(f"Comparing model only supported with Eq or Unify not: {expr}")
+        if expr.operator not in ('Eq', 'Unify'):
+            raise UnsupportedError(f"Unsupported comparison: {expr}. Models can only be compared"
+                                   " with `=` or `==`")
 
         return COMPARISONS[expr.operator](q, "__".join(path + ("pk",)), right)
 
