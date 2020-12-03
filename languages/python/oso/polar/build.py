@@ -1,6 +1,6 @@
 import os
 from cffi import FFI
-from os import sys
+import sys
 
 ffibuilder = FFI()
 

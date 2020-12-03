@@ -25,9 +25,8 @@ class Tag(AuthorizedModel):
 
 class Post(AuthorizedModel):
     contents = models.CharField(max_length=255)
-    AccessLevelType = models.TextChoices("AccessLevelType", "public private")
     access_level = models.CharField(
-        choices=AccessLevelType.choices, max_length=7, default="private"
+        choices=[(c, c) for c in ["public", "private"]], max_length=7, default="private"
     )
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     needs_moderation = models.BooleanField(default=False)

@@ -1,8 +1,7 @@
 import logging
 import os.path
 
-from django.apps import AppConfig, apps
-from django.core.exceptions import ImproperlyConfigured
+from django.apps import apps
 from django.http import HttpRequest
 
 from oso import Oso as _Oso
@@ -32,7 +31,7 @@ def init_oso():
     def register_class(model, name=None):
         try:
             Oso.register_class(model, name=name)
-        except DuplicateClassAliasError as e:
+        except DuplicateClassAliasError:
             pass
 
     # Register all models.

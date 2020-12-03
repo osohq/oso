@@ -3,10 +3,9 @@
 Tests come from the relationship document & operations laid out there.
 """
 import pytest
-from django.db import models
 from django.core.exceptions import PermissionDenied
 
-from django_oso.models import AuthorizedModel, authorize_model
+from django_oso.models import authorize_model
 from django_oso.oso import Oso, reset_oso
 from test_app2.models import Post, Tag, User
 
@@ -97,10 +96,12 @@ def test_authorize_model_basic(post_fixtures):
     assert posts.count() == 9
 
     authorize_filter = authorize_model(None, Post, actor="moderator", action="read")
-    assert (
-        str(authorize_filter)
-        == "(OR: (AND: ('access_level', 'private'), ('needs_moderation', True)), (AND: ('access_level', 'public'), ('needs_moderation', True)))"
+    expected = (
+        "(OR: ("
+        + "AND: ('access_level', 'private'), ('needs_moderation', True)), "
+        + "(AND: ('access_level', 'public'), ('needs_moderation', True)))"
     )
+    assert str(authorize_filter) == expected
     posts = Post.objects.filter(authorize_filter)
     assert posts.count() == 4
     assert posts.all()[0].contents == "private for moderation"
@@ -167,9 +168,9 @@ def test_authorize_scalar_attribute_condition(post_fixtures):
     posts = Post.objects.filter(authorize_filter)
 
     def allowed(post, user):
-        return (
-            post.access_level == "public" and post.created_by.is_banned == False
-        ) or (post.access_level == "private" and post.created_by == user)
+        return (post.access_level == "public" and not post.created_by.is_banned) or (
+            post.access_level == "private" and post.created_by == user
+        )
 
     assert posts.count() == 7
     assert all(allowed(post, foo) for post in posts)

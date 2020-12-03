@@ -313,26 +313,6 @@ jobs:
           name: oso_js_node
           path: languages/js/*
 
-  # docs:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/setup-python@v1
-  #       with:
-  #         python-version: "3.6"
-  #     - uses: actions/checkout@v2
-  #     - run: pip3 install -r requirements-dev.txt -i https://pypi.python.org/simple/
-  #       working-directory: polar
-  #     - run: pip3 install -e .
-  #       working-directory: polar
-  #     - run: pip3 install -e .
-  #       working-directory: oso
-  #     - run: make html
-  #       working-directory: docs
-  #     - uses: actions/upload-artifact@v1
-  #       with:
-  #         name: docs
-  #         path: docs/_build/html/
-
   validate_python:
     name: Test python ${{ matrix.python-version }} on ${{ matrix.os }}
     needs: [build_wheels]
@@ -340,7 +320,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -582,12 +562,6 @@ jobs:
       - name: Create JS release artifact
         working-directory: oso_js_node
         run: npm pack
-      # - name: Download docs
-      #   uses: actions/download-artifact@v1
-      #   with:
-      #     name: docs
-      # - name: Zip docs
-      #   run: zip -r oso-docs.zip docs/
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
@@ -654,15 +628,6 @@ jobs:
           asset_path: ./oso_js_node/oso-${{ steps.version.outputs.oso_version }}.tgz
           asset_name: oso-js-node-${{ steps.version.outputs.oso_version }}.tgz
           asset_content_type: application/gzip
-      # - name: Upload Release Docs
-      #   uses: actions/upload-release-asset@v1
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-      #     asset_path: ./oso-docs.zip
-      #     asset_name: oso-docs.zip
-      #     asset_content_type: application/zip
   alert-failure:
     name: Alert on failure
     if: ${{ !success() }}

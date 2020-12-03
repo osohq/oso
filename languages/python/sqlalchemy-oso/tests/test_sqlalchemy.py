@@ -10,7 +10,7 @@ from sqlalchemy_oso.hooks import (
     authorized_sessionmaker,
 )
 
-from .models import *
+from .models import User, Post
 from .conftest import print_query
 
 
@@ -312,8 +312,9 @@ def test_null_with_partial(engine, oso):
     )
     posts = Session().query(Post)
 
-    assert (
-        str(posts)
-        == "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation \nFROM posts \nWHERE posts.contents IS NULL"
+    assert str(posts) == (
+        "SELECT posts.id AS posts_id, posts.contents AS posts_contents, "
+        + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
+        + "posts.needs_moderation AS posts_needs_moderation \nFROM posts \nWHERE posts.contents IS NULL"
     )
     assert posts.count() == 0

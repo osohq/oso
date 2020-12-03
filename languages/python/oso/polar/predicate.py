@@ -1,13 +1,15 @@
-from dataclasses import dataclass
 from typing import Any, Sequence
 
 
-@dataclass(frozen=True)
 class Predicate:
     """Represent a predicate in Polar (`name(args, ...)`)."""
 
     name: str
     args: Sequence[Any]
+
+    def __init__(self, name: str, args: Sequence[Any]):
+        self.name = name
+        self.args = args
 
     def __str__(self):
         return f'{self.name}({", ".join(self.args)})'

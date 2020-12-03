@@ -5,10 +5,9 @@ https://www.notion.so/osohq/Relationships-621b884edbc6423f93d29e6066e58d16.
 """
 import pytest
 
-from oso import Oso
 from sqlalchemy_oso.auth import authorize_model
 
-from .models import *
+from .models import Post, Tag, User
 from .conftest import print_query
 
 
@@ -94,7 +93,9 @@ def test_authorize_scalar_attribute_condition(session, oso, fixture_data):
 
     # moderator can see posts made by banned users.
     oso.load_str(
-        'allow(actor: User, "read", post: Post) if actor.is_moderator = true and post.created_by.is_banned = true;'
+        """allow(actor: User, "read", post: Post) if
+                actor.is_moderator = true
+                and post.created_by.is_banned = true;"""
     )
 
     foo = session.query(User).filter(User.username == "foo").first()
@@ -103,7 +104,7 @@ def test_authorize_scalar_attribute_condition(session, oso, fixture_data):
 
     def allowed(post, user):
         return (
-            (post.access_level == "public" and post.created_by.is_banned == False)
+            (post.access_level == "public" and not post.created_by.is_banned)
             or post.access_level == "private"
             and post.created_by == user
         )

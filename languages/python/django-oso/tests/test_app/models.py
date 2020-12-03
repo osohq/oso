@@ -2,8 +2,6 @@ from django.db import models
 
 from django_oso.models import AuthorizedModel
 
-import pytest
-
 
 class TestRegistration(models.Model):
     class Meta:

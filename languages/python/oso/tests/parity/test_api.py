@@ -5,37 +5,33 @@ import pytest
 
 from pathlib import Path
 
-from polar import Polar, Predicate
+from polar import Predicate
 from polar.exceptions import (
     InvalidIteratorError,
     PolarRuntimeError,
-    PolarApiError,
     PolarFileExtensionError,
     PolarFileNotFoundError,
 )
-from oso import Http, PathMapper
 
-from test_api_externals import Widget, DooDad, Actor, Company, get_frobbed, set_frobbed
+from .test_api_externals import (
+    Http,
+    Widget,
+    DooDad,
+    Actor,
+    Company,
+    get_frobbed,
+    set_frobbed,
+)
 
-try:
-    # This import is required when running the rust version of the library
-    # so that the fixture is registered with pytest.
-    from polar.test_helpers import polar
-except ImportError:
-    pass
-
-from polar.test_helpers import tell, qvar, query
 
 # Set if running tests against old code
 EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
 
-## FIXTURES ##
+# *** FIXTURES *** #
 
 
 @pytest.fixture
 def load_policy(polar):
-    polar.register_class(Http)
-    polar.register_class(PathMapper)
     polar.load_file(Path(__file__).parent / "policies" / "test_api.polar")
 
 
@@ -64,7 +60,7 @@ def actor_in_role(monkeypatch):
     return patch
 
 
-## TESTS ##
+# *** TESTS *** #
 
 
 def test_register_class(polar, load_policy, query):
@@ -191,7 +187,7 @@ def test_patching(polar, widget_in_company, actor_in_role, load_policy, query):
     )
 
 
-## Instance Caching tests (move these somewhere else eventually)
+# Instance Caching tests (move these somewhere else eventually)
 def test_instance_round_trip(polar, query, qvar):
     # direct round trip
     user = Actor("sam")

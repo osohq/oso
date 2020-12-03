@@ -1,6 +1,5 @@
 import codecs
 import os
-import sys
 from setuptools import setup, find_packages
 from os import path
 
@@ -50,7 +49,7 @@ setup(
         "License :: OSI Approved :: Apache Software License",
     ],
     url="https://www.osohq.com/",
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests", "tests.*"]),
     python_requires=">=3.6",
     install_requires=install_requires,
     # List additional groups of dependencies here (e.g. development

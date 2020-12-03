@@ -13,8 +13,7 @@ test-requirements: .make.test-requirements-install
 	touch $@
 
 test: test-requirements
-	pytest tests
-	pytest oso
+	pytest
 
 fmt:
 	black .
