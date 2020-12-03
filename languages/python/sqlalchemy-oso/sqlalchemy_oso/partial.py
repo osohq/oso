@@ -72,9 +72,10 @@ def translate_compare(expression: Expression, session: Session, model, get_model
         assert inspect(right)
         assert isinstance(right, model)
 
-        if not expression.operator in ("Eq", "Unify"):
+        if expression.operator not in ("Eq", "Unify"):
             raise UnsupportedError(
-                f"Comparing model only supported with Eq or Unify not: {expression.operator}"
+                f"Unsupported comparison: {expression}. Models can only be compared"
+                " with `=` or `==`"
             )
 
         primary_keys = [pk.name for pk in inspect(model).primary_key]
