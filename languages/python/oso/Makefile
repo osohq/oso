@@ -18,6 +18,9 @@ test: test-requirements
 fmt:
 	black .
 
+typecheck:
+	mypy oso polar tests
+
 package:
 	python setup.py sdist bdist_wheel
 

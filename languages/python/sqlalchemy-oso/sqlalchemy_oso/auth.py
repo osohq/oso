@@ -3,7 +3,7 @@ from polar.partial import Partial, TypeConstraint
 
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
-from sqlalchemy.orm.util import class_mapper
+from sqlalchemy.orm.util import class_mapper  # type: ignore
 from sqlalchemy.sql import expression as sql
 
 from sqlalchemy_oso.partial import partial_to_filter

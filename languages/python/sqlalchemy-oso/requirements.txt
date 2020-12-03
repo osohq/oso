@@ -1,2 +1,3 @@
 oso~=0.8.2
 sqlalchemy~=1.3.20
+sqlalchemy-stubs

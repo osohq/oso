@@ -16,5 +16,9 @@ test: test-requirements
 fmt:
 	black .
 
+typecheck:
+	mypy tests
+	mypy sqlalchemy_oso
+
 package:
 	python setup.py sdist bdist_wheel
