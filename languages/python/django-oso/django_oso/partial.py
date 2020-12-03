@@ -69,7 +69,7 @@ def translate_expr(expr: Expression, model: Model, **kwargs):
     elif expr.operator == "Not":
         return not_expr(expr, model, **kwargs)
     else:
-        raise UnsupportedError(f"Unimplemented partial operator {expr.operator}")
+        raise UnsupportedError(f"Unsupported partial expression: {expr}")
 
 
 def isa_expr(expr: Expression, model: Model, **kwargs):
@@ -136,5 +136,4 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
 
 def not_expr(expr: Expression, model: Model, **kwargs):
     assert expr.operator == "Not"
-    q = translate_expr(expr.args[0], model, **kwargs)
-    return ~q
+    return ~translate_expr(expr.args[0], model, **kwargs)
