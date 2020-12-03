@@ -20,7 +20,6 @@ def partial_to_filter(expression: Expression, session: Session, model, get_model
     return translate_expr(expression, session, model, get_model)
 
 
-# Returns None or the translated expression.
 def translate_expr(expression: Expression, session: Session, model, get_model):
     assert isinstance(expression, Expression)
     if expression.operator in COMPARISONS:
@@ -60,17 +59,20 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
 
 
 def translate_compare(expression: Expression, session: Session, model, get_model):
-    left = expression.args[0]
-    right = expression.args[1]
-
+    (left, right) = expression.args
     left_path = dot_path(left)
     if left_path:
-        path = left_path
-        value = right
+        path, field_name = left_path[:-1], left_path[-1]
+        return translate_dot(
+            path,
+            session,
+            model,
+            functools.partial(emit_compare, field_name, right, expression.operator),
+        )
     else:
         assert left == Variable("_this")
-        assert inspect(right)
-        assert isinstance(right, model)
+        if not isinstance(right, model):
+            return sql.false()
 
         if expression.operator not in ("Eq", "Unify"):
             raise UnsupportedError(
@@ -79,23 +81,10 @@ def translate_compare(expression: Expression, session: Session, model, get_model
             )
 
         primary_keys = [pk.name for pk in inspect(model).primary_key]
-        pk_filter = None
+        pk_filter = sql.true()
         for key in primary_keys:
-            key_value = getattr(right, key)
-            if pk_filter is None:
-                pk_filter = getattr(model, key) == key_value
-            else:
-                pk_filter &= getattr(model, key) == key_value
-
+            pk_filter &= getattr(model, key) == getattr(right, key)
         return pk_filter
-
-    path, field_name = path[:-1], path[-1]
-    return translate_dot(
-        path,
-        session,
-        model,
-        functools.partial(emit_compare, field_name, value, expression.operator),
-    )
 
 
 def translate_in(expression, session, model, get_model):

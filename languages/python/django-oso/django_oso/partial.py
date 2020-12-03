@@ -4,6 +4,7 @@ from django.apps import apps
 from polar.expression import Expression
 from polar.exceptions import UnsupportedError
 from polar.partial import dot_path
+from oso import Variable
 
 from .oso import django_model_name
 
@@ -97,9 +98,8 @@ def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
     if left_path:
         return COMPARISONS[expr.operator]("__".join(path + left_path), right)
     else:
-        if isinstance(right, model):
-            right = right.pk
-        else:
+        assert left == Variable("_this")
+        if not isinstance(right, model):
             return FALSE_FILTER
 
         if expr.operator not in ("Eq", "Unify"):
@@ -108,7 +108,7 @@ def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
                 " with `=` or `==`"
             )
 
-        return COMPARISONS[expr.operator]("__".join(path + ("pk",)), right)
+        return COMPARISONS[expr.operator]("__".join(path + ("pk",)), right.pk)
 
 
 def in_expr(expr: Expression, model: Model, path=(), **kwargs):
