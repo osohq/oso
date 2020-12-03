@@ -77,6 +77,7 @@ def translate_expr(expr: Expression, model: Model, **kwargs):
 
 
 def isa_expr(expr: Expression, model: Model, **kwargs):
+    assert expr.operator == "Isa"
     (left, right) = expr.args
     for attr in dot_path(left):
         model = getattr(model, attr).field.related_model
@@ -86,6 +87,7 @@ def isa_expr(expr: Expression, model: Model, **kwargs):
 
 
 def and_expr(expr: Expression, model: Model, **kwargs):
+    assert expr.operator == "And"
     q = Q()
     for arg in expr.args:
         expr = translate_expr(arg, model, **kwargs)
@@ -95,6 +97,7 @@ def and_expr(expr: Expression, model: Model, **kwargs):
 
 
 def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
+    assert expr.operator in COMPARISONS
     (left, right) = expr.args
     left_path = dot_path(left)
     if left_path:
@@ -115,6 +118,7 @@ def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
 
 
 def in_expr(expr: Expression, model: Model, path=(), **kwargs):
+    assert expr.operator == "In"
     (left, right) = expr.args
     right_path = dot_path(right)
     assert right_path, "RHS of in must be a dot lookup"
@@ -137,5 +141,6 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
 
 
 def not_expr(expr: Expression, model: Model, **kwargs):
+    assert expr.operator == "Not"
     q = translate_expr(expr.args[0], model, **kwargs)
     return ~q
