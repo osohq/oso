@@ -136,4 +136,5 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
 
 def not_expr(expr: Expression, model: Model, **kwargs):
     assert expr.operator == "Not"
+    assert expr.args[0].operator == "Isa"
     return ~translate_expr(expr.args[0], model, **kwargs)
