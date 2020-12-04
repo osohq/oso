@@ -87,7 +87,12 @@ def and_expr(expr: Expression, model: Model, **kwargs):
     q = Q()
     for arg in expr.args:
         expr = translate_expr(arg, model, **kwargs)
-        if expr:
+        # TODO: Remove once `isa` is handled for partials correctly
+        # shortcutting filter: if any term is false, the whole
+        # AND expression is false
+        if expr == FALSE_FILTER:
+            return FALSE_FILTER
+        elif expr:
             q = q & expr
     return q
 
