@@ -186,8 +186,7 @@ def test_partial_subfield_isa():
 
     authorize_filter = authorize_model(None, Post, actor="foo", action="bar")
     assert (
-        str(authorize_filter)
-        == "(OR: ('created_by__name', 'alice'), ('pk__in', []))"
+        str(authorize_filter) == "(OR: ('created_by__name', 'alice'), ('pk__in', []))"
     )
     authorized_posts = Post.objects.filter(authorize_filter)
     assert authorized_posts.count() == 2
