@@ -178,16 +178,15 @@ def test_partial_subfield_isa():
 
     Oso.load_str(
         """
-            allow(_, _, post: test_app::Post) if check_user(post.created_by);
-            check_user(user: test_app::Admin) if user.name = "not alice";
-            check_user(user: test_app::User) if user.name = "alice";
+            allow(_, _, post: test_app::Post) if check(post.created_by);
+            check(user: test_app::User) if user.name = "alice";
+            check(post: test_app::Post) if post.is_private = false;
         """
     )
 
     authorize_filter = authorize_model(None, Post, actor="foo", action="bar")
     assert (
-        str(authorize_filter)
-        == "(OR: (AND: ('pk__in', []), ('created_by__name', 'not alice')), ('created_by__name', 'alice'))"
+        str(authorize_filter) == "(OR: ('created_by__name', 'alice'), ('pk__in', []))"
     )
     authorized_posts = Post.objects.filter(authorize_filter)
     assert authorized_posts.count() == 2
