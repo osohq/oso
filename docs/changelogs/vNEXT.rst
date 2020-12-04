@@ -41,4 +41,4 @@ Other bugs & improvements
   SQLAlchemy adapter. Previously these operations would result in an error.
 - The SQLAlchemy list filtering adapter now supports all comparisons. Previously
   comparisons other than ``==`` or ``=`` would cause an error.
-- Fixed bug where checking if a characters is in a string would fail incorrectly.
+- Fixed bug where checking if a character is in a string would fail incorrectly.

@@ -6,6 +6,13 @@ from pathlib import Path
 import sys
 from typing import Dict
 
+try:
+    # importing readline on compatible platforms
+    # changes how `input` works for the REPL
+    import readline  # noqa: F401
+except ImportError:
+    pass
+
 from .exceptions import (
     PolarRuntimeError,
     InlineQueryFailedError,
