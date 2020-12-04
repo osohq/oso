@@ -87,7 +87,12 @@ def and_expr(expr: Expression, model: Model, **kwargs):
     assert expr.operator == "And"
     q = Q()
     for arg in expr.args:
-        q &= translate_expr(arg, model, **kwargs)
+        expr = translate_expr(arg, model, **kwargs)
+        # TODO: Remove once we can perform method selection in the presence of partials.
+        # Short-circuit: if any expr is false, the whole AND is false.
+        if expr == FALSE_FILTER:
+            return FALSE_FILTER
+        q &= expr
     return q
 
 
