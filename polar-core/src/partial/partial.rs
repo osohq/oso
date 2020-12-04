@@ -164,37 +164,32 @@ impl Partial {
 
     /// Add a constraint that this must contain some known value.
     ///
-    /// From OTHER in THIS where other is not a partial or variable.
-    pub fn in_contains(&mut self, other: Term) {
+    /// From `item in _this` where item is not a partial or a variable.
+    pub fn contains_item(&mut self, other: Term) {
         // TODO for now, this is represented as an in operation, but we may
         // want some other representation eventually.
         // TODO what about non-ground compound terms like [x, 1] in THIS
 
-        assert!(!(matches!(other.value(), Value::Variable(_) | Value::Partial(_))));
+        assert!(!(matches!(other.value(), Value::Partial(_) | Value::Variable(_))));
 
         let in_op = op!(In, other, self.variable_term());
         self.add_constraint(in_op);
     }
 
-    /// Add a constraint that a variable or partial value must be in this.
-    ///
-    /// `other` must be a partial or a variable.
+    /// Add a constraint that a variable must be in this.
     ///
     /// Returns: A new partial to use for additional constraints on `other`.
-    pub fn in_unbound(&mut self, other: Term) -> Term {
-        let name = match other.value() {
-            Value::Partial(constraints) => constraints.name().clone(),
-            Value::Variable(sym) => sym.clone(),
-            _ => panic!(
-                "Unexpected in LHS value {:?}, maybe you meant to call Constraints::contains()",
-                other.value()
-            ),
-        };
-
-        let in_op = op!(In, term!(name.clone()), self.variable_term());
+    pub fn contains_variable(&mut self, other: Symbol) -> Term {
+        let in_op = op!(In, term!(other.clone()), self.variable_term());
         self.add_constraint(in_op);
 
-        Term::new_temporary(Value::Partial(Partial::new(name)))
+        Partial::new(other).into_term()
+    }
+
+    /// Add constraint that this partial must be in another.
+    pub fn contained_in_partial(&mut self, other: Partial) {
+        let in_op = op!(In, self.variable_term(), term!(other.variable));
+        self.add_constraint(in_op);
     }
 
     pub fn compare(&mut self, operator: Operator, operand: Operand) {
@@ -918,28 +913,22 @@ mod test {
         let p = Polar::new();
         p.load_str(
             r#"f(x) if y in x.values;
-               g(x, y) if y in x.values;
+               g(x, y) if y in x.values and y > 0;
                h(x) if y in x.values and (y.bar = 1 and y.baz = 2) or y.bar = 3;"#,
         )?;
 
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
-        // TODO (dhatch): This doesn't work now, but ultimately this should have
-        // no constraints since nothing is added to `y`.
+        let mut q = p.new_query_from_term(term!(call!("f", [partial!("x")])), false);
         assert_partial_expressions!(
             next_binding(&mut q)?,
-            "a" => "() in _this.values",
-            "_y_12" => ""
+            "x" => "() in _this.values"
         );
         assert_query_done!(q);
 
-        // Not sure about this one, where there's an output binding.  There are still
-        // no constraints on b.
-        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a"), partial!("b")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [partial!("x"), partial!("y")])), false);
         assert_partial_expressions!(
             next_binding(&mut q)?,
-            "a" => "() in _this.values",
-            "b" => "",
-            "_y_17" => ""
+            "x" => "",
+            "y" => "_this in () and _this > 0"
         );
         assert_query_done!(q);
 

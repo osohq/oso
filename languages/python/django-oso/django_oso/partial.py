@@ -1,4 +1,5 @@
 from django.db.models import Q, Model, Count, Subquery
+from django.db.models.query import QuerySet
 from django.apps import apps
 
 from polar.expression import Expression
@@ -104,7 +105,9 @@ def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
         return COMPARISONS[expr.operator]("__".join(path + left_path), right)
     else:
         assert left == Variable("_this")
-        if not isinstance(right, model):
+        if isinstance(right, QuerySet):
+            return Subquery(right.values("pk"))
+        elif not isinstance(right, model):
             return FALSE_FILTER
 
         if expr.operator not in ("Eq", "Unify"):
@@ -119,24 +122,31 @@ def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
 def in_expr(expr: Expression, model: Model, path=(), **kwargs):
     assert expr.operator == "In"
     (left, right) = expr.args
-    right_path = dot_path(right)
-    assert right_path, "RHS of in must be a dot lookup"
-    right_path = path + right_path
 
-    if isinstance(left, Expression):
-        if left.operator == "And" and not left.args:
-            # An unconstrained partial is in a list if the list is non-empty.
-            count = Count("__".join(right_path))
-            filter = COMPARISONS["Gt"]("__".join(right_path + ("count",)), 0)
-            subquery = Subquery(
-                model.objects.annotate(count).filter(filter).values("pk")
-            )
+    if isinstance(right, Expression) and right.operator != "Dot":
+        right = translate_expr(right, model, path=path, **kwargs)
 
-            return contained_in("pk", subquery)
-        else:
-            return translate_expr(left, model, path=right_path, **kwargs)
+    if isinstance(right, Subquery):
+        return contained_in("pk", right)
     else:
-        return COMPARISONS["Unify"]("__".join(right_path), left)
+        right_path = dot_path(right)
+        assert right_path, "RHS of in must be a dot lookup"
+        right_path = path + right_path
+
+        if isinstance(left, Expression):
+            if left.operator == "And" and not left.args:
+                # An unconstrained partial is in a list if the list is non-empty.
+                count = Count("__".join(right_path))
+                filter = COMPARISONS["Gt"]("__".join(right_path + ("count",)), 0)
+                subquery = Subquery(
+                    model.objects.annotate(count).filter(filter).values("pk")
+                )
+
+                return contained_in("pk", subquery)
+            else:
+                return translate_expr(left, model, path=right_path, **kwargs)
+        else:
+            return COMPARISONS["Unify"]("__".join(right_path), left)
 
 
 def not_expr(expr: Expression, model: Model, **kwargs):

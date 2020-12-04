@@ -19,18 +19,20 @@ from .expression import Expression, Pattern
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
-    def __init__(self, polar, classes={}, instances={}):
+    def __init__(self, polar, classes={}, instances={}, to_polar_hooks=[]):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
         self.classes = classes.copy()
         self.instances = instances.copy()
+        self.to_polar_hooks = to_polar_hooks.copy()
 
     def copy(self):
         """Copy an existing cache."""
         return type(self)(
             self.ffi_polar,
-            classes=self.classes.copy(),
-            instances=self.instances.copy(),
+            classes=self.classes,
+            instances=self.instances,
+            to_polar_hooks=self.to_polar_hooks,
         )
 
     def get_class(self, name):
@@ -124,6 +126,12 @@ class Host:
                 f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
             )
 
+    def to_polar_hook(self, v):
+        for fn in self.to_polar_hooks:
+            x = fn(v, self)
+            if x:
+                return self.to_polar(x)
+
     def to_polar(self, v):
         """Convert a Python object to a Polar term."""
         if type(v) == bool:
@@ -158,6 +166,9 @@ class Host:
         elif isinstance(v, Partial):
             val = {"Partial": v.to_polar()}
         else:
+            hook_val = self.to_polar_hook(v)
+            if hook_val:
+                return hook_val
             val = {
                 "ExternalInstance": {
                     "instance_id": self.cache_instance(v),
