@@ -1485,7 +1485,7 @@ impl PolarVirtualMachine {
                             s.chars()
                                 .map(|c| c.to_string())
                                 .map(Value::String)
-                                .filter(|c| !is_ground || term.value() == c)
+                                .filter(|c| !is_ground || c == value)
                                 .map(|c| {
                                     vec![Goal::Unify {
                                         left: item.clone(),

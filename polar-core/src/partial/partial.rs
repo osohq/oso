@@ -88,16 +88,16 @@ impl Partial {
 
     /// Add an isa constraint of the form `_this matches other`.
     ///
-    /// Returns:
+    /// ## Returns
     ///
-    ///     - Some(Runnable) if a compatibility check needs to be performed.
-    ///       If the runnable succeeds, this partial should be used and the
-    ///       query should continue.
+    /// - Some(Runnable) if a compatibility check needs to be performed.
+    ///   If the runnable succeeds, this partial should be used and the
+    ///   query should continue.
     ///
-    ///       If the runnable fails, the query should backtrack because the
-    ///       existing constraints are incompatible with the proposed constraint.
-    ///     - None if no compatibility check needs to be performed and the partial
-    ///       is compatible with the new constraint.
+    ///   If the runnable fails, the query should backtrack because the
+    ///   existing constraints are incompatible with the proposed constraint.
+    /// - None if no compatibility check needs to be performed and the partial
+    ///   is compatible with the new constraint.
     pub fn isa(&mut self, other: Term) -> Option<Box<dyn Runnable>> {
         match other.value() {
             Value::Pattern(Pattern::Dictionary(fields)) => {
