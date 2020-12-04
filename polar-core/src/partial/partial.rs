@@ -115,7 +115,7 @@ impl Partial {
 
     /// Add an isa constraint of the form `_this matches other`.
     ///
-    /// Returns:
+    /// ## Returns
     ///
     /// - Some(Runnable) if a compatibility check needs to be performed.
     ///   If the runnable succeeds, this partial should be used and the
