@@ -1868,4 +1868,9 @@ fn test_builtin_iterables() {
         "x",
         vec![value!(1), value!(2)],
     );
+
+    qeval(&mut p, r#""b" in "abc""#);
+    qnull(&mut p, r#""d" in "abc""#);
+    qeval(&mut p, r#"forall(x in "abc", x in "abacus")"#);
+    qnull(&mut p, r#"forall(x in "abcd", x in "abacus")"#);
 }
