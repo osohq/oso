@@ -78,28 +78,34 @@ def test_authorize_model_basic(post_fixtures):
     )
 
     authorize_filter = authorize_model(None, Post, actor="user", action="read")
-    assert str(authorize_filter) == "(AND: ('access_level', 'public'))"
+    assert (
+        str(authorize_filter)
+        == "(AND: (NOT (AND: ('pk__in', []))), ('access_level', 'public'))"
+    )
     posts = Post.objects.filter(authorize_filter)
     assert posts.count() == 5
     assert posts.all()[0].contents == "foo public post"
 
     authorize_filter = authorize_model(None, Post, actor="user", action="write")
-    assert str(authorize_filter) == "(AND: ('access_level', 'private'))"
+    assert (
+        str(authorize_filter)
+        == "(AND: (NOT (AND: ('pk__in', []))), ('access_level', 'private'))"
+    )
     posts = Post.objects.filter(authorize_filter)
     assert posts.count() == 4
     assert posts.all()[0].contents == "foo private post"
     assert posts.all()[1].contents == "foo private post 2"
 
     authorize_filter = authorize_model(None, Post, actor="admin", action="read")
-    assert str(authorize_filter) == "(AND: )"
+    assert str(authorize_filter) == "(NOT (AND: ('pk__in', [])))"
     posts = Post.objects.filter(authorize_filter)
     assert posts.count() == 9
 
     authorize_filter = authorize_model(None, Post, actor="moderator", action="read")
     expected = (
         "(OR: ("
-        + "AND: ('access_level', 'private'), ('needs_moderation', True)), "
-        + "(AND: ('access_level', 'public'), ('needs_moderation', True)))"
+        + "AND: (NOT (AND: ('pk__in', []))), ('access_level', 'private'), ('needs_moderation', True)), "
+        + "(AND: (NOT (AND: ('pk__in', []))), ('access_level', 'public'), ('needs_moderation', True)))"
     )
     assert str(authorize_filter) == expected
     posts = Post.objects.filter(authorize_filter)
@@ -502,7 +508,7 @@ def test_empty_constraints_in(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     assert str(authorize_filter).startswith(
-        "(AND: ('pk__in', <django.db.models.expressions.Subquery object at "
+        "(AND: (NOT (AND: ('pk__in', []))), ('pk__in', <django.db.models.expressions.Subquery object at "
     )
     posts = Post.objects.filter(authorize_filter)
     assert (
@@ -531,7 +537,10 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
     )
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
-    assert str(authorize_filter) == "(AND: ('tags__name', 'bloop'))"
+    assert (
+        str(authorize_filter)
+        == "(AND: (NOT (AND: ('pk__in', []))), ('tags__name', 'bloop'))"
+    )
     posts = Post.objects.filter(authorize_filter)
     assert (
         str(posts.query)

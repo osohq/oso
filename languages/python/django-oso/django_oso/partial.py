@@ -4,10 +4,12 @@ from django.apps import apps
 from polar.expression import Expression
 from polar.exceptions import UnsupportedError
 from polar.partial import dot_path
+from oso import Variable
 
 from .oso import django_model_name
 
 
+TRUE_FILTER = ~Q(pk__in=[])
 FALSE_FILTER = Q(pk__in=[])
 
 COMPARISONS = {
@@ -50,11 +52,7 @@ def partial_to_query_filter(partial: Expression, model: Model, **kwargs):
         Q(is_private=False)
     """
 
-    q = translate_expr(partial, model, **kwargs)
-    if q is None:
-        return Q()
-
-    return q
+    return translate_expr(partial, model, **kwargs)
 
 
 def translate_expr(expr: Expression, model: Model, **kwargs):
@@ -69,17 +67,20 @@ def translate_expr(expr: Expression, model: Model, **kwargs):
         return isa_expr(expr, model, **kwargs)
     elif expr.operator == "In":
         return in_expr(expr, model, **kwargs)
+    elif expr.operator == "Not":
+        return not_expr(expr, model, **kwargs)
     else:
-        raise UnsupportedError(f"Unimplemented partial operator {expr.operator}")
+        raise UnsupportedError(f"Unsupported partial expression: {expr}")
 
 
 def isa_expr(expr: Expression, model: Model, **kwargs):
+    assert expr.operator == "Isa"
     (left, right) = expr.args
     for attr in dot_path(left):
         model = getattr(model, attr).field.related_model
     constraint_type = apps.get_model(django_model_name(right.tag))
     assert not right.fields, "Unexpected fields in matches expression"
-    return None if issubclass(model, constraint_type) else FALSE_FILTER
+    return TRUE_FILTER if issubclass(model, constraint_type) else FALSE_FILTER
 
 
 def and_expr(expr: Expression, model: Model, **kwargs):
@@ -87,25 +88,23 @@ def and_expr(expr: Expression, model: Model, **kwargs):
     q = Q()
     for arg in expr.args:
         expr = translate_expr(arg, model, **kwargs)
-        # TODO: Remove once we can perform method selection on partials.
-        # shortcutting filter: if any term is false, the whole
-        # AND expression is false
+        # TODO: Remove once we can perform method selection in the presence of partials.
+        # Short-circuit: if any expr is false, the whole AND is false.
         if expr == FALSE_FILTER:
             return FALSE_FILTER
-        elif expr:
-            q = q & expr
+        q &= expr
     return q
 
 
 def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
+    assert expr.operator in COMPARISONS
     (left, right) = expr.args
     left_path = dot_path(left)
     if left_path:
         return COMPARISONS[expr.operator]("__".join(path + left_path), right)
     else:
-        if isinstance(right, model):
-            right = right.pk
-        else:
+        assert left == Variable("_this")
+        if not isinstance(right, model):
             return FALSE_FILTER
 
         if expr.operator not in ("Eq", "Unify"):
@@ -114,7 +113,7 @@ def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
                 " with `=` or `==`"
             )
 
-        return COMPARISONS[expr.operator]("__".join(path + ("pk",)), right)
+        return COMPARISONS[expr.operator]("__".join(path + ("pk",)), right.pk)
 
 
 def in_expr(expr: Expression, model: Model, path=(), **kwargs):
@@ -138,3 +137,9 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
             return translate_expr(left, model, path=right_path, **kwargs)
     else:
         return COMPARISONS["Unify"]("__".join(right_path), left)
+
+
+def not_expr(expr: Expression, model: Model, **kwargs):
+    assert expr.operator == "Not"
+    assert expr.args[0].operator == "Isa"
+    return ~translate_expr(expr.args[0], model, **kwargs)

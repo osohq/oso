@@ -15,20 +15,47 @@ pub struct Partial {
 
 /// Invert operators.
 fn invert_operation(Operation { operator, args }: Operation) -> Operation {
-    Operation {
-        operator: match operator {
-            Operator::And => Operator::Or,
-            Operator::Or => Operator::And,
-            Operator::Unify | Operator::Eq => Operator::Neq,
-            Operator::Neq => Operator::Unify,
-            Operator::Gt => Operator::Leq,
-            Operator::Geq => Operator::Lt,
-            Operator::Lt => Operator::Geq,
-            Operator::Leq => Operator::Gt,
-            Operator::Debug | Operator::Print | Operator::New | Operator::Dot => operator,
-            _ => todo!("negate {:?}", operator),
+    match operator {
+        Operator::And => Operation {
+            operator: Operator::Or,
+            args,
         },
-        args,
+        Operator::Or => Operation {
+            operator: Operator::And,
+            args,
+        },
+        Operator::Unify | Operator::Eq => Operation {
+            operator: Operator::Neq,
+            args,
+        },
+        Operator::Neq => Operation {
+            operator: Operator::Unify,
+            args,
+        },
+        Operator::Gt => Operation {
+            operator: Operator::Leq,
+            args,
+        },
+        Operator::Geq => Operation {
+            operator: Operator::Lt,
+            args,
+        },
+        Operator::Lt => Operation {
+            operator: Operator::Geq,
+            args,
+        },
+        Operator::Leq => Operation {
+            operator: Operator::Gt,
+            args,
+        },
+        Operator::Debug | Operator::Print | Operator::New | Operator::Dot => {
+            Operation { operator, args }
+        }
+        Operator::Isa => Operation {
+            operator: Operator::Not,
+            args: vec![term!(op!(Isa, args[0].clone(), args[1].clone()))],
+        },
+        _ => todo!("negate {:?}", operator),
     }
 }
 
@@ -1025,6 +1052,7 @@ mod test {
         p.load_str("f(x, y) if x in y.a.b.c;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "1 in _this.a.b.c");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -1054,6 +1082,29 @@ mod test {
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d = 1");
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d.e = 1");
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d.e.f = 1");
+        assert_query_done!(q);
+        Ok(())
+    }
+
+    #[test]
+    fn test_partial_negated_isa() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"f(x) if (not x matches Foo{} or not g(x)) and x = 1;
+               g(_: Bar);"#,
+        )?;
+        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q)?,
+            "a",
+            "not _this matches Foo{} and _this = 1"
+        );
+        assert_partial_expression!(
+            next_binding(&mut q)?,
+            "a",
+            "not _this matches Bar{} and _this = 1"
+        );
+        assert_query_done!(q);
         Ok(())
     }
 }
