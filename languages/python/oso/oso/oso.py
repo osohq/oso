@@ -9,8 +9,9 @@ class Oso(Polar):
     """The central object to manage application policy state, e.g.
     the policy data, and verify requests.
 
+    >>> from oso import Oso
     >>> Oso()
-    <oso.Oso object at 0x7fad57305100>
+    <oso.oso.Oso object at 0x...>
 
     """
 

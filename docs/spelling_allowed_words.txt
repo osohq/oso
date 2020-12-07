@@ -63,6 +63,7 @@ precommit
 args
 moduli
 enumerables
+mixin
 
 ## Product names
 sqlite

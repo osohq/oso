@@ -6,6 +6,16 @@ The ``django-oso`` library can enforce policies over Django models. This allows
 policies to control access to collections of objects without needing to
 authorize each object individually.
 
+Installation
+============
+
+The oso Django integration is available on `PyPI`_ and can be installed using
+``pip``::
+
+    $ pip install django-oso
+
+.. _PyPI: https://pypi.org/project/django-oso/
+
 Usage
 =====
 
