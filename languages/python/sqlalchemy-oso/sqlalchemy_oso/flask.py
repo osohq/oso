@@ -4,7 +4,7 @@
 """
 
 try:
-    from flask import _app_ctx_stack
+    from flask import _app_ctx_stack  # type: ignore
     from flask_sqlalchemy import SQLAlchemy, SignallingSession
 except ImportError:
     import warnings
