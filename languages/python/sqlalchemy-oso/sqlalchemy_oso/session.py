@@ -96,7 +96,7 @@ def scoped_session(get_oso, get_user, get_action, scopefunc=None, **kwargs):
     :param scopefunc: Additional scope function to use for scoping sessions.
                       Output will be combined with the oso, action and user objects.
     :param kwargs: Additional keyword arguments to pass to
-                   authorized_sessionmaker.
+                   :py:func:`authorized_sessionmaker`.
 
     .. _scoped_session: https://docs.sqlalchemy.org/en/13/orm/contextual.html
     """
