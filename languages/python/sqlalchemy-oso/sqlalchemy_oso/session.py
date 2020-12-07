@@ -1,4 +1,6 @@
 """SQLAlchemy session classes and factories for oso."""
+from typing import Optional
+
 from sqlalchemy import event
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm import sessionmaker, Session
@@ -15,7 +17,7 @@ def _before_compile(query):
     return _authorize_query(query)
 
 
-def _authorize_query(query: Query) -> Query:
+def _authorize_query(query: Query) -> Optional[Query]:
     """Authorize an existing query with an oso instance, user and action."""
     # Get the query session.
     session = query.session
@@ -135,7 +137,7 @@ class AuthorizedSessionBase(object):
         self._oso_user = user
         self._oso_action = action
 
-        super().__init__(**options)
+        super().__init__(**options)  # type: ignore
 
     @property
     def oso_context(self):
