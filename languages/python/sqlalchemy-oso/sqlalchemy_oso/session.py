@@ -66,7 +66,6 @@ def authorized_sessionmaker(get_oso, get_user, get_action, class_=None, **kwargs
         class_ = Session
 
     # oso, user and action must remain unchanged for the entire session.
-    # If they change before a query runs, an error is thrown.
     # This is to prevent objects that are unauthorized from ending up in the
     # session's identity map.
     class Sess(AuthorizedSessionBase, class_):
