@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1607131339621,
+  "lastUpdate": 1607361677398,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -17061,6 +17061,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 6249,
             "range": "± 527",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2a5797b0f44bb4d7bbac8e681be4ae96f1658f3f",
+          "message": "Improve high level API used by SQLAlchemy adapter. (#569)",
+          "timestamp": "2020-12-07T12:09:26-05:00",
+          "tree_id": "3f5079ce22fad3756eef6323b0d7cf294a8fb4af",
+          "url": "https://github.com/osohq/oso/commit/2a5797b0f44bb4d7bbac8e681be4ae96f1658f3f"
+        },
+        "date": 1607361675511,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 45364,
+            "range": "± 2221",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 1867102,
+            "range": "± 30979",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 8970464,
+            "range": "± 148118",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 17944032,
+            "range": "± 284328",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 869,
+            "range": "± 41",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2620,
+            "range": "± 78",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 68760,
+            "range": "± 2087",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 514435,
+            "range": "± 12243",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18076,
+            "range": "± 747",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17867,
+            "range": "± 794",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17925,
+            "range": "± 712",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18177,
+            "range": "± 615",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16340,
+            "range": "± 624",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6215,
+            "range": "± 529",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 7362,
+            "range": "± 1223",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 8969,
+            "range": "± 355",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 21676,
+            "range": "± 2285",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 5889,
+            "range": "± 134",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 11609,
+            "range": "± 362",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 7213,
+            "range": "± 175",
             "unit": "ns/iter"
           }
         ]
