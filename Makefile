@@ -71,7 +71,7 @@ fmt: java-fmt
 clippy:
 	cargo clippy --all-features --all-targets -- -D warnings
 
-lint: clippy
+lint: clippy python-build python-flask-build python-sqlalchemy-build python-django-build
 	$(MAKE) -C languages/python lint
 	$(MAKE) -C languages/ruby lint typecheck
 	$(MAKE) -C languages/js lint
