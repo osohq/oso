@@ -285,3 +285,14 @@ def test_null_with_partial(engine, oso):
         + "posts.needs_moderation AS posts_needs_moderation \nFROM posts \nWHERE posts.contents IS NULL"
     )
     assert posts.count() == 0
+
+
+def test_regular_session(engine, oso, fixture_data):
+    """Test that a regular session doesn't apply authorization."""
+    from sqlalchemy.orm import Session
+
+    session = Session(bind=engine)
+    posts = session.query(Post)
+
+    # No posts would be returned if authorization was applied.
+    assert posts.count() == 9
