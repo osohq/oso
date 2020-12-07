@@ -59,7 +59,7 @@ export function tempFileGx(): Promise<string> {
   return tempFile('g(1);g(2);g(3);', 'g.polar');
 }
 
-export function truncate(file: string): Promise<string> {
+export function truncate(file: string): Promise<void> {
   return new Promise((res, rej) =>
     _truncate(file, err => (err === null ? res() : rej(err)))
   );
