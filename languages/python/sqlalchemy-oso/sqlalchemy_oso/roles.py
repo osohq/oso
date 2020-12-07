@@ -5,9 +5,91 @@ from sqlalchemy.orm import relationship, scoped_session, backref
 from sqlalchemy import inspect
 
 
+ROLE_CLASSES = []
+
+
+def enable_roles(oso):
+    global ROLE_CLASSES
+
+    policy = """
+    # RBAC BASE POLICY
+
+    ## Top-level RBAC allow rule
+
+    allow(user, action: String, resource) if
+        rbac_allow(user, action, resource);
+    
+    ### The association between the resource roles and the requested resource is outsourced from the rbac_allow
+    rbac_allow(user, action, resource) if
+        resource_role_applies_to(resource, role_resource) and
+        user_in_role(user, role, role_resource) and
+        role_allow(role, action, resource);
+    
+    # RESOURCE-ROLE RELATIONSHIPS
+
+    ## These rules allow roles to apply to resources other than those that they are scoped to.
+    ## The most common example of this is nested resources, e.g. Repository roles should apply to the Issues
+    ## nested in that repository.
+
+    ### A resource's roles applies to itself
+    resource_role_applies_to(role_resource, role_resource);
+
+    # ROLE-ROLE RELATIONSHIPS
+
+    ## Role Hierarchies
+
+    ### Grant a role permissions that it inherits from a more junior role
+    role_allow(role, action, resource) if
+        inherits_role(role, inherited_role) and
+        role_allow(inherited_role, action, resource);
+
+    ### Helper to determine relative order or roles in a list
+    inherits_role_helper(role, inherited_role, role_order) if
+        ([first, *rest] = role_order and
+        role = first and
+        inherited_role in rest) or
+        ([first, *rest] = role_order and
+        inherits_role_helper(role, inherited_role, rest));
+    """
+
+    for role_model in ROLE_CLASSES:
+        User = role_model["user_model"].__name__
+        Resource = role_model["resource_model"].__name__
+        Group = role_model["group_model"]
+        if Group:
+            Group = Group.__name__
+        Role = role_model["role_model"]
+
+        policy += f"""
+        user_in_role(user: {User}, role, resource: {Resource}) if
+            session = OsoSession.get() and
+            role in session.query({Role}).filter({Role}.users.any({User}.id.__eq__(user.id))) and
+            role.{Resource.lower()}.id = resource.id;
+
+        inherits_role(role: {Role}, inherited_role) if
+            {Resource.lower()}_role_order(role_order) and
+            inherits_role_helper(role.name, inherited_role_name, role_order) and
+            inherited_role = new {Role}(name: inherited_role_name, {Resource.lower()}: role.{Resource.lower()});
+        """
+
+    # @TODO: Group
+    oso.load_str(policy)
+
+
 def resource_role_class(
     declarative_base, user_model, resource_model, roles, group_model=None
 ):
+    global ROLE_CLASSES
+    ROLE_CLASSES.append(
+        {
+            "user_model": user_model,
+            "resource_model": resource_model,
+            "group_model": group_model,
+            # @NOTE: Must name role model like this for now.
+            "role_model": resource_model.__name__ + "Role",
+        }
+    )
+
     # many-to-many relationship with users
     user_join_table = Table(
         f"{resource_model.__name__.lower()}_roles_users",
