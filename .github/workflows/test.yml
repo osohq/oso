@@ -50,6 +50,8 @@ jobs:
       - name: Lint Python code
         working-directory: "languages/python"
         run: make lint
+        env:
+          MYPYPATH: "oso"
 
       ## Check Ruby
       - name: Install Ruby + gems
