@@ -140,7 +140,7 @@ jobs:
 
       # Python lint requires python build.
       - name: Lint Python code
-        run: make -C lanuages/python lint
+        run: make -C languages/python lint
 
       ## Test + check docs
       ## (easier to do here once all above deps are installed)
