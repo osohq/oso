@@ -1,11 +1,13 @@
-from sqlalchemy.types import Integer, String, DateTime
+from typing import Any, List
+
+from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Table, Column, ForeignKey
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import relationship, scoped_session, backref
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy import inspect
 
 
-ROLE_CLASSES = []
+ROLE_CLASSES: List[Any] = []
 
 
 def enable_roles(oso):
@@ -18,13 +20,13 @@ def enable_roles(oso):
 
     allow(user, action: String, resource) if
         rbac_allow(user, action, resource);
-    
+
     ### The association between the resource roles and the requested resource is outsourced from the rbac_allow
     rbac_allow(user, action, resource) if
         resource_role_applies_to(resource, role_resource) and
         user_in_role(user, role, role_resource) and
         role_allow(role, action, resource);
-    
+
     # RESOURCE-ROLE RELATIONSHIPS
 
     ## These rules allow roles to apply to resources other than those that they are scoped to.
@@ -264,7 +266,6 @@ def add_user_role(session, user, resource, role_name):
     # TODO: check input for valid role name
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
-    user_model = type(user)
 
     # try to get role
     role = (
@@ -292,8 +293,6 @@ def delete_user_role(session, user, resource, role_name=None):
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
     user_model = type(user)
-    resource_name = resource_model.__name__.lower()
-    kwargs = {"name": role_name, resource_name: resource, "users": [user]}
 
     role_query = (
         session.query(role_model)
