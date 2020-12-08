@@ -1,0 +1,109 @@
+=====
+0.9.0
+=====
+
+**Release date:** 2020-12-08
+
+Breaking changes
+================
+
+.. warning:: This release contains breaking changes. Be sure
+   to follow migration steps before upgrading.
+
+Simplified ``sqlalchemy-oso`` session creation
+----------------------------------------------
+
+``sqlalchemy-oso`` now associates the current oso instance, user to authorize,
+and action to authorize with
+:py:class:`sqlalchemy_oso.session.AuthorizedSession`. This class manages
+authorization instead of the removed
+``sqlalchemy_oso.hooks.make_authorized_query_cls``.
+
+- The ``sqlalchemy_oso.hooks`` module has been renamed to
+  ``sqlalchemy_oso.session``. Update any imports to ``sqlalchemy_oso.session``.
+- The ``sqlalchemy_oso.hooks.make_authorized_query_cls`` function has been
+  removed. Use the session API instead.
+  (:py:func:`sqlalchemy_oso.authorized_sessionmaker`).
+- The ``sqlalchemy_oso.authorized_sessionmaker`` function no longer accepts
+  extra positional arguments. Use keyword arguments to pass options to the
+  session.
+
+Removed "extras"
+----------------
+
+The oso library previously had some additional default supported classes:
+``Http`` and ``Pathmapper``. These have been deprecated and removed.
+
+To write policies over HTTP requests, either register the suitable
+application class directly, or use a framework integration (e.g.
+``flask-oso`` or ``django-oso``) which will do this for you
+automatically.
+
+New features
+============
+
+``PolarClass`` implemented for ``uuid`` crate
+---------------------------------------------
+
+``PolarClass`` is now implemented for `version 0.6 of the uuid crate
+<https://docs.rs/uuid/0.6/uuid/>`_ behind the optional ``uuid-06`` feature
+flag. Version 0.6 was chosen for compatibility with `Diesel
+<https://crates.io/crates/diesel>`_.
+
+Thanks to `John Halbert <https://github.com/johnhalbert>`_ for the
+contribution!
+
+Improved ``sqlalchemy-oso`` support for usage with ``flask_sqlalchemy``
+-----------------------------------------------------------------------
+
+The ``sqlalchemy-oso`` library now has a built-in wrapper class that makes it
+easier to use with the popular `Flask-SQLAlchemy
+<https://pypi.org/project/Flask-SQLAlchemy/>`_ library. See
+:py:class:`sqlalchemy_oso.flask.AuthorizedSQLAlchemy` for more information.
+
+``scoped_session`` support for ``sqlalchemy-oso``
+-------------------------------------------------
+
+The new :py:func:`sqlalchemy_oso.session.scoped_session` session proxy can be
+used instead of SQLAlchemy's built-in scoped_session_. This creates a session
+scoped to the current oso instance, user and action.
+
+.. _scoped_session: https://docs.sqlalchemy.org/en/13/orm/contextual.html#sqlalchemy.orm.scoping.scoped_session
+
+Initial support for built-in roles in ``sqlalchemy-oso``
+--------------------------------------------------------
+
+This release includes the first steps towards out-of-the-box role-based access
+control (RBAC) support in the ``sqlalchemy-oso`` integration. New to the
+integration is an API for easily creating roles scoped to a resource and
+assigning them to users of your application. You are then able to write RBAC
+rules over those managed roles.
+
+We will be iterating heavily on this feature over the coming weeks, but we
+would love to hear any feedback from early testers.
+
+Other bugs & improvements
+=========================
+
+- The Django ``AnonymousUser`` class is available in polar policies under the
+  name ``auth::AnonymousUser``. This name is preferable to the previous fully
+  qualified name because it matches the registered name of the ``User`` model
+  (``auth::User``).
+- The ``django-oso`` library no longer prints to stdout when loading policy
+  files. Instead, the Python ``logging`` module is used.
+- Relaxed the requirements for the Python ``oso`` and ``django-oso`` libraries.
+  These now require ``cffi~=1.14`` and ``django>=2.2``, respectively.
+
+  Thanks to `Mike D. <https://github.com/devmonkey22>`_ for suggesting /
+  implementing the above three improvements!
+- ``matches`` operations on fields of partials are now handled correctly in the
+  SQLAlchemy list filtering adapter. Previously these operations would result
+  in an error.
+- The SQLAlchemy list filtering adapter now supports all comparisons. Previously
+  comparisons other than ``==`` or ``=`` would cause an error.
+- The Django list filtering adapter now fully supports use of the ``not``
+  operator in policies.
+- For the Django and SQLAlchemy list filtering adapters, a rule like ``allow(_,
+  _, post: Post) if _tag in post.tags;`` now translates into a constraint that
+  the post must have at least 1 tag.
+- Fixed bug where checking if a character is in a string would fail incorrectly.

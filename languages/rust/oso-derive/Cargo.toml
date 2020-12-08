@@ -6,7 +6,7 @@ license = "Apache-2.0"
 homepage = "https://github.com/osohq/oso"
 readme = "README.md"
 
-version = "0.8.2"
+version = "0.9.0"
 
 edition = "2018"
 

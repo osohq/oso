@@ -64,6 +64,7 @@ args
 moduli
 enumerables
 mixin
+stdout
 
 ## Product names
 sqlite

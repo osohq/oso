@@ -1,5 +1,5 @@
 django~=3.0
-django-oso==0.4.1
-oso==0.8.2
+django-oso==0.5.0
+oso==0.9.0
 pytest==5.3.5
 pytest-django==3.9.0
