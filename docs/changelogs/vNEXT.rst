@@ -20,18 +20,6 @@ Breaking change 1
 
 Link to migration guide
 
-
-Removed "extras"
-----------------
-
-The oso library previously had some additional default supported classes:
-``Http`` and ``Pathmapper``. These have been deprecated and removed.
-
-To write policies over HTTP requests, either register the suitable
-application class directly, or use a framework integration (e.g.
-``flask-oso`` or ``django-oso``) which will do this for you
-automatically.
-
 New features
 ============
 
