@@ -61,6 +61,15 @@ scoped to the current oso instance, user and action.
 Other bugs & improvements
 =========================
 
+- The Django ``AnonymousUser`` class is available in polar policies under the
+  name ``auth::AnonymousUser``. This name is preferable to the previously used
+  fully qualified name because it matches the registered name of the ``User``
+  model (``auth::User``).
+- The ``django-oso`` library no longer prints to stdout when loading policy
+  files. Instead, the Python ``logging`` module is used.
+
+  Thanks to `Mike D. <https://github.com/devmonkey22>`_ for both of the above
+  improvements!
 - ``matches`` operations on fields of partials are now handled correctly in the
   SQLAlchemy adapter. Previously these operations would result in an error.
 - The SQLAlchemy list filtering adapter now supports all comparisons. Previously
