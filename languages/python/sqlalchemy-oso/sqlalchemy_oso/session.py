@@ -31,7 +31,10 @@ def set_get_session(oso: Oso, get_session_func):
     :type [get_session_func]: [lambda]
 
     The session can be accessed from polar via the OsoSession constant.
-    eg: OsoSession.get().query(...)
+    E.g.,
+        ```
+        OsoSession.get().query(...)
+        ```
     """
     _OsoSession.set_get_session(get_session_func)
     oso.register_constant(_OsoSession, "OsoSession")
