@@ -63,9 +63,9 @@ Other bugs & improvements
 =========================
 
 - The Django ``AnonymousUser`` class is available in polar policies under the
-  name ``auth::AnonymousUser``. This name is preferable to the previously used
-  fully qualified name because it matches the registered name of the ``User``
-  model (``auth::User``).
+  name ``auth::AnonymousUser``. This name is preferable to the previous fully
+  qualified name because it matches the registered name of the ``User`` model
+  (``auth::User``).
 - The ``django-oso`` library no longer prints to stdout when loading policy
   files. Instead, the Python ``logging`` module is used.
 
@@ -78,8 +78,8 @@ Other bugs & improvements
 - The Django list filtering adapter now fully supports use of the ``not``
   operator in policies.
 - Fixed bug where checking if a character is in a string would fail incorrectly.
-- Relaxed the requirements for Python ``oso`` and ``django-oso`` libraries.
-  These now require ``cffi~=1.14`` and ``django>=2.2`` respectively.
+- Relaxed the requirements for the Python ``oso`` and ``django-oso`` libraries.
+  These now require ``cffi~=1.14`` and ``django>=2.2``, respectively.
 - For the Django and SQLAlchemy list filtering adapters, a rule like ``allow(_,
   _, post: Post) if _tag in post.tags;`` now translates into a constraint that
   the post must have at least 1 tag.
