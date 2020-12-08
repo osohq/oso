@@ -35,8 +35,10 @@ Removed "extras"
 The oso library previously had some additional default supported classes:
 ``Http`` and ``Pathmapper``. These have been deprecated and removed.
 
-Instead, you should register suitable classes directly. For example,
-registering the ``werkzeug.wrappers.Request`` object for Flask applications.
+To write policies over HTTP requests, either register the suitable
+application class directly, or use a framework integration (e.g.
+``flask-oso`` or ``django-oso``) which will do this for you
+automatically.
 
 New features
 ============
