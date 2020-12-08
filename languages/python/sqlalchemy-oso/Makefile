@@ -1,7 +1,7 @@
 .PHONY: build test test-requirements fmt lint
 build:
 	rm -rf build
-	python setup.py develop
+	pip install -e .[flask]
 
 test-requirements: .make.test-requirements-install
 
