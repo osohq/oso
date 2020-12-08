@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1607448795254,
+  "lastUpdate": 1607457311968,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -17493,6 +17493,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 6169,
             "range": "± 95",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a28dc2a9a8006832577f8302199e56f34baee4e3",
+          "message": "Builtin Roles for sqlalchemy (#579)\n\n* sqlalchemy roles\r\n\r\n* role helpers\r\n\r\n* generate polar\r\n\r\n* linting\r\n\r\n* tests for roles\r\n\r\n* add docstring to enable_roles\r\n\r\n* fix linter problems\r\n\r\n* move OsoSession into lib\r\n\r\n* LINTER FJDSKL\r\n\r\n* make ososession a private class\r\n\r\n* lil example\r\n\r\n* spelling\r\n\r\n* spelling\r\n\r\nCo-authored-by: Leina McDermott <leina05@gmail.com>",
+          "timestamp": "2020-12-08T14:43:12-05:00",
+          "tree_id": "e1127698cac55dd8ca807589b7f8381782f87eb2",
+          "url": "https://github.com/osohq/oso/commit/a28dc2a9a8006832577f8302199e56f34baee4e3"
+        },
+        "date": 1607457310030,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 48660,
+            "range": "± 4452",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2020642,
+            "range": "± 101049",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 9811250,
+            "range": "± 660108",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 18587754,
+            "range": "± 433596",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 896,
+            "range": "± 40",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2664,
+            "range": "± 166",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 71385,
+            "range": "± 4028",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 522092,
+            "range": "± 24477",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 19188,
+            "range": "± 1326",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 20137,
+            "range": "± 1776",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18625,
+            "range": "± 1548",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 19446,
+            "range": "± 1153",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16907,
+            "range": "± 1232",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6514,
+            "range": "± 894",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 7927,
+            "range": "± 2011",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 9780,
+            "range": "± 1185",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 25375,
+            "range": "± 7176",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 6156,
+            "range": "± 258",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 11990,
+            "range": "± 997",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 7522,
+            "range": "± 206",
             "unit": "ns/iter"
           }
         ]
