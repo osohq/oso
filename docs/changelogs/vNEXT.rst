@@ -68,3 +68,6 @@ Other bugs & improvements
 - The Django list filtering adapter now fully supports use of the ``not``
   operator in policies.
 - Fixed bug where checking if a character is in a string would fail incorrectly.
+- For the Django and SQLAlchemy list filtering adapters, a rule like ``allow(_,
+  _, post: Post) if _tag in post.tags;`` now translates into a constraint that
+  the post must have at least 1 tag.
