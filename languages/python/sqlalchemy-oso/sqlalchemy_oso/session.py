@@ -11,14 +11,14 @@ from oso import Oso
 from sqlalchemy_oso.auth import authorize_model_filter
 
 
-class OsoSession:
+class _OsoSession:
     @classmethod
     def get(cls):
         return cls._get()
 
     @classmethod
     def set_get_session(cls, get_session):
-        OsoSession._get = get_session
+        _OsoSession._get = get_session
 
 
 def set_get_session(oso: Oso, get_session_func):
@@ -30,8 +30,8 @@ def set_get_session(oso: Oso, get_session_func):
     :param [get_session_func]: [A function that returns a SQLAlchemy session]
     :type [get_session_func]: [lambda]
     """
-    OsoSession.set_get_session(get_session_func)
-    oso.register_constant(OsoSession, "OsoSession")
+    _OsoSession.set_get_session(get_session_func)
+    oso.register_constant(_OsoSession, "OsoSession")
 
 
 @event.listens_for(Query, "before_compile", retval=True)
