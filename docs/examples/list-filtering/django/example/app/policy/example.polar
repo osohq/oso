@@ -7,4 +7,4 @@ allow(user: app::User, "GET", post: app::Post) if
 
 allow(user: app::User, "GET", post: app::Post) if
     post.access_level = "private" and
-    post.creator in user.direct_reports.all();
+    post.creator in user.direct_reports;
