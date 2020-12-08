@@ -16,7 +16,7 @@ class A {
 }
 oso.registerClass(A);
 
-class D extends A { }
+class D extends A {}
 
 namespace B {
   export class C {
