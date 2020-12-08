@@ -28,6 +28,18 @@ authorization instead of the removed
   extra positional arguments. Use keyword arguments to pass options to the
   session.
 
+
+Removed "extras"
+----------------
+
+The oso library previously had some additional default supported classes:
+``Http`` and ``Pathmapper``. These have been deprecated and removed.
+
+To write policies over HTTP requests, either register the suitable
+application class directly, or use a framework integration (e.g.
+``flask-oso`` or ``django-oso``) which will do this for you
+automatically.
+
 New features
 ============
 
@@ -68,3 +80,5 @@ Other bugs & improvements
 - The Django list filtering adapter now fully supports use of the ``not``
   operator in policies.
 - Fixed bug where checking if a character is in a string would fail incorrectly.
+- Relaxed the requirements for Python ``oso`` and ``django-oso`` libraries.
+  These now require ``cffi~=1.14`` and ``django>=2.2`` respectively.

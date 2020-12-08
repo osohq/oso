@@ -19,9 +19,7 @@ class Organization:
     def lookup(cls, id: int):
         """Lookup an organization from the DB by id"""
         record = query_db(
-            "select id, name from organizations where id  = ?",
-            [id],
-            one=True,
+            "select id, name from organizations where id  = ?", [id], one=True,
         )
         if record is None:
             raise NotFound()

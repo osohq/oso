@@ -1,14 +1,14 @@
 # Top-level rules
 
-allow(_user, "GET", http_request: Http) if
-    http_request.path = "/";
+allow(_user, "GET", request: Request) if
+    request.path = "/";
 
-allow(_user: User, "GET", http_request: Http) if
-    http_request.path = "/whoami";
+allow(_user: User, "GET", request: Request) if
+    request.path = "/whoami";
 
 # Allow by path segment
-allow(user, action, http_request: Http) if
-    http_request.path.split("/") = [_, stem, *rest]
+allow(user, action, request: Request) if
+    request.path.split("/") = [_, stem, *rest]
     and allow_by_path(user, action, stem, rest);
 
 ### Expense rules

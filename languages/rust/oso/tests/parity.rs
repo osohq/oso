@@ -109,7 +109,6 @@ fn test() {
     let c = b::C::new("hello".to_string());
     res!(oso.query_rule("testMethodCalls", (a, c)));
     res!(oso.query_rule("testOr", ()));
-    // res!(oso.query_rule("testHttpAndPathMapper", ()));
 
     // Test that cut doesn't return anything.
     res!(@not oso.query_rule("testCut", ()));

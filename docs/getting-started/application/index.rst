@@ -143,7 +143,7 @@ Add oso
         .. literalinclude:: /examples/application/expenses-flask/app/authorization.py
             :caption: :fab:`python` authorization.py
             :language: python
-            :lines: 26-
+            :lines: 25-
 
     .. group-tab:: Java
 
@@ -162,7 +162,7 @@ Add oso
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Application.java
             :caption: :fab:`java` Application.java
             :language: java
-            :lines: 24-32
+            :lines: 24-34
 
 We can now access this ``oso`` instance anywhere in our application, and specify
 which policy files are loaded in the application configuration.
@@ -182,7 +182,7 @@ to allow some users to only have access to certain routes if they are logged in.
         .. literalinclude:: /examples/application/expenses-flask/app/authorization.py
             :caption: :fab:`python` authorization.py
             :language: python
-            :lines: 10-15
+            :lines: 9-14
 
 
     .. group-tab:: Java
@@ -193,7 +193,7 @@ to allow some users to only have access to certain routes if they are logged in.
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Authorizer.java
             :caption: :fab:`java` Authorizer.java
             :language: java
-            :lines: 18-42
+            :lines: 23-36
 
 Now that this is in place, we can write a simple policy to allow anyone
 to call our index route, and see the hello message:
@@ -356,14 +356,14 @@ Authorizing Access to Data
         .. literalinclude:: /examples/application/expenses-flask/app/authorization.py
             :caption: :fab:`python` authorization.py
             :language: python
-            :lines: 18-23
+            :lines: 17-22
 
         ... so authorizing the GET request looks like:
 
         .. literalinclude:: /examples/application/expenses-flask/app/expense.py
             :caption: :fab:`python` expense.py
             :language: python
-            :lines: 55-58
+            :lines: 50-52
 
         Let's give it a try!
 
@@ -383,7 +383,7 @@ Authorizing Access to Data
         .. literalinclude:: /examples/application/expenses-flask/app/organization.py
             :caption: :fab:`python` organization.py
             :language: python
-            :lines: 31-34
+            :lines: 30-32
 
         .. code-block:: console
 
@@ -420,7 +420,7 @@ Authorizing Access to Data
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Authorizer.java
             :caption: :fab:`java` Authorizer.java
             :language: java
-            :lines: 60-70
+            :lines: 49-58
 
         ... so authorizing the GET request looks like:
 
@@ -506,8 +506,8 @@ we want to make sure only authorized expenses are submitted.
         .. literalinclude:: /examples/application/expenses-flask/app/expense.py
             :caption: :fab:`python` expense.py
             :language: python
-            :lines: 61-70
-            :emphasize-lines: 8-9
+            :lines: 56-64
+            :emphasize-lines: 7-8
 
         We could change the first highlighted line to:
 

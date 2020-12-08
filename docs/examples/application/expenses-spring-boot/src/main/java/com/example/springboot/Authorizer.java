@@ -1,12 +1,8 @@
 package com.example.springboot;
 
 import com.osohq.oso.Exceptions.OsoException;
-import com.osohq.oso.Http;
 import com.osohq.oso.Oso;
 import java.sql.SQLException;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -30,21 +26,13 @@ public class Authorizer extends HandlerInterceptorAdapter {
       setCurrentUser(request);
 
       // Authorize the incoming request
-      Http http =
-          new Http(request.getServerName(), request.getServletPath().toString(), getQuery(request));
-      if (!oso.isAllowed(currentUser.get(), request.getMethod(), http)) {
+      if (!oso.isAllowed(currentUser.get(), request.getMethod(), request)) {
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "oso authorization: unauthorized");
       }
     } catch (SQLException e) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found", e);
     }
     return true;
-  }
-
-  /** Get query from request parameters */
-  private Map<String, String> getQuery(HttpServletRequest request) {
-    return request.getParameterMap().entrySet().stream()
-        .collect(Collectors.toMap(Entry::getKey, e -> e.getValue()[0]));
   }
 
   /** Set current user from authorization header */

@@ -544,26 +544,6 @@ public class PolarTest {
   }
 
   /*** TEST OSO ***/
-  @Test
-  public void testPathMapper() throws Exception {
-    Oso oso = new Oso();
-    // Extracts matches into a hash
-    PathMapper mapper = new PathMapper("/widget/{id}");
-    assertTrue(
-        mapper.map("/widget/12").equals(Map.of("id", "12")), "Failed to extract matches to a hash");
-    // maps HTTP resources
-    oso.registerClass(MyClass.class, "MyClass");
-    oso.loadStr(
-        "allow(actor, \"get\", _: Http{path: path}) if "
-            + "new PathMapper(\"/myclass/{id}\").map(path) = {id: id} and "
-            + "allow(actor, \"get\", new MyClass(\"test\", new Integer(id)));\n"
-            + "allow(_actor, \"get\", myclass: MyClass) if myclass.id = 12;");
-    Http http12 = new Http(null, "/myclass/12", null);
-    assertTrue(oso.isAllowed("sam", "get", http12), "Failed to correctly map HTTP resource");
-    Http http13 = new Http(null, "/myclass/13", null);
-    assertFalse(oso.isAllowed("sam", "get", http13), "Failed to correctly map HTTP resource");
-  }
-
   public static class NotIterable {
     public NotIterable() {}
   }

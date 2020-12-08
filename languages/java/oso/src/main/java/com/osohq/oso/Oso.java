@@ -5,10 +5,6 @@ import java.io.IOException;
 public class Oso extends Polar {
   public Oso() {
     super();
-
-    // Register helper classes.
-    registerClass(Http.class, "Http");
-    registerClass(PathMapper.class, "PathMapper");
   }
 
   /** Submit an `allow` query to the Polar knowledge base. */

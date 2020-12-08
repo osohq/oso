@@ -3,6 +3,7 @@ package com.example.springboot;
 import com.osohq.oso.Exceptions;
 import com.osohq.oso.Oso;
 import java.io.IOException;
+import javax.servlet.http.HttpServletRequest;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +28,7 @@ public class Application {
     oso.registerClass(User.class, "User");
     oso.registerClass(Expense.class, "Expense");
     oso.registerClass(Organization.class, "Organization");
+    oso.registerClass(HttpServletRequest.class, "Request");
     oso.loadFile("src/main/oso/authorization.polar");
     return oso;
   }
