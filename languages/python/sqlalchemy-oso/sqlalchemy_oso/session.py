@@ -29,6 +29,9 @@ def set_get_session(oso: Oso, get_session_func):
 
     :param [get_session_func]: [A function that returns a SQLAlchemy session]
     :type [get_session_func]: [lambda]
+
+    The session can be accessed from polar via the OsoSession constant.
+    eg: OsoSession.get().query(...)
     """
     _OsoSession.set_get_session(get_session_func)
     oso.register_constant(_OsoSession, "OsoSession")
