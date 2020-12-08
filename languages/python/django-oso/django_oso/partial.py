@@ -93,10 +93,6 @@ def and_expr(expr: Expression, model: Model, **kwargs):
         # Short-circuit: if any expr is false, the whole AND is false.
         if expr == FALSE_FILTER:
             return FALSE_FILTER
-        elif expr == TRUE_FILTER:
-            continue
-        elif isinstance(expr, Subquery):
-            breakpoint()
         q &= expr
     return q
 
@@ -109,9 +105,7 @@ def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
         return COMPARISONS[expr.operator]("__".join(path + left_path), right)
     else:
         assert left == Variable("_this")
-        if isinstance(right, QuerySet):
-            return Subquery(right.values("pk"))
-        elif not isinstance(right, model):
+        if not isinstance(right, model):
             return FALSE_FILTER
 
         if expr.operator not in ("Eq", "Unify"):
@@ -127,11 +121,8 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
     assert expr.operator == "In"
     (left, right) = expr.args
 
-    if isinstance(right, Expression) and right.operator != "Dot":
-        right = translate_expr(right, model, path=path, **kwargs)
-
-    if isinstance(right, Subquery):
-        return contained_in("pk", right)
+    if isinstance(right, QuerySet):
+        return contained_in("pk", Subquery(right.values("pk")))
     else:
         right_path = dot_path(right)
         assert right_path, "RHS of in must be a dot lookup"

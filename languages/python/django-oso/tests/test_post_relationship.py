@@ -454,6 +454,7 @@ def test_partial_in_collection(tag_nested_many_many_fixtures):
         """
             allow(user: test_app2::User, "read", post: test_app2::Post) if
                 post in user.posts and
+                post.id > 0 and
                 tag in post.tags and
                 user in tag.users;
         """
@@ -473,7 +474,8 @@ def test_partial_in_collection(tag_nested_many_many_fixtures):
         + ' WHERE ("test_app2_post"."id" IN'
         + ' (SELECT U0."id" FROM "test_app2_post" U0'
         + ' INNER JOIN "test_app2_user_posts" U1 ON (U0."id" = U1."post_id")'
-        + ' WHERE U1."user_id" = 1) AND "test_app2_tag_users"."user_id" = 1)'
+        + ' WHERE U1."user_id" = 1)'
+        + ' AND "test_app2_post"."id" > 0 AND "test_app2_tag_users"."user_id" = 1)'
     )
     assert tag_nested_many_many_fixtures["user_eng_post"] in posts
     assert tag_nested_many_many_fixtures["user_user_post"] in posts
@@ -489,21 +491,6 @@ def test_partial_in_collection(tag_nested_many_many_fixtures):
     assert tag_nested_many_many_fixtures["random_post"] in posts
     assert tag_nested_many_many_fixtures["not_tagged_post"] not in posts
     assert tag_nested_many_many_fixtures["all_tagged_post"] not in posts
-
-
-@pytest.mark.django_db
-def test_whatever(tag_nested_many_many_fixtures):
-    Oso.load_str(
-        """
-            allow(user: test_app2::User, "read", post: test_app2::Post) if
-                post in user.posts and
-                post.id > 0;
-        """
-    )
-
-    user = User.objects.get(username="user")
-    authorize_filter = authorize_model(None, Post, actor=user, action="read")
-    breakpoint()
 
 
 @pytest.mark.xfail(
