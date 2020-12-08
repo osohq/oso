@@ -1,2 +1,2 @@
-oso~=0.8.2
+oso~=0.9.0
 sqlalchemy~=1.3.20
