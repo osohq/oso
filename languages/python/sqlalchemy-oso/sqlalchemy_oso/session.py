@@ -32,9 +32,9 @@ def set_get_session(oso: Oso, get_session_func):
 
     The session can be accessed from polar via the OsoSession constant.
     E.g.,
-        ```
-        OsoSession.get().query(...)
-        ```
+    ```
+    OsoSession.get().query(...)
+    ```
     """
     _OsoSession.set_get_session(get_session_func)
     oso.register_constant(_OsoSession, "OsoSession")
