@@ -46,7 +46,8 @@ Improved ``sqlalchemy-oso`` support for usage with ``flask_sqlalchemy``
 -----------------------------------------------------------------------
 
 The ``sqlalchemy-oso`` library now has a built-in wrapper class that makes it
-easier to use with the popular ``flask_sqlalchemy`` library.  See
+easier to use with the popular `Flask-SQLAlchemy
+<https://pypi.org/project/Flask-SQLAlchemy/>`_ library.  See
 :py:class:`sqlalchemy_oso.flask.AuthorizedSQLAlchemy` for more information.
 
 ``scoped_session`` support for ``sqlalchemy-oso``
