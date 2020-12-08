@@ -386,7 +386,7 @@ def test_reassign_user_role(test_db_session):
 
 
 def test_set_get_session():
-    from sqlalchemy_oso.session import set_get_session, OsoSession
+    from sqlalchemy_oso.session import set_get_session
     from oso import Oso
 
     def get_session():
