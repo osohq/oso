@@ -186,10 +186,18 @@ impl Partial {
         Partial::new(other).into_term()
     }
 
+    // TODO(gj): test for constraints that apply to collection before doing the below shenanigans.
+
     /// Add constraint that this partial must be in another.
     pub fn contained_in_partial(&mut self, other: Partial) {
-        let in_op = op!(In, self.variable_term(), term!(other.variable));
-        self.add_constraint(in_op);
+        // Pick up constraints on the collection's items and copy them to self (the item).
+        for constraint in other.constraints() {
+            // if constraint.operator == Operator::In {
+            self.add_constraint(constraint.clone());
+            // }
+        }
+        // let in_op = op!(In, self.variable_term(), term!(other.variable));
+        // self.add_constraint(in_op);
     }
 
     pub fn compare(&mut self, operator: Operator, operand: Operand) {

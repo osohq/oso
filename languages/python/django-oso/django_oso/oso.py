@@ -8,7 +8,7 @@ from django.db.models.manager import Manager
 
 from oso import Oso as _Oso
 from polar.exceptions import DuplicateClassAliasError
-from polar.partial import Partial, UnifyConstraint
+from polar.partial import Partial, TypeConstraint, InConstraint
 
 
 _logger = logging.getLogger(__name__)
@@ -34,9 +34,13 @@ def init_oso():
     def manager_to_partial(maybe_manager, host):
         if isinstance(maybe_manager, Manager):
             id = Oso.ffi_polar.new_id()
+            # TODO(gj): try In(Isa(_this, Post), _this)
             return Partial(
                 f"_manager_partial_{id}",
-                UnifyConstraint(host.to_polar(maybe_manager.all())),
+                InConstraint(host.to_polar(maybe_manager.all())),
+                TypeConstraint(
+                    polar_model_name(maybe_manager.target_field.related_model)
+                ),
             )
 
     Oso.host.to_polar_hooks.append(manager_to_partial)

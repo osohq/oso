@@ -491,6 +491,21 @@ def test_partial_in_collection(tag_nested_many_many_fixtures):
     assert tag_nested_many_many_fixtures["all_tagged_post"] not in posts
 
 
+@pytest.mark.django_db
+def test_whatever(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+            allow(user: test_app2::User, "read", post: test_app2::Post) if
+                post in user.posts and
+                post.id > 0;
+        """
+    )
+
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    breakpoint()
+
+
 @pytest.mark.xfail(
     reason="Need to evaluate partials returned in bindings in non-partial code paths.",
 )

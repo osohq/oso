@@ -59,7 +59,7 @@ class TypeConstraint(Constraint):
         }
 
 
-class UnifyConstraint(Constraint):
+class InConstraint(Constraint):
     def __init__(self, polar_instance):
         self.polar_instance = polar_instance
 
@@ -71,7 +71,7 @@ class UnifyConstraint(Constraint):
 
     def to_polar(self):
         return {
-            "operator": "Unify",
+            "operator": "In",
             "args": [
                 {"value": {"Variable": "_this"}},
                 self.polar_instance,

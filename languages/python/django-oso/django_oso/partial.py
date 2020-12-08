@@ -93,6 +93,10 @@ def and_expr(expr: Expression, model: Model, **kwargs):
         # Short-circuit: if any expr is false, the whole AND is false.
         if expr == FALSE_FILTER:
             return FALSE_FILTER
+        elif expr == TRUE_FILTER:
+            continue
+        elif isinstance(expr, Subquery):
+            breakpoint()
         q &= expr
     return q
 
