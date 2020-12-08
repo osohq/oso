@@ -11,6 +11,29 @@ from oso import Oso
 from sqlalchemy_oso.auth import authorize_model_filter
 
 
+class OsoSession:
+    @classmethod
+    def get(cls):
+        return cls._get()
+
+    @classmethod
+    def set_get_session(cls, get_session):
+        OsoSession._get = get_session
+
+
+def set_get_session(oso: Oso, get_session_func):
+    """Set the function that oso uses to expose a SQLAlchemy session to the policy
+
+    :param [oso]: [The Oso instance used to evaluate the policy.]
+    :type [oso]: [Oso]
+
+    :param [get_session_func]: [A function that returns a SQLAlchemy session]
+    :type [get_session_func]: [lambda]
+    """
+    OsoSession.set_get_session(get_session_func)
+    oso.register_constant(OsoSession, "OsoSession")
+
+
 @event.listens_for(Query, "before_compile", retval=True)
 def _before_compile(query):
     """Enable before compile hook."""

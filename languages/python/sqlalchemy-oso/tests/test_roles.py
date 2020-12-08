@@ -9,7 +9,7 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-from sqlalchemy_oso import roles as oso_roles
+from sqlalchemy_oso import roles as oso_roles, register_models
 
 
 Base = declarative_base(name="RoleBase")
@@ -383,3 +383,34 @@ def test_reassign_user_role(test_db_session):
     roles = oso_roles.get_user_roles_for_resource(test_db_session, john, abbey_road)
     assert len(roles) == 1
     assert roles[0].name == "WRITE"
+
+
+def test_set_get_session():
+    from sqlalchemy_oso.session import set_get_session, OsoSession
+    from oso import Oso
+
+    def get_session():
+        engine = create_engine("sqlite://")
+        Base.metadata.create_all(engine)
+
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        load_fixture_data(session)
+
+        return session
+
+    oso = Oso()
+    set_get_session(oso, get_session)
+    register_models(oso, Base)
+    test_str = """get_repo(name: String) if
+                    session = OsoSession.get() and
+                    repo = session.query(Repository).filter_by(name: name).first() and
+                    repo.name = name;
+                    """
+
+    oso.load_str(test_str)
+    results = oso.query_rule("get_repo", "Abbey Road")
+    assert next(results)
+    results = oso.query_rule("get_repo", "Abbey Road")
+    assert next(results)
