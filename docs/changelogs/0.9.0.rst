@@ -70,6 +70,18 @@ scoped to the current oso instance, user and action.
 
 .. _scoped_session: https://docs.sqlalchemy.org/en/13/orm/contextual.html#sqlalchemy.orm.scoping.scoped_session
 
+Initial support for built-in roles in ``sqlalchemy-oso``
+--------------------------------------------------------
+
+This release includes the first steps towards out-of-the-box role-based access
+control (RBAC) support in the ``sqlalchemy-oso`` integration. New to the
+integration is an API for easily creating roles scoped to a resource and
+assigning them to users of your application. You are then able to write RBAC
+rules over those managed roles.
+
+We will be iterating heavily on this feature over the coming weeks, but we
+would love to hear any feedback from early testers.
+
 Other bugs & improvements
 =========================
 
