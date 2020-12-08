@@ -19,10 +19,10 @@ and action to authorize with
 authorization instead of the removed
 ``sqlalchemy_oso.hooks.make_authorized_query_cls``.
 
-- The ``sqlalchemy.hooks`` module has been renamed to ``sqlalchemy.session``.
-  Update any imports to ``sqlalchemy.session``.
-- The ``sqlalchemy_hooks.make_authorized_query_cls`` function has been removed.
-  Use the session API instead
+- The ``sqlalchemy_oso.hooks`` module has been renamed to
+  ``sqlalchemy_oso.session``. Update any imports to ``sqlalchemy_oso.session``.
+- The ``sqlalchemy_oso.hooks.make_authorized_query_cls`` function has been
+  removed. Use the session API instead.
   (:py:func:`sqlalchemy_oso.authorized_sessionmaker`).
 - The ``sqlalchemy_oso.authorized_sessionmaker`` function no longer accepts
   extra positional arguments. Use keyword arguments to pass options to the
