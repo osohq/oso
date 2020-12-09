@@ -52,7 +52,7 @@ def enable_roles(oso):
         Specifies a hierarchical role order for built-in
         resource-specific roles defined with
         :py:meth:`sqlalchemy_oso.roles.resource_role_class` The rule name
-        is the lowercased resource model name followed by
+        is the lower-cased resource model name followed by
         ``_role_order``. The only parameter is a list of role names in
         hierarchical order. Roles to the left will inherit the
         permissions of roles to the right. This is useful if any role
