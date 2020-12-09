@@ -38,6 +38,8 @@ pub enum QueryEvent {
     ExternalCall {
         /// Persistent id across all requests for results from the same external call.
         call_id: u64,
+        /// Associated query contains partial.
+        query_contains_partial: bool,
         /// The external instance to make this call on.
         instance: Term,
         /// Field name to lookup or method name to call. A class name indicates a constructor

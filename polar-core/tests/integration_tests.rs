@@ -90,6 +90,7 @@ where
                 attribute,
                 args,
                 kwargs,
+                ..
             } => {
                 query
                     .call_result(

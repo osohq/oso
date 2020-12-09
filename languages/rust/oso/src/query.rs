@@ -62,6 +62,7 @@ impl Query {
                     attribute,
                     args,
                     kwargs,
+                    ..
                 } => self.handle_external_call(call_id, instance, attribute, args, kwargs),
                 QueryEvent::ExternalOp {
                     call_id,

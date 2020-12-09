@@ -25,6 +25,7 @@ class Host:
         self.classes = classes.copy()
         self.instances = instances.copy()
         self.to_polar_hooks = to_polar_hooks.copy()
+        self.contains_partial = False
 
     def copy(self):
         """Copy an existing cache."""
@@ -127,10 +128,11 @@ class Host:
             )
 
     def to_polar_hook(self, v):
-        for fn in self.to_polar_hooks:
-            x = fn(v, self)
-            if x:
-                return self.to_polar(x)
+        if self.contains_partial:
+            for fn in self.to_polar_hooks:
+                x = fn(v, self)
+                if x:
+                    return self.to_polar(x)
 
     def to_polar(self, v):
         """Convert a Python object to a Polar term."""

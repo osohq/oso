@@ -26,6 +26,7 @@ mod tests {
                 Term::new_from_test(value!("hello")),
             ]),
             kwargs: None,
+            query_contains_partial: false,
         };
         eprintln!("{}", serde_json::to_string(&event).unwrap());
         let term = Term::new_from_test(value!(1));

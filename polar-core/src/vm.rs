@@ -1199,6 +1199,7 @@ impl PolarVirtualMachine {
             attribute: field_name,
             args,
             kwargs,
+            query_contains_partial: self.query_contains_partial,
         })
     }
 

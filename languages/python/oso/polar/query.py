@@ -80,6 +80,7 @@ class Query:
         self.host.make_instance(cls_name, args, kwargs, id)
 
     def handle_external_call(self, data):
+        self.host.contains_partial = data["query_contains_partial"]
         call_id = data["call_id"]
         instance = self.host.to_python(data["instance"])
 
