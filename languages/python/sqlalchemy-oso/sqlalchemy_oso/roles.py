@@ -318,6 +318,8 @@ def get_user_model_for_resource_model(resource_model):
 
 def get_user_resources_and_roles(session, user, resource_model):
     """Get a user's roles for all resources of a single resource type.
+    E.g., get all of a user's repositories and their role for each
+    repository.
 
     :param session: SQLAlchemy session
     :type session: sqlalchemy.orm.session.Session
@@ -345,7 +347,23 @@ def get_user_resources_and_roles(session, user, resource_model):
 
 
 def get_group_resources_and_roles(session, group, resource_model):
-    """Get a group's roles for a all resources of a single resource type"""
+    """Get a user group's roles for all resources of a single resource type.
+    E.g., get all of a team's repositories and their role for each
+    repository.
+
+
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
+
+    :param group: group record (python object) of the SQLAlchemy user group model \
+    associated with roles scoped to the supplied ``resource_model``
+
+    :param resource_model: the resource model (python class) for which to get \
+    the user's roles
+
+    :return: List of (resource, role) tuples for every role the user group has \
+    associated with the ``resource_model``
+    """
     role_model = get_role_model_for_resource_model(resource_model)
     group_model = type(group)
     resource_roles = (
@@ -360,7 +378,22 @@ def get_group_resources_and_roles(session, group, resource_model):
 
 
 def get_user_roles_for_resource(session, user, resource):
-    """Get a user's roles for a single resource record"""
+    """Get a user's roles for a single resource record. E.g., get all the
+    roles a user has for Organization 1.
+
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
+
+    :param user: user record (python object) of the SQLAlchemy user model \
+    associated with roles scoped to the model of the supplied ``resource``
+
+    :param resource: the resource record (python object) for which to get \
+    the user's roles
+
+    :return: List of all role objects the user has \
+    associated with the ``resource``
+
+    """
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
     user_model = type(user)
@@ -374,6 +407,21 @@ def get_user_roles_for_resource(session, user, resource):
 
 # - Get an organization's users and their roles
 def get_resource_users_and_roles(session, resource):
+    """Get all of the users and their roles for a specific resource. E.g.,
+    get all the users in Organization 1 and their roles in the
+    organization.
+
+
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
+
+    :param resource: the resource record (python object) for which to get \
+    the users and roles
+
+    :return: List of (user, role) tuples for every user associated with \
+    the ``resource``
+
+    """
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
     user_model = get_user_model_for_resource_model(resource_model)
@@ -392,6 +440,23 @@ def get_resource_users_and_roles(session, resource):
 
 # - Get all the users who have a specific role
 def get_resource_users_with_role(session, resource, role_name):
+    """Get all of the users that have a specific role for a specific
+    resource. E.g., get all the users in Organization 1 that have the "OWNER"
+    role.
+
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
+
+    :param resource: the resource record (python object) for which to get \
+    the users
+
+    :param role_name: the name of the role to get users for
+    :type role_name: str
+
+    :return: List of users that have the ``role_name`` role for \
+    ``resource``
+
+    """
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
     user_model = get_user_model_for_resource_model(resource_model)
@@ -411,6 +476,16 @@ def get_resource_users_with_role(session, resource, role_name):
 
 # - Assign a user to an organization with a role
 def add_user_role(session, user, resource, role_name):
+    """Add a user to a role for a specific resource.
+
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
+
+    :param user: user record (python object) to assign the role to
+
+    :param role_name: the name of the role to assign to the user
+    :type role_name: str
+    """
     # TODO: check input for valid role name
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
@@ -438,6 +513,18 @@ def add_user_role(session, user, resource, role_name):
 
 # - Delete a user to an organization with a role
 def delete_user_role(session, user, resource, role_name=None):
+    """Remove a user from a role for a specific resource.
+
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
+
+    :param user: user record (python object) to remove the role from
+
+    :param role_name: the name of the role to remove from the user. If not \
+    provided, the function will remove all roles the user has for \
+    ``resource``.
+    :type role_name: str
+    """
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
     user_model = type(user)
@@ -464,5 +551,18 @@ def delete_user_role(session, user, resource, role_name=None):
 
 # - Change the user's role in an organization
 def reassign_user_role(session, user, resource, role_name):
+    """Remove all existing roles that a user has for a specific resource, and
+    reassign the user to a new role. If the user does not have any roles for
+    the given resource, the behavior is the same as
+    :py:meth:`sqlalchemy_oso.roles.add_user_role`.
+
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
+
+    :param user: user record (python object) whose role should be reassigned
+
+    :param role_name: the name of the new role to assign to the user
+    :type role_name: str
+    """
     delete_user_role(session, user, resource)
     add_user_role(session, user, resource, role_name)
