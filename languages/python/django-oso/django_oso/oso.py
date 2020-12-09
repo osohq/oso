@@ -34,12 +34,11 @@ def init_oso():
     def manager_to_partial(maybe_manager, host):
         if isinstance(maybe_manager, Manager):
             id = Oso.ffi_polar.new_id()
-            # TODO(gj): try In(Isa(_this, Post), _this)
             return Partial(
                 f"_manager_partial_{id}",
-                InConstraint(host.to_polar(maybe_manager.all())),
-                TypeConstraint(
-                    polar_model_name(maybe_manager.target_field.related_model)
+                InConstraint(
+                    host.to_polar(maybe_manager.all()),
+                    polar_model_name(maybe_manager.target_field.related_model),
                 ),
             )
 
