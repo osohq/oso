@@ -121,9 +121,16 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
     assert expr.operator == "In"
     (left, right) = expr.args
 
+    if (
+        isinstance(right, Expression)
+        and right.operator == "Unify"
+        and right.args[0] == Variable("_this")
+    ):
+        right = right.args[1]
+
     if isinstance(right, QuerySet):
         if isinstance(left, Expression):
-            item_filter = translate_expr(left, model, **kwargs)
+            item_filter = translate_expr(left, model, path=path, **kwargs)
         else:
             item_filter = Q()
         return contained_in("pk", Subquery(right.values("pk").filter(item_filter)))

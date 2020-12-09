@@ -8,6 +8,7 @@ class User(models.Model):
     is_moderator = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
     posts = models.ManyToManyField("Post")
+    tags = models.ManyToManyField("Tag")
 
     class Meta:
         app_label = "test_app2"

@@ -91,6 +91,26 @@ class InConstraint(Constraint):
         }
 
 
+class UnifyConstraint(Constraint):
+    def __init__(self, polar_instance):
+        self.polar_instance = polar_instance
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, type(self))
+            and self.polar_instance == other.polar_instance
+        )
+
+    def to_polar(self):
+        return {
+            "operator": "Unify",
+            "args": [
+                {"value": {"Variable": "_this"}},
+                self.polar_instance,
+            ],
+        }
+
+
 def dot_path(expr):
     """Get the path components of a (potentially nested) dot lookup. The path
     is returned as a tuple. The empty tuple is returned if input is not a dot

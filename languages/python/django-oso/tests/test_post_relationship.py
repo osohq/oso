@@ -372,6 +372,9 @@ def tag_nested_many_many_fixtures():
     random.save()
     random.users.set([other_user])
 
+    user.tags.set([eng, user_posts])
+    other_user.tags.set([random])
+
     user_eng_post = Post(
         contents="user eng post", access_level="public", created_by=user
     )
@@ -489,6 +492,35 @@ def test_partial_in_collection(tag_nested_many_many_fixtures):
     assert tag_nested_many_many_fixtures["user_eng_post"] not in posts
     assert tag_nested_many_many_fixtures["user_user_post"] not in posts
     assert tag_nested_many_many_fixtures["random_post"] in posts
+    assert tag_nested_many_many_fixtures["not_tagged_post"] not in posts
+    assert tag_nested_many_many_fixtures["all_tagged_post"] not in posts
+
+
+@pytest.mark.django_db
+def test_partial_set_intersection(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+            allow(user: test_app2::User, "read", post: test_app2::Post) if
+                tag in user.tags and tag in post.tags;
+        """
+    )
+
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+    assert (
+        str(posts.query)
+        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
+        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
+        + ' FROM "test_app2_post"'
+        + ' WHERE "test_app2_post"."id" IN'
+        + ' (SELECT U0."id" FROM "test_app2_tag" U0'
+        + ' INNER JOIN "test_app2_user_tags" U1 ON (U0."id" = U1."tag_id")'
+        + ' WHERE U1."user_id" = 1)'
+    )
+    assert tag_nested_many_many_fixtures["user_eng_post"] in posts
+    assert tag_nested_many_many_fixtures["user_user_post"] in posts
+    assert tag_nested_many_many_fixtures["random_post"] not in posts
     assert tag_nested_many_many_fixtures["not_tagged_post"] not in posts
     assert tag_nested_many_many_fixtures["all_tagged_post"] not in posts
 
