@@ -52,7 +52,7 @@ jobs:
       - name: Install django-oso from release
         run: pip install django_oso==${{ github.event.inputs.django_oso_version }} -f django-oso-python
       - name: Install sqlalchemy-oso from release
-        run: pip install sqlalchemy_oso==${{ github.event.inputs.sqlalchemy_oso_version }} -f sqlalchemy-oso-python
+        run: pip install sqlalchemy_oso[flask]==${{ github.event.inputs.sqlalchemy_oso_version }} -f sqlalchemy-oso-python
       - name: Build docs
         run: SPHINXOPTS="-W" make -C docs build
       - name: s3 publish
