@@ -41,3 +41,9 @@ API Reference
 
 .. automodule:: sqlalchemy_oso.flask
     :members:
+
+``sqlalchemy_oso.roles``
+------------------------
+
+.. automodule:: sqlalchemy_oso.roles
+    :members:
