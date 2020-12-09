@@ -24,17 +24,17 @@ class _OsoSession:
 def set_get_session(oso: Oso, get_session_func):
     """Set the function that oso uses to expose a SQLAlchemy session to the policy
 
-    :param [oso]: [The Oso instance used to evaluate the policy.]
-    :type [oso]: [Oso]
+    :param oso: The Oso instance used to evaluate the policy.
+    :type oso: Oso
 
-    :param [get_session_func]: [A function that returns a SQLAlchemy session]
-    :type [get_session_func]: [lambda]
+    :param get_session_func: A function that returns a SQLAlchemy session
+    :type get_session_func: lambda
 
-    The session can be accessed from polar via the OsoSession constant.
-    E.g.,
-    ```
-    OsoSession.get().query(...)
-    ```
+    The session can be accessed from polar via the OsoSession constant. E.g.,
+
+    .. code-block:: polar
+
+        OsoSession.get().query(...)
     """
     _OsoSession.set_get_session(get_session_func)
     oso.register_constant(_OsoSession, "OsoSession")
