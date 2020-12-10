@@ -59,38 +59,6 @@ class TypeConstraint(Constraint):
         }
 
 
-class InConstraint(Constraint):
-    def __init__(self, polar_instance, type_name=None):
-        self.polar_instance = polar_instance
-        self.type_name = type_name
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, type(self))
-            and self.polar_instance == other.polar_instance
-        )
-
-    def to_polar(self):
-        return {
-            "operator": "In",
-            "args": [
-                {
-                    "value": (
-                        {
-                            "Partial": Partial(
-                                "_item_partial",  # TODO: unique id
-                                TypeConstraint(self.type_name),
-                            ).to_polar()
-                        }
-                        if self.type_name
-                        else {"Variable": "_this"}
-                    )
-                },
-                self.polar_instance,
-            ],
-        }
-
-
 class UnifyConstraint(Constraint):
     def __init__(self, polar_instance):
         self.polar_instance = polar_instance
