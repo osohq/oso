@@ -119,19 +119,14 @@ def test_authorize_query_multiple_types(engine, oso, fixture_data):
     # TODO (dhatch): What happens for aggregations?
 
 
-# TODO convert not to use hooks, internal interface.
-@pytest.mark.xfail(reason="No good, aliases don't work right now.")
-def test_hooks_alias(session, oso, fixture_data):
+def test_alias(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
-
-    class LocalQueryClass(Query):
-        pass
-
-    session.configure(query_cls=LocalQueryClass)
+    session = AuthorizedSession(oso, user="user", action="read", bind=engine)
 
     post_alias = aliased(Post)
 
     query = session.query(post_alias)
+    print_query(query)
 
     # Fine with hooks if you don't authorize it.
     assert query.count() == 1

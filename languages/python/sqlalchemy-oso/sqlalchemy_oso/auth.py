@@ -3,7 +3,7 @@ from polar.partial import Partial, TypeConstraint
 
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
-from sqlalchemy.orm.util import class_mapper  # type: ignore
+from sqlalchemy import inspect
 from sqlalchemy.sql import expression as sql
 
 from sqlalchemy_oso.partial import partial_to_filter
@@ -60,11 +60,12 @@ def authorize_model_filter(oso: Oso, actor, action, session: Session, model):
     :param session: The SQLAlchemy session.
     :param model: The model to authorize, must be a SQLAlchemy model.
     """
-    # TODO (dhatch): Check that model is a model.
-    # TODO (dhatch): More robust name mapping?
-    assert class_mapper(model), f"Expected a model; received: {model}"
+    try:
+        mapped_class = inspect(model, raiseerr=True).class_
+    except AttributeError:
+        raise TypeError(f"Expected a model; received: {model}")
 
-    partial_resource = Partial("resource", TypeConstraint(polar_model_name(model)))
+    partial_resource = Partial("resource", TypeConstraint(polar_model_name(mapped_class)))
     results = oso.query_rule("allow", actor, action, partial_resource)
 
     combined_filter = None
