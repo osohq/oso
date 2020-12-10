@@ -1531,35 +1531,28 @@ impl PolarVirtualMachine {
                     Value::Partial(partial) => {
                         let mut partial = partial.clone();
                         let partial_name = partial.name().clone();
+
+                        let partial_in_partial = |mut item: Partial, mut collection: Partial| {
+                            if collection.constraints().is_empty() {
+                                collection.contains_variable(item.name().clone());
+                                (collection.name().clone(), collection.into_term())
+                            } else {
+                                item.contained_in(collection);
+                                (item.name().clone(), item.into_term())
+                            }
+                        };
+
                         match item.value() {
                             Value::Variable(item) => {
                                 assert!(self.value(item).is_none());
-
-                                if partial.constraints().is_empty() {
-                                    let item_partial = partial.contains_variable(item.clone());
-                                    self.bind(item, item_partial);
-                                    self.bind(&partial_name, partial.into_term());
-                                } else {
-                                    let mut item_partial = Partial::new(item.clone());
-                                    let in_op = op!(In, term!(sym!("_this")), term!(partial_name));
-                                    item_partial.add_constraint(in_op);
-                                    self.bind(item, item_partial.into_term());
-                                }
+                                let item_partial = Partial::new(item.clone());
+                                let (name, partial) = partial_in_partial(item_partial, partial);
+                                self.bind(&name, partial);
                             }
                             Value::Partial(item_partial) => {
-                                if !partial.constraints().is_empty() {
-                                    let mut item_partial = item_partial.clone();
-                                    let in_op = op!(In, term!(sym!("_this")), term!(partial_name));
-                                    item_partial.add_constraint(in_op);
-                                    self.bind(
-                                        &item_partial.name().clone(),
-                                        item_partial.into_term(),
-                                    );
-                                } else {
-                                    let _ = partial.contains_variable(item_partial.name().clone());
-                                    // self.bind(item, item_partial);
-                                    self.bind(&partial_name, partial.into_term());
-                                }
+                                let (name, partial) =
+                                    partial_in_partial(item_partial.clone(), partial);
+                                self.bind(&name, partial);
                             }
                             _ => {
                                 partial.contains_item(item);

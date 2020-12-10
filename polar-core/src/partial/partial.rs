@@ -177,13 +177,15 @@ impl Partial {
     }
 
     /// Add a constraint that a variable must be in this.
-    ///
-    /// Returns: A new partial to use for additional constraints on `other`.
-    pub fn contains_variable(&mut self, other: Symbol) -> Term {
-        let in_op = op!(In, term!(other.clone()), self.variable_term());
+    pub fn contains_variable(&mut self, other: Symbol) {
+        let in_op = op!(In, term!(other), self.variable_term());
         self.add_constraint(in_op);
+    }
 
-        Partial::new(other).into_term()
+    /// Add a constraint that this must be contained in some other partial.
+    pub fn contained_in(&mut self, other: Partial) {
+        let in_op = op!(In, self.variable_term(), term!(other.variable));
+        self.add_constraint(in_op);
     }
 
     pub fn compare(&mut self, operator: Operator, operand: Operand) {
