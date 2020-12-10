@@ -6,7 +6,8 @@ import pytest
 from django.core.exceptions import PermissionDenied
 
 from django_oso.models import authorize_model
-from django_oso.oso import Oso, reset_oso
+from django_oso.oso import Oso, reset_oso, polar_model_name
+from polar.partial import Partial, TypeConstraint
 from test_app2.models import Post, Tag, User
 
 
@@ -500,13 +501,18 @@ def test_partial_in_collection(tag_nested_many_many_fixtures):
 def test_partial_set_intersection(tag_nested_many_many_fixtures):
     Oso.load_str(
         """
-            allow(user: test_app2::User, "read", post: test_app2::Post) if
+            allow(user: test_app2::User, tag, post: test_app2::Post) if
                 tag in user.tags and tag in post.tags;
         """
     )
 
     user = User.objects.get(username="user")
-    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    authorize_filter = authorize_model(
+        None,
+        Post,
+        actor=user,
+        action=Partial("tag_partial", TypeConstraint(polar_model_name(Tag))),
+    )
     posts = Post.objects.filter(authorize_filter)
     assert (
         str(posts.query)

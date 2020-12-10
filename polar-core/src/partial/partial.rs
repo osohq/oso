@@ -921,8 +921,8 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("x"), partial!("y")])), false);
         assert_partial_expressions!(
             next_binding(&mut q)?,
-            "x" => "",
-            "y" => "_this in () and _this > 0"
+            "x" => "(_this > 0) in _this.values",
+            "y" => "_this > 0"
         );
         assert_query_done!(q);
 
