@@ -78,7 +78,7 @@ class Issue(Base):
 
 
 RepositoryRoleMixin = oso_roles.resource_role_class(
-    Base, User, Repository, ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"], Team
+    Base, User, Repository, ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"]
 )
 
 
@@ -154,61 +154,51 @@ def load_fixture_data(session):
         name="READ",
         repository=abby_road,
         users=[john, paul],
-        groups=[vocalists],
     )
     abby_road_triage = RepositoryRole(
         name="TRIAGE",
         repository=abby_road,
         users=[],
-        groups=[],
     )
     abby_road_write = RepositoryRole(
         name="WRITE",
         repository=abby_road,
         users=[],
-        groups=[],
     )
     abby_road_maintain = RepositoryRole(
         name="MAINTAIN",
         repository=abby_road,
         users=[],
-        groups=[],
     )
     abby_road_admin = RepositoryRole(
         name="ADMIN",
         repository=abby_road,
         users=[],
-        groups=[],
     )
     paperwork_read = RepositoryRole(
         name="READ",
         repository=paperwork,
         users=[mike, sully],
-        groups=[scarers],
     )
     paperwork_triage = RepositoryRole(
         name="TRIAGE",
         repository=paperwork,
         users=[],
-        groups=[],
     )
     paperwork_write = RepositoryRole(
         name="WRITE",
         repository=paperwork,
         users=[],
-        groups=[],
     )
     paperwork_maintain = RepositoryRole(
         name="MAINTAIN",
         repository=paperwork,
         users=[],
-        groups=[],
     )
     paperwork_admin = RepositoryRole(
         name="ADMIN",
         repository=paperwork,
         users=[],
-        groups=[],
     )
     repo_roles = [
         abby_road_read,
@@ -298,16 +288,6 @@ def test_get_user_roles_for_resource(test_db_session):
     )
     assert len(resource_roles) == 1
     assert resource_roles[0].name == "OWNER"
-
-
-def test_get_group_resources_and_roles(test_db_session):
-    vocalists = test_db_session.query(Team).filter_by(name="Vocalists").first()
-    resource_roles = oso_roles.get_group_resources_and_roles(
-        test_db_session, vocalists, Repository
-    )
-    assert len(resource_roles) == 1
-    assert resource_roles[0][0].name == "Abbey Road"
-    assert resource_roles[0][1].name == "READ"
 
 
 def test_get_resource_users_and_roles(test_db_session):
