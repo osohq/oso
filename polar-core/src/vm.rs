@@ -1546,6 +1546,7 @@ impl PolarVirtualMachine {
                             Value::Variable(item) => {
                                 assert!(self.value(item).is_none());
                                 let item_partial = Partial::new(item.clone());
+                                self.bind(item, item_partial.clone().into_term());
                                 let (name, partial) = partial_in_partial(item_partial, partial);
                                 self.bind(&name, partial);
                             }
