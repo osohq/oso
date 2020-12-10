@@ -186,16 +186,6 @@ impl Partial {
         Partial::new(other).into_term()
     }
 
-    // TODO(gj): test for constraints that apply to collection before doing the below shenanigans.
-
-    /// Add constraint that this partial must be in another.
-    pub fn contained_in_partial(&mut self, other: Partial) {
-        // Copy constraints on the collection's items to self (the item).
-        for constraint in other.constraints() {
-            self.add_constraint(constraint.clone());
-        }
-    }
-
     pub fn compare(&mut self, operator: Operator, operand: Operand) {
         use Operator::{Eq, Geq, Gt, Leq, Lt, Neq};
         let asymmetric_op = matches!(operator, Gt | Geq | Lt | Leq);
@@ -231,7 +221,7 @@ impl Partial {
         ));
 
         let name = value.value().as_symbol().unwrap();
-        Term::new_temporary(Value::Partial(Partial::new(name.clone())))
+        Partial::new(name.clone()).into_term()
     }
 
     pub fn into_term(self) -> Term {

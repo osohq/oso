@@ -133,7 +133,9 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
             item_filter = translate_expr(left, model, path=path, **kwargs)
         else:
             item_filter = Q()
-        return contained_in("pk", Subquery(right.values("pk").filter(item_filter)))
+        return contained_in(
+            "__".join(path + ("pk",)), Subquery(right.values("pk").filter(item_filter))
+        )
     else:
         right_path = dot_path(right)
         assert right_path, "RHS of in must be a dot lookup"
