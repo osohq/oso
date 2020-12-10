@@ -8,7 +8,7 @@ from django.db.models.manager import Manager
 
 from oso import Oso as _Oso
 from polar.exceptions import DuplicateClassAliasError
-from polar.partial import Partial, TypeConstraint, UnifyConstraint
+from polar.partial import Partial, UnifyConstraint
 
 
 _logger = logging.getLogger(__name__)
