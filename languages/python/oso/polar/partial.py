@@ -78,7 +78,7 @@ class InConstraint(Constraint):
                     "value": (
                         {
                             "Partial": Partial(
-                                f"_item_partial",  # TODO: unique id
+                                "_item_partial",  # TODO: unique id
                                 TypeConstraint(self.type_name),
                             ).to_polar()
                         }
