@@ -142,18 +142,15 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
         right_path = path + right_path
 
         if isinstance(left, Expression):
-            if left.operator == "And":
-                if not left.args:
-                    # An unconstrained partial is in a list if the list is non-empty.
-                    count = Count("__".join(right_path))
-                    filter = COMPARISONS["Gt"]("__".join(right_path + ("count",)), 0)
-                    subquery = Subquery(
-                        model.objects.annotate(count).filter(filter).values("pk")
-                    )
+            if left.operator == "And" and not left.args:
+                # An unconstrained partial is in a list if the list is non-empty.
+                count = Count("__".join(right_path))
+                filter = COMPARISONS["Gt"]("__".join(right_path + ("count",)), 0)
+                subquery = Subquery(
+                    model.objects.annotate(count).filter(filter).values("pk")
+                )
 
-                    return contained_in("pk", subquery)
-                else:
-                    return translate_expr(left, model, path=right_path, **kwargs)
+                return contained_in("pk", subquery)
             else:
                 return translate_expr(left, model, path=right_path, **kwargs)
         else:
