@@ -126,7 +126,6 @@ def test_alias(engine, oso, fixture_data):
     post_alias = aliased(Post)
 
     query = session.query(post_alias)
-    print_query(query)
 
     # Fine with hooks if you don't authorize it.
     assert query.count() == 1
