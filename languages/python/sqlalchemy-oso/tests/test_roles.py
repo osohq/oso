@@ -341,6 +341,9 @@ def test_add_user_role(test_db_session):
     assert len(roles) == 1
     assert roles[0].name == "READ"
 
+    with pytest.raises(Exception):
+        oso_roles.add_user_role(test_db_session, ringo, abbey_road, "NOT_A_REAL_ROLE")
+
 
 def test_delete_user_role(test_db_session):
     # Test with explicit role arg

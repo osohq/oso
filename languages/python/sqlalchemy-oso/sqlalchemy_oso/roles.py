@@ -243,7 +243,7 @@ def resource_role_class(
     )
 
     class ResourceRoleMixin:
-        # TODO: enforce that classes are named with the ResourceRole convention, e.g. RepositorRole
+        # TODO: enforce that classes are named with the ResourceRole convention, e.g. RepositoryRole
         choices = roles
 
         __tablename__ = f"{resource_model.__name__.lower()}_roles"
@@ -486,9 +486,13 @@ def add_user_role(session, user, resource, role_name):
     :param role_name: the name of the role to assign to the user
     :type role_name: str
     """
-    # TODO: check input for valid role name
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
+
+    if role_name not in role_model.choices:
+        raise Exception(
+            f"{role_name} Is not a valid choice for {resource.__class__.__name__} Roles"
+        )
 
     # try to get role
     role = (
