@@ -6,6 +6,8 @@ from django.core.exceptions import PermissionDenied, EmptyResultSet
 
 from django_oso.oso import Oso, reset_oso
 from django_oso.auth import authorize, authorize_model
+from polar import Variable
+from django_oso.partial import partial_to_query_filter
 
 from oso import OsoError
 
@@ -315,3 +317,14 @@ def test_negated_matches_with_partial(rf):
         + ' FROM "test_app_post"'
     )
     assert authorized_posts.count() == 1
+
+
+def test_partial_unification():
+    Oso.load_str("f(x, y) if x = y and x = 1;")
+    results = Oso.query_rule("f", Variable("x"), Variable("y"))
+
+    filter = None
+    for result in results:
+        x = result["bindings"]["x"]
+        filter = partial_to_query_filter(x, None, bindings=result["bindings"])
+        breakpoint()

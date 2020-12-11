@@ -226,7 +226,7 @@ pub fn fold_partial<T: Folder>(
             .into_iter()
             .map(|c| fld.fold_operation(c))
             .collect(),
-        variable: fld.fold_variable(variable),
+        variable,
     }
 }
 

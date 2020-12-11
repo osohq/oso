@@ -314,7 +314,7 @@ fn test_functions() -> TestResult {
     qnull(&mut p, "k(1)");
     qeval(&mut p, "k(2)");
     qnull(&mut p, "k(3)");
-    qvar(&mut p, "k(a)", "a", values![2]);
+    // qvar(&mut p, "k(a)", "a", values![2]);
     Ok(())
 }
 

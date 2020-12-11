@@ -779,6 +779,13 @@ def unwrap_and(x):
         return x.args
 
 
+def test_partial_unification(polar):
+    polar.load_str("f(x, y) if x = y;")
+    results = polar.query_rule("f", Variable("x"), Variable("y"))
+    for result in results:
+        breakpoint()
+
+
 def test_partial(polar):
     polar.load_str("f(1);")
     polar.load_str("f(x) if x = 1 and x = 2;")

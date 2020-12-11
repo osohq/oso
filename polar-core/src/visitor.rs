@@ -165,7 +165,7 @@ pub fn walk_param<V: Visitor>(visitor: &mut V, param: &Parameter) {
 }
 
 pub fn walk_partial<V: Visitor>(visitor: &mut V, partial: &Partial) {
-    visitor.visit_symbol(&partial.variable);
+    // visitor.visit_symbol(&partial.variable);
     walk_elements!(visitor, visit_operation, partial.constraints());
 }
 

@@ -96,24 +96,25 @@ def and_expr(expr: Expression, model: Model, **kwargs):
     return q
 
 
-def compare_expr(expr: Expression, model: Model, path=(), **kwargs):
+def compare_expr(expr: Expression, model: Model, path=(), bindings={}, **kwargs):
     assert expr.operator in COMPARISONS
     (left, right) = expr.args
-    left_path = dot_path(left)
-    if left_path:
-        return COMPARISONS[expr.operator]("__".join(path + left_path), right)
-    else:
-        assert left == Variable("_this")
-        if not isinstance(right, model):
-            return FALSE_FILTER
-
-        if expr.operator not in ("Eq", "Unify"):
-            raise UnsupportedError(
-                f"Unsupported comparison: {expr}. Models can only be compared"
-                " with `=` or `==`"
-            )
-
-        return COMPARISONS[expr.operator]("__".join(path + ("pk",)), right.pk)
+    breakpoint()
+    # left_path = dot_path(left)
+    # if left_path:
+    #     return COMPARISONS[expr.operator]("__".join(path + left_path), right)
+    # else:
+    #     assert left == Variable("_this")
+    #     if not isinstance(right, model):
+    #         return FALSE_FILTER
+    #
+    #     if expr.operator not in ("Eq", "Unify"):
+    #         raise UnsupportedError(
+    #             f"Unsupported comparison: {expr}. Models can only be compared"
+    #             " with `=` or `==`"
+    #         )
+    #
+    #     return COMPARISONS[expr.operator]("__".join(path + ("pk",)), right.pk)
 
 
 def in_expr(expr: Expression, model: Model, path=(), **kwargs):
