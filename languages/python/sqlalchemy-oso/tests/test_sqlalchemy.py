@@ -1,7 +1,7 @@
 """Test hooks & SQLAlchemy API integrations."""
 import pytest
 
-from sqlalchemy.orm import aliased, Query
+from sqlalchemy.orm import aliased
 
 from sqlalchemy_oso.session import (
     authorized_sessionmaker,
@@ -119,15 +119,9 @@ def test_authorize_query_multiple_types(engine, oso, fixture_data):
     # TODO (dhatch): What happens for aggregations?
 
 
-# TODO convert not to use hooks, internal interface.
-@pytest.mark.xfail(reason="No good, aliases don't work right now.")
-def test_hooks_alias(session, oso, fixture_data):
+def test_alias(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
-
-    class LocalQueryClass(Query):
-        pass
-
-    session.configure(query_cls=LocalQueryClass)
+    session = AuthorizedSession(oso, user="user", action="read", bind=engine)
 
     post_alias = aliased(Post)
 
