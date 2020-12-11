@@ -65,7 +65,9 @@ def authorize_model_filter(oso: Oso, actor, action, session: Session, model):
     except AttributeError:
         raise TypeError(f"Expected a model; received: {model}")
 
-    partial_resource = Partial("resource", TypeConstraint(polar_model_name(mapped_class)))
+    partial_resource = Partial(
+        "resource", TypeConstraint(polar_model_name(mapped_class))
+    )
     results = oso.query_rule("allow", actor, action, partial_resource)
 
     combined_filter = None

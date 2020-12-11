@@ -1,7 +1,7 @@
 """Test hooks & SQLAlchemy API integrations."""
 import pytest
 
-from sqlalchemy.orm import aliased, Query
+from sqlalchemy.orm import aliased
 
 from sqlalchemy_oso.session import (
     authorized_sessionmaker,
