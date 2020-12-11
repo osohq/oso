@@ -457,6 +457,8 @@ def test_partial_in_collection(tag_nested_many_many_fixtures):
     Oso.load_str(
         """
             allow(user: test_app2::User, "read", post: test_app2::Post) if
+                (post.created_by in user.direct_reports or
+                post.created_by.username = user.username) and
                 post in user.posts and
                 post.id > 0 and
                 tag in post.tags and
@@ -472,14 +474,20 @@ def test_partial_in_collection(tag_nested_many_many_fixtures):
         == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
         + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
         + ' FROM "test_app2_post"'
+        + ' INNER JOIN "test_app2_user" ON ("test_app2_post"."created_by_id" = "test_app2_user"."id")'
         + ' INNER JOIN "test_app2_post_tags" ON ("test_app2_post"."id" = "test_app2_post_tags"."post_id")'
         + ' INNER JOIN "test_app2_tag" ON ("test_app2_post_tags"."tag_id" = "test_app2_tag"."id")'
         + ' INNER JOIN "test_app2_tag_users" ON ("test_app2_tag"."id" = "test_app2_tag_users"."tag_id")'
-        + ' WHERE ("test_app2_post"."id" IN'
-        + ' (SELECT U0."id" FROM "test_app2_post" U0'
-        + ' INNER JOIN "test_app2_user_posts" U1 ON (U0."id" = U1."post_id")'
-        + ' WHERE U1."user_id" = 1)'
+        + ' WHERE (("test_app2_post"."created_by_id" IN'
+        + ' (SELECT U0."id" FROM "test_app2_user" U0 WHERE U0."manager_id" = 1)'
+        + ' AND "test_app2_post"."id" IN'
+        + ' (SELECT U0."id" FROM "test_app2_post" U0 INNER JOIN "test_app2_user_posts" U1'
+        + ' ON (U0."id" = U1."post_id") WHERE U1."user_id" = 1)'
         + ' AND "test_app2_post"."id" > 0 AND "test_app2_tag_users"."user_id" = 1)'
+        + ' OR ("test_app2_user"."username" = user AND "test_app2_post"."id" IN'
+        + ' (SELECT U0."id" FROM "test_app2_post" U0 INNER JOIN "test_app2_user_posts" U1'
+        + ' ON (U0."id" = U1."post_id") WHERE U1."user_id" = 1)'
+        + ' AND "test_app2_post"."id" > 0 AND "test_app2_tag_users"."user_id" = 1))'
     )
     assert tag_nested_many_many_fixtures["user_eng_post"] in posts
     assert tag_nested_many_many_fixtures["user_user_post"] in posts

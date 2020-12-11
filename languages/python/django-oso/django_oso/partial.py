@@ -121,6 +121,10 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
     assert expr.operator == "In"
     (left, right) = expr.args
 
+    if isinstance(left, Expression) and left.operator == "Dot":
+        path = path + dot_path(left)
+        left = Variable("_this")
+
     if (
         isinstance(right, Expression)
         and right.operator == "Unify"
@@ -139,22 +143,22 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
     else:
         right_path = dot_path(right)
         assert right_path, "RHS of in must be a dot lookup"
-        right_path = path + right_path
+        path = path + right_path
 
         if isinstance(left, Expression):
             if left.operator == "And" and not left.args:
                 # An unconstrained partial is in a list if the list is non-empty.
-                count = Count("__".join(right_path))
-                filter = COMPARISONS["Gt"]("__".join(right_path + ("count",)), 0)
+                count = Count("__".join(path))
+                filter = COMPARISONS["Gt"]("__".join(path + ("count",)), 0)
                 subquery = Subquery(
                     model.objects.annotate(count).filter(filter).values("pk")
                 )
 
                 return contained_in("pk", subquery)
             else:
-                return translate_expr(left, model, path=right_path, **kwargs)
+                return translate_expr(left, model, path=path, **kwargs)
         else:
-            return COMPARISONS["Unify"]("__".join(right_path), left)
+            return COMPARISONS["Unify"]("__".join(path), left)
 
 
 def not_expr(expr: Expression, model: Model, **kwargs):
