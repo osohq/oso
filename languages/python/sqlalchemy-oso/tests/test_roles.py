@@ -272,22 +272,24 @@ def test_db_session():
 
 def test_get_user_resources_and_roles(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
-    resource_roles = oso_roles.get_user_resources_and_roles(
-        test_db_session, john, Organization
-    )
-    assert len(resource_roles) == 1
-    assert resource_roles[0][0].name == "The Beatles"
-    assert resource_roles[0][1].name == "OWNER"
+    resource_roles = oso_roles.get_user_roles(test_db_session, john, Organization)
+    ids = list(resource_roles.keys())
+    assert len(ids) == 1
+    assert ids[0] == 1
+    assert resource_roles[ids[0]][0].name == "OWNER"
 
 
 def test_get_user_roles_for_resource(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
     beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
-    resource_roles = oso_roles.get_user_roles_for_resource(
-        test_db_session, john, beatles
+    resource_roles = oso_roles.get_user_roles(
+        test_db_session, john, Organization, beatles.id
     )
-    assert len(resource_roles) == 1
-    assert resource_roles[0].name == "OWNER"
+    ids = list(resource_roles.keys())
+    assert len(ids) == 1
+    assert ids[0] == beatles.id
+    assert len(resource_roles[beatles.id]) == 1
+    assert resource_roles[beatles.id][0].name == "OWNER"
 
 
 def test_get_resource_users_and_roles(test_db_session):
@@ -312,14 +314,17 @@ def test_add_user_role(test_db_session):
     ringo = test_db_session.query(User).filter_by(email="ringo@beatles.com").first()
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, ringo, abbey_road)
-    assert len(roles) == 0
+    roles = oso_roles.get_user_roles(test_db_session, ringo, Repository, abbey_road.id)
+    assert roles == {}
 
     oso_roles.add_user_role(test_db_session, ringo, abbey_road, "READ")
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, ringo, abbey_road)
-    assert len(roles) == 1
-    assert roles[0].name == "READ"
+    roles = oso_roles.get_user_roles(test_db_session, ringo, Repository, abbey_road.id)
+    ids = list(roles.keys())
+    assert len(ids) == 1
+    assert ids[0] == abbey_road.id
+    assert len(roles[abbey_road.id]) == 1
+    assert roles[abbey_road.id][0].name == "READ"
 
     with pytest.raises(Exception):
         oso_roles.add_user_role(test_db_session, ringo, abbey_road, "NOT_A_REAL_ROLE")
@@ -330,23 +335,23 @@ def test_delete_user_role(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, john, abbey_road)
-    assert len(roles) == 1
+    roles = oso_roles.get_user_roles(test_db_session, john, Repository, abbey_road.id)
+    assert len(roles[abbey_road.id]) == 1
 
     oso_roles.delete_user_role(test_db_session, john, abbey_road, "READ")
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, john, abbey_road)
-    assert len(roles) == 0
+    roles = oso_roles.get_user_roles(test_db_session, john, Repository, abbey_road.id)
+    assert roles == {}
 
     # Test without explicit role arg
     paul = test_db_session.query(User).filter_by(email="paul@beatles.com").first()
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, paul, abbey_road)
-    assert len(roles) == 1
+    roles = oso_roles.get_user_roles(test_db_session, paul, Repository, abbey_road.id)
+    assert len(roles[abbey_road.id]) == 1
 
     oso_roles.delete_user_role(test_db_session, paul, abbey_road)
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, paul, abbey_road)
-    assert len(roles) == 0
+    roles = oso_roles.get_user_roles(test_db_session, paul, Repository, abbey_road.id)
+    assert roles == {}
 
     # Test trying to delete non-existent role raises exception
     with pytest.raises(Exception):
@@ -357,15 +362,15 @@ def test_reassign_user_role(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, john, abbey_road)
-    assert len(roles) == 1
-    assert roles[0].name == "READ"
+    roles = oso_roles.get_user_roles(test_db_session, john, Repository, abbey_road.id)
+    assert len(roles[abbey_road.id]) == 1
+    assert roles[abbey_road.id][0].name == "READ"
 
     oso_roles.reassign_user_role(test_db_session, john, abbey_road, "WRITE")
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, john, abbey_road)
-    assert len(roles) == 1
-    assert roles[0].name == "WRITE"
+    roles = oso_roles.get_user_roles(test_db_session, john, Repository, abbey_road.id)
+    assert len(roles[abbey_road.id]) == 1
+    assert roles[abbey_road.id][0].name == "WRITE"
 
 
 def test_set_get_session():
