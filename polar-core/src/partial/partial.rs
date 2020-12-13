@@ -679,7 +679,7 @@ mod test {
     fn test_multiple_partials() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x, y) if x = 1 and y = 2;")?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a"), partial!("b")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a"), sym!("b")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this = 1");
         assert_partial_expression!(next, "b", "_this = 2");
@@ -978,11 +978,11 @@ mod test {
             r#"f(x);
                g(x) if false;"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         assert_query_done!(q);
         Ok(())
     }
