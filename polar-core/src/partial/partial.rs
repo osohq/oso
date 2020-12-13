@@ -393,10 +393,10 @@ mod test {
                f(x) if x.a = 3 or x.b = 4;"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
-        assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(1));
-        assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(2));
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a = 3");
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.b = 4");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 2");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "3 = _this.a");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "4 = _this.b");
         assert_query_done!(q);
         Ok(())
     }
