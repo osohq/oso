@@ -1,12 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::folder::{fold_operation, fold_partial, fold_term, Folder};
+use crate::folder::{fold_partial, fold_term, Folder};
 use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 // use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 
 use super::Partial;
+
+/// A trivially true expression.
+const TRUE: Operation = op!(And);
 
 /// Simplify the values of the bindings to be returned to the host language.
 ///
@@ -33,63 +36,53 @@ pub struct Simplifier {
 
 impl Folder for Simplifier {
     fn fold_term(&mut self, t: Term) -> Term {
-        match t.value() {
-            Value::Variable(v) if *v != self.this_var && self.bindings.contains_key(v) => {
-                fold_term(self.deref(&t), self)
-            }
-            _ => fold_term(t, self),
-        }
+        fold_term(self.deref(&t), self)
     }
 
-    fn fold_partial(&mut self, p: Partial) -> Partial {
+    fn fold_partial(&mut self, mut p: Partial) -> Partial {
         let mut seen: HashSet<&Operation> = HashSet::new();
-        let constraints = p
-            .constraints
+        p.constraints = p
+            .constraints()
             .iter()
-            .filter(|&c| c != &op!(And)) // Drop empty constraints.
+            .filter(|c| *c != &TRUE) // Drop empty constraints.
             .filter(|o| seen.insert(o)) // Deduplicate constraints.
             .cloned()
             .collect();
-        fold_partial(p.clone_with_constraints(constraints), self)
-    }
 
-    fn fold_operation(&mut self, o: Operation) -> Operation {
-        if o.operator == Operator::Unify {
-            assert_eq!(o.args.len(), 2);
-            if o.args[0] == o.args[1] {
-                op!(And)
-            } else if self.bindings.is_empty() {
+        if let Some(i) = p.constraints.iter().position(|o| {
+            o.operator == Operator::Unify && {
                 let left = &o.args[0];
                 let right = &o.args[1];
-                match (left.value(), right.value()) {
-                    (Value::Variable(v), x) if x.is_ground() => {
-                        eprintln!("A {} ← {}", left.to_polar(), right.to_polar());
-                        self.bind(v.clone(), right.clone());
-                        op!(And)
+                left == right
+                    || match (left.value(), right.value()) {
+                        (Value::Variable(v), x) if *v != self.this_var && x.is_ground() => {
+                            eprintln!("A {} ← {}", left.to_polar(), right.to_polar());
+                            self.bind(v.clone(), right.clone());
+                            true
+                        }
+                        (x, Value::Variable(v)) if *v != self.this_var && x.is_ground() => {
+                            eprintln!("B {} ← {}", right.to_polar(), left.to_polar());
+                            self.bind(v.clone(), left.clone());
+                            true
+                        }
+                        (Value::Variable(v), Value::Variable(w)) if *v == self.this_var => {
+                            eprintln!("C {} ← {}", right.to_polar(), left.to_polar());
+                            self.bind(w.clone(), left.clone());
+                            false
+                        }
+                        (Value::Variable(v), Value::Variable(w)) if *w == self.this_var => {
+                            eprintln!("D {} ← {}", left.to_polar(), right.to_polar());
+                            self.bind(v.clone(), right.clone());
+                            false
+                        }
+                        _ => false,
                     }
-                    (x, Value::Variable(v)) if x.is_ground() => {
-                        eprintln!("B {} ← {}", right.to_polar(), left.to_polar());
-                        self.bind(v.clone(), left.clone());
-                        op!(And)
-                    }
-                    (Value::Variable(v), Value::Variable(w)) if *v == self.this_var => {
-                        eprintln!("C {} ← {}", right.to_polar(), left.to_polar());
-                        self.bind(w.clone(), left.clone());
-                        fold_operation(o, self)
-                    }
-                    (Value::Variable(v), Value::Variable(w)) if *w == self.this_var => {
-                        eprintln!("D {} ← {}", left.to_polar(), right.to_polar());
-                        self.bind(v.clone(), right.clone());
-                        fold_operation(o, self)
-                    }
-                    _ => fold_operation(o, self),
-                }
-            } else {
-                fold_operation(o, self)
             }
-        } else {
-            fold_operation(o, self)
+        }) {
+            eprintln!("CHOSEN CONSTRAINT: {:?}", &p.constraints[i]);
+            p.constraints.remove(i);
         }
+        fold_partial(p, self)
     }
 
     // fn fold_operation(&mut self, mut o: Operation) -> Operation {
@@ -238,13 +231,7 @@ fn simplify_partial(mut term: Term, var: Symbol) -> Term {
             new.to_polar()
         );
         if new == term {
-            if simplifier.bindings.is_empty()
-                || term.value().as_partial().unwrap().constraints.len() == 1
-            {
-                break;
-            } else {
-                simplifier.bindings.drain();
-            }
+            break;
         }
         term = new;
     }
