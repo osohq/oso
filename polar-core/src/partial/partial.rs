@@ -633,12 +633,12 @@ mod test {
                positive(x) if x > 0 and x < 0;
                zero(x) if x == 0;"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("positive", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("positive", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this > 0");
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this > 0 and _this < 0");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("zero", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("zero", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this == 0");
         assert_query_done!(q);
         Ok(())
@@ -647,8 +647,8 @@ mod test {
     #[test]
     fn test_partial_comparison_dot() -> TestResult {
         let p = Polar::new();
-        p.load_str("positive(x) if x.a > 0 and 0 < x.a;")?;
-        let mut q = p.new_query_from_term(term!(call!("positive", [partial!("a")])), false);
+        p.load_str("a_positive(x) if x.a > 0 and 0 < x.a;")?;
+        let mut q = p.new_query_from_term(term!(call!("a_positive", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a > 0");
         assert_query_done!(q);
         Ok(())

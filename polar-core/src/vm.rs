@@ -18,7 +18,7 @@ use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial::{simplify_bindings, Operand, Partial};
+use crate::partial::{simplify_bindings, Partial};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -1929,20 +1929,8 @@ impl PolarVirtualMachine {
                     msg: "cannot compare partials".to_string(),
                 },
             )),
-            (Value::Partial(partial), _) => {
-                let mut partial = partial.clone();
-                partial.compare(op, Operand::right(right_term.clone()));
-
-                let name = partial.name().clone();
-                self.bind(&name, partial.into_term());
-                Ok(QueryEvent::None)
-            }
-            (_, Value::Partial(partial)) => {
-                let mut partial = partial.clone();
-                partial.compare(op, Operand::left(left_term.clone()));
-
-                let name = partial.name().clone();
-                self.bind(&name, partial.into_term());
+            (Value::Partial(partial), _) | (_, Value::Partial(partial)) => {
+                self.constrain(&partial, term.value().as_expression()?.clone());
                 Ok(QueryEvent::None)
             }
             (left, right) => Err(self.type_error(
@@ -2182,7 +2170,7 @@ impl PolarVirtualMachine {
                         eprintln!("4.B {} = {}", left, right.to_polar());
                         // Neither is bound, so bind them together.
                         // TODO: should theoretically bind the earliest one here?
-                        let partial = Partial::new(sym!("woof"));
+                        let partial = Partial::new(sym!("unify 4.B"));
                         let op = op!(Unify, term!(left.clone()), right.clone());
                         self.constrain(&partial, op);
                     }
@@ -2200,9 +2188,9 @@ impl PolarVirtualMachine {
         let partial = partial.clone_with_new_constraint(op);
         for var in partial.variables().iter() {
             eprintln!(
-                "BINDING {} <= {}",
+                "BINDING {} ← {}",
                 var,
-                partial.clone().into_term().to_polar()
+                self.deep_deref(&partial.clone().into_term()).to_polar()
             );
             self.bind(var, self.deep_deref(&partial.clone().into_term()));
         }
