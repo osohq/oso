@@ -8,43 +8,19 @@ use crate::terms::{Operation, Operator, Symbol, Term, Value};
 
 use super::Partial;
 
-fn sub_this(term: Term, this_var: Symbol) -> Term {
-    struct VariableSubber {
-        this_var: Symbol,
-    }
-
-    impl VariableSubber {
-        pub fn new(this_var: Symbol) -> Self {
-            Self { this_var }
-        }
-    }
-
-    impl Folder for VariableSubber {
-        fn fold_variable(&mut self, v: Symbol) -> Symbol {
-            if v == self.this_var {
-                sym!("_this")
-            } else {
-                v
-            }
-        }
-    }
-
-    fold_term(term, &mut VariableSubber::new(this_var))
-}
-
 /// Simplify the values of the bindings to be returned to the host language.
 ///
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref.
+/// TODO(ap): deep dref.
 pub fn simplify_bindings(bindings: Bindings) -> Bindings {
     bindings
         .into_iter()
         .map(|(var, value)| match value.value() {
-            Value::Partial(partial) => {
-                let simplified = simplify_partial(partial.clone().into_term(), var.clone());
-                let subbed = sub_this(simplified, var.clone());
-                (var, subbed)
-            }
+            Value::Partial(partial) => (
+                var.clone(),
+                simplify_partial(partial.clone().into_term(), var),
+            ),
             _ => (var, value),
         })
         .collect()
@@ -223,45 +199,30 @@ impl Simplifier {
     //     }
     // }
 
-    // /// Substitute the this variable in a constraint with a dot operation.
-    // /// Given `this` and `x`, return `x`.
-    // /// Given `this.x` and `this.y`, return `this.x.y`.
-    // fn sub_this(arg: &Term, dot_op: &Term) -> Term {
-    //     assert!(matches!(
-    //         dot_op.value(),
-    //         Value::Expression(Operation {
-    //             operator: Operator::Dot,
-    //             ..
-    //         })
-    //     ));
-    //
-    //     match arg.value() {
-    //         Value::Variable(v) if v.is_this_var() => dot_op.clone(),
-    //         Value::Expression(Operation { operator, args }) => {
-    //             arg.clone_with_value(Value::Expression(Operation {
-    //                 operator: *operator,
-    //                 args: args.iter().map(|arg| Self::sub_this(arg, dot_op)).collect(),
-    //             }))
-    //         }
-    //         _ => arg.clone(),
-    //     }
-    // }
+    /// Substitute `sym!(_"this")` for our variable in a partial.
+    fn sub_this(&self, term: Term) -> Term {
+        struct VariableSubber {
+            this_var: Symbol,
+        }
 
-    // /// Substitute the this variable in a list of constraints with a dot operation path.
-    // fn map_constraints(&mut self, constraints: &[Operation], dot_op: &Term) -> TermList {
-    //     constraints
-    //         .iter()
-    //         .map(|c| Operation {
-    //             operator: c.operator,
-    //             args: c
-    //                 .args
-    //                 .iter()
-    //                 .map(|arg| Self::sub_this(arg, dot_op))
-    //                 .collect(),
-    //         })
-    //         .map(|c| dot_op.clone_with_value(Value::Expression(fold_operation(c, self))))
-    //         .collect()
-    // }
+        impl VariableSubber {
+            pub fn new(this_var: Symbol) -> Self {
+                Self { this_var }
+            }
+        }
+
+        impl Folder for VariableSubber {
+            fn fold_variable(&mut self, v: Symbol) -> Symbol {
+                if v == self.this_var {
+                    sym!("_this")
+                } else {
+                    v
+                }
+            }
+        }
+
+        fold_term(term, &mut VariableSubber::new(self.this_var.clone()))
+    }
 }
 
 /// Simplify a partial until quiescence.
@@ -277,7 +238,9 @@ fn simplify_partial(mut term: Term, var: Symbol) -> Term {
             new.to_polar()
         );
         if new == term {
-            if simplifier.bindings.is_empty() || term.value().as_partial().unwrap().constraints.len() == 1 {
+            if simplifier.bindings.is_empty()
+                || term.value().as_partial().unwrap().constraints.len() == 1
+            {
                 break;
             } else {
                 simplifier.bindings.drain();
@@ -287,10 +250,7 @@ fn simplify_partial(mut term: Term, var: Symbol) -> Term {
     }
 
     // let new = fold_term(new, &mut EmptyAndRemover {});
-
-    let mut partial_to_expr = PartialToExpression {};
-
-    partial_to_expr.fold_term(new)
+    simplifier.sub_this(PartialToExpression {}.fold_term(new))
 }
 
 // #[cfg(test)]
