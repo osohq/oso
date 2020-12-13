@@ -645,7 +645,7 @@ impl PolarVirtualMachine {
             .map(|binding| &binding.1)
     }
 
-    /// Recursively dereference variables in a term, including subterms.
+    /// Recursively dereference variables in a term, including subterms, except partials.
     pub fn deep_deref(&self, term: &Term) -> Term {
         pub struct Derefer<'vm> {
             vm: &'vm PolarVirtualMachine,
@@ -2204,7 +2204,7 @@ impl PolarVirtualMachine {
                 var,
                 partial.clone().into_term().to_polar()
             );
-            self.bind(var, partial.clone().into_term());
+            self.bind(var, self.deep_deref(&partial.clone().into_term()));
         }
     }
 
