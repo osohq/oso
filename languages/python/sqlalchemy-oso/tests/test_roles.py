@@ -150,109 +150,49 @@ def load_fixture_data(session):
     for repo in repositories:
         session.add(repo)
     # TODO: issues
-    abby_road_read = RepositoryRole(
-        name="READ",
-        repository=abby_road,
-        users=[john, paul],
-    )
-    abby_road_triage = RepositoryRole(
-        name="TRIAGE",
-        repository=abby_road,
-        users=[],
-    )
-    abby_road_write = RepositoryRole(
-        name="WRITE",
-        repository=abby_road,
-        users=[],
-    )
-    abby_road_maintain = RepositoryRole(
-        name="MAINTAIN",
-        repository=abby_road,
-        users=[],
-    )
-    abby_road_admin = RepositoryRole(
-        name="ADMIN",
-        repository=abby_road,
-        users=[],
-    )
-    paperwork_read = RepositoryRole(
-        name="READ",
-        repository=paperwork,
-        users=[mike, sully],
-    )
-    paperwork_triage = RepositoryRole(
-        name="TRIAGE",
-        repository=paperwork,
-        users=[],
-    )
-    paperwork_write = RepositoryRole(
-        name="WRITE",
-        repository=paperwork,
-        users=[],
-    )
-    paperwork_maintain = RepositoryRole(
-        name="MAINTAIN",
-        repository=paperwork,
-        users=[],
-    )
-    paperwork_admin = RepositoryRole(
-        name="ADMIN",
-        repository=paperwork,
-        users=[],
-    )
-    repo_roles = [
-        abby_road_read,
-        abby_road_triage,
-        abby_road_write,
-        abby_road_maintain,
-        abby_road_admin,
-        paperwork_read,
-        paperwork_triage,
-        paperwork_write,
-        paperwork_maintain,
-        paperwork_admin,
+    roles = [
+        RepositoryRole(name="READ", repository=abby_road, user=john),
+        RepositoryRole(name="READ", repository=abby_road, user=paul),
+        RepositoryRole(name="READ", repository=paperwork, user=mike),
+        RepositoryRole(name="READ", repository=paperwork, user=sully),
+        OrganizationRole(
+            name="OWNER",
+            organization=beatles,
+            user=john,
+        ),
+        OrganizationRole(
+            name="MEMBER",
+            organization=beatles,
+            user=paul,
+        ),
+        OrganizationRole(
+            name="MEMBER",
+            organization=beatles,
+            user=ringo,
+        ),
+        OrganizationRole(
+            name="OWNER",
+            organization=monsters,
+            user=mike,
+        ),
+        OrganizationRole(
+            name="MEMBER",
+            organization=monsters,
+            user=sully,
+        ),
+        OrganizationRole(
+            name="MEMBER",
+            organization=monsters,
+            user=randall,
+        ),
+        TeamRole(name="MEMBER", team=vocalists, user=paul),
+        TeamRole(name="MAINTAINER", team=vocalists, user=john),
+        TeamRole(name="MAINTAINER", team=percussion, user=ringo),
+        TeamRole(name="MEMBER", team=scarers, user=randall),
+        TeamRole(name="MAINTAINER", team=scarers, user=sully),
     ]
-    for repo_role in repo_roles:
-        session.add(repo_role)
-    beatles_owner = OrganizationRole(
-        name="OWNER",
-        organization=beatles,
-        users=[john],
-    )
-    beatles_member = OrganizationRole(
-        name="MEMBER",
-        organization=beatles,
-        users=[paul, ringo],
-    )
-    monsters_owner = OrganizationRole(
-        name="OWNER",
-        organization=monsters,
-        users=[mike],
-    )
-    monsters_member = OrganizationRole(
-        name="MEMBER",
-        organization=monsters,
-        users=[sully, randall],
-    )
-    org_roles = [beatles_owner, beatles_member, monsters_owner, monsters_member]
-    for org_role in org_roles:
-        session.add(org_role)
-    vocalists_member = TeamRole(name="MEMBER", team=vocalists, users=[paul])
-    vocalists_maintainer = TeamRole(name="MAINTAINER", team=vocalists, users=[john])
-    percussion_member = TeamRole(name="MEMBER", team=percussion, users=[])
-    percussion_maintainer = TeamRole(name="MAINTAINER", team=percussion, users=[ringo])
-    scarers_member = TeamRole(name="MEMBER", team=scarers, users=[randall])
-    scarers_maintainer = TeamRole(name="MAINTAINER", team=scarers, users=[sully])
-    team_roles = [
-        vocalists_member,
-        vocalists_maintainer,
-        percussion_member,
-        percussion_maintainer,
-        scarers_member,
-        scarers_maintainer,
-    ]
-    for team_role in team_roles:
-        session.add(team_role)
+    for role in roles:
+        session.add(role)
 
     session.commit()
 
@@ -269,60 +209,67 @@ def test_db_session():
 
     return session
 
+# # @TODO: These relationship fields aren't working.
+# def test_user_resources_relationship_fields(test_db_session):
+#     beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
+#     users = beatles.users
+#     assert len(users) == 3
+#     assert users[0].email == "john@beatles.com"
+#
+# def test_resource_users_relationship_fields(test_db_session):
+#     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
+#     orgs = john.organizations
+#     assert len(orgs) == 1
+#     assert orgs[0].name == "The Beatles"
 
 def test_get_user_resources_and_roles(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
-    resource_roles = oso_roles.get_user_resources_and_roles(
-        test_db_session, john, Organization
-    )
-    assert len(resource_roles) == 1
-    assert resource_roles[0][0].name == "The Beatles"
-    assert resource_roles[0][1].name == "OWNER"
-
+    roles = john.organization_roles
+    assert len(roles) == 1
+    assert roles[0].name == "OWNER"
+    assert roles[0].organization.name == "The Beatles"
 
 def test_get_user_roles_for_resource(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
     beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
-    resource_roles = oso_roles.get_user_roles_for_resource(
-        test_db_session, john, beatles
-    )
+    resource_roles = test_db_session.query(OrganizationRole).filter_by(user=john, organization=beatles).all()
     assert len(resource_roles) == 1
     assert resource_roles[0].name == "OWNER"
 
 
 def test_get_resource_users_and_roles(test_db_session):
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
-    users = oso_roles.get_resource_users_and_roles(test_db_session, abbey_road)
-    assert len(users)
-    assert users[0][0].email == "john@beatles.com"
-    assert users[0][1].name == "READ"
-    assert users[1][0].email == "paul@beatles.com"
-    assert users[0][1].name == "READ"
+    user_roles = abbey_road.roles
+    assert user_roles[0].user.email == "john@beatles.com"
+    assert user_roles[0].name == "READ"
+    assert user_roles[1].user.email == "paul@beatles.com"
+    assert user_roles[0].name == "READ"
 
 
 def test_get_resource_users_with_role(test_db_session):
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
-    users = oso_roles.get_resource_users_with_role(test_db_session, abbey_road, "READ")
+    users = test_db_session.query(RepositoryRole).filter_by(repository=abbey_road, name="READ").all()
     assert len(users) == 2
-    assert users[0].email == "john@beatles.com"
-    assert users[1].email == "paul@beatles.com"
+    assert users[0].user.email == "john@beatles.com"
+    assert users[1].user.email == "paul@beatles.com"
 
 
 def test_add_user_role(test_db_session):
     ringo = test_db_session.query(User).filter_by(email="ringo@beatles.com").first()
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, ringo, abbey_road)
+    roles = test_db_session.query(RepositoryRole).filter_by(user=ringo, repository=abbey_road).all()
     assert len(roles) == 0
 
-    oso_roles.add_user_role(test_db_session, ringo, abbey_road, "READ")
+    new_role = RepositoryRole(name="READ", repository=abbey_road, user=ringo)
+    test_db_session.add(new_role)
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, ringo, abbey_road)
+    roles = test_db_session.query(RepositoryRole).filter_by(user=ringo, repository=abbey_road).all()
     assert len(roles) == 1
     assert roles[0].name == "READ"
 
-    with pytest.raises(Exception):
-        oso_roles.add_user_role(test_db_session, ringo, abbey_road, "NOT_A_REAL_ROLE")
+    # with pytest.raises(ValueError):
+    #     new_role = RepositoryRole(name="NOT_A_REAL_ROLE", repository=abbey_road, user=ringo)
 
 
 def test_delete_user_role(test_db_session):
@@ -330,40 +277,39 @@ def test_delete_user_role(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, john, abbey_road)
+    roles = test_db_session.query(RepositoryRole).filter_by(user=john, repository=abbey_road).all()
     assert len(roles) == 1
 
-    oso_roles.delete_user_role(test_db_session, john, abbey_road, "READ")
+    test_db_session.delete(roles[0])
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, john, abbey_road)
+    roles = test_db_session.query(RepositoryRole).filter_by(user=john, repository=abbey_road).all()
     assert len(roles) == 0
 
-    # Test without explicit role arg
     paul = test_db_session.query(User).filter_by(email="paul@beatles.com").first()
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, paul, abbey_road)
+    roles = test_db_session.query(RepositoryRole).filter_by(user=paul, repository=abbey_road).all()
     assert len(roles) == 1
 
-    oso_roles.delete_user_role(test_db_session, paul, abbey_road)
+    test_db_session.query(RepositoryRole).filter_by(user=paul, repository=abbey_road).delete()
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, paul, abbey_road)
+    roles = test_db_session.query(RepositoryRole).filter_by(user=paul, repository=abbey_road).all()
     assert len(roles) == 0
 
-    # Test trying to delete non-existent role raises exception
-    with pytest.raises(Exception):
-        oso_roles.delete_user_role(test_db_session, paul, abbey_road, "READ")
+    # # Test trying to delete non-existent role raises exception
+    # with pytest.raises(Exception):
+    #     oso_roles.delete_user_role(test_db_session, paul, abbey_road, "READ")
 
 
 def test_reassign_user_role(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, john, abbey_road)
+    roles = test_db_session.query(RepositoryRole).filter_by(user=john, repository=abbey_road).all()
     assert len(roles) == 1
     assert roles[0].name == "READ"
 
-    oso_roles.reassign_user_role(test_db_session, john, abbey_road, "WRITE")
+    test_db_session.query(RepositoryRole).filter_by(user=john, repository=abbey_road).update({"name": "WRITE"})
 
-    roles = oso_roles.get_user_roles_for_resource(test_db_session, john, abbey_road)
+    roles = test_db_session.query(RepositoryRole).filter_by(user=john, repository=abbey_road).all()
     assert len(roles) == 1
     assert roles[0].name == "WRITE"
 
