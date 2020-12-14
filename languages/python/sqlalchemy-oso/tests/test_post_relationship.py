@@ -6,6 +6,7 @@ https://www.notion.so/osohq/Relationships-621b884edbc6423f93d29e6066e58d16.
 import pytest
 
 from sqlalchemy_oso.auth import authorize_model
+from sqlalchemy.orm import Session
 
 from .models import Post, Tag, User
 from .conftest import print_query
@@ -403,11 +404,12 @@ def test_empty_constraints_in(session, oso, tag_nested_many_many_test_fixture):
     posts = authorize_model(oso, user, "read", session, Post)
     assert str(posts) == (
         "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.access_level AS posts_access_level,"
-        + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation"
+        + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation,"
+        + " posts.tag_name AS posts_tag_name"
         + " \nFROM posts"
         + " \nWHERE (EXISTS (SELECT 1"
         + " \nFROM post_tags, tags"
-        + " \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_id))"
+        + " \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_name))"
     )
     posts = posts.all()
     assert len(posts) == 4
@@ -428,11 +430,12 @@ def test_in_with_constraints_but_no_matching_objects(
     posts = authorize_model(oso, user, "read", session, Post)
     assert str(posts) == (
         "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.access_level AS posts_access_level,"
-        + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation"
+        + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation,"
+        + " posts.tag_name AS posts_tag_name"
         + " \nFROM posts"
         + " \nWHERE (EXISTS (SELECT 1"
         + " \nFROM post_tags, tags"
-        + " \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_id AND tags.name = ?))"
+        + " \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_name AND tags.name = ?))"
     )
     posts = posts.all()
     assert len(posts) == 0
@@ -458,6 +461,51 @@ def test_partial_subfield_isa(session, oso, tag_nested_many_many_test_fixture):
 
     assert len(posts) == 4
 
+
+def test_nested_relationship_single_single(session, engine, oso):
+    oso.load_str(
+        """
+        allow(_, _, post: Post) if
+            tag = post.tag and
+            tag.is_public = true;
+        """
+    )
+
+    eng = Tag(name="eng")
+    random = Tag(name="random", is_public=True)
+
+    user = User(username="user")
+
+    user_eng_post = Post(
+        contents="user eng post", access_level="public", created_by=user, tag=eng
+    )
+    user_random_post = Post(
+        contents="user random post",
+        access_level="public",
+        created_by=user,
+        tag=random
+    )
+
+    session.add_all([eng, random, user, user_eng_post, user_random_post])
+    session.commit()
+
+    session = Session(bind=engine, enable_baked_queries=False)
+    posts = authorize_model(oso, user, "read", session, Post)
+
+    assert str(posts) == (
+        "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.access_level AS posts_access_level,"
+        + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation,"
+        + " posts.tag_name AS posts_tag_name"
+        + " \nFROM posts"
+        + " \nWHERE (EXISTS (SELECT 1"
+        + " \nFROM tags"
+        + " \nWHERE tags.name = posts.tag_name AND tags.is_public = 1))")
+
+    posts = posts.all()
+    for post in posts:
+        assert post.tag.name == "random"
+
+    assert len(posts) == 1
 
 # TODO test_nested_relationship_single_many
 # TODO test_nested_relationship_single_single
