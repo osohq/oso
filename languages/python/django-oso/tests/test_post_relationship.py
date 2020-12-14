@@ -556,6 +556,51 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
     assert len(posts) == 0
 
 
+@pytest.mark.django_db
+def test_nested_relationship_single_single():
+    Oso.load_str(
+        """
+        allow(_, _, post: test_app2::Post) if
+            tag = post.tag and
+            tag.is_public = true;
+        """
+    )
+
+    eng = Tag(name="eng")
+    random = Tag(name="random", is_public=True)
+
+    user = User(username="user")
+
+    user_eng_post = Post(
+        contents="user eng post", access_level="public", created_by=user, tag=eng
+    )
+    user_random_post = Post(
+        contents="user random post",
+        access_level="public",
+        created_by=user,
+        tag=random
+    )
+
+    eng.save()
+    random.save()
+    user.save()
+    user_eng_post.save()
+    user_random_post.save()
+
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+
+    assert (
+        str(posts.query)
+        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
+        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
+        + ' FROM "test_app2_post"'
+        + ' INNER JOIN "test_app2_tag"'
+        + ' ON ("test_app2_post"."tag_id" = "test_app2_tag"."id")'
+        + ' WHERE "test_app2_tag"."is_public"'
+    )
+    assert len(posts) == 1
+
 # todo test_nested_relationship_single_many
 # todo test_nested_relationship_single_single
 # todo test_nested_relationship_single_single_single ... etc

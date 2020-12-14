@@ -31,6 +31,7 @@ class Post(AuthorizedModel):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     needs_moderation = models.BooleanField(default=False)
     tags = models.ManyToManyField(Tag)
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, null=True)
 
     class Meta:
         app_label = "test_app2"
