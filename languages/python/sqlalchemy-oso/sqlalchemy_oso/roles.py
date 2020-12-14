@@ -276,11 +276,21 @@ def enable_roles(oso):
 
 
 def get_role_model_for_resource_model(resource_model):
-    return inspect(resource_model).relationships.get("roles").argument.class_
+    try:
+        return (
+            inspect(resource_model, raiseerr=True)
+            .relationships.get("roles")
+            .argument.class_
+        )
+    except AttributeError:
+        raise TypeError(f"Expected a model; received: {resource_model}")
 
 
 def get_user_model_for_resource_model(resource_model):
-    return inspect(resource_model).relationships.get("users").argument.class_
+    try:
+        return inspect(resource_model).relationships.get("users").argument.class_
+    except AttributeError:
+        raise TypeError(f"Expected a model; received: {resource_model}")
 
 
 def get_user_roles(session, user, resource_model, resource_id=None):
