@@ -25,14 +25,14 @@ post_tags = Table(
     "post_tags",
     ModelBase.metadata,
     Column("post_id", Integer, ForeignKey("posts.id")),
-    Column("tag_id", Integer, ForeignKey("tags.name")),
+    Column("tag_name", Integer, ForeignKey("tags.name")),
 )
 
 user_tags = Table(
     "user_tags",
     ModelBase.metadata,
     Column("user_id", Integer, ForeignKey("users.id")),
-    Column("tag_id", Integer, ForeignKey("tags.name")),
+    Column("tag_name", Integer, ForeignKey("tags.name")),
 )
 
 

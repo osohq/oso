@@ -276,7 +276,8 @@ def test_null_with_partial(engine, oso):
     assert str(posts) == (
         "SELECT posts.id AS posts_id, posts.contents AS posts_contents, "
         + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
-        + "posts.needs_moderation AS posts_needs_moderation \nFROM posts \nWHERE posts.contents IS NULL"
+        + "posts.needs_moderation AS posts_needs_moderation, posts.tag_name AS posts_tag_name"
+        + " \nFROM posts \nWHERE posts.contents IS NULL"
     )
     assert posts.count() == 0
 
