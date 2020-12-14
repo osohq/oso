@@ -55,22 +55,22 @@ impl Folder for Simplifier {
                 let right = &o.args[1];
                 left == right
                     || match (left.value(), right.value()) {
-                        (Value::Variable(v), x) if *v != self.this_var && x.is_ground() => {
+                        (Value::Variable(v), x) if !self.is_this_var(left) && x.is_ground() => {
                             eprintln!("A {} ← {}", left.to_polar(), right.to_polar());
                             self.bind(v.clone(), right.clone());
                             true
                         }
-                        (x, Value::Variable(v)) if *v != self.this_var && x.is_ground() => {
+                        (x, Value::Variable(v)) if !self.is_this_var(right) && x.is_ground() => {
                             eprintln!("B {} ← {}", right.to_polar(), left.to_polar());
                             self.bind(v.clone(), left.clone());
                             true
                         }
-                        (Value::Variable(v), Value::Variable(w)) if *v == self.this_var => {
+                        (_, Value::Variable(v)) if self.is_this_var(left) => {
                             eprintln!("C {} ← {}", right.to_polar(), left.to_polar());
-                            self.bind(w.clone(), left.clone());
+                            self.bind(v.clone(), left.clone());
                             false
                         }
-                        (Value::Variable(v), Value::Variable(w)) if *w == self.this_var => {
+                        (Value::Variable(v), _) if self.is_this_var(right) => {
                             eprintln!("D {} ← {}", left.to_polar(), right.to_polar());
                             self.bind(v.clone(), right.clone());
                             false
@@ -165,6 +165,17 @@ impl Simplifier {
                 term.clone()
             }
             _ => term.clone(),
+        }
+    }
+
+    fn is_this_var(&self, t: &Term) -> bool {
+        match t.value() {
+            Value::Variable(v) => v == &self.this_var,
+            Value::Expression(Operation {
+                operator: Operator::Dot,
+                args,
+            }) => self.is_this_var(&args[0]),
+            _ => false,
         }
     }
 

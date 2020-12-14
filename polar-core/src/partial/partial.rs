@@ -648,8 +648,9 @@ mod test {
     fn test_partial_comparison_dot() -> TestResult {
         let p = Polar::new();
         p.load_str("a_positive(x) if x.a > 0 and 0 < x.a;")?;
-        let mut q = p.new_query_from_term(term!(call!("a_positive", [sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a > 0");
+        let mut q = p.new_query_from_term(term!(call!("a_positive", [sym!("x")])), false);
+        // TODO(gj): Canonicalize comparisons.
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.a > 0 and 0 < _this.a");
         assert_query_done!(q);
         Ok(())
     }
