@@ -1048,24 +1048,22 @@ mod test {
                h(x) if y in x.values and (y.bar = 1 and y.baz = 2) or y.bar = 3;"#,
         )?;
 
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         // TODO (dhatch): This doesn't work now, but ultimately this should have
         // no constraints since nothing is added to `y`.
         assert_partial_expressions!(
             next_binding(&mut q)?,
-            "a" => "() in _this.values",
-            "_y_12" => ""
+            "a" => "() in _this.values"
         );
         assert_query_done!(q);
 
         // Not sure about this one, where there's an output binding.  There are still
         // no constraints on b.
-        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a"), partial!("b")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a"), sym!("b")])), false);
         assert_partial_expressions!(
             next_binding(&mut q)?,
             "a" => "() in _this.values",
-            "b" => "",
-            "_y_17" => ""
+            "b" => ""
         );
         assert_query_done!(q);
 
