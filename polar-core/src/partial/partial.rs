@@ -670,7 +670,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q)?,
             "a",
-            "_this.y = 0 and _this.y > 1 and _this.y.z > 1 and _this = 2"
+            "0 = _this.y and _this.y > 1 and _this.y.z > 1 and _this = 2"
         );
         assert_query_done!(q);
         Ok(())
@@ -991,23 +991,23 @@ mod test {
     #[test]
     fn test_in_partial_lhs() -> TestResult {
         let p = Polar::new();
-        p.load_str(
-            r#"lhs(x) if x in [1, 2];
-               not_lhs(x) if not x in [1, 2];
-               rhs(x) if 1 in x;"#,
-        )?;
-
+        p.load_str("lhs(x) if x in [1, 2];")?;
         // Partials on the LHS of `in` accumulate constraints disjunctively.
-        let mut q = p.new_query_from_term(term!(call!("lhs", [sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1");
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 2");
+        let mut q = p.new_query_from_term(term!(call!("lhs", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this = 1");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this = 2");
         assert_query_done!(q);
+        Ok(())
+    }
 
+    #[test]
+    fn test_negated_in_partial_lhs() -> TestResult {
+        let p = Polar::new();
+        p.load_str("not_lhs(x) if not x in [1, 2];")?;
         // Inverting an `in` produces a conjunction of the inverted disjunctive constraints.
-        let mut q = p.new_query_from_term(term!(call!("not_lhs", [sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1 and _this != 2");
+        let mut q = p.new_query_from_term(term!(call!("not_lhs", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this != 1 and _this != 2");
         assert_query_done!(q);
-
         Ok(())
     }
 
@@ -1020,19 +1020,19 @@ mod test {
                contains_dot_dot(x, y) if x in y.foo.bar and y.foo = 2;"#,
         )?;
 
-        let mut q = p.new_query_from_term(term!(call!("contains", [1, sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "1 in _this");
+        let mut q = p.new_query_from_term(term!(call!("contains", [1, sym!("y")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "y", "1 in _this");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("contains_dot", [1, sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "1 in _this.foo");
+        let mut q = p.new_query_from_term(term!(call!("contains_dot", [1, sym!("y")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "y", "1 in _this.foo");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("contains_dot_dot", [1, sym!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("contains_dot_dot", [1, sym!("y")])), false);
         assert_partial_expression!(
             next_binding(&mut q)?,
-            "a",
-            "1 in _this.foo.bar and _this.foo = 2"
+            "y",
+            "1 in _this.foo.bar and 2 = _this.foo"
         );
         assert_query_done!(q);
 
@@ -1053,7 +1053,7 @@ mod test {
         // no constraints since nothing is added to `y`.
         assert_partial_expressions!(
             next_binding(&mut q)?,
-            "a" => "() in _this.values"
+            "a" => "_y_12 in _this.values"
         );
         assert_query_done!(q);
 
@@ -1062,7 +1062,7 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("a"), sym!("b")])), false);
         assert_partial_expressions!(
             next_binding(&mut q)?,
-            "a" => "() in _this.values",
+            "a" => "_y_17 in _this.values",
             "b" => ""
         );
         assert_query_done!(q);
@@ -1070,11 +1070,11 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("a")])), false);
         assert_partial_expressions!(
             next_binding(&mut q)?,
-            "a" => "(_this.bar = 1 and _this.baz = 2) in _this.values"
+            "a" => "_y_27 in _this.values and 1 = _y_27.bar and 2 = _y_27.baz"
         );
         assert_partial_expressions!(
             next_binding(&mut q)?,
-            "a" => "(_this.bar = 3) in _this.values"
+            "a" => "_y_27 in _this.values and 3 = _y_27.bar"
         );
         assert_query_done!(q);
 
@@ -1195,17 +1195,17 @@ mod test {
 
         let mut q = p.new_query_from_term(term!(call!("f", [1, sym!("a")])), false);
 
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c = 1");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "1 = _this.a.b.c");
         assert_partial_expression!(
             next_binding(&mut q)?,
             "a",
-            "_this.a.b.c < 1 and _this.a.b > 1 and _this.a.b.c > 1"
+            "1 > _this.a.b.c and 1 < _this.a.b and _this.a.b.c > 1"
         );
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a = 1");
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b = 1");
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d = 1");
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d.e = 1");
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d.e.f = 1");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "1 = _this.a");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "1 = _this.a.b");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "1 = _this.a.b.c.d");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "1 = _this.a.b.c.d.e");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "1 = _this.a.b.c.d.e.f");
         assert_query_done!(q);
         Ok(())
     }
