@@ -406,7 +406,7 @@ mod test {
         let p = Polar::new();
         p.load_str("f(x, y, z) if x = y and x = z;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("a"), 1, 2])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1 and _this = 2");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1 and 1 = 2");
         assert_query_done!(q);
         Ok(())
     }
@@ -421,11 +421,11 @@ mod test {
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("a"), 1, 2])), false);
         let next = next_binding(&mut q)?;
-        assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 3");
+        assert_partial_expression!(next, "a", "_this = 1 and 1 = 2 and 1 = 3");
         let next = next_binding(&mut q)?;
-        assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 4");
+        assert_partial_expression!(next, "a", "_this = 1 and 1 = 2 and 1 = 4");
         let next = next_binding(&mut q)?;
-        assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 5");
+        assert_partial_expression!(next, "a", "_this = 1 and 1 = 2 and 1 = 5");
         assert_query_done!(q);
         Ok(())
     }
@@ -545,7 +545,7 @@ mod test {
                h(x: Bar) if x.z = 1;
                h(x: Baz) if x.z = 1;"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         let mut next_binding = || loop {
             match q.next_event().unwrap() {
                 QueryEvent::Result { bindings, .. } => return bindings,
@@ -601,7 +601,7 @@ mod test {
             r#"f(x: PostSubclass) if g(x);
                g(x: Post);"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         let mut next_binding = || loop {
             match q.next_event().unwrap() {
                 QueryEvent::Result { bindings, .. } => return bindings,
@@ -661,11 +661,11 @@ mod test {
             r#"f(x) if x.y.z > 0;
                g(x) if x.y = 0 and x.y > 1 and x.y.z > 1 and x = 2;"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.y.z > 0");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         assert_partial_expression!(
             next_binding(&mut q)?,
             "a",
@@ -691,7 +691,7 @@ mod test {
     fn test_partial_in_arithmetic_op() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x) if x = x + 0;")?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
@@ -702,7 +702,7 @@ mod test {
     fn test_method_call_on_partial() -> TestResult {
         let p = Polar::new();
         p.load_str("g(x) if x.foo();")?;
-        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
@@ -821,7 +821,7 @@ mod test {
     fn test_comparing_partials() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x, y) if x > y;")?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a"), partial!("b")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a"), sym!("b")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
@@ -832,7 +832,7 @@ mod test {
     fn test_dot_lookup_with_partial_as_field() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x) if {}.(x);")?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }), ..}));
@@ -850,27 +850,27 @@ mod test {
                j(x) if not (not x = 1);
                k(x) if not (not (not x = 1));"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this <= 1");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1 or _this != 2");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("i", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("i", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1 and _this != 2");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("j", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("j", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("k", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("k", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1");
         assert_query_done!(q);
 
@@ -886,19 +886,19 @@ mod test {
                h(x) if not (y = 1 and x.foo.bar = y);
                i(x) if not (y = x.foo.bar and 1 = y);"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.foo != 1");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.foo != 1");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.foo.bar != 1");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("i", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("i", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.foo.bar != 1");
         assert_query_done!(q);
         Ok(())
@@ -912,16 +912,16 @@ mod test {
                g(x) if not (x = 1 and (not x = 2));
                h(x) if x = 1 and not (x = 2 or x = 3);"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this = 3 and _this != 1 or _this = 2");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1 or _this = 2");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("a")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this = 1 and _this != 2 and _this != 3");
         assert_query_done!(q);
@@ -936,11 +936,11 @@ mod test {
             r#"f(x) if not (x.foo = y);
                g(x) if not (x.foo.bar = y);"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "");
         assert_query_done!(q);
         Ok(())
@@ -954,17 +954,17 @@ mod test {
                g(x) if not (1 = x or x = 2);
                h(x) if not (x.foo.bar = 1 or 2 = x.foo.bar);"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this.foo != 1 and _this.foo != 2");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this != 1 and _this != 2");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("a")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this.foo.bar != 1 and _this.foo.bar != 2");
         assert_query_done!(q);
@@ -997,13 +997,13 @@ mod test {
         )?;
 
         // Partials on the LHS of `in` accumulate constraints disjunctively.
-        let mut q = p.new_query_from_term(term!(call!("lhs", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("lhs", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1");
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 2");
         assert_query_done!(q);
 
         // Inverting an `in` produces a conjunction of the inverted disjunctive constraints.
-        let mut q = p.new_query_from_term(term!(call!("not_lhs", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("not_lhs", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1 and _this != 2");
         assert_query_done!(q);
 
@@ -1019,16 +1019,15 @@ mod test {
                contains_dot_dot(x, y) if x in y.foo.bar and y.foo = 2;"#,
         )?;
 
-        let mut q = p.new_query_from_term(term!(call!("contains", [1, partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("contains", [1, sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "1 in _this");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("contains_dot", [1, partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("contains_dot", [1, sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "1 in _this.foo");
         assert_query_done!(q);
 
-        let mut q =
-            p.new_query_from_term(term!(call!("contains_dot_dot", [1, partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("contains_dot_dot", [1, sym!("a")])), false);
         assert_partial_expression!(
             next_binding(&mut q)?,
             "a",
@@ -1067,7 +1066,7 @@ mod test {
         );
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("a")])), false);
         assert_partial_expressions!(
             next_binding(&mut q)?,
             "a" => "(_this.bar = 1 and _this.baz = 2) in _this.values"
@@ -1101,7 +1100,7 @@ mod test {
                f(x) if x = 2 and cut;
                f(x) if x = 3;"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(1));
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(2));
         assert_query_done!(q);
@@ -1117,11 +1116,11 @@ mod test {
                g(1) if cut;
                g(2);"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1 and _this = 2");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(1));
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(2));
         assert_query_done!(q);
@@ -1136,7 +1135,7 @@ mod test {
             r#"f(x, y) if cut and x = 1;
                f(x, y: 2) if x = 2;"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a"), value!(2)])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a"), value!(2)])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(2));
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(1));
         assert_query_done!(q);
@@ -1150,12 +1149,12 @@ mod test {
             r#"f(x) if x := 1;
                g(x) if x = 1 and y := x;"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }), ..}));
 
-        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1");
         assert_query_done!(q);
         Ok(())
@@ -1165,7 +1164,7 @@ mod test {
     fn nonlogical_inversions() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x) if not print(x);")?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         assert_query_done!(q);
         Ok(())
     }
@@ -1174,7 +1173,7 @@ mod test {
     fn test_nested_dot_in() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x, y) if x in y.a.b.c;")?;
-        let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [1, sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "1 in _this.a.b.c");
         assert_query_done!(q);
         Ok(())
@@ -1193,7 +1192,7 @@ mod test {
                f(x, y) if x = y.a.b.c.d.e.f;"#,
         )?;
 
-        let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [1, sym!("a")])), false);
 
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c = 1");
         assert_partial_expression!(
@@ -1217,7 +1216,7 @@ mod test {
             r#"f(x) if (not x matches Foo{} or not g(x)) and x = 1;
                g(_: Bar);"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
         assert_partial_expression!(
             next_binding(&mut q)?,
             "a",
