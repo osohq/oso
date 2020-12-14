@@ -36,7 +36,6 @@ def resource_role_class(declarative_base, user_model, resource_model, role_choic
                     f"{value} Is not a valid choice for {resource_model.__name__} Roles"
                 )
 
-
     @declared_attr
     def resource_id(cls):
         type = inspect(resource_model).primary_key[0].type
@@ -51,24 +50,23 @@ def resource_role_class(declarative_base, user_model, resource_model, role_choic
     setattr(ResourceRoleMixin, f"{resource_model.__name__.lower()}_id", resource_id)
     setattr(ResourceRoleMixin, resource_model.__name__.lower(), resource)
 
-    @declared_attr
-    def users(cls):
-        return relationship(user_model.__name__, secondary=tablename, lazy="dynamic", viewonly=True)
-
-    @declared_attr
-    def resources(cls):
-        return relationship(resource_model.__name__, secondary=tablename, lazy="dynamic", viewonly=True)
-
-    setattr(resource_model, "users", users)
-
+    # Add the relationship between the user_model and the resource_model
+    resources = relationship(
+        resource_model.__name__,
+        secondary=tablename,
+        lazy=True,
+        viewonly=True,
+        backref="users",
+        sync_backref=False,
+    )
     # @Q: Do we try to pluralize this name correctly?
     setattr(user_model, resource_model.__name__.lower() + "s", resources)
-
 
     return ResourceRoleMixin
 
 
 ROLE_CLASSES: List[Any] = []
+
 
 def enable_roles():
 

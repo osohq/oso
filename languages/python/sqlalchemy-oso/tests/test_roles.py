@@ -209,18 +209,20 @@ def test_db_session():
 
     return session
 
-# # @TODO: These relationship fields aren't working.
-# def test_user_resources_relationship_fields(test_db_session):
-#     beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
-#     users = beatles.users
-#     assert len(users) == 3
-#     assert users[0].email == "john@beatles.com"
-#
-# def test_resource_users_relationship_fields(test_db_session):
-#     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
-#     orgs = john.organizations
-#     assert len(orgs) == 1
-#     assert orgs[0].name == "The Beatles"
+
+def test_user_resources_relationship_fields(test_db_session):
+    beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
+    users = beatles.users
+    assert len(users) == 3
+    assert users[0].email == "john@beatles.com"
+
+
+def test_resource_users_relationship_fields(test_db_session):
+    john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
+    orgs = john.organizations
+    assert len(orgs) == 1
+    assert orgs[0].name == "The Beatles"
+
 
 def test_get_user_resources_and_roles(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
@@ -229,10 +231,15 @@ def test_get_user_resources_and_roles(test_db_session):
     assert roles[0].name == "OWNER"
     assert roles[0].organization.name == "The Beatles"
 
+
 def test_get_user_roles_for_resource(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
     beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
-    resource_roles = test_db_session.query(OrganizationRole).filter_by(user=john, organization=beatles).all()
+    resource_roles = (
+        test_db_session.query(OrganizationRole)
+        .filter_by(user=john, organization=beatles)
+        .all()
+    )
     assert len(resource_roles) == 1
     assert resource_roles[0].name == "OWNER"
 
@@ -248,7 +255,11 @@ def test_get_resource_users_and_roles(test_db_session):
 
 def test_get_resource_users_with_role(test_db_session):
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
-    users = test_db_session.query(RepositoryRole).filter_by(repository=abbey_road, name="READ").all()
+    users = (
+        test_db_session.query(RepositoryRole)
+        .filter_by(repository=abbey_road, name="READ")
+        .all()
+    )
     assert len(users) == 2
     assert users[0].user.email == "john@beatles.com"
     assert users[1].user.email == "paul@beatles.com"
@@ -258,13 +269,21 @@ def test_add_user_role(test_db_session):
     ringo = test_db_session.query(User).filter_by(email="ringo@beatles.com").first()
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
 
-    roles = test_db_session.query(RepositoryRole).filter_by(user=ringo, repository=abbey_road).all()
+    roles = (
+        test_db_session.query(RepositoryRole)
+        .filter_by(user=ringo, repository=abbey_road)
+        .all()
+    )
     assert len(roles) == 0
 
     new_role = RepositoryRole(name="READ", repository=abbey_road, user=ringo)
     test_db_session.add(new_role)
 
-    roles = test_db_session.query(RepositoryRole).filter_by(user=ringo, repository=abbey_road).all()
+    roles = (
+        test_db_session.query(RepositoryRole)
+        .filter_by(user=ringo, repository=abbey_road)
+        .all()
+    )
     assert len(roles) == 1
     assert roles[0].name == "READ"
 
@@ -277,21 +296,39 @@ def test_delete_user_role(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
 
-    roles = test_db_session.query(RepositoryRole).filter_by(user=john, repository=abbey_road).all()
+    roles = (
+        test_db_session.query(RepositoryRole)
+        .filter_by(user=john, repository=abbey_road)
+        .all()
+    )
     assert len(roles) == 1
 
     test_db_session.delete(roles[0])
 
-    roles = test_db_session.query(RepositoryRole).filter_by(user=john, repository=abbey_road).all()
+    roles = (
+        test_db_session.query(RepositoryRole)
+        .filter_by(user=john, repository=abbey_road)
+        .all()
+    )
     assert len(roles) == 0
 
     paul = test_db_session.query(User).filter_by(email="paul@beatles.com").first()
-    roles = test_db_session.query(RepositoryRole).filter_by(user=paul, repository=abbey_road).all()
+    roles = (
+        test_db_session.query(RepositoryRole)
+        .filter_by(user=paul, repository=abbey_road)
+        .all()
+    )
     assert len(roles) == 1
 
-    test_db_session.query(RepositoryRole).filter_by(user=paul, repository=abbey_road).delete()
+    test_db_session.query(RepositoryRole).filter_by(
+        user=paul, repository=abbey_road
+    ).delete()
 
-    roles = test_db_session.query(RepositoryRole).filter_by(user=paul, repository=abbey_road).all()
+    roles = (
+        test_db_session.query(RepositoryRole)
+        .filter_by(user=paul, repository=abbey_road)
+        .all()
+    )
     assert len(roles) == 0
 
     # # Test trying to delete non-existent role raises exception
@@ -303,13 +340,23 @@ def test_reassign_user_role(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
 
-    roles = test_db_session.query(RepositoryRole).filter_by(user=john, repository=abbey_road).all()
+    roles = (
+        test_db_session.query(RepositoryRole)
+        .filter_by(user=john, repository=abbey_road)
+        .all()
+    )
     assert len(roles) == 1
     assert roles[0].name == "READ"
 
-    test_db_session.query(RepositoryRole).filter_by(user=john, repository=abbey_road).update({"name": "WRITE"})
+    test_db_session.query(RepositoryRole).filter_by(
+        user=john, repository=abbey_road
+    ).update({"name": "WRITE"})
 
-    roles = test_db_session.query(RepositoryRole).filter_by(user=john, repository=abbey_road).all()
+    roles = (
+        test_db_session.query(RepositoryRole)
+        .filter_by(user=john, repository=abbey_road)
+        .all()
+    )
     assert len(roles) == 1
     assert roles[0].name == "WRITE"
 
