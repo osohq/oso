@@ -77,18 +77,18 @@ impl Inverter {
 }
 
 struct PartialInverter<'a> {
-    old_value: &'a Term,
+    old_value: Option<&'a Term>,
 }
 
 impl<'a> PartialInverter<'a> {
-    pub fn new(old_value: &'a Term) -> Self {
+    pub fn new(old_value: Option<&'a Term>) -> Self {
         Self { old_value }
     }
 
     fn invert_partial(&mut self, p: &Partial) -> Partial {
         // Compute csp from old_value vs. p.
-        let csp = match self.old_value.value() {
-            Value::Partial(q) => q.constraints().len(),
+        let csp = match self.old_value.map(|t| t.value()) {
+            Some(Value::Partial(q)) => q.constraints().len(),
             _ => 0,
         };
         p.clone_with_constraints(p.inverted_constraints(csp))
@@ -110,8 +110,10 @@ fn invert_partials(bindings: BindingStack, old_bindings: &[Binding]) -> BindingS
     bindings
         .into_iter()
         .map(|Binding(var, value)| {
-            let old_value = &old_bindings.iter().rfind(|Binding(v, _)| *v == var).unwrap().1;
-            eprintln!("Old value of {}: {}", var, old_value.to_polar());
+            let old_value = old_bindings
+                .iter()
+                .rfind(|Binding(v, _)| *v == var)
+                .map(|Binding(_, value)| value);
             Binding(var, PartialInverter::new(old_value).fold_term(value))
         })
         .collect()
