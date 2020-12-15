@@ -5,7 +5,7 @@ from sqlalchemy.schema import Table, Column, ForeignKey
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.event import listen
-from sqlalchemy import inspect
+from sqlalchemy import inspect, UniqueConstraint
 
 
 def resource_role_class(declarative_base, user_model, resource_model, role_choices):
@@ -17,11 +17,16 @@ def resource_role_class(declarative_base, user_model, resource_model, role_choic
         __tablename__ = tablename
         id = Column(Integer, primary_key=True)
         name = Column(String())
+        __table_args__ = (
+            UniqueConstraint(
+                f"{resource_model.__name__.lower()}_id", "name", "user_id"
+            ),
+        )
 
         @validates("name")
         def validate_name(self, key, name):
             if name not in self.choices:
-                raise Exception(
+                raise ValueError(
                     f"{name} Is not a valid choice for {self.__class__.__name__}"
                 )
             return name
@@ -36,13 +41,6 @@ def resource_role_class(declarative_base, user_model, resource_model, role_choic
         @declared_attr
         def user(cls):
             return relationship(user_model.__name__, backref=tablename, lazy=True)
-
-        @staticmethod
-        def before_set_name(target, value, oldvalue, initiator):
-            if value not in role_choices:
-                raise ValueError(
-                    f"{value} Is not a valid choice for {resource_model.__name__} Roles"
-                )
 
     @declared_attr
     def resource_id(cls):

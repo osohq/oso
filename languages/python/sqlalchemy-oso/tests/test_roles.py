@@ -213,6 +213,7 @@ def test_db_session():
 def test_user_resources_relationship_fields(test_db_session):
     beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
     users = beatles.users
+    users.sort(key=lambda x: x.email)
     assert len(users) == 3
     assert users[0].email == "john@beatles.com"
 
@@ -276,7 +277,7 @@ def test_add_user_role(test_db_session):
     )
     assert len(roles) == 0
 
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         new_role = RepositoryRole(name="FAKE", repository=abbey_road, user=ringo)
         test_db_session.add(new_role)
 
@@ -290,9 +291,6 @@ def test_add_user_role(test_db_session):
     )
     assert len(roles) == 1
     assert roles[0].name == "READ"
-
-    # with pytest.raises(ValueError):
-    #     new_role = RepositoryRole(name="NOT_A_REAL_ROLE", repository=abbey_road, user=ringo)
 
 
 def test_delete_user_role(test_db_session):
@@ -334,10 +332,6 @@ def test_delete_user_role(test_db_session):
         .all()
     )
     assert len(roles) == 0
-
-    # # Test trying to delete non-existent role raises exception
-    # with pytest.raises(Exception):
-    #     oso_roles.delete_user_role(test_db_session, paul, abbey_road, "READ")
 
 
 def test_reassign_user_role(test_db_session):
