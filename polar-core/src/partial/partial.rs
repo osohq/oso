@@ -739,18 +739,18 @@ mod test {
                g(x) if not (x = 1 and (not x = 2));
                h(x) if x = 1 and not (x = 2 or x = 3);"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let next = next_binding(&mut q)?;
-        assert_partial_expression!(next, "a", "_this = 3 and _this != 1 or _this = 2");
+        assert_partial_expression!(next, "x", "_this = 3 and 3 != 1 or 3 = 2");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1 or _this = 2");
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this != 1 or _this = 2");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("h", [sym!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
         let next = next_binding(&mut q)?;
-        assert_partial_expression!(next, "a", "_this = 1 and _this != 2 and _this != 3");
+        assert_partial_expression!(next, "x", "_this = 1 and 1 != 2 and 1 != 3");
         assert_query_done!(q);
 
         Ok(())
