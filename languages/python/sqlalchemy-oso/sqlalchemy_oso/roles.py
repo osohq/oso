@@ -3,7 +3,7 @@ from typing import Any, List
 from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Table, Column, ForeignKey
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.event import listen
 from sqlalchemy import inspect
 
@@ -17,6 +17,14 @@ def resource_role_class(declarative_base, user_model, resource_model, role_choic
         __tablename__ = tablename
         id = Column(Integer, primary_key=True)
         name = Column(String())
+
+        @validates("name")
+        def validate_name(self, key, name):
+            if name not in self.choices:
+                raise Exception(
+                    f"{name} Is not a valid choice for {self.__class__.__name__}"
+                )
+            return name
 
         @declared_attr
         def user_id(cls):

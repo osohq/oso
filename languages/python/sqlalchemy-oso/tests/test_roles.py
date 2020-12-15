@@ -276,6 +276,10 @@ def test_add_user_role(test_db_session):
     )
     assert len(roles) == 0
 
+    with pytest.raises(Exception):
+        new_role = RepositoryRole(name="FAKE", repository=abbey_road, user=ringo)
+        test_db_session.add(new_role)
+
     new_role = RepositoryRole(name="READ", repository=abbey_road, user=ringo)
     test_db_session.add(new_role)
 
