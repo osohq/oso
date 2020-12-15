@@ -221,6 +221,7 @@ pub struct PolarVirtualMachine {
 
     // Other flags.
     pub query_contains_partial: bool,
+    pub simplify: bool,
 
     /// Output messages.
     pub messages: MessageQueue,
@@ -297,6 +298,7 @@ impl PolarVirtualMachine {
             polar_log: std::env::var("POLAR_LOG").is_ok(),
             polar_log_mute: false,
             query_contains_partial,
+            simplify: true,
             messages,
         };
         vm.bind_constants(constants);
@@ -2734,7 +2736,10 @@ impl Runnable for PolarVirtualMachine {
             None
         };
 
-        let bindings = simplify_bindings(self.bindings(false));
+        let mut bindings = self.bindings(false);
+        if self.simplify {
+            bindings = simplify_bindings(bindings);
+        }
 
         Ok(QueryEvent::Result { bindings, trace })
     }

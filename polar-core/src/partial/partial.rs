@@ -11,52 +11,6 @@ pub struct Partial {
     pub variable: Symbol,
 }
 
-/// Invert operators.
-fn invert_operation(Operation { operator, args }: Operation) -> Operation {
-    match operator {
-        Operator::And => Operation {
-            operator: Operator::Or,
-            args,
-        },
-        Operator::Or => Operation {
-            operator: Operator::And,
-            args,
-        },
-        Operator::Unify | Operator::Eq => Operation {
-            operator: Operator::Neq,
-            args,
-        },
-        Operator::Neq => Operation {
-            operator: Operator::Unify,
-            args,
-        },
-        Operator::Gt => Operation {
-            operator: Operator::Leq,
-            args,
-        },
-        Operator::Geq => Operation {
-            operator: Operator::Lt,
-            args,
-        },
-        Operator::Lt => Operation {
-            operator: Operator::Geq,
-            args,
-        },
-        Operator::Leq => Operation {
-            operator: Operator::Gt,
-            args,
-        },
-        Operator::Debug | Operator::Print | Operator::New | Operator::Dot => {
-            Operation { operator, args }
-        }
-        Operator::Isa => Operation {
-            operator: Operator::Not,
-            args: vec![term!(op!(Isa, args[0].clone(), args[1].clone()))],
-        },
-        _ => todo!("negate {:?}", operator),
-    }
-}
-
 impl Partial {
     pub fn new(variable: Symbol) -> Self {
         Self {
@@ -96,25 +50,11 @@ impl Partial {
     pub fn inverted_constraints(&self, csp: usize) -> Vec<Operation> {
         let (old, new) = self.constraints.split_at(csp);
         let mut combined = old.to_vec();
-        match new.len() {
-            // Do nothing to an empty partial.
-            0 => (),
-
-            // Invert a single constraint.
-            1 => combined.push(invert_operation(new[0].clone())),
-
-            // Invert the conjunction of multiple constraints, yielding a disjunction of their
-            // inverted selves. (De Morgan's Law)
-            _ => {
-                let inverted = new.iter().cloned().map(invert_operation);
-                let inverted = inverted.map(|o| Term::new_temporary(Value::Expression(o)));
-                let inverted = Operation {
-                    operator: Operator::Or,
-                    args: inverted.collect(),
-                };
-                combined.push(inverted);
-            }
-        }
+        combined.extend(
+            new.iter()
+                .map(|o| op!(Not, term!(value!(o.clone()))))
+                .collect::<Vec<Operation>>(),
+        );
         combined
     }
 
@@ -677,28 +617,28 @@ mod test {
                j(x) if not (not x = 1);
                k(x) if not (not (not x = 1));"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1");
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this != 1");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this <= 1");
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this <= 1");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("h", [sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1 or _this != 2");
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this != 1 or _this != 2");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("i", [sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1 and _this != 2");
+        let mut q = p.new_query_from_term(term!(call!("i", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this != 1 and _this != 2");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("j", [sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1");
+        let mut q = p.new_query_from_term(term!(call!("j", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this = 1");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("k", [sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1");
+        let mut q = p.new_query_from_term(term!(call!("k", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this != 1");
         assert_query_done!(q);
 
         Ok(())

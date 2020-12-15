@@ -1,18 +1,16 @@
 use std::cell::RefCell;
-use std::collections::hash_map::{Entry, HashMap};
+use std::collections::hash_map::Entry;
 use std::rc::Rc;
 
 use crate::counter::Counter;
 use crate::error::PolarResult;
 use crate::events::QueryEvent;
 use crate::folder::{fold_value, Folder};
-use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::partial::Partial;
 use crate::runnable::Runnable;
-use crate::terms::{Symbol, Term, Value};
-use crate::visitor::{walk_term, Visitor};
-use crate::vm::{Binding, BindingStack, Goal, Goals, PolarVirtualMachine};
+use crate::terms::{Term, Value};
+use crate::vm::{Binding, BindingStack, Goals, PolarVirtualMachine};
 
 #[derive(Clone)]
 pub struct Inverter {
@@ -20,7 +18,6 @@ pub struct Inverter {
     bindings: Rc<RefCell<BindingStack>>,
     bsp: usize,
     results: Vec<BindingStack>,
-    csps: HashMap<Symbol, usize>,
 }
 
 impl Inverter {
@@ -30,45 +27,10 @@ impl Inverter {
         bindings: Rc<RefCell<BindingStack>>,
         bsp: usize,
     ) -> Self {
-        struct CspVisitor {
-            csps: HashMap<Symbol, usize>,
-        }
-
-        impl Visitor for CspVisitor {
-            fn visit_partial(&mut self, p: &Partial) {
-                let csp = p.constraints().len();
-                for v in p.variables() {
-                    eprintln!(
-                        "@@@@@@@@@@@@@@@@@@@@@@@@@@ {} - {} - {}",
-                        v,
-                        csp,
-                        p.clone().into_term().to_polar()
-                    );
-                    if let Some(prev) = self.csps.insert(v.clone(), csp) {
-                        assert_eq!(
-                            prev, csp,
-                            "csps don't match for {}\n\told: {}\n\tnew: {}",
-                            v.0, prev, csp
-                        );
-                    }
-                }
-            }
-        }
-
-        let mut visitor = CspVisitor {
-            csps: HashMap::new(),
-        };
-
-        goals.iter().for_each(|g| {
-            if let Goal::Query { term } = g {
-                eprintln!("@SKLASJDFLKAJSDFLKJASDLFKJASDLFJK");
-                walk_term(&mut visitor, &vm.deep_deref(term));
-            }
-        });
-
+        let mut vm = vm.clone_with_goals(goals);
+        vm.simplify = false;
         Self {
-            csps: visitor.csps,
-            vm: vm.clone_with_goals(goals),
+            vm,
             bindings,
             bsp,
             results: vec![],
