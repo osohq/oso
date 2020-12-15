@@ -2,22 +2,22 @@ use crate::counter::Counter;
 use crate::error::{OperationalError, PolarResult};
 use crate::events::QueryEvent;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Pattern, Term, Value};
+use crate::terms::{Operation, Operator, Pattern, Value};
 
 #[derive(Clone)]
 pub struct IsaConstraintCheck {
     existing: Vec<Operation>,
-    proposed: Term,
+    proposed: Operation,
     result: Option<bool>,
     alternative_check: Option<QueryEvent>,
     last_call_id: u64,
 }
 
 impl IsaConstraintCheck {
-    pub fn new(existing: Vec<Operation>, mut proposed: Operation) -> Self {
+    pub fn new(existing: Vec<Operation>, proposed: Operation) -> Self {
         Self {
             existing,
-            proposed: proposed.args.pop().unwrap(),
+            proposed,
             result: None,
             alternative_check: None,
             last_call_id: 0,
@@ -45,12 +45,13 @@ impl IsaConstraintCheck {
     ) -> Option<(QueryEvent, QueryEvent)> {
         // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
         // partial, Integer)`.
-        if constraint.operator != Operator::Isa {
+        if constraint.operator != Operator::Isa || constraint.args[0] != self.proposed.args[0] {
             return None;
         }
 
-        let right = constraint.args.pop().unwrap();
-        match (self.proposed.value(), right.value()) {
+        let proposed = self.proposed.args.pop().unwrap();
+        let existing = constraint.args.pop().unwrap();
+        match (proposed.value(), existing.value()) {
             (
                 Value::Pattern(Pattern::Instance(proposed)),
                 Value::Pattern(Pattern::Instance(existing)),

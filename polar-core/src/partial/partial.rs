@@ -2,13 +2,8 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::runnable::Runnable;
-use crate::terms::{
-    Dictionary, InstanceLiteral, Operation, Operator, Pattern, Symbol, Term, Value,
-};
+use crate::terms::{Operation, Operator, Symbol, Term, Value};
 use crate::visitor::{walk_partial, Visitor};
-
-use super::isa_constraint_check::IsaConstraintCheck;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Partial {
@@ -131,133 +126,6 @@ impl Partial {
         self.constraints.push(o);
     }
 
-    pub fn unify(&mut self, other: Term) {
-        let op = op!(Unify, self.variable_term(), other);
-        self.add_constraint(op);
-    }
-
-    /// Add an isa constraint of the form `_this matches other`.
-    ///
-    /// ## Returns
-    ///
-    /// - Some(Runnable) if a compatibility check needs to be performed.
-    ///   If the runnable succeeds, this partial should be used and the
-    ///   query should continue.
-    ///
-    ///   If the runnable fails, the query should backtrack because the
-    ///   existing constraints are incompatible with the proposed constraint.
-    /// - None if no compatibility check needs to be performed and the partial
-    ///   is compatible with the new constraint.
-    pub fn isa(&mut self, other: Term) -> Option<Box<dyn Runnable>> {
-        match other.value() {
-            Value::Pattern(Pattern::Dictionary(fields)) => {
-                // Add field constraints.
-                for (field, value) in fields.fields.iter().rev() {
-                    self.add_constraint(op!(
-                        Unify,
-                        term!(op!(Dot, self.variable_term(), term!(field.clone()))),
-                        value.clone()
-                    ));
-                }
-                None
-            }
-            Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
-                // Construct field-less Isa operation since field constraints will be added
-                // separately.
-                let tag_pattern = term!(pattern!(instance!(tag.clone())));
-                let type_constraint = op!(Isa, self.variable_term(), tag_pattern);
-                let existing = self.constraints.clone();
-                let check = Box::new(IsaConstraintCheck::new(existing, type_constraint.clone()));
-
-                self.add_constraint(type_constraint);
-
-                // Add field constraints.
-                let fields = term!(pattern!(fields.clone()));
-                assert!(self.isa(fields).is_none());
-
-                Some(check)
-            }
-            _ => {
-                // Punt to unify for non-patterns.
-                self.unify(other);
-                None
-            }
-        }
-    }
-
-    /// Add a constraint that this must contain some known value.
-    ///
-    /// From OTHER in THIS where other is not a partial or variable.
-    pub fn in_contains(&mut self, other: Term) {
-        // TODO for now, this is represented as an in operation, but we may
-        // want some other representation eventually.
-        // TODO what about non-ground compound terms like [x, 1] in THIS
-
-        assert!(!(matches!(other.value(), Value::Variable(_) | Value::Partial(_))));
-
-        let in_op = op!(In, other, self.variable_term());
-        self.add_constraint(in_op);
-    }
-
-    /// Add a constraint that a variable or partial value must be in this.
-    ///
-    /// `other` must be a partial or a variable.
-    ///
-    /// Returns: A new partial to use for additional constraints on `other`.
-    pub fn in_unbound(&mut self, other: Term) -> Term {
-        let name = match other.value() {
-            Value::Partial(constraints) => constraints.name().clone(),
-            Value::Variable(sym) => sym.clone(),
-            _ => panic!(
-                "Unexpected in LHS value {:?}, maybe you meant to call Constraints::contains()",
-                other.value()
-            ),
-        };
-
-        let in_op = op!(In, term!(name.clone()), self.variable_term());
-        self.add_constraint(in_op);
-
-        Term::new_temporary(Value::Partial(Partial::new(name)))
-    }
-
-    pub fn compare(&mut self, operator: Operator, operand: Operand) {
-        use Operator::{Eq, Geq, Gt, Leq, Lt, Neq};
-        let asymmetric_op = matches!(operator, Gt | Geq | Lt | Leq);
-        let symmetric_op = matches!(operator, Eq | Neq);
-        assert!(asymmetric_op || symmetric_op);
-
-        // Normalize comparison operations so this is always on LHS.
-        let args = vec![self.variable_term(), operand.term];
-        let mut operation = Operation { operator, args };
-        if operand.side == Side::Left && asymmetric_op {
-            operation.operator = match operation.operator {
-                Gt => Lt,
-                Geq => Leq,
-                Lt => Gt,
-                Leq => Geq,
-                _ => unreachable!(),
-            };
-        }
-        self.add_constraint(operation);
-    }
-
-    /// Add lookup of `field` assigned to `value` on `self.
-    ///
-    /// Returns: A partial expression for `value`.
-    pub fn lookup(&mut self, field: Term, value: Term) -> Term {
-        // Note this is a 2-arg lookup (Dot) not 3-arg. (Pre rewrite).
-        assert!(matches!(field.value(), Value::String(_)));
-
-        self.add_constraint(op!(
-            Unify,
-            value.clone(),
-            term!(op!(Dot, self.variable_term(), field))
-        ));
-
-        let name = value.value().as_symbol().unwrap();
-        Term::new_temporary(Value::Partial(Partial::new(name.clone())))
-    }
-
     pub fn into_term(self) -> Term {
         Term::new_temporary(Value::Partial(self))
     }
@@ -277,12 +145,6 @@ impl Partial {
         }
     }
 
-    pub fn clone_with_name(&self, name: Symbol) -> Self {
-        let mut new = self.clone();
-        new.variable = name;
-        new
-    }
-
     pub fn clone_with_constraints(&self, constraints: Vec<Operation>) -> Self {
         let mut new = self.clone();
         new.constraints = constraints;
@@ -293,42 +155,6 @@ impl Partial {
         let mut new = self.clone();
         new.add_constraint(constraint);
         new
-    }
-
-    pub fn name(&self) -> &Symbol {
-        &self.variable
-    }
-
-    fn variable_term(&self) -> Term {
-        Term::new_temporary(Value::Variable(sym!("_this")))
-    }
-}
-
-#[derive(PartialEq)]
-enum Side {
-    Left,
-    Right,
-}
-
-/// Is the non-this arg the left or right operand?
-pub struct Operand {
-    side: Side,
-    term: Term,
-}
-
-impl Operand {
-    pub fn left(term: Term) -> Self {
-        Self {
-            side: Side::Left,
-            term,
-        }
-    }
-
-    pub fn right(term: Term) -> Self {
-        Self {
-            side: Side::Right,
-            term,
-        }
     }
 }
 
@@ -440,15 +266,15 @@ mod test {
                f(x: Post) if g(x.y);
                g(x: User) if x.z = 1;"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let next = next_binding(&mut q)?;
-        assert_partial_expression!(next, "a", "_this matches Post{} and _this.foo = 1");
+        assert_partial_expression!(next, "x", "_this matches Post{} and 1 = _this.foo");
         let next = next_binding(&mut q)?;
-        assert_partial_expression!(next, "a", "_this matches User{} and _this.bar = 1");
+        assert_partial_expression!(next, "x", "_this matches User{} and 1 = _this.bar");
         assert_partial_expression!(
             next_binding(&mut q)?,
-            "a",
-            "_this matches Post{} and _this.y matches User{} and _this.y.z = 1"
+            "x",
+            "_this matches Post{} and _this.y matches User{} and 1 = _this.y.z"
         );
         assert_query_done!(q);
         Ok(())
@@ -472,7 +298,7 @@ mod test {
                f(x: {id: 1}) if x matches Post{id: 2};
                f(x: 1);"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let mut next_binding = || loop {
             match q.next_event().unwrap() {
                 QueryEvent::Result { bindings, .. } => return bindings,
@@ -487,45 +313,45 @@ mod test {
                 _ => panic!("not bindings"),
             }
         };
-        assert_partial_expression!(next_binding(), "a", "_this matches Post{} and _this.id = 1");
+        assert_partial_expression!(next_binding(), "x", "_this matches Post{} and _this.id = 1");
         assert_partial_expression!(
             next_binding(),
-            "a",
+            "x",
             "_this matches Post{} and _this.id = 1 and _this.id = 2"
         );
         assert_partial_expression!(
             next_binding(),
-            "a",
+            "x",
             "_this matches Post{} and _this.id = 1 and _this.id = 2"
         );
         assert_partial_expression!(
             next_binding(),
-            "a",
+            "x",
             "_this matches Post{} and _this.id = 1 and _this.id = 2 and _this.bar = 2"
         );
         assert_partial_expression!(
             next_binding(),
-            "a",
-            "_this matches Post{} and _this.id = 1 and _this.bar = 3 and _this.id = 2 and _this.y = 1"
+            "x",
+            "_this matches Post{} and _this.id = 1 and _this.bar = 3 and _this.id = 2 and 1 = _this.y"
         );
         assert_partial_expression!(
             next_binding(),
-            "a",
+            "x",
             "_this.id = 1 and _this.bar = 1 and _this.id = 2"
         );
         assert_partial_expression!(
             next_binding(),
-            "a",
+            "x",
             "_this.id = 1 and _this.id = 2 and _this.bar = 2"
         );
-        assert_partial_expression!(next_binding(), "a", "_this.id = 1");
-        assert_partial_expression!(next_binding(), "a", "_this.id = 1 and _this.id = 2");
+        assert_partial_expression!(next_binding(), "x", "_this.id = 1");
+        assert_partial_expression!(next_binding(), "x", "_this.id = 1 and _this.id = 2");
         assert_partial_expression!(
             next_binding(),
-            "a",
+            "x",
             "_this.id = 1 and _this matches Post{} and _this.id = 2"
         );
-        assert_partial_expression!(next_binding(), "a", "_this = 1");
+        assert_partial_expression!(next_binding(), "x", "_this = 1");
         assert_query_done!(q);
         Ok(())
     }
@@ -545,7 +371,7 @@ mod test {
                h(x: Bar) if x.z = 1;
                h(x: Baz) if x.z = 1;"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let mut next_binding = || loop {
             match q.next_event().unwrap() {
                 QueryEvent::Result { bindings, .. } => return bindings,
@@ -562,33 +388,33 @@ mod test {
         };
         assert_partial_expression!(
             next_binding(),
-            "a",
-            "_this matches Post{} and _this.foo = 0 and _this.post = 1"
+            "x",
+            "_this matches Post{} and 0 = _this.foo and 1 = _this.post"
         );
         assert_partial_expression!(
             next_binding(),
-            "a",
-            "_this matches Post{} and _this.foo = 0 and _this matches PostSubclass{} and _this.post_subclass = 1"
+"x",
+            "_this matches Post{} and 0 = _this.foo and _this matches PostSubclass{} and 1 = _this.post_subclass"
         );
         assert_partial_expression!(
             next_binding(),
-            "a",
-            "_this matches User{} and _this.bar = 1 and _this.user = 1"
+            "x",
+            "_this matches User{} and 1 = _this.bar and 1 = _this.user"
         );
         assert_partial_expression!(
             next_binding(),
-            "a",
-            "_this matches User{} and _this.bar = 1 and _this matches UserSubclass{} and _this.user_subclass = 1"
+"x",
+            "_this matches User{} and 1 = _this.bar and _this matches UserSubclass{} and 1 = _this.user_subclass"
         );
         assert_partial_expression!(
             next_binding(),
-            "a",
-            "_this matches Foo{} and _this.y matches Bar{} and _this.y.z = 1"
+            "x",
+            "_this matches Foo{} and _this.y matches Bar{} and 1 = _this.y.z"
         );
         assert_partial_expression!(
             next_binding(),
-            "a",
-            "_this matches Foo{} and _this.y matches Baz{} and _this.y.z = 1"
+            "x",
+            "_this matches Foo{} and _this.y matches Baz{} and 1 = _this.y.z"
         );
         assert_query_done!(q);
         Ok(())

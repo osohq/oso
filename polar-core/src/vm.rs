@@ -18,7 +18,7 @@ use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial::{simplify_bindings, Partial};
+use crate::partial::{simplify_bindings, IsaConstraintCheck, Partial};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -962,7 +962,10 @@ impl PolarVirtualMachine {
             &[left, right],
         );
 
-        match (&left.value(), &right.value()) {
+        let derefed_left = self.deref(left);
+        let derefed_right = self.deref(right);
+
+        match (derefed_left.value(), derefed_right.value()) {
             (Value::InstanceLiteral(_), _) => unreachable!("unparseable"),
             (_, Value::InstanceLiteral(_)) | (_, Value::Dictionary(_)) => {
                 unreachable!("parsed as pattern")
@@ -976,52 +979,83 @@ impl PolarVirtualMachine {
                 ));
             }
 
-            (Value::Variable(v), _) | (Value::RestVariable(v), _) => {
-                if let Some(value) = self.value(&v).cloned() {
-                    self.push_goal(Goal::Isa {
-                        left: value,
-                        right: right.clone(),
-                    })?;
-                } else {
-                    self.push_goal(Goal::Unify {
-                        left: left.clone(),
-                        right: right.clone(),
-                    })?;
-                }
+            // TODO(gj): collapse?
+            (Value::Variable(_), _) | (Value::RestVariable(_), _) => {
+                self.push_goal(Goal::Unify {
+                    left: derefed_left.clone(),
+                    right: derefed_right.clone(),
+                })?;
             }
 
-            (_, Value::Variable(v)) | (_, Value::RestVariable(v)) => {
-                if let Some(value) = self.value(&v).cloned() {
-                    self.push_goal(Goal::Isa {
-                        left: left.clone(),
-                        right: value,
-                    })?;
-                } else {
-                    self.push_goal(Goal::Unify {
-                        left: left.clone(),
-                        right: right.clone(),
-                    })?;
-                }
+            (_, Value::Variable(_)) | (_, Value::RestVariable(_)) => {
+                self.push_goal(Goal::Unify {
+                    left: derefed_left.clone(),
+                    right: derefed_right.clone(),
+                })?;
             }
 
             (Value::Partial(partial), _) => {
-                let mut partial = partial.clone();
-                let name = partial.name().clone();
-                if let Some(runnable) = partial.isa(right.clone()) {
-                    // Run compatibility check
-                    self.choose_conditional(
-                        vec![Goal::Run { runnable }],
-                        vec![Goal::Bind {
-                            var: name,
-                            value: partial.into_term(),
-                        }],
-                        vec![Goal::Backtrack],
-                    )?;
-                } else {
-                    self.push_goal(Goal::Bind {
-                        var: name,
-                        value: partial.into_term(),
-                    })?;
+                match right.value() {
+                    Value::Pattern(Pattern::Dictionary(fields)) => {
+                        let to_unify = |(field, value): (&Symbol, &Term)| -> Operation {
+                            let field = right.clone_with_value(value!(field.clone()));
+                            let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
+                            op!(Unify, left, value.clone())
+                        };
+
+                        let mut partial = partial.clone();
+
+                        // Add all but the last field constraint to the partial.
+                        for op in fields.fields.iter().skip(1).rev().map(to_unify) {
+                            partial.add_constraint(op);
+                        }
+
+                        // Add the last field constraint and trigger the bind dance.
+                        for op in fields.fields.iter().take(1).map(to_unify) {
+                            self.constrain(&partial, &term!(op));
+                        }
+                    }
+                    Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
+                        // Grab existing constraints before we add new ones.
+                        let existing = partial.constraints.clone();
+
+                        // Construct field-less matches operation.
+                        let tag_pattern =
+                            right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
+                        let type_constraint = op!(Isa, left.clone(), tag_pattern);
+                        let mut partial =
+                            partial.clone_with_new_constraint(type_constraint.clone());
+
+                        // Construct compatibility check.
+                        let runnable = Box::new(IsaConstraintCheck::new(existing, type_constraint));
+
+                        // Construct field constraints.
+                        fields.fields.iter().rev().for_each(|(f, v)| {
+                            let field = right.clone_with_value(value!(f.clone()));
+                            let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
+                            let unify = op!(Unify, left, v.clone());
+                            partial = partial.clone_with_new_constraint(unify);
+                        });
+
+                        // Construct manual binds to run if compabitility check succeeds. If the
+                        // check fails, the query should backtrack because the existing constraints
+                        // are incompatible with the proposed constraint.
+                        let binds = partial.variables().into_iter().map(|var| Goal::Bind {
+                            var,
+                            value: partial.clone().into_term(),
+                        });
+
+                        // Run compatibility check.
+                        self.choose_conditional(
+                            vec![Goal::Run { runnable }],
+                            binds.collect(),
+                            vec![Goal::Backtrack],
+                        )?;
+                    }
+                    _ => self.constrain(
+                        partial,
+                        &left.clone_with_value(value!(op!(Unify, left.clone(), right.clone()))),
+                    ),
                 }
             }
 
