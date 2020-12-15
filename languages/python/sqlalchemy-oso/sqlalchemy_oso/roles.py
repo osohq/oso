@@ -8,8 +8,18 @@ from sqlalchemy.event import listen
 from sqlalchemy import inspect, UniqueConstraint
 
 
-def resource_role_class(declarative_base, user_model, resource_model, role_choices):
+def resource_role_class(
+    declarative_base, user_model, resource_model, role_choices, mutually_exclusive=True
+):
     tablename = f"{resource_model.__name__.lower()}_roles"
+    if mutually_exclusive:
+        unique_constraint = UniqueConstraint(
+            f"{resource_model.__name__.lower()}_id", "user_id"
+        )
+    else:
+        unique_constraint = UniqueConstraint(
+            f"{resource_model.__name__.lower()}_id", "name", "user_id"
+        )
 
     class ResourceRoleMixin:
         choices = role_choices
@@ -17,11 +27,7 @@ def resource_role_class(declarative_base, user_model, resource_model, role_choic
         __tablename__ = tablename
         id = Column(Integer, primary_key=True)
         name = Column(String())
-        __table_args__ = (
-            UniqueConstraint(
-                f"{resource_model.__name__.lower()}_id", "name", "user_id"
-            ),
-        )
+        __table_args__ = (unique_constraint,)
 
         @validates("name")
         def validate_name(self, key, name):

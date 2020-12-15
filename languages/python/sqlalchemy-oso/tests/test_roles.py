@@ -8,6 +8,7 @@ from sqlalchemy.types import Integer, String, DateTime
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.exc import IntegrityError
 
 from sqlalchemy_oso import roles as oso_roles, register_models
 
@@ -78,7 +79,10 @@ class Issue(Base):
 
 
 RepositoryRoleMixin = oso_roles.resource_role_class(
-    Base, User, Repository, ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"]
+    Base,
+    User,
+    Repository,
+    ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"],
 )
 
 
@@ -87,8 +91,9 @@ class RepositoryRole(Base, RepositoryRoleMixin):
         return {"id": self.id, "name": str(self.name)}
 
 
+# For the tests, make OrganizationRoles NOT mutually exclusive
 OrganizationRoleMixin = oso_roles.resource_role_class(
-    Base, User, Organization, ["OWNER", "MEMBER", "BILLING"]
+    Base, User, Organization, ["OWNER", "MEMBER", "BILLING"], mutually_exclusive=False
 )
 
 
@@ -283,6 +288,7 @@ def test_add_user_role(test_db_session):
 
     new_role = RepositoryRole(name="READ", repository=abbey_road, user=ringo)
     test_db_session.add(new_role)
+    test_db_session.commit()
 
     roles = (
         test_db_session.query(RepositoryRole)
@@ -291,6 +297,52 @@ def test_add_user_role(test_db_session):
     )
     assert len(roles) == 1
     assert roles[0].name == "READ"
+
+    # ensure user cannot have duplicate role
+    with pytest.raises(IntegrityError):
+        new_role = RepositoryRole(name="READ", repository=abbey_road, user=ringo)
+        test_db_session.add(new_role)
+        test_db_session.commit()
+
+    # ensure user cannot have two roles for the same resource if `mutually_exclusive=True`
+    with pytest.raises(IntegrityError):
+        test_db_session.rollback()
+        new_role = RepositoryRole(name="WRITE", repository=abbey_road, user=ringo)
+        test_db_session.add(new_role)
+        test_db_session.commit()
+
+    test_db_session.rollback()
+    beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
+    roles = (
+        test_db_session.query(OrganizationRole)
+        .filter_by(user=ringo, organization=beatles)
+        .order_by(OrganizationRole.name)
+        .all()
+    )
+    assert len(roles) == 1
+    assert roles[0].name == "MEMBER"
+
+    # ensure user cannot have two roles for the same resource
+    with pytest.raises(IntegrityError):
+        test_db_session.rollback()
+        new_role = OrganizationRole(name="MEMBER", organization=beatles, user=ringo)
+        test_db_session.add(new_role)
+        test_db_session.commit()
+
+    # ensure user can have two roles for the same resource if `mutually_exclusive=False`
+    test_db_session.rollback()
+    new_role = OrganizationRole(name="BILLING", organization=beatles, user=ringo)
+    test_db_session.add(new_role)
+    test_db_session.commit()
+
+    roles = (
+        test_db_session.query(OrganizationRole)
+        .filter_by(user=ringo, organization=beatles)
+        .order_by(OrganizationRole.name)
+        .all()
+    )
+    assert len(roles) == 2
+    assert roles[0].name == "BILLING"
 
 
 def test_delete_user_role(test_db_session):
