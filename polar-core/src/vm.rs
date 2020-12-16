@@ -586,7 +586,7 @@ impl PolarVirtualMachine {
             if !include_temps && self.is_temporary_var(&var) {
                 continue;
             }
-            bindings.insert(var.clone(), self.deref(value));
+            bindings.insert(var.clone(), self.deep_deref(value));
         }
         bindings
     }
