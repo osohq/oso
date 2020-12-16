@@ -273,15 +273,14 @@ def enable_roles(oso):
 
 
 # ROLE HELPERS
-# TODO: rewrite these for new schema
 
 
 def get_role_model_for_resource_model(resource_model):
     return inspect(resource_model).relationships.get("roles").argument.class_
 
 
-# def get_user_model_for_resource_model(resource_model):
-#     return inspect(resource_model).relationships.get("users").argument()
+def get_user_model_for_resource_model(resource_model):
+    return inspect(resource_model).relationships.get("users").argument.class_
 
 
 def get_user_roles(session, user, resource_model, resource_id=None):
@@ -298,7 +297,7 @@ def get_user_roles(session, user, resource_model, resource_id=None):
 
     :param resource_id: (optional) the resource id for which to get the user's roles.
 
-    :return: list of roles
+    :return: list of the user's roles
     """
     role_model = get_role_model_for_resource_model(resource_model)
     user_model = type(user)
@@ -316,165 +315,133 @@ def get_user_roles(session, user, resource_model, resource_id=None):
     return roles.all()
 
 
-# def get_resource_users_and_roles(session, resource):
-#     """Get all of the users and their roles for a specific resource. E.g.,
-#     get all the users in Organization 1 and their roles in the
-#     organization.
-#     :param session: SQLAlchemy session
-#     :type session: sqlalchemy.orm.session.Session
+def get_resource_roles(session, resource):
+    """Get all of the roles for a specific resource. E.g.,
+    get all the roles in Organization 1. Each role has a single user
+    associated with it, which can be accessed by calling ``role.user``.
 
-#     :param resource: the resource record (python object) for which to get \
-#     the users and roles
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
 
-#     :return: List of (user, role) tuples for every user associated with \
-#     the ``resource``
+    :param resource: the resource record (python object) for which to get \
+    the users and roles
 
-#     """
-#     resource_model = type(resource)
-#     role_model = get_role_model_for_resource_model(resource_model)
-#     user_model = get_user_model_for_resource_model(resource_model)
-#     user_roles = (
-#         session.query(user_model, role_model)
-#         .select_from(role_model)
-#         .join(role_model.users)
-#         .join(resource_model)
-#         .filter(resource_model.id == resource.id)
-#         .order_by(user_model.id)
-#         .order_by(role_model.name)
-#         .all()
-#     )
-#     return user_roles
+    :return: list of the user's roles
+    :return: List of roles associated with the ``resource``
+
+    """
+    return resource.roles
 
 
-# # - Get all the users who have a specific role
-# def get_resource_users_with_role(session, resource, role_name):
-#     """Get all of the users that have a specific role for a specific
-#     resource. E.g., get all the users in Organization 1 that have the "OWNER"
-#     role.
+# - Get all the users who have a specific role
+def get_resource_users_by_role(session, resource, role_name):
+    """Get all of the users that have a specific role for a specific
+    resource. E.g., get all the users in Organization 1 that have the "OWNER"
+    role.
 
-#     :param session: SQLAlchemy session
-#     :type session: sqlalchemy.orm.session.Session
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
 
-#     :param resource: the resource record (python object) for which to get \
-#     the users
+    :param resource: the resource record (python object) for which to get \
+    the users
 
-#     :param role_name: the name of the role to get users for
-#     :type role_name: str
+    :param role_name: the name of the role to get users for
+    :type role_name: str
 
-#     :return: List of users that have the ``role_name`` role for \
-#     ``resource``
+    :return: List of users that have the ``role_name`` role for \
+    ``resource``
 
-#     """
-#     resource_model = type(resource)
-#     role_model = get_role_model_for_resource_model(resource_model)
-#     user_model = get_user_model_for_resource_model(resource_model)
+    """
+    # TODO: would it be helpful to aggregate the roles by name if `role_name`
+    # is None? E.g. return a dict of {role_name: [users]}?
+    resource_model = type(resource)
+    role_model = get_role_model_for_resource_model(resource_model)
+    user_model = get_user_model_for_resource_model(resource_model)
 
-#     users = (
-#         session.query(user_model)
-#         .select_from(role_model)
-#         .join(role_model.users)
-#         .join(resource_model)
-#         .filter(role_model.name == role_name, resource_model.id == resource.id)
-#         .order_by(user_model.id)
-#         .all()
-#     )
+    users = (
+        session.query(user_model)
+        .join(role_model)
+        .filter_by(repository=resource, name=role_name)
+        .order_by(user_model.id)
+        .all()
+    )
 
-#     return users
-
-
-# # - Assign a user to an organization with a role
-# def add_user_role(session, user, resource, role_name):
-#     """Add a user to a role for a specific resource.
-
-#     :param session: SQLAlchemy session
-#     :type session: sqlalchemy.orm.session.Session
-
-#     :param user: user record (python object) to assign the role to
-
-#     :param role_name: the name of the role to assign to the user
-#     :type role_name: str
-#     """
-#     resource_model = type(resource)
-#     role_model = get_role_model_for_resource_model(resource_model)
-
-#     if role_name not in role_model.choices:
-#         raise Exception(
-#             f"{role_name} Is not a valid choice for {resource.__class__.__name__} Roles"
-#         )
-
-#     # try to get role
-#     role = (
-#         session.query(role_model)
-#         .select_from(resource_model)
-#         .join(role_model)
-#         .filter(resource_model.id == resource.id)
-#         .filter(role_model.name == role_name)
-#     ).first()
-
-#     if role:
-#         # TODO: check if user already in role
-#         role.users.append(user)
-#     else:
-#         resource_name = resource_model.__name__.lower()
-#         kwargs = {"name": role_name, resource_name: resource, "users": [user]}
-
-#         role = role_model(**kwargs)
-#         session.add(role)
-#         session.commit()
+    return users
 
 
-# # - Delete a user to an organization with a role
-# def delete_user_role(session, user, resource, role_name=None):
-#     """Remove a user from a role for a specific resource.
+# - Assign a user to an organization with a role
+def add_user_role(session, user, resource, role_name):
+    """Add a user to a role for a specific resource.
 
-#     :param session: SQLAlchemy session
-#     :type session: sqlalchemy.orm.session.Session
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
 
-#     :param user: user record (python object) to remove the role from
+    :param user: user record (python object) to assign the role to
 
-#     :param role_name: the name of the role to remove from the user. If not \
-#     provided, the function will remove all roles the user has for \
-#     ``resource``.
-#     :type role_name: str
-#     """
-#     resource_model = type(resource)
-#     role_model = get_role_model_for_resource_model(resource_model)
-#     user_model = type(user)
+    :param role_name: the name of the role to assign to the user
+    :type role_name: str
+    """
+    # get models
+    resource_model = type(resource)
+    role_model = get_role_model_for_resource_model(resource_model)
 
-#     role_query = (
-#         session.query(role_model)
-#         .select_from(resource_model)
-#         .join(role_model)
-#         .filter(resource_model.id == resource.id)
-#     )
-#     if role_name:
-#         role_query = role_query.filter(role_model.name == role_name)
-#     else:
-#         role_query = role_query.filter(role_model.users.any(user_model.id == user.id))
-
-#     roles = role_query.all()
-
-#     for role in roles:
-#         try:
-#             role.users.remove(user)
-#         except ValueError:
-#             raise Exception(f"User {user.id} not in role {role.name} for {resource.id}")
+    # create and save role
+    resource_name = resource_model.__name__.lower()
+    kwargs = {"name": role_name, resource_name: resource, "user": user}
+    new_role = role_model(**kwargs)
+    session.add(new_role)
+    session.commit()
 
 
-# # - Change the user's role in an organization
-# def reassign_user_role(session, user, resource, role_name):
-#     """Remove all existing roles that a user has for a specific resource, and
-#     reassign the user to a new role. If the user does not have any roles for
-#     the given resource, the behavior is the same as
-#     :py:meth:`sqlalchemy_oso.roles.add_user_role`.
+# - Delete a user to an organization with a role
+def delete_user_role(session, user, resource, role_name=None):
+    """Remove a user from a role for a specific resource.
 
-#     :param session: SQLAlchemy session
-#     :type session: sqlalchemy.orm.session.Session
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
 
-#     :param user: user record (python object) whose role should be reassigned
+    :param user: user record (python object) to remove the role from
 
-#     :param role_name: the name of the new role to assign to the user
-#     :type role_name: str
-#     """
-#     delete_user_role(session, user, resource)
-#     add_user_role(session, user, resource, role_name)
+    :param role_name: the name of the role to remove from the user. If not \
+    provided, the function will remove all roles the user has for \
+    ``resource``.
+    :type role_name: str
+    """
+    resource_model = type(resource)
+    resource_name = resource_model.__name__.lower()
+    role_model = get_role_model_for_resource_model(resource_model)
+    user_model = type(user)
+
+    filter_kwargs = {"user": user, resource_name: resource}
+    if role_name:
+        filter_kwargs["name"] = role_name
+    roles = session.query(role_model).filter_by(**filter_kwargs)
+
+    roles.delete()
+    session.commit()
+
+
+# - Change the user's role in an organization
+def reassign_user_role(session, user, resource, role_name):
+    """Remove all existing roles that a user has for a specific resource, and
+    reassign the user to a new role. If the user does not have any roles for
+    the given resource, the behavior is the same as
+    :py:meth:`sqlalchemy_oso.roles.add_user_role`.
+
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
+
+    :param user: user record (python object) whose role should be reassigned
+
+    :param role_name: the name of the new role to assign to the user
+    :type role_name: str
+    """
+    resource_model = type(resource)
+    resource_name = resource_model.__name__.lower()
+    role_model = get_role_model_for_resource_model(resource_model)
+    user_model = type(user)
+
+    filter_kwargs = {"user": user, resource_name: resource}
+
+    session.query(role_model).filter_by(**filter_kwargs).update({"name": role_name})
+    session.commit()

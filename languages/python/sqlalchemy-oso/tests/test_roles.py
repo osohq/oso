@@ -276,25 +276,43 @@ def test_get_user_roles_for_resource(test_db_session):
     assert resource_roles[0].name == "OWNER"
 
 
-def test_get_resource_users_and_roles(test_db_session):
+def test_get_resource_roles(test_db_session):
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
+
+    # Test with ORM method
     user_roles = abbey_road.roles
     assert user_roles[0].user.email == "john@beatles.com"
     assert user_roles[0].name == "READ"
     assert user_roles[1].user.email == "paul@beatles.com"
     assert user_roles[0].name == "READ"
 
+    # Test with oso method
+    user_roles = oso_roles.get_resource_roles(test_db_session, abbey_road)
+    assert user_roles[0].user.email == "john@beatles.com"
+    assert user_roles[0].name == "READ"
+    assert user_roles[1].user.email == "paul@beatles.com"
+    assert user_roles[0].name == "READ"
 
-def test_get_resource_users_with_role(test_db_session):
+
+def test_get_resource_users_by_role(test_db_session):
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
+
+    # Test with ORM method
     users = (
-        test_db_session.query(RepositoryRole)
+        test_db_session.query(User)
+        .join(RepositoryRole)
         .filter_by(repository=abbey_road, name="READ")
         .all()
     )
     assert len(users) == 2
-    assert users[0].user.email == "john@beatles.com"
-    assert users[1].user.email == "paul@beatles.com"
+    assert users[0].email == "john@beatles.com"
+    assert users[1].email == "paul@beatles.com"
+
+    # Test with oso method
+    users = oso_roles.get_resource_users_by_role(test_db_session, abbey_road, "READ")
+    assert len(users) == 2
+    assert users[0].email == "john@beatles.com"
+    assert users[1].email == "paul@beatles.com"
 
 
 def test_add_user_role(test_db_session):
@@ -308,13 +326,12 @@ def test_add_user_role(test_db_session):
     )
     assert len(roles) == 0
 
+    # Test can't add invalid role
     with pytest.raises(ValueError):
-        new_role = RepositoryRole(name="FAKE", repository=abbey_road, user=ringo)
-        test_db_session.add(new_role)
+        oso_roles.add_user_role(test_db_session, ringo, abbey_road, "FAKE")
 
-    new_role = RepositoryRole(name="READ", repository=abbey_road, user=ringo)
-    test_db_session.add(new_role)
-    test_db_session.commit()
+    # Test adding valid role
+    oso_roles.add_user_role(test_db_session, ringo, abbey_road, "READ")
 
     roles = (
         test_db_session.query(RepositoryRole)
@@ -326,16 +343,12 @@ def test_add_user_role(test_db_session):
 
     # ensure user cannot have duplicate role
     with pytest.raises(IntegrityError):
-        new_role = RepositoryRole(name="READ", repository=abbey_road, user=ringo)
-        test_db_session.add(new_role)
-        test_db_session.commit()
+        oso_roles.add_user_role(test_db_session, ringo, abbey_road, "READ")
 
     # ensure user cannot have two roles for the same resource if `mutually_exclusive=True`
     with pytest.raises(IntegrityError):
         test_db_session.rollback()
-        new_role = RepositoryRole(name="WRITE", repository=abbey_road, user=ringo)
-        test_db_session.add(new_role)
-        test_db_session.commit()
+        oso_roles.add_user_role(test_db_session, ringo, abbey_road, "WRITE")
 
     test_db_session.rollback()
     beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
@@ -350,16 +363,11 @@ def test_add_user_role(test_db_session):
 
     # ensure user cannot have two roles for the same resource
     with pytest.raises(IntegrityError):
-        test_db_session.rollback()
-        new_role = OrganizationRole(name="MEMBER", organization=beatles, user=ringo)
-        test_db_session.add(new_role)
-        test_db_session.commit()
+        oso_roles.add_user_role(test_db_session, ringo, beatles, "MEMBER")
 
     # ensure user can have two roles for the same resource if `mutually_exclusive=False`
     test_db_session.rollback()
-    new_role = OrganizationRole(name="BILLING", organization=beatles, user=ringo)
-    test_db_session.add(new_role)
-    test_db_session.commit()
+    oso_roles.add_user_role(test_db_session, ringo, beatles, "BILLING")
 
     roles = (
         test_db_session.query(OrganizationRole)
@@ -372,27 +380,28 @@ def test_add_user_role(test_db_session):
 
 
 def test_delete_user_role(test_db_session):
-    # Test with explicit role arg
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
+    paul = test_db_session.query(User).filter_by(email="paul@beatles.com").first()
     abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
 
+    # Test with explicit role arg
     roles = (
         test_db_session.query(RepositoryRole)
-        .filter_by(user=john, repository=abbey_road)
+        .filter_by(user=john, repository=abbey_road, name="READ")
         .all()
     )
     assert len(roles) == 1
 
-    test_db_session.delete(roles[0])
+    oso_roles.delete_user_role(test_db_session, john, abbey_road, "READ")
 
     roles = (
         test_db_session.query(RepositoryRole)
-        .filter_by(user=john, repository=abbey_road)
+        .filter_by(user=john, repository=abbey_road, name="READ")
         .all()
     )
     assert len(roles) == 0
 
-    paul = test_db_session.query(User).filter_by(email="paul@beatles.com").first()
+    # Test with no role arg
     roles = (
         test_db_session.query(RepositoryRole)
         .filter_by(user=paul, repository=abbey_road)
@@ -400,9 +409,7 @@ def test_delete_user_role(test_db_session):
     )
     assert len(roles) == 1
 
-    test_db_session.query(RepositoryRole).filter_by(
-        user=paul, repository=abbey_road
-    ).delete()
+    oso_roles.delete_user_role(test_db_session, paul, abbey_road)
 
     roles = (
         test_db_session.query(RepositoryRole)
@@ -424,9 +431,7 @@ def test_reassign_user_role(test_db_session):
     assert len(roles) == 1
     assert roles[0].name == "READ"
 
-    test_db_session.query(RepositoryRole).filter_by(
-        user=john, repository=abbey_road
-    ).update({"name": "WRITE"})
+    oso_roles.reassign_user_role(test_db_session, john, abbey_road, "WRITE")
 
     roles = (
         test_db_session.query(RepositoryRole)
