@@ -63,6 +63,11 @@ fn invert_operation(Operation { operator, args }: Operation) -> Operation {
             operator: Operator::Not,
             args: vec![term!(op!(Isa, args[0].clone(), args[1].clone()))],
         },
+        Operator::Not => args[0]
+            .value()
+            .as_expression()
+            .expect("negated expression")
+            .clone(),
         _ => todo!("negate {:?}", operator),
     }
 }
@@ -162,6 +167,13 @@ impl Folder for Simplifier {
     fn fold_operation(&mut self, o: Operation) -> Operation {
         fold_operation(
             match o.operator {
+                // Collapse trivial conjunctions & disjunctions.
+                Operator::And | Operator::Or if o.args.len() == 1 => o.args[0]
+                    .value()
+                    .as_expression()
+                    .expect("expression")
+                    .clone(),
+
                 Operator::Unify
                 | Operator::Eq
                 | Operator::Neq

@@ -50,11 +50,28 @@ impl Partial {
     pub fn inverted_constraints(&self, csp: usize) -> Vec<Operation> {
         let (old, new) = self.constraints.split_at(csp);
         let mut combined = old.to_vec();
-        combined.extend(
-            new.iter()
-                .map(|o| op!(Not, term!(value!(o.clone()))))
-                .collect::<Vec<Operation>>(),
-        );
+
+        fn invert_constraint(op: &Operation) -> Operation {
+            match op.operator {
+                Operator::And => todo!("nand"),
+                Operator::Or => Operation {
+                    operator: Operator::And,
+                    args: op
+                        .args
+                        .iter()
+                        .map(|t| t.clone_with_value(value!(op!(Not, t.clone()))))
+                        .collect(),
+                },
+                _ => op!(Not, term!(value!(op.clone()))),
+            }
+        }
+        combined.push(Operation {
+            operator: Operator::Or,
+            args: new
+                .iter()
+                .map(|c| Term::new_temporary(Value::Expression(invert_constraint(c))))
+                .collect(),
+        });
         combined
     }
 
