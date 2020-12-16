@@ -272,54 +272,47 @@ def enable_roles(oso):
 # ROLE HELPERS
 # TODO: rewrite these for new schema
 
-# def get_role_model_for_resource_model(resource_model):
-#     return inspect(resource_model).relationships.get("roles").argument.class_
+
+def get_role_model_for_resource_model(resource_model):
+    return inspect(resource_model).relationships.get("roles").argument.class_
 
 
 # def get_user_model_for_resource_model(resource_model):
-#     role_model = get_role_model_for_resource_model(resource_model)
-#     return inspect(role_model).relationships.get("users").argument()
+#     return inspect(resource_model).relationships.get("users").argument()
 
 
-# def get_user_roles(session, user, resource_model, resource_id=None):
-#     """Get a user's roles for all resources of a single resource type.
-#     E.g., get all of a user's repositories and their role for each
-#     repository.
-#     Or optionally, all roles scoped to a specific resource_id.
+def get_user_roles(session, user, resource_model, resource_id=None):
+    """Get a user's roles for all resources of a single resource type.
+    E.g., get all of a user's repositories and their role for each
+    repository.
+    Or optionally, all roles scoped to a specific resource_id.
 
-#     :param session: SQLAlchemy session
-#     :type session: sqlalchemy.orm.session.Session
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
 
-#     :param user: user record (python object) of the SQLAlchemy user model \
-#     associated with roles scoped to the supplied ``resource_model``
+    :param user: user record (python object) of the SQLAlchemy user model \
+    associated with roles scoped to the supplied ``resource_model``
 
-#     :param resource_id: the resource id for which to get the user's roles.
+    :param resource_id: (optional) the resource id for which to get the user's roles.
 
-#     :return: List of (resource, role) tuples for every role the user has \
-#     associated with the ``resource_model``
-#     """
-#     role_model = get_role_model_for_resource_model(resource_model)
-#     user_model = type(user)
+    :return: list of roles
+    """
+    role_model = get_role_model_for_resource_model(resource_model)
+    user_model = type(user)
 
-#     roles = (
-#         session.query(resource_model, role_model)
-#         .filter(role_model.users.any(user_model.id == user.id))
-#         .join(resource_model)
-#         .order_by(resource_model.id)
-#         .order_by(role_model.name)
-#     )
+    roles = (
+        session.query(role_model)
+        .join(resource_model)
+        .filter(role_model.user == user)
+        .order_by(resource_model.id)
+        .order_by(role_model.name)
+    )
 
-#     if resource_id:
-#         roles = roles.filter(resource_model.id == resource_id)
-#     result = {}
-#     for resource, role in roles.all():
-#         if resource.id not in result:
-#             result[resource.id] = []
-#         result[resource.id].append(role)
-#     return result
+    if resource_id:
+        roles = roles.filter(resource_model.id == resource_id)
+    return roles.all()
 
 
-# # - Get an organization's users and their roles
 # def get_resource_users_and_roles(session, resource):
 #     """Get all of the users and their roles for a specific resource. E.g.,
 #     get all the users in Organization 1 and their roles in the

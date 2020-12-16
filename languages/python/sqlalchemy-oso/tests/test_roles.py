@@ -243,7 +243,15 @@ def test_resource_users_relationship_fields(test_db_session):
 
 def test_get_user_resources_and_roles(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
+
+    # Test with ORM method
     roles = john.organization_roles
+    assert len(roles) == 1
+    assert roles[0].name == "OWNER"
+    assert roles[0].organization.name == "The Beatles"
+
+    # Test with oso method
+    roles = oso_roles.get_user_roles(test_db_session, john, Organization)
     assert len(roles) == 1
     assert roles[0].name == "OWNER"
     assert roles[0].organization.name == "The Beatles"
@@ -252,11 +260,18 @@ def test_get_user_resources_and_roles(test_db_session):
 def test_get_user_roles_for_resource(test_db_session):
     john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
     beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
+
+    # Test with ORM method
     resource_roles = (
         test_db_session.query(OrganizationRole)
         .filter_by(user=john, organization=beatles)
         .all()
     )
+    assert len(resource_roles) == 1
+    assert resource_roles[0].name == "OWNER"
+
+    # Test with oso method
+    roles = oso_roles.get_user_roles(test_db_session, john, Organization, beatles.id)
     assert len(resource_roles) == 1
     assert resource_roles[0].name == "OWNER"
 
