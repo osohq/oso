@@ -271,7 +271,9 @@ def test_get_user_roles_for_resource(test_db_session):
     assert resource_roles[0].name == "OWNER"
 
     # Test with oso method
-    roles = oso_roles.get_user_roles(test_db_session, john, Organization, beatles.id)
+    resource_roles = oso_roles.get_user_roles(
+        test_db_session, john, Organization, beatles.id
+    )
     assert len(resource_roles) == 1
     assert resource_roles[0].name == "OWNER"
 
@@ -479,7 +481,7 @@ def test_enable_roles(test_db_session, oso_with_session):
         .first()
     )
 
-    ## test base `resource_role_applies_to`
+    # test base `resource_role_applies_to`
     results = list(
         oso.query_rule(
             "resource_role_applies_to", abbey_road, Variable("role_resource")
@@ -488,7 +490,7 @@ def test_enable_roles(test_db_session, oso_with_session):
     assert len(results) == 1
     assert results[0].get("bindings").get("role_resource") == abbey_road
 
-    ## test custom `resource_role_applies_to` rules (for nested resources)
+    # test custom `resource_role_applies_to` rules (for nested resources)
     resource_role_applies_to_str = """resource_role_applies_to(repo: Repository, parent_org) if
         parent_org := repo.organization and
         parent_org matches Organization;
@@ -515,13 +517,13 @@ def test_enable_roles(test_db_session, oso_with_session):
     assert results[0].get("bindings").get("role").name == "OWNER"
 
     # test `inherits_role` and `resource_role_order`
-    ## make sure `inherits_role` returns nothing without a role order rule
+    # make sure `inherits_role` returns nothing without a role order rule
     results = list(
         oso.query_rule("inherits_role", org_owner_role, Variable("inherited_role"))
     )
     assert len(results) == 0
 
-    ## test role_order rule
+    # test role_order rule
     role_order_str = 'organization_role_order(["OWNER", "MEMBER", "BILLING"]);'
     oso.load_str(role_order_str)
 
@@ -534,18 +536,18 @@ def test_enable_roles(test_db_session, oso_with_session):
     assert results[1].get("bindings").get("inherited_role").name == "MEMBER"
 
     # TODO: test `role_allow`
-    ## make sure this query fails before any rules are added
+    # make sure this query fails before any rules are added
     results = list(oso.query_rule("role_allow", john, "READ", abbey_road))
     assert len(results) == 0
 
-    ## test basic `role_allow` rule
+    # test basic `role_allow` rule
     role_allow_str = """role_allow(role: RepositoryRole{name: "READ"}, "READ", repo: Repository) if
                             role.repository = repo;"""
     oso.load_str(role_allow_str)
     results = list(oso.query_rule("role_allow", read_repo_role, "READ", abbey_road))
     assert len(results) == 1
 
-    ## test `role_allow` rule using nested resource
+    # test `role_allow` rule using nested resource
     nested_role_allow_str = """role_allow(role: OrganizationRole{name: "MEMBER"}, "READ", repo: Repository) if
                             role.organization = repo.organization;"""
     oso.load_str(nested_role_allow_str)
