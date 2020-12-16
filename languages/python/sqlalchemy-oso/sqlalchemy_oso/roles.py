@@ -1,10 +1,9 @@
 from typing import Any, List
 
 from sqlalchemy.types import Integer, String
-from sqlalchemy.schema import Table, Column, ForeignKey
+from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import relationship, backref, validates
-from sqlalchemy.event import listen
+from sqlalchemy.orm import relationship, validates
 from sqlalchemy import inspect, UniqueConstraint
 from .session import _OsoSession
 
@@ -98,14 +97,14 @@ def resource_role_class(
             return name
 
         @declared_attr
-        def user_id(cls):
+        def user_id(self):
             type = inspect(user_model).primary_key[0].type
             name = inspect(user_model).primary_key[0].name
             table_name = user_model.__tablename__
             return Column(type, ForeignKey(f"{table_name}.{name}"))
 
         @declared_attr
-        def user(cls):
+        def user(self):
             return relationship(user_model.__name__, backref=tablename, lazy=True)
 
     @declared_attr
@@ -253,21 +252,21 @@ def enable_roles(oso):
     """
 
     for role_model in ROLE_CLASSES:
-        UserModel = role_model["user_model"]
-        User = UserModel.__name__
-        ResourceModel = role_model["resource_model"]
-        Resource = ResourceModel.__name__
-        Role = get_role_model_for_resource_model(ResourceModel).__name__
+        user_model = role_model["user_model"]
+        user = user_model.__name__
+        resource_model = role_model["resource_model"]
+        resource = resource_model.__name__
+        role = get_role_model_for_resource_model(resource_model).__name__
 
         policy += f"""
-        user_in_role(user: {User}, role, resource: {Resource}) if
+        user_in_role(user: {user}, role, resource: {resource}) if
             session = OsoSession.get() and
-            role in session.query({Role}).filter_by(user: user, {Resource.lower()}: resource).all();
+            role in session.query({role}).filter_by(user: user, {resource.lower()}: resource).all();
 
-        inherits_role(role: {Role}, inherited_role) if
-            {Resource.lower()}_role_order(role_order) and
+        inherits_role(role: {role}, inherited_role) if
+            {resource.lower()}_role_order(role_order) and
             inherits_role_helper(role.name, inherited_role_name, role_order) and
-            inherited_role = new {Role}(name: inherited_role_name, {Resource.lower()}: role.{Resource.lower()});
+            inherited_role = new {role}(name: inherited_role_name, {resource.lower()}: role.{resource.lower()});
         """
     oso.load_str(policy)
 
@@ -310,7 +309,6 @@ def get_user_roles(session, user, resource_model, resource_id=None):
     :return: list of the user's roles
     """
     role_model = get_role_model_for_resource_model(resource_model)
-    user_model = type(user)
 
     roles = (
         session.query(role_model)
@@ -420,7 +418,6 @@ def delete_user_role(session, user, resource, role_name=None):
     resource_model = type(resource)
     resource_name = resource_model.__name__.lower()
     role_model = get_role_model_for_resource_model(resource_model)
-    user_model = type(user)
 
     filter_kwargs = {"user": user, resource_name: resource}
     if role_name:
@@ -449,7 +446,6 @@ def reassign_user_role(session, user, resource, role_name):
     resource_model = type(resource)
     resource_name = resource_model.__name__.lower()
     role_model = get_role_model_for_resource_model(resource_model)
-    user_model = type(user)
 
     filter_kwargs = {"user": user, resource_name: resource}
 
