@@ -11,7 +11,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import IntegrityError
 
 from sqlalchemy_oso import roles as oso_roles, register_models
-
+from sqlalchemy_oso.roles import enable_roles
+from sqlalchemy_oso.session import set_get_session
+from oso import Oso, Variable
 
 Base = declarative_base(name="RoleBase")
 
@@ -215,6 +217,15 @@ def test_db_session():
     return session
 
 
+@pytest.fixture
+def oso_with_session(test_db_session):
+    oso = Oso()
+    set_get_session(oso, lambda: test_db_session)
+    register_models(oso, Base)
+
+    return oso
+
+
 def test_user_resources_relationship_fields(test_db_session):
     beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
     users = beatles.users
@@ -411,32 +422,119 @@ def test_reassign_user_role(test_db_session):
     assert roles[0].name == "WRITE"
 
 
-def test_set_get_session():
-    from sqlalchemy_oso.session import set_get_session
-    from oso import Oso
-
-    def get_session():
-        engine = create_engine("sqlite://")
-        Base.metadata.create_all(engine)
-
-        Session = sessionmaker(bind=engine)
-        session = Session()
-
-        load_fixture_data(session)
-
-        return session
-
-    oso = Oso()
-    set_get_session(oso, get_session)
-    register_models(oso, Base)
+def test_set_get_session(oso_with_session):
     test_str = """get_repo(name: String) if
                     session = OsoSession.get() and
                     repo = session.query(Repository).filter_by(name: name).first() and
                     repo.name = name;
                     """
 
+    oso = oso_with_session
+
     oso.load_str(test_str)
     results = oso.query_rule("get_repo", "Abbey Road")
     assert next(results)
     results = oso.query_rule("get_repo", "Abbey Road")
     assert next(results)
+
+
+# TODO: split this test up
+def test_enable_roles(test_db_session, oso_with_session):
+    oso = oso_with_session
+    enable_roles(oso)
+
+    # Get test data
+    john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
+    ringo = test_db_session.query(User).filter_by(email="ringo@beatles.com").first()
+    abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
+    beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
+    read_repo_role = (
+        test_db_session.query(RepositoryRole)
+        .filter_by(user=john, repository=abbey_road)
+        .first()
+    )
+    org_owner_role = (
+        test_db_session.query(OrganizationRole)
+        .filter_by(user=john, organization=beatles)
+        .first()
+    )
+
+    ## test base `resource_role_applies_to`
+    results = list(
+        oso.query_rule(
+            "resource_role_applies_to", abbey_road, Variable("role_resource")
+        )
+    )
+    assert len(results) == 1
+    assert results[0].get("bindings").get("role_resource") == abbey_road
+
+    ## test custom `resource_role_applies_to` rules (for nested resources)
+    resource_role_applies_to_str = """resource_role_applies_to(repo: Repository, parent_org) if
+        parent_org := repo.organization and
+        parent_org matches Organization;
+        """
+    oso.load_str(resource_role_applies_to_str)
+    results = list(
+        oso.query_rule(
+            "resource_role_applies_to", abbey_road, Variable("role_resource")
+        )
+    )
+    results.sort(key=lambda x: x.get("bindings").get("role_resource").name)
+    assert len(results) == 2
+    assert results[0].get("bindings").get("role_resource") == abbey_road
+    assert results[1].get("bindings").get("role_resource") == beatles
+
+    # test `user_in_role` for RepositoryRole
+    results = list(oso.query_rule("user_in_role", john, Variable("role"), abbey_road))
+    assert len(results) == 1
+    assert results[0].get("bindings").get("role").name == "READ"
+
+    # test `user_in_role` for OrganizationRole
+    results = list(oso.query_rule("user_in_role", john, Variable("role"), beatles))
+    assert len(results) == 1
+    assert results[0].get("bindings").get("role").name == "OWNER"
+
+    # test `inherits_role` and `resource_role_order`
+    ## make sure `inherits_role` returns nothing without a role order rule
+    results = list(
+        oso.query_rule("inherits_role", org_owner_role, Variable("inherited_role"))
+    )
+    assert len(results) == 0
+
+    ## test role_order rule
+    role_order_str = 'organization_role_order(["OWNER", "MEMBER", "BILLING"]);'
+    oso.load_str(role_order_str)
+
+    results = list(
+        oso.query_rule("inherits_role", org_owner_role, Variable("inherited_role"))
+    )
+    results.sort(key=lambda x: x.get("bindings").get("inherited_role").name)
+    assert len(results) == 2
+    assert results[0].get("bindings").get("inherited_role").name == "BILLING"
+    assert results[1].get("bindings").get("inherited_role").name == "MEMBER"
+
+    # TODO: test `role_allow`
+    ## make sure this query fails before any rules are added
+    results = list(oso.query_rule("role_allow", john, "READ", abbey_road))
+    assert len(results) == 0
+
+    ## test basic `role_allow` rule
+    role_allow_str = """role_allow(role: RepositoryRole{name: "READ"}, "READ", repo: Repository) if
+                            role.repository = repo;"""
+    oso.load_str(role_allow_str)
+    results = list(oso.query_rule("role_allow", read_repo_role, "READ", abbey_road))
+    assert len(results) == 1
+
+    ## test `role_allow` rule using nested resource
+    nested_role_allow_str = """role_allow(role: OrganizationRole{name: "MEMBER"}, "READ", repo: Repository) if
+                            role.organization = repo.organization;"""
+    oso.load_str(nested_role_allow_str)
+    results = list(oso.query_rule("role_allow", org_owner_role, "READ", abbey_road))
+    assert len(results) == 1
+
+    # TODO: test top-level `allow`
+    results = list(oso.query_rule("allow", john, "READ", abbey_road))
+    assert len(results) == 2
+
+    results = list(oso.query_rule("allow", ringo, "READ", abbey_road))
+    assert len(results) == 1
