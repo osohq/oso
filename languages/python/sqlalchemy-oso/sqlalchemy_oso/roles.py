@@ -66,11 +66,8 @@ def resource_role_class(
     global ROLE_CLASSES
     ROLE_CLASSES.append(
         {
-            "user_model": user_model.__name__,
-            "resource_model": resource_model.__name__,
-            # @NOTE: Must name role model like this for now.
-            # TODO: make this generic
-            "role_model": resource_model.__name__ + "Role",
+            "user_model": user_model,
+            "resource_model": resource_model,
         }
     )
 
@@ -256,9 +253,11 @@ def enable_roles(oso):
     """
 
     for role_model in ROLE_CLASSES:
-        User = role_model["user_model"]
-        Resource = role_model["resource_model"]
-        Role = role_model["role_model"]
+        UserModel = role_model["user_model"]
+        User = UserModel.__name__
+        ResourceModel = role_model["resource_model"]
+        Resource = ResourceModel.__name__
+        Role = get_role_model_for_resource_model(ResourceModel).__name__
 
         policy += f"""
         user_in_role(user: {User}, role, resource: {Resource}) if
