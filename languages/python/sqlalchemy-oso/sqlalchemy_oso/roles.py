@@ -6,6 +6,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.event import listen
 from sqlalchemy import inspect, UniqueConstraint
+from .session import _OsoSession
 
 ROLE_CLASSES: List[Any] = []
 
@@ -209,8 +210,11 @@ def enable_roles(oso):
     :type oso: Oso
     """
 
-    # @TODO: Need to set up this listener somehow.
-    # listen(ResourceRoleMixin.name, "set", ResourceRoleMixin.before_set_name, propigate=True)
+    if not _OsoSession.set:
+        raise Exception(
+            "Sqlalchemy roles requires the sqlalchemy OsoSession. Please call session.set_get_session before enable_roles."
+        )
+
     global ROLE_CLASSES
 
     policy = """
