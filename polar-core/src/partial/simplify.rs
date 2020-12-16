@@ -97,9 +97,7 @@ pub struct Simplifier {
 
 impl Folder for Simplifier {
     fn fold_term(&mut self, t: Term) -> Term {
-        let x = self.deref(&t);
-        eprintln!("X = {}", x);
-        fold_term(x, self)
+        fold_term(self.deref(&t), self)
     }
 
     fn fold_partial(&mut self, mut p: Partial) -> Partial {
@@ -168,11 +166,11 @@ impl Folder for Simplifier {
         fold_operation(
             match o.operator {
                 // Collapse trivial conjunctions & disjunctions.
-                Operator::And | Operator::Or if o.args.len() == 1 => o.args[0]
-                    .value()
-                    .as_expression()
-                    .expect("expression")
-                    .clone(),
+                // Operator::And | Operator::Or if o.args.len() == 1 => o.args[0]
+                //     .value()
+                //     .as_expression()
+                //     .expect("expression")
+                //     .clone(),
 
                 Operator::Unify
                 | Operator::Eq

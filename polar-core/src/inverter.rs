@@ -6,6 +6,7 @@ use crate::counter::Counter;
 use crate::error::PolarResult;
 use crate::events::QueryEvent;
 use crate::folder::{fold_value, Folder};
+use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::partial::Partial;
 use crate::runnable::Runnable;
@@ -39,21 +40,28 @@ impl Inverter {
 }
 
 struct PartialInverter<'a> {
-    old_value: Option<&'a Term>,
+    old_value: &'a Term,
 }
 
 impl<'a> PartialInverter<'a> {
-    pub fn new(old_value: Option<&'a Term>) -> Self {
+    pub fn new(old_value: &'a Term) -> Self {
         Self { old_value }
     }
 
     fn invert_partial(&mut self, p: &Partial) -> Partial {
         // Compute csp from old_value vs. p.
-        let csp = match self.old_value.map(|t| t.value()) {
-            Some(Value::Partial(q)) => q.constraints().len(),
+        let csp = match self.old_value.value() {
+            Value::Partial(q) => q.constraints().len(),
             _ => 0,
         };
-        p.clone_with_constraints(p.inverted_constraints(csp))
+        let q = p.clone_with_constraints(p.inverted_constraints(csp));
+        eprintln!(
+            "INVERTING w/old value {}: ¬{} = {}",
+            self.old_value.to_polar(),
+            p.clone().into_term().to_polar(),
+            q.clone().into_term().to_polar()
+        );
+        q
     }
 }
 
@@ -71,12 +79,13 @@ impl<'a> Folder for PartialInverter<'a> {
 fn invert_partials(bindings: BindingStack, old_bindings: &[Binding]) -> BindingStack {
     bindings
         .into_iter()
-        .map(|Binding(var, value)| {
-            let old_value = old_bindings
+        .filter_map(|Binding(var, value)| {
+            old_bindings
                 .iter()
                 .rfind(|Binding(v, _)| *v == var)
-                .map(|Binding(_, value)| value);
-            Binding(var, PartialInverter::new(old_value).fold_term(value))
+                .map(|Binding(_, old_value)| {
+                    Binding(var, PartialInverter::new(old_value).fold_term(value))
+                })
         })
         .collect()
 }
@@ -93,9 +102,9 @@ fn dedupe_bindings(bindings: BindingStack) -> Bindings {
 
 /// Reduce + merge constraints.
 fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
-    dedupe_bindings(bindings)
-        .drain()
-        .for_each(|(var, value)| match acc.entry(var) {
+    dedupe_bindings(bindings).drain().for_each(|(var, value)| {
+        eprintln!("REDUCING {} = {}", var, value);
+        match acc.entry(var) {
             Entry::Occupied(mut o) => {
                 let mut old = o.get().value().as_partial().expect("Partial").clone();
                 let new = value.value().as_partial().expect("Partial").clone();
@@ -106,7 +115,8 @@ fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
             Entry::Vacant(v) => {
                 v.insert(value);
             }
-        });
+        }
+    });
     acc
 }
 
