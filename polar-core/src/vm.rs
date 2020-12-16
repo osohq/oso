@@ -558,10 +558,7 @@ impl PolarVirtualMachine {
         I: IntoIterator<Item = Goal>,
         I::IntoIter: std::iter::DoubleEndedIterator,
     {
-        goals
-            .into_iter()
-            .rev()
-            .try_for_each(|goal| self.push_goal(goal))
+        goals.into_iter().rev().try_for_each(|g| self.push_goal(g))
     }
 
     /// Push a binding onto the binding stack.
