@@ -565,28 +565,11 @@ impl PolarVirtualMachine {
     }
 
     /// Push a binding onto the binding stack.
-    fn bind(&mut self, var: &Symbol, value: Term) {
+    fn bind(&mut self, var: &Symbol, val: Term) {
         if self.log {
-            self.print(&format!(
-                "⇒ bind: {} ← {}",
-                var.to_polar(),
-                value.to_polar()
-            ));
+            self.print(&format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()));
         }
-
-        // let value = match value.value() {
-        //     Value::Partial(p) if p.name() != var => {
-        //         // Rebind the previous name of the partial to the new variable that contains the
-        //         // partial. This is necessary because partials are mutated with new constraints.
-        //         // Without this rebinding, additional constraints on the new partial would not be
-        //         // attached to the old (partial) name.
-        //         self.bind(p.name(), Term::new_temporary(Value::Variable(var.clone())));
-        //         value.clone_with_value(Value::Partial(p.clone_with_name(var.clone())))
-        //     }
-        //     _ => value,
-        // };
-
-        self.bindings.push(Binding(var.clone(), value));
+        self.bindings.push(Binding(var.clone(), val));
     }
 
     /// Augment the bindings stack with constants from a hash map.

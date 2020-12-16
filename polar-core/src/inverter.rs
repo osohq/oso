@@ -143,16 +143,12 @@ impl Runnable for Inverter {
                     return Ok(QueryEvent::Done { result });
                 }
                 QueryEvent::Result { .. } => {
-                    // if self.vm.query_contains_partial {
                     let bindings = self.vm.bindings[self.bsp..].to_owned();
                     let derefed = bindings
                         .into_iter()
                         .map(|Binding(var, value)| Binding(var, self.vm.deep_deref(&value)))
                         .collect();
                     self.results.push(derefed);
-                    // } else {
-                    //     return Ok(QueryEvent::Done { result: false });
-                    // }
                 }
                 event => return Ok(event),
             }
