@@ -365,7 +365,6 @@ fn simplify_partial(mut term: Term, var: Symbol) -> Term {
         term = new;
     }
 
-    // let new = fold_term(new, &mut EmptyAndRemover {});
     simplifier.sub_this(PartialToExpression {}.fold_term(new))
 }
 

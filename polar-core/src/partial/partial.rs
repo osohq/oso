@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
+use crate::terms::{Operation, Operator, Symbol, Term, Value};
 use crate::visitor::{walk_partial, Visitor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -47,52 +47,17 @@ impl Partial {
         self.constraints.extend(other.constraints);
     }
 
+    // TODO(gj): simpler way to write this function.
     pub fn inverted_constraints(&self, csp: usize) -> Vec<Operation> {
         let (old, new) = self.constraints.split_at(csp);
         let mut combined = old.to_vec();
-
-        fn invert_constraint(op: &Operation) -> Operation {
-            match op.operator {
-                Operator::And => todo!("nand"),
-                Operator::Or => Operation {
-                    operator: Operator::And,
-                    args: op
-                        .args
-                        .iter()
-                        .map(|t| t.clone_with_value(value!(op!(Not, t.clone()))))
-                        .collect(),
-                },
-                _ => op!(Not, term!(value!(op.clone()))),
-            }
-        }
-        if new.len() == 1 && new[0].operator == Operator::Or {
-            combined.extend(
-                new[0]
-                    .args
-                    .iter()
-                    .map(|t| {
-                        invert_constraint(&t.value().as_expression().expect("an expression").clone())
-                    })
-                    .collect::<Vec<Operation>>(),
-            );
-        } else {
-            let inverted = new
-                .iter()
-                .map(|c| Term::new_temporary(Value::Expression(invert_constraint(c))))
-                .collect::<TermList>();
-            combined.push(if inverted.len() == 1 {
-                inverted[0]
-                    .value()
-                    .as_expression()
-                    .expect("an expression")
-                    .clone()
-            } else {
-                Operation {
-                    operator: Operator::Or,
-                    args: inverted,
-                }
-            });
-        }
+        combined.push(op!(
+            Not,
+            term!(value!(Operation {
+                operator: Operator::And,
+                args: new.iter().cloned().map(|o| term!(value!(o))).collect()
+            }))
+        ));
         combined
     }
 

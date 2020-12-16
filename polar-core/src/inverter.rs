@@ -1,3 +1,4 @@
+// TODO(gj): fix term!
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::rc::Rc;
@@ -10,7 +11,7 @@ use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::partial::Partial;
 use crate::runnable::Runnable;
-use crate::terms::{Term, Value};
+use crate::terms::{Operation, Operator, Term, Value};
 use crate::vm::{Binding, BindingStack, Goals, PolarVirtualMachine};
 
 #[derive(Clone)]
@@ -106,11 +107,37 @@ fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
         eprintln!("REDUCING {} = {}", var, value);
         match acc.entry(var) {
             Entry::Occupied(mut o) => {
-                let mut old = o.get().value().as_partial().expect("Partial").clone();
+                let old_term = o.get();
+                let old = old_term.value().as_partial().expect("Partial").clone();
                 let new = value.value().as_partial().expect("Partial").clone();
-                old.merge_constraints(new);
-                let conjunction = value.clone_with_value(Value::Partial(old));
-                o.insert(conjunction);
+                eprintln!("OLD => {}", old.clone().into_term().to_polar());
+                eprintln!("NEW => {}", new.clone().into_term().to_polar());
+
+                let old_constraints = old_term.clone_with_value(value!(Operation {
+                    operator: Operator::And,
+                    args: old
+                        .constraints
+                        .into_iter()
+                        .map(|o| term!(value!(o)))
+                        .collect(),
+                }));
+
+                let new_constraints = value.clone_with_value(value!(Operation {
+                    operator: Operator::And,
+                    args: new
+                        .constraints()
+                        .iter()
+                        .cloned()
+                        .map(|o| term!(value!(o)))
+                        .collect(),
+                }));
+
+                let disjunction = op!(Or, old_constraints, new_constraints);
+                let new = new.clone_with_constraints(vec![disjunction]);
+                let new_term = old_term.clone_with_value(value!(new));
+
+                eprintln!("MERGED => {}", new_term.to_polar());
+                o.insert(new_term);
             }
             Entry::Vacant(v) => {
                 v.insert(value);
