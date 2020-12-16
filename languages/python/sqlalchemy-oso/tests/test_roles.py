@@ -532,7 +532,7 @@ def test_enable_roles(test_db_session, oso_with_session):
     results = list(oso.query_rule("role_allow", org_owner_role, "READ", abbey_road))
     assert len(results) == 1
 
-    # TODO: test top-level `allow`
+    # test top-level `allow`
     results = list(oso.query_rule("allow", john, "READ", abbey_road))
     assert len(results) == 2
 
