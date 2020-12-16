@@ -10,7 +10,6 @@
 
 use std::collections::BTreeMap;
 
-use crate::partial::Partial;
 use crate::rules::*;
 use crate::terms::*;
 
@@ -85,9 +84,6 @@ pub trait Folder: Sized {
     fn fold_param(&mut self, p: Parameter) -> Parameter {
         fold_param(p, self)
     }
-    fn fold_partial(&mut self, p: Partial) -> Partial {
-        fold_partial(p, self)
-    }
 }
 
 pub fn fold_rule<T: Folder>(Rule { name, params, body }: Rule, fld: &mut T) -> Rule {
@@ -116,7 +112,6 @@ pub fn fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
         Value::Variable(v) => Value::Variable(fld.fold_variable(v)),
         Value::RestVariable(r) => Value::RestVariable(fld.fold_rest_variable(r)),
         Value::Expression(o) => Value::Expression(fld.fold_operation(o)),
-        Value::Partial(p) => Value::Partial(fld.fold_partial(p)),
     }
 }
 
@@ -214,22 +209,6 @@ pub fn fold_operation<T: Folder>(
     }
 }
 
-pub fn fold_partial<T: Folder>(
-    Partial {
-        constraints,
-        variable,
-    }: Partial,
-    fld: &mut T,
-) -> Partial {
-    Partial {
-        constraints: constraints
-            .into_iter()
-            .map(|c| fld.fold_operation(c))
-            .collect(),
-        variable,
-    }
-}
-
 pub fn fold_name<T: Folder>(n: Symbol, _fld: &mut T) -> Symbol {
     n
 }
@@ -312,6 +291,4 @@ mod tests {
         let mut fld = TrivialFolder {};
         assert_eq!(fld.fold_rule(rule.clone()), rule);
     }
-
-    // TODO(gj): Add test for folding a partial.
 }

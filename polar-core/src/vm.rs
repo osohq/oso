@@ -18,7 +18,7 @@ use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial::{simplify_bindings, IsaConstraintCheck, Partial};
+use crate::partial::{simplify_bindings, IsaConstraintCheck};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -241,25 +241,26 @@ impl Default for PolarVirtualMachine {
 
 #[allow(clippy::ptr_arg)]
 fn query_contains_partial(goals: &Goals) -> bool {
-    struct PartialVisitor {
-        has_partial: bool,
-    }
-
-    impl Visitor for PartialVisitor {
-        fn visit_partial(&mut self, _: &Partial) {
-            self.has_partial = true;
-        }
-    }
-
-    let mut visitor = PartialVisitor { has_partial: false };
-    goals.iter().any(|goal| {
-        if let Goal::Query { term } = goal {
-            walk_term(&mut visitor, &term);
-            visitor.has_partial
-        } else {
-            false
-        }
-    })
+    // struct PartialVisitor {
+    //     has_partial: bool,
+    // }
+    //
+    // impl Visitor for PartialVisitor {
+    //     fn visit_partial(&mut self, _: &Partial) {
+    //         self.has_partial = true;
+    //     }
+    // }
+    //
+    // let mut visitor = PartialVisitor { has_partial: false };
+    // goals.iter().any(|goal| {
+    //     if let Goal::Query { term } = goal {
+    //         walk_term(&mut visitor, &term);
+    //         visitor.has_partial
+    //     } else {
+    //         false
+    //     }
+    // })
+    true
 }
 
 // Methods which aren't goals/instructions.
@@ -627,7 +628,7 @@ impl PolarVirtualMachine {
             .map(|binding| &binding.1)
     }
 
-    /// Recursively dereference variables in a term, including subterms, except partials.
+    /// Recursively dereference variables in a term, including subterms, except operations.
     pub fn deep_deref(&self, term: &Term) -> Term {
         pub struct Derefer<'vm> {
             vm: &'vm PolarVirtualMachine,
@@ -644,7 +645,7 @@ impl PolarVirtualMachine {
                 match t.value() {
                     Value::List(_) | Value::Variable(_) | Value::RestVariable(_) => {
                         let derefed = self.vm.deref(&t);
-                        if let Value::Partial(_) = derefed.value() {
+                        if let Value::Expression(_) = derefed.value() {
                             t
                         } else {
                             fold_term(derefed, self)
@@ -654,8 +655,8 @@ impl PolarVirtualMachine {
                 }
             }
 
-            fn fold_partial(&mut self, p: Partial) -> Partial {
-                p
+            fn fold_operation(&mut self, o: Operation) -> Operation {
+                o
             }
         }
 
@@ -952,11 +953,11 @@ impl PolarVirtualMachine {
             (_, Value::InstanceLiteral(_)) | (_, Value::Dictionary(_)) => {
                 unreachable!("parsed as pattern")
             }
-            (_, Value::Partial(_)) => {
+            (_, Value::Expression(_)) => {
                 return Err(self.set_error_context(
                     &right,
                     error::RuntimeError::Unsupported {
-                        msg: "cannot match against a partial".to_string(),
+                        msg: "cannot match against an expression".to_string(),
                     },
                 ));
             }
@@ -976,7 +977,7 @@ impl PolarVirtualMachine {
                 })?;
             }
 
-            (Value::Partial(partial), _) => {
+            (Value::Expression(operation), _) => {
                 match right.value() {
                     Value::Pattern(Pattern::Dictionary(fields)) => {
                         let to_unify = |(field, value): (&Symbol, &Term)| -> Operation {
@@ -985,28 +986,28 @@ impl PolarVirtualMachine {
                             op!(Unify, left, value.clone())
                         };
 
-                        let mut partial = partial.clone();
+                        let mut operation = operation.clone();
 
-                        // Add all but the last field constraint to the partial.
+                        // Add all but the last field constraint to the operation.
                         for op in fields.fields.iter().skip(1).rev().map(to_unify) {
-                            partial.add_constraint(op);
+                            operation.add_constraint(op);
                         }
 
                         // Add the last field constraint and trigger the bind dance.
                         for op in fields.fields.iter().take(1).map(to_unify) {
-                            self.constrain(&partial, &term!(op));
+                            self.constrain(&operation, &term!(op));
                         }
                     }
                     Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
                         // Grab existing constraints before we add new ones.
-                        let existing = partial.constraints.clone();
+                        let existing = operation.constraints();
 
                         // Construct field-less matches operation.
                         let tag_pattern =
                             right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
                         let type_constraint = op!(Isa, left.clone(), tag_pattern);
-                        let mut partial =
-                            partial.clone_with_new_constraint(type_constraint.clone());
+                        let mut operation =
+                            operation.clone_with_new_constraint(type_constraint.clone());
 
                         // Construct compatibility check.
                         let runnable = Box::new(IsaConstraintCheck::new(existing, type_constraint));
@@ -1016,15 +1017,15 @@ impl PolarVirtualMachine {
                             let field = right.clone_with_value(value!(f.clone()));
                             let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
                             let unify = op!(Unify, left, v.clone());
-                            partial = partial.clone_with_new_constraint(unify);
+                            operation = operation.clone_with_new_constraint(unify);
                         });
 
                         // Construct manual binds to run if compabitility check succeeds. If the
                         // check fails, the query should backtrack because the existing constraints
                         // are incompatible with the proposed constraint.
-                        let binds = partial.variables().into_iter().map(|var| Goal::Bind {
+                        let binds = operation.variables().into_iter().map(|var| Goal::Bind {
                             var,
-                            value: partial.clone().into_term(),
+                            value: operation.clone().into_term(),
                         });
 
                         // Run compatibility check.
@@ -1035,7 +1036,7 @@ impl PolarVirtualMachine {
                         )?;
                     }
                     _ => self.constrain(
-                        partial,
+                        operation,
                         &left.clone_with_value(value!(op!(Unify, left.clone(), right.clone()))),
                     ),
                 }
@@ -1554,7 +1555,7 @@ impl PolarVirtualMachine {
                             },
                         ])?;
                     }
-                    Value::Partial(partial) => self.constrain(partial, term),
+                    Value::Expression(operation) => self.constrain(operation, term),
                     _ => {
                         return Err(self.type_error(
                             &iterable,
@@ -1629,7 +1630,7 @@ impl PolarVirtualMachine {
                     return Err(self.set_error_context(
                         &term,
                         error::RuntimeError::Unsupported {
-                            msg: "cannot use cut with a partial".to_string(),
+                            msg: "cannot use cut with partial evaluation".to_string(),
                         },
                     ));
                 }
@@ -1743,13 +1744,13 @@ impl PolarVirtualMachine {
                     Goal::CheckError,
                 ])?;
             }
-            Value::Partial(partial) => {
+            Value::Expression(operation) => {
                 if matches!(field.value(), Value::Call(_)) {
                     return Err(self.set_error_context(
                         &derefed_object,
                         error::RuntimeError::Unsupported {
                             msg: format!(
-                                "cannot call method on partial {}",
+                                "cannot call method on expression {}",
                                 derefed_object.to_polar()
                             ),
                         },
@@ -1758,7 +1759,7 @@ impl PolarVirtualMachine {
 
                 let dot_op = object.clone_with_value(value!(op!(Dot, object.clone(), field)));
                 self.constrain(
-                    partial,
+                    operation,
                     &object.clone_with_value(value!(op!(Unify, value.clone(), dot_op))),
                 );
             }
@@ -1928,14 +1929,14 @@ impl PolarVirtualMachine {
                     args: vec![left_term, right_term],
                 })
             }
-            (Value::Partial(_), Value::Partial(_)) => Err(self.set_error_context(
+            (Value::Expression(_), Value::Expression(_)) => Err(self.set_error_context(
                 &term,
                 error::RuntimeError::Unsupported {
-                    msg: "cannot compare partials".to_string(),
+                    msg: "cannot compare expressions".to_string(),
                 },
             )),
-            (Value::Partial(partial), _) | (_, Value::Partial(partial)) => {
-                self.constrain(partial, term);
+            (Value::Expression(operation), _) | (_, Value::Expression(operation)) => {
+                self.constrain(operation, term);
                 Ok(QueryEvent::None)
             }
             (left, right) => Err(self.type_error(
@@ -2101,16 +2102,16 @@ impl PolarVirtualMachine {
 
         match (value, other_value) {
             (Some(value), Some(other_value)) => match (value.value(), other_value.value()) {
-                (Value::Partial(p), Value::Partial(q)) => {
+                (Value::Expression(o), Value::Expression(p)) => {
                     eprintln!("1.A {} = {}", var, other.to_polar());
                     eprintln!("1.A {} = {}", value.to_polar(), other_value.to_polar());
-                    let mut combined = p.clone();
-                    combined.merge_constraints(q.clone());
+                    let mut combined = o.clone();
+                    combined.merge_constraints(p.clone());
                     self.constrain(&combined, term);
                 }
-                (Value::Partial(p), _) | (_, Value::Partial(p)) => {
+                (Value::Expression(o), _) | (_, Value::Expression(o)) => {
                     eprintln!("1.B {} = {}", var, other.to_polar());
-                    self.constrain(p, term);
+                    self.constrain(o, term);
                 }
                 _ => {
                     eprintln!("1.D {} = {}", var, other.to_polar());
@@ -2124,9 +2125,9 @@ impl PolarVirtualMachine {
             },
             (Some(value), None) => {
                 match value.value() {
-                    Value::Partial(p) => {
+                    Value::Expression(o) => {
                         eprintln!("2.A {} = {}", var, other.to_polar());
-                        self.constrain(p, term);
+                        self.constrain(o, term);
                     }
                     _ => {
                         eprintln!("2.B {} = {}", var, other.to_polar());
@@ -2141,9 +2142,9 @@ impl PolarVirtualMachine {
             }
             (None, Some(other_value)) => {
                 match other_value.value() {
-                    Value::Partial(p) => {
+                    Value::Expression(o) => {
                         eprintln!("3.A {} = {}", var, other.to_polar());
-                        self.constrain(p, term);
+                        self.constrain(o, term);
                     }
                     _ => {
                         eprintln!("3.B {} = {}", var, other.to_polar());
@@ -2154,15 +2155,15 @@ impl PolarVirtualMachine {
             }
             (None, None) => {
                 match other.value() {
-                    Value::Partial(_) => {
+                    Value::Expression(_) => {
                         eprintln!("4.A {} = {}", var, other.to_polar());
                         self.bind(var, other.clone());
                     }
                     // TODO(gj): does RestVariable need any special handling?
                     Value::Variable(_) | Value::RestVariable(_) => {
                         eprintln!("4.B {} = {}", var, other.to_polar());
-                        // Neither is bound, so tie them together in a new partial.
-                        self.constrain(&Partial::new(sym!("unify")), term);
+                        // Neither is bound, so tie them together in a new expression.
+                        self.constrain(&op!(And), term);
                     }
                     _ => {
                         eprintln!("4.C {} = {}", var, other.to_polar());
@@ -2174,16 +2175,15 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
-    fn constrain(&mut self, p: &Partial, t: &Term) {
+    fn constrain(&mut self, o: &Operation, t: &Term) {
+        assert!(o.operator == Operator::And);
         let constraint = self.deep_deref(t).value().as_expression().unwrap().clone();
-        let partial = p.clone_with_new_constraint(constraint);
-        for var in partial.variables().iter() {
-            eprintln!(
-                "BINDING {} ← {}",
-                var,
-                partial.clone().into_term().to_polar()
-            );
-            self.bind(var, partial.clone().into_term());
+        // TODO(gj): we're going Term -> Operation -> Term via clone_with_new_constraint. Can
+        // probably shortcut that by passing clone_with_new_constraint a term.
+        let operation = o.clone_with_new_constraint(constraint);
+        for var in operation.variables().iter() {
+            eprintln!("BINDING {} ← {}", var, operation.to_polar());
+            self.bind(var, operation.clone().into_term());
         }
     }
 

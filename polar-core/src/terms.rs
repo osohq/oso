@@ -6,7 +6,6 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 pub use super::numerics::Numeric;
-use super::partial::Partial;
 use super::visitor::{walk_term, Visitor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
@@ -140,7 +139,6 @@ pub enum Value {
     Variable(Symbol),
     RestVariable(Symbol),
     Expression(Operation),
-    Partial(Partial),
 }
 
 impl Value {
@@ -185,16 +183,6 @@ impl Value {
         }
     }
 
-    pub fn as_partial(&self) -> Result<&Partial, error::RuntimeError> {
-        match self {
-            Value::Partial(e) => Ok(e),
-            _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected partial, got: {}", self.to_polar()),
-                stack_trace: None, // @TODO
-            }),
-        }
-    }
-
     pub fn as_call(&self) -> Result<&Call, error::RuntimeError> {
         match self {
             Value::Call(pred) => Ok(pred),
@@ -220,8 +208,7 @@ impl Value {
             Value::Call(_)
             | Value::ExternalInstance(_)
             | Value::Variable(_)
-            | Value::RestVariable(_)
-            | Value::Partial(_) => false,
+            | Value::RestVariable(_) => false,
             Value::Number(_) | Value::String(_) | Value::Boolean(_) => true,
             Value::InstanceLiteral(_) | Value::Pattern(_) => panic!("unexpected value type"),
             Value::Dictionary(Dictionary { fields }) => fields.values().all(|t| t.is_ground()),
