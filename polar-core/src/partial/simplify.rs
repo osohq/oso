@@ -324,7 +324,7 @@ impl Simplifier {
                     (Value::Variable(v), Value::Variable(w))
                         if v.is_this_var() && w.is_this_var() =>
                     {
-                        term.clone_with_value(value!(true))
+                        unreachable!()
                     }
                     (Value::Variable(v), _) if v.is_this_var() => right.clone(),
                     (_, Value::Variable(v)) if v.is_this_var() => left.clone(),
