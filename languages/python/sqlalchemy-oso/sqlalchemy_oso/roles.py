@@ -105,7 +105,7 @@ def resource_role_class(
 
         @declared_attr
         def user(self):
-            return relationship(user_model.__name__, backref=tablename, lazy=True)
+            return relationship(user_model.__name__, backref=tablename)
 
     @declared_attr
     def resource_id(cls):
@@ -116,7 +116,7 @@ def resource_role_class(
 
     @declared_attr
     def resource(cls):
-        return relationship(resource_model.__name__, backref="roles", lazy=True)
+        return relationship(resource_model.__name__, backref="roles")
 
     setattr(ResourceRoleMixin, f"{resource_model.__name__.lower()}_id", resource_id)
     setattr(ResourceRoleMixin, resource_model.__name__.lower(), resource)
@@ -125,7 +125,6 @@ def resource_role_class(
     resources = relationship(
         resource_model.__name__,
         secondary=tablename,
-        lazy=True,
         viewonly=True,
         backref="users",
         sync_backref=False,
