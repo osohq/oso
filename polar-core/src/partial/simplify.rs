@@ -82,7 +82,7 @@ pub fn simplify_bindings(bindings: Bindings) -> Bindings {
             Value::Expression(o) => {
                 assert_eq!(o.operator, Operator::And);
                 (var.clone(), simplify_partial(o.clone().into_term(), var))
-            },
+            }
             _ => (var, value),
         })
         .collect()
@@ -151,112 +151,125 @@ impl Folder for Simplifier {
         fold_operation(o, self)
     }*/
 
-    fn fold_operation(&mut self, o: Operation) -> Operation {
-        // Preprocess constraints.
-        /*let mut seen: HashSet<&Operation> = HashSet::new();
-        let o = o.clone_with_constraints(
-            o.constraints()
-                .iter()
-                .filter(|c| *c != &TRUE) // Drop empty constraints.
-                .filter(|o| seen.insert(o)) // Deduplicate constraints.
-                .cloned()
-                .collect(),
-        );*/
+    fn fold_operation(&mut self, mut o: Operation) -> Operation {
+        if o.operator == Operator::And {
+            // Preprocess constraints.
+            let mut seen: HashSet<&Operation> = HashSet::new();
+            o = o.clone_with_constraints(
+                o.constraints()
+                    .iter()
+                    .filter(|o| *o != &TRUE) // Drop empty constraints.
+                    .filter(|o| seen.insert(o)) // Deduplicate constraints.
+                    .cloned()
+                    .collect(),
+            );
+        }
 
-        fold_operation(
-            /*match o.operator {
-                // Collapse trivial conjunctions & disjunctions.
-                Operator::And | Operator::Or if o.args.len() == 1 => o.args[0]
+        match o.operator {
+            // Zero-argument conjunctions & disjunctions represent constants
+            // TRUE and FALSE, respectively. We do not simplify them.
+
+            // Replace one-argument conjunctions & disjunctions with their argument.
+            Operator::And | Operator::Or if o.args.len() == 1 => fold_operation(
+                o.args[0]
                     .value()
                     .as_expression()
                     .expect("expression")
                     .clone(),
+                self,
+            ),
 
-                Operator::Unify
-                | Operator::Eq
-                | Operator::Neq
-                | Operator::Gt
-                | Operator::Geq
-                | Operator::Lt
-                | Operator::Leq => {
-                    let left = &o.args[0];
-                    let right = &o.args[1];
-
-                    match (left.value().as_expression(), right.value().as_expression()) {
-                        (Ok(left), Ok(right))
-                            if left.operator == Operator::Not
-                                && right.operator == Operator::Not =>
-                        {
-                            todo!("not x = not y");
-                        }
-                        (Ok(left), _) if left.operator == Operator::Not => {
-                            invert_operation(Operation {
-                                operator: o.operator,
-                                args: vec![left.args[0].clone(), right.clone()],
-                            })
-                        }
-                        (_, Ok(right)) if right.operator == Operator::Not => {
-                            invert_operation(Operation {
-                                operator: o.operator,
-                                args: vec![left.clone(), right.args[0].clone()],
-                            })
-                        }
-                        _ => o,
+            // Choose an (anti)unification constraint to make a binding from,
+            // maybe throw it away, and fold the rest.
+            Operator::And if o.args.len() > 1 => {
+                if let Some(i) = o.constraints().iter().position(|o| {
+                    let mut o = o.clone();
+                    let mut invert = false;
+                    if o.operator == Operator::Not {
+                        o = o.args[0].value().as_expression().unwrap().clone();
+                        invert = true;
                     }
+                    match o.operator {
+                        Operator::Unify | Operator::Neq => {
+                            let left = &o.args[0];
+                            let right = &o.args[1];
+                            let invert = if invert {
+                                o.operator != Operator::Neq
+                            } else {
+                                o.operator == Operator::Neq
+                            };
+                            left == right
+                                || match (left.value(), right.value()) {
+                                    (Value::Variable(v), x)
+                                        if !self.is_this_var(left) && x.is_ground() =>
+                                    {
+                                        eprintln!("A {} ← {}", left.to_polar(), right.to_polar());
+                                        self.bind(v.clone(), right.clone(), invert);
+                                        true
+                                    }
+                                    (x, Value::Variable(v))
+                                        if !self.is_this_var(right) && x.is_ground() =>
+                                    {
+                                        eprintln!("B {} ← {}", right.to_polar(), left.to_polar());
+                                        self.bind(v.clone(), left.clone(), invert);
+                                        true
+                                    }
+                                    (_, Value::Variable(v)) if self.is_this_var(left) => {
+                                        eprintln!("C {} ← {}", right.to_polar(), left.to_polar());
+                                        self.bind(v.clone(), left.clone(), invert);
+                                        false
+                                    }
+                                    (Value::Variable(v), _) if self.is_this_var(right) => {
+                                        eprintln!("D {} ← {}", left.to_polar(), right.to_polar());
+                                        self.bind(v.clone(), right.clone(), invert);
+                                        false
+                                    }
+                                    _ => false,
+                                }
+                        }
+                        _ => false,
+                    }
+                }) {
+                    eprintln!("CHOSEN CONSTRAINT: {}", &o.args[i].to_polar());
+                    o.args.remove(i);
                 }
-                Operator::Not => match o.args[0].value().as_expression() {
-                    Ok(o) => invert_operation(o.clone()),
-                    _ => return o,
-                },
-                _ => o,
-            }*/ o,
-            self,
-        )
-    }
+                fold_operation(o, self)
+            }
 
-    // fn fold_operation(&mut self, mut o: Operation) -> Operation {
-    //     if let Some(op) = self.maybe_unwrap_single_argument_and_or(&o) {
-    //         o = op;
-    //     }
-    //
-    //     match o.operator {
-    //         Operator::Neq => {
-    //             let left = &o.args[0];
-    //             let right = &o.args[1];
-    //             Operation {
-    //                 operator: Operator::And,
-    //                 args: match (left.value(), right.value()) {
-    //                     // Distribute **inverted** expression over the partial.
-    //                     (Value::Partial(c), Value::Expression(_)) => {
-    //                         self.map_constraints(&c.inverted_constraints(0), right)
-    //                     }
-    //                     (Value::Expression(_), Value::Partial(c)) => {
-    //                         self.map_constraints(&c.inverted_constraints(0), left)
-    //                     }
-    //                     _ => return fold_operation(o, self),
-    //                 },
-    //             }
-    //         }
-    //         Operator::Eq | Operator::Unify => {
-    //             let left = &o.args[0];
-    //             let right = &o.args[1];
-    //             Operation {
-    //                 operator: Operator::And,
-    //                 args: match (left.value(), right.value()) {
-    //                     // Distribute expression over the partial.
-    //                     (Value::Partial(c), Value::Expression(_)) => {
-    //                         self.map_constraints(c.constraints(), right)
-    //                     }
-    //                     (Value::Expression(_), Value::Partial(c)) => {
-    //                         self.map_constraints(c.constraints(), left)
-    //                     }
-    //                     _ => return fold_operation(o, self),
-    //                 },
-    //             }
-    //         }
-    //         _ => fold_operation(o, self),
-    //     }
-    // }
+            // (Negated) comparisons.
+            Operator::Eq | Operator::Gt | Operator::Geq | Operator::Lt | Operator::Leq => {
+                let left = &o.args[0];
+                let right = &o.args[1];
+                match (left.value().as_expression(), right.value().as_expression()) {
+                    (Ok(left), Ok(right))
+                        if left.operator == Operator::Not && right.operator == Operator::Not =>
+                    {
+                        todo!("not x = not y");
+                    }
+                    (Ok(left), _) if left.operator == Operator::Not => {
+                        invert_operation(Operation {
+                            operator: o.operator,
+                            args: vec![left.args[0].clone(), right.clone()],
+                        })
+                    }
+                    (_, Ok(right)) if right.operator == Operator::Not => {
+                        invert_operation(Operation {
+                            operator: o.operator,
+                            args: vec![left.clone(), right.args[0].clone()],
+                        })
+                    }
+                    _ => fold_operation(o, self),
+                }
+            }
+
+            // Negation.
+            Operator::Not => match o.args[0].value().as_expression() {
+                Ok(o) => invert_operation(o.clone()),
+                _ => fold_operation(o, self),
+            },
+            _ => fold_operation(o, self),
+        }
+    }
 }
 
 impl Simplifier {
@@ -268,7 +281,6 @@ impl Simplifier {
     }
 
     pub fn bind(&mut self, var: Symbol, value: Term, invert: bool) {
-        // TODO(ap): check that if there's a current value, it's equal to the new one.
         self.bindings.insert(
             var.clone(),
             if invert {
@@ -277,27 +289,18 @@ impl Simplifier {
                 value
             },
         );
-        eprintln!(
-            "Simplifier.bind({}, {}, {})",
-            &var,
-            self.bindings[&var].to_polar(),
-            invert
-        );
     }
 
     pub fn deref(&self, term: &Term) -> Term {
         match term.value() {
             // TODO(gj): RestVariable?
-            Value::Variable(symbol) => {
-                if let Some(value) = self.bindings.get(symbol) {
-                    if value != term {
-                        return self.deref(value);
-                    }
-                }
-                term.clone()
-            }
+            Value::Variable(symbol) => self.bindings.get(symbol).unwrap_or(term).clone(),
             _ => term.clone(),
         }
+    }
+
+    fn is_bound(&self, var: &Symbol) -> bool {
+        self.bindings.contains_key(var)
     }
 
     fn is_this_var(&self, t: &Term) -> bool {
