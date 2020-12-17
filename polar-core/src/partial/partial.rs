@@ -802,33 +802,33 @@ mod test {
                h(x) if y in x.values and (y.bar = 1 and y.baz = 2) or y.bar = 3;"#,
         )?;
 
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         // TODO (dhatch): This doesn't work now, but ultimately this should have
         // no constraints since nothing is added to `y`.
         assert_partial_expressions!(
             next_binding(&mut q)?,
-            "a" => "_y_12 in _this.values"
+            "x" => "_y_12 in _this.values"
         );
         assert_query_done!(q);
 
         // Not sure about this one, where there's an output binding.  There are still
         // no constraints on b.
-        let mut q = p.new_query_from_term(term!(call!("g", [sym!("a"), sym!("b")])), false);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), sym!("y")])), false);
         assert_partial_expressions!(
             next_binding(&mut q)?,
-            "a" => "_y_17 in _this.values",
-            "b" => ""
+            "x" => "_y_17 in _this.values",
+            "y" => "_this = _y_17"
         );
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("h", [sym!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
         assert_partial_expressions!(
             next_binding(&mut q)?,
-            "a" => "_y_27 in _this.values and 1 = _y_27.bar and 2 = _y_27.baz"
+            "x" => "_y_27 in _this.values and 1 = _y_27.bar and 2 = _y_27.baz"
         );
         assert_partial_expressions!(
             next_binding(&mut q)?,
-            "a" => "_y_27 in _this.values and 3 = _y_27.bar"
+            "x" => "_y_27 in _this.values and 3 = _y_27.bar"
         );
         assert_query_done!(q);
 
