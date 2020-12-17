@@ -83,7 +83,9 @@ pub fn simplify_bindings(bindings: Bindings) -> Bindings {
                 assert_eq!(o.operator, Operator::And);
                 let mut simplifier = Simplifier::new(var.clone());
                 let simplified = simplifier.simplify_partial(o.clone().into_term());
-                (var, simplifier.sub_this(simplified))
+                let simplified = simplifier.sub_this(simplified);
+                let simplified = simplifier.simplify_trivial_constraint(simplified);
+                (var, simplified)
             }
             _ => (var, value),
         })
@@ -288,6 +290,27 @@ impl Simplifier {
         }
 
         fold_term(term, &mut VariableSubber::new(self.this_var.clone()))
+    }
+
+    /// Turn `_this = x` into `x`.
+    fn simplify_trivial_constraint(&self, term: Term) -> Term {
+        match term.value() {
+            Value::Expression(o) if o.operator == Operator::Unify => {
+                let left = &o.args[0];
+                let right = &o.args[1];
+                match (left.value(), right.value()) {
+                    (Value::Variable(v), Value::Variable(w))
+                        if v.is_this_var() && w.is_this_var() =>
+                    {
+                        term.clone_with_value(value!(true))
+                    }
+                    (Value::Variable(v), _) if v.is_this_var() => right.clone(),
+                    (_, Value::Variable(v)) if v.is_this_var() => left.clone(),
+                    _ => term,
+                }
+            }
+            _ => term,
+        }
     }
 
     /// Simplify a partial until quiescence.
