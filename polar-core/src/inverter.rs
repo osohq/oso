@@ -10,7 +10,7 @@ use crate::folder::{fold_value, Folder};
 use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Term, Value};
+use crate::terms::{Operation, Term, Value};
 use crate::vm::{Binding, BindingStack, Goals, PolarVirtualMachine};
 
 #[derive(Clone)]
@@ -103,7 +103,7 @@ fn dedupe_bindings(bindings: BindingStack) -> Bindings {
 /// Reduce + merge constraints.
 fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
     dedupe_bindings(bindings).drain().for_each(|(var, value)| {
-        eprintln!("REDUCING {} = {}", var, value);
+        eprintln!("REDUCING {} = ({})", var, value);
         match acc.entry(var) {
             Entry::Occupied(mut o) => {
                 let mut merged = o.get().value().as_expression().expect("expression").clone();

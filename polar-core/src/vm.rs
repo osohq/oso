@@ -2085,12 +2085,9 @@ impl PolarVirtualMachine {
         let value = self.value(var).cloned();
         let other_value = match other.value() {
             Value::Variable(v) | Value::RestVariable(v) => self.value(v).cloned(),
-            v @ Value::Expression(_) | v @ Value::Pattern(_) => {
+            Value::Pattern(_) => {
                 let src = (self.term_source(other, false), var);
-                let msg = match v {
-                    Value::Pattern(_) => format!("cannot bind pattern '{}' to '{}'", src.0, src.1),
-                    _ => format!("cannot bind expression '{}' to '{}'", src.0, src.1),
-                };
+                let msg = format!("cannot bind pattern '{}' to '{}'", src.0, src.1);
                 return Err(self.type_error(&other, msg));
             }
             _ => None,
