@@ -261,7 +261,8 @@ def enable_roles(oso):
         policy += f"""
         user_in_role(user: {user}, role, resource: {resource}) if
             session = OsoSession.get() and
-            role in session.query({role}).filter_by(user: user, {resource.lower()}: resource).all();
+            role in session.query({role}).filter_by(user: user) and
+            role.{resource.lower()}.id = resource.id;
 
         inherits_role(role: {role}, inherited_role) if
             {resource.lower()}_role_order(role_order) and
