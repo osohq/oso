@@ -16,7 +16,9 @@ class _OsoSession:
 
     @classmethod
     def get(cls):
-        return cls._get()
+        session = cls._get()
+        new_session = Session(bind=session.bind)
+        return new_session
 
     @classmethod
     def set_get_session(cls, get_session):
