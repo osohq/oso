@@ -77,8 +77,9 @@ fn invert_operation(Operation { operator, args }: Operation) -> Operation {
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref.
 /// TODO(ap): deep deref.
-pub fn simplify_bindings(bindings: Bindings) -> Bindings {
-    bindings
+pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
+    let mut unsatisfiable = false;
+    let bindings: Bindings = bindings
         .into_iter()
         .map(|(var, value)| match value.value() {
             Value::Expression(o) => {
@@ -87,11 +88,21 @@ pub fn simplify_bindings(bindings: Bindings) -> Bindings {
                 let simplified = simplifier.simplify_partial(o.clone().into_term());
                 let simplified = simplifier.sub_this(simplified);
                 let simplified = simplifier.simplify_trivial_constraint(simplified);
+
+                match simplified.value().as_expression() {
+                    Ok(o) if o == &FALSE => unsatisfiable = true,
+                    _ => (),
+                }
                 (var, simplified)
             }
             _ => (var, value),
         })
-        .collect()
+        .collect();
+    if unsatisfiable {
+        None
+    } else {
+        Some(bindings)
+    }
 }
 
 pub struct Simplifier {

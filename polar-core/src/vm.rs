@@ -2712,7 +2712,11 @@ impl Runnable for PolarVirtualMachine {
 
         let mut bindings = self.bindings(false);
         if self.simplify {
-            bindings = simplify_bindings(bindings);
+            if let Some(bs) = simplify_bindings(bindings) {
+                bindings = bs;
+            } else {
+                return Ok(QueryEvent::Done { result: false });
+            }
         }
 
         Ok(QueryEvent::Result { bindings, trace })
