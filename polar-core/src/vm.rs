@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
-//use super::visitor::{walk_term, Visitor};
+use super::visitor::{walk_term, Visitor};
 use crate::counter::Counter;
 use crate::debugger::{DebugEvent, Debugger};
 use crate::error::{self, PolarResult};
@@ -240,27 +240,28 @@ impl Default for PolarVirtualMachine {
 }
 
 #[allow(clippy::ptr_arg)]
-fn query_contains_partial(_goals: &Goals) -> bool {
-    // struct PartialVisitor {
-    //     has_partial: bool,
-    // }
-    //
-    // impl Visitor for PartialVisitor {
-    //     fn visit_partial(&mut self, _: &Partial) {
-    //         self.has_partial = true;
-    //     }
-    // }
-    //
-    // let mut visitor = PartialVisitor { has_partial: false };
-    // goals.iter().any(|goal| {
-    //     if let Goal::Query { term } = goal {
-    //         walk_term(&mut visitor, &term);
-    //         visitor.has_partial
-    //     } else {
-    //         false
-    //     }
-    // })
-    true
+fn query_contains_partial(goals: &Goals) -> bool {
+    struct ExpressionVisitor {
+        has_expression: bool,
+    }
+
+    impl Visitor for ExpressionVisitor {
+        fn visit_operation(&mut self, _: &Operation) {
+            self.has_expression = true;
+        }
+    }
+
+    let mut visitor = ExpressionVisitor {
+        has_expression: false,
+    };
+    goals.iter().any(|goal| {
+        if let Goal::Query { term } = goal {
+            walk_term(&mut visitor, &term);
+            visitor.has_expression
+        } else {
+            false
+        }
+    })
 }
 
 // Methods which aren't goals/instructions.
