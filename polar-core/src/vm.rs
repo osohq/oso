@@ -2715,7 +2715,7 @@ impl Runnable for PolarVirtualMachine {
             if let Some(bs) = simplify_bindings(bindings) {
                 bindings = bs;
             } else {
-                return Ok(QueryEvent::Done { result: false });
+                return Ok(QueryEvent::None);
             }
         }
 

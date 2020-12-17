@@ -127,6 +127,12 @@ mod test {
         };
     }
 
+    macro_rules! assert_query_none {
+        ($query:expr) => {
+            assert!(matches!($query.next_event()?, QueryEvent::None));
+        };
+    }
+
     fn next_binding(query: &mut Query) -> Result<Bindings, PolarError> {
         let event = query.next_event()?;
         if let QueryEvent::Result { bindings, .. } = event {
@@ -163,6 +169,7 @@ mod test {
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
         assert_query_done!(q);
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), 1, 2])), false);
+        assert_query_none!(q);
         assert_query_done!(q);
         Ok(())
     }
@@ -488,6 +495,7 @@ mod test {
             next_binding(&mut q)?,
             hashmap! {sym!("x") => term!(1), sym!("y") => term!(1)}
         );
+        assert_query_none!(q);
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), sym!("y")])), false);
@@ -495,24 +503,29 @@ mod test {
             next_binding(&mut q)?,
             hashmap! {sym!("x") => term!(1), sym!("y") => term!(2)}
         );
+        assert_query_none!(q);
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), op!(And)])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(sym!("_y_28")));
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_none!(q);
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), op!(And)])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_none!(q);
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("f", [op!(And), sym!("y")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("y")], term!(sym!("_x_47")));
         assert_eq!(next_binding(&mut q)?[&sym!("y")], term!(1));
+        assert_query_none!(q);
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [op!(And), sym!("y")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("y")], term!(2));
+        assert_query_none!(q);
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("f", [op!(And), op!(And)])), false);
