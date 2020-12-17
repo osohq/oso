@@ -14,8 +14,7 @@ def resource_role_class(
     declarative_base, user_model, resource_model, role_choices, mutually_exclusive=True
 ):
     """Create a :ref:`resource-specific role<resource-specific-roles>` Mixin
-    for SQLAlchemy models. The role mixin is an `Association
-    Object<https://docs.sqlalchemy.org/en/13/orm/basic_relationships.html#association-object>`_
+    for SQLAlchemy models. The role mixin is an `Association Object <https://docs.sqlalchemy.org/en/13/orm/basic_relationships.html#association-object>`_
     between the ``user_model`` and the ``resource_model``.
 
 
