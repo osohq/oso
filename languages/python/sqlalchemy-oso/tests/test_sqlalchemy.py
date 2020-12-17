@@ -1,7 +1,7 @@
 """Test hooks & SQLAlchemy API integrations."""
 import pytest
 
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, joinedload, subqueryload, selectinload
 
 from sqlalchemy_oso.session import (
     authorized_sessionmaker,
@@ -9,7 +9,7 @@ from sqlalchemy_oso.session import (
     AuthorizedSession,
 )
 
-from .models import User, Post
+from .models import User, Post, Tag
 from .conftest import print_query
 
 
@@ -290,3 +290,25 @@ def test_regular_session(engine, oso, fixture_data):
 
     # No posts would be returned if authorization was applied.
     assert posts.count() == 9
+
+
+def test_query_with_authorized_session(engine, oso, fixture_data):
+    """Test behavior of related objects when used in a query with an authorized session."""
+    session = AuthorizedSession(oso=oso, user="user", action="read", bind=engine)
+
+    # Only view public posts that have the engineering tag.
+    oso.load_str("""
+        allow(_, _, post: Post) if
+            post.access_level = "public" and tag in post.tags and
+            tag.name = "engineering" and user in tag.users and
+            user.username = "foo";
+    """)
+
+    posts = session.query(Post).options(joinedload(Post.tags))
+
+    # Even though there are posts that are "public", we can't read tags to check the policy
+    # because there is no rule about tags.
+
+    # Therefore, the user cannot see any of the posts.
+    assert len(posts.all()) == 3
+    assert len(posts[0].tags) == 0

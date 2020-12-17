@@ -6,7 +6,7 @@ from sqlalchemy.orm.session import Session
 from oso import Oso
 from sqlalchemy_oso.auth import register_models
 
-from .models import ModelBase, Post, User
+from .models import ModelBase, Post, User, Tag
 
 
 def print_query(query):
@@ -21,15 +21,20 @@ def post_fixtures():
         bad_user = User(id=2, username="bad_user", is_banned=True)
         users = [foo, admin_user, bad_user]
 
+        engineering = Tag(name="engineering", users=[foo])
+        random = Tag(name="random", users=[admin_user])
+
         posts = [
             Post(
-                id=0, contents="foo public post", access_level="public", created_by=foo
+                id=0, contents="foo public post", access_level="public", created_by=foo,
+                tags=[engineering],
             ),
             Post(
                 id=1,
                 contents="foo public post 2",
                 access_level="public",
                 created_by=foo,
+                tags=[engineering],
             ),
             Post(
                 id=3,
@@ -56,6 +61,7 @@ def post_fixtures():
                 access_level="public",
                 needs_moderation=True,
                 created_by=foo,
+                tags=[engineering],
             ),
             Post(
                 id=7,
@@ -81,6 +87,8 @@ def post_fixtures():
 
         for u in users:
             session.add(u)
+
+        session.add(random)
 
     return create
 
