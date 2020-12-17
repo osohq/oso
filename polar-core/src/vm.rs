@@ -654,10 +654,6 @@ impl PolarVirtualMachine {
                     _ => fold_term(t, self),
                 }
             }
-
-            fn fold_operation(&mut self, o: Operation) -> Operation {
-                o
-            }
         }
 
         Derefer::new(self).fold_term(term.clone())
