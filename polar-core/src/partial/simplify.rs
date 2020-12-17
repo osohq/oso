@@ -8,6 +8,8 @@ use crate::terms::{Operation, Operator, Symbol, Term, Value};
 
 /// A trivially true expression.
 const TRUE: Operation = op!(And);
+/// A trivially false expression.
+const FALSE: Operation = op!(Or);
 
 /// Invert operators.
 fn invert_operation(Operation { operator, args }: Operation) -> Operation {
@@ -134,9 +136,29 @@ impl Folder for Simplifier {
             // A trivial unification is always TRUE.
             Operator::Unify | Operator::Eq if o.args[0] == o.args[1] => TRUE,
 
-            // Choose an (anti)unification constraint to make a binding from,
-            // maybe throw it away, and fold the rest.
             Operator::And if o.args.len() > 1 => {
+                // Look for incompatible unifications.
+                let mut seen: HashMap<Symbol, Value> = HashMap::new();
+                for c in o.constraints().iter() {
+                    if c.operator != Operator::Unify {
+                        continue;
+                    }
+                    let left = &c.args[0];
+                    let right = &c.args[1];
+                    match (left.value(), right.value()) {
+                        (Value::Variable(v), x) | (x, Value::Variable(v)) if x.is_ground() => {
+                            if let Some(y) = seen.insert(v.clone(), x.clone()) {
+                                if &y != x {
+                                    return FALSE;
+                                }
+                            }
+                        }
+                        _ => continue,
+                    }
+                }
+
+                // Choose an (anti)unification constraint to make a binding from, maybe throw it
+                // away, and fold the rest.
                 if let Some(i) = o.constraints().iter().position(|o| match o.operator {
                     Operator::Unify | Operator::Neq => {
                         let left = &o.args[0];
