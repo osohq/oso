@@ -106,37 +106,11 @@ fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
         eprintln!("REDUCING {} = {}", var, value);
         match acc.entry(var) {
             Entry::Occupied(mut o) => {
-                let old_term = o.get();
-                let old = old_term.value().as_expression().expect("expression").clone();
+                let mut merged = o.get().value().as_expression().expect("expression").clone();
                 let new = value.value().as_expression().expect("expression").clone();
-                eprintln!("OLD => {}", old.clone().into_term().to_polar());
-                eprintln!("NEW => {}", new.clone().into_term().to_polar());
-
-                let old_constraints = old_term.clone_with_value(value!(Operation {
-                    operator: Operator::And,
-                    args: old
-                        .constraints()
-                        .into_iter()
-                        .map(|o| term!(value!(o)))
-                        .collect(),
-                }));
-
-                let new_constraints = value.clone_with_value(value!(Operation {
-                    operator: Operator::And,
-                    args: new
-                        .constraints()
-                        .iter()
-                        .cloned()
-                        .map(|o| term!(value!(o)))
-                        .collect(),
-                }));
-
-                let disjunction = op!(Or, old_constraints, new_constraints);
-                let new = new.clone_with_constraints(vec![disjunction]);
-                let new_term = old_term.clone_with_value(value!(new));
-
-                eprintln!("MERGED => {}", new_term.to_polar());
-                o.insert(new_term);
+                merged.merge_constraints(new);
+                eprintln!("MERGED => {}", merged.to_polar());
+                o.insert(value.clone_with_value(value!(merged)));
             }
             Entry::Vacant(v) => {
                 v.insert(value);
