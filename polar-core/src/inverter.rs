@@ -9,7 +9,6 @@ use crate::events::QueryEvent;
 use crate::folder::{fold_value, Folder};
 use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
-use crate::partial::Partial;
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Term, Value};
 use crate::vm::{Binding, BindingStack, Goals, PolarVirtualMachine};
@@ -49,20 +48,20 @@ impl<'a> PartialInverter<'a> {
         Self { old_value }
     }
 
-    fn invert_partial(&mut self, p: &Partial) -> Partial {
+    fn invert_operation(&mut self, o: &Operation) -> Operation {
         // Compute csp from old_value vs. p.
         let csp = match self.old_value.value() {
-            Value::Partial(q) => q.constraints().len(),
+            Value::Expression(e) => e.constraints().len(),
             _ => 0,
         };
-        let q = p.clone_with_constraints(p.inverted_constraints(csp));
+        let p = o.clone_with_constraints(o.inverted_constraints(csp));
         eprintln!(
             "INVERTING w/old value {}: ¬{} = {}",
             self.old_value.to_polar(),
-            p.clone().into_term().to_polar(),
-            q.clone().into_term().to_polar()
+            o.clone().into_term().to_polar(),
+            p.clone().into_term().to_polar()
         );
-        q
+        p
     }
 }
 
@@ -70,7 +69,7 @@ impl<'a> Folder for PartialInverter<'a> {
     /// Invert top-level constraints.
     fn fold_term(&mut self, t: Term) -> Term {
         t.clone_with_value(match t.value() {
-            Value::Partial(p) => Value::Partial(self.invert_partial(p)),
+            Value::Expression(o) => Value::Expression(self.invert_operation(o)),
             v => fold_value(v.clone(), self),
         })
     }
@@ -108,15 +107,15 @@ fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
         match acc.entry(var) {
             Entry::Occupied(mut o) => {
                 let old_term = o.get();
-                let old = old_term.value().as_partial().expect("Partial").clone();
-                let new = value.value().as_partial().expect("Partial").clone();
+                let old = old_term.value().as_expression().expect("expression").clone();
+                let new = value.value().as_expression().expect("expression").clone();
                 eprintln!("OLD => {}", old.clone().into_term().to_polar());
                 eprintln!("NEW => {}", new.clone().into_term().to_polar());
 
                 let old_constraints = old_term.clone_with_value(value!(Operation {
                     operator: Operator::And,
                     args: old
-                        .constraints
+                        .constraints()
                         .into_iter()
                         .map(|o| term!(value!(o)))
                         .collect(),

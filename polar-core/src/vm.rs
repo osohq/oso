@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
-use super::visitor::{walk_term, Visitor};
+//use super::visitor::{walk_term, Visitor};
 use crate::counter::Counter;
 use crate::debugger::{DebugEvent, Debugger};
 use crate::error::{self, PolarResult};
@@ -240,7 +240,7 @@ impl Default for PolarVirtualMachine {
 }
 
 #[allow(clippy::ptr_arg)]
-fn query_contains_partial(goals: &Goals) -> bool {
+fn query_contains_partial(_goals: &Goals) -> bool {
     // struct PartialVisitor {
     //     has_partial: bool,
     // }

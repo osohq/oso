@@ -7,7 +7,6 @@
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::partial::Partial;
 use crate::rules::*;
 use crate::terms::*;
 
@@ -299,11 +298,6 @@ impl From<Pattern> for TestHelper<Value> {
 impl From<Operation> for TestHelper<Value> {
     fn from(other: Operation) -> Self {
         Self(Value::Expression(other))
-    }
-}
-impl From<Partial> for TestHelper<Value> {
-    fn from(other: Partial) -> Self {
-        Self(Value::Partial(other))
     }
 }
 impl From<TermList> for TestHelper<Value> {

@@ -1,12 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::folder::{fold_operation, fold_partial, fold_term, Folder};
+use crate::folder::{fold_operation, fold_term, Folder};
 use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 // use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
-
-use super::Partial;
 
 /// A trivially true expression.
 const TRUE: Operation = op!(And);
@@ -81,10 +79,10 @@ pub fn simplify_bindings(bindings: Bindings) -> Bindings {
     bindings
         .into_iter()
         .map(|(var, value)| match value.value() {
-            Value::Partial(partial) => (
-                var.clone(),
-                simplify_partial(partial.clone().into_term(), var),
-            ),
+            Value::Expression(o) => {
+                assert_eq!(o.operator, Operator::And);
+                (var.clone(), simplify_partial(o.clone().into_term(), var))
+            },
             _ => (var, value),
         })
         .collect()
@@ -100,17 +98,8 @@ impl Folder for Simplifier {
         fold_term(self.deref(&t), self)
     }
 
-    fn fold_partial(&mut self, mut p: Partial) -> Partial {
-        let mut seen: HashSet<&Operation> = HashSet::new();
-        p.constraints = p
-            .constraints()
-            .iter()
-            .filter(|c| *c != &TRUE) // Drop empty constraints.
-            .filter(|o| seen.insert(o)) // Deduplicate constraints.
-            .cloned()
-            .collect();
-
-        if let Some(i) = p.constraints.iter().position(|o| {
+    /*fn fold_operation(&mut self, mut o: Operation) -> Operation {
+        if let Some(i) = o.constraints().iter().position(|o| {
             let mut o = o.clone();
             let mut invert = false;
             if o.operator == Operator::Not {
@@ -159,18 +148,29 @@ impl Folder for Simplifier {
             eprintln!("CHOSEN CONSTRAINT: {}", &p.constraints[i].to_polar());
             p.constraints.remove(i);
         }
-        fold_partial(p, self)
-    }
+        fold_operation(o, self)
+    }*/
 
     fn fold_operation(&mut self, o: Operation) -> Operation {
+        // Preprocess constraints.
+        /*let mut seen: HashSet<&Operation> = HashSet::new();
+        let o = o.clone_with_constraints(
+            o.constraints()
+                .iter()
+                .filter(|c| *c != &TRUE) // Drop empty constraints.
+                .filter(|o| seen.insert(o)) // Deduplicate constraints.
+                .cloned()
+                .collect(),
+        );*/
+
         fold_operation(
-            match o.operator {
+            /*match o.operator {
                 // Collapse trivial conjunctions & disjunctions.
-                // Operator::And | Operator::Or if o.args.len() == 1 => o.args[0]
-                //     .value()
-                //     .as_expression()
-                //     .expect("expression")
-                //     .clone(),
+                Operator::And | Operator::Or if o.args.len() == 1 => o.args[0]
+                    .value()
+                    .as_expression()
+                    .expect("expression")
+                    .clone(),
 
                 Operator::Unify
                 | Operator::Eq
@@ -187,7 +187,7 @@ impl Folder for Simplifier {
                             if left.operator == Operator::Not
                                 && right.operator == Operator::Not =>
                         {
-                            todo!("not 1 = not 2");
+                            todo!("not x = not y");
                         }
                         (Ok(left), _) if left.operator == Operator::Not => {
                             invert_operation(Operation {
@@ -209,7 +209,7 @@ impl Folder for Simplifier {
                     _ => return o,
                 },
                 _ => o,
-            },
+            }*/ o,
             self,
         )
     }
@@ -257,16 +257,6 @@ impl Folder for Simplifier {
     //         _ => fold_operation(o, self),
     //     }
     // }
-}
-
-struct PartialToExpression;
-impl Folder for PartialToExpression {
-    fn fold_term(&mut self, t: Term) -> Term {
-        match t.value() {
-            Value::Partial(partial) => fold_term(partial.clone().into_expression(), self),
-            _ => fold_term(t, self),
-        }
-    }
 }
 
 impl Simplifier {
@@ -365,7 +355,7 @@ fn simplify_partial(mut term: Term, var: Symbol) -> Term {
         term = new;
     }
 
-    simplifier.sub_this(PartialToExpression {}.fold_term(new))
+    simplifier.sub_this(new)
 }
 
 // #[cfg(test)]
