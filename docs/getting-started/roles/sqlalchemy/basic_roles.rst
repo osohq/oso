@@ -9,29 +9,118 @@ Add roles to your app
 =========================
 
 Install the oso SQLAlchemy package
--------------------------------------
+----------------------------------
 
-Install the package and import it in your code. Alternatively, if you are
+Install the ``oso_sqlalchemy`` package and import it in your code. Alternatively, if you are
 starting from scratch and need a requirements.txt file, clone the sample application `here <TODO>`_
 
 .. code-block:: shell
 
     pip install sqlalchemy_oso
 
+
+Add a method to intialize oso and make the oso instance available to your application code.
+
+.. code-block:: python
+    :caption: :fab:`python` __init__.py
+
+    from oso import Oso
+    from sqlalchemy_oso import register_models, set_get_session
+
+    base_oso = Oso()
+
+    def init_oso(app):
+        register_models(base_oso, Base)
+        set_get_session(base_oso, lambda: g.session)
+        base_oso.load_file("app/authorization.polar")
+        app.oso = base_oso
+
+
+
 Create a users model
 ---------------------
 
 Add a user model that will represent your app's users (if you don't already have one).
 
+.. TODO: make this a literal include
+
+.. code-block:: python
+    :caption: :fab:`python` models.py
+
+    from sqlalchemy.types import Integer, String
+    from sqlalchemy.schema import Column, ForeignKey
+    from sqlalchemy.orm import relationship
+    from sqlalchemy.ext.declarative import declarative_base
+
+
+    Base = declarative_base()
+
+    class User(Base):
+        __tablename__ = "users"
+
+        id = Column(Integer, primary_key=True)
+        email = Column(String())
+
+        def repr(self):
+            return {"id": self.id, "email": self.email}
+
+
+
 Create an organizations model
 ------------------------------
 
-Add an organization model that will represent the organizations or tenants that users belong to.
+Add an organization model that will represent the organizations or tenants
+that users belong to. The roles you create will be scoped to this model. If
+your app isn't multi-tenant, you can create an ``Application`` model instead,
+with one instance used globally.
+
+
+.. code-block:: python
+    :caption: :fab:`python` models.py
+
+    class Organization(Base):
+        __tablename__ = "organizations"
+
+        id = Column(Integer, primary_key=True)
+        name = Column(String())
+        billing_address = Column(String())
+
+        def repr(self):
+            return {"id": self.id, "name": self.name}
+
+
 
 Add an endpoint that needs authorization
 ----------------------------------------
 
-Create an endpoint that will need authorization to access.
+Create or choose an existing endpoint that will need authorization to access.
+In our sample app we've created 2 endpoints that have different authorization
+requirements: one to view repositories and another to view billing
+information.
+
+.. code-block:: python
+    :caption: :fab:`python` routes.py
+
+    from flask import Blueprint, g, request
+    from .models import User, Organization, Repository
+
+    bp = Blueprint("routes", __name__)
+
+
+    @bp.route("/orgs/<int:org_id>/repos", methods=["GET"])
+    def repos_index(org_id):
+        org = g.session.query(Organization).filter(Organization.id == org_id).first()
+
+        repos = g.session.query(Repository).filter(Repository.organization.has(id=org_id))
+        return {f"repos": [repo.repr() for repo in repos]}
+
+
+    @bp.route("/orgs/<int:org_id>/billing", methods=["GET"])
+    def billing_show(org_id):
+        org = g.session.query(Organization).filter(Organization.id == org_id).first()
+        return {f"billing_address": org.billing_address}
+
+
 
 2. Add roles
 ============
@@ -39,12 +128,59 @@ Create an endpoint that will need authorization to access.
 Create the OrganizationRole class using the role mixin
 ------------------------------------------------------
 
-The oso SQLAlchemy library provides a mixin which creates a role model for users. Create a role model that extends it.
+The oso SQLAlchemy library provides a method to generate a mixin which
+creates a role model. Create the mixin by passing in the base, user, and
+organization models, as well as the role names. Then create a role model that
+extends it.
+
+
+.. code-block:: python
+    :caption: :fab:`python` routes.py
+
+    from sqlalchemy_oso.roles import resource_role_class
+
+
+    OrganizationRoleMixin = resource_role_class(
+        Base, User, Organization, ["OWNER", "MEMBER", "BILLING"]
+    )
+
+
+    class OrganizationRole(Base, OrganizationRoleMixin):
+        def repr(self):
+            return {"id": self.id, "name": str(self.name)}
+
+
 
 Assign role permissions
 -----------------------
 
+To give the roles permissions, write an oso policy.
+First, call :py:func:`sqlalchemy_oso.roles.enable_roles` to load the base policy for roles.
+
+
+.. code-block:: python
+    :caption: :fab:`python` __init__.py
+    :emphasize-lines: 3,12
+
+    from oso import Oso
+    from sqlalchemy_oso import register_models, set_get_session
+    from sqlalchemy_oso.roles import enable_roles
+
+    base_oso = Oso()
+
+    def init_oso(app):
+        register_models(base_oso, Base)
+        set_get_session(base_oso, lambda: g.session)
+        base_oso.load_file("app/authorization.polar")
+        app.oso = base_oso
+        enable_roles(base_oso)
+
 Write a policy
+
+Enforce the policy
+------------------
+Add policy checks to your code to control access.
+
 
 Create an endpoint for assigning roles
 --------------------------------------
