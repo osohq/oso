@@ -16,7 +16,8 @@ model, adds relationships to the user and resource classes and contains more err
 for various required constraints and things that can go wrong.
 
 It also includes docs!
-.. TODO: Add roles docs link as part of docs pr.
+
+https://docs.oso.dev/getting-started/builtin-roles/index.html
 
 New features
 ============
