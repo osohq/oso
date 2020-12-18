@@ -455,7 +455,7 @@ mod test {
     fn test_partial_in_arithmetic_op() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x) if x = x + 0;")?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
@@ -916,19 +916,19 @@ mod test {
                f(x, y) if x = y.a.b.c.d.e.f;"#,
         )?;
 
-        let mut q = p.new_query_from_term(term!(call!("f", [1, sym!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [1, sym!("y")])), false);
 
-        assert_partial_expression!(next_binding(&mut q)?, "a", "1 = _this.a.b.c");
+        assert_partial_expression!(next_binding(&mut q)?, "y", "1 = _this.a.b.c");
         assert_partial_expression!(
             next_binding(&mut q)?,
-            "a",
+            "y",
             "1 > _this.a.b.c and 1 < _this.a.b and _this.a.b.c > 1"
         );
-        assert_partial_expression!(next_binding(&mut q)?, "a", "1 = _this.a");
-        assert_partial_expression!(next_binding(&mut q)?, "a", "1 = _this.a.b");
-        assert_partial_expression!(next_binding(&mut q)?, "a", "1 = _this.a.b.c.d");
-        assert_partial_expression!(next_binding(&mut q)?, "a", "1 = _this.a.b.c.d.e");
-        assert_partial_expression!(next_binding(&mut q)?, "a", "1 = _this.a.b.c.d.e.f");
+        assert_partial_expression!(next_binding(&mut q)?, "y", "1 = _this.a");
+        assert_partial_expression!(next_binding(&mut q)?, "y", "1 = _this.a.b");
+        assert_partial_expression!(next_binding(&mut q)?, "y", "1 = _this.a.b.c.d");
+        assert_partial_expression!(next_binding(&mut q)?, "y", "1 = _this.a.b.c.d.e");
+        assert_partial_expression!(next_binding(&mut q)?, "y", "1 = _this.a.b.c.d.e.f");
         assert_query_done!(q);
         Ok(())
     }
