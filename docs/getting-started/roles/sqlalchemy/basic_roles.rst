@@ -101,7 +101,7 @@ information.
 .. code-block:: python
     :caption: :fab:`python` routes.py
 
-    from flask import Blueprint, g, request
+    from flask import Blueprint, g, request, current_app
     from .models import User, Organization, Repository
 
     bp = Blueprint("routes", __name__)
@@ -110,8 +110,7 @@ information.
     @bp.route("/orgs/<int:org_id>/repos", methods=["GET"])
     def repos_index(org_id):
         org = g.session.query(Organization).filter(Organization.id == org_id).first()
-
-        repos = g.session.query(Repository).filter(Repository.organization.has(id=org_id))
+        repos = g.session.query(Repository).filter_by(organization=org)
         return {f"repos": [repo.repr() for repo in repos]}
 
 
@@ -175,17 +174,78 @@ First, call :py:func:`sqlalchemy_oso.roles.enable_roles` to load the base policy
         app.oso = base_oso
         enable_roles(base_oso)
 
-Write a policy
+You can then write Polar ``role_allow`` rules over ``OrganizationRoles``.
+
+.. code-block:: polar
+    :caption: :fa:`oso` authorization.polar
+
+    # ROLE-PERMISSION RELATIONSHIPS
+
+    ## Organization Permissions
+
+    ### All organization roles let users read the organization
+    role_allow(role: OrganizationRole, "READ", org: Organization);
+
+    ### Org members can list repos in the org
+    role_allow(role: OrganizationRole{name: "MEMBER"}, "LIST_REPOS", organization: Organization);
+
+    ### The billing role can view billing info
+    role_allow(role: OrganizationRole{name: "BILLING"}, "READ_BILLING", organization: Organization);
+
+You can also specify a :ref:`hierarchical role ordering <role-hierarchies>` with ``organization_role_order`` rules.
+
+.. code-block:: polar
+    :caption: :fa:`oso` authorization.polar
+
+    # ROLE-ROLE RELATIONSHIPS
+
+    ## Role Hierarchies
+
+    ### Specify organization role order (most senior on left)
+    organization_role_order(["OWNER", "MEMBER"]);
+    organization_role_order(["OWNER", "BILLING"]);
+
+For more details on the roles base policy, see :doc:`/getting-started/builtin-roles/index`.
+
 
 Enforce the policy
 ------------------
-Add policy checks to your code to control access.
+
+Add policy checks to your code to control access to the protected endpoints.
+
+.. code-block:: python
+    :caption: :fab:`python` routes.py
+    :emphasize-lines: 1, 6, 15
+
+    from flask import current_app
+
+    @bp.route("/orgs/<int:org_id>/repos", methods=["GET"])
+    def repos_index(org_id):
+        org = g.session.query(Organization).filter(Organization.id == org_id).first()
+        current_app.oso.authorize(org, actor=g.current_user, action="LIST_REPOS")
+
+        repos = g.session.query(Repository).filter(Repository.organization.has(id=org_id))
+        return {f"repos": [repo.repr() for repo in repos]}
+
+
+    @bp.route("/orgs/<int:org_id>/billing", methods=["GET"])
+    def billing_show(org_id):
+        org = g.session.query(Organization).filter(Organization.id == org_id).first()
+        current_app.oso.authorize(org, actor=g.current_user, action="READ_BILLING")
+        return {f"billing_address": org.billing_address}
+
+Our example uses :py:func:`flask_oso.FlaskOso.authorize` to complete the
+policy check. If you're not using Flask, check out our general-purpose
+:doc:`Python package </using/libraries/python/index>`.
 
 
 Create an endpoint for assigning roles
 --------------------------------------
 
-Add a new endpoint to your application that users can hit to assign roles
+Until you assign users to roles, they'll receive a ``403 FORBIDDEN`` response if they try to
+access either protected endpoint.
+
+Add a new endpoint to your application that users can hit to assign roles.
 
 Call the oso role API
 ---------------------
