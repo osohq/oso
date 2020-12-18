@@ -645,7 +645,7 @@ impl PolarVirtualMachine {
             fn fold_term(&mut self, t: Term) -> Term {
                 match t.value() {
                     Value::List(_) | Value::Variable(_) | Value::RestVariable(_) => {
-                        let derefed = self.vm.deref(&t);
+                        let derefed = self.vm.deref_expr(&t);
                         if let Value::Expression(_) = derefed.value() {
                             t
                         } else {
@@ -660,9 +660,7 @@ impl PolarVirtualMachine {
         Derefer::new(self).fold_term(term.clone())
     }
 
-    /// Recursively dereference a variable, but do not descend into (most) subterms.
-    /// The exception is for lists, so that we can correctly handle rest variables.
-    pub fn deref(&self, term: &Term) -> Term {
+    fn careful_deref(&self, term: &Term, mut seen: HashSet<Symbol>) -> Term {
         match &term.value() {
             Value::List(list) => {
                 let ends_with_rest = list
@@ -670,7 +668,11 @@ impl PolarVirtualMachine {
                     .map_or(false, |el| matches!(el.value(), Value::RestVariable(_)));
 
                 // Deref all elements.
-                let mut derefed: Vec<Term> = list.iter().map(|t| self.deref(t)).collect();
+                // TODO(ap): fold seen.
+                let mut derefed: Vec<Term> = list
+                    .iter()
+                    .map(|t| self.careful_deref(t, seen.clone()))
+                    .collect();
 
                 // If last element was a rest variable, append the list it derefed to.
                 if ends_with_rest {
@@ -686,15 +688,39 @@ impl PolarVirtualMachine {
                 term.clone_with_value(Value::List(derefed))
             }
             Value::Variable(symbol) | Value::RestVariable(symbol) => {
-                if let Some(value) = self.value(&symbol) {
-                    if value != term {
-                        return self.deref(value);
+                if seen.insert(symbol.clone()) {
+                    if let Some(value) = self.value(&symbol) {
+                        if value != term {
+                            return self.careful_deref(value, seen);
+                        }
                     }
                 }
                 term.clone()
             }
             _ => term.clone(),
         }
+    }
+
+    /// Recursively dereference a variable, but do not descend into (most) subterms.
+    /// The exception is for lists, so that we can correctly handle rest variables.
+    /// We also support cycle detection, in which case we return the original term.
+    pub fn deref(&self, term: &Term) -> Term {
+        self.careful_deref(term, HashSet::new())
+    }
+
+    fn deref_expr(&self, term: &Term) -> Term {
+        let derefed = self.deref(term);
+        if &derefed == term {
+            if let Ok(v) = term.value().as_symbol() {
+                if let Some(x) = self.value(v) {
+                    return term!(value!(op!(
+                        And,
+                        term!(value!(op!(Unify, term.clone(), x.clone())))
+                    )));
+                }
+            }
+        }
+        derefed
     }
 
     /// Return `true` if `var` is a temporary variable.
@@ -942,9 +968,8 @@ impl PolarVirtualMachine {
             &[left, right],
         );
 
-        let derefed_left = self.deref(left);
-        let derefed_right = self.deref(right);
-
+        let derefed_left = self.deref_expr(left);
+        let derefed_right = self.deref_expr(right);
         match (derefed_left.value(), derefed_right.value()) {
             (Value::InstanceLiteral(_), _) => unreachable!("unparseable"),
             (_, Value::InstanceLiteral(_)) | (_, Value::Dictionary(_)) => {
@@ -1456,8 +1481,8 @@ impl PolarVirtualMachine {
             Operator::In => {
                 assert_eq!(args.len(), 2);
                 let item = &args[0];
-                let derefed_item = self.deref(item);
-                let iterable = self.deref(&args[1]);
+                let derefed_item = self.deref_expr(item);
+                let iterable = self.deref_expr(&args[1]);
                 match iterable.value() {
                     Value::List(list) if list.is_empty() => {
                         // Nothing is in an empty list.
@@ -1704,8 +1729,8 @@ impl PolarVirtualMachine {
     fn dot_op_helper(&mut self, mut args: Vec<Term>) -> PolarResult<()> {
         assert_eq!(args.len(), 3);
         let object = &args[0];
-        let derefed_object = self.deref(object);
-        let field = self.deref(&args[1]);
+        let derefed_object = self.deref_expr(object);
+        let field = self.deref_expr(&args[1]);
         let value = &args[2];
 
         match derefed_object.value() {
@@ -1850,8 +1875,8 @@ impl PolarVirtualMachine {
         args: Vec<Term>,
     ) -> PolarResult<QueryEvent> {
         assert_eq!(args.len(), 2);
-        let mut left_term = self.deref(&args[0]);
-        let mut right_term = self.deref(&args[1]);
+        let mut left_term = self.deref_expr(&args[0]);
+        let mut right_term = self.deref_expr(&args[1]);
 
         self.log_with(
             || {
@@ -2123,6 +2148,11 @@ impl PolarVirtualMachine {
                         eprintln!("2.A {} = {}", var, other.to_polar());
                         self.constrain(o, term);
                     }
+                    Value::Variable(v) => {
+                        eprintln!("2.C {} = {}", var, other.to_polar());
+                        self.bind(v, other.clone());
+                        self.constrain(&op!(And), term);
+                    }
                     _ => {
                         eprintln!("2.B {} = {}", var, other.to_polar());
                         // Only var is bound, unify with whatever other is.
@@ -2154,10 +2184,13 @@ impl PolarVirtualMachine {
                         self.bind(var, other.clone());
                     }
                     // TODO(gj): does RestVariable need any special handling?
-                    Value::Variable(_) | Value::RestVariable(_) => {
+                    Value::Variable(other_var) | Value::RestVariable(other_var) => {
                         eprintln!("4.B {} = {}", var, other.to_polar());
-                        // Neither is bound, so tie them together in a new expression.
-                        self.constrain(&op!(And), term);
+
+                        // Neither is bound, so bind them together.
+                        //self.constrain(&op!(And), term);
+                        self.bind(var, other.clone());
+                        self.bind(other_var, term!(value!(var.clone())));
                     }
                     _ => {
                         eprintln!("4.C {} = {}", var, other.to_polar());

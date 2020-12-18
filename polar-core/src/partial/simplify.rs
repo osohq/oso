@@ -5,6 +5,7 @@ use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 // use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
+use crate::vm::PolarVirtualMachine;
 
 /// A trivially true expression.
 const TRUE: Operation = op!(And);

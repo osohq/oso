@@ -10,7 +10,7 @@ use crate::folder::{fold_value, Folder};
 use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Term, Value};
+use crate::terms::{Operation, Operator, Symbol, Term, Value};
 use crate::vm::{Binding, BindingStack, Goals, PolarVirtualMachine};
 
 #[derive(Clone)]

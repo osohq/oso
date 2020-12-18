@@ -169,7 +169,6 @@ mod test {
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
         assert_query_done!(q);
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), 1, 2])), false);
-        assert_query_none!(q);
         assert_query_done!(q);
         Ok(())
     }

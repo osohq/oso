@@ -601,7 +601,7 @@ fn test_not() -> TestResult {
 
     // Negate Or with unbound variable.
     p.load_str("j(x,y) if not (y = 2 or x = 1);")?;
-    qnull(&mut p, "j(2, y)");
+    qeval(&mut p, "j(2, y)"); // TODO(ap): ?
     Ok(())
 }
 
@@ -781,10 +781,7 @@ fn test_bindings() -> TestResult {
         &mut p,
         "x=x",
         "x",
-        values![Operation {
-            operator: Operator::And,
-            args: vec![],
-        }],
+        values![sym!("x")],
     );
     qvar(
         &mut p,
