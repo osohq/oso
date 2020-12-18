@@ -30,24 +30,7 @@ def register_models(oso: Oso, base):
         oso.register_class(model)
 
 
-def authorize_model(oso: Oso, actor, action, session: Session, model) -> Query:
-    """Return a query containing filters that apply the policy to ``model``.
-
-    Executing this query will return only authorized objects. If the request is
-    not authorized, a query that always contains no result will be returned.
-
-    :param oso: The oso class to use for evaluating the policy.
-    :param actor: The actor to authorize.
-    :param action: The action to authorize.
-
-    :param session: The SQLAlchemy session.
-    :param model: The model to authorize, must be a SQLAlchemy model.
-    """
-    filters = authorize_model_filter(oso, actor, action, session, model)
-    return session.query(model).filter(filters)
-
-
-def authorize_model_filter(oso: Oso, actor, action, session: Session, model):
+def authorize_model(oso: Oso, actor, action, session: Session, model):
     """Return SQLAlchemy expression that applies the policy to ``model``.
 
     Executing this query will return only authorized objects. If the request is
@@ -58,7 +41,7 @@ def authorize_model_filter(oso: Oso, actor, action, session: Session, model):
     :param action: The action to authorize.
 
     :param session: The SQLAlchemy session.
-    :param model: The model to authorize, must be a SQLAlchemy model.
+    :param model: The model to authorize, must be a SQLAlchemy model or alias.
     """
     try:
         mapped_class = inspect(model, raiseerr=True).class_
