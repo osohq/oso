@@ -8,7 +8,6 @@ from sqlalchemy.types import Integer, String, DateTime
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.exc import IntegrityError
 
 from sqlalchemy_oso import roles as oso_roles, register_models
 from sqlalchemy_oso.roles import enable_roles
@@ -344,15 +343,13 @@ def test_add_user_role(test_db_session):
     assert roles[0].name == "READ"
 
     # ensure user cannot have duplicate role
-    with pytest.raises(IntegrityError):
+    with pytest.raises(Exception):
         oso_roles.add_user_role(test_db_session, ringo, abbey_road, "READ")
 
     # ensure user cannot have two roles for the same resource if `mutually_exclusive=True`
-    with pytest.raises(IntegrityError):
-        test_db_session.rollback()
+    with pytest.raises(Exception):
         oso_roles.add_user_role(test_db_session, ringo, abbey_road, "WRITE")
 
-    test_db_session.rollback()
     beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
     roles = (
         test_db_session.query(OrganizationRole)
@@ -364,11 +361,10 @@ def test_add_user_role(test_db_session):
     assert roles[0].name == "MEMBER"
 
     # ensure user cannot have two roles for the same resource
-    with pytest.raises(IntegrityError):
+    with pytest.raises(Exception):
         oso_roles.add_user_role(test_db_session, ringo, beatles, "MEMBER")
 
     # ensure user can have two roles for the same resource if `mutually_exclusive=False`
-    test_db_session.rollback()
     oso_roles.add_user_role(test_db_session, ringo, beatles, "BILLING")
 
     roles = (

@@ -5,6 +5,7 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy import inspect, UniqueConstraint
+from sqlalchemy.exc import IntegrityError
 from .session import _OsoSession
 
 ROLE_CLASSES: List[Any] = []
@@ -398,7 +399,16 @@ def add_user_role(session, user, resource, role_name):
     kwargs = {"name": role_name, resource_name: resource, "user": user}
     new_role = role_model(**kwargs)
     session.add(new_role)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise Exception(
+            f"""Cannot assign user {user} to role {role_name} for
+            {resource_name} either because the assignment already exists, or
+            because the role is mutually exclusive and the user already has
+            another role for this resource."""
+        )
 
 
 # - Delete a user to an organization with a role
