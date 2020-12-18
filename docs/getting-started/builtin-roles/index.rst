@@ -10,11 +10,6 @@ of directly over your users and provide helper methods for managing roles.
 
 Currently this feature is in preview for the SQLAlchemy library.
 
-.. toctree::
-    :maxdepth: 1
-
-    sqlalchemy
-
 How it works
 ============
 
