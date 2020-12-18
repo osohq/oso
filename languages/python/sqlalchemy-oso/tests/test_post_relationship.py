@@ -73,9 +73,7 @@ def test_authorize_scalar_attribute_eq(session, oso, fixture_data):
 
     foo = session.query(User).filter(User.username == "foo").first()
 
-    posts = session.query(Post).filter(
-        authorize_model(oso, foo, "read", session, Post)
-    )
+    posts = session.query(Post).filter(authorize_model(oso, foo, "read", session, Post))
     print_query(posts)
 
     def allowed(post):
@@ -112,9 +110,7 @@ def test_authorize_scalar_attribute_condition(session, oso, fixture_data):
 
     foo = session.query(User).filter(User.username == "foo").first()
 
-    posts = session.query(Post).filter(
-        authorize_model(oso, foo, "read", session, Post)
-    )
+    posts = session.query(Post).filter(authorize_model(oso, foo, "read", session, Post))
 
     def allowed(post, user):
         return (
@@ -385,7 +381,8 @@ def test_nested_relationship_many_many(session, oso, tag_nested_many_many_test_f
     posts = session.query(Post).filter(
         authorize_model(
             oso, tag_nested_many_many_test_fixture["other_user"], "read", session, Post
-        ))
+        )
+    )
     assert not tag_nested_many_many_test_fixture["user_eng_post"] in posts
     assert not tag_nested_many_many_test_fixture["user_user_post"] in posts
     assert tag_nested_many_many_test_fixture["random_post"] in posts
@@ -415,9 +412,11 @@ def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
     assert len(posts) == 4
 
     user = tag_nested_many_many_test_fixture["other_user"]
-    posts = session.query(Post).filter(
-        authorize_model(oso, user, "read", session, Post)
-    ).all()
+    posts = (
+        session.query(Post)
+        .filter(authorize_model(oso, user, "read", session, Post))
+        .all()
+    )
     assert tag_nested_many_many_test_fixture["user_eng_post"] not in posts
     assert tag_nested_many_many_test_fixture["user_user_post"] not in posts
     assert tag_nested_many_many_test_fixture["random_post"] in posts

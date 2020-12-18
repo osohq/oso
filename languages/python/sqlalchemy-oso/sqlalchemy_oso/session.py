@@ -73,9 +73,7 @@ def _authorize_query(query: Query) -> Optional[Query]:
         if entity is None:
             continue
 
-        authorized_filter = authorize_model(
-            oso, user, action, query.session, entity
-        )
+        authorized_filter = authorize_model(oso, user, action, query.session, entity)
         if authorized_filter is not None:
             query = query.filter(authorized_filter)
 
