@@ -777,12 +777,7 @@ fn test_non_instance_specializers() -> TestResult {
 fn test_bindings() -> TestResult {
     let mut p = Polar::new();
     qvar(&mut p, "x=1", "x", values![1]);
-    qvar(
-        &mut p,
-        "x=x",
-        "x",
-        values![sym!("x")],
-    );
+    qvar(&mut p, "x=x", "x", values![sym!("x")]);
     qvar(
         &mut p,
         "x=y and y=x",

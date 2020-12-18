@@ -645,7 +645,7 @@ impl PolarVirtualMachine {
             fn fold_term(&mut self, t: Term) -> Term {
                 match t.value() {
                     Value::List(_) | Value::Variable(_) | Value::RestVariable(_) => {
-                        let derefed = self.vm.deref_expr(&t);
+                        let derefed = self.vm.deref(&t);
                         if let Value::Expression(_) = derefed.value() {
                             t
                         } else {
@@ -660,7 +660,8 @@ impl PolarVirtualMachine {
         Derefer::new(self).fold_term(term.clone())
     }
 
-    fn careful_deref(&self, term: &Term, mut seen: HashSet<Symbol>) -> Term {
+    fn careful_deref(&self, term: &Term, seen: &mut HashSet<Symbol>) -> Term {
+        // eprintln!("CAREFULLY DEREFING: {}", term.to_polar());
         match &term.value() {
             Value::List(list) => {
                 let ends_with_rest = list
@@ -668,11 +669,8 @@ impl PolarVirtualMachine {
                     .map_or(false, |el| matches!(el.value(), Value::RestVariable(_)));
 
                 // Deref all elements.
-                // TODO(ap): fold seen.
-                let mut derefed: Vec<Term> = list
-                    .iter()
-                    .map(|t| self.careful_deref(t, seen.clone()))
-                    .collect();
+                let mut derefed: Vec<Term> =
+                    list.iter().map(|t| self.careful_deref(t, seen)).collect();
 
                 // If last element was a rest variable, append the list it derefed to.
                 if ends_with_rest {
@@ -688,8 +686,17 @@ impl PolarVirtualMachine {
                 term.clone_with_value(Value::List(derefed))
             }
             Value::Variable(symbol) | Value::RestVariable(symbol) => {
+                // eprintln!("  variable -> {}", symbol);
                 if seen.insert(symbol.clone()) {
+                    // eprintln!("  had not seen {} before", symbol);
                     if let Some(value) = self.value(&symbol) {
+                        // eprintln!("  {} bound to {}", symbol, value.to_polar());
+                        // eprintln!(
+                        //     "  {} != {} -> {}",
+                        //     value.to_polar(),
+                        //     term.to_polar(),
+                        //     value != term
+                        // );
                         if value != term {
                             return self.careful_deref(value, seen);
                         }
@@ -705,7 +712,7 @@ impl PolarVirtualMachine {
     /// The exception is for lists, so that we can correctly handle rest variables.
     /// We also support cycle detection, in which case we return the original term.
     pub fn deref(&self, term: &Term) -> Term {
-        self.careful_deref(term, HashSet::new())
+        self.careful_deref(term, &mut HashSet::new())
     }
 
     fn deref_expr(&self, term: &Term) -> Term {
@@ -2123,21 +2130,74 @@ impl PolarVirtualMachine {
             (Some(value), Some(other_value)) => match (value.value(), other_value.value()) {
                 (Value::Expression(o), Value::Expression(p)) => {
                     eprintln!("1.A {} = {}", var, other.to_polar());
-                    eprintln!("1.A {} = {}", value.to_polar(), other_value.to_polar());
                     let mut combined = o.clone();
                     combined.merge_constraints(p.clone());
                     self.constrain(&combined, term);
                 }
-                (Value::Expression(o), _) | (_, Value::Expression(o)) => {
+                (Value::Expression(o), _) => {
                     eprintln!("1.B {} = {}", var, other.to_polar());
-                    self.constrain(o, term);
+
+                    let mut seen = HashSet::new();
+                    self.careful_deref(&other_value, &mut seen);
+
+                    // a -> b -> c -> d
+                    //
+                    // a = b and b = c and c = d and d = a
+                    //
+                    // abcd
+                    // bcda
+                    //
+                    let original = seen.iter().cycle().take(seen.len() + 1);
+                    let offset = seen.iter().cycle().skip(1).take(seen.len() + 1);
+                    // TODO(gj): ensure no dupes.
+                    let mut o = o.clone();
+                    original.zip(offset).for_each(|(x, y)| {
+                        o.add_constraint(op!(Unify, term!(x.clone()), term!(y.clone())))
+                    });
+
+                    self.constrain(&o, term);
+                }
+                (_, Value::Expression(o)) => {
+                    eprintln!("1.C {} = {}", var, other.to_polar());
+
+                    let mut seen = HashSet::new();
+                    self.careful_deref(&value, &mut seen);
+
+                    let original = seen.iter().cycle().take(seen.len() + 1);
+                    let offset = seen.iter().cycle().skip(1).take(seen.len() + 1);
+                    // TODO(gj): ensure no dupes.
+                    let mut o = o.clone();
+                    original.zip(offset).for_each(|(x, y)| {
+                        o.add_constraint(op!(Unify, term!(x.clone()), term!(y.clone())))
+                    });
+
+                    self.constrain(&o, term);
+                }
+                // x = y and y = z
+                (Value::Variable(v), Value::Variable(o)) => {
+                    // BEFORE
+                    // v(x) is bound to var(_x_7)
+                    //   - and var(_x_7) is bound to v(x)
+                    // o(y) is bound to other(_y_8)
+                    //   - and other(_y_8) is bound to o(y)
+                    //
+                    // BIND
+                    // o(y) to var(_x_7)
+                    // v(x) to other(_y_8)
+
+                    eprintln!("1.D {} = {}", var, other.to_polar());
+                    eprintln!("  binding {} <- {}", o, var);
+                    eprintln!("  binding {} <- {}", v, other.to_polar());
+
+                    self.bind(o, term!(var.clone()));
+                    self.bind(v, other.clone());
                 }
                 _ => {
-                    eprintln!("1.D {} = {}", var, other.to_polar());
+                    eprintln!("1.E {} = {}", var, other.to_polar());
                     // Both are bound, unify their values.
                     // TODO(gj): losing ordering here.
                     self.push_goal(Goal::Unify {
-                        left: value,
+                        left: term!(var.clone()),
                         right: other_value,
                     })?;
                 }
@@ -2148,11 +2208,24 @@ impl PolarVirtualMachine {
                         eprintln!("2.A {} = {}", var, other.to_polar());
                         self.constrain(o, term);
                     }
-                    Value::Variable(v) => {
+                    Value::Variable(_) if other.is_ground() => {
                         eprintln!("2.C {} = {}", var, other.to_polar());
-                        self.bind(v, other.clone());
-                        self.constrain(&op!(And), term);
+                        eprintln!("  binding {} <- {}", var, other.to_polar());
+                        self.bind(var, other.clone());
+                        eprintln!("  BINDINGS:");
+                        for Binding(var, val) in self.bindings.iter() {
+                            eprintln!("    {} <- {}", var, val.to_polar());
+                        }
                     }
+                    // Value::Variable(_) => {
+                    //     eprintln!("2.C {} = {}", var, other.to_polar());
+                    //     let mut seen = HashSet::new();
+                    //     self.careful_deref(&value, &mut seen);
+                    //
+                    //     let unify = term!(value!(op!(Unify, value.clone(), term!(var.clone()))));
+                    //     // self.bind(v, other.clone());
+                    //     self.constrain(&op!(And, unify), term);
+                    // }
                     _ => {
                         eprintln!("2.B {} = {}", var, other.to_polar());
                         // Only var is bound, unify with whatever other is.
@@ -2172,6 +2245,7 @@ impl PolarVirtualMachine {
                     }
                     _ => {
                         eprintln!("3.B {} = {}", var, other.to_polar());
+                        eprintln!("  binding {} <- {}", var, other_value.to_polar());
                         // var is unbound, other is bound; bind var to the value of other.
                         self.bind(var, other_value);
                     }
@@ -2181,19 +2255,40 @@ impl PolarVirtualMachine {
                 match other.value() {
                     Value::Expression(_) => {
                         eprintln!("4.A {} = {}", var, other.to_polar());
+                        eprintln!("  binding {} <- {}", var, other.to_polar());
                         self.bind(var, other.clone());
+
+                        eprintln!("  BINDINGS:");
+                        for Binding(var, val) in self.bindings.iter() {
+                            eprintln!("    {} <- {}", var, val.to_polar());
+                        }
                     }
                     // TODO(gj): does RestVariable need any special handling?
                     Value::Variable(other_var) | Value::RestVariable(other_var) => {
                         eprintln!("4.B {} = {}", var, other.to_polar());
+                        // eprintln!("  binding {} <- {}", var, other.to_polar());
+                        // eprintln!("  binding {} <- {}", other_var, var);
+                        // eprintln!("  {} <- {}", var, self.deref(&term!(var.clone())));
+                        // eprintln!(
+                        //     "  {} <- {}",
+                        //     other_var,
+                        //     self.deref(&term!(other_var.clone()))
+                        // );
+                        // eprintln!("  {} <- {}", other, self.deref(other));
 
                         // Neither is bound, so bind them together.
                         //self.constrain(&op!(And), term);
                         self.bind(var, other.clone());
                         self.bind(other_var, term!(value!(var.clone())));
+
+                        eprintln!("  BINDINGS:");
+                        for Binding(var, val) in self.bindings.iter() {
+                            eprintln!("    {} <- {}", var, val.to_polar());
+                        }
                     }
                     _ => {
                         eprintln!("4.C {} = {}", var, other.to_polar());
+                        eprintln!("  binding {} <- {}", var, other.to_polar());
                         self.bind(var, other.clone());
                     }
                 }
@@ -2205,6 +2300,7 @@ impl PolarVirtualMachine {
     fn constrain(&mut self, o: &Operation, t: &Term) {
         assert!(o.operator == Operator::And);
         let constraint = self.deep_deref(t).value().as_expression().unwrap().clone();
+        eprintln!("DEEP DEREFED TO: {}", constraint.to_polar());
         // TODO(gj): we're going Term -> Operation -> Term via clone_with_new_constraint. Can
         // probably shortcut that by passing clone_with_new_constraint a term.
         let operation = o.clone_with_new_constraint(constraint);
@@ -3522,7 +3618,7 @@ mod tests {
                         .unwrap()
                 }
                 QueryEvent::ExternalIsSubSpecializer { .. } | QueryEvent::Result { .. } => (),
-                _ => panic!("Unexpected event"),
+                e => panic!("Unexpected event: {:?}", e),
             }
         }
 
