@@ -70,6 +70,9 @@ def test_data(engine):
 
     session.commit()
 
+    # Prevent session from being destroyed.
+    models['_session'] = session
+
     return models
 
 def test_basic(oso, policy, session, test_data, authorization_data):
