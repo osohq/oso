@@ -47,14 +47,3 @@ be able to do everything that members can do.
 
   organization_role_order(["ADMIN", "MEMBER"])
 
-Frameworks
-==========
-
-To learn more about this feature and see usage examples, see our ORM specific documentation:
-  - :doc:`SQLAlchemy </getting-started/builtin-roles/sqlalchemy>`
-
-More framework integrations are coming soon - join us on Slack_ to discuss your
-use case or open an issue on GitHub_.
-
-.. _Slack: http://join-slack.osohq.com/
-.. _GitHub: https://github.com/osohq/oso
