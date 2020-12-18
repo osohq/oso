@@ -18,6 +18,8 @@ Lets say you have a User class and a Widget class and you want to assign users a
 a user a role for a Widget. The library creates the table and adds methods to allow you to manage assigning
 users to the role. You can then write rules over the role instead of the user.
 
+.. image:: /getting-started/builtin-roles/roles.svg
+
 .. code-block:: polar
   
   allow_role(WidgetRole{name: "OWNER"}, "UPDATE", Widget{});
