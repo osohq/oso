@@ -3,7 +3,7 @@ Builtin Roles
 ==============
 
 oso includes a library that makes it easy to add roles to your application.
-It integrates with our orm library integrations and allows you to create role
+It integrates with our model library integrations and allows you to create role
 relationships between your user models and your resource models.
 We then generate some polar to make it easy to define rules over these roles instead
 of directly over your users and provide helper methods for managing roles.
