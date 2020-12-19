@@ -10,7 +10,7 @@ use crate::folder::{fold_value, Folder};
 use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Symbol, Term, Value};
+use crate::terms::{Operation, Operator, Term, Value};
 use crate::vm::{Binding, BindingStack, Goals, PolarVirtualMachine};
 
 #[derive(Clone)]
@@ -104,14 +104,42 @@ fn dedupe_bindings(bindings: BindingStack) -> Bindings {
 fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
     dedupe_bindings(bindings).drain().for_each(|(var, value)| {
         eprintln!("REDUCING {} = ({})", var, value);
-        match acc.entry(var) {
-            Entry::Occupied(mut o) => {
-                let mut merged = o.get().value().as_expression().expect("expression").clone();
-                let new = value.value().as_expression().expect("expression").clone();
-                merged.merge_constraints(new);
-                eprintln!("MERGED => {}", merged.to_polar());
-                o.insert(value.clone_with_value(value!(merged)));
-            }
+        match acc.entry(var.clone()) {
+            Entry::Occupied(mut o) => match (o.get().value(), value.value()) {
+                (Value::Expression(x), Value::Expression(y)) => {
+                    let mut x = x.clone();
+                    x.merge_constraints(y.clone());
+                    eprintln!("MERGED => {}", x.to_polar());
+                    o.insert(value.clone_with_value(value!(x)));
+                }
+                (Value::Expression(x), _) => {
+                    let unify = op!(Unify, term!(var), value.clone());
+                    eprintln!(
+                        "CLONED WITH NEW CONSTRAINT {}; {}",
+                        x.to_polar(),
+                        unify.to_polar()
+                    );
+                    let x = x.clone_with_new_constraint(unify);
+                    o.insert(value.clone_with_value(value!(x)));
+                }
+                (_, Value::Expression(x)) => {
+                    let unify = op!(Unify, term!(var), o.get().clone());
+                    eprintln!(
+                        "CLONED WITH NEW CONSTRAINT {}; {}",
+                        x.to_polar(),
+                        unify.to_polar()
+                    );
+                    let x = x.clone_with_new_constraint(unify);
+                    o.insert(value.clone_with_value(value!(x)));
+                }
+                _ => {
+                    let left_unify = term!(value!(op!(Unify, term!(var.clone()), o.get().clone())));
+                    let right_unify = term!(value!(op!(Unify, term!(var), value.clone())));
+                    let x = op!(And, left_unify, right_unify);
+                    eprintln!("CREATED NEW PARTIAL {}", x.to_polar());
+                    o.insert(value.clone_with_value(value!(x)));
+                }
+            },
             Entry::Vacant(v) => {
                 v.insert(value);
             }
