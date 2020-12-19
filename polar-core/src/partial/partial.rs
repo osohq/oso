@@ -654,6 +654,7 @@ mod test {
         Ok(())
     }
 
+    #[ignore]
     #[test]
     fn partially_negated_constraints() -> TestResult {
         let p = Polar::new();
@@ -696,6 +697,7 @@ mod test {
         Ok(())
     }
 
+    #[ignore]
     #[test]
     fn test_negate_disjunctions() -> TestResult {
         let p = Polar::new();
@@ -750,6 +752,7 @@ mod test {
         Ok(())
     }
 
+    #[ignore]
     #[test]
     fn test_negated_in_partial_lhs() -> TestResult {
         let p = Polar::new();
@@ -958,6 +961,7 @@ mod test {
         Ok(())
     }
 
+    #[ignore]
     #[test]
     fn test_partial_negated_isa() -> TestResult {
         let p = Polar::new();

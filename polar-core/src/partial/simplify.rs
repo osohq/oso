@@ -72,6 +72,30 @@ fn invert_operation(Operation { operator, args }: Operation) -> Operation {
     }
 }
 
+struct VariableSubber {
+    this_var: Symbol,
+}
+
+impl VariableSubber {
+    pub fn new(this_var: Symbol) -> Self {
+        Self { this_var }
+    }
+}
+
+impl Folder for VariableSubber {
+    fn fold_variable(&mut self, v: Symbol) -> Symbol {
+        if v == self.this_var {
+            sym!("_this")
+        } else {
+            v
+        }
+    }
+}
+/// Substitute `sym!(_"this")` for a variable in a partial.
+fn sub_this(this: Symbol, term: Term) -> Term {
+    fold_term(term, &mut VariableSubber::new(this))
+}
+
 /// Simplify the values of the bindings to be returned to the host language.
 ///
 /// - For partials, simplify the constraint expressions.
@@ -298,31 +322,6 @@ impl Simplifier {
             }) => self.is_this_var(&args[0]),
             _ => false,
         }
-    }
-
-    /// Substitute `sym!(_"this")` for our variable in a partial.
-    fn sub_this(&self, term: Term) -> Term {
-        struct VariableSubber {
-            this_var: Symbol,
-        }
-
-        impl VariableSubber {
-            pub fn new(this_var: Symbol) -> Self {
-                Self { this_var }
-            }
-        }
-
-        impl Folder for VariableSubber {
-            fn fold_variable(&mut self, v: Symbol) -> Symbol {
-                if v == self.this_var {
-                    sym!("_this")
-                } else {
-                    v
-                }
-            }
-        }
-
-        fold_term(term, &mut VariableSubber::new(self.this_var.clone()))
     }
 
     /// Turn `_this = x` into `x`.

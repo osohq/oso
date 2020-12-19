@@ -10,7 +10,7 @@ use crate::folder::{fold_value, Folder};
 use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Term, Value};
+use crate::terms::{Operation, Operator, Symbol, Term, Value};
 use crate::vm::{Binding, BindingStack, Goals, PolarVirtualMachine};
 
 #[derive(Clone)]
@@ -40,12 +40,16 @@ impl Inverter {
 }
 
 struct PartialInverter<'a> {
+    this_var: &'a Symbol,
     old_value: &'a Term,
 }
 
 impl<'a> PartialInverter<'a> {
-    pub fn new(old_value: &'a Term) -> Self {
-        Self { old_value }
+    pub fn new(this_var: &'a Symbol, old_value: &'a Term) -> Self {
+        Self {
+            this_var,
+            old_value,
+        }
     }
 
     fn invert_operation(&mut self, o: &Operation) -> Operation {
@@ -70,7 +74,10 @@ impl<'a> Folder for PartialInverter<'a> {
     fn fold_term(&mut self, t: Term) -> Term {
         t.clone_with_value(match t.value() {
             Value::Expression(o) => Value::Expression(self.invert_operation(o)),
-            v => fold_value(v.clone(), self),
+            v => Value::Expression(Operation {
+                operator: Operator::Neq,
+                args: vec![term!(value!(self.this_var.clone())), term!(fold_value(v.clone(), self))],
+            }),
         })
     }
 }
@@ -84,7 +91,7 @@ fn invert_partials(bindings: BindingStack, old_bindings: &[Binding]) -> BindingS
                 .iter()
                 .rfind(|Binding(v, _)| *v == var)
                 .map(|Binding(_, old_value)| {
-                    Binding(var, PartialInverter::new(old_value).fold_term(value))
+                    Binding(var.clone(), PartialInverter::new(&var, old_value).fold_term(value))
                 })
         })
         .collect()
