@@ -2170,8 +2170,13 @@ impl PolarVirtualMachine {
                     eprintln!("  binding {} <- {}", o, var);
                     eprintln!("  binding {} <- {}", v, other.to_polar());
 
-                    self.bind(o, term!(var.clone()));
-                    self.bind(v, other.clone());
+                    if o == var && v == other.value().as_symbol().unwrap() {
+                    } else if o == var || v == other.value().as_symbol().unwrap() {
+                        todo!("1.D.?");
+                    } else {
+                        self.bind(o, term!(var.clone()));
+                        self.bind(v, other.clone());
+                    }
                 }
                 _ => {
                     eprintln!("1.E {} = {}", var, other.to_polar());

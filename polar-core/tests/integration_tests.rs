@@ -657,6 +657,17 @@ fn test_retries() -> TestResult {
 }
 
 #[test]
+fn test_two_rule_bodies() -> TestResult {
+    let mut p = Polar::new();
+    p.load_str(
+        r#"f(x) if x = y and g(y);
+           g(y) if y = 1;"#,
+    )?;
+    qvar(&mut p, "f(x)", "x", values![1]);
+    Ok(())
+}
+
+#[test]
 fn test_two_rule_bodies_not_nested() -> TestResult {
     let mut p = Polar::new();
     p.load_str(
@@ -667,6 +678,7 @@ fn test_two_rule_bodies_not_nested() -> TestResult {
     Ok(())
 }
 
+// TODO(ap): ??
 #[test]
 fn test_two_rule_bodies_nested() -> TestResult {
     let mut p = Polar::new();
@@ -778,21 +790,18 @@ fn test_bindings() -> TestResult {
     let mut p = Polar::new();
     qvar(&mut p, "x=1", "x", values![1]);
     qvar(&mut p, "x=x", "x", values![sym!("x")]);
-    qvar(
+    qvars(
         &mut p,
         "x=y and y=x",
-        "x",
-        values![Operation {
-            operator: Operator::And,
-            args: vec![],
-        }],
+        &["x", "y"],
+        values![[sym!("y"), sym!("x")]],
     );
-
-    p.load_str(
-        r#"f(x) if x = y and g(y);
-           g(y) if y = 1;"#,
-    )?;
-    qvar(&mut p, "f(x)", "x", values![1]);
+    qvars(
+        &mut p,
+        "x=y and y=z",
+        &["x", "y", "z"],
+        values![[sym!("y"), sym!("z"), sym!("x")]],
+    );
     Ok(())
 }
 
