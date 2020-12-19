@@ -247,15 +247,53 @@ access either protected endpoint.
 
 Add a new endpoint to your application that users can hit to assign roles.
 
+.. code-block:: python
+    :caption: :fab:`python` routes.py
+
+    @bp.route("/orgs/<int:org_id>/roles", methods=["POST"])
+    def org_roles_new(org_id):
+        return "Unimplemented"
+
 Call the oso role API
 ---------------------
 
-Users can be added to a role using `oso.add_to_role`
+Use the oso role API to create role assignments with
+:py:meth:`sqlalchemy_oso.roles.add_user_role` and
+:py:meth:`sqlalchemy_oso.roles.reassign_user_role`.
+
+To control who can assign roles, add another call to :py:func:`flask_oso.FlaskOso.authorize`.
+
+.. code-block:: python
+    :caption: :fab:`python` routes.py
+    :emphasize-lines: 4,11,13
+
+    @bp.route("/orgs/<int:org_id>/roles", methods=["POST"])
+    def org_roles_new(org_id):
+        org = g.session.query(Organization).filter_by(id=org_id).first()
+        current_app.oso.authorize(org, actor=g.current_user, action="CREATE_ROLE")
+
+        # Create role
+        role_name = request.get_json().get("name")
+        user_email = request.get_json().get("user_email")
+        user = g.session.query(User).filter_by(email=user_email).first()
+        try:
+            add_user_role(g.session, user, org, role_name)
+        except Exception as e:
+            reassign_user_role(g.session, user, org, role_name)
+
+        return f"created a new role for org: {org_id}, {user_email}, {role_name}"
+
 
 Configure permissions for role assignments
 ------------------------------------------
 
 Update the oso policy to specify who is allowed to assign roles.
+
+.. code-block:: polar
+    :caption: :fa:`oso` authorization.polar
+
+    ### Org owners can assign roles within the org
+    role_allow(role: OrganizationRole{name: "OWNER"}, "CREATE_ROLE", organization: Organization);
 
 3. Test it works
 ================
@@ -263,7 +301,19 @@ Update the oso policy to specify who is allowed to assign roles.
 Run the application
 -------------------
 
-Start your server ...
+Start the server.
+
+.. code-block:: shell
+
+    $ flask run
+    * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+
+Make a request.
+
+.. code-block:: shell
+    $ curl --header "user: john@beatles.com" localhost:5000/orgs/1/repos
+    {"repos":[{"id":1,"name":"Abbey Road"}]}
+
 
 Try it out
 ----------
