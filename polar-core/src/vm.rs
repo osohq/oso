@@ -2175,16 +2175,6 @@ impl PolarVirtualMachine {
                 }
                 // x = y and y = z
                 (Value::Variable(v), Value::Variable(o)) => {
-                    // BEFORE
-                    // v(x) is bound to var(_x_7)
-                    //   - and var(_x_7) is bound to v(x)
-                    // o(y) is bound to other(_y_8)
-                    //   - and other(_y_8) is bound to o(y)
-                    //
-                    // BIND
-                    // o(y) to var(_x_7)
-                    // v(x) to other(_y_8)
-
                     eprintln!("1.D {} = {}", var, other.to_polar());
                     eprintln!("  binding {} <- {}", o, var);
                     eprintln!("  binding {} <- {}", v, other.to_polar());
@@ -2217,15 +2207,6 @@ impl PolarVirtualMachine {
                             eprintln!("    {} <- {}", var, val.to_polar());
                         }
                     }
-                    // Value::Variable(_) => {
-                    //     eprintln!("2.C {} = {}", var, other.to_polar());
-                    //     let mut seen = HashSet::new();
-                    //     self.careful_deref(&value, &mut seen);
-                    //
-                    //     let unify = term!(value!(op!(Unify, value.clone(), term!(var.clone()))));
-                    //     // self.bind(v, other.clone());
-                    //     self.constrain(&op!(And, unify), term);
-                    // }
                     _ => {
                         eprintln!("2.B {} = {}", var, other.to_polar());
                         // Only var is bound, unify with whatever other is.
@@ -2276,18 +2257,7 @@ impl PolarVirtualMachine {
                     // TODO(gj): does RestVariable need any special handling?
                     Value::Variable(other_var) | Value::RestVariable(other_var) => {
                         eprintln!("4.B {} = {}", var, other.to_polar());
-                        // eprintln!("  binding {} <- {}", var, other.to_polar());
-                        // eprintln!("  binding {} <- {}", other_var, var);
-                        // eprintln!("  {} <- {}", var, self.deref(&term!(var.clone())));
-                        // eprintln!(
-                        //     "  {} <- {}",
-                        //     other_var,
-                        //     self.deref(&term!(other_var.clone()))
-                        // );
-                        // eprintln!("  {} <- {}", other, self.deref(other));
-
                         // Neither is bound, so bind them together.
-                        //self.constrain(&op!(And), term);
                         self.bind(var, other.clone());
                         self.bind(other_var, term!(value!(var.clone())));
 
