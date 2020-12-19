@@ -2820,10 +2820,8 @@ impl Runnable for PolarVirtualMachine {
 
         let mut bindings = self.bindings(false);
         if self.simplify {
-            if let Some(bs) = simplify_bindings(bindings) {
-                bindings = bs.into_iter().map(|(var, val)| {
-                    (var, self.deref(&val))
-                }).collect();
+            if let Some(bs) = simplify_bindings(bindings, self.bindings(true)) {
+                bindings = bs;
                 dbg!(&bindings);
             } else {
                 return Ok(QueryEvent::None);

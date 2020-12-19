@@ -91,9 +91,38 @@ impl Folder for VariableSubber {
         }
     }
 }
-/// Substitute `sym!(_"this")` for a variable in a partial.
-fn sub_this(this: Symbol, term: Term) -> Term {
+
+/// Substitute `sym!("_this")` for a variable in a partial.
+pub fn sub_this(this: Symbol, term: Term) -> Term {
+    eprintln!("THIS: {}; TERM: {}", this, term.to_polar());
+    if term
+        .value()
+        .as_symbol()
+        .map(|s| s == &this)
+        .unwrap_or(false)
+    {
+        return term;
+    }
     fold_term(term, &mut VariableSubber::new(this))
+}
+
+/// Turn `_this = x` into `x`.
+fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
+    match term.value() {
+        Value::Expression(o) if o.operator == Operator::Unify => {
+            let left = &o.args[0];
+            let right = &o.args[1];
+            match (left.value(), right.value()) {
+                (Value::Variable(v), Value::Variable(w)) if v == &this && w == &this => {
+                    unreachable!()
+                }
+                (Value::Variable(v), _) if v == &this => right.clone(),
+                (_, Value::Variable(v)) if v == &this => left.clone(),
+                _ => term,
+            }
+        }
+        _ => term,
+    }
 }
 
 /// Simplify the values of the bindings to be returned to the host language.
@@ -101,27 +130,34 @@ fn sub_this(this: Symbol, term: Term) -> Term {
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref.
 /// TODO(ap): deep deref.
-pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
+pub fn simplify_bindings(bindings: Bindings, bindings_with_temps: Bindings) -> Option<Bindings> {
     let mut unsatisfiable = false;
+
+    let mut simplify = |var: Symbol, term: Term| {
+        let mut simplifier = Simplifier::new(var.clone());
+        let simplified = simplifier.simplify_partial(term);
+        let simplified = simplify_trivial_constraint(var.clone(), simplified);
+        let simplified = sub_this(var, simplified);
+
+        match simplified.value().as_expression() {
+            Ok(o) if o == &FALSE => unsatisfiable = true,
+            _ => (),
+        }
+        simplified
+    };
+
     let bindings: Bindings = bindings
         .into_iter()
         .map(|(var, value)| match value.value() {
             Value::Expression(o) => {
                 assert_eq!(o.operator, Operator::And);
-                let mut simplifier = Simplifier::new(var.clone());
-                let simplified = simplifier.simplify_partial(o.clone().into_term());
-                let simplified = simplifier.sub_this(simplified);
-                let simplified = simplifier.simplify_trivial_constraint(simplified);
-
-                match simplified.value().as_expression() {
-                    Ok(o) if o == &FALSE => unsatisfiable = true,
-                    _ => (),
-                }
-                (var, simplified)
+                (var.clone(), simplify(var, value))
             }
+            Value::Variable(v) => (var, simplify(v.clone(), bindings_with_temps[v].clone())),
             _ => (var, value),
         })
         .collect();
+
     if unsatisfiable {
         None
     } else {
@@ -286,7 +322,7 @@ impl Simplifier {
     pub fn new(this_var: Symbol) -> Self {
         Self {
             this_var,
-            bindings: HashMap::new(),
+            bindings: Bindings::new(),
         }
     }
 
@@ -321,27 +357,6 @@ impl Simplifier {
                 args,
             }) => self.is_this_var(&args[0]),
             _ => false,
-        }
-    }
-
-    /// Turn `_this = x` into `x`.
-    fn simplify_trivial_constraint(&self, term: Term) -> Term {
-        match term.value() {
-            Value::Expression(o) if o.operator == Operator::Unify => {
-                let left = &o.args[0];
-                let right = &o.args[1];
-                match (left.value(), right.value()) {
-                    (Value::Variable(v), Value::Variable(w))
-                        if v.is_this_var() && w.is_this_var() =>
-                    {
-                        unreachable!()
-                    }
-                    (Value::Variable(v), _) if v.is_this_var() => right.clone(),
-                    (_, Value::Variable(v)) if v.is_this_var() => left.clone(),
-                    _ => term,
-                }
-            }
-            _ => term,
         }
     }
 

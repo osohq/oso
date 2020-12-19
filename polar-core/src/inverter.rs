@@ -74,10 +74,14 @@ impl<'a> Folder for PartialInverter<'a> {
     fn fold_term(&mut self, t: Term) -> Term {
         t.clone_with_value(match t.value() {
             Value::Expression(o) => Value::Expression(self.invert_operation(o)),
-            v => Value::Expression(Operation {
-                operator: Operator::Neq,
-                args: vec![term!(value!(self.this_var.clone())), term!(fold_value(v.clone(), self))],
-            }),
+            v => Value::Expression(op!(
+                And,
+                term!(value!(op!(
+                    Neq,
+                    term!(value!(self.this_var.clone())),
+                    term!(fold_value(v.clone(), self))
+                )))
+            )),
         })
     }
 }
@@ -91,7 +95,10 @@ fn invert_partials(bindings: BindingStack, old_bindings: &[Binding]) -> BindingS
                 .iter()
                 .rfind(|Binding(v, _)| *v == var)
                 .map(|Binding(_, old_value)| {
-                    Binding(var.clone(), PartialInverter::new(&var, old_value).fold_term(value))
+                    Binding(
+                        var.clone(),
+                        PartialInverter::new(&var, old_value).fold_term(value),
+                    )
                 })
         })
         .collect()
