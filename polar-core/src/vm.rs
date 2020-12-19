@@ -661,7 +661,6 @@ impl PolarVirtualMachine {
     }
 
     fn careful_deref(&self, term: &Term, seen: &mut HashSet<Symbol>) -> Term {
-        // eprintln!("CAREFULLY DEREFING: {}", term.to_polar());
         match &term.value() {
             Value::List(list) => {
                 let ends_with_rest = list
@@ -670,6 +669,7 @@ impl PolarVirtualMachine {
 
                 // Deref all elements.
                 let mut derefed: Vec<Term> =
+                    // TODO(gj): reduce recursion here.
                     list.iter().map(|t| self.careful_deref(t, seen)).collect();
 
                 // If last element was a rest variable, append the list it derefed to.
@@ -686,17 +686,8 @@ impl PolarVirtualMachine {
                 term.clone_with_value(Value::List(derefed))
             }
             Value::Variable(symbol) | Value::RestVariable(symbol) => {
-                // eprintln!("  variable -> {}", symbol);
                 if seen.insert(symbol.clone()) {
-                    // eprintln!("  had not seen {} before", symbol);
                     if let Some(value) = self.value(&symbol) {
-                        // eprintln!("  {} bound to {}", symbol, value.to_polar());
-                        // eprintln!(
-                        //     "  {} != {} -> {}",
-                        //     value.to_polar(),
-                        //     term.to_polar(),
-                        //     value != term
-                        // );
                         if value != term {
                             return self.careful_deref(value, seen);
                         }
@@ -2236,17 +2227,8 @@ impl PolarVirtualMachine {
                 match other.value() {
                     Value::Expression(o) => {
                         eprintln!("4.A {} = {}", var, other.to_polar());
-
-                        let fka_temp = var
-                            .0
-                            .split('_')
-                            .rev()
-                            .skip(1)
-                            .fold("".to_owned(), |acc, x| x.to_owned() + &acc);
-                        let fka_temp = term!(sym!(fka_temp));
-
-                        let unify = term!(value!(op!(Unify, fka_temp, term!(var.clone()))));
-
+                        let unify =
+                            term!(value!(op!(Unify, term!(var.clone()), term!(var.clone()))));
                         self.constrain(&o, &unify);
 
                         eprintln!("  BINDINGS:");
