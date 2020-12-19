@@ -2253,10 +2253,20 @@ impl PolarVirtualMachine {
             }
             (None, None) => {
                 match other.value() {
-                    Value::Expression(_) => {
+                    Value::Expression(o) => {
                         eprintln!("4.A {} = {}", var, other.to_polar());
-                        eprintln!("  binding {} <- {}", var, other.to_polar());
-                        self.bind(var, other.clone());
+
+                        let fka_temp = var
+                            .0
+                            .split('_')
+                            .rev()
+                            .skip(1)
+                            .fold("".to_owned(), |acc, x| x.to_owned() + &acc);
+                        let fka_temp = term!(sym!(fka_temp));
+
+                        let unify = term!(value!(op!(Unify, fka_temp, term!(var.clone()))));
+
+                        self.constrain(&o, &unify);
 
                         eprintln!("  BINDINGS:");
                         for Binding(var, val) in self.bindings.iter() {
