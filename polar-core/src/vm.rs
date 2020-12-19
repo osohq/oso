@@ -2154,8 +2154,8 @@ impl PolarVirtualMachine {
                     let mut seen = HashSet::new();
                     self.careful_deref(&value, &mut seen);
 
-                    let original = seen.iter().cycle().take(seen.len() + 1);
-                    let offset = seen.iter().cycle().skip(1).take(seen.len() + 1);
+                    let original = seen.iter().cycle().take(seen.len());
+                    let offset = seen.iter().cycle().skip(1).take(seen.len());
                     // TODO(gj): ensure no dupes.
                     let mut o = o.clone();
                     original.zip(offset).for_each(|(x, y)| {
@@ -2189,8 +2189,11 @@ impl PolarVirtualMachine {
                         eprintln!("2.A {} = {}", var, other.to_polar());
                         self.constrain(o, term);
                     }
-                    Value::Variable(_) if other.is_ground() => {
-                        eprintln!("2.C {} = {}", var, other.to_polar());
+                    Value::Variable(_)
+                        if other.is_ground()
+                            || matches!(other.value(), Value::ExternalInstance(_)) =>
+                    {
+                        eprintln!("2.B {} = {}", var, other.to_polar());
                         eprintln!("  binding {} <- {}", var, other.to_polar());
                         self.bind(var, other.clone());
                         eprintln!("  BINDINGS:");
@@ -2198,8 +2201,17 @@ impl PolarVirtualMachine {
                             eprintln!("    {} <- {}", var, val.to_polar());
                         }
                     }
+                    Value::Variable(_) if other.value().as_symbol().is_ok() => {
+                        eprintln!("2.C {} = {}", var, other.to_polar());
+                        eprintln!("  binding {} <- {}", var, other.to_polar());
+                        self.bind(var, other.clone());
+                        self.bind(other.value().as_symbol().unwrap(), value);
+                    }
+                    Value::Variable(_) => {
+                        todo!("2.D {} = {}", var, other.to_polar());
+                    }
                     _ => {
-                        eprintln!("2.B {} = {}", var, other.to_polar());
+                        eprintln!("2.E {} = {}", var, other.to_polar());
                         // Only var is bound, unify with whatever other is.
                         // TODO(gj): losing ordering here.
                         self.push_goal(Goal::Unify {
