@@ -4,6 +4,8 @@ from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship, validates
+from sqlalchemy.orm.util import object_mapper
+from sqlalchemy.orm.exc import UnmappedInstanceError
 from sqlalchemy import inspect, UniqueConstraint
 from sqlalchemy.exc import IntegrityError
 from .session import _OsoSession
@@ -275,6 +277,18 @@ def enable_roles(oso):
 # ROLE HELPERS
 
 
+def _check_valid_instance(*args, raise_error=True):
+    for instance in args:
+        valid = True
+        try:
+            object_mapper(instance)
+        except UnmappedInstanceError:
+            valid = False
+
+        if raise_error and not valid:
+            raise TypeError(f"Expected a mapped object instance; received: {instance}")
+
+
 def get_role_model_for_resource_model(resource_model):
     try:
         return (
@@ -309,6 +323,7 @@ def get_user_roles(session, user, resource_model, resource_id=None):
 
     :return: list of the user's roles
     """
+    _check_valid_instance(user)
     role_model = get_role_model_for_resource_model(resource_model)
 
     roles = (
@@ -339,6 +354,7 @@ def get_resource_roles(session, resource):
     :return: List of roles associated with the ``resource``
 
     """
+    _check_valid_instance(resource)
     return resource.roles
 
 
@@ -363,6 +379,7 @@ def get_resource_users_by_role(session, resource, role_name):
     """
     # TODO: would it be helpful to aggregate the roles by name if `role_name`
     # is None? E.g. return a dict of {role_name: [users]}?
+    _check_valid_instance(resource)
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
     user_model = get_user_model_for_resource_model(resource_model)
@@ -390,6 +407,7 @@ def add_user_role(session, user, resource, role_name):
     :param role_name: the name of the role to assign to the user
     :type role_name: str
     """
+    _check_valid_instance(user, resource)
     # get models
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
@@ -425,6 +443,7 @@ def delete_user_role(session, user, resource, role_name=None):
     ``resource``.
     :type role_name: str
     """
+    _check_valid_instance(user, resource)
     resource_model = type(resource)
     resource_name = resource_model.__name__.lower()
     role_model = get_role_model_for_resource_model(resource_model)
@@ -453,6 +472,7 @@ def reassign_user_role(session, user, resource, role_name):
     :param role_name: the name of the new role to assign to the user
     :type role_name: str
     """
+    _check_valid_instance(user, resource)
     resource_model = type(resource)
     resource_name = resource_model.__name__.lower()
     role_model = get_role_model_for_resource_model(resource_model)
