@@ -133,7 +133,7 @@ fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
                         x.to_polar(),
                         unify.to_polar()
                     );
-                    let x = x.clone_with_new_constraint(unify);
+                    let x = x.clone_with_new_constraint(term!(unify));
                     o.insert(value.clone_with_value(value!(x)));
                 }
                 (_, Value::Expression(x)) => {
@@ -143,7 +143,7 @@ fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
                         x.to_polar(),
                         unify.to_polar()
                     );
-                    let x = x.clone_with_new_constraint(unify);
+                    let x = x.clone_with_new_constraint(term!(unify));
                     o.insert(value.clone_with_value(value!(x)));
                 }
                 _ => {

@@ -568,7 +568,18 @@ impl PolarVirtualMachine {
         if self.log {
             self.print(&format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()));
         }
+        eprintln!("bind: {} ← {}", var.to_polar(), val.to_polar());
         self.bindings.push(Binding(var.clone(), val));
+    }
+
+    /// Augment the constraint expression `o` with the expression in `t`,
+    /// then bind each variable that occurs in the augmented expression to it.
+    fn constrain(&mut self, o: &Operation, t: &Term) {
+        assert_eq!(o.operator, Operator::And);
+        let operation = o.clone_with_new_constraint(self.deep_deref(t));
+        for var in operation.variables().iter() {
+            self.bind(var, operation.clone().into_term());
+        }
     }
 
     /// Augment the bindings stack with constants from a hash map.
@@ -660,50 +671,74 @@ impl PolarVirtualMachine {
         Derefer::new(self).fold_term(term.clone())
     }
 
-    fn careful_deref(&self, term: &Term, seen: &mut HashSet<Symbol>) -> Term {
-        match &term.value() {
-            Value::List(list) => {
-                let ends_with_rest = list
-                    .last()
-                    .map_or(false, |el| matches!(el.value(), Value::RestVariable(_)));
-
-                // Deref all elements.
-                let mut derefed: Vec<Term> =
-                    // TODO(gj): reduce recursion here.
-                    list.iter().map(|t| self.careful_deref(t, seen)).collect();
-
-                // If last element was a rest variable, append the list it derefed to.
-                if ends_with_rest {
-                    if let Some(last_term) = derefed.pop() {
-                        if let Value::List(terms) = last_term.value() {
-                            derefed.append(&mut terms.clone());
-                        } else {
-                            derefed.push(last_term);
-                        }
-                    }
-                }
-
-                term.clone_with_value(Value::List(derefed))
-            }
-            Value::Variable(symbol) | Value::RestVariable(symbol) => {
-                if seen.insert(symbol.clone()) {
-                    if let Some(value) = self.value(&symbol) {
-                        if value != term {
-                            return self.careful_deref(value, seen);
-                        }
-                    }
-                }
-                term.clone()
-            }
-            _ => term.clone(),
-        }
-    }
-
-    /// Recursively dereference a variable, but do not descend into (most) subterms.
+    /// Recursively dereference variables, but do not descend into (most) subterms.
     /// The exception is for lists, so that we can correctly handle rest variables.
     /// We also support cycle detection, in which case we return the original term.
     pub fn deref(&self, term: &Term) -> Term {
-        self.careful_deref(term, &mut HashSet::new())
+        let mut next = term.clone();
+        loop {
+            match &next.value() {
+                Value::List(list) => {
+                    let ends_with_rest = list
+                        .last()
+                        .map_or(false, |el| matches!(el.value(), Value::RestVariable(_)));
+
+                    // Deref all elements.
+                    let mut derefed: Vec<Term> =
+                    // TODO(gj): reduce recursion here.
+                    list.iter().map(|t| self.deref(t)).collect();
+
+                    // If last element was a rest variable, append the list it derefed to.
+                    if ends_with_rest {
+                        if let Some(last_term) = derefed.pop() {
+                            if let Value::List(terms) = last_term.value() {
+                                derefed.append(&mut terms.clone());
+                            } else {
+                                derefed.push(last_term);
+                            }
+                        }
+                    }
+
+                    next = term.clone_with_value(Value::List(derefed));
+                }
+                Value::Variable(var) | Value::RestVariable(var) => {
+                    if let Some(val) = self.value(var).cloned() {
+                        next = val;
+                    } else {
+                        break;
+                    }
+                }
+                _ => break,
+            }
+            if &next == term {
+                break;
+            }
+        }
+        next
+    }
+
+    /// If the given variable is bound in a cycle,
+    /// return the variable that is bound to it.
+    pub fn deref_cycle(&self, var: &Symbol) -> Option<Symbol> {
+        let mut next = var;
+        while let Some(value) = self.value(next) {
+            match value.value() {
+                Value::Variable(symbol) | Value::RestVariable(symbol) => {
+                    if symbol == next || symbol == var {
+                        // The variable is bound in a cycle.
+                        return Some(next.clone());
+                    } else {
+                        // Keep chasing.
+                        next = symbol;
+                    }
+                }
+                _ => {
+                    // The variable is not bound in a cycle.
+                    break;
+                }
+            }
+        }
+        None
     }
 
     fn deref_expr(&self, term: &Term) -> Term {
@@ -1026,8 +1061,8 @@ impl PolarVirtualMachine {
                         let tag_pattern =
                             right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
                         let type_constraint = op!(Isa, left.clone(), tag_pattern);
-                        let mut operation =
-                            operation.clone_with_new_constraint(type_constraint.clone());
+                        let mut operation = operation
+                            .clone_with_new_constraint(type_constraint.clone().into_term());
 
                         // Construct compatibility check.
                         let runnable = Box::new(IsaConstraintCheck::new(existing, type_constraint));
@@ -1037,7 +1072,7 @@ impl PolarVirtualMachine {
                             let field = right.clone_with_value(value!(f.clone()));
                             let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
                             let unify = op!(Unify, left, v.clone());
-                            operation = operation.clone_with_new_constraint(unify);
+                            operation = operation.clone_with_new_constraint(term!(unify));
                         });
 
                         // Construct manual binds to run if compabitility check succeeds. If the
@@ -1978,15 +2013,159 @@ impl PolarVirtualMachine {
     ///  - Recursive unification => more `Unify` goals are pushed onto the stack
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
-        eprintln!("UNIFYING {} = {}", left.to_polar(), right.to_polar());
-        let term =
-            left.clone_with_value(Value::Expression(op!(Unify, left.clone(), right.clone())));
-        match (&left.value(), &right.value()) {
-            (Value::Variable(var), _) => self.unify_var(var, right, &term)?,
-            (_, Value::Variable(var)) => self.unify_var(var, left, &term)?,
+        eprintln!(
+            "UNIFYING {} = {} w/bindings:",
+            left.to_polar(),
+            right.to_polar()
+        );
+        for Binding(var, val) in &self.bindings {
+            eprintln!("  {} = {}", var, val.to_polar());
+        }
+        match (left.value(), right.value()) {
+            // Unify two variables.
+            (Value::Variable(l), Value::Variable(r))
+            | (Value::Variable(l), Value::RestVariable(r))
+            | (Value::RestVariable(l), Value::Variable(r))
+            | (Value::RestVariable(l), Value::RestVariable(r)) => {
+                let x = self.deref(left);
+                let y = self.deref(right);
 
-            (Value::RestVariable(var), _) => self.unify_var(var, right, &term)?,
-            (_, Value::RestVariable(var)) => self.unify_var(var, left, &term)?,
+                match (x.value(), y.value()) {
+                    (Value::Expression(e), Value::Expression(f)) => {
+                        self.constrain(e, &f.clone().into_term());
+                        return Ok(());
+                    }
+                    (Value::Expression(e), _) | (_, Value::Expression(e)) => {
+                        self.constrain(e, &term!(op!(Unify, left.clone(), right.clone())));
+                        return Ok(());
+                    }
+                    (_, _) => (),
+                }
+
+                match (&x == left, &y == right) {
+                    (true, true) => {
+                        // Both variables are unbound or in cycles.
+                        match (self.deref_cycle(l), self.deref_cycle(r)) {
+                            (None, None) => {
+                                // They are both unbound. Bind them together.
+                                eprintln!("new cycle: {} = {}", l, r);
+                                self.bind(l, right.clone());
+                                self.bind(r, left.clone());
+                            }
+                            (Some(ref p), None) => {
+                                // Left is in a cycle. Extend it to include right.
+                                eprintln!("extend cycle from left: {}({}) = {}", l, p, r);
+                                assert_ne!(p, l);
+                                assert_eq!(self.value(p).unwrap().value().as_symbol().unwrap(), l);
+                                self.bind(p, right.clone());
+                                self.bind(r, left.clone());
+                            }
+                            (None, Some(ref q)) => {
+                                // Right is in a cycle. Extend it to include left.
+                                eprintln!("extend cycle from right: {} = {}({})", l, r, q);
+                                assert_ne!(q, r);
+                                assert_eq!(self.value(q).unwrap().value().as_symbol().unwrap(), r);
+                                self.bind(q, left.clone());
+                                self.bind(l, right.clone());
+                            }
+                            (Some(ref p), Some(ref q)) => {
+                                // Both variables are in cycles.
+                                assert_ne!(p, l);
+                                assert_ne!(q, r);
+                                assert_eq!(self.value(p).unwrap().value().as_symbol().unwrap(), l);
+                                assert_eq!(self.value(q).unwrap().value().as_symbol().unwrap(), r);
+                                if p == r || q == l {
+                                    // The cycles are the same. Do nothing.
+                                } else {
+                                    // Join the cycles.
+                                    eprintln!("join cycles: {}({}) = {}({})", l, p, r, q);
+                                    self.bind(p, right.clone());
+                                    self.bind(q, left.clone());
+                                }
+                            }
+                        }
+                    }
+                    (false, true) => {
+                        // The variable on the left is bound.
+                        // Unify the one on the right with its value.
+                        self.push_goal(Goal::Unify {
+                            left: x.clone(),
+                            right: right.clone(),
+                        })?;
+                    }
+                    (true, false) => {
+                        // The variable on the right is bound.
+                        // Unify the one on the left with its value.
+                        self.push_goal(Goal::Unify {
+                            left: left.clone(),
+                            right: y.clone(),
+                        })?;
+                    }
+                    (false, false) => {
+                        // Both variables are bound, and not in cycles.
+                        // Unify their values.
+                        self.push_goal(Goal::Unify {
+                            left: x.clone(),
+                            right: y.clone(),
+                        })?;
+                    }
+                }
+            }
+
+            (Value::Variable(var), Value::Expression(expr))
+            | (Value::Expression(expr), Value::Variable(var)) => {
+                panic!(
+                    "cannot bind variable `{}` to expression `{}`",
+                    var,
+                    expr.to_polar()
+                );
+            }
+
+            // Unify/bind the variable on the left with/to the term on the right.
+            (Value::Variable(var), _) | (Value::RestVariable(var), _) => {
+                let right = right.clone();
+                if self.deref_cycle(var).is_some() {
+                    // Ground out the cycle.
+                    self.bind(var, right);
+                } else if let Some(val) = self.value(var) {
+                    match val.value() {
+                        Value::Expression(expr) => {
+                            let expr = expr.clone();
+                            let left = left.clone();
+                            self.constrain(&expr, &term!(op!(Unify, left, right)))
+                        }
+                        _ => {
+                            let left = val.clone();
+                            self.push_goal(Goal::Unify { left, right })?;
+                        }
+                    }
+                } else {
+                    self.bind(var, right);
+                }
+            }
+
+            // Unify/bind the variable on the right with/to the term on the left.
+            (_, Value::Variable(var)) | (_, Value::RestVariable(var)) => {
+                let left = left.clone();
+                if self.deref_cycle(var).is_some() {
+                    // Ground out the cycle.
+                    self.bind(var, left);
+                } else if let Some(val) = self.value(var) {
+                    match val.value() {
+                        Value::Expression(expr) => {
+                            let expr = expr.clone();
+                            let right = right.clone();
+                            self.constrain(&expr, &term!(op!(Unify, left, right)))
+                        }
+                        _ => {
+                            let right = val.clone();
+                            self.push_goal(Goal::Unify { left, right })?;
+                        }
+                    }
+                } else {
+                    self.bind(var, left);
+                }
+            }
 
             // Unify lists by recursively unifying their elements.
             (Value::List(left), Value::List(right)) => {
@@ -2099,194 +2278,6 @@ impl PolarVirtualMachine {
         }
 
         Ok(())
-    }
-
-    /// Unify a symbol `left` with a term `right`.
-    /// This is sort of a "sub-goal" of `Unify`.
-    //
-    // TODO(gj): bring ordering back
-    fn unify_var(&mut self, var: &Symbol, other: &Term, term: &Term) -> PolarResult<()> {
-        let value = self.value(var).cloned();
-        let other_value = match other.value() {
-            Value::Variable(v) | Value::RestVariable(v) => self.value(v).cloned(),
-            Value::Pattern(_) => {
-                let src = (self.term_source(other, false), var);
-                let msg = format!("cannot bind pattern '{}' to '{}'", src.0, src.1);
-                return Err(self.type_error(&other, msg));
-            }
-            _ => None,
-        };
-
-        match (value, other_value) {
-            (Some(value), Some(other_value)) => match (value.value(), other_value.value()) {
-                (Value::Expression(o), Value::Expression(p)) => {
-                    eprintln!("1.A {} = {}", var, other.to_polar());
-                    let mut combined = o.clone();
-                    combined.merge_constraints(p.clone());
-                    self.constrain(&combined, term);
-                }
-                (Value::Expression(o), _) => {
-                    eprintln!("1.B {} = {}", var, other.to_polar());
-
-                    let mut seen = HashSet::new();
-                    self.careful_deref(&other_value, &mut seen);
-
-                    // a -> b -> c -> d
-                    //
-                    // a = b and b = c and c = d and d = a
-                    //
-                    // abcd
-                    // bcda
-                    //
-                    let original = seen.iter().cycle().take(seen.len() + 1);
-                    let offset = seen.iter().cycle().skip(1).take(seen.len() + 1);
-                    // TODO(gj): ensure no dupes.
-                    let mut o = o.clone();
-                    original.zip(offset).for_each(|(x, y)| {
-                        o.add_constraint(op!(Unify, term!(x.clone()), term!(y.clone())))
-                    });
-
-                    self.constrain(&o, term);
-                }
-                (_, Value::Expression(o)) => {
-                    eprintln!("1.C {} = {}", var, other.to_polar());
-
-                    let mut seen = HashSet::new();
-                    self.careful_deref(&value, &mut seen);
-
-                    let original = seen.iter().cycle().take(seen.len());
-                    let offset = seen.iter().cycle().skip(1).take(seen.len());
-                    // TODO(gj): ensure no dupes.
-                    let mut o = o.clone();
-                    original.zip(offset).for_each(|(x, y)| {
-                        o.add_constraint(op!(Unify, term!(x.clone()), term!(y.clone())))
-                    });
-
-                    self.constrain(&o, term);
-                }
-                // x = y and y = z
-                (Value::Variable(v), Value::Variable(o)) => {
-                    eprintln!("1.D {} = {}", var, other.to_polar());
-                    eprintln!("  binding {} <- {}", o, var);
-                    eprintln!("  binding {} <- {}", v, other.to_polar());
-
-                    if o == var && v == other.value().as_symbol().unwrap() {
-                    } else if o == var || v == other.value().as_symbol().unwrap() {
-                        todo!("1.D.?");
-                    } else {
-                        self.bind(o, term!(var.clone()));
-                        self.bind(v, other.clone());
-                    }
-                }
-                _ => {
-                    eprintln!("1.E {} = {}", var, other.to_polar());
-                    // Both are bound, unify their values.
-                    // TODO(gj): losing ordering here.
-                    self.push_goal(Goal::Unify {
-                        left: term!(var.clone()),
-                        right: other_value,
-                    })?;
-                }
-            },
-            (Some(value), None) => {
-                match value.value() {
-                    Value::Expression(o) => {
-                        eprintln!("2.A {} = {}", var, other.to_polar());
-                        self.constrain(o, term);
-                    }
-                    Value::Variable(_)
-                        if other.is_ground()
-                            || matches!(other.value(), Value::ExternalInstance(_)) =>
-                    {
-                        eprintln!("2.B {} = {}", var, other.to_polar());
-                        eprintln!("  binding {} <- {}", var, other.to_polar());
-                        self.bind(var, other.clone());
-                        eprintln!("  BINDINGS:");
-                        for Binding(var, val) in self.bindings.iter() {
-                            eprintln!("    {} <- {}", var, val.to_polar());
-                        }
-                    }
-                    Value::Variable(_) if other.value().as_symbol().is_ok() => {
-                        eprintln!("2.C {} = {}", var, other.to_polar());
-                        eprintln!("  binding {} <- {}", var, other.to_polar());
-                        self.bind(var, other.clone());
-                        self.bind(other.value().as_symbol().unwrap(), value);
-                    }
-                    Value::Variable(_) => {
-                        todo!("2.D {} = {}", var, other.to_polar());
-                    }
-                    _ => {
-                        eprintln!("2.E {} = {}", var, other.to_polar());
-                        // Only var is bound, unify with whatever other is.
-                        // TODO(gj): losing ordering here.
-                        self.push_goal(Goal::Unify {
-                            left: value,
-                            right: other.clone(),
-                        })?;
-                    }
-                }
-            }
-            (None, Some(other_value)) => {
-                match other_value.value() {
-                    Value::Expression(o) => {
-                        eprintln!("3.A {} = {}", var, other.to_polar());
-                        self.constrain(o, term);
-                    }
-                    _ => {
-                        eprintln!("3.B {} = {}", var, other.to_polar());
-                        eprintln!("  binding {} <- {}", var, other_value.to_polar());
-                        // var is unbound, other is bound; bind var to the value of other.
-                        self.bind(var, other_value);
-                    }
-                }
-            }
-            (None, None) => {
-                match other.value() {
-                    Value::Expression(o) => {
-                        eprintln!("4.A {} = {}", var, other.to_polar());
-                        let unify =
-                            term!(value!(op!(Unify, term!(var.clone()), term!(var.clone()))));
-                        self.constrain(&o, &unify);
-
-                        eprintln!("  BINDINGS:");
-                        for Binding(var, val) in self.bindings.iter() {
-                            eprintln!("    {} <- {}", var, val.to_polar());
-                        }
-                    }
-                    // TODO(gj): does RestVariable need any special handling?
-                    Value::Variable(other_var) | Value::RestVariable(other_var) => {
-                        eprintln!("4.B {} = {}", var, other.to_polar());
-                        // Neither is bound, so bind them together.
-                        self.bind(var, other.clone());
-                        self.bind(other_var, term!(value!(var.clone())));
-
-                        eprintln!("  BINDINGS:");
-                        for Binding(var, val) in self.bindings.iter() {
-                            eprintln!("    {} <- {}", var, val.to_polar());
-                        }
-                    }
-                    _ => {
-                        eprintln!("4.C {} = {}", var, other.to_polar());
-                        eprintln!("  binding {} <- {}", var, other.to_polar());
-                        self.bind(var, other.clone());
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    fn constrain(&mut self, o: &Operation, t: &Term) {
-        assert!(o.operator == Operator::And);
-        let constraint = self.deep_deref(t).value().as_expression().unwrap().clone();
-        eprintln!("DEEP DEREFED TO: {}", constraint.to_polar());
-        // TODO(gj): we're going Term -> Operation -> Term via clone_with_new_constraint. Can
-        // probably shortcut that by passing clone_with_new_constraint a term.
-        let operation = o.clone_with_new_constraint(constraint);
-        for var in operation.variables().iter() {
-            eprintln!("BINDING {} ← {}", var, operation.to_polar());
-            self.bind(var, operation.clone().into_term());
-        }
     }
 
     /// "Unify" two lists element-wise, respecting rest-variables.
@@ -2818,14 +2809,16 @@ impl Runnable for PolarVirtualMachine {
             None
         };
 
-        let mut bindings = self.bindings(false);
+        let mut bindings = self.bindings(true);
         if self.simplify {
-            if let Some(bs) = simplify_bindings(bindings, self.bindings(true)) {
+            if let Some(bs) = simplify_bindings(bindings) {
                 bindings = bs;
                 dbg!(&bindings);
             } else {
                 return Ok(QueryEvent::None);
             }
+        } else {
+            dbg!(&bindings);
         }
 
         Ok(QueryEvent::Result { bindings, trace })
@@ -2998,6 +2991,47 @@ mod tests {
         vm.bind(&x, term_y);
         vm.bind(&y, value.clone());
         assert_eq!(vm.deref(&term_x), value);
+    }
+
+    #[test]
+    fn deref_cycle() {
+        let mut vm = PolarVirtualMachine::default();
+        let w = sym!("w");
+        let x = sym!("x");
+        let y = sym!("y");
+        let z = sym!("z");
+
+        // 0-cycle.
+        vm.bind(&x, term!(1));
+        assert_eq!(vm.deref_cycle(&x), None);
+
+        // 1-cycle.
+        vm.bind(&x, term!(x.clone()));
+        assert_eq!(vm.deref_cycle(&x), Some(x.clone()));
+
+        // 2-cycle.
+        vm.bind(&x, term!(y.clone()));
+        vm.bind(&y, term!(x.clone()));
+        assert_eq!(vm.deref_cycle(&x), Some(y.clone()));
+        assert_eq!(vm.deref_cycle(&y), Some(x.clone()));
+
+        // 3-cycle.
+        vm.bind(&x, term!(y.clone()));
+        vm.bind(&y, term!(z.clone()));
+        vm.bind(&z, term!(x.clone()));
+        assert_eq!(vm.deref_cycle(&x), Some(z.clone()));
+        assert_eq!(vm.deref_cycle(&y), Some(x.clone()));
+        assert_eq!(vm.deref_cycle(&z), Some(y.clone()));
+
+        // 4-cycle.
+        vm.bind(&w, term!(x.clone()));
+        vm.bind(&x, term!(y.clone()));
+        vm.bind(&y, term!(z.clone()));
+        vm.bind(&z, term!(w.clone()));
+        assert_eq!(vm.deref_cycle(&w), Some(z.clone()));
+        assert_eq!(vm.deref_cycle(&x), Some(w));
+        assert_eq!(vm.deref_cycle(&y), Some(x));
+        assert_eq!(vm.deref_cycle(&z), Some(y));
     }
 
     #[test]
@@ -3496,12 +3530,12 @@ mod tests {
         // Left variable bound to bound right variable.
         vm.bind(&y, one.clone());
         vm.append_goals(vec![Goal::Unify {
-            left: term!(x),
+            left: term!(x.clone()),
             right: term!(y),
         }])
         .unwrap();
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.value(&sym!("x")), Some(&one));
+        assert_eq!(vm.deref(&term!(x)), one);
         vm.backtrack().unwrap();
 
         // Left variable bound to value.
@@ -3512,9 +3546,9 @@ mod tests {
         }])
         .unwrap();
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.value(&z), Some(&one));
+        assert_eq!(vm.deref(&term!(z.clone())), one);
 
-        // Left variable bound to value
+        // Left variable bound to value, unify with something else, backtrack.
         vm.bind(&z, one.clone());
         vm.append_goals(vec![Goal::Unify {
             left: term!(z.clone()),
@@ -3522,7 +3556,7 @@ mod tests {
         }])
         .unwrap();
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.value(&z), Some(&one));
+        assert_eq!(vm.deref(&term!(z)), one);
     }
 
     #[test]

@@ -78,10 +78,10 @@ impl Operation {
         new
     }
 
-    pub fn clone_with_new_constraint(&self, constraint: Operation) -> Self {
+    pub fn clone_with_new_constraint(&self, constraint: Term) -> Self {
         assert_eq!(self.operator, Operator::And);
         let mut new = self.clone();
-        new.args.push(constraint.into_term());
+        new.args.push(constraint);
         new
     }
 }
@@ -488,17 +488,15 @@ mod test {
         let next = next_binding(&mut q)?;
         assert_eq!(next[&sym!("x")], term!(sym!("y")));
         assert_eq!(next[&sym!("y")], term!(sym!("x")));
-        assert_eq!(
-            next_binding(&mut q)?,
-            hashmap! {sym!("x") => term!(1), sym!("y") => term!(1)}
-        );
+        let next = next_binding(&mut q)?;
+        assert_eq!(next[&sym!("x")], term!(1));
+        assert_eq!(next[&sym!("y")], term!(1));
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), sym!("y")])), false);
-        assert_eq!(
-            next_binding(&mut q)?,
-            hashmap! {sym!("x") => term!(1), sym!("y") => term!(2)}
-        );
+        let next = next_binding(&mut q)?;
+        assert_eq!(next[&sym!("x")], term!(1));
+        assert_eq!(next[&sym!("y")], term!(2));
         assert_query_done!(q);
 
         // TODO(gj): fix lifetime of binding.

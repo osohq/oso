@@ -788,20 +788,69 @@ fn test_non_instance_specializers() -> TestResult {
 #[test]
 fn test_bindings() -> TestResult {
     let mut p = Polar::new();
+
+    // 0-cycle, aka ground.
     qvar(&mut p, "x=1", "x", values![1]);
+
+    // 1-cycle.
     qvar(&mut p, "x=x", "x", values![sym!("x")]);
+
+    // 2-cycle.
     qvars(
         &mut p,
         "x=y and y=x",
         &["x", "y"],
         values![[sym!("y"), sym!("x")]],
     );
+
+    // 3-cycle, 2 ways.
     qvars(
         &mut p,
         "x=y and y=z",
         &["x", "y", "z"],
+        values![[sym!("z"), sym!("x"), sym!("y")]],
+    );
+    qvars(
+        &mut p,
+        "x=y and z=x",
+        &["x", "y", "z"],
         values![[sym!("y"), sym!("z"), sym!("x")]],
     );
+
+    // 4-cycle, 3 ways.
+    qvars(
+        &mut p,
+        "x=y and y=z and z=w and w=x",
+        &["x", "y", "z", "w"],
+        values![[sym!("w"), sym!("x"), sym!("y"), sym!("z")]],
+    );
+    qvars(
+        &mut p,
+        "x=y and y=z and w=z and w=x",
+        &["x", "y", "z", "w"],
+        values![[sym!("w"), sym!("x"), sym!("y"), sym!("z")]],
+    );
+    qvars(
+        &mut p,
+        "x=y and w=z and z=x",
+        &["x", "y", "z", "w"],
+        values![[sym!("y"), sym!("z"), sym!("w"), sym!("x")]],
+    );
+
+    // 6-cycle, 2 ways.
+    qvars(
+        &mut p,
+        "x=y and y=z and z=w and w=v and v=u",
+        &["x", "y", "z", "w", "v", "u"],
+        values![[sym!("u"), sym!("x"), sym!("y"), sym!("z"), sym!("w"), sym!("v")]],
+    );
+    qvars(
+        &mut p,
+        "x=y and y=z and w=v and v=u and u=x",
+        &["x", "y", "z", "w", "v", "u"],
+        values![[sym!("z"), sym!("u"), sym!("y"), sym!("x"), sym!("w"), sym!("v")]],
+    );
+
     Ok(())
 }
 

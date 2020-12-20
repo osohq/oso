@@ -130,15 +130,13 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref.
 /// TODO(ap): deep deref.
-pub fn simplify_bindings(bindings: Bindings, bindings_with_temps: Bindings) -> Option<Bindings> {
+pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
     let mut unsatisfiable = false;
-
     let mut simplify = |var: Symbol, term: Term| {
         let mut simplifier = Simplifier::new(var.clone());
         let simplified = simplifier.simplify_partial(term);
         let simplified = simplify_trivial_constraint(var.clone(), simplified);
         let simplified = sub_this(var, simplified);
-
         match simplified.value().as_expression() {
             Ok(o) if o == &FALSE => unsatisfiable = true,
             _ => (),
@@ -147,14 +145,17 @@ pub fn simplify_bindings(bindings: Bindings, bindings_with_temps: Bindings) -> O
     };
 
     let bindings: Bindings = bindings
-        .into_iter()
+        .iter()
+        .filter(|(var, _)| !var.is_temporary_var())
         .map(|(var, value)| match value.value() {
             Value::Expression(o) => {
                 assert_eq!(o.operator, Operator::And);
-                (var.clone(), simplify(var, value))
+                (var.clone(), simplify(var.clone(), value.clone()))
             }
-            Value::Variable(v) => (var, simplify(v.clone(), bindings_with_temps[v].clone())),
-            _ => (var, value),
+            Value::Variable(v) if v.is_temporary_var() => {
+                (var.clone(), simplify(var.clone(), bindings[v].clone()))
+            }
+            _ => (var.clone(), value.clone()),
         })
         .collect();
 
