@@ -1,0 +1,70 @@
+name: Host classes
+policies: []
+description: Check core host class functionality
+cases:
+  # construct test cases
+  - description: can construct simple instance
+    query: x = new UnitClass()
+    result: [{x: {repr: UnitClass}}]
+  - description: can construct with no args
+    query: new Constructor().num_args() = 0
+  - description: can construct with multiple args
+    query: new Constructor(1, 2, 3).num_args() = 3
+  - description: can construct with kwargs
+    query: "new Constructor(x: 1, y: 2, z: 3).num_kwargs() = 3"
+  - description: can construct with args and kwargs
+    query: "c = new Constructor(1, y: 2, z: 3) and c.num_kwargs() = 2 and c.num_args() = 1"
+    result: [{c: {repr: Constructor}}]
+  - description: constructed with kwargs sets values properly
+    query: "new Constructor(1, 2, x: 3).kwargs.x = 3"
+
+  # attributes + methods
+  - description: can read attributes from a struct
+    query: x = new ValueFactory().string_attr
+    result: [{x: "abc"}]
+  - description: can call methods on struct
+    query: x = new ValueFactory().get_string()
+    result: [{x: "abc"}]
+  - description: can get lists back
+    query: 1 in new ValueFactory().get_list()
+  - description: can call class methods
+    query: |
+      "abc" = MethodVariants.class_method_return_string()
+  - description: can call class methods with args
+    query: MethodVariants.sum_input_args(1, 2, 3) = 6
+
+  # check kwarg combinations work
+  - description: can call methods with kwargs
+    query: |
+      new MethodVariants().is_key_in_kwargs("a", a: 1, b: 2)
+  - query: new MethodVariants().set_x_or_y() = [1, 2]
+  - query: |
+      new MethodVariants().set_x_or_y(y: 4, x: 3) = [3, 4]
+  - query: new MethodVariants().set_x_or_y(5, 6) = [5, 6]
+  - query: |
+      new MethodVariants().set_x_or_y(7, y: 8) = [7, 8]
+
+  # methods returning iterators and generators
+  - description: can call methods with (empty) iterators
+    query: x in new MethodVariants().get_empty_iter()
+    result: []
+  - description: can call methods with iterators
+    query: x in new MethodVariants().get_iter()
+    result: [{x: 1},{x: 2},{x: 3}]
+  - description: can call methods with generators
+    query: x in new MethodVariants().get_generator()
+    result: [{x: 1},{x: 2},{x: 3}]
+
+  # calling inherited methods
+  - description: can call methods on parent classes
+    query: new ChildClass().inherit_parent() = "parent"
+  - description: can call override methods on classes
+    query: new ChildClass().override_parent() = "child"
+
+  # methods returning nil
+  - description: can get nil back and compare
+    query: new ValueFactory().get_nil() = nil
+  - description: cannot call on nil
+    query: new ValueFactory().get_nil().bad_call()
+    err: has no attribute 'bad_call'
+  
