@@ -1,0 +1,20 @@
+name: Host classes operators
+policies: []
+description: Check host classes support operators
+cases:
+  # eq
+  - query: new ImplementsEq(1) = new ImplementsEq(1)
+  - query: new ImplementsEq(1) == new ImplementsEq(1)
+  - query: not new ImplementsEq(1) = new ImplementsEq(2)
+
+  # lt/gt
+  - query: new Comparable(1) < new Comparable(2)
+  - query: not new Comparable(2) < new Comparable(1)
+  - query: not new Comparable(1) > new Comparable(2)
+  - query: new Comparable(2) > new Comparable(1)
+  - query: new Comparable(1) <= new Comparable(2)
+  - query: not new Comparable(2) <= new Comparable(1)
+  - query: not new Comparable(1) >= new Comparable(2)
+  - query: new Comparable(2) >= new Comparable(1)
+  - query: new Comparable(1) >= new Comparable(1)
+  - query: new Comparable(1) <= new Comparable(1)
