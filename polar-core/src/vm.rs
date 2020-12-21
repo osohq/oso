@@ -18,7 +18,7 @@ use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial::{simplify_bindings, IsaConstraintCheck};
+use crate::partial::{is_coherent, simplify_bindings, IsaConstraintCheck};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -574,13 +574,22 @@ impl PolarVirtualMachine {
 
     /// Augment the constraint expression `o` with the expression in `t`,
     /// then bind each variable that occurs in the augmented expression to it.
-    fn constrain(&mut self, o: &Operation, t: &Term) {
+    fn constrain(&mut self, o: &Operation, t: &Term) -> PolarResult<()> {
         assert_eq!(o.operator, Operator::And);
-        eprintln!("Augmenting constraint `{}` with `{}`", o.to_polar(), t.to_polar());
+        eprintln!(
+            "Augmenting constraint `{}` with `{}`",
+            o.to_polar(),
+            t.to_polar()
+        );
         let operation = o.clone_with_new_constraint(t.clone());
-        for var in operation.variables().iter() {
-            self.bind(var, operation.clone().into_term());
+        if is_coherent(&operation) {
+            for var in operation.variables().iter() {
+                self.bind(var, operation.clone().into_term());
+            }
+        } else {
+            self.push_goal(Goal::Backtrack)?;
         }
+        Ok(())
     }
 
     /// Augment the bindings stack with constants from a hash map.
@@ -756,7 +765,11 @@ impl PolarVirtualMachine {
                     }
                     match x.value() {
                         Value::Variable(y) | Value::RestVariable(y) => {
-                            expr.args.push(term!(value!(op!(Unify, term!(sym!(v.clone())), x.clone()))));
+                            expr.args.push(term!(value!(op!(
+                                Unify,
+                                term!(sym!(v.clone())),
+                                x.clone()
+                            ))));
                             v = y;
                         }
                         _ => unreachable!(),
@@ -1063,7 +1076,7 @@ impl PolarVirtualMachine {
 
                         // Add the last field constraint and trigger the bind dance.
                         for op in fields.fields.iter().take(1).map(to_unify) {
-                            self.constrain(&operation, &term!(op));
+                            self.constrain(&operation, &term!(op))?;
                         }
                     }
                     Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
@@ -1106,7 +1119,7 @@ impl PolarVirtualMachine {
                     _ => self.constrain(
                         operation,
                         &left.clone_with_value(value!(op!(Unify, left.clone(), right.clone()))),
-                    ),
+                    )?,
                 }
             }
 
@@ -1623,7 +1636,7 @@ impl PolarVirtualMachine {
                             },
                         ])?;
                     }
-                    Value::Expression(operation) => self.constrain(operation, term),
+                    Value::Expression(operation) => self.constrain(operation, term)?,
                     _ => {
                         return Err(self.type_error(
                             &iterable,
@@ -1829,7 +1842,7 @@ impl PolarVirtualMachine {
                 self.constrain(
                     operation,
                     &object.clone_with_value(value!(op!(Unify, value.clone(), dot_op))),
-                );
+                )?;
             }
             _ => {
                 return Err(self.type_error(
@@ -2004,7 +2017,7 @@ impl PolarVirtualMachine {
                 },
             )),
             (Value::Expression(operation), _) | (_, Value::Expression(operation)) => {
-                self.constrain(operation, term);
+                self.constrain(operation, term)?;
                 Ok(QueryEvent::None)
             }
             (left, right) => Err(self.type_error(
@@ -2047,28 +2060,32 @@ impl PolarVirtualMachine {
 
                 match (x.value(), y.value()) {
                     (Value::Expression(e), Value::Expression(f)) => {
-                        self.constrain(e, &f.clone().into_term());
-                        return Ok(());
-                    }
-                    (Value::Expression(e), Value::Variable(_)) => {
+                        eprintln!("Z {} = {}", e.to_polar(), f.to_polar());
                         let mut e = e.clone();
                         e.args.push(term!(op!(Unify, left.clone(), right.clone())));
-                        self.constrain(&e, &self.deref_expr(&right));
-                        return Ok(());
+                        return self.constrain(&e, &f.clone().into_term());
+                    }
+                    (Value::Expression(e), Value::Variable(_))
+                    | (Value::Expression(e), Value::RestVariable(_)) => {
+                        eprintln!("Y {} = {}", e.to_polar(), y.to_polar());
+                        let mut e = e.clone();
+                        e.args.push(term!(op!(Unify, left.clone(), right.clone())));
+                        return self.constrain(&e, &self.deref_expr(&right));
                     }
                     (Value::Expression(e), _) => {
-                        self.constrain(&e, &term!(op!(Unify, y.clone(), right.clone())));
-                        return Ok(());
+                        eprintln!("X {} = {}", e.to_polar(), y.to_polar());
+                        return self.constrain(&e, &term!(op!(Unify, left.clone(), y.clone())));
                     }
-                    (Value::Variable(_), Value::Expression(f)) => {
+                    (Value::Variable(_), Value::Expression(f))
+                    | (Value::RestVariable(_), Value::Expression(f)) => {
+                        eprintln!("W {} = {}", x.to_polar(), f.to_polar());
                         let mut f = f.clone();
                         f.args.push(term!(op!(Unify, left.clone(), right.clone())));
-                        self.constrain(&f, &self.deref_expr(&left));
-                        return Ok(());
+                        return self.constrain(&f, &self.deref_expr(&left));
                     }
                     (_, Value::Expression(f)) => {
-                        self.constrain(&f, &term!(op!(Unify, left.clone(), x.clone())));
-                        return Ok(());
+                        eprintln!("V {} = {}", x.to_polar(), f.to_polar());
+                        return self.constrain(&f, &term!(op!(Unify, x.clone(), right.clone())));
                     }
                     (_, _) => (),
                 }
@@ -2144,7 +2161,9 @@ impl PolarVirtualMachine {
             }
 
             (Value::Variable(var), Value::Expression(expr))
-            | (Value::Expression(expr), Value::Variable(var)) => {
+            | (Value::RestVariable(var), Value::Expression(expr))
+            | (Value::Expression(expr), Value::Variable(var))
+            | (Value::Expression(expr), Value::RestVariable(var)) => {
                 panic!(
                     "cannot bind variable `{}` to expression `{}`",
                     var,
@@ -2163,7 +2182,7 @@ impl PolarVirtualMachine {
                         Value::Expression(expr) => {
                             let expr = expr.clone();
                             let left = left.clone();
-                            self.constrain(&expr, &term!(op!(Unify, left, right)))
+                            self.constrain(&expr, &term!(op!(Unify, left, right)))?;
                         }
                         _ => {
                             let left = val.clone();
@@ -2186,7 +2205,7 @@ impl PolarVirtualMachine {
                         Value::Expression(expr) => {
                             let expr = expr.clone();
                             let right = right.clone();
-                            self.constrain(&expr, &term!(op!(Unify, left, right)))
+                            self.constrain(&expr, &term!(op!(Unify, left, right)))?;
                         }
                         _ => {
                             let right = val.clone();

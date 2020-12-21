@@ -171,6 +171,29 @@ pub struct Simplifier {
     this_var: Symbol,
 }
 
+// Look for incompatible unifications.
+pub fn is_coherent(o: &Operation) -> bool {
+    let mut seen: HashMap<Symbol, Value> = HashMap::new();
+    for c in o.constraints().iter() {
+        if c.operator != Operator::Unify {
+            continue;
+        }
+        let left = &c.args[0];
+        let right = &c.args[1];
+        match (left.value(), right.value()) {
+            (Value::Variable(v), x) | (x, Value::Variable(v)) if x.is_ground() => {
+                if let Some(y) = seen.insert(v.clone(), x.clone()) {
+                    if &y != x {
+                        return false;
+                    }
+                }
+            }
+            _ => continue,
+        }
+    }
+    true
+}
+
 impl Folder for Simplifier {
     fn fold_term(&mut self, t: Term) -> Term {
         fold_term(self.deref(&t), self)
@@ -209,29 +232,14 @@ impl Folder for Simplifier {
             Operator::Unify | Operator::Eq if o.args[0] == o.args[1] => TRUE,
 
             Operator::And if o.args.len() > 1 => {
-                // Look for incompatible unifications.
-                let mut seen: HashMap<Symbol, Value> = HashMap::new();
-                for c in o.constraints().iter() {
-                    if c.operator != Operator::Unify {
-                        continue;
-                    }
-                    let left = &c.args[0];
-                    let right = &c.args[1];
-                    match (left.value(), right.value()) {
-                        (Value::Variable(v), x) | (x, Value::Variable(v)) if x.is_ground() => {
-                            if let Some(y) = seen.insert(v.clone(), x.clone()) {
-                                if &y != x {
-                                    return FALSE;
-                                }
-                            }
-                        }
-                        _ => continue,
-                    }
+                if !is_coherent(&o) {
+                    return FALSE;
                 }
 
                 // Toss trivial unifications.
                 for (i, c) in o.constraints().into_iter().enumerate() {
-                    if c.operator == Operator::Unify && c.args.len() == 2 && c.args[0] == c.args[1] {
+                    if c.operator == Operator::Unify && c.args.len() == 2 && c.args[0] == c.args[1]
+                    {
                         eprintln!("TOSSING CONSTRAINT `{}`", o.args[i].to_polar());
                         o.args.remove(i);
                     }

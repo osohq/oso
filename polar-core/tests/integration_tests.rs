@@ -842,13 +842,27 @@ fn test_bindings() -> TestResult {
         &mut p,
         "x=y and y=z and z=w and w=v and v=u",
         &["x", "y", "z", "w", "v", "u"],
-        values![[sym!("u"), sym!("x"), sym!("y"), sym!("z"), sym!("w"), sym!("v")]],
+        values![[
+            sym!("u"),
+            sym!("x"),
+            sym!("y"),
+            sym!("z"),
+            sym!("w"),
+            sym!("v")
+        ]],
     );
     qvars(
         &mut p,
         "x=y and y=z and w=v and v=u and u=x",
         &["x", "y", "z", "w", "v", "u"],
-        values![[sym!("z"), sym!("u"), sym!("y"), sym!("x"), sym!("w"), sym!("v")]],
+        values![[
+            sym!("z"),
+            sym!("u"),
+            sym!("y"),
+            sym!("x"),
+            sym!("w"),
+            sym!("v")
+        ]],
     );
 
     Ok(())
