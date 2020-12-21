@@ -22,27 +22,37 @@ def test_authorize_model_basic(session, oso, fixture_data):
         "post.needs_moderation = true;"
     )
 
-    posts = authorize_model(oso, "user", "read", session, Post)
+    posts = session.query(Post).filter(
+        authorize_model(oso, "user", "read", session, Post)
+    )
 
     assert posts.count() == 5
     assert posts.all()[0].contents == "foo public post"
     assert posts.all()[0].id == 0
 
-    posts = authorize_model(oso, "user", "write", session, Post)
+    posts = session.query(Post).filter(
+        authorize_model(oso, "user", "write", session, Post)
+    )
 
     assert posts.count() == 4
     assert posts.all()[0].contents == "foo private post"
     assert posts.all()[1].contents == "foo private post 2"
 
-    posts = authorize_model(oso, "admin", "read", session, Post)
+    posts = session.query(Post).filter(
+        authorize_model(oso, "admin", "read", session, Post)
+    )
     assert posts.count() == 9
 
-    posts = authorize_model(oso, "moderator", "read", session, Post)
+    posts = session.query(Post).filter(
+        authorize_model(oso, "moderator", "read", session, Post)
+    )
     print_query(posts)
     assert posts.all()[0].contents == "private for moderation"
     assert posts.all()[1].contents == "public for moderation"
 
-    posts = authorize_model(oso, "guest", "read", session, Post)
+    posts = session.query(Post).filter(
+        authorize_model(oso, "guest", "read", session, Post)
+    )
     assert posts.count() == 0
 
 
@@ -63,7 +73,7 @@ def test_authorize_scalar_attribute_eq(session, oso, fixture_data):
 
     foo = session.query(User).filter(User.username == "foo").first()
 
-    posts = authorize_model(oso, foo, "read", session, Post)
+    posts = session.query(Post).filter(authorize_model(oso, foo, "read", session, Post))
     print_query(posts)
 
     def allowed(post):
@@ -100,7 +110,7 @@ def test_authorize_scalar_attribute_condition(session, oso, fixture_data):
 
     foo = session.query(User).filter(User.username == "foo").first()
 
-    posts = authorize_model(oso, foo, "read", session, Post)
+    posts = session.query(Post).filter(authorize_model(oso, foo, "read", session, Post))
 
     def allowed(post, user):
         return (
@@ -113,7 +123,9 @@ def test_authorize_scalar_attribute_condition(session, oso, fixture_data):
     assert all(allowed(post, foo) for post in posts)
 
     admin = session.query(User).filter(User.username == "admin_user").first()
-    posts = authorize_model(oso, admin, "read", session, Post)
+    posts = session.query(Post).filter(
+        authorize_model(oso, admin, "read", session, Post)
+    )
 
     def allowed_admin(post):
         return post.created_by.is_banned
@@ -185,7 +197,9 @@ def test_in_multiple_attribute_relationship(session, oso, tag_test_fixture):
     """
     )
 
-    posts = authorize_model(oso, tag_test_fixture["user"], "read", session, Post)
+    posts = session.query(Post).filter(
+        authorize_model(oso, tag_test_fixture["user"], "read", session, Post)
+    )
 
     assert tag_test_fixture["user_public_post"] in posts
     assert tag_test_fixture["user_private_post"] in posts
@@ -262,7 +276,9 @@ def test_nested_relationship_many_single(session, oso, tag_nested_test_fixture):
     """
     )
 
-    posts = authorize_model(oso, tag_nested_test_fixture["user"], "read", session, Post)
+    posts = session.query(Post).filter(
+        authorize_model(oso, tag_nested_test_fixture["user"], "read", session, Post)
+    )
     assert tag_nested_test_fixture["user_eng_post"] in posts
     assert tag_nested_test_fixture["user_user_post"] in posts
     assert not tag_nested_test_fixture["random_post"] in posts
@@ -270,8 +286,10 @@ def test_nested_relationship_many_single(session, oso, tag_nested_test_fixture):
     assert tag_nested_test_fixture["all_tagged_post"] in posts
     assert posts.count() == 3
 
-    posts = authorize_model(
-        oso, tag_nested_test_fixture["other_user"], "read", session, Post
+    posts = session.query(Post).filter(
+        authorize_model(
+            oso, tag_nested_test_fixture["other_user"], "read", session, Post
+        )
     )
     assert not tag_nested_test_fixture["user_eng_post"] in posts
     assert not tag_nested_test_fixture["user_user_post"] in posts
@@ -347,8 +365,10 @@ def test_nested_relationship_many_many(session, oso, tag_nested_many_many_test_f
     """
     )
 
-    posts = authorize_model(
-        oso, tag_nested_many_many_test_fixture["user"], "read", session, Post
+    posts = session.query(Post).filter(
+        authorize_model(
+            oso, tag_nested_many_many_test_fixture["user"], "read", session, Post
+        )
     )
     # TODO (dhatch): Check that this SQL query is correct, seems right from results.
     print_query(posts)
@@ -358,8 +378,10 @@ def test_nested_relationship_many_many(session, oso, tag_nested_many_many_test_f
     assert not tag_nested_many_many_test_fixture["not_tagged_post"] in posts
     assert tag_nested_many_many_test_fixture["all_tagged_post"] in posts
 
-    posts = authorize_model(
-        oso, tag_nested_many_many_test_fixture["other_user"], "read", session, Post
+    posts = session.query(Post).filter(
+        authorize_model(
+            oso, tag_nested_many_many_test_fixture["other_user"], "read", session, Post
+        )
     )
     assert not tag_nested_many_many_test_fixture["user_eng_post"] in posts
     assert not tag_nested_many_many_test_fixture["user_user_post"] in posts
@@ -376,7 +398,9 @@ def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
     )
 
     user = tag_nested_many_many_test_fixture["user"]
-    posts = authorize_model(oso, user, "read", session, Post)
+    posts = session.query(Post).filter(
+        authorize_model(oso, user, "read", session, Post)
+    )
     print_query(posts)
     posts = posts.all()
 
@@ -388,7 +412,11 @@ def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
     assert len(posts) == 4
 
     user = tag_nested_many_many_test_fixture["other_user"]
-    posts = authorize_model(oso, user, "read", session, Post).all()
+    posts = (
+        session.query(Post)
+        .filter(authorize_model(oso, user, "read", session, Post))
+        .all()
+    )
     assert tag_nested_many_many_test_fixture["user_eng_post"] not in posts
     assert tag_nested_many_many_test_fixture["user_user_post"] not in posts
     assert tag_nested_many_many_test_fixture["random_post"] in posts
@@ -400,7 +428,9 @@ def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
 def test_empty_constraints_in(session, oso, tag_nested_many_many_test_fixture):
     oso.load_str("""allow(_, "read", post: Post) if _tag in post.tags;""")
     user = tag_nested_many_many_test_fixture["user"]
-    posts = authorize_model(oso, user, "read", session, Post)
+    posts = session.query(Post).filter(
+        authorize_model(oso, user, "read", session, Post)
+    )
     assert str(posts) == (
         "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.access_level AS posts_access_level,"
         + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation"
@@ -425,7 +455,9 @@ def test_in_with_constraints_but_no_matching_objects(
     """
     )
     user = tag_nested_many_many_test_fixture["user"]
-    posts = authorize_model(oso, user, "read", session, Post)
+    posts = session.query(Post).filter(
+        authorize_model(oso, user, "read", session, Post)
+    )
     assert str(posts) == (
         "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.access_level AS posts_access_level,"
         + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation"
@@ -450,7 +482,9 @@ def test_partial_subfield_isa(session, oso, tag_nested_many_many_test_fixture):
     )
 
     user = tag_nested_many_many_test_fixture["user"]
-    posts = authorize_model(oso, user, "read", session, Post)
+    posts = session.query(Post).filter(
+        authorize_model(oso, user, "read", session, Post)
+    )
     # Should only get posts created by user.
     posts = posts.all()
     for post in posts:
