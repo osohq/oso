@@ -34,7 +34,10 @@ def resource_role_class(
     the generated Role mixin will be scoped to. The Role mixin will \
     have a many-to-one (ForeignKey) relationship with this resource model. \
     A many-to-many relationship to ``user_model`` is added to ``resource_model``; \
-    the relationship is named ``users``.
+    the relationship is named ``users``. \
+    NOTE: only one role model can be created per resource model. Attempting to call \
+    ``resource_role_class()`` more than once for the same resource model will result in \
+    a ``ValueError``.
 
     :param roles: An order-independent list of the built-in roles for this resource-specific role type.
     :type roles: List[str]
@@ -58,6 +61,11 @@ def resource_role_class(
     """
 
     global ROLE_CLASSES
+    if resource_model in [role.get("resource_model") for role in ROLE_CLASSES]:
+        raise ValueError(
+            f"Cannot create two Role classes for the same `resource_model`: {resource_model.__name__}"
+        )
+
     ROLE_CLASSES.append(
         {
             "user_model": user_model,
