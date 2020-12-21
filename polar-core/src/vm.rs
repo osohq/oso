@@ -709,7 +709,7 @@ impl PolarVirtualMachine {
                         }
                     }
 
-                    next = term.clone_with_value(Value::List(derefed));
+                    return term.clone_with_value(Value::List(derefed));
                 }
                 Value::Variable(var) | Value::RestVariable(var) => {
                     if let Some(val) = self.value(var).cloned() {
