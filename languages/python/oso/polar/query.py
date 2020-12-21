@@ -26,6 +26,7 @@ class Query:
     """Execute a Polar query through the FFI/event interface."""
 
     def __init__(self, ffi_query, *, host=None):
+        self.event_loop = None
         self.ffi_query = ffi_query
         self.host = host
         self.calls = {}
@@ -35,8 +36,10 @@ class Query:
         del self.ffi_query
 
     def run(self):
+        if self.event_loop is None:
+            self.event_loop = asyncio.get_event_loop()
         while True:
-            result = asyncio.run(self.next())
+            result = self.event_loop.run_until_complete(self.next())
             if result:
                 yield result
             else:
