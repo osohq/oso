@@ -3,9 +3,9 @@ from typing import Any, List
 from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import relationship, validates
+from sqlalchemy.orm import relationship, validates, class_mapper
 from sqlalchemy.orm.util import object_mapper
-from sqlalchemy.orm.exc import UnmappedInstanceError
+from sqlalchemy.orm.exc import UnmappedInstanceError, UnmappedClassError
 from sqlalchemy import inspect, UniqueConstraint
 from sqlalchemy.exc import IntegrityError
 from .session import _OsoSession
@@ -56,6 +56,7 @@ def resource_role_class(
 
 
     """
+
     global ROLE_CLASSES
     ROLE_CLASSES.append(
         {
@@ -64,15 +65,12 @@ def resource_role_class(
         }
     )
 
-    tablename = f"{resource_model.__name__.lower()}_roles"
+    resource_name = _get_resource_name_lower(resource_model)
+    tablename = f"{resource_name}_roles"
     if mutually_exclusive:
-        unique_constraint = UniqueConstraint(
-            f"{resource_model.__name__.lower()}_id", "user_id"
-        )
+        unique_constraint = UniqueConstraint(f"{resource_name}_id", "user_id")
     else:
-        unique_constraint = UniqueConstraint(
-            f"{resource_model.__name__.lower()}_id", "name", "user_id"
-        )
+        unique_constraint = UniqueConstraint(f"{resource_name}_id", "name", "user_id")
 
     class ResourceRoleMixin:
         choices = role_choices
@@ -112,8 +110,8 @@ def resource_role_class(
     def resource(cls):
         return relationship(resource_model.__name__, backref="roles")
 
-    setattr(ResourceRoleMixin, f"{resource_model.__name__.lower()}_id", resource_id)
-    setattr(ResourceRoleMixin, resource_model.__name__.lower(), resource)
+    setattr(ResourceRoleMixin, f"{resource_name}_id", resource_id)
+    setattr(ResourceRoleMixin, resource_name, resource)
 
     # Add the relationship between the user_model and the resource_model
     resources = relationship(
@@ -124,7 +122,7 @@ def resource_role_class(
         sync_backref=False,
     )
     # @Q: Do we try to pluralize this name correctly?
-    setattr(user_model, resource_model.__name__.lower() + "s", resources)
+    setattr(user_model, resource_name + "s", resources)
 
     return ResourceRoleMixin
 
@@ -268,6 +266,22 @@ def enable_roles(oso):
 # ROLE HELPERS
 
 
+def _get_resource_name_lower(resource_model):
+    return resource_model.__name__.lower()
+
+
+def _check_valid_model(*args, raise_error=True):
+    for model in args:
+        valid = True
+        try:
+            class_mapper(model)
+        except UnmappedClassError:
+            valid = False
+
+        if raise_error and not valid:
+            raise TypeError(f"Expected a model (mapped class); received: {model}")
+
+
 def _check_valid_instance(*args, raise_error=True):
     for instance in args:
         valid = True
@@ -281,21 +295,17 @@ def _check_valid_instance(*args, raise_error=True):
 
 
 def get_role_model_for_resource_model(resource_model):
-    try:
-        return (
-            inspect(resource_model, raiseerr=True)
-            .relationships.get("roles")
-            .argument.class_
-        )
-    except AttributeError:
-        raise TypeError(f"Expected a model; received: {resource_model}")
+    _check_valid_model(resource_model)
+    return (
+        inspect(resource_model, raiseerr=True)
+        .relationships.get("roles")
+        .argument.class_
+    )
 
 
 def get_user_model_for_resource_model(resource_model):
-    try:
-        return inspect(resource_model).relationships.get("users").argument.class_
-    except AttributeError:
-        raise TypeError(f"Expected a model; received: {resource_model}")
+    _check_valid_model(resource_model)
+    return inspect(resource_model).relationships.get("users").argument.class_
 
 
 def get_user_roles(session, user, resource_model, resource_id=None):
@@ -315,6 +325,7 @@ def get_user_roles(session, user, resource_model, resource_id=None):
     :return: list of the user's roles
     """
     _check_valid_instance(user)
+    _check_valid_model(resource_model)
     role_model = get_role_model_for_resource_model(resource_model)
 
     roles = (
@@ -387,7 +398,7 @@ def get_resource_users_by_role(session, resource, role_name):
 
 
 # - Assign a user to an organization with a role
-def add_user_role(session, user, resource, role_name):
+def add_user_role(session, user, resource, role_name, commit=True):
     """Add a user to a role for a specific resource.
 
     :param session: SQLAlchemy session
@@ -397,6 +408,9 @@ def add_user_role(session, user, resource, role_name):
 
     :param role_name: the name of the role to assign to the user
     :type role_name: str
+
+    :param commit: flag to specify whether or not session should be committed after adding role; defaults to ``True``
+    :type commit: boolean
     """
     _check_valid_instance(user, resource)
     # get models
@@ -404,24 +418,25 @@ def add_user_role(session, user, resource, role_name):
     role_model = get_role_model_for_resource_model(resource_model)
 
     # create and save role
-    resource_name = resource_model.__name__.lower()
+    resource_name = _get_resource_name_lower(resource_model)
     kwargs = {"name": role_name, resource_name: resource, "user": user}
     new_role = role_model(**kwargs)
     session.add(new_role)
-    try:
-        session.commit()
-    except IntegrityError:
-        session.rollback()
-        raise Exception(
-            f"""Cannot assign user {user} to role {role_name} for
-            {resource_name} either because the assignment already exists, or
-            because the role is mutually exclusive and the user already has
-            another role for this resource."""
-        )
+    if commit:
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            raise Exception(
+                f"""Cannot assign user {user} to role {role_name} for
+                {resource_name} either because the assignment already exists, or
+                because the role is mutually exclusive and the user already has
+                another role for this resource."""
+            )
 
 
 # - Delete a user to an organization with a role
-def delete_user_role(session, user, resource, role_name=None):
+def delete_user_role(session, user, resource, role_name=None, commit=True):
     """Remove a user from a role for a specific resource.
 
     :param session: SQLAlchemy session
@@ -433,10 +448,13 @@ def delete_user_role(session, user, resource, role_name=None):
     provided, the function will remove all roles the user has for \
     ``resource``.
     :type role_name: str
+
+    :param commit: flag to specify whether or not session should be committed after deleting role; defaults to ``True``
+    :type commit: boolean
     """
     _check_valid_instance(user, resource)
     resource_model = type(resource)
-    resource_name = resource_model.__name__.lower()
+    resource_name = _get_resource_name_lower(resource_model)
     role_model = get_role_model_for_resource_model(resource_model)
 
     filter_kwargs = {"user": user, resource_name: resource}
@@ -445,11 +463,12 @@ def delete_user_role(session, user, resource, role_name=None):
     roles = session.query(role_model).filter_by(**filter_kwargs)
 
     roles.delete()
-    session.commit()
+    if commit:
+        session.commit()
 
 
 # - Change the user's role in an organization
-def reassign_user_role(session, user, resource, role_name):
+def reassign_user_role(session, user, resource, role_name, commit=True):
     """Remove all existing roles that a user has for a specific resource, and
     reassign the user to a new role. If the user does not have any roles for
     the given resource, the behavior is the same as
@@ -462,13 +481,18 @@ def reassign_user_role(session, user, resource, role_name):
 
     :param role_name: the name of the new role to assign to the user
     :type role_name: str
+
+    :param commit: flag to specify whether or not session should be committed after reassigning role; defaults to ``True``
+    :type commit: boolean
     """
     _check_valid_instance(user, resource)
     resource_model = type(resource)
-    resource_name = resource_model.__name__.lower()
+    resource_name = _get_resource_name_lower(resource_model)
     role_model = get_role_model_for_resource_model(resource_model)
 
     filter_kwargs = {"user": user, resource_name: resource}
 
     session.query(role_model).filter_by(**filter_kwargs).update({"name": role_name})
-    session.commit()
+
+    if commit:
+        session.commit()
