@@ -10,7 +10,7 @@ Breaking changes
 Updated to built-in roles in ``sqlalchemy-oso``
 --------------------------------------------------------
 
-This release makes a number of changes to the way out-of-the-box role support
+This release makes a number of changes to how the out-of-the-box role support
 works in the ``sqlalchemy-oso`` integration. It simplifies the schema of the role
 model, adds relationships to the user and resource classes and contains more error checks
 for various required constraints and things that can go wrong.
