@@ -821,6 +821,8 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
         == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
         + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
         + ' FROM "test_app2_post"'
+    )
+
 
 @pytest.mark.django_db
 def test_in_other_queryset_constraints_3(tag_nested_many_many_fixtures):
