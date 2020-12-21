@@ -140,6 +140,24 @@ class Polar:
         for res in Query(query, host=host).run():
             yield res
 
+    async def query_async(self, query):
+        """Query for a predicate, parsing it if necessary.
+
+        :param query: The predicate to query for.
+
+        :return: The result of the query.
+        """
+        host = self.host.copy()
+        if isinstance(query, str):
+            query = self.ffi_polar.new_query_from_str(query)
+        elif isinstance(query, Predicate):
+            query = self.ffi_polar.new_query_from_term(host.to_polar(query))
+        else:
+            raise InvalidQueryTypeError()
+
+        async for res in Query(query, host=host).run_async():
+            yield res
+
     def query_rule(self, name, *args):
         """Query for rule with name ``name`` and arguments ``args``.
 
@@ -149,6 +167,16 @@ class Polar:
         :return: The result of the query.
         """
         return self.query(Predicate(name=name, args=args))
+
+    async def async_query_rule(self, name, *args):
+        """Query for rule with name ``name`` and arguments ``args``.
+
+        :param name: The name of the predicate to query.
+        :param args: Arguments for the predicate.
+
+        :return: The result of the query.
+        """
+        return self.query_async(Predicate(name=name, args=args))
 
     def repl(self, files=[]):
         """Start an interactive REPL session."""

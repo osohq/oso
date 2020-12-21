@@ -1,5 +1,7 @@
+import asyncio
 from collections.abc import Iterable
 import json
+import inspect
 
 from .exceptions import (
     InvalidIteratorError,
@@ -33,6 +35,18 @@ class Query:
         del self.ffi_query
 
     def run(self):
+        while True:
+            result = asyncio.run(self.next())
+            if result:
+                yield result
+            else:
+                return
+
+    async def run_async(self):
+        while True:
+            yield await self.next()
+
+    async def next(self):
         """Run the event loop and yield results."""
         assert self.ffi_query, "no query to run"
         while True:
@@ -58,30 +72,30 @@ class Query:
                 break
             elif kind == "Result":
                 bindings = {
-                    k: self.host.to_python(v) for k, v in data["bindings"].items()
+                    k: await self.host.to_python(v) for k, v in data["bindings"].items()
                 }
                 trace = data["trace"]
-                yield {"bindings": bindings, "trace": trace}
+                return {"bindings": bindings, "trace": trace}
             elif kind in call_map:
-                call_map[kind](data)
+                await call_map[kind](data)
             else:
                 raise PolarRuntimeError(f"Unhandled event: {json.dumps(event)}")
 
-    def handle_make_external(self, data):
+    async def handle_make_external(self, data):
         id = data["instance_id"]
         constructor = data["constructor"]["value"]
         if "Call" in constructor:
             cls_name = constructor["Call"]["name"]
-            args = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
+            args = [await self.host.to_python(arg) for arg in constructor["Call"]["args"]]
             kwargs = constructor["Call"]["kwargs"] or {}
-            kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
+            kwargs = {k: await self.host.to_python(v) for k, v in kwargs.items()}
         else:
             raise InvalidConstructorError()
         self.host.make_instance(cls_name, args, kwargs, id)
 
-    def handle_external_call(self, data):
+    async def handle_external_call(self, data):
         call_id = data["call_id"]
-        instance = self.host.to_python(data["instance"])
+        instance = await self.host.to_python(data["instance"])
 
         attribute = data["attribute"]
 
@@ -95,9 +109,9 @@ class Query:
         if (
             callable(attr) and not data["args"] is None
         ):  # If it's a function, call it with the args.
-            args = [self.host.to_python(arg) for arg in data["args"]]
+            args = [await self.host.to_python(arg) for arg in data["args"]]
             kwargs = data["kwargs"] or {}
-            kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
+            kwargs = {k: await self.host.to_python(v) for k, v in kwargs.items()}
             result = attr(*args, **kwargs)
         elif not data["args"] is None:
             raise InvalidCallError(
@@ -106,46 +120,49 @@ class Query:
         else:  # If it's just an attribute, it's the result.
             result = attr
 
+        if inspect.isawaitable(result):
+            result = await result
+
         # Return the result of the call.
         self.ffi_query.call_result(call_id, self.host.to_polar(result))
 
-    def handle_external_op(self, data):
+    async def handle_external_op(self, data):
         op = data["operator"]
-        args = [self.host.to_python(arg) for arg in data["args"]]
+        args = [await self.host.to_python(arg) for arg in data["args"]]
         answer = self.host.operator(op, args)
         self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_external_isa(self, data):
+    async def handle_external_isa(self, data):
         instance = data["instance"]
         class_tag = data["class_tag"]
-        answer = self.host.isa(instance, class_tag)
+        answer = await self.host.isa(instance, class_tag)
         self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_external_unify(self, data):
+    async def handle_external_unify(self, data):
         left_instance_id = data["left_instance_id"]
         right_instance_id = data["right_instance_id"]
         answer = self.host.unify(left_instance_id, right_instance_id)
         self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_external_is_subspecializer(self, data):
+    async def handle_external_is_subspecializer(self, data):
         instance_id = data["instance_id"]
         left_tag = data["left_class_tag"]
         right_tag = data["right_class_tag"]
         answer = self.host.is_subspecializer(instance_id, left_tag, right_tag)
         self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_external_is_subclass(self, data):
+    async def handle_external_is_subclass(self, data):
         left_tag = data["left_class_tag"]
         right_tag = data["right_class_tag"]
         answer = self.host.is_subclass(left_tag, right_tag)
         self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_next_external(self, data):
+    async def handle_next_external(self, data):
         call_id = data["call_id"]
         iterable = data["iterable"]
 
         if call_id not in self.calls:
-            value = self.host.to_python(iterable)
+            value = await self.host.to_python(iterable)
             if isinstance(value, Iterable):
                 self.calls[call_id] = iter(value)
             else:
@@ -158,7 +175,7 @@ class Query:
         except StopIteration:
             self.ffi_query.call_result(call_id, None)
 
-    def handle_debug(self, data):
+    async def handle_debug(self, data):
         if data["message"]:
             print(data["message"])
         try:

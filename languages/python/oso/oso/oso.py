@@ -19,6 +19,24 @@ class Oso(Polar):
         """Create an oso object."""
         super().__init__()
 
+    async def is_allowed_async(self, actor, action, resource) -> bool:
+        """Evaluate whether ``actor`` is allowed to perform ``action`` on ``resource``.
+
+        Uses allow rules in the Polar policy to determine whether a request is
+        permitted. ``actor`` and ``resource`` should be classes that have been
+        registered with Polar using the :py:func:`register_class` function or
+        the ``polar_class`` decorator.
+
+        :param actor: The actor performing the request.
+        :param action: The action the actor is attempting to perform.
+        :param resource: The resource being accessed.
+
+        :return: ``True`` if the request is allowed, ``False`` otherwise.
+        """
+        async for _ in self.query_rule_async("allow", actor, action, resource):
+            return True
+        return False
+
     def is_allowed(self, actor, action, resource) -> bool:
         """Evaluate whether ``actor`` is allowed to perform ``action`` on ``resource``.
 

@@ -1,7 +1,7 @@
 """Translate between Polar and the host language (Python)."""
 
 from math import inf, isnan, nan
-
+import inspect
 from .exceptions import (
     PolarRuntimeError,
     UnregisteredClassError,
@@ -79,8 +79,8 @@ class Host:
         right = self.get_instance(right_instance_id)
         return left == right
 
-    def isa(self, instance, class_tag) -> bool:
-        instance = self.to_python(instance)
+    async def isa(self, instance, class_tag) -> bool:
+        instance = await self.to_python(instance)
         cls = self.get_class(class_tag)
         return isinstance(instance, cls)
 
@@ -167,7 +167,7 @@ class Host:
         term = {"value": val}
         return term
 
-    def to_python(self, value):
+    async def to_python(self, value):
         """Convert a Polar term to a Python object."""
         value = value["value"]
         tag = [*value][0]
@@ -189,20 +189,21 @@ class Host:
                         )
             return number
         elif tag == "List":
-            return [self.to_python(e) for e in value[tag]]
+            return [await self.to_python(e) for e in value[tag]]
         elif tag == "Dictionary":
-            return {k: self.to_python(v) for k, v in value[tag]["fields"].items()}
+            return {k: await self.to_python(v) for k, v in value[tag]["fields"].items()}
         elif tag == "ExternalInstance":
-            return self.get_instance(value[tag]["instance_id"])
+            instance = self.get_instance(value[tag]["instance_id"])
+            return await instance if inspect.isawaitable(instance) else instance
         elif tag == "Call":
             return Predicate(
                 name=value[tag]["name"],
-                args=[self.to_python(v) for v in value[tag]["args"]],
+                args=[await self.to_python(v) for v in value[tag]["args"]],
             )
         elif tag == "Variable":
             return Variable(value[tag])
         elif tag == "Expression":
-            args = list(map(self.to_python, value[tag]["args"]))
+            args = [await self.to_python(arg) for arg in value[tag]["args"]]
             operator = value[tag]["operator"]
 
             return Expression(operator, args)
