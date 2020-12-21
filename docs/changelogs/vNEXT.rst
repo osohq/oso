@@ -17,7 +17,7 @@ for various required constraints and things that can go wrong.
 
 It also includes docs!
 
-https://docs.oso.dev/getting-started/builtin-roles/index.html
+https://docs.osohq.com/getting-started/builtin-roles/index.html
 
 New features
 ============
