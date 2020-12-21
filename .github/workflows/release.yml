@@ -585,7 +585,7 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/main'
+    if: github.ref != 'refs/heads/sam/async-python'
     needs:
       [
         build_wheels,
