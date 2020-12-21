@@ -861,9 +861,11 @@ def test_iterators(polar, qeval, qvar):
     assert qvar("x in new Bar([1, 2, 3])", "x") == [1, 2, 3]
     assert qvar("x = new Bar([1, 2, 3]).sum()", "x", one=True) == 6
 
+
 @pytest.mark.asyncio
 async def test_async(polar, query_async, qvar_async):
     import asyncio
+
     class AsyncTest:
         async def async_fn(self):
             await asyncio.sleep(0.1)
@@ -892,7 +894,17 @@ async def test_async(polar, query_async, qvar_async):
     polar.register_class(AsyncTest)
 
     assert await query_async("new AsyncTest().async_fn() = 1") == [{}]
-    assert await query_async("forall(x in [1, 2, 3], x in new AsyncTest().async_generator())") == [{}]
+    assert await query_async(
+        "forall(x in [1, 2, 3], x in new AsyncTest().async_generator())"
+    ) == [{}]
     assert await qvar_async("x in new AsyncTest().async_generator()", "x") == [1, 2, 3]
-    assert await qvar_async("x in new AsyncTest().async_generator_sleeps()", "x") == [1, 2, 3]
-    assert await qvar_async("x in new AsyncTest().async_generator_tasks()", "x") == [1, 2, 3]
+    assert await qvar_async("x in new AsyncTest().async_generator_sleeps()", "x") == [
+        1,
+        2,
+        3,
+    ]
+    assert await qvar_async("x in new AsyncTest().async_generator_tasks()", "x") == [
+        1,
+        2,
+        3,
+    ]
