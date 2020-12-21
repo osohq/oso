@@ -884,9 +884,10 @@ async def test_async(polar, query_async, qvar_async):
             yield 3
 
         async def async_generator_tasks(self):
-            task1 = asyncio.create_task(asyncio.sleep(0.3, 1))
-            task2 = asyncio.create_task(asyncio.sleep(0.2, 2))
-            task3 = asyncio.create_task(asyncio.sleep(0.1, 3))
+            loop = asyncio.get_event_loop()
+            task1 = loop.create_task(asyncio.sleep(0.3, 1))
+            task2 = loop.create_task(asyncio.sleep(0.2, 2))
+            task3 = loop.create_task(asyncio.sleep(0.1, 3))
             yield task1
             yield task2
             yield task3
