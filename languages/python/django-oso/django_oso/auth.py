@@ -82,6 +82,7 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
     filter = None
     for result in results:
         resource_partial = result["bindings"]["resource"]
+        breakpoint()
         if filter is None:
             filter = Q()
 

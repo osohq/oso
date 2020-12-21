@@ -358,9 +358,12 @@ def test_nested_relationship_many_single(tag_nested_fixtures):
 
 @pytest.fixture
 def tag_nested_many_many_fixtures():
-    user = User(username="user")
+    manager = User(username="manager")
+    manager.save()
+
+    user = User(username="user", manager=manager)
     user.save()
-    other_user = User(username="other_user")
+    other_user = User(username="other_user", manager=manager)
     other_user.save()
 
     eng = Tag(name="eng")
@@ -668,6 +671,129 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
     )
     assert len(posts) == 0
 
+
+@pytest.mark.django_db
+def test_in_other_queryset(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        allow(user: test_app2::User, "read", post: test_app2::Post) if
+            post.created_by in user.direct_reports;
+        """)
+
+    user = User.objects.get(username="manager")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+
+    assert str(authorize_filter).startswith(
+            "(AND: (NOT (AND: ('pk__in', []))), "
+            + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
+            )
+
+    assert (
+        str(posts.query)
+        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
+        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
+        + ' FROM "test_app2_post"'
+        + ' WHERE "test_app2_post"."created_by_id" IN'
+        + ' (SELECT U0."id" FROM "test_app2_user" U0 WHERE U0."manager_id" = 1)'
+    )
+
+    assert len(posts) == 5
+
+
+@pytest.mark.xfail(reason="Cannot unify partials.")
+@pytest.mark.django_db
+def test_in_other_queryset_with_unify(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        allow(user: test_app2::User, "read", post: test_app2::Post) if
+            report in user.direct_reports and
+            post.created_by = report;
+        """)
+
+    user = User.objects.get(username="manager")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+
+    assert str(authorize_filter).startswith(
+            "(AND: (NOT (AND: ('pk__in', []))), "
+            + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
+            )
+
+    assert (
+        str(posts.query)
+        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
+        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
+        + ' FROM "test_app2_post"'
+        + ' WHERE "test_app2_post"."created_by_id" IN'
+        + ' (SELECT U0."id" FROM "test_app2_user" U0 WHERE U0."manager_id" = 1)'
+    )
+
+    assert len(posts) == 5
+
+
+@pytest.mark.django_db
+def test_in_other_queryset_constraints(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        allow(user: test_app2::User, "read", post: test_app2::Post) if
+            post.created_by in user.direct_reports and
+            # These constraints are silently ignored, ideally would cause an error.
+            report in user.direct_reports and
+            report.username = "user";
+        """)
+
+    raise Exception("fail")
+
+    user = User.objects.get(username="manager")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+
+    assert str(authorize_filter).startswith(
+            "(AND: (NOT (AND: ('pk__in', []))), "
+            + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
+            )
+
+    assert (
+        str(posts.query)
+        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
+        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
+        + ' FROM "test_app2_post"'
+        + ' WHERE "test_app2_post"."created_by_id" IN'
+        + ' (SELECT U0."id" FROM "test_app2_user" U0 WHERE U0."manager_id" = 1)'
+    )
+
+    assert len(posts) == 3
+
+
+@pytest.mark.django_db
+def test_in_other_queryset_constraints_2(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        allow(user: test_app2::User, "read", post: test_app2::Post) if
+            post.created_by in user.direct_reports and
+            post.created_by.username = "user";
+        """)
+
+    user = User.objects.get(username="manager")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+
+    assert str(authorize_filter).startswith(
+            "(AND: (NOT (AND: ('pk__in', []))), "
+            + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
+            )
+
+    assert (
+        str(posts.query)
+        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
+        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
+        + ' FROM "test_app2_post"'
+        + ' WHERE "test_app2_post"."created_by_id" IN'
+        + ' (SELECT U0."id" FROM "test_app2_user" U0 WHERE U0."manager_id" = 1)'
+    )
+
+    assert len(posts) == 3
 
 # todo test_nested_relationship_single_many
 # todo test_nested_relationship_single_single
