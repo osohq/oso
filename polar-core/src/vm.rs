@@ -719,7 +719,7 @@ impl PolarVirtualMachine {
 
     /// If the given variable is bound in a cycle,
     /// return the variable that is bound to it.
-    pub fn deref_cycle(&self, var: &Symbol) -> Option<Symbol> {
+    fn deref_cycle(&self, var: &Symbol) -> Option<Symbol> {
         let mut next = var;
         while let Some(value) = self.value(next) {
             match value.value() {
@@ -741,16 +741,27 @@ impl PolarVirtualMachine {
         None
     }
 
+    /// Use this when you want to allow an expression but you might have a variable pointing at an
+    /// expression.
     fn deref_expr(&self, term: &Term) -> Term {
         let derefed = self.deref(term);
         if &derefed == term {
             if let Ok(v) = term.value().as_symbol() {
-                if let Some(x) = self.value(v) {
-                    return term!(value!(op!(
-                        And,
-                        term!(value!(op!(Unify, term.clone(), x.clone())))
-                    )));
+                let mut v = v;
+                let mut expr = op!(And);
+                while let Some(x) = self.value(v) {
+                    if x == term {
+                        break;
+                    }
+                    match x.value() {
+                        Value::Variable(y) | Value::RestVariable(y) => {
+                            expr.args.push(term!(value!(op!(Unify, term!(sym!(v.clone())), x.clone()))));
+                            v = y;
+                        }
+                        _ => unreachable!(),
+                    }
                 }
+                return term!(value!(expr));
             }
         }
         derefed
@@ -2030,19 +2041,49 @@ impl PolarVirtualMachine {
                 let x = self.deref(left);
                 let y = self.deref(right);
 
+                eprintln!("X: {}; Y: {}", x.to_polar(), y.to_polar());
+
                 match (x.value(), y.value()) {
                     (Value::Expression(e), Value::Expression(f)) => {
                         self.constrain(e, &f.clone().into_term());
                         return Ok(());
                     }
-                    (Value::Expression(e), _) | (_, Value::Expression(e)) => {
-                        self.constrain(e, &term!(op!(Unify, left.clone(), right.clone())));
+                    (Value::Expression(e), _) => {
+                        self.constrain(e, &self.deref_expr(&y));
+                        return Ok(());
+                    }
+                    (_, Value::Expression(f)) => {
+                        self.constrain(f, &self.deref_expr(&x));
                         return Ok(());
                     }
                     (_, _) => (),
                 }
 
                 match (&x == left, &y == right) {
+                    (false, false) => {
+                        // Both variables are bound, and not in cycles.
+                        // Unify their values.
+                        self.push_goal(Goal::Unify {
+                            left: x.clone(),
+                            right: y.clone(),
+                        })?;
+                    }
+                    (false, true) => {
+                        // The variable on the left is bound.
+                        // Unify the one on the right with its value.
+                        self.push_goal(Goal::Unify {
+                            left: x.clone(),
+                            right: right.clone(),
+                        })?;
+                    }
+                    (true, false) => {
+                        // The variable on the right is bound.
+                        // Unify the one on the left with its value.
+                        self.push_goal(Goal::Unify {
+                            left: left.clone(),
+                            right: y.clone(),
+                        })?;
+                    }
                     (true, true) => {
                         // Both variables are unbound or in cycles.
                         match (self.deref_cycle(l), self.deref_cycle(r)) {
@@ -2084,30 +2125,6 @@ impl PolarVirtualMachine {
                                 }
                             }
                         }
-                    }
-                    (false, true) => {
-                        // The variable on the left is bound.
-                        // Unify the one on the right with its value.
-                        self.push_goal(Goal::Unify {
-                            left: x.clone(),
-                            right: right.clone(),
-                        })?;
-                    }
-                    (true, false) => {
-                        // The variable on the right is bound.
-                        // Unify the one on the left with its value.
-                        self.push_goal(Goal::Unify {
-                            left: left.clone(),
-                            right: y.clone(),
-                        })?;
-                    }
-                    (false, false) => {
-                        // Both variables are bound, and not in cycles.
-                        // Unify their values.
-                        self.push_goal(Goal::Unify {
-                            left: x.clone(),
-                            right: y.clone(),
-                        })?;
                     }
                 }
             }
