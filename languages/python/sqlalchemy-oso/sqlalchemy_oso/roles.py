@@ -10,6 +10,8 @@ from sqlalchemy import inspect, UniqueConstraint
 from sqlalchemy.exc import IntegrityError
 from .session import _OsoSession
 
+# Global list to keep track of role classes as they are created, used to
+# generate RBAC base policy in Polar
 ROLE_CLASSES: List[Any] = []
 
 
