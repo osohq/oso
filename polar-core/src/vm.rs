@@ -1027,8 +1027,9 @@ impl PolarVirtualMachine {
             &[left, right],
         );
 
-        let derefed_left = self.deref_expr(left);
-        let derefed_right = self.deref_expr(right);
+        // TODO(gj): should this be deref_expr in some cases?
+        let derefed_left = self.deref(left);
+        let derefed_right = self.deref(right);
         match (derefed_left.value(), derefed_right.value()) {
             (Value::InstanceLiteral(_), _) => unreachable!("unparseable"),
             (_, Value::InstanceLiteral(_)) | (_, Value::Dictionary(_)) => {
