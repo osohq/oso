@@ -203,6 +203,9 @@ def load_fixture_data(session):
     session.commit()
 
 
+# TEST FIXTURES
+
+
 @pytest.fixture
 def test_db_session():
     engine = create_engine("sqlite://")
@@ -225,6 +228,31 @@ def oso_with_session(test_db_session):
     return oso
 
 
+@pytest.fixture
+def john(test_db_session):
+    return test_db_session.query(User).filter_by(email="john@beatles.com").first()
+
+
+@pytest.fixture
+def paul(test_db_session):
+    return test_db_session.query(User).filter_by(email="paul@beatles.com").first()
+
+
+@pytest.fixture
+def ringo(test_db_session):
+    return test_db_session.query(User).filter_by(email="ringo@beatles.com").first()
+
+
+@pytest.fixture
+def abbey_road(test_db_session):
+    return test_db_session.query(Repository).filter_by(name="Abbey Road").first()
+
+
+@pytest.fixture
+def beatles(test_db_session):
+    return test_db_session.query(Organization).filter_by(name="The Beatles").first()
+
+
 def test_user_resources_relationship_fields(test_db_session):
     beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
     users = beatles.users
@@ -233,16 +261,13 @@ def test_user_resources_relationship_fields(test_db_session):
     assert users[0].email == "john@beatles.com"
 
 
-def test_resource_users_relationship_fields(test_db_session):
-    john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
+def test_resource_users_relationship_fields(john):
     orgs = john.organizations
     assert len(orgs) == 1
     assert orgs[0].name == "The Beatles"
 
 
-def test_get_user_resources_and_roles(test_db_session):
-    john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
-
+def test_get_user_resources_and_roles(test_db_session, john):
     # Test with ORM method
     roles = john.organization_roles
     assert len(roles) == 1
@@ -256,10 +281,7 @@ def test_get_user_resources_and_roles(test_db_session):
     assert roles[0].organization.name == "The Beatles"
 
 
-def test_get_user_roles_for_resource(test_db_session):
-    john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
-    beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
-
+def test_get_user_roles_for_resource(test_db_session, john, beatles):
     # Test with ORM method
     resource_roles = (
         test_db_session.query(OrganizationRole)
@@ -277,9 +299,7 @@ def test_get_user_roles_for_resource(test_db_session):
     assert resource_roles[0].name == "OWNER"
 
 
-def test_get_resource_roles(test_db_session):
-    abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
-
+def test_get_resource_roles(test_db_session, abbey_road):
     # Test with ORM method
     user_roles = abbey_road.roles
     assert user_roles[0].user.email == "john@beatles.com"
@@ -295,9 +315,7 @@ def test_get_resource_roles(test_db_session):
     assert user_roles[0].name == "READ"
 
 
-def test_get_resource_users_by_role(test_db_session):
-    abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
-
+def test_get_resource_users_by_role(test_db_session, abbey_road):
     # Test with ORM method
     users = (
         test_db_session.query(User)
@@ -316,10 +334,7 @@ def test_get_resource_users_by_role(test_db_session):
     assert users[1].email == "paul@beatles.com"
 
 
-def test_add_user_role(test_db_session):
-    ringo = test_db_session.query(User).filter_by(email="ringo@beatles.com").first()
-    abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
-
+def test_add_user_role(test_db_session, abbey_road, ringo, beatles):
     roles = (
         test_db_session.query(RepositoryRole)
         .filter_by(user=ringo, repository=abbey_road)
@@ -350,7 +365,6 @@ def test_add_user_role(test_db_session):
     with pytest.raises(Exception):
         oso_roles.add_user_role(test_db_session, ringo, abbey_road, "WRITE")
 
-    beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
     roles = (
         test_db_session.query(OrganizationRole)
         .filter_by(user=ringo, organization=beatles)
@@ -377,11 +391,7 @@ def test_add_user_role(test_db_session):
     assert roles[0].name == "BILLING"
 
 
-def test_delete_user_role(test_db_session):
-    john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
-    paul = test_db_session.query(User).filter_by(email="paul@beatles.com").first()
-    abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
-
+def test_delete_user_role(test_db_session, john, paul, abbey_road):
     # Test with explicit role arg
     roles = (
         test_db_session.query(RepositoryRole)
@@ -417,10 +427,7 @@ def test_delete_user_role(test_db_session):
     assert len(roles) == 0
 
 
-def test_reassign_user_role(test_db_session):
-    john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
-    abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
-
+def test_reassign_user_role(test_db_session, john, abbey_road):
     roles = (
         test_db_session.query(RepositoryRole)
         .filter_by(user=john, repository=abbey_road)
@@ -456,16 +463,13 @@ def test_set_get_session(oso_with_session):
     assert next(results)
 
 
-# TODO: split this test up
-def test_enable_roles(test_db_session, oso_with_session):
+def test_enable_roles(
+    test_db_session, oso_with_session, john, ringo, abbey_road, beatles
+):
     oso = oso_with_session
     enable_roles(oso)
 
     # Get test data
-    john = test_db_session.query(User).filter_by(email="john@beatles.com").first()
-    ringo = test_db_session.query(User).filter_by(email="ringo@beatles.com").first()
-    abbey_road = test_db_session.query(Repository).filter_by(name="Abbey Road").first()
-    beatles = test_db_session.query(Organization).filter_by(name="The Beatles").first()
     read_repo_role = (
         test_db_session.query(RepositoryRole)
         .filter_by(user=john, repository=abbey_road)
@@ -531,21 +535,23 @@ def test_enable_roles(test_db_session, oso_with_session):
     assert results[0].get("bindings").get("inherited_role").name == "BILLING"
     assert results[1].get("bindings").get("inherited_role").name == "MEMBER"
 
-    # TODO: test `role_allow`
     # make sure this query fails before any rules are added
     results = list(oso.query_rule("role_allow", john, "READ", abbey_road))
     assert len(results) == 0
 
     # test basic `role_allow` rule
-    role_allow_str = """role_allow(role: RepositoryRole{name: "READ"}, "READ", repo: Repository) if
-                            role.repository.id = repo.id;"""
+    role_allow_str = (
+        'role_allow(role: RepositoryRole{name: "READ"}, "READ", repo: Repository);'
+    )
+
     oso.load_str(role_allow_str)
     results = list(oso.query_rule("role_allow", read_repo_role, "READ", abbey_road))
     assert len(results) == 1
 
     # test `role_allow` rule using nested resource
-    nested_role_allow_str = """role_allow(role: OrganizationRole{name: "MEMBER"}, "READ", repo: Repository) if
-                            role.organization.id = repo.organization.id;"""
+    nested_role_allow_str = (
+        'role_allow(role: OrganizationRole{name: "MEMBER"}, "READ", repo: Repository);'
+    )
     oso.load_str(nested_role_allow_str)
     results = list(oso.query_rule("role_allow", org_owner_role, "READ", abbey_road))
     assert len(results) == 1
