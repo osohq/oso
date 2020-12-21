@@ -229,6 +229,14 @@ impl Folder for Simplifier {
                     }
                 }
 
+                // Toss trivial unifications.
+                for (i, c) in o.constraints().into_iter().enumerate() {
+                    if c.operator == Operator::Unify && c.args.len() == 2 && c.args[0] == c.args[1] {
+                        eprintln!("TOSSING CONSTRAINT `{}`", o.args[i].to_polar());
+                        o.args.remove(i);
+                    }
+                }
+
                 // Choose an (anti)unification constraint to make a binding from, maybe throw it
                 // away, and fold the rest.
                 if let Some(i) = o.constraints().iter().position(|o| match o.operator {

@@ -576,7 +576,8 @@ impl PolarVirtualMachine {
     /// then bind each variable that occurs in the augmented expression to it.
     fn constrain(&mut self, o: &Operation, t: &Term) {
         assert_eq!(o.operator, Operator::And);
-        let operation = o.clone_with_new_constraint(self.deep_deref(t));
+        eprintln!("Augmenting constraint `{}` with `{}`", o.to_polar(), t.to_polar());
+        let operation = o.clone_with_new_constraint(t.clone());
         for var in operation.variables().iter() {
             self.bind(var, operation.clone().into_term());
         }
@@ -761,6 +762,7 @@ impl PolarVirtualMachine {
                         _ => unreachable!(),
                     }
                 }
+                eprintln!("deref_expr({}) → {}", term.to_polar(), expr.to_polar());
                 return term!(value!(expr));
             }
         }
@@ -2048,12 +2050,24 @@ impl PolarVirtualMachine {
                         self.constrain(e, &f.clone().into_term());
                         return Ok(());
                     }
+                    (Value::Expression(e), Value::Variable(_)) => {
+                        let mut e = e.clone();
+                        e.args.push(term!(op!(Unify, left.clone(), right.clone())));
+                        self.constrain(&e, &self.deref_expr(&right));
+                        return Ok(());
+                    }
                     (Value::Expression(e), _) => {
-                        self.constrain(e, &self.deref_expr(&y));
+                        self.constrain(&e, &term!(op!(Unify, y.clone(), right.clone())));
+                        return Ok(());
+                    }
+                    (Value::Variable(_), Value::Expression(f)) => {
+                        let mut f = f.clone();
+                        f.args.push(term!(op!(Unify, left.clone(), right.clone())));
+                        self.constrain(&f, &self.deref_expr(&left));
                         return Ok(());
                     }
                     (_, Value::Expression(f)) => {
-                        self.constrain(f, &self.deref_expr(&x));
+                        self.constrain(&f, &term!(op!(Unify, left.clone(), x.clone())));
                         return Ok(());
                     }
                     (_, _) => (),
