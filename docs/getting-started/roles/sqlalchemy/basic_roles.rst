@@ -308,18 +308,51 @@ Start the server.
     $ flask run
     * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 
-Make a request.
-
-.. code-block:: shell
-    $ curl --header "user: john@beatles.com" localhost:5000/orgs/1/repos
-    {"repos":[{"id":1,"name":"Abbey Road"}]}
-
 
 Try it out
 ----------
 
-Make an API request to ...
+Make a request. Access should be granted or denied based on your policy. Our
+sample app includes some fixture data. Our policy says that users with the
+"OWNER" role can assign roles, users with the ``"MEMBER"`` role can view
+repos, and users with the ``"BILLING"`` role can view billing info. Also, the
+``"OWNER"`` roles inherits the permissions of the ``"MEMBER"`` and "BILLING" roles.
 
-As admin, you can assign a user to a role
+Paul is a member of "The Beatles" organization, so he can view repositories but not
+billing info:
 
-As a user in a role, you can see X but not Y
+.. code-block:: shell
+
+    $ curl --header "user: paul@beatles.com" localhost:5000/orgs/1/repos
+    {"repos":[{"id":1,"name":"Abbey Road"}]}
+    $
+    $ curl --header "user: paul@beatles.com" localhost:5000/orgs/1/billing
+    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+    <title>403 Forbidden</title>
+    <h1>Forbidden</h1>
+    <p>Unauthorized</p>
+
+John is the owner of "The Beatles" so he can assign roles:
+
+.. code-block:: shell
+
+    $ curl --header "Content-Type: application/json" \
+    --header "user: john@beatles.com"  \
+    --request POST \
+    --data '{"name":"BILLING", "user_email":"ringo@beatles.com"}' \
+    http://localhost:5000/orgs/1/roles
+    created a new role for org: 1, ringo@beatles.com, BILLING
+
+But Ringo isn't an owner, so his access should be denied:
+
+.. code-block:: shell
+
+    $ curl --header "Content-Type: application/json" \
+    --header "user: ringo@beatles.com"  \
+    --request POST \
+    --data '{"name":"BILLING", "user_email":"ringo@beatles.com"}' \
+    http://localhost:5000/orgs/1/roles
+    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+    <title>403 Forbidden</title>
+    <h1>Forbidden</h1>
+    <p>Unauthorized</p>
