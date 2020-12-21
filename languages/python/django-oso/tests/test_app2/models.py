@@ -7,11 +7,12 @@ class User(models.Model):
     username = models.CharField(max_length=255)
     is_moderator = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
-    posts = models.ManyToManyField("Post")
+    posts = models.ManyToManyField("Post", related_name="users")
     tags = models.ManyToManyField("Tag")
     manager = models.ForeignKey(
         "self", null=True, related_name="direct_reports", on_delete=models.CASCADE
     )
+
 
     class Meta:
         app_label = "test_app2"

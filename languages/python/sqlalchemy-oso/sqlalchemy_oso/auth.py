@@ -3,7 +3,7 @@ from polar.partial import Partial, TypeConstraint
 
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
-from sqlalchemy.orm.util import class_mapper  # type: ignore
+from sqlalchemy import inspect
 from sqlalchemy.sql import expression as sql
 
 from sqlalchemy_oso.partial import partial_to_filter
@@ -30,24 +30,7 @@ def register_models(oso: Oso, base):
         oso.register_class(model)
 
 
-def authorize_model(oso: Oso, actor, action, session: Session, model) -> Query:
-    """Return a query containing filters that apply the policy to ``model``.
-
-    Executing this query will return only authorized objects. If the request is
-    not authorized, a query that always contains no result will be returned.
-
-    :param oso: The oso class to use for evaluating the policy.
-    :param actor: The actor to authorize.
-    :param action: The action to authorize.
-
-    :param session: The SQLAlchemy session.
-    :param model: The model to authorize, must be a SQLAlchemy model.
-    """
-    filters = authorize_model_filter(oso, actor, action, session, model)
-    return session.query(model).filter(filters)
-
-
-def authorize_model_filter(oso: Oso, actor, action, session: Session, model):
+def authorize_model(oso: Oso, actor, action, session: Session, model):
     """Return SQLAlchemy expression that applies the policy to ``model``.
 
     Executing this query will return only authorized objects. If the request is
@@ -58,13 +41,16 @@ def authorize_model_filter(oso: Oso, actor, action, session: Session, model):
     :param action: The action to authorize.
 
     :param session: The SQLAlchemy session.
-    :param model: The model to authorize, must be a SQLAlchemy model.
+    :param model: The model to authorize, must be a SQLAlchemy model or alias.
     """
-    # TODO (dhatch): Check that model is a model.
-    # TODO (dhatch): More robust name mapping?
-    assert class_mapper(model), f"Expected a model; received: {model}"
+    try:
+        mapped_class = inspect(model, raiseerr=True).class_
+    except AttributeError:
+        raise TypeError(f"Expected a model; received: {model}")
 
-    partial_resource = Partial("resource", TypeConstraint(polar_model_name(model)))
+    partial_resource = Partial(
+        "resource", TypeConstraint(polar_model_name(mapped_class))
+    )
     results = oso.query_rule("allow", actor, action, partial_resource)
 
     combined_filter = None

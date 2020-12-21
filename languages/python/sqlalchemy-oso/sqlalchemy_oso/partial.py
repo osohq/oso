@@ -55,7 +55,8 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
 
     assert not right.fields, "Unexpected fields in isa expression"
     constraint_type = get_model(right.tag)
-    return sql.true() if issubclass(model, constraint_type) else sql.false()
+    model_type = inspect(model, raiseerr=True).class_
+    return sql.true() if issubclass(model_type, constraint_type) else sql.false()
 
 
 def translate_compare(expression: Expression, session: Session, model, get_model):

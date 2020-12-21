@@ -128,9 +128,6 @@ def enable_roles(oso):
     for role_model in ROLE_CLASSES:
         User = role_model["user_model"].__name__
         Resource = role_model["resource_model"].__name__
-        Group = role_model["group_model"]
-        if Group:
-            Group = Group.__name__
         Role = role_model["role_model"]
 
         policy += f"""
@@ -144,14 +141,10 @@ def enable_roles(oso):
             inherits_role_helper(role.name, inherited_role_name, role_order) and
             inherited_role = new {Role}(name: inherited_role_name, {Resource.lower()}: role.{Resource.lower()});
         """
-
-    # @TODO: Group
     oso.load_str(policy)
 
 
-def resource_role_class(
-    declarative_base, user_model, resource_model, roles, group_model=None
-):
+def resource_role_class(declarative_base, user_model, resource_model, roles):
     """Create a :ref:`resource-specific role<resource-specific-roles>` Mixin
     for SQLAlchemy models. Returns the role mixin, which must then be mixed
     into a SQLAlchemy model for the role. E.g.,
@@ -198,11 +191,6 @@ def resource_role_class(
     :param roles: An order-independent list of the built-in roles for this resource-specific role type.
     :type roles: List[str]
 
-    :param group_model: Optional SQLAlchemy model representing user groups \
-    that the resource-specific roles can be assigned to. The generated Role mixin will \
-    have a many-to-many relationship with this group model. The primary key of \
-    the ``group_model`` must be named ``id``. E.g.,
-
         .. code-block:: python
 
             class Team(Base):
@@ -218,7 +206,6 @@ def resource_role_class(
         {
             "user_model": user_model,
             "resource_model": resource_model,
-            "group_model": group_model,
             # @NOTE: Must name role model like this for now.
             "role_model": resource_model.__name__ + "Role",
         }
@@ -243,7 +230,7 @@ def resource_role_class(
     )
 
     class ResourceRoleMixin:
-        # TODO: enforce that classes are named with the ResourceRole convention, e.g. RepositorRole
+        # TODO: enforce that classes are named with the ResourceRole convention, e.g. RepositoryRole
         choices = roles
 
         __tablename__ = f"{resource_model.__name__.lower()}_roles"
@@ -271,35 +258,6 @@ def resource_role_class(
 
     setattr(ResourceRoleMixin, f"{resource_model.__name__.lower()}_id", resource_id)
     setattr(ResourceRoleMixin, resource_model.__name__.lower(), resource)
-
-    if group_model:
-        group_join_table = Table(
-            f"{resource_model.__name__.lower()}_roles_groups",
-            declarative_base.metadata,
-            Column(
-                f"{resource_model.__name__.lower()}_role_id",
-                Integer,
-                ForeignKey(f"{resource_model.__name__.lower()}_roles.id"),
-                primary_key=True,
-            ),
-            Column(
-                "group_id",
-                Integer,
-                ForeignKey(f"{group_model.__tablename__}.id"),
-                primary_key=True,
-            ),
-        )
-
-        @declared_attr
-        def groups(cls):
-            return relationship(
-                f"{group_model.__name__}",
-                secondary=group_join_table,
-                lazy="subquery",
-                backref=backref(f"{group_model.__name__.lower()}_roles", lazy=True),
-            )
-
-        setattr(ResourceRoleMixin, "groups", groups)
 
     return ResourceRoleMixin
 
@@ -339,37 +297,6 @@ def get_user_resources_and_roles(session, user, resource_model):
         session.query(resource_model, role_model)
         .join(role_model)
         .filter(role_model.users.any(user_model.id == user.id))
-        .order_by(resource_model.id)
-        .order_by(role_model.name)
-        .all()
-    )
-    return resource_roles
-
-
-def get_group_resources_and_roles(session, group, resource_model):
-    """Get a user group's roles for all resources of a single resource type.
-    E.g., get all of a team's repositories and their role for each
-    repository.
-
-
-    :param session: SQLAlchemy session
-    :type session: sqlalchemy.orm.session.Session
-
-    :param group: group record (python object) of the SQLAlchemy user group model \
-    associated with roles scoped to the supplied ``resource_model``
-
-    :param resource_model: the resource model (python class) for which to get \
-    the user's roles
-
-    :return: List of (resource, role) tuples for every role the user group has \
-    associated with the ``resource_model``
-    """
-    role_model = get_role_model_for_resource_model(resource_model)
-    group_model = type(group)
-    resource_roles = (
-        session.query(resource_model, role_model)
-        .join(role_model)
-        .filter(role_model.groups.any(group_model.id == group.id))
         .order_by(resource_model.id)
         .order_by(role_model.name)
         .all()
@@ -486,9 +413,13 @@ def add_user_role(session, user, resource, role_name):
     :param role_name: the name of the role to assign to the user
     :type role_name: str
     """
-    # TODO: check input for valid role name
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
+
+    if role_name not in role_model.choices:
+        raise Exception(
+            f"{role_name} Is not a valid choice for {resource.__class__.__name__} Roles"
+        )
 
     # try to get role
     role = (
