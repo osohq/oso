@@ -21,7 +21,6 @@ def resource_role_class(
     `Association Object <https://docs.sqlalchemy.org/en/13/orm/basic_relationships.html#association-object>`_
     between the ``user_model`` and the ``resource_model``.
 
-
     :param declarative_base: The SQLAlchemy declarative base model that \
     the role model and all related models are mapped to.
 
@@ -39,14 +38,6 @@ def resource_role_class(
 
     :param roles: An order-independent list of the built-in roles for this resource-specific role type.
     :type roles: List[str]
-
-        .. code-block:: python
-
-            class Team(Base):
-                __tablename__ = "teams"
-
-                id = Column(Integer, primary_key=True)
-                name = Column(String(256))
 
     :param mutually_exclusive: Boolean flag that sets whether or not users \
     can have more than one role for a given resource. Defaults to ``True``.
