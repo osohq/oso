@@ -188,10 +188,11 @@ def test_patching(polar, widget_in_company, actor_in_role, load_policy, query):
 
 
 # Instance Caching tests (move these somewhere else eventually)
-def test_instance_round_trip(polar, query, qvar):
+@pytest.mark.asyncio
+async def test_instance_round_trip(polar, query, qvar):
     # direct round trip
     user = Actor("sam")
-    assert polar.host.to_python(polar.host.to_polar(user)) is user
+    assert await polar.host.to_python(polar.host.to_polar(user)) is user
 
 
 @pytest.mark.xfail(

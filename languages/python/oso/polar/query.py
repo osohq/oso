@@ -37,7 +37,8 @@ class Query:
 
     def run(self):
         if self.event_loop is None:
-            self.event_loop = asyncio.get_event_loop()
+            self.event_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.event_loop)
         while True:
             result = self.event_loop.run_until_complete(self.next())
             if result:
