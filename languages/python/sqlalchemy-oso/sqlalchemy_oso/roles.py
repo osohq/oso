@@ -91,14 +91,14 @@ def resource_role_class(
             return name
 
         @declared_attr
-        def user_id(self):
+        def user_id(cls):
             type = inspect(user_model).primary_key[0].type
             name = inspect(user_model).primary_key[0].name
             table_name = user_model.__tablename__
             return Column(type, ForeignKey(f"{table_name}.{name}"))
 
         @declared_attr
-        def user(self):
+        def user(cls):
             return relationship(user_model.__name__, backref=tablename)
 
     @declared_attr
