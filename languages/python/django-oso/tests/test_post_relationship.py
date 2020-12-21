@@ -482,15 +482,15 @@ def test_partial_in_collection(tag_nested_many_many_fixtures):
         + ' INNER JOIN "test_app2_tag" ON ("test_app2_post_tags"."tag_id" = "test_app2_tag"."id")'
         + ' INNER JOIN "test_app2_tag_users" ON ("test_app2_tag"."id" = "test_app2_tag_users"."tag_id")'
         + ' WHERE (("test_app2_post"."created_by_id" IN'
-        + ' (SELECT U0."id" FROM "test_app2_user" U0 WHERE U0."manager_id" = 1)'
+        + ' (SELECT U0."id" FROM "test_app2_user" U0 WHERE U0."manager_id" = 2)'
         + ' AND "test_app2_post"."id" IN'
         + ' (SELECT U0."id" FROM "test_app2_post" U0 INNER JOIN "test_app2_user_posts" U1'
-        + ' ON (U0."id" = U1."post_id") WHERE U1."user_id" = 1)'
-        + ' AND "test_app2_post"."id" > 0 AND "test_app2_tag_users"."user_id" = 1)'
+        + ' ON (U0."id" = U1."post_id") WHERE U1."user_id" = 2)'
+        + ' AND "test_app2_post"."id" > 0 AND "test_app2_tag_users"."user_id" = 2)'
         + ' OR ("test_app2_user"."username" = user AND "test_app2_post"."id" IN'
         + ' (SELECT U0."id" FROM "test_app2_post" U0 INNER JOIN "test_app2_user_posts" U1'
-        + ' ON (U0."id" = U1."post_id") WHERE U1."user_id" = 1)'
-        + ' AND "test_app2_post"."id" > 0 AND "test_app2_tag_users"."user_id" = 1))'
+        + ' ON (U0."id" = U1."post_id") WHERE U1."user_id" = 2)'
+        + ' AND "test_app2_post"."id" > 0 AND "test_app2_tag_users"."user_id" = 2))'
     )
     assert tag_nested_many_many_fixtures["user_eng_post"] in posts
     assert tag_nested_many_many_fixtures["user_user_post"] in posts
@@ -529,10 +529,10 @@ def test_partial_set_intersection(tag_nested_many_many_fixtures):
         + ' INNER JOIN "test_app2_post_tags" ON ("test_app2_post"."id" = "test_app2_post_tags"."post_id")'
         + ' WHERE ("test_app2_post_tags"."tag_id" IN'
         + ' (SELECT U0."id" FROM "test_app2_tag" U0'
-        + ' INNER JOIN "test_app2_user_tags" U1 ON (U0."id" = U1."tag_id") WHERE U1."user_id" = 1)'
+        + ' INNER JOIN "test_app2_user_tags" U1 ON (U0."id" = U1."tag_id") WHERE U1."user_id" = 2)'
         + ' OR "test_app2_post_tags"."tag_id" IN'
         + ' (SELECT U0."id" FROM "test_app2_tag" U0'
-        + ' INNER JOIN "test_app2_user_tags" U1 ON (U0."id" = U1."tag_id") WHERE U1."user_id" = 1))'
+        + ' INNER JOIN "test_app2_user_tags" U1 ON (U0."id" = U1."tag_id") WHERE U1."user_id" = 2))'
     )
     assert tag_nested_many_many_fixtures["user_eng_post"] in posts
     assert tag_nested_many_many_fixtures["user_user_post"] in posts
@@ -566,7 +566,7 @@ def test_partial_set_intersection_shenanigans(tag_nested_many_many_fixtures):
         + ' INNER JOIN "test_app2_post_tags" ON ("test_app2_post"."id" = "test_app2_post_tags"."post_id")'
         + ' WHERE "test_app2_post_tags"."tag_id" IN'
         + ' (SELECT U0."id" FROM "test_app2_tag" U0'
-        + ' INNER JOIN "test_app2_user_tags" U1 ON (U0."id" = U1."tag_id") WHERE U1."user_id" = 1)'
+        + ' INNER JOIN "test_app2_user_tags" U1 ON (U0."id" = U1."tag_id") WHERE U1."user_id" = 2)'
     )
     assert tag_nested_many_many_fixtures["user_eng_post"] in posts
     assert tag_nested_many_many_fixtures["user_user_post"] in posts
@@ -732,6 +732,7 @@ def test_in_other_queryset_with_unify(tag_nested_many_many_fixtures):
     assert len(posts) == 5
 
 
+@pytest.mark.xfail(reason="Not currently tying the 'report' partial to the 'post' partial.")
 @pytest.mark.django_db
 def test_in_other_queryset_constraints(tag_nested_many_many_fixtures):
     Oso.load_str(
@@ -743,16 +744,14 @@ def test_in_other_queryset_constraints(tag_nested_many_many_fixtures):
             report.username = "user";
         """)
 
-    raise Exception("fail")
-
     user = User.objects.get(username="manager")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
 
     assert str(authorize_filter).startswith(
-            "(AND: (NOT (AND: ('pk__in', []))), "
-            + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
-            )
+        "(AND: (NOT (AND: ('pk__in', []))), "
+        + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
+    )
 
     assert (
         str(posts.query)
@@ -827,6 +826,7 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
     )
 
 
+@pytest.mark.xfail(reason="Not currently tying the 'user' partials to each other / the 'post' partial.")
 @pytest.mark.django_db
 def test_in_other_queryset_constraints_3(tag_nested_many_many_fixtures):
     """Add constraints on partial."""
@@ -834,14 +834,12 @@ def test_in_other_queryset_constraints_3(tag_nested_many_many_fixtures):
         """
         allow(user: test_app2::User, "read", post: test_app2::Post) if
             post.created_by in user.direct_reports and
-            # This constraint is invalid (cannot constrain the list directly)
+            # This constraint is invalid (cannot constrain the list directly).
             # It never gets output because you get a *new* partial every time you
-            # access user.direct_reports
+            # access user.direct_reports.
             user.direct_reports.username = "foo" and
             user.direct_reports.foo();
         """)
-
-    raise Exception("fail")
 
     user = User.objects.get(username="manager")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
