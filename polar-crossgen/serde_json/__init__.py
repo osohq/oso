@@ -44,7 +44,9 @@ class TypedJsonDeserializer:
                 assert isinstance(self.input, list)
                 result = []
                 for item in self.input:
-                    result.append(TypedJsonDeserializer(item).deserialize_any(item_type))
+                    result.append(
+                        TypedJsonDeserializer(item).deserialize_any(item_type)
+                    )
 
                 return result
 
@@ -58,7 +60,7 @@ class TypedJsonDeserializer:
                 return tuple(result)
 
             elif getattr(obj_type, "__origin__") == typing.Union:  # Option
-                assert len(types) == 2 and types[1] == type(None)
+                assert len(types) == 2 and isinstance(None, types[1])
                 if self.input is None:
                     return None
                 else:
@@ -77,38 +79,38 @@ class TypedJsonDeserializer:
                 raise st.DeserializationError("Unexpected type", obj_type)
 
         else:
-            # handle structs
-            if dataclasses.is_dataclass(obj_type):
-                # handle enum variants
-                values = []
-                fields = dataclasses.fields(obj_type)
-                typing_hints = get_type_hints(obj_type)
-                if hasattr(obj_type, "VARIANTS"):
-                    assert len(fields) == 1
-                    assert fields[0].name == "value"
-                    values = [
-                        TypedJsonDeserializer(self.input).deserialize_any(typing_hints["value"])
-                    ]
-                else:
-                    for field in fields:
-                        field_type = typing_hints[field.name]
-                        deserializer = TypedJsonDeserializer(self.input.get(field.name, None))
-                        field_value = deserializer.deserialize_any(field_type)
-                        values.append(field_value)
-                return obj_type(*values)
+            # handle enums + structs
 
-            # handle variant
-            elif hasattr(obj_type, "VARIANTS"):
-                variant_name, variant_value = next(iter(self.input.items()))
-                if variant_name not in obj_type.VARIANTS_MAP:
-                    raise st.DeserializationError(
-                        "Unexpected variant name", variant_name
-                    )
-                new_type = obj_type.VARIANTS_MAP[variant_name]
-                return TypedJsonDeserializer(variant_value).deserialize_any(new_type)
+            if dataclasses.is_dataclass(obj_type):
+                fields = dataclasses.fields(obj_type)
+                types = get_type_hints(obj_type)
+
+                # if it has a single value field
+                # treat it like a newtype variant
+                if len(fields) == 1 and fields[0].name == "value":
+                    return obj_type(TypedJsonDeserializer(self.input).deserialize_any(types[fields[0].name]))
+                    
+                # regular struct or a struct enum variant
+                kwargs = {
+                    field.name: TypedJsonDeserializer(
+                        self.input.get(field.name, None)
+                    ).deserialize_any(types[field.name])
+                    for field in fields
+                }
+                return obj_type(**kwargs)
 
             else:
-                raise st.DeserializationError("Unexpected type", obj_type)
+                # type is an enum, look through subclasses to find which variant
+                # to deserialize it as
+                variant_name, variant_value = next(iter(self.input.items()))
+                for subclass in obj_type.__subclasses__():
+                    if subclass.__name__.endswith(f"__{variant_name}"):
+                        return TypedJsonDeserializer(variant_value).deserialize_any(
+                            subclass
+                        )
+
+                raise st.DeserializationError("Unexpected variant name", variant_name)
+
 
 def deserialize_json(input_str, obj):
     deserializer = TypedJsonDeserializer(json.loads(input_str))

@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create Python class definitions.
     let mut source = Vec::new();
-    let config = serde_generate::CodeGeneratorConfig::new("testing".to_string());
+    let config = serde_generate::CodeGeneratorConfig::new("testing".to_string()).with_serialization(false);
     let generator = serde_generate::python3::CodeGenerator::new(&config);
     generator.output(&mut source, &registry)?;
 
@@ -36,11 +36,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create Go class definitions.
     let mut source = Vec::new();
-    let config = serde_generate::CodeGeneratorConfig::new("testing".to_string());
     let generator = serde_generate::golang::CodeGenerator::new(&config);
     generator.output(&mut source, &registry)?;
 
     let mut f = File::create("polar_types.go")?;
-    f.write_all(&source);
+    f.write_all(&source)?;
     Ok(())
 }
