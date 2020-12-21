@@ -168,7 +168,7 @@ class Polar:
         """
         return self.query(Predicate(name=name, args=args))
 
-    async def async_query_rule(self, name, *args):
+    async def query_rule_async(self, name, *args):
         """Query for rule with name ``name`` and arguments ``args``.
 
         :param name: The name of the predicate to query.

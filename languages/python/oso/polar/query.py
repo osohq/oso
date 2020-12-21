@@ -90,7 +90,9 @@ class Query:
         constructor = data["constructor"]["value"]
         if "Call" in constructor:
             cls_name = constructor["Call"]["name"]
-            args = [await self.host.to_python(arg) for arg in constructor["Call"]["args"]]
+            args = [
+                await self.host.to_python(arg) for arg in constructor["Call"]["args"]
+            ]
             kwargs = constructor["Call"]["kwargs"] or {}
             kwargs = {k: await self.host.to_python(v) for k, v in kwargs.items()}
         else:

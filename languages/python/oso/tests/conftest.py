@@ -82,6 +82,7 @@ def qvar(query):
 
     return _qvar
 
+
 @pytest.fixture
 def query_async(polar):
     """ Query something and pull out the results for the variable v """
