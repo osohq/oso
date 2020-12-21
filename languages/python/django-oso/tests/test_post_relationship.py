@@ -556,6 +556,36 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
     assert len(posts) == 0
 
 
+@pytest.mark.django_db
+def test_reverse_many_relationship(tag_nested_many_many_fixtures):
+    """Test an authorization rule over a reverse relationship"""
+    Oso.load_str(
+        """
+        allow(actor, _, post: test_app2::Post) if
+            post.users matches test_app2::User and
+            actor in post.users;
+        """
+    )
+
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    assert (
+        str(authorize_filter)
+        == "(AND: (NOT (AND: ('pk__in', []))), ('users', <User: User object (1)>))"
+    )
+    posts = Post.objects.filter(authorize_filter)
+    assert (
+        str(posts.query)
+        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
+        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
+        + ' FROM "test_app2_post"'
+        + ' INNER JOIN "test_app2_user_posts"'
+        + ' ON ("test_app2_post"."id" = "test_app2_user_posts"."post_id")'
+        + ' WHERE "test_app2_user_posts"."user_id" = 1'
+    )
+    assert len(posts) == 4
+
+
 # todo test_nested_relationship_single_many
 # todo test_nested_relationship_single_single
 # todo test_nested_relationship_single_single_single ... etc

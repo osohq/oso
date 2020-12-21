@@ -77,7 +77,7 @@ def isa_expr(expr: Expression, model: Model, **kwargs):
     assert expr.operator == "Isa"
     (left, right) = expr.args
     for attr in dot_path(left):
-        model = getattr(model, attr).field.related_model
+        model = model._meta.get_field(attr).related_model
     constraint_type = apps.get_model(django_model_name(right.tag))
     assert not right.fields, "Unexpected fields in matches expression"
     return TRUE_FILTER if issubclass(model, constraint_type) else FALSE_FILTER
