@@ -1,389 +1,7 @@
-# {
-#     "Call": Struct(
-#         [
-#             Named {
-#                 name: "name",
-#                 value: TypeName(
-#                     "Symbol",
-#                 ),
-#             },
-#             Named {
-#                 name: "args",
-#                 value: Seq(
-#                     TypeName(
-#                         "Term",
-#                     ),
-#                 ),
-#             },
-#             Named {
-#                 name: "kwargs",
-#                 value: Option(
-#                     Map {
-#                         key: TypeName(
-#                             "Symbol",
-#                         ),
-#                         value: TypeName(
-#                             "Term",
-#                         ),
-#                     },
-#                 ),
-#             },
-#         ],
-#     ),
-#     "Dictionary": Struct(
-#         [
-#             Named {
-#                 name: "fields",
-#                 value: Map {
-#                     key: TypeName(
-#                         "Symbol",
-#                     ),
-#                     value: TypeName(
-#                         "Term",
-#                     ),
-#                 },
-#             },
-#         ],
-#     ),
-#     "ExternalInstance": Struct(
-#         [
-#             Named {
-#                 name: "instance_id",
-#                 value: U64,
-#             },
-#             Named {
-#                 name: "constructor",
-#                 value: Option(
-#                     TypeName(
-#                         "Term",
-#                     ),
-#                 ),
-#             },
-#             Named {
-#                 name: "repr",
-#                 value: Option(
-#                     Str,
-#                 ),
-#             },
-#         ],
-#     ),
-#     "InstanceLiteral": Struct(
-#         [
-#             Named {
-#                 name: "tag",
-#                 value: TypeName(
-#                     "Symbol",
-#                 ),
-#             },
-#             Named {
-#                 name: "fields",
-#                 value: TypeName(
-#                     "Dictionary",
-#                 ),
-#             },
-#         ],
-#     ),
-#     "Numeric": Enum(
-#         {
-#             0: Named {
-#                 name: "Integer",
-#                 value: NewType(
-#                     I64,
-#                 ),
-#             },
-#             1: Named {
-#                 name: "Float",
-#                 value: NewType(
-#                     F64,
-#                 ),
-#             },
-#         },
-#     ),
-#     "Operation": Struct(
-#         [
-#             Named {
-#                 name: "operator",
-#                 value: TypeName(
-#                     "Operator",
-#                 ),
-#             },
-#             Named {
-#                 name: "args",
-#                 value: Seq(
-#                     TypeName(
-#                         "Term",
-#                     ),
-#                 ),
-#             },
-#         ],
-#     ),
-#     "Operator": Enum(
-#         {
-#             0: Named {
-#                 name: "Debug",
-#                 value: Unit,
-#             },
-#             1: Named {
-#                 name: "Print",
-#                 value: Unit,
-#             },
-#             2: Named {
-#                 name: "Cut",
-#                 value: Unit,
-#             },
-#             3: Named {
-#                 name: "In",
-#                 value: Unit,
-#             },
-#             4: Named {
-#                 name: "Isa",
-#                 value: Unit,
-#             },
-#             5: Named {
-#                 name: "New",
-#                 value: Unit,
-#             },
-#             6: Named {
-#                 name: "Dot",
-#                 value: Unit,
-#             },
-#             7: Named {
-#                 name: "Not",
-#                 value: Unit,
-#             },
-#             8: Named {
-#                 name: "Mul",
-#                 value: Unit,
-#             },
-#             9: Named {
-#                 name: "Div",
-#                 value: Unit,
-#             },
-#             10: Named {
-#                 name: "Mod",
-#                 value: Unit,
-#             },
-#             11: Named {
-#                 name: "Rem",
-#                 value: Unit,
-#             },
-#             12: Named {
-#                 name: "Add",
-#                 value: Unit,
-#             },
-#             13: Named {
-#                 name: "Sub",
-#                 value: Unit,
-#             },
-#             14: Named {
-#                 name: "Eq",
-#                 value: Unit,
-#             },
-#             15: Named {
-#                 name: "Geq",
-#                 value: Unit,
-#             },
-#             16: Named {
-#                 name: "Leq",
-#                 value: Unit,
-#             },
-#             17: Named {
-#                 name: "Neq",
-#                 value: Unit,
-#             },
-#             18: Named {
-#                 name: "Gt",
-#                 value: Unit,
-#             },
-#             19: Named {
-#                 name: "Lt",
-#                 value: Unit,
-#             },
-#             20: Named {
-#                 name: "Unify",
-#                 value: Unit,
-#             },
-#             21: Named {
-#                 name: "Or",
-#                 value: Unit,
-#             },
-#             22: Named {
-#                 name: "And",
-#                 value: Unit,
-#             },
-#             23: Named {
-#                 name: "ForAll",
-#                 value: Unit,
-#             },
-#             24: Named {
-#                 name: "Assign",
-#                 value: Unit,
-#             },
-#         },
-#     ),
-#     "Partial": Struct(
-#         [
-#             Named {
-#                 name: "constraints",
-#                 value: Seq(
-#                     TypeName(
-#                         "Operation",
-#                     ),
-#                 ),
-#             },
-#             Named {
-#                 name: "variable",
-#                 value: TypeName(
-#                     "Symbol",
-#                 ),
-#             },
-#         ],
-#     ),
-#     "Pattern": Enum(
-#         {
-#             0: Named {
-#                 name: "Dictionary",
-#                 value: NewType(
-#                     TypeName(
-#                         "Dictionary",
-#                     ),
-#                 ),
-#             },
-#             1: Named {
-#                 name: "Instance",
-#                 value: NewType(
-#                     TypeName(
-#                         "InstanceLiteral",
-#                     ),
-#                 ),
-#             },
-#         },
-#     ),
-#     "Symbol": NewTypeStruct(
-#         Str,
-#     ),
-#     "Term": Struct(
-#         [
-#             Named {
-#                 name: "value",
-#                 value: TypeName(
-#                     "Value",
-#                 ),
-#             },
-#         ],
-#     ),
-#     "Value": Enum(
-#         {
-#             0: Named {
-#                 name: "Number",
-#                 value: NewType(
-#                     TypeName(
-#                         "Numeric",
-#                     ),
-#                 ),
-#             },
-#             1: Named {
-#                 name: "String",
-#                 value: NewType(
-#                     Str,
-#                 ),
-#             },
-#             2: Named {
-#                 name: "Boolean",
-#                 value: NewType(
-#                     Bool,
-#                 ),
-#             },
-#             3: Named {
-#                 name: "ExternalInstance",
-#                 value: NewType(
-#                     TypeName(
-#                         "ExternalInstance",
-#                     ),
-#                 ),
-#             },
-#             4: Named {
-#                 name: "InstanceLiteral",
-#                 value: NewType(
-#                     TypeName(
-#                         "InstanceLiteral",
-#                     ),
-#                 ),
-#             },
-#             5: Named {
-#                 name: "Dictionary",
-#                 value: NewType(
-#                     TypeName(
-#                         "Dictionary",
-#                     ),
-#                 ),
-#             },
-#             6: Named {
-#                 name: "Pattern",
-#                 value: NewType(
-#                     TypeName(
-#                         "Pattern",
-#                     ),
-#                 ),
-#             },
-#             7: Named {
-#                 name: "Call",
-#                 value: NewType(
-#                     TypeName(
-#                         "Call",
-#                     ),
-#                 ),
-#             },
-#             8: Named {
-#                 name: "List",
-#                 value: NewType(
-#                     Seq(
-#                         TypeName(
-#                             "Term",
-#                         ),
-#                     ),
-#                 ),
-#             },
-#             9: Named {
-#                 name: "Variable",
-#                 value: NewType(
-#                     TypeName(
-#                         "Symbol",
-#                     ),
-#                 ),
-#             },
-#             10: Named {
-#                 name: "RestVariable",
-#                 value: NewType(
-#                     TypeName(
-#                         "Symbol",
-#                     ),
-#                 ),
-#             },
-#             11: Named {
-#                 name: "Expression",
-#                 value: NewType(
-#                     TypeName(
-#                         "Operation",
-#                     ),
-#                 ),
-#             },
-#             12: Named {
-#                 name: "Partial",
-#                 value: NewType(
-#                     TypeName(
-#                         "Partial",
-#                     ),
-#                 ),
-#             },
-#         },
-#     ),
-# }
 # pyre-strict
 from dataclasses import dataclass
 import typing
 import serde_types as st
-import serde_json as sj
 
 @dataclass(frozen=True)
 class Call:
@@ -408,6 +26,34 @@ class ExternalInstance:
 class InstanceLiteral:
     tag: "Symbol"
     fields: "Dictionary"
+
+
+class Node:
+    VARIANTS = []  # type: typing.Sequence[typing.Type[Node]]
+
+
+@dataclass(frozen=True)
+class Node__Rule(Node):
+    NAME = "Rule"  # type: str
+    INDEX = 0  # type: int
+    value: "Rule"
+
+
+@dataclass(frozen=True)
+class Node__Term(Node):
+    NAME = "Term"  # type: str
+    INDEX = 1  # type: int
+    value: "Term"
+
+Node.VARIANTS = [
+    Node__Rule,
+    Node__Term,
+]
+
+Node.VARIANTS_MAP = {
+    "Rule": Node__Rule,
+    "Term": Node__Term,
+}
 
 
 class Numeric:
@@ -680,6 +326,12 @@ Operator.VARIANTS_MAP = {
 
 
 @dataclass(frozen=True)
+class Parameter:
+    parameter: "Term"
+    specializer: typing.Optional["Term"]
+
+
+@dataclass(frozen=True)
 class Partial:
     constraints: typing.Sequence["Operation"]
     variable: "Symbol"
@@ -713,6 +365,149 @@ Pattern.VARIANTS_MAP = {
 }
 
 
+class QueryEvent:
+    VARIANTS = []  # type: typing.Sequence[typing.Type[QueryEvent]]
+
+
+@dataclass(frozen=True)
+class QueryEvent__None(QueryEvent):
+    NAME = "None"  # type: str
+    INDEX = 0  # type: int
+    pass
+
+
+@dataclass(frozen=True)
+class QueryEvent__Done(QueryEvent):
+    NAME = "Done"  # type: str
+    INDEX = 1  # type: int
+    result: st.bool
+
+
+@dataclass(frozen=True)
+class QueryEvent__Debug(QueryEvent):
+    NAME = "Debug"  # type: str
+    INDEX = 2  # type: int
+    message: str
+
+
+@dataclass(frozen=True)
+class QueryEvent__MakeExternal(QueryEvent):
+    NAME = "MakeExternal"  # type: str
+    INDEX = 3  # type: int
+    instance_id: st.uint64
+    constructor: "Term"
+
+
+@dataclass(frozen=True)
+class QueryEvent__ExternalCall(QueryEvent):
+    NAME = "ExternalCall"  # type: str
+    INDEX = 4  # type: int
+    call_id: st.uint64
+    instance: "Term"
+    attribute: "Symbol"
+    args: typing.Optional[typing.Sequence["Term"]]
+    kwargs: typing.Optional[typing.Dict["Symbol", "Term"]]
+
+
+@dataclass(frozen=True)
+class QueryEvent__ExternalIsa(QueryEvent):
+    NAME = "ExternalIsa"  # type: str
+    INDEX = 5  # type: int
+    call_id: st.uint64
+    instance: "Term"
+    class_tag: "Symbol"
+
+
+@dataclass(frozen=True)
+class QueryEvent__ExternalIsSubSpecializer(QueryEvent):
+    NAME = "ExternalIsSubSpecializer"  # type: str
+    INDEX = 6  # type: int
+    call_id: st.uint64
+    instance_id: st.uint64
+    left_class_tag: "Symbol"
+    right_class_tag: "Symbol"
+
+
+@dataclass(frozen=True)
+class QueryEvent__ExternalIsSubclass(QueryEvent):
+    NAME = "ExternalIsSubclass"  # type: str
+    INDEX = 7  # type: int
+    call_id: st.uint64
+    left_class_tag: "Symbol"
+    right_class_tag: "Symbol"
+
+
+@dataclass(frozen=True)
+class QueryEvent__ExternalUnify(QueryEvent):
+    NAME = "ExternalUnify"  # type: str
+    INDEX = 8  # type: int
+    call_id: st.uint64
+    left_instance_id: st.uint64
+    right_instance_id: st.uint64
+
+
+@dataclass(frozen=True)
+class QueryEvent__Result(QueryEvent):
+    NAME = "Result"  # type: str
+    INDEX = 9  # type: int
+    bindings: typing.Dict["Symbol", "Term"]
+    trace: typing.Optional["TraceResult"]
+
+
+@dataclass(frozen=True)
+class QueryEvent__ExternalOp(QueryEvent):
+    NAME = "ExternalOp"  # type: str
+    INDEX = 10  # type: int
+    call_id: st.uint64
+    operator: "Operator"
+    args: typing.Sequence["Term"]
+
+
+@dataclass(frozen=True)
+class QueryEvent__NextExternal(QueryEvent):
+    NAME = "NextExternal"  # type: str
+    INDEX = 11  # type: int
+    call_id: st.uint64
+    iterable: "Term"
+
+QueryEvent.VARIANTS = [
+    QueryEvent__None,
+    QueryEvent__Done,
+    QueryEvent__Debug,
+    QueryEvent__MakeExternal,
+    QueryEvent__ExternalCall,
+    QueryEvent__ExternalIsa,
+    QueryEvent__ExternalIsSubSpecializer,
+    QueryEvent__ExternalIsSubclass,
+    QueryEvent__ExternalUnify,
+    QueryEvent__Result,
+    QueryEvent__ExternalOp,
+    QueryEvent__NextExternal,
+]
+
+QueryEvent.VARIANTS_MAP = {
+    "None": QueryEvent__None,
+    "Done": QueryEvent__Done,
+    "Debug": QueryEvent__Debug,
+    "MakeExternal": QueryEvent__MakeExternal,
+    "ExternalCall": QueryEvent__ExternalCall,
+    "ExternalIsa": QueryEvent__ExternalIsa,
+    "ExternalIsSubSpecializer": QueryEvent__ExternalIsSubSpecializer,
+    "ExternalIsSubclass": QueryEvent__ExternalIsSubclass,
+    "ExternalUnify": QueryEvent__ExternalUnify,
+    "Result": QueryEvent__Result,
+    "ExternalOp": QueryEvent__ExternalOp,
+    "NextExternal": QueryEvent__NextExternal,
+}
+
+
+@dataclass(frozen=True)
+class Rule:
+    name: "Symbol"
+    params: typing.Sequence["Parameter"]
+    body: "Term"
+
+
 @dataclass(frozen=True)
 class Symbol:
     value: str
@@ -721,6 +516,18 @@ class Symbol:
 @dataclass(frozen=True)
 class Term:
     value: "Value"
+
+
+@dataclass(frozen=True)
+class Trace:
+    node: "Node"
+    children: typing.Sequence["Trace"]
+
+
+@dataclass(frozen=True)
+class TraceResult:
+    trace: "Trace"
+    formatted: str
 
 
 class Value:
@@ -849,7 +656,3 @@ Value.VARIANTS_MAP = {
     "Partial": Value__Partial,
 }
 
-assert sj.deserialize_json('{"String": "abc"}', Value) == Value__String("abc")
-assert sj.deserialize_json('{"Number": {"Integer": 12}}', Value) == Value__Number(Numeric__Integer(12))
-# assert sj.deserialize_json('{"String": "abc"}', Value) == Value__String("abc")
-# assert sj.deserialize_json('{"String": "abc"}', Value) == Value__String("abc")
