@@ -81,3 +81,26 @@ def qvar(query):
         return [env[v] for env in results]
 
     return _qvar
+
+@pytest.fixture
+def query_async(polar):
+    """ Query something and pull out the results for the variable v """
+
+    async def _query(q):
+        return [r["bindings"] async for r in polar.query_async(q)]
+
+    return _query
+
+
+@pytest.fixture
+def qvar_async(query_async):
+    """ Query something and pull out the results for the variable v """
+
+    async def _qvar(q, v, one=False):
+        results = await query_async(q)
+        if one:
+            assert len(results) == 1, "expected one result"
+            return results[0][v]
+        return [env[v] for env in results]
+
+    return _qvar

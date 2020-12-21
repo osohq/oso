@@ -40,11 +40,15 @@ class Query:
             if result:
                 yield result
             else:
-                return
+                break
 
     async def run_async(self):
         while True:
-            yield await self.next()
+            result = await self.next()
+            if result:
+                yield result
+            else:
+                break
 
     async def next(self):
         """Run the event loop and yield results."""
@@ -165,14 +169,20 @@ class Query:
             value = await self.host.to_python(iterable)
             if isinstance(value, Iterable):
                 self.calls[call_id] = iter(value)
+            elif inspect.isasyncgen(value):
+                self.calls[call_id] = value
             else:
                 raise InvalidIteratorError(f"{value} is not iterable")
 
         # Return the next result of the call.
         try:
-            value = next(self.calls[call_id])
+            iterator = self.calls[call_id]
+            if inspect.isasyncgen(iterator):
+                value = await iterator.__anext__()
+            else:
+                value = next(self.calls[call_id])
             self.ffi_query.call_result(call_id, self.host.to_polar(value))
-        except StopIteration:
+        except (StopIteration, StopAsyncIteration):
             self.ffi_query.call_result(call_id, None)
 
     async def handle_debug(self, data):
