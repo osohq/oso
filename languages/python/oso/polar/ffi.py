@@ -61,6 +61,9 @@ class Polar:
     def next_message(self):
         return lib.polar_next_polar_message(self.ptr)
 
+    def format_term(self, term):
+        return format_term(term)
+
 
 class Query:
     def __init__(self, ptr):
@@ -173,3 +176,12 @@ def process_messages(next_message_method):
             print(msg)
         elif kind == "Warning":
             print(f"[warning] {msg}")
+
+
+def format_term(term):
+    fmt_ptr = lib.format_term(to_c_str(term))
+    if is_null(fmt_ptr):
+        return "error"
+    fmt_str = ffi.string(fmt_ptr).decode()
+    lib.string_free(fmt_ptr)
+    return fmt_str

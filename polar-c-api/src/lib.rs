@@ -1,5 +1,5 @@
 pub use polar_core::polar::{Polar, Query};
-use polar_core::{error, terms};
+use polar_core::{error, formatting::ToPolarString, terms};
 
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
@@ -401,5 +401,24 @@ pub extern "C" fn query_free(query: *mut Query) -> i32 {
     ffi_try!({
         std::mem::drop(unsafe { Box::from_raw(query) });
         POLAR_SUCCESS
+    })
+}
+
+/// Recovers the original boxed version of `query` so that
+/// it can be properly freed
+#[no_mangle]
+pub extern "C" fn format_term(term: *const c_char) -> *const c_char {
+    ffi_try!({
+        let s = unsafe { ffi_string!(term) };
+        let term: Result<terms::Term, _> = serde_json::from_str(&s);
+        match term {
+            Ok(term) => CString::new(term.to_polar())
+                .expect("No null bytes")
+                .into_raw(),
+            Err(e) => {
+                set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
+                null_mut()
+            }
+        }
     })
 }

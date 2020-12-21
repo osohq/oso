@@ -1,5 +1,6 @@
 """Translate between Polar and the host language (Python)."""
 
+import json
 from math import inf, isnan, nan
 
 from .exceptions import (
@@ -124,6 +125,9 @@ class Host:
                 f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
             )
 
+    def format_value(self, value):
+        return self.ffi_polar.format_term(json.dumps(self.to_polar(value)))
+
     def to_polar(self, v):
         """Convert a Python object to a Polar term."""
         if type(v) == bool:
@@ -157,11 +161,36 @@ class Host:
             val = {"Variable": v}
         elif isinstance(v, Partial):
             val = {"Partial": v.to_polar()}
+        elif isinstance(v, Expression):
+            val = {
+                "Expression": {
+                    "operator": v.operator,
+                    "args":  [self.to_polar(v) for v in v.args],
+                }
+            }
+        elif isinstance(v, Pattern):
+            if v.tag:
+                inner = {
+                    "Instance": {
+                        "tag": v.tag,
+                        "fields": {"fields": {k: self.to_polar(v) for k, v in v.fields.items()}}
+                    }
+                }
+            else:
+                inner = {
+                    "Dictionary": {
+                        "fields": {"fields": {k: self.to_polar(v) for k, v in v.fields.items()}}
+                    }
+                }
+
+            val = {
+                "Pattern": inner
+            }
         else:
             val = {
                 "ExternalInstance": {
                     "instance_id": self.cache_instance(v),
-                    "repr": repr(v),
+                    "repr": object.__repr__(v),
                 }
             }
         term = {"value": val}
