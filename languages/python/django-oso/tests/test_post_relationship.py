@@ -813,7 +813,7 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     assert (
         str(authorize_filter)
-        == "(AND: (NOT (AND: ('pk__in', []))), ('users', <User: User object (1)>))"
+        == "(AND: (NOT (AND: ('pk__in', []))), ('users', <User: User object (2)>))"
     )
     posts = Post.objects.filter(authorize_filter)
     assert (
@@ -821,6 +821,9 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
         == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
         + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
         + ' FROM "test_app2_post"'
+        + ' INNER JOIN "test_app2_user_posts"'
+        + ' ON ("test_app2_post"."id" = "test_app2_user_posts"."post_id")'
+        + ' WHERE "test_app2_user_posts"."user_id" = 2'
     )
 
 
