@@ -465,7 +465,7 @@ def test_set_get_session(oso_with_session):
 
 def test_duplicate_resource_role():
     with pytest.raises(ValueError):
-        DuplicateRepositoryRoleMixin = oso_roles.resource_role_class(
+        oso_roles.resource_role_class(
             Base,
             User,
             Repository,
