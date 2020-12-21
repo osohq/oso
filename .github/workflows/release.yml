@@ -712,7 +712,7 @@ jobs:
           asset_content_type: application/gzip
   alert-failure:
     name: Alert on failure
-    if: ${{ !success() }}
+    if: ${{ !success() && !cancelled() }}
     runs-on: ubuntu-latest
     needs:
       [
