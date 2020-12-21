@@ -789,11 +789,51 @@ def test_in_other_queryset_constraints_2(tag_nested_many_many_fixtures):
         == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
         + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
         + ' FROM "test_app2_post"'
+        + ' INNER JOIN "test_app2_user" ON'
+        + ' ("test_app2_post"."created_by_id" = "test_app2_user"."id")'
+        + ' WHERE ("test_app2_post"."created_by_id" IN'
+        + ' (SELECT U0."id" FROM "test_app2_user" U0 WHERE U0."manager_id" = 1)'
+        + ' AND "test_app2_user"."username" = user)'
+    )
+
+    assert len(posts) == 4
+
+
+@pytest.mark.django_db
+def test_in_other_queryset_constraints_3(tag_nested_many_many_fixtures):
+    """Add constraints on partial."""
+    Oso.load_str(
+        """
+        allow(user: test_app2::User, "read", post: test_app2::Post) if
+            post.created_by in user.direct_reports and
+            # This constraint is invalid (cannot constrain the list directly)
+            # It never gets output because you get a *new* partial every time you
+            # access user.direct_reports
+            user.direct_reports.username = "foo" and
+            user.direct_reports.foo();
+        """)
+
+    raise Exception("fail")
+
+    user = User.objects.get(username="manager")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+
+    assert str(authorize_filter).startswith(
+            "(AND: (NOT (AND: ('pk__in', []))), "
+            + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
+            )
+
+    assert (
+        str(posts.query)
+        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
+        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
+        + ' FROM "test_app2_post"'
         + ' WHERE "test_app2_post"."created_by_id" IN'
         + ' (SELECT U0."id" FROM "test_app2_user" U0 WHERE U0."manager_id" = 1)'
     )
 
-    assert len(posts) == 3
+    assert len(posts) == 4
 
 # todo test_nested_relationship_single_many
 # todo test_nested_relationship_single_single
