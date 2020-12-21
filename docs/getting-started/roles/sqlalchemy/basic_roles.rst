@@ -308,12 +308,29 @@ Start the server.
     $ flask run
     * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 
+Make a simple request.
+
+.. code-block:: shell
+
+    $ curl --header "user: ringo@beatles.com" localhost:5000/
+    Hello ringo@beatles.com
+
 
 Try it out
 ----------
 
-Make a request. Access should be granted or denied based on your policy. Our
-sample app includes some fixture data. Our policy says that users with the
+Try to access the protected endpoints. Access should be granted or denied
+based on your policy. Our sample app includes some fixture data for testing.
+To run the server with fixture data, set the ``FLASK_APP`` environment
+variable.
+
+.. code-block:: shell
+
+    $ export FLASK_APP="app:create_app(None, True)"
+    $ flask run
+    * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+
+Our policy says that users with the
 "OWNER" role can assign roles, users with the ``"MEMBER"`` role can view
 repos, and users with the ``"BILLING"`` role can view billing info. Also, the
 ``"OWNER"`` roles inherits the permissions of the ``"MEMBER"`` and "BILLING" roles.
