@@ -2,11 +2,12 @@
 Built-in Role-Based Access Control
 ==================================
 
-oso includes a library that makes it easy to add roles to your application.
-It integrates with our model library integrations and allows you to create role
-relationships between your user models and your resource models.
-We then generate some polar to make it easy to define rules over these roles instead
-of directly over your users and provide helper methods for managing roles.
+oso includes support for adding roles directly to your application via our ORM integrations.
+These features let you declaratively create models to represent roles in your application,
+relate these role models to your user and resource models, and manage them through helper methods.
+We also generate Polar rules that you can use in your oso policies to write
+rules based on the roles you defined, instead of writing them over users
+directly.
 
 This feature is currently supported in the SQLAlchemy library.
 
