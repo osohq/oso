@@ -45,8 +45,6 @@ Using oso, you can:
 
 .. container:: cta
 
-    **oso is now in Developer Preview**
-
     .. button::
         :link: /getting-started/quickstart
         :text: Try oso

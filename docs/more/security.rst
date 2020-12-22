@@ -63,8 +63,8 @@ and handle errors safely.
 All source code is available at `our GitHub repository <https://github.com/osohq/oso>`_.
 Releases are built and published using GitHub actions.
 
-The current version of oso is in Developer Preview and has not yet undergone a
-code audit. We plan to engage a qualified third-party to perform an audit, whose results we will make publicly available, in the near future.
+oso has not yet undergone a code audit. We plan to engage a qualified third-party to perform an audit,
+whose results we will make publicly available, in the near future.
 
 
 Vulnerability Reporting
