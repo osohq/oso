@@ -84,6 +84,8 @@ JShell
 js
 Odoo
 cURL
+django
+sqlalchemy
 
 
 ## Misc terms
