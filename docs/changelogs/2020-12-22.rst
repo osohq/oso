@@ -31,8 +31,6 @@ can go wrong.
 
 It also includes :doc:`docs</getting-started/roles/index>`!
 
-https://docs.osohq.com/getting-started/builtin-roles/index.html
-
 
 Bug fixes & improvements
 ------------------------
