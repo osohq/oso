@@ -38,13 +38,78 @@ this.
 .. image:: /getting-started/builtin-roles/roles.svg
 
 The ``WidgetRole`` table is a join table between ``User`` and ``Widget`` that
-contains additional ``id`` and ``name`` attributes.
-contains some metadata like the name of the role. In SQLAlchemy library we
-add User.widgets and Widget.users as relationships you can query, as well as
-User.widget_roles and Widget.roles to get the roles directly. We also provide
-helper methods that make managing assigning users to roles easy.
+contains additional ``id`` (Integer) and ``name`` (String) attributes. In
+SQLAlchemy library we add ``User.widgets`` and ``Widget.users`` as
+relationships you can query, as well as ``User.widget_roles`` and
+``Widget.roles`` to get the roles directly. We also provide
+:py:data:`helper methods<sqlalchemy_oso.roles>` for inspecting and managing roles.
 
-You can then write rules over the role instead of the user.
+With ``WidgetRole`` defined, you can call :py:meth:`sqlalchemy_oso.roles.enable_roles`
+which unlocks a few special Polar rules by loading the following base policy:
+
+.. code-block:: polar
+    :caption: :fa:`oso`
+
+    # RBAC BASE POLICY
+
+    ## Top-level RBAC allow rule
+
+    ### The association between the resource roles and the requested resource is outsourced from the rbac_allow
+    allow(user, action, resource) if
+        resource_role_applies_to(resource, role_resource) and
+        user_in_role(user, role, role_resource) and
+        role_allow(role, action, resource);
+
+    # RESOURCE-ROLE RELATIONSHIPS
+
+    ## These rules allow roles to apply to resources other than those that they are scoped to.
+    ## The most common example of this is nested resources, e.g. Repository roles should apply to the Issues
+    ## nested in that repository.
+
+    ### A resource's roles applies to itself
+    resource_role_applies_to(role_resource, role_resource);
+
+    # ROLE-ROLE RELATIONSHIPS
+
+    ## Role Hierarchies
+
+    ### Grant a role permissions that it inherits from a more junior role
+    role_allow(role, action, resource) if
+        inherits_role(role, inherited_role) and
+        role_allow(inherited_role, action, resource);
+
+    ### Determine role inheritance based on the `widget_role_order` rule
+    inherits_role(role: WidgetRole, inherited_role) if
+        widget_role_order(role_order) and
+        inherits_role_helper(role.name, inherited_role_name, role_order) and
+        inherited_role = new WidgetRole(name: inherited_role_name, widget: role.widget);
+
+    ### Helper to determine relative order or roles in a list
+    inherits_role_helper(role, inherited_role, role_order) if
+        ([first, *rest] = role_order and
+        role = first and
+        inherited_role in rest) or
+        ([first, *rest] = role_order and
+        inherits_role_helper(role, inherited_role, rest));
+
+    # USER-ROLE RELATIONSHIPS
+
+    ### Get a user's roles for a specific resource
+    user_in_role(user: User, role, resource: Widget) if
+        session = OsoSession.get() and
+        role in session.query(WidgetRole).filter_by(user: user) and
+        role.widget.id = resource.id;
+
+.. warning::
+
+    The roles base policy loaded by
+    :py:meth:`sqlalchemy_oso.roles.enable_roles` calls builtin rules with the
+    following name/arity: ``user_in_role/3``, ``inherits_role/2``, and
+    ``inherits_role_helper/3``. Defining your own rules with the same name/arity
+    may cause unexpected behavior.
+
+
+With the roles base policy loaded, you can write rules over roles instead of the user:
 
 .. code-block:: polar
 
