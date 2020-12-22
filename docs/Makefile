@@ -82,6 +82,7 @@ python-test:
 	cd examples/context/python && pytest .
 	cd examples/user_types/python && pytest .
 	cd examples/list-filtering/sqlalchemy && pytest sqlalchemy_example
+	cd examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide && pytest .
 	$(MAKE) -C examples/list-filtering/django test
 
 ruby-test:
