@@ -17,16 +17,23 @@ This guide walks you through how to use ``sqlalchemy_oso`` to add basic roles to
 Install the oso SQLAlchemy package
 ----------------------------------
 
-Install the ``sqlalchemy_oso`` package and import it in your code.
-Alternatively, if you are starting from scratch and need a
-``requirements.txt`` file, clone the `sample application
-<https://github.com/osohq/oso-sqlalchemy-roles-guide/tree/main>`_.
+Install the ``sqlalchemy_oso`` package.
 
 .. code-block:: console
     :class: copybutton
     :caption: $_
 
     $ pip install sqlalchemy_oso
+
+Alternatively, if you are starting from scratch, clone the `sample
+application <https://github.com/osohq/oso-sqlalchemy-roles-guide/tree/main>`_
+and use the provided ``requirements.txt`` file.
+
+.. code-block:: console
+    :class: copybutton
+    :caption: $_
+
+    $ pip install -r requirements.txt
 
 
 Add a method to initialize oso and make the oso instance available to your application code.
