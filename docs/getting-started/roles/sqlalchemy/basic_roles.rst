@@ -3,8 +3,13 @@ Add roles to your app
 =====================
 
 The :py:data:`sqlalchemy_oso.roles` module provides out-of-the-box Role-Based Access Control features that
-let you create a roles system in your database with a few lines of code and specify role permissions
+let you create a roles system  with a few lines of code, and specify role permissions
 in a declarative oso policy.
+
+This guide walks you through how to use ``sqlalchemy_oso`` to add basic roles to a multi-tenant app.
+
+    Note: we're using a Flask app for this example, but the
+    ``sqlalchemy_oso`` library can be used with any Python application.
 
 1. Set up the application
 =========================
