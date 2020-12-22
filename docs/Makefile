@@ -53,14 +53,14 @@ _api_docs: _api_docs/ruby _api_docs/java _api_docs/js/node
 html doctest spelling: Makefile deps _api_docs
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-build: Makefile deps _api_docs
+build: Makefile deps _api_docs submodules
 	@DOCS_RELEASE=1 $(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 clean:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	rm -r _api_docs
 
-livehtml: deps _api_docs
+livehtml: deps _api_docs submodules
 	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 livehtml-light: deps
@@ -114,3 +114,6 @@ test: doctest
 
 deps:
 	pip3 install -r requirements-docs.txt
+
+submodules:
+	git submodule update --recursive --remote
