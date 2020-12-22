@@ -70,10 +70,7 @@ Create an organizations model
 ------------------------------
 
 Add an organization model that will represent the organizations or tenants
-that users belong to. The roles you create will be scoped to this model. If
-your app isn't multi-tenant, you can create an ``Application`` model instead,
-with one instance used globally.
-
+that users belong to. The roles you create will be scoped to this model.
 
 .. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/models.py
     :class: copybutton
