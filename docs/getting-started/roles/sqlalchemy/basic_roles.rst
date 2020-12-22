@@ -1,5 +1,5 @@
 =====================
-Add roles to your app
+Roles with SQLAlchemy
 =====================
 
 The :py:data:`sqlalchemy_oso.roles` module provides out-of-the-box Role-Based Access Control features that
