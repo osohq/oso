@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1608676210196,
+  "lastUpdate": 1608681112121,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -20229,6 +20229,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 5958,
             "range": "± 348",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "830969a7386d21e2b7ab9b707dbf698a0f79631a",
+          "message": "SQLAlchemy roles guides (#615)\n\n* set up roles docs\r\n\r\n* start basic roles guide\r\n\r\n* more guide\r\n\r\n* adding roles part of basic roles guide\r\n\r\n* add last section to docs, still need intro and conclusion\r\n\r\n* update to include info about loading fixture data\r\n\r\n* add sqlalchemy roles guide submodule\r\n\r\n* add tests for oso-sqlalchemy-roles-guide to docs test\r\n\r\n* add lightweight docs target to build site without api docs\r\n\r\n* update roles guide to use literalincludes\r\n\r\n* edit intro\r\n\r\n* rough\r\n\r\n* flesh out a little\r\n\r\n* dont need that page the guide can handle it\r\n\r\n* oops\r\n\r\n* spelling\r\n\r\n* diagram\r\n\r\n* change up the wording a bit\r\n\r\n* spelling\r\n\r\n* update roles docs organization\r\n\r\n* add submodule dependency to docs build\r\n\r\n* add submodule dependency to spelling build\r\n\r\n* configure default branch and conflict resolution for oso-sqlalchemy-roles-guide submodule\r\n\r\n* fix broken docs paths\r\n\r\n* remove subjective wording\r\n\r\n* fix example polar\r\n\r\n* inline code\r\n\r\n* spelling + try to get submodules target working\r\n\r\n* show roles base policy in docs\r\n\r\n* update submodules target for roles guide\r\n\r\n* more detail on builtin rules\r\n\r\n* update submodules again\r\n\r\n* rename rbac guide to rbac patterns\r\n\r\n* spelling\r\n\r\n* remove awkward wording\r\n\r\n* talk about set get session in docs\r\n\r\n* last of dave's comments for basic roles\r\n\r\n* update for new line numbers\r\n\r\n* nix confusing wording\r\n\r\n* last review comments\r\n\r\n* spelling\r\n\r\n* explain naming convention\r\n\r\n* include link to roles docs in changelog\r\n\r\nCo-authored-by: steve olsen <dev@steve.computer>",
+          "timestamp": "2020-12-22T18:44:22-05:00",
+          "tree_id": "a3d50036366f807333c05a7c230ff25755a55356",
+          "url": "https://github.com/osohq/oso/commit/830969a7386d21e2b7ab9b707dbf698a0f79631a"
+        },
+        "date": 1608681110302,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 50286,
+            "range": "± 9762",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2028155,
+            "range": "± 75906",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 9524739,
+            "range": "± 398167",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 18835153,
+            "range": "± 800163",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 880,
+            "range": "± 134",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2626,
+            "range": "± 263",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 74359,
+            "range": "± 5219",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 540241,
+            "range": "± 51257",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 19035,
+            "range": "± 1377",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 19305,
+            "range": "± 1556",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 19186,
+            "range": "± 1471",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 19249,
+            "range": "± 2143",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 17302,
+            "range": "± 4419",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6707,
+            "range": "± 1868",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 8116,
+            "range": "± 2274",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 10076,
+            "range": "± 443",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 22701,
+            "range": "± 3657",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 6671,
+            "range": "± 296",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 13441,
+            "range": "± 799",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 8072,
+            "range": "± 347",
             "unit": "ns/iter"
           }
         ]
