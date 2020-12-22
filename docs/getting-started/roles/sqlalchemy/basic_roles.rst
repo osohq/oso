@@ -175,8 +175,8 @@ Use the oso role API to create role assignments with
 .. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/routes.py
     :class: copybutton
     :language: python
-    :lines: 30-44
-    :emphasize-lines: 4,11,13
+    :lines: 30-47
+    :emphasize-lines: 4,13,16
     :caption: :fab:`python` routes.py
 
 
