@@ -37,7 +37,9 @@ and use the provided ``requirements.txt`` file.
 
 
 Add a method to initialize oso and make the oso instance available to your application code.
-Call :py:func:`sqlalchemy_oso.roles.enable_roles` to load the base oso policy for roles.
+Call :py:func:`sqlalchemy_oso.session.set_get_session` to configure access to
+the SQLALchemy session oso should use to make queries.
+Then call :py:func:`sqlalchemy_oso.roles.enable_roles` to load the base oso policy for roles.
 
 .. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/__init__.py
     :class: copybutton
