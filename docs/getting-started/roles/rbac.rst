@@ -1,6 +1,6 @@
-=======================================================
-Role-Based Access Control for Application Authorization
-=======================================================
+==================================
+Role-Based Access Control Patterns
+==================================
 
 When managing access to resources within an application, it can be useful to
 group permissions into **roles**, and assign these roles to users. This is
