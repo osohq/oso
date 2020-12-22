@@ -18,8 +18,8 @@ Install the oso SQLAlchemy package
 ----------------------------------
 
 Install the ``sqlalchemy_oso`` package and import it in your code.
-Alternatively, if you are starting from scratch and need a requirements.txt
-file, clone the sample application `here
+Alternatively, if you are starting from scratch and need a
+``requirements.txt`` file, clone the `sample application
 <https://github.com/osohq/oso-sqlalchemy-roles-guide/tree/main>`_.
 
 .. code-block:: console
@@ -216,7 +216,7 @@ variable.
 
 Our policy says that users with the
 "OWNER" role can assign roles, users with the ``"MEMBER"`` role can view
-repos, and users with the ``"BILLING"`` role can view billing info. Also, the
+repositories, and users with the ``"BILLING"`` role can view billing info. Also, the
 ``"OWNER"`` roles inherits the permissions of the ``"MEMBER"`` and "BILLING" roles.
 
 Paul is a member of "The Beatles" organization, so he can view repositories but not
@@ -264,7 +264,7 @@ But Ringo isn't an owner, so his access should be denied:
     <h1>Forbidden</h1>
     <p>Unauthorized</p>
 
-The fully-implemented Github sample app, complete with tests, can be found `here
+The fully-implemented GitHub sample app, complete with tests, can be found `here
 <https://github.com/osohq/oso-sqlalchemy-roles-guide/tree/basic_roles_complete>`_.
 
 
