@@ -13,7 +13,6 @@ class User(models.Model):
         "self", null=True, related_name="direct_reports", on_delete=models.CASCADE
     )
 
-
     class Meta:
         app_label = "test_app2"
 

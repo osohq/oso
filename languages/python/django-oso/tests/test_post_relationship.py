@@ -678,16 +678,17 @@ def test_in_other_queryset(tag_nested_many_many_fixtures):
         """
         allow(user: test_app2::User, "read", post: test_app2::Post) if
             post.created_by in user.direct_reports;
-        """)
+        """
+    )
 
     user = User.objects.get(username="manager")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
 
     assert str(authorize_filter).startswith(
-            "(AND: (NOT (AND: ('pk__in', []))), "
-            + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
-            )
+        "(AND: (NOT (AND: ('pk__in', []))), "
+        + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
+    )
 
     assert (
         str(posts.query)
@@ -709,16 +710,17 @@ def test_in_other_queryset_with_unify(tag_nested_many_many_fixtures):
         allow(user: test_app2::User, "read", post: test_app2::Post) if
             report in user.direct_reports and
             post.created_by = report;
-        """)
+        """
+    )
 
     user = User.objects.get(username="manager")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
 
     assert str(authorize_filter).startswith(
-            "(AND: (NOT (AND: ('pk__in', []))), "
-            + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
-            )
+        "(AND: (NOT (AND: ('pk__in', []))), "
+        + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
+    )
 
     assert (
         str(posts.query)
@@ -732,7 +734,9 @@ def test_in_other_queryset_with_unify(tag_nested_many_many_fixtures):
     assert len(posts) == 5
 
 
-@pytest.mark.xfail(reason="Not currently tying the 'report' partial to the 'post' partial.")
+@pytest.mark.xfail(
+    reason="Not currently tying the 'report' partial to the 'post' partial."
+)
 @pytest.mark.django_db
 def test_in_other_queryset_constraints(tag_nested_many_many_fixtures):
     Oso.load_str(
@@ -742,7 +746,8 @@ def test_in_other_queryset_constraints(tag_nested_many_many_fixtures):
             # These constraints are silently ignored, ideally would cause an error.
             report in user.direct_reports and
             report.username = "user";
-        """)
+        """
+    )
 
     user = User.objects.get(username="manager")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
@@ -772,16 +777,17 @@ def test_in_other_queryset_constraints_2(tag_nested_many_many_fixtures):
         allow(user: test_app2::User, "read", post: test_app2::Post) if
             post.created_by in user.direct_reports and
             post.created_by.username = "user";
-        """)
+        """
+    )
 
     user = User.objects.get(username="manager")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
 
     assert str(authorize_filter).startswith(
-            "(AND: (NOT (AND: ('pk__in', []))), "
-            + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
-            )
+        "(AND: (NOT (AND: ('pk__in', []))), "
+        + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
+    )
     assert (
         str(posts.query)
         == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
@@ -826,7 +832,9 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
     )
 
 
-@pytest.mark.xfail(reason="Not currently tying the 'user' partials to each other / the 'post' partial.")
+@pytest.mark.xfail(
+    reason="Not currently tying the 'user' partials to each other / the 'post' partial."
+)
 @pytest.mark.django_db
 def test_in_other_queryset_constraints_3(tag_nested_many_many_fixtures):
     """Add constraints on partial."""
@@ -839,16 +847,17 @@ def test_in_other_queryset_constraints_3(tag_nested_many_many_fixtures):
             # access user.direct_reports.
             user.direct_reports.username = "foo" and
             user.direct_reports.foo();
-        """)
+        """
+    )
 
     user = User.objects.get(username="manager")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
 
     assert str(authorize_filter).startswith(
-            "(AND: (NOT (AND: ('pk__in', []))), "
-            + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
-            )
+        "(AND: (NOT (AND: ('pk__in', []))), "
+        + "('created_by__pk__in', <django.db.models.expressions.Subquery object at"
+    )
 
     assert (
         str(posts.query)
@@ -860,7 +869,7 @@ def test_in_other_queryset_constraints_3(tag_nested_many_many_fixtures):
     )
     assert len(posts) == 4
 
-  
+
 # todo test_nested_relationship_single_many
 # todo test_nested_relationship_single_single
 # todo test_nested_relationship_single_single_single ... etc
