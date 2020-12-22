@@ -34,7 +34,7 @@ Data model
 ----------
 
 Lets say you have a ``User`` class and a ``Widget`` class and you want to
-assign users a role for a widget like "OWNER" or "User". Using the roles
+assign users a role for a widget like "OWNER" or "USER". Using the roles
 library you can generate a ``WidgetRole`` model which allows you to assign a
 user a role for a ``Widget``. The schema for this new model's table looks like
 this.
@@ -42,7 +42,7 @@ this.
 .. image:: /getting-started/builtin-roles/roles.svg
 
 The ``WidgetRole`` table is a join table between ``User`` and ``Widget`` that
-contains additional ``id`` (Integer) and ``name`` (String) attributes. In
+contains additional ``id`` (Integer) and ``name`` (String) attributes. In the
 SQLAlchemy library we add ``User.widgets`` and ``Widget.users`` as
 relationships you can query, as well as ``User.widget_roles`` and
 ``Widget.roles`` to get the roles directly. We also provide
