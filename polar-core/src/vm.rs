@@ -2254,11 +2254,11 @@ impl PolarVirtualMachine {
 
             // Cycles: one or more variables are bound together.
             (VariableState::Unbound, VariableState::Unbound) => {
-                // Both variables are unbound. Bind them in a new cycle.
-                eprintln!("new cycle: {} = {}", l, r);
-                self.bind(l, right.clone());
-                if r != l {
-                    // Only bind one once for a 1-cycle.
+                // Both variables are unbound. Bind them in a new cycle,
+                // but do not create 1-cycles.
+                if l != r {
+                    eprintln!("new cycle: {} = {}", l, r);
+                    self.bind(l, right.clone());
                     self.bind(r, left.clone());
                 }
             }

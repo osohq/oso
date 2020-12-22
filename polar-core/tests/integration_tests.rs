@@ -792,8 +792,8 @@ fn test_bindings() -> TestResult {
     // 0-cycle, aka ground.
     qvar(&mut p, "x=1", "x", values![1]);
 
-    // 1-cycle.
-    qvar(&mut p, "x=x", "x", values![sym!("x")]);
+    // 1-cycle is dropped.
+    qeval(&mut p, "x=x");
 
     // 2-cycle.
     qvars(
