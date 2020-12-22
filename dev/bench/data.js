@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1608590933165,
+  "lastUpdate": 1608596347479,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -19077,6 +19077,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 6222,
             "range": "± 109",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "baa2ddfaec46a91a6a0dfd88c9560aafabce0b7f",
+          "message": "Updated role schema + library cleanups (#594)\n\n* new model and tests\r\n\r\n* get relationships between users and resources working\r\n\r\n* validate role name\r\n\r\n* add unique constraint to roles table\r\n\r\n* test unique constraints and make mutually_exclusive a boolean flag\r\n\r\n* add enable_roles method + tests\r\n\r\n* remove old code from roles.py\r\n\r\n* update role methods with steve's updates from before refactor\r\n\r\n* update role helper methods for new schema WIP\r\n\r\n* make sure session is set\r\n\r\n* look up role model name\r\n\r\n* update role helper methods for new schema\r\n\r\n* add some error handling to the inspect methods\r\n\r\n* lint cleanup\r\n\r\n* lints\r\n\r\n* fix generated Polar code that is not partial-compatible\r\n\r\n* spelling\r\n\r\n* lint\r\n\r\n* create a new session to use in Polar\r\n\r\n* don't specify defaults\r\n\r\n* fix tests\r\n\r\n* changelog entry\r\n\r\n* docs link\r\n\r\n* catch integrity errors and rollback the session\r\n\r\n* better error handling for role helpers\r\n\r\n* Update docs/changelogs/vNEXT.rst\r\n\r\nCo-authored-by: Sam Scott <sam@osohq.com>\r\n\r\n* clean up roles docstrings\r\n\r\n* rename input to declared_attr cls\r\n\r\n* turn resource_name into a helper function, add model validater helper,\r\nadd commit flag to add_user_role, delete_user_role, and\r\nreassign_user_role\r\n\r\n* clean up test_roles\r\n\r\n* raise error on duplicate resource_role_class\r\n\r\n* Update docs/changelogs/vNEXT.rst\r\n\r\nCo-authored-by: Sam Scott <sam@osohq.com>\r\n\r\n* add comment\r\n\r\n* linting\r\n\r\nCo-authored-by: steve olsen <dev@steve.computer>\r\nCo-authored-by: Sam Scott <sam@osohq.com>",
+          "timestamp": "2020-12-21T19:12:01-05:00",
+          "tree_id": "c5fa5544513e958fe7334293524bc49b8629bafe",
+          "url": "https://github.com/osohq/oso/commit/baa2ddfaec46a91a6a0dfd88c9560aafabce0b7f"
+        },
+        "date": 1608596345499,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 42814,
+            "range": "± 2440",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 1804958,
+            "range": "± 40973",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 8121634,
+            "range": "± 283198",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 16427986,
+            "range": "± 471760",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 803,
+            "range": "± 42",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2465,
+            "range": "± 86",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 66973,
+            "range": "± 2702",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 511700,
+            "range": "± 18204",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 17459,
+            "range": "± 1218",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17373,
+            "range": "± 1108",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17592,
+            "range": "± 785",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 17553,
+            "range": "± 1011",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16156,
+            "range": "± 1241",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6130,
+            "range": "± 880",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 7278,
+            "range": "± 2107",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 8827,
+            "range": "± 511",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 30276,
+            "range": "± 2342",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 5841,
+            "range": "± 179",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 11395,
+            "range": "± 304",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 7031,
+            "range": "± 248",
             "unit": "ns/iter"
           }
         ]
