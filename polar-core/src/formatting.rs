@@ -598,7 +598,6 @@ pub mod to_polar {
                         "false".to_string()
                     }
                 }
-                Value::InstanceLiteral(i) => i.to_polar(),
                 Value::Dictionary(i) => i.to_polar(),
                 Value::Pattern(i) => i.to_polar(),
                 Value::ExternalInstance(i) => i.to_polar(),

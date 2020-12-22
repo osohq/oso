@@ -223,7 +223,6 @@ impl From<(Symbol, Term)> for TestHelper<Parameter> {
     fn from(arg: (Symbol, Term)) -> Self {
         let specializer = match arg.1.value().clone() {
             Value::Dictionary(dict) => value!(pattern!(dict)),
-            Value::InstanceLiteral(lit) => value!(pattern!(lit)),
             v => v,
         };
         Self(Parameter {
@@ -283,7 +282,7 @@ impl From<bool> for TestHelper<Value> {
 
 impl From<InstanceLiteral> for TestHelper<Value> {
     fn from(other: InstanceLiteral) -> Self {
-        Self(Value::InstanceLiteral(other))
+        Self(Value::Pattern(Pattern::Instance(other)))
     }
 }
 impl From<Call> for TestHelper<Value> {

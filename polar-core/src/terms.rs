@@ -132,7 +132,6 @@ pub enum Value {
     String(String),
     Boolean(bool),
     ExternalInstance(ExternalInstance),
-    InstanceLiteral(InstanceLiteral),
     Dictionary(Dictionary),
     Pattern(Pattern),
     Call(Call),
@@ -160,16 +159,6 @@ impl Value {
             Value::String(string) => Ok(string.as_ref()),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected string, got: {}", self.to_polar()),
-                stack_trace: None, // @TODO
-            }),
-        }
-    }
-
-    pub fn as_instance_literal(&self) -> Result<&InstanceLiteral, error::RuntimeError> {
-        match self {
-            Value::InstanceLiteral(literal) => Ok(literal),
-            _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected instance literal, got: {}", self.to_polar()),
                 stack_trace: None, // @TODO
             }),
         }
@@ -223,7 +212,7 @@ impl Value {
             | Value::RestVariable(_)
             | Value::Partial(_) => false,
             Value::Number(_) | Value::String(_) | Value::Boolean(_) => true,
-            Value::InstanceLiteral(_) | Value::Pattern(_) => panic!("unexpected value type"),
+            Value::Pattern(_) => panic!("unexpected value type"),
             Value::Dictionary(Dictionary { fields }) => fields.values().all(|t| t.is_ground()),
             Value::List(terms) => terms.iter().all(|t| t.is_ground()),
             Value::Expression(Operation { operator: _, args }) => {

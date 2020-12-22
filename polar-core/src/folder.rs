@@ -108,7 +108,6 @@ pub fn fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
         Value::String(s) => Value::String(fld.fold_string(s)),
         Value::Boolean(b) => Value::Boolean(fld.fold_boolean(b)),
         Value::ExternalInstance(e) => Value::ExternalInstance(fld.fold_external_instance(e)),
-        Value::InstanceLiteral(i) => Value::InstanceLiteral(fld.fold_instance_literal(i)),
         Value::Dictionary(d) => Value::Dictionary(fld.fold_dictionary(d)),
         Value::Pattern(p) => Value::Pattern(fld.fold_pattern(p)),
         Value::Call(c) => Value::Call(fld.fold_call(c)),
