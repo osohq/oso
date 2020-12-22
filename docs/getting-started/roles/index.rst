@@ -9,20 +9,21 @@ We also generate Polar rules that you can use in your oso policies to write
 rules based on the roles you defined, instead of writing them over users
 directly.
 
-This feature is currently supported in the SQLAlchemy library.
+This feature is currently supported in the :doc:`SQLAlchemy library
+</getting-started/roles/sqlalchemy/basic_roles>`.
 
 
 If you want to get started with SQLAlchemy roles, look at
 :doc:`/getting-started/roles/sqlalchemy/basic_roles`.
 
 For a more in-depth understanding of roles, check out our :doc:`guide to
-Role-Based Access Control (RBAC) </getting-started/roles/rbac>`.
+Role-Based Access Control (RBAC) patterns</getting-started/roles/rbac>`.
 
 .. toctree::
     :hidden:
     :maxdepth: 1
 
-    Guide to RBAC <rbac>
+    RBAC patterns <rbac>
     sqlalchemy/basic_roles
 
 
