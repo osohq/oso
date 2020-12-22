@@ -37,7 +37,7 @@ and use the provided ``requirements.txt`` file.
 
 
 Add a method to initialize oso and make the oso instance available to your
-application code. This method should intialize oso and load your policy file
+application code. This method should initialize oso and load your policy file
 (can be an empty ``.polar`` file). It should also call
 :py:func:`sqlalchemy_oso.session.set_get_session` to configure access to the
 SQLALchemy session oso should use to make queries. Then call
