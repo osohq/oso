@@ -157,8 +157,8 @@ oso is available as a library in several languages:
 
     .. group-tab:: Rust
 
-        The rust version of oso is available on crates.io_. 
-        
+        The rust version of oso is available on crates.io_.
+
         Add oso and oso-derive as dependencies in your Cargo.toml
 
         .. code-block:: toml
@@ -185,7 +185,7 @@ oso is available as a library in several languages:
 
         .. _crates.io: https://crates.io/crates/oso
 
-        
+
 
 
 **Libraries coming soon:**
@@ -206,6 +206,7 @@ Releases
     :maxdepth: 1
     :caption: See below for release notes:
 
+    changelogs/2020-12-22
     v0.9.0 <changelogs/0.9.0>
     v0.8.2 <changelogs/0.8.2>
     v0.8.0 <changelogs/0.8.0>
