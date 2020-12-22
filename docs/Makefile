@@ -50,7 +50,7 @@ _api_docs: _api_docs/ruby _api_docs/java _api_docs/js/node
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-html doctest spelling: Makefile deps _api_docs
+html doctest spelling: Makefile deps _api_docs submodules
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 build: Makefile deps _api_docs submodules
