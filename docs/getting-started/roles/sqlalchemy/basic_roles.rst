@@ -36,15 +36,18 @@ and use the provided ``requirements.txt`` file.
     $ pip install -r requirements.txt
 
 
-Add a method to initialize oso and make the oso instance available to your application code.
-Call :py:func:`sqlalchemy_oso.session.set_get_session` to configure access to
-the SQLALchemy session oso should use to make queries.
-Then call :py:func:`sqlalchemy_oso.roles.enable_roles` to load the base oso policy for roles.
+Add a method to initialize oso and make the oso instance available to your
+application code. This method should intialize oso and load your policy file
+(can be an empty ``.polar`` file). It should also call
+:py:func:`sqlalchemy_oso.session.set_get_session` to configure access to the
+SQLALchemy session oso should use to make queries. Then call
+:py:func:`sqlalchemy_oso.roles.enable_roles` to load the base oso policy for
+roles.
 
 .. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/__init__.py
     :class: copybutton
     :language: python
-    :lines: 11-14, 57-66
+    :lines: 6,11-14, 57-66
     :caption: :fab:`python` __init__.py
 
 
@@ -84,7 +87,7 @@ Add an endpoint that needs authorization
 ----------------------------------------
 
 Create or choose an existing endpoint that will need authorization to access.
-In our sample app we've created 2 endpoints that have different authorization
+In our sample app we've created two endpoints that have different authorization
 requirements: one to view repositories and another to view billing
 information.
 
@@ -98,8 +101,14 @@ Add policy checks to your code to control access to the protected endpoints.
     :caption: :fab:`python` routes.py
 
 Our example uses :py:func:`flask_oso.FlaskOso.authorize` to complete the
-policy check. If you're not using Flask, check out our general-purpose
-:doc:`Python package </using/libraries/python/index>`.
+policy check, which returns a ``403 Forbidden`` response if the provided
+``actor`` is not allowed to take ``action`` on the ``resource`` passed as the
+first argument. If you're not using Flask, you can use
+:py:meth:`oso.Oso.is_allowed` from our general-purpose :doc:`Python package
+</using/libraries/python/index>`.
+
+Since we haven't added any rules to our policy file yet, these endpoints will
+return a ``403 Forbidden`` response to all requests.
 
 2. Add roles
 ============
@@ -107,10 +116,11 @@ policy check. If you're not using Flask, check out our general-purpose
 Create the OrganizationRole class using the role mixin
 ------------------------------------------------------
 
-The oso SQLAlchemy library provides a method to generate a mixin which
-creates a role model. Create the mixin by passing in the base, user, and
-organization models, as well as the role names. Then create a role model that
-extends it.
+The oso SQLAlchemy library provides the
+:py:meth:`sqlalchemy_oso.roles.resource_role_class` method to generate a
+mixin which creates a role model. Create the mixin by passing in the base,
+user, and organization models, as well as the role names. Then create a role
+model that extends it.
 
 
 .. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/models.py
@@ -224,9 +234,9 @@ variable.
     * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 
 Our policy says that users with the
-"OWNER" role can assign roles, users with the ``"MEMBER"`` role can view
-repositories, and users with the ``"BILLING"`` role can view billing info. Also, the
-``"OWNER"`` roles inherits the permissions of the ``"MEMBER"`` and "BILLING" roles.
+"OWNER" role can assign roles, users with the "MEMBER" role can view
+repositories, and users with the "BILLING" role can view billing info. Also, the
+"OWNER" roles inherits the permissions of the "MEMBER" and "BILLING" roles.
 
 Paul is a member of "The Beatles" organization, so he can view repositories but not
 billing info:
