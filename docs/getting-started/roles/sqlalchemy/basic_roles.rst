@@ -136,7 +136,7 @@ You can also specify a :ref:`hierarchical role ordering <role-hierarchies>` with
     :caption: :fa:`oso` authorization.polar
 
 
-For more details on the roles base policy, see :doc:`/getting-started/builtin-roles/index`.
+For more details on the roles base policy, see :doc:`/getting-started/roles/index`.
 
 
 Create an endpoint for assigning roles

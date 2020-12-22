@@ -65,7 +65,6 @@ Using oso, you can:
    Writing Policies <getting-started/policies/index>
    Role-Based Access Control <getting-started/roles/index>
    List Filtering <getting-started/list-filtering/index>
-   Builtin Roles <getting-started/builtin-roles/index>
 
 .. toctree::
    :maxdepth: 1
