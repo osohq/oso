@@ -12,12 +12,17 @@ from sqlalchemy_oso.auth import authorize_model
 
 
 class _OsoSession:
+    set = False
+
     @classmethod
     def get(cls):
-        return cls._get()
+        session = cls._get()
+        new_session = Session(bind=session.bind)
+        return new_session
 
     @classmethod
     def set_get_session(cls, get_session):
+        cls.set = True
         _OsoSession._get = get_session
 
 

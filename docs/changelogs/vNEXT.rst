@@ -7,30 +7,21 @@ NEXT
 Breaking changes
 ================
 
-.. TODO remove warning and replace with "None" if no breaking
-   changes.
+Updated to built-in roles in ``sqlalchemy-oso``
+--------------------------------------------------------
 
-.. warning:: This release contains breaking changes. Be sure
-   to follow migration steps before upgrading.
+This release makes a number of changes to how the out-of-the-box role support
+works in the ``sqlalchemy-oso`` integration. It simplifies the schema of the role
+model, adds relationships to the user and resource classes and contains more error checks
+for various required constraints and things that can go wrong.
 
-Breaking change 1
------------------
+It also includes docs!
 
-- summary of breaking change
-
-Link to migration guide
+https://docs.osohq.com/getting-started/builtin-roles/index.html
 
 New features
 ============
 
-Feature 1
----------
-
-- summary
-- of
-- user facing changes
-
-Link to relevant documentation section
 
 Other bugs & improvements
 =========================
