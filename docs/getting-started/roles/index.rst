@@ -44,7 +44,7 @@ You can then write rules over the role instead of the user.
 
 .. code-block:: polar
 
-  allow_role(WidgetRole{name: "OWNER"}, "UPDATE", Widget{});
+  allow_role(_role: WidgetRole{name: "OWNER"}, "UPDATE", _resource: Widget{});
 
 There are some other kinds of rules you can write to influence how roles work in your application.
 
@@ -57,7 +57,7 @@ all roles you could do that with these two rules.
   resource_role_applies_to(widget: Widget, org: Organization) if
     widget.organization_id = org.id;
 
-  allow_role(OrganizationRole{name: "ADMIN"}, "UPDATE", Widget{});
+  allow_role(_role: OrganizationRole{name: "ADMIN"}, "UPDATE", _resource: Widget{});
 
 You can write a rule that specifies a hierarchy for roles. For instance if you want admins to
 be able to do everything that members can do.
