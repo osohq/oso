@@ -130,11 +130,11 @@ rules to write policies over your roles:
     - Description
   * - ``role_allow(role, action, resource)``
     - allows actors that have ``role`` to take ``action`` on ``resource``.
-  * - ``resource_role_applies_to(child_resource, parent_resource)``Float
-    - permits roles that control access to ``parent_resource`` to apply to
-    ``child_resource`` as well
+  * - ``resource_role_applies_to(child_resource, parent_resource)``
+    - permits roles that control access to ``parent_resource`` to apply to ``child_resource`` as well
   * - ``[resource_name]_role_order(["ROLE_NAME_1", "ROLE_NAME_2",...])``
     - specifies a hierarchical role order
+
 
 role_allow
 ^^^^^^^^^^
