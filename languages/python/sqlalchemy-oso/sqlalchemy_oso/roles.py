@@ -408,7 +408,7 @@ def get_resource_users_by_role(session, resource, role_name):
 
 
 # - Assign a user to an organization with a role
-def add_user_role(session, user, resource, role_name, commit=True):
+def add_user_role(session, user, resource, role_name, commit=False):
     """Add a user to a role for a specific resource.
 
     :param session: SQLAlchemy session
@@ -419,7 +419,7 @@ def add_user_role(session, user, resource, role_name, commit=True):
     :param role_name: the name of the role to assign to the user
     :type role_name: str
 
-    :param commit: flag to specify whether or not session should be committed after adding role; defaults to ``True``
+    :param commit: flag to specify whether or not session should be committed after adding role; defaults to ``False``
     :type commit: boolean
     """
     _check_valid_instance(user, resource)
@@ -446,7 +446,7 @@ def add_user_role(session, user, resource, role_name, commit=True):
 
 
 # - Delete a user to an organization with a role
-def delete_user_role(session, user, resource, role_name=None, commit=True):
+def delete_user_role(session, user, resource, role_name=None, commit=False):
     """Remove a user from a role for a specific resource.
 
     :param session: SQLAlchemy session
@@ -459,7 +459,7 @@ def delete_user_role(session, user, resource, role_name=None, commit=True):
     ``resource``.
     :type role_name: str
 
-    :param commit: flag to specify whether or not session should be committed after deleting role; defaults to ``True``
+    :param commit: flag to specify whether or not session should be committed after deleting role; defaults to ``False``
     :type commit: boolean
     """
     _check_valid_instance(user, resource)
@@ -478,7 +478,7 @@ def delete_user_role(session, user, resource, role_name=None, commit=True):
 
 
 # - Change the user's role in an organization
-def reassign_user_role(session, user, resource, role_name, commit=True):
+def reassign_user_role(session, user, resource, role_name, commit=False):
     """Remove all existing roles that a user has for a specific resource, and
     reassign the user to a new role. If the user does not have any roles for
     the given resource, the behavior is the same as
@@ -492,7 +492,7 @@ def reassign_user_role(session, user, resource, role_name, commit=True):
     :param role_name: the name of the new role to assign to the user
     :type role_name: str
 
-    :param commit: flag to specify whether or not session should be committed after reassigning role; defaults to ``True``
+    :param commit: flag to specify whether or not session should be committed after reassigning role; defaults to ``False``
     :type commit: boolean
     """
     _check_valid_instance(user, resource)
