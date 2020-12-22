@@ -116,5 +116,5 @@ deps:
 	pip3 install -r requirements-docs.txt
 
 submodules:
-	git submodule update --init --recursive --remote
+	git submodule update --checkout --init --recursive --remote
 	cd examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide && git checkout basic_roles_complete && git pull
