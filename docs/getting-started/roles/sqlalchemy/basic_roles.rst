@@ -2,8 +2,9 @@
 Add roles to your app
 =====================
 
-
-.. TODO: intro
+The :py:data:`sqlalchemy_oso.roles` module provides out-of-the-box Role-Based Access Control features that
+let you create a roles system in your database with a few lines of code and specify role permissions
+in a declarative oso policy.
 
 1. Set up the application
 =========================
@@ -11,29 +12,27 @@ Add roles to your app
 Install the oso SQLAlchemy package
 ----------------------------------
 
-Install the ``oso_sqlalchemy`` package and import it in your code. Alternatively, if you are
-starting from scratch and need a requirements.txt file, clone the sample application `here <TODO>`_
+Install the ``sqlalchemy_oso`` package and import it in your code.
+Alternatively, if you are starting from scratch and need a requirements.txt
+file, clone the sample application `here
+<https://github.com/osohq/oso-sqlalchemy-roles-guide/tree/main>`_.
 
-.. code-block:: shell
+.. code-block:: console
+    :class: copybutton
+    :caption: $_
 
-    pip install sqlalchemy_oso
+    $ pip install sqlalchemy_oso
 
 
-Add a method to intialize oso and make the oso instance available to your application code.
+Add a method to initialize oso and make the oso instance available to your application code.
+Call :py:func:`sqlalchemy_oso.roles.enable_roles` to load the base oso policy for roles.
 
-.. code-block:: python
+.. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/__init__.py
+    :class: copybutton
+    :language: python
+    :lines: 11-14, 57-66
     :caption: :fab:`python` __init__.py
 
-    from oso import Oso
-    from sqlalchemy_oso import register_models, set_get_session
-
-    base_oso = Oso()
-
-    def init_oso(app):
-        register_models(base_oso, Base)
-        set_get_session(base_oso, lambda: g.session)
-        base_oso.load_file("app/authorization.polar")
-        app.oso = base_oso
 
 
 
@@ -42,28 +41,12 @@ Create a users model
 
 Add a user model that will represent your app's users (if you don't already have one).
 
-.. TODO: make this a literal include
 
-.. code-block:: python
+.. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/models.py
+    :class: copybutton
+    :language: python
+    :lines: 9-10, 14-21
     :caption: :fab:`python` models.py
-
-    from sqlalchemy.types import Integer, String
-    from sqlalchemy.schema import Column, ForeignKey
-    from sqlalchemy.orm import relationship
-    from sqlalchemy.ext.declarative import declarative_base
-
-
-    Base = declarative_base()
-
-    class User(Base):
-        __tablename__ = "users"
-
-        id = Column(Integer, primary_key=True)
-        email = Column(String())
-
-        def repr(self):
-            return {"id": self.id, "email": self.email}
-
 
 
 Create an organizations model
@@ -75,18 +58,11 @@ your app isn't multi-tenant, you can create an ``Application`` model instead,
 with one instance used globally.
 
 
-.. code-block:: python
+.. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/models.py
+    :class: copybutton
+    :language: python
+    :lines: 24-32
     :caption: :fab:`python` models.py
-
-    class Organization(Base):
-        __tablename__ = "organizations"
-
-        id = Column(Integer, primary_key=True)
-        name = Column(String())
-        billing_address = Column(String())
-
-        def repr(self):
-            return {"id": self.id, "name": self.name}
 
 
 
@@ -98,28 +74,18 @@ In our sample app we've created 2 endpoints that have different authorization
 requirements: one to view repositories and another to view billing
 information.
 
-.. code-block:: python
+Add policy checks to your code to control access to the protected endpoints.
+
+
+.. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/routes.py
+    :class: copybutton
+    :language: python
+    :lines: 1-2, 5-6, 13-27
     :caption: :fab:`python` routes.py
 
-    from flask import Blueprint, g, request, current_app
-    from .models import User, Organization, Repository
-
-    bp = Blueprint("routes", __name__)
-
-
-    @bp.route("/orgs/<int:org_id>/repos", methods=["GET"])
-    def repos_index(org_id):
-        org = g.session.query(Organization).filter(Organization.id == org_id).first()
-        repos = g.session.query(Repository).filter_by(organization=org)
-        return {f"repos": [repo.repr() for repo in repos]}
-
-
-    @bp.route("/orgs/<int:org_id>/billing", methods=["GET"])
-    def billing_show(org_id):
-        org = g.session.query(Organization).filter(Organization.id == org_id).first()
-        return {f"billing_address": org.billing_address}
-
-
+Our example uses :py:func:`flask_oso.FlaskOso.authorize` to complete the
+policy check. If you're not using Flask, check out our general-purpose
+:doc:`Python package </using/libraries/python/index>`.
 
 2. Add roles
 ============
@@ -133,110 +99,39 @@ organization models, as well as the role names. Then create a role model that
 extends it.
 
 
-.. code-block:: python
-    :caption: :fab:`python` routes.py
-
-    from sqlalchemy_oso.roles import resource_role_class
-
-
-    OrganizationRoleMixin = resource_role_class(
-        Base, User, Organization, ["OWNER", "MEMBER", "BILLING"]
-    )
-
-
-    class OrganizationRole(Base, OrganizationRoleMixin):
-        def repr(self):
-            return {"id": self.id, "name": str(self.name)}
+.. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/models.py
+    :class: copybutton
+    :language: python
+    :lines: 6, 50-58
+    :caption: :fab:`python` models.py
 
 
 
-Assign role permissions
------------------------
+Specify role permissions
+------------------------
 
 To give the roles permissions, write an oso policy.
-First, call :py:func:`sqlalchemy_oso.roles.enable_roles` to load the base policy for roles.
 
+Since we already called :py:func:`sqlalchemy_oso.roles.enable_roles` in our ``init_oso()`` method,
+you can write Polar ``role_allow`` rules over ``OrganizationRoles``.
 
-.. code-block:: python
-    :caption: :fab:`python` __init__.py
-    :emphasize-lines: 3,12
-
-    from oso import Oso
-    from sqlalchemy_oso import register_models, set_get_session
-    from sqlalchemy_oso.roles import enable_roles
-
-    base_oso = Oso()
-
-    def init_oso(app):
-        register_models(base_oso, Base)
-        set_get_session(base_oso, lambda: g.session)
-        base_oso.load_file("app/authorization.polar")
-        app.oso = base_oso
-        enable_roles(base_oso)
-
-You can then write Polar ``role_allow`` rules over ``OrganizationRoles``.
-
-.. code-block:: polar
+.. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/authorization.polar
+    :class: copybutton
+    :language: polar
+    :lines: 7-14
     :caption: :fa:`oso` authorization.polar
 
-    # ROLE-PERMISSION RELATIONSHIPS
-
-    ## Organization Permissions
-
-    ### All organization roles let users read the organization
-    role_allow(role: OrganizationRole, "READ", org: Organization);
-
-    ### Org members can list repos in the org
-    role_allow(role: OrganizationRole{name: "MEMBER"}, "LIST_REPOS", organization: Organization);
-
-    ### The billing role can view billing info
-    role_allow(role: OrganizationRole{name: "BILLING"}, "READ_BILLING", organization: Organization);
 
 You can also specify a :ref:`hierarchical role ordering <role-hierarchies>` with ``organization_role_order`` rules.
 
-.. code-block:: polar
+.. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/authorization.polar
+    :class: copybutton
+    :language: polar
+    :lines: 24-26
     :caption: :fa:`oso` authorization.polar
 
-    # ROLE-ROLE RELATIONSHIPS
-
-    ## Role Hierarchies
-
-    ### Specify organization role order (most senior on left)
-    organization_role_order(["OWNER", "MEMBER"]);
-    organization_role_order(["OWNER", "BILLING"]);
 
 For more details on the roles base policy, see :doc:`/getting-started/builtin-roles/index`.
-
-
-Enforce the policy
-------------------
-
-Add policy checks to your code to control access to the protected endpoints.
-
-.. code-block:: python
-    :caption: :fab:`python` routes.py
-    :emphasize-lines: 1, 6, 15
-
-    from flask import current_app
-
-    @bp.route("/orgs/<int:org_id>/repos", methods=["GET"])
-    def repos_index(org_id):
-        org = g.session.query(Organization).filter(Organization.id == org_id).first()
-        current_app.oso.authorize(org, actor=g.current_user, action="LIST_REPOS")
-
-        repos = g.session.query(Repository).filter(Repository.organization.has(id=org_id))
-        return {f"repos": [repo.repr() for repo in repos]}
-
-
-    @bp.route("/orgs/<int:org_id>/billing", methods=["GET"])
-    def billing_show(org_id):
-        org = g.session.query(Organization).filter(Organization.id == org_id).first()
-        current_app.oso.authorize(org, actor=g.current_user, action="READ_BILLING")
-        return {f"billing_address": org.billing_address}
-
-Our example uses :py:func:`flask_oso.FlaskOso.authorize` to complete the
-policy check. If you're not using Flask, check out our general-purpose
-:doc:`Python package </using/libraries/python/index>`.
 
 
 Create an endpoint for assigning roles
@@ -245,43 +140,20 @@ Create an endpoint for assigning roles
 Until you assign users to roles, they'll receive a ``403 FORBIDDEN`` response if they try to
 access either protected endpoint.
 
-Add a new endpoint to your application that users can hit to assign roles.
-
-.. code-block:: python
-    :caption: :fab:`python` routes.py
-
-    @bp.route("/orgs/<int:org_id>/roles", methods=["POST"])
-    def org_roles_new(org_id):
-        return "Unimplemented"
-
-Call the oso role API
----------------------
+Add a new endpoint to your application that users can hit to assign roles. To
+control who can assign roles, add another call to
+:py:func:`flask_oso.FlaskOso.authorize`.
 
 Use the oso role API to create role assignments with
 :py:meth:`sqlalchemy_oso.roles.add_user_role` and
 :py:meth:`sqlalchemy_oso.roles.reassign_user_role`.
 
-To control who can assign roles, add another call to :py:func:`flask_oso.FlaskOso.authorize`.
-
-.. code-block:: python
-    :caption: :fab:`python` routes.py
+.. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/routes.py
+    :class: copybutton
+    :language: python
+    :lines: 30-44
     :emphasize-lines: 4,11,13
-
-    @bp.route("/orgs/<int:org_id>/roles", methods=["POST"])
-    def org_roles_new(org_id):
-        org = g.session.query(Organization).filter_by(id=org_id).first()
-        current_app.oso.authorize(org, actor=g.current_user, action="CREATE_ROLE")
-
-        # Create role
-        role_name = request.get_json().get("name")
-        user_email = request.get_json().get("user_email")
-        user = g.session.query(User).filter_by(email=user_email).first()
-        try:
-            add_user_role(g.session, user, org, role_name)
-        except Exception as e:
-            reassign_user_role(g.session, user, org, role_name)
-
-        return f"created a new role for org: {org_id}, {user_email}, {role_name}"
+    :caption: :fab:`python` routes.py
 
 
 Configure permissions for role assignments
@@ -289,11 +161,12 @@ Configure permissions for role assignments
 
 Update the oso policy to specify who is allowed to assign roles.
 
-.. code-block:: polar
+.. literalinclude:: /examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide/app/authorization.polar
+    :class: copybutton
+    :language: polar
+    :lines: 16-17
     :caption: :fa:`oso` authorization.polar
 
-    ### Org owners can assign roles within the org
-    role_allow(role: OrganizationRole{name: "OWNER"}, "CREATE_ROLE", organization: Organization);
 
 3. Test it works
 ================
@@ -303,14 +176,18 @@ Run the application
 
 Start the server.
 
-.. code-block:: shell
+.. code-block:: console
+    :class: copybutton
+    :caption: $_
 
     $ flask run
     * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 
 Make a simple request.
 
-.. code-block:: shell
+.. code-block:: console
+    :class: copybutton
+    :caption: $_
 
     $ curl --header "user: ringo@beatles.com" localhost:5000/
     Hello ringo@beatles.com
@@ -324,7 +201,9 @@ based on your policy. Our sample app includes some fixture data for testing.
 To run the server with fixture data, set the ``FLASK_APP`` environment
 variable.
 
-.. code-block:: shell
+.. code-block:: console
+    :class: copybutton
+    :caption: $_
 
     $ export FLASK_APP="app:create_app(None, True)"
     $ flask run
@@ -338,11 +217,13 @@ repos, and users with the ``"BILLING"`` role can view billing info. Also, the
 Paul is a member of "The Beatles" organization, so he can view repositories but not
 billing info:
 
-.. code-block:: shell
+.. code-block:: console
+    :class: copybutton
+    :caption: $_
 
     $ curl --header "user: paul@beatles.com" localhost:5000/orgs/1/repos
     {"repos":[{"id":1,"name":"Abbey Road"}]}
-    $
+
     $ curl --header "user: paul@beatles.com" localhost:5000/orgs/1/billing
     <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
     <title>403 Forbidden</title>
@@ -351,7 +232,9 @@ billing info:
 
 John is the owner of "The Beatles" so he can assign roles:
 
-.. code-block:: shell
+.. code-block:: console
+    :class: copybutton
+    :caption: $_
 
     $ curl --header "Content-Type: application/json" \
     --header "user: john@beatles.com"  \
@@ -362,7 +245,9 @@ John is the owner of "The Beatles" so he can assign roles:
 
 But Ringo isn't an owner, so his access should be denied:
 
-.. code-block:: shell
+.. code-block:: console
+    :class: copybutton
+    :caption: $_
 
     $ curl --header "Content-Type: application/json" \
     --header "user: ringo@beatles.com"  \
@@ -373,3 +258,8 @@ But Ringo isn't an owner, so his access should be denied:
     <title>403 Forbidden</title>
     <h1>Forbidden</h1>
     <p>Unauthorized</p>
+
+The fully-implemented Github sample app, complete with tests, can be found `here
+<https://github.com/osohq/oso-sqlalchemy-roles-guide/tree/basic_roles_complete>`_.
+
+
