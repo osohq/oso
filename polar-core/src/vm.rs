@@ -175,6 +175,15 @@ impl std::ops::DerefMut for GoalStack {
 
 pub type Queries = TermList;
 
+/// Variable binding state.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum VariableState {
+    Unbound,
+    Bound(Term),
+    Cycle(Vec<Symbol>),
+    Partial(Operation),
+}
+
 #[derive(Clone)]
 pub struct PolarVirtualMachine {
     /// Stacks.
@@ -646,8 +655,27 @@ impl PolarVirtualMachine {
         self.bindings
             .iter()
             .rev()
-            .find(|binding| binding.0 == *variable)
-            .map(|binding| &binding.1)
+            .find(|Binding(var, _)| var == variable)
+            .map(|Binding(_, val)| val)
+    }
+
+    /// Investigate the state of a variable and return a variable state variant.
+    fn variable_state(&self, variable: &Symbol) -> VariableState {
+        let mut path = vec![variable];
+        while let Some(value) = self.value(path.last().unwrap()) {
+            match value.value() {
+                Value::Expression(e) => return VariableState::Partial(e.clone()),
+                Value::Variable(v) | Value::RestVariable(v) => {
+                    if v == variable {
+                        return VariableState::Cycle(path.into_iter().cloned().collect());
+                    } else {
+                        path.push(v);
+                    }
+                }
+                _ => return VariableState::Bound(value.clone()),
+            }
+        }
+        VariableState::Unbound
     }
 
     /// Recursively dereference variables in a term, including subterms, except operations.
@@ -685,100 +713,68 @@ impl PolarVirtualMachine {
     /// The exception is for lists, so that we can correctly handle rest variables.
     /// We also support cycle detection, in which case we return the original term.
     pub fn deref(&self, term: &Term) -> Term {
-        let mut next = term.clone();
-        loop {
-            match &next.value() {
-                Value::List(list) => {
-                    let ends_with_rest = list
-                        .last()
-                        .map_or(false, |el| matches!(el.value(), Value::RestVariable(_)));
+        match &term.value() {
+            Value::List(list) => {
+                let ends_with_rest = list
+                    .last()
+                    .map_or(false, |el| matches!(el.value(), Value::RestVariable(_)));
 
-                    // Deref all elements.
-                    let mut derefed: Vec<Term> =
+                // Deref all elements.
+                let mut derefed: Vec<Term> =
                     // TODO(gj): reduce recursion here.
                     list.iter().map(|t| self.deref(t)).collect();
 
-                    // If last element was a rest variable, append the list it derefed to.
-                    if ends_with_rest {
-                        if let Some(last_term) = derefed.pop() {
-                            if let Value::List(terms) = last_term.value() {
-                                derefed.append(&mut terms.clone());
-                            } else {
-                                derefed.push(last_term);
-                            }
+                // If last element was a rest variable, append the list it derefed to.
+                if ends_with_rest {
+                    if let Some(last_term) = derefed.pop() {
+                        if let Value::List(terms) = last_term.value() {
+                            derefed.append(&mut terms.clone());
+                        } else {
+                            derefed.push(last_term);
                         }
                     }
+                }
 
-                    return term.clone_with_value(Value::List(derefed));
-                }
-                Value::Variable(var) | Value::RestVariable(var) => {
-                    if let Some(val) = self.value(var).cloned() {
-                        next = val;
-                    } else {
-                        break;
-                    }
-                }
-                _ => break,
+                term.clone_with_value(Value::List(derefed))
             }
-            if &next == term {
-                break;
-            }
+            Value::Variable(var) | Value::RestVariable(var) => match self.variable_state(var) {
+                VariableState::Bound(value) => value,
+                VariableState::Unbound | VariableState::Cycle(_) | VariableState::Partial(_) => {
+                    term.clone()
+                }
+            },
+            _ => term.clone(),
         }
-        next
-    }
-
-    /// If the given variable is bound in a cycle,
-    /// return the variable that is bound to it.
-    fn deref_cycle(&self, var: &Symbol) -> Option<Symbol> {
-        let mut next = var;
-        while let Some(value) = self.value(next) {
-            match value.value() {
-                Value::Variable(symbol) | Value::RestVariable(symbol) => {
-                    if symbol == next || symbol == var {
-                        // The variable is bound in a cycle.
-                        return Some(next.clone());
-                    } else {
-                        // Keep chasing.
-                        next = symbol;
-                    }
-                }
-                _ => {
-                    // The variable is not bound in a cycle.
-                    break;
-                }
-            }
-        }
-        None
     }
 
     /// Use this when you want to allow an expression but you might have a variable pointing at an
     /// expression.
     fn deref_expr(&self, term: &Term) -> Term {
         let derefed = self.deref(term);
-        if &derefed == term {
-            if let Ok(v) = term.value().as_symbol() {
-                let mut v = v;
-                let mut expr = op!(And);
-                while let Some(x) = self.value(v) {
-                    if x == term {
-                        break;
-                    }
-                    match x.value() {
-                        Value::Variable(y) | Value::RestVariable(y) => {
-                            expr.args.push(term!(value!(op!(
-                                Unify,
-                                term!(sym!(v.clone())),
-                                x.clone()
-                            ))));
-                            v = y;
-                        }
-                        _ => unreachable!(),
-                    }
-                }
-                eprintln!("deref_expr({}) → {}", term.to_polar(), expr.to_polar());
-                return term!(value!(expr));
-            }
-        }
+        // if &derefed == term {
+        //     if let Ok(v) = term.value().as_symbol() {
+        //         let mut v = v;
+        //         let mut expr = op!(And);
+        //         while let Some(x) = self.value(v) {
+        //             if x == term {
+        //                 break;
+        //             }
+        //             match x.value() {
+        //                 Value::Variable(y) | Value::RestVariable(y) => {
+        //                     expr.args.push(term!(value!(op!(
+        //                         Unify,
+        //                         term!(sym!(v.clone())),
+        //                         x.clone()
+        //                     ))));
+        //                     v = y;
+        //                 }
+        //                 _ => unreachable!(),
+        //             }
+        //         }
+        //         eprintln!("deref_expr({}) → {}", term.to_polar(), expr.to_polar());
+        //         return term!(value!(expr));
+        //     }
+        // }
         derefed
     }
 
@@ -1498,10 +1494,15 @@ impl PolarVirtualMachine {
                 let right = args.pop().unwrap();
                 let left = args.pop().unwrap();
                 match (left.value(), right.value()) {
-                    (Value::Variable(var), _) => match self.value(var) {
-                        None => self.push_goal(Goal::Unify { left, right })?,
-                        Some(value) => {
-                            return Err(self.type_error( &left, format!("Can only assign to unbound variables, {} is bound to value {}.", var.to_polar(), value.to_polar())));
+                    (Value::Variable(var), _) => match self.variable_state(var) {
+                        VariableState::Unbound | VariableState::Cycle(_) => {
+                            self.push_goal(Goal::Unify { left, right })?;
+                        }
+                        VariableState::Bound(value) => {
+                            return Err(self.type_error(&left, format!("Can only assign to unbound variables, {} is bound to value {}.", var.to_polar(), value.to_polar())));
+                        }
+                        VariableState::Partial(e) => {
+                            return Err(self.type_error(&left, format!("Can only assign to unbound variables, {} is bound to expression {}.", var.to_polar(), e.to_polar())));
                         }
                     },
                     _ => {
@@ -1785,20 +1786,19 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// Push appropriate goals for lookups on Dictionaries, InstanceLiterals, and ExternalInstances
+    /// Push appropriate goals for lookups on dictionaries and instances.
     fn dot_op_helper(&mut self, mut args: Vec<Term>) -> PolarResult<()> {
         assert_eq!(args.len(), 3);
         let object = &args[0];
-        let derefed_object = self.deref_expr(object);
-        let field = self.deref_expr(&args[1]);
+        let field = &args[1];
         let value = &args[2];
 
-        match derefed_object.value() {
+        match object.value() {
             // Push a `Lookup` goal for simple field lookups on dictionaries.
             Value::Dictionary(dict) if matches!(field.value(), Value::String(_) | Value::Variable(_)) => {
                 self.push_goal(Goal::Lookup {
                     dict: dict.clone(),
-                    field,
+                    field: field.clone(),
                     value: args.remove(2),
                 })?
             }
@@ -1820,37 +1820,55 @@ impl PolarVirtualMachine {
                 self.append_goals(vec![
                     Goal::LookupExternal {
                         call_id,
-                        field,
-                        instance: derefed_object.clone(),
+                        field: field.clone(),
+                        instance: object.clone(),
                     },
                     Goal::CheckError,
                 ])?;
             }
-            Value::Expression(operation) => {
+            Value::Variable(v) | Value::RestVariable(v) => {
+                let mut operation = op!(And);
+
+                match self.variable_state(v) {
+                    VariableState::Bound(x) => {
+                        return self.dot_op_helper(vec![x, field.clone(), value.clone()]);
+                    }
+                    VariableState::Unbound => {}
+                    VariableState::Partial(expr) => {
+                        operation.merge_constraints(expr);
+                    }
+                    VariableState::Cycle(c) => {
+                        for (x, y) in c.iter().zip(c.iter().skip(1)) {
+                            operation.add_constraint(op!(
+                                Unify,
+                                term!(x.clone()),
+                                term!(y.clone())
+                            ));
+                        }
+                    }
+                }
                 if matches!(field.value(), Value::Call(_)) {
                     return Err(self.set_error_context(
-                        &derefed_object,
+                        object,
                         error::RuntimeError::Unsupported {
-                            msg: format!(
-                                "cannot call method on expression {}",
-                                derefed_object.to_polar()
-                            ),
+                            msg: format!("cannot call method on unbound variable {}", v),
                         },
                     ));
                 }
 
-                let dot_op = object.clone_with_value(value!(op!(Dot, object.clone(), field)));
+                let dot_op =
+                    object.clone_with_value(value!(op!(Dot, object.clone(), field.clone())));
                 self.constrain(
-                    operation,
+                    &operation,
                     &object.clone_with_value(value!(op!(Unify, value.clone(), dot_op))),
                 )?;
             }
             _ => {
                 return Err(self.type_error(
-                    &derefed_object,
+                    &object,
                     format!(
-                        "can only perform lookups on dicts and instances, this is {:?}",
-                        derefed_object.value()
+                        "can only perform lookups on dicts and instances, this is {}",
+                        object.to_polar()
                     ),
                 ))
             }
@@ -2048,118 +2066,13 @@ impl PolarVirtualMachine {
         for Binding(var, val) in &self.bindings {
             eprintln!("  {} = {}", var, val.to_polar());
         }
+
         match (left.value(), right.value()) {
             // Unify two variables.
-            (Value::Variable(l), Value::Variable(r))
-            | (Value::Variable(l), Value::RestVariable(r))
-            | (Value::RestVariable(l), Value::Variable(r))
-            | (Value::RestVariable(l), Value::RestVariable(r)) => {
-                let x = self.deref(left);
-                let y = self.deref(right);
-
-                eprintln!("X: {}; Y: {}", x.to_polar(), y.to_polar());
-
-                match (x.value(), y.value()) {
-                    (Value::Expression(e), Value::Expression(f)) => {
-                        eprintln!("Z {} = {}", e.to_polar(), f.to_polar());
-                        let mut e = e.clone();
-                        e.args.push(term!(op!(Unify, left.clone(), right.clone())));
-                        return self.constrain(&e, &f.clone().into_term());
-                    }
-                    (Value::Expression(e), Value::Variable(_))
-                    | (Value::Expression(e), Value::RestVariable(_)) => {
-                        eprintln!("Y {} = {}", e.to_polar(), y.to_polar());
-                        let mut e = e.clone();
-                        e.args.push(term!(op!(Unify, left.clone(), right.clone())));
-                        return self.constrain(&e, &self.deref_expr(&right));
-                    }
-                    (Value::Expression(e), _) => {
-                        eprintln!("X {} = {}", e.to_polar(), y.to_polar());
-                        return self.constrain(&e, &term!(op!(Unify, left.clone(), y.clone())));
-                    }
-                    (Value::Variable(_), Value::Expression(f))
-                    | (Value::RestVariable(_), Value::Expression(f)) => {
-                        eprintln!("W {} = {}", x.to_polar(), f.to_polar());
-                        let mut f = f.clone();
-                        f.args.push(term!(op!(Unify, left.clone(), right.clone())));
-                        return self.constrain(&f, &self.deref_expr(&left));
-                    }
-                    (_, Value::Expression(f)) => {
-                        eprintln!("V {} = {}", x.to_polar(), f.to_polar());
-                        return self.constrain(&f, &term!(op!(Unify, x.clone(), right.clone())));
-                    }
-                    (_, _) => (),
-                }
-
-                match (&x == left, &y == right) {
-                    (false, false) => {
-                        // Both variables are bound, and not in cycles.
-                        // Unify their values.
-                        self.push_goal(Goal::Unify {
-                            left: x.clone(),
-                            right: y.clone(),
-                        })?;
-                    }
-                    (false, true) => {
-                        // The variable on the left is bound.
-                        // Unify the one on the right with its value.
-                        self.push_goal(Goal::Unify {
-                            left: x.clone(),
-                            right: right.clone(),
-                        })?;
-                    }
-                    (true, false) => {
-                        // The variable on the right is bound.
-                        // Unify the one on the left with its value.
-                        self.push_goal(Goal::Unify {
-                            left: left.clone(),
-                            right: y.clone(),
-                        })?;
-                    }
-                    (true, true) => {
-                        // Both variables are unbound or in cycles.
-                        match (self.deref_cycle(l), self.deref_cycle(r)) {
-                            (None, None) => {
-                                // They are both unbound. Bind them together.
-                                eprintln!("new cycle: {} = {}", l, r);
-                                self.bind(l, right.clone());
-                                self.bind(r, left.clone());
-                            }
-                            (Some(ref p), None) => {
-                                // Left is in a cycle. Extend it to include right.
-                                eprintln!("extend cycle from left: {}({}) = {}", l, p, r);
-                                assert_ne!(p, l);
-                                assert_eq!(self.value(p).unwrap().value().as_symbol().unwrap(), l);
-                                self.bind(p, right.clone());
-                                self.bind(r, left.clone());
-                            }
-                            (None, Some(ref q)) => {
-                                // Right is in a cycle. Extend it to include left.
-                                eprintln!("extend cycle from right: {} = {}({})", l, r, q);
-                                assert_ne!(q, r);
-                                assert_eq!(self.value(q).unwrap().value().as_symbol().unwrap(), r);
-                                self.bind(q, left.clone());
-                                self.bind(l, right.clone());
-                            }
-                            (Some(ref p), Some(ref q)) => {
-                                // Both variables are in cycles.
-                                assert_ne!(p, l);
-                                assert_ne!(q, r);
-                                assert_eq!(self.value(p).unwrap().value().as_symbol().unwrap(), l);
-                                assert_eq!(self.value(q).unwrap().value().as_symbol().unwrap(), r);
-                                if p == r || q == l {
-                                    // The cycles are the same. Do nothing.
-                                } else {
-                                    // Join the cycles.
-                                    eprintln!("join cycles: {}({}) = {}({})", l, p, r, q);
-                                    self.bind(p, right.clone());
-                                    self.bind(q, left.clone());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            (Value::Variable(_), Value::Variable(_))
+            | (Value::Variable(_), Value::RestVariable(_))
+            | (Value::RestVariable(_), Value::Variable(_))
+            | (Value::RestVariable(_), Value::RestVariable(_)) => self.unify_vars(left, right)?,
 
             (Value::Variable(var), Value::Expression(expr))
             | (Value::RestVariable(var), Value::Expression(expr))
@@ -2172,49 +2085,35 @@ impl PolarVirtualMachine {
                 );
             }
 
-            // Unify/bind the variable on the left with/to the term on the right.
+            // Unify/bind a variable on the left with/to the term on the right.
             (Value::Variable(var), _) | (Value::RestVariable(var), _) => {
                 let right = right.clone();
-                if self.deref_cycle(var).is_some() {
-                    // Ground out the cycle.
-                    self.bind(var, right);
-                } else if let Some(val) = self.value(var) {
-                    match val.value() {
-                        Value::Expression(expr) => {
-                            let expr = expr.clone();
-                            let left = left.clone();
-                            self.constrain(&expr, &term!(op!(Unify, left, right)))?;
-                        }
-                        _ => {
-                            let left = val.clone();
-                            self.push_goal(Goal::Unify { left, right })?;
-                        }
+                match self.variable_state(var) {
+                    VariableState::Unbound | VariableState::Cycle(_) => self.bind(var, right),
+                    VariableState::Partial(expr) => {
+                        let left = left.clone();
+                        self.constrain(&expr, &term!(op!(Unify, left, right)))?;
                     }
-                } else {
-                    self.bind(var, right);
+                    VariableState::Bound(value) => {
+                        let left = value;
+                        self.push_goal(Goal::Unify { left, right })?;
+                    }
                 }
             }
 
-            // Unify/bind the variable on the right with/to the term on the left.
+            // Unify/bind a variable on the right with/to the term on the left.
             (_, Value::Variable(var)) | (_, Value::RestVariable(var)) => {
                 let left = left.clone();
-                if self.deref_cycle(var).is_some() {
-                    // Ground out the cycle.
-                    self.bind(var, left);
-                } else if let Some(val) = self.value(var) {
-                    match val.value() {
-                        Value::Expression(expr) => {
-                            let expr = expr.clone();
-                            let right = right.clone();
-                            self.constrain(&expr, &term!(op!(Unify, left, right)))?;
-                        }
-                        _ => {
-                            let right = val.clone();
-                            self.push_goal(Goal::Unify { left, right })?;
-                        }
+                match self.variable_state(var) {
+                    VariableState::Unbound | VariableState::Cycle(_) => self.bind(var, left),
+                    VariableState::Partial(expr) => {
+                        let right = right.clone();
+                        self.constrain(&expr, &term!(op!(Unify, left, right)))?;
                     }
-                } else {
-                    self.bind(var, left);
+                    VariableState::Bound(value) => {
+                        let right = value;
+                        self.push_goal(Goal::Unify { left, right })?;
+                    }
                 }
             }
 
@@ -2328,6 +2227,113 @@ impl PolarVirtualMachine {
             (_, _) => self.push_goal(Goal::Backtrack)?,
         }
 
+        Ok(())
+    }
+
+    /// Unify two variables. May produce new bindings, `Unify` goals,
+    /// or unification constraints.
+    fn unify_vars(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
+        let l = left.value().as_symbol().expect("variable");
+        let r = right.value().as_symbol().expect("variable");
+        match (self.variable_state(l), self.variable_state(r)) {
+            // Base cases: at least one variable is bound.
+            (VariableState::Bound(x), VariableState::Bound(y)) => {
+                // Both variables are bound. Unify their values.
+                self.push_goal(Goal::Unify { left: x, right: y })?;
+            }
+            (VariableState::Bound(x), VariableState::Unbound) => {
+                // The variable on the left is bound.
+                // Bind the one on the right to its value.
+                self.bind(r, x);
+            }
+            (VariableState::Unbound, VariableState::Bound(y)) => {
+                // The variable on the right is bound.
+                // Bind the one on the left to its value.
+                self.bind(l, y);
+            }
+
+            // Cycles: one or more variables are bound together.
+            (VariableState::Unbound, VariableState::Unbound) => {
+                // Both variables are unbound. Bind them in a new cycle.
+                eprintln!("new cycle: {} = {}", l, r);
+                self.bind(l, right.clone());
+                if r != l {
+                    // Only bind one once for a 1-cycle.
+                    self.bind(r, left.clone());
+                }
+            }
+            (VariableState::Cycle(c), VariableState::Unbound) => {
+                // Left is in a cycle. Extend it to include right.
+                let p = c.last().unwrap();
+                eprintln!("extend cycle from left: {}({}) = {}", l, p, r);
+                assert_ne!(p, l);
+                self.bind(p, right.clone());
+                self.bind(r, left.clone());
+            }
+            (VariableState::Unbound, VariableState::Cycle(d)) => {
+                // Right is in a cycle. Extend it to include left.
+                let q = d.last().unwrap();
+                eprintln!("extend cycle from right: {} = {}({})", l, r, q);
+                assert_ne!(q, r);
+                self.bind(q, left.clone());
+                self.bind(l, right.clone());
+            }
+            (VariableState::Cycle(c), VariableState::Cycle(d)) => {
+                // Both variables are in cycles.
+                let p = c.last().unwrap();
+                let q = d.last().unwrap();
+                assert_ne!(p, l);
+                assert_ne!(q, r);
+                if p == r || q == l {
+                    // The cycles are the same. Do nothing.
+                } else {
+                    eprintln!("join cycles: {}({}) = {}({})", l, p, r, q);
+                    self.bind(p, right.clone());
+                    self.bind(q, left.clone());
+                }
+            }
+            (VariableState::Cycle(_), VariableState::Bound(y)) => {
+                // Ground out the cycle.
+                self.bind(l, y);
+            }
+            (VariableState::Bound(x), VariableState::Cycle(_)) => {
+                // Ground out the cycle.
+                self.bind(r, x);
+            }
+
+            // Expressions.
+            (VariableState::Partial(e), VariableState::Bound(y)) => {
+                // Add a unification constraint.
+                self.constrain(&e, &term!(op!(Unify, left.clone(), y)))?;
+            }
+            (VariableState::Bound(x), VariableState::Partial(f)) => {
+                // Add a unification constraint.
+                self.constrain(&f, &term!(op!(Unify, x, right.clone())))?;
+            }
+            (VariableState::Partial(mut e), VariableState::Partial(f)) => {
+                // Merge existing constraints and add a unification constraint.
+                e.args.push(term!(op!(Unify, left.clone(), right.clone())));
+                self.constrain(&e, &f.into_term())?;
+            }
+            (VariableState::Partial(mut e), VariableState::Unbound) => {
+                // Add a unification constraint and a cyclic constraint.
+                e.args.push(term!(op!(Unify, left.clone(), right.clone())));
+                self.constrain(&e, &term!(op!(Unify, right.clone(), right.clone())))?;
+            }
+            (VariableState::Unbound, VariableState::Partial(mut f)) => {
+                // Add a unification constraint and a cyclic constraint.
+                f.args.push(term!(op!(Unify, left.clone(), right.clone())));
+                self.constrain(&f, &term!(op!(Unify, left.clone(), left.clone())))?;
+            }
+            (VariableState::Partial(_), VariableState::Cycle(_)) => {
+                // Bind the entire cycle to the expression.
+                todo!("bind cycle to expr");
+            }
+            (VariableState::Cycle(_), VariableState::Partial(_)) => {
+                // Bind the entire cycle to the expression.
+                todo!("bind cycle to expr");
+            }
+        }
         Ok(())
     }
 
@@ -3029,7 +3035,7 @@ mod tests {
 
         // unbound var -> unbound var
         vm.bind(&x, term_y.clone());
-        assert_eq!(vm.deref(&term_x), term_y);
+        assert_eq!(vm.deref(&term_x), term_x);
 
         // value
         assert_eq!(vm.deref(&value), value.clone());
@@ -3045,44 +3051,55 @@ mod tests {
     }
 
     #[test]
-    fn deref_cycle() {
+    fn variable_state() {
         let mut vm = PolarVirtualMachine::default();
-        let w = sym!("w");
         let x = sym!("x");
         let y = sym!("y");
         let z = sym!("z");
 
-        // 0-cycle.
+        // Unbound.
+        assert_eq!(vm.variable_state(&x), VariableState::Unbound);
+
+        // Bound.
         vm.bind(&x, term!(1));
-        assert_eq!(vm.deref_cycle(&x), None);
+        assert_eq!(vm.variable_state(&x), VariableState::Bound(term!(1)));
 
         // 1-cycle.
         vm.bind(&x, term!(x.clone()));
-        assert_eq!(vm.deref_cycle(&x), Some(x.clone()));
+        assert_eq!(vm.variable_state(&x), VariableState::Cycle(vec![x.clone()]));
 
         // 2-cycle.
         vm.bind(&x, term!(y.clone()));
         vm.bind(&y, term!(x.clone()));
-        assert_eq!(vm.deref_cycle(&x), Some(y.clone()));
-        assert_eq!(vm.deref_cycle(&y), Some(x.clone()));
+        assert_eq!(
+            vm.variable_state(&x),
+            VariableState::Cycle(vec![x.clone(), y.clone()])
+        );
+        assert_eq!(
+            vm.variable_state(&y),
+            VariableState::Cycle(vec![y.clone(), x.clone()])
+        );
 
         // 3-cycle.
         vm.bind(&x, term!(y.clone()));
         vm.bind(&y, term!(z.clone()));
         vm.bind(&z, term!(x.clone()));
-        assert_eq!(vm.deref_cycle(&x), Some(z.clone()));
-        assert_eq!(vm.deref_cycle(&y), Some(x.clone()));
-        assert_eq!(vm.deref_cycle(&z), Some(y.clone()));
+        assert_eq!(
+            vm.variable_state(&x),
+            VariableState::Cycle(vec![x.clone(), y.clone(), z.clone()])
+        );
+        assert_eq!(
+            vm.variable_state(&y),
+            VariableState::Cycle(vec![y.clone(), z.clone(), x.clone()])
+        );
+        assert_eq!(
+            vm.variable_state(&z),
+            VariableState::Cycle(vec![z.clone(), x.clone(), y])
+        );
 
-        // 4-cycle.
-        vm.bind(&w, term!(x.clone()));
-        vm.bind(&x, term!(y.clone()));
-        vm.bind(&y, term!(z.clone()));
-        vm.bind(&z, term!(w.clone()));
-        assert_eq!(vm.deref_cycle(&w), Some(z.clone()));
-        assert_eq!(vm.deref_cycle(&x), Some(w));
-        assert_eq!(vm.deref_cycle(&y), Some(x));
-        assert_eq!(vm.deref_cycle(&z), Some(y));
+        // Expression.
+        vm.bind(&x, term!(op!(And)));
+        assert_eq!(vm.variable_state(&x), VariableState::Partial(op!(And)));
     }
 
     #[test]
@@ -3516,8 +3533,8 @@ mod tests {
         let zero = term!(0);
         let mut vm = PolarVirtualMachine::default();
         vm.bind(&x, zero.clone());
-        assert_eq!(vm.value(&x), Some(&zero));
-        assert_eq!(vm.value(&y), None);
+        assert_eq!(vm.variable_state(&x), VariableState::Bound(zero));
+        assert_eq!(vm.variable_state(&y), VariableState::Unbound);
     }
 
     #[test]
@@ -3564,8 +3581,8 @@ mod tests {
             }],
         );
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.value(&x), Some(&Term::new_from_test(zero)));
-        assert_eq!(vm.value(&y), Some(&Term::new_from_test(one)));
+        assert_eq!(vm.variable_state(&x), VariableState::Bound(term!(zero)));
+        assert_eq!(vm.variable_state(&y), VariableState::Bound(term!(one)));
     }
 
     #[test]
