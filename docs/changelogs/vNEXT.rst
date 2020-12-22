@@ -26,7 +26,5 @@ New features
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- Fixed type-checking for many-to-many relationships in Django using the ``related_name`` field
+  in list filtering policies.
