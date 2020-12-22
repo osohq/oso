@@ -117,3 +117,4 @@ deps:
 
 submodules:
 	git submodule update --init --recursive --remote
+	cd examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide && git checkout basic_roles_complete && git pull
