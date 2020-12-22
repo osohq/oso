@@ -19,12 +19,12 @@ from .expression import Expression, Pattern
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
-    def __init__(self, polar, classes={}, instances={}, to_polar_hooks=[]):
+    def __init__(self, polar, classes=None, instances=None, to_polar_hooks=None):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
-        self.classes = classes.copy()
-        self.instances = instances.copy()
-        self.to_polar_hooks = to_polar_hooks.copy()
+        self.classes = (classes or {}).copy()
+        self.instances = (instances or {}).copy()
+        self.to_polar_hooks = (to_polar_hooks or []).copy()
         self.contains_partial = False
 
     def copy(self):
