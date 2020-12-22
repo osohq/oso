@@ -344,10 +344,10 @@ def test_add_user_role(test_db_session, abbey_road, ringo, beatles):
 
     # Test can't add invalid role
     with pytest.raises(ValueError):
-        oso_roles.add_user_role(test_db_session, ringo, abbey_road, "FAKE")
+        oso_roles.add_user_role(test_db_session, ringo, abbey_road, "FAKE", commit=True)
 
     # Test adding valid role
-    oso_roles.add_user_role(test_db_session, ringo, abbey_road, "READ")
+    oso_roles.add_user_role(test_db_session, ringo, abbey_road, "READ", commit=True)
 
     roles = (
         test_db_session.query(RepositoryRole)
@@ -359,11 +359,13 @@ def test_add_user_role(test_db_session, abbey_road, ringo, beatles):
 
     # ensure user cannot have duplicate role
     with pytest.raises(Exception):
-        oso_roles.add_user_role(test_db_session, ringo, abbey_road, "READ")
+        oso_roles.add_user_role(test_db_session, ringo, abbey_road, "READ", commit=True)
 
     # ensure user cannot have two roles for the same resource if `mutually_exclusive=True`
     with pytest.raises(Exception):
-        oso_roles.add_user_role(test_db_session, ringo, abbey_road, "WRITE")
+        oso_roles.add_user_role(
+            test_db_session, ringo, abbey_road, "WRITE", commit=True
+        )
 
     roles = (
         test_db_session.query(OrganizationRole)
@@ -376,7 +378,7 @@ def test_add_user_role(test_db_session, abbey_road, ringo, beatles):
 
     # ensure user cannot have two roles for the same resource
     with pytest.raises(Exception):
-        oso_roles.add_user_role(test_db_session, ringo, beatles, "MEMBER")
+        oso_roles.add_user_role(test_db_session, ringo, beatles, "MEMBER", commit=True)
 
     # ensure user can have two roles for the same resource if `mutually_exclusive=False`
     oso_roles.add_user_role(test_db_session, ringo, beatles, "BILLING")
