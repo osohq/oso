@@ -269,9 +269,9 @@ ExpectValue<T>: Term = {
                 errors.push(
                     ErrorRecovery {
                         dropped_tokens: vec![(loc, lexer::Token::String(term.to_polar()), end)],
-                        error: ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "value".to_string() } },
+                        error: ParseError::User { error: error::ParseError::WrongValueType { loc, term: term.clone(), expected: "value".to_string() } },
                     });
-                Term::new_temporary(Value::Boolean(false))
+                term
             },
             ValueOrLogical::Value(t) | ValueOrLogical::Either(t) => t
         }
@@ -285,10 +285,9 @@ ExpectLogical<T>: Term = {
                 errors.push(
                     ErrorRecovery {
                         dropped_tokens: vec![(loc, lexer::Token::String(term.to_polar()), end)],
-                        error: ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "logical expression".to_string() } },
+                        error: ParseError::User { error: error::ParseError::WrongValueType { loc, term: term.clone(), expected: "logical expression".to_string() } },
                     });
-                Term::new_temporary(Value::Boolean(false))
-                // Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "logical expression".to_string() } })
+                term
             },
             ValueOrLogical::Logical(t) | ValueOrLogical::Either(t) => t
         }
