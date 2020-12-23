@@ -51,28 +51,84 @@ fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> erro
 }
 
 pub fn parse_term(src: &str) -> PolarResult<Term> {
+    let mut errors = vec![];
+
     polar::TermParser::new()
-        .parse(0, Lexer::new(src))
+        .parse(0, &mut errors, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
+        .and_then(|r| {
+            if errors.is_empty() {
+                Ok(r)
+            } else {
+                Err(to_parse_error(errors.remove(0).error).into())
+            }
+        })
 }
 
 pub fn parse_lines(src_id: u64, src: &str) -> PolarResult<Vec<Line>> {
+    let mut errors = vec![];
+
     polar::LinesParser::new()
-        .parse(src_id, Lexer::new(src))
+        .parse(src_id, &mut errors, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
+        .and_then(|r| {
+            if errors.is_empty() {
+                Ok(r)
+            } else {
+                Err(to_parse_error(errors.remove(0).error).into())
+            }
+        })
 }
 
 pub fn parse_query(src_id: u64, src: &str) -> PolarResult<Term> {
+    let mut errors = vec![];
     polar::TermExpParser::new()
-        .parse(src_id, Lexer::new(src))
+        .parse(src_id, &mut errors, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
+        .and_then(|r| {
+            if errors.is_empty() {
+                Ok(r)
+            } else {
+                Err(to_parse_error(errors.remove(0).error).into())
+            }
+        })
+}
+
+pub fn parse_query_with_errors(src_id: u64, src: &str) -> PolarResult<(Term, String)> {
+    let mut errors = vec![];
+    polar::TermExpParser::new()
+        .parse(src_id, &mut errors, Lexer::new(src))
+        .map_err(|e| to_parse_error(e).into())
+        .map(|t| {
+            (
+                t,
+                errors.into_iter().fold(String::new(), |acc, e| {
+                    acc + &format!(
+                        "{} at ({}, {}): {:?}",
+                        to_parse_error(e.error).to_string(),
+                        e.dropped_tokens[0].0,
+                        e.dropped_tokens[0].2,
+                        e.dropped_tokens[0].1
+                    )
+                }),
+            )
+        })
 }
 
 #[cfg(test)]
 pub fn parse_rules(src_id: u64, src: &str) -> PolarResult<Vec<Rule>> {
+    let mut errors = vec![];
+
     polar::RulesParser::new()
-        .parse(src_id, Lexer::new(src))
+        .parse(src_id, &mut errors, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
+        .and_then(|r| {
+            if errors.is_empty() {
+                Ok(r)
+            } else {
+                Err(to_parse_error(errors.remove(0).error).into())
+            }
+        })
 }
 
 #[cfg(test)]
@@ -368,6 +424,37 @@ mod tests {
                     ..
                 }
             ));
+        }
+    }
+
+    #[test]
+    fn test_catching_wrong_types_return_errors() {
+        for bad_query in &[
+            "f(x=1)",
+            "x in [1, 2] < 2",
+            "{x: 1 < 2}",
+            "{x: 1 < 2}",
+            "not 1",
+            "1 and 2",
+            "1 + print(\"x\")",
+            "forall([1, 2, 3], x < 1)",
+            "x = (1 or 2)",
+            "x = (1 = 2)",
+            "foo.bar(x or y)",
+            "foo.bar(z: x or y)",
+            "x = y = z",
+            "x = y = 1",
+            "x = 1 = z",
+            "1 = y = z",
+            "x = (1 and 2)",
+            "(1 or 2) = x",
+            "x = (not x)",
+            "y matches z = x",
+        ] {
+            let query = super::parse_query_with_errors(0, bad_query).unwrap();
+            println!("{}", query.0.to_polar());
+            println!("{}", query.1);
+            // assert!(matches!(query, Ok((_t, _e))));
         }
     }
 }

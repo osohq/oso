@@ -14,9 +14,9 @@ use crate::terms::*;
 use crate::numerics::*;
 use super::ValueOrLogical;
 
-use lalrpop_util::ParseError;
+use lalrpop_util::{ErrorRecovery, ParseError};
 
-grammar(src_id: u64);
+grammar<'err>(src_id: u64, errors: &'err mut Vec<ErrorRecovery<usize, lexer::Token, error::ParseError>>);
 
 extern {
     type Location = usize;
@@ -235,7 +235,8 @@ pub TermExp: Term = {
         ValueOrLogical::Value(t) | ValueOrLogical::Logical(t) | ValueOrLogical::Either(t) => {
             t
         }
-    }
+    },
+    ! => { errors.push(<>); Term::new_temporary(Value::Boolean(false)) }
 }
 
 // A value expression
@@ -262,25 +263,38 @@ IsAny<T>: ValueOrLogical = {
 
 
 ExpectValue<T>: Term = {
-    <loc:@L> <term:T> =>? {
+    <loc:@L> <term:T> <end:@R> => {
         match term {
             ValueOrLogical::Logical(term) => {
-                Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "value".to_string() } })
+                errors.push(
+                    ErrorRecovery {
+                        dropped_tokens: vec![(loc, lexer::Token::String(term.to_polar()), end)],
+                        error: ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "value".to_string() } },
+                    });
+                Term::new_temporary(Value::Boolean(false))
             },
-            ValueOrLogical::Value(t) | ValueOrLogical::Either(t) => Ok(t)
+            ValueOrLogical::Value(t) | ValueOrLogical::Either(t) => t
         }
-    }
+    },
 }
 
 ExpectLogical<T>: Term = {
-    <loc:@L> <term:T> =>? {
+    <loc:@L> <term:T> <end:@R> => {
         match term {
             ValueOrLogical::Value(term) => {
-                Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "logical expression".to_string() } })
+                errors.push(
+                    ErrorRecovery {
+                        dropped_tokens: vec![(loc, lexer::Token::String(term.to_polar()), end)],
+                        error: ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "logical expression".to_string() } },
+                    });
+                Term::new_temporary(Value::Boolean(false))
+                // Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "logical expression".to_string() } })
             },
-            ValueOrLogical::Logical(t) | ValueOrLogical::Either(t) => Ok(t)
+            ValueOrLogical::Logical(t) | ValueOrLogical::Either(t) => t
         }
-    }
+    },
+    ! => { errors.push(<>); Term::new_temporary(Value::Boolean(false)) }
+
 }
 
 Exp10<T>: ValueOrLogical = {
