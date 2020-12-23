@@ -747,35 +747,32 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// Use this when you want to allow an expression but you might have a variable pointing at an
-    /// expression.
+    /// Use this when you want to allow an expression, but you might have a variable
+    /// bound to an expression, or not bound at all.
     fn deref_expr(&self, term: &Term) -> Term {
-        let derefed = self.deref(term);
-        // if &derefed == term {
-        //     if let Ok(v) = term.value().as_symbol() {
-        //         let mut v = v;
-        //         let mut expr = op!(And);
-        //         while let Some(x) = self.value(v) {
-        //             if x == term {
-        //                 break;
-        //             }
-        //             match x.value() {
-        //                 Value::Variable(y) | Value::RestVariable(y) => {
-        //                     expr.args.push(term!(value!(op!(
-        //                         Unify,
-        //                         term!(sym!(v.clone())),
-        //                         x.clone()
-        //                     ))));
-        //                     v = y;
-        //                 }
-        //                 _ => unreachable!(),
-        //             }
-        //         }
-        //         eprintln!("deref_expr({}) → {}", term.to_polar(), expr.to_polar());
-        //         return term!(value!(expr));
-        //     }
-        // }
-        derefed
+        match term.value() {
+            Value::Variable(var) | Value::RestVariable(var) => match self.variable_state(var) {
+                VariableState::Bound(value) => value,
+                VariableState::Unbound => {
+                    term!(op!(And, term!(op!(Unify, term.clone(), term.clone()))))
+                }
+                VariableState::Cycle(c) => {
+                    let mut constraints = op!(And);
+                    for (x, y) in c.iter().zip(c.iter().skip(1)) {
+                        constraints.add_constraint(op!(
+                            Unify,
+                            term!(x.clone()),
+                            term!(y.clone())
+                        ));
+                    }
+                    term!(constraints)
+                }
+                VariableState::Partial(constraints) => {
+                    term!(constraints)
+                }
+            },
+            _ => term.clone(),
+        }
     }
 
     /// Return `true` if `var` is a temporary variable.
@@ -2029,14 +2026,8 @@ impl PolarVirtualMachine {
                     args: vec![left_term, right_term],
                 })
             }
-            (Value::Expression(_), Value::Expression(_)) => Err(self.set_error_context(
-                &term,
-                error::RuntimeError::Unsupported {
-                    msg: "cannot compare expressions".to_string(),
-                },
-            )),
-            (Value::Expression(operation), _) | (_, Value::Expression(operation)) => {
-                self.constrain(operation, term)?;
+            (Value::Expression(expr), _) | (_, Value::Expression(expr)) => {
+                self.constrain(expr, term)?;
                 Ok(QueryEvent::None)
             }
             (left, right) => Err(self.type_error(
