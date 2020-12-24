@@ -422,7 +422,7 @@ mod test {
         let p = Polar::new();
         p.load_str(
             r#"f(x) if x.y.z > 0;
-               g(x) if x.y = 0 and x.y > 1 and x.y.z > 1 and x = 2;"#,
+               g(x) if x.y = 0 and x.y > 1 and x.y.z > 1;"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "x", "_this.y.z > 0");
@@ -432,7 +432,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "0 = _this.y and _this.y > 1 and _this.y.z > 1 and _this = 2"
+            "0 = _this.y and _this.y > 1 and _this.y.z > 1"
         );
         assert_query_done!(q);
         Ok(())
