@@ -675,7 +675,7 @@ mod test {
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.foo != 1");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.foo");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
