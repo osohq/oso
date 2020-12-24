@@ -1,15 +1,16 @@
-.. title:: 0.0.4 Changelog
+.. title:: Changelog for Release 2020-06-03
 .. meta::
-  :description: Check out our changelog for oso 0.0.4 to learn about new features, bug fixes, and more. 
+  :description: Changelog for Release 2020-06-03 (oso 0.0.4) containing new features, bug fixes, and more.
 
-======
-0.0.4
-======
+##################
+Release 2020-06-03
+##################
 
-**Release date:** 2020-06-03
-
+=============
+``oso`` 0.0.4
+=============
 
 Other bugs & improvements
 =========================
 
-- Fixed handling of methods with different arities
+- Fixed handling of methods with different arities.
