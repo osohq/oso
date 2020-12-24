@@ -2035,6 +2035,9 @@ impl PolarVirtualMachine {
 
         // Do the comparison.
         match (left_term.value(), right_term.value()) {
+            (Value::Expression(_), _) | (_, Value::Expression(_)) => unreachable!(
+                "should never encounter a bare expression; only variables bound to expressions"
+            ),
             (Value::Number(left), Value::Number(right)) => {
                 if !match op {
                     Operator::Lt => left < right,
@@ -2079,6 +2082,7 @@ impl PolarVirtualMachine {
                     args: vec![left_term, right_term],
                 })
             }
+            (Value::RestVariable(_), Value::RestVariable(_)) => todo!("*rest, *rest"),
             (Value::Variable(l), Value::Variable(r))
             | (Value::RestVariable(l), Value::Variable(r))
             | (Value::Variable(l), Value::RestVariable(r)) => {
@@ -2152,11 +2156,7 @@ impl PolarVirtualMachine {
                         return self.comparison_op_helper(term, op, vec![left_term, y]);
                     }
                     VariableState::Cycle(c) => {
-                        let mut expr = op!(And);
-                        for (x, y) in c.iter().zip(c.iter().skip(1)) {
-                            expr.add_constraint(op!(Unify, term!(x.clone()), term!(y.clone())));
-                        }
-                        self.constrain(&expr, term)?;
+                        self.constrain(&cycle_constraints(c), term)?;
                     }
                     VariableState::Partial(e) => {
                         self.constrain(&e, term)?;
