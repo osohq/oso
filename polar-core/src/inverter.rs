@@ -11,7 +11,9 @@ use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
-use crate::vm::{Binding, BindingStack, Goals, PolarVirtualMachine};
+use crate::vm::{
+    cycle_constraints, Binding, BindingStack, Goals, PolarVirtualMachine, VariableState,
+};
 
 #[derive(Clone)]
 pub struct Inverter {
@@ -87,18 +89,46 @@ impl<'a> Folder for PartialInverter<'a> {
 }
 
 /// Invert all partials in `bindings` and return them.
-fn invert_partials(bindings: BindingStack, old_bindings: &[Binding]) -> BindingStack {
+fn invert_partials(
+    bindings: BindingStack,
+    old_bindings: &[Binding],
+    vm: &PolarVirtualMachine,
+) -> BindingStack {
     bindings
         .into_iter()
         .filter_map(|Binding(var, value)| {
             old_bindings
                 .iter()
+                .inspect(|Binding(var, val)| {
+                    eprintln!("LOOKING AT: {} -> {}", var, val.to_polar());
+                })
                 .rfind(|Binding(v, _)| *v == var)
                 .map(|Binding(_, old_value)| {
-                    Binding(
-                        var.clone(),
-                        PartialInverter::new(&var, old_value).fold_term(value),
-                    )
+                    eprintln!(
+                        "INVERTING {} -> {} w/ old_value: {}",
+                        var,
+                        value.to_polar(),
+                        old_value.to_polar()
+                    );
+                    match old_value.value() {
+                        Value::Variable(old_var) | Value::RestVariable(old_var) => {
+                            match vm.variable_state(old_var) {
+                                VariableState::Unbound => todo!(),
+                                VariableState::Bound(x) => todo!(),
+                                VariableState::Cycle(c) => {
+                                    // TODO(gj): basically do a vm.constrain() here except we want
+                                    // to return the constrained, inverted partial as the Binding.
+                                    // cycle_constraints(c)
+                                    todo!();
+                                }
+                                VariableState::Partial(e) => todo!(),
+                            }
+                        }
+                        _ => Binding(
+                            var.clone(),
+                            PartialInverter::new(&var, old_value).fold_term(value),
+                        ),
+                    }
                 })
         })
         .collect()
@@ -108,6 +138,9 @@ fn invert_partials(bindings: BindingStack, old_bindings: &[Binding]) -> BindingS
 fn dedupe_bindings(bindings: BindingStack) -> Bindings {
     bindings
         .into_iter()
+        .inspect(|Binding(var, val)| {
+            eprintln!("DEDUPING: {} -> {}", var, val.to_polar());
+        })
         .fold(Bindings::new(), |mut acc, Binding(var, value)| {
             acc.insert(var, value);
             acc

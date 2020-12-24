@@ -177,7 +177,7 @@ pub type Queries = TermList;
 
 /// Variable binding state.
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum VariableState {
+pub enum VariableState {
     Unbound,
     Bound(Term),
     Cycle(Vec<Symbol>),
@@ -185,7 +185,8 @@ enum VariableState {
 }
 
 /// Represent each binding in a cycle as a unification constraint.
-fn cycle_constraints(cycle: Vec<Symbol>) -> Operation {
+// TODO(gj): put this in an impl block on VariableState?
+pub fn cycle_constraints(cycle: Vec<Symbol>) -> Operation {
     let mut constraints = op!(And);
     for (x, y) in cycle.iter().zip(cycle.iter().skip(1)) {
         constraints.add_constraint(op!(Unify, term!(x.clone()), term!(y.clone())));
@@ -600,6 +601,8 @@ impl PolarVirtualMachine {
             t.to_polar()
         );
         let operation = o.clone_with_new_constraint(t.clone());
+        // TODO(gj): test what happens when we constrain a partial that contains variables of every
+        // possible state.
         if self.is_consistent(&operation) {
             for var in operation.variables().iter() {
                 match self.variable_state(var) {
@@ -727,7 +730,7 @@ impl PolarVirtualMachine {
     }
 
     /// Investigate the state of a variable and return a variable state variant.
-    fn variable_state(&self, variable: &Symbol) -> VariableState {
+    pub fn variable_state(&self, variable: &Symbol) -> VariableState {
         let mut path = vec![variable];
         while let Some(value) = self.value(path.last().unwrap()) {
             match value.value() {
