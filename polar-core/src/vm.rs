@@ -1079,102 +1079,51 @@ impl PolarVirtualMachine {
             &[left, right],
         );
 
-        // TODO(gj): should this be deref_expr in some cases?
-        let derefed_left = self.deref(left);
-        let derefed_right = self.deref(right);
-        match (derefed_left.value(), derefed_right.value()) {
+        match (left.value(), right.value()) {
             (Value::InstanceLiteral(_), _) => unreachable!("unparseable"),
             (_, Value::InstanceLiteral(_)) | (_, Value::Dictionary(_)) => {
                 unreachable!("parsed as pattern")
             }
-            (_, Value::Expression(_)) => {
-                return Err(self.set_error_context(
-                    &right,
-                    error::RuntimeError::Unsupported {
-                        msg: "cannot match against an expression".to_string(),
-                    },
-                ));
+            (Value::Expression(_), _) | (_, Value::Expression(_)) => {
+                unreachable!("encountered bare expression")
             }
 
-            // TODO(gj): collapse?
-            (Value::Variable(_), _) | (Value::RestVariable(_), _) => {
-                self.push_goal(Goal::Unify {
-                    left: derefed_left.clone(),
-                    right: derefed_right.clone(),
-                })?;
-            }
-
-            (_, Value::Variable(_)) | (_, Value::RestVariable(_)) => {
-                self.push_goal(Goal::Unify {
-                    left: derefed_left.clone(),
-                    right: derefed_right.clone(),
-                })?;
-            }
-
-            (Value::Expression(operation), _) => {
-                match right.value() {
-                    Value::Pattern(Pattern::Dictionary(fields)) => {
-                        let to_unify = |(field, value): (&Symbol, &Term)| -> Operation {
-                            let field = right.clone_with_value(value!(field.clone()));
-                            let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
-                            op!(Unify, left, value.clone())
-                        };
-
-                        let mut operation = operation.clone();
-
-                        // Add all but the last field constraint to the operation.
-                        for op in fields.fields.iter().skip(1).rev().map(to_unify) {
-                            operation.add_constraint(op);
-                        }
-
-                        // Add the last field constraint and trigger the bind dance.
-                        for op in fields.fields.iter().take(1).map(to_unify) {
-                            self.constrain(&operation, &term!(op))?;
-                        }
+            (Value::RestVariable(_), Value::RestVariable(_)) => todo!("*rest, *rest"),
+            (Value::Variable(l), Value::Variable(r))
+            | (Value::RestVariable(l), Value::Variable(r))
+            | (Value::Variable(l), Value::RestVariable(r)) => {
+                // Two variables.
+                match (self.variable_state(l), self.variable_state(r)) {
+                    (VariableState::Unbound, VariableState::Unbound) => todo!("unbound, unbound"),
+                    (VariableState::Bound(x), _) => return self.isa(&x, right),
+                    (_, VariableState::Bound(y)) => return self.isa(left, &y),
+                    (VariableState::Cycle(c), VariableState::Cycle(d)) => {
+                        let mut e = cycle_constraints(c);
+                        e.merge_constraints(cycle_constraints(d));
+                        let term = term!(op!(Isa, left.clone(), right.clone()));
+                        self.constrain(&e, &term)?;
                     }
-                    Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
-                        // Grab existing constraints before we add new ones.
-                        let existing = operation.constraints();
-
-                        // Construct field-less matches operation.
-                        let tag_pattern =
-                            right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
-                        let type_constraint = op!(Isa, left.clone(), tag_pattern);
-                        let mut operation = operation
-                            .clone_with_new_constraint(type_constraint.clone().into_term());
-
-                        // Construct compatibility check.
-                        let runnable = Box::new(IsaConstraintCheck::new(existing, type_constraint));
-
-                        // Construct field constraints.
-                        fields.fields.iter().rev().for_each(|(f, v)| {
-                            let field = right.clone_with_value(value!(f.clone()));
-                            let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
-                            let unify = op!(Unify, left, v.clone());
-                            operation = operation.clone_with_new_constraint(term!(unify));
-                        });
-
-                        // Construct manual binds to run if compabitility check succeeds. If the
-                        // check fails, the query should backtrack because the existing constraints
-                        // are incompatible with the proposed constraint.
-                        let binds = operation.variables().into_iter().map(|var| Goal::Bind {
-                            var,
-                            value: operation.clone().into_term(),
-                        });
-
-                        // Run compatibility check.
-                        self.choose_conditional(
-                            vec![Goal::Run { runnable }],
-                            binds.collect(),
-                            vec![Goal::Backtrack],
-                        )?;
-                    }
-                    _ => self.constrain(
-                        operation,
-                        &left.clone_with_value(value!(op!(Unify, left.clone(), right.clone()))),
-                    )?,
+                    (s, t) => todo!("({:?}, {:?}]", s, t),
                 }
             }
+            (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
+                match self.variable_state(l) {
+                    // TODO(gj): instead of punting to Unify, should we cons up a new expression of
+                    // `left matches RHS`?
+                    VariableState::Unbound => todo!("isa w/unbound"),
+                    VariableState::Bound(x) => return self.isa(&x, right),
+                    VariableState::Cycle(c) => {
+                        return self.isa_expr(&cycle_constraints(c), left, right);
+                    }
+                    VariableState::Partial(e) => return self.isa_expr(&e, left, right),
+                }
+            }
+            (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => match self.variable_state(r) {
+                VariableState::Unbound => todo!("isa w/unbound"),
+                VariableState::Bound(y) => return self.isa(left, &y),
+                VariableState::Cycle(_) => todo!("isa w/cycle"),
+                VariableState::Partial(_) => todo!("isa w/partial"),
+            },
 
             (Value::List(left), Value::List(right)) => {
                 self.unify_lists(left, right, |(left, right)| Goal::Isa {
@@ -1245,6 +1194,71 @@ impl PolarVirtualMachine {
                 left: left.clone(),
                 right: right.clone(),
             })?,
+        }
+        Ok(())
+    }
+
+    fn isa_expr(&mut self, operation: &Operation, left: &Term, right: &Term) -> PolarResult<()> {
+        match right.value() {
+            Value::Pattern(Pattern::Dictionary(fields)) => {
+                let to_unify = |(field, value): (&Symbol, &Term)| -> Operation {
+                    let field = right.clone_with_value(value!(field.clone()));
+                    let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
+                    op!(Unify, left, value.clone())
+                };
+
+                let mut operation = operation.clone();
+
+                // Add all but the last field constraint to the operation.
+                for op in fields.fields.iter().skip(1).rev().map(to_unify) {
+                    operation.add_constraint(op);
+                }
+
+                // Add the last field constraint and trigger the bind dance.
+                for op in fields.fields.iter().take(1).map(to_unify) {
+                    self.constrain(&operation, &term!(op))?;
+                }
+            }
+            Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
+                // Grab existing constraints before we add new ones.
+                let existing = operation.constraints();
+
+                // Construct field-less matches operation.
+                let tag_pattern = right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
+                let type_constraint = op!(Isa, left.clone(), tag_pattern);
+                let mut operation =
+                    operation.clone_with_new_constraint(type_constraint.clone().into_term());
+
+                // Construct compatibility check.
+                let runnable = Box::new(IsaConstraintCheck::new(existing, type_constraint));
+
+                // Construct field constraints.
+                fields.fields.iter().rev().for_each(|(f, v)| {
+                    let field = right.clone_with_value(value!(f.clone()));
+                    let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
+                    let unify = op!(Unify, left, v.clone());
+                    operation = operation.clone_with_new_constraint(term!(unify));
+                });
+
+                // Construct manual binds to run if compabitility check succeeds. If the
+                // check fails, the query should backtrack because the existing constraints
+                // are incompatible with the proposed constraint.
+                let binds = operation.variables().into_iter().map(|var| Goal::Bind {
+                    var,
+                    value: operation.clone().into_term(),
+                });
+
+                // Run compatibility check.
+                self.choose_conditional(
+                    vec![Goal::Run { runnable }],
+                    binds.collect(),
+                    vec![Goal::Backtrack],
+                )?;
+            }
+            _ => self.constrain(
+                operation,
+                &left.clone_with_value(value!(op!(Unify, left.clone(), right.clone()))),
+            )?,
         }
         Ok(())
     }
