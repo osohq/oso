@@ -600,13 +600,27 @@ mod test {
     }
 
     #[test]
+    fn test_dot_lookup_with_unbound_as_field() -> TestResult {
+        let p = Polar::new();
+        p.load_str("f(x) if {a: 1, b: 2}.(x) > 0;")?;
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!("a"));
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!("b"));
+        Ok(())
+    }
+
+    #[test]
     fn test_dot_lookup_with_partial_as_field() -> TestResult {
         let p = Polar::new();
-        p.load_str("f(x) if {}.(x);")?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
-        let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }), ..}));
+        p.load_str("f(x, y) if {a: y, b: y}.(x) > 0;")?;
+        p.register_constant(sym!("x"), term!(value!(op!(And))));
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
+        let next = next_binding(&mut q)?;
+        assert_eq!(next[&sym!("x")], term!("a"));
+        assert_partial_expression!(next, "y", "_this > 0");
+        let next = next_binding(&mut q)?;
+        assert_eq!(next[&sym!("x")], term!("b"));
+        assert_partial_expression!(next, "y", "_this > 0");
         Ok(())
     }
 
