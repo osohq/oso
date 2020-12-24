@@ -473,7 +473,7 @@ mod test {
     }
 
     #[test]
-    fn test_partial_unification() -> TestResult {
+    fn test_partial_unification_1() -> TestResult {
         let p = Polar::new();
         p.load_str(
             r#"f(x, y) if x = y;
@@ -499,7 +499,7 @@ mod test {
         assert_eq!(next[&sym!("y")], term!(2));
         assert_query_done!(q);
 
-        // TODO(gj): fix lifetime of binding.
+        // Register `y` as a partial.
         p.register_constant(sym!("y"), term!(value!(op!(And))));
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
@@ -507,7 +507,6 @@ mod test {
         let next = next_binding(&mut q)?;
         assert_eq!(next[&sym!("x")], term!(1));
         assert_eq!(next[&sym!("y")], term!(1));
-        assert_query_none!(q);
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), sym!("y")])), false);
@@ -516,6 +515,11 @@ mod test {
         assert_eq!(next[&sym!("y")], term!(2));
         assert_query_done!(q);
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_partial_unification_2() -> TestResult {
         let p = Polar::new();
         p.load_str(
             r#"f(x, y) if x = y;
@@ -525,6 +529,8 @@ mod test {
                g(x, y) if x = 1 and y = 2;
                g(x, y) if x = 1 and y = 2 and x = y;"#,
         )?;
+
+        // Register `x` as a partial.
         p.register_constant(sym!("x"), term!(value!(op!(And))));
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
@@ -540,6 +546,7 @@ mod test {
         assert_eq!(next[&sym!("y")], term!(2));
         assert_query_done!(q);
 
+        // Register `y` as a partial.
         p.register_constant(sym!("y"), term!(value!(op!(And))));
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
@@ -547,14 +554,12 @@ mod test {
         let next = next_binding(&mut q)?;
         assert_eq!(next[&sym!("x")], term!(1));
         assert_eq!(next[&sym!("y")], term!(1));
-        assert_query_none!(q);
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
         assert_eq!(next[&sym!("x")], term!(1));
         assert_eq!(next[&sym!("y")], term!(2));
-        assert_query_none!(q);
         assert_query_done!(q);
         Ok(())
     }
@@ -917,9 +922,7 @@ mod test {
                g(x) if x = 1 and y := x;"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }), ..}));
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));

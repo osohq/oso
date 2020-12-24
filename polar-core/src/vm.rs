@@ -602,7 +602,10 @@ impl PolarVirtualMachine {
         let operation = o.clone_with_new_constraint(t.clone());
         if self.is_consistent(&operation) {
             for var in operation.variables().iter() {
-                self.bind(var, operation.clone().into_term());
+                match self.variable_state(var) {
+                    VariableState::Bound(_) => (),
+                    _ => self.bind(var, operation.clone().into_term()),
+                }
             }
         } else {
             self.push_goal(Goal::Backtrack)?;
@@ -638,9 +641,9 @@ impl PolarVirtualMachine {
                     }
                 }
                 (Value::Variable(l), _) => {
-                    eprintln!("L: {:?}", self.variable_state(l));
                     if let VariableState::Bound(x) = self.variable_state(l) {
                         if let Some(y) = values.insert(l.clone(), right.clone()) {
+                            eprintln!("L: {}, {}, {}", l, x.to_polar(), y.to_polar());
                             if x != y {
                                 panic!("L Boom!");
                                 return false;
@@ -649,9 +652,9 @@ impl PolarVirtualMachine {
                     }
                 }
                 (_, Value::Variable(r)) => {
-                    eprintln!("R: {:?}", self.variable_state(r));
                     if let VariableState::Bound(y) = self.variable_state(r) {
                         if let Some(x) = values.insert(r.clone(), left.clone()) {
+                            eprintln!("R: {}, {}, {}", r, x.to_polar(), y.to_polar());
                             if x != y {
                                 panic!("R Boom!");
                                 return false;
@@ -2211,15 +2214,10 @@ impl PolarVirtualMachine {
             (Value::Variable(var), _) | (Value::RestVariable(var), _) => {
                 let right = right.clone();
                 match self.variable_state(var) {
-                    VariableState::Unbound | VariableState::Cycle(_) => self.bind(var, right),
-                    VariableState::Partial(expr) => {
-                        let left = left.clone();
-                        self.constrain(&expr, &term!(op!(Unify, left, right)))?;
-                    }
                     VariableState::Bound(value) => {
-                        let left = value;
-                        self.push_goal(Goal::Unify { left, right })?;
+                        self.push_goal(Goal::Unify { left: value, right })?;
                     }
+                    _ => self.bind(var, right),
                 }
             }
 
@@ -2227,15 +2225,10 @@ impl PolarVirtualMachine {
             (_, Value::Variable(var)) | (_, Value::RestVariable(var)) => {
                 let left = left.clone();
                 match self.variable_state(var) {
-                    VariableState::Unbound | VariableState::Cycle(_) => self.bind(var, left),
-                    VariableState::Partial(expr) => {
-                        let right = right.clone();
-                        self.constrain(&expr, &term!(op!(Unify, left, right)))?;
-                    }
                     VariableState::Bound(value) => {
-                        let right = value;
-                        self.push_goal(Goal::Unify { left, right })?;
+                        self.push_goal(Goal::Unify { left, right: value })?;
                     }
+                    _ => self.bind(var, left),
                 }
             }
 
