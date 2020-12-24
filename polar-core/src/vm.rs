@@ -1241,6 +1241,12 @@ impl PolarVirtualMachine {
                 }
             }
             Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
+                eprintln!(
+                    "isa_expr; expr: {}; {} matches {}",
+                    operation.to_polar(),
+                    left.to_polar(),
+                    right.to_polar()
+                );
                 // Grab existing constraints before we add new ones.
                 let existing = operation.constraints();
 
@@ -1529,7 +1535,7 @@ impl PolarVirtualMachine {
                 let args = predicate.args.iter().map(|t| self.deep_deref(t)).collect();
                 let pre_filter = generic_rule.get_applicable_rules(&args);
 
-                self.polar_log_mute = true;
+                // self.polar_log_mute = true;
 
                 // Filter rules by applicability.
                 vec![

@@ -123,7 +123,7 @@ mod test {
     use crate::formatting::ToPolarString;
     use crate::kb::Bindings;
     use crate::polar::{Polar, Query};
-    use crate::terms::Call;
+    use crate::terms::{Call, Dictionary, InstanceLiteral, Pattern};
 
     macro_rules! assert_partial_expression {
         ($bindings:expr, $sym:expr, $right:expr) => {
@@ -155,11 +155,11 @@ mod test {
         };
     }
 
-    macro_rules! assert_query_none {
-        ($query:expr) => {
-            assert!(matches!($query.next_event()?, QueryEvent::None));
-        };
-    }
+    // macro_rules! assert_query_none {
+    //     ($query:expr) => {
+    //         assert!(matches!($query.next_event()?, QueryEvent::None));
+    //     };
+    // }
 
     fn next_binding(query: &mut Query) -> Result<Bindings, PolarError> {
         let event = query.next_event()?;
@@ -497,6 +497,53 @@ mod test {
         let error = q.next_event().unwrap_err();
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        Ok(())
+    }
+
+    #[test]
+    fn test_rule_filtering_with_partials() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"f(x) if g(x.c);
+               g(y: B) if y.b > 0;
+               g(y: C) if y.c > 0;"#,
+        )?;
+
+        // Register `x` as a partial.
+        p.register_constant(
+            sym!("x"),
+            op!(
+                And,
+                op!(Isa, term!(sym!("_this")), term!(pattern!(instance!("A")))).into_term()
+            )
+            .into_term(),
+        );
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        let mut next_binding = || loop {
+            match q.next_event().unwrap() {
+                QueryEvent::Result { bindings, .. } => return bindings,
+                QueryEvent::ExternalIsSubclass { call_id, .. } => {
+                    q.question_result(call_id, false).unwrap();
+                }
+                QueryEvent::ExternalIsa {
+                    call_id,
+                    class_tag,
+                    instance,
+                } => {
+                    eprintln!("ExternalIsa: {} matches {}", instance.to_polar(), class_tag);
+
+                    // And(Isa(_this, A), And(Dot(_this, c), Isa(_this, C)))
+                    q.question_result(call_id, class_tag == sym!("C")).unwrap();
+                }
+                _ => panic!("not bindings"),
+            }
+        };
+        assert_partial_expression!(
+            next_binding(),
+            "x",
+            "_this matches A{} and _this.c matches C{} and _this.c.c > 0"
+        );
+        assert_query_done!(q);
         Ok(())
     }
 
