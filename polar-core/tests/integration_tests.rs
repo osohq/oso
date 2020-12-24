@@ -1079,8 +1079,7 @@ fn test_comparisons() -> TestResult {
     qnull(&mut p, "neq(\"aa\", \"aa\")");
     qeval(&mut p, "neq(\"ab\", \"aa\")");
 
-    let mut q = p.new_query("eq(bob, bob)", false)?;
-    q.next_event().expect_err("can't compare unbound variables");
+    qeval(&mut p, "eq(bob, bob)");
 
     qeval(&mut p, "1.0 == 1");
     qeval(&mut p, "0.99 < 1");

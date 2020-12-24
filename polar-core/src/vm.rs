@@ -18,7 +18,7 @@ use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial::{is_coherent, simplify_bindings, IsaConstraintCheck};
+use crate::partial::{simplify_bindings, IsaConstraintCheck};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -182,6 +182,15 @@ enum VariableState {
     Bound(Term),
     Cycle(Vec<Symbol>),
     Partial(Operation),
+}
+
+/// Represent each binding in a cycle as a unification constraint.
+fn cycle_constraints(cycle: Vec<Symbol>) -> Operation {
+    let mut constraints = op!(And);
+    for (x, y) in cycle.iter().zip(cycle.iter().skip(1)) {
+        constraints.add_constraint(op!(Unify, term!(x.clone()), term!(y.clone())));
+    }
+    constraints
 }
 
 #[derive(Clone)]
@@ -591,7 +600,7 @@ impl PolarVirtualMachine {
             t.to_polar()
         );
         let operation = o.clone_with_new_constraint(t.clone());
-        if is_coherent(&operation) {
+        if self.is_consistent(&operation) {
             for var in operation.variables().iter() {
                 self.bind(var, operation.clone().into_term());
             }
@@ -599,6 +608,61 @@ impl PolarVirtualMachine {
             self.push_goal(Goal::Backtrack)?;
         }
         Ok(())
+    }
+
+    /// Check for incompatible unifications.
+    fn is_consistent(&self, o: &Operation) -> bool {
+        let mut values: HashMap<Symbol, Term> = HashMap::new();
+        for c in o.constraints().iter() {
+            if c.operator != Operator::Unify {
+                continue;
+            }
+            eprintln!("** Checking consistency: {}", c.to_polar());
+            let left = &c.args[0];
+            let right = &c.args[1];
+            match (left.value(), right.value()) {
+                (Value::Variable(l), Value::Variable(r)) => {
+                    eprintln!(
+                        "L, R: ({:?}, {:?})",
+                        self.variable_state(l),
+                        self.variable_state(r)
+                    );
+                    match (self.variable_state(l), self.variable_state(r)) {
+                        (VariableState::Bound(x), VariableState::Bound(y)) => {
+                            if x != y {
+                                panic!("L, R, Boom!");
+                                return false;
+                            }
+                        }
+                        (_, _) => (),
+                    }
+                }
+                (Value::Variable(l), _) => {
+                    eprintln!("L: {:?}", self.variable_state(l));
+                    if let VariableState::Bound(x) = self.variable_state(l) {
+                        if let Some(y) = values.insert(l.clone(), right.clone()) {
+                            if x != y {
+                                panic!("L Boom!");
+                                return false;
+                            }
+                        }
+                    }
+                }
+                (_, Value::Variable(r)) => {
+                    eprintln!("R: {:?}", self.variable_state(r));
+                    if let VariableState::Bound(y) = self.variable_state(r) {
+                        if let Some(x) = values.insert(r.clone(), left.clone()) {
+                            if x != y {
+                                panic!("R Boom!");
+                                return false;
+                            }
+                        }
+                    }
+                }
+                _ => (),
+            }
+        }
+        true
     }
 
     /// Augment the bindings stack with constants from a hash map.
@@ -757,15 +821,7 @@ impl PolarVirtualMachine {
                     term!(op!(And, term!(op!(Unify, term.clone(), term.clone()))))
                 }
                 VariableState::Cycle(c) => {
-                    let mut constraints = op!(And);
-                    for (x, y) in c.iter().zip(c.iter().skip(1)) {
-                        constraints.add_constraint(op!(
-                            Unify,
-                            term!(x.clone()),
-                            term!(y.clone())
-                        ));
-                    }
-                    term!(constraints)
+                    term!(cycle_constraints(c))
                 }
                 VariableState::Partial(constraints) => {
                     term!(constraints)
@@ -1824,26 +1880,6 @@ impl PolarVirtualMachine {
                 ])?;
             }
             Value::Variable(v) | Value::RestVariable(v) => {
-                let mut operation = op!(And);
-
-                match self.variable_state(v) {
-                    VariableState::Bound(x) => {
-                        return self.dot_op_helper(vec![x, field.clone(), value.clone()]);
-                    }
-                    VariableState::Unbound => {}
-                    VariableState::Partial(expr) => {
-                        operation.merge_constraints(expr);
-                    }
-                    VariableState::Cycle(c) => {
-                        for (x, y) in c.iter().zip(c.iter().skip(1)) {
-                            operation.add_constraint(op!(
-                                Unify,
-                                term!(x.clone()),
-                                term!(y.clone())
-                            ));
-                        }
-                    }
-                }
                 if matches!(field.value(), Value::Call(_)) {
                     return Err(self.set_error_context(
                         object,
@@ -1853,10 +1889,18 @@ impl PolarVirtualMachine {
                     ));
                 }
 
+                let constraints = match self.variable_state(v) {
+                    VariableState::Bound(x) => {
+                        return self.dot_op_helper(vec![x, field.clone(), value.clone()]);
+                    }
+                    VariableState::Unbound => op!(And),
+                    VariableState::Partial(expr) => expr,
+                    VariableState::Cycle(c) => cycle_constraints(c),
+                };
                 let dot_op =
                     object.clone_with_value(value!(op!(Dot, object.clone(), field.clone())));
                 self.constrain(
-                    &operation,
+                    &constraints,
                     &object.clone_with_value(value!(op!(Unify, value.clone(), dot_op))),
                 )?;
             }
@@ -1950,8 +1994,14 @@ impl PolarVirtualMachine {
         args: Vec<Term>,
     ) -> PolarResult<QueryEvent> {
         assert_eq!(args.len(), 2);
-        let mut left_term = self.deref_expr(&args[0]);
-        let mut right_term = self.deref_expr(&args[1]);
+        let mut left_term = args[0].clone();
+        let mut right_term = args[1].clone();
+        eprintln!(
+            "CMP: {} {} {}",
+            left_term.to_polar(),
+            op.to_polar(),
+            right_term.to_polar(),
+        );
 
         self.log_with(
             || {
@@ -2026,8 +2076,89 @@ impl PolarVirtualMachine {
                     args: vec![left_term, right_term],
                 })
             }
-            (Value::Expression(expr), _) | (_, Value::Expression(expr)) => {
-                self.constrain(expr, term)?;
+            (Value::Variable(l), Value::Variable(r))
+            | (Value::RestVariable(l), Value::Variable(r))
+            | (Value::Variable(l), Value::RestVariable(r)) => {
+                // Two variables.
+                match (self.variable_state(l), self.variable_state(r)) {
+                    (VariableState::Unbound, VariableState::Unbound) => {
+                        todo!("unbound, unbound");
+                    }
+                    (VariableState::Bound(x), _) => {
+                        let args = vec![x, right_term];
+                        return self.comparison_op_helper(
+                            &term.clone_with_value(Value::Expression(Operation {
+                                operator: op,
+                                args: args.clone(),
+                            })),
+                            op,
+                            args,
+                        );
+                    }
+                    (_, VariableState::Bound(y)) => {
+                        let args = vec![left_term, y];
+                        return self.comparison_op_helper(
+                            &term.clone_with_value(Value::Expression(Operation {
+                                operator: op,
+                                args: args.clone(),
+                            })),
+                            op,
+                            args,
+                        );
+                    }
+                    (VariableState::Cycle(c), VariableState::Cycle(d)) => {
+                        let mut e = cycle_constraints(c);
+                        e.merge_constraints(cycle_constraints(d));
+                        self.constrain(&e, term)?;
+                    }
+                    (s, t) => todo!("({:?}, {:?}]", s, t),
+                }
+                Ok(QueryEvent::None)
+            }
+            (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
+                // A variable on the left, ground on the right.
+                assert!(
+                    right_term.is_ground(),
+                    "expected ground term on the right of comparison, this is `{}`",
+                    right_term.to_polar()
+                );
+                match self.variable_state(l) {
+                    VariableState::Unbound => todo!("cmp w/unbound"),
+                    VariableState::Bound(x) => {
+                        return self.comparison_op_helper(term, op, vec![x, right_term]);
+                    }
+                    VariableState::Cycle(c) => {
+                        self.constrain(&cycle_constraints(c), term)?;
+                    }
+                    VariableState::Partial(e) => {
+                        self.constrain(&e, term)?;
+                    }
+                }
+                Ok(QueryEvent::None)
+            }
+            (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => {
+                // Ground on the left, a variable on the right.
+                assert!(
+                    left_term.is_ground(),
+                    "expected ground term on the left of comparison, this is `{}`",
+                    left_term.to_polar()
+                );
+                match self.variable_state(r) {
+                    VariableState::Unbound => todo!("cmp w/unbound"),
+                    VariableState::Bound(y) => {
+                        return self.comparison_op_helper(term, op, vec![left_term, y]);
+                    }
+                    VariableState::Cycle(c) => {
+                        let mut expr = op!(And);
+                        for (x, y) in c.iter().zip(c.iter().skip(1)) {
+                            expr.add_constraint(op!(Unify, term!(x.clone()), term!(y.clone())));
+                        }
+                        self.constrain(&expr, term)?;
+                    }
+                    VariableState::Partial(e) => {
+                        self.constrain(&e, term)?;
+                    }
+                }
                 Ok(QueryEvent::None)
             }
             (left, right) => Err(self.type_error(
@@ -2316,13 +2447,15 @@ impl PolarVirtualMachine {
                 f.args.push(term!(op!(Unify, left.clone(), right.clone())));
                 self.constrain(&f, &term!(op!(Unify, left.clone(), left.clone())))?;
             }
-            (VariableState::Partial(_), VariableState::Cycle(_)) => {
+            (VariableState::Partial(mut e), VariableState::Cycle(c)) => {
                 // Bind the entire cycle to the expression.
-                todo!("bind cycle to expr");
+                e.merge_constraints(cycle_constraints(c));
+                self.constrain(&e, &term!(op!(Unify, left.clone(), right.clone())))?;
             }
-            (VariableState::Cycle(_), VariableState::Partial(_)) => {
+            (VariableState::Cycle(c), VariableState::Partial(mut e)) => {
                 // Bind the entire cycle to the expression.
-                todo!("bind cycle to expr");
+                e.merge_constraints(cycle_constraints(c));
+                self.constrain(&e, &term!(op!(Unify, left.clone(), right.clone())))?;
             }
         }
         Ok(())
