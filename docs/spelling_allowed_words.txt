@@ -86,6 +86,7 @@ Odoo
 cURL
 django
 sqlalchemy
+macOS
 
 
 ## Misc terms
