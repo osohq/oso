@@ -2,6 +2,8 @@ use std::collections::HashSet;
 //
 // use serde::{Deserialize, Serialize};
 //
+use crate::folder::{fold_term, Folder};
+use crate::formatting::ToPolarString;
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 use crate::visitor::{walk_operation, Visitor};
 
@@ -26,6 +28,32 @@ impl Operation {
 
         walk_operation(&mut visitor, &self);
         visitor.vars
+    }
+
+    pub fn ground(&self, var: Symbol, value: Term) -> Self {
+        struct Grounder {
+            var: Symbol,
+            value: Term,
+        }
+
+        impl Folder for Grounder {
+            fn fold_term(&mut self, t: Term) -> Term {
+                if let Value::Variable(v) = t.value() {
+                    if v == &self.var {
+                        return self.value.clone();
+                    }
+                }
+                fold_term(t, self)
+            }
+        }
+
+        assert!(
+            value.is_ground() || matches!(value.value(), Value::ExternalInstance(_)),
+            "Expected ground term for `{}`, got `{}`",
+            var,
+            value.to_polar()
+        );
+        Grounder { var, value }.fold_operation(self.clone())
     }
 
     /// Augment our constraints with those on `other`.
@@ -670,6 +698,7 @@ mod test {
                h(x) if not (y = 1 and x.foo.bar = y);
                i(x) if not (y = x.foo.bar and 1 = y);"#,
         )?;
+
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.foo");
         assert_query_done!(q);
@@ -685,6 +714,7 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("i", [sym!("x")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.foo.bar");
         assert_query_done!(q);
+
         Ok(())
     }
 

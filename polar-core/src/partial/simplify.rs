@@ -351,7 +351,7 @@ impl Simplifier {
     }
 
     /// Simplify a partial until quiescence.
-    fn simplify_partial(&mut self, mut term: Term) -> Term {
+    pub fn simplify_partial(&mut self, mut term: Term) -> Term {
         let mut new;
         loop {
             eprintln!("SIMPLIFYING {}: {}", self.this_var, term.to_polar());

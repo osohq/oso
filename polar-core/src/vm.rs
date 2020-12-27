@@ -604,10 +604,10 @@ impl PolarVirtualMachine {
         // TODO(gj): test what happens when we constrain a partial that contains variables of every
         // possible state.
         if self.is_consistent(&operation) {
-            for var in operation.variables().iter() {
-                match self.variable_state(var) {
+            for var in operation.variables() {
+                match self.variable_state(&var) {
                     VariableState::Bound(_) => (),
-                    _ => self.bind(var, operation.clone().into_term()),
+                    _ => self.bind(&var, operation.clone().into_term()),
                 }
             }
         } else {
@@ -2245,6 +2245,13 @@ impl PolarVirtualMachine {
                     VariableState::Bound(value) => {
                         self.push_goal(Goal::Unify { left, right: value })?;
                     }
+                    VariableState::Partial(f) => {
+                        self.constrain(
+                            &f.ground(var.clone(), left.clone()),
+                            &term!(value!(op!(And))),
+                        )?;
+                        self.bind(var, left);
+                    }
                     _ => self.bind(var, left),
                 }
             }
@@ -2447,15 +2454,13 @@ impl PolarVirtualMachine {
                 e.args.push(term!(op!(Unify, left.clone(), right.clone())));
                 self.constrain(&e, &f.into_term())?;
             }
-            (VariableState::Partial(mut e), VariableState::Unbound) => {
-                // Add a unification constraint and a cyclic constraint.
-                e.args.push(term!(op!(Unify, left.clone(), right.clone())));
-                self.constrain(&e, &term!(op!(Unify, right.clone(), right.clone())))?;
+            (VariableState::Partial(e), VariableState::Unbound) => {
+                // Add a unification constraint.
+                self.constrain(&e, &term!(op!(Unify, left.clone(), right.clone())))?;
             }
-            (VariableState::Unbound, VariableState::Partial(mut f)) => {
-                // Add a unification constraint and a cyclic constraint.
-                f.args.push(term!(op!(Unify, left.clone(), right.clone())));
-                self.constrain(&f, &term!(op!(Unify, left.clone(), left.clone())))?;
+            (VariableState::Unbound, VariableState::Partial(f)) => {
+                // Add a unification constraint.
+                self.constrain(&f, &term!(op!(Unify, left.clone(), right.clone())))?;
             }
             (VariableState::Partial(mut e), VariableState::Cycle(c)) => {
                 // Bind the entire cycle to the expression.
