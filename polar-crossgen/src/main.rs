@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut f = File::create("polar_types.py")?;
     f.write_all(&source)?;
 
-    let mut f = File::create("../languages/go/polar_types.go")?;
+    let mut f = File::create("../languages/go/pkg/polar_types.go")?;
     let source = go::Codegen::output(&registry)?;
     f.write_all(&source.as_bytes())?;
     Ok(())
