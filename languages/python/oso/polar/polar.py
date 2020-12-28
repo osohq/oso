@@ -175,7 +175,8 @@ class Polar:
 
         :return: The result of the query.
         """
-        return self.query_async(Predicate(name=name, args=args))
+        async for res in self.query_async(Predicate(name=name, args=args)):
+            yield res
 
     def repl(self, files=[]):
         """Start an interactive REPL session."""
