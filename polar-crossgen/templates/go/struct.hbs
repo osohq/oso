@@ -1,0 +1,38 @@
+// {{name}} struct
+type {{name}} struct {
+    {{~#each fields}}
+    // {{this.variable}}
+    {{this.variable}} {{this.name}}{{/each}}
+}
+
+{{!-- 
+func deserialize{{name}}(j json.RawMessage) ({{name}}, error) {
+    var result {{name}}
+    var rawMap struct {
+    {{~#each fields}}
+        {{this.variable}} {{this.deserialize_type_name}}{{/each}}
+    }
+    err := json.Unmarshal(j, &rawMap)
+    if err != nil { return result, err }
+
+    {{#each fields}}
+    var {{variable}} {{name}}
+    {
+    // Deserialize {{ deserialize_name }}
+    var input {{ deserialize_type_name }}
+    input = rawMap.{{variable}}
+    {{> (deserialize_name) }}
+    {{variable}} = output
+    }
+    {{/each}}
+
+    result = {{name}} {
+    {{#each fields}}
+        {{~#if this.2}}{{this.variable}}:  rawMap.{{this.variable}},
+        {{~else}}{{this.variable}}: {{this.variable}},
+        {{/if}}
+    {{/each}}
+    }
+
+    return result, nil
+} --}}

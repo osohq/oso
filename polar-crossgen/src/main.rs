@@ -5,10 +5,13 @@ use std::fs::File;
 use std::io::Write;
 
 use polar_core::events::QueryEvent;
-use polar_core::traces::{Node, Trace};
 use polar_core::terms::*;
+use polar_core::traces::{Node, Trace};
+
+mod go;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    simple_logging::log_to_stderr(log::LevelFilter::Info);
     // Obtain the Serde format of `Term`. (In practice, formats are more often read from a file.)
     let mut tracer = Tracer::new(TracerConfig::default());
     let mut samples = Samples::new();
@@ -27,7 +30,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create Python class definitions.
     let mut source = Vec::new();
-    let config = serde_generate::CodeGeneratorConfig::new("testing".to_string()).with_serialization(false);
+    let config =
+        serde_generate::CodeGeneratorConfig::new("oso".to_string()).with_serialization(false);
     let generator = serde_generate::python3::CodeGenerator::new(&config);
     generator.output(&mut source, &registry)?;
 
@@ -35,11 +39,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     f.write_all(&source);
 
     // Create Go class definitions.
+    let config =
+        serde_generate::CodeGeneratorConfig::new("oso".to_string()).with_serialization(true);
     let mut source = Vec::new();
     let generator = serde_generate::golang::CodeGenerator::new(&config);
     generator.output(&mut source, &registry)?;
 
     let mut f = File::create("polar_types.go")?;
     f.write_all(&source)?;
+    let mut f = File::create("polar_types2.go")?;
+    let source = go::Codegen::output(&registry)?;
+    f.write_all(&source.as_bytes())?;
     Ok(())
 }

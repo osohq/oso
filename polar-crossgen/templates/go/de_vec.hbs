@@ -1,0 +1,9 @@
+outputVec := make({{name}}, len(input))
+for i, v := range input {
+    input := v
+    {{#with inner}}
+    {{~> (this.deserialize_name)}}
+    {{/with}}
+    outputVec[i] = output
+}
+output := outputVec

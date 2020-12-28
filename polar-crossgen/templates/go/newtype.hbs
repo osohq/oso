@@ -1,0 +1,10 @@
+// {{name}} newtype
+type {{name}} {{type}}
+
+{{!-- func deserialize{{name}}(j json.RawMessage) ({{name}}, error) {
+    var result {{name}}
+    inner, err := deserialize{{type}}(j)
+    if err != nil { return result, err }
+    result = {{name}} { Inner: inner }
+    return result, nil
+} --}}

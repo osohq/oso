@@ -1,0 +1,9 @@
+outputMap := make({{name}})
+for k, v := range input {
+    input := v
+    {{#with inner}}
+    {{~> (this.deserialize_name)}}
+    {{/with}}
+    outputMap[k] = output
+}
+output := outputMap
