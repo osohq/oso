@@ -7,12 +7,14 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+
+	oso "github.com/osohq/oso/languages/go/pkg"
 )
 
 func TestSerialize(t *testing.T) {
 	expected := `{"Number":{"Integer":123}}`
-	int123 := NumericInteger(123)
-	term := Value{&ValueNumber{
+	int123 := oso.NumericInteger(123)
+	term := oso.Value{&oso.ValueNumber{
 		&int123,
 	}}
 	s, err := json.Marshal(term)
@@ -34,19 +36,19 @@ func TestDeserialize(t *testing.T) {
         }
 	}`)
 
-	var term Value
+	var term oso.Value
 	err := json.Unmarshal(jsonTerm, &term)
 	if err != nil {
 		t.Fatal(err)
 	}
-	int0 := NumericInteger(0)
-	int1 := NumericInteger(1)
-	expectedCall := ValueCall{
+	int0 := oso.NumericInteger(0)
+	int1 := oso.NumericInteger(1)
+	expectedCall := oso.ValueCall{
 		Name:   "foo",
-		Args:   []Value{Value{&ValueNumber{&int0}}},
-		Kwargs: &map[string]Value{"bar": Value{&ValueNumber{&int1}}},
+		Args:   []oso.Value{oso.Value{&oso.ValueNumber{&int0}}},
+		Kwargs: &map[string]oso.Value{"bar": oso.Value{&oso.ValueNumber{&int1}}},
 	}
-	expected := Value{&expectedCall}
+	expected := oso.Value{&expectedCall}
 	if !cmp.Equal(term, expected) || !reflect.DeepEqual(term, expected) {
 		t.Error(fmt.Errorf("Result differs from expected:\n%s", cmp.Diff(term, expected)))
 	}
