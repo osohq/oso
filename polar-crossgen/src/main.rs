@@ -1,5 +1,4 @@
-use serde::{Deserialize, Serialize};
-use serde_reflection::{Registry, Samples, Tracer, TracerConfig};
+use serde_reflection::{Samples, Tracer, TracerConfig};
 
 use std::fs::File;
 use std::io::Write;
@@ -36,18 +35,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generator.output(&mut source, &registry)?;
 
     let mut f = File::create("polar_types.py")?;
-    f.write_all(&source);
-
-    // Create Go class definitions.
-    let config =
-        serde_generate::CodeGeneratorConfig::new("oso".to_string()).with_serialization(true);
-    let mut source = Vec::new();
-    let generator = serde_generate::golang::CodeGenerator::new(&config);
-    generator.output(&mut source, &registry)?;
-
-    let mut f = File::create("polar_types.go")?;
     f.write_all(&source)?;
-    let mut f = File::create("polar_types2.go")?;
+
+    let mut f = File::create("../languages/go/polar_types.go")?;
     let source = go::Codegen::output(&registry)?;
     f.write_all(&source.as_bytes())?;
     Ok(())

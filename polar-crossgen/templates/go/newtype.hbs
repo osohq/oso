@@ -1,10 +1,13 @@
 // {{name}} newtype
 type {{name}} {{type}}
 
-{{!-- func deserialize{{name}}(j json.RawMessage) ({{name}}, error) {
-    var result {{name}}
-    inner, err := deserialize{{type}}(j)
-    if err != nil { return result, err }
-    result = {{name}} { Inner: inner }
-    return result, nil
-} --}}
+func (variant {{name}}) MarshalJSON() ([]byte, error) {
+    return json.Marshal({{type}}(variant))
+}
+
+func (variant *{{name}}) UnmarshalJSON(b []byte) (error) {
+    inner := {{type}}(*variant)
+    err := json.Unmarshal(b, &inner)
+    *variant = {{name}}(inner)
+    return err
+}

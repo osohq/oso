@@ -1,5 +1,5 @@
-use handlebars::Handlebars;
-use handlebars::{Context, Helper, JsonRender, Output, RenderContext, RenderError};
+use handlebars::{handlebars_helper, Handlebars};
+use handlebars::{Context, Helper, Output, RenderContext, RenderError};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 // use crate::{
@@ -7,28 +7,23 @@ use serde_json::json;
 //     indent::{IndentConfig, IndentedWriter},
 //     CodeGeneratorConfig, Encoding,
 // };
-use heck::CamelCase;
-use serde_reflection::{ContainerFormat, Format, FormatHolder, Named, Registry, VariantFormat};
-use std::{
-    collections::{BTreeMap, HashMap},
-    io::{Result, Write},
-    path::PathBuf,
-};
+use heck::{CamelCase, SnakeCase};
+use serde_reflection::{ContainerFormat, Format, Named, Registry, VariantFormat};
 
 pub struct Codegen<'a> {
     handlebars: Handlebars<'a>,
     output: String,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
-struct TypeInfo {
-    variable: String,
-    name: String,
-    deserialize_name: String,
-    deserialize_type_name: String,
-    nested: bool,
-    inner: Option<Box<TypeInfo>>,
-}
+// #[derive(Clone, Deserialize, Serialize)]
+// struct TypeInfo {
+//     variable: String,
+//     name: String,
+//     deserialize_name: String,
+//     deserialize_type_name: String,
+//     nested: bool,
+//     inner: Option<Box<TypeInfo>>,
+// }
 
 // default format helper
 fn format_helper(
@@ -47,17 +42,29 @@ fn format_helper(
     Ok(())
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct TypeInfo {
+    variable: String,
+    type_name: String,
+}
+
 impl<'a> Codegen<'a> {
     pub fn output(registry: &Registry) -> anyhow::Result<String> {
+        handlebars_helper!(snake_case: |s: str| s.to_snake_case());
+        handlebars_helper!(camel_case: |s: str| s.to_camel_case());
+
         let mut handlebars = Handlebars::new();
         handlebars.register_templates_directory(".hbs", "templates/go")?;
         handlebars.register_helper("format", Box::new(format_helper));
+        handlebars.register_helper("snake-case", Box::new(snake_case));
+        handlebars.register_helper("camel-case", Box::new(camel_case));
         handlebars.set_strict_mode(true);
-        let mut output = r#"package oso
+        let output = r#"package oso
 
 import (
     "encoding/json"
     "errors"
+    "fmt"
 )
 
 
@@ -77,92 +84,11 @@ import (
         Ok(())
     }
 
-    // fn deserialize_methods(format: &Format) -> Vec<String> {
-    //     use Format::*;
-    //     match format {
-    //     TypeName(_) => vec!["type".to_string()],
-    //         Unit => vec!["unit".into()],
-    //         I128 | U128 => todo!("unsupported"), //"serde.Int128".into(),
-    //         Bool
-    //         | I8
-    //         | I16
-    //         | I32
-    //         | I64
-    //         | U8
-    //         | U16
-    //         | U32
-    //         | U64
-    //         | F32
-    //         | F64
-    //         | Char
-    //         | Str
-    //         | Bytes  => vec!["primitive".into()],
-    //         Option(format) => {
-    //             let mut result = vec!["opt"];
-    //             result.append(&Self::deserialize_methods(format))
-    //         }
-    //         Seq(format) => {
-    //             let mut result = vec!["opt"];
-    //             result.append(&Self::deserialize_methods(format))
-    //         }
-    //         Map { value, .. } => {
-    //              => {
-    //             let mut result = vec!["opt"];
-    //             result.append(&Self::deserialize_methods(format))
-    //         }
-    //             format!("map", self.quote_type(value))
-    //         }
-    //         Tuple(formats) => format!(
-    //             "tuple",
-    //         TupleArray { content, size } => format!("[{}]{}", size, self.quote_type(content)),
-
-    //         Variable(_) => panic!("unexpected value"),
-    //     }
-    // }
-
-    fn deserialize_name(format: &Format) -> &'static str {
-        use Format::*;
-        match format {
-            TypeName(x) => "de_typed",
-            Unit => "de_unit",
-            I128 | U128 => todo!("unsupported"), //"serde.Int128".into(),
-            Bool | I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | F32 | F64 | Char | Str | Bytes => {
-                "de_primitive"
-            }
-            Option(_) => "de_opt",
-            Seq(_) => "de_vec",
-            Map { .. } => "de_map",
-            Tuple(_) => "de_tuple",
-            TupleArray { .. } => todo!("unsupported"),
-            Variable(_) => panic!("unexpected value"),
-        }
-    }
-
-    fn type_info(&self, variable: &str, format: &Format) -> TypeInfo {
-        let name = self.quote_type(format);
-        use Format::*;
-        let inner = match format {
-            Map { value: format, .. } | Seq(format) | Option(format) => {
-                Some(Box::new(self.type_info("tmp", format)))
-            }
-            // Tuple(format) => "de_tuple",
-            _ => None,
-        };
-        let deserialize_name = Self::deserialize_name(format).to_string();
-        let deserialize_type_name = match &deserialize_name {
-            x if x == "de_typed" || x == "de_primitive" => name.clone(),
-            x if x == "de_vec" => "[]json.RawMessage".to_string(),
-            x if x == "de_map" => "map[string]json.RawMessage".to_string(),
-            x if x == "de_opt" => "json.RawMessage".to_string(),
-            _ => todo!("unsupported"),
-        };
+    fn type_info(&self, field: &Named<Format>) -> TypeInfo {
         TypeInfo {
-            variable: variable.to_string(),
-            name,
-            deserialize_type_name,
-            deserialize_name,
-            nested: inner.is_some(),
-            inner,
+            // TODO: This wont be camel case for non-Go language
+            variable: field.name.to_camel_case(),
+            type_name: self.quote_type(&field.value),
         }
     }
 
@@ -171,7 +97,7 @@ import (
             "struct",
             &json!({"name": name, "fields": fields
                 .iter()
-                .map(|f| self.type_info(&f.name.to_camel_case(), &f.value))
+                .map(|f| self.type_info(&f))
                 .collect::<Vec<TypeInfo>>()
             }),
         )
@@ -242,14 +168,6 @@ import (
                         "type": self.quote_type(format),
                     }),
                 )?;
-                self.render(
-                    "enum_variant",
-                    &json!({
-                        "base": base,
-                        "name": name,
-                        // "variant": self.quote_type(format)
-                    }),
-                )?;
             }
             // Tuple(formats) => formats
             //     .iter()
@@ -261,19 +179,18 @@ import (
             //     .collect(),
             Struct(fields) => {
                 self.output_struct(&(base.to_string() + name), fields)?;
-
-                self.render(
-                    "enum_variant",
-                    &json!({
-                        "base": base,
-                        "name": name,
-                        // "variant": self.quote_type(format)
-                    }),
-                )?;
             }
             // Variable(_) => panic!("incorrect value"),
             _ => todo!("{:#?}", variant),
         };
+        self.render(
+            "enum_variant",
+            &json!({
+                "base": base,
+                "name": name,
+                // "variant": self.quote_type(format)
+            }),
+        )?;
         Ok(())
     }
 
