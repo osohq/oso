@@ -11,16 +11,6 @@ type Query struct {
 	calls    map[int]interface{}
 }
 
-// Query is iterable, returning the results
-func (q Query) Iter() <-chan map[string]interface{} {
-	ch := make(chan map[string]interface{})
-	go func() {
-		// empty iterator
-		close(ch)
-	}()
-	return ch
-}
-
 // NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
 func newQuery(ffiQuery QueryFfi, host Host) Query {
@@ -31,7 +21,10 @@ func newQuery(ffiQuery QueryFfi, host Host) Query {
 	}
 }
 
-func (q Query) next() (*map[string]interface{}, error) {
+func (q *Query) Next() (*map[string]interface{}, error) {
+	if q == nil {
+		return nil, fmt.Errorf("query has already finished")
+	}
 	for {
 		ffiEvent, err := q.ffiQuery.nextEvent()
 		if err != nil {
@@ -48,6 +41,7 @@ func (q Query) next() (*map[string]interface{}, error) {
 			// nothing to do
 			continue
 		case *QueryEventDone:
+			defer q.ffiQuery.delete()
 			return nil, nil
 		case *QueryEventDebug:
 			// TODO

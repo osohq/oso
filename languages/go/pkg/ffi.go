@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 )
 
 type PolarFfi struct {
@@ -20,10 +19,14 @@ type PolarFfi struct {
 
 func NewPolarFfi() PolarFfi {
 	polarPtr := C.polar_new()
-	defer C.polar_free(polarPtr)
 	return PolarFfi{
 		ptr: polarPtr,
 	}
+}
+
+func (p *PolarFfi) delete() {
+	C.polar_free(p.ptr)
+	p = nil
 }
 
 func getError() error {
@@ -43,6 +46,9 @@ func (p PolarFfi) nextMessage() *C.char {
 func processMessages(i ffiInterface) {
 	for {
 		msgPtr := i.nextMessage()
+		if msgPtr == nil {
+			return
+		}
 		message := C.GoString(msgPtr)
 		defer C.string_free(msgPtr)
 		var messageStruct struct {
@@ -96,7 +102,6 @@ func (p PolarFfi) clearRules() error {
 }
 
 func (p PolarFfi) newQueryFromStr(queryStr string) (*QueryFfi, error) {
-	log.Printf("New query: %s", queryStr)
 	result := C.polar_new_query(p.ptr, C.CString(queryStr), C.uint(0))
 	processMessages(p)
 	if result == nil {
@@ -155,10 +160,14 @@ type QueryFfi struct {
 }
 
 func newQueryFfi(ptr *C.polar_Query) *QueryFfi {
-	defer C.query_free(ptr)
 	return &QueryFfi{
 		ptr: ptr,
 	}
+}
+
+func (q *QueryFfi) delete() {
+	C.query_free(q.ptr)
+	q = nil
 }
 
 func (q QueryFfi) callResult(callID int, value Value) error {

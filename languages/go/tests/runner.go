@@ -123,8 +123,18 @@ func (tc TestCase) RunTest(o *oso.Polar, t *testing.T) {
 			}
 
 			results := make([]Result, 0)
-			for v := range testQuery.Iter() {
-				results = append(results, NewResult(v))
+			if queryErr == nil {
+				for {
+					v, err := testQuery.Next()
+					if err != nil {
+						queryErr = err
+						break
+					}
+					if v == nil {
+						break
+					}
+					results = append(results, NewResult(*v))
+				}
 			}
 			if c.Err != nil {
 				if queryErr != nil {

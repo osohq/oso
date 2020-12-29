@@ -1,7 +1,6 @@
 package oso
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -20,10 +19,9 @@ func testFromFile(t *testing.T, path string) {
 	var testCase TestCase
 	err = yaml.Unmarshal(yamlInput, &testCase)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	oso := oso.NewPolar()
-	fmt.Printf("running test")
 	testCase.RunTest(&oso, t)
 }
 
@@ -39,6 +37,6 @@ func TestAll(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 }
