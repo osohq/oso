@@ -2234,6 +2234,13 @@ impl PolarVirtualMachine {
                     VariableState::Bound(value) => {
                         self.push_goal(Goal::Unify { left: value, right })?;
                     }
+                    VariableState::Partial(f) => {
+                        self.constrain(
+                            &f.ground(var.clone(), right.clone()),
+                            &term!(value!(op!(And))),
+                        )?;
+                        self.bind(var, right);
+                    }
                     _ => self.bind(var, right),
                 }
             }
