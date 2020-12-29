@@ -1,0 +1,116 @@
+package oso
+
+import (
+	"fmt"
+	"reflect"
+)
+
+type DuplicateClassAliasError struct {
+	name     string
+	cls      reflect.Type
+	existing reflect.Type
+}
+
+func NewDuplicateClassAliasError(name string, cls reflect.Type, existing reflect.Type) error {
+	return &DuplicateClassAliasError{name: name, cls: cls, existing: existing}
+}
+
+func (e *DuplicateClassAliasError) Error() string {
+	return fmt.Sprintf("Attempted to alias %v as '%s', but %v already has that alias.", e.cls, e.name, e.existing)
+}
+
+type DuplicateInstanceRegistrationError struct {
+	id int
+}
+
+func (e *DuplicateInstanceRegistrationError) Error() string {
+	return fmt.Sprintf("Attempted to register instance %d, but an instance with that ID already exists.", e.id)
+}
+
+type InlineQueryFailedError struct {
+	source string
+}
+
+func (e *InlineQueryFailedError) Error() string {
+	return fmt.Sprintf("Inline query failed: %s", e.source)
+}
+
+type InvalidCallError struct {
+	instance reflect.Value
+	field    string
+}
+
+func (e *InvalidCallError) Error() string {
+	return fmt.Sprintf("%v.%s is not a function", e.instance, e.field)
+}
+
+type InvalidIteratorError struct {
+	instance reflect.Value
+}
+
+func (e *InvalidIteratorError) Error() string {
+	return fmt.Sprintf("%v is not iterable", e.instance)
+}
+
+type InvalidConstructorError struct {
+	ctor Value
+}
+
+func (e *InvalidConstructorError) Error() string {
+	return fmt.Sprintf("%v is not a constructor", e.ctor)
+}
+
+type InvalidQueryEventError struct {
+	event string
+}
+
+func (e *InvalidQueryEventError) Error() string {
+	return fmt.Sprintf("Invalid query event: %s", e.event)
+}
+
+type KwargsError struct {
+}
+
+func (e *KwargsError) Error() string {
+	return fmt.Sprintf("Go does not support keyword arguments")
+}
+
+type PolarFileExtensionError struct {
+	file string
+}
+
+func (e *PolarFileExtensionError) Error() string {
+	return fmt.Sprintf("Polar files must have .polar extension. Offending file: %s", e.file)
+}
+
+type PolarFileNotFoundError struct {
+	file string
+}
+
+func (e *PolarFileNotFoundError) Error() string {
+	return fmt.Sprintf("Could not find file: %s", e.file)
+}
+
+type UnimplementedOperationError struct {
+	operation string
+}
+
+func (e *UnimplementedOperationError) Error() string {
+	return fmt.Sprintf("%s are unimplemented in the oso Go library", e.operation)
+}
+
+type UnregisteredClassError struct {
+	name string
+}
+
+func (e *UnregisteredClassError) Error() string {
+	return fmt.Sprintf("Unregistered class: %s", e.name)
+}
+
+type UnregisteredInstanceError struct {
+	id int
+}
+
+func (e *UnregisteredInstanceError) Error() string {
+	return fmt.Sprintf("Unregistered instance: %d.", e.id)
+}

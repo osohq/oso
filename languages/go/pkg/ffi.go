@@ -11,16 +11,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 )
 
-type Polar struct {
+type PolarFfi struct {
 	ptr *C.polar_Polar
 }
 
-func NewPolar() Polar {
+func NewPolarFfi() PolarFfi {
 	polarPtr := C.polar_new()
 	defer C.polar_free(polarPtr)
-	return Polar{
+	return PolarFfi{
 		ptr: polarPtr,
 	}
 }
@@ -35,7 +36,7 @@ type ffiInterface interface {
 	nextMessage() *C.char
 }
 
-func (p Polar) nextMessage() *C.char {
+func (p PolarFfi) nextMessage() *C.char {
 	return C.polar_next_polar_message(p.ptr)
 }
 
@@ -63,7 +64,7 @@ func processMessages(i ffiInterface) {
 	}
 }
 
-func (p Polar) newId() (int, error) {
+func (p PolarFfi) newId() (int, error) {
 	id := C.polar_get_external_id(p.ptr)
 	if id == 0 {
 		return 0, getError()
@@ -71,7 +72,7 @@ func (p Polar) newId() (int, error) {
 	return int(id), nil
 }
 
-func (p Polar) load(s string, filename *string) error {
+func (p PolarFfi) load(s string, filename *string) error {
 	cString := C.CString(s)
 	var cFilename *C.char
 	if filename != nil {
@@ -85,7 +86,7 @@ func (p Polar) load(s string, filename *string) error {
 	return nil
 }
 
-func (p Polar) clearRules() error {
+func (p PolarFfi) clearRules() error {
 	result := C.polar_clear_rules(p.ptr)
 	processMessages(p)
 	if result == 0 {
@@ -94,13 +95,14 @@ func (p Polar) clearRules() error {
 	return nil
 }
 
-func (p Polar) newQueryFromStr(queryStr string) (*Query, error) {
-	result := C.polar_new_query(p.ptr, C.CString(queryStr), 0)
+func (p PolarFfi) newQueryFromStr(queryStr string) (*QueryFfi, error) {
+	log.Printf("New query: %s", queryStr)
+	result := C.polar_new_query(p.ptr, C.CString(queryStr), C.uint(0))
 	processMessages(p)
 	if result == nil {
 		return nil, getError()
 	}
-	return newQuery(result), nil
+	return newQueryFfi(result), nil
 }
 
 func ffiSerialize(input json.Marshaler) (*C.char, error) {
@@ -111,7 +113,7 @@ func ffiSerialize(input json.Marshaler) (*C.char, error) {
 	return C.CString(string(json)), nil
 }
 
-func (p Polar) newQueryFromTerm(queryTerm json.Marshaler) (*Query, error) {
+func (p PolarFfi) newQueryFromTerm(queryTerm json.Marshaler) (*QueryFfi, error) {
 	json, err := ffiSerialize(queryTerm)
 	if err != nil {
 		return nil, err
@@ -121,20 +123,20 @@ func (p Polar) newQueryFromTerm(queryTerm json.Marshaler) (*Query, error) {
 	if result == nil {
 		return nil, getError()
 	}
-	return newQuery(result), nil
+	return newQueryFfi(result), nil
 }
 
-func (p Polar) nextInlineQuery(queryStr string) (*Query, error) {
+func (p PolarFfi) nextInlineQuery() (*QueryFfi, error) {
 	queryPtr := C.polar_next_inline_query(p.ptr, 0)
 	processMessages(p)
 	if queryPtr == nil {
 		// TODO: we don't have any way of signaling this failing?
 		return nil, nil
 	}
-	return newQuery(queryPtr), nil
+	return newQueryFfi(queryPtr), nil
 }
 
-func (p Polar) registerConstant(v json.Marshaler, name string) error {
+func (p PolarFfi) registerConstant(v Value, name string) error {
 	cName := C.CString(name)
 	cValue, err := ffiSerialize(v)
 	if err != nil {
@@ -148,18 +150,18 @@ func (p Polar) registerConstant(v json.Marshaler, name string) error {
 	return nil
 }
 
-type Query struct {
+type QueryFfi struct {
 	ptr *C.polar_Query
 }
 
-func newQuery(ptr *C.polar_Query) *Query {
+func newQueryFfi(ptr *C.polar_Query) *QueryFfi {
 	defer C.query_free(ptr)
-	return &Query{
+	return &QueryFfi{
 		ptr: ptr,
 	}
 }
 
-func (q Query) callResult(callID int, value json.Marshaler) error {
+func (q QueryFfi) callResult(callID int, value Value) error {
 	s, err := ffiSerialize(value)
 	if err != nil {
 		return err
@@ -172,7 +174,7 @@ func (q Query) callResult(callID int, value json.Marshaler) error {
 	return nil
 }
 
-func (q Query) questionResult(callID int, answer bool) error {
+func (q QueryFfi) questionResult(callID int, answer bool) error {
 	var intAnswer int
 	if answer {
 		intAnswer = 1
@@ -186,7 +188,7 @@ func (q Query) questionResult(callID int, answer bool) error {
 	return nil
 }
 
-func (q Query) applicationError(message string) error {
+func (q QueryFfi) applicationError(message string) error {
 	result := C.polar_application_error(q.ptr, C.CString(message))
 	if result == 0 {
 		return getError()
@@ -194,7 +196,7 @@ func (q Query) applicationError(message string) error {
 	return nil
 }
 
-func (q Query) nextEvent() (*string, error) {
+func (q QueryFfi) nextEvent() (*string, error) {
 	event := C.polar_next_query_event(q.ptr)
 	if event == nil {
 		return nil, getError()
@@ -204,7 +206,7 @@ func (q Query) nextEvent() (*string, error) {
 	return &goEvent, nil
 }
 
-func (q Query) debugCommand(command json.Marshaler) error {
+func (q QueryFfi) debugCommand(command json.Marshaler) error {
 	cStr, err := ffiSerialize(command)
 	if err != nil {
 		return err
@@ -216,7 +218,7 @@ func (q Query) debugCommand(command json.Marshaler) error {
 	return nil
 }
 
-func (q Query) source() (*string, error) {
+func (q QueryFfi) source() (*string, error) {
 	source := C.polar_query_source_info(q.ptr)
 	if source == nil {
 		return nil, getError()

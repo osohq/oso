@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	oso "github.com/osohq/oso/languages/go/pkg"
 )
 
 type TestCase struct {
@@ -78,47 +79,8 @@ func ToInput(v interface{}) (interface{}, error) {
 // 	Case        interface{} `yaml:"cases"`
 // }
 
-type Oso struct{}
-
-func NewOso() Oso {
-	//         for _, c in inspect.getmembers(classes):
-	//             if isinstance(c, type):
-	//                 oso.register_class(c)
-	//         for k, v in CONSTANTS.items():
-	//             oso.register_constant(v, k)
-	//         for policy in self.policies:
-	//             path = Path(__file__).parent.resolve()
-	//             oso.load_file(f"{path}/policy/{policy}.polar")
-	//         self.oso = oso
-	return Oso{}
-}
-
-type QueryResult struct {
-}
-
-func (c QueryResult) Iter() <-chan map[string]interface{} {
-	ch := make(chan map[string]interface{})
-	go func() {
-		// empty iterator
-		close(ch)
-	}()
-	return ch
-}
-
-func (*Oso) Query(q string) (QueryResult, error) {
-	return QueryResult{}, nil
-}
-
-func (*Oso) QueryRule(q string, args ...interface{}) (QueryResult, error) {
-	return QueryResult{}, nil
-}
-
-func (*Oso) LoadString(s string) {
-
-}
-
 type Case struct {
-	Description *string                  `yaml:"description`
+	Description *string                  `yaml:"description"`
 	Query       string                   `yaml:"query"`
 	Load        *string                  `yaml:"load"`
 	Inputs      *[]string                `yaml:"inputs"`
@@ -126,7 +88,7 @@ type Case struct {
 	Err         *string                  `yaml:"err"`
 }
 
-func (tc TestCase) RunTest(oso *Oso, t *testing.T) {
+func (tc TestCase) RunTest(o *oso.Polar, t *testing.T) {
 	for _, c := range tc.Cases {
 		testName := tc.Name + "\n" + tc.Description + "\n"
 		if c.Description != nil {
@@ -135,10 +97,10 @@ func (tc TestCase) RunTest(oso *Oso, t *testing.T) {
 			testName += c.Query
 		}
 		t.Run(testName, func(t *testing.T) {
-			var testQuery QueryResult
+			var testQuery *oso.Query
 			var queryErr error
 			if c.Inputs == nil {
-				testQuery, queryErr = oso.Query(c.Query)
+				testQuery, queryErr = o.Query(c.Query)
 			} else {
 				Inputs := make([]interface{}, len(*c.Inputs))
 				for idx, v := range *c.Inputs {
@@ -148,7 +110,7 @@ func (tc TestCase) RunTest(oso *Oso, t *testing.T) {
 					}
 					Inputs[idx] = input
 				}
-				testQuery, queryErr = oso.QueryRule(c.Query, Inputs...)
+				testQuery, queryErr = o.QueryRule(c.Query, Inputs...)
 			}
 
 			expectedResults := make([]Result, len(c.Result))
@@ -157,7 +119,7 @@ func (tc TestCase) RunTest(oso *Oso, t *testing.T) {
 			}
 
 			if c.Load != nil {
-				oso.LoadString(*c.Load)
+				o.LoadString(*c.Load)
 			}
 
 			results := make([]Result, 0)

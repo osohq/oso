@@ -38,9 +38,9 @@ func (result *{{name}}) UnmarshalJSON(b []byte) error {
 func (variant {{name}}) MarshalJSON() ([]byte, error) {
     switch variant.{{name}}Variant.(type) {
     {{#each variants}}
-    case *{{../name}}{{this}}:
+    case var := *{{../name}}{{this}}:
         return json.Marshal(map[string]*{{../name}}{{this}} { 
-            "{{this}}": variant.{{../name}}Variant.(*{{../name}}{{this}}),
+            "{{this}}": var,
         });
     {{/each}}
     }
