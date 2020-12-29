@@ -10,7 +10,16 @@ import "C"
 import (
 	"encoding/json"
 	"fmt"
+	"unsafe"
 )
+
+func ffiSerialize(input interface{}) (*C.char, error) {
+	json, err := json.Marshal(input)
+	if err != nil {
+		return nil, err
+	}
+	return C.CString(string(json)), nil
+}
 
 type PolarFfi struct {
 	ptr *C.polar_Polar
@@ -106,7 +115,9 @@ func (p PolarFfi) clearRules() error {
 }
 
 func (p PolarFfi) newQueryFromStr(queryStr string) (*QueryFfi, error) {
-	result := C.polar_new_query(p.ptr, C.CString(queryStr), C.uint(0))
+	cs := C.CString(queryStr)
+	defer C.free(unsafe.Pointer(cs))
+	result := C.polar_new_query(p.ptr, cs, 0)
 	processMessages(p)
 	if result == nil {
 		return nil, getError()
@@ -114,16 +125,9 @@ func (p PolarFfi) newQueryFromStr(queryStr string) (*QueryFfi, error) {
 	return newQueryFfi(result), nil
 }
 
-func ffiSerialize(input interface{}) (*C.char, error) {
-	json, err := json.Marshal(input)
-	if err != nil {
-		return nil, err
-	}
-	return C.CString(string(json)), nil
-}
-
 func (p PolarFfi) newQueryFromTerm(queryTerm interface{}) (*QueryFfi, error) {
 	json, err := ffiSerialize(queryTerm)
+	defer C.free(unsafe.Pointer(json))
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +151,9 @@ func (p PolarFfi) nextInlineQuery() (*QueryFfi, error) {
 
 func (p PolarFfi) registerConstant(v Value, name string) error {
 	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
 	cValue, err := ffiSerialize(v)
+	defer C.free(unsafe.Pointer(cValue))
 	if err != nil {
 		return err
 	}
@@ -183,6 +189,7 @@ func (q QueryFfi) callResult(callID int, value *Value) error {
 	var err error
 	if value != nil {
 		s, err = ffiSerialize(value)
+		defer C.free(unsafe.Pointer(s))
 		if err != nil {
 			return err
 		}
@@ -230,6 +237,7 @@ func (q QueryFfi) nextEvent() (*string, error) {
 
 func (q QueryFfi) debugCommand(command interface{}) error {
 	cStr, err := ffiSerialize(command)
+	defer C.free(unsafe.Pointer(cStr))
 	if err != nil {
 		return err
 	}

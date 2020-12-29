@@ -28,7 +28,9 @@ type TestCase struct {
 	Cases       []Case   `yaml:"cases"`
 }
 
-type Result map[string]interface{}
+type Result struct {
+	inner interface{}
+}
 
 func toResult(input interface{}) interface{} {
 	switch input.(type) {
@@ -39,20 +41,23 @@ func toResult(input interface{}) interface{} {
 	}
 }
 
-func NewResult(input map[string]interface{}) Result {
-	result := make(map[string]interface{})
+func NewResult(input map[string]interface{}) map[string]Result {
+	result := make(map[string]Result)
 	for k, v := range input {
-		result[k] = toResult(v)
+		result[k] = Result{inner: v}
 	}
 	return result
 }
 
 func (left Result) Equal(right interface{}) bool {
-	if val, ok := left["repr"]; ok {
-		return reflect.DeepEqual(val, right)
-	} else {
-		return reflect.DeepEqual(left, right)
+	switch val := left.inner.(type) {
+	case map[string]interface{}:
+		if repr, ok := val["repr"]; ok {
+			fmt.Printf("%v", right)
+			return repr.(string) == fmt.Sprintf("%v", right)
+		}
 	}
+	return reflect.DeepEqual(left, right)
 }
 
 type Variable string
@@ -85,24 +90,13 @@ func toInput(o oso.Polar, v interface{}, t *testing.T) interface{} {
 	return v
 }
 
-// def to_input(v):
-//     if isinstance(v, dict):
-//         if "type" in v:
-//             cls = getattr(classes, v["type"])
-//             args = [to_input(v) for v in v.get("args", [])]
-//             kwargs = {k: to_input(v) for k, v in v.get("kwargs", {}).items()}
-//             return cls(*args, **kwargs)
-//         elif "var" in v:
-//             return Variable(v["var"])
-//     return v
-
 type Case struct {
-	Description *string                  `yaml:"description"`
-	Query       string                   `yaml:"query"`
-	Load        *string                  `yaml:"load"`
-	Inputs      *[]interface{}           `yaml:"input"`
-	Result      []map[string]interface{} `yaml:"result"`
-	Err         *string                  `yaml:"err"`
+	Description *string                   `yaml:"description"`
+	Query       string                    `yaml:"query"`
+	Load        *string                   `yaml:"load"`
+	Inputs      *[]interface{}            `yaml:"input"`
+	Result      *[]map[string]interface{} `yaml:"result"`
+	Err         *string                   `yaml:"err"`
 }
 
 func contains(list []string, elem string) bool {
@@ -176,16 +170,20 @@ func (tc TestCase) RunTest(o oso.Polar, t *testing.T) {
 				testQuery, queryErr = o.QueryRule(c.Query, Inputs...)
 			}
 
-			expectedResults := make([]Result, len(c.Result))
-			for idx, v := range c.Result {
-				expectedResults[idx] = NewResult(v)
+			expectedResults := make([]map[string]Result, 0)
+			if c.Result == nil {
+				expectedResults = append(expectedResults, NewResult(make(map[string]interface{})))
+			} else {
+				for _, v := range *c.Result {
+					expectedResults = append(expectedResults, NewResult(v))
+				}
 			}
 
 			if c.Load != nil {
 				o.LoadString(*c.Load)
 			}
 
-			results := make([]Result, 0)
+			results := make([]map[string]interface{}, 0)
 			if queryErr == nil {
 				for {
 					v, err := testQuery.Next()
@@ -196,7 +194,7 @@ func (tc TestCase) RunTest(o oso.Polar, t *testing.T) {
 					if v == nil {
 						break
 					}
-					results = append(results, NewResult(*v))
+					results = append(results, *v)
 				}
 			}
 			if c.Err != nil {
@@ -215,8 +213,21 @@ func (tc TestCase) RunTest(o oso.Polar, t *testing.T) {
 				if queryErr != nil {
 					t.Error(queryErr)
 				} else {
-					if !cmp.Equal(results, expectedResults) {
-						t.Error(fmt.Errorf("incorrect query result:\n%s", cmp.Diff(results, expectedResults)))
+					if len(results) != len(expectedResults) {
+						t.Error(fmt.Errorf("incorrect query result:\n%s", cmp.Diff(expectedResults, results)))
+						return
+					}
+					for idx, expectedResult := range expectedResults {
+						result := results[idx]
+						for k, v := range expectedResult {
+							if v2, ok := result[k]; ok {
+								if !v.Equal(v2) {
+									t.Error(fmt.Errorf("incorrect query result:\n%s", cmp.Diff(v2, v)))
+								}
+							} else {
+								t.Error(fmt.Errorf("incorrect query result:\n%s", cmp.Diff(v, nil)))
+							}
+						}
 					}
 				}
 

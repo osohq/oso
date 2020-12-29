@@ -10,7 +10,7 @@ import (
 type Host struct {
 	ffiPolar  PolarFfi
 	classes   map[string]reflect.Type
-	instances map[int]reflect.Value
+	instances map[int]interface{}
 }
 
 func NewHost(polar PolarFfi) Host {
@@ -18,7 +18,7 @@ func NewHost(polar PolarFfi) Host {
 	for k, v := range CLASSES {
 		classes[k] = v
 	}
-	instances := make(map[int]reflect.Value)
+	instances := make(map[int]interface{})
 	return Host{
 		ffiPolar:  polar,
 		classes:   classes,
@@ -31,7 +31,7 @@ func (h Host) copy() Host {
 	for k, v := range h.classes {
 		classes[k] = v
 	}
-	instances := make(map[int]reflect.Value)
+	instances := make(map[int]interface{})
 	for k, v := range h.instances {
 		instances[k] = v
 	}
@@ -63,9 +63,9 @@ func (h Host) cacheClass(cls reflect.Type, name *string) error {
 	return nil
 }
 
-func (h Host) getInstance(id int) (*reflect.Value, error) {
+func (h Host) getInstance(id int) (interface{}, error) {
 	if v, ok := h.instances[id]; ok {
-		return &v, nil
+		return v, nil
 	}
 	return nil, &UnregisteredInstanceError{id: id}
 }
@@ -81,7 +81,7 @@ func (h Host) cacheInstance(instance interface{}, id *int) (*int, error) {
 	} else {
 		instanceID = *id
 	}
-	h.instances[instanceID] = reflect.ValueOf(instance)
+	h.instances[instanceID] = instance
 	return &instanceID, nil
 }
 
@@ -99,7 +99,7 @@ func (h Host) makeInstance(name string, args []interface{}, kwargs map[string]in
 	if err != nil {
 		return nil, err
 	}
-	return h.cacheInstance(instance, nil)
+	return h.cacheInstance(*instance, &id)
 }
 
 func (h Host) unify(leftID int, rightID int) (bool, error) {
@@ -111,7 +111,9 @@ func (h Host) unify(leftID int, rightID int) (bool, error) {
 	if err2 != nil {
 		return false, err2
 	}
-	if left.Type() == right.Type() && left.Type().Comparable() {
+	leftType := reflect.TypeOf(left)
+	rightType := reflect.TypeOf(right)
+	if leftType == rightType && leftType.Comparable() {
 		return left == right, nil
 	}
 	return reflect.DeepEqual(left, right), nil
@@ -208,7 +210,7 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 	// deref pointer
 	if rt.Kind() == reflect.Ptr {
 		rtDeref := rt.Elem()
-		return h.toPolar(rtDeref)
+		return h.toPolar(rtDeref.Interface())
 	}
 
 	switch rt.Kind() {
@@ -249,8 +251,6 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 		}
 		return &Value{&inner}, nil
 	}
-
-	panic("unhandled variant in toPolar")
 }
 
 func (h Host) listToGo(v []Value) ([]interface{}, error) {
@@ -291,56 +291,11 @@ func (h Host) toGo(v Value) (interface{}, error) {
 		}
 		return retMap, nil
 	case *ValueExternalInstance:
-		return h.getInstance(int(inner.InstanceId))
+		instance, err := h.getInstance(int(inner.InstanceId))
+		if err != nil {
+			return nil, err
+		}
+		return instance, nil
 	}
 	return nil, fmt.Errorf("Unexpected Polar type %v", v)
 }
-
-//         tag = [*value][0]
-//         if tag in ["String", "Boolean"]:
-//             return value[tag]
-//         elif tag == "Number":
-//             number = [*value[tag].values()][0]
-//             if "Float" in value[tag]:
-//                 if number == "Infinity":
-//                     return inf
-//                 elif number == "-Infinity":
-//                     return -inf
-//                 elif number == "NaN":
-//                     return nan
-//                 else:
-//                     if not isinstance(number, float):
-//                         raise PolarRuntimeError(
-//                             f'Expected a floating point number, got "{number}"'
-//                         )
-//             return number
-//         elif tag == "List":
-//             return [self.to_python(e) for e in value[tag]]
-//         elif tag == "Dictionary":
-//             return {k: self.to_python(v) for k, v in value[tag]["fields"].items()}
-//         elif tag == "ExternalInstance":
-//             return self.get_instance(value[tag]["instance_id"])
-//         elif tag == "Call":
-//             return Predicate(
-//                 name=value[tag]["name"],
-//                 args=[self.to_python(v) for v in value[tag]["args"]],
-//             )
-//         elif tag == "Variable":
-//             return Variable(value[tag])
-//         elif tag == "Expression":
-//             args = list(map(self.to_python, value[tag]["args"]))
-//             operator = value[tag]["operator"]
-
-//             return Expression(operator, args)
-//         elif tag == "Pattern":
-//             pattern_tag = [*value[tag]][0]
-//             if pattern_tag == "Instance":
-//                 instance = value[tag]["Instance"]
-//                 return Pattern(instance["tag"], instance["fields"]["fields"])
-//             elif pattern_tag == "Dictionary":
-//                 dictionary = value[tag]["Dictionary"]
-//                 return Pattern(None, dictionary["fields"])
-//             else:
-//                 raise UnexpectedPolarTypeError("Pattern: " + value[tag])
-
-//         raise UnexpectedPolarTypeError(tag)

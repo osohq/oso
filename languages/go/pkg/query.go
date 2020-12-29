@@ -121,18 +121,18 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 	if err != nil {
 		return err
 	}
-	attr := reflect.ValueOf(instance).FieldByName(event.Attribute)
-	if attr.IsZero() {
-		q.ffiQuery.applicationError((&InvalidCallError{instance: event.Instance, field: event.Attribute}).Error())
-		q.ffiQuery.callResult(int(event.CallId), nil)
-		return nil
-	}
 
 	var result interface{}
 
 	// if we provided Args, it should be callable
 	if event.Args != nil {
-		if attr.Kind() == reflect.Func {
+		method := reflect.ValueOf(instance).MethodByName(event.Attribute)
+		if !method.IsValid() {
+			q.ffiQuery.applicationError((&InvalidCallError{instance: event.Instance, field: event.Attribute}).Error())
+			q.ffiQuery.callResult(int(event.CallId), nil)
+			return nil
+		}
+		if method.Kind() == reflect.Func {
 			args, err := q.host.listToGo(*event.Args)
 			valueArgs := make([]reflect.Value, len(args))
 			for idx, v := range args {
@@ -144,7 +144,7 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 			if event.Kwargs != nil {
 				return &KwargsError{}
 			}
-			results := attr.Call(valueArgs)
+			results := method.Call(valueArgs)
 			if len(results) == 1 {
 				result = results[0].Interface()
 			} else {
@@ -158,6 +158,12 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 			return &InvalidCallError{instance: event.Instance, field: event.Attribute}
 		}
 	} else {
+		attr := reflect.ValueOf(instance).FieldByName(event.Attribute)
+		if !attr.IsValid() {
+			q.ffiQuery.applicationError((&InvalidCallError{instance: event.Instance, field: event.Attribute}).Error())
+			q.ffiQuery.callResult(int(event.CallId), nil)
+			return nil
+		}
 		result = attr.Interface()
 	}
 

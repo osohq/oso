@@ -7,6 +7,10 @@ import (
 
 type UnitClass struct{}
 
+func (u UnitClass) String() string {
+	return "UnitClass"
+}
+
 type IterableClass struct {
 	Elems []int
 }
