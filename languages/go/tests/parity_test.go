@@ -21,7 +21,7 @@ func testFromFile(t *testing.T, path string) {
 		t.Fatal(err)
 	}
 	oso := oso.NewPolar()
-	testCase.RunTest(&oso, t)
+	testCase.RunTest(oso, t)
 }
 
 func TestAll(t *testing.T) {

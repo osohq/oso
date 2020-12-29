@@ -1,7 +1,6 @@
 package oso
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -57,42 +56,24 @@ func (left Result) Equal(right interface{}) bool {
 
 type Variable string
 
-func ToInput(v interface{}) (interface{}, error) {
-	switch v.(type) {
-	case map[string]interface{}:
-		if _, ok := v.(map[string]interface{})["type"]; ok {
-			return nil, errors.New("classes aren't supported yet")
-		}
-		if v, ok := v.(map[string]interface{})["var"]; ok {
-			return Variable(v.(string)), nil
-		}
-	}
-	return v, nil
-}
-
 func toInput(o oso.Polar, v interface{}, t *testing.T) interface{} {
 	if vMap, ok := v.(map[string]interface{}); ok {
 		if ty, ok := vMap["type"]; ok {
 			class := CLASSES[ty.(string)]
-			instance := reflect.New(class)
-
-			for idx, arg := range vMap["args"].([]interface{}) {
-				argInput := toInput(o, arg, t)
-				f := instance.Field(idx)
-				if f.IsValid() && f.CanSet() {
-					f.Set(reflect.ValueOf(argInput))
-				} else {
-					t.Fatal(fmt.Errorf("cannot set field %v", f))
-				}
+			if class == nil {
+				t.Fatalf("class %s not implemented for tests", ty.(string))
 			}
-			for k, v := range vMap["kwargs"].(map[string]interface{}) {
-				argInput := toInput(o, v, t)
-				f := instance.FieldByName(k)
-				if f.IsValid() && f.CanSet() {
-					f.Set(reflect.ValueOf(argInput))
-				} else {
-					t.Fatal(fmt.Errorf("cannot set field %v", f))
-				}
+			var args []interface{}
+			var kwargs map[string]interface{}
+			if vMap["args"] != nil {
+				args = vMap["args"].([]interface{})
+			}
+			if vMap["kwargs"] != nil {
+				kwargs = vMap["kwargs"].(map[string]interface{})
+			}
+			instance, err := oso.InstantiateClass(class, args, kwargs)
+			if err != nil {
+				t.Fatal(err)
 			}
 			return instance
 		}
@@ -136,7 +117,7 @@ func String(s string) *string {
 	return &s
 }
 
-func (tc TestCase) setupTest(o *oso.Polar, t *testing.T) error {
+func (tc TestCase) setupTest(o oso.Polar, t *testing.T) error {
 	for k, v := range CLASSES {
 		err := o.RegisterClass(v, &k)
 		if err != nil {
@@ -166,7 +147,7 @@ func (tc TestCase) setupTest(o *oso.Polar, t *testing.T) error {
 	return nil
 }
 
-func (tc TestCase) RunTest(o *oso.Polar, t *testing.T) {
+func (tc TestCase) RunTest(o oso.Polar, t *testing.T) {
 	err := tc.setupTest(o, t)
 	if err != nil {
 		t.Fatal(err)
@@ -187,10 +168,7 @@ func (tc TestCase) RunTest(o *oso.Polar, t *testing.T) {
 			} else {
 				Inputs := make([]interface{}, len(*c.Inputs))
 				for idx, v := range *c.Inputs {
-					input, err := ToInput(v)
-					if err != nil {
-						t.Error(err)
-					}
+					input := toInput(o, v, t)
 					Inputs[idx] = input
 				}
 				// fmt.Printf("Querying for: %s(%v)", c.Query, Inputs)

@@ -49,17 +49,17 @@ func (h Host) getClass(name string) (*reflect.Type, error) {
 	return nil, &UnregisteredClassError{name: name}
 }
 
-func (h Host) cacheClass(cls interface{}, name *string) error {
+func (h Host) cacheClass(cls reflect.Type, name *string) error {
 	var className string
 	if name == nil {
-		className = reflect.TypeOf(className).Name()
+		className = cls.Name()
 	} else {
 		className = *name
 	}
 	if v, ok := h.classes[className]; ok {
-		return &DuplicateClassAliasError{name: className, cls: reflect.TypeOf(cls), existing: v}
+		return &DuplicateClassAliasError{name: className, cls: cls, existing: v}
 	}
-	h.classes[className] = reflect.TypeOf(cls)
+	h.classes[className] = cls
 	return nil
 }
 
@@ -95,23 +95,9 @@ func (h Host) makeInstance(name string, args []interface{}, kwargs map[string]in
 	if err != nil {
 		return nil, err
 	}
-	instance := reflect.New(*class)
-	fmt.Printf("What is this: %#v, %#v", instance, (*class).Kind().String())
-	for idx, arg := range args {
-		f := instance.Field(idx)
-		if f.IsValid() && f.CanSet() {
-			f.Set(reflect.ValueOf(arg))
-		} else {
-			return nil, fmt.Errorf("cannot set field %v", f)
-		}
-	}
-	for k, v := range kwargs {
-		f := instance.FieldByName(k)
-		if f.IsValid() && f.CanSet() {
-			f.Set(reflect.ValueOf(v))
-		} else {
-			return nil, fmt.Errorf("cannot set field %v", f)
-		}
+	instance, err := InstantiateClass(*class, args, kwargs)
+	if err != nil {
+		return nil, err
 	}
 	return h.cacheInstance(instance, nil)
 }
