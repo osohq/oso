@@ -3,8 +3,11 @@ package oso
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -83,12 +86,61 @@ type Case struct {
 	Description *string                  `yaml:"description"`
 	Query       string                   `yaml:"query"`
 	Load        *string                  `yaml:"load"`
-	Inputs      *[]string                `yaml:"inputs"`
+	Inputs      *[]interface{}           `yaml:"input"`
 	Result      []map[string]interface{} `yaml:"result"`
 	Err         *string                  `yaml:"err"`
 }
 
+func contains(list []string, elem string) bool {
+	for _, a := range list {
+		if a == elem {
+			return true
+		}
+	}
+	return false
+}
+
+func String(s string) *string {
+	return &s
+}
+
+func (tc TestCase) setupTest(o *oso.Polar, t *testing.T) error {
+	err := o.RegisterClass(reflect.TypeOf(ValueFactory{}), String("ValueFactory"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = o.RegisterClass(reflect.TypeOf(UnitClass{}), String("UnitClass"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = filepath.Walk("../../../test/policies/", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		if contains(tc.Policies, strings.TrimSuffix(path, filepath.Ext(path))) {
+			err = o.LoadFile(path)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return nil
+}
+
 func (tc TestCase) RunTest(o *oso.Polar, t *testing.T) {
+	err := tc.setupTest(o, t)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, c := range tc.Cases {
 		testName := tc.Name + "\n" + tc.Description + "\n"
 		if c.Description != nil {
@@ -100,6 +152,7 @@ func (tc TestCase) RunTest(o *oso.Polar, t *testing.T) {
 			var testQuery *oso.Query
 			var queryErr error
 			if c.Inputs == nil {
+				// fmt.Printf("Querying for: %s", c.Query)
 				testQuery, queryErr = o.Query(c.Query)
 			} else {
 				Inputs := make([]interface{}, len(*c.Inputs))
@@ -110,6 +163,7 @@ func (tc TestCase) RunTest(o *oso.Polar, t *testing.T) {
 					}
 					Inputs[idx] = input
 				}
+				// fmt.Printf("Querying for: %s(%v)", c.Query, Inputs)
 				testQuery, queryErr = o.QueryRule(c.Query, Inputs...)
 			}
 

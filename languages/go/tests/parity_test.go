@@ -8,7 +8,6 @@ import (
 
 	yaml "github.com/goccy/go-yaml"
 	oso "github.com/osohq/oso/languages/go/pkg"
-	// testRunner "github.com/osohq/oso/languages/go/tests"
 )
 
 func testFromFile(t *testing.T, path string) {

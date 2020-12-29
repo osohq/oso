@@ -3,8 +3,8 @@ package oso
 // #cgo CFLAGS: -g -Wall
 // #include <stdint.h>
 // #include <stdlib.h>
-// #include "polar.h"
-// #cgo LDFLAGS: -lpolar -L${SRCDIR} -ldl -lm
+// #include "../../../polar-c-api/polar.h"
+// #cgo LDFLAGS: ${SRCDIR}/../../../target/debug/libpolar.a -ldl -lm
 import "C"
 
 import (
@@ -110,7 +110,7 @@ func (p PolarFfi) newQueryFromStr(queryStr string) (*QueryFfi, error) {
 	return newQueryFfi(result), nil
 }
 
-func ffiSerialize(input json.Marshaler) (*C.char, error) {
+func ffiSerialize(input interface{}) (*C.char, error) {
 	json, err := json.Marshal(input)
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func ffiSerialize(input json.Marshaler) (*C.char, error) {
 	return C.CString(string(json)), nil
 }
 
-func (p PolarFfi) newQueryFromTerm(queryTerm json.Marshaler) (*QueryFfi, error) {
+func (p PolarFfi) newQueryFromTerm(queryTerm interface{}) (*QueryFfi, error) {
 	json, err := ffiSerialize(queryTerm)
 	if err != nil {
 		return nil, err
@@ -215,7 +215,7 @@ func (q QueryFfi) nextEvent() (*string, error) {
 	return &goEvent, nil
 }
 
-func (q QueryFfi) debugCommand(command json.Marshaler) error {
+func (q QueryFfi) debugCommand(command interface{}) error {
 	cStr, err := ffiSerialize(command)
 	if err != nil {
 		return err

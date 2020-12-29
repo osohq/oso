@@ -107,9 +107,17 @@ func (p Polar) ClearRules() error {
 
 // Query accepts string and predicates
 func (p Polar) Query(query interface{}) (*Query, error) {
-	switch query.(type) {
+	switch q := query.(type) {
 	case string:
-		ffiQuery, err := p.ffiPolar.newQueryFromStr(query.(string))
+		ffiQuery, err := p.ffiPolar.newQueryFromStr(q)
+		if err != nil {
+			return nil, err
+		}
+		newQuery := newQuery(*ffiQuery, p.host.copy())
+		return &newQuery, nil
+	case Call:
+		inner := ValueCall(q)
+		ffiQuery, err := p.ffiPolar.newQueryFromTerm(Value{&inner})
 		if err != nil {
 			return nil, err
 		}
@@ -121,8 +129,19 @@ func (p Polar) Query(query interface{}) (*Query, error) {
 }
 
 func (p Polar) QueryRule(name string, args ...interface{}) (*Query, error) {
-	// TODO
-	return nil, fmt.Errorf("Unsupported: QueryRule")
+	polarArgs := make([]Value, len(args))
+	for idx, arg := range args {
+		converted, err := p.host.toPolar(arg)
+		if err != nil {
+			return nil, err
+		}
+		polarArgs[idx] = *converted
+	}
+	query := Call{
+		Name: name,
+		Args: polarArgs,
+	}
+	return p.Query(query)
 }
 
 func (p Polar) Repl(files ...string) error {

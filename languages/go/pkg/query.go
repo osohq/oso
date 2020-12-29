@@ -44,8 +44,19 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			defer q.ffiQuery.delete()
 			return nil, nil
 		case *QueryEventDebug:
+
 			// TODO
 			return nil, fmt.Errorf("not yet implemented")
+		case *QueryEventResult:
+			results := make(map[string]interface{})
+			for k, v := range ev.Bindings {
+				converted, err := q.host.toGo(v)
+				if err != nil {
+					return nil, err
+				}
+				results[k] = converted
+			}
+			return &results, nil
 		case *QueryEventMakeExternal:
 			err = q.handleMakeExternal(ev)
 			break
@@ -63,9 +74,6 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			break
 		case *QueryEventExternalUnify:
 			err = q.handleExternalUnify(ev)
-			break
-		case *QueryEventResult:
-			err = q.handleResult(ev)
 			break
 		case *QueryEventExternalOp:
 			err = q.handleExternalOp(ev)
@@ -92,54 +100,41 @@ func (q Query) handleMakeExternal(event *QueryEventMakeExternal) error {
 			args[idx] = converted
 		}
 		kwargs := make(map[string]interface{})
-		for k, v := range *ctor.Kwargs {
-			converted, err := q.host.toGo(v)
-			if err != nil {
-				return err
+		if ctor.Kwargs != nil {
+			for k, v := range *ctor.Kwargs {
+				converted, err := q.host.toGo(v)
+				if err != nil {
+					return err
+				}
+				kwargs[k] = converted
 			}
-			kwargs[k] = converted
 		}
 		_, err := q.host.makeInstance(ctor.Name, args, kwargs, int(event.InstanceId))
 		return err
 	}
 	return &InvalidConstructorError{ctor: event.Constructor}
-	// def handle_make_external(self, data):
-	// id = data["instance_id"]
-	// constructor = data["constructor"]["value"]
-	// if "Call" in constructor:
-	// 	cls_name = constructor["Call"]["name"]
-	// 	args = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
-	// 	kwargs = constructor["Call"]["kwargs"] or {}
-	// 	kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
-	// else:
-	// 	raise InvalidConstructorError()
-	// self.host.make_instance(cls_name, args, kwargs, id)
-	return nil
 }
 
 func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
-	return nil
+	return fmt.Errorf("handleExternalCall not yet implemented")
 }
 func (q Query) handleExternalIsa(event *QueryEventExternalIsa) error {
-	return nil
+	return fmt.Errorf("handleExternalIsa not yet implemented")
 }
 func (q Query) handleExternalIsSubSpecializer(event *QueryEventExternalIsSubSpecializer) error {
-	return nil
+	return fmt.Errorf("handleExternalIsSubSpecializer not yet implemented")
 }
 func (q Query) handleExternalIsSubclass(event *QueryEventExternalIsSubclass) error {
-	return nil
+	return fmt.Errorf("handleExternalIsSubclass not yet implemented")
 }
 func (q Query) handleExternalUnify(event *QueryEventExternalUnify) error {
-	return nil
-}
-func (q Query) handleResult(event *QueryEventResult) error {
-	return nil
+	return fmt.Errorf("handleExternalUnify not yet implemented")
 }
 func (q Query) handleExternalOp(event *QueryEventExternalOp) error {
-	return nil
+	return fmt.Errorf("handleExternalOp not yet implemented")
 }
 func (q Query) handleNextExternal(event *QueryEventNextExternal) error {
-	return nil
+	return fmt.Errorf("handleNextExternal not yet implemented")
 }
 
 //             if kind == "Done":

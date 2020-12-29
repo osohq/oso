@@ -1,2 +1,2 @@
 test:
-	go test ./tests/
+	go test -v ./tests/

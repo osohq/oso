@@ -60,6 +60,7 @@ func (h Host) cacheClass(cls interface{}, name *string) error {
 	if v, ok := h.classes[className]; ok {
 		return &DuplicateClassAliasError{name: className, cls: reflect.TypeOf(cls), existing: v}
 	}
+	h.classes[className] = reflect.TypeOf(cls)
 	return nil
 }
 
@@ -184,6 +185,20 @@ func (h Host) isSubspecializer(instanceID int, leftTag string, rightTag string) 
 //             )
 
 func (h Host) toPolar(v interface{}) (*Value, error) {
+	// handle nil first
+	if v == nil {
+		instanceID, err := h.cacheInstance(nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		repr := "nil"
+		inner := ValueExternalInstance{
+			InstanceId:  uint64(*instanceID),
+			Constructor: nil,
+			Repr:        &repr,
+		}
+		return &Value{&inner}, nil
+	}
 	// check basic primitive types
 	switch v.(type) {
 	case bool:
