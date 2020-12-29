@@ -9,7 +9,6 @@ import "C"
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 )
 
@@ -32,7 +31,13 @@ func (p *PolarFfi) delete() {
 func getError() error {
 	err := C.polar_get_error()
 	defer C.string_free(err)
-	return errors.New(C.GoString(err))
+	errStr := C.GoString(err)
+	var polarError FormattedPolarError
+	jsonErr := json.Unmarshal([]byte(errStr), &polarError)
+	if jsonErr != nil {
+		return jsonErr
+	}
+	return &polarError
 }
 
 type ffiInterface interface {

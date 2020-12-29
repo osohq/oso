@@ -92,19 +92,15 @@ import (
         use ContainerFormat::*;
         match format {
             UnitStruct => self.render("unit_struct", &"")?,
-            // NewTypeStruct(format) => {
-            //     match format.as_ref() {
-            //         // See comment in `output_variant`.
-            //     Format::TypeName(_) | Format::Option(_) => vec![Named {
-            //         name: "Value".to_string(),
-            //         value: format.as_ref().clone(),
-            //     }],
-            //     _ => {
-            //         self.output_struct_or_variant_new_type_container(None, None, name, format)?;
-            //         return Ok(());
-            //     }
-            //     }
-            // },
+            NewTypeStruct(format) => {
+                self.render(
+                    "newtype",
+                    &json!({
+                        "name": name,
+                        "type": self.quote_type(format),
+                    }),
+                )?;
+            }
             // TupleStruct(formats) => formats
             //     .iter()
             //     .enumerate()

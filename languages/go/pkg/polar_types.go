@@ -22,6 +22,152 @@ type Dictionary struct {
 	Fields map[string]Value `json:"fields"`
 }
 
+// ErrorKind enum
+type ErrorKindVariant interface {
+	isErrorKind()
+}
+
+type ErrorKind struct {
+	ErrorKindVariant
+}
+
+func (result *ErrorKind) UnmarshalJSON(b []byte) error {
+	var rawMap map[string]json.RawMessage
+
+	err := json.Unmarshal(b, &rawMap)
+	if err != nil {
+		return err
+	}
+
+	if len(rawMap) != 1 {
+		return errors.New("Deserializing ErrorKind as an enum variant; expecting a single key")
+	}
+
+	for k, v := range rawMap {
+		switch k {
+
+		case "Parse":
+			var variant ErrorKindParse
+			err := json.Unmarshal(v, &variant)
+			*result = ErrorKind{&variant}
+			return err
+
+		case "Runtime":
+			var variant ErrorKindRuntime
+			err := json.Unmarshal(v, &variant)
+			*result = ErrorKind{&variant}
+			return err
+
+		case "Operational":
+			var variant ErrorKindOperational
+			err := json.Unmarshal(v, &variant)
+			*result = ErrorKind{&variant}
+			return err
+
+		case "Parameter":
+			var variant ErrorKindParameter
+			err := json.Unmarshal(v, &variant)
+			*result = ErrorKind{&variant}
+			return err
+
+		}
+		return fmt.Errorf("Unknown variant for ErrorKind: %s", k)
+	}
+	return fmt.Errorf("Cannot deserialize ErrorKind: %s", string(b))
+}
+
+func (variant ErrorKind) MarshalJSON() ([]byte, error) {
+	switch inner := variant.ErrorKindVariant.(type) {
+
+	case *ErrorKindParse:
+		return json.Marshal(map[string]*ErrorKindParse{
+			"Parse": inner,
+		})
+
+	case *ErrorKindRuntime:
+		return json.Marshal(map[string]*ErrorKindRuntime{
+			"Runtime": inner,
+		})
+
+	case *ErrorKindOperational:
+		return json.Marshal(map[string]*ErrorKindOperational{
+			"Operational": inner,
+		})
+
+	case *ErrorKindParameter:
+		return json.Marshal(map[string]*ErrorKindParameter{
+			"Parameter": inner,
+		})
+
+	}
+
+	return nil, fmt.Errorf("unexpected variant of %v", variant)
+}
+
+// ErrorKindParse newtype
+type ErrorKindParse ParseError
+
+func (variant ErrorKindParse) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ParseError(variant))
+}
+
+func (variant *ErrorKindParse) UnmarshalJSON(b []byte) error {
+	inner := ParseError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindParse(inner)
+	return err
+}
+
+func (*ErrorKindParse) isErrorKind() {}
+
+// ErrorKindRuntime newtype
+type ErrorKindRuntime RuntimeError
+
+func (variant ErrorKindRuntime) MarshalJSON() ([]byte, error) {
+	return json.Marshal(RuntimeError(variant))
+}
+
+func (variant *ErrorKindRuntime) UnmarshalJSON(b []byte) error {
+	inner := RuntimeError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindRuntime(inner)
+	return err
+}
+
+func (*ErrorKindRuntime) isErrorKind() {}
+
+// ErrorKindOperational newtype
+type ErrorKindOperational OperationalError
+
+func (variant ErrorKindOperational) MarshalJSON() ([]byte, error) {
+	return json.Marshal(OperationalError(variant))
+}
+
+func (variant *ErrorKindOperational) UnmarshalJSON(b []byte) error {
+	inner := OperationalError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindOperational(inner)
+	return err
+}
+
+func (*ErrorKindOperational) isErrorKind() {}
+
+// ErrorKindParameter newtype
+type ErrorKindParameter ParameterError
+
+func (variant ErrorKindParameter) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ParameterError(variant))
+}
+
+func (variant *ErrorKindParameter) UnmarshalJSON(b []byte) error {
+	inner := ParameterError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindParameter(inner)
+	return err
+}
+
+func (*ErrorKindParameter) isErrorKind() {}
+
 // ExternalInstance struct
 type ExternalInstance struct {
 	// InstanceId
@@ -30,6 +176,14 @@ type ExternalInstance struct {
 	Constructor *Value `json:"constructor"`
 	// Repr
 	Repr *string `json:"repr"`
+}
+
+// FormattedPolarError struct
+type FormattedPolarError struct {
+	// Kind
+	Kind ErrorKind `json:"kind"`
+	// Formatted
+	Formatted string `json:"formatted"`
 }
 
 // InstanceLiteral struct
@@ -76,11 +230,10 @@ func (result *Node) UnmarshalJSON(b []byte) error {
 			*result = Node{&variant}
 			return err
 
-		default:
-			return fmt.Errorf("Unknown variant for Node: %s", k)
 		}
+		return fmt.Errorf("Unknown variant for Node: %s", k)
 	}
-	return fmt.Errorf("unreachable")
+	return fmt.Errorf("Cannot deserialize Node: %s", string(b))
 }
 
 func (variant Node) MarshalJSON() ([]byte, error) {
@@ -169,11 +322,10 @@ func (result *Numeric) UnmarshalJSON(b []byte) error {
 			*result = Numeric{&variant}
 			return err
 
-		default:
-			return fmt.Errorf("Unknown variant for Numeric: %s", k)
 		}
+		return fmt.Errorf("Unknown variant for Numeric: %s", k)
 	}
-	return fmt.Errorf("unreachable")
+	return fmt.Errorf("Cannot deserialize Numeric: %s", string(b))
 }
 
 func (variant Numeric) MarshalJSON() ([]byte, error) {
@@ -233,6 +385,113 @@ type Operation struct {
 	// Args
 	Args []Value `json:"args"`
 }
+
+// OperationalError enum
+type OperationalErrorVariant interface {
+	isOperationalError()
+}
+
+type OperationalError struct {
+	OperationalErrorVariant
+}
+
+func (result *OperationalError) UnmarshalJSON(b []byte) error {
+	var rawMap map[string]json.RawMessage
+
+	err := json.Unmarshal(b, &rawMap)
+	if err != nil {
+		return err
+	}
+
+	if len(rawMap) != 1 {
+		return errors.New("Deserializing OperationalError as an enum variant; expecting a single key")
+	}
+
+	for k, v := range rawMap {
+		switch k {
+
+		case "Unimplemented":
+			var variant OperationalErrorUnimplemented
+			err := json.Unmarshal(v, &variant)
+			*result = OperationalError{&variant}
+			return err
+
+		case "Unknown":
+			var variant OperationalErrorUnknown
+			err := json.Unmarshal(v, &variant)
+			*result = OperationalError{&variant}
+			return err
+
+		case "InvalidState":
+			var variant OperationalErrorInvalidState
+			err := json.Unmarshal(v, &variant)
+			*result = OperationalError{&variant}
+			return err
+
+		}
+		return fmt.Errorf("Unknown variant for OperationalError: %s", k)
+	}
+	return fmt.Errorf("Cannot deserialize OperationalError: %s", string(b))
+}
+
+func (variant OperationalError) MarshalJSON() ([]byte, error) {
+	switch inner := variant.OperationalErrorVariant.(type) {
+
+	case *OperationalErrorUnimplemented:
+		return json.Marshal(map[string]*OperationalErrorUnimplemented{
+			"Unimplemented": inner,
+		})
+
+	case *OperationalErrorUnknown:
+		return json.Marshal(map[string]*OperationalErrorUnknown{
+			"Unknown": inner,
+		})
+
+	case *OperationalErrorInvalidState:
+		return json.Marshal(map[string]*OperationalErrorInvalidState{
+			"InvalidState": inner,
+		})
+
+	}
+
+	return nil, fmt.Errorf("unexpected variant of %v", variant)
+}
+
+// OperationalErrorUnimplemented newtype
+type OperationalErrorUnimplemented string
+
+func (variant OperationalErrorUnimplemented) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(variant))
+}
+
+func (variant *OperationalErrorUnimplemented) UnmarshalJSON(b []byte) error {
+	inner := string(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = OperationalErrorUnimplemented(inner)
+	return err
+}
+
+func (*OperationalErrorUnimplemented) isOperationalError() {}
+
+type OperationalErrorUnknown struct{}
+
+func (*OperationalErrorUnknown) isOperationalError() {}
+
+// OperationalErrorInvalidState newtype
+type OperationalErrorInvalidState string
+
+func (variant OperationalErrorInvalidState) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(variant))
+}
+
+func (variant *OperationalErrorInvalidState) UnmarshalJSON(b []byte) error {
+	inner := string(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = OperationalErrorInvalidState(inner)
+	return err
+}
+
+func (*OperationalErrorInvalidState) isOperationalError() {}
 
 // Operator enum
 type OperatorVariant interface {
@@ -408,11 +667,10 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 			*result = Operator{&variant}
 			return err
 
-		default:
-			return fmt.Errorf("Unknown variant for Operator: %s", k)
 		}
+		return fmt.Errorf("Unknown variant for Operator: %s", k)
 	}
-	return fmt.Errorf("unreachable")
+	return fmt.Errorf("Cannot deserialize Operator: %s", string(b))
 }
 
 func (variant Operator) MarshalJSON() ([]byte, error) {
@@ -656,6 +914,247 @@ type Parameter struct {
 	Specializer *Value `json:"specializer"`
 }
 
+// ParameterError newtype
+type ParameterError string
+
+func (variant ParameterError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(variant))
+}
+
+func (variant *ParameterError) UnmarshalJSON(b []byte) error {
+	inner := string(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ParameterError(inner)
+	return err
+}
+
+// ParseError enum
+type ParseErrorVariant interface {
+	isParseError()
+}
+
+type ParseError struct {
+	ParseErrorVariant
+}
+
+func (result *ParseError) UnmarshalJSON(b []byte) error {
+	var rawMap map[string]json.RawMessage
+
+	err := json.Unmarshal(b, &rawMap)
+	if err != nil {
+		return err
+	}
+
+	if len(rawMap) != 1 {
+		return errors.New("Deserializing ParseError as an enum variant; expecting a single key")
+	}
+
+	for k, v := range rawMap {
+		switch k {
+
+		case "IntegerOverflow":
+			var variant ParseErrorIntegerOverflow
+			err := json.Unmarshal(v, &variant)
+			*result = ParseError{&variant}
+			return err
+
+		case "InvalidTokenCharacter":
+			var variant ParseErrorInvalidTokenCharacter
+			err := json.Unmarshal(v, &variant)
+			*result = ParseError{&variant}
+			return err
+
+		case "InvalidToken":
+			var variant ParseErrorInvalidToken
+			err := json.Unmarshal(v, &variant)
+			*result = ParseError{&variant}
+			return err
+
+		case "UnrecognizedEOF":
+			var variant ParseErrorUnrecognizedEOF
+			err := json.Unmarshal(v, &variant)
+			*result = ParseError{&variant}
+			return err
+
+		case "UnrecognizedToken":
+			var variant ParseErrorUnrecognizedToken
+			err := json.Unmarshal(v, &variant)
+			*result = ParseError{&variant}
+			return err
+
+		case "ExtraToken":
+			var variant ParseErrorExtraToken
+			err := json.Unmarshal(v, &variant)
+			*result = ParseError{&variant}
+			return err
+
+		case "ReservedWord":
+			var variant ParseErrorReservedWord
+			err := json.Unmarshal(v, &variant)
+			*result = ParseError{&variant}
+			return err
+
+		case "InvalidFloat":
+			var variant ParseErrorInvalidFloat
+			err := json.Unmarshal(v, &variant)
+			*result = ParseError{&variant}
+			return err
+
+		case "WrongValueType":
+			var variant ParseErrorWrongValueType
+			err := json.Unmarshal(v, &variant)
+			*result = ParseError{&variant}
+			return err
+
+		}
+		return fmt.Errorf("Unknown variant for ParseError: %s", k)
+	}
+	return fmt.Errorf("Cannot deserialize ParseError: %s", string(b))
+}
+
+func (variant ParseError) MarshalJSON() ([]byte, error) {
+	switch inner := variant.ParseErrorVariant.(type) {
+
+	case *ParseErrorIntegerOverflow:
+		return json.Marshal(map[string]*ParseErrorIntegerOverflow{
+			"IntegerOverflow": inner,
+		})
+
+	case *ParseErrorInvalidTokenCharacter:
+		return json.Marshal(map[string]*ParseErrorInvalidTokenCharacter{
+			"InvalidTokenCharacter": inner,
+		})
+
+	case *ParseErrorInvalidToken:
+		return json.Marshal(map[string]*ParseErrorInvalidToken{
+			"InvalidToken": inner,
+		})
+
+	case *ParseErrorUnrecognizedEOF:
+		return json.Marshal(map[string]*ParseErrorUnrecognizedEOF{
+			"UnrecognizedEOF": inner,
+		})
+
+	case *ParseErrorUnrecognizedToken:
+		return json.Marshal(map[string]*ParseErrorUnrecognizedToken{
+			"UnrecognizedToken": inner,
+		})
+
+	case *ParseErrorExtraToken:
+		return json.Marshal(map[string]*ParseErrorExtraToken{
+			"ExtraToken": inner,
+		})
+
+	case *ParseErrorReservedWord:
+		return json.Marshal(map[string]*ParseErrorReservedWord{
+			"ReservedWord": inner,
+		})
+
+	case *ParseErrorInvalidFloat:
+		return json.Marshal(map[string]*ParseErrorInvalidFloat{
+			"InvalidFloat": inner,
+		})
+
+	case *ParseErrorWrongValueType:
+		return json.Marshal(map[string]*ParseErrorWrongValueType{
+			"WrongValueType": inner,
+		})
+
+	}
+
+	return nil, fmt.Errorf("unexpected variant of %v", variant)
+}
+
+// ParseErrorIntegerOverflow struct
+type ParseErrorIntegerOverflow struct {
+	// Token
+	Token string `json:"token"`
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (*ParseErrorIntegerOverflow) isParseError() {}
+
+// ParseErrorInvalidTokenCharacter struct
+type ParseErrorInvalidTokenCharacter struct {
+	// Token
+	Token string `json:"token"`
+	// C
+	C rune `json:"c"`
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (*ParseErrorInvalidTokenCharacter) isParseError() {}
+
+// ParseErrorInvalidToken struct
+type ParseErrorInvalidToken struct {
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (*ParseErrorInvalidToken) isParseError() {}
+
+// ParseErrorUnrecognizedEOF struct
+type ParseErrorUnrecognizedEOF struct {
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (*ParseErrorUnrecognizedEOF) isParseError() {}
+
+// ParseErrorUnrecognizedToken struct
+type ParseErrorUnrecognizedToken struct {
+	// Token
+	Token string `json:"token"`
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (*ParseErrorUnrecognizedToken) isParseError() {}
+
+// ParseErrorExtraToken struct
+type ParseErrorExtraToken struct {
+	// Token
+	Token string `json:"token"`
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (*ParseErrorExtraToken) isParseError() {}
+
+// ParseErrorReservedWord struct
+type ParseErrorReservedWord struct {
+	// Token
+	Token string `json:"token"`
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (*ParseErrorReservedWord) isParseError() {}
+
+// ParseErrorInvalidFloat struct
+type ParseErrorInvalidFloat struct {
+	// Token
+	Token string `json:"token"`
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (*ParseErrorInvalidFloat) isParseError() {}
+
+// ParseErrorWrongValueType struct
+type ParseErrorWrongValueType struct {
+	// Loc
+	Loc uint64 `json:"loc"`
+	// Term
+	Term Value `json:"term"`
+	// Expected
+	Expected string `json:"expected"`
+}
+
+func (*ParseErrorWrongValueType) isParseError() {}
+
 // Partial struct
 type Partial struct {
 	// Constraints
@@ -700,11 +1199,10 @@ func (result *Pattern) UnmarshalJSON(b []byte) error {
 			*result = Pattern{&variant}
 			return err
 
-		default:
-			return fmt.Errorf("Unknown variant for Pattern: %s", k)
 		}
+		return fmt.Errorf("Unknown variant for Pattern: %s", k)
 	}
-	return fmt.Errorf("unreachable")
+	return fmt.Errorf("Cannot deserialize Pattern: %s", string(b))
 }
 
 func (variant Pattern) MarshalJSON() ([]byte, error) {
@@ -853,11 +1351,10 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 			*result = QueryEvent{&variant}
 			return err
 
-		default:
-			return fmt.Errorf("Unknown variant for QueryEvent: %s", k)
 		}
+		return fmt.Errorf("Unknown variant for QueryEvent: %s", k)
 	}
-	return fmt.Errorf("unreachable")
+	return fmt.Errorf("Cannot deserialize QueryEvent: %s", string(b))
 }
 
 func (variant QueryEvent) MarshalJSON() ([]byte, error) {
@@ -1066,6 +1563,219 @@ type Rule struct {
 	Body Value `json:"body"`
 }
 
+// RuntimeError enum
+type RuntimeErrorVariant interface {
+	isRuntimeError()
+}
+
+type RuntimeError struct {
+	RuntimeErrorVariant
+}
+
+func (result *RuntimeError) UnmarshalJSON(b []byte) error {
+	var rawMap map[string]json.RawMessage
+
+	err := json.Unmarshal(b, &rawMap)
+	if err != nil {
+		return err
+	}
+
+	if len(rawMap) != 1 {
+		return errors.New("Deserializing RuntimeError as an enum variant; expecting a single key")
+	}
+
+	for k, v := range rawMap {
+		switch k {
+
+		case "ArithmeticError":
+			var variant RuntimeErrorArithmeticError
+			err := json.Unmarshal(v, &variant)
+			*result = RuntimeError{&variant}
+			return err
+
+		case "Serialization":
+			var variant RuntimeErrorSerialization
+			err := json.Unmarshal(v, &variant)
+			*result = RuntimeError{&variant}
+			return err
+
+		case "Unsupported":
+			var variant RuntimeErrorUnsupported
+			err := json.Unmarshal(v, &variant)
+			*result = RuntimeError{&variant}
+			return err
+
+		case "TypeError":
+			var variant RuntimeErrorTypeError
+			err := json.Unmarshal(v, &variant)
+			*result = RuntimeError{&variant}
+			return err
+
+		case "UnboundVariable":
+			var variant RuntimeErrorUnboundVariable
+			err := json.Unmarshal(v, &variant)
+			*result = RuntimeError{&variant}
+			return err
+
+		case "StackOverflow":
+			var variant RuntimeErrorStackOverflow
+			err := json.Unmarshal(v, &variant)
+			*result = RuntimeError{&variant}
+			return err
+
+		case "QueryTimeout":
+			var variant RuntimeErrorQueryTimeout
+			err := json.Unmarshal(v, &variant)
+			*result = RuntimeError{&variant}
+			return err
+
+		case "Application":
+			var variant RuntimeErrorApplication
+			err := json.Unmarshal(v, &variant)
+			*result = RuntimeError{&variant}
+			return err
+
+		case "FileLoading":
+			var variant RuntimeErrorFileLoading
+			err := json.Unmarshal(v, &variant)
+			*result = RuntimeError{&variant}
+			return err
+
+		}
+		return fmt.Errorf("Unknown variant for RuntimeError: %s", k)
+	}
+	return fmt.Errorf("Cannot deserialize RuntimeError: %s", string(b))
+}
+
+func (variant RuntimeError) MarshalJSON() ([]byte, error) {
+	switch inner := variant.RuntimeErrorVariant.(type) {
+
+	case *RuntimeErrorArithmeticError:
+		return json.Marshal(map[string]*RuntimeErrorArithmeticError{
+			"ArithmeticError": inner,
+		})
+
+	case *RuntimeErrorSerialization:
+		return json.Marshal(map[string]*RuntimeErrorSerialization{
+			"Serialization": inner,
+		})
+
+	case *RuntimeErrorUnsupported:
+		return json.Marshal(map[string]*RuntimeErrorUnsupported{
+			"Unsupported": inner,
+		})
+
+	case *RuntimeErrorTypeError:
+		return json.Marshal(map[string]*RuntimeErrorTypeError{
+			"TypeError": inner,
+		})
+
+	case *RuntimeErrorUnboundVariable:
+		return json.Marshal(map[string]*RuntimeErrorUnboundVariable{
+			"UnboundVariable": inner,
+		})
+
+	case *RuntimeErrorStackOverflow:
+		return json.Marshal(map[string]*RuntimeErrorStackOverflow{
+			"StackOverflow": inner,
+		})
+
+	case *RuntimeErrorQueryTimeout:
+		return json.Marshal(map[string]*RuntimeErrorQueryTimeout{
+			"QueryTimeout": inner,
+		})
+
+	case *RuntimeErrorApplication:
+		return json.Marshal(map[string]*RuntimeErrorApplication{
+			"Application": inner,
+		})
+
+	case *RuntimeErrorFileLoading:
+		return json.Marshal(map[string]*RuntimeErrorFileLoading{
+			"FileLoading": inner,
+		})
+
+	}
+
+	return nil, fmt.Errorf("unexpected variant of %v", variant)
+}
+
+// RuntimeErrorArithmeticError struct
+type RuntimeErrorArithmeticError struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (*RuntimeErrorArithmeticError) isRuntimeError() {}
+
+// RuntimeErrorSerialization struct
+type RuntimeErrorSerialization struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (*RuntimeErrorSerialization) isRuntimeError() {}
+
+// RuntimeErrorUnsupported struct
+type RuntimeErrorUnsupported struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (*RuntimeErrorUnsupported) isRuntimeError() {}
+
+// RuntimeErrorTypeError struct
+type RuntimeErrorTypeError struct {
+	// Msg
+	Msg string `json:"msg"`
+	// StackTrace
+	StackTrace *string `json:"stack_trace"`
+}
+
+func (*RuntimeErrorTypeError) isRuntimeError() {}
+
+// RuntimeErrorUnboundVariable struct
+type RuntimeErrorUnboundVariable struct {
+	// Sym
+	Sym string `json:"sym"`
+}
+
+func (*RuntimeErrorUnboundVariable) isRuntimeError() {}
+
+// RuntimeErrorStackOverflow struct
+type RuntimeErrorStackOverflow struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (*RuntimeErrorStackOverflow) isRuntimeError() {}
+
+// RuntimeErrorQueryTimeout struct
+type RuntimeErrorQueryTimeout struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (*RuntimeErrorQueryTimeout) isRuntimeError() {}
+
+// RuntimeErrorApplication struct
+type RuntimeErrorApplication struct {
+	// Msg
+	Msg string `json:"msg"`
+	// StackTrace
+	StackTrace *string `json:"stack_trace"`
+}
+
+func (*RuntimeErrorApplication) isRuntimeError() {}
+
+// RuntimeErrorFileLoading struct
+type RuntimeErrorFileLoading struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (*RuntimeErrorFileLoading) isRuntimeError() {}
+
 // Trace struct
 type Trace struct {
 	// Node
@@ -1178,11 +1888,10 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 			*result = Value{&variant}
 			return err
 
-		default:
-			return fmt.Errorf("Unknown variant for Value: %s", k)
 		}
+		return fmt.Errorf("Unknown variant for Value: %s", k)
 	}
-	return fmt.Errorf("unreachable")
+	return fmt.Errorf("Cannot deserialize Value: %s", string(b))
 }
 
 func (variant Value) MarshalJSON() ([]byte, error) {

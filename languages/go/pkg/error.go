@@ -114,3 +114,7 @@ type UnregisteredInstanceError struct {
 func (e *UnregisteredInstanceError) Error() string {
 	return fmt.Sprintf("Unregistered instance: %d.", e.id)
 }
+
+func (e *FormattedPolarError) Error() string {
+	return fmt.Sprintf("Error: %#v\n%s", e.Kind, e.Formatted)
+}

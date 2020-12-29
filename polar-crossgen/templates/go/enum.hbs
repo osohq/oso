@@ -27,11 +27,10 @@ func (result *{{name}}) UnmarshalJSON(b []byte) error {
             *result = {{../name}} { &variant }
             return err
         {{/each}}
-        default:
-            return fmt.Errorf("Unknown variant for {{../name}}: %s", k)
         }
+        return fmt.Errorf("Unknown variant for {{../name}}: %s", k)
     }
-    return fmt.Errorf("unreachable")
+    return fmt.Errorf("Cannot deserialize {{../name}}: %s", string(b))
 }
 
 

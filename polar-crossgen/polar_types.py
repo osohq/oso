@@ -15,11 +15,48 @@ class Dictionary:
     fields: typing.Dict[str, "Value"]
 
 
+class ErrorKind:
+    pass
+
+
+@dataclass(frozen=True)
+class ErrorKind__Parse(ErrorKind):
+    value: "ParseError"
+
+
+@dataclass(frozen=True)
+class ErrorKind__Runtime(ErrorKind):
+    value: "RuntimeError"
+
+
+@dataclass(frozen=True)
+class ErrorKind__Operational(ErrorKind):
+    value: "OperationalError"
+
+
+@dataclass(frozen=True)
+class ErrorKind__Parameter(ErrorKind):
+    value: "ParameterError"
+
+ErrorKind.VARIANTS_MAP = {
+    "Parse": ErrorKind__Parse,
+    "Runtime": ErrorKind__Runtime,
+    "Operational": ErrorKind__Operational,
+    "Parameter": ErrorKind__Parameter,
+}
+
+
 @dataclass(frozen=True)
 class ExternalInstance:
     instance_id: st.uint64
     constructor: typing.Optional["Value"]
     repr: typing.Optional[str]
+
+
+@dataclass(frozen=True)
+class FormattedPolarError:
+    kind: "ErrorKind"
+    formatted: str
 
 
 @dataclass(frozen=True)
@@ -70,6 +107,31 @@ Numeric.VARIANTS_MAP = {
 class Operation:
     operator: "Operator"
     args: typing.Sequence["Value"]
+
+
+class OperationalError:
+    pass
+
+
+@dataclass(frozen=True)
+class OperationalError__Unimplemented(OperationalError):
+    value: str
+
+
+@dataclass(frozen=True)
+class OperationalError__Unknown(OperationalError):
+    pass
+
+
+@dataclass(frozen=True)
+class OperationalError__InvalidState(OperationalError):
+    value: str
+
+OperationalError.VARIANTS_MAP = {
+    "Unimplemented": OperationalError__Unimplemented,
+    "Unknown": OperationalError__Unknown,
+    "InvalidState": OperationalError__InvalidState,
+}
 
 
 class Operator:
@@ -236,6 +298,81 @@ class Parameter:
 
 
 @dataclass(frozen=True)
+class ParameterError:
+    value: str
+
+
+class ParseError:
+    pass
+
+
+@dataclass(frozen=True)
+class ParseError__IntegerOverflow(ParseError):
+    token: str
+    loc: st.uint64
+
+
+@dataclass(frozen=True)
+class ParseError__InvalidTokenCharacter(ParseError):
+    token: str
+    c: st.char
+    loc: st.uint64
+
+
+@dataclass(frozen=True)
+class ParseError__InvalidToken(ParseError):
+    loc: st.uint64
+
+
+@dataclass(frozen=True)
+class ParseError__UnrecognizedEOF(ParseError):
+    loc: st.uint64
+
+
+@dataclass(frozen=True)
+class ParseError__UnrecognizedToken(ParseError):
+    token: str
+    loc: st.uint64
+
+
+@dataclass(frozen=True)
+class ParseError__ExtraToken(ParseError):
+    token: str
+    loc: st.uint64
+
+
+@dataclass(frozen=True)
+class ParseError__ReservedWord(ParseError):
+    token: str
+    loc: st.uint64
+
+
+@dataclass(frozen=True)
+class ParseError__InvalidFloat(ParseError):
+    token: str
+    loc: st.uint64
+
+
+@dataclass(frozen=True)
+class ParseError__WrongValueType(ParseError):
+    loc: st.uint64
+    term: "Value"
+    expected: str
+
+ParseError.VARIANTS_MAP = {
+    "IntegerOverflow": ParseError__IntegerOverflow,
+    "InvalidTokenCharacter": ParseError__InvalidTokenCharacter,
+    "InvalidToken": ParseError__InvalidToken,
+    "UnrecognizedEOF": ParseError__UnrecognizedEOF,
+    "UnrecognizedToken": ParseError__UnrecognizedToken,
+    "ExtraToken": ParseError__ExtraToken,
+    "ReservedWord": ParseError__ReservedWord,
+    "InvalidFloat": ParseError__InvalidFloat,
+    "WrongValueType": ParseError__WrongValueType,
+}
+
+
+@dataclass(frozen=True)
 class Partial:
     constraints: typing.Sequence["Operation"]
     variable: str
@@ -362,6 +499,69 @@ class Rule:
     name: str
     params: typing.Sequence["Parameter"]
     body: "Value"
+
+
+class RuntimeError:
+    pass
+
+
+@dataclass(frozen=True)
+class RuntimeError__ArithmeticError(RuntimeError):
+    msg: str
+
+
+@dataclass(frozen=True)
+class RuntimeError__Serialization(RuntimeError):
+    msg: str
+
+
+@dataclass(frozen=True)
+class RuntimeError__Unsupported(RuntimeError):
+    msg: str
+
+
+@dataclass(frozen=True)
+class RuntimeError__TypeError(RuntimeError):
+    msg: str
+    stack_trace: typing.Optional[str]
+
+
+@dataclass(frozen=True)
+class RuntimeError__UnboundVariable(RuntimeError):
+    sym: str
+
+
+@dataclass(frozen=True)
+class RuntimeError__StackOverflow(RuntimeError):
+    msg: str
+
+
+@dataclass(frozen=True)
+class RuntimeError__QueryTimeout(RuntimeError):
+    msg: str
+
+
+@dataclass(frozen=True)
+class RuntimeError__Application(RuntimeError):
+    msg: str
+    stack_trace: typing.Optional[str]
+
+
+@dataclass(frozen=True)
+class RuntimeError__FileLoading(RuntimeError):
+    msg: str
+
+RuntimeError.VARIANTS_MAP = {
+    "ArithmeticError": RuntimeError__ArithmeticError,
+    "Serialization": RuntimeError__Serialization,
+    "Unsupported": RuntimeError__Unsupported,
+    "TypeError": RuntimeError__TypeError,
+    "UnboundVariable": RuntimeError__UnboundVariable,
+    "StackOverflow": RuntimeError__StackOverflow,
+    "QueryTimeout": RuntimeError__QueryTimeout,
+    "Application": RuntimeError__Application,
+    "FileLoading": RuntimeError__FileLoading,
+}
 
 
 @dataclass(frozen=True)

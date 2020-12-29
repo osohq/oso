@@ -74,20 +74,31 @@ func (vf ValueFactory) get_type() reflect.Type {
 	return reflect.TypeOf(vf.InnerClass)
 }
 
-// class Constructor:
-//     def __repr__(self):
-//         return "Constructor"
+type Constructor map[string]interface{}
 
-//     def __init__(self, *args, **kwargs):
-//         """For testing constructor"""
-//         self.args = args
-//         self.kwargs = kwargs
+// type Constructor struct {
+// 	Args   []interface{}
+// 	Kwargs map[string]interface{}
+// }
 
-//     def num_args(self):
-//         return len(self.args)
+// func NewConstructor(args ...interface{}) Constructor {
+// 	Args := make([]interface{}, len(args))
+// 	for idx, v := range args {
+// 		Args[idx] = v
+// 	}
+// 	return Constructor{
+// 		Args:   Args,
+// 		Kwargs: make(map[string]interface{}),
+// 	}
+// }
 
-//     def num_kwargs(self):
-//         return len(self.kwargs)
+// func (c Constructor) numArgs() int {
+// 	return len(c.Args)
+// }
+
+func (c Constructor) numKwrgs() int {
+	return len(map[string]interface{}(c))
+}
 
 // class MethodVariants:
 //     """Class with various method variants"""

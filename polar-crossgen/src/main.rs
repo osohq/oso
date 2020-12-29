@@ -3,6 +3,9 @@ use serde_reflection::{Samples, Tracer, TracerConfig};
 use std::fs::File;
 use std::io::Write;
 
+use polar_core::error::{
+    ErrorKind, FormattedPolarError, OperationalError, ParseError, RuntimeError,
+};
 use polar_core::events::QueryEvent;
 use polar_core::terms::*;
 use polar_core::traces::{Node, Trace};
@@ -21,6 +24,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracer.trace_type::<Pattern>(&samples)?;
     tracer.trace_type::<Node>(&samples)?;
     tracer.trace_type::<Trace>(&samples)?;
+    tracer.trace_type::<FormattedPolarError>(&samples)?;
+    tracer.trace_type::<ErrorKind>(&samples)?;
+    tracer.trace_type::<ParseError>(&samples)?;
+    tracer.trace_type::<OperationalError>(&samples)?;
+    tracer.trace_type::<RuntimeError>(&samples)?;
+
     // need to provide concrete values for numeric
     tracer.trace_value(&mut samples, &Numeric::from(0i64))?;
     tracer.trace_value(&mut samples, &Numeric::from(0.0f64))?;

@@ -17,6 +17,7 @@ var CLASSES = map[string]reflect.Type{
 	"UnitClass":     reflect.TypeOf(UnitClass{}),
 	"ValueFactory":  reflect.TypeOf(ValueFactory{}),
 	"IterableClass": reflect.TypeOf(IterableClass{}),
+	"Constructor":   reflect.TypeOf(Constructor{}),
 }
 
 type TestCase struct {
@@ -205,17 +206,17 @@ func (tc TestCase) RunTest(o oso.Polar, t *testing.T) {
 						t.Error(err)
 					}
 					if !re.Match([]byte(queryErr.Error())) {
-						t.Error(fmt.Errorf("expected query to fail with %s. Got %s", *c.Err, queryErr))
+						t.Error(fmt.Errorf("expected query to fail with:\n\t\"%s\"\nGot:\n\t\"%s\"", *c.Err, queryErr))
 					}
 				} else {
-					t.Error(fmt.Errorf("expected query to fail with %s. Got success", *c.Err))
+					t.Error(fmt.Errorf("expected query to fail with:\n\t\"%s\". Got:\n\tSuccess", *c.Err))
 				}
 			} else {
 				if queryErr != nil {
 					t.Error(queryErr)
 				} else {
 					if !cmp.Equal(results, expectedResults) {
-						t.Error(fmt.Errorf("unexpected query result:\n%s", cmp.Diff(results, expectedResults)))
+						t.Error(fmt.Errorf("incorrect query result:\n%s", cmp.Diff(results, expectedResults)))
 					}
 				}
 
