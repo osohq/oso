@@ -668,6 +668,7 @@ impl PolarVirtualMachine {
                         }
                     }
                 }
+                (l, r) if l.is_ground() && r.is_ground() && l != r => return false,
                 _ => (),
             }
         }
