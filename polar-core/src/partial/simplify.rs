@@ -5,6 +5,7 @@ use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 // use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
+use crate::vm::{PolarVirtualMachine, VariableState};
 
 /// A trivially true expression.
 const TRUE: Operation = op!(And);
@@ -130,10 +131,10 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref.
 /// TODO(ap): deep deref.
-pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
+pub fn simplify_bindings(bindings: Bindings, vm: &PolarVirtualMachine) -> Option<Bindings> {
     let mut unsatisfiable = false;
     let mut simplify = |var: Symbol, term: Term| {
-        let mut simplifier = Simplifier::new(var.clone());
+        let mut simplifier = Simplifier::new(var.clone(), vm);
         let simplified = simplifier.simplify_partial(term);
         let simplified = simplify_trivial_constraint(var.clone(), simplified);
         let simplified = sub_this(var, simplified);
@@ -166,12 +167,13 @@ pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
     }
 }
 
-pub struct Simplifier {
+pub struct Simplifier<'vm> {
     bindings: Bindings,
     this_var: Symbol,
+    vm: &'vm PolarVirtualMachine,
 }
 
-impl Folder for Simplifier {
+impl<'vm> Folder for Simplifier<'vm> {
     fn fold_term(&mut self, t: Term) -> Term {
         fold_term(self.deref(&t), self)
     }
@@ -227,34 +229,132 @@ impl Folder for Simplifier {
                         let invert = o.operator == Operator::Neq;
                         left == right
                             || match (left.value(), right.value()) {
-                                (Value::Variable(v), x)
-                                    if !self.is_this_var(left)
-                                        && !self.is_bound(v)
-                                        && x.is_ground() =>
-                                {
-                                    eprintln!("A {} ← {}", left.to_polar(), right.to_polar());
-                                    self.bind(v.clone(), right.clone(), invert);
-                                    true
+                                (Value::Variable(l), Value::Variable(r))
+                                | (Value::Variable(l), Value::RestVariable(r))
+                                | (Value::RestVariable(l), Value::Variable(r))
+                                | (Value::RestVariable(l), Value::RestVariable(r)) => {
+                                    match (self.is_this_var(left), self.is_this_var(right)) {
+                                        (true, true) => unreachable!(),
+                                        (true, false) => {
+                                            eprintln!(
+                                                "C {} ← {}",
+                                                right.to_polar(),
+                                                left.to_polar()
+                                            );
+                                            self.bind(r.clone(), left.clone(), invert);
+                                            return true;
+                                        }
+                                        (false, true) => {
+                                            eprintln!(
+                                                "D {} ← {}",
+                                                right.to_polar(),
+                                                left.to_polar()
+                                            );
+                                            self.bind(l.clone(), right.clone(), invert);
+                                            return true;
+                                        }
+                                        (false, false) => (),
+                                    }
+                                    match (self.vm.variable_state(l), self.vm.variable_state(r)) {
+                                        (VariableState::Unbound, VariableState::Unbound) => todo!(),
+                                        (VariableState::Unbound, VariableState::Cycle(_)) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Unbound, VariableState::Partial(_)) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Unbound, VariableState::Bound(_)) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Cycle(_), VariableState::Unbound) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Cycle(_), VariableState::Cycle(_)) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Cycle(_), VariableState::Partial(_)) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Cycle(_), VariableState::Bound(_)) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Partial(_), VariableState::Unbound) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Partial(_), VariableState::Cycle(_)) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Partial(_), VariableState::Partial(_)) => {
+                                            eprintln!(
+                                                "A {} ← {}",
+                                                left.to_polar(),
+                                                right.to_polar()
+                                            );
+                                            self.bind(l.clone(), right.clone(), invert);
+                                            self.bind(r.clone(), left.clone(), invert);
+                                            true
+                                        }
+                                        (VariableState::Partial(_), VariableState::Bound(_)) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Bound(_), VariableState::Unbound) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Bound(_), VariableState::Cycle(_)) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Bound(_), VariableState::Partial(_)) => {
+                                            todo!()
+                                        }
+                                        (VariableState::Bound(_), VariableState::Bound(_)) => {
+                                            todo!()
+                                        }
+                                    }
                                 }
-                                (x, Value::Variable(v))
-                                    if !self.is_this_var(right)
-                                        && !self.is_bound(v)
-                                        && x.is_ground() =>
-                                {
-                                    eprintln!("B {} ← {}", right.to_polar(), left.to_polar());
-                                    self.bind(v.clone(), left.clone(), invert);
-                                    true
+                                (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
+                                    match self.vm.variable_state(l) {
+                                        VariableState::Unbound => todo!(),
+                                        VariableState::Cycle(_) => todo!(),
+                                        VariableState::Partial(_) => todo!(),
+                                        VariableState::Bound(_) => todo!(),
+                                    }
                                 }
-                                (_, Value::Variable(v)) if self.is_this_var(left) => {
-                                    eprintln!("C {} ← {}", right.to_polar(), left.to_polar());
-                                    self.bind(v.clone(), left.clone(), invert);
-                                    false
+                                (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => {
+                                    match self.vm.variable_state(r) {
+                                        VariableState::Unbound => todo!(),
+                                        VariableState::Cycle(_) => todo!(),
+                                        VariableState::Partial(_) => todo!(),
+                                        VariableState::Bound(_) => todo!(),
+                                    }
                                 }
-                                (Value::Variable(v), _) if self.is_this_var(right) => {
-                                    eprintln!("D {} ← {}", left.to_polar(), right.to_polar());
-                                    self.bind(v.clone(), right.clone(), invert);
-                                    false
-                                }
+                                // (Value::Variable(v), x)
+                                //     // if !self.is_this_var(left)
+                                //     //     && !self.is_bound(v)
+                                //     //     && x.is_ground() =>
+                                // {
+                                //     eprintln!("A {} ← {}", left.to_polar(), right.to_polar());
+                                //     self.bind(v.clone(), right.clone(), invert);
+                                //     true
+                                // }
+                                // (x, Value::Variable(v))
+                                //     if !self.is_this_var(right)
+                                //         && !self.is_bound(v)
+                                //         && x.is_ground() =>
+                                // {
+                                //     eprintln!("B {} ← {}", right.to_polar(), left.to_polar());
+                                //     self.bind(v.clone(), left.clone(), invert);
+                                //     true
+                                // }
+                                // (_, Value::Variable(v)) if self.is_this_var(left) => {
+                                //     eprintln!("C {} ← {}", right.to_polar(), left.to_polar());
+                                //     self.bind(v.clone(), left.clone(), invert);
+                                //     false
+                                // }
+                                // (Value::Variable(v), _) if self.is_this_var(right) => {
+                                //     eprintln!("D {} ← {}", left.to_polar(), right.to_polar());
+                                //     self.bind(v.clone(), right.clone(), invert);
+                                //     false
+                                // }
                                 _ => false,
                             }
                     }
@@ -308,11 +408,12 @@ impl Folder for Simplifier {
     }
 }
 
-impl Simplifier {
-    pub fn new(this_var: Symbol) -> Self {
+impl<'vm> Simplifier<'vm> {
+    pub fn new(this_var: Symbol, vm: &'vm PolarVirtualMachine) -> Self {
         Self {
             this_var,
             bindings: Bindings::new(),
+            vm,
         }
     }
 
@@ -352,12 +453,13 @@ impl Simplifier {
 
     /// Simplify a partial until quiescence.
     pub fn simplify_partial(&mut self, mut term: Term) -> Term {
+        let mut seen = HashSet::new();
         let mut new;
         loop {
             eprintln!("SIMPLIFYING {}: {}", self.this_var, term.to_polar());
             new = self.fold_term(term.clone());
             eprintln!(" ⇒ {}", new.to_polar());
-            if new == term {
+            if !seen.insert(new.clone()) {
                 break;
             }
             term = new;

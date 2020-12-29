@@ -3018,7 +3018,7 @@ impl Runnable for PolarVirtualMachine {
 
         let mut bindings = self.bindings(true);
         if self.simplify {
-            if let Some(bs) = simplify_bindings(bindings) {
+            if let Some(bs) = simplify_bindings(bindings, &self) {
                 bindings = bs;
                 dbg!(&bindings);
             } else {
