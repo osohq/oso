@@ -36,7 +36,7 @@ func (e *InlineQueryFailedError) Error() string {
 }
 
 type InvalidCallError struct {
-	instance reflect.Value
+	instance Value
 	field    string
 }
 
@@ -45,7 +45,7 @@ func (e *InvalidCallError) Error() string {
 }
 
 type InvalidIteratorError struct {
-	instance reflect.Value
+	instance Value
 }
 
 func (e *InvalidIteratorError) Error() string {

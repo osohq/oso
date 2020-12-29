@@ -32,47 +32,74 @@ type ErrorKind struct {
 }
 
 func (result *ErrorKind) UnmarshalJSON(b []byte) error {
-	var rawMap map[string]json.RawMessage
+	var variantName string
+	var variantValue *json.RawMessage
 
-	err := json.Unmarshal(b, &rawMap)
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
 	if err != nil {
-		return err
-	}
-
-	if len(rawMap) != 1 {
-		return errors.New("Deserializing ErrorKind as an enum variant; expecting a single key")
-	}
-
-	for k, v := range rawMap {
-		switch k {
-
-		case "Parse":
-			var variant ErrorKindParse
-			err := json.Unmarshal(v, &variant)
-			*result = ErrorKind{&variant}
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
 			return err
-
-		case "Runtime":
-			var variant ErrorKindRuntime
-			err := json.Unmarshal(v, &variant)
-			*result = ErrorKind{&variant}
-			return err
-
-		case "Operational":
-			var variant ErrorKindOperational
-			err := json.Unmarshal(v, &variant)
-			*result = ErrorKind{&variant}
-			return err
-
-		case "Parameter":
-			var variant ErrorKindParameter
-			err := json.Unmarshal(v, &variant)
-			*result = ErrorKind{&variant}
-			return err
-
 		}
-		return fmt.Errorf("Unknown variant for ErrorKind: %s", k)
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing ErrorKind as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
 	}
+	switch variantName {
+
+	case "Parse":
+		var variant ErrorKindParse
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ErrorKind{&variant}
+		return nil
+
+	case "Runtime":
+		var variant ErrorKindRuntime
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ErrorKind{&variant}
+		return nil
+
+	case "Operational":
+		var variant ErrorKindOperational
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ErrorKind{&variant}
+		return nil
+
+	case "Parameter":
+		var variant ErrorKindParameter
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ErrorKind{&variant}
+		return nil
+
+	}
+
 	return fmt.Errorf("Cannot deserialize ErrorKind: %s", string(b))
 }
 
@@ -194,6 +221,99 @@ type InstanceLiteral struct {
 	Fields Dictionary `json:"fields"`
 }
 
+// Message struct
+type Message struct {
+	// Kind
+	Kind MessageKind `json:"kind"`
+	// Msg
+	Msg string `json:"msg"`
+}
+
+// MessageKind enum
+type MessageKindVariant interface {
+	isMessageKind()
+}
+
+type MessageKind struct {
+	MessageKindVariant
+}
+
+func (result *MessageKind) UnmarshalJSON(b []byte) error {
+	var variantName string
+	var variantValue *json.RawMessage
+
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
+	if err != nil {
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
+			return err
+		}
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing MessageKind as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
+	}
+	switch variantName {
+
+	case "Print":
+		var variant MessageKindPrint
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = MessageKind{&variant}
+		return nil
+
+	case "Warning":
+		var variant MessageKindWarning
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = MessageKind{&variant}
+		return nil
+
+	}
+
+	return fmt.Errorf("Cannot deserialize MessageKind: %s", string(b))
+}
+
+func (variant MessageKind) MarshalJSON() ([]byte, error) {
+	switch inner := variant.MessageKindVariant.(type) {
+
+	case *MessageKindPrint:
+		return json.Marshal(map[string]*MessageKindPrint{
+			"Print": inner,
+		})
+
+	case *MessageKindWarning:
+		return json.Marshal(map[string]*MessageKindWarning{
+			"Warning": inner,
+		})
+
+	}
+
+	return nil, fmt.Errorf("unexpected variant of %v", variant)
+}
+
+type MessageKindPrint struct{}
+
+func (*MessageKindPrint) isMessageKind() {}
+
+type MessageKindWarning struct{}
+
+func (*MessageKindWarning) isMessageKind() {}
+
 // Node enum
 type NodeVariant interface {
 	isNode()
@@ -204,35 +324,52 @@ type Node struct {
 }
 
 func (result *Node) UnmarshalJSON(b []byte) error {
-	var rawMap map[string]json.RawMessage
+	var variantName string
+	var variantValue *json.RawMessage
 
-	err := json.Unmarshal(b, &rawMap)
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
 	if err != nil {
-		return err
-	}
-
-	if len(rawMap) != 1 {
-		return errors.New("Deserializing Node as an enum variant; expecting a single key")
-	}
-
-	for k, v := range rawMap {
-		switch k {
-
-		case "Rule":
-			var variant NodeRule
-			err := json.Unmarshal(v, &variant)
-			*result = Node{&variant}
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
 			return err
-
-		case "Term":
-			var variant NodeTerm
-			err := json.Unmarshal(v, &variant)
-			*result = Node{&variant}
-			return err
-
 		}
-		return fmt.Errorf("Unknown variant for Node: %s", k)
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing Node as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
 	}
+	switch variantName {
+
+	case "Rule":
+		var variant NodeRule
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Node{&variant}
+		return nil
+
+	case "Term":
+		var variant NodeTerm
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Node{&variant}
+		return nil
+
+	}
+
 	return fmt.Errorf("Cannot deserialize Node: %s", string(b))
 }
 
@@ -296,35 +433,52 @@ type Numeric struct {
 }
 
 func (result *Numeric) UnmarshalJSON(b []byte) error {
-	var rawMap map[string]json.RawMessage
+	var variantName string
+	var variantValue *json.RawMessage
 
-	err := json.Unmarshal(b, &rawMap)
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
 	if err != nil {
-		return err
-	}
-
-	if len(rawMap) != 1 {
-		return errors.New("Deserializing Numeric as an enum variant; expecting a single key")
-	}
-
-	for k, v := range rawMap {
-		switch k {
-
-		case "Integer":
-			var variant NumericInteger
-			err := json.Unmarshal(v, &variant)
-			*result = Numeric{&variant}
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
 			return err
-
-		case "Float":
-			var variant NumericFloat
-			err := json.Unmarshal(v, &variant)
-			*result = Numeric{&variant}
-			return err
-
 		}
-		return fmt.Errorf("Unknown variant for Numeric: %s", k)
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing Numeric as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
 	}
+	switch variantName {
+
+	case "Integer":
+		var variant NumericInteger
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Numeric{&variant}
+		return nil
+
+	case "Float":
+		var variant NumericFloat
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Numeric{&variant}
+		return nil
+
+	}
+
 	return fmt.Errorf("Cannot deserialize Numeric: %s", string(b))
 }
 
@@ -396,41 +550,63 @@ type OperationalError struct {
 }
 
 func (result *OperationalError) UnmarshalJSON(b []byte) error {
-	var rawMap map[string]json.RawMessage
+	var variantName string
+	var variantValue *json.RawMessage
 
-	err := json.Unmarshal(b, &rawMap)
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
 	if err != nil {
-		return err
-	}
-
-	if len(rawMap) != 1 {
-		return errors.New("Deserializing OperationalError as an enum variant; expecting a single key")
-	}
-
-	for k, v := range rawMap {
-		switch k {
-
-		case "Unimplemented":
-			var variant OperationalErrorUnimplemented
-			err := json.Unmarshal(v, &variant)
-			*result = OperationalError{&variant}
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
 			return err
-
-		case "Unknown":
-			var variant OperationalErrorUnknown
-			err := json.Unmarshal(v, &variant)
-			*result = OperationalError{&variant}
-			return err
-
-		case "InvalidState":
-			var variant OperationalErrorInvalidState
-			err := json.Unmarshal(v, &variant)
-			*result = OperationalError{&variant}
-			return err
-
 		}
-		return fmt.Errorf("Unknown variant for OperationalError: %s", k)
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing OperationalError as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
 	}
+	switch variantName {
+
+	case "Unimplemented":
+		var variant OperationalErrorUnimplemented
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = OperationalError{&variant}
+		return nil
+
+	case "Unknown":
+		var variant OperationalErrorUnknown
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = OperationalError{&variant}
+		return nil
+
+	case "InvalidState":
+		var variant OperationalErrorInvalidState
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = OperationalError{&variant}
+		return nil
+
+	}
+
 	return fmt.Errorf("Cannot deserialize OperationalError: %s", string(b))
 }
 
@@ -503,173 +679,305 @@ type Operator struct {
 }
 
 func (result *Operator) UnmarshalJSON(b []byte) error {
-	var rawMap map[string]json.RawMessage
+	var variantName string
+	var variantValue *json.RawMessage
 
-	err := json.Unmarshal(b, &rawMap)
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
 	if err != nil {
-		return err
-	}
-
-	if len(rawMap) != 1 {
-		return errors.New("Deserializing Operator as an enum variant; expecting a single key")
-	}
-
-	for k, v := range rawMap {
-		switch k {
-
-		case "Debug":
-			var variant OperatorDebug
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
 			return err
-
-		case "Print":
-			var variant OperatorPrint
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Cut":
-			var variant OperatorCut
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "In":
-			var variant OperatorIn
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Isa":
-			var variant OperatorIsa
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "New":
-			var variant OperatorNew
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Dot":
-			var variant OperatorDot
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Not":
-			var variant OperatorNot
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Mul":
-			var variant OperatorMul
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Div":
-			var variant OperatorDiv
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Mod":
-			var variant OperatorMod
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Rem":
-			var variant OperatorRem
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Add":
-			var variant OperatorAdd
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Sub":
-			var variant OperatorSub
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Eq":
-			var variant OperatorEq
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Geq":
-			var variant OperatorGeq
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Leq":
-			var variant OperatorLeq
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Neq":
-			var variant OperatorNeq
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Gt":
-			var variant OperatorGt
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Lt":
-			var variant OperatorLt
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Unify":
-			var variant OperatorUnify
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Or":
-			var variant OperatorOr
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "And":
-			var variant OperatorAnd
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "ForAll":
-			var variant OperatorForAll
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
-		case "Assign":
-			var variant OperatorAssign
-			err := json.Unmarshal(v, &variant)
-			*result = Operator{&variant}
-			return err
-
 		}
-		return fmt.Errorf("Unknown variant for Operator: %s", k)
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing Operator as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
 	}
+	switch variantName {
+
+	case "Debug":
+		var variant OperatorDebug
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Print":
+		var variant OperatorPrint
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Cut":
+		var variant OperatorCut
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "In":
+		var variant OperatorIn
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Isa":
+		var variant OperatorIsa
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "New":
+		var variant OperatorNew
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Dot":
+		var variant OperatorDot
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Not":
+		var variant OperatorNot
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Mul":
+		var variant OperatorMul
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Div":
+		var variant OperatorDiv
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Mod":
+		var variant OperatorMod
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Rem":
+		var variant OperatorRem
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Add":
+		var variant OperatorAdd
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Sub":
+		var variant OperatorSub
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Eq":
+		var variant OperatorEq
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Geq":
+		var variant OperatorGeq
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Leq":
+		var variant OperatorLeq
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Neq":
+		var variant OperatorNeq
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Gt":
+		var variant OperatorGt
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Lt":
+		var variant OperatorLt
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Unify":
+		var variant OperatorUnify
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Or":
+		var variant OperatorOr
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "And":
+		var variant OperatorAnd
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "ForAll":
+		var variant OperatorForAll
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	case "Assign":
+		var variant OperatorAssign
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Operator{&variant}
+		return nil
+
+	}
+
 	return fmt.Errorf("Cannot deserialize Operator: %s", string(b))
 }
 
@@ -938,77 +1246,129 @@ type ParseError struct {
 }
 
 func (result *ParseError) UnmarshalJSON(b []byte) error {
-	var rawMap map[string]json.RawMessage
+	var variantName string
+	var variantValue *json.RawMessage
 
-	err := json.Unmarshal(b, &rawMap)
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
 	if err != nil {
-		return err
-	}
-
-	if len(rawMap) != 1 {
-		return errors.New("Deserializing ParseError as an enum variant; expecting a single key")
-	}
-
-	for k, v := range rawMap {
-		switch k {
-
-		case "IntegerOverflow":
-			var variant ParseErrorIntegerOverflow
-			err := json.Unmarshal(v, &variant)
-			*result = ParseError{&variant}
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
 			return err
-
-		case "InvalidTokenCharacter":
-			var variant ParseErrorInvalidTokenCharacter
-			err := json.Unmarshal(v, &variant)
-			*result = ParseError{&variant}
-			return err
-
-		case "InvalidToken":
-			var variant ParseErrorInvalidToken
-			err := json.Unmarshal(v, &variant)
-			*result = ParseError{&variant}
-			return err
-
-		case "UnrecognizedEOF":
-			var variant ParseErrorUnrecognizedEOF
-			err := json.Unmarshal(v, &variant)
-			*result = ParseError{&variant}
-			return err
-
-		case "UnrecognizedToken":
-			var variant ParseErrorUnrecognizedToken
-			err := json.Unmarshal(v, &variant)
-			*result = ParseError{&variant}
-			return err
-
-		case "ExtraToken":
-			var variant ParseErrorExtraToken
-			err := json.Unmarshal(v, &variant)
-			*result = ParseError{&variant}
-			return err
-
-		case "ReservedWord":
-			var variant ParseErrorReservedWord
-			err := json.Unmarshal(v, &variant)
-			*result = ParseError{&variant}
-			return err
-
-		case "InvalidFloat":
-			var variant ParseErrorInvalidFloat
-			err := json.Unmarshal(v, &variant)
-			*result = ParseError{&variant}
-			return err
-
-		case "WrongValueType":
-			var variant ParseErrorWrongValueType
-			err := json.Unmarshal(v, &variant)
-			*result = ParseError{&variant}
-			return err
-
 		}
-		return fmt.Errorf("Unknown variant for ParseError: %s", k)
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing ParseError as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
 	}
+	switch variantName {
+
+	case "IntegerOverflow":
+		var variant ParseErrorIntegerOverflow
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ParseError{&variant}
+		return nil
+
+	case "InvalidTokenCharacter":
+		var variant ParseErrorInvalidTokenCharacter
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ParseError{&variant}
+		return nil
+
+	case "InvalidToken":
+		var variant ParseErrorInvalidToken
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ParseError{&variant}
+		return nil
+
+	case "UnrecognizedEOF":
+		var variant ParseErrorUnrecognizedEOF
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ParseError{&variant}
+		return nil
+
+	case "UnrecognizedToken":
+		var variant ParseErrorUnrecognizedToken
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ParseError{&variant}
+		return nil
+
+	case "ExtraToken":
+		var variant ParseErrorExtraToken
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ParseError{&variant}
+		return nil
+
+	case "ReservedWord":
+		var variant ParseErrorReservedWord
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ParseError{&variant}
+		return nil
+
+	case "InvalidFloat":
+		var variant ParseErrorInvalidFloat
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ParseError{&variant}
+		return nil
+
+	case "WrongValueType":
+		var variant ParseErrorWrongValueType
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ParseError{&variant}
+		return nil
+
+	}
+
 	return fmt.Errorf("Cannot deserialize ParseError: %s", string(b))
 }
 
@@ -1173,35 +1533,52 @@ type Pattern struct {
 }
 
 func (result *Pattern) UnmarshalJSON(b []byte) error {
-	var rawMap map[string]json.RawMessage
+	var variantName string
+	var variantValue *json.RawMessage
 
-	err := json.Unmarshal(b, &rawMap)
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
 	if err != nil {
-		return err
-	}
-
-	if len(rawMap) != 1 {
-		return errors.New("Deserializing Pattern as an enum variant; expecting a single key")
-	}
-
-	for k, v := range rawMap {
-		switch k {
-
-		case "Dictionary":
-			var variant PatternDictionary
-			err := json.Unmarshal(v, &variant)
-			*result = Pattern{&variant}
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
 			return err
-
-		case "Instance":
-			var variant PatternInstance
-			err := json.Unmarshal(v, &variant)
-			*result = Pattern{&variant}
-			return err
-
 		}
-		return fmt.Errorf("Unknown variant for Pattern: %s", k)
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing Pattern as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
 	}
+	switch variantName {
+
+	case "Dictionary":
+		var variant PatternDictionary
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Pattern{&variant}
+		return nil
+
+	case "Instance":
+		var variant PatternInstance
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Pattern{&variant}
+		return nil
+
+	}
+
 	return fmt.Errorf("Cannot deserialize Pattern: %s", string(b))
 }
 
@@ -1265,95 +1642,162 @@ type QueryEvent struct {
 }
 
 func (result *QueryEvent) UnmarshalJSON(b []byte) error {
-	var rawMap map[string]json.RawMessage
+	var variantName string
+	var variantValue *json.RawMessage
 
-	err := json.Unmarshal(b, &rawMap)
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
 	if err != nil {
-		return err
-	}
-
-	if len(rawMap) != 1 {
-		return errors.New("Deserializing QueryEvent as an enum variant; expecting a single key")
-	}
-
-	for k, v := range rawMap {
-		switch k {
-
-		case "None":
-			var variant QueryEventNone
-			err := json.Unmarshal(v, &variant)
-			*result = QueryEvent{&variant}
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
 			return err
-
-		case "Done":
-			var variant QueryEventDone
-			err := json.Unmarshal(v, &variant)
-			*result = QueryEvent{&variant}
-			return err
-
-		case "Debug":
-			var variant QueryEventDebug
-			err := json.Unmarshal(v, &variant)
-			*result = QueryEvent{&variant}
-			return err
-
-		case "MakeExternal":
-			var variant QueryEventMakeExternal
-			err := json.Unmarshal(v, &variant)
-			*result = QueryEvent{&variant}
-			return err
-
-		case "ExternalCall":
-			var variant QueryEventExternalCall
-			err := json.Unmarshal(v, &variant)
-			*result = QueryEvent{&variant}
-			return err
-
-		case "ExternalIsa":
-			var variant QueryEventExternalIsa
-			err := json.Unmarshal(v, &variant)
-			*result = QueryEvent{&variant}
-			return err
-
-		case "ExternalIsSubSpecializer":
-			var variant QueryEventExternalIsSubSpecializer
-			err := json.Unmarshal(v, &variant)
-			*result = QueryEvent{&variant}
-			return err
-
-		case "ExternalIsSubclass":
-			var variant QueryEventExternalIsSubclass
-			err := json.Unmarshal(v, &variant)
-			*result = QueryEvent{&variant}
-			return err
-
-		case "ExternalUnify":
-			var variant QueryEventExternalUnify
-			err := json.Unmarshal(v, &variant)
-			*result = QueryEvent{&variant}
-			return err
-
-		case "Result":
-			var variant QueryEventResult
-			err := json.Unmarshal(v, &variant)
-			*result = QueryEvent{&variant}
-			return err
-
-		case "ExternalOp":
-			var variant QueryEventExternalOp
-			err := json.Unmarshal(v, &variant)
-			*result = QueryEvent{&variant}
-			return err
-
-		case "NextExternal":
-			var variant QueryEventNextExternal
-			err := json.Unmarshal(v, &variant)
-			*result = QueryEvent{&variant}
-			return err
-
 		}
-		return fmt.Errorf("Unknown variant for QueryEvent: %s", k)
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing QueryEvent as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
 	}
+	switch variantName {
+
+	case "None":
+		var variant QueryEventNone
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = QueryEvent{&variant}
+		return nil
+
+	case "Done":
+		var variant QueryEventDone
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = QueryEvent{&variant}
+		return nil
+
+	case "Debug":
+		var variant QueryEventDebug
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = QueryEvent{&variant}
+		return nil
+
+	case "MakeExternal":
+		var variant QueryEventMakeExternal
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = QueryEvent{&variant}
+		return nil
+
+	case "ExternalCall":
+		var variant QueryEventExternalCall
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = QueryEvent{&variant}
+		return nil
+
+	case "ExternalIsa":
+		var variant QueryEventExternalIsa
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = QueryEvent{&variant}
+		return nil
+
+	case "ExternalIsSubSpecializer":
+		var variant QueryEventExternalIsSubSpecializer
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = QueryEvent{&variant}
+		return nil
+
+	case "ExternalIsSubclass":
+		var variant QueryEventExternalIsSubclass
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = QueryEvent{&variant}
+		return nil
+
+	case "ExternalUnify":
+		var variant QueryEventExternalUnify
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = QueryEvent{&variant}
+		return nil
+
+	case "Result":
+		var variant QueryEventResult
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = QueryEvent{&variant}
+		return nil
+
+	case "ExternalOp":
+		var variant QueryEventExternalOp
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = QueryEvent{&variant}
+		return nil
+
+	case "NextExternal":
+		var variant QueryEventNextExternal
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = QueryEvent{&variant}
+		return nil
+
+	}
+
 	return fmt.Errorf("Cannot deserialize QueryEvent: %s", string(b))
 }
 
@@ -1573,77 +2017,129 @@ type RuntimeError struct {
 }
 
 func (result *RuntimeError) UnmarshalJSON(b []byte) error {
-	var rawMap map[string]json.RawMessage
+	var variantName string
+	var variantValue *json.RawMessage
 
-	err := json.Unmarshal(b, &rawMap)
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
 	if err != nil {
-		return err
-	}
-
-	if len(rawMap) != 1 {
-		return errors.New("Deserializing RuntimeError as an enum variant; expecting a single key")
-	}
-
-	for k, v := range rawMap {
-		switch k {
-
-		case "ArithmeticError":
-			var variant RuntimeErrorArithmeticError
-			err := json.Unmarshal(v, &variant)
-			*result = RuntimeError{&variant}
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
 			return err
-
-		case "Serialization":
-			var variant RuntimeErrorSerialization
-			err := json.Unmarshal(v, &variant)
-			*result = RuntimeError{&variant}
-			return err
-
-		case "Unsupported":
-			var variant RuntimeErrorUnsupported
-			err := json.Unmarshal(v, &variant)
-			*result = RuntimeError{&variant}
-			return err
-
-		case "TypeError":
-			var variant RuntimeErrorTypeError
-			err := json.Unmarshal(v, &variant)
-			*result = RuntimeError{&variant}
-			return err
-
-		case "UnboundVariable":
-			var variant RuntimeErrorUnboundVariable
-			err := json.Unmarshal(v, &variant)
-			*result = RuntimeError{&variant}
-			return err
-
-		case "StackOverflow":
-			var variant RuntimeErrorStackOverflow
-			err := json.Unmarshal(v, &variant)
-			*result = RuntimeError{&variant}
-			return err
-
-		case "QueryTimeout":
-			var variant RuntimeErrorQueryTimeout
-			err := json.Unmarshal(v, &variant)
-			*result = RuntimeError{&variant}
-			return err
-
-		case "Application":
-			var variant RuntimeErrorApplication
-			err := json.Unmarshal(v, &variant)
-			*result = RuntimeError{&variant}
-			return err
-
-		case "FileLoading":
-			var variant RuntimeErrorFileLoading
-			err := json.Unmarshal(v, &variant)
-			*result = RuntimeError{&variant}
-			return err
-
 		}
-		return fmt.Errorf("Unknown variant for RuntimeError: %s", k)
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing RuntimeError as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
 	}
+	switch variantName {
+
+	case "ArithmeticError":
+		var variant RuntimeErrorArithmeticError
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{&variant}
+		return nil
+
+	case "Serialization":
+		var variant RuntimeErrorSerialization
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{&variant}
+		return nil
+
+	case "Unsupported":
+		var variant RuntimeErrorUnsupported
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{&variant}
+		return nil
+
+	case "TypeError":
+		var variant RuntimeErrorTypeError
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{&variant}
+		return nil
+
+	case "UnboundVariable":
+		var variant RuntimeErrorUnboundVariable
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{&variant}
+		return nil
+
+	case "StackOverflow":
+		var variant RuntimeErrorStackOverflow
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{&variant}
+		return nil
+
+	case "QueryTimeout":
+		var variant RuntimeErrorQueryTimeout
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{&variant}
+		return nil
+
+	case "Application":
+		var variant RuntimeErrorApplication
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{&variant}
+		return nil
+
+	case "FileLoading":
+		var variant RuntimeErrorFileLoading
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{&variant}
+		return nil
+
+	}
+
 	return fmt.Errorf("Cannot deserialize RuntimeError: %s", string(b))
 }
 
@@ -1802,95 +2298,162 @@ type Value struct {
 }
 
 func (result *Value) UnmarshalJSON(b []byte) error {
-	var rawMap map[string]json.RawMessage
+	var variantName string
+	var variantValue *json.RawMessage
 
-	err := json.Unmarshal(b, &rawMap)
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
 	if err != nil {
-		return err
-	}
-
-	if len(rawMap) != 1 {
-		return errors.New("Deserializing Value as an enum variant; expecting a single key")
-	}
-
-	for k, v := range rawMap {
-		switch k {
-
-		case "Number":
-			var variant ValueNumber
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
 			return err
-
-		case "String":
-			var variant ValueString
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
-			return err
-
-		case "Boolean":
-			var variant ValueBoolean
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
-			return err
-
-		case "ExternalInstance":
-			var variant ValueExternalInstance
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
-			return err
-
-		case "Dictionary":
-			var variant ValueDictionary
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
-			return err
-
-		case "Pattern":
-			var variant ValuePattern
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
-			return err
-
-		case "Call":
-			var variant ValueCall
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
-			return err
-
-		case "List":
-			var variant ValueList
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
-			return err
-
-		case "Variable":
-			var variant ValueVariable
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
-			return err
-
-		case "RestVariable":
-			var variant ValueRestVariable
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
-			return err
-
-		case "Expression":
-			var variant ValueExpression
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
-			return err
-
-		case "Partial":
-			var variant ValuePartial
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
-			return err
-
 		}
-		return fmt.Errorf("Unknown variant for Value: %s", k)
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing Value as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
 	}
+	switch variantName {
+
+	case "Number":
+		var variant ValueNumber
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Value{&variant}
+		return nil
+
+	case "String":
+		var variant ValueString
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Value{&variant}
+		return nil
+
+	case "Boolean":
+		var variant ValueBoolean
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Value{&variant}
+		return nil
+
+	case "ExternalInstance":
+		var variant ValueExternalInstance
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Value{&variant}
+		return nil
+
+	case "Dictionary":
+		var variant ValueDictionary
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Value{&variant}
+		return nil
+
+	case "Pattern":
+		var variant ValuePattern
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Value{&variant}
+		return nil
+
+	case "Call":
+		var variant ValueCall
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Value{&variant}
+		return nil
+
+	case "List":
+		var variant ValueList
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Value{&variant}
+		return nil
+
+	case "Variable":
+		var variant ValueVariable
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Value{&variant}
+		return nil
+
+	case "RestVariable":
+		var variant ValueRestVariable
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Value{&variant}
+		return nil
+
+	case "Expression":
+		var variant ValueExpression
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Value{&variant}
+		return nil
+
+	case "Partial":
+		var variant ValuePartial
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Value{&variant}
+		return nil
+
+	}
+
 	return fmt.Errorf("Cannot deserialize Value: %s", string(b))
 }
 

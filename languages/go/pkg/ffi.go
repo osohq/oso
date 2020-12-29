@@ -56,21 +56,20 @@ func processMessages(i ffiInterface) {
 		}
 		message := C.GoString(msgPtr)
 		defer C.string_free(msgPtr)
-		var messageStruct struct {
-			kind string
-			msg  string
-		}
+		var messageStruct Message
 		err := json.Unmarshal([]byte(message), &messageStruct)
 		if err != nil {
-			continue
+			panic(err)
 		}
-		switch messageStruct.kind {
-		case "Print":
-			fmt.Print(messageStruct.msg)
+		switch messageStruct.Kind.MessageKindVariant.(type) {
+		case *MessageKindPrint:
+			fmt.Printf("%s\n", messageStruct.Msg)
 			break
-		case "Warning":
-			fmt.Printf("WARNING: %s", messageStruct.msg)
+		case *MessageKindWarning:
+			fmt.Printf("WARNING: %s\n", messageStruct.Msg)
 			break
+		default:
+			fmt.Printf("Unexpected message: %#v\n", messageStruct)
 		}
 	}
 }
@@ -175,10 +174,18 @@ func (q *QueryFfi) delete() {
 	q = nil
 }
 
-func (q QueryFfi) callResult(callID int, value Value) error {
-	s, err := ffiSerialize(value)
-	if err != nil {
-		return err
+func (q QueryFfi) nextMessage() *C.char {
+	return C.polar_next_query_message(q.ptr)
+}
+
+func (q QueryFfi) callResult(callID int, value *Value) error {
+	var s *C.char
+	var err error
+	if value != nil {
+		s, err = ffiSerialize(value)
+		if err != nil {
+			return err
+		}
 	}
 
 	result := C.polar_call_result(q.ptr, C.ulong(callID), s)
@@ -212,6 +219,7 @@ func (q QueryFfi) applicationError(message string) error {
 
 func (q QueryFfi) nextEvent() (*string, error) {
 	event := C.polar_next_query_event(q.ptr)
+	processMessages(q)
 	if event == nil {
 		return nil, getError()
 	}
@@ -226,6 +234,7 @@ func (q QueryFfi) debugCommand(command interface{}) error {
 		return err
 	}
 	result := C.polar_debug_command(q.ptr, cStr)
+	processMessages(q)
 	if result == 0 {
 		return getError()
 	}

@@ -65,6 +65,31 @@ class InstanceLiteral:
     fields: "Dictionary"
 
 
+@dataclass(frozen=True)
+class Message:
+    kind: "MessageKind"
+    msg: str
+
+
+class MessageKind:
+    pass
+
+
+@dataclass(frozen=True)
+class MessageKind__Print(MessageKind):
+    pass
+
+
+@dataclass(frozen=True)
+class MessageKind__Warning(MessageKind):
+    pass
+
+MessageKind.VARIANTS_MAP = {
+    "Print": MessageKind__Print,
+    "Warning": MessageKind__Warning,
+}
+
+
 class Node:
     pass
 

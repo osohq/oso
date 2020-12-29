@@ -7,6 +7,7 @@ use polar_core::error::{
     ErrorKind, FormattedPolarError, OperationalError, ParseError, RuntimeError,
 };
 use polar_core::events::QueryEvent;
+use polar_core::messages::{Message, MessageKind};
 use polar_core::terms::*;
 use polar_core::traces::{Node, Trace};
 
@@ -29,6 +30,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracer.trace_type::<ParseError>(&samples)?;
     tracer.trace_type::<OperationalError>(&samples)?;
     tracer.trace_type::<RuntimeError>(&samples)?;
+    tracer.trace_type::<MessageKind>(&samples)?;
+    tracer.trace_type::<Message>(&samples)?;
 
     // need to provide concrete values for numeric
     tracer.trace_value(&mut samples, &Numeric::from(0i64))?;

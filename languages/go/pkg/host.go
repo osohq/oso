@@ -253,6 +253,18 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 	panic("unhandled variant in toPolar")
 }
 
+func (h Host) listToGo(v []Value) ([]interface{}, error) {
+	retList := make([]interface{}, len(v))
+	for idx, v := range v {
+		ret, err := h.toGo(v)
+		if err != nil {
+			return nil, err
+		}
+		retList[idx] = ret
+	}
+	return retList, nil
+}
+
 func (h Host) toGo(v Value) (interface{}, error) {
 	switch inner := v.ValueVariant.(type) {
 	case *ValueBoolean:
@@ -267,15 +279,7 @@ func (h Host) toGo(v Value) (interface{}, error) {
 	case *ValueString:
 		return string(*inner), nil
 	case *ValueList:
-		retList := make([]interface{}, len(*inner))
-		for idx, v := range *inner {
-			ret, err := h.toGo(v)
-			if err != nil {
-				return nil, err
-			}
-			retList[idx] = ret
-		}
-		return retList, nil
+		return h.listToGo(*inner)
 	case *ValueDictionary:
 		retMap := make(map[string]interface{})
 		for k, v := range inner.Fields {

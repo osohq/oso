@@ -3,6 +3,7 @@ package oso
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 )
 
 type Query struct {
@@ -116,7 +117,55 @@ func (q Query) handleMakeExternal(event *QueryEventMakeExternal) error {
 }
 
 func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
-	return fmt.Errorf("handleExternalCall not yet implemented")
+	instance, err := q.host.toGo(event.Instance)
+	if err != nil {
+		return err
+	}
+	attr := reflect.ValueOf(instance).FieldByName(event.Attribute)
+	if attr.IsZero() {
+		q.ffiQuery.applicationError((&InvalidCallError{instance: event.Instance, field: event.Attribute}).Error())
+		q.ffiQuery.callResult(int(event.CallId), nil)
+		return nil
+	}
+
+	var result interface{}
+
+	// if we provided Args, it should be callable
+	if event.Args != nil {
+		if attr.Kind() == reflect.Func {
+			args, err := q.host.listToGo(*event.Args)
+			valueArgs := make([]reflect.Value, len(args))
+			for idx, v := range args {
+				valueArgs[idx] = reflect.ValueOf(v)
+			}
+			if err != nil {
+				return err
+			}
+			if event.Kwargs != nil {
+				return &KwargsError{}
+			}
+			results := attr.Call(valueArgs)
+			if len(results) == 1 {
+				result = results[0].Interface()
+			} else {
+				arrayResult := make([]interface{}, len(results))
+				for idx, v := range results {
+					arrayResult[idx] = v.Interface()
+				}
+				result = interface{}(arrayResult)
+			}
+		} else {
+			return &InvalidCallError{instance: event.Instance, field: event.Attribute}
+		}
+	} else {
+		result = attr.Interface()
+	}
+
+	polarValue, err := q.host.toPolar(result)
+	if err != nil {
+		return err
+	}
+	return q.ffiQuery.callResult(int(event.CallId), polarValue)
 }
 func (q Query) handleExternalIsa(event *QueryEventExternalIsa) error {
 	return fmt.Errorf("handleExternalIsa not yet implemented")
