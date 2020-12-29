@@ -401,11 +401,6 @@ class Value__ExternalInstance(Value):
 
 
 @dataclass(frozen=True)
-class Value__InstanceLiteral(Value):
-    value: "InstanceLiteral"
-
-
-@dataclass(frozen=True)
 class Value__Dictionary(Value):
     value: "Dictionary"
 
@@ -449,7 +444,6 @@ Value.VARIANTS_MAP = {
     "String": Value__String,
     "Boolean": Value__Boolean,
     "ExternalInstance": Value__ExternalInstance,
-    "InstanceLiteral": Value__InstanceLiteral,
     "Dictionary": Value__Dictionary,
     "Pattern": Value__Pattern,
     "Call": Value__Call,

@@ -84,16 +84,16 @@ func (result *Node) UnmarshalJSON(b []byte) error {
 }
 
 func (variant Node) MarshalJSON() ([]byte, error) {
-	switch variant.NodeVariant.(type) {
+	switch inner := variant.NodeVariant.(type) {
 
 	case *NodeRule:
 		return json.Marshal(map[string]*NodeRule{
-			"Rule": variant.NodeVariant.(*NodeRule),
+			"Rule": inner,
 		})
 
 	case *NodeTerm:
 		return json.Marshal(map[string]*NodeTerm{
-			"Term": variant.NodeVariant.(*NodeTerm),
+			"Term": inner,
 		})
 
 	}
@@ -177,16 +177,16 @@ func (result *Numeric) UnmarshalJSON(b []byte) error {
 }
 
 func (variant Numeric) MarshalJSON() ([]byte, error) {
-	switch variant.NumericVariant.(type) {
+	switch inner := variant.NumericVariant.(type) {
 
 	case *NumericInteger:
 		return json.Marshal(map[string]*NumericInteger{
-			"Integer": variant.NumericVariant.(*NumericInteger),
+			"Integer": inner,
 		})
 
 	case *NumericFloat:
 		return json.Marshal(map[string]*NumericFloat{
-			"Float": variant.NumericVariant.(*NumericFloat),
+			"Float": inner,
 		})
 
 	}
@@ -416,131 +416,131 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 }
 
 func (variant Operator) MarshalJSON() ([]byte, error) {
-	switch variant.OperatorVariant.(type) {
+	switch inner := variant.OperatorVariant.(type) {
 
 	case *OperatorDebug:
 		return json.Marshal(map[string]*OperatorDebug{
-			"Debug": variant.OperatorVariant.(*OperatorDebug),
+			"Debug": inner,
 		})
 
 	case *OperatorPrint:
 		return json.Marshal(map[string]*OperatorPrint{
-			"Print": variant.OperatorVariant.(*OperatorPrint),
+			"Print": inner,
 		})
 
 	case *OperatorCut:
 		return json.Marshal(map[string]*OperatorCut{
-			"Cut": variant.OperatorVariant.(*OperatorCut),
+			"Cut": inner,
 		})
 
 	case *OperatorIn:
 		return json.Marshal(map[string]*OperatorIn{
-			"In": variant.OperatorVariant.(*OperatorIn),
+			"In": inner,
 		})
 
 	case *OperatorIsa:
 		return json.Marshal(map[string]*OperatorIsa{
-			"Isa": variant.OperatorVariant.(*OperatorIsa),
+			"Isa": inner,
 		})
 
 	case *OperatorNew:
 		return json.Marshal(map[string]*OperatorNew{
-			"New": variant.OperatorVariant.(*OperatorNew),
+			"New": inner,
 		})
 
 	case *OperatorDot:
 		return json.Marshal(map[string]*OperatorDot{
-			"Dot": variant.OperatorVariant.(*OperatorDot),
+			"Dot": inner,
 		})
 
 	case *OperatorNot:
 		return json.Marshal(map[string]*OperatorNot{
-			"Not": variant.OperatorVariant.(*OperatorNot),
+			"Not": inner,
 		})
 
 	case *OperatorMul:
 		return json.Marshal(map[string]*OperatorMul{
-			"Mul": variant.OperatorVariant.(*OperatorMul),
+			"Mul": inner,
 		})
 
 	case *OperatorDiv:
 		return json.Marshal(map[string]*OperatorDiv{
-			"Div": variant.OperatorVariant.(*OperatorDiv),
+			"Div": inner,
 		})
 
 	case *OperatorMod:
 		return json.Marshal(map[string]*OperatorMod{
-			"Mod": variant.OperatorVariant.(*OperatorMod),
+			"Mod": inner,
 		})
 
 	case *OperatorRem:
 		return json.Marshal(map[string]*OperatorRem{
-			"Rem": variant.OperatorVariant.(*OperatorRem),
+			"Rem": inner,
 		})
 
 	case *OperatorAdd:
 		return json.Marshal(map[string]*OperatorAdd{
-			"Add": variant.OperatorVariant.(*OperatorAdd),
+			"Add": inner,
 		})
 
 	case *OperatorSub:
 		return json.Marshal(map[string]*OperatorSub{
-			"Sub": variant.OperatorVariant.(*OperatorSub),
+			"Sub": inner,
 		})
 
 	case *OperatorEq:
 		return json.Marshal(map[string]*OperatorEq{
-			"Eq": variant.OperatorVariant.(*OperatorEq),
+			"Eq": inner,
 		})
 
 	case *OperatorGeq:
 		return json.Marshal(map[string]*OperatorGeq{
-			"Geq": variant.OperatorVariant.(*OperatorGeq),
+			"Geq": inner,
 		})
 
 	case *OperatorLeq:
 		return json.Marshal(map[string]*OperatorLeq{
-			"Leq": variant.OperatorVariant.(*OperatorLeq),
+			"Leq": inner,
 		})
 
 	case *OperatorNeq:
 		return json.Marshal(map[string]*OperatorNeq{
-			"Neq": variant.OperatorVariant.(*OperatorNeq),
+			"Neq": inner,
 		})
 
 	case *OperatorGt:
 		return json.Marshal(map[string]*OperatorGt{
-			"Gt": variant.OperatorVariant.(*OperatorGt),
+			"Gt": inner,
 		})
 
 	case *OperatorLt:
 		return json.Marshal(map[string]*OperatorLt{
-			"Lt": variant.OperatorVariant.(*OperatorLt),
+			"Lt": inner,
 		})
 
 	case *OperatorUnify:
 		return json.Marshal(map[string]*OperatorUnify{
-			"Unify": variant.OperatorVariant.(*OperatorUnify),
+			"Unify": inner,
 		})
 
 	case *OperatorOr:
 		return json.Marshal(map[string]*OperatorOr{
-			"Or": variant.OperatorVariant.(*OperatorOr),
+			"Or": inner,
 		})
 
 	case *OperatorAnd:
 		return json.Marshal(map[string]*OperatorAnd{
-			"And": variant.OperatorVariant.(*OperatorAnd),
+			"And": inner,
 		})
 
 	case *OperatorForAll:
 		return json.Marshal(map[string]*OperatorForAll{
-			"ForAll": variant.OperatorVariant.(*OperatorForAll),
+			"ForAll": inner,
 		})
 
 	case *OperatorAssign:
 		return json.Marshal(map[string]*OperatorAssign{
-			"Assign": variant.OperatorVariant.(*OperatorAssign),
+			"Assign": inner,
 		})
 
 	}
@@ -708,16 +708,16 @@ func (result *Pattern) UnmarshalJSON(b []byte) error {
 }
 
 func (variant Pattern) MarshalJSON() ([]byte, error) {
-	switch variant.PatternVariant.(type) {
+	switch inner := variant.PatternVariant.(type) {
 
 	case *PatternDictionary:
 		return json.Marshal(map[string]*PatternDictionary{
-			"Dictionary": variant.PatternVariant.(*PatternDictionary),
+			"Dictionary": inner,
 		})
 
 	case *PatternInstance:
 		return json.Marshal(map[string]*PatternInstance{
-			"Instance": variant.PatternVariant.(*PatternInstance),
+			"Instance": inner,
 		})
 
 	}
@@ -861,66 +861,66 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 }
 
 func (variant QueryEvent) MarshalJSON() ([]byte, error) {
-	switch variant.QueryEventVariant.(type) {
+	switch inner := variant.QueryEventVariant.(type) {
 
 	case *QueryEventNone:
 		return json.Marshal(map[string]*QueryEventNone{
-			"None": variant.QueryEventVariant.(*QueryEventNone),
+			"None": inner,
 		})
 
 	case *QueryEventDone:
 		return json.Marshal(map[string]*QueryEventDone{
-			"Done": variant.QueryEventVariant.(*QueryEventDone),
+			"Done": inner,
 		})
 
 	case *QueryEventDebug:
 		return json.Marshal(map[string]*QueryEventDebug{
-			"Debug": variant.QueryEventVariant.(*QueryEventDebug),
+			"Debug": inner,
 		})
 
 	case *QueryEventMakeExternal:
 		return json.Marshal(map[string]*QueryEventMakeExternal{
-			"MakeExternal": variant.QueryEventVariant.(*QueryEventMakeExternal),
+			"MakeExternal": inner,
 		})
 
 	case *QueryEventExternalCall:
 		return json.Marshal(map[string]*QueryEventExternalCall{
-			"ExternalCall": variant.QueryEventVariant.(*QueryEventExternalCall),
+			"ExternalCall": inner,
 		})
 
 	case *QueryEventExternalIsa:
 		return json.Marshal(map[string]*QueryEventExternalIsa{
-			"ExternalIsa": variant.QueryEventVariant.(*QueryEventExternalIsa),
+			"ExternalIsa": inner,
 		})
 
 	case *QueryEventExternalIsSubSpecializer:
 		return json.Marshal(map[string]*QueryEventExternalIsSubSpecializer{
-			"ExternalIsSubSpecializer": variant.QueryEventVariant.(*QueryEventExternalIsSubSpecializer),
+			"ExternalIsSubSpecializer": inner,
 		})
 
 	case *QueryEventExternalIsSubclass:
 		return json.Marshal(map[string]*QueryEventExternalIsSubclass{
-			"ExternalIsSubclass": variant.QueryEventVariant.(*QueryEventExternalIsSubclass),
+			"ExternalIsSubclass": inner,
 		})
 
 	case *QueryEventExternalUnify:
 		return json.Marshal(map[string]*QueryEventExternalUnify{
-			"ExternalUnify": variant.QueryEventVariant.(*QueryEventExternalUnify),
+			"ExternalUnify": inner,
 		})
 
 	case *QueryEventResult:
 		return json.Marshal(map[string]*QueryEventResult{
-			"Result": variant.QueryEventVariant.(*QueryEventResult),
+			"Result": inner,
 		})
 
 	case *QueryEventExternalOp:
 		return json.Marshal(map[string]*QueryEventExternalOp{
-			"ExternalOp": variant.QueryEventVariant.(*QueryEventExternalOp),
+			"ExternalOp": inner,
 		})
 
 	case *QueryEventNextExternal:
 		return json.Marshal(map[string]*QueryEventNextExternal{
-			"NextExternal": variant.QueryEventVariant.(*QueryEventNextExternal),
+			"NextExternal": inner,
 		})
 
 	}
@@ -1130,12 +1130,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 			*result = Value{&variant}
 			return err
 
-		case "InstanceLiteral":
-			var variant ValueInstanceLiteral
-			err := json.Unmarshal(v, &variant)
-			*result = Value{&variant}
-			return err
-
 		case "Dictionary":
 			var variant ValueDictionary
 			err := json.Unmarshal(v, &variant)
@@ -1192,71 +1186,66 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 }
 
 func (variant Value) MarshalJSON() ([]byte, error) {
-	switch variant.ValueVariant.(type) {
+	switch inner := variant.ValueVariant.(type) {
 
 	case *ValueNumber:
 		return json.Marshal(map[string]*ValueNumber{
-			"Number": variant.ValueVariant.(*ValueNumber),
+			"Number": inner,
 		})
 
 	case *ValueString:
 		return json.Marshal(map[string]*ValueString{
-			"String": variant.ValueVariant.(*ValueString),
+			"String": inner,
 		})
 
 	case *ValueBoolean:
 		return json.Marshal(map[string]*ValueBoolean{
-			"Boolean": variant.ValueVariant.(*ValueBoolean),
+			"Boolean": inner,
 		})
 
 	case *ValueExternalInstance:
 		return json.Marshal(map[string]*ValueExternalInstance{
-			"ExternalInstance": variant.ValueVariant.(*ValueExternalInstance),
-		})
-
-	case *ValueInstanceLiteral:
-		return json.Marshal(map[string]*ValueInstanceLiteral{
-			"InstanceLiteral": variant.ValueVariant.(*ValueInstanceLiteral),
+			"ExternalInstance": inner,
 		})
 
 	case *ValueDictionary:
 		return json.Marshal(map[string]*ValueDictionary{
-			"Dictionary": variant.ValueVariant.(*ValueDictionary),
+			"Dictionary": inner,
 		})
 
 	case *ValuePattern:
 		return json.Marshal(map[string]*ValuePattern{
-			"Pattern": variant.ValueVariant.(*ValuePattern),
+			"Pattern": inner,
 		})
 
 	case *ValueCall:
 		return json.Marshal(map[string]*ValueCall{
-			"Call": variant.ValueVariant.(*ValueCall),
+			"Call": inner,
 		})
 
 	case *ValueList:
 		return json.Marshal(map[string]*ValueList{
-			"List": variant.ValueVariant.(*ValueList),
+			"List": inner,
 		})
 
 	case *ValueVariable:
 		return json.Marshal(map[string]*ValueVariable{
-			"Variable": variant.ValueVariant.(*ValueVariable),
+			"Variable": inner,
 		})
 
 	case *ValueRestVariable:
 		return json.Marshal(map[string]*ValueRestVariable{
-			"RestVariable": variant.ValueVariant.(*ValueRestVariable),
+			"RestVariable": inner,
 		})
 
 	case *ValueExpression:
 		return json.Marshal(map[string]*ValueExpression{
-			"Expression": variant.ValueVariant.(*ValueExpression),
+			"Expression": inner,
 		})
 
 	case *ValuePartial:
 		return json.Marshal(map[string]*ValuePartial{
-			"Partial": variant.ValueVariant.(*ValuePartial),
+			"Partial": inner,
 		})
 
 	}
@@ -1327,22 +1316,6 @@ func (variant *ValueExternalInstance) UnmarshalJSON(b []byte) error {
 }
 
 func (*ValueExternalInstance) isValue() {}
-
-// ValueInstanceLiteral newtype
-type ValueInstanceLiteral InstanceLiteral
-
-func (variant ValueInstanceLiteral) MarshalJSON() ([]byte, error) {
-	return json.Marshal(InstanceLiteral(variant))
-}
-
-func (variant *ValueInstanceLiteral) UnmarshalJSON(b []byte) error {
-	inner := InstanceLiteral(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValueInstanceLiteral(inner)
-	return err
-}
-
-func (*ValueInstanceLiteral) isValue() {}
 
 // ValueDictionary newtype
 type ValueDictionary Dictionary
