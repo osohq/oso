@@ -3,7 +3,6 @@
 package oso
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 )
@@ -97,6 +96,7 @@ func (h Host) makeInstance(name string, args []interface{}, kwargs map[string]in
 		return nil, err
 	}
 	instance := reflect.New(*class)
+	fmt.Printf("What is this: %#v, %#v", instance, (*class).Kind().String())
 	for idx, arg := range args {
 		f := instance.Field(idx)
 		if f.IsValid() && f.CanSet() {
@@ -204,13 +204,11 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 	case bool:
 		inner := ValueBoolean(v.(bool))
 		return &Value{&inner}, nil
-	case int:
-	case uint:
+	case int, uint:
 		intVal := NumericInteger(v.(int))
 		inner := ValueNumber{&intVal}
 		return &Value{&inner}, nil
-	case float32:
-	case float64:
+	case float32, float64:
 		floatVal := NumericFloat(v.(float64))
 		inner := ValueNumber{&floatVal}
 		return &Value{&inner}, nil
@@ -220,10 +218,15 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 	}
 
 	// check composite types
-	rt := reflect.TypeOf(v)
+	rt := reflect.ValueOf(v)
+	// deref pointer
+	if rt.Kind() == reflect.Ptr {
+		rtDeref := rt.Elem()
+		return h.toPolar(rtDeref)
+	}
+
 	switch rt.Kind() {
-	case reflect.Slice:
-	case reflect.Array:
+	case reflect.Slice, reflect.Array:
 		vList := v.([]interface{})
 		slice := make([]Value, len(vList))
 		for idx, v := range vList {
@@ -261,7 +264,7 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 		return &Value{&inner}, nil
 	}
 
-	return nil, errors.New("unreachable")
+	panic("unhandled variant in toPolar")
 }
 
 func (h Host) toGo(v Value) (interface{}, error) {

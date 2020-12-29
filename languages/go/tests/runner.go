@@ -14,6 +14,12 @@ import (
 	oso "github.com/osohq/oso/languages/go/pkg"
 )
 
+var CLASSES = map[string]reflect.Type{
+	"UnitClass":     reflect.TypeOf(UnitClass{}),
+	"ValueFactory":  reflect.TypeOf(ValueFactory{}),
+	"IterableClass": reflect.TypeOf(IterableClass{}),
+}
+
 type TestCase struct {
 	// Raw         string                   `yaml:omit`
 	Name        string   `yaml:"name"`
@@ -64,6 +70,39 @@ func ToInput(v interface{}) (interface{}, error) {
 	return v, nil
 }
 
+func toInput(o oso.Polar, v interface{}, t *testing.T) interface{} {
+	if vMap, ok := v.(map[string]interface{}); ok {
+		if ty, ok := vMap["type"]; ok {
+			class := CLASSES[ty.(string)]
+			instance := reflect.New(class)
+
+			for idx, arg := range vMap["args"].([]interface{}) {
+				argInput := toInput(o, arg, t)
+				f := instance.Field(idx)
+				if f.IsValid() && f.CanSet() {
+					f.Set(reflect.ValueOf(argInput))
+				} else {
+					t.Fatal(fmt.Errorf("cannot set field %v", f))
+				}
+			}
+			for k, v := range vMap["kwargs"].(map[string]interface{}) {
+				argInput := toInput(o, v, t)
+				f := instance.FieldByName(k)
+				if f.IsValid() && f.CanSet() {
+					f.Set(reflect.ValueOf(argInput))
+				} else {
+					t.Fatal(fmt.Errorf("cannot set field %v", f))
+				}
+			}
+			return instance
+		}
+		if v, ok := vMap["var"]; ok {
+			return Variable(v.(string))
+		}
+	}
+	return v
+}
+
 // def to_input(v):
 //     if isinstance(v, dict):
 //         if "type" in v:
@@ -74,13 +113,6 @@ func ToInput(v interface{}) (interface{}, error) {
 //         elif "var" in v:
 //             return Variable(v["var"])
 //     return v
-
-// type TestCase struct {
-// 	Name        string      `yaml:"name"`
-// 	Description string      `yaml:"description"`
-// 	Policies    []string    `yaml:"policies"`
-// 	Case        interface{} `yaml:"cases"`
-// }
 
 type Case struct {
 	Description *string                  `yaml:"description"`
@@ -105,16 +137,14 @@ func String(s string) *string {
 }
 
 func (tc TestCase) setupTest(o *oso.Polar, t *testing.T) error {
-	err := o.RegisterClass(reflect.TypeOf(ValueFactory{}), String("ValueFactory"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = o.RegisterClass(reflect.TypeOf(UnitClass{}), String("UnitClass"))
-	if err != nil {
-		t.Fatal(err)
+	for k, v := range CLASSES {
+		err := o.RegisterClass(v, &k)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	err = filepath.Walk("../../../test/policies/", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk("../../../test/policies/", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
