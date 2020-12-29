@@ -899,7 +899,8 @@ mod test {
     fn test_that_cut_with_partial_errors() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x) if cut;")?;
-        let mut q = p.new_query_from_term(term!(call!("f", [op!(And)])), false);
+        p.register_constant(sym!("x"), op!(And).into_term());
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));

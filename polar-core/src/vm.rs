@@ -258,31 +258,6 @@ impl Default for PolarVirtualMachine {
     }
 }
 
-#[allow(clippy::ptr_arg)]
-fn query_contains_partial(goals: &Goals) -> bool {
-    struct ExpressionVisitor {
-        has_expression: bool,
-    }
-
-    impl Visitor for ExpressionVisitor {
-        fn visit_operation(&mut self, _: &Operation) {
-            self.has_expression = true;
-        }
-    }
-
-    let mut visitor = ExpressionVisitor {
-        has_expression: false,
-    };
-    goals.iter().any(|goal| {
-        if let Goal::Query { term } = goal {
-            walk_term(&mut visitor, &term);
-            visitor.has_expression
-        } else {
-            false
-        }
-    })
-}
-
 // Methods which aren't goals/instructions.
 impl PolarVirtualMachine {
     /// Make a new virtual machine with an initial list of goals.
@@ -298,7 +273,6 @@ impl PolarVirtualMachine {
             .expect("cannot acquire KB read lock")
             .constants
             .clone();
-        let query_contains_partial = query_contains_partial(&goals);
         let mut vm = Self {
             goals: GoalStack::new_reversed(goals),
             bindings: vec![],
@@ -318,12 +292,41 @@ impl PolarVirtualMachine {
             log: std::env::var("RUST_LOG").is_ok(),
             polar_log: std::env::var("POLAR_LOG").is_ok(),
             polar_log_mute: false,
-            query_contains_partial,
+            query_contains_partial: false,
             simplify: true,
             messages,
         };
         vm.bind_constants(constants);
+        vm.query_contains_partial();
         vm
+    }
+
+    fn query_contains_partial(&mut self) {
+        struct VarVisitor<'vm> {
+            has_partial: bool,
+            vm: &'vm PolarVirtualMachine,
+        }
+
+        impl<'vm> Visitor for VarVisitor<'vm> {
+            fn visit_variable(&mut self, v: &Symbol) {
+                if matches!(self.vm.variable_state(v), VariableState::Partial(_)) {
+                    self.has_partial = true;
+                }
+            }
+        }
+
+        let mut visitor = VarVisitor {
+            has_partial: false,
+            vm: &self,
+        };
+        self.query_contains_partial = self.goals.iter().any(|goal| {
+            if let Goal::Query { term } = goal.as_ref() {
+                walk_term(&mut visitor, term);
+                visitor.has_partial
+            } else {
+                false
+            }
+        });
     }
 
     #[cfg(test)]
