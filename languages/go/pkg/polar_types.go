@@ -1440,7 +1440,7 @@ type ParseErrorInvalidTokenCharacter struct {
 	// Token
 	Token string `json:"token"`
 	// C
-	C rune `json:"c"`
+	C string `json:"c"`
 	// Loc
 	Loc uint64 `json:"loc"`
 }

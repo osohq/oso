@@ -111,7 +111,6 @@ func (p Polar) LoadFile(f string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Load from: %s\n%s", f, string(data))
 	err = p.ffiPolar.load(string(data), &f)
 	if err != nil {
 		return err

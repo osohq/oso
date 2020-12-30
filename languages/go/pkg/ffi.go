@@ -93,9 +93,11 @@ func (p PolarFfi) newId() (int, error) {
 
 func (p PolarFfi) load(s string, filename *string) error {
 	cString := C.CString(s)
+	defer C.free(unsafe.Pointer(cString))
 	var cFilename *C.char
 	if filename != nil {
 		cFilename = C.CString(*filename)
+		defer C.free(unsafe.Pointer(cFilename))
 	}
 	result := C.polar_load(p.ptr, cString, cFilename)
 	processMessages(p)

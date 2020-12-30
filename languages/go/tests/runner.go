@@ -200,7 +200,7 @@ func (tc TestCase) RunTest(t *testing.T) {
 			}
 
 			if c.Load != nil {
-				o.LoadString(*c.Load)
+				queryErr = o.LoadString(*c.Load)
 			}
 
 			results := make([]map[string]interface{}, 0)

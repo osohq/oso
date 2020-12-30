@@ -191,7 +191,7 @@ import (
             U128 => todo!("unsupported"), //"serde.Uint128".into(),
             F32 => "float32".into(),
             F64 => "float64".into(),
-            Char => "rune".into(),
+            Char => "string".into(), // serde_json serializes char as a string
             Str => "string".into(),
             Bytes => "[]byte".into(),
 
