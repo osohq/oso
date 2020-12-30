@@ -9,7 +9,7 @@ import (
 type Query struct {
 	ffiQuery QueryFfi
 	host     Host
-	calls    map[int]interface{}
+	calls    map[int]chan interface{}
 }
 
 // NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
@@ -18,7 +18,7 @@ func newQuery(ffiQuery QueryFfi, host Host) Query {
 	return Query{
 		ffiQuery: ffiQuery,
 		host:     host,
-		calls:    make(map[int]interface{}),
+		calls:    make(map[int]chan interface{}),
 	}
 }
 
@@ -233,7 +233,28 @@ func (q Query) handleExternalOp(event *QueryEventExternalOp) error {
 }
 
 func (q Query) handleNextExternal(event *QueryEventNextExternal) error {
-	return fmt.Errorf("handleNextExternal not yet implemented")
+	if _, ok := q.calls[int(event.CallId)]; !ok {
+		instance, err := q.host.toGo(event.Iterable)
+		if err != nil {
+			return err
+		}
+		if iter, ok := instance.(Iterator); ok {
+			q.calls[int(event.CallId)] = iter.Iter()
+		} else {
+			return &InvalidIteratorError{instance: event.Iterable}
+		}
+	}
+
+	iter := q.calls[int(event.CallId)]
+	nextValue, ok := <-iter
+	if !ok { // iterator is done
+		return q.ffiQuery.callResult(int(event.CallId), nil)
+	}
+	retValue, err := q.host.toPolar(nextValue)
+	if err != nil {
+		return err
+	}
+	return q.ffiQuery.callResult(int(event.CallId), retValue)
 }
 
 //     def handle_next_external(self, data):

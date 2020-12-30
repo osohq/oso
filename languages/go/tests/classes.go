@@ -25,8 +25,8 @@ func (ic IterableClass) sum() int {
 	return res
 }
 
-func (ic IterableClass) Iter() chan int {
-	c := make(chan int)
+func (ic IterableClass) Iter() chan interface{} {
+	c := make(chan interface{})
 	go func() {
 		for _, v := range ic.Elems {
 			c <- v
