@@ -36,6 +36,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // need to provide concrete values for numeric
     tracer.trace_value(&mut samples, &Numeric::from(0i64))?;
     tracer.trace_value(&mut samples, &Numeric::from(0.0f64))?;
+    // TODO: tracing these results in an error.
+    // serde reflection doesn't support untagged enums
+    // tracer.trace_value(&mut samples, &Numeric::from(std::f64::NAN))?;
+    // tracer.trace_value(&mut samples, &Numeric::from(std::f64::INFINITY))?;
     tracer.trace_type::<Numeric>(&samples)?;
     let registry = tracer.registry()?;
 

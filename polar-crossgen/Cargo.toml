@@ -14,7 +14,7 @@ log = "0.4.11"
 maplit = "1.0.2"
 polar-core = { path = "../polar-core" }
 serde = { version = "1.0.118", features = ["derive"] }
-serde-generate = { path = "../../serde-reflection/serde-generate" } # "0.17.0"
-serde-reflection = { path = "../../serde-reflection/serde-reflection" } # "0.17.0"
+serde-reflection = "*"
+serde-generate = "*"
 serde_json = "1.0.60"
 simple-logging = "2.0.2"

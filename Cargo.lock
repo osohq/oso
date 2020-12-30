@@ -446,9 +446,9 @@ dependencies = [
 
 [[package]]
 name = "dtoa"
-version = "0.4.6"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "134951f4028bdadb9b84baf4232681efbf277da25144b9b0ad65df75946c422b"
+checksum = "88d7ed2934d741c6b37e33e3832298e8850b53fd2d2bea03873375596c7cea4e"
 
 [[package]]
 name = "either"
@@ -1327,6 +1327,8 @@ dependencies = [
 [[package]]
 name = "serde-generate"
 version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "075353ee504a2b099d4fd0b5d452b6bde115e8bbe61a6ec11d3ef834924e64f9"
 dependencies = [
  "bcs",
  "bincode",
@@ -1344,6 +1346,8 @@ dependencies = [
 [[package]]
 name = "serde-reflection"
 version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "695ca48311bdeac687d09bbd558de507f0874a401c56cce52ee5665705f817f3"
 dependencies = [
  "serde",
  "thiserror",
