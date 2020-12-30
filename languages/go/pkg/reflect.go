@@ -27,7 +27,6 @@ func setFieldTo(field reflect.Value, input interface{}) error {
 				return err
 			}
 		}
-		fmt.Printf("Set field to %v", field.Interface())
 		return nil
 	case reflect.Map:
 		inputMap := input.(map[string]interface{})

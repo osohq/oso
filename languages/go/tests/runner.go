@@ -73,11 +73,11 @@ func (left Result) Equal(right interface{}) bool {
 	switch val := left.inner.(type) {
 	case map[string]Result:
 		if repr, ok := val["repr"]; ok {
-			fmt.Printf("%v", right)
+			// fmt.Printf("%v", right)
 			return repr.inner.(string) == fmt.Sprintf("%v", right)
 		}
 	}
-	// fmt.Printf("%v == %v: %v", left.inner, right, cmp.Equal(left.inner, right))
+	fmt.Printf("%v == %v: %v", left.inner, right, cmp.Equal(left.inner, right))
 	return cmp.Equal(left.inner, right)
 }
 
@@ -234,18 +234,18 @@ func (tc TestCase) RunTest(t *testing.T) {
 					t.Error(queryErr)
 				} else {
 					if len(results) != len(expectedResults) {
-						t.Error(fmt.Errorf("incorrect query result:\n%s", cmp.Diff(expectedResults, results)))
+						t.Error(fmt.Errorf("incorrect number of results\nGot: %v\nExpected: %v\n:\n%s", len(results), len(expectedResults), cmp.Diff(expectedResults, results)))
 						return
 					}
 					for idx, expectedResult := range expectedResults {
 						result := results[idx]
 						for k, v := range expectedResult {
 							if v2, ok := result[k]; ok {
-								if !v.Equal(v2) {
+								if !cmp.Equal(v2, v2) {
 									t.Error(fmt.Errorf("incorrect query result:\n%s", cmp.Diff(v2, v)))
 								}
 							} else {
-								t.Error(fmt.Errorf("incorrect query result:\n%s", cmp.Diff(v, nil)))
+								t.Error(fmt.Errorf("missing query result for: %v\n%s", k, cmp.Diff(v, nil)))
 							}
 						}
 					}
