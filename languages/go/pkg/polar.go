@@ -208,11 +208,18 @@ func (p Polar) Repl(files ...string) error {
 //                 print(False)
 
 func (p Polar) RegisterClass(cls reflect.Type, name *string) error {
-	err := p.host.cacheClass(cls, name)
+	var className string
+	if name == nil {
+		className = cls.Name()
+	} else {
+		className = *name
+	}
+
+	err := p.host.cacheClass(cls, className)
 	if err != nil {
 		return err
 	}
-	return p.RegisterConstant(cls, cls.Name())
+	return p.RegisterConstant(cls, className)
 }
 
 func (p Polar) RegisterConstant(value interface{}, name string) error {

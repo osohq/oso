@@ -49,17 +49,11 @@ func (h Host) getClass(name string) (*reflect.Type, error) {
 	return nil, &UnregisteredClassError{name: name}
 }
 
-func (h Host) cacheClass(cls reflect.Type, name *string) error {
-	var className string
-	if name == nil {
-		className = cls.Name()
-	} else {
-		className = *name
+func (h Host) cacheClass(cls reflect.Type, name string) error {
+	if v, ok := h.classes[name]; ok {
+		return &DuplicateClassAliasError{name: name, cls: cls, existing: v}
 	}
-	if v, ok := h.classes[className]; ok {
-		return &DuplicateClassAliasError{name: className, cls: cls, existing: v}
-	}
-	h.classes[className] = cls
+	h.classes[name] = cls
 	return nil
 }
 
