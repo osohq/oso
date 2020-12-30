@@ -107,7 +107,7 @@ pub fn sub_this(this: Symbol, term: Term) -> Term {
     fold_term(term, &mut VariableSubber::new(this))
 }
 
-/// Turn `_this = x` into `x`.
+/// Turn `_this = x` into `x` when it's ground.
 fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
     match term.value() {
         Value::Expression(o) if o.operator == Operator::Unify => {
@@ -117,8 +117,8 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
                 (Value::Variable(v), Value::Variable(w)) if v == &this && w == &this => {
                     unreachable!()
                 }
-                (Value::Variable(v), _) if v == &this => right.clone(),
-                (_, Value::Variable(v)) if v == &this => left.clone(),
+                (Value::Variable(l), _) if l == &this && right.is_ground() => right.clone(),
+                (_, Value::Variable(r)) if r == &this && left.is_ground() => left.clone(),
                 _ => term,
             }
         }
@@ -229,32 +229,22 @@ impl<'vm> Folder for Simplifier<'vm> {
                         let invert = o.operator == Operator::Neq;
                         left == right
                             || match (left.value(), right.value()) {
+                                (x, _) if self.is_this_var(right) => {
+                                    if let Value::Variable(l) = x {
+                                        self.bind(l.clone(), right.clone(), invert);
+                                    }
+                                    false
+                                }
+                                (_, y) if self.is_this_var(left) => {
+                                    if let Value::Variable(r) = y {
+                                        self.bind(r.clone(), left.clone(), invert);
+                                    }
+                                    false
+                                }
                                 (Value::Variable(l), Value::Variable(r))
                                 | (Value::Variable(l), Value::RestVariable(r))
                                 | (Value::RestVariable(l), Value::Variable(r))
                                 | (Value::RestVariable(l), Value::RestVariable(r)) => {
-                                    match (self.is_this_var(left), self.is_this_var(right)) {
-                                        (true, true) => unreachable!(),
-                                        (true, false) => {
-                                            eprintln!(
-                                                "C {} ← {}",
-                                                right.to_polar(),
-                                                left.to_polar()
-                                            );
-                                            self.bind(r.clone(), left.clone(), invert);
-                                            return true;
-                                        }
-                                        (false, true) => {
-                                            eprintln!(
-                                                "D {} ← {}",
-                                                right.to_polar(),
-                                                left.to_polar()
-                                            );
-                                            self.bind(l.clone(), right.clone(), invert);
-                                            return true;
-                                        }
-                                        (false, false) => (),
-                                    }
                                     match (self.vm.variable_state(l), self.vm.variable_state(r)) {
                                         (VariableState::Unbound, VariableState::Unbound) => todo!(),
                                         (VariableState::Unbound, VariableState::Cycle(_)) => {
@@ -285,13 +275,12 @@ impl<'vm> Folder for Simplifier<'vm> {
                                             todo!()
                                         }
                                         (VariableState::Partial(_), VariableState::Partial(_)) => {
-                                            eprintln!(
-                                                "A {} ← {}",
-                                                left.to_polar(),
-                                                right.to_polar()
-                                            );
-                                            self.bind(l.clone(), right.clone(), invert);
-                                            self.bind(r.clone(), left.clone(), invert);
+                                            if !self.is_bound(l) {
+                                                self.bind(l.clone(), right.clone(), invert);
+                                            }
+                                            if !self.is_bound(r) {
+                                                self.bind(r.clone(), left.clone(), invert);
+                                            }
                                             true
                                         }
                                         (VariableState::Partial(_), VariableState::Bound(_)) => {
@@ -315,7 +304,10 @@ impl<'vm> Folder for Simplifier<'vm> {
                                     match self.vm.variable_state(l) {
                                         VariableState::Unbound => todo!(),
                                         VariableState::Cycle(_) => todo!(),
-                                        VariableState::Partial(_) => todo!(),
+                                        VariableState::Partial(_) => {
+                                            self.bind(l.clone(), right.clone(), invert);
+                                            true
+                                        }
                                         VariableState::Bound(_) => todo!(),
                                     }
                                 }
@@ -323,7 +315,10 @@ impl<'vm> Folder for Simplifier<'vm> {
                                     match self.vm.variable_state(r) {
                                         VariableState::Unbound => todo!(),
                                         VariableState::Cycle(_) => todo!(),
-                                        VariableState::Partial(_) => todo!(),
+                                        VariableState::Partial(_) => {
+                                            self.bind(r.clone(), left.clone(), invert);
+                                            true
+                                        }
                                         VariableState::Bound(_) => todo!(),
                                     }
                                 }
@@ -344,16 +339,6 @@ impl<'vm> Folder for Simplifier<'vm> {
                                 //     eprintln!("B {} ← {}", right.to_polar(), left.to_polar());
                                 //     self.bind(v.clone(), left.clone(), invert);
                                 //     true
-                                // }
-                                // (_, Value::Variable(v)) if self.is_this_var(left) => {
-                                //     eprintln!("C {} ← {}", right.to_polar(), left.to_polar());
-                                //     self.bind(v.clone(), left.clone(), invert);
-                                //     false
-                                // }
-                                // (Value::Variable(v), _) if self.is_this_var(right) => {
-                                //     eprintln!("D {} ← {}", left.to_polar(), right.to_polar());
-                                //     self.bind(v.clone(), right.clone(), invert);
-                                //     false
                                 // }
                                 _ => false,
                             }
@@ -418,6 +403,7 @@ impl<'vm> Simplifier<'vm> {
     }
 
     pub fn bind(&mut self, var: Symbol, value: Term, invert: bool) {
+        let value = self.deref(&value);
         self.bindings.insert(
             var,
             if invert {
@@ -430,8 +416,9 @@ impl<'vm> Simplifier<'vm> {
 
     pub fn deref(&self, term: &Term) -> Term {
         match term.value() {
-            // TODO(gj): RestVariable?
-            Value::Variable(symbol) => self.bindings.get(symbol).unwrap_or(term).clone(),
+            Value::Variable(var) | Value::RestVariable(var) => {
+                self.bindings.get(var).unwrap_or(term).clone()
+            }
             _ => term.clone(),
         }
     }
@@ -453,16 +440,16 @@ impl<'vm> Simplifier<'vm> {
 
     /// Simplify a partial until quiescence.
     pub fn simplify_partial(&mut self, mut term: Term) -> Term {
-        let mut seen = HashSet::new();
         let mut new;
         loop {
             eprintln!("SIMPLIFYING {}: {}", self.this_var, term.to_polar());
             new = self.fold_term(term.clone());
             eprintln!(" ⇒ {}", new.to_polar());
-            if !seen.insert(new.clone()) {
+            if new == term {
                 break;
             }
             term = new;
+            self.bindings.clear();
         }
         new
     }
