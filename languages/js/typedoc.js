@@ -1,6 +1,5 @@
 module.exports = {
-  inputFiles: ['./src'],
-  mode: 'library',
+  entryPoints: ['./src'],
   out: 'docs',
   exclude: [
     './test/*',
@@ -8,10 +7,10 @@ module.exports = {
     './src/**/polar_wasm_api*',
     './src/index.ts',
   ],
-  excludeNotExported: true,
   excludePrivate: true,
   excludeProtected: true,
-  ignoreCompilerErrors: true,
+  excludeExternals: true,
+  externalPattern: '**/node_modules/*',
   theme: 'default',
   readme: '../../README.md',
   gaID: 'UA-139858805-1',
