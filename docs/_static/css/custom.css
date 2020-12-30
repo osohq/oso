@@ -85,20 +85,9 @@
   .md-nav--primary .md-nav__title--site {
     background-color: var(--oso-primary) !important;
   }
-  .navheader .nav-dev-preview {
-    display: none;
-  }
 
   .logo-sidebar {
     display: unset !important;
-  }
-
-  .nav-dev-preview {
-    background-color: var(--oso-primary-2);
-    border-radius: 20% 5%;
-    color: #ffffffbb;
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
   }
 
   .md-header-nav__button {
@@ -128,18 +117,6 @@
   line-height: 3.2rem;
 }
 
-.nav-dev-preview {
-  /* background-color: #453e71; */
-  border-radius: 20% 5%;
-  color: #ffffffbb;
-  margin: 2px;
-  padding: 6px 9px;
-  font-family: "Space Grotesk", sans-serif;
-  font-weight: 600;
-  -webkit-user-select: none; /* Safari */
-  -ms-user-select: none; /* IE 10+ and Edge */
-  user-select: none; /* Standard syntax */
-}
 
 .md-header-nav__source {
   width: 24rem;

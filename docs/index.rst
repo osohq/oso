@@ -45,8 +45,6 @@ Using oso, you can:
 
 .. container:: cta
 
-    **oso is now in Developer Preview**
-
     .. button::
         :link: /getting-started/quickstart
         :text: Try oso
@@ -65,7 +63,7 @@ Using oso, you can:
    getting-started/quickstart
    getting-started/application/index
    Writing Policies <getting-started/policies/index>
-   Role-Based Access Control <getting-started/rbac>
+   Role-Based Access Control <getting-started/roles/index>
    List Filtering <getting-started/list-filtering/index>
 
 .. toctree::

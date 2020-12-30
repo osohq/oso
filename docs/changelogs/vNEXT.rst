@@ -7,35 +7,12 @@ NEXT
 Breaking changes
 ================
 
-.. TODO remove warning and replace with "None" if no breaking
-   changes.
-
-.. warning:: This release contains breaking changes. Be sure
-   to follow migration steps before upgrading.
-
-Breaking change 1
------------------
-
-- summary of breaking change
-
-Link to migration guide
+.. None
 
 New features
 ============
 
-Feature 1
+PolarClass implemented for versions 0.7 & 0.8 of uuid crate
 ---------
 
-- summary
-- of
-- user facing changes
-
-Link to relevant documentation section
-
-Other bugs & improvements
-=========================
-
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- PolarClass is now implemented for versions 0.7 & 0.8 of the uuid crate behind the optional uuid-07 feature flag.

@@ -50,17 +50,20 @@ _api_docs: _api_docs/ruby _api_docs/java _api_docs/js/node
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-html doctest spelling: Makefile deps _api_docs
+html doctest spelling: Makefile deps _api_docs submodules
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-build: Makefile deps _api_docs
+build: Makefile deps _api_docs submodules
 	@DOCS_RELEASE=1 $(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 clean:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	rm -r _api_docs
+	rm -rf _api_docs
 
-livehtml: deps _api_docs
+livehtml: deps _api_docs submodules
+	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+livehtml-light: deps
 	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 $(JAVA_PACKAGE_JAR_PATH):
@@ -82,6 +85,7 @@ python-test:
 	cd examples/context/python && pytest .
 	cd examples/user_types/python && pytest .
 	cd examples/list-filtering/sqlalchemy && pytest sqlalchemy_example
+	cd examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide && pytest .
 	$(MAKE) -C examples/list-filtering/django test
 
 ruby-test:
@@ -110,3 +114,7 @@ test: doctest
 
 deps:
 	pip3 install -r requirements-docs.txt
+
+submodules:
+	git submodule update --checkout --init --recursive --remote
+	cd examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide && git checkout basic_roles_complete && git pull

@@ -1087,10 +1087,7 @@ impl PolarVirtualMachine {
         );
 
         match (left.value(), right.value()) {
-            (Value::InstanceLiteral(_), _) => unreachable!("unparseable"),
-            (_, Value::InstanceLiteral(_)) | (_, Value::Dictionary(_)) => {
-                unreachable!("parsed as pattern")
-            }
+            (_, Value::Dictionary(_)) => unreachable!("parsed as pattern"),
             (Value::Expression(_), _) | (_, Value::Expression(_)) => {
                 unreachable!("encountered bare expression")
             }
@@ -2395,20 +2392,6 @@ impl PolarVirtualMachine {
                 }
             }
 
-            (Value::InstanceLiteral(_), Value::InstanceLiteral(_)) => {
-                return Err(
-                    self.type_error(&left, String::from("Cannot unify two instance literals."))
-                );
-            }
-
-            (Value::InstanceLiteral(_), Value::ExternalInstance(_))
-            | (Value::ExternalInstance(_), Value::InstanceLiteral(_)) => {
-                return Err(self.type_error(
-                    &left,
-                    String::from("Cannot unify instance literal with external instance."),
-                ));
-            }
-
             // Anything else fails.
             (_, _) => self.push_goal(Goal::Backtrack)?,
         }
@@ -2856,9 +2839,6 @@ impl PolarVirtualMachine {
         right: &Term,
         arg: &Term,
     ) -> PolarResult<QueryEvent> {
-        assert!(!matches!(left.value(), Value::InstanceLiteral(_)));
-        assert!(!matches!(right.value(), Value::InstanceLiteral(_)));
-
         let arg = self.deref(&arg);
         match (arg.value(), left.value(), right.value()) {
             (

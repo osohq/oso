@@ -13,3 +13,6 @@
 [submodule "docs/examples/quickstart/oso-rust-quickstart"]
 	path = docs/examples/quickstart/oso-rust-quickstart
 	url = https://github.com/osohq/oso-rust-quickstart.git
+[submodule "docs/examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide"]
+	path = docs/examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide
+	url = https://github.com/osohq/oso-sqlalchemy-roles-guide

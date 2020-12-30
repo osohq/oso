@@ -1,7 +1,7 @@
 /// Utils for mocking externals in tests.
 use std::collections::{BTreeMap, HashMap};
 
-use polar_core::terms::{ExternalInstance, Symbol, Term, Value};
+use polar_core::terms::{ExternalInstance, Pattern, Symbol, Term, Value};
 
 #[derive(Default)]
 /// Mock external that keeps track of instance literals and allows
@@ -68,7 +68,7 @@ impl MockExternal {
         right_class_tag: Symbol,
     ) -> bool {
         match self.get_external(instance_id) {
-            Value::InstanceLiteral(literal) => {
+            Value::Pattern(Pattern::Instance(literal)) => {
                 literal.tag == left_class_tag || literal.tag == right_class_tag
             }
             _ => panic!("expected instance literal"),

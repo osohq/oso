@@ -84,6 +84,9 @@ JShell
 js
 Odoo
 cURL
+django
+sqlalchemy
+macOS
 
 
 ## Misc terms
@@ -98,6 +101,7 @@ amongst
 hardcoding
 hardcoded
 pre
+declaratively
 
 # Release specifiers
 rc

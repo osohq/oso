@@ -8,16 +8,21 @@ from sqlalchemy import orm
 
 from oso import Oso
 
-from sqlalchemy_oso.auth import authorize_model_filter
+from sqlalchemy_oso.auth import authorize_model
 
 
 class _OsoSession:
+    set = False
+
     @classmethod
     def get(cls):
-        return cls._get()
+        session = cls._get()
+        new_session = Session(bind=session.bind)
+        return new_session
 
     @classmethod
     def set_get_session(cls, get_session):
+        cls.set = True
         _OsoSession._get = get_session
 
 
@@ -73,9 +78,7 @@ def _authorize_query(query: Query) -> Optional[Query]:
         if entity is None:
             continue
 
-        authorized_filter = authorize_model_filter(
-            oso, user, action, query.session, entity
-        )
+        authorized_filter = authorize_model(oso, user, action, query.session, entity)
         if authorized_filter is not None:
             query = query.filter(authorized_filter)
 

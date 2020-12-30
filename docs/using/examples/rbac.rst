@@ -15,7 +15,7 @@ permission being the ability to perform an :ref:`action <actions>`
 on a :ref:`resource <resources>` --- can be grouped into roles.
 
 This guide shows an example of implementing :ref:`global roles <global-roles>`. For guidance on
-other RBAC use cases, check out :doc:`/getting-started/rbac`.
+other RBAC use cases, check out :doc:`/getting-started/roles/rbac`.
 
 RBAC Basics
 -----------

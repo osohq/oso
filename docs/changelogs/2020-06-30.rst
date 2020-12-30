@@ -1,12 +1,14 @@
-.. title:: 0.1.0 Changelog
+.. title:: Changelog for Release 2020-06-30
 .. meta::
-  :description: Check out our changelog for oso 0.1.0 to learn about new features, bug fixes, and more. 
+  :description: Changelog for Release 2020-06-30 (oso 0.1.0) containing new features, bug fixes, and more.
 
-======
-0.1.0
-======
+##################
+Release 2020-06-30
+##################
 
-**Release date:** 2020-06-30
+=============
+``oso`` 0.1.0
+=============
 
 Major news
 ==========

@@ -98,7 +98,6 @@ pub fn walk_term<V: Visitor>(visitor: &mut V, term: &Term) {
         Value::String(s) => visitor.visit_string(s),
         Value::Boolean(b) => visitor.visit_boolean(b),
         Value::ExternalInstance(e) => visitor.visit_external_instance(e),
-        Value::InstanceLiteral(i) => visitor.visit_instance_literal(i),
         Value::Dictionary(d) => visitor.visit_dictionary(d),
         Value::Pattern(p) => visitor.visit_pattern(p),
         Value::Call(c) => visitor.visit_call(c),

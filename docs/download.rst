@@ -157,8 +157,8 @@ oso is available as a library in several languages:
 
     .. group-tab:: Rust
 
-        The rust version of oso is available on crates.io_. 
-        
+        The rust version of oso is available on crates.io_.
+
         Add oso and oso-derive as dependencies in your Cargo.toml
 
         .. code-block:: toml
@@ -185,7 +185,7 @@ oso is available as a library in several languages:
 
         .. _crates.io: https://crates.io/crates/oso
 
-        
+
 
 
 **Libraries coming soon:**
@@ -206,21 +206,22 @@ Releases
     :maxdepth: 1
     :caption: See below for release notes:
 
-    v0.9.0 <changelogs/0.9.0>
-    v0.8.2 <changelogs/0.8.2>
-    v0.8.0 <changelogs/0.8.0>
-    v0.7.1 <changelogs/0.7.1>
-    v0.7.0 <changelogs/0.7.0>
-    v0.6.0 <changelogs/0.6.0>
-    v0.5.2 <changelogs/0.5.2>
-    v0.5.1 <changelogs/0.5.1>
-    v0.5.0 <changelogs/0.5.0>
-    v0.4.0 <changelogs/0.4.0>
-    v0.3.0 <changelogs/0.3.0>
-    v0.2.0 <changelogs/0.2.0>
-    v0.1.0 <changelogs/0.1.0>
-    v0.0.4 <changelogs/0.0.4>
-    v0.0.3 <changelogs/0.0.3>
-    v0.0.2 <changelogs/0.0.2>
+    changelogs/2020-12-22
+    changelogs/2020-12-08
+    changelogs/2020-11-25
+    changelogs/2020-11-10
+    changelogs/2020-10-27
+    changelogs/2020-10-13
+    changelogs/2020-09-22
+    changelogs/2020-09-08
+    changelogs/2020-09-01
+    changelogs/2020-08-25
+    changelogs/2020-08-11
+    changelogs/2020-07-28
+    changelogs/2020-07-14
+    changelogs/2020-06-30
+    changelogs/2020-06-03
+    changelogs/2020-05-11
+    changelogs/2020-04-24
 
 .. include:: /newsletter.rst

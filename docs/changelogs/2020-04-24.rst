@@ -1,17 +1,17 @@
-.. title:: 0.0.2 Changelog
+.. title:: Changelog for Release 2020-04-24
 .. meta::
-  :description: Check out our changelog for oso 0.0.2 to learn about new features, bug fixes, and more. 
+  :description: Changelog for Release 2020-04-24 (oso 0.0.2) containing new features, bug fixes, and more.
 
+##################
+Release 2020-04-24
+##################
 
-======
-0.0.2
-======
-
-**Release date:** 2020-04-24
+=============
+``oso`` 0.0.2
+=============
 
 Breaking changes
 ================
-
 
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
@@ -19,11 +19,11 @@ Breaking changes
 ``@external_class`` decorator is now named ``@polar_class``
 -----------------------------------------------------------
 
-The :py:func:`oso.polar_class` decorator replaces ``external_class``.
-The decorator is now safe to use on classes that extend ``odoo.model.Model``.
+The :py:func:`oso.polar_class` decorator replaces ``external_class``. The
+decorator is now safe to use on classes that extend ``odoo.model.Model``.
 
 New features
-==============
+============
 
 Comparison Operators
 --------------------
@@ -56,20 +56,20 @@ class are created using the syntax ``Name{field: value, ...}``.
 Dictionary keys do not need to be quoted
 ----------------------------------------
 
-The following:
+The following...
 
 .. code-block:: polar
 
   {key: "value", key2: "value2"}
 
-Is now valid Polar. Dictionary keys no longer need to be quoted. The unquoted
-form is recommended.
+...is now valid Polar. Dictionary keys no longer need to be quoted. The
+unquoted form is recommended.
 
 Polar debugger
 --------------
 
-The Polar debugger allows interactive debugging of Polar rules. It can be helpful to see
-why a rule is behaving differently than expected.  Just add the
+The Polar debugger allows interactive debugging of Polar rules. It can be
+helpful to see why a rule is behaving differently than expected. Just add the
 ``debug()`` predicate to your rule body to get started.
 
 More info: :doc:`/more/dev-tools/debugger`.
@@ -78,4 +78,5 @@ Other bugs & improvements
 =========================
 
 - Variables used only once in a rule result in warnings.
-- Error messages are more clear, and potential missing semicolons are warned about.
+- Error messages are more clear, and potential missing semicolons are warned
+  about.
