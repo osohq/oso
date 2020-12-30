@@ -3,6 +3,8 @@ package oso
 import (
 	"fmt"
 	"reflect"
+
+	oso "github.com/osohq/oso/languages/go/pkg"
 )
 
 type UnitClass struct{}
@@ -132,6 +134,7 @@ func (m *MethodVariants) sum_input_args(args ...int) int {
 //     def get_empty_generator(self):
 //         yield from iter([])
 
+// TODO: I don't think these make sense. Maybe as interfaces?
 type ParentClass struct{}
 
 // class ParentClass:
@@ -166,23 +169,30 @@ type Animal struct {
 }
 
 type ImplementsEq struct {
-	val int
+	Val int
 }
 
-func (left ImplementsEq) Equal(right ImplementsEq) bool {
-	return left.val == right.val
+func (left ImplementsEq) Equal(right oso.Comparer) bool {
+	return left.Val == right.(ImplementsEq).Val
+}
+func (left ImplementsEq) Lt(right oso.Comparer) bool {
+	panic("unsupported")
 }
 
 type Comparable struct {
 	Val int
 }
 
-func (a Comparable) Compare(b Comparable) int {
-	if a.Val > b.Val {
-		return 1
+func (a Comparable) Equal(b oso.Comparer) bool {
+	if other, ok := b.(Comparable); ok {
+		return a.Val == other.Val
 	}
-	if a.Val < b.Val {
-		return -1
+	panic(fmt.Sprintf("cannot compare Comparable with %v", b))
+}
+
+func (a Comparable) Lt(b oso.Comparer) bool {
+	if other, ok := b.(Comparable); ok {
+		return a.Val < other.Val
 	}
-	return 0
+	panic(fmt.Sprintf("cannot compare Comparable with %v", b))
 }

@@ -10,7 +10,7 @@ import (
 type Host struct {
 	ffiPolar  PolarFfi
 	classes   map[string]reflect.Type
-	instances map[int]interface{}
+	instances map[int]reflect.Value
 }
 
 func NewHost(polar PolarFfi) Host {
@@ -18,7 +18,7 @@ func NewHost(polar PolarFfi) Host {
 	for k, v := range CLASSES {
 		classes[k] = v
 	}
-	instances := make(map[int]interface{})
+	instances := make(map[int]reflect.Value)
 	return Host{
 		ffiPolar:  polar,
 		classes:   classes,
@@ -31,7 +31,7 @@ func (h Host) copy() Host {
 	for k, v := range h.classes {
 		classes[k] = v
 	}
-	instances := make(map[int]interface{})
+	instances := make(map[int]reflect.Value)
 	for k, v := range h.instances {
 		instances[k] = v
 	}
@@ -63,9 +63,9 @@ func (h Host) cacheClass(cls reflect.Type, name *string) error {
 	return nil
 }
 
-func (h Host) getInstance(id int) (interface{}, error) {
+func (h Host) getInstance(id int) (*reflect.Value, error) {
 	if v, ok := h.instances[id]; ok {
-		return v, nil
+		return &v, nil
 	}
 	return nil, &UnregisteredInstanceError{id: id}
 }
@@ -81,7 +81,7 @@ func (h Host) cacheInstance(instance interface{}, id *int) (*int, error) {
 	} else {
 		instanceID = *id
 	}
-	h.instances[instanceID] = instance
+	h.instances[instanceID] = reflect.ValueOf(instance)
 	return &instanceID, nil
 }
 
@@ -111,11 +111,6 @@ func (h Host) unify(leftID int, rightID int) (bool, error) {
 	if err2 != nil {
 		return false, err2
 	}
-	leftType := reflect.TypeOf(left)
-	rightType := reflect.TypeOf(right)
-	if leftType == rightType && leftType.Comparable() {
-		return left == right, nil
-	}
 	return reflect.DeepEqual(left, right), nil
 }
 
@@ -128,7 +123,7 @@ func (h Host) isa(value Value, classTag string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return reflect.TypeOf(instance) == *class, nil
+	return reflect.TypeOf(instance).AssignableTo(*class), nil
 }
 
 func (h Host) isSubclass(leftTag string, rightTag string) (bool, error) {
@@ -141,36 +136,33 @@ func (h Host) isSubclass(leftTag string, rightTag string) (bool, error) {
 		return false, err
 	}
 
+	// TODO: This seems like it would work for interfaces?
 	return (*left).Implements(*right), nil
 }
 
 func (h Host) isSubspecializer(instanceID int, leftTag string, rightTag string) (bool, error) {
-	// TODO
+	// TODO: Not sure I can actually use these?
+	// instance, err := h.getInstance(instanceID)
+	// if err != nil {
+	// 	return false, err
+	// }
+	// instanceValue := reflect.ValueOf(instance)
+	leftClass, err := h.getClass(leftTag)
+	if err != nil {
+		return false, err
+	}
+	rightClass, err := h.getClass(rightTag)
+	if err != nil {
+		return false, err
+	}
+	// TODO: actually work this out
+	// Idea is that if the right class is less specific
+	// then it can be assigned to the left class?
+	if (*rightClass).AssignableTo(*leftClass) {
+		return true, nil
+	}
 	return false, nil
 }
-
-//     def operator(self, op, args):
-//         try:
-//             if op == "Lt":
-//                 return args[0] < args[1]
-//             elif op == "Gt":
-//                 return args[0] > args[1]
-//             elif op == "Eq":
-//                 return args[0] == args[1]
-//             elif op == "Leq":
-//                 return args[0] <= args[1]
-//             elif op == "Geq":
-//                 return args[0] >= args[1]
-//             elif op == "Neq":
-//                 return args[0] != args[1]
-//             else:
-//                 raise PolarRuntimeError(
-//                     f"Unsupported external operation '{type(args[0])} {op} {type(args[1])}'"
-//                 )
-//         except TypeError:
-//             raise PolarRuntimeError(
-//                 f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
-//             )
 
 func (h Host) toPolar(v interface{}) (*Value, error) {
 	// handle nil first
@@ -295,7 +287,10 @@ func (h Host) toGo(v Value) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		return instance, nil
+		if instance == nil || !instance.IsValid() {
+			return nil, nil
+		}
+		return (*instance).Interface(), nil
 	}
 	return nil, fmt.Errorf("Unexpected Polar type %v", v)
 }

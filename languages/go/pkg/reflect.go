@@ -10,6 +10,10 @@ func String(s string) *string {
 }
 
 func setFieldTo(field reflect.Value, input interface{}) error {
+	if !field.CanSet() {
+		return fmt.Errorf("cannot set field")
+	}
+	fieldType := field.Type()
 	switch fieldKind := field.Kind(); fieldKind {
 	case reflect.Array, reflect.Slice:
 		inputArray, ok := input.([]interface{})
@@ -40,12 +44,21 @@ func setFieldTo(field reflect.Value, input interface{}) error {
 	case reflect.Ptr:
 		deref := field.Elem()
 		return setFieldTo(deref, input)
+	case reflect.Bool:
+		field.SetBool(reflect.ValueOf(input).Convert(fieldType).Bool())
+	case reflect.Float32, reflect.Float64:
+		field.SetFloat(reflect.ValueOf(input).Convert(fieldType).Float())
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		field.SetInt(reflect.ValueOf(input).Convert(fieldType).Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		field.SetUint(reflect.ValueOf(input).Convert(fieldType).Uint())
+	case reflect.String:
+		field.SetString(reflect.ValueOf(input).Convert(fieldType).String())
 	default:
 		valInput := reflect.ValueOf(input)
 		valid := field.IsValid()
 		canSet := field.CanSet()
 		inputType := valInput.Type()
-		fieldType := field.Type()
 		if valid && canSet && inputType.ConvertibleTo(fieldType) {
 			field.Set(valInput.Convert(fieldType))
 		} else {
@@ -98,7 +111,6 @@ func InstantiateClass(class reflect.Type, args []interface{}, kwargs map[string]
 		if err != nil {
 			return nil, err
 		}
-		break
 	case reflect.Array, reflect.Slice:
 		if len(kwargs) != 0 {
 			return nil, fmt.Errorf("Cannot assign kwargs to a class of type: %s", class.Kind())
@@ -107,7 +119,6 @@ func InstantiateClass(class reflect.Type, args []interface{}, kwargs map[string]
 		if err != nil {
 			return nil, err
 		}
-		break
 	case reflect.Map:
 		if len(args) != 0 {
 			return nil, fmt.Errorf("Cannot assign args to a class of type: %s", class.Kind())
@@ -116,7 +127,6 @@ func InstantiateClass(class reflect.Type, args []interface{}, kwargs map[string]
 		if err != nil {
 			return nil, err
 		}
-		break
 	default:
 		return nil, fmt.Errorf("Cannot instantiate a class of type: %s", class.Kind())
 	}

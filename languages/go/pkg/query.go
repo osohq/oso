@@ -45,7 +45,6 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			defer q.ffiQuery.delete()
 			return nil, nil
 		case *QueryEventDebug:
-
 			// TODO
 			return nil, fmt.Errorf("not yet implemented")
 		case *QueryEventResult:
@@ -60,28 +59,20 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			return &results, nil
 		case *QueryEventMakeExternal:
 			err = q.handleMakeExternal(ev)
-			break
 		case *QueryEventExternalCall:
 			err = q.handleExternalCall(ev)
-			break
 		case *QueryEventExternalIsa:
 			err = q.handleExternalIsa(ev)
-			break
 		case *QueryEventExternalIsSubSpecializer:
 			err = q.handleExternalIsSubSpecializer(ev)
-			break
 		case *QueryEventExternalIsSubclass:
 			err = q.handleExternalIsSubclass(ev)
-			break
 		case *QueryEventExternalUnify:
 			err = q.handleExternalUnify(ev)
-			break
 		case *QueryEventExternalOp:
 			err = q.handleExternalOp(ev)
-			break
 		case *QueryEventNextExternal:
 			err = q.handleNextExternal(ev)
-			break
 		default:
 			return nil, fmt.Errorf("unexpected query event: %v", ev)
 		}
@@ -182,107 +173,68 @@ func (q Query) handleExternalIsa(event *QueryEventExternalIsa) error {
 	}
 	return q.ffiQuery.questionResult(int(event.CallId), isa)
 }
+
 func (q Query) handleExternalIsSubSpecializer(event *QueryEventExternalIsSubSpecializer) error {
-	return fmt.Errorf("handleExternalIsSubSpecializer not yet implemented")
+	res, err := q.host.isSubspecializer(int(event.InstanceId), event.LeftClassTag, event.RightClassTag)
+	if err != nil {
+		return err
+	}
+	return q.ffiQuery.questionResult(int(event.CallId), res)
 }
+
 func (q Query) handleExternalIsSubclass(event *QueryEventExternalIsSubclass) error {
-	return fmt.Errorf("handleExternalIsSubclass not yet implemented")
+	res, err := q.host.isSubclass(event.LeftClassTag, event.RightClassTag)
+	if err != nil {
+		return err
+	}
+	return q.ffiQuery.questionResult(int(event.CallId), res)
 }
+
 func (q Query) handleExternalUnify(event *QueryEventExternalUnify) error {
-	return fmt.Errorf("handleExternalUnify not yet implemented")
+	res, err := q.host.unify(int(event.LeftInstanceId), int(event.RightInstanceId))
+	if err != nil {
+		return err
+	}
+	return q.ffiQuery.questionResult(int(event.CallId), res)
 }
+
 func (q Query) handleExternalOp(event *QueryEventExternalOp) error {
-	return fmt.Errorf("handleExternalOp not yet implemented")
+	if len(event.Args) != 2 {
+		return fmt.Errorf("Unexpected number of arguments for operation: %v", len(event.Args))
+	}
+	left, err := q.host.toGo(event.Args[0])
+	if err != nil {
+		return err
+	}
+	right, err := q.host.toGo(event.Args[1])
+	if err != nil {
+		return err
+	}
+	var answer bool
+	leftCmp := left.(Comparer)
+	rightCmp := right.(Comparer)
+	switch event.Operator.OperatorVariant.(type) {
+	case *OperatorLt:
+		answer = leftCmp.Lt(rightCmp)
+	case *OperatorLeq:
+		answer = leftCmp.Lt(rightCmp) || leftCmp.Equal(rightCmp)
+	case *OperatorGt:
+		answer = rightCmp.Lt(leftCmp)
+	case *OperatorGeq:
+		answer = !leftCmp.Lt(rightCmp)
+	case *OperatorEq:
+		answer = leftCmp.Equal(rightCmp)
+	case *OperatorNeq:
+		answer = !leftCmp.Equal(rightCmp)
+	default:
+		return fmt.Errorf("Unsupported operation: %v", event.Operator.OperatorVariant)
+	}
+	return q.ffiQuery.questionResult(int(event.CallId), answer)
 }
+
 func (q Query) handleNextExternal(event *QueryEventNextExternal) error {
 	return fmt.Errorf("handleNextExternal not yet implemented")
 }
-
-//             if kind == "Done":
-//                 break
-//             elif kind == "Result":
-//                 bindings = {
-//                     k: self.host.to_python(v) for k, v in data["bindings"].items()
-//                 }
-//                 trace = data["trace"]
-//                 yield {"bindings": bindings, "trace": trace}
-//             elif kind in call_map:
-//                 call_map[kind](data)
-//             else:
-//                 raise PolarRuntimeError(f"Unhandled event: {json.dumps(event)}")
-
-//     def handle_make_external(self, data):
-//         id = data["instance_id"]
-//         constructor = data["constructor"]["value"]
-//         if "Call" in constructor:
-//             cls_name = constructor["Call"]["name"]
-//             args = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
-//             kwargs = constructor["Call"]["kwargs"] or {}
-//             kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
-//         else:
-//             raise InvalidConstructorError()
-//         self.host.make_instance(cls_name, args, kwargs, id)
-
-//     def handle_external_call(self, data):
-//         call_id = data["call_id"]
-//         instance = self.host.to_python(data["instance"])
-
-//         attribute = data["attribute"]
-
-//         # Lookup the attribute on the instance.
-//         try:
-//             attr = getattr(instance, attribute)
-//         except AttributeError as e:
-//             self.ffi_query.application_error(str(e))
-//             self.ffi_query.call_result(call_id, None)
-//             return
-//         if (
-//             callable(attr) and not data["args"] is None
-//         ):  # If it's a function, call it with the args.
-//             args = [self.host.to_python(arg) for arg in data["args"]]
-//             kwargs = data["kwargs"] or {}
-//             kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
-//             result = attr(*args, **kwargs)
-//         elif not data["args"] is None:
-//             raise InvalidCallError(
-//                 f"tried to call '{attribute}' but it is not callable"
-//             )
-//         else:  # If it's just an attribute, it's the result.
-//             result = attr
-
-//         # Return the result of the call.
-//         self.ffi_query.call_result(call_id, self.host.to_polar(result))
-
-//     def handle_external_op(self, data):
-//         op = data["operator"]
-//         args = [self.host.to_python(arg) for arg in data["args"]]
-//         answer = self.host.operator(op, args)
-//         self.ffi_query.question_result(data["call_id"], answer)
-
-//     def handle_external_isa(self, data):
-//         instance = data["instance"]
-//         class_tag = data["class_tag"]
-//         answer = self.host.isa(instance, class_tag)
-//         self.ffi_query.question_result(data["call_id"], answer)
-
-//     def handle_external_unify(self, data):
-//         left_instance_id = data["left_instance_id"]
-//         right_instance_id = data["right_instance_id"]
-//         answer = self.host.unify(left_instance_id, right_instance_id)
-//         self.ffi_query.question_result(data["call_id"], answer)
-
-//     def handle_external_is_subspecializer(self, data):
-//         instance_id = data["instance_id"]
-//         left_tag = data["left_class_tag"]
-//         right_tag = data["right_class_tag"]
-//         answer = self.host.is_subspecializer(instance_id, left_tag, right_tag)
-//         self.ffi_query.question_result(data["call_id"], answer)
-
-//     def handle_external_is_subclass(self, data):
-//         left_tag = data["left_class_tag"]
-//         right_tag = data["right_class_tag"]
-//         answer = self.host.is_subclass(left_tag, right_tag)
-//         self.ffi_query.question_result(data["call_id"], answer)
 
 //     def handle_next_external(self, data):
 //         call_id = data["call_id"]
