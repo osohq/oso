@@ -14,10 +14,17 @@ import (
 )
 
 var CLASSES = map[string]reflect.Type{
-	"UnitClass":     reflect.TypeOf(UnitClass{}),
-	"ValueFactory":  reflect.TypeOf(ValueFactory{}),
-	"IterableClass": reflect.TypeOf(IterableClass{}),
-	"Constructor":   reflect.TypeOf(Constructor{}),
+	"UnitClass":       reflect.TypeOf(UnitClass{}),
+	"ValueFactory":    reflect.TypeOf(ValueFactory{}),
+	"IterableClass":   reflect.TypeOf(IterableClass{}),
+	"Constructor":     reflect.TypeOf(Constructor{}),
+	"MethodVariants":  reflect.TypeOf(MethodVariants{}),
+	"ParentClass":     reflect.TypeOf(ParentClass{}),
+	"ChildClass":      reflect.TypeOf(ChildClass{}),
+	"GrandchildClass": reflect.TypeOf(GrandchildClass{}),
+	"Animal":          reflect.TypeOf(Animal{}),
+	"ImplementsEq":    reflect.TypeOf(ImplementsEq{}),
+	"Comparable":      reflect.TypeOf(Comparable{}),
 }
 
 type TestCase struct {
@@ -32,32 +39,46 @@ type Result struct {
 	inner interface{}
 }
 
-func toResult(input interface{}) interface{} {
-	switch input.(type) {
-	case map[string]interface{}:
-		return NewResult(input.(map[string]interface{}))
-	default:
-		return input
-	}
-}
-
-func NewResult(input map[string]interface{}) map[string]Result {
+func toResult(input map[string]interface{}) map[string]Result {
 	result := make(map[string]Result)
 	for k, v := range input {
-		result[k] = Result{inner: v}
+		result[k] = NewResult(v)
 	}
 	return result
 }
 
+func NewResult(input interface{}) Result {
+	switch inputVal := input.(type) {
+	case map[string]interface{}:
+		result := make(map[string]Result)
+		for k, v := range inputVal {
+			result[k] = NewResult(v)
+		}
+		return Result{result}
+	case []interface{}:
+		result := make([]Result, len(inputVal))
+		for idx, v := range inputVal {
+			result[idx] = NewResult(v)
+		}
+		return Result{result}
+	case uint64:
+		// standardise uints to ints
+		return Result{inner: int(inputVal)}
+	default:
+		return Result{input}
+	}
+}
+
 func (left Result) Equal(right interface{}) bool {
 	switch val := left.inner.(type) {
-	case map[string]interface{}:
+	case map[string]Result:
 		if repr, ok := val["repr"]; ok {
 			fmt.Printf("%v", right)
-			return repr.(string) == fmt.Sprintf("%v", right)
+			return repr.inner.(string) == fmt.Sprintf("%v", right)
 		}
 	}
-	return reflect.DeepEqual(left, right)
+	fmt.Printf("%v == %v: %v", left.inner, right, cmp.Equal(left.inner, right))
+	return cmp.Equal(left.inner, right)
 }
 
 type Variable string
@@ -128,7 +149,7 @@ func (tc TestCase) setupTest(o oso.Polar, t *testing.T) error {
 			return nil
 		}
 
-		if contains(tc.Policies, strings.TrimSuffix(path, filepath.Ext(path))) {
+		if contains(tc.Policies, strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))) {
 			err = o.LoadFile(path)
 			if err != nil {
 				return err
@@ -142,11 +163,7 @@ func (tc TestCase) setupTest(o oso.Polar, t *testing.T) error {
 	return nil
 }
 
-func (tc TestCase) RunTest(o oso.Polar, t *testing.T) {
-	err := tc.setupTest(o, t)
-	if err != nil {
-		t.Fatal(err)
-	}
+func (tc TestCase) RunTest(t *testing.T) {
 	for _, c := range tc.Cases {
 		testName := tc.Name + "\n" + tc.Description + "\n"
 		if c.Description != nil {
@@ -155,10 +172,14 @@ func (tc TestCase) RunTest(o oso.Polar, t *testing.T) {
 			testName += c.Query
 		}
 		t.Run(testName, func(t *testing.T) {
+			o := *oso.NewPolar()
+			err := tc.setupTest(o, t)
+			if err != nil {
+				t.Fatal(err)
+			}
 			var testQuery *oso.Query
 			var queryErr error
 			if c.Inputs == nil {
-				// fmt.Printf("Querying for: %s", c.Query)
 				testQuery, queryErr = o.Query(c.Query)
 			} else {
 				Inputs := make([]interface{}, len(*c.Inputs))
@@ -166,16 +187,15 @@ func (tc TestCase) RunTest(o oso.Polar, t *testing.T) {
 					input := toInput(o, v, t)
 					Inputs[idx] = input
 				}
-				// fmt.Printf("Querying for: %s(%v)", c.Query, Inputs)
 				testQuery, queryErr = o.QueryRule(c.Query, Inputs...)
 			}
 
 			expectedResults := make([]map[string]Result, 0)
 			if c.Result == nil {
-				expectedResults = append(expectedResults, NewResult(make(map[string]interface{})))
+				expectedResults = append(expectedResults, toResult(make(map[string]interface{})))
 			} else {
 				for _, v := range *c.Result {
-					expectedResults = append(expectedResults, NewResult(v))
+					expectedResults = append(expectedResults, toResult(v))
 				}
 			}
 

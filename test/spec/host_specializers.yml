@@ -22,21 +22,21 @@ cases:
     query: what_dict_is
     # wolf
     input:
-     - {type: Animal, kwargs: {species: "canis lupus", genus: "canis", family: "canidae"}}
+     - {type: Animal, kwargs: {Species: "canis lupus", Genus: "canis", Family: "canidae"}}
      - {var: res}
     result: [{res: "wolf"}, {res: "canine"}]
   - description: can specialize on dictionaries 2/3
     query: what_dict_is
     # dog
     input:
-     - {type: Animal, kwargs: {species: "canis familiaris", genus: "canis", family: "canidae"}}
+     - {type: Animal, kwargs: {Species: "canis familiaris", Genus: "canis", Family: "canidae"}}
      - {var: res}
     result: [{res: "dog"}, {res: "canine"}]
   - description: can specialize on dictionaries 3/3
     query: what_dict_is
     # canine
     input:
-     - {type: Animal, kwargs: {genus: "canis", family: "canidae"}}
+     - {type: Animal, kwargs: {Genus: "canis", Family: "canidae"}}
      - {var: res}
     result: [{res: "canine"}]
 
@@ -45,28 +45,28 @@ cases:
     query: what_class_is
     # wolf
     input:
-     - {type: Animal, kwargs: {species: "canis lupus", genus: "canis", family: "canidae"}}
+     - {type: Animal, kwargs: {Species: "canis lupus", Genus: "canis", Family: "canidae"}}
      - {var: res}
     result: [{res: "wolf"}, {res: "canis lupus"}, {res: "canine"}, {res: "canid"}, {res: "animal"}]
   - description: can specialize on instance literals 2/5
     query: what_class_is
     # dog
     input:
-     - {type: Animal, kwargs: {species: "canis familiaris", genus: "canis", family: "canidae"}}
+     - {type: Animal, kwargs: {Species: "canis familiaris", Genus: "canis", Family: "canidae"}}
      - {var: res}
     result: [{res: "dog"}, {res: "canis familiaris"}, {res: "canine"}, {res: "canid"}, {res: "animal"}]
   - description: can specialize on instance literals 3/5
     query: what_class_is
     # canine
     input:
-     - {type: Animal, kwargs: {genus: "canis", family: "canidae"}}
+     - {type: Animal, kwargs: {Genus: "canis", Family: "canidae"}}
      - {var: res}
     result: [{res: null}, {res: "canine"}, {res: "canid"}, {res: "animal"}]
   - description: can specialize on instance literals 4/5
     query: what_class_is
     # canid
     input:
-     - {type: Animal, kwargs: {family: "canidae"}}
+     - {type: Animal, kwargs: {Family: "canidae"}}
      - {var: res}
     result: [{res: "canid"}, {res: "animal"}]
   - description: can specialize on instance literals 5/5
@@ -82,7 +82,7 @@ cases:
     query: what_is
     # wolf
     input:
-     - {type: Animal, kwargs: {species: "canis lupus", genus: "canis", family: "canidae"}}
+     - {type: Animal, kwargs: {Species: "canis lupus", Genus: "canis", Family: "canidae"}}
      - {var: res}
     result: 
       - res: wolf_class

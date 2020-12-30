@@ -80,11 +80,6 @@ func (vf ValueFactory) get_type() reflect.Type {
 
 type Constructor map[string]interface{}
 
-// type Constructor struct {
-// 	Args   []interface{}
-// 	Kwargs map[string]interface{}
-// }
-
 // func NewConstructor(args ...interface{}) Constructor {
 // 	Args := make([]interface{}, len(args))
 // 	for idx, v := range args {
@@ -104,16 +99,20 @@ func (c Constructor) numKwrgs() int {
 	return len(map[string]interface{}(c))
 }
 
-// class MethodVariants:
-//     """Class with various method variants"""
+type MethodVariants struct {
+}
 
-//     @classmethod
-//     def class_method_return_string(cls):
-//         return "abc"
+func (m *MethodVariants) class_method_return_string() string {
+	return "abc"
+}
 
-//     @classmethod
-//     def sum_input_args(cls, *args):
-//         return sum(args)
+func (m *MethodVariants) sum_input_args(args ...int) int {
+	sum := 0
+	for _, arg := range args {
+		sum += arg
+	}
+	return sum
+}
 
 //     def is_key_in_kwargs(self, key, **kwargs):
 //         return key in kwargs
@@ -133,12 +132,16 @@ func (c Constructor) numKwrgs() int {
 //     def get_empty_generator(self):
 //         yield from iter([])
 
+type ParentClass struct{}
+
 // class ParentClass:
 //     def inherit_parent(self):
 //         return "parent"
 
 //     def override_parent(self):
 //         return "parent"
+
+type ChildClass struct{}
 
 // class ChildClass(ParentClass):
 //     def inherit_child(self):
@@ -147,6 +150,8 @@ func (c Constructor) numKwrgs() int {
 //     def override_parent(self):
 //         return "child"
 
+type GrandchildClass struct{}
+
 // class GrandchildClass(ChildClass):
 //     def inherit_grandchild(self):
 //         return "grandchild"
@@ -154,35 +159,30 @@ func (c Constructor) numKwrgs() int {
 //     def override_parent(self):
 //         return "grandchild"
 
-// class Animal:
-//     """Class to check dictionary specializers"""
-//     def __init__(self, species=None, genus=None, family=None):
-//         self.genus = genus
-//         self.species = species
-//         self.family = family
+type Animal struct {
+	Species string
+	Genus   string
+	Family  string
+}
 
-// class ImplementsEq:
-//     def __init__(self, val):
-//         self.val = val
+type ImplementsEq struct {
+	val int
+}
 
-//     def __eq__(self, other):
-//         return isinstance(other, ImplementsEq) and self.val == other.val
+func (left ImplementsEq) Equal(right ImplementsEq) bool {
+	return left.val == right.val
+}
 
-// class Comparable:
-//     def __init__(self, val):
-//         self.val = val
+type Comparable struct {
+	Val int
+}
 
-//     def __gt__(self, other):
-//         return self.val > other.val
-
-//     def __lt__(self, other):
-//         return self.val < other.val
-
-//     def __eq__(self, other):
-//         return self.val == other.val
-
-//     def __le__(self, other):
-//         return self < other or self == other
-
-//     def __ge__(self, other):
-//         return self > other or self == other
+func (a Comparable) Compare(b Comparable) int {
+	if a.Val > b.Val {
+		return 1
+	}
+	if a.Val < b.Val {
+		return -1
+	}
+	return 0
+}

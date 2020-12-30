@@ -5,6 +5,10 @@ import (
 	"reflect"
 )
 
+func String(s string) *string {
+	return &s
+}
+
 func setFieldTo(field reflect.Value, input interface{}) error {
 	switch fieldKind := field.Kind(); fieldKind {
 	case reflect.Array, reflect.Slice:
@@ -54,6 +58,9 @@ func setFieldTo(field reflect.Value, input interface{}) error {
 func setStructFields(instance reflect.Value, args []interface{}) error {
 	for idx, arg := range args {
 		f := instance.Field(idx)
+		if !f.IsValid() {
+			return fmt.Errorf("Cannot set field #%v", idx)
+		}
 		err := setFieldTo(f, arg)
 		if err != nil {
 			return err
@@ -65,6 +72,9 @@ func setStructFields(instance reflect.Value, args []interface{}) error {
 func setMapFields(instance reflect.Value, kwargs map[string]interface{}) error {
 	for k, v := range kwargs {
 		f := instance.FieldByName(k)
+		if !f.IsValid() {
+			return fmt.Errorf("Cannot set field %v", k)
+		}
 		err := setFieldTo(f, v)
 		if err != nil {
 			return err

@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	yaml "github.com/goccy/go-yaml"
-	oso "github.com/osohq/oso/languages/go/pkg"
 )
 
 func testFromFile(t *testing.T, path string) {
@@ -20,8 +19,7 @@ func testFromFile(t *testing.T, path string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	oso := oso.NewPolar()
-	testCase.RunTest(oso, t)
+	testCase.RunTest(t)
 }
 
 func TestAll(t *testing.T) {

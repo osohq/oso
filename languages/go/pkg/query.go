@@ -82,6 +82,8 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 		case *QueryEventNextExternal:
 			err = q.handleNextExternal(ev)
 			break
+		default:
+			return nil, fmt.Errorf("unexpected query event: %v", ev)
 		}
 		if err != nil {
 			return nil, err
@@ -174,7 +176,11 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 	return q.ffiQuery.callResult(int(event.CallId), polarValue)
 }
 func (q Query) handleExternalIsa(event *QueryEventExternalIsa) error {
-	return fmt.Errorf("handleExternalIsa not yet implemented")
+	isa, err := q.host.isa(event.Instance, event.ClassTag)
+	if err != nil {
+		return err
+	}
+	return q.ffiQuery.questionResult(int(event.CallId), isa)
 }
 func (q Query) handleExternalIsSubSpecializer(event *QueryEventExternalIsSubSpecializer) error {
 	return fmt.Errorf("handleExternalIsSubSpecializer not yet implemented")

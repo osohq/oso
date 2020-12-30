@@ -16,15 +16,38 @@ type Polar struct {
 	host     Host
 }
 
-func NewPolar() Polar {
+func NewPolar() *Polar {
 	ffiPolar := NewPolarFfi()
 	polar := Polar{
 		ffiPolar: ffiPolar,
 		host:     NewHost(ffiPolar),
 	}
 
+	err := polar.RegisterConstant(nil, "nil")
+	if err != nil {
+		fmt.Printf(err.Error())
+		return nil
+	}
+
+	builtinClasses := map[string]reflect.Type{
+		"Boolean":    reflect.TypeOf(true),
+		"Integer":    reflect.TypeOf(int(1)),
+		"Float":      reflect.TypeOf(float64(1.0)),
+		"String":     reflect.TypeOf(""),
+		"List":       reflect.TypeOf(make([]interface{}, 0)),
+		"Dictionary": reflect.TypeOf(make(map[string]interface{})),
+	}
+
+	for k, v := range builtinClasses {
+		err := polar.RegisterClass(v, &k)
+		if err != nil {
+			fmt.Printf(err.Error())
+			return nil
+		}
+	}
+
 	// register global constants
-	return polar
+	return &polar
 }
 
 // CLASSES: Dict[str, type] = {}
@@ -78,7 +101,7 @@ func (p Polar) checkInlineQueries() error {
 }
 
 func (p Polar) LoadFile(f string) error {
-	if filepath.Ext(f) != "polar" {
+	if filepath.Ext(f) != ".polar" {
 		return &PolarFileExtensionError{file: f}
 	}
 
