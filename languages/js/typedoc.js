@@ -1,4 +1,5 @@
 module.exports = {
+  tsconfig: './tsconfig.build.json',
   entryPoints: ['./src'],
   out: 'docs',
   exclude: [
@@ -6,6 +7,7 @@ module.exports = {
     './src/**/*.test.ts',
     './src/**/polar_wasm_api*',
     './src/index.ts',
+    './src/helpers.ts',
   ],
   excludePrivate: true,
   excludeProtected: true,
