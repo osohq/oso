@@ -590,7 +590,6 @@ impl PolarVirtualMachine {
         if self.log {
             self.print(&format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()));
         }
-        eprintln!("bind: {} ← {}", var.to_polar(), val.to_polar());
         self.bindings.push(Binding(var.clone(), val));
     }
 
@@ -626,16 +625,10 @@ impl PolarVirtualMachine {
             if c.operator != Operator::Unify {
                 continue;
             }
-            eprintln!("** Checking consistency: {}", c.to_polar());
             let left = &c.args[0];
             let right = &c.args[1];
             match (left.value(), right.value()) {
                 (Value::Variable(l), Value::Variable(r)) => {
-                    eprintln!(
-                        "L, R: ({:?}, {:?})",
-                        self.variable_state(l),
-                        self.variable_state(r)
-                    );
                     match (self.variable_state(l), self.variable_state(r)) {
                         (VariableState::Bound(x), VariableState::Bound(y)) => {
                             if x != y {
@@ -649,7 +642,6 @@ impl PolarVirtualMachine {
                 (Value::Variable(l), _) => {
                     if let VariableState::Bound(x) = self.variable_state(l) {
                         if let Some(y) = values.insert(l.clone(), right.clone()) {
-                            eprintln!("L: {}, {}, {}", l, x.to_polar(), y.to_polar());
                             if x != y {
                                 panic!("L Boom!");
                                 return false;
@@ -660,7 +652,6 @@ impl PolarVirtualMachine {
                 (_, Value::Variable(r)) => {
                     if let VariableState::Bound(y) = self.variable_state(r) {
                         if let Some(x) = values.insert(r.clone(), left.clone()) {
-                            eprintln!("R: {}, {}, {}", r, x.to_polar(), y.to_polar());
                             if x != y {
                                 panic!("R Boom!");
                                 return false;
@@ -2224,15 +2215,6 @@ impl PolarVirtualMachine {
     ///  - Recursive unification => more `Unify` goals are pushed onto the stack
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
-        eprintln!(
-            "UNIFYING {} = {} w/bindings:",
-            left.to_polar(),
-            right.to_polar()
-        );
-        for Binding(var, val) in &self.bindings {
-            eprintln!("  {} = {}", var, val.to_polar());
-        }
-
         match (left.value(), right.value()) {
             // Unify two variables.
             (Value::Variable(_), Value::Variable(_))
@@ -3042,12 +3024,9 @@ impl Runnable for PolarVirtualMachine {
         if self.simplify {
             if let Some(bs) = simplify_bindings(bindings, &self) {
                 bindings = bs;
-                dbg!(&bindings);
             } else {
                 return Ok(QueryEvent::None);
             }
-        } else {
-            dbg!(&bindings);
         }
 
         Ok(QueryEvent::Result { bindings, trace })
