@@ -229,18 +229,19 @@ impl<'vm> Folder for Simplifier<'vm> {
                         let invert = o.operator == Operator::Neq;
                         left == right
                             || match (left.value(), right.value()) {
-                                (x, _) if self.is_this_var(right) => {
-                                    if let Value::Variable(l) = x {
-                                        self.bind(l.clone(), right.clone(), invert);
-                                    }
-                                    false
+                                (Value::Variable(l), _) | (Value::RestVariable(l), _)
+                                    if self.is_this_var(right) =>
+                                {
+                                    self.bind(l.clone(), right.clone(), invert);
+                                    true
                                 }
-                                (_, y) if self.is_this_var(left) => {
-                                    if let Value::Variable(r) = y {
-                                        self.bind(r.clone(), left.clone(), invert);
-                                    }
-                                    false
+                                (_, Value::Variable(r)) | (_, Value::RestVariable(r))
+                                    if self.is_this_var(left) =>
+                                {
+                                    self.bind(r.clone(), left.clone(), invert);
+                                    true
                                 }
+                                _ if self.is_this_var(left) || self.is_this_var(right) => false,
                                 (Value::Variable(l), Value::Variable(r))
                                 | (Value::Variable(l), Value::RestVariable(r))
                                 | (Value::RestVariable(l), Value::Variable(r))
@@ -428,14 +429,7 @@ impl<'vm> Simplifier<'vm> {
     }
 
     fn is_this_var(&self, t: &Term) -> bool {
-        match t.value() {
-            Value::Variable(v) => v == &self.this_var,
-            Value::Expression(Operation {
-                operator: Operator::Dot,
-                args,
-            }) => self.is_this_var(&args[0]),
-            _ => false,
-        }
+        matches!(t.value(), Value::Variable(v) if v == &self.this_var)
     }
 
     /// Simplify a partial until quiescence.
