@@ -1095,15 +1095,26 @@ impl PolarVirtualMachine {
                 unreachable!("encountered bare expression")
             }
 
-            (Value::RestVariable(_), Value::RestVariable(_)) => todo!("*rest, *rest"),
             (Value::Variable(l), Value::Variable(r))
+            | (Value::RestVariable(l), Value::RestVariable(r))
             | (Value::RestVariable(l), Value::Variable(r))
             | (Value::Variable(l), Value::RestVariable(r)) => {
                 // Two variables.
                 match (self.variable_state(l), self.variable_state(r)) {
-                    (VariableState::Unbound, VariableState::Unbound) => todo!("unbound, unbound"),
-                    (VariableState::Bound(x), _) => return self.isa(&x, right),
-                    (_, VariableState::Bound(y)) => return self.isa(left, &y),
+                    (VariableState::Unbound, VariableState::Unbound) => {
+                        self.push_goal(Goal::Unify {
+                            left: left.clone(),
+                            right: right.clone(),
+                        })?
+                    }
+                    (VariableState::Bound(x), _) => self.push_goal(Goal::Isa {
+                        left: x,
+                        right: right.clone(),
+                    })?,
+                    (_, VariableState::Bound(y)) => self.push_goal(Goal::Isa {
+                        left: left.clone(),
+                        right: y,
+                    })?,
                     (VariableState::Cycle(c), VariableState::Cycle(d)) => {
                         let mut e = cycle_constraints(c);
                         e.merge_constraints(cycle_constraints(d));
@@ -1113,23 +1124,29 @@ impl PolarVirtualMachine {
                     (s, t) => todo!("({:?}, {:?}]", s, t),
                 }
             }
-            (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
-                match self.variable_state(l) {
-                    // TODO(gj): instead of punting to Unify, should we cons up a new expression of
-                    // `left matches RHS`?
-                    VariableState::Unbound => todo!("isa w/unbound"),
-                    VariableState::Bound(x) => return self.isa(&x, right),
-                    VariableState::Cycle(c) => {
-                        return self.isa_expr(&cycle_constraints(c), left, right);
-                    }
-                    VariableState::Partial(e) => return self.isa_expr(&e, left, right),
-                }
-            }
+            (Value::Variable(l), _) | (Value::RestVariable(l), _) => match self.variable_state(l) {
+                VariableState::Unbound => self.push_goal(Goal::Unify {
+                    left: left.clone(),
+                    right: right.clone(),
+                })?,
+                VariableState::Bound(x) => self.push_goal(Goal::Isa {
+                    left: x,
+                    right: right.clone(),
+                })?,
+                VariableState::Cycle(c) => self.isa_expr(&cycle_constraints(c), left, right)?,
+                VariableState::Partial(e) => self.isa_expr(&e, left, right)?,
+            },
             (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => match self.variable_state(r) {
-                VariableState::Unbound => todo!("isa w/unbound"),
-                VariableState::Bound(y) => return self.isa(left, &y),
-                VariableState::Cycle(_) => todo!("isa w/cycle"),
-                VariableState::Partial(_) => todo!("isa w/partial"),
+                VariableState::Unbound => self.push_goal(Goal::Unify {
+                    left: left.clone(),
+                    right: right.clone(),
+                })?,
+                VariableState::Bound(y) => self.push_goal(Goal::Isa {
+                    left: left.clone(),
+                    right: y,
+                })?,
+                VariableState::Cycle(d) => self.isa_expr(&cycle_constraints(d), left, right)?,
+                VariableState::Partial(f) => self.isa_expr(&f, left, right)?,
             },
 
             (Value::List(left), Value::List(right)) => {
@@ -2220,15 +2237,34 @@ impl PolarVirtualMachine {
             | (Value::RestVariable(_), Value::Variable(_))
             | (Value::RestVariable(_), Value::RestVariable(_)) => self.unify_vars(left, right)?,
 
+            // Can't bind expressions directly.
             (Value::Variable(var), Value::Expression(expr))
             | (Value::RestVariable(var), Value::Expression(expr))
             | (Value::Expression(expr), Value::Variable(var))
             | (Value::Expression(expr), Value::RestVariable(var)) => {
-                panic!(
-                    "cannot bind variable `{}` to expression `{}`",
-                    var,
-                    expr.to_polar()
-                );
+                return Err(self.type_error(
+                    &left,
+                    format!(
+                        "cannot bind variable `{}` to expression `{}`",
+                        var,
+                        expr.to_polar()
+                    ),
+                ));
+            }
+
+            // Can't bind patterns directly.
+            (Value::Variable(var), Value::Pattern(pattern))
+            | (Value::RestVariable(var), Value::Pattern(pattern))
+            | (Value::Pattern(pattern), Value::Variable(var))
+            | (Value::Pattern(pattern), Value::RestVariable(var)) => {
+                return Err(self.type_error(
+                    &left,
+                    format!(
+                        "cannot bind variable `{}` to pattern `{}`",
+                        var,
+                        pattern.to_polar()
+                    ),
+                ));
             }
 
             // Unify/bind a variable on the left with/to the term on the right.

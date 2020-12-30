@@ -585,7 +585,7 @@ fn test_not() -> TestResult {
     qnull(&mut p, "g(1)");
     qnull(&mut p, "g(2)");
     qeval(&mut p, "g(3)");
-    qnull(&mut p, "g(x) and x=3"); // this should fail because unbound x means g(x) always fails
+    qeval(&mut p, "g(x) and x=3");
     qeval(&mut p, "x=3 and g(x)");
 
     p.load_str("h(x) if not (not (x = 1 or x = 3) or x = 3);")?;
@@ -597,11 +597,11 @@ fn test_not() -> TestResult {
 
     // Negate And with unbound variable.
     p.load_str("i(x,y) if not (y = 2 and x = 1);")?;
-    qvar(&mut p, "i(2,y)", "y", values![sym!("_y_44")]);
+    qvar(&mut p, "i(2,y)", "y", values![sym!("y")]);
 
     // Negate Or with unbound variable.
     p.load_str("j(x,y) if not (y = 2 or x = 1);")?;
-    qeval(&mut p, "j(2, y)"); // TODO(ap): ?
+    qeval(&mut p, "j(2, y)");
     Ok(())
 }
 
@@ -1904,7 +1904,7 @@ fn test_list_matches() {
 
 #[test]
 fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
-    qruntime!("x matches y", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind pattern 'y' to 'x'");
+    qruntime!("x matches y", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind variable `x` to pattern `y{}`");
     Ok(())
 }
 
