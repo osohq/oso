@@ -122,7 +122,9 @@ func (h Host) isa(value Value, classTag string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return reflect.TypeOf(instance).AssignableTo(*class), nil
+	instanceType := reflect.TypeOf(instance)
+	res := instanceType.ConvertibleTo(*class)
+	return res, nil
 }
 
 func (h Host) isSubclass(leftTag string, rightTag string) (bool, error) {
