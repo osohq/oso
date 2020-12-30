@@ -121,7 +121,7 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 	if event.Args != nil {
 		method := reflect.ValueOf(instance).MethodByName(event.Attribute)
 		if !method.IsValid() {
-			q.ffiQuery.applicationError((&InvalidCallError{instance: event.Instance, field: event.Attribute}).Error())
+			q.ffiQuery.applicationError((&MissingAttributeError{instance: event.Instance, field: event.Attribute}).Error())
 			q.ffiQuery.callResult(int(event.CallId), nil)
 			return nil
 		}
@@ -153,7 +153,7 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 	} else {
 		attr := reflect.ValueOf(instance).FieldByName(event.Attribute)
 		if !attr.IsValid() {
-			q.ffiQuery.applicationError((&InvalidCallError{instance: event.Instance, field: event.Attribute}).Error())
+			q.ffiQuery.applicationError((&MissingAttributeError{instance: event.Instance, field: event.Attribute}).Error())
 			q.ffiQuery.callResult(int(event.CallId), nil)
 			return nil
 		}

@@ -17,7 +17,7 @@ type IterableClass struct {
 	Elems []int
 }
 
-func (ic IterableClass) sum() int {
+func (ic IterableClass) Sum() int {
 	res := 0
 	for _, v := range ic.Elems {
 		res += v
@@ -51,32 +51,32 @@ func NewValueFactory() ValueFactory {
 	}
 }
 
-func (vf ValueFactory) get_nil() *int {
+func (vf ValueFactory) GetNil() *int {
 	return nil
 }
 
-func (vf ValueFactory) get_string() string {
+func (vf ValueFactory) GetString() string {
 	return vf.StringAttr
 }
 
-func (vf ValueFactory) get_list() []int {
+func (vf ValueFactory) GetList() []int {
 	return vf.ListAttr
 }
 
-func (vf ValueFactory) get_dict() map[string]int {
+func (vf ValueFactory) GetDict() map[string]int {
 	return vf.DictAttr
 }
 
-func (vf ValueFactory) get_class() error {
+func (vf ValueFactory) GetClass() error {
 	return fmt.Errorf("unimplemented")
 }
 
-func (vf ValueFactory) get_instance() error {
+func (vf ValueFactory) GetInstance() error {
 	// TODO: What does this return?
 	return fmt.Errorf("unimplemented")
 }
 
-func (vf ValueFactory) get_type() reflect.Type {
+func (vf ValueFactory) GetType() reflect.Type {
 	return reflect.TypeOf(vf.InnerClass)
 }
 
@@ -97,18 +97,18 @@ type Constructor map[string]interface{}
 // 	return len(c.Args)
 // }
 
-func (c Constructor) numKwrgs() int {
+func (c Constructor) NumKwargs() int {
 	return len(map[string]interface{}(c))
 }
 
 type MethodVariants struct {
 }
 
-func (m *MethodVariants) class_method_return_string() string {
+func (m *MethodVariants) ClassMethodReturnsString() string {
 	return "abc"
 }
 
-func (m *MethodVariants) sum_input_args(args ...int) int {
+func (m *MethodVariants) SumInputArgs(args ...int) int {
 	sum := 0
 	for _, arg := range args {
 		sum += arg

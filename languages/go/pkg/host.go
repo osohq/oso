@@ -111,6 +111,11 @@ func (h Host) unify(leftID int, rightID int) (bool, error) {
 	if err2 != nil {
 		return false, err2
 	}
+	if leftEq, ok := left.Interface().(Comparer); ok {
+		if rightEq, ok := right.Interface().(Comparer); ok {
+			return leftEq.Equal(rightEq), nil
+		}
+	}
 	return reflect.DeepEqual(left, right), nil
 }
 
@@ -165,28 +170,43 @@ func (h Host) isSubspecializer(instanceID int, leftTag string, rightTag string) 
 }
 
 func (h Host) toPolar(v interface{}) (*Value, error) {
-	// handle nil first
-	if v == nil {
-		instanceID, err := h.cacheInstance(nil, nil)
-		if err != nil {
-			return nil, err
-		}
-		repr := "nil"
-		inner := ValueExternalInstance{
-			InstanceId:  uint64(*instanceID),
-			Constructor: nil,
-			Repr:        &repr,
-		}
-		return &Value{&inner}, nil
-	}
-	// check basic primitive types
 	switch v.(type) {
 	case bool:
 		inner := ValueBoolean(v.(bool))
 		return &Value{&inner}, nil
-	case int, uint:
-		intVal := NumericInteger(v.(int))
-		inner := ValueNumber{&intVal}
+	case int, int8, int16, int32, int64:
+		var intVal int64
+		switch vv := v.(type) {
+		case int:
+			intVal = int64(vv)
+		case int8:
+			intVal = int64(vv)
+		case int16:
+			intVal = int64(vv)
+		case int32:
+			intVal = int64(vv)
+		case int64:
+			intVal = int64(vv)
+		}
+		numInt := NumericInteger(intVal)
+		inner := ValueNumber{&numInt}
+		return &Value{&inner}, nil
+	case uint, uint8, uint16, uint32, uint64:
+		var uintVal int64
+		switch vv := v.(type) {
+		case uint:
+			uintVal = int64(vv)
+		case uint8:
+			uintVal = int64(vv)
+		case uint16:
+			uintVal = int64(vv)
+		case uint32:
+			uintVal = int64(vv)
+		case uint64:
+			uintVal = int64(vv)
+		}
+		numInt := NumericInteger(uintVal)
+		inner := ValueNumber{&numInt}
 		return &Value{&inner}, nil
 	case float32, float64:
 		floatVal := NumericFloat(v.(float64))
@@ -202,26 +222,30 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 	// deref pointer
 	if rt.Kind() == reflect.Ptr {
 		rtDeref := rt.Elem()
+		if rt.IsNil() {
+			return h.toPolar(none{})
+		}
 		return h.toPolar(rtDeref.Interface())
 	}
 
 	switch rt.Kind() {
 	case reflect.Slice, reflect.Array:
-		vList := v.([]interface{})
-		slice := make([]Value, len(vList))
-		for idx, v := range vList {
-			converted, err := h.toPolar(v)
+		slice := make([]Value, rt.Len())
+		for i := 0; i < rt.Len(); i++ {
+			converted, err := h.toPolar(rt.Index(i).Interface())
 			if err != nil {
 				return nil, err
 			}
-			slice[idx] = *converted
+			slice[i] = *converted
 		}
 		inner := ValueList(slice)
 		return &Value{&inner}, nil
 	case reflect.Map:
-		vMap := v.(map[string]interface{})
 		fields := make(map[string]Value)
-		for k, v := range vMap {
+		iter := rt.MapRange()
+		for iter.Next() {
+			k := iter.Key().String()
+			v := iter.Value().Interface()
 			converted, err := h.toPolar(v)
 			if err != nil {
 				return nil, err
@@ -264,7 +288,7 @@ func (h Host) toGo(v Value) (interface{}, error) {
 	case *ValueNumber:
 		switch number := inner.NumericVariant.(type) {
 		case *NumericInteger:
-			return int(*number), nil
+			return int64(*number), nil
 		case *NumericFloat:
 			return float64(*number), nil
 		}

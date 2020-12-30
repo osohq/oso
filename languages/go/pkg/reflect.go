@@ -21,14 +21,13 @@ func setFieldTo(field reflect.Value, input interface{}) error {
 		if !ok {
 			return fmt.Errorf("Cannot assign to array from %s", reflect.TypeOf(input).Kind())
 		}
-		for _, v := range inputArray {
-			elem := reflect.New(field.Type().Elem()).Elem()
-			err := setFieldTo(elem, v)
+		for idx, v := range inputArray {
+			err := setFieldTo(field.Index(idx), v)
 			if err != nil {
 				return err
 			}
-			reflect.Append(field, elem)
 		}
+		fmt.Printf("Set field to %v", field.Interface())
 		return nil
 	case reflect.Map:
 		inputMap := input.(map[string]interface{})

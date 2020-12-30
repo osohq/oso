@@ -9,7 +9,7 @@ cases:
     query: x in new IterableClass([])
     result: []
   - description: can call methods on them
-    query: x = new IterableClass([1, 2, 3]).sum()
+    query: x = new IterableClass([1, 2, 3]).Sum()
     result: [{x: 6}]
   - description: fail if not iterable
     query: x in new UnitClass()

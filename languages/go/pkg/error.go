@@ -35,6 +35,15 @@ func (e *InlineQueryFailedError) Error() string {
 	return fmt.Sprintf("Inline query failed: %s", e.source)
 }
 
+type MissingAttributeError struct {
+	instance Value
+	field    string
+}
+
+func (e *MissingAttributeError) Error() string {
+	return fmt.Sprintf("%v has no attribute '%s'", e.instance, e.field)
+}
+
 type InvalidCallError struct {
 	instance Value
 	field    string

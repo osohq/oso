@@ -63,7 +63,7 @@ func NewResult(input interface{}) Result {
 		return Result{result}
 	case uint64:
 		// standardise uints to ints
-		return Result{inner: int(inputVal)}
+		return Result{inner: int64(inputVal)}
 	default:
 		return Result{input}
 	}
@@ -77,7 +77,7 @@ func (left Result) Equal(right interface{}) bool {
 			return repr.inner.(string) == fmt.Sprintf("%v", right)
 		}
 	}
-	fmt.Printf("%v == %v: %v", left.inner, right, cmp.Equal(left.inner, right))
+	// fmt.Printf("%v == %v: %v", left.inner, right, cmp.Equal(left.inner, right))
 	return cmp.Equal(left.inner, right)
 }
 
