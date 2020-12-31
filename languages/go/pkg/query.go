@@ -121,7 +121,7 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 	if event.Args != nil {
 		method := reflect.ValueOf(instance).MethodByName(event.Attribute)
 		if !method.IsValid() {
-			q.ffiQuery.applicationError((&MissingAttributeError{instance: event.Instance, field: event.Attribute}).Error())
+			q.ffiQuery.applicationError((&MissingAttributeError{instance: instance, field: event.Attribute}).Error())
 			q.ffiQuery.callResult(int(event.CallId), nil)
 			return nil
 		}
@@ -137,7 +137,7 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 			if !method.Type().IsVariadic() {
 				if len(args) != numIn {
 					return &ErrorWithAdditionalInfo{
-						Inner: &InvalidCallError{instance: event.Instance, field: event.Attribute},
+						Inner: &InvalidCallError{instance: instance, field: event.Attribute},
 						Info:  fmt.Sprintf("incorrect number of arguments. Expected %v, got %v", numIn, len(args)),
 					}
 				}
@@ -159,7 +159,7 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 				err := setFieldTo(callArgs[i], arg)
 				if err != nil {
 					return &ErrorWithAdditionalInfo{
-						Inner: &InvalidCallError{instance: event.Instance, field: event.Attribute},
+						Inner: &InvalidCallError{instance: instance, field: event.Attribute},
 						Info:  err.Error(),
 					}
 				}
@@ -170,7 +170,7 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 				err := setFieldTo(callArgs[end], remainingArgs)
 				if err != nil {
 					return &ErrorWithAdditionalInfo{
-						Inner: &InvalidCallError{instance: event.Instance, field: event.Attribute},
+						Inner: &InvalidCallError{instance: instance, field: event.Attribute},
 						Info:  err.Error(),
 					}
 				}
@@ -192,12 +192,12 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 				result = interface{}(arrayResult)
 			}
 		} else {
-			return &InvalidCallError{instance: event.Instance, field: event.Attribute}
+			return &InvalidCallError{instance: instance, field: event.Attribute}
 		}
 	} else {
 		attr := reflect.ValueOf(instance).FieldByName(event.Attribute)
 		if !attr.IsValid() {
-			q.ffiQuery.applicationError((&MissingAttributeError{instance: event.Instance, field: event.Attribute}).Error())
+			q.ffiQuery.applicationError((&MissingAttributeError{instance: instance, field: event.Attribute}).Error())
 			q.ffiQuery.callResult(int(event.CallId), nil)
 			return nil
 		}

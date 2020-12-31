@@ -36,16 +36,16 @@ func (e *InlineQueryFailedError) Error() string {
 }
 
 type MissingAttributeError struct {
-	instance Value
+	instance interface{}
 	field    string
 }
 
 func (e *MissingAttributeError) Error() string {
-	return fmt.Sprintf("%v has no attribute '%s'", e.instance, e.field)
+	return fmt.Sprintf("'%v' object has no attribute '%s'", e.instance, e.field)
 }
 
 type InvalidCallError struct {
-	instance Value
+	instance interface{}
 	field    string
 }
 
