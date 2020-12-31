@@ -55,7 +55,7 @@ impl IsaConstraintCheck {
         &mut self,
         mut constraint: Operation,
         counter: &Counter,
-    ) -> Option<(QueryEvent, QueryEvent)> {
+    ) -> (Option<QueryEvent>, Option<QueryEvent>) {
         // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
         // partial, Integer)`.
         eprintln!(
@@ -64,21 +64,21 @@ impl IsaConstraintCheck {
             self.proposed.to_polar()
         );
         if constraint.operator != Operator::Isa {
-            return None;
+            return (None, None);
         }
 
         let constraint_base = base(&constraint.args[0], 0);
         let proposed_base = base(&self.proposed.args[0], 0);
 
         if constraint_base.is_none() || proposed_base.is_none() {
-            return None;
+            return (None, None);
         }
 
         let (constraint_base, constraint_depth) = constraint_base.unwrap();
         let (proposed_base, proposed_depth) = proposed_base.unwrap();
 
         if constraint_base != proposed_base {
-            return None;
+            return (None, None);
         }
 
         if constraint.args[0] == self.proposed.args[0] {
@@ -92,20 +92,20 @@ impl IsaConstraintCheck {
                     let call_id = counter.next();
                     self.last_call_id = call_id;
 
-                    Some((
-                        QueryEvent::ExternalIsSubclass {
+                    (
+                        Some(QueryEvent::ExternalIsSubclass {
                             call_id,
                             left_class_tag: proposed.tag.clone(),
                             right_class_tag: existing.tag.clone(),
-                        },
-                        QueryEvent::ExternalIsSubclass {
+                        }),
+                        Some(QueryEvent::ExternalIsSubclass {
                             call_id,
                             left_class_tag: existing.tag.clone(),
                             right_class_tag: proposed.tag.clone(),
-                        },
-                    ))
+                        }),
+                    )
                 }
-                _ => None,
+                _ => (None, None),
             }
         } else if constraint_depth > proposed_depth {
             panic!("AAAAAAAAAAAAAAAAAAAA");
@@ -113,18 +113,8 @@ impl IsaConstraintCheck {
             let call_id = counter.next();
             self.last_call_id = call_id;
 
-            Some((
-                QueryEvent::ExternalIsa {
-                    call_id,
-                    instance: op!(
-                        And,
-                        constraint.clone().into_term(),
-                        self.proposed.clone().into_term()
-                    )
-                    .into_term(),
-                    class_tag: sym!(""),
-                },
-                QueryEvent::ExternalIsa {
+            (
+                Some(QueryEvent::ExternalIsa {
                     call_id,
                     instance: op!(
                         And,
@@ -133,8 +123,9 @@ impl IsaConstraintCheck {
                     )
                     .into_term(),
                     class_tag: sym!(""),
-                },
-            ))
+                }),
+                None,
+            )
         }
     }
 }
@@ -157,8 +148,12 @@ impl Runnable for IsaConstraintCheck {
             if let Some(alternative) = self.alternative_check.take() {
                 return Ok(alternative);
             } else if let Some(constraint) = self.existing.pop() {
-                if let Some((primary, alternative)) = self.check_constraint(constraint, &counter) {
+                let (maybe_primary, maybe_alternative) =
+                    self.check_constraint(constraint, &counter);
+                if let Some(alternative) = maybe_alternative {
                     self.alternative_check = Some(alternative);
+                }
+                if let Some(primary) = maybe_primary {
                     return Ok(primary);
                 }
             } else {
