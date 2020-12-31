@@ -8,6 +8,7 @@ module.exports = {
     './src/**/polar_wasm_api*',
     './src/index.ts',
     './src/helpers.ts',
+    './src/messages.ts',
   ],
   excludePrivate: true,
   excludeProtected: true,
