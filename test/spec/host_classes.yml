@@ -29,7 +29,7 @@ cases:
     query: 1 in new ValueFactory().GetList()
   - description: can call class methods
     query: |
-      "abc" = MethodVariants.class_method_return_string()
+      "abc" = MethodVariants.ClassMethodReturnsString()
   - description: can call class methods with args
     query: MethodVariants.SumInputArgs(1, 2, 3) = 6
 

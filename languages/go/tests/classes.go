@@ -56,15 +56,15 @@ func (vf ValueFactory) GetNil() *int {
 }
 
 func (vf ValueFactory) GetString() string {
-	return vf.StringAttr
+	return NewValueFactory().StringAttr
 }
 
 func (vf ValueFactory) GetList() []int {
-	return vf.ListAttr
+	return NewValueFactory().ListAttr
 }
 
 func (vf ValueFactory) GetDict() map[string]int {
-	return vf.DictAttr
+	return NewValueFactory().DictAttr
 }
 
 func (vf ValueFactory) GetClass() error {
@@ -124,17 +124,19 @@ func (m MethodVariants) SumInputArgs(args ...int) int {
 	return sum
 }
 
+func (MethodVariants) GetIter() oso.Iterator {
+	return IterableClass{Elems: NewValueFactory().ListAttr}
+}
+
+func (MethodVariants) GetEmptyIter() oso.Iterator {
+	return IterableClass{}
+}
+
 //     def is_key_in_kwargs(self, key, **kwargs):
 //         return key in kwargs
 
 //     def set_x_or_y(self, x=1, y=2):
 //         return [x, y]
-
-//     def get_iter(self):
-//         return iter(ValueFactory.list_attr)
-
-//     def get_empty_iter(self):
-//         return iter([])
 
 //     def get_generator(self):
 //         yield from iter(ValueFactory.list_attr)
