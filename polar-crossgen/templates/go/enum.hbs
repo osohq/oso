@@ -38,7 +38,7 @@ func (result *{{name}}) UnmarshalJSON(b []byte) error {
                 return err
             }
         }
-        *result = {{../name}} { &variant }
+        *result = {{../name}} { variant }
         return nil
     {{/each}}
     }
@@ -50,8 +50,8 @@ func (result *{{name}}) UnmarshalJSON(b []byte) error {
 func (variant {{name}}) MarshalJSON() ([]byte, error) {
     switch inner := variant.{{name}}Variant.(type) {
     {{#each variants}}
-    case *{{../name}}{{this}}:
-        return json.Marshal(map[string]*{{../name}}{{this}} { 
+    case {{../name}}{{this}}:
+        return json.Marshal(map[string]{{../name}}{{this}} {
             "{{this}}": inner,
         });
     {{/each}}

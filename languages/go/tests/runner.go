@@ -81,8 +81,6 @@ func (left Result) Equal(right interface{}) bool {
 	return cmp.Equal(left.inner, right)
 }
 
-type Variable string
-
 func toInput(o oso.Polar, v interface{}, t *testing.T) interface{} {
 	if vMap, ok := v.(map[string]interface{}); ok {
 		if ty, ok := vMap["type"]; ok {
@@ -105,7 +103,7 @@ func toInput(o oso.Polar, v interface{}, t *testing.T) interface{} {
 			return instance
 		}
 		if v, ok := vMap["var"]; ok {
-			return Variable(v.(string))
+			return oso.ValueVariable(v.(string))
 		}
 	}
 	return v

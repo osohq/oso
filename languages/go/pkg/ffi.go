@@ -69,10 +69,10 @@ func processMessages(i ffiInterface) {
 			panic(err)
 		}
 		switch messageStruct.Kind.MessageKindVariant.(type) {
-		case *MessageKindPrint:
+		case MessageKindPrint:
 			fmt.Printf("%s\n", messageStruct.Msg)
 			break
-		case *MessageKindWarning:
+		case MessageKindWarning:
 			fmt.Printf("WARNING: %s\n", messageStruct.Msg)
 			break
 		default:

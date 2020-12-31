@@ -13,9 +13,8 @@ import (
 
 func TestSerialize(t *testing.T) {
 	expected := `{"Number":{"Integer":123}}`
-	int123 := oso.NumericInteger(123)
-	term := oso.Value{&oso.ValueNumber{
-		&int123,
+	term := oso.Value{oso.ValueNumber{
+		oso.NumericInteger(123),
 	}}
 	s, err := json.Marshal(term)
 	if err != nil {
@@ -41,14 +40,14 @@ func TestDeserialize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	int0 := oso.NumericInteger(0)
-	int1 := oso.NumericInteger(1)
 	expectedCall := oso.ValueCall{
-		Name:   "foo",
-		Args:   []oso.Value{{&oso.ValueNumber{&int0}}},
-		Kwargs: &map[string]oso.Value{"bar": {&oso.ValueNumber{&int1}}},
+		Name: "foo",
+		Args: []oso.Value{{
+			oso.ValueNumber{oso.NumericInteger(0)},
+		}},
+		Kwargs: &map[string]oso.Value{"bar": {oso.ValueNumber{oso.NumericInteger(1)}}},
 	}
-	expected := oso.Value{&expectedCall}
+	expected := oso.Value{expectedCall}
 	if !cmp.Equal(term, expected) || !reflect.DeepEqual(term, expected) {
 		t.Error(fmt.Errorf("Result differs from expected:\n%s", cmp.Diff(term, expected)))
 	}
@@ -61,8 +60,8 @@ func TestDeserialize(t *testing.T) {
 	}
 	expectedErr := oso.FormattedPolarError{
 		Kind: oso.ErrorKind{
-			&oso.ErrorKindParse{
-				&oso.ParseErrorInvalidTokenCharacter{
+			oso.ErrorKindParse{
+				oso.ParseErrorInvalidTokenCharacter{
 					Token: "this is not",
 					C:     "\n",
 					Loc:   24,

@@ -116,7 +116,7 @@ func (p Polar) Query(query interface{}) (*Query, error) {
 		return &newQuery, nil
 	case Call:
 		inner := ValueCall(q)
-		ffiQuery, err := p.ffiPolar.newQueryFromTerm(Value{&inner})
+		ffiQuery, err := p.ffiPolar.newQueryFromTerm(Value{inner})
 		if err != nil {
 			return nil, err
 		}

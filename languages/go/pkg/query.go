@@ -38,16 +38,16 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 		}
 
 		switch ev := event.QueryEventVariant.(type) {
-		case *QueryEventNone:
+		case QueryEventNone:
 			// nothing to do
 			continue
-		case *QueryEventDone:
+		case QueryEventDone:
 			defer q.ffiQuery.delete()
 			return nil, nil
-		case *QueryEventDebug:
+		case QueryEventDebug:
 			// TODO
 			return nil, fmt.Errorf("not yet implemented")
-		case *QueryEventResult:
+		case QueryEventResult:
 			results := make(map[string]interface{})
 			for k, v := range ev.Bindings {
 				converted, err := q.host.toGo(v)
@@ -57,21 +57,21 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 				results[k] = converted
 			}
 			return &results, nil
-		case *QueryEventMakeExternal:
+		case QueryEventMakeExternal:
 			err = q.handleMakeExternal(ev)
-		case *QueryEventExternalCall:
+		case QueryEventExternalCall:
 			err = q.handleExternalCall(ev)
-		case *QueryEventExternalIsa:
+		case QueryEventExternalIsa:
 			err = q.handleExternalIsa(ev)
-		case *QueryEventExternalIsSubSpecializer:
+		case QueryEventExternalIsSubSpecializer:
 			err = q.handleExternalIsSubSpecializer(ev)
-		case *QueryEventExternalIsSubclass:
+		case QueryEventExternalIsSubclass:
 			err = q.handleExternalIsSubclass(ev)
-		case *QueryEventExternalUnify:
+		case QueryEventExternalUnify:
 			err = q.handleExternalUnify(ev)
-		case *QueryEventExternalOp:
+		case QueryEventExternalOp:
 			err = q.handleExternalOp(ev)
-		case *QueryEventNextExternal:
+		case QueryEventNextExternal:
 			err = q.handleNextExternal(ev)
 		default:
 			return nil, fmt.Errorf("unexpected query event: %v", ev)
@@ -83,8 +83,8 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 
 }
 
-func (q Query) handleMakeExternal(event *QueryEventMakeExternal) error {
-	if ctor, ok := event.Constructor.ValueVariant.(*ValueCall); ok {
+func (q Query) handleMakeExternal(event QueryEventMakeExternal) error {
+	if ctor, ok := event.Constructor.ValueVariant.(ValueCall); ok {
 		args := make([]interface{}, len(ctor.Args))
 		for idx, arg := range ctor.Args {
 			converted, err := q.host.toGo(arg)
@@ -109,7 +109,7 @@ func (q Query) handleMakeExternal(event *QueryEventMakeExternal) error {
 	return &InvalidConstructorError{ctor: event.Constructor}
 }
 
-func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
+func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 	instance, err := q.host.toGo(event.Instance)
 	if err != nil {
 		return err
@@ -210,7 +210,7 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 	}
 	return q.ffiQuery.callResult(int(event.CallId), polarValue)
 }
-func (q Query) handleExternalIsa(event *QueryEventExternalIsa) error {
+func (q Query) handleExternalIsa(event QueryEventExternalIsa) error {
 	isa, err := q.host.isa(event.Instance, event.ClassTag)
 	if err != nil {
 		return err
@@ -218,7 +218,7 @@ func (q Query) handleExternalIsa(event *QueryEventExternalIsa) error {
 	return q.ffiQuery.questionResult(int(event.CallId), isa)
 }
 
-func (q Query) handleExternalIsSubSpecializer(event *QueryEventExternalIsSubSpecializer) error {
+func (q Query) handleExternalIsSubSpecializer(event QueryEventExternalIsSubSpecializer) error {
 	res, err := q.host.isSubspecializer(int(event.InstanceId), event.LeftClassTag, event.RightClassTag)
 	if err != nil {
 		return err
@@ -226,7 +226,7 @@ func (q Query) handleExternalIsSubSpecializer(event *QueryEventExternalIsSubSpec
 	return q.ffiQuery.questionResult(int(event.CallId), res)
 }
 
-func (q Query) handleExternalIsSubclass(event *QueryEventExternalIsSubclass) error {
+func (q Query) handleExternalIsSubclass(event QueryEventExternalIsSubclass) error {
 	res, err := q.host.isSubclass(event.LeftClassTag, event.RightClassTag)
 	if err != nil {
 		return err
@@ -234,7 +234,7 @@ func (q Query) handleExternalIsSubclass(event *QueryEventExternalIsSubclass) err
 	return q.ffiQuery.questionResult(int(event.CallId), res)
 }
 
-func (q Query) handleExternalUnify(event *QueryEventExternalUnify) error {
+func (q Query) handleExternalUnify(event QueryEventExternalUnify) error {
 	res, err := q.host.unify(int(event.LeftInstanceId), int(event.RightInstanceId))
 	if err != nil {
 		return err
@@ -242,7 +242,7 @@ func (q Query) handleExternalUnify(event *QueryEventExternalUnify) error {
 	return q.ffiQuery.questionResult(int(event.CallId), res)
 }
 
-func (q Query) handleExternalOp(event *QueryEventExternalOp) error {
+func (q Query) handleExternalOp(event QueryEventExternalOp) error {
 	if len(event.Args) != 2 {
 		return fmt.Errorf("Unexpected number of arguments for operation: %v", len(event.Args))
 	}
@@ -258,17 +258,17 @@ func (q Query) handleExternalOp(event *QueryEventExternalOp) error {
 	leftCmp := left.(Comparer)
 	rightCmp := right.(Comparer)
 	switch event.Operator.OperatorVariant.(type) {
-	case *OperatorLt:
+	case OperatorLt:
 		answer = leftCmp.Lt(rightCmp)
-	case *OperatorLeq:
+	case OperatorLeq:
 		answer = leftCmp.Lt(rightCmp) || leftCmp.Equal(rightCmp)
-	case *OperatorGt:
+	case OperatorGt:
 		answer = rightCmp.Lt(leftCmp)
-	case *OperatorGeq:
+	case OperatorGeq:
 		answer = !leftCmp.Lt(rightCmp)
-	case *OperatorEq:
+	case OperatorEq:
 		answer = leftCmp.Equal(rightCmp)
-	case *OperatorNeq:
+	case OperatorNeq:
 		answer = !leftCmp.Equal(rightCmp)
 	default:
 		return fmt.Errorf("Unsupported operation: %v", event.Operator.OperatorVariant)
@@ -276,7 +276,7 @@ func (q Query) handleExternalOp(event *QueryEventExternalOp) error {
 	return q.ffiQuery.questionResult(int(event.CallId), answer)
 }
 
-func (q Query) handleNextExternal(event *QueryEventNextExternal) error {
+func (q Query) handleNextExternal(event QueryEventNextExternal) error {
 	if _, ok := q.calls[int(event.CallId)]; !ok {
 		instance, err := q.host.toGo(event.Iterable)
 		if err != nil {

@@ -166,10 +166,10 @@ func (h Host) isSubspecializer(instanceID int, leftTag string, rightTag string) 
 }
 
 func (h Host) toPolar(v interface{}) (*Value, error) {
-	switch v.(type) {
+	switch v := v.(type) {
 	case bool:
-		inner := ValueBoolean(v.(bool))
-		return &Value{&inner}, nil
+		inner := ValueBoolean(v)
+		return &Value{inner}, nil
 	case int, int8, int16, int32, int64:
 		var intVal int64
 		switch vv := v.(type) {
@@ -184,9 +184,8 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 		case int64:
 			intVal = int64(vv)
 		}
-		numInt := NumericInteger(intVal)
-		inner := ValueNumber{&numInt}
-		return &Value{&inner}, nil
+		inner := ValueNumber{NumericInteger(intVal)}
+		return &Value{inner}, nil
 	case uint, uint8, uint16, uint32, uint64:
 		var uintVal int64
 		switch vv := v.(type) {
@@ -201,16 +200,26 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 		case uint64:
 			uintVal = int64(vv)
 		}
-		numInt := NumericInteger(uintVal)
-		inner := ValueNumber{&numInt}
-		return &Value{&inner}, nil
+		inner := ValueNumber{NumericInteger(uintVal)}
+		return &Value{inner}, nil
 	case float32, float64:
-		floatVal := NumericFloat(v.(float64))
-		inner := ValueNumber{&floatVal}
-		return &Value{&inner}, nil
+		var floatVal float64
+		switch vv := v.(type) {
+		case float32:
+			floatVal = float64(vv)
+		case float64:
+			floatVal = float64(vv)
+		}
+		inner := ValueNumber{NumericFloat(floatVal)}
+		return &Value{inner}, nil
 	case string:
-		inner := ValueString(v.(string))
-		return &Value{&inner}, nil
+		inner := ValueString(v)
+		return &Value{inner}, nil
+	case Value:
+		return &v, nil
+	case ValueVariant:
+		// if its already a variant, return that
+		return &Value{v}, nil
 	}
 
 	// check composite types
@@ -235,7 +244,7 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 			slice[i] = *converted
 		}
 		inner := ValueList(slice)
-		return &Value{&inner}, nil
+		return &Value{inner}, nil
 	case reflect.Map:
 		fields := make(map[string]Value)
 		iter := rt.MapRange()
@@ -249,7 +258,7 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 			fields[k] = *converted
 		}
 		inner := ValueDictionary{Fields: fields}
-		return &Value{&inner}, nil
+		return &Value{inner}, nil
 	default:
 		instanceID, err := h.cacheInstance(v, nil)
 		if err != nil {
@@ -261,7 +270,7 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 			Constructor: nil,
 			Repr:        &repr,
 		}
-		return &Value{&inner}, nil
+		return &Value{inner}, nil
 	}
 }
 
@@ -279,20 +288,20 @@ func (h Host) listToGo(v []Value) ([]interface{}, error) {
 
 func (h Host) toGo(v Value) (interface{}, error) {
 	switch inner := v.ValueVariant.(type) {
-	case *ValueBoolean:
-		return bool(*inner), nil
-	case *ValueNumber:
+	case ValueBoolean:
+		return bool(inner), nil
+	case ValueNumber:
 		switch number := inner.NumericVariant.(type) {
-		case *NumericInteger:
-			return int64(*number), nil
-		case *NumericFloat:
-			return float64(*number), nil
+		case NumericInteger:
+			return int64(number), nil
+		case NumericFloat:
+			return float64(number), nil
 		}
-	case *ValueString:
-		return string(*inner), nil
-	case *ValueList:
-		return h.listToGo(*inner)
-	case *ValueDictionary:
+	case ValueString:
+		return string(inner), nil
+	case ValueList:
+		return h.listToGo(inner)
+	case ValueDictionary:
 		retMap := make(map[string]interface{})
 		for k, v := range inner.Fields {
 			ret, err := h.toGo(v)
@@ -302,7 +311,7 @@ func (h Host) toGo(v Value) (interface{}, error) {
 			retMap[k] = ret
 		}
 		return retMap, nil
-	case *ValueExternalInstance:
+	case ValueExternalInstance:
 		instance, err := h.getInstance(int(inner.InstanceId))
 		if err != nil {
 			return nil, err
