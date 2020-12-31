@@ -532,6 +532,7 @@ mod test {
                         "EXTERNAL ISAAAAAAAAAAAAAAAAAAAAAA\n  {}",
                         instance.to_polar()
                     );
+                    // TODO(gj): Update the below for our new expectation.
                     let proposed = &instance.value().as_expression().unwrap().args[1];
                     eprintln!("  STEP 1: {}", proposed.to_polar());
                     let proposed = &proposed.value().as_expression().unwrap().args[1];

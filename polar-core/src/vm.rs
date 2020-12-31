@@ -1239,6 +1239,28 @@ impl PolarVirtualMachine {
                     right.to_polar()
                 );
 
+                let simplified = simplify_partial(
+                    left.value().as_symbol()?,
+                    operation.clone().into_term(),
+                    &self,
+                );
+                let simplified = simplified.value().as_expression()?;
+                let lhs_of_matches = simplified
+                    .constraints()
+                    .into_iter()
+                    .find_map(|c| {
+                        if c.operator != Operator::Unify {
+                            None
+                        } else if &c.args[0] == left {
+                            Some(c.args[1].clone())
+                        } else if &c.args[1] == left {
+                            Some(c.args[0].clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap();
+
                 // Construct field-less matches operation.
                 let tag_pattern = right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
                 let type_constraint = op!(Isa, left.clone(), tag_pattern);
@@ -1250,14 +1272,21 @@ impl PolarVirtualMachine {
                     operation.to_polar(),
                     left.value().as_symbol()?
                 );
-                let constraints = simplify_partial(&sym!(""), operation.clone().into_term(), &self);
-                let constraints = constraints.value().as_expression()?;
-                eprintln!(
-                    "Post-simplification of proposed: {}",
-                    constraints.to_polar()
-                );
+                let new_matches = op!(Isa, lhs_of_matches, right.clone());
+                // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.
 
-                let runnable = Box::new(IsaConstraintCheck::new(constraints.constraints()));
+                // left
+                // _value_1_15
+                //
+                // x matches A{} and x.c = _value_1_15 and _value_1_15 matches C{}
+                //
+                // x matches A{} and x.c matches C{}
+                eprintln!("Post-simplification of proposed: {}", simplified.to_polar());
+
+                let runnable = Box::new(IsaConstraintCheck::new(
+                    simplified.constraints(),
+                    new_matches,
+                ));
 
                 // Construct field constraints.
                 fields.fields.iter().rev().for_each(|(f, v)| {

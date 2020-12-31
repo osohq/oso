@@ -3,16 +3,15 @@ use crate::error::{OperationalError, PolarResult};
 use crate::events::QueryEvent;
 use crate::formatting::ToPolarString;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
+use crate::terms::{Operation, Operator, Pattern, Term, Value};
 
-fn base(x: &Term, depth: usize) -> Option<(Symbol, usize)> {
+fn path(x: &Term) -> Vec<Term> {
     match x.value() {
-        Value::Variable(v) => Some((v.clone(), depth)),
         Value::Expression(Operation {
             operator: Operator::Dot,
             args,
-        }) => base(&args[0], depth + 1),
-        _ => None,
+        }) => [vec![args[0].clone()], path(&args[1])].concat(),
+        _ => vec![x.clone()],
     }
 }
 
@@ -26,8 +25,7 @@ pub struct IsaConstraintCheck {
 }
 
 impl IsaConstraintCheck {
-    pub fn new(mut existing: Vec<Operation>) -> Self {
-        let proposed = existing.pop().unwrap();
+    pub fn new(existing: Vec<Operation>, proposed: Operation) -> Self {
         Self {
             existing,
             proposed,
@@ -67,23 +65,47 @@ impl IsaConstraintCheck {
             return (None, None);
         }
 
-        let constraint_base = base(&constraint.args[0], 0);
-        let proposed_base = base(&self.proposed.args[0], 0);
+        let constraint_path = path(&constraint.args[0]);
+        let proposed_path = path(&self.proposed.args[0]);
 
-        if constraint_base.is_none() || proposed_base.is_none() {
+        // Not comparable b/c one of the matches statements has a LHS that isn't a variable or dot
+        // op.
+        if constraint_path.is_empty() || proposed_path.is_empty() {
             return (None, None);
         }
 
-        let (constraint_base, constraint_depth) = constraint_base.unwrap();
-        let (proposed_base, proposed_depth) = proposed_base.unwrap();
-
-        if constraint_base != proposed_base {
+        // a.b.c vs. d
+        if constraint_path
+            .iter()
+            .zip(proposed_path.iter())
+            .any(|(a, b)| a != b)
+        {
             return (None, None);
         }
 
-        if constraint.args[0] == self.proposed.args[0] {
-            let proposed = self.proposed.args.pop().unwrap();
-            let existing = constraint.args.pop().unwrap();
+        let proposed = self.proposed.args.pop().unwrap();
+        let existing = constraint.args.pop().unwrap();
+
+        eprintln!("DO WE GET HERE???????????????????????????????????????????????????");
+        eprintln!(
+            "  constraint_path: {}",
+            constraint_path
+                .iter()
+                .map(|x| x.to_polar())
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
+        eprintln!(
+            "  proposed_path: {}",
+            proposed_path
+                .iter()
+                .map(|x| x.to_polar())
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
+
+        // x matches A{} vs. x matches B{}
+        if constraint_path == proposed_path {
             match (proposed.value(), existing.value()) {
                 (
                     Value::Pattern(Pattern::Instance(proposed)),
@@ -107,25 +129,35 @@ impl IsaConstraintCheck {
                 }
                 _ => (None, None),
             }
-        } else if constraint_depth > proposed_depth {
+        } else if constraint_path.len() > proposed_path.len() {
+            // comparing existing x.a.b matches B{} vs. proposed x.a matches A{}
             panic!("AAAAAAAAAAAAAAAAAAAA");
         } else {
-            let call_id = counter.next();
-            self.last_call_id = call_id;
+            match (proposed.value(), existing.value()) {
+                (
+                    Value::Pattern(Pattern::Instance(proposed)),
+                    Value::Pattern(Pattern::Instance(_)),
+                ) => {
+                    // comparing existing x matches A{} vs. proposed x.c matches C{}
+                    let call_id = counter.next();
+                    self.last_call_id = call_id;
 
-            (
-                Some(QueryEvent::ExternalIsa {
-                    call_id,
-                    instance: op!(
-                        And,
-                        constraint.into_term(),
-                        self.proposed.clone().into_term()
+                    (
+                        Some(QueryEvent::ExternalIsa {
+                            call_id,
+                            // TODO(gj): make this a list of the penultimate class_tag and the ultimate
+                            // field and class_tag. E.g.,
+                            instance: term!(Value::List(vec![
+                                existing.clone(),
+                                proposed_path.last().unwrap().clone(),
+                            ])),
+                            class_tag: proposed.tag.clone(),
+                        }),
+                        None,
                     )
-                    .into_term(),
-                    class_tag: sym!(""),
-                }),
-                None,
-            )
+                }
+                _ => (None, None),
+            }
         }
     }
 }
