@@ -52,54 +52,28 @@ func NewPolar() *Polar {
 	return &polar
 }
 
-// CLASSES: Dict[str, type] = {}
-
-// class Polar:
-//     """Polar API"""
-
-//     def __init__(self, classes=CLASSES):
-//         self.ffi_polar = FfiPolar()
-//         self.host = Host(self.ffi_polar)
-
-//         # Register global constants.
-//         self.register_constant(None, name="nil")
-
-//         # Register built-in classes.
-//         self.register_class(bool, name="Boolean")
-//         self.register_class(int, name="Integer")
-//         self.register_class(float, name="Float")
-//         self.register_class(list, name="List")
-//         self.register_class(dict, name="Dictionary")
-//         self.register_class(str, name="String")
-//         self.register_class(datetime, name="Datetime")
-//         self.register_class(timedelta, name="Timedelta")
-
-//         # Pre-registered classes.
-//         for name, cls in classes.items():
-//             self.register_class(cls, name=name)
-
-//     def __del__(self):
-//         del self.host
-//         del self.ffi_polar
-
 func (p Polar) checkInlineQueries() error {
 	for {
-		query, err := p.ffiPolar.nextInlineQuery()
+		ffiQuery, err := p.ffiPolar.nextInlineQuery()
 		if err != nil {
 			return err
 		}
-		if query == nil {
+		if ffiQuery == nil {
 			return nil
 		}
-		// TODO
-		// try:
-		// 	next(Query(query, host=self.host.copy()).run())
-		// except StopIteration:
-		// 	source = query.source()
-		// 	raise InlineQueryFailedError(source.get())
+		query := newQuery(*ffiQuery, p.host.copy())
+		res, err := query.Next()
+		if err != nil {
+			return err
+		}
+		if res == nil {
+			querySource, err := query.ffiQuery.source()
+			if err != nil {
+				return err
+			}
+			return &InlineQueryFailedError{source: *querySource}
+		}
 	}
-
-	return nil
 }
 
 func (p Polar) LoadFile(f string) error {
