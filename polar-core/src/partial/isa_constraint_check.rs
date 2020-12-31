@@ -1,8 +1,20 @@
 use crate::counter::Counter;
 use crate::error::{OperationalError, PolarResult};
 use crate::events::QueryEvent;
+use crate::formatting::ToPolarString;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Pattern, Value};
+use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
+
+fn base(x: &Term, depth: usize) -> Option<(Symbol, usize)> {
+    match x.value() {
+        Value::Variable(v) => Some((v.clone(), depth)),
+        Value::Expression(Operation {
+            operator: Operator::Dot,
+            args,
+        }) => base(&args[0], depth + 1),
+        _ => None,
+    }
+}
 
 #[derive(Clone)]
 pub struct IsaConstraintCheck {
@@ -14,7 +26,8 @@ pub struct IsaConstraintCheck {
 }
 
 impl IsaConstraintCheck {
-    pub fn new(existing: Vec<Operation>, proposed: Operation) -> Self {
+    pub fn new(mut existing: Vec<Operation>) -> Self {
+        let proposed = existing.pop().unwrap();
         Self {
             existing,
             proposed,
@@ -45,34 +58,83 @@ impl IsaConstraintCheck {
     ) -> Option<(QueryEvent, QueryEvent)> {
         // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
         // partial, Integer)`.
-        if constraint.operator != Operator::Isa || constraint.args[0] != self.proposed.args[0] {
+        eprintln!(
+            "check_constraint => constraint: {} @@@@@@@@@@@@ proposed: {}",
+            constraint.to_polar(),
+            self.proposed.to_polar()
+        );
+        if constraint.operator != Operator::Isa {
             return None;
         }
 
-        let proposed = self.proposed.args.pop().unwrap();
-        let existing = constraint.args.pop().unwrap();
-        match (proposed.value(), existing.value()) {
-            (
-                Value::Pattern(Pattern::Instance(proposed)),
-                Value::Pattern(Pattern::Instance(existing)),
-            ) if proposed.tag != existing.tag => {
-                let call_id = counter.next();
-                self.last_call_id = call_id;
+        let constraint_base = base(&constraint.args[0], 0);
+        let proposed_base = base(&self.proposed.args[0], 0);
 
-                Some((
-                    QueryEvent::ExternalIsSubclass {
-                        call_id,
-                        left_class_tag: proposed.tag.clone(),
-                        right_class_tag: existing.tag.clone(),
-                    },
-                    QueryEvent::ExternalIsSubclass {
-                        call_id,
-                        left_class_tag: existing.tag.clone(),
-                        right_class_tag: proposed.tag.clone(),
-                    },
-                ))
+        if constraint_base.is_none() || proposed_base.is_none() {
+            return None;
+        }
+
+        let (constraint_base, constraint_depth) = constraint_base.unwrap();
+        let (proposed_base, proposed_depth) = proposed_base.unwrap();
+
+        if constraint_base != proposed_base {
+            return None;
+        }
+
+        if constraint.args[0] == self.proposed.args[0] {
+            let proposed = self.proposed.args.pop().unwrap();
+            let existing = constraint.args.pop().unwrap();
+            match (proposed.value(), existing.value()) {
+                (
+                    Value::Pattern(Pattern::Instance(proposed)),
+                    Value::Pattern(Pattern::Instance(existing)),
+                ) if proposed.tag != existing.tag => {
+                    let call_id = counter.next();
+                    self.last_call_id = call_id;
+
+                    Some((
+                        QueryEvent::ExternalIsSubclass {
+                            call_id,
+                            left_class_tag: proposed.tag.clone(),
+                            right_class_tag: existing.tag.clone(),
+                        },
+                        QueryEvent::ExternalIsSubclass {
+                            call_id,
+                            left_class_tag: existing.tag.clone(),
+                            right_class_tag: proposed.tag.clone(),
+                        },
+                    ))
+                }
+                _ => None,
             }
-            _ => None,
+        } else if constraint_depth > proposed_depth {
+            panic!("AAAAAAAAAAAAAAAAAAAA");
+        } else {
+            let call_id = counter.next();
+            self.last_call_id = call_id;
+
+            Some((
+                QueryEvent::ExternalIsa {
+                    call_id,
+                    instance: op!(
+                        And,
+                        constraint.clone().into_term(),
+                        self.proposed.clone().into_term()
+                    )
+                    .into_term(),
+                    class_tag: sym!(""),
+                },
+                QueryEvent::ExternalIsa {
+                    call_id,
+                    instance: op!(
+                        And,
+                        constraint.into_term(),
+                        self.proposed.clone().into_term()
+                    )
+                    .into_term(),
+                    class_tag: sym!(""),
+                },
+            ))
         }
     }
 }

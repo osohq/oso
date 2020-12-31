@@ -514,7 +514,7 @@ mod test {
             sym!("x"),
             op!(
                 And,
-                op!(Isa, term!(sym!("_this")), term!(pattern!(instance!("A")))).into_term()
+                op!(Isa, term!(sym!("x")), term!(pattern!(instance!("A")))).into_term()
             )
             .into_term(),
         );
@@ -526,16 +526,26 @@ mod test {
                     q.question_result(call_id, false).unwrap();
                 }
                 QueryEvent::ExternalIsa {
-                    call_id,
-                    class_tag,
-                    instance,
+                    call_id, instance, ..
                 } => {
-                    eprintln!("ExternalIsa: {} matches {}", instance.to_polar(), class_tag);
-
-                    // And(Isa(_this, A), And(Dot(_this, c), Isa(_this, C)))
-                    q.question_result(call_id, class_tag == sym!("C")).unwrap();
+                    eprintln!(
+                        "EXTERNAL ISAAAAAAAAAAAAAAAAAAAAAA\n  {}",
+                        instance.to_polar()
+                    );
+                    let proposed = &instance.value().as_expression().unwrap().args[1];
+                    eprintln!("  STEP 1: {}", proposed.to_polar());
+                    let proposed = &proposed.value().as_expression().unwrap().args[1];
+                    eprintln!("  STEP 2: {}", proposed.to_polar());
+                    match proposed.value().as_pattern().unwrap() {
+                        Pattern::Instance(InstanceLiteral { tag, .. }) => {
+                            eprintln!("  STEP 3: {}", tag);
+                            q.question_result(call_id, tag == &sym!("C")).unwrap();
+                        }
+                        _ => q.question_result(call_id, false).unwrap(),
+                    }
                 }
-                _ => panic!("not bindings"),
+                QueryEvent::None => (),
+                e => panic!("not bindings: {:?}", e),
             }
         };
         assert_partial_expression!(

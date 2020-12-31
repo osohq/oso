@@ -126,6 +126,12 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
     }
 }
 
+pub fn simplify_partial(var: &Symbol, term: Term, vm: &PolarVirtualMachine) -> Term {
+    let mut simplifier = Simplifier::new(var.clone(), vm);
+    let simplified = simplifier.simplify_partial(term);
+    simplify_trivial_constraint(var.clone(), simplified)
+}
+
 /// Simplify the values of the bindings to be returned to the host language.
 ///
 /// - For partials, simplify the constraint expressions.
@@ -134,9 +140,7 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
 pub fn simplify_bindings(bindings: Bindings, vm: &PolarVirtualMachine) -> Option<Bindings> {
     let mut unsatisfiable = false;
     let mut simplify = |var: Symbol, term: Term| {
-        let mut simplifier = Simplifier::new(var.clone(), vm);
-        let simplified = simplifier.simplify_partial(term);
-        let simplified = simplify_trivial_constraint(var.clone(), simplified);
+        let simplified = simplify_partial(&var, term, vm);
         let simplified = sub_this(var, simplified);
         match simplified.value().as_expression() {
             Ok(o) if o == &FALSE => unsatisfiable = true,

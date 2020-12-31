@@ -18,7 +18,7 @@ use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial::{simplify_bindings, IsaConstraintCheck};
+use crate::partial::{simplify_bindings, simplify_partial, IsaConstraintCheck};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -1124,7 +1124,7 @@ impl PolarVirtualMachine {
                 VariableState::Cycle(c) => self.isa_expr(&cycle_constraints(c), left, right)?,
                 VariableState::Partial(e) => self.isa_expr(&e, left, right)?,
             },
-            (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => match self.variable_state(r) {
+            (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => todo!() /*match self.variable_state(r) {
                 VariableState::Unbound => self.push_goal(Goal::Unify {
                     left: left.clone(),
                     right: right.clone(),
@@ -1135,7 +1135,7 @@ impl PolarVirtualMachine {
                 })?,
                 VariableState::Cycle(d) => self.isa_expr(&cycle_constraints(d), left, right)?,
                 VariableState::Partial(f) => self.isa_expr(&f, left, right)?,
-            },
+            }*/,
 
             (Value::List(left), Value::List(right)) => {
                 self.unify_lists(left, right, |(left, right)| Goal::Isa {
@@ -1233,22 +1233,31 @@ impl PolarVirtualMachine {
             }
             Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
                 eprintln!(
-                    "isa_expr; expr: {}; {} matches {}",
+                    "isa_expr\n  existing expr: {}\n  new operation: {} matches {}",
                     operation.to_polar(),
                     left.to_polar(),
                     right.to_polar()
                 );
-                // Grab existing constraints before we add new ones.
-                let existing = operation.constraints();
 
                 // Construct field-less matches operation.
                 let tag_pattern = right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
                 let type_constraint = op!(Isa, left.clone(), tag_pattern);
                 let mut operation =
-                    operation.clone_with_new_constraint(type_constraint.clone().into_term());
+                    operation.clone_with_new_constraint(type_constraint.into_term());
 
-                // Construct compatibility check.
-                let runnable = Box::new(IsaConstraintCheck::new(existing, type_constraint));
+                eprintln!(
+                    "Pre-simplification\n  of proposed {}\n  in the context of {}",
+                    operation.to_polar(),
+                    left.value().as_symbol()?
+                );
+                let constraints = simplify_partial(&sym!(""), operation.clone().into_term(), &self);
+                let constraints = constraints.value().as_expression()?;
+                eprintln!(
+                    "Post-simplification of proposed: {}",
+                    constraints.to_polar()
+                );
+
+                let runnable = Box::new(IsaConstraintCheck::new(constraints.constraints()));
 
                 // Construct field constraints.
                 fields.fields.iter().rev().for_each(|(f, v)| {
