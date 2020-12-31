@@ -367,7 +367,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        ruby-version: [2.4, 2.5, 2.6, 2.7]
+        ruby-version: [2.4, 2.5, 2.6, 2.7, "3.0"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
