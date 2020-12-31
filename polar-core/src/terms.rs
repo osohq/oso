@@ -328,7 +328,7 @@ impl Term {
     }
 
     /// Get a set of all the variables used within a term.
-    pub fn variables<'set>(&self, vars: &'set mut HashSet<Symbol>) {
+    pub fn variables(&self, vars: &mut HashSet<Symbol>) {
         struct VariableVisitor<'set> {
             vars: &'set mut HashSet<Symbol>,
         }

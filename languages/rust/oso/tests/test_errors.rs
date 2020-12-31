@@ -321,7 +321,7 @@ fn test_wrong_argument_types() {
     assert!(query.next().unwrap().is_err());
 
     // Out of bound argument.
-    let mut query = oso.oso.query_rule("int", (Foo, -1 as i8)).unwrap();
+    let mut query = oso.oso.query_rule("int", (Foo, -1_i8)).unwrap();
     assert!(query.next().unwrap().is_err());
 }
 
