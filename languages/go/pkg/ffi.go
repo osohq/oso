@@ -39,7 +39,6 @@ func (p *PolarFfi) delete() {
 
 func getError() error {
 	err := C.polar_get_error()
-	defer C.string_free(err)
 	errStr := C.GoString(err)
 	var polarError FormattedPolarError
 	jsonErr := json.Unmarshal([]byte(errStr), &polarError)
@@ -64,7 +63,6 @@ func processMessages(i ffiInterface) {
 			return
 		}
 		message := C.GoString(msgPtr)
-		defer C.string_free(msgPtr)
 		var messageStruct Message
 		err := json.Unmarshal([]byte(message), &messageStruct)
 		if err != nil {
@@ -93,11 +91,9 @@ func (p PolarFfi) newId() (int, error) {
 
 func (p PolarFfi) load(s string, filename *string) error {
 	cString := C.CString(s)
-	defer C.free(unsafe.Pointer(cString))
 	var cFilename *C.char
 	if filename != nil {
 		cFilename = C.CString(*filename)
-		defer C.free(unsafe.Pointer(cFilename))
 	}
 	result := C.polar_load(p.ptr, cString, cFilename)
 	processMessages(p)
@@ -118,7 +114,6 @@ func (p PolarFfi) clearRules() error {
 
 func (p PolarFfi) newQueryFromStr(queryStr string) (*QueryFfi, error) {
 	cs := C.CString(queryStr)
-	defer C.free(unsafe.Pointer(cs))
 	result := C.polar_new_query(p.ptr, cs, 0)
 	processMessages(p)
 	if result == nil {
@@ -129,7 +124,6 @@ func (p PolarFfi) newQueryFromStr(queryStr string) (*QueryFfi, error) {
 
 func (p PolarFfi) newQueryFromTerm(queryTerm interface{}) (*QueryFfi, error) {
 	json, err := ffiSerialize(queryTerm)
-	defer C.free(unsafe.Pointer(json))
 	if err != nil {
 		return nil, err
 	}
@@ -153,10 +147,9 @@ func (p PolarFfi) nextInlineQuery() (*QueryFfi, error) {
 
 func (p PolarFfi) registerConstant(v Value, name string) error {
 	cName := C.CString(name)
-	defer C.free(unsafe.Pointer(cName))
 	cValue, err := ffiSerialize(v)
-	defer C.free(unsafe.Pointer(cValue))
 	if err != nil {
+		defer C.free(unsafe.Pointer(cName))
 		return err
 	}
 	result := C.polar_register_constant(p.ptr, cName, cValue)
@@ -191,7 +184,6 @@ func (q QueryFfi) callResult(callID int, value *Value) error {
 	var err error
 	if value != nil {
 		s, err = ffiSerialize(value)
-		defer C.free(unsafe.Pointer(s))
 		if err != nil {
 			return err
 		}
@@ -232,14 +224,12 @@ func (q QueryFfi) nextEvent() (*string, error) {
 	if event == nil {
 		return nil, getError()
 	}
-	defer C.string_free(event)
 	goEvent := C.GoString(event)
 	return &goEvent, nil
 }
 
 func (q QueryFfi) debugCommand(command interface{}) error {
 	cStr, err := ffiSerialize(command)
-	defer C.free(unsafe.Pointer(cStr))
 	if err != nil {
 		return err
 	}
@@ -256,7 +246,6 @@ func (q QueryFfi) source() (*string, error) {
 	if source == nil {
 		return nil, getError()
 	}
-	defer C.string_free(source)
 	goSource := C.GoString(source)
 	return &goSource, nil
 }

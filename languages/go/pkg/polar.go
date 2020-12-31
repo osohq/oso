@@ -192,7 +192,9 @@ func (p Polar) RegisterClass(cls reflect.Type, name *string) error {
 	if err != nil {
 		return err
 	}
-	return p.RegisterConstant(cls, className)
+	// zeroVal := reflect.Zero(cls)
+	newVal := reflect.New(cls)
+	return p.RegisterConstant(newVal.Interface(), className)
 }
 
 func (p Polar) RegisterConstant(value interface{}, name string) error {

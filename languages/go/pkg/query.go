@@ -127,17 +127,61 @@ func (q Query) handleExternalCall(event *QueryEventExternalCall) error {
 		}
 		if method.Kind() == reflect.Func {
 			args, err := q.host.listToGo(*event.Args)
-			valueArgs := make([]reflect.Value, len(args))
-			for idx, v := range args {
-				valueArgs[idx] = reflect.ValueOf(v)
-			}
 			if err != nil {
 				return err
 			}
 			if event.Kwargs != nil {
 				return &KwargsError{}
 			}
-			results := method.Call(valueArgs)
+			numIn := method.Type().NumIn()
+			if !method.Type().IsVariadic() {
+				if len(args) != numIn {
+					return &ErrorWithAdditionalInfo{
+						Inner: &InvalidCallError{instance: event.Instance, field: event.Attribute},
+						Info:  fmt.Sprintf("incorrect number of arguments. Expected %v, got %v", numIn, len(args)),
+					}
+				}
+			}
+
+			var end int
+			if method.Type().IsVariadic() {
+				// stop one before the end so we can make this a slice
+				end = numIn - 1
+			} else {
+				end = numIn
+			}
+
+			// convert args
+			callArgs := make([]reflect.Value, numIn)
+			for i := 0; i < end; i++ {
+				arg := args[i]
+				callArgs[i] = reflect.New(method.Type().In(i))
+				err := setFieldTo(callArgs[i], arg)
+				if err != nil {
+					return &ErrorWithAdditionalInfo{
+						Inner: &InvalidCallError{instance: event.Instance, field: event.Attribute},
+						Info:  err.Error(),
+					}
+				}
+			}
+			if method.Type().IsVariadic() {
+				remainingArgs := args[end:]
+				callArgs[end] = reflect.New(method.Type().In(end)).Elem()
+				err := setFieldTo(callArgs[end], remainingArgs)
+				if err != nil {
+					return &ErrorWithAdditionalInfo{
+						Inner: &InvalidCallError{instance: event.Instance, field: event.Attribute},
+						Info:  err.Error(),
+					}
+				}
+			}
+			var results []reflect.Value
+			if method.Type().IsVariadic() {
+				results = method.CallSlice(callArgs)
+			} else {
+				results = method.Call(callArgs)
+			}
+
 			if len(results) == 1 {
 				result = results[0].Interface()
 			} else {

@@ -172,7 +172,11 @@ func (tc TestCase) RunTest(t *testing.T) {
 			testName += c.Query
 		}
 		t.Run(testName, func(t *testing.T) {
-			o := *oso.NewPolar()
+			oPtr := oso.NewPolar()
+			if oPtr == nil {
+				t.Fatal("Failed to setup Polar")
+			}
+			var o oso.Polar = *oPtr
 			err := tc.setupTest(o, t)
 			if err != nil {
 				t.Fatal(err)

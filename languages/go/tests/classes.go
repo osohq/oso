@@ -82,6 +82,10 @@ func (vf ValueFactory) GetType() reflect.Type {
 
 type Constructor map[string]interface{}
 
+func (u Constructor) String() string {
+	return "Constructor"
+}
+
 // func NewConstructor(args ...interface{}) Constructor {
 // 	Args := make([]interface{}, len(args))
 // 	for idx, v := range args {
@@ -104,11 +108,15 @@ func (c Constructor) NumKwargs() int {
 type MethodVariants struct {
 }
 
-func (m *MethodVariants) ClassMethodReturnsString() string {
+func (u MethodVariants) String() string {
+	return "MethodVariants"
+}
+
+func (m MethodVariants) ClassMethodReturnsString() string {
 	return "abc"
 }
 
-func (m *MethodVariants) SumInputArgs(args ...int) int {
+func (m MethodVariants) SumInputArgs(args ...int) int {
 	sum := 0
 	for _, arg := range args {
 		sum += arg
@@ -168,8 +176,16 @@ type Animal struct {
 	Family  string
 }
 
+func (a Animal) String() string {
+	return fmt.Sprintf("Animal { %s, %s, %s }", a.Species, a.Genus, a.Family)
+}
+
 type ImplementsEq struct {
 	Val int
+}
+
+func (u ImplementsEq) String() string {
+	return fmt.Sprintf("ImplementsEq { %v }", u.Val)
 }
 
 func (left ImplementsEq) Equal(right oso.Comparer) bool {
@@ -181,6 +197,10 @@ func (left ImplementsEq) Lt(right oso.Comparer) bool {
 
 type Comparable struct {
 	Val int
+}
+
+func (u Comparable) String() string {
+	return fmt.Sprintf("Comparable { %v }", u.Val)
 }
 
 func (a Comparable) Equal(b oso.Comparer) bool {
