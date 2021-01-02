@@ -526,23 +526,23 @@ mod test {
                     q.question_result(call_id, false).unwrap();
                 }
                 QueryEvent::ExternalIsa {
-                    call_id, instance, ..
+                    call_id,
+                    instance,
+                    class_tag,
                 } => {
-                    eprintln!(
-                        "EXTERNAL ISAAAAAAAAAAAAAAAAAAAAAA\n  {}",
-                        instance.to_polar()
-                    );
-                    // TODO(gj): Update the below for our new expectation.
-                    let proposed = &instance.value().as_expression().unwrap().args[1];
-                    eprintln!("  STEP 1: {}", proposed.to_polar());
-                    let proposed = &proposed.value().as_expression().unwrap().args[1];
-                    eprintln!("  STEP 2: {}", proposed.to_polar());
-                    match proposed.value().as_pattern().unwrap() {
-                        Pattern::Instance(InstanceLiteral { tag, .. }) => {
-                            eprintln!("  STEP 3: {}", tag);
-                            q.question_result(call_id, tag == &sym!("C")).unwrap();
-                        }
-                        _ => q.question_result(call_id, false).unwrap(),
+                    let (_base_class, path) = if let Value::List(l) = instance.value() {
+                        l.split_at(1)
+                    } else {
+                        panic!();
+                    };
+                    if let Some(segment) = path.last() {
+                        q.question_result(
+                            call_id,
+                            segment.value().as_string().unwrap().to_uppercase() == class_tag.0,
+                        )
+                        .unwrap();
+                    } else {
+                        panic!();
                     }
                 }
                 QueryEvent::None => (),

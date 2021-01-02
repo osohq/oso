@@ -86,24 +86,6 @@ impl IsaConstraintCheck {
         let proposed = self.proposed.args.pop().unwrap();
         let existing = constraint.args.pop().unwrap();
 
-        eprintln!("DO WE GET HERE???????????????????????????????????????????????????");
-        eprintln!(
-            "  constraint_path: {}",
-            constraint_path
-                .iter()
-                .map(|x| x.to_polar())
-                .collect::<Vec<String>>()
-                .join(", ")
-        );
-        eprintln!(
-            "  proposed_path: {}",
-            proposed_path
-                .iter()
-                .map(|x| x.to_polar())
-                .collect::<Vec<String>>()
-                .join(", ")
-        );
-
         // x matches A{} vs. x matches B{}
         if constraint_path == proposed_path {
             match (proposed.value(), existing.value()) {
@@ -133,24 +115,26 @@ impl IsaConstraintCheck {
             // comparing existing x.a.b matches B{} vs. proposed x.a matches A{}
             panic!("AAAAAAAAAAAAAAAAAAAA");
         } else {
+            // Proposed path is a superset of existing path. Take the existing tag, the additional
+            // path segments from the proposed path, and the proposed tag.
+            //
+            // E.g., given `a.b matches B{}` and `a.b.c.d matches D{}`, we want to assemble an
+            // `ExternalIsa` of `[B, c, d] matches D`.
             match (proposed.value(), existing.value()) {
                 (
                     Value::Pattern(Pattern::Instance(proposed)),
                     Value::Pattern(Pattern::Instance(_)),
                 ) => {
-                    // comparing existing x matches A{} vs. proposed x.c matches C{}
                     let call_id = counter.next();
                     self.last_call_id = call_id;
+
+                    let mut instance = vec![existing];
+                    instance.append(&mut proposed_path[constraint_path.len()..].to_vec());
 
                     (
                         Some(QueryEvent::ExternalIsa {
                             call_id,
-                            // TODO(gj): make this a list of the penultimate class_tag and the ultimate
-                            // field and class_tag. E.g.,
-                            instance: term!(Value::List(vec![
-                                existing.clone(),
-                                proposed_path.last().unwrap().clone(),
-                            ])),
+                            instance: term!(Value::List(instance)),
                             class_tag: proposed.tag.clone(),
                         }),
                         None,
