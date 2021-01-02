@@ -1124,7 +1124,7 @@ impl PolarVirtualMachine {
                 VariableState::Cycle(c) => self.isa_expr(&cycle_constraints(c), left, right)?,
                 VariableState::Partial(e) => self.isa_expr(&e, left, right)?,
             },
-            (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => todo!() /*match self.variable_state(r) {
+            (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => match self.variable_state(r) {
                 VariableState::Unbound => self.push_goal(Goal::Unify {
                     left: left.clone(),
                     right: right.clone(),
@@ -1135,7 +1135,7 @@ impl PolarVirtualMachine {
                 })?,
                 VariableState::Cycle(d) => self.isa_expr(&cycle_constraints(d), left, right)?,
                 VariableState::Partial(f) => self.isa_expr(&f, left, right)?,
-            }*/,
+            },
 
             (Value::List(left), Value::List(right)) => {
                 self.unify_lists(left, right, |(left, right)| Goal::Isa {
