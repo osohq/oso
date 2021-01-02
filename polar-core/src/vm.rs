@@ -2193,11 +2193,6 @@ impl PolarVirtualMachine {
             }
             (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
                 // A variable on the left, ground on the right.
-                assert!(
-                    right_term.is_ground(),
-                    "expected ground term on the right of comparison, this is `{}`",
-                    right_term.to_polar()
-                );
                 match self.variable_state(l) {
                     VariableState::Unbound => todo!("cmp w/unbound"),
                     VariableState::Bound(x) => {
@@ -2214,11 +2209,6 @@ impl PolarVirtualMachine {
             }
             (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => {
                 // Ground on the left, a variable on the right.
-                assert!(
-                    left_term.is_ground(),
-                    "expected ground term on the left of comparison, this is `{}`",
-                    left_term.to_polar()
-                );
                 match self.variable_state(r) {
                     VariableState::Unbound => todo!("cmp w/unbound"),
                     VariableState::Bound(y) => {
