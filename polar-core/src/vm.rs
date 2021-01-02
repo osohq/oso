@@ -1953,18 +1953,17 @@ impl PolarVirtualMachine {
                 ])?;
             }
             Value::Variable(v) | Value::RestVariable(v) => {
-                if matches!(field.value(), Value::Call(_)) {
-                    return Err(self.set_error_context(
-                        object,
-                        error::RuntimeError::Unsupported {
-                            msg: format!("cannot call method on unbound variable {}", v),
-                        },
-                    ));
-                }
-
                 let constraints = match self.variable_state(v) {
                     VariableState::Bound(x) => {
                         return self.dot_op_helper(vec![x, field.clone(), value.clone()]);
+                    }
+                    _ if matches!(field.value(), Value::Call(_)) => {
+                        return Err(self.set_error_context(
+                            object,
+                            error::RuntimeError::Unsupported {
+                                msg: format!("cannot call method on unbound variable {}", v),
+                            },
+                        ));
                     }
                     VariableState::Unbound => op!(And),
                     VariableState::Partial(expr) => expr,
