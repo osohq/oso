@@ -1970,7 +1970,7 @@ impl PolarVirtualMachine {
                         todo!("unbound, unbound");
                     }
                     (VariableState::Bound(x), _) => {
-                        let args = vec![x, right_term.clone()];
+                        let args = vec![x, right_term.clone(), result.clone()];
                         return self.arithmetic_op_helper(
                             &term.clone_with_value(Value::Expression(Operation {
                                 operator: op,
@@ -1981,7 +1981,7 @@ impl PolarVirtualMachine {
                         );
                     }
                     (_, VariableState::Bound(y)) => {
-                        let args = vec![left_term.clone(), y];
+                        let args = vec![left_term.clone(), y, result.clone()];
                         return self.arithmetic_op_helper(
                             &term.clone_with_value(Value::Expression(Operation {
                                 operator: op,
@@ -2004,7 +2004,11 @@ impl PolarVirtualMachine {
                 match self.variable_state(l) {
                     VariableState::Unbound => todo!("cmp w/unbound"),
                     VariableState::Bound(x) => {
-                        return self.arithmetic_op_helper(term, op, vec![x, right_term.clone()]);
+                        return self.arithmetic_op_helper(
+                            term,
+                            op,
+                            vec![x, right_term.clone(), result.clone()],
+                        );
                     }
                     VariableState::Cycle(c) => {
                         self.constrain(&cycle_constraints(c), term)?;
@@ -2019,7 +2023,11 @@ impl PolarVirtualMachine {
                 match self.variable_state(r) {
                     VariableState::Unbound => todo!("cmp w/unbound"),
                     VariableState::Bound(y) => {
-                        return self.arithmetic_op_helper(term, op, vec![left_term.clone(), y]);
+                        return self.arithmetic_op_helper(
+                            term,
+                            op,
+                            vec![left_term.clone(), y, result.clone()],
+                        );
                     }
                     VariableState::Cycle(c) => {
                         self.constrain(&cycle_constraints(c), term)?;
