@@ -121,6 +121,7 @@ impl Operation {
                             invert = !invert;
                         }
 
+                        // TODO(gj): do we still need this? Test it!
                         let mut get_maybe_inverted_value = |term: &Term| -> Value {
                             let value = term.value();
                             if let Ok(e) = value.as_expression() {
