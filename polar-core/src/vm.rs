@@ -1308,7 +1308,12 @@ impl PolarVirtualMachine {
     /// Create a choice over the applicable rules.
     fn query_for_predicate(&mut self, predicate: Call) -> PolarResult<()> {
         assert!(predicate.kwargs.is_none());
-        let goals = match self.kb.read().unwrap().rules.get(&predicate.name) {
+        let goals = match self
+            .kb
+            .read()
+            .unwrap()
+            .lookup_rule(predicate.name.clone().into(), Path::default_path())
+        {
             None => vec![Goal::Backtrack],
             Some(generic_rule) => {
                 assert_eq!(generic_rule.name, predicate.name);
@@ -2834,10 +2839,9 @@ mod tests {
         let f1 = rule!("f", [1]);
         let f2 = rule!("f", [2]);
 
-        let rule = GenericRule::new(sym!("f"), vec![Arc::new(f1), Arc::new(f2)]);
-
         let mut kb = KnowledgeBase::new();
-        kb.rules.insert(rule.name.clone(), rule);
+        kb.add_rule(f1);
+        kb.add_rule(f2);
 
         let goal = query!(op!(And));
 

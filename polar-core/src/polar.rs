@@ -4,7 +4,6 @@ use super::kb::*;
 use super::messages::*;
 use super::parser;
 use super::rewrites::*;
-use super::rules::*;
 use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
@@ -207,13 +206,7 @@ impl Polar {
                     let mut rule_warnings = check_singletons(&rule, &kb);
                     warnings.append(&mut rule_warnings);
                     let rule = rewrite_rule(rule, &mut kb);
-
-                    let name = rule.name.clone();
-                    let generic_rule = kb
-                        .rules
-                        .entry(name.clone())
-                        .or_insert_with(|| GenericRule::new(name, vec![]));
-                    generic_rule.add_rule(Arc::new(rule));
+                    kb.add_rule(rule);
                 }
                 parser::Line::Query(term) => {
                     kb.inline_queries.push(term);
@@ -235,10 +228,7 @@ impl Polar {
 
     /// Clear rules from the knowledge base
     pub fn clear_rules(&self) {
-        let mut kb = self.kb.write().unwrap();
-        kb.rules.clear();
-        kb.sources = Sources::default();
-        kb.inline_queries.clear();
+        self.kb.write().unwrap().clear_rules();
         self.loaded_content.write().unwrap().clear();
         self.loaded_files.write().unwrap().clear();
     }

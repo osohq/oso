@@ -5,6 +5,8 @@ use super::rules::*;
 use super::sources::*;
 use super::terms::*;
 
+use std::sync::Arc;
+
 /// A map of bindings: variable name → value. The VM uses a stack internally,
 /// but can translate to and from this type.
 pub type Bindings = HashMap<Symbol, Term>;
@@ -12,7 +14,7 @@ pub type Bindings = HashMap<Symbol, Term>;
 #[derive(Default)]
 pub struct KnowledgeBase {
     constants: Bindings,
-    pub rules: HashMap<Symbol, GenericRule>,
+    rules: HashMap<Symbol, GenericRule>,
     pub sources: Sources,
     /// For symbols returned from gensym.
     gensym_counter: Counter,
@@ -81,5 +83,21 @@ impl KnowledgeBase {
     pub fn lookup_rule(&self, path: Path, scope: Path) -> Option<&GenericRule> {
         let name = path.0.get(0).unwrap();
         self.rules.get(name)
+    }
+
+    pub fn add_rule(&mut self, rule: Rule) {
+        let name = rule.name.clone();
+        let generic_rule = self
+            .rules
+            .entry(name.clone())
+            .or_insert_with(|| GenericRule::new(name, vec![]));
+        generic_rule.add_rule(Arc::new(rule));
+    }
+
+    /// Clear rules from KB, leaving constants in place.
+    pub fn clear_rules(&mut self) {
+        self.rules.clear();
+        self.sources = Sources::default();
+        self.inline_queries.clear();
     }
 }
