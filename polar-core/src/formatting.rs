@@ -491,11 +491,13 @@ pub mod to_polar {
                     ),
                 },
                 // n-ary operators
+                And if self.args.is_empty() => "(true)".to_string(),
                 And => format_args(
                     self.operator,
                     &self.args,
                     &format!(" {} ", self.operator.to_polar()),
                 ),
+                Or if self.args.is_empty() => "(false)".to_string(),
                 Or => format_args(
                     self.operator,
                     &self.args,

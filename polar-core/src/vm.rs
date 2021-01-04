@@ -605,65 +605,13 @@ impl PolarVirtualMachine {
         let operation = o.clone_with_new_constraint(t.clone());
         // TODO(gj): test what happens when we constrain a partial that contains variables of every
         // possible state.
-        if self.is_consistent(&operation) {
-            for var in operation.variables() {
-                match self.variable_state(&var) {
-                    VariableState::Bound(_) => (),
-                    _ => self.bind(&var, operation.clone().into_term()),
-                }
+        for var in operation.variables() {
+            match self.variable_state(&var) {
+                VariableState::Bound(_) => (),
+                _ => self.bind(&var, operation.clone().into_term()),
             }
-        } else {
-            self.push_goal(Goal::Backtrack)?;
         }
         Ok(())
-    }
-
-    /// Check for incompatible unifications.
-    fn is_consistent(&self, o: &Operation) -> bool {
-        let mut values: HashMap<Symbol, Term> = HashMap::new();
-        for c in o.constraints().iter() {
-            if c.operator != Operator::Unify {
-                continue;
-            }
-            let left = &c.args[0];
-            let right = &c.args[1];
-            match (left.value(), right.value()) {
-                (Value::Variable(l), Value::Variable(r)) => {
-                    match (self.variable_state(l), self.variable_state(r)) {
-                        (VariableState::Bound(x), VariableState::Bound(y)) => {
-                            if x != y {
-                                panic!("L, R, Boom!");
-                                return false;
-                            }
-                        }
-                        (_, _) => (),
-                    }
-                }
-                (Value::Variable(l), _) => {
-                    if let VariableState::Bound(x) = self.variable_state(l) {
-                        if let Some(y) = values.insert(l.clone(), right.clone()) {
-                            if x != y {
-                                panic!("L Boom!");
-                                return false;
-                            }
-                        }
-                    }
-                }
-                (_, Value::Variable(r)) => {
-                    if let VariableState::Bound(y) = self.variable_state(r) {
-                        if let Some(x) = values.insert(r.clone(), left.clone()) {
-                            if x != y {
-                                panic!("R Boom!");
-                                return false;
-                            }
-                        }
-                    }
-                }
-                (l, r) if l.is_ground() && r.is_ground() && l != r => return false,
-                _ => (),
-            }
-        }
-        true
     }
 
     /// Augment the bindings stack with constants from a hash map.
@@ -2287,11 +2235,12 @@ impl PolarVirtualMachine {
                         self.push_goal(Goal::Unify { left: value, right })?;
                     }
                     VariableState::Partial(f) => {
-                        self.constrain(
-                            &f.ground(var.clone(), right.clone()),
-                            &term!(value!(op!(And))),
-                        )?;
-                        self.bind(var, right);
+                        if let Some(grounded) = f.ground(var.clone(), right.clone()) {
+                            self.constrain(&grounded, &op!(And).into_term())?;
+                            self.bind(var, right);
+                        } else {
+                            self.push_goal(Goal::Backtrack)?;
+                        }
                     }
                     _ => self.bind(var, right),
                 }
@@ -2305,11 +2254,12 @@ impl PolarVirtualMachine {
                         self.push_goal(Goal::Unify { left, right: value })?;
                     }
                     VariableState::Partial(f) => {
-                        self.constrain(
-                            &f.ground(var.clone(), left.clone()),
-                            &term!(value!(op!(And))),
-                        )?;
-                        self.bind(var, left);
+                        if let Some(grounded) = f.ground(var.clone(), left.clone()) {
+                            self.constrain(&grounded, &op!(And).into_term())?;
+                            self.bind(var, left);
+                        } else {
+                            self.push_goal(Goal::Backtrack)?;
+                        }
                     }
                     _ => self.bind(var, left),
                 }

@@ -1,14 +1,10 @@
-use std::collections::HashSet;
-//
-// use serde::{Deserialize, Serialize};
-//
-use crate::folder::{fold_term, Folder};
-use crate::formatting::ToPolarString;
+use crate::folder::{fold_operation, fold_term, Folder};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 use crate::visitor::{walk_operation, Visitor};
+use std::collections::HashSet;
 
 impl Operation {
-    // Invariant: self is an AND
+    /// Construct & return a set of symbols that occur in this operation.
     pub fn variables(&self) -> HashSet<Symbol> {
         struct VariableVisitor {
             vars: HashSet<Symbol>,
@@ -16,8 +12,6 @@ impl Operation {
 
         impl Visitor for VariableVisitor {
             fn visit_variable(&mut self, v: &Symbol) {
-                // TODO(gj): check that var is bound to partial or unbound.
-                // TODO(gj): update above comment
                 self.vars.insert(v.clone());
             }
         }
@@ -30,10 +24,16 @@ impl Operation {
         visitor.vars
     }
 
-    pub fn ground(&self, var: Symbol, value: Term) -> Self {
+    /// Replace `var` with a ground (non-variable) value. Checks for
+    /// consistent unifications along the way: if everything's fine,
+    /// returns `Some(grounded_term)`, but if an inconsistent ground
+    /// (anti-)unification is detected, return `None`.
+    pub fn ground(&self, var: Symbol, value: Term) -> Option<Self> {
         struct Grounder {
             var: Symbol,
             value: Term,
+            invert: bool,
+            consistent: bool,
         }
 
         impl Folder for Grounder {
@@ -45,15 +45,79 @@ impl Operation {
                 }
                 fold_term(t, self)
             }
+
+            fn fold_operation(&mut self, o: Operation) -> Operation {
+                match o.operator {
+                    Operator::Unify | Operator::Eq | Operator::Neq => {
+                        let mut invert = self.invert;
+                        if o.operator == Operator::Neq {
+                            invert = !invert;
+                        }
+
+                        let mut get_maybe_inverted_value = |term: &Term| -> Value {
+                            let value = term.value();
+                            if let Ok(e) = value.as_expression() {
+                                if e.operator == Operator::Not {
+                                    assert_eq!(e.args.len(), 1, "negation is unary");
+                                    invert = !invert;
+                                    return e.args[0].value().clone();
+                                }
+                            }
+                            value.clone()
+                        };
+
+                        let left = self.fold_term(o.args[0].clone());
+                        let right = self.fold_term(o.args[1].clone());
+
+                        let left_value = get_maybe_inverted_value(&left);
+                        let right_value = get_maybe_inverted_value(&right);
+                        if left_value.is_ground()
+                            && right_value.is_ground()
+                            && (if invert {
+                                left_value == right_value
+                            } else {
+                                left_value != right_value
+                            })
+                        {
+                            self.consistent = false;
+                        }
+
+                        Operation {
+                            operator: if invert {
+                                if o.operator == Operator::Neq {
+                                    Operator::Unify
+                                } else {
+                                    Operator::Neq
+                                }
+                            } else {
+                                o.operator
+                            },
+                            args: vec![left, right],
+                        }
+                    }
+                    Operator::Not => {
+                        self.invert = !self.invert;
+                        let o = fold_operation(o, self);
+                        self.invert = !self.invert;
+                        o
+                    }
+                    _ => fold_operation(o, self),
+                }
+            }
         }
 
-        assert!(
-            value.is_ground() || matches!(value.value(), Value::ExternalInstance(_)),
-            "Expected ground term for `{}`, got `{}`",
+        let mut grounder = Grounder {
             var,
-            value.to_polar()
-        );
-        Grounder { var, value }.fold_operation(self.clone())
+            value,
+            invert: false,
+            consistent: true,
+        };
+        let grounded = grounder.fold_operation(self.clone());
+        if grounder.consistent {
+            Some(grounded)
+        } else {
+            None
+        }
     }
 
     /// Augment our constraints with those on `other`.
@@ -81,7 +145,6 @@ impl Operation {
     }
 
     pub fn constraints(&self) -> Vec<Operation> {
-        assert_eq!(self.operator, Operator::And);
         self.args
             .iter()
             .map(|a| a.value().as_expression().unwrap().clone())
@@ -636,7 +699,7 @@ mod test {
         p.register_constant(sym!("y"), term!(value!(op!(And))));
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
-        assert_partial_expressions!(next, "x" => "", "y" => "");
+        assert_partial_expressions!(next, "x" => "(true)", "y" => "(true)");
         let next = next_binding(&mut q)?;
         assert_eq!(next[&sym!("x")], term!(1));
         assert_eq!(next[&sym!("y")], term!(1));
@@ -775,7 +838,6 @@ mod test {
         Ok(())
     }
 
-    #[ignore]
     #[test]
     fn partially_negated_constraints() -> TestResult {
         let p = Polar::new();
@@ -784,8 +846,13 @@ mod test {
                g(x) if x = 3 and not (x = 3 and (not x = 2));
                h(x) if not (x = 1 and (not x = 2));
                i(x) if x = 1 and not (x = 2 or x = 3);
-               j(x) if not (x = 2 or x = 3) and x = 1;"#,
+               j(x) if x != 2 and x = 1;
+               k(x) if (x != 2 or x != 3) and x = 1;
+               l(x) if not (x = 2) and x = 1;
+               m(x) if not (x = 2 or x = 3) and x = 1;
+               n(x) if not (x != 2) and x = 1;"#,
         )?;
+
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(3));
         assert_query_done!(q);
@@ -803,6 +870,22 @@ mod test {
 
         let mut q = p.new_query_from_term(term!(call!("j", [sym!("x")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("k", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("l", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("n", [sym!("x")])), false);
         assert_query_done!(q);
 
         Ok(())

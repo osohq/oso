@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use crate::folder::{fold_operation, fold_term, Folder};
 use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
-// use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 use crate::vm::{PolarVirtualMachine, VariableState};
 
@@ -115,7 +114,7 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
             let right = &o.args[1];
             match (left.value(), right.value()) {
                 (Value::Variable(v), Value::Variable(w)) if v == &this && w == &this => {
-                    unreachable!()
+                    TRUE.into_term()
                 }
                 (Value::Variable(l), _) if l == &this && right.is_ground() => right.clone(),
                 (_, Value::Variable(r)) if r == &this && left.is_ground() => left.clone(),
@@ -196,6 +195,24 @@ impl<'vm> Folder for Simplifier<'vm> {
             );
         }
 
+        if o.operator == Operator::And || o.operator == Operator::Or {
+            // Toss trivial unifications.
+            for (i, c) in o.constraints().into_iter().enumerate() {
+                match c.operator {
+                    Operator::Unify | Operator::Eq | Operator::Neq => {
+                        assert_eq!(c.args.len(), 2);
+                        let left = &c.args[0];
+                        let right = &c.args[1];
+                        if left == right || left.is_ground() && right.is_ground() {
+                            eprintln!("TOSSING CONSTRAINT `{}`", o.args[i].to_polar());
+                            o.args.remove(i);
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+
         match o.operator {
             // Zero-argument conjunctions & disjunctions represent constants
             // TRUE and FALSE, respectively. We do not simplify them.
@@ -211,23 +228,15 @@ impl<'vm> Folder for Simplifier<'vm> {
                 self,
             ),
 
-            // A trivial unification is always TRUE.
-            Operator::Unify | Operator::Eq if o.args[0] == o.args[1] => TRUE,
-
+            // Non-trivial conjunctions. Choose an (anti-)unification constraint
+            // to make a binding from, maybe throw it away, and fold the rest.
             Operator::And if o.args.len() > 1 => {
-                // Toss trivial unifications.
-                for (i, c) in o.constraints().into_iter().enumerate() {
-                    if c.operator == Operator::Unify && c.args.len() == 2 && c.args[0] == c.args[1]
-                    {
-                        eprintln!("TOSSING CONSTRAINT `{}`", o.args[i].to_polar());
-                        o.args.remove(i);
-                    }
-                }
-
-                // Choose an (anti)unification constraint to make a binding from, maybe throw it
-                // away, and fold the rest.
                 if let Some(i) = o.constraints().iter().position(|o| match o.operator {
-                    Operator::Unify | Operator::Neq => {
+                    // A conjunction of TRUE with X is X, so drop TRUE.
+                    Operator::And if o.args.len() == 0 => true,
+
+                    // Choose an (anti)unification to maybe drop.
+                    Operator::Unify | Operator::Eq | Operator::Neq => {
                         let left = &o.args[0];
                         let right = &o.args[1];
                         let invert = o.operator == Operator::Neq;
@@ -357,7 +366,12 @@ impl<'vm> Folder for Simplifier<'vm> {
             }
 
             // (Negated) comparisons.
-            Operator::Eq | Operator::Gt | Operator::Geq | Operator::Lt | Operator::Leq => {
+            Operator::Eq
+            | Operator::Neq
+            | Operator::Gt
+            | Operator::Geq
+            | Operator::Lt
+            | Operator::Leq => {
                 let left = &o.args[0];
                 let right = &o.args[1];
                 match (left.value().as_expression(), right.value().as_expression()) {
@@ -383,16 +397,13 @@ impl<'vm> Folder for Simplifier<'vm> {
             }
 
             // Negation.
-            Operator::Not => fold_operation(
-                invert_operation(
-                    self.simplify_partial(o.args[0].clone())
-                        .value()
-                        .as_expression()
-                        .expect("expression")
-                        .clone(),
-                ),
-                self,
-            ),
+            Operator::Not => {
+                // Simplify the negated expression to eliminate temps.
+                match self.simplify_partial(o.args[0].clone()).value() {
+                    Value::Expression(e) => fold_operation(invert_operation(e.clone()), self),
+                    _ => fold_operation(o, self),
+                }
+            }
             _ => fold_operation(o, self),
         }
     }
