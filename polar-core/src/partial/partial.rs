@@ -1,8 +1,9 @@
+use std::collections::HashSet;
+
 use crate::folder::{fold_operation, fold_term, Folder};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 use crate::visitor::{walk_operation, Visitor};
 use crate::vm::compare;
-use std::collections::HashSet;
 
 /// A trivially true expression.
 pub const TRUE: Operation = op!(And);
@@ -91,6 +92,47 @@ impl Operation {
         visitor.vars
     }
 
+    pub fn get_cycle(&self, var: &Symbol) -> HashSet<Symbol> {
+        struct CycleVisitor {
+            vars: HashSet<Symbol>,
+        }
+
+        impl CycleVisitor {
+            fn new(vars: HashSet<Symbol>) -> Self {
+                Self { vars }
+            }
+        }
+
+        impl Visitor for CycleVisitor {
+            fn visit_operation(&mut self, o: &Operation) {
+                if o.operator == Operator::Unify {
+                    match (o.args[0].value(), o.args[1].value()) {
+                        (Value::Variable(l), Value::Variable(r))
+                        | (Value::Variable(l), Value::RestVariable(r))
+                        | (Value::RestVariable(l), Value::Variable(r))
+                        | (Value::RestVariable(l), Value::RestVariable(r))
+                            if self.vars.contains(l) || self.vars.contains(r) =>
+                        {
+                            self.vars.insert(l.clone());
+                            self.vars.insert(r.clone());
+                        }
+                        _ => walk_operation(self, o),
+                    }
+                } else {
+                    walk_operation(self, o);
+                }
+            }
+        }
+
+        let mut vars = HashSet::new();
+        vars.insert(var.clone());
+        let mut visitor = CycleVisitor::new(vars);
+        // Walk twice to ensure we capture all edges of a cycle.
+        walk_operation(&mut visitor, self);
+        walk_operation(&mut visitor, self);
+        visitor.vars
+    }
+
     /// Replace `var` with a ground (non-variable) value. Checks for
     /// consistent unifications along the way: if everything's fine,
     /// returns `Some(grounded_term)`, but if an inconsistent ground
@@ -121,44 +163,20 @@ impl Operation {
                             invert = !invert;
                         }
 
-                        // TODO(gj): do we still need this? Test it!
-                        let mut get_maybe_inverted_value = |term: &Term| -> Value {
-                            let value = term.value();
-                            if let Ok(e) = value.as_expression() {
-                                if e.operator == Operator::Not {
-                                    assert_eq!(e.args.len(), 1, "negation is unary");
-                                    invert = !invert;
-                                    return e.args[0].value().clone();
-                                }
-                            }
-                            value.clone()
-                        };
-
-                        let left = self.fold_term(o.args[0].clone());
-                        let right = self.fold_term(o.args[1].clone());
-
-                        let l = get_maybe_inverted_value(&left);
-                        let r = get_maybe_inverted_value(&right);
+                        let l = self.fold_term(o.args[0].clone());
+                        let r = self.fold_term(o.args[1].clone());
                         if l.is_ground() && r.is_ground() {
-                            let inconsistent = if invert { l == r } else { l != r };
-                            if inconsistent {
+                            let consistent = if invert { l != r } else { l == r };
+                            if consistent {
+                                TRUE
+                            } else {
                                 self.consistent = false;
                                 FALSE
-                            } else {
-                                TRUE
                             }
                         } else {
                             Operation {
-                                operator: if invert {
-                                    if o.operator == Operator::Neq {
-                                        Operator::Unify
-                                    } else {
-                                        Operator::Neq
-                                    }
-                                } else {
-                                    o.operator
-                                },
-                                args: vec![left, right],
+                                operator: o.operator,
+                                args: vec![l, r],
                             }
                         }
                     }
@@ -827,7 +845,8 @@ mod test {
         p.load_str("h(x, y) if x > y and y = 1;")?;
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
-        assert_partial_expressions!(next, "x" => "_this > 1", "y" => "1 = _this and x > 1");
+        assert_partial_expression!(next, "x", "_this > 1");
+        assert_eq!(next[&sym!("y")], term!(1));
         assert_query_done!(q);
 
         Ok(())

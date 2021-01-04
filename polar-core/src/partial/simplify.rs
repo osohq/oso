@@ -64,7 +64,12 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
 pub fn simplify_partial(var: &Symbol, term: Term, vm: &PolarVirtualMachine) -> Term {
     let mut simplifier = Simplifier::new(var.clone(), vm);
     let simplified = simplifier.simplify_partial(term);
-    simplify_trivial_constraint(var.clone(), simplified)
+    let simplified = simplify_trivial_constraint(var.clone(), simplified);
+    if matches!(simplified.value(), Value::Expression(e) if e.operator != Operator::And) {
+        op!(And, simplified).into_term()
+    } else {
+        simplified
+    }
 }
 
 /// Simplify the values of the bindings to be returned to the host language.
@@ -86,12 +91,15 @@ pub fn simplify_bindings(bindings: Bindings, vm: &PolarVirtualMachine) -> Option
 
     let bindings: Bindings = bindings
         .iter()
+        // Filter out temp vars...
         .filter(|(var, _)| !var.is_temporary_var())
         .map(|(var, value)| match value.value() {
             Value::Expression(o) => {
                 assert_eq!(o.operator, Operator::And);
                 (var.clone(), simplify(var.clone(), value.clone()))
             }
+            // ...but if a non-temp var is bound to a temp var, look through the temp var and
+            // simplify the value to which it's bound.
             Value::Variable(v) if v.is_temporary_var() => {
                 (var.clone(), simplify(var.clone(), bindings[v].clone()))
             }
