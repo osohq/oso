@@ -1211,8 +1211,12 @@ impl PolarVirtualMachine {
                 let lhs_of_matches = simplified
                     .constraints()
                     .into_iter()
+                    // TODO(gj): assert that a simplified expression contains at most 1 unification
+                    // involving a particular variable.
                     .find_map(|c| {
-                        if c.operator != Operator::Unify {
+                        if c.operator == Operator::Isa && &c.args[0] == left {
+                            Some(left.clone())
+                        } else if c.operator != Operator::Unify {
                             None
                         } else if &c.args[0] == left {
                             Some(c.args[1].clone())
