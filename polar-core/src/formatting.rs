@@ -120,6 +120,7 @@ pub fn format_rules(rules: &Rules, sep: &str) -> String {
 
 fn precedence(o: &Operator) -> i32 {
     match o {
+        Operator::Sqrt => 11,
         Operator::Print => 11,
         Operator::Debug => 11,
         Operator::New => 10,
@@ -412,6 +413,7 @@ pub mod to_polar {
                 Debug => "debug",
                 Print => "print",
                 Isa => "matches",
+                Sqrt => "sqrt",
             }
             .to_string()
         }
@@ -423,6 +425,7 @@ pub mod to_polar {
             // Adds parentheses when sub expressions have lower precedence (which is what you would have had to have during initial parse)
             // Lets us spit out strings that would reparse to the same ast.
             match self.operator {
+                Sqrt => format!("sqrt({})", format_args(self.operator, &self.args, ", ")),
                 Debug => "debug()".to_owned(),
                 Print => format!("print({})", format_args(self.operator, &self.args, ", ")),
                 Cut => "cut".to_owned(),

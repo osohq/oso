@@ -1605,7 +1605,8 @@ impl PolarVirtualMachine {
             | op @ Operator::Mul
             | op @ Operator::Div
             | op @ Operator::Mod
-            | op @ Operator::Rem => {
+            | op @ Operator::Rem
+            | op @ Operator::Sqrt => {
                 return self.arithmetic_op_helper(term, op, args);
             }
 
@@ -1940,142 +1941,223 @@ impl PolarVirtualMachine {
         op: Operator,
         args: Vec<Term>,
     ) -> PolarResult<QueryEvent> {
-        assert_eq!(args.len(), 3);
-        let left_term = &args[0];
-        let right_term = &args[1];
-        let result = &args[2];
-        assert!(matches!(result.value(), Value::Variable(_)));
+        match args.len() {
+            2 => {
+                let left_term = &args[0];
+                let result = &args[1];
+                assert!(matches!(result.value(), Value::Variable(_)));
 
-        self.log_with(
-            || {
-                format!(
-                    "MATH: {} {} {} = {}",
-                    left_term.to_polar(),
-                    op.to_polar(),
-                    right_term.to_polar(),
-                    result.to_polar()
-                )
-            },
-            &[&left_term, &right_term, result],
-        );
-
-        match (left_term.value(), right_term.value()) {
-            (Value::RestVariable(_), Value::RestVariable(_)) => todo!("*rest, *rest"),
-            (Value::Variable(l), Value::Variable(r))
-            | (Value::RestVariable(l), Value::Variable(r))
-            | (Value::Variable(l), Value::RestVariable(r)) => {
-                // Two variables.
-                match (self.variable_state(l), self.variable_state(r)) {
-                    (VariableState::Unbound, VariableState::Unbound) => {
-                        todo!("unbound, unbound");
+                match left_term.value() {
+                    Value::Variable(l) | Value::RestVariable(l) => match self.variable_state(l) {
+                        VariableState::Bound(x) => {
+                            let args = vec![x, result.clone()];
+                            return self.arithmetic_op_helper(
+                                &term.clone_with_value(Value::Expression(Operation {
+                                    operator: op,
+                                    args: args.clone(),
+                                })),
+                                op,
+                                args,
+                            );
+                        }
+                        VariableState::Unbound => {
+                            self.constrain(&op!(And), term)?;
+                        }
+                        VariableState::Cycle(c) => {
+                            self.constrain(&cycle_constraints(c), term)?;
+                        }
+                        VariableState::Partial(e) => {
+                            self.constrain(&e, term)?;
+                        }
+                    },
+                    Value::Number(left) => {
+                        if let Some(answer) = match (left, op) {
+                            (Numeric::Float(f), Operator::Sqrt) => Some(Numeric::Float(f.sqrt())),
+                            _ => {
+                                return Err(self.set_error_context(
+                                    term,
+                                    error::RuntimeError::Unsupported {
+                                        msg: format!("numeric operation {}", op.to_polar()),
+                                    },
+                                ))
+                            }
+                        } {
+                            self.push_goal(Goal::Unify {
+                                left: term.clone_with_value(Value::Number(answer)),
+                                right: result.clone(),
+                            })?;
+                        } else {
+                            return Err(self.set_error_context(
+                                term,
+                                error::RuntimeError::ArithmeticError {
+                                    msg: term.to_polar(),
+                                },
+                            ));
+                        }
                     }
-                    (VariableState::Bound(x), _) => {
-                        let args = vec![x, right_term.clone(), result.clone()];
-                        return self.arithmetic_op_helper(
-                            &term.clone_with_value(Value::Expression(Operation {
-                                operator: op,
-                                args: args.clone(),
-                            })),
-                            op,
-                            args,
-                        );
-                    }
-                    (_, VariableState::Bound(y)) => {
-                        let args = vec![left_term.clone(), y, result.clone()];
-                        return self.arithmetic_op_helper(
-                            &term.clone_with_value(Value::Expression(Operation {
-                                operator: op,
-                                args: args.clone(),
-                            })),
-                            op,
-                            args,
-                        );
-                    }
-                    (VariableState::Cycle(c), VariableState::Cycle(d)) => {
-                        let mut e = cycle_constraints(c);
-                        e.merge_constraints(cycle_constraints(d));
-                        self.constrain(&e, term)?;
-                    }
-                    (s, t) => todo!("({:?}, {:?}]", s, t),
-                }
-            }
-            (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
-                // A variable on the left, ground on the right.
-                match self.variable_state(l) {
-                    VariableState::Unbound => todo!("cmp w/unbound"),
-                    VariableState::Bound(x) => {
-                        return self.arithmetic_op_helper(
-                            term,
-                            op,
-                            vec![x, right_term.clone(), result.clone()],
-                        );
-                    }
-                    VariableState::Cycle(c) => {
-                        self.constrain(&cycle_constraints(c), term)?;
-                    }
-                    VariableState::Partial(e) => {
-                        self.constrain(&e, term)?;
-                    }
-                }
-            }
-            (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => {
-                // Ground on the left, a variable on the right.
-                match self.variable_state(r) {
-                    VariableState::Unbound => todo!("cmp w/unbound"),
-                    VariableState::Bound(y) => {
-                        return self.arithmetic_op_helper(
-                            term,
-                            op,
-                            vec![left_term.clone(), y, result.clone()],
-                        );
-                    }
-                    VariableState::Cycle(c) => {
-                        self.constrain(&cycle_constraints(c), term)?;
-                    }
-                    VariableState::Partial(e) => {
-                        self.constrain(&e, term)?;
-                    }
-                }
-            }
-            (Value::Number(left), Value::Number(right)) => {
-                if let Some(answer) = match op {
-                    Operator::Add => *left + *right,
-                    Operator::Sub => *left - *right,
-                    Operator::Mul => *left * *right,
-                    Operator::Div => *left / *right,
-                    Operator::Mod => (*left).modulo(*right),
-                    Operator::Rem => *left % *right,
                     _ => {
                         return Err(self.set_error_context(
                             term,
                             error::RuntimeError::Unsupported {
-                                msg: format!("numeric operation {}", op.to_polar()),
+                                msg: format!(
+                                    "unsupported arithmetic operands: {}",
+                                    term.to_polar()
+                                ),
                             },
                         ))
                     }
-                } {
-                    self.push_goal(Goal::Unify {
-                        left: term.clone_with_value(Value::Number(answer)),
-                        right: result.clone(),
-                    })?;
-                } else {
-                    return Err(self.set_error_context(
-                        term,
-                        error::RuntimeError::ArithmeticError {
-                            msg: term.to_polar(),
-                        },
-                    ));
                 }
             }
-            (_, _) => {
+            3 => {
+                let left_term = &args[0];
+                let right_term = &args[1];
+                let result = &args[2];
+                assert!(matches!(result.value(), Value::Variable(_)));
+
+                self.log_with(
+                    || {
+                        format!(
+                            "MATH: {} {} {} = {}",
+                            left_term.to_polar(),
+                            op.to_polar(),
+                            right_term.to_polar(),
+                            result.to_polar()
+                        )
+                    },
+                    &[&left_term, &right_term, result],
+                );
+
+                match (left_term.value(), right_term.value()) {
+                    (Value::RestVariable(_), Value::RestVariable(_)) => todo!("*rest, *rest"),
+                    (Value::Variable(l), Value::Variable(r))
+                    | (Value::RestVariable(l), Value::Variable(r))
+                    | (Value::Variable(l), Value::RestVariable(r)) => {
+                        // Two variables.
+                        match (self.variable_state(l), self.variable_state(r)) {
+                            (VariableState::Unbound, VariableState::Unbound) => {
+                                todo!("unbound, unbound");
+                            }
+                            (VariableState::Bound(x), _) => {
+                                let args = vec![x, right_term.clone(), result.clone()];
+                                return self.arithmetic_op_helper(
+                                    &term.clone_with_value(Value::Expression(Operation {
+                                        operator: op,
+                                        args: args.clone(),
+                                    })),
+                                    op,
+                                    args,
+                                );
+                            }
+                            (_, VariableState::Bound(y)) => {
+                                let args = vec![left_term.clone(), y, result.clone()];
+                                return self.arithmetic_op_helper(
+                                    &term.clone_with_value(Value::Expression(Operation {
+                                        operator: op,
+                                        args: args.clone(),
+                                    })),
+                                    op,
+                                    args,
+                                );
+                            }
+                            (VariableState::Cycle(c), VariableState::Cycle(d)) => {
+                                let mut e = cycle_constraints(c);
+                                e.merge_constraints(cycle_constraints(d));
+                                self.constrain(&e, term)?;
+                            }
+                            (s, t) => todo!("({:?}, {:?}]", s, t),
+                        }
+                    }
+                    (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
+                        // A variable on the left, ground on the right.
+                        match self.variable_state(l) {
+                            VariableState::Unbound => todo!("cmp w/unbound"),
+                            VariableState::Bound(x) => {
+                                return self.arithmetic_op_helper(
+                                    term,
+                                    op,
+                                    vec![x, right_term.clone(), result.clone()],
+                                );
+                            }
+                            VariableState::Cycle(c) => {
+                                self.constrain(&cycle_constraints(c), term)?;
+                            }
+                            VariableState::Partial(e) => {
+                                self.constrain(&e, term)?;
+                            }
+                        }
+                    }
+                    (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => {
+                        // Ground on the left, a variable on the right.
+                        match self.variable_state(r) {
+                            VariableState::Unbound => todo!("cmp w/unbound"),
+                            VariableState::Bound(y) => {
+                                return self.arithmetic_op_helper(
+                                    term,
+                                    op,
+                                    vec![left_term.clone(), y, result.clone()],
+                                );
+                            }
+                            VariableState::Cycle(c) => {
+                                self.constrain(&cycle_constraints(c), term)?;
+                            }
+                            VariableState::Partial(e) => {
+                                self.constrain(&e, term)?;
+                            }
+                        }
+                    }
+                    (Value::Number(left), Value::Number(right)) => {
+                        if let Some(answer) = match op {
+                            Operator::Add => *left + *right,
+                            Operator::Sub => *left - *right,
+                            Operator::Mul => *left * *right,
+                            Operator::Div => *left / *right,
+                            Operator::Mod => (*left).modulo(*right),
+                            Operator::Rem => *left % *right,
+                            _ => {
+                                return Err(self.set_error_context(
+                                    term,
+                                    error::RuntimeError::Unsupported {
+                                        msg: format!("numeric operation {}", op.to_polar()),
+                                    },
+                                ))
+                            }
+                        } {
+                            self.push_goal(Goal::Unify {
+                                left: term.clone_with_value(Value::Number(answer)),
+                                right: result.clone(),
+                            })?;
+                        } else {
+                            return Err(self.set_error_context(
+                                term,
+                                error::RuntimeError::ArithmeticError {
+                                    msg: term.to_polar(),
+                                },
+                            ));
+                        }
+                    }
+                    (_, _) => {
+                        return Err(self.set_error_context(
+                            term,
+                            error::RuntimeError::Unsupported {
+                                msg: format!(
+                                    "unsupported arithmetic operands: {}",
+                                    term.to_polar()
+                                ),
+                            },
+                        ))
+                    }
+                }
+            }
+            _ => {
                 return Err(self.set_error_context(
                     term,
                     error::RuntimeError::Unsupported {
-                        msg: format!("unsupported arithmetic operands: {}", term.to_polar()),
+                        msg: format!("weird number of arithmetic operands: {}", term.to_polar()),
                     },
                 ))
             }
         }
+
         Ok(QueryEvent::None)
     }
 

@@ -69,7 +69,7 @@ impl<'kb> Rewriter<'kb> {
             {
                 true
             }
-            Operator::New if o.args.len() == 1 => true,
+            Operator::New | Operator::Sqrt if o.args.len() == 1 => true,
             _ => false,
         }
     }

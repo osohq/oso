@@ -66,6 +66,7 @@ extern {
         "or" => lexer::Token::Or,           // or
         "not" => lexer::Token::Not,         // not
         "matches" => lexer::Token::Matches, // matches
+        "sqrt" => lexer::Token::Sqrt,
     }
 }
 
@@ -283,7 +284,7 @@ ExpectLogical<T>: Term = {
     }
 }
 
-Exp10<T>: ValueOrLogical = {
+Exp11<T>: ValueOrLogical = {
     <IsValue<Pattern>> if T == "Pattern",
     <Value> if T == "Term",
     "(" <Exp1<T>> ")", // "resets" the parsing
@@ -297,6 +298,22 @@ CallTerm: Value = {
     "(" <Variable> ")",
     "(" <PolarString> ")",
 }
+
+SqrtExp<T>: Value = {
+    "sqrt" "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
+        Value::Expression(Operation{operator: Operator::Sqrt, args: args})
+    },
+}
+
+// math shit
+Exp10<T>: ValueOrLogical = {
+    <IsAny<SqrtExp<T>>>,
+    <Exp11<T>>,
+};
 
 DotOp<T>: Value = {
     <head:ExpectValue<Exp9<T>>> "." <call_term:Spanned<CallTerm>> => {

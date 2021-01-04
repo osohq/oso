@@ -110,6 +110,7 @@ pub enum Operator {
     And,
     ForAll,
     Assign,
+    Sqrt,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]

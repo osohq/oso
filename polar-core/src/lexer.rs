@@ -87,6 +87,9 @@ pub enum Token {
     Or,        // or
     Not,       // not
     Matches,   // matches
+
+    // Hacked in additional operators
+    Sqrt,
 }
 
 impl ToString for Token {
@@ -136,6 +139,7 @@ impl ToString for Token {
             Token::Or => "or".to_owned(),           // or
             Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
+            Token::Sqrt => "sqrt".to_owned(),
         }
     }
 }
@@ -246,6 +250,8 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Mod, last + 1)))
         } else if &self.buf == "rem" {
             Some(Ok((start, Token::Rem, last + 1)))
+        } else if &self.buf == "sqrt" {
+            Some(Ok((start, Token::Sqrt, last + 1)))
         } else {
             Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
         }
