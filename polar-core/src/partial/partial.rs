@@ -1,7 +1,74 @@
 use crate::folder::{fold_operation, fold_term, Folder};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 use crate::visitor::{walk_operation, Visitor};
+use crate::vm::compare;
 use std::collections::HashSet;
+
+/// A trivially true expression.
+pub const TRUE: Operation = op!(And);
+/// A trivially false expression.
+pub const FALSE: Operation = op!(Or);
+
+/// Invert operators.
+pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
+    fn invert_args(args: Vec<Term>) -> Vec<Term> {
+        args.into_iter()
+            .map(|t| {
+                t.clone_with_value(value!(invert_operation(
+                    t.value().as_expression().unwrap().clone()
+                )))
+            })
+            .collect()
+    }
+
+    match operator {
+        Operator::And => Operation {
+            operator: Operator::Or,
+            args: invert_args(args),
+        },
+        Operator::Or => Operation {
+            operator: Operator::And,
+            args: invert_args(args),
+        },
+        Operator::Unify | Operator::Eq => Operation {
+            operator: Operator::Neq,
+            args,
+        },
+        Operator::Neq => Operation {
+            operator: Operator::Unify,
+            args,
+        },
+        Operator::Gt => Operation {
+            operator: Operator::Leq,
+            args,
+        },
+        Operator::Geq => Operation {
+            operator: Operator::Lt,
+            args,
+        },
+        Operator::Lt => Operation {
+            operator: Operator::Geq,
+            args,
+        },
+        Operator::Leq => Operation {
+            operator: Operator::Gt,
+            args,
+        },
+        Operator::Debug | Operator::Print | Operator::New | Operator::Dot => {
+            Operation { operator, args }
+        }
+        Operator::Isa => Operation {
+            operator: Operator::Not,
+            args: vec![term!(op!(Isa, args[0].clone(), args[1].clone()))],
+        },
+        Operator::Not => args[0]
+            .value()
+            .as_expression()
+            .expect("negated expression")
+            .clone(),
+        _ => todo!("negate {:?}", operator),
+    }
+}
 
 impl Operation {
     /// Construct & return a set of symbols that occur in this operation.
@@ -69,30 +136,29 @@ impl Operation {
                         let left = self.fold_term(o.args[0].clone());
                         let right = self.fold_term(o.args[1].clone());
 
-                        let left_value = get_maybe_inverted_value(&left);
-                        let right_value = get_maybe_inverted_value(&right);
-                        if left_value.is_ground()
-                            && right_value.is_ground()
-                            && (if invert {
-                                left_value == right_value
+                        let l = get_maybe_inverted_value(&left);
+                        let r = get_maybe_inverted_value(&right);
+                        if l.is_ground() && r.is_ground() {
+                            let inconsistent = if invert { l == r } else { l != r };
+                            if inconsistent {
+                                self.consistent = false;
+                                FALSE
                             } else {
-                                left_value != right_value
-                            })
-                        {
-                            self.consistent = false;
-                        }
-
-                        Operation {
-                            operator: if invert {
-                                if o.operator == Operator::Neq {
-                                    Operator::Unify
+                                TRUE
+                            }
+                        } else {
+                            Operation {
+                                operator: if invert {
+                                    if o.operator == Operator::Neq {
+                                        Operator::Unify
+                                    } else {
+                                        Operator::Neq
+                                    }
                                 } else {
-                                    Operator::Neq
-                                }
-                            } else {
-                                o.operator
-                            },
-                            args: vec![left, right],
+                                    o.operator
+                                },
+                                args: vec![left, right],
+                            }
                         }
                     }
                     Operator::Not => {
@@ -100,6 +166,26 @@ impl Operation {
                         let o = fold_operation(o, self);
                         self.invert = !self.invert;
                         o
+                    }
+                    Operator::Gt | Operator::Geq | Operator::Lt | Operator::Leq => {
+                        let o = if self.invert { invert_operation(o) } else { o };
+                        let left = self.fold_term(o.args[0].clone());
+                        let right = self.fold_term(o.args[1].clone());
+                        match (left.value(), right.value()) {
+                            (Value::Number(_), Value::Number(_))
+                            | (Value::Number(_), Value::Boolean(_))
+                            | (Value::Boolean(_), Value::Number(_))
+                            | (Value::Boolean(_), Value::Boolean(_))
+                            | (Value::String(_), Value::String(_)) => {
+                                if compare(&o.operator, left, right) {
+                                    TRUE
+                                } else {
+                                    self.consistent = false;
+                                    FALSE
+                                }
+                            }
+                            _ => fold_operation(o, self),
+                        }
                     }
                     _ => fold_operation(o, self),
                 }

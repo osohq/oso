@@ -6,71 +6,7 @@ use crate::kb::Bindings;
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 use crate::vm::{PolarVirtualMachine, VariableState};
 
-/// A trivially true expression.
-const TRUE: Operation = op!(And);
-/// A trivially false expression.
-const FALSE: Operation = op!(Or);
-
-/// Invert operators.
-fn invert_operation(Operation { operator, args }: Operation) -> Operation {
-    fn invert_args(args: Vec<Term>) -> Vec<Term> {
-        args.into_iter()
-            .map(|t| {
-                t.clone_with_value(value!(invert_operation(
-                    t.value().as_expression().unwrap().clone()
-                )))
-            })
-            .collect()
-    }
-
-    match operator {
-        Operator::And => Operation {
-            operator: Operator::Or,
-            args: invert_args(args),
-        },
-        Operator::Or => Operation {
-            operator: Operator::And,
-            args: invert_args(args),
-        },
-        Operator::Unify | Operator::Eq => Operation {
-            operator: Operator::Neq,
-            args,
-        },
-        Operator::Neq => Operation {
-            operator: Operator::Unify,
-            args,
-        },
-        Operator::Gt => Operation {
-            operator: Operator::Leq,
-            args,
-        },
-        Operator::Geq => Operation {
-            operator: Operator::Lt,
-            args,
-        },
-        Operator::Lt => Operation {
-            operator: Operator::Geq,
-            args,
-        },
-        Operator::Leq => Operation {
-            operator: Operator::Gt,
-            args,
-        },
-        Operator::Debug | Operator::Print | Operator::New | Operator::Dot => {
-            Operation { operator, args }
-        }
-        Operator::Isa => Operation {
-            operator: Operator::Not,
-            args: vec![term!(op!(Isa, args[0].clone(), args[1].clone()))],
-        },
-        Operator::Not => args[0]
-            .value()
-            .as_expression()
-            .expect("negated expression")
-            .clone(),
-        _ => todo!("negate {:?}", operator),
-    }
-}
+use super::partial::{invert_operation, FALSE, TRUE};
 
 struct VariableSubber {
     this_var: Symbol,
@@ -203,7 +139,7 @@ impl<'vm> Folder for Simplifier<'vm> {
                         assert_eq!(c.args.len(), 2);
                         let left = &c.args[0];
                         let right = &c.args[1];
-                        if left == right || left.is_ground() && right.is_ground() {
+                        if left == right {
                             eprintln!("TOSSING CONSTRAINT `{}`", o.args[i].to_polar());
                             o.args.remove(i);
                         }
@@ -233,7 +169,7 @@ impl<'vm> Folder for Simplifier<'vm> {
             Operator::And if o.args.len() > 1 => {
                 if let Some(i) = o.constraints().iter().position(|o| match o.operator {
                     // A conjunction of TRUE with X is X, so drop TRUE.
-                    Operator::And if o.args.len() == 0 => true,
+                    Operator::And if o.args.is_empty() => true,
 
                     // Choose an (anti)unification to maybe drop.
                     Operator::Unify | Operator::Eq | Operator::Neq => {

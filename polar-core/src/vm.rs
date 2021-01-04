@@ -194,6 +194,41 @@ pub fn cycle_constraints(cycle: Vec<Symbol>) -> Operation {
     constraints
 }
 
+pub fn compare(op: &Operator, mut left: Term, mut right: Term) -> bool {
+    // Coerce booleans to integers.
+    fn to_int(x: bool) -> i64 {
+        if x {
+            1
+        } else {
+            0
+        }
+    }
+    if let Value::Boolean(x) = left.value() {
+        left = left.clone_with_value(Value::Number(Numeric::Integer(to_int(*x))));
+    }
+    if let Value::Boolean(x) = right.value() {
+        right = right.clone_with_value(Value::Number(Numeric::Integer(to_int(*x))));
+    }
+
+    fn compare<T: PartialOrd>(op: &Operator, left: T, right: T) -> bool {
+        match op {
+            Operator::Lt => left < right,
+            Operator::Leq => left <= right,
+            Operator::Gt => left > right,
+            Operator::Geq => left >= right,
+            Operator::Eq => left == right,
+            Operator::Neq => left != right,
+            _ => unreachable!("{:?} is not a comparison operator", op),
+        }
+    }
+
+    match (left.value(), right.value()) {
+        (Value::Number(l), Value::Number(r)) => compare(op, l, r),
+        (Value::String(l), Value::String(r)) => compare(op, l, r),
+        _ => unreachable!("{} {} {}", left.to_polar(), op.to_polar(), right.to_polar()),
+    }
+}
+
 #[derive(Clone)]
 pub struct PolarVirtualMachine {
     /// Stacks.
@@ -2014,71 +2049,38 @@ impl PolarVirtualMachine {
         args: Vec<Term>,
     ) -> PolarResult<QueryEvent> {
         assert_eq!(args.len(), 2);
-        let mut left_term = args[0].clone();
-        let mut right_term = args[1].clone();
+        let left = args[0].clone();
+        let right = args[1].clone();
         eprintln!(
             "CMP: {} {} {}",
-            left_term.to_polar(),
+            left.to_polar(),
             op.to_polar(),
-            right_term.to_polar(),
+            right.to_polar(),
         );
 
         self.log_with(
             || {
                 format!(
                     "CMP: {} {} {}",
-                    left_term.to_polar(),
+                    left.to_polar(),
                     op.to_polar(),
-                    right_term.to_polar(),
+                    right.to_polar(),
                 )
             },
-            &[&left_term, &right_term],
+            &[&left, &right],
         );
 
-        // Coerce booleans to integers.
-        fn to_int(x: bool) -> i64 {
-            if x {
-                1
-            } else {
-                0
-            }
-        }
-        if let Value::Boolean(x) = left_term.value() {
-            left_term = left_term.clone_with_value(Value::Number(Numeric::Integer(to_int(*x))));
-        }
-        if let Value::Boolean(x) = right_term.value() {
-            right_term = right_term.clone_with_value(Value::Number(Numeric::Integer(to_int(*x))));
-        }
-
         // Do the comparison.
-        match (left_term.value(), right_term.value()) {
+        match (left.value(), right.value()) {
             (Value::Expression(_), _) | (_, Value::Expression(_)) => unreachable!(
                 "should never encounter a bare expression; only variables bound to expressions"
             ),
-            (Value::Number(left), Value::Number(right)) => {
-                if !match op {
-                    Operator::Lt => left < right,
-                    Operator::Leq => left <= right,
-                    Operator::Gt => left > right,
-                    Operator::Geq => left >= right,
-                    Operator::Eq => left == right,
-                    Operator::Neq => left != right,
-                    _ => unreachable!("{:?} is not a comparison operator", op),
-                } {
-                    self.push_goal(Goal::Backtrack)?;
-                }
-                Ok(QueryEvent::None)
-            }
-            (Value::String(left), Value::String(right)) => {
-                if !match op {
-                    Operator::Lt => left < right,
-                    Operator::Leq => left <= right,
-                    Operator::Gt => left > right,
-                    Operator::Geq => left >= right,
-                    Operator::Eq => left == right,
-                    Operator::Neq => left != right,
-                    _ => unreachable!("{:?} is not a comparison operator", op),
-                } {
+            (Value::Number(_), Value::Number(_))
+            | (Value::Number(_), Value::Boolean(_))
+            | (Value::Boolean(_), Value::Number(_))
+            | (Value::Boolean(_), Value::Boolean(_))
+            | (Value::String(_), Value::String(_)) => {
+                if !compare(&op, left, right) {
                     self.push_goal(Goal::Backtrack)?;
                 }
                 Ok(QueryEvent::None)
@@ -2096,7 +2098,7 @@ impl PolarVirtualMachine {
                 Ok(QueryEvent::ExternalOp {
                     call_id,
                     operator: op,
-                    args: vec![left_term, right_term],
+                    args: vec![left, right],
                 })
             }
             (Value::RestVariable(_), Value::RestVariable(_)) => todo!("*rest, *rest"),
@@ -2109,7 +2111,7 @@ impl PolarVirtualMachine {
                         todo!("unbound, unbound");
                     }
                     (VariableState::Bound(x), _) => {
-                        let args = vec![x, right_term];
+                        let args = vec![x, right];
                         return self.comparison_op_helper(
                             &term.clone_with_value(Value::Expression(Operation {
                                 operator: op,
@@ -2120,7 +2122,7 @@ impl PolarVirtualMachine {
                         );
                     }
                     (_, VariableState::Bound(y)) => {
-                        let args = vec![left_term, y];
+                        let args = vec![left, y];
                         return self.comparison_op_helper(
                             &term.clone_with_value(Value::Expression(Operation {
                                 operator: op,
@@ -2144,7 +2146,7 @@ impl PolarVirtualMachine {
                 match self.variable_state(l) {
                     VariableState::Unbound => todo!("cmp w/unbound"),
                     VariableState::Bound(x) => {
-                        return self.comparison_op_helper(term, op, vec![x, right_term]);
+                        return self.comparison_op_helper(term, op, vec![x, right]);
                     }
                     VariableState::Cycle(c) => {
                         self.constrain(&cycle_constraints(c), term)?;
@@ -2160,7 +2162,7 @@ impl PolarVirtualMachine {
                 match self.variable_state(r) {
                     VariableState::Unbound => todo!("cmp w/unbound"),
                     VariableState::Bound(y) => {
-                        return self.comparison_op_helper(term, op, vec![left_term, y]);
+                        return self.comparison_op_helper(term, op, vec![left, y]);
                     }
                     VariableState::Cycle(c) => {
                         self.constrain(&cycle_constraints(c), term)?;
