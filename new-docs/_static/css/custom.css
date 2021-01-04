@@ -1,0 +1,336 @@
+/* nav.md-tabs {
+    background: #343131;
+} */
+
+/* Colours */
+
+:root {
+  --oso-primary: #0e024e;
+  --oso-primary-2: #392396;
+  --oso-accent: #e3f6f5;
+  --oso-secondary: #ffd803;
+  --oso-secondary-accent: #bae8e8;
+  --oso-gray-1: #141414;
+  --oso-gray-2: #ebebec;
+  --oso-gray-3: #f8f8f8;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("./IBMPlexMono-Regular.ttf");
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("./IBMPlexMono-Medium.ttf");
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("./IBMPlexMono-SemiBold.ttf");
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("./SpaceGrotesk-Light.ttf");
+  font-weight: 300;
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("./SpaceGrotesk-Regular.ttf");
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("./SpaceGrotesk-Medium.ttf");
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("./SpaceGrotesk-SemiBold.ttf");
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("./SpaceGrotesk-Bold.ttf");
+  font-weight: 700;
+}
+
+@media only screen and (max-width: 44.9375em) {
+  .md-typeset pre {
+    margin: 0;
+  }
+  .button-text {
+    display: none;
+  }
+  .md-header-nav__source {
+    width: 14rem !important;
+    max-width: 14rem !important;
+  }
+
+  .md-header-nav__title {
+    display: none;
+  }
+}
+
+/* Sidebar colour on mobile */
+@media only screen and (max-width: 76.1875em) {
+  .md-nav--primary .md-nav__title--site {
+    background-color: var(--oso-primary) !important;
+  }
+
+  .logo-sidebar {
+    display: unset !important;
+  }
+
+  .md-header-nav__button {
+    margin: 0.5rem;
+  }
+}
+
+.logo-sidebar {
+  display: none;
+}
+
+.md-header {
+  background-color: var(--oso-primary);
+  height: 3.2rem;
+}
+
+.md-footer-nav {
+  background-color: var(--oso-accent);
+  color: black;
+}
+
+.md-footer-nav__direction {
+  color: black;
+}
+
+.md-header-nav__title {
+  line-height: 3.2rem;
+}
+
+
+.md-header-nav__source {
+  width: 24rem;
+  max-width: 24rem;
+  padding-top: 8px;
+  display: block !important;
+}
+
+.md-footer-meta {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.md-tabs {
+  background-color: var(--oso-primary);
+}
+
+/*** End of custom colours ***/
+
+/* Logo/Nav */
+
+.md-header-nav__button.md-logo {
+  padding: 0 !important;
+}
+
+.md-nav span.caption {
+  padding-top: 0.3rem;
+}
+
+/* End Logo/Nav */
+
+/* Code formatting */
+
+.literal-block-wrapper {
+  background: #eee;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin: 0;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.highlight {
+  background: #fcfcfc;
+  border-radius: 6px;
+  margin: 0;
+}
+
+/* Prompts and outputs are not selectable */
+.highlight .gp,
+.go {
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10+ and Edge */
+  user-select: none; /* Standard syntax */
+}
+
+.no-select {
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10+ and Edge */
+  user-select: none; /* Standard syntax */
+}
+
+.code-block-caption .caption-text {
+  color: #888080;
+  font-size: 0.7rem;
+  margin-left: 0.5rem;
+}
+
+/* Our pretend version of a fontawesome icon for oso */
+.fa-oso {
+  content: url("oso_logo.png");
+  filter: opacity(75%);
+  height: 1rem;
+  vertical-align: middle;
+}
+
+/* End code formatting */
+
+.ui.segment {
+  padding: 2% !important;
+  font-size: inherit !important;
+}
+
+.ui.menu {
+  font-size: 0.8rem;
+}
+
+.with-columns footer {
+  width: 100% !important;
+}
+
+/* Button tweaks */
+.cta .matter-button-contained {
+  text-align: center;
+  min-width: 96px;
+  font-size: 16pt;
+  margin: 1rem;
+  width: 180px;
+  box-shadow: none;
+  height: 54px;
+  font-weight: 600;
+}
+
+button {
+  font-family: "IBM Plex Mono", sans-serif !important;
+  font-weight: 600;
+}
+
+.md-header-nav__source button {
+  vertical-align: middle;
+  margin: 8px 0px;
+  font-size: 12pt;
+}
+
+button.github,
+button.slack,
+button.blog {
+  background-color: transparent;
+}
+
+button.download {
+  background-color: var(--oso-secondary);
+  color: var(--oso-gray-1);
+}
+
+button.get-started {
+  background-color: var(--oso-primary-2);
+}
+
+button.learn-more {
+  border-style: solid;
+  border-width: 1px;
+  border-color: rgba(20, 20, 20, 0.1);
+  background-color: transparent;
+  color: #141414;
+}
+
+button.subscribe {
+  background-color: var(--oso-primary-2);
+  height: 38px;
+}
+
+.cta {
+  padding-top: 10pt;
+  text-align: center;
+  font-size: 16pt;
+}
+
+code.literal {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(27, 31, 35, 0.05);
+  border-radius: 6px;
+  font-family: IBM Plex Mono, monospace;
+  font-weight: 500;
+}
+
+.admonition.tip > .admonition-title {
+  background-color: var(--oso-accent) !important;
+}
+
+.md-typeset .admonition.whats-next > .admonition-title::before {
+  content: "\f5a0";
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+}
+
+.md-typeset .admonition.try-it > .admonition-title::before {
+  content: "\f135";
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+}
+
+.md-typeset .admonition.subscribe > .admonition-title::before {
+  content: "\f0e0";
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+}
+
+.md-typeset h1,
+.md-typeset h2 {
+  font-weight: 400;
+}
+
+/* For the footer form */
+footer .subscribe-form {
+  text-align: center;
+  padding: 0 25%;
+}
+
+.subscribe-form .fab {
+  padding: 20px 2px 0px;
+  font-size: 24pt;
+}
+
+.matter-textfield-filled {
+  background-color: white !important;
+  border-radius: 4px !important;
+  border-bottom: none !important;
+}
+
+.matter-textfield-filled > input {
+  border-top: solid 6px transparent !important;
+}
+
+.md-footer-copyright {
+  margin: 4rem 0.6rem 0 0;
+}
+
+body {
+  font-family: "Space Grotesk", sans-serif;
+}
+
+div.sphinx-tabs {
+  margin-top: 0.6rem;
+}

@@ -1,0 +1,103 @@
+{{ if .Site.IsServer }}
+<div class="mb-4 py-4 px-4 border-t border-gray-200">
+    <table class="w-full text-left table-auto table-collapse border-gray-200">
+        <caption class="text-left pb-2">Hugo Variables for the current page.</caption>
+        <thead>
+            <tr class="p-2 font-semibold bg-gray-100 border-t ">
+                <th>Variable</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="p-2 border-t">
+                <td>.Name</td>
+                <td>{{ printf "%#v" .Name }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.Title</td>
+                <td>{{ printf "%#v" .Title }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.Lang</td>
+                <td>{{ printf "%#v" .Lang }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.Kind</td>
+                <td>{{ printf "%#v" .Kind }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.Type</td>
+                <td>{{ printf "%#v" .Type }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.IsPage</td>
+                <td>{{ printf "%#v" .IsPage }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.IsHome</td>
+                <td>{{ printf "%#v" .IsHome }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.Next</td>
+                <td>{{ printf "%v" .Next }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.Prev</td>
+                <td>{{ printf "%v" .Prev }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.Params</td>
+                <td>
+                    <table>
+                        {{ range $k,$v := .Params }}
+                        <tr>
+                            <td class="text-right italic pr-2">{{ printf "%#v:" $k }}</td>
+                            <td>{{ printf "%#v" $v }}</td>
+                        </tr>
+                        {{ end }}
+                    </table>
+                </td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.Section</td>
+                <td>{{ printf "%#v" .Section }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.CurrentSection</td>
+                <td>{{ printf "%v" .CurrentSection }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.Pages</td>
+                <td>
+                    {{ printf "%v" .Pages }}
+                    <table>
+                        {{- range $k,$v := .Pages }}
+                        <tr>
+                            <td class="text-right italic pr-2">{{ printf "%#v:" $k }}</td>
+                            <td>{{ printf "%v" $v }}</td>
+                        </tr>
+                        {{ end -}}
+                    </table>
+                </td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.Resources</td>
+                <td>{{ printf "%v" .Resources }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.File</td>
+                <td>{{ if .File }}{{ printf "%v" .File }}{{ else}}""{{ end }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.File.Dir</td>
+                <td>{{ if .File }}{{ printf "%#v" .File.Dir }}{{ else}}""{{ end }}</td>
+            </tr>
+            <tr class="p-2 border-t">
+                <td>.File.UniqueID</td>
+                <td>{{ if .File }}{{ printf "%#v" .File.UniqueID }}{{ else}}""{{ end }}</td>
+            </tr>
+
+        </tbody>
+    </table>
+</div>
+{{ end }}

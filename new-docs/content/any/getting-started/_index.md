@@ -1,0 +1,14 @@
+---
+# TODO: Rename?
+title: "Getting Started"
+weight: 1
+any: false
+---
+
+## Learn by doing
+
+TODO: Should we rename this section?
+
+Here are a collection of practice-oriented guides for using oso.
+
+Each guide is focused around implementing specific functionality in your application. 

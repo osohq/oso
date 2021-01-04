@@ -1,0 +1,9 @@
+{{ range where .AllTranslations "Language.Lang" "!=" "any" }}
+<a href="{{ .RelPermalink }}" class="flex flex-col justify-between items-center shadow-md rounded-lg w-full  bg-primary text-white
+        hover:bg-yellow hover:text-black py-1">
+    <div class="flex flex-shrink h-14 w-10 pt-1">
+        {{ partial "fontawesome.html" .Language.Params.icon }}
+    </div>
+    <div class="flex text-lg font-semibold text-center align-baseline">{{ .Language.LanguageName }}</div>
+</a>
+{{ end }}
