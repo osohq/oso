@@ -2064,6 +2064,12 @@ impl PolarVirtualMachine {
                                 e.merge_constraints(cycle_constraints(d));
                                 self.constrain(&e, term)?;
                             }
+                            (VariableState::Partial(e), VariableState::Partial(f)) => {
+                                eprintln!("{} {:?} {}, ", e.to_polar(), op, f.to_polar());
+                                let mut e = e.clone();
+                                e.merge_constraints(f);
+                                self.constrain(&e, term)?;
+                            }
                             (s, t) => todo!("({:?}, {:?}]", s, t),
                         }
                     }
