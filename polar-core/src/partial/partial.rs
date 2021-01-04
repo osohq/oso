@@ -1048,7 +1048,6 @@ mod test {
         Ok(())
     }
 
-    #[ignore]
     #[test]
     fn test_negated_in_partial_lhs() -> TestResult {
         let p = Polar::new();
@@ -1088,14 +1087,16 @@ mod test {
         Ok(())
     }
 
-    #[ignore]
     #[test]
     fn test_in_partial() -> TestResult {
         let p = Polar::new();
         p.load_str(
             r#"f(x) if y in x.values;
                g(x, y) if y in x.values;
-               h(x) if y in x.values and (y.bar = 1 and y.baz = 2) or y.bar = 3;"#,
+               h(x) if y in x.values and (y.bar = 1 and y.baz = 2) or y.bar = 3;
+               i() if x in y;
+               j() if x in [];
+               k(x) if x > 1 and x in [2, 3];"#,
         )?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
@@ -1124,6 +1125,18 @@ mod test {
             next_binding(&mut q)?,
             "x" => "_y_27 in _this.values and 3 = _y_27.bar"
         );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("i")), false);
+        assert!(next_binding(&mut q)?.is_empty());
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("j")), false);
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("k", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(2));
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(3));
         assert_query_done!(q);
 
         Ok(())

@@ -795,26 +795,6 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// Use this when you want to allow an expression, but you might have a variable
-    /// bound to an expression, or not bound at all.
-    fn deref_expr(&self, term: &Term) -> Term {
-        match term.value() {
-            Value::Variable(var) | Value::RestVariable(var) => match self.variable_state(var) {
-                VariableState::Bound(value) => value,
-                VariableState::Unbound => {
-                    term!(op!(And, term!(op!(Unify, term.clone(), term.clone()))))
-                }
-                VariableState::Cycle(c) => {
-                    term!(cycle_constraints(c))
-                }
-                VariableState::Partial(constraints) => {
-                    term!(constraints)
-                }
-            },
-            _ => term.clone(),
-        }
-    }
-
     /// Return `true` if `var` is a temporary variable.
     fn is_temporary_var(&self, name: &Symbol) -> bool {
         name.is_temporary_var()
@@ -1648,117 +1628,8 @@ impl PolarVirtualMachine {
                 return self.arithmetic_op_helper(term, op, args);
             }
 
-            Operator::In => {
-                assert_eq!(args.len(), 2);
-                let item = &args[0];
-                let derefed_item = self.deref_expr(item);
-                let iterable = self.deref_expr(&args[1]);
-                match iterable.value() {
-                    Value::List(list) if list.is_empty() => {
-                        // Nothing is in an empty list.
-                        self.backtrack()?;
-                    }
-                    Value::String(s) if s.is_empty() => {
-                        // Nothing is in an empty string.
-                        self.backtrack()?;
-                    }
-                    Value::Dictionary(d) if d.is_empty() => {
-                        // Nothing is in an empty dict.
-                        self.backtrack()?;
-                    }
-                    Value::List(terms) => {
-                        // Unify item with each element of the list, skipping non-matching ground terms.
-                        let value = derefed_item.value();
-                        let is_ground = value.is_ground();
-                        self.choose(
-                            terms
-                                .iter()
-                                .filter(|term| {
-                                    !is_ground || !term.is_ground() || term.value() == value
-                                })
-                                .map(|term| {
-                                    vec![Goal::Unify {
-                                        left: item.clone(),
-                                        right: term.clone(),
-                                    }]
-                                })
-                                .collect::<Vec<Goals>>(),
-                        )?;
-                    }
-                    Value::Dictionary(dict) => {
-                        // Unify item with each (k, v) pair of the dict, skipping non-matching ground terms.
-                        let value = derefed_item.value();
-                        let is_ground = value.is_ground();
-                        self.choose(
-                            dict.fields
-                                .iter()
-                                .map(|(k, v)| {
-                                    iterable.clone_with_value(Value::List(vec![
-                                        v.clone_with_value(Value::String(k.0.clone())),
-                                        v.clone(),
-                                    ]))
-                                })
-                                .filter(|term| {
-                                    !is_ground || !term.is_ground() || term.value() == value
-                                })
-                                .map(|term| {
-                                    vec![Goal::Unify {
-                                        left: item.clone(),
-                                        right: term,
-                                    }]
-                                })
-                                .collect::<Vec<Goals>>(),
-                        )?;
-                    }
-                    Value::String(s) => {
-                        // Unify item with each element of the string
-                        let value = derefed_item.value();
-                        let is_ground = value.is_ground();
-                        self.choose(
-                            s.chars()
-                                .map(|c| c.to_string())
-                                .map(Value::String)
-                                .filter(|c| !is_ground || c == value)
-                                .map(|c| {
-                                    vec![Goal::Unify {
-                                        left: item.clone(),
-                                        right: iterable.clone_with_value(c),
-                                    }]
-                                })
-                                .collect::<Vec<Goals>>(),
-                        )?;
-                    }
-                    // Push an `ExternalLookup` goal for external instances
-                    Value::ExternalInstance(_) => {
-                        // Generate symbol for next result and bind to `false` (default)
-                        let (call_id, next_term) =
-                            self.new_call_var("next_value", Value::Boolean(false));
+            op @ Operator::In => return self.in_op_helper(term, op, args),
 
-                        // append unify goal to be evaluated after
-                        // next result is fetched
-                        self.append_goals(vec![
-                            Goal::NextExternal {
-                                call_id,
-                                iterable: self.deep_deref(&iterable),
-                            },
-                            Goal::Unify {
-                                left: item.clone(),
-                                right: next_term,
-                            },
-                        ])?;
-                    }
-                    Value::Expression(operation) => self.constrain(operation, term)?,
-                    _ => {
-                        return Err(self.type_error(
-                            &iterable,
-                            format!(
-                                "can only use `in` on an iterable value, this is {:?}",
-                                iterable.value()
-                            ),
-                        ));
-                    }
-                }
-            }
             Operator::Debug => {
                 let mut message = "".to_string();
                 if !args.is_empty() {
@@ -1970,6 +1841,181 @@ impl PolarVirtualMachine {
             }
         }
         Ok(())
+    }
+
+    fn in_op_helper(
+        &mut self,
+        term: &Term,
+        op: Operator,
+        args: Vec<Term>,
+    ) -> PolarResult<QueryEvent> {
+        assert_eq!(args.len(), 2);
+        let item = &args[0];
+        let iterable = &args[1];
+        match (item.value(), iterable.value()) {
+            (Value::Expression(_), _) | (_, Value::Expression(_)) => unreachable!(),
+            (_, Value::List(list)) if list.is_empty() => {
+                // Nothing is in an empty list.
+                self.backtrack()?;
+            }
+            (_, Value::String(s)) if s.is_empty() => {
+                // Nothing is in an empty string.
+                self.backtrack()?;
+            }
+            (_, Value::Dictionary(d)) if d.is_empty() => {
+                // Nothing is in an empty dict.
+                self.backtrack()?;
+            }
+
+            (Value::RestVariable(_), Value::RestVariable(_)) => todo!("*rest, *rest"),
+            (Value::Variable(l), Value::Variable(r))
+            | (Value::RestVariable(l), Value::Variable(r))
+            | (Value::Variable(l), Value::RestVariable(r)) => {
+                // Two variables.
+                match (self.variable_state(l), self.variable_state(r)) {
+                    (VariableState::Unbound, VariableState::Unbound) => {
+                        self.constrain(&op!(And), term)?;
+                    }
+                    (VariableState::Bound(item), _) => {
+                        let args = vec![item, iterable.clone()];
+                        return self.in_op_helper(
+                            &term.clone_with_value(Value::Expression(Operation {
+                                operator: op,
+                                args: args.clone(),
+                            })),
+                            op,
+                            args,
+                        );
+                    }
+                    (_, VariableState::Bound(iterable)) => {
+                        let args = vec![item.clone(), iterable];
+                        return self.in_op_helper(
+                            &term.clone_with_value(Value::Expression(Operation {
+                                operator: op,
+                                args: args.clone(),
+                            })),
+                            op,
+                            args,
+                        );
+                    }
+                    (VariableState::Cycle(c), VariableState::Cycle(d)) => {
+                        let mut e = cycle_constraints(c);
+                        e.merge_constraints(cycle_constraints(d));
+                        self.constrain(&e, term)?;
+                    }
+                    (VariableState::Unbound, VariableState::Partial(e))
+                    | (VariableState::Partial(e), VariableState::Unbound) => {
+                        self.constrain(&e, term)?;
+                    }
+                    (VariableState::Cycle(c), VariableState::Partial(mut e))
+                    | (VariableState::Partial(mut e), VariableState::Cycle(c)) => {
+                        e.merge_constraints(cycle_constraints(c));
+                        self.constrain(&e, term)?;
+                    }
+                    (s, t) => todo!("({:?}, {:?}]", s, t),
+                }
+            }
+
+            (_, Value::Variable(v)) | (_, Value::RestVariable(v)) => match self.variable_state(v) {
+                VariableState::Unbound => todo!(),
+                VariableState::Bound(_) => todo!(),
+                VariableState::Cycle(c) => {
+                    let e = cycle_constraints(c);
+                    self.constrain(&e, term)?;
+                }
+                VariableState::Partial(e) => {
+                    self.constrain(&e, term)?;
+                }
+            },
+
+            (_, Value::List(terms)) => {
+                // Unify item with each element of the list, skipping non-matching ground terms.
+                let item_is_ground = item.is_ground();
+                self.choose(
+                    terms
+                        .iter()
+                        .filter(|term| {
+                            !item_is_ground || !term.is_ground() || term.value() == item.value()
+                        })
+                        .map(|term| {
+                            vec![Goal::Unify {
+                                left: item.clone(),
+                                right: term.clone(),
+                            }]
+                        })
+                        .collect::<Vec<Goals>>(),
+                )?;
+            }
+            (_, Value::Dictionary(dict)) => {
+                // Unify item with each (k, v) pair of the dict, skipping non-matching ground terms.
+                let item_is_ground = item.is_ground();
+                self.choose(
+                    dict.fields
+                        .iter()
+                        .map(|(k, v)| {
+                            iterable.clone_with_value(Value::List(vec![
+                                v.clone_with_value(Value::String(k.0.clone())),
+                                v.clone(),
+                            ]))
+                        })
+                        .filter(|term| {
+                            !item_is_ground || !term.is_ground() || term.value() == item.value()
+                        })
+                        .map(|term| {
+                            vec![Goal::Unify {
+                                left: item.clone(),
+                                right: term,
+                            }]
+                        })
+                        .collect::<Vec<Goals>>(),
+                )?;
+            }
+            (_, Value::String(s)) => {
+                // Unify item with each element of the string
+                let item_is_ground = item.is_ground();
+                self.choose(
+                    s.chars()
+                        .map(|c| c.to_string())
+                        .map(Value::String)
+                        .filter(|c| !item_is_ground || c == item.value())
+                        .map(|c| {
+                            vec![Goal::Unify {
+                                left: item.clone(),
+                                right: iterable.clone_with_value(c),
+                            }]
+                        })
+                        .collect::<Vec<Goals>>(),
+                )?;
+            }
+            // Push an `ExternalLookup` goal for external instances
+            (_, Value::ExternalInstance(_)) => {
+                // Generate symbol for next result and bind to `false` (default)
+                let (call_id, next_term) = self.new_call_var("next_value", Value::Boolean(false));
+
+                // append unify goal to be evaluated after
+                // next result is fetched
+                self.append_goals(vec![
+                    Goal::NextExternal {
+                        call_id,
+                        iterable: self.deep_deref(&iterable),
+                    },
+                    Goal::Unify {
+                        left: item.clone(),
+                        right: next_term,
+                    },
+                ])?;
+            }
+            _ => {
+                return Err(self.type_error(
+                    &iterable,
+                    format!(
+                        "can only use `in` on an iterable value, this is {:?}",
+                        iterable.value()
+                    ),
+                ));
+            }
+        }
+        Ok(QueryEvent::None)
     }
 
     /// Evaluate arithmetic operations.
