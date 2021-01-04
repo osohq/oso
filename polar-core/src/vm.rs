@@ -769,12 +769,8 @@ impl PolarVirtualMachine {
                 VariableState::Unbound => {
                     term!(op!(And, term!(op!(Unify, term.clone(), term.clone()))))
                 }
-                VariableState::Cycle(c) => {
-                    term!(cycle_constraints(c))
-                }
-                VariableState::Partial(constraints) => {
-                    term!(constraints)
-                }
+                VariableState::Cycle(c) => term!(cycle_constraints(c)),
+                VariableState::Partial(constraints) => term!(constraints),
             },
             _ => term.clone(),
         }
@@ -1945,8 +1941,8 @@ impl PolarVirtualMachine {
         args: Vec<Term>,
     ) -> PolarResult<QueryEvent> {
         assert_eq!(args.len(), 3);
-        let left_term = self.deref(&args[0]);
-        let right_term = self.deref(&args[1]);
+        let left_term = &args[0];
+        let right_term = &args[1];
         let result = &args[2];
         assert!(matches!(result.value(), Value::Variable(_)));
 
@@ -1964,6 +1960,75 @@ impl PolarVirtualMachine {
         );
 
         match (left_term.value(), right_term.value()) {
+            (Value::RestVariable(_), Value::RestVariable(_)) => todo!("*rest, *rest"),
+            (Value::Variable(l), Value::Variable(r))
+            | (Value::RestVariable(l), Value::Variable(r))
+            | (Value::Variable(l), Value::RestVariable(r)) => {
+                // Two variables.
+                match (self.variable_state(l), self.variable_state(r)) {
+                    (VariableState::Unbound, VariableState::Unbound) => {
+                        todo!("unbound, unbound");
+                    }
+                    (VariableState::Bound(x), _) => {
+                        let args = vec![x, right_term.clone()];
+                        return self.arithmetic_op_helper(
+                            &term.clone_with_value(Value::Expression(Operation {
+                                operator: op,
+                                args: args.clone(),
+                            })),
+                            op,
+                            args,
+                        );
+                    }
+                    (_, VariableState::Bound(y)) => {
+                        let args = vec![left_term.clone(), y];
+                        return self.arithmetic_op_helper(
+                            &term.clone_with_value(Value::Expression(Operation {
+                                operator: op,
+                                args: args.clone(),
+                            })),
+                            op,
+                            args,
+                        );
+                    }
+                    (VariableState::Cycle(c), VariableState::Cycle(d)) => {
+                        let mut e = cycle_constraints(c);
+                        e.merge_constraints(cycle_constraints(d));
+                        self.constrain(&e, term)?;
+                    }
+                    (s, t) => todo!("({:?}, {:?}]", s, t),
+                }
+            }
+            (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
+                // A variable on the left, ground on the right.
+                match self.variable_state(l) {
+                    VariableState::Unbound => todo!("cmp w/unbound"),
+                    VariableState::Bound(x) => {
+                        return self.arithmetic_op_helper(term, op, vec![x, right_term.clone()]);
+                    }
+                    VariableState::Cycle(c) => {
+                        self.constrain(&cycle_constraints(c), term)?;
+                    }
+                    VariableState::Partial(e) => {
+                        self.constrain(&e, term)?;
+                    }
+                }
+            }
+            (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => {
+                // Ground on the left, a variable on the right.
+                match self.variable_state(r) {
+                    VariableState::Unbound => todo!("cmp w/unbound"),
+                    VariableState::Bound(y) => {
+                        return self.arithmetic_op_helper(term, op, vec![left_term.clone(), y]);
+                    }
+                    VariableState::Cycle(c) => {
+                        self.constrain(&cycle_constraints(c), term)?;
+                    }
+                    VariableState::Partial(e) => {
+                        self.constrain(&e, term)?;
+                    }
+                }
+            }
             (Value::Number(left), Value::Number(right)) => {
                 if let Some(answer) = match op {
                     Operator::Add => *left + *right,
