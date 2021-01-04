@@ -77,6 +77,25 @@ impl Symbol {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Path(pub Vec<Symbol>);
+
+impl Path {
+    pub fn new(parts: Vec<Symbol>) -> Self {
+        Self(parts)
+    }
+
+    pub fn default_path() -> Self {
+        Self(vec![sym!("default")])
+    }
+}
+
+impl From<Symbol> for Path {
+    fn from(symbol: Symbol) -> Self {
+        Self(vec![symbol])
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Call {
     pub name: Symbol,

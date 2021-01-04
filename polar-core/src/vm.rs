@@ -202,9 +202,6 @@ pub struct PolarVirtualMachine {
     /// Maximum size of goal stack
     stack_limit: usize,
 
-    /// Binding stack constant below here.
-    csp: usize,
-
     /// Interactive debugger.
     pub debugger: Debugger,
 
@@ -271,19 +268,13 @@ impl PolarVirtualMachine {
         goals: Goals,
         messages: MessageQueue,
     ) -> Self {
-        let constants = kb
-            .read()
-            .expect("cannot acquire KB read lock")
-            .constants
-            .clone();
         let query_contains_partial = query_contains_partial(&goals);
-        let mut vm = Self {
+        Self {
             goals: GoalStack::new_reversed(goals),
             bindings: vec![],
             query_start_time: None,
             query_timeout: QUERY_TIMEOUT_S,
             stack_limit: MAX_STACK_SIZE,
-            csp: 0,
             choices: vec![],
             queries: vec![],
             tracing,
@@ -298,9 +289,7 @@ impl PolarVirtualMachine {
             polar_log_mute: false,
             query_contains_partial,
             messages,
-        };
-        vm.bind_constants(constants);
-        vm
+        }
     }
 
     #[cfg(test)]
@@ -587,20 +576,10 @@ impl PolarVirtualMachine {
         self.bindings.push(Binding(var.clone(), value));
     }
 
-    /// Augment the bindings stack with constants from a hash map.
-    /// There must be no temporaries bound yet.
-    pub fn bind_constants(&mut self, bindings: Bindings) {
-        assert_eq!(self.bsp(), self.csp);
-        for (var, value) in bindings.iter() {
-            self.bind(var, value.clone());
-        }
-        self.csp += bindings.len();
-    }
-
     /// Retrieve the current non-constant bindings as a hash map.
     pub fn bindings(&self, include_temps: bool) -> Bindings {
         let mut bindings = HashMap::new();
-        for Binding(var, value) in &self.bindings[self.csp..] {
+        for Binding(var, value) in &self.bindings {
             if !include_temps && self.is_temporary_var(&var) && value.value().as_partial().is_err()
             {
                 continue;
@@ -613,7 +592,7 @@ impl PolarVirtualMachine {
     /// Retrieve the current non-constant bindings for symbols in variables.
     pub fn variable_bindings(&self, variables: &HashSet<Symbol>) -> Bindings {
         let mut bindings = HashMap::new();
-        for Binding(var, value) in &self.bindings[self.csp..] {
+        for Binding(var, value) in &self.bindings {
             if !variables.contains(var) {
                 continue;
             }
@@ -638,12 +617,19 @@ impl PolarVirtualMachine {
 
     /// Look up a variable in the bindings stack and return
     /// a reference to its value if it's bound.
-    fn value(&self, variable: &Symbol) -> Option<&Term> {
+    fn value(&self, variable: &Symbol) -> Option<Term> {
         self.bindings
             .iter()
             .rev()
             .find(|binding| binding.0 == *variable)
-            .map(|binding| &binding.1)
+            .map(|binding| binding.1.clone())
+            .or_else(|| {
+                self.kb
+                    .read()
+                    .unwrap()
+                    .lookup_constant(variable.clone().into(), Path::default_path())
+                    .cloned()
+            })
     }
 
     /// Recursively dereference variables in a term, including subterms.
@@ -699,8 +685,8 @@ impl PolarVirtualMachine {
             }
             Value::Variable(symbol) | Value::RestVariable(symbol) => {
                 if let Some(value) = self.value(&symbol) {
-                    if value != term {
-                        return self.deref(value);
+                    if &value != term {
+                        return self.deref(&value);
                     }
                 }
                 term.clone()
@@ -965,7 +951,7 @@ impl PolarVirtualMachine {
             }
 
             (Value::Variable(v), _) | (Value::RestVariable(v), _) => {
-                if let Some(value) = self.value(&v).cloned() {
+                if let Some(value) = self.value(&v) {
                     self.push_goal(Goal::Isa {
                         left: value,
                         right: right.clone(),
@@ -979,7 +965,7 @@ impl PolarVirtualMachine {
             }
 
             (_, Value::Variable(v)) | (_, Value::RestVariable(v)) => {
-                if let Some(value) = self.value(&v).cloned() {
+                if let Some(value) = self.value(&v) {
                     self.push_goal(Goal::Isa {
                         left: left.clone(),
                         right: value,
@@ -2061,7 +2047,7 @@ impl PolarVirtualMachine {
     /// This is sort of a "sub-goal" of `Unify`.
     fn unify_var(&mut self, left: &Symbol, right: &Term) -> PolarResult<()> {
         let right_value = match right.value() {
-            Value::Variable(v) | Value::RestVariable(v) => self.value(v).cloned(),
+            Value::Variable(v) | Value::RestVariable(v) => self.value(v),
             v @ Value::Expression(_) | v @ Value::Pattern(_) => {
                 let src = (self.term_source(right, false), left);
                 let msg = match v {
@@ -2072,7 +2058,7 @@ impl PolarVirtualMachine {
             }
             _ => None,
         };
-        let left_value = self.value(&left).cloned();
+        let left_value = self.value(&left);
 
         match (left_value, right_value) {
             (Some(left), Some(right)) => {
@@ -3250,7 +3236,7 @@ mod tests {
         let zero = term!(0);
         let mut vm = PolarVirtualMachine::default();
         vm.bind(&x, zero.clone());
-        assert_eq!(vm.value(&x), Some(&zero));
+        assert_eq!(vm.value(&x), Some(zero));
         assert_eq!(vm.value(&y), None);
     }
 
@@ -3298,8 +3284,8 @@ mod tests {
             }],
         );
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.value(&x), Some(&Term::new_from_test(zero)));
-        assert_eq!(vm.value(&y), Some(&Term::new_from_test(one)));
+        assert_eq!(vm.value(&x), Some(Term::new_from_test(zero)));
+        assert_eq!(vm.value(&y), Some(Term::new_from_test(one)));
     }
 
     #[test]
@@ -3320,7 +3306,7 @@ mod tests {
         }])
         .unwrap();
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.value(&sym!("x")), Some(&one));
+        assert_eq!(vm.value(&sym!("x")), Some(one.clone()));
         vm.backtrack().unwrap();
 
         // Left variable bound to value.
@@ -3331,7 +3317,7 @@ mod tests {
         }])
         .unwrap();
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.value(&z), Some(&one));
+        assert_eq!(vm.value(&z), Some(one.clone()));
 
         // Left variable bound to value
         vm.bind(&z, one.clone());
@@ -3341,7 +3327,7 @@ mod tests {
         }])
         .unwrap();
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.value(&z), Some(&one));
+        assert_eq!(vm.value(&z), Some(one));
     }
 
     #[test]

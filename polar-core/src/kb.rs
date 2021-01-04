@@ -11,7 +11,7 @@ pub type Bindings = HashMap<Symbol, Term>;
 
 #[derive(Default)]
 pub struct KnowledgeBase {
-    pub constants: Bindings,
+    constants: Bindings,
     pub rules: HashMap<Symbol, GenericRule>,
     pub sources: Sources,
     /// For symbols returned from gensym.
@@ -71,5 +71,15 @@ impl KnowledgeBase {
     /// Return true if a constant with the given name has been defined.
     pub fn is_constant(&self, name: &Symbol) -> bool {
         self.constants.contains_key(name)
+    }
+
+    pub fn lookup_constant(&self, path: Path, scope: Path) -> Option<&Term> {
+        let name = path.0.get(0).unwrap();
+        self.constants.get(name)
+    }
+
+    pub fn lookup_rule(&self, path: Path, scope: Path) -> Option<&GenericRule> {
+        let name = path.0.get(0).unwrap();
+        self.rules.get(name)
     }
 }
