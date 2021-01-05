@@ -100,7 +100,7 @@ pub fn simplify_bindings(bindings: Bindings, vm: &PolarVirtualMachine) -> Option
             }
             // ...but if a non-temp var is bound to a temp var, look through the temp var and
             // simplify the value to which it's bound.
-            Value::Variable(v) if v.is_temporary_var() => {
+            Value::Variable(v) | Value::RestVariable(v) => {
                 (var.clone(), simplify(var.clone(), bindings[v].clone()))
             }
             _ => (var.clone(), value.clone()),

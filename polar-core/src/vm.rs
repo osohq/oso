@@ -1177,7 +1177,7 @@ impl PolarVirtualMachine {
         match right.value() {
             Value::Pattern(Pattern::Dictionary(fields)) => {
                 let to_unify = |(field, value): (&Symbol, &Term)| -> Operation {
-                    let field = right.clone_with_value(value!(field.clone()));
+                    let field = right.clone_with_value(value!(field.0.as_ref()));
                     let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
                     op!(Unify, left, value.clone())
                 };
@@ -1257,7 +1257,7 @@ impl PolarVirtualMachine {
 
                 // Construct field constraints.
                 fields.fields.iter().rev().for_each(|(f, v)| {
-                    let field = right.clone_with_value(value!(f.clone()));
+                    let field = right.clone_with_value(value!(f.0.as_ref()));
                     let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
                     let unify = op!(Unify, left, v.clone());
                     operation = operation.clone_with_new_constraint(term!(unify));
@@ -2291,7 +2291,7 @@ impl PolarVirtualMachine {
                         if let Some(grounded) = f.ground(var.clone(), right.clone()) {
                             self.constrain(&grounded, &op!(And).into_term())?;
                             // for var in cycle {
-                            self.bind(&var, right.clone());
+                            self.bind(&var, right);
                         // }
                         } else {
                             self.push_goal(Goal::Backtrack)?;
