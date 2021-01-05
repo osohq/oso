@@ -88,6 +88,7 @@ impl KnowledgeBase {
 
     /// Define a constant variable. (in the default scope)
     pub fn constant(&mut self, name: Symbol, value: Term) {
+        // All constants are defined on the default scope; if default scope doesn't exist, add it
         self.scopes
             .entry(sym!("default"))
             .or_insert(Scope::new(sym!("default").into()))
@@ -102,6 +103,7 @@ impl KnowledgeBase {
     }
 
     pub fn lookup_constant(&self, path: Path, scope: Path) -> Option<&Term> {
+        // lookup scope by path; return `None` if scope doesn't exist
         if let Some(scope) = self.scopes.get(&scope.into_1()) {
             match path.into_2() {
                 (name, None) => scope.constants.get(&name),
@@ -123,19 +125,23 @@ impl KnowledgeBase {
     }
 
     pub fn lookup_rule(&self, path: Path, scope: Path) -> Option<&GenericRule> {
-        let scope = self.scopes.get(&scope.into_1()).unwrap();
-
-        match path.into_2() {
-            (rule_name, None) => scope.rules.get(&rule_name),
-            (included_scope, Some(rule_name)) => self
-                .get_included_scope(scope, included_scope.into())
-                .unwrap()
-                .rules
-                .get(&rule_name),
+        // lookup scope by path; return `None` if scope doesn't exist
+        if let Some(scope) = self.scopes.get(&scope.into_1()) {
+            match path.into_2() {
+                (rule_name, None) => scope.rules.get(&rule_name),
+                (included_scope, Some(rule_name)) => self
+                    .get_included_scope(scope, included_scope.into())
+                    .unwrap()
+                    .rules
+                    .get(&rule_name),
+            }
+        } else {
+            None
         }
     }
 
     pub fn add_rule(&mut self, rule: Rule, scope: Path) {
+        // lookup scope by path; panic if scope doesn't exist
         let scope = self.scopes.get_mut(&scope.into_1()).unwrap();
 
         let name = rule.name.clone();
