@@ -869,7 +869,7 @@ fn test_make_external() -> TestResult {
             name,
             args,
             kwargs: Some(kwargs),
-        }) if name == &sym!("Bar")
+        }) if name.name() == &sym!("Bar")
             && args == &vec![term!(1)]
             && kwargs == &btreemap! {sym!("a") => term!(2), sym!("b") => term!(3)} => {}
         _ => panic!("Expected call with args and kwargs"),

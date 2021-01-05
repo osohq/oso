@@ -143,7 +143,7 @@ impl Query {
                         .iter()
                         .map(|term| PolarValue::from_term(term, &self.host))
                         .collect::<crate::Result<Vec<PolarValue>>>()?;
-                    self.host.make_instance(&name.0, args, instance_id)
+                    self.host.make_instance(&name.name().0, args, instance_id)
                 }
             }
             _ => lazy_error!("invalid type for constructing an instance -- internal error"),

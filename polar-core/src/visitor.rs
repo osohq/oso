@@ -30,6 +30,7 @@ pub trait Visitor: Sized {
     fn visit_boolean(&mut self, _b: &bool) {}
     fn visit_instance_id(&mut self, _i: &u64) {}
     fn visit_symbol(&mut self, _s: &Symbol) {}
+    fn visit_path(&mut self, _p: &Path) {}
     fn visit_variable(&mut self, _v: &Symbol) {}
     fn visit_rest_variable(&mut self, _r: &Symbol) {}
     fn visit_operator(&mut self, _o: &Operator) {}
@@ -139,7 +140,7 @@ pub fn walk_pattern<V: Visitor>(visitor: &mut V, pattern: &Pattern) {
 }
 
 pub fn walk_call<V: Visitor>(visitor: &mut V, call: &Call) {
-    visitor.visit_symbol(&call.name);
+    visitor.visit_path(&call.name);
     walk_elements!(visitor, visit_term, &call.args);
     if let Some(kwargs) = call.kwargs.as_ref() {
         walk_fields!(visitor, kwargs);
@@ -200,6 +201,10 @@ mod tests {
         }
         fn visit_symbol(&mut self, s: &Symbol) {
             self.push(Value::Variable(s.clone()));
+        }
+        fn visit_path(&mut self, p: &Path) {
+            // TODO: wrong! Add value::path
+            self.push(Value::Variable(p.name().clone()));
         }
         fn visit_variable(&mut self, v: &Symbol) {
             self.push(Value::Variable(v.clone()));

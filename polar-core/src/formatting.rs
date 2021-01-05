@@ -571,6 +571,15 @@ pub mod to_polar {
         }
     }
 
+    impl ToPolarString for Path {
+        fn to_polar(&self) -> String {
+            match self.scope() {
+                Some(scope) => format!("{}::{}", scope.to_string(), self.name().to_string()),
+                None => self.name().to_polar(),
+            }
+        }
+    }
+
     impl ToPolarString for Term {
         fn to_polar(&self) -> String {
             self.value().to_polar()

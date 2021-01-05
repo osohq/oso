@@ -108,14 +108,14 @@ macro_rules! string {
 macro_rules! call {
     ($name:expr) => {
         Call {
-            name: sym!($name),
+            name: $crate::terms::Path::from_symbol(sym!($name)),
             args: vec![],
             kwargs: None
         }
     };
     ($name:expr, [$($args:expr),*]) => {
         Call {
-            name: sym!($name),
+            name: $crate::terms::Path::from_symbol(sym!($name)),
             args: vec![
                 $(term!($args)),*
             ],
@@ -124,7 +124,7 @@ macro_rules! call {
     };
     ($name:expr, [$($args:expr),*], $fields:expr) => {
         Call {
-            name: sym!($name),
+            name: $crate::terms::Path::from_symbol(sym!($name)),
             args: vec![
                 $(term!($args)),*
             ],

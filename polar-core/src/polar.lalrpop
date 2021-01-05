@@ -114,18 +114,18 @@ Call: Value = {
     <name:Name> "("  ")" => {
         let args = vec![];
         let kwargs = None;
-        Value::Call(Call{name, args, kwargs})
+        Value::Call(Call{name: Path::with_name(name), args, kwargs})
     },
     // Positional args only.
     <name:Name> "(" <mut args:(<ValExp> ",")*> <arg:ValExp> ")" => {
         args.push(arg);
         let kwargs = None;
-        Value::Call(Call{name, args, kwargs})
+        Value::Call(Call{name: Path::with_name(name), args, kwargs})
     },
     // Positional args + kwargs.
     <name:Name> "(" <mut args:(<ValExp> ",")*> <fields:(<Fields<ValExp>>)>")" => {
         let kwargs = Some(fields);
-        Value::Call(Call{name, args, kwargs})
+        Value::Call(Call{name: Path::with_name(name), args, kwargs})
     }
 };
 

@@ -39,6 +39,9 @@ pub trait Folder: Sized {
     fn fold_instance_id(&mut self, i: u64) -> u64 {
         fold_instance_id(i, self)
     }
+    fn fold_path(&mut self, p: Path) -> Path {
+        fold_path(p, self)
+    }
     // Class, key, and rule names.
     fn fold_name(&mut self, n: Symbol) -> Symbol {
         fold_name(n, self)
@@ -178,7 +181,7 @@ pub fn fold_pattern<T: Folder>(p: Pattern, fld: &mut T) -> Pattern {
 
 pub fn fold_call<T: Folder>(Call { name, args, kwargs }: Call, fld: &mut T) -> Call {
     Call {
-        name: fld.fold_name(name),
+        name: fld.fold_path(name),
         args: fld.fold_list(args),
         kwargs: kwargs.map(|kwargs| {
             kwargs
@@ -231,6 +234,10 @@ pub fn fold_partial<T: Folder>(
 
 pub fn fold_name<T: Folder>(n: Symbol, _fld: &mut T) -> Symbol {
     n
+}
+
+pub fn fold_path<T: Folder>(p: Path, _fld: &mut T) -> Path {
+    p
 }
 
 pub fn fold_param<T: Folder>(

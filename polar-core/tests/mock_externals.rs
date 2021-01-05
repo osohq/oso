@@ -53,7 +53,7 @@ impl MockExternal {
         // True if class tags match
         if let Value::ExternalInstance(ExternalInstance { instance_id, .. }) = instance.value() {
             match self.get_external(*instance_id) {
-                Value::Call(call) => call.name == class_tag,
+                Value::Call(call) => call.name.name() == &class_tag,
                 _ => panic!("expected call"),
             }
         } else {

@@ -77,10 +77,29 @@ impl Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Path {
     scope: Option<Symbol>,
     name: Symbol,
+}
+
+impl serde::Serialize for Path {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // TODO something that turns this into a string with colon.
+        self.name.serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Path {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Symbol::deserialize(deserializer).map(Path::from_symbol)
+    }
 }
 
 impl Path {
@@ -90,6 +109,25 @@ impl Path {
 
     pub fn with_name(name: Symbol) -> Self {
         Self { scope: None, name }
+    }
+
+    pub fn from_symbol(name: Symbol) -> Self {
+        let name_string = name.0;
+        let parts = name_string
+            .split("::")
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>();
+        if parts.len() > 1 {
+            Self {
+                scope: Some(Symbol(parts.get(0).unwrap().clone())),
+                name: Symbol(parts[1..].join("::").clone()),
+            }
+        } else {
+            Self {
+                scope: None,
+                name: Symbol(parts.get(0).unwrap().clone()),
+            }
+        }
     }
 
     pub fn scope(&self) -> Option<&Symbol> {
@@ -103,7 +141,7 @@ impl Path {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Call {
-    pub name: Symbol,
+    pub name: Path,
     pub args: TermList,
     pub kwargs: Option<BTreeMap<Symbol, Term>>,
 }

@@ -1,6 +1,6 @@
 //! Communicate with the Polar virtual machine: load rules, make queries, etc/
 
-use polar_core::terms::{Call, Symbol, Term, Value};
+use polar_core::terms::{Call, Path, Symbol, Term, Value};
 
 use std::fs::File;
 use std::io::Read;
@@ -133,7 +133,8 @@ impl Oso {
             .map(|value| value.to_term(&mut query_host))
             .collect();
         let query_value = Value::Call(Call {
-            name: Symbol(name.to_string()),
+            // TODO: add scope argument to this method
+            name: Path::with_name(Symbol(name.to_string())),
             args,
             kwargs: None,
         });

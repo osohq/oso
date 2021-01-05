@@ -1129,19 +1129,26 @@ impl PolarVirtualMachine {
             Option<Vec<Term>>,
             Option<BTreeMap<Symbol, Term>>,
         ) = match self.deref(field).value() {
-            Value::Call(Call { name, args, kwargs }) => (
-                name.clone(),
-                Some(args.iter().map(|arg| self.deep_deref(arg)).collect()),
-                match kwargs {
-                    Some(unwrapped) => Some(
-                        unwrapped
-                            .iter()
-                            .map(|(k, v)| (k.to_owned(), self.deep_deref(v)))
-                            .collect(),
-                    ),
-                    None => None,
-                },
-            ),
+            Value::Call(Call {
+                name: path,
+                args,
+                kwargs,
+            }) => {
+                assert!(path.scope().is_none());
+                (
+                    path.name().clone(),
+                    Some(args.iter().map(|arg| self.deep_deref(arg)).collect()),
+                    match kwargs {
+                        Some(unwrapped) => Some(
+                            unwrapped
+                                .iter()
+                                .map(|(k, v)| (k.to_owned(), self.deep_deref(v)))
+                                .collect(),
+                        ),
+                        None => None,
+                    },
+                )
+            }
             Value::String(field) => (Symbol(field.clone()), None, None),
             v => {
                 return Err(self.type_error(
@@ -1312,11 +1319,11 @@ impl PolarVirtualMachine {
             .kb
             .read()
             .unwrap()
-            .lookup_rule(Path::with_name(predicate.name.clone()), &sym!("default"))
+            .lookup_rule(predicate.name.clone(), &sym!("default"))
         {
             None => vec![Goal::Backtrack],
             Some(generic_rule) => {
-                assert_eq!(generic_rule.name, predicate.name);
+                assert_eq!(&generic_rule.name, predicate.name.name());
 
                 // Pre-filter rules.
                 let args = predicate.args.iter().map(|t| self.deep_deref(&t)).collect();
