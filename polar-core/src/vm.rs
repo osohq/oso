@@ -1202,31 +1202,31 @@ impl PolarVirtualMachine {
                     right.to_polar()
                 );
 
-                let simplified = simplify_partial(
-                    left.value().as_symbol()?,
-                    operation.clone().into_term(),
-                    &self,
-                );
+                // TODO(gj): assert that a simplified expression contains at most 1 unification
+                // involving a particular variable.
+
+                let var = left.value().as_symbol()?;
+                let simplified = simplify_partial(var, operation.clone().into_term(), &self);
                 let simplified = simplified.value().as_expression()?;
                 let lhs_of_matches = simplified
                     .constraints()
                     .into_iter()
-                    // TODO(gj): assert that a simplified expression contains at most 1 unification
-                    // involving a particular variable.
                     .find_map(|c| {
-                        if c.operator == Operator::Isa && &c.args[0] == left {
-                            Some(left.clone())
-                        } else if c.operator != Operator::Unify {
+                        // If the simplified partial includes a `var = dot_op` constraint, use the
+                        // dot op as the LHS of the matches.
+                        if c.operator != Operator::Unify {
                             None
-                        } else if &c.args[0] == left {
+                        } else if &c.args[0] == left &&
+                            matches!(c.args[1].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
                             Some(c.args[1].clone())
-                        } else if &c.args[1] == left {
+                        } else if &c.args[1] == left &&
+                            matches!(c.args[0].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
                             Some(c.args[0].clone())
                         } else {
                             None
                         }
                     })
-                    .unwrap();
+                    .unwrap_or_else(|| left.clone());
 
                 // Construct field-less matches operation.
                 let tag_pattern = right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
@@ -1237,7 +1237,7 @@ impl PolarVirtualMachine {
                 eprintln!(
                     "Pre-simplification\n  of proposed {}\n  in the context of {}",
                     operation.to_polar(),
-                    left.value().as_symbol()?
+                    var,
                 );
                 let new_matches = op!(Isa, lhs_of_matches, right.clone());
                 // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.

@@ -425,17 +425,17 @@ mod test {
     fn test_partial_isa_with_fields() -> TestResult {
         let p = Polar::new();
         p.load_str(
-            r#"# f(x: Post{id: 1});
-               # f(x: Post{id: 1}) if x matches {id: 2};
-               # f(x: Post{id: 1}) if x matches Post{id: 2};
-               # f(x: Post{id: 1}) if x matches User{id: 2}; # Will fail.
-               # f(x: Post{id: 1}) if x matches {id: 2, bar: 2};
-               # f(x: Post{id: 1, bar: 1}) if x matches User{id: 2}; # Will fail.
-               # f(x: Post{id: 1, bar: 3}) if x matches Post{id: 2} and x.y = 1;
-               # f(x: {id: 1, bar: 1}) if x matches {id: 2};
-               # f(x: {id: 1}) if x matches {id: 2, bar: 2};
-               # f(x: {id: 1});
-               # f(x: {id: 1}) if x matches {id: 2};
+            r#"f(x: Post{id: 1});
+               f(x: Post{id: 1}) if x matches {id: 2};
+               f(x: Post{id: 1}) if x matches Post{id: 2};
+               f(x: Post{id: 1}) if x matches User{id: 2}; # Will fail.
+               f(x: Post{id: 1}) if x matches {id: 2, bar: 2};
+               f(x: Post{id: 1, bar: 1}) if x matches User{id: 2}; # Will fail.
+               f(x: Post{id: 1, bar: 3}) if x matches Post{id: 2} and x.y = 1;
+               f(x: {id: 1, bar: 1}) if x matches {id: 2};
+               f(x: {id: 1}) if x matches {id: 2, bar: 2};
+               f(x: {id: 1});
+               f(x: {id: 1}) if x matches {id: 2};
                f(x: {id: 1}) if x matches Post{id: 2};
                f(x: 1);"#,
         )?;
@@ -454,39 +454,39 @@ mod test {
                 _ => panic!("not bindings"),
             }
         };
-        // assert_partial_expression!(next_binding(), "x", "_this matches Post{} and _this.id = 1");
-        // assert_partial_expression!(
-        //     next_binding(),
-        //     "x",
-        //     "_this matches Post{} and _this.id = 1 and _this.id = 2"
-        // );
-        // assert_partial_expression!(
-        //     next_binding(),
-        //     "x",
-        //     "_this matches Post{} and _this.id = 1 and _this.id = 2"
-        // );
-        // assert_partial_expression!(
-        //     next_binding(),
-        //     "x",
-        //     "_this matches Post{} and _this.id = 1 and _this.id = 2 and _this.bar = 2"
-        // );
-        // assert_partial_expression!(
-        //     next_binding(),
-        //     "x",
-        //     "_this matches Post{} and _this.id = 1 and _this.bar = 3 and _this.id = 2 and 1 = _this.y"
-        // );
-        // assert_partial_expression!(
-        //     next_binding(),
-        //     "x",
-        //     "_this.id = 1 and _this.bar = 1 and _this.id = 2"
-        // );
-        // assert_partial_expression!(
-        //     next_binding(),
-        //     "x",
-        //     "_this.id = 1 and _this.id = 2 and _this.bar = 2"
-        // );
-        // assert_partial_expression!(next_binding(), "x", "_this.id = 1");
-        // assert_partial_expression!(next_binding(), "x", "_this.id = 1 and _this.id = 2");
+        assert_partial_expression!(next_binding(), "x", "_this matches Post{} and _this.id = 1");
+        assert_partial_expression!(
+            next_binding(),
+            "x",
+            "_this matches Post{} and _this.id = 1 and _this.id = 2"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "x",
+            "_this matches Post{} and _this.id = 1 and _this.id = 2"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "x",
+            "_this matches Post{} and _this.id = 1 and _this.id = 2 and _this.bar = 2"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "x",
+            "_this matches Post{} and _this.id = 1 and _this.bar = 3 and _this.id = 2 and 1 = _this.y"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "x",
+            "_this.id = 1 and _this.bar = 1 and _this.id = 2"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "x",
+            "_this.id = 1 and _this.id = 2 and _this.bar = 2"
+        );
+        assert_partial_expression!(next_binding(), "x", "_this.id = 1");
+        assert_partial_expression!(next_binding(), "x", "_this.id = 1 and _this.id = 2");
         assert_partial_expression!(
             next_binding(),
             "x",
