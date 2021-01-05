@@ -637,13 +637,21 @@ impl PolarVirtualMachine {
             o.to_polar(),
             t.to_polar()
         );
+        if matches!(t.value().as_expression(), Ok(o) if o.operator == Operator::Unify && o.args[0].value().as_expression().map(|o| o.operator == Operator::Dot).unwrap_or(false))
+        {
+            dbg!(&t);
+        }
         let operation = o.clone_with_new_constraint(t.clone());
         // TODO(gj): test what happens when we constrain a partial that contains variables of every
         // possible state.
-        for var in operation.variables() {
-            match self.variable_state(&var) {
-                VariableState::Bound(_) => (),
-                _ => self.bind(&var, operation.clone().into_term()),
+
+        let mut vars = operation.variables().into_iter();
+
+        if let Some(var) = vars.next() {
+            eprintln!("Selected var: {}", var);
+            self.bind(&var, operation.into_term());
+            for other in vars {
+                self.bind(&other, term!(var.clone()));
             }
         }
         Ok(())
