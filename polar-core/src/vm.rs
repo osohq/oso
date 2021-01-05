@@ -3666,6 +3666,7 @@ mod tests {
         ]);
     }
 
+    #[test]
     fn test_call_scoped_rule() {
         let mut kb = KnowledgeBase::new();
         let f1 = rule!("f", [1]);
@@ -3673,5 +3674,31 @@ mod tests {
         kb.add_rule(f1, sym!("default"));
         kb.add_rule(f2, sym!("custom_scope"));
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![]);
+        // query custom_scope::f(1) from default scope
+        let goal = query!(call!("custom_scope::f", [sym!("x")]));
+        vm.push_goal(goal).unwrap();
+
+        assert_query_events!(vm, [
+            QueryEvent::Result{hashmap!(sym!("x") => term!(2))},
+            QueryEvent::Done { result : true }
+        ]);
+
+        // query default::f(1) from default scope
+        let goal = query!(call!("default::f", [sym!("x")]));
+        vm.push_goal(goal).unwrap();
+
+        assert_query_events!(vm, [
+            QueryEvent::Result{hashmap!(sym!("x") => term!(1))},
+            QueryEvent::Done { result : true }
+        ]);
+
+        // query f(1) from default scope
+        let goal = query!(call!("f", [sym!("x")]));
+        vm.push_goal(goal).unwrap();
+
+        assert_query_events!(vm, [
+            QueryEvent::Result{hashmap!(sym!("x") => term!(1))},
+            QueryEvent::Done { result : true }
+        ]);
     }
 }
