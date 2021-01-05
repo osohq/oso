@@ -94,7 +94,7 @@ impl Folder for VariableSubber {
 
 /// Substitute `sym!("_this")` for a variable in a partial.
 pub fn sub_this(this: Symbol, term: Term) -> Term {
-    eprintln!("THIS: {}; TERM: {}", this, term.to_polar());
+    // eprintln!("THIS: {}; TERM: {}", this, term.to_polar());
     if term
         .value()
         .as_symbol()
@@ -204,7 +204,7 @@ impl<'vm> Folder for Simplifier<'vm> {
                         let left = &c.args[0];
                         let right = &c.args[1];
                         if left == right || left.is_ground() && right.is_ground() {
-                            eprintln!("TOSSING CONSTRAINT `{}`", o.args[i].to_polar());
+                            // eprintln!("TOSSING CONSTRAINT `{}`", o.args[i].to_polar());
                             o.args.remove(i);
                         }
                     }
@@ -359,7 +359,7 @@ impl<'vm> Folder for Simplifier<'vm> {
                     }
                     _ => false,
                 }) {
-                    eprintln!("CHOSEN CONSTRAINT: {}", &o.args[i].to_polar());
+                    // eprintln!("CHOSEN CONSTRAINT: {}", &o.args[i].to_polar());
                     o.args.remove(i);
                 }
                 fold_operation(o, self)
@@ -451,9 +451,10 @@ impl<'vm> Simplifier<'vm> {
     pub fn simplify_partial(&mut self, mut term: Term) -> Term {
         let mut new;
         loop {
-            eprintln!("SIMPLIFYING {}: {}", self.this_var, term.to_polar());
+            //eprintln!("SIMPLIFYING {}", self.this_var);
+            //eprintln!("SIMPLIFYING {}: {}", self.this_var, term.to_polar());
             new = self.fold_term(term.clone());
-            eprintln!(" ⇒ {}", new.to_polar());
+            //eprintln!(" ⇒ {}", new.to_polar());
             if new == term {
                 break;
             }
