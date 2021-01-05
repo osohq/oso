@@ -141,7 +141,8 @@ impl Path {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Call {
-    pub name: Path,
+    #[serde(rename = "name")]
+    pub path: Path,
     pub args: TermList,
     pub kwargs: Option<BTreeMap<Symbol, Term>>,
 }

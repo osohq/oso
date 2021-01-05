@@ -534,7 +534,7 @@ pub mod to_polar {
                 }
                 None => args,
             };
-            format!("{}({})", self.name.to_polar(), combined_args)
+            format!("{}({})", self.path.to_polar(), combined_args)
         }
     }
 

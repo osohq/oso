@@ -9,7 +9,7 @@ mod tests {
         let mut kwargs = BTreeMap::new();
         kwargs.insert(Symbol::new("bar"), term!(1));
         let pred = Call {
-            name: Path::with_name(Symbol("foo".to_owned())),
+            path: Path::with_name(Symbol("foo".to_owned())),
             args: vec![Term::new_from_test(value!(0))],
             kwargs: Some(kwargs),
         };
@@ -37,7 +37,7 @@ mod tests {
             Term::new_from_test(Value::String("something".to_owned())),
         );
         let constructor = Call {
-            name: Path::with_name(Symbol::new("Foo")),
+            path: Path::with_name(Symbol::new("Foo")),
             args: vec![
                 term!(1234),
                 Term::new_from_test(Value::String("something".to_owned())),

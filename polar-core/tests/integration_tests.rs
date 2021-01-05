@@ -866,10 +866,10 @@ fn test_make_external() -> TestResult {
     let q = Polar::new().new_query("x = new Bar(1, a: 2, b: 3)", false)?;
     let mock_make_bar = |_, constructor: Term| match constructor.value() {
         Value::Call(Call {
-            name,
+            path,
             args,
             kwargs: Some(kwargs),
-        }) if name.name() == &sym!("Bar")
+        }) if path.name() == &sym!("Bar")
             && args == &vec![term!(1)]
             && kwargs == &btreemap! {sym!("a") => term!(2), sym!("b") => term!(3)} => {}
         _ => panic!("Expected call with args and kwargs"),

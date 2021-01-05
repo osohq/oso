@@ -179,9 +179,9 @@ pub fn fold_pattern<T: Folder>(p: Pattern, fld: &mut T) -> Pattern {
     }
 }
 
-pub fn fold_call<T: Folder>(Call { name, args, kwargs }: Call, fld: &mut T) -> Call {
+pub fn fold_call<T: Folder>(Call { path, args, kwargs }: Call, fld: &mut T) -> Call {
     Call {
-        name: fld.fold_path(name),
+        path: fld.fold_path(path),
         args: fld.fold_list(args),
         kwargs: kwargs.map(|kwargs| {
             kwargs

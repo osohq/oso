@@ -140,7 +140,7 @@ pub fn walk_pattern<V: Visitor>(visitor: &mut V, pattern: &Pattern) {
 }
 
 pub fn walk_call<V: Visitor>(visitor: &mut V, call: &Call) {
-    visitor.visit_path(&call.name);
+    visitor.visit_path(&call.path);
     walk_elements!(visitor, visit_term, &call.args);
     if let Some(kwargs) = call.kwargs.as_ref() {
         walk_fields!(visitor, kwargs);

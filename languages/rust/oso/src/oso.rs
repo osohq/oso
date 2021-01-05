@@ -134,7 +134,7 @@ impl Oso {
             .collect();
         let query_value = Value::Call(Call {
             // TODO: add scope argument to this method
-            name: Path::with_name(Symbol(name.to_string())),
+            path: Path::with_name(Symbol(name.to_string())),
             args,
             kwargs: None,
         });

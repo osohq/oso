@@ -1129,11 +1129,7 @@ impl PolarVirtualMachine {
             Option<Vec<Term>>,
             Option<BTreeMap<Symbol, Term>>,
         ) = match self.deref(field).value() {
-            Value::Call(Call {
-                name: path,
-                args,
-                kwargs,
-            }) => {
+            Value::Call(Call { path, args, kwargs }) => {
                 assert!(path.scope().is_none());
                 (
                     path.name().clone(),
@@ -1319,11 +1315,11 @@ impl PolarVirtualMachine {
             .kb
             .read()
             .unwrap()
-            .lookup_rule(predicate.name.clone(), &sym!("default"))
+            .lookup_rule(predicate.path.clone(), &sym!("default"))
         {
             None => vec![Goal::Backtrack],
             Some(generic_rule) => {
-                assert_eq!(&generic_rule.name, predicate.name.name());
+                assert_eq!(&generic_rule.name, predicate.path.name());
 
                 // Pre-filter rules.
                 let args = predicate.args.iter().map(|t| self.deep_deref(&t)).collect();
@@ -2013,7 +2009,7 @@ impl PolarVirtualMachine {
                 // Handled in the parser.
                 assert!(left.kwargs.is_none());
                 assert!(right.kwargs.is_none());
-                if left.name == right.name && left.args.len() == right.args.len() {
+                if left.path == right.path && left.args.len() == right.args.len() {
                     self.append_goals(left.args.iter().zip(right.args.iter()).map(
                         |(left, right)| Goal::Unify {
                             left: left.clone(),
@@ -3668,5 +3664,14 @@ mod tests {
             QueryEvent::Debug { message } if &message[..] == "consequent" && vm.bindings(true).is_empty() && vm.is_halted(),
             QueryEvent::Done { result: true }
         ]);
+    }
+
+    fn test_call_scoped_rule() {
+        let mut kb = KnowledgeBase::new();
+        let f1 = rule!("f", [1]);
+        let f2 = rule!("f", [2]);
+        kb.add_rule(f1, sym!("default"));
+        kb.add_rule(f2, sym!("custom_scope"));
+        let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![]);
     }
 }

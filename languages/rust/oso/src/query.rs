@@ -135,7 +135,7 @@ impl Query {
 
     fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> crate::Result<()> {
         match constructor.value() {
-            Value::Call(Call { name, args, kwargs }) => {
+            Value::Call(Call { path, args, kwargs }) => {
                 if !kwargs.is_none() {
                     lazy_error!("keyword args for constructor not supported.")
                 } else {
@@ -143,7 +143,7 @@ impl Query {
                         .iter()
                         .map(|term| PolarValue::from_term(term, &self.host))
                         .collect::<crate::Result<Vec<PolarValue>>>()?;
-                    self.host.make_instance(&name.name().0, args, instance_id)
+                    self.host.make_instance(&path.name().0, args, instance_id)
                 }
             }
             _ => lazy_error!("invalid type for constructing an instance -- internal error"),
