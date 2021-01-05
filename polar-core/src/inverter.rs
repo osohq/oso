@@ -58,11 +58,12 @@ impl PartialInverter {
         // Compute csp from old_value vs. p.
         let csp = match &self.old_state {
             VariableState::Partial(e) => e.constraints().len(),
+            VariableState::Cycle(c) => c.len() - 1,
             _ => 0,
         };
         let p = o.clone_with_constraints(o.inverted_constraints(csp));
         eprintln!(
-            "INVERTING w/old state {:?}: ¬{} = {}",
+            "INVERTING w/old state {:?}: ¬{} => {}",
             self.old_state,
             o.clone().into_term().to_polar(),
             p.clone().into_term().to_polar()

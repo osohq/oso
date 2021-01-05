@@ -2287,12 +2287,12 @@ impl PolarVirtualMachine {
                         self.push_goal(Goal::Unify { left: value, right })?;
                     }
                     VariableState::Partial(f) => {
-                        let cycle = f.get_cycle(var);
+                        // let cycle = f.get_cycle(var);
                         if let Some(grounded) = f.ground(var.clone(), right.clone()) {
                             self.constrain(&grounded, &op!(And).into_term())?;
-                            for var in cycle {
-                                self.bind(&var, right.clone());
-                            }
+                            // for var in cycle {
+                            self.bind(&var, right.clone());
+                        // }
                         } else {
                             self.push_goal(Goal::Backtrack)?;
                         }

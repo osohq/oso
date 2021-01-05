@@ -363,15 +363,17 @@ impl<'vm> Simplifier<'vm> {
     }
 
     pub fn bind(&mut self, var: Symbol, value: Term, invert: bool) {
+        eprintln!("Binding...");
+        eprintln!("  {} to {}", var, value.to_polar());
         let value = self.deref(&value);
-        self.bindings.insert(
-            var,
-            if invert {
-                value.clone_with_value(value!(op!(Not, value.clone())))
-            } else {
-                value
-            },
-        );
+        eprintln!("  derefed: {} to {}", var, value.to_polar());
+        let value = if invert {
+            value.clone_with_value(value!(op!(Not, value.clone())))
+        } else {
+            value
+        };
+        eprintln!("  inverted: {} to {}", var, value.to_polar());
+        self.bindings.insert(var, value);
     }
 
     pub fn deref(&self, term: &Term) -> Term {
