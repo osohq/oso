@@ -342,12 +342,14 @@ impl<'vm> Folder for Simplifier<'vm> {
 
             // Negation.
             Operator::Not => {
-                // Simplify the negated expression to eliminate temps.
-                match self.simplify_partial(o.args[0].clone()).value() {
-                    Value::Expression(e) => fold_operation(invert_operation(e.clone()), self),
-                    _ => fold_operation(o, self),
+                assert_eq!(o.args.len(), 1, "expected unary negation");
+                match o.args[0].value() {
+                    Value::Expression(e) => invert_operation(fold_operation(e.clone(), self)),
+                    _ => op!(Not, self.fold_term(o.args[0].clone())),
                 }
             }
+
+            // Default case.
             _ => fold_operation(o, self),
         }
     }
@@ -390,7 +392,11 @@ impl<'vm> Simplifier<'vm> {
     }
 
     fn is_this_var(&self, t: &Term) -> bool {
-        matches!(t.value(), Value::Variable(v) if v == &self.this_var)
+        match t.value() {
+            Value::Variable(v) => v == &self.this_var,
+            Value::Expression(e) => e.operator == Operator::Dot && self.is_this_var(&e.args[0]),
+            _ => false,
+        }
     }
 
     /// Simplify a partial until quiescence.
