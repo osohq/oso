@@ -67,6 +67,10 @@ extern {
         "not" => lexer::Token::Not,         // not
         "matches" => lexer::Token::Matches, // matches
         "sqrt" => lexer::Token::Sqrt,
+        "abs" => lexer::Token::Abs,
+        "min" => lexer::Token::Min,
+        "max" => lexer::Token::Max,
+        "sign" => lexer::Token::Sign,
     }
 }
 
@@ -309,9 +313,53 @@ SqrtExp<T>: Value = {
     },
 }
 
+AbsExp<T>: Value = {
+    "abs" "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
+        Value::Expression(Operation{operator: Operator::Abs, args: args})
+    },
+}
+
+MinExp<T>: Value = {
+    "min" "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
+        Value::Expression(Operation{operator: Operator::Min, args: args})
+    },
+}
+
+MaxExp<T>: Value = {
+    "max" "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
+        Value::Expression(Operation{operator: Operator::Max, args: args})
+    },
+}
+
+SignExp<T>: Value = {
+    "sign" "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
+        Value::Expression(Operation{operator: Operator::Sign, args: args})
+    },
+}
+
 // math shit
 Exp10<T>: ValueOrLogical = {
     <IsAny<SqrtExp<T>>>,
+    <IsAny<AbsExp<T>>>,
+    <IsAny<MinExp<T>>>,
+    <IsAny<MaxExp<T>>>,
+    <IsAny<SignExp<T>>>,
     <Exp11<T>>,
 };
 

@@ -65,11 +65,17 @@ impl<'kb> Rewriter<'kb> {
             | Operator::Sub
             | Operator::Mod
             | Operator::Rem
+            | Operator::Min
+            | Operator::Max
                 if o.args.len() == 2 =>
             {
                 true
             }
-            Operator::New | Operator::Sqrt if o.args.len() == 1 => true,
+            Operator::New | Operator::Sqrt | Operator::Abs | Operator::Sign
+                if o.args.len() == 1 =>
+            {
+                true
+            }
             _ => false,
         }
     }

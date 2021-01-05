@@ -28,7 +28,7 @@ use crate::traces::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 #[cfg(not(target_arch = "wasm32"))]
-pub const QUERY_TIMEOUT_S: std::time::Duration = std::time::Duration::from_secs(30*10*10);
+pub const QUERY_TIMEOUT_S: std::time::Duration = std::time::Duration::from_secs(30 * 10 * 10);
 #[cfg(target_arch = "wasm32")]
 pub const QUERY_TIMEOUT_S: f64 = 30_000.0;
 
@@ -1606,7 +1606,11 @@ impl PolarVirtualMachine {
             | op @ Operator::Div
             | op @ Operator::Mod
             | op @ Operator::Rem
-            | op @ Operator::Sqrt => {
+            | op @ Operator::Sqrt
+            | op @ Operator::Abs
+            | op @ Operator::Min
+            | op @ Operator::Max
+            | op @ Operator::Sign => {
                 return self.arithmetic_op_helper(term, op, args);
             }
 
@@ -1973,6 +1977,14 @@ impl PolarVirtualMachine {
                     Value::Number(left) => {
                         if let Some(answer) = match (left, op) {
                             (Numeric::Float(f), Operator::Sqrt) => Some(Numeric::Float(f.sqrt())),
+                            (Numeric::Float(f), Operator::Abs) => Some(Numeric::Float(f.abs())),
+                            (Numeric::Float(f), Operator::Sign) => {
+                                if *f == 0.0 {
+                                    Some(Numeric::Float(0.0))
+                                } else {
+                                    Some(Numeric::Float(f.signum()))
+                                }
+                            }
                             _ => {
                                 return Err(self.set_error_context(
                                     term,
@@ -2119,14 +2131,30 @@ impl PolarVirtualMachine {
                             Operator::Div => *left / *right,
                             Operator::Mod => (*left).modulo(*right),
                             Operator::Rem => *left % *right,
-                            _ => {
-                                return Err(self.set_error_context(
-                                    term,
-                                    error::RuntimeError::Unsupported {
-                                        msg: format!("numeric operation {}", op.to_polar()),
-                                    },
-                                ))
-                            }
+                            _ => match (left, right, op) {
+                                (Numeric::Float(f), Numeric::Float(g), Operator::Min) => {
+                                    if f < g {
+                                        Some(Numeric::Float(*f))
+                                    } else {
+                                        Some(Numeric::Float(*g))
+                                    }
+                                }
+                                (Numeric::Float(f), Numeric::Float(g), Operator::Max) => {
+                                    if f > g {
+                                        Some(Numeric::Float(*f))
+                                    } else {
+                                        Some(Numeric::Float(*g))
+                                    }
+                                }
+                                _ => {
+                                    return Err(self.set_error_context(
+                                        term,
+                                        error::RuntimeError::Unsupported {
+                                            msg: format!("numeric operation {}", op.to_polar()),
+                                        },
+                                    ))
+                                }
+                            },
                         } {
                             self.push_goal(Goal::Unify {
                                 left: term.clone_with_value(Value::Number(answer)),
@@ -2141,7 +2169,7 @@ impl PolarVirtualMachine {
                             ));
                         }
                     }
-                    (_, _) => {
+                    (l, r) => {
                         return Err(self.set_error_context(
                             term,
                             error::RuntimeError::Unsupported {

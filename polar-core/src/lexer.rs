@@ -88,8 +88,12 @@ pub enum Token {
     Not,       // not
     Matches,   // matches
 
-    // Hacked in additional operators
+    // Steve was here
     Sqrt,
+    Abs,
+    Min,
+    Max,
+    Sign,
 }
 
 impl ToString for Token {
@@ -140,6 +144,10 @@ impl ToString for Token {
             Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
             Token::Sqrt => "sqrt".to_owned(),
+            Token::Abs => "abs".to_owned(),
+            Token::Min => "min".to_owned(),
+            Token::Max => "max".to_owned(),
+            Token::Sign => "sign".to_owned(),
         }
     }
 }
@@ -252,6 +260,14 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Rem, last + 1)))
         } else if &self.buf == "sqrt" {
             Some(Ok((start, Token::Sqrt, last + 1)))
+        } else if &self.buf == "abs" {
+            Some(Ok((start, Token::Abs, last + 1)))
+        } else if &self.buf == "min" {
+            Some(Ok((start, Token::Min, last + 1)))
+        } else if &self.buf == "max" {
+            Some(Ok((start, Token::Max, last + 1)))
+        } else if &self.buf == "sign" {
+            Some(Ok((start, Token::Sign, last + 1)))
         } else {
             Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
         }
