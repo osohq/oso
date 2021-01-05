@@ -51,8 +51,10 @@ pub struct KnowledgeBase {
 
 impl KnowledgeBase {
     pub fn new() -> Self {
+        let mut scopes = HashMap::new();
+        scopes.insert(sym!("default"), Scope::new(sym!("default").into()));
         Self {
-            scopes: Default::default(),
+            scopes: scopes,
             sources: Sources::default(),
             id_counter: Counter::default(),
             gensym_counter: Counter::default(),
@@ -100,16 +102,17 @@ impl KnowledgeBase {
     }
 
     pub fn lookup_constant(&self, path: Path, scope: Path) -> Option<&Term> {
-        let scope = self.scopes.get(&scope.into_1()).unwrap();
-        // .entry(scope.into_1())
-        // .or_insert(Scope::new(sym!("default").into()));
-        match path.into_2() {
-            (name, None) => scope.constants.get(&name),
-            (included_scope, Some(name)) => self
-                .get_included_scope(scope, included_scope.into())
-                .unwrap()
-                .constants
-                .get(&name),
+        if let Some(scope) = self.scopes.get(&scope.into_1()) {
+            match path.into_2() {
+                (name, None) => scope.constants.get(&name),
+                (included_scope, Some(name)) => self
+                    .get_included_scope(scope, included_scope.into())
+                    .unwrap()
+                    .constants
+                    .get(&name),
+            }
+        } else {
+            None
         }
     }
 
