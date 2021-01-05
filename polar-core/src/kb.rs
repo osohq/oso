@@ -11,10 +11,36 @@ use std::sync::Arc;
 /// but can translate to and from this type.
 pub type Bindings = HashMap<Symbol, Term>;
 
+// pub struct ScopeDefinition {
+//     name: Symbol,
+
+//     /// Scopes that you can call rules from this scope.
+//     included_names: HashSet<Path>,
+
+//     rule_templates: HashMap<Symbol, GenericRule>,
+//     // type definitions
+// }
+
 #[derive(Default)]
-pub struct KnowledgeBase {
+pub struct Scope {
+    name: Path,
     constants: Bindings,
     rules: HashMap<Symbol, GenericRule>,
+}
+
+impl Scope {
+    pub fn new(name: Path) -> Self {
+        Self {
+            name: name,
+            constants: HashMap::new(),
+            rules: HashMap::new(),
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct KnowledgeBase {
+    scopes: HashMap<Symbol, Scope>,
     pub sources: Sources,
     /// For symbols returned from gensym.
     gensym_counter: Counter,
@@ -26,8 +52,7 @@ pub struct KnowledgeBase {
 impl KnowledgeBase {
     pub fn new() -> Self {
         Self {
-            constants: HashMap::new(),
-            rules: HashMap::new(),
+            scopes: Default::default(),
             sources: Sources::default(),
             id_counter: Counter::default(),
             gensym_counter: Counter::default(),
@@ -59,35 +84,59 @@ impl KnowledgeBase {
         }
     }
 
-    /// Add a generic rule to the knowledge base.
-    #[cfg(test)]
-    pub fn add_generic_rule(&mut self, rule: GenericRule) {
-        self.rules.insert(rule.name.clone(), rule);
-    }
-
-    /// Define a constant variable.
+    /// Define a constant variable. (in the default scope)
     pub fn constant(&mut self, name: Symbol, value: Term) {
-        self.constants.insert(name, value);
+        self.scopes
+            .entry(sym!("default"))
+            .or_insert(Scope::new(sym!("default").into()))
+            .constants
+            .insert(name, value);
     }
 
     /// Return true if a constant with the given name has been defined.
-    pub fn is_constant(&self, name: &Symbol) -> bool {
-        self.constants.contains_key(name)
+    pub fn is_constant(&self, symbol: &Symbol) -> bool {
+        self.lookup_constant(symbol.clone().into(), sym!("default").into())
+            .is_some()
     }
 
     pub fn lookup_constant(&self, path: Path, scope: Path) -> Option<&Term> {
-        let name = path.0.get(0).unwrap();
-        self.constants.get(name)
+        let scope = self.scopes.get(&scope.into_1()).unwrap();
+        // .entry(scope.into_1())
+        // .or_insert(Scope::new(sym!("default").into()));
+        match path.into_2() {
+            (name, None) => scope.constants.get(&name),
+            (included_scope, Some(name)) => self
+                .get_included_scope(scope, included_scope.into())
+                .unwrap()
+                .constants
+                .get(&name),
+        }
+    }
+
+    /// Get `included` scope w.r.t `base`.
+    fn get_included_scope(&self, _base: &Scope, included: Path) -> Option<&Scope> {
+        // For now everything is included in everything.
+        self.scopes.get(&included.into_1())
     }
 
     pub fn lookup_rule(&self, path: Path, scope: Path) -> Option<&GenericRule> {
-        let name = path.0.get(0).unwrap();
-        self.rules.get(name)
+        let scope = self.scopes.get(&scope.into_1()).unwrap();
+
+        match path.into_2() {
+            (rule_name, None) => scope.rules.get(&rule_name),
+            (included_scope, Some(rule_name)) => self
+                .get_included_scope(scope, included_scope.into())
+                .unwrap()
+                .rules
+                .get(&rule_name),
+        }
     }
 
-    pub fn add_rule(&mut self, rule: Rule) {
+    pub fn add_rule(&mut self, rule: Rule, scope: Path) {
+        let scope = self.scopes.get_mut(&scope.into_1()).unwrap();
+
         let name = rule.name.clone();
-        let generic_rule = self
+        let generic_rule = scope
             .rules
             .entry(name.clone())
             .or_insert_with(|| GenericRule::new(name, vec![]));
@@ -96,7 +145,9 @@ impl KnowledgeBase {
 
     /// Clear rules from KB, leaving constants in place.
     pub fn clear_rules(&mut self) {
-        self.rules.clear();
+        for scope in self.scopes.iter_mut() {
+            scope.1.rules.clear()
+        }
         self.sources = Sources::default();
         self.inline_queries.clear();
     }

@@ -2840,8 +2840,8 @@ mod tests {
         let f2 = rule!("f", [2]);
 
         let mut kb = KnowledgeBase::new();
-        kb.add_rule(f1);
-        kb.add_rule(f2);
+        kb.add_rule(f1, Path::default_path());
+        kb.add_rule(f2, Path::default_path());
 
         let goal = query!(op!(And));
 
@@ -3375,14 +3375,16 @@ mod tests {
 
     #[test]
     fn test_filter_rules() {
-        let rule_a = Arc::new(rule!("bar", ["_"; instance!("a")]));
-        let rule_b = Arc::new(rule!("bar", ["_"; instance!("b")]));
-        let rule_1a = Arc::new(rule!("bar", [value!(1)]));
-        let rule_1b = Arc::new(rule!("bar", ["_"; value!(1)]));
+        let rule_a = rule!("bar", ["_"; instance!("a")]);
+        let rule_b = rule!("bar", ["_"; instance!("b")]);
+        let rule_1a = rule!("bar", [value!(1)]);
+        let rule_1b = rule!("bar", ["_"; value!(1)]);
 
-        let gen_rule = GenericRule::new(sym!("bar"), vec![rule_a, rule_b, rule_1a, rule_1b]);
         let mut kb = KnowledgeBase::new();
-        kb.add_generic_rule(gen_rule);
+        kb.add_rule(rule_a, Path::default_path());
+        kb.add_rule(rule_b, Path::default_path());
+        kb.add_rule(rule_1a, Path::default_path());
+        kb.add_rule(rule_1b, Path::default_path());
 
         let external_instance = Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
@@ -3442,18 +3444,23 @@ mod tests {
     #[test]
     fn test_sort_rules() {
         // Test sort rule by mocking ExternalIsSubSpecializer and ExternalIsa.
-        let bar_rule = GenericRule::new(
-            sym!("bar"),
-            vec![
-                Arc::new(rule!("bar", ["_"; instance!("b"), "_"; instance!("a"), value!(3)])),
-                Arc::new(rule!("bar", ["_"; instance!("a"), "_"; instance!("a"), value!(1)])),
-                Arc::new(rule!("bar", ["_"; instance!("a"), "_"; instance!("b"), value!(2)])),
-                Arc::new(rule!("bar", ["_"; instance!("b"), "_"; instance!("b"), value!(4)])),
-            ],
-        );
-
         let mut kb = KnowledgeBase::new();
-        kb.add_generic_rule(bar_rule);
+        kb.add_rule(
+            rule!("bar", ["_"; instance!("b"), "_"; instance!("a"), value!(3)]),
+            Path::default_path(),
+        );
+        kb.add_rule(
+            rule!("bar", ["_"; instance!("a"), "_"; instance!("a"), value!(1)]),
+            Path::default_path(),
+        );
+        kb.add_rule(
+            rule!("bar", ["_"; instance!("a"), "_"; instance!("b"), value!(2)]),
+            Path::default_path(),
+        );
+        kb.add_rule(
+            rule!("bar", ["_"; instance!("b"), "_"; instance!("b"), value!(4)]),
+            Path::default_path(),
+        );
 
         let external_instance = Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
@@ -3574,16 +3581,9 @@ mod tests {
 
     #[test]
     fn test_prefiltering() {
-        let bar_rule = GenericRule::new(
-            sym!("bar"),
-            vec![
-                Arc::new(rule!("bar", [value!([1])])),
-                Arc::new(rule!("bar", [value!([2])])),
-            ],
-        );
-
         let mut kb = KnowledgeBase::new();
-        kb.add_generic_rule(bar_rule);
+        kb.add_rule(rule!("bar", [value!([1])]), Path::default_path());
+        kb.add_rule(rule!("bar", [value!([2])]), Path::default_path());
 
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![]);
         vm.bind(&sym!("x"), term!(1));
