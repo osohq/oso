@@ -21,15 +21,14 @@ pub type Bindings = HashMap<Symbol, Term>;
 //     // type definitions
 // }
 
-#[derive(Default)]
 pub struct Scope {
-    name: Path,
+    name: Symbol,
     constants: Bindings,
     rules: HashMap<Symbol, GenericRule>,
 }
 
 impl Scope {
-    pub fn new(name: Path) -> Self {
+    pub fn new(name: Symbol) -> Self {
         Self {
             name: name,
             constants: HashMap::new(),
@@ -52,7 +51,7 @@ pub struct KnowledgeBase {
 impl KnowledgeBase {
     pub fn new() -> Self {
         let mut scopes = HashMap::new();
-        scopes.insert(sym!("default"), Scope::new(sym!("default").into()));
+        scopes.insert(sym!("default"), Scope::new(sym!("default")));
         Self {
             scopes: scopes,
             sources: Sources::default(),
@@ -98,51 +97,50 @@ impl KnowledgeBase {
 
     /// Return true if a constant with the given name has been defined.
     pub fn is_constant(&self, symbol: &Symbol) -> bool {
-        self.lookup_constant(symbol.clone().into(), sym!("default").into())
+        self.lookup_constant(Path::with_name(symbol.clone()), &sym!("default"))
             .is_some()
     }
 
-    pub fn lookup_constant(&self, path: Path, scope: Path) -> Option<&Term> {
+    pub fn lookup_constant(&self, const_path: Path, scope: &Symbol) -> Option<&Term> {
         // lookup scope by path; return `None` if scope doesn't exist
-        if let Some(scope) = self.scopes.get(&scope.into_1()) {
-            match path.into_2() {
-                (name, None) => scope.constants.get(&name),
-                (included_scope, Some(name)) => self
-                    .get_included_scope(scope, included_scope.into())
-                    .unwrap()
-                    .constants
-                    .get(&name),
+        self.scopes.get(&scope).and_then(|scope| {
+            match (const_path.scope(), const_path.name()) {
+                // if there is no included scope, get the constant from the current scope
+                (None, const_name) => scope.constants.get(&const_name),
+                // if there is an included scope, check that the scope is included and get the constant from the included scope
+                (Some(included_scope), const_name) => self
+                    .get_included_scope(scope, included_scope)
+                    .and_then(|scope| scope.constants.get(&const_name)),
             }
-        } else {
-            None
-        }
+        })
     }
 
     /// Get `included` scope w.r.t `base`.
-    fn get_included_scope(&self, _base: &Scope, included: Path) -> Option<&Scope> {
+    fn get_included_scope(&self, _base: &Scope, included: &Symbol) -> Option<&Scope> {
         // For now everything is included in everything.
-        self.scopes.get(&included.into_1())
+        self.scopes.get(included)
     }
 
-    pub fn lookup_rule(&self, path: Path, scope: Path) -> Option<&GenericRule> {
+    pub fn lookup_rule(&self, rule_path: Path, in_scope: &Symbol) -> Option<&GenericRule> {
         // lookup scope by path; return `None` if scope doesn't exist
-        if let Some(scope) = self.scopes.get(&scope.into_1()) {
-            match path.into_2() {
-                (rule_name, None) => scope.rules.get(&rule_name),
-                (included_scope, Some(rule_name)) => self
-                    .get_included_scope(scope, included_scope.into())
-                    .unwrap()
-                    .rules
-                    .get(&rule_name),
+        self.scopes.get(&in_scope).and_then(|scope| {
+            match (rule_path.scope(), rule_path.name()) {
+                // if there is no included scope, get the rule from the current scope
+                (None, name) => scope.rules.get(&name),
+                // if there is a scope name, check that the scope is included and get the rule from the included scope
+                (Some(included_scope), name) => self
+                    .get_included_scope(scope, included_scope)
+                    .and_then(|scope| scope.rules.get(&name)),
             }
-        } else {
-            None
-        }
+        })
     }
 
-    pub fn add_rule(&mut self, rule: Rule, scope: Path) {
+    pub fn add_rule(&mut self, rule: Rule, scope: Symbol) {
         // lookup scope by path; panic if scope doesn't exist
-        let scope = self.scopes.get_mut(&scope.into_1()).unwrap();
+        let scope = self
+            .scopes
+            .entry(scope.clone())
+            .or_insert_with(|| Scope::new(scope));
 
         let name = rule.name.clone();
         let generic_rule = scope
@@ -154,8 +152,8 @@ impl KnowledgeBase {
 
     /// Clear rules from KB, leaving constants in place.
     pub fn clear_rules(&mut self) {
-        for scope in self.scopes.iter_mut() {
-            scope.1.rules.clear()
+        for (_, scope) in self.scopes.iter_mut() {
+            scope.rules.clear()
         }
         self.sources = Sources::default();
         self.inline_queries.clear();

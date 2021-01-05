@@ -627,7 +627,7 @@ impl PolarVirtualMachine {
                 self.kb
                     .read()
                     .unwrap()
-                    .lookup_constant(variable.clone().into(), Path::default_path())
+                    .lookup_constant(Path::with_name(variable.clone()), &sym!("default"))
                     .cloned()
             })
     }
@@ -1312,7 +1312,7 @@ impl PolarVirtualMachine {
             .kb
             .read()
             .unwrap()
-            .lookup_rule(predicate.name.clone().into(), Path::default_path())
+            .lookup_rule(Path::with_name(predicate.name.clone()), &sym!("default"))
         {
             None => vec![Goal::Backtrack],
             Some(generic_rule) => {
@@ -2840,8 +2840,8 @@ mod tests {
         let f2 = rule!("f", [2]);
 
         let mut kb = KnowledgeBase::new();
-        kb.add_rule(f1, Path::default_path());
-        kb.add_rule(f2, Path::default_path());
+        kb.add_rule(f1, sym!("default"));
+        kb.add_rule(f2, sym!("default"));
 
         let goal = query!(op!(And));
 
@@ -3381,10 +3381,10 @@ mod tests {
         let rule_1b = rule!("bar", ["_"; value!(1)]);
 
         let mut kb = KnowledgeBase::new();
-        kb.add_rule(rule_a, Path::default_path());
-        kb.add_rule(rule_b, Path::default_path());
-        kb.add_rule(rule_1a, Path::default_path());
-        kb.add_rule(rule_1b, Path::default_path());
+        kb.add_rule(rule_a, sym!("default"));
+        kb.add_rule(rule_b, sym!("default"));
+        kb.add_rule(rule_1a, sym!("default"));
+        kb.add_rule(rule_1b, sym!("default"));
 
         let external_instance = Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
@@ -3447,19 +3447,19 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         kb.add_rule(
             rule!("bar", ["_"; instance!("b"), "_"; instance!("a"), value!(3)]),
-            Path::default_path(),
+            sym!("default"),
         );
         kb.add_rule(
             rule!("bar", ["_"; instance!("a"), "_"; instance!("a"), value!(1)]),
-            Path::default_path(),
+            sym!("default"),
         );
         kb.add_rule(
             rule!("bar", ["_"; instance!("a"), "_"; instance!("b"), value!(2)]),
-            Path::default_path(),
+            sym!("default"),
         );
         kb.add_rule(
             rule!("bar", ["_"; instance!("b"), "_"; instance!("b"), value!(4)]),
-            Path::default_path(),
+            sym!("default"),
         );
 
         let external_instance = Value::ExternalInstance(ExternalInstance {
@@ -3582,8 +3582,8 @@ mod tests {
     #[test]
     fn test_prefiltering() {
         let mut kb = KnowledgeBase::new();
-        kb.add_rule(rule!("bar", [value!([1])]), Path::default_path());
-        kb.add_rule(rule!("bar", [value!([2])]), Path::default_path());
+        kb.add_rule(rule!("bar", [value!([1])]), sym!("default"));
+        kb.add_rule(rule!("bar", [value!([2])]), sym!("default"));
 
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![]);
         vm.bind(&sym!("x"), term!(1));

@@ -77,52 +77,27 @@ impl Symbol {
     }
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct Path(pub Vec<Symbol>);
-
-impl Path {
-    pub fn new(parts: Vec<Symbol>) -> Self {
-        Self(parts)
-    }
-
-    pub fn default_path() -> Self {
-        Self(vec![sym!("default")])
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    /// Take head off path and return head and rest.
-    /// Returns: (Some(Symbol), None) if 1 item
-    ///          (Some(Symbol), Some(Path)) if > 1 item
-    ///          (None, None) if 0 items
-    pub fn parts(mut self) -> (Option<Symbol>, Option<Path>) {
-        if self.len() == 0 {
-            (None, None)
-        } else if self.len() == 1 {
-            (Some(self.0.remove(0)), None)
-        } else {
-            (Some(self.0.remove(0)), Some(self))
-        }
-    }
-
-    // TODO hack for no nested scopes.
-    pub fn into_2(self) -> (Symbol, Option<Symbol>) {
-        assert!(self.len() <= 2);
-
-        (self.0.get(0).unwrap().clone(), self.0.get(1).cloned())
-    }
-
-    pub fn into_1(mut self) -> Symbol {
-        assert!(self.len() <= 1);
-        self.0.pop().unwrap()
-    }
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub struct Path {
+    scope: Option<Symbol>,
+    name: Symbol,
 }
 
-impl From<Symbol> for Path {
-    fn from(symbol: Symbol) -> Self {
-        Self(vec![symbol])
+impl Path {
+    pub fn new(scope: Option<Symbol>, name: Symbol) -> Self {
+        Self { scope, name }
+    }
+
+    pub fn with_name(name: Symbol) -> Self {
+        Self { scope: None, name }
+    }
+
+    pub fn scope(&self) -> Option<&Symbol> {
+        self.scope.as_ref()
+    }
+
+    pub fn name(&self) -> &Symbol {
+        &self.name
     }
 }
 

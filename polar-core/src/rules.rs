@@ -163,7 +163,7 @@ mod tests {
 
         let kb = polar.kb.read().unwrap();
         let generic_rule = kb
-            .lookup_rule(sym!("f").into(), Path::default_path())
+            .lookup_rule(Path::with_name(sym!("f")), &sym!("default"))
             .unwrap();
         let index = &generic_rule.index;
         assert!(index.rules.is_empty());
