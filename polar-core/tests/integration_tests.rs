@@ -1884,6 +1884,7 @@ fn test_scopes() {
         r#"
         def scope custom {
             allow("allowed");
+
         }
 
 

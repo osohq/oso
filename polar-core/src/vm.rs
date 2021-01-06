@@ -3699,13 +3699,17 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         let f1 = rule!("f", [1]); // default scope
         let f2 = rule!("f", [2]); // custom_scope_1
+        let h1 = rule!("h", [1]); // custom_scope_1
         let f3 = rule!("f", [sym!("x")] => call!("g", [sym!("x")])); // custom_scope_2
+        let j = rule!("j", [sym!("x")] => call!("custom_scope_1::h", [sym!("x")])); // custom_scope_2
         let g3 = rule!("g", [3]); // custom_scope_2
         let g1 = rule!("g", [1]); // default
 
         kb.add_rule(f1, sym!("default")).unwrap();
         kb.add_rule(f2, sym!("custom_scope_1")).unwrap();
+        kb.add_rule(h1, sym!("custom_scope_1")).unwrap();
         kb.add_rule(f3, sym!("custom_scope_2")).unwrap();
+        kb.add_rule(j, sym!("custom_scope_2")).unwrap();
         kb.add_rule(g3, sym!("custom_scope_2")).unwrap();
         kb.add_rule(g1, sym!("default")).unwrap();
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![]);
@@ -3745,5 +3749,12 @@ mod tests {
             QueryEvent::Result{hashmap!(sym!("x") => term!(3))},
             QueryEvent::Done { result : true }
         ]);
+
+        // query j(x) from default scope. Doesn't return any results because
+        // the custom_scope_2 rule cannot access custom_scope_1.
+        let goal = query!(call!("custom_scope_2::j", [sym!("x")]));
+        vm.push_goal(goal).unwrap();
+
+        assert_query_events!(vm, [QueryEvent::Done { result: true }]);
     }
 }

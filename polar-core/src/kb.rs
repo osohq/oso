@@ -140,9 +140,12 @@ impl KnowledgeBase {
     }
 
     /// Get `included` scope w.r.t `base`.
-    fn get_included_scope(&self, _base: &Scope, included: &Symbol) -> Option<&Scope> {
-        // For now everything is included in everything.
-        self.scopes.get(included)
+    fn get_included_scope(&self, base: &Scope, included: &Symbol) -> Option<&Scope> {
+        if &base.name.0 == "default" {
+            self.scopes.get(included)
+        } else {
+            None
+        }
     }
 
     pub fn lookup_rule(
