@@ -119,7 +119,7 @@ impl KnowledgeBase {
         self.scopes.insert(scope.name.clone(), scope);
 
         for template in rule_templates {
-            self.add_rule_template(template, &name);
+            self.add_rule_template(template, &name)?;
         }
 
         Ok(())
@@ -277,16 +277,31 @@ impl KnowledgeBase {
 
     /// Add a rule template to the scope
     /// Precondition: scope exists with name `scope`.
-    fn add_rule_template(&mut self, template: Rule, scope: &Symbol) {
+    fn add_rule_template(&mut self, template: Rule, scope: &Symbol) -> PolarResult<()> {
         let scope = self.scopes.get_mut(scope).unwrap();
 
-        // TODO: maybe check that rule body is empty?
+        // check that rule body is empty
+        match template.body.value() {
+            Value::Expression(Operation {
+                operator: Operator::And,
+                args,
+            }) if args.is_empty() => (),
+            _ => {
+                return Err(error::RuntimeError::FileLoading {
+                    msg: "Rule template cannot have a body.".to_owned(),
+                }
+                .into())
+            }
+        }
         let name = template.name.clone();
-        let _rule_templates = scope
+        // get rule templates
+        scope
             .rule_templates
             .entry(name.clone())
+            .and_modify(|rule_templates| rule_templates.push(template.clone()))
             .or_insert_with(|| vec![template]);
-        // TODO: finish this method: add another rule template to an existing name
+
+        Ok(())
     }
 }
 
@@ -343,11 +358,11 @@ mod test {
 
         let template = rule!("allow_role", [sym!("actor"); pattern!(instance!("User")), sym!("action"); pattern!(instance!("String")), sym!("resource"); pattern!(instance!("Repository"))]);
 
-        // TODO: create scope first
+        // create scope first
         let scope_name = sym!("custom_scope");
         kb.scopes
             .insert(scope_name.clone(), Scope::new(scope_name.clone()));
-        kb.add_rule_template(template, &scope_name);
+        kb.add_rule_template(template, &scope_name).unwrap();
         // (actor: User, action: String, resource: Repository)")
         let rule = rule!("allow_role", [sym!("actor"); pattern!(instance!("User")), sym!("action"); pattern!(instance!("String")), sym!("resource"); pattern!(instance!("Repository"))]);
         assert!(kb.add_rule(rule, sym!("custom_scope")).is_ok());
@@ -357,6 +372,11 @@ mod test {
         assert!(kb.add_rule(bad_rule, sym!("custom_scope")).is_err());
         let bad_rule = rule!("allow_role", [sym!("actor"); pattern!(instance!("EvilUser")), sym!("action"); pattern!(instance!("String")), sym!("resource"); pattern!(instance!("Repository"))]);
         assert!(kb.add_rule(bad_rule, sym!("custom_scope")).is_err());
+
+        let template = rule!("allow_role", [sym!("actor"); pattern!(instance!("SuperUser")), sym!("action"); pattern!(instance!("String")), sym!("resource"); pattern!(instance!("Repository"))]);
+        kb.add_rule_template(template, &scope_name).unwrap();
+        let rule = rule!("allow_role", [sym!("actor"); pattern!(instance!("SuperUser")), sym!("action"); pattern!(instance!("String")), sym!("resource"); pattern!(instance!("Repository"))]);
+        assert!(kb.add_rule(rule, sym!("custom_scope")).is_ok());
     }
 
     // TODO fields test.

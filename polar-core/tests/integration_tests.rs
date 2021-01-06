@@ -1765,20 +1765,20 @@ fn test_list_results() -> TestResult {
 fn test_expressions_in_lists() -> TestResult {
     let mut p = Polar::new();
     p.load_str(
-        r#"scope(actor: Dictionary, "read", "Person", filters) if
+        r#"_scope(actor: Dictionary, "read", "Person", filters) if
                filters = ["id", "=", actor.id];"#,
     )?;
     qeval(
         &mut p,
-        r#"scope({id: 1}, "read", "Person", ["id", "=", 1])"#,
+        r#"_scope({id: 1}, "read", "Person", ["id", "=", 1])"#,
     );
     qnull(
         &mut p,
-        r#"scope({id: 2}, "read", "Person", ["id", "=", 1])"#,
+        r#"_scope({id: 2}, "read", "Person", ["id", "=", 1])"#,
     );
     qnull(
         &mut p,
-        r#"scope({id: 1}, "read", "Person", ["not_id", "=", 1])"#,
+        r#"_scope({id: 1}, "read", "Person", ["not_id", "=", 1])"#,
     );
     qeval(&mut p, r#"d = {x: 1} and [d.x, 1+1] = [1, 2]"#);
     qvar(
