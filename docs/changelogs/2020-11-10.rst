@@ -1,8 +1,14 @@
-=====
-0.8.0
-=====
+.. title:: Changelog for Release 2020-11-10
+.. meta::
+  :description: Changelog for Release 2020-11-10 (oso 0.8.0) containing new features, bug fixes, and more.
 
-**Release date:** 2020-11-10
+##################
+Release 2020-11-10
+##################
+
+=============
+``oso`` 0.8.0
+=============
 
 Breaking changes
 ================
@@ -54,8 +60,8 @@ to ``x`` yields a constraint that is translated into a check like
 Other bugs & improvements
 =========================
 
-- List filtering now supports queries involving inversion (the ``not`` operator)
-  properly.
+- List filtering now supports queries involving inversion (the ``not``
+  operator) properly.
 
 - Polar now checks fields in the case of a ``matches`` against a built-in
   language type. E.g.:
@@ -64,10 +70,10 @@ Other bugs & improvements
 
     2 matches Integer { numerator: 2, denominator: 1 }
 
-- More invalid expressions are captured at parse time. For example, you cannot perform
-  arithmetic over logical operations, ``(x = 1) + (x = 2)``, nor can you
-  check an arithmetic expression for "truthiness", i.e. ``1 or 2``
-  will also fail to parse::
+- More invalid expressions are captured at parse time. For example, you cannot
+  perform arithmetic over logical operations, ``(x = 1) + (x = 2)``, nor can
+  you check an arithmetic expression for "truthiness", i.e. ``1 or 2`` will
+  also fail to parse::
 
     query> (x = 1) + (x = 2)
     ParserError
@@ -77,9 +83,9 @@ Other bugs & improvements
     ParserError
     Wrong value type: 1. Expected a logical at line 1, column 1
 
-- Matching an unbound variable against a pattern now results in an error. Previously
-  this would bind the variable with the pattern, resulting in unexpected behavior.
-  For example::
+- Matching an unbound variable against a pattern now results in an error.
+  Previously this would bind the variable with the pattern, resulting in
+  unexpected behavior. For example::
 
     query> x matches String
     PolarTypeError
@@ -92,3 +98,15 @@ Other bugs & improvements
 
     query> "abc" matches String
     True
+
+====================
+``django-oso`` 0.4.0
+====================
+
+Bumped the minimum required version of the ``oso`` dependency.
+
+===================
+``flask-oso`` 0.5.0
+===================
+
+Bumped the minimum required version of the ``oso`` dependency.

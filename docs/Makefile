@@ -58,7 +58,7 @@ build: Makefile deps _api_docs submodules
 
 clean:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	rm -r _api_docs
+	rm -rf _api_docs
 
 livehtml: deps _api_docs submodules
 	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

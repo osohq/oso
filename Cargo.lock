@@ -726,7 +726,8 @@ dependencies = [
  "thiserror",
  "tracing",
  "tracing-subscriber",
- "uuid",
+ "uuid 0.6.5",
+ "uuid 0.8.1",
 ]
 
 [[package]]
@@ -1483,6 +1484,12 @@ checksum = "e1436e58182935dcd9ce0add9ea0b558e8a87befe01c1a301e6020aeb0876363"
 dependencies = [
  "cfg-if",
 ]
+
+[[package]]
+name = "uuid"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fde2f6a4bea1d6e007c4ad38c6839fa71cbb63b6dbf5b595aa38dc9b1093c11"
 
 [[package]]
 name = "vec_map"
