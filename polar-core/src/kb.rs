@@ -166,22 +166,7 @@ impl KnowledgeBase {
                     has_template = true;
                     // in order for a rule to have matched a template, the rule's parameters must exactly match
                     // the template's parameters
-                    if rule.params == template.params {
-                        matched_template = true;
-                    }
-                    // for (rule_param, template_param) in
-                    //     rule.params.iter().zip(template.params.iter())
-                    // {
-                    //     match (&rule_param.specializer, &template_param.specializer) {
-                    //         (Some(_rule_specializer), None) => (),
-                    //         (Some(rule_specializer), Some(template_specializer)) => {
-                    //             if rule_specializer != template_specializer {
-                    //                 matched_template = false
-                    //             }
-                    //         }
-                    //         _ => (),
-                    //     }
-                    // }
+                    matched_template = KnowledgeBase::check_rule_compatibility(&rule, template);
                 }
             }
             // if the rule has at least one applicable template but did not match any, then it is not allowed
@@ -199,6 +184,62 @@ impl KnowledgeBase {
             .entry(rule_name.clone())
             .or_insert_with(|| GenericRule::new(rule_name, vec![]));
         Ok(generic_rule.add_rule(Arc::new(rule)))
+    }
+
+    pub fn check_rule_compatibility(rule: &Rule, template: &Rule) -> bool {
+        for (rule_param, template_param) in rule.params.iter().zip(template.params.iter()) {
+            let parameter_matches = match (
+                template_param.parameter.value(),
+                template_param.specializer.as_ref().map(Term::value),
+                rule_param.parameter.value(),
+                rule_param.specializer.as_ref().map(Term::value),
+            ) {
+                // Template (variable, specializer) then rule must have a variable and specializer that matches OR a value that matches the specializer.
+                (
+                    Value::Variable(_),
+                    Some(Value::Pattern(Pattern::Instance(template_spec))),
+                    Value::Variable(_),
+                    Some(Value::Pattern(Pattern::Instance(rule_spec))),
+                ) => {
+                    // if tags match, all template fields must match those in rule fields, otherwise false
+                    if template_spec.tag == rule_spec.tag {
+                        let all_fields_match = template_spec
+                            .fields
+                            .fields
+                            .iter()
+                            .map(|(k, template_value)| {
+                                rule_spec
+                                    .fields
+                                    .fields
+                                    .get(k)
+                                    .map(|rule_value| rule_value == template_value)
+                                    .unwrap_or_else(|| false)
+                            })
+                            .all(|v| v);
+
+                        all_fields_match
+                    } else {
+                        false
+                    }
+                }
+                (Value::Variable(_), Some(_), Value::Variable(_), None) => false,
+                (Value::Variable(_), Some(_template_spec), _rule_param, None) => {
+                    // TODO: can't do this case right now
+                    unimplemented!("value match spec not implemented");
+                }
+                // Template (variable, no specializer) then the rule can have anything, including any specializer
+                (Value::Variable(_), None, _, _) => true,
+                // Template (value, no specializer) the value must match exactly.
+                (template_value, None, rule_value, None) => template_value == rule_value,
+                _ => false,
+            };
+
+            if !parameter_matches {
+                return false;
+            }
+        }
+
+        true
     }
 
     /// Clear rules from KB, leaving constants in place.
@@ -224,4 +265,72 @@ impl KnowledgeBase {
             .entry(name.clone())
             .or_insert_with(|| vec![template]);
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_template_compatibility() {
+        // Rules with variables allow any values.
+        let template = rule!("f", [sym!("foo")]);
+        let rule1 = rule!("f", [sym!("bar")]);
+        let rule2 = rule!("f", [sym!("foo")]);
+        let rule3 = rule!("f", [1]);
+        let rule4 = rule!("f", [sym!("bar"); pattern!(instance!("Baz"))]);
+
+        assert!(KnowledgeBase::check_rule_compatibility(&rule1, &template));
+        assert!(KnowledgeBase::check_rule_compatibility(&rule2, &template));
+        assert!(KnowledgeBase::check_rule_compatibility(&rule3, &template));
+        assert!(KnowledgeBase::check_rule_compatibility(&rule4, &template));
+
+        let template_with_value = rule!("g", [1]);
+        let rule_g2 = rule!("g", [2]);
+        assert!(KnowledgeBase::check_rule_compatibility(
+            &template_with_value,
+            &template_with_value
+        ));
+        assert!(!KnowledgeBase::check_rule_compatibility(
+            &rule_g2,
+            &template_with_value
+        ));
+
+        let template_spec = rule!("f", [sym!("foo"); pattern!(instance!("Bar")), sym!("baz"); pattern!(instance!("Baz"))]);
+        let rule1 = rule!("f", [sym!("foo"); pattern!(instance!("Nope")), sym!("baz"); pattern!(instance!("Baz"))]);
+        let rule2 = rule!("f", [sym!("foo"); pattern!(instance!("Bar")), sym!("baz"); pattern!(instance!("Nope"))]);
+
+        assert!(KnowledgeBase::check_rule_compatibility(
+            &template_spec,
+            &template_spec
+        ));
+        assert!(!KnowledgeBase::check_rule_compatibility(
+            &rule1,
+            &template_spec
+        ));
+        assert!(!KnowledgeBase::check_rule_compatibility(
+            &rule2,
+            &template_spec
+        ));
+    }
+
+    #[test]
+    fn test_rule_templates() {
+        let mut kb = KnowledgeBase::new();
+
+        let template = rule!("allow_role", [sym!("actor"); pattern!(instance!("User")), sym!("action"); pattern!(instance!("String")), sym!("resource"); pattern!(instance!("Repository"))]);
+
+        kb.add_rule_template(template, sym!("custom_scope"));
+        // (actor: User, action: String, resource: Repository)")
+        let rule = rule!("allow_role", [sym!("actor"); pattern!(instance!("User")), sym!("action"); pattern!(instance!("String")), sym!("resource"); pattern!(instance!("Repository"))]);
+        assert!(kb.add_rule(rule, sym!("custom_scope")).is_ok());
+
+        let bad_rule = rule!("allow_role", [sym!("actor"), sym!("action"); pattern!(instance!("String")), sym!("resource"); pattern!(instance!("Repository"))]);
+
+        assert!(kb.add_rule(bad_rule, sym!("custom_scope")).is_err());
+        let bad_rule = rule!("allow_role", [sym!("actor"); pattern!(instance!("EvilUser")), sym!("action"); pattern!(instance!("String")), sym!("resource"); pattern!(instance!("Repository"))]);
+        assert!(kb.add_rule(bad_rule, sym!("custom_scope")).is_err());
+    }
+
+    // TODO fields test.
 }

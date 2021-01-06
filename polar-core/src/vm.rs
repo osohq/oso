@@ -3740,18 +3740,4 @@ mod tests {
             QueryEvent::Done { result : true }
         ]);
     }
-
-    #[test]
-    fn test_rule_templates() {
-        let mut kb = KnowledgeBase::new();
-        let template = rule!("allow_role", ["actor"; value!(instance!("User")), "action"; value!(instance!("String")), "resource"; value!(instance!("Repository"))]);
-        kb.add_rule_template(template, sym!("custom_scope"));
-        // (actor: User, action: String, resource: Repository)")
-        let rule = rule!("allow_role", ["actor"; value!(instance!("User")), "action"; value!(instance!("String")), "resource"; value!(instance!("Repository"))]);
-        assert!(kb.add_rule(rule, sym!("custom_scope")).is_ok());
-        let bad_rule = rule!("allow_role", ["actor", "action"; value!(instance!("String")), "resource"; value!(instance!("Repository"))]);
-        assert!(kb.add_rule(bad_rule, sym!("custom_scope")).is_err());
-        let bad_rule = rule!("allow_role", ["actor"; value!(instance!("EvilUser")), "action"; value!(instance!("String")), "resource"; value!(instance!("Repository"))]);
-        assert!(kb.add_rule(bad_rule, sym!("custom_scope")).is_err());
-    }
 }
