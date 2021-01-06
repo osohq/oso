@@ -21,7 +21,7 @@ use super::terms::*;
 #[derive(Clone, Debug, PartialEq)]
 pub struct ScopeDef {
     pub name: Symbol,
-    pub rules: Vec<Rule>,
+    pub rule_templates: Vec<Rule>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -383,8 +383,8 @@ mod tests {
         let scope_def = super::parse_lines(0, "def scope foo { f(1); f(2); }").unwrap();
         if let Line::ScopeDef(scope_def) = scope_def.get(0).unwrap() {
             assert_eq!(scope_def.name, sym!("foo"));
-            assert_eq!(scope_def.rules.get(0).unwrap(), &rule!("f", [1]));
-            assert_eq!(scope_def.rules.get(1).unwrap(), &rule!("f", [2]));
+            assert_eq!(scope_def.rule_templates.get(0).unwrap(), &rule!("f", [1]));
+            assert_eq!(scope_def.rule_templates.get(1).unwrap(), &rule!("f", [2]));
         } else {
             panic!("Not scope def");
         }

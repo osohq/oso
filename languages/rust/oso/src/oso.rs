@@ -91,8 +91,12 @@ impl Oso {
         let mut f = File::open(&file)?;
         let mut policy = String::new();
         f.read_to_string(&mut policy)?;
-        self.inner
-            .load(&policy, Some(file.to_string_lossy().into_owned()))?;
+        // TODO expose argument on load_file
+        self.inner.load(
+            &policy,
+            Some(file.to_string_lossy().into_owned()),
+            "default".to_owned(),
+        )?;
         self.check_inline_queries()
     }
 
@@ -102,7 +106,7 @@ impl Oso {
     /// oso.load_str("allow(a, b, c) if true;");
     /// ```
     pub fn load_str(&mut self, s: &str) -> crate::Result<()> {
-        self.inner.load(s, None)?;
+        self.inner.load(s, None, "default".to_owned())?;
         self.check_inline_queries()
     }
 

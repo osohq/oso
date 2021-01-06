@@ -82,17 +82,19 @@ pub extern "C" fn polar_load(
     polar_ptr: *mut Polar,
     src: *const c_char,
     filename: *const c_char,
+    scope: *const c_char,
 ) -> i32 {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let src = unsafe { ffi_string!(src) };
+        let scope = unsafe { ffi_string!(scope) };
         let filename = unsafe {
             filename
                 .as_ref()
                 .map(|ptr| CStr::from_ptr(ptr).to_string_lossy().to_string())
         };
 
-        match polar.load(&src, filename) {
+        match polar.load(&src, filename, scope.into_owned()) {
             Err(err) => {
                 set_error(err);
                 POLAR_FAILURE

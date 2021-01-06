@@ -1874,3 +1874,47 @@ fn test_builtin_iterables() {
     qeval(&mut p, r#"forall(x in "abc", x in "abacus")"#);
     qnull(&mut p, r#"forall(x in "abcd", x in "abacus")"#);
 }
+
+#[test]
+fn test_scopes() {
+    let mut p = Polar::new();
+
+    // load a custom scope def a top-level allow rule
+    p.load(
+        r#"
+        def scope custom {
+            allow("allowed");
+        }
+
+
+        allow(actor) if custom::allow(actor);
+        "#,
+        None,
+        String::from("default"),
+    )
+    .unwrap();
+
+    // load a good rule into the custom scope
+    p.load(
+        r#"
+        allow("allowed");
+        "#,
+        None,
+        String::from("custom"),
+    )
+    .unwrap();
+
+    // this rule cannot be loaded because it doesn't match the template.
+    p.load(
+        r#"
+        allow("bad_rule");
+        "#,
+        None,
+        String::from("custom"),
+    )
+    .unwrap_err();
+
+    qnull(&mut p, r#"allow("not_allowed")"#);
+    qeval(&mut p, r#"allow("allowed")"#);
+    qvar(&mut p, r#"allow(v)"#, "v", values!["allowed"]);
+}

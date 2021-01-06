@@ -620,7 +620,7 @@ pub Rules: Vec<Rule> = <Rule*>;
 Line: Line = {
     <Rule> => Line::Rule(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
-    "def" "scope" <name:Name> "{" <rules:Rules> "}" => Line::ScopeDef(ScopeDef { name, rules }),
+    "def" "scope" <name:Name> "{" <rule_templates:Rules> "}" => Line::ScopeDef(ScopeDef { name, rule_templates }),
 }
 
 pub Lines: Vec<Line> = <Line*>;

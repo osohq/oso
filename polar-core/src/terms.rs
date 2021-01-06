@@ -88,8 +88,7 @@ impl serde::Serialize for Path {
     where
         S: serde::Serializer,
     {
-        // TODO something that turns this into a string with colon.
-        self.name.serialize(serializer)
+        serializer.serialize_str(&self.to_string())
     }
 }
 
@@ -136,6 +135,12 @@ impl Path {
 
     pub fn name(&self) -> &Symbol {
         &self.name
+    }
+}
+
+impl ToString for Path {
+    fn to_string(&self) -> String {
+        self.to_polar()
     }
 }
 

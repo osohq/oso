@@ -185,7 +185,7 @@ impl Polar {
         Ok(())
     }
 
-    pub fn load(&self, src: &str, filename: Option<String>) -> PolarResult<()> {
+    pub fn load(&self, src: &str, filename: Option<String>, scope: String) -> PolarResult<()> {
         if let Some(ref filename) = filename {
             self.check_file(src, filename)?;
         }
@@ -206,13 +206,15 @@ impl Polar {
                     let mut rule_warnings = check_singletons(&rule, &kb);
                     warnings.append(&mut rule_warnings);
                     let rule = rewrite_rule(rule, &mut kb);
-                    kb.add_rule(rule, sym!("default").into())?;
+                    kb.add_rule(rule, Symbol(scope.clone()))?;
                 }
                 parser::Line::Query(term) => {
                     kb.inline_queries.push(term);
                 }
-                parser::Line::ScopeDef(_scope_def) => (), // TODO: match on scope definition line and go through all rules inside it
-                                                          // `add_scope_definition()` method adds definition and all rule templates; if there is an existing scope/scope definition, error
+                parser::Line::ScopeDef(parser::ScopeDef {
+                    name,
+                    rule_templates,
+                }) => kb.add_scope_definition(name, rule_templates)?,
             }
         }
         self.messages.extend(warnings.iter().map(|m| Message {
@@ -225,7 +227,7 @@ impl Polar {
 
     // Used in integration tests
     pub fn load_str(&self, src: &str) -> PolarResult<()> {
-        self.load(src, None)
+        self.load(src, None, "default".to_string())
     }
 
     /// Clear rules from the knowledge base
