@@ -15,15 +15,14 @@ pub type Bindings = HashMap<Symbol, Term>;
 //     name: Symbol,
 
 //     /// Scopes that you can call rules from this scope.
-//     included_names: HashSet<Path>,
-
-//     rule_templates: HashMap<Symbol, GenericRule>,
+//     // included_names: HashSet<Path>,
 //     // type definitions
 // }
 
 pub struct Scope {
     name: Symbol,
     constants: Bindings,
+    rule_templates: HashMap<Symbol, Vec<Rule>>,
     rules: HashMap<Symbol, GenericRule>,
 }
 
@@ -32,6 +31,7 @@ impl Scope {
         Self {
             name: name,
             constants: HashMap::new(),
+            rule_templates: HashMap::new(),
             rules: HashMap::new(),
         }
     }
@@ -121,33 +121,84 @@ impl KnowledgeBase {
         self.scopes.get(included)
     }
 
-    pub fn lookup_rule(&self, rule_path: Path, in_scope: &Symbol) -> Option<&GenericRule> {
+    pub fn lookup_rule(
+        &self,
+        rule_path: Path,
+        current_scope: &Symbol,
+    ) -> Option<(&GenericRule, &Symbol)> {
         // lookup scope by path; return `None` if scope doesn't exist
-        self.scopes.get(&in_scope).and_then(|scope| {
+        self.scopes.get(&current_scope).and_then(|current_scope| {
             match (rule_path.scope(), rule_path.name()) {
                 // if there is no included scope, get the rule from the current scope
-                (None, name) => scope.rules.get(&name),
+                (None, rule_name) => current_scope
+                    .rules
+                    .get(&rule_name)
+                    .map(|rule| (rule, &current_scope.name)),
                 // if there is a scope name, check that the scope is included and get the rule from the included scope
-                (Some(included_scope), name) => self
-                    .get_included_scope(scope, included_scope)
-                    .and_then(|scope| scope.rules.get(&name)),
+                (Some(rule_scope), rule_name) => self
+                    .get_included_scope(current_scope, rule_scope)
+                    .and_then(|new_scope| {
+                        new_scope
+                            .rules
+                            .get(&rule_name)
+                            .map(|rule| (rule, &new_scope.name))
+                    }),
             }
         })
     }
 
-    pub fn add_rule(&mut self, rule: Rule, scope: Symbol) {
+    /// Add `rule` to the rules for `scope`
+    pub fn add_rule(&mut self, rule: Rule, scope: Symbol) -> Result<(), error::RuntimeError> {
         // lookup scope by path; panic if scope doesn't exist
         let scope = self
             .scopes
             .entry(scope.clone())
             .or_insert_with(|| Scope::new(scope));
 
-        let name = rule.name.clone();
+        // determine if rule matches a rule template in the scope
+        let rule_name = rule.name.clone();
+        if let Some(rule_templates) = scope.rule_templates.get(&rule_name) {
+            let mut has_template = false;
+            let mut matched_template = false;
+            for template in rule_templates {
+                if rule.params.len() == template.params.len() {
+                    // a rule has an applicable template if any template exists with the same name and arity
+                    has_template = true;
+                    // in order for a rule to have matched a template, the rule's parameters must exactly match
+                    // the template's parameters
+                    if rule.params == template.params {
+                        matched_template = true;
+                    }
+                    // for (rule_param, template_param) in
+                    //     rule.params.iter().zip(template.params.iter())
+                    // {
+                    //     match (&rule_param.specializer, &template_param.specializer) {
+                    //         (Some(_rule_specializer), None) => (),
+                    //         (Some(rule_specializer), Some(template_specializer)) => {
+                    //             if rule_specializer != template_specializer {
+                    //                 matched_template = false
+                    //             }
+                    //         }
+                    //         _ => (),
+                    //     }
+                    // }
+                }
+            }
+            // if the rule has at least one applicable template but did not match any, then it is not allowed
+            if has_template && !matched_template {
+                // TODO: warning or return code?
+                return Err(error::RuntimeError::TypeError {
+                    msg: "Rule not allowed in scope".to_owned(),
+                    stack_trace: None,
+                });
+            }
+        }
+
         let generic_rule = scope
             .rules
-            .entry(name.clone())
-            .or_insert_with(|| GenericRule::new(name, vec![]));
-        generic_rule.add_rule(Arc::new(rule));
+            .entry(rule_name.clone())
+            .or_insert_with(|| GenericRule::new(rule_name, vec![]));
+        Ok(generic_rule.add_rule(Arc::new(rule)))
     }
 
     /// Clear rules from KB, leaving constants in place.
@@ -157,5 +208,20 @@ impl KnowledgeBase {
         }
         self.sources = Sources::default();
         self.inline_queries.clear();
+    }
+
+    /// Add a rule template to the scope
+    pub fn add_rule_template(&mut self, template: Rule, scope: Symbol) {
+        let scope = self
+            .scopes
+            .entry(scope.clone())
+            .or_insert_with(|| Scope::new(scope));
+
+        // TODO: maybe check that rule body is empty?
+        let name = template.name.clone();
+        let _rule_templates = scope
+            .rule_templates
+            .entry(name.clone())
+            .or_insert_with(|| vec![template]);
     }
 }

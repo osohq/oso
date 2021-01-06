@@ -162,7 +162,7 @@ mod tests {
         polar.load_str(r#"f(1, 3, {c: "z"});"#).unwrap();
 
         let kb = polar.kb.read().unwrap();
-        let generic_rule = kb
+        let (generic_rule, _) = kb
             .lookup_rule(Path::with_name(sym!("f")), &sym!("default"))
             .unwrap();
         let index = &generic_rule.index;

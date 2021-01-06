@@ -206,7 +206,7 @@ impl Polar {
                     let mut rule_warnings = check_singletons(&rule, &kb);
                     warnings.append(&mut rule_warnings);
                     let rule = rewrite_rule(rule, &mut kb);
-                    kb.add_rule(rule, sym!("default").into());
+                    kb.add_rule(rule, sym!("default").into())?;
                 }
                 parser::Line::Query(term) => {
                     kb.inline_queries.push(term);

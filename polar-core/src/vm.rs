@@ -98,6 +98,10 @@ pub enum Goal {
         applicable_rules: Rules,
         unfiltered_rules: Rules,
     },
+    ScopePush {
+        scope: Symbol,
+    },
+    ScopePop,
     SortRules {
         args: TermList,
         rules: Rules,
@@ -137,9 +141,10 @@ pub struct Binding(pub Symbol, pub Term);
 #[derive(Clone, Debug)]
 pub struct Choice {
     pub alternatives: Vec<GoalStack>,
-    bsp: usize,            // binding stack pointer
-    pub goals: GoalStack,  // goal stack snapshot
-    queries: Queries,      // query stack snapshot
+    bsp: usize,           // binding stack pointer
+    pub goals: GoalStack, // goal stack snapshot
+    queries: Queries,     // query stack snapshot
+    scope_stack: Vec<Symbol>,
     trace: Vec<Rc<Trace>>, // trace snapshot
     trace_stack: TraceStack,
 }
@@ -182,6 +187,7 @@ pub struct PolarVirtualMachine {
     pub bindings: BindingStack,
     choices: Choices,
     pub queries: Queries,
+    scope_stack: Vec<Symbol>,
 
     pub tracing: bool,
     pub trace_stack: TraceStack, // Stack of traces higher up the tree.
@@ -277,6 +283,7 @@ impl PolarVirtualMachine {
             stack_limit: MAX_STACK_SIZE,
             choices: vec![],
             queries: vec![],
+            scope_stack: vec![sym!("default")],
             tracing,
             trace_stack: vec![],
             trace: vec![],
@@ -397,6 +404,12 @@ impl PolarVirtualMachine {
                 unfiltered_rules,
                 args,
             } => self.filter_rules(applicable_rules, unfiltered_rules, args)?,
+            Goal::ScopePush { scope } => {
+                self.scope_stack.push(scope.clone());
+            }
+            Goal::ScopePop => {
+                self.scope_stack.pop();
+            }
             Goal::SortRules {
                 rules,
                 outer,
@@ -485,6 +498,7 @@ impl PolarVirtualMachine {
             goals: self.goals.clone(),
             queries: self.queries.clone(),
             trace: self.trace.clone(),
+            scope_stack: self.scope_stack.clone(),
             trace_stack: self.trace_stack.clone(),
         });
     }
@@ -870,6 +884,7 @@ impl PolarVirtualMachine {
                     bsp,
                     goals,
                     queries,
+                    scope_stack,
                     trace,
                     trace_stack,
                 }) => {
@@ -880,16 +895,19 @@ impl PolarVirtualMachine {
                             self.queries = queries;
                             self.trace = trace;
                             self.trace_stack = trace_stack;
+                            self.scope_stack = scope_stack;
                         } else {
                             self.goals.clone_from(&goals);
                             self.queries.clone_from(&queries);
                             self.trace.clone_from(&trace);
                             self.trace_stack.clone_from(&trace_stack);
+                            self.scope_stack.clone_from(&scope_stack);
                             self.choices.push(Choice {
                                 alternatives,
                                 bsp,
                                 goals,
                                 queries,
+                                scope_stack,
                                 trace,
                                 trace_stack,
                             })
@@ -1315,10 +1333,10 @@ impl PolarVirtualMachine {
             .kb
             .read()
             .unwrap()
-            .lookup_rule(predicate.path.clone(), &sym!("default"))
+            .lookup_rule(predicate.path.clone(), self.scope_stack.last().unwrap())
         {
             None => vec![Goal::Backtrack],
-            Some(generic_rule) => {
+            Some((generic_rule, scope_name)) => {
                 assert_eq!(&generic_rule.name, predicate.path.name());
 
                 // Pre-filter rules.
@@ -1330,12 +1348,16 @@ impl PolarVirtualMachine {
                 // Filter rules by applicability.
                 vec![
                     Goal::TraceStackPush,
+                    Goal::ScopePush {
+                        scope: scope_name.clone(),
+                    },
                     Goal::FilterRules {
                         applicable_rules: vec![],
                         unfiltered_rules: pre_filter,
                         args: predicate.args,
                     },
                     Goal::TraceStackPop,
+                    Goal::ScopePop,
                 ]
             }
         };
@@ -3669,13 +3691,21 @@ mod tests {
     #[test]
     fn test_call_scoped_rule() {
         let mut kb = KnowledgeBase::new();
-        let f1 = rule!("f", [1]);
-        let f2 = rule!("f", [2]);
+        let f1 = rule!("f", [1]); // default scope
+        let f2 = rule!("f", [2]); // custom_scope_1
+        let f3 = rule!("f", [sym!("x")] => call!("g", [sym!("x")])); // custom_scope_2
+        let g3 = rule!("g", [3]); // custom_scope_2
+        let g1 = rule!("g", [1]); // default
+
         kb.add_rule(f1, sym!("default"));
-        kb.add_rule(f2, sym!("custom_scope"));
+        kb.add_rule(f2, sym!("custom_scope_1"));
+        kb.add_rule(f3, sym!("custom_scope_2"));
+        kb.add_rule(g3, sym!("custom_scope_2"));
+        kb.add_rule(g1, sym!("default"));
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![]);
+
         // query custom_scope::f(1) from default scope
-        let goal = query!(call!("custom_scope::f", [sym!("x")]));
+        let goal = query!(call!("custom_scope_1::f", [sym!("x")]));
         vm.push_goal(goal).unwrap();
 
         assert_query_events!(vm, [
@@ -3700,5 +3730,28 @@ mod tests {
             QueryEvent::Result{hashmap!(sym!("x") => term!(1))},
             QueryEvent::Done { result : true }
         ]);
+
+        // query f(1) from default scope
+        let goal = query!(call!("custom_scope_2::f", [sym!("x")]));
+        vm.push_goal(goal).unwrap();
+
+        assert_query_events!(vm, [
+            QueryEvent::Result{hashmap!(sym!("x") => term!(3))},
+            QueryEvent::Done { result : true }
+        ]);
+    }
+
+    #[test]
+    fn test_rule_templates() {
+        let mut kb = KnowledgeBase::new();
+        let template = rule!("allow_role", ["actor"; value!(instance!("User")), "action"; value!(instance!("String")), "resource"; value!(instance!("Repository"))]);
+        kb.add_rule_template(template, sym!("custom_scope"));
+        // (actor: User, action: String, resource: Repository)")
+        let rule = rule!("allow_role", ["actor"; value!(instance!("User")), "action"; value!(instance!("String")), "resource"; value!(instance!("Repository"))]);
+        assert!(kb.add_rule(rule, sym!("custom_scope")).is_ok());
+        let bad_rule = rule!("allow_role", ["actor", "action"; value!(instance!("String")), "resource"; value!(instance!("Repository"))]);
+        assert!(kb.add_rule(bad_rule, sym!("custom_scope")).is_err());
+        let bad_rule = rule!("allow_role", ["actor"; value!(instance!("EvilUser")), "action"; value!(instance!("String")), "resource"; value!(instance!("Repository"))]);
+        assert!(kb.add_rule(bad_rule, sym!("custom_scope")).is_err());
     }
 }
