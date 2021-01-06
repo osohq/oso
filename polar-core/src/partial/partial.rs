@@ -922,7 +922,7 @@ mod test {
                k(x) if not (not (not x = 1));"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this != 1");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
@@ -1000,7 +1000,7 @@ mod test {
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this != 1");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("i", [sym!("x")])), false);

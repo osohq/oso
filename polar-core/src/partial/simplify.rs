@@ -149,14 +149,7 @@ impl<'vm> Folder for Simplifier<'vm> {
                         assert_eq!(c.args.len(), 2);
                         let left = &c.args[0];
                         let right = &c.args[1];
-                        if left == right {
-                            eprintln!("TOSSING CONSTRAINT `{}`", c.to_polar());
-                            false
-                        } else {
-                            eprintln!("KEEPING CONSTRAINT `{}`", c.to_polar());
-                            eprintln!("  Updated o: {}", o.to_polar());
-                            true
-                        }
+                        left != right
                     }
                     _ => true,
                 })
@@ -179,30 +172,29 @@ impl<'vm> Folder for Simplifier<'vm> {
                 self,
             ),
 
-            // Non-trivial conjunctions. Choose an (anti-)unification constraint
-            // to make a binding from, maybe throw it away, and fold the rest.
+            // Non-trivial conjunctions. Choose a unification constraint to
+            // make a binding from, maybe throw it away, and fold the rest.
             Operator::And if o.args.len() > 1 => {
                 if let Some(i) = o.constraints().iter().position(|o| match o.operator {
                     // A conjunction of TRUE with X is X, so drop TRUE.
                     Operator::And if o.args.is_empty() => true,
 
                     // Choose a unification to maybe drop.
-                    Operator::Unify | Operator::Eq | Operator::Neq => {
+                    Operator::Unify | Operator::Eq => {
                         let left = &o.args[0];
                         let right = &o.args[1];
-                        let invert = o.operator == Operator::Neq;
                         left == right
                             || match (left.value(), right.value()) {
                                 (Value::Variable(l), _) | (Value::RestVariable(l), _)
                                     if self.is_this_var(right) =>
                                 {
-                                    self.bind(l.clone(), right.clone(), invert);
+                                    self.bind(l.clone(), right.clone());
                                     true
                                 }
                                 (_, Value::Variable(r)) | (_, Value::RestVariable(r))
                                     if self.is_this_var(left) =>
                                 {
-                                    self.bind(r.clone(), left.clone(), invert);
+                                    self.bind(r.clone(), left.clone());
                                     true
                                 }
                                 _ if self.is_this_var(left) || self.is_this_var(right) => false,
@@ -241,10 +233,10 @@ impl<'vm> Folder for Simplifier<'vm> {
                                         }
                                         (VariableState::Partial(_), VariableState::Partial(_)) => {
                                             if !self.is_bound(l) {
-                                                self.bind(l.clone(), right.clone(), invert);
+                                                self.bind(l.clone(), right.clone());
                                             }
                                             if !self.is_bound(r) {
-                                                self.bind(r.clone(), left.clone(), invert);
+                                                self.bind(r.clone(), left.clone());
                                             }
                                             true
                                         }
@@ -270,7 +262,7 @@ impl<'vm> Folder for Simplifier<'vm> {
                                         VariableState::Unbound => todo!(),
                                         VariableState::Cycle(_) => todo!(),
                                         VariableState::Partial(_) => {
-                                            self.bind(l.clone(), right.clone(), invert);
+                                            self.bind(l.clone(), right.clone());
                                             true
                                         }
                                         VariableState::Bound(_) => todo!(),
@@ -281,7 +273,7 @@ impl<'vm> Folder for Simplifier<'vm> {
                                         VariableState::Unbound => todo!(),
                                         VariableState::Cycle(_) => todo!(),
                                         VariableState::Partial(_) => {
-                                            self.bind(r.clone(), left.clone(), invert);
+                                            self.bind(r.clone(), left.clone());
                                             true
                                         }
                                         VariableState::Bound(_) => todo!(),
@@ -316,44 +308,16 @@ impl<'vm> Folder for Simplifier<'vm> {
                 fold_operation(o, self)
             }
 
-            // (Negated) comparisons.
-            Operator::Unify
-            | Operator::Eq
-            | Operator::Neq
-            | Operator::Gt
-            | Operator::Geq
-            | Operator::Lt
-            | Operator::Leq => {
-                let left = &o.args[0];
-                let right = &o.args[1];
-                match (left.value().as_expression(), right.value().as_expression()) {
-                    (Ok(left), Ok(right))
-                        if left.operator == Operator::Not && right.operator == Operator::Not =>
-                    {
-                        todo!("not x = not y");
-                    }
-                    (Ok(left), _) if left.operator == Operator::Not => {
-                        invert_operation(Operation {
-                            operator: o.operator,
-                            args: vec![left.args[0].clone(), right.clone()],
-                        })
-                    }
-                    (_, Ok(right)) if right.operator == Operator::Not => {
-                        invert_operation(Operation {
-                            operator: o.operator,
-                            args: vec![left.clone(), right.args[0].clone()],
-                        })
-                    }
-                    _ => fold_operation(o, self),
-                }
-            }
-
-            // Negation.
+            // Negation. Simplify the negated term, saving & restoring
+            // the current bindings.
             Operator::Not => {
-                assert_eq!(o.args.len(), 1, "expected unary negation");
-                match o.args[0].value() {
-                    Value::Expression(e) => invert_operation(fold_operation(e.clone(), self)),
-                    _ => op!(Not, self.fold_term(o.args[0].clone())),
+                assert_eq!(o.args.len(), 1);
+                let bindings = self.bindings.clone();
+                let simplified = self.simplify_partial(o.args[0].clone());
+                self.bindings = bindings;
+                match simplified.value() {
+                    Value::Expression(e) => invert_operation(e.clone()),
+                    _ => todo!("negate {}", o.args[0].to_polar()),
                 }
             }
 
@@ -372,17 +336,8 @@ impl<'vm> Simplifier<'vm> {
         }
     }
 
-    pub fn bind(&mut self, var: Symbol, value: Term, invert: bool) {
-        eprintln!("Binding...");
-        eprintln!("  {} to {}", var, value.to_polar());
+    pub fn bind(&mut self, var: Symbol, value: Term) {
         let value = self.deref(&value);
-        eprintln!("  derefed: {} to {}", var, value.to_polar());
-        let value = if invert {
-            value.clone_with_value(value!(op!(Not, value.clone())))
-        } else {
-            value
-        };
-        eprintln!("  inverted: {} to {}", var, value.to_polar());
         self.bindings.insert(var, value);
     }
 
