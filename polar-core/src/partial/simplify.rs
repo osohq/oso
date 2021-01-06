@@ -179,7 +179,7 @@ impl<'vm> Folder for Simplifier<'vm> {
                     // A conjunction of TRUE with X is X, so drop TRUE.
                     Operator::And if o.args.is_empty() => true,
 
-                    // Choose an (anti)unification to maybe drop.
+                    // Choose a unification to maybe drop.
                     Operator::Unify | Operator::Eq | Operator::Neq => {
                         let left = &o.args[0];
                         let right = &o.args[1];
@@ -310,7 +310,8 @@ impl<'vm> Folder for Simplifier<'vm> {
             }
 
             // (Negated) comparisons.
-            Operator::Eq
+            Operator::Unify
+            | Operator::Eq
             | Operator::Neq
             | Operator::Gt
             | Operator::Geq

@@ -58,14 +58,6 @@ impl PartialInverter {
         // Compute csp from old_value vs. p.
         let csp = match &self.old_state {
             VariableState::Partial(e) => e.constraints().len(),
-            /*VariableState::Cycle(c) => {
-                eprintln!(
-                    "invert_operation\n  cycle: {:?}\n  new partial: {}",
-                    c,
-                    o.to_polar()
-                );
-                c.len() - 1
-            }*/
             _ => 0,
         };
         let p = o.clone_with_constraints(o.inverted_constraints(csp));
@@ -100,48 +92,25 @@ impl Folder for PartialInverter {
 fn invert_partials(bindings: BindingStack, vm: &PolarVirtualMachine) -> BindingStack {
     let mut new_bindings = Vec::new();
     for Binding(var, value) in bindings {
-        eprintln!("invert_partials: {} -> {}", var, value.to_polar());
         match vm.variable_state(&var) {
             VariableState::Unbound => (),
             VariableState::Bound(x) => {
                 todo!("{} is bound to {} in VM, now {}", var, x, value.to_polar())
             }
             VariableState::Cycle(c) => {
-                eprintln!("  var is a cycle");
-                // let mut constraints = cycle_constraints(c.clone());
-                // eprintln!("  cycled constraints: {}", constraints.to_polar());
-                let constraints = match value.value() {
-                    Value::Expression(e) => e.clone(),
-                    _ => op!(And, term!(op!(Unify, term!(var.clone()), value.clone()))),
-                };
-                eprintln!("  constraints: {}", constraints.to_polar());
-
-                let mut vars = constraints.variables().into_iter();
-
-                if let Some(var) = vars.next() {
-                    eprintln!("  Selected var: {}", var);
-                    let x = PartialInverter::new(var.clone(), VariableState::Cycle(c.clone()))
-                        .fold_term(constraints.clone().into_term());
-                    let y = match x.value() {
-                        Value::Expression(e) => {
-                            let mut e = e.clone();
-                            e.merge_constraints(cycle_constraints(c.clone()));
-                            e.into_term()
+                let constraints =
+                    PartialInverter::new(var.clone(), VariableState::Cycle(c.clone()))
+                        .fold_term(value);
+                match constraints.value() {
+                    Value::Expression(e) => {
+                        let mut e = e.clone();
+                        e.merge_constraints(cycle_constraints(c.clone()));
+                        for var in e.variables() {
+                            new_bindings.push(Binding(var.clone(), e.clone().into_term()));
                         }
-                        _ => x,
-                    };
-                    new_bindings.push(Binding(var.clone(), y));
-                    for other in vars {
-                        new_bindings.push(Binding(other.clone(), term!(var.clone())));
                     }
+                    _ => todo!("constraints is {}", constraints.to_polar()),
                 }
-                // for var in constraints.variables() {
-                //     new_bindings.push(Binding(
-                //         var.clone(),
-                //         PartialInverter::new(var.clone(), VariableState::Cycle(c.clone()))
-                //             .fold_term(constraints.clone().into_term()),
-                //     ));
-                // }
             }
             VariableState::Partial(e) => todo!(
                 "{} was partial {} in VM, now {}",
