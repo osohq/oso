@@ -30,7 +30,10 @@ def translate_expr(expression: Expression, session: Session, model, get_model):
         return translate_in(expression, session, model, get_model)
     elif expression.operator == "And":
         return translate_and(expression, session, model, get_model)
+    elif expression.operator == "Or":
+        return translate_or(expression, session, model, get_model)
     else:
+        breakpoint()
         raise UnsupportedError(f"Unsupported {expression}")
 
 
@@ -40,6 +43,16 @@ def translate_and(expression: Expression, session: Session, model, get_model):
     for expression in expression.args:
         translated = translate_expr(expression, session, model, get_model)
         expr = expr & translated
+
+    return expr
+
+
+def translate_or(expression, session, model, get_model):
+    assert expression.operator == "Or"
+    expr = sql.or_()
+    for expression in expression.args:
+        translated = translate_expr(expression, session, model, get_model)
+        expr = expr | translated
 
     return expr
 
