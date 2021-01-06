@@ -141,20 +141,27 @@ impl<'vm> Folder for Simplifier<'vm> {
 
         if o.operator == Operator::And || o.operator == Operator::Or {
             // Toss trivial unifications.
-            for (i, c) in o.constraints().into_iter().enumerate() {
-                match c.operator {
+            o.args = o
+                .constraints()
+                .into_iter()
+                .filter(|c| match c.operator {
                     Operator::Unify | Operator::Eq | Operator::Neq => {
                         assert_eq!(c.args.len(), 2);
                         let left = &c.args[0];
                         let right = &c.args[1];
                         if left == right {
-                            eprintln!("TOSSING CONSTRAINT `{}`", o.args[i].to_polar());
-                            o.args.remove(i);
+                            eprintln!("TOSSING CONSTRAINT `{}`", c.to_polar());
+                            false
+                        } else {
+                            eprintln!("KEEPING CONSTRAINT `{}`", c.to_polar());
+                            eprintln!("  Updated o: {}", o.to_polar());
+                            true
                         }
                     }
-                    _ => (),
-                }
-            }
+                    _ => true,
+                })
+                .map(|c| c.into_term())
+                .collect();
         }
 
         match o.operator {
