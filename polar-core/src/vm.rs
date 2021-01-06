@@ -2865,8 +2865,8 @@ mod tests {
         let f2 = rule!("f", [2]);
 
         let mut kb = KnowledgeBase::new();
-        kb.add_rule(f1, sym!("default"));
-        kb.add_rule(f2, sym!("default"));
+        kb.add_rule(f1, sym!("default")).unwrap();
+        kb.add_rule(f2, sym!("default")).unwrap();
 
         let goal = query!(op!(And));
 
@@ -3406,10 +3406,10 @@ mod tests {
         let rule_1b = rule!("bar", ["_"; value!(1)]);
 
         let mut kb = KnowledgeBase::new();
-        kb.add_rule(rule_a, sym!("default"));
-        kb.add_rule(rule_b, sym!("default"));
-        kb.add_rule(rule_1a, sym!("default"));
-        kb.add_rule(rule_1b, sym!("default"));
+        kb.add_rule(rule_a, sym!("default")).unwrap();
+        kb.add_rule(rule_b, sym!("default")).unwrap();
+        kb.add_rule(rule_1a, sym!("default")).unwrap();
+        kb.add_rule(rule_1b, sym!("default")).unwrap();
 
         let external_instance = Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
@@ -3473,19 +3473,23 @@ mod tests {
         kb.add_rule(
             rule!("bar", ["_"; instance!("b"), "_"; instance!("a"), value!(3)]),
             sym!("default"),
-        );
+        )
+        .unwrap();
         kb.add_rule(
             rule!("bar", ["_"; instance!("a"), "_"; instance!("a"), value!(1)]),
             sym!("default"),
-        );
+        )
+        .unwrap();
         kb.add_rule(
             rule!("bar", ["_"; instance!("a"), "_"; instance!("b"), value!(2)]),
             sym!("default"),
-        );
+        )
+        .unwrap();
         kb.add_rule(
             rule!("bar", ["_"; instance!("b"), "_"; instance!("b"), value!(4)]),
             sym!("default"),
-        );
+        )
+        .unwrap();
 
         let external_instance = Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
@@ -3607,8 +3611,10 @@ mod tests {
     #[test]
     fn test_prefiltering() {
         let mut kb = KnowledgeBase::new();
-        kb.add_rule(rule!("bar", [value!([1])]), sym!("default"));
-        kb.add_rule(rule!("bar", [value!([2])]), sym!("default"));
+        kb.add_rule(rule!("bar", [value!([1])]), sym!("default"))
+            .unwrap();
+        kb.add_rule(rule!("bar", [value!([2])]), sym!("default"))
+            .unwrap();
 
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![]);
         vm.bind(&sym!("x"), term!(1));
@@ -3697,11 +3703,11 @@ mod tests {
         let g3 = rule!("g", [3]); // custom_scope_2
         let g1 = rule!("g", [1]); // default
 
-        kb.add_rule(f1, sym!("default"));
-        kb.add_rule(f2, sym!("custom_scope_1"));
-        kb.add_rule(f3, sym!("custom_scope_2"));
-        kb.add_rule(g3, sym!("custom_scope_2"));
-        kb.add_rule(g1, sym!("default"));
+        kb.add_rule(f1, sym!("default")).unwrap();
+        kb.add_rule(f2, sym!("custom_scope_1")).unwrap();
+        kb.add_rule(f3, sym!("custom_scope_2")).unwrap();
+        kb.add_rule(g3, sym!("custom_scope_2")).unwrap();
+        kb.add_rule(g1, sym!("default")).unwrap();
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![]);
 
         // query custom_scope::f(1) from default scope

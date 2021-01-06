@@ -19,9 +19,16 @@ use super::rules::*;
 use super::terms::*;
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct ScopeDef {
+    pub name: Symbol,
+    pub rules: Vec<Rule>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Line {
     Rule(Rule),
     Query(Term),
+    ScopeDef(ScopeDef), // TODO: add scope definition
 }
 
 fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
@@ -368,6 +375,18 @@ mod tests {
                     ..
                 }
             ));
+        }
+    }
+
+    #[test]
+    fn test_parse_scope_def() {
+        let scope_def = super::parse_lines(0, "def scope foo { f(1); f(2); }").unwrap();
+        if let Line::ScopeDef(scope_def) = scope_def.get(0).unwrap() {
+            assert_eq!(scope_def.name, sym!("foo"));
+            assert_eq!(scope_def.rules.get(0).unwrap(), &rule!("f", [1]));
+            assert_eq!(scope_def.rules.get(1).unwrap(), &rule!("f", [2]));
+        } else {
+            panic!("Not scope def");
         }
     }
 }

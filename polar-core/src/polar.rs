@@ -211,6 +211,8 @@ impl Polar {
                 parser::Line::Query(term) => {
                     kb.inline_queries.push(term);
                 }
+                parser::Line::ScopeDef(_scope_def) => (), // TODO: match on scope definition line and go through all rules inside it
+                                                          // `add_scope_definition()` method adds definition and all rule templates; if there is an existing scope/scope definition, error
             }
         }
         self.messages.extend(warnings.iter().map(|m| Message {

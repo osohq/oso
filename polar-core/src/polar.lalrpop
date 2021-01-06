@@ -6,7 +6,7 @@ use std::str::FromStr;
 use std::collections::{HashMap, BTreeMap};
 
 use crate::lexer::{self, Token};
-use crate::parser::Line;
+use crate::parser::{Line, ScopeDef};
 use crate::error;
 use crate::terms::*;
 use crate::rules::*;
@@ -66,6 +66,8 @@ extern {
         "or" => lexer::Token::Or,           // or
         "not" => lexer::Token::Not,         // not
         "matches" => lexer::Token::Matches, // matches
+        "def" => lexer::Token::Def,         // def
+        "scope" => lexer::Token::Scope,     // scope
     }
 }
 
@@ -534,7 +536,6 @@ pub Value: ValueOrLogical = {
 };
 
 
-
 // ****** Terms + Patterns ******* //
 
 Spanned<T>: Term = <start:@L> <value:T> <end:@R> =>  Term::new_from_parser(src_id, start, end, value);
@@ -614,12 +615,12 @@ pub Rule: Rule = {
     }
 }
 
-
 pub Rules: Vec<Rule> = <Rule*>;
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
+    "def" "scope" <name:Name> "{" <rules:Rules> "}" => Line::ScopeDef(ScopeDef { name, rules }),
 }
 
 pub Lines: Vec<Line> = <Line*>;

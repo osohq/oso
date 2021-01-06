@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use super::counter::Counter;
+use super::error::PolarResult;
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
@@ -99,6 +100,29 @@ impl KnowledgeBase {
     pub fn is_constant(&self, symbol: &Symbol) -> bool {
         self.lookup_constant(Path::with_name(symbol.clone()), &sym!("default"))
             .is_some()
+    }
+
+    pub fn add_scope_definition(
+        &mut self,
+        name: Symbol,
+        rule_templates: Vec<Rule>,
+    ) -> PolarResult<()> {
+        // Scope cannot already be defined.
+        if self.scopes.contains_key(&name) {
+            return Err(error::RuntimeError::FileLoading {
+                msg: format!("Scope {} already defined.", name),
+            }
+            .into());
+        }
+
+        let scope = Scope::new(name.clone());
+        self.scopes.insert(scope.name.clone(), scope);
+
+        for template in rule_templates {
+            self.add_rule_template(template, &name);
+        }
+
+        Ok(())
     }
 
     pub fn lookup_constant(&self, const_path: Path, scope: &Symbol) -> Option<&Term> {
@@ -252,11 +276,9 @@ impl KnowledgeBase {
     }
 
     /// Add a rule template to the scope
-    pub fn add_rule_template(&mut self, template: Rule, scope: Symbol) {
-        let scope = self
-            .scopes
-            .entry(scope.clone())
-            .or_insert_with(|| Scope::new(scope));
+    /// Precondition: scope exists with name `scope`.
+    fn add_rule_template(&mut self, template: Rule, scope: &Symbol) {
+        let scope = self.scopes.get_mut(scope).unwrap();
 
         // TODO: maybe check that rule body is empty?
         let name = template.name.clone();
@@ -264,6 +286,7 @@ impl KnowledgeBase {
             .rule_templates
             .entry(name.clone())
             .or_insert_with(|| vec![template]);
+        // TODO: finish this method: add another rule template to an existing name
     }
 }
 
@@ -315,12 +338,16 @@ mod test {
     }
 
     #[test]
-    fn test_rule_templates() {
+    fn test_add_rule_template() {
         let mut kb = KnowledgeBase::new();
 
         let template = rule!("allow_role", [sym!("actor"); pattern!(instance!("User")), sym!("action"); pattern!(instance!("String")), sym!("resource"); pattern!(instance!("Repository"))]);
 
-        kb.add_rule_template(template, sym!("custom_scope"));
+        // TODO: create scope first
+        let scope_name = sym!("custom_scope");
+        kb.scopes
+            .insert(scope_name.clone(), Scope::new(scope_name.clone()));
+        kb.add_rule_template(template, &scope_name);
         // (actor: User, action: String, resource: Repository)")
         let rule = rule!("allow_role", [sym!("actor"); pattern!(instance!("User")), sym!("action"); pattern!(instance!("String")), sym!("resource"); pattern!(instance!("Repository"))]);
         assert!(kb.add_rule(rule, sym!("custom_scope")).is_ok());
@@ -333,4 +360,22 @@ mod test {
     }
 
     // TODO fields test.
+
+    #[test]
+    fn test_add_scope_def() {
+        let mut kb = KnowledgeBase::new();
+        let scope_name = sym!("custom_scope");
+        let templates = vec![
+            rule!("allow_role", [sym!("actor"); pattern!(instance!("User")), sym!("action"); pattern!(instance!("String")), sym!("resource"); pattern!(instance!("Repository"))]),
+        ];
+
+        // check adding a new scope works
+        assert!(kb
+            .add_scope_definition(scope_name.clone(), templates.clone())
+            .is_ok());
+        // check adding a scope that already exists fails
+        assert!(kb.add_scope_definition(scope_name, templates).is_err());
+        // check adding the default scope fails
+        assert!(kb.add_scope_definition(sym!("default"), vec![]).is_err());
+    }
 }
