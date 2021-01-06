@@ -86,7 +86,7 @@ class Polar:
         del self.host
         del self.ffi_polar
 
-    def load_file(self, policy_file):
+    def load_file(self, policy_file, scope="default"):
         """Load in polar policies. By default, defers loading of knowledge base
         until a query is made."""
         policy_file = Path(policy_file)
@@ -101,7 +101,7 @@ class Polar:
         except FileNotFoundError:
             raise PolarFileNotFoundError(fname)
 
-        self.load_str(file_data.decode("utf-8"), policy_file)
+        self.load_str(file_data.decode("utf-8"), policy_file, scope)
 
     def load_str(self, string, filename=None, scope="default"):
         """Load a Polar string, checking that all inline queries succeed."""
