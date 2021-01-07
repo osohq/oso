@@ -1,0 +1,6 @@
+// {{name}} struct
+type {{name}} struct {
+    {{~#each fields}}
+    // {{this.variable}}
+    {{this.variable}} {{this.type_name}} `json:"{{( snake-case this.variable )}}"`{{/each}}
+}

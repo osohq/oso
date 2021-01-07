@@ -46,7 +46,21 @@ where
         type Value = f64;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("JSON encoded data")
+            formatter.write_str("An integer (42), a float (1.2), or a string (\"NaN\")")
+        }
+
+        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(v as f64)
+        }
+
+        fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(v as f64)
         }
 
         fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
@@ -300,46 +314,46 @@ mod tests {
         assert!(Numeric::Integer(-1) != Numeric::Float(1.0));
         assert!(Numeric::Integer(2) > Numeric::Float(1.0));
         assert!(Numeric::Integer(-2) < Numeric::Float(1.0));
-        assert!(Numeric::Integer(1 << 52) == Numeric::Float((2.0_f64).powi(52)));
-        assert!(Numeric::Integer(1 << 53) == Numeric::Float((2.0_f64).powi(53)));
-        assert!(Numeric::Integer((1 << 52) + 1) == Numeric::Float((2.0_f64).powi(52) + 1.0));
-        assert!(Numeric::Integer(1 << 52) < Numeric::Float((2.0_f64).powi(52) + 1.0));
-        assert!(Numeric::Integer((1 << 52) + 1) > Numeric::Float((2.0_f64).powi(52)));
-        assert!(Numeric::Integer(-(1 << 52) - 1) < Numeric::Float(-(2.0_f64).powi(52)));
+        assert!(Numeric::Integer(1 << 52) == Numeric::Float((2.0 as f64).powi(52)));
+        assert!(Numeric::Integer(1 << 53) == Numeric::Float((2.0 as f64).powi(53)));
+        assert!(Numeric::Integer((1 << 52) + 1) == Numeric::Float((2.0 as f64).powi(52) + 1.0));
+        assert!(Numeric::Integer(1 << 52) < Numeric::Float((2.0 as f64).powi(52) + 1.0));
+        assert!(Numeric::Integer((1 << 52) + 1) > Numeric::Float((2.0 as f64).powi(52)));
+        assert!(Numeric::Integer(-(1 << 52) - 1) < Numeric::Float(-(2.0 as f64).powi(52)));
 
         // Long not exactly representable as float compares correctly.
-        assert!(Numeric::Integer((1 << 53) + 1) > Numeric::Float((2.0_f64).powi(53)));
-        assert!(Numeric::Integer((1 << 53) - 1) == Numeric::Float((2.0_f64).powi(53) - 1.0));
-        assert!(Numeric::Integer(-(1 << 53) - 1) < Numeric::Float(-(2.0_f64).powi(53)));
-        assert!(Numeric::Integer(-(1 << 54)) < Numeric::Float(-(2.0_f64).powi(53)));
-        assert!(Numeric::Integer(1 << 54) > Numeric::Float((2.0_f64).powi(53)));
-        assert!(Numeric::Integer(1 << 56) > Numeric::Float((2.0_f64).powi(54)));
+        assert!(Numeric::Integer((1 << 53) + 1) > Numeric::Float((2.0 as f64).powi(53)));
+        assert!(Numeric::Integer((1 << 53) - 1) == Numeric::Float((2.0 as f64).powi(53) - 1.0));
+        assert!(Numeric::Integer(-(1 << 53) - 1) < Numeric::Float(-(2.0 as f64).powi(53)));
+        assert!(Numeric::Integer(-(1 << 54)) < Numeric::Float(-(2.0 as f64).powi(53)));
+        assert!(Numeric::Integer(1 << 54) > Numeric::Float((2.0 as f64).powi(53)));
+        assert!(Numeric::Integer(1 << 56) > Numeric::Float((2.0 as f64).powi(54)));
 
         // Float larger than max long compares correctly
-        assert!(Numeric::Integer(1 << 56) < Numeric::Float((2.0_f64).powi(70)));
+        assert!(Numeric::Integer(1 << 56) < Numeric::Float((2.0 as f64).powi(70)));
 
         // Float smaller than min long compares correctly.
-        assert!(Numeric::Integer(1 << 56) > Numeric::Float(-(2.0_f64).powi(70)));
-        assert!(Numeric::Integer(-(1 << 56)) > Numeric::Float(-(2.0_f64).powi(70)));
-        assert!(Numeric::Integer(i64::MIN) > Numeric::Float(-(2.0_f64).powi(70)));
-        assert!(Numeric::Integer(i64::MAX) < Numeric::Float((2.0_f64).powi(65) + 3.1));
+        assert!(Numeric::Integer(1 << 56) > Numeric::Float(-(2.0 as f64).powi(70)));
+        assert!(Numeric::Integer(-(1 << 56)) > Numeric::Float(-(2.0 as f64).powi(70)));
+        assert!(Numeric::Integer(i64::MIN) > Numeric::Float(-(2.0 as f64).powi(70)));
+        assert!(Numeric::Integer(i64::MAX) < Numeric::Float((2.0 as f64).powi(65) + 3.1));
 
         // i64 max is 2 ** 63 - 1. This value is not representable as a f64.
-        assert!(Numeric::Integer(i64::MAX) < Numeric::Float((2.0_f64).powi(63)));
+        assert!(Numeric::Integer(i64::MAX) < Numeric::Float((2.0 as f64).powi(63)));
         // 2 ** 63 - 2 ** 10 is the next representable float down
-        assert!(Numeric::Integer(i64::MAX) > Numeric::Float((2.0_f64).powi(63) - 1024.0));
+        assert!(Numeric::Integer(i64::MAX) > Numeric::Float((2.0 as f64).powi(63) - 1024.0));
         // 2 ** 63 + 2 ** 11 is the next representable float up
-        assert!(Numeric::Integer(i64::MAX) < Numeric::Float((2.0_f64).powi(63) + 2048.0));
+        assert!(Numeric::Integer(i64::MAX) < Numeric::Float((2.0 as f64).powi(63) + 2048.0));
 
         // i64 min is 2 ** 63. This value is exactly representable as a f64.
-        assert!(Numeric::Integer(i64::MIN) == Numeric::Float(-(2.0_f64).powi(63)));
+        assert!(Numeric::Integer(i64::MIN) == Numeric::Float(-(2.0 as f64).powi(63)));
         // next value down is 2 ** 63 - 2048
-        assert!(Numeric::Integer(i64::MIN) > Numeric::Float(-(2.0_f64).powi(63) - 2048.0));
+        assert!(Numeric::Integer(i64::MIN) > Numeric::Float(-(2.0 as f64).powi(63) - 2048.0));
         // next value up is 2 ** 63 + 1024
-        assert!(Numeric::Integer(i64::MIN) < Numeric::Float(-(2.0_f64).powi(63) + 1024.0));
+        assert!(Numeric::Integer(i64::MIN) < Numeric::Float(-(2.0 as f64).powi(63) + 1024.0));
 
-        assert!(Numeric::Integer(i64::MIN) < Numeric::Float(-(2.0_f64).powi(62)));
-        assert!(Numeric::Integer(i64::MIN) > Numeric::Float(-(2.0_f64).powi(65)));
+        assert!(Numeric::Integer(i64::MIN) < Numeric::Float(-(2.0 as f64).powi(62)));
+        assert!(Numeric::Integer(i64::MIN) > Numeric::Float(-(2.0 as f64).powi(65)));
 
         // Long exactly representable as float compares correctly
         assert!(Numeric::Integer(2) == Numeric::Float(2.0));

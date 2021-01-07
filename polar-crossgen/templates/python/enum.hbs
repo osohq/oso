@@ -1,0 +1,8 @@
+class {{name}}(Enum):
+    content: typing.Union[{{#each variants}}"{{../name}}{{this}}",{{/each}}]
+    tag: typing.Literal[{{#each variants}}"{{this}}",{{/each}}]
+    _name: str = "{{name}}"
+
+    def __init__(self, *, content, tag):
+        self.content = content
+        self.tag = tag
