@@ -8,6 +8,11 @@ import json
 class DeserializationError(Exception):
     pass
 
+
+class SerializationError(Exception):
+    pass
+
+
 class Enum:
     def __getattribute__(self, attr):
         content = object.__getattribute__(self, "content")
@@ -25,19 +30,21 @@ class Enum:
         return self.__eq__(other)
 
 
-
 def make_special_method_wrapper(method_name):
     def wrapper(self, *args, **kwargs):
         return getattr(self, method_name)(*args, **kwargs)
+
     wrapper.__name__ = method_name
     return wrapper
 
 
-
 def get_newtype_hints(obj_type):
     # hack to get the forward-evaluated version of a typing type
-    def __types() -> obj_type: return
+    def __types() -> obj_type:
+        pass
+
     return get_type_hints(__types)["return"]
+
 
 class TypedJsonDeserializer:
     """
@@ -56,15 +63,14 @@ class TypedJsonDeserializer:
     null | None
     """
 
-    input: any
+    input: typing.Any
     primitive_types = [str, int, float, bool]
     name: str = ""
 
-    def __init__(self, input_val: any, name: str = ""):
+    def __init__(self, input_val: typing.Any, name: str = ""):
         self.input = input_val
         self.name = name
 
-    # noqa
     def deserialize_any(self, obj_type) -> typing.Any:
         if obj_type in self.primitive_types:
             return obj_type(self.input)
@@ -89,29 +95,36 @@ class TypedJsonDeserializer:
                 for (item_type, item) in zip(types, self.input):
                     item = TypedJsonDeserializer(item).deserialize_any(item_type)
                     result.append(item)
-                return tuple(result)
+                return obj_type(result)
 
-            elif getattr(obj_type, "__origin__") == typing.Union:  # Option or enum variant
-                if len(types) == 2 and isinstance(types[1], type) and isinstance(None, types[1]): # Option
+            elif (
+                getattr(obj_type, "__origin__") == typing.Union
+            ):  # Option or enum variant
+                if (
+                    len(types) == 2
+                    and isinstance(types[1], type)
+                    and isinstance(None, types[1])
+                ):  # Option
                     if self.input is None:
                         return None
                     else:
                         return self.deserialize_any(types[0])
             elif getattr(obj_type, "__origin__") == dict:  # Map
                 assert len(types) == 2
-                result = dict()
-                assert isinstance(self.input, dict)
-                for k, v in self.input.items():
-                    result[k] = TypedJsonDeserializer(v).deserialize_any(types[1])
+                result_dict = dict()
+                input_dict = self.input or {}
+                assert isinstance(input_dict, dict)
+                for k, v in input_dict.items():
+                    result_dict[k] = TypedJsonDeserializer(v).deserialize_any(types[1])
 
-                return result
+                return result_dict
 
             else:
                 raise DeserializationError("Unexpected type", obj_type)
 
         else:
             # handle enums + structs
-                
+
             types = get_type_hints(obj_type)
             if dataclasses.is_dataclass(obj_type):
                 fields = dataclasses.fields(obj_type)
@@ -123,6 +136,10 @@ class TypedJsonDeserializer:
                     for field in fields
                 }
                 return obj_type(**kwargs)
+            elif not isinstance(obj_type, type):
+                # newtype
+                ty = get_newtype_hints(obj_type.__supertype__)
+                return obj_type(self.deserialize_any(ty))
             elif issubclass(obj_type, Enum):
                 # enum
                 assert (
@@ -132,19 +149,136 @@ class TypedJsonDeserializer:
                 type_name = obj_type._name + variant_name
                 for t in types["content"].__args__:
                     if t.__name__ == type_name:
-                        return obj_type(tag=variant_name, content=TypedJsonDeserializer(
-                            variant_value
-                        ).deserialize_any(get_newtype_hints(t.__supertype__)))
-                raise DeserializationError(f"unexpected variant for {obj_type}", variant_name)
+                        return obj_type(
+                            tag=variant_name,
+                            content=TypedJsonDeserializer(
+                                variant_value
+                            ).deserialize_any(t),
+                        )
+                raise DeserializationError(
+                    f"unexpected variant for {obj_type}", variant_name
+                )
             else:
                 # type is a struct, but not a dataclass
                 # no idea how to handle
                 raise DeserializationError("Unexpected type", obj_type)
-                
+
+
+class TypedJsonSerializer:
+    """
+    Serializes JSON using the provided type
+
+
+    JSON | Python
+    ---------------
+    object | dict
+    array | list
+    string | str
+    number (int) | int
+    number (real) | float
+    true | True
+    false | False
+    null | None
+    """
+
+    input: typing.Any
+    primitive_types = [str, int, float, bool]
+    name: str = ""
+
+    def __init__(self, input_val: typing.Any, name: str = ""):
+        self.input = input_val
+        self.name = name
+
+    def serialize_any(self, obj_type) -> typing.Any:
+        if obj_type in self.primitive_types:
+            return obj_type(self.input)
+        elif hasattr(obj_type, "__origin__"):  # Generic type
+            types = getattr(obj_type, "__args__")
+            if getattr(obj_type, "__origin__") == collections.abc.Sequence:  # Sequence
+                assert len(types) == 1
+                item_type = types[0]
+                assert isinstance(self.input, list)
+                result = []
+                for item in self.input:
+                    result.append(TypedJsonSerializer(item).serialize_any(item_type))
+
+                return result
+
+            elif getattr(obj_type, "__origin__") == tuple:  # Tuple
+                result = []
+                assert len(types) == len(self.input)
+                for (item_type, item) in zip(types, self.input):
+                    item = TypedJsonSerializer(item).serialize_any(item_type)
+                    result.append(item)
+                return obj_type(result)
+
+            elif (
+                getattr(obj_type, "__origin__") == typing.Union
+            ):  # Option or enum variant
+                if (
+                    len(types) == 2
+                    and isinstance(types[1], type)
+                    and isinstance(None, types[1])
+                ):  # Option
+                    if self.input is None:
+                        return None
+                    else:
+                        return self.serialize_any(types[0])
+            elif getattr(obj_type, "__origin__") == dict:  # Map
+                assert len(types) == 2
+                result_dict = dict()
+                input_dict = self.input or {}
+                assert isinstance(input_dict, dict)
+                for k, v in input_dict.items():
+                    result_dict[k] = TypedJsonSerializer(v).serialize_any(types[1])
+
+                return result_dict
+
+            else:
+                raise SerializationError("Unexpected type", obj_type)
+
+        else:
+            # handle enums + structs
+
+            types = get_type_hints(obj_type)
+            if dataclasses.is_dataclass(obj_type):
+                fields = dataclasses.fields(obj_type)
+                # regular struct
+                kwargs = {
+                    field.name: TypedJsonSerializer(
+                        getattr(self.input, field.name, None)
+                    ).serialize_any(types[field.name])
+                    for field in fields
+                }
+                return kwargs
+            elif not isinstance(obj_type, type):
+                # newtype
+                ty = get_newtype_hints(obj_type.__supertype__)
+                return self.serialize_any(ty)
+            elif issubclass(obj_type, Enum):
+                # enum
+                content = object.__getattribute__(self.input, "content")
+                tag = object.__getattribute__(self.input, "tag")
+                type_name = obj_type._name + tag
+                for t in types["content"].__args__:
+                    if t.__name__ == type_name:
+                        return {tag: TypedJsonSerializer(content).serialize_any(t)}
+                raise SerializationError(f"unexpected variant for {obj_type}", content)
+            else:
+                # type is a struct, but not a dataclass
+                # no idea how to handle
+                raise SerializationError("Unexpected type", obj_type)
+
 
 def deserialize_json(input_str, obj):
     deserializer = TypedJsonDeserializer(json.loads(input_str))
     return deserializer.deserialize_any(obj)
+
+
+def serialize_json(input_val, obj):
+    serializer = TypedJsonSerializer(input_val)
+    output = serializer.serialize_any(obj)
+    return json.dumps(output)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -153,276 +287,346 @@ class Call:
     args: typing.Sequence["Value"]
     kwargs: typing.Optional[typing.Dict[str, "Value"]]
 
+
 @dataclasses.dataclass(frozen=True)
 class Dictionary:
     fields: typing.Dict[str, "Value"]
 
-ErrorKindParse = typing.NewType('ErrorKindParse', "ParseError")
+
+ErrorKindParse = typing.NewType("ErrorKindParse", "ParseError")
 
 
-
-ErrorKindRuntime = typing.NewType('ErrorKindRuntime', "RuntimeError")
-
+ErrorKindRuntime = typing.NewType("ErrorKindRuntime", "RuntimeError")
 
 
-ErrorKindOperational = typing.NewType('ErrorKindOperational', "OperationalError")
+ErrorKindOperational = typing.NewType("ErrorKindOperational", "OperationalError")
 
 
-
-ErrorKindParameter = typing.NewType('ErrorKindParameter', "ParameterError")
-
+ErrorKindParameter = typing.NewType("ErrorKindParameter", "ParameterError")
 
 
 class ErrorKind(Enum):
-    content: typing.Union["ErrorKindParse","ErrorKindRuntime","ErrorKindOperational","ErrorKindParameter",]
-    tag: typing.Literal["Parse","Runtime","Operational","Parameter",]
+    content: typing.Union[
+        "ErrorKindParse",
+        "ErrorKindRuntime",
+        "ErrorKindOperational",
+        "ErrorKindParameter",
+    ]
+    tag: typing.Literal[
+        "Parse",
+        "Runtime",
+        "Operational",
+        "Parameter",
+    ]
     _name: str = "ErrorKind"
 
     def __init__(self, *, content, tag):
         self.content = content
         self.tag = tag
+
+
 @dataclasses.dataclass(frozen=True)
 class ExternalInstance:
     instance_id: int
     constructor: typing.Optional["Value"]
     repr: typing.Optional[str]
 
+
 @dataclasses.dataclass(frozen=True)
 class FormattedPolarError:
     kind: "ErrorKind"
     formatted: str
+
 
 @dataclasses.dataclass(frozen=True)
 class InstanceLiteral:
     tag: str
     fields: "Dictionary"
 
+
 @dataclasses.dataclass(frozen=True)
 class Message:
     kind: "MessageKind"
     msg: str
 
+
 class MessageKindPrint:
     pass
-
 
 
 class MessageKindWarning:
     pass
 
 
-
 class MessageKind(Enum):
-    content: typing.Union["MessageKindPrint","MessageKindWarning",]
-    tag: typing.Literal["Print","Warning",]
+    content: typing.Union[
+        "MessageKindPrint",
+        "MessageKindWarning",
+    ]
+    tag: typing.Literal[
+        "Print",
+        "Warning",
+    ]
     _name: str = "MessageKind"
 
     def __init__(self, *, content, tag):
         self.content = content
         self.tag = tag
-NodeRule = typing.NewType('NodeRule', "Rule")
 
 
+NodeRule = typing.NewType("NodeRule", "Rule")
 
-NodeTerm = typing.NewType('NodeTerm', "Value")
 
+NodeTerm = typing.NewType("NodeTerm", "Value")
 
 
 class Node(Enum):
-    content: typing.Union["NodeRule","NodeTerm",]
-    tag: typing.Literal["Rule","Term",]
+    content: typing.Union[
+        "NodeRule",
+        "NodeTerm",
+    ]
+    tag: typing.Literal[
+        "Rule",
+        "Term",
+    ]
     _name: str = "Node"
 
     def __init__(self, *, content, tag):
         self.content = content
         self.tag = tag
-NumericInteger = typing.NewType('NumericInteger', int)
 
 
+NumericInteger = typing.NewType("NumericInteger", int)
 
-NumericFloat = typing.NewType('NumericFloat', float)
 
+NumericFloat = typing.NewType("NumericFloat", float)
 
 
 class Numeric(Enum):
-    content: typing.Union["NumericInteger","NumericFloat",]
-    tag: typing.Literal["Integer","Float",]
+    content: typing.Union[
+        "NumericInteger",
+        "NumericFloat",
+    ]
+    tag: typing.Literal[
+        "Integer",
+        "Float",
+    ]
     _name: str = "Numeric"
 
     def __init__(self, *, content, tag):
         self.content = content
         self.tag = tag
+
+
 @dataclasses.dataclass(frozen=True)
 class Operation:
     operator: "Operator"
     args: typing.Sequence["Value"]
 
-OperationalErrorUnimplemented = typing.NewType('OperationalErrorUnimplemented', str)
 
+OperationalErrorUnimplemented = typing.NewType("OperationalErrorUnimplemented", str)
 
 
 class OperationalErrorUnknown:
     pass
 
 
-
-OperationalErrorInvalidState = typing.NewType('OperationalErrorInvalidState', str)
-
+OperationalErrorInvalidState = typing.NewType("OperationalErrorInvalidState", str)
 
 
 class OperationalError(Enum):
-    content: typing.Union["OperationalErrorUnimplemented","OperationalErrorUnknown","OperationalErrorInvalidState",]
-    tag: typing.Literal["Unimplemented","Unknown","InvalidState",]
+    content: typing.Union[
+        "OperationalErrorUnimplemented",
+        "OperationalErrorUnknown",
+        "OperationalErrorInvalidState",
+    ]
+    tag: typing.Literal[
+        "Unimplemented",
+        "Unknown",
+        "InvalidState",
+    ]
     _name: str = "OperationalError"
 
     def __init__(self, *, content, tag):
         self.content = content
         self.tag = tag
+
+
 class OperatorDebug:
     pass
-
 
 
 class OperatorPrint:
     pass
 
 
-
 class OperatorCut:
     pass
-
 
 
 class OperatorIn:
     pass
 
 
-
 class OperatorIsa:
     pass
-
 
 
 class OperatorNew:
     pass
 
 
-
 class OperatorDot:
     pass
-
 
 
 class OperatorNot:
     pass
 
 
-
 class OperatorMul:
     pass
-
 
 
 class OperatorDiv:
     pass
 
 
-
 class OperatorMod:
     pass
-
 
 
 class OperatorRem:
     pass
 
 
-
 class OperatorAdd:
     pass
-
 
 
 class OperatorSub:
     pass
 
 
-
 class OperatorEq:
     pass
-
 
 
 class OperatorGeq:
     pass
 
 
-
 class OperatorLeq:
     pass
-
 
 
 class OperatorNeq:
     pass
 
 
-
 class OperatorGt:
     pass
-
 
 
 class OperatorLt:
     pass
 
 
-
 class OperatorUnify:
     pass
-
 
 
 class OperatorOr:
     pass
 
 
-
 class OperatorAnd:
     pass
-
 
 
 class OperatorForAll:
     pass
 
 
-
 class OperatorAssign:
     pass
 
 
-
 class Operator(Enum):
-    content: typing.Union["OperatorDebug","OperatorPrint","OperatorCut","OperatorIn","OperatorIsa","OperatorNew","OperatorDot","OperatorNot","OperatorMul","OperatorDiv","OperatorMod","OperatorRem","OperatorAdd","OperatorSub","OperatorEq","OperatorGeq","OperatorLeq","OperatorNeq","OperatorGt","OperatorLt","OperatorUnify","OperatorOr","OperatorAnd","OperatorForAll","OperatorAssign",]
-    tag: typing.Literal["Debug","Print","Cut","In","Isa","New","Dot","Not","Mul","Div","Mod","Rem","Add","Sub","Eq","Geq","Leq","Neq","Gt","Lt","Unify","Or","And","ForAll","Assign",]
+    content: typing.Union[
+        "OperatorDebug",
+        "OperatorPrint",
+        "OperatorCut",
+        "OperatorIn",
+        "OperatorIsa",
+        "OperatorNew",
+        "OperatorDot",
+        "OperatorNot",
+        "OperatorMul",
+        "OperatorDiv",
+        "OperatorMod",
+        "OperatorRem",
+        "OperatorAdd",
+        "OperatorSub",
+        "OperatorEq",
+        "OperatorGeq",
+        "OperatorLeq",
+        "OperatorNeq",
+        "OperatorGt",
+        "OperatorLt",
+        "OperatorUnify",
+        "OperatorOr",
+        "OperatorAnd",
+        "OperatorForAll",
+        "OperatorAssign",
+    ]
+    tag: typing.Literal[
+        "Debug",
+        "Print",
+        "Cut",
+        "In",
+        "Isa",
+        "New",
+        "Dot",
+        "Not",
+        "Mul",
+        "Div",
+        "Mod",
+        "Rem",
+        "Add",
+        "Sub",
+        "Eq",
+        "Geq",
+        "Leq",
+        "Neq",
+        "Gt",
+        "Lt",
+        "Unify",
+        "Or",
+        "And",
+        "ForAll",
+        "Assign",
+    ]
     _name: str = "Operator"
 
     def __init__(self, *, content, tag):
         self.content = content
         self.tag = tag
+
+
 @dataclasses.dataclass(frozen=True)
 class Parameter:
     parameter: "Value"
     specializer: typing.Optional["Value"]
 
-ParameterError = typing.NewType('ParameterError', str)
+
+ParameterError = typing.NewType("ParameterError", str)
+
 
 @dataclasses.dataclass(frozen=True)
 class ParseErrorIntegerOverflow:
     token: str
     loc: int
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -432,17 +636,14 @@ class ParseErrorInvalidTokenCharacter:
     loc: int
 
 
-
 @dataclasses.dataclass(frozen=True)
 class ParseErrorInvalidToken:
     loc: int
 
 
-
 @dataclasses.dataclass(frozen=True)
 class ParseErrorUnrecognizedEOF:
     loc: int
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -451,12 +652,10 @@ class ParseErrorUnrecognizedToken:
     loc: int
 
 
-
 @dataclasses.dataclass(frozen=True)
 class ParseErrorExtraToken:
     token: str
     loc: int
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -465,12 +664,10 @@ class ParseErrorReservedWord:
     loc: int
 
 
-
 @dataclasses.dataclass(frozen=True)
 class ParseErrorInvalidFloat:
     token: str
     loc: int
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -480,39 +677,66 @@ class ParseErrorWrongValueType:
     expected: str
 
 
-
 class ParseError(Enum):
-    content: typing.Union["ParseErrorIntegerOverflow","ParseErrorInvalidTokenCharacter","ParseErrorInvalidToken","ParseErrorUnrecognizedEOF","ParseErrorUnrecognizedToken","ParseErrorExtraToken","ParseErrorReservedWord","ParseErrorInvalidFloat","ParseErrorWrongValueType",]
-    tag: typing.Literal["IntegerOverflow","InvalidTokenCharacter","InvalidToken","UnrecognizedEOF","UnrecognizedToken","ExtraToken","ReservedWord","InvalidFloat","WrongValueType",]
+    content: typing.Union[
+        "ParseErrorIntegerOverflow",
+        "ParseErrorInvalidTokenCharacter",
+        "ParseErrorInvalidToken",
+        "ParseErrorUnrecognizedEOF",
+        "ParseErrorUnrecognizedToken",
+        "ParseErrorExtraToken",
+        "ParseErrorReservedWord",
+        "ParseErrorInvalidFloat",
+        "ParseErrorWrongValueType",
+    ]
+    tag: typing.Literal[
+        "IntegerOverflow",
+        "InvalidTokenCharacter",
+        "InvalidToken",
+        "UnrecognizedEOF",
+        "UnrecognizedToken",
+        "ExtraToken",
+        "ReservedWord",
+        "InvalidFloat",
+        "WrongValueType",
+    ]
     _name: str = "ParseError"
 
     def __init__(self, *, content, tag):
         self.content = content
         self.tag = tag
+
+
 @dataclasses.dataclass(frozen=True)
 class Partial:
     constraints: typing.Sequence["Operation"]
     variable: str
 
-PatternDictionary = typing.NewType('PatternDictionary', "Dictionary")
+
+PatternDictionary = typing.NewType("PatternDictionary", "Dictionary")
 
 
-
-PatternInstance = typing.NewType('PatternInstance', "InstanceLiteral")
-
+PatternInstance = typing.NewType("PatternInstance", "InstanceLiteral")
 
 
 class Pattern(Enum):
-    content: typing.Union["PatternDictionary","PatternInstance",]
-    tag: typing.Literal["Dictionary","Instance",]
+    content: typing.Union[
+        "PatternDictionary",
+        "PatternInstance",
+    ]
+    tag: typing.Literal[
+        "Dictionary",
+        "Instance",
+    ]
     _name: str = "Pattern"
 
     def __init__(self, *, content, tag):
         self.content = content
         self.tag = tag
+
+
 class QueryEventNone:
     pass
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -520,18 +744,15 @@ class QueryEventDone:
     result: bool
 
 
-
 @dataclasses.dataclass(frozen=True)
 class QueryEventDebug:
     message: str
-
 
 
 @dataclasses.dataclass(frozen=True)
 class QueryEventMakeExternal:
     instance_id: int
     constructor: "Value"
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -543,13 +764,11 @@ class QueryEventExternalCall:
     kwargs: typing.Optional[typing.Dict[str, "Value"]]
 
 
-
 @dataclasses.dataclass(frozen=True)
 class QueryEventExternalIsa:
     call_id: int
     instance: "Value"
     class_tag: str
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -560,13 +779,11 @@ class QueryEventExternalIsSubSpecializer:
     right_class_tag: str
 
 
-
 @dataclasses.dataclass(frozen=True)
 class QueryEventExternalIsSubclass:
     call_id: int
     left_class_tag: str
     right_class_tag: str
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -576,12 +793,10 @@ class QueryEventExternalUnify:
     right_instance_id: int
 
 
-
 @dataclasses.dataclass(frozen=True)
 class QueryEventResult:
     bindings: typing.Dict[str, "Value"]
     trace: typing.Optional["TraceResult"]
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -591,32 +806,58 @@ class QueryEventExternalOp:
     args: typing.Sequence["Value"]
 
 
-
 @dataclasses.dataclass(frozen=True)
 class QueryEventNextExternal:
     call_id: int
     iterable: "Value"
 
 
-
 class QueryEvent(Enum):
-    content: typing.Union["QueryEventNone","QueryEventDone","QueryEventDebug","QueryEventMakeExternal","QueryEventExternalCall","QueryEventExternalIsa","QueryEventExternalIsSubSpecializer","QueryEventExternalIsSubclass","QueryEventExternalUnify","QueryEventResult","QueryEventExternalOp","QueryEventNextExternal",]
-    tag: typing.Literal["None","Done","Debug","MakeExternal","ExternalCall","ExternalIsa","ExternalIsSubSpecializer","ExternalIsSubclass","ExternalUnify","Result","ExternalOp","NextExternal",]
+    content: typing.Union[
+        "QueryEventNone",
+        "QueryEventDone",
+        "QueryEventDebug",
+        "QueryEventMakeExternal",
+        "QueryEventExternalCall",
+        "QueryEventExternalIsa",
+        "QueryEventExternalIsSubSpecializer",
+        "QueryEventExternalIsSubclass",
+        "QueryEventExternalUnify",
+        "QueryEventResult",
+        "QueryEventExternalOp",
+        "QueryEventNextExternal",
+    ]
+    tag: typing.Literal[
+        "None",
+        "Done",
+        "Debug",
+        "MakeExternal",
+        "ExternalCall",
+        "ExternalIsa",
+        "ExternalIsSubSpecializer",
+        "ExternalIsSubclass",
+        "ExternalUnify",
+        "Result",
+        "ExternalOp",
+        "NextExternal",
+    ]
     _name: str = "QueryEvent"
 
     def __init__(self, *, content, tag):
         self.content = content
         self.tag = tag
+
+
 @dataclasses.dataclass(frozen=True)
 class Rule:
     name: str
     params: typing.Sequence["Parameter"]
     body: "Value"
 
+
 @dataclasses.dataclass(frozen=True)
 class RuntimeErrorArithmeticError:
     msg: str
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -624,11 +865,9 @@ class RuntimeErrorSerialization:
     msg: str
 
 
-
 @dataclasses.dataclass(frozen=True)
 class RuntimeErrorUnsupported:
     msg: str
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -637,11 +876,9 @@ class RuntimeErrorTypeError:
     stack_trace: typing.Optional[str]
 
 
-
 @dataclasses.dataclass(frozen=True)
 class RuntimeErrorUnboundVariable:
     sym: str
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -649,11 +886,9 @@ class RuntimeErrorStackOverflow:
     msg: str
 
 
-
 @dataclasses.dataclass(frozen=True)
 class RuntimeErrorQueryTimeout:
     msg: str
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -662,82 +897,118 @@ class RuntimeErrorApplication:
     stack_trace: typing.Optional[str]
 
 
-
 @dataclasses.dataclass(frozen=True)
 class RuntimeErrorFileLoading:
     msg: str
 
 
-
 class RuntimeError(Enum):
-    content: typing.Union["RuntimeErrorArithmeticError","RuntimeErrorSerialization","RuntimeErrorUnsupported","RuntimeErrorTypeError","RuntimeErrorUnboundVariable","RuntimeErrorStackOverflow","RuntimeErrorQueryTimeout","RuntimeErrorApplication","RuntimeErrorFileLoading",]
-    tag: typing.Literal["ArithmeticError","Serialization","Unsupported","TypeError","UnboundVariable","StackOverflow","QueryTimeout","Application","FileLoading",]
+    content: typing.Union[
+        "RuntimeErrorArithmeticError",
+        "RuntimeErrorSerialization",
+        "RuntimeErrorUnsupported",
+        "RuntimeErrorTypeError",
+        "RuntimeErrorUnboundVariable",
+        "RuntimeErrorStackOverflow",
+        "RuntimeErrorQueryTimeout",
+        "RuntimeErrorApplication",
+        "RuntimeErrorFileLoading",
+    ]
+    tag: typing.Literal[
+        "ArithmeticError",
+        "Serialization",
+        "Unsupported",
+        "TypeError",
+        "UnboundVariable",
+        "StackOverflow",
+        "QueryTimeout",
+        "Application",
+        "FileLoading",
+    ]
     _name: str = "RuntimeError"
 
     def __init__(self, *, content, tag):
         self.content = content
         self.tag = tag
+
+
 @dataclasses.dataclass(frozen=True)
 class Trace:
     node: "Node"
     children: typing.Sequence["Trace"]
+
 
 @dataclasses.dataclass(frozen=True)
 class TraceResult:
     trace: "Trace"
     formatted: str
 
-ValueNumber = typing.NewType('ValueNumber', "Numeric")
+
+ValueNumber = typing.NewType("ValueNumber", "Numeric")
 
 
-
-ValueString = typing.NewType('ValueString', str)
-
+ValueString = typing.NewType("ValueString", str)
 
 
-ValueBoolean = typing.NewType('ValueBoolean', bool)
+ValueBoolean = typing.NewType("ValueBoolean", bool)
 
 
-
-ValueExternalInstance = typing.NewType('ValueExternalInstance', "ExternalInstance")
-
+ValueExternalInstance = typing.NewType("ValueExternalInstance", "ExternalInstance")
 
 
-ValueDictionary = typing.NewType('ValueDictionary', "Dictionary")
+ValueDictionary = typing.NewType("ValueDictionary", "Dictionary")
 
 
-
-ValuePattern = typing.NewType('ValuePattern', "Pattern")
-
+ValuePattern = typing.NewType("ValuePattern", "Pattern")
 
 
-ValueCall = typing.NewType('ValueCall', "Call")
+ValueCall = typing.NewType("ValueCall", "Call")
 
 
-
-ValueList = typing.NewType('ValueList', typing.Sequence["Value"])
-
+ValueList = typing.NewType("ValueList", typing.Sequence["Value"])
 
 
-ValueVariable = typing.NewType('ValueVariable', str)
+ValueVariable = typing.NewType("ValueVariable", str)
 
 
-
-ValueRestVariable = typing.NewType('ValueRestVariable', str)
-
+ValueRestVariable = typing.NewType("ValueRestVariable", str)
 
 
-ValueExpression = typing.NewType('ValueExpression', "Operation")
+ValueExpression = typing.NewType("ValueExpression", "Operation")
 
 
-
-ValuePartial = typing.NewType('ValuePartial', "Partial")
-
+ValuePartial = typing.NewType("ValuePartial", "Partial")
 
 
 class Value(Enum):
-    content: typing.Union["ValueNumber","ValueString","ValueBoolean","ValueExternalInstance","ValueDictionary","ValuePattern","ValueCall","ValueList","ValueVariable","ValueRestVariable","ValueExpression","ValuePartial",]
-    tag: typing.Literal["Number","String","Boolean","ExternalInstance","Dictionary","Pattern","Call","List","Variable","RestVariable","Expression","Partial",]
+    content: typing.Union[
+        "ValueNumber",
+        "ValueString",
+        "ValueBoolean",
+        "ValueExternalInstance",
+        "ValueDictionary",
+        "ValuePattern",
+        "ValueCall",
+        "ValueList",
+        "ValueVariable",
+        "ValueRestVariable",
+        "ValueExpression",
+        "ValuePartial",
+    ]
+    tag: typing.Literal[
+        "Number",
+        "String",
+        "Boolean",
+        "ExternalInstance",
+        "Dictionary",
+        "Pattern",
+        "Call",
+        "List",
+        "Variable",
+        "RestVariable",
+        "Expression",
+        "Partial",
+    ]
     _name: str = "Value"
 
     def __init__(self, *, content, tag):
