@@ -23,7 +23,7 @@ Role-Based Access Control (RBAC) patterns</getting-started/rbac>`.
     :hidden:
     :maxdepth: 1
 
-    RBAC patterns <rbac>
+    RBAC patterns <../rbac>
     sqlalchemy/basic_roles
 
 
