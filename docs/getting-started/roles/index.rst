@@ -17,7 +17,7 @@ If you want to get started with SQLAlchemy roles, look at
 :doc:`/getting-started/roles/sqlalchemy/basic_roles`.
 
 For a more in-depth understanding of roles, check out our :doc:`guide to
-Role-Based Access Control (RBAC) patterns</getting-started/roles/rbac>`.
+Role-Based Access Control (RBAC) patterns</getting-started/rbac>`.
 
 .. toctree::
     :hidden:
