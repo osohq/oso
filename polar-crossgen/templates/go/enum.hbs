@@ -1,0 +1,61 @@
+// {{name}} enum
+type {{name}}Variant interface {
+    is{{name}}()
+}
+
+type {{name}} struct {
+    {{name}}Variant
+}
+
+func (result *{{name}}) UnmarshalJSON(b []byte) error {
+    var variantName string
+    var variantValue *json.RawMessage
+
+    // try and deserialize as a string first
+    err := json.Unmarshal(b, &variantName)
+    if err != nil { 
+        var rawMap map[string]json.RawMessage
+        err := json.Unmarshal(b, &rawMap)
+        if err != nil {
+            return err
+        }
+         // JSON should be of form {"VariantName": {...}}
+        if len(rawMap) != 1 {
+            return errors.New("Deserializing {{name}} as an enum variant; expecting a single key")
+        }
+        for k, v := range rawMap {
+            variantName = k
+            variantValue = &v
+        }
+    }
+    switch variantName {
+    {{#each variants}}
+    case "{{this}}":
+        var variant {{../name}}{{this}}
+        if variantValue != nil {
+            err := json.Unmarshal(*variantValue, &variant);
+            if err != nil {
+                return err
+            }
+        }
+        *result = {{../name}} { variant }
+        return nil
+    {{/each}}
+    }
+
+    return fmt.Errorf("Cannot deserialize {{../name}}: %s", string(b))
+}
+
+
+func (variant {{name}}) MarshalJSON() ([]byte, error) {
+    switch inner := variant.{{name}}Variant.(type) {
+    {{#each variants}}
+    case {{../name}}{{this}}:
+        return json.Marshal(map[string]{{../name}}{{this}} {
+            "{{this}}": inner,
+        });
+    {{/each}}
+    }
+
+    return nil, fmt.Errorf("unexpected variant of %v", variant)
+}

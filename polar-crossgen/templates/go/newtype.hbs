@@ -1,0 +1,13 @@
+// {{name}} newtype
+type {{name}} {{type}}
+
+func (variant {{name}}) MarshalJSON() ([]byte, error) {
+    return json.Marshal({{type}}(variant))
+}
+
+func (variant *{{name}}) UnmarshalJSON(b []byte) (error) {
+    inner := {{type}}(*variant)
+    err := json.Unmarshal(b, &inner)
+    *variant = {{name}}(inner)
+    return err
+}
