@@ -1895,22 +1895,27 @@ impl PolarVirtualMachine {
                         let constraint = op!(And, term.clone());
                         self.constrain(&constraint)?;
                     }
+                    (VariableState::Cycle(c), VariableState::Unbound) => {
+                        let e = cycle_constraints(c);
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    }
                     (VariableState::Cycle(c), VariableState::Cycle(d)) => {
                         let mut e = cycle_constraints(c);
                         e.merge_constraints(cycle_constraints(d));
-                        let e = e.clone_with_new_constraint(term.clone());
-                        self.constrain(&e)?;
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
                     }
                     (VariableState::Unbound, VariableState::Partial(e))
                     | (VariableState::Partial(e), VariableState::Unbound) => {
-                        let e = e.clone_with_new_constraint(term.clone());
-                        self.constrain(&e)?;
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
                     }
                     (VariableState::Cycle(c), VariableState::Partial(mut e))
                     | (VariableState::Partial(mut e), VariableState::Cycle(c)) => {
                         e.merge_constraints(cycle_constraints(c));
-                        let e = e.clone_with_new_constraint(term.clone());
-                        self.constrain(&e)?;
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    }
+                    (VariableState::Partial(mut e), VariableState::Partial(f)) => {
+                        e.merge_constraints(f);
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
                     }
                     (s, t) => todo!("({:?}, {:?}]", s, t),
                 }
@@ -2193,6 +2198,14 @@ impl PolarVirtualMachine {
                         e.merge_constraints(cycle_constraints(d));
                         let e = e.clone_with_new_constraint(term.clone());
                         self.constrain(&e)?;
+                    }
+                    (VariableState::Partial(e), VariableState::Unbound) => {
+                        let e = e.clone_with_new_constraint(term.clone());
+                        self.constrain(&e)?;
+                    }
+                    (VariableState::Partial(mut e), VariableState::Partial(f)) => {
+                        e.merge_constraints(f);
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
                     }
                     (s, t) => todo!("({:?}, {:?}]", s, t),
                 }
