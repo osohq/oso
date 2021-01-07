@@ -7,6 +7,7 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
+from . import polar_types
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -67,13 +68,13 @@ class Query:
             else:
                 raise PolarRuntimeError(f"Unhandled event: {json.dumps(event)}")
 
-    def handle_make_external(self, data):
-        id = data["instance_id"]
-        constructor = data["constructor"]["value"]
-        if "Call" in constructor:
-            cls_name = constructor["Call"]["name"]
-            args = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
-            kwargs = constructor["Call"]["kwargs"] or {}
+    def handle_make_external(self, data: polar_types.QueryEventMakeExternal):
+        id = data.instance_id
+        constructor = data.constructor
+        if isinstance(constructor, polar_types.ValueCall):
+            cls_name = constructor.name
+            args = [self.host.to_python(arg) for arg in constructor.args]
+            kwargs = constructor.kwargs or {}
             kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
         else:
             raise InvalidConstructorError()
@@ -115,11 +116,9 @@ class Query:
         answer = self.host.operator(op, args)
         self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_external_isa(self, data):
-        instance = data["instance"]
-        class_tag = data["class_tag"]
-        answer = self.host.isa(instance, class_tag)
-        self.ffi_query.question_result(data["call_id"], answer)
+    def handle_external_isa(self, data: polar_types.QueryEventExternalIsa):
+        answer = self.host.isa(data.instance, data.class_tag)
+        self.ffi_query.question_result(data.call_id, answer)
 
     def handle_external_unify(self, data):
         left_instance_id = data["left_instance_id"]
