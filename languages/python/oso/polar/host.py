@@ -12,7 +12,6 @@ from .exceptions import (
 )
 from .variable import Variable
 from .predicate import Predicate
-from .partial import Partial
 from .expression import Expression, Pattern
 
 
@@ -82,7 +81,14 @@ class Host:
     def isa(self, instance, class_tag) -> bool:
         instance = self.to_python(instance)
         cls = self.get_class(class_tag)
-        return isinstance(instance, cls)
+        if isinstance(instance, list):
+            base, *path = instance
+            base = self.get_class(base.tag)()
+            for segment in path:
+                base = getattr(base, segment)
+            return isinstance(base, cls)
+        else:
+            return isinstance(instance, cls)
 
     def is_subclass(self, left_tag, right_tag) -> bool:
         """Return true if left is a subclass (or the same class) as right."""
@@ -155,8 +161,25 @@ class Host:
             }
         elif isinstance(v, Variable):
             val = {"Variable": v}
-        elif isinstance(v, Partial):
-            val = {"Partial": v.to_polar()}
+        elif isinstance(v, Expression):
+            val = {
+                "Expression": {
+                    "operator": v.operator,
+                    "args": [self.to_polar(v) for v in v.args],
+                }
+            }
+        elif isinstance(v, Pattern):
+            if v.tag is None:
+                val = {"Pattern": self.to_polar(v.fields)["value"]}
+            else:
+                val = {
+                    "Pattern": {
+                        "Instance": {
+                            "tag": v.tag,
+                            "fields": self.to_polar(v.fields)["value"]["Dictionary"],
+                        }
+                    }
+                }
         else:
             val = {
                 "ExternalInstance": {

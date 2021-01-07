@@ -22,6 +22,8 @@ COMPARISONS = {
     "Lt": lambda f, v: Q(**{f"{f}__lt": v}),
 }
 
+VARIABLES = {}
+
 
 def contained_in(f, v):
     return Q(**{f"{f}__in": v})
@@ -99,22 +101,37 @@ def and_expr(expr: Expression, model: Model, **kwargs):
 def compare_expr(expr: Expression, model: Model, path=(), bindings={}, **kwargs):
     assert expr.operator in COMPARISONS
     (left, right) = expr.args
-    breakpoint()
-    # left_path = dot_path(left)
-    # if left_path:
-    #     return COMPARISONS[expr.operator]("__".join(path + left_path), right)
-    # else:
-    #     assert left == Variable("_this")
-    #     if not isinstance(right, model):
-    #         return FALSE_FILTER
-    #
-    #     if expr.operator not in ("Eq", "Unify"):
-    #         raise UnsupportedError(
-    #             f"Unsupported comparison: {expr}. Models can only be compared"
-    #             " with `=` or `==`"
-    #         )
-    #
-    #     return COMPARISONS[expr.operator]("__".join(path + ("pk",)), right.pk)
+    left_path = dot_path(left)
+    right_path = dot_path(right)
+    if left_path:
+        return COMPARISONS[expr.operator]("__".join(path + left_path), right)
+    elif right_path:
+        if isinstance(right_path[0], Variable):
+            try:
+                stored_path = VARIABLES[right_path[0]]
+                return COMPARISONS[expr.operator](
+                    "__".join(stored_path + path + right_path[1:]), left
+                )
+            except KeyError:
+                breakpoint()
+        else:
+            return COMPARISONS[expr.operator]("__".join(path + right_path), left)
+    elif left == Variable("_this"):
+        if model is None:
+            return FALSE_FILTER
+        elif not isinstance(right, model):
+            return FALSE_FILTER
+        elif expr.operator not in ("Eq", "Unify"):
+            raise UnsupportedError(
+                f"Unsupported comparison: {expr}. Models can only be compared"
+                " with `=` or `==`"
+            )
+        else:
+            return COMPARISONS[expr.operator]("__".join(path + ("pk",)), right.pk)
+    elif right == Variable("_this"):
+        breakpoint()
+    else:
+        breakpoint()
 
 
 def in_expr(expr: Expression, model: Model, path=(), **kwargs):
@@ -124,20 +141,26 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
     assert right_path, "RHS of in must be a dot lookup"
     right_path = path + right_path
 
-    if isinstance(left, Expression):
-        if left.operator == "And" and not left.args:
-            # An unconstrained partial is in a list if the list is non-empty.
-            count = Count("__".join(right_path))
-            filter = COMPARISONS["Gt"]("__".join(right_path + ("count",)), 0)
-            subquery = Subquery(
-                model.objects.annotate(count).filter(filter).values("pk")
-            )
-
-            return contained_in("pk", subquery)
-        else:
-            return translate_expr(left, model, path=right_path, **kwargs)
+    if isinstance(left, Variable):
+        VARIABLES[left] = right_path
+        return Q()
     else:
-        return COMPARISONS["Unify"]("__".join(right_path), left)
+        breakpoint()
+
+    # if isinstance(left, Expression):
+    #     if left.operator == "And" and not left.args:
+    #         # An unconstrained partial is in a list if the list is non-empty.
+    #         count = Count("__".join(right_path))
+    #         filter = COMPARISONS["Gt"]("__".join(right_path + ("count",)), 0)
+    #         subquery = Subquery(
+    #             model.objects.annotate(count).filter(filter).values("pk")
+    #         )
+    #
+    #         return contained_in("pk", subquery)
+    #     else:
+    #         return translate_expr(left, model, path=right_path, **kwargs)
+    # else:
+    #     return COMPARISONS["Unify"]("__".join(right_path), left)
 
 
 def not_expr(expr: Expression, model: Model, **kwargs):

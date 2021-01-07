@@ -6,7 +6,7 @@ from django.core.exceptions import PermissionDenied, EmptyResultSet
 
 from django_oso.oso import Oso, reset_oso
 from django_oso.auth import authorize, authorize_model
-from polar import Variable
+from polar import Variable, Expression
 from django_oso.partial import partial_to_query_filter
 
 from oso import OsoError
@@ -322,9 +322,15 @@ def test_negated_matches_with_partial(rf):
 def test_partial_unification():
     Oso.load_str("f(x, y) if x = y and x = 1;")
     results = Oso.query_rule("f", Variable("x"), Variable("y"))
+    first = next(results)["bindings"]
+    assert first["x"] == 1
+    assert first["y"] == 1
 
-    filter = None
-    for result in results:
-        x = result["bindings"]["x"]
-        filter = partial_to_query_filter(x, None, bindings=result["bindings"])
-        breakpoint()
+    with pytest.raises(StopIteration):
+        next(results)
+
+    Oso.load_str("g(x, y) if x = y and y > 1;")
+    results = Oso.query_rule("g", Variable("x"), Variable("y"))
+    first = next(results)["bindings"]
+    assert first["x"] == Expression("And", [Expression("Gt", [Variable("_this"), 1])])
+    assert first["y"] == Expression("And", [Expression("Gt", [Variable("_this"), 1])])

@@ -490,6 +490,11 @@ def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
         """
     )
     user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    assert (
+        str(authorize_filter)
+        == "(OR: (AND: (NOT (AND: ('pk__in', []))), ('tags__name', 'eng')), (AND: (NOT (AND: ('pk__in', []))), ('access_level', 'public')))"
+    )
     posts = Post.objects.authorize(None, actor=user, action="read")
     # all should be returned with no duplicates
     assert list(posts) == list(tag_nested_many_many_fixtures.values())

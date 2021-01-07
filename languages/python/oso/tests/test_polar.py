@@ -8,7 +8,6 @@ from polar import (
     Polar,
     Predicate,
     Variable,
-    Partial,
     Expression,
     Pattern,
 )
@@ -40,8 +39,8 @@ def test_data_conversions(polar, qvar, query):
     assert qvar("c(x)", "x", one=True)
     assert qvar("d(x)", "x", one=True) == [1, "two", True]
     y = qvar("x = y", "x", one=True)
-    assert str(y) == "Variable('y')"
-    assert repr(y) == "Variable('y')"
+    assert str(y) == "Variable('x')"
+    assert repr(y) == "Variable('x')"
 
 
 def test_load_function(polar, query, qvar):
@@ -781,42 +780,42 @@ def unwrap_and(x):
 
 def test_partial_unification(polar):
     polar.load_str("f(x, y) if x = y;")
-    results = polar.query_rule("f", Variable("x"), Variable("y"))
-    for result in results:
-        breakpoint()
+    x = Variable("x")
+    y = Variable("y")
+    results = polar.query_rule("f", x, y)
+    result = next(results)["bindings"]
+    assert result["x"] == y
+    assert result["y"] == x
+    with pytest.raises(StopIteration):
+        next(results)
 
 
 def test_partial(polar):
     polar.load_str("f(1);")
     polar.load_str("f(x) if x = 1 and x = 2;")
 
-    results = polar.query_rule("f", Partial("x"))
+    results = polar.query_rule("f", Variable("x"))
     first = next(results)
 
     x = first["bindings"]["x"]
-    assert Expression("Unify", [Variable("_this"), 1])
+    assert x == 1
 
-    second = next(results)
-    x = second["bindings"]["x"]
-
-    # Top level should be and
-    and_args = unwrap_and(x)
-    assert and_args[0] == Expression("Unify", [Variable("_this"), 1])
-    assert and_args[1] == Expression("Unify", [Variable("_this"), 2])
+    with pytest.raises(StopIteration):
+        next(results)
 
     polar.load_str("g(x) if x.bar = 1 and x.baz = 2;")
 
-    results = polar.query_rule("g", Partial("x"))
+    results = polar.query_rule("g", Variable("x"))
     first = next(results)
 
     x = first["bindings"]["x"]
     and_args = unwrap_and(x)
     assert len(and_args) == 2
     assert and_args[0] == Expression(
-        "Unify", [Expression("Dot", [Variable("_this"), "bar"]), 1]
+        "Unify", [1, Expression("Dot", [Variable("_this"), "bar"])]
     )
     assert and_args[1] == Expression(
-        "Unify", [Expression("Dot", [Variable("_this"), "baz"]), 2]
+        "Unify", [2, Expression("Dot", [Variable("_this"), "baz"])]
     )
 
 
@@ -833,8 +832,9 @@ def test_partial_constraint(polar):
     polar.load_str("f(x: User) if x.user = 1;")
     polar.load_str("f(x: Post) if x.post = 1;")
 
-    partial = Partial("x", TypeConstraint("User"))
-    results = polar.query_rule("f", partial)
+    x = Variable("x")
+    polar.register_constant(Expression("And", [TypeConstraint(x, "User")]), x)
+    results = polar.query_rule("f", x)
 
     first = next(results)["bindings"]["x"]
     and_args = unwrap_and(first)
@@ -845,8 +845,49 @@ def test_partial_constraint(polar):
 
     unify = and_args[1]
     assert unify == Expression(
-        "Unify", [Expression("Dot", [Variable("_this"), "user"]), 1]
+        "Unify", [1, Expression("Dot", [Variable("_this"), "user"])]
     )
+
+    with pytest.raises(StopIteration):
+        next(results)
+
+
+def test_partial_rule_filtering(polar):
+    class A:
+        def __init__(self):
+            self.c = C()
+
+    class B:
+        pass
+
+    class C:
+        pass
+
+    class D:
+        pass
+
+    polar.register_class(A)
+    polar.register_class(B)
+    polar.register_class(C)
+    polar.register_class(D)
+
+    polar.load_str(
+        """f(x: A) if g(x.c);
+           g(_: B);
+           g(_: C);
+           g(_: D);"""
+    )
+
+    x = Variable("x")
+    polar.register_constant(Expression("And", [TypeConstraint(x, "A")]), x)
+    results = polar.query_rule("f", x)
+
+    first = next(results)["bindings"]["x"]
+    and_args = unwrap_and(first)
+    assert len(and_args) == 2
+
+    assert and_args[0] == Expression("Isa", [Variable("_this"), Pattern("A", {})])
+    assert and_args[1] == Expression("Isa", [Expression("Dot", [Variable('_this'), 'c']), Pattern("C", {})])
 
     with pytest.raises(StopIteration):
         next(results)
