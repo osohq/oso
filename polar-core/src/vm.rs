@@ -629,19 +629,14 @@ impl PolarVirtualMachine {
     }
 
     /// Bind each variable that occurs in a constraint to the constraint.
-    fn constrain(&mut self, constraint: &Operation) -> PolarResult<()> {
-        assert_eq!(
-            constraint.operator,
-            Operator::And,
-            "invalid constraint `{}`",
-            constraint.to_polar()
-        );
+    fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
+        assert_eq!(o.operator, Operator::And, "bad constraint {}", o.to_polar());
 
-        eprintln!("Constraining with `{}`", constraint.to_polar());
-        for var in constraint.variables() {
+        eprintln!("Constraining with `{}`", o.to_polar());
+        for var in o.variables() {
             match self.variable_state(&var) {
                 VariableState::Bound(_) => (),
-                _ => self.bind(&var, constraint.clone().into_term()),
+                _ => self.bind(&var, o.clone().into_term()),
             }
         }
         Ok(())
@@ -1171,12 +1166,7 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
-    fn isa_expr(
-        &mut self,
-        operation: &Operation,
-        left: &Term,
-        right: &Term,
-    ) -> PolarResult<()> {
+    fn isa_expr(&mut self, operation: &Operation, left: &Term, right: &Term) -> PolarResult<()> {
         match right.value() {
             Value::Pattern(Pattern::Dictionary(fields)) => {
                 let to_unify = |(field, value): (&Symbol, &Term)| -> Operation {
@@ -1194,8 +1184,7 @@ impl PolarVirtualMachine {
 
                 // Add the last field constraint and trigger the bind dance.
                 for op in fields.fields.iter().take(1).map(to_unify) {
-                    // TODO(ap): do something with op.
-                    self.constrain(&operation)?;
+                    self.constrain(&operation.clone_with_new_constraint(op.into_term()))?;
                 }
             }
             Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {

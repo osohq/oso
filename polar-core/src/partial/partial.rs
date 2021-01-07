@@ -307,6 +307,33 @@ impl Operation {
         new.args.push(constraint);
         new
     }
+
+    pub fn mirror(&self) -> Self {
+        let args = self.args.clone().into_iter().rev().collect();
+        match self.operator {
+            Operator::Unify | Operator::Eq | Operator::Neq => Self {
+                operator: self.operator,
+                args,
+            },
+            Operator::Gt => Self {
+                operator: Operator::Leq,
+                args,
+            },
+            Operator::Geq => Self {
+                operator: Operator::Lt,
+                args,
+            },
+            Operator::Lt => Self {
+                operator: Operator::Geq,
+                args,
+            },
+            Operator::Leq => Self {
+                operator: Operator::Gt,
+                args,
+            },
+            _ => self.clone(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -453,23 +480,22 @@ mod test {
         let p = Polar::new();
         p.load_str(
             r#"f(x: Post{id: 1});
-               f(x: Post{id: 1}) if x matches {id: 2}; # Will fail.
-               f(x: Post{id: 1}) if x matches Post{id: 2};
-               f(x: Post{id: 1}) if x matches User{id: 2}; # Will fail.
-               f(x: Post{id: 1}) if x matches {id: 2, bar: 2};
-               f(x: Post{id: 1, bar: 1}) if x matches User{id: 2}; # Will fail.
-               f(x: Post{id: 1, bar: 3}) if x matches Post{id: 2} and x.y = 1;
-               f(x: {id: 1, bar: 1}) if x matches {id: 2};
-               f(x: {id: 1}) if x matches {id: 2, bar: 2};
-               f(x: {id: 1});
-               f(x: {id: 1}) if x matches {id: 2};
-               f(x: {id: 1}) if x matches Post{id: 2};
-               f(x: 1);"#,
+               g(x: Post{id: 1}) if x matches {id: 2}; # Will fail.
+               h(x: Post{id: 1}) if x matches Post{id: 2};
+               i(x: Post{id: 1}) if x matches User{id: 2}; # Will fail.
+               j(x: Post{id: 1}) if x matches {id: 2, bar: 2};
+               k(x: Post{id: 1, bar: 1}) if x matches User{id: 2}; # Will fail.
+               l(x: Post{id: 1, bar: 3}) if x matches Post{id: 2} and x.y = 1;
+               m(x: {id: 1, bar: 1}) if x matches {id: 2};
+               n(x: {id: 1}) if x matches {id: 2, bar: 2};
+               o(x: {id: 1});
+               p(x: {id: 1}) if x matches {id: 2};
+               q(x: {id: 1}) if x matches Post{id: 2};
+               r(x: 1);"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        let mut next_binding = || loop {
+        let next_binding = |q: &mut Query| loop {
             match q.next_event().unwrap() {
-                QueryEvent::Result { bindings, .. } => return bindings,
+                QueryEvent::Result { bindings, .. } => return Some(bindings),
                 QueryEvent::ExternalIsSubclass {
                     call_id,
                     left_class_tag,
@@ -478,43 +504,98 @@ mod test {
                     q.question_result(call_id, left_class_tag.0.starts_with(&right_class_tag.0))
                         .unwrap();
                 }
+                QueryEvent::Done { .. } => return None,
                 _ => panic!("not bindings"),
             }
         };
-        assert_partial_expression!(next_binding(), "x", "_this matches Post{} and _this.id = 1");
+
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_partial_expression!(
-            next_binding(),
+            next_binding(&mut q).unwrap(),
+            "x",
+            "_this matches Post{} and _this.id = 1"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
+        // TODO(gj): Inconsistent dot op unifications.
+        assert_partial_expression!(
+            next_binding(&mut q).unwrap(),
             "x",
             "_this matches Post{} and _this.id = 1 and _this.id = 2"
         );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
         assert_partial_expression!(
-            next_binding(),
+            next_binding(&mut q).unwrap(),
+            "x",
+            "_this matches Post{} and _this.id = 1 and _this.id = 2"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("i", [sym!("x")])), false);
+        assert!(next_binding(&mut q).is_none());
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("j", [sym!("x")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q).unwrap(),
             "x",
             "_this matches Post{} and _this.id = 1 and _this.id = 2 and _this.bar = 2"
         );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("k", [sym!("x")])), false);
+        assert!(next_binding(&mut q).is_none());
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("l", [sym!("x")])), false);
         assert_partial_expression!(
-            next_binding(),
+            next_binding(&mut q).unwrap(),
             "x",
             "_this matches Post{} and _this.id = 1 and _this.bar = 3 and _this.id = 2 and 1 = _this.y"
         );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
         assert_partial_expression!(
-            next_binding(),
+            next_binding(&mut q).unwrap(),
             "x",
             "_this.id = 1 and _this.bar = 1 and _this.id = 2"
         );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("n", [sym!("x")])), false);
         assert_partial_expression!(
-            next_binding(),
+            next_binding(&mut q).unwrap(),
             "x",
             "_this.id = 1 and _this.id = 2 and _this.bar = 2"
         );
-        assert_partial_expression!(next_binding(), "x", "_this.id = 1");
-        assert_partial_expression!(next_binding(), "x", "_this.id = 1 and _this.id = 2");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("o", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q).unwrap(), "x", "_this.id = 1");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("p", [sym!("x")])), false);
         assert_partial_expression!(
-            next_binding(),
+            next_binding(&mut q).unwrap(),
+            "x",
+            "_this.id = 1 and _this.id = 2"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("q", [sym!("x")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q).unwrap(),
             "x",
             "_this.id = 1 and _this matches Post{} and _this.id = 2"
         );
-        assert_eq!(next_binding()[&sym!("x")], term!(1));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("r", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q).unwrap()[&sym!("x")], term!(1));
         assert_query_done!(q);
         Ok(())
     }

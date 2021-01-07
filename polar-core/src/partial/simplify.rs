@@ -133,7 +133,7 @@ impl<'vm> Folder for Simplifier<'vm> {
                 o.constraints()
                     .iter()
                     .filter(|o| *o != &TRUE) // Drop empty constraints.
-                    .filter(|o| seen.insert(o)) // Deduplicate constraints.
+                    .filter(|o| !seen.contains(&o.mirror()) && seen.insert(o)) // Deduplicate constraints.
                     .cloned()
                     .collect(),
             );
@@ -308,8 +308,8 @@ impl<'vm> Folder for Simplifier<'vm> {
                 fold_operation(o, self)
             }
 
-            // Negation. Simplify the negated term, saving & restoring
-            // the current bindings.
+            // Negation. Simplify the negated term, saving & restoring the
+            // current bindings because bindings may not leak out of a negation.
             Operator::Not => {
                 assert_eq!(o.args.len(), 1);
                 let bindings = self.bindings.clone();
