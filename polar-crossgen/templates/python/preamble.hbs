@@ -8,6 +8,10 @@ import json
 class DeserializationError(Exception):
     pass
 
+
+class SerializationError(Exception):
+    pass
+
 class Enum:
     def __getattribute__(self, attr):
         content = object.__getattribute__(self, "content")
@@ -36,7 +40,7 @@ def make_special_method_wrapper(method_name):
 
 def get_newtype_hints(obj_type):
     # hack to get the forward-evaluated version of a typing type
-    def __types() -> obj_type: return
+    def __types() -> obj_type: pass
     return get_type_hints(__types)["return"]
 
 class TypedJsonDeserializer:
@@ -56,15 +60,14 @@ class TypedJsonDeserializer:
     null | None
     """
 
-    input: any
+    input: typing.Any
     primitive_types = [str, int, float, bool]
     name: str = ""
 
-    def __init__(self, input_val: any, name: str = ""):
+    def __init__(self, input_val: typing.Any, name: str = ""):
         self.input = input_val
         self.name = name
 
-    # noqa
     def deserialize_any(self, obj_type) -> typing.Any:
         if obj_type in self.primitive_types:
             return obj_type(self.input)
@@ -89,7 +92,7 @@ class TypedJsonDeserializer:
                 for (item_type, item) in zip(types, self.input):
                     item = TypedJsonDeserializer(item).deserialize_any(item_type)
                     result.append(item)
-                return tuple(result)
+                return obj_type(result)
 
             elif getattr(obj_type, "__origin__") == typing.Union:  # Option or enum variant
                 if len(types) == 2 and isinstance(types[1], type) and isinstance(None, types[1]): # Option
@@ -99,12 +102,13 @@ class TypedJsonDeserializer:
                         return self.deserialize_any(types[0])
             elif getattr(obj_type, "__origin__") == dict:  # Map
                 assert len(types) == 2
-                result = dict()
-                assert isinstance(self.input, dict)
-                for k, v in self.input.items():
-                    result[k] = TypedJsonDeserializer(v).deserialize_any(types[1])
+                result_dict = dict()
+                input_dict = self.input or {}
+                assert isinstance(input_dict, dict)
+                for k, v in input_dict.items():
+                    result_dict[k] = TypedJsonDeserializer(v).deserialize_any(types[1])
 
-                return result
+                return result_dict
 
             else:
                 raise DeserializationError("Unexpected type", obj_type)
@@ -123,6 +127,10 @@ class TypedJsonDeserializer:
                     for field in fields
                 }
                 return obj_type(**kwargs)
+            elif not isinstance(obj_type, type):
+                # newtype
+                ty = get_newtype_hints(obj_type.__supertype__)
+                return obj_type(self.deserialize_any(ty))
             elif issubclass(obj_type, Enum):
                 # enum
                 assert (
@@ -134,16 +142,124 @@ class TypedJsonDeserializer:
                     if t.__name__ == type_name:
                         return obj_type(tag=variant_name, content=TypedJsonDeserializer(
                             variant_value
-                        ).deserialize_any(get_newtype_hints(t.__supertype__)))
+                        ).deserialize_any(t))
                 raise DeserializationError(f"unexpected variant for {obj_type}", variant_name)
             else:
                 # type is a struct, but not a dataclass
                 # no idea how to handle
                 raise DeserializationError("Unexpected type", obj_type)
-                
+
+
+class TypedJsonSerializer:
+    """
+    Serializes JSON using the provided type
+
+
+    JSON | Python
+    ---------------
+    object | dict
+    array | list
+    string | str
+    number (int) | int
+    number (real) | float
+    true | True
+    false | False
+    null | None
+    """
+
+    input: typing.Any
+    primitive_types = [str, int, float, bool]
+    name: str = ""
+
+    def __init__(self, input_val: typing.Any, name: str = ""):
+        self.input = input_val
+        self.name = name
+
+    def serialize_any(self, obj_type) -> typing.Any:
+        if obj_type in self.primitive_types:
+            return obj_type(self.input)
+        elif hasattr(obj_type, "__origin__"):  # Generic type
+            types = getattr(obj_type, "__args__")
+            if getattr(obj_type, "__origin__") == collections.abc.Sequence:  # Sequence
+                assert len(types) == 1
+                item_type = types[0]
+                assert isinstance(self.input, list)
+                result = []
+                for item in self.input:
+                    result.append(
+                        TypedJsonSerializer(item).serialize_any(item_type)
+                    )
+
+                return result
+
+            elif getattr(obj_type, "__origin__") == tuple:  # Tuple
+                result = []
+                assert len(types) == len(self.input)
+                for (item_type, item) in zip(types, self.input):
+                    item = TypedJsonSerializer(item).serialize_any(item_type)
+                    result.append(item)
+                return obj_type(result)
+
+            elif getattr(obj_type, "__origin__") == typing.Union:  # Option or enum variant
+                if len(types) == 2 and isinstance(types[1], type) and isinstance(None, types[1]): # Option
+                    if self.input is None:
+                        return None
+                    else:
+                        return self.serialize_any(types[0])
+            elif getattr(obj_type, "__origin__") == dict:  # Map
+                assert len(types) == 2
+                result_dict = dict()
+                input_dict = self.input or {}
+                assert isinstance(input_dict, dict)
+                for k, v in input_dict.items():
+                    result_dict[k] = TypedJsonSerializer(v).serialize_any(types[1])
+
+                return result_dict
+
+            else:
+                raise SerializationError("Unexpected type", obj_type)
+
+        else:
+            # handle enums + structs
+            types = get_type_hints(obj_type)
+            if dataclasses.is_dataclass(obj_type):
+                fields = dataclasses.fields(obj_type)
+                # regular struct
+                kwargs = {
+                    field.name: TypedJsonSerializer(
+                        getattr(self.input, field.name, None)
+                    ).serialize_any(types[field.name])
+                    for field in fields
+                }
+                return kwargs
+            elif not isinstance(obj_type, type):
+                # newtype
+                ty = get_newtype_hints(obj_type.__supertype__)
+                return self.serialize_any(ty)
+            elif issubclass(obj_type, Enum):
+                # enum
+                content = object.__getattribute__(self.input, "content")
+                tag = object.__getattribute__(self.input, "tag")
+                type_name = obj_type._name + tag
+                for t in types["content"].__args__:
+                    if t.__name__ == type_name:
+                        return {
+                            tag: TypedJsonSerializer(content).serialize_any(t)
+                        }
+                raise SerializationError(f"unexpected variant for {obj_type}", content)
+            else:
+                # type is a struct, but not a dataclass
+                # no idea how to handle
+                raise SerializationError("Unexpected type", obj_type)
+
 
 def deserialize_json(input_str, obj):
     deserializer = TypedJsonDeserializer(json.loads(input_str))
     return deserializer.deserialize_any(obj)
+
+def serialize_json(input_val, obj):
+    serializer = TypedJsonSerializer(input_val)
+    output = serializer.serialize_any(obj)
+    return json.dumps(output)
 
 
