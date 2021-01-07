@@ -2,6 +2,7 @@
 
 members = [
     "polar-core",
+    "polar-crossgen",
     "polar-c-api",
     "polar-language-server",
     "polar-wasm-api",
