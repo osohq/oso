@@ -105,11 +105,13 @@ fn invert_partials(bindings: BindingStack, vm: &PolarVirtualMachine, bsp: usize)
                         .fold_term(value);
                 match constraints.value() {
                     Value::Expression(e) => {
-                        eprintln!("  EXXXXXXXXXXXXXXXXXPR: {}", e.to_polar());
-                        // let mut f = cycle_constraints(c);
-                        // f.merge_constraints(e.clone());
-                        for var in e.variables() {
-                            new_bindings.push(Binding(var.clone(), e.clone().into_term()));
+                        //eprintln!("  EXXXXXXXXXXXXXXXXXPR: {}", e.to_polar());
+                        let mut f = cycle_constraints(c);
+                        f.merge_constraints(e.clone());
+                        eprintln!("  FFFFFFFEXXXXXXXXXXXXXXXXXPR: {}", f.to_polar());
+                        for var in f.variables() {
+                            eprintln!("  *** Binding {} ← {}", var, f.to_polar());
+                            new_bindings.push(Binding(var.clone(), f.clone().into_term()));
                         }
                     }
                     _ => todo!("constraints is {}", constraints.to_polar()),

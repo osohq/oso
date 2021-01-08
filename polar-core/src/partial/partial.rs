@@ -1394,12 +1394,12 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "1 = _this and not 1 matches Foo{}"
+            "_this = 1 and not _this matches Foo{}"
         );
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "1 = _this and not 1 matches Bar{}"
+            "_this = 1 and not _this matches Bar{}"
         );
         assert_query_done!(q);
         Ok(())
