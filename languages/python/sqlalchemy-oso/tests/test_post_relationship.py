@@ -350,6 +350,8 @@ def tag_nested_many_many_test_fixture(session):
     return objects
 
 
+# TODO constraints on nested many many (will not work w/ preprocessor without more recursion)
+
 def test_nested_relationship_many_many(session, oso, tag_nested_many_many_test_fixture):
     """Test that nested relationships work.
 
