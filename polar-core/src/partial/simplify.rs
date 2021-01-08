@@ -94,7 +94,7 @@ pub fn simplify_bindings(bindings: Bindings, vm: &PolarVirtualMachine) -> Option
                 (var.clone(), simplify(var.clone(), value.clone()))
             }
             // Single-level deref. TODO(gj/ap): deep deref.
-            Value::Variable(v) | Value::RestVariable(v) => {
+            Value::Variable(v) | Value::RestVariable(v) if v.is_temporary_var() => {
                 (var.clone(), simplify(var.clone(), bindings[v].clone()))
             }
             _ => (var.clone(), value.clone()),
