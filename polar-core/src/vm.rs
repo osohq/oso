@@ -2953,7 +2953,7 @@ impl PolarVirtualMachine {
             "{}({})",
             rule.name,
             rule.params.iter().fold(String::new(), |mut acc, p| {
-                if acc != "" {
+                if !acc.is_empty() {
                     acc += ", ";
                 }
                 acc += &self.term_source(&p.parameter, false);

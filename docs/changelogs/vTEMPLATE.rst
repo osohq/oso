@@ -1,8 +1,14 @@
-====
-NEXT
-====
+.. title:: Changelog for Release DATE
+.. meta::
+  :description: Changelog for Release DATE (RELEASED_VERSIONS) containing new features, bug fixes, and more.
 
-**Release date:** XXXX-XX-XX
+############
+Release DATE
+############
+
+==================================
+``RELEASED_PACKAGE_1`` NEW_VERSION
+==================================
 
 Breaking changes
 ================

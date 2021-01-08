@@ -1,7 +1,8 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": false
+    "noEmit": false,
+    "stripInternal": true
   },
   "include": ["src/**/*", "test/parity.ts"],
   "exclude": ["src/**/*.test.ts", "src/polar_wasm_api*"]

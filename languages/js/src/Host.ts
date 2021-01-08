@@ -33,7 +33,7 @@ export class Host {
 
   /**
    * Shallow clone a host to extend its state for the duration of a particular
-   * query without modifying the longer-lived [[`Polar.#host`]] state.
+   * query without modifying the longer-lived [[`Polar`]] host state.
    *
    * @internal
    */
@@ -53,7 +53,7 @@ export class Host {
   }
 
   /**
-   * Fetch a JavaScript class from the [[`#classes`]] cache.
+   * Fetch a JavaScript class from the class cache.
    *
    * @param name Class name to look up.
    *
@@ -66,7 +66,7 @@ export class Host {
   }
 
   /**
-   * Store a JavaScript class in the [[`#classes`]] cache.
+   * Store a JavaScript class in the class cache.
    *
    * @param cls Class to cache.
    * @param name Optional alias under which to cache the class. Defaults to the
@@ -99,7 +99,7 @@ export class Host {
   }
 
   /**
-   * Check if an instance exists in the [[`#instances`]] cache.
+   * Check if an instance exists in the instance cache.
    *
    * @internal
    */
@@ -108,7 +108,7 @@ export class Host {
   }
 
   /**
-   * Fetch a JavaScript instance from the [[`#instances`]] cache.
+   * Fetch a JavaScript instance from the instance cache.
    *
    * Public for the test suite.
    *
@@ -120,8 +120,8 @@ export class Host {
   }
 
   /**
-   * Store a JavaScript instance in the [[`#instances`]] cache, fetching a new
-   * instance ID from the Polar VM if an ID is not provided.
+   * Store a JavaScript instance in the instance cache, fetching a new instance
+   * ID from the Polar VM if an ID is not provided.
    *
    * @internal
    */
@@ -135,8 +135,7 @@ export class Host {
   }
 
   /**
-   * Construct a JavaScript instance and store it in the [[`#instances`]]
-   * cache.
+   * Construct a JavaScript instance and store it in the instance cache.
    *
    * @internal
    */
@@ -189,7 +188,7 @@ export class Host {
   }
 
   /**
-   * Check if two instances unify according to the [[`#equalityFn`]].
+   * Check if two instances unify according to the [[`EqualityFn`]].
    *
    * @internal
    */

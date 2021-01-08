@@ -84,7 +84,7 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
  * Try to parse a JSON payload received from across the WebAssembly boundary as
  * a [[`Result`]].
  *
- * @hidden
+ * @internal
  */
 function parseResult({ bindings }: obj): QueryEvent {
   if (
@@ -102,7 +102,7 @@ function parseResult({ bindings }: obj): QueryEvent {
  * Try to parse a JSON payload received from across the WebAssembly boundary as
  * a [[`MakeExternal`]].
  *
- * @hidden
+ * @internal
  */
 function parseMakeExternal(d: obj): QueryEvent {
   const instanceId = d.instance_id;
@@ -127,7 +127,7 @@ function parseMakeExternal(d: obj): QueryEvent {
  * Try to parse a JSON payload received from across the WebAssembly boundary as
  * a [[`NextExternal`]].
  *
- * @hidden
+ * @internal
  */
 function parseNextExternal(d: obj): QueryEvent {
   const callId = d.call_id;
@@ -144,7 +144,7 @@ function parseNextExternal(d: obj): QueryEvent {
  * Try to parse a JSON payload received from across the WebAssembly boundary as
  * an [[`ExternalCall`]].
  *
- * @hidden
+ * @internal
  */
 function parseExternalCall({
   args,
@@ -172,7 +172,7 @@ function parseExternalCall({
  * Try to parse a JSON payload received from across the WebAssembly boundary as
  * an [[`ExternalIsSubspecializer`]].
  *
- * @hidden
+ * @internal
  */
 function parseExternalIsSubspecializer({
   call_id: callId,
@@ -197,7 +197,7 @@ function parseExternalIsSubspecializer({
  * Try to parse a JSON payload received from across the WebAssembly boundary as
  * an [[`ExternalIsa`]].
  *
- * @hidden
+ * @internal
  */
 function parseExternalIsa({
   call_id: callId,
@@ -220,7 +220,7 @@ function parseExternalIsa({
  * Try to parse a JSON payload received from across the WebAssembly boundary as
  * an [[`ExternalUnify`]].
  *
- * @hidden
+ * @internal
  */
 function parseExternalUnify({
   call_id: callId,
@@ -243,7 +243,7 @@ function parseExternalUnify({
  * Try to parse a JSON payload received from across the WebAssembly boundary as
  * a [[`Debug`]].
  *
- * @hidden
+ * @internal
  */
 function parseDebug({ message }: obj): QueryEvent {
   if (typeof message !== 'string') throw new Error();
@@ -288,14 +288,20 @@ if (
   FG_BLUE = '\x1b[34m';
   FG_RED = '\x1b[31m';
 }
+/** @internal */
 export const PROMPT = FG_BLUE + 'query> ' + RESET;
 
+/** @internal */
 export function printError(e: Error) {
   console.error(FG_RED + e.name + RESET);
   console.error(e.message);
 }
 
-// https://stackoverflow.com/a/46759625
+/**
+ * https://stackoverflow.com/a/46759625
+ *
+ * @internal
+ */
 export function isConstructor(f: unknown): boolean {
   try {
     Reflect.construct(String, [], f);

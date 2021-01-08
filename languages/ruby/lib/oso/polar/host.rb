@@ -46,7 +46,7 @@ module Oso
       # @raise [DuplicateClassAliasError] if attempting to register a class
       # under a previously-registered name.
       def cache_class(cls, name:)
-        raise DuplicateClassAliasError, name: name, old: get_class(name), new: cls if classes.key? name
+        raise DuplicateClassAliasError.new name: name, old: get_class(name), new: cls if classes.key? name
 
         classes[name] = cls
         name
