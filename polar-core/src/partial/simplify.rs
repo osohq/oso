@@ -30,7 +30,6 @@ impl Folder for VariableSubber {
 
 /// Substitute `sym!("_this")` for a variable in a partial.
 pub fn sub_this(this: Symbol, term: Term) -> Term {
-    eprintln!("THIS: {}; TERM: {}", this, term.to_polar());
     if term
         .value()
         .as_symbol()
@@ -81,7 +80,6 @@ pub fn simplify_bindings(bindings: Bindings, vm: &PolarVirtualMachine) -> Option
     let mut unsatisfiable = false;
     let mut simplify = |var: Symbol, term: Term| {
         let simplified = simplify_partial(&var, term, vm);
-        let simplified = sub_this(var, simplified);
         match simplified.value().as_expression() {
             Ok(o) if o == &FALSE => unsatisfiable = true,
             _ => (),
@@ -92,7 +90,7 @@ pub fn simplify_bindings(bindings: Bindings, vm: &PolarVirtualMachine) -> Option
     let bindings: Bindings = bindings
         .iter()
         // Filter out temp vars...
-        .filter(|(var, _)| !var.is_temporary_var())
+        // .filter(|(var, _)| !var.is_temporary_var())
         .map(|(var, value)| match value.value() {
             Value::Expression(o) => {
                 assert_eq!(o.operator, Operator::And);
@@ -205,7 +203,8 @@ impl<'vm> Folder for Simplifier<'vm> {
                                     match (self.vm.variable_state(l), self.vm.variable_state(r)) {
                                         (VariableState::Unbound, VariableState::Unbound) => todo!(),
                                         (VariableState::Unbound, VariableState::Cycle(_)) => {
-                                            todo!()
+                                            self.bind(l.clone(), right.clone());
+                                            true
                                         }
                                         (VariableState::Unbound, VariableState::Partial(_)) => {
                                             todo!()
@@ -217,7 +216,13 @@ impl<'vm> Folder for Simplifier<'vm> {
                                             todo!()
                                         }
                                         (VariableState::Cycle(_), VariableState::Cycle(_)) => {
-                                            todo!()
+                                            if !self.is_bound(l) {
+                                                self.bind(l.clone(), right.clone());
+                                            }
+                                            if !self.is_bound(r) {
+                                                self.bind(r.clone(), left.clone());
+                                            }
+                                            true
                                         }
                                         (VariableState::Cycle(_), VariableState::Partial(_)) => {
                                             todo!()
@@ -259,7 +264,10 @@ impl<'vm> Folder for Simplifier<'vm> {
                                 }
                                 (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
                                     match self.vm.variable_state(l) {
-                                        VariableState::Unbound => todo!(),
+                                        VariableState::Unbound => {
+                                            self.bind(l.clone(), right.clone());
+                                            true
+                                        }
                                         VariableState::Cycle(_) => todo!(),
                                         VariableState::Partial(_) => {
                                             self.bind(l.clone(), right.clone());
@@ -279,24 +287,6 @@ impl<'vm> Folder for Simplifier<'vm> {
                                         VariableState::Bound(_) => todo!(),
                                     }
                                 }
-                                // (Value::Variable(v), x)
-                                //     // if !self.is_this_var(left)
-                                //     //     && !self.is_bound(v)
-                                //     //     && x.is_ground() =>
-                                // {
-                                //     eprintln!("A {} ← {}", left.to_polar(), right.to_polar());
-                                //     self.bind(v.clone(), right.clone(), invert);
-                                //     true
-                                // }
-                                // (x, Value::Variable(v))
-                                //     if !self.is_this_var(right)
-                                //         && !self.is_bound(v)
-                                //         && x.is_ground() =>
-                                // {
-                                //     eprintln!("B {} ← {}", right.to_polar(), left.to_polar());
-                                //     self.bind(v.clone(), left.clone(), invert);
-                                //     true
-                                // }
                                 _ => false,
                             }
                     }

@@ -18,7 +18,7 @@ use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial::{simplify_bindings, simplify_partial, IsaConstraintCheck};
+use crate::partial::{simplify_bindings, simplify_partial, sub_this, IsaConstraintCheck};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -275,7 +275,7 @@ pub struct PolarVirtualMachine {
 
     // Other flags.
     pub query_contains_partial: bool,
-    pub simplify: bool,
+    pub inverting: bool,
 
     /// Output messages.
     pub messages: MessageQueue,
@@ -328,7 +328,7 @@ impl PolarVirtualMachine {
             polar_log: std::env::var("POLAR_LOG").is_ok(),
             polar_log_mute: false,
             query_contains_partial: false,
-            simplify: true,
+            inverting: false,
             messages,
         };
         vm.bind_constants(constants);
@@ -3086,12 +3086,19 @@ impl Runnable for PolarVirtualMachine {
         };
 
         let mut bindings = self.bindings(true);
-        if self.simplify {
+        if !self.inverting {
             if let Some(bs) = simplify_bindings(bindings, &self) {
                 bindings = bs;
             } else {
                 return Ok(QueryEvent::None);
             }
+
+            bindings = bindings
+                .clone()
+                .into_iter()
+                .filter(|(var, _)| !var.is_temporary_var())
+                .map(|(var, value)| (var.clone(), sub_this(var, value)))
+                .collect();
         }
 
         Ok(QueryEvent::Result { bindings, trace })

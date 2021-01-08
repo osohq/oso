@@ -74,63 +74,26 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
 
 impl Operation {
     /// Construct & return a set of symbols that occur in this operation.
-    pub fn variables(&self) -> HashSet<Symbol> {
+    pub fn variables(&self) -> Vec<Symbol> {
         struct VariableVisitor {
-            vars: HashSet<Symbol>,
+            seen: HashSet<Symbol>,
+            vars: Vec<Symbol>,
         }
 
         impl Visitor for VariableVisitor {
             fn visit_variable(&mut self, v: &Symbol) {
-                self.vars.insert(v.clone());
-            }
-        }
-
-        let mut visitor = VariableVisitor {
-            vars: HashSet::new(),
-        };
-
-        walk_operation(&mut visitor, &self);
-        visitor.vars
-    }
-
-    pub fn get_cycle(&self, var: &Symbol) -> HashSet<Symbol> {
-        struct CycleVisitor {
-            vars: HashSet<Symbol>,
-        }
-
-        impl CycleVisitor {
-            fn new(vars: HashSet<Symbol>) -> Self {
-                Self { vars }
-            }
-        }
-
-        impl Visitor for CycleVisitor {
-            fn visit_operation(&mut self, o: &Operation) {
-                if o.operator == Operator::Unify {
-                    match (o.args[0].value(), o.args[1].value()) {
-                        (Value::Variable(l), Value::Variable(r))
-                        | (Value::Variable(l), Value::RestVariable(r))
-                        | (Value::RestVariable(l), Value::Variable(r))
-                        | (Value::RestVariable(l), Value::RestVariable(r))
-                            if self.vars.contains(l) || self.vars.contains(r) =>
-                        {
-                            self.vars.insert(l.clone());
-                            self.vars.insert(r.clone());
-                        }
-                        _ => walk_operation(self, o),
-                    }
-                } else {
-                    walk_operation(self, o);
+                if self.seen.insert(v.clone()) {
+                    self.vars.push(v.clone());
                 }
             }
         }
 
-        let mut vars = HashSet::new();
-        vars.insert(var.clone());
-        let mut visitor = CycleVisitor::new(vars);
-        // Walk twice to ensure we capture all edges of a cycle.
-        walk_operation(&mut visitor, self);
-        walk_operation(&mut visitor, self);
+        let mut visitor = VariableVisitor {
+            seen: HashSet::new(),
+            vars: vec![],
+        };
+
+        walk_operation(&mut visitor, &self);
         visitor.vars
     }
 
@@ -165,7 +128,6 @@ impl Operation {
                         let r = self.fold_term(o.args[1].clone());
                         if l.is_ground() && r.is_ground() {
                             let consistent = if neq { l != r } else { l == r };
-                            // let result = if self.invert { FALSE } else { TRUE };
                             eprintln!(
                                 "Checking consistency...\n  op: {} {} {}\n  inverted: {}\n  Neq: {}\n  consistent: {}",
                                 l.to_polar(),
@@ -182,24 +144,12 @@ impl Operation {
                                 } else {
                                     FALSE
                                 }
+                            } else if consistent {
+                                TRUE
                             } else {
-                                if consistent {
-                                    TRUE
-                                } else {
-                                    self.consistent = false;
-                                    FALSE
-                                }
+                                self.consistent = false;
+                                FALSE
                             }
-                        // if consistent {
-                        //     result
-                        // } else {
-                        //     if self.invert {
-                        //         result
-                        //     } else {
-                        //         self.consistent = false;
-                        //         result
-                        //     }
-                        // }
                         } else {
                             Operation {
                                 operator: o.operator,
@@ -1097,10 +1047,6 @@ mod test {
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
         assert_query_done!(q);
 
-        //     x => _x_20 = x and (not (_x_20 = 2)) and _x_20 = 1
-        // _x_20 => _x_20 = x and (not (_x_20 = 2)) and _x_20 = 1
-        //
-        //
         let mut q = p.new_query_from_term(term!(call!("l", [sym!("x")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
         assert_query_done!(q);
@@ -1362,7 +1308,7 @@ mod test {
     fn nonlogical_inversions() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x) if not print(x);")?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_query_done!(q);
         Ok(())
     }
@@ -1418,14 +1364,16 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "not _this matches Foo{} and _this = 1"
+            "1 = _this and not 1 matches Foo{}"
         );
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "not _this matches Bar{} and _this = 1"
+            "1 = _this and not 1 matches Bar{}"
         );
         assert_query_done!(q);
         Ok(())
     }
+
+    // TODO(gj): add test where we have a partial prior to an inversion
 }
