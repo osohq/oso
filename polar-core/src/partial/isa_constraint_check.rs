@@ -1,7 +1,6 @@
 use crate::counter::Counter;
 use crate::error::{OperationalError, PolarResult};
 use crate::events::QueryEvent;
-use crate::formatting::ToPolarString;
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Pattern, Term, Value};
 
@@ -56,11 +55,6 @@ impl IsaConstraintCheck {
     ) -> (Option<QueryEvent>, Option<QueryEvent>) {
         // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
         // partial, Integer)`.
-        eprintln!(
-            "check_constraint => constraint: {} @@@@@@@@@@@@ proposed: {}",
-            constraint.to_polar(),
-            self.proposed.to_polar()
-        );
         if constraint.operator != Operator::Isa {
             return (None, None);
         }

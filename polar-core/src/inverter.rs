@@ -62,14 +62,7 @@ impl PartialInverter {
             VariableState::Partial(e) => e.constraints().len(),
             _ => 0,
         };
-        let p = o.clone_with_constraints(o.inverted_constraints(csp));
-        eprintln!(
-            "INVERTING w/old state {:?}: ¬{} => {}",
-            self.old_state,
-            o.clone().into_term().to_polar(),
-            p.clone().into_term().to_polar()
-        );
-        p
+        o.clone_with_constraints(o.inverted_constraints(csp))
     }
 }
 
@@ -105,12 +98,9 @@ fn invert_partials(bindings: BindingStack, vm: &PolarVirtualMachine, bsp: usize)
                         .fold_term(value);
                 match constraints.value() {
                     Value::Expression(e) => {
-                        //eprintln!("  EXXXXXXXXXXXXXXXXXPR: {}", e.to_polar());
                         let mut f = cycle_constraints(c);
                         f.merge_constraints(e.clone());
-                        eprintln!("  FFFFFFFEXXXXXXXXXXXXXXXXXPR: {}", f.to_polar());
                         for var in f.variables() {
-                            eprintln!("  *** Binding {} ← {}", var, f.to_polar());
                             new_bindings.push(Binding(var.clone(), f.clone().into_term()));
                         }
                     }
@@ -154,50 +144,18 @@ fn reduce_constraints(bindings: Vec<BindingStack>) -> (Bindings, Vec<Symbol>) {
         .fold(Bindings::new(), |mut acc, bindings| {
             dedupe_bindings(bindings)
                 .into_iter()
-                .for_each(|Binding(var, value)| {
-                    eprintln!("REDUCING {} = ({})", var, value);
-                    match acc.entry(var.clone()) {
-                        Entry::Occupied(mut o) => match (o.get().value(), value.value()) {
-                            (Value::Expression(x), Value::Expression(y)) => {
-                                let mut x = x.clone();
-                                x.merge_constraints(y.clone());
-                                eprintln!("MERGED => {}", x.to_polar());
-                                o.insert(value.clone_with_value(value!(x)));
-                            }
-                            (Value::Expression(x), _) => {
-                                let unify = op!(Unify, term!(var), value.clone());
-                                eprintln!(
-                                    "CLONED WITH NEW CONSTRAINT {}; {}",
-                                    x.to_polar(),
-                                    unify.to_polar()
-                                );
-                                let x = x.clone_with_new_constraint(term!(unify));
-                                o.insert(value.clone_with_value(value!(x)));
-                            }
-                            (_, Value::Expression(x)) => {
-                                let unify = op!(Unify, term!(var), o.get().clone());
-                                eprintln!(
-                                    "CLONED WITH NEW CONSTRAINT {}; {}",
-                                    x.to_polar(),
-                                    unify.to_polar()
-                                );
-                                let x = x.clone_with_new_constraint(term!(unify));
-                                o.insert(value.clone_with_value(value!(x)));
-                            }
-                            _ => {
-                                let left_unify =
-                                    term!(value!(op!(Unify, term!(var.clone()), o.get().clone())));
-                                let right_unify =
-                                    term!(value!(op!(Unify, term!(var), value.clone())));
-                                let x = op!(And, left_unify, right_unify);
-                                eprintln!("CREATED NEW PARTIAL {}", x.to_polar());
-                                o.insert(value.clone_with_value(value!(x)));
-                            }
-                        },
-                        Entry::Vacant(v) => {
-                            v.insert(value);
-                            vars.push(var);
+                .for_each(|Binding(var, value)| match acc.entry(var.clone()) {
+                    Entry::Occupied(mut o) => match (o.get().value(), value.value()) {
+                        (Value::Expression(x), Value::Expression(y)) => {
+                            let mut x = x.clone();
+                            x.merge_constraints(y.clone());
+                            o.insert(value.clone_with_value(value!(x)));
                         }
+                        (existing, new) => todo!("Encountered new state while reducing constraints.\n  Existing: {} -> {}\n  New: {} -> {}", var, existing.to_polar(), var, new.to_polar()),
+                    },
+                    Entry::Vacant(v) => {
+                        v.insert(value);
+                        vars.push(var);
                     }
                 });
             acc
@@ -227,23 +185,9 @@ impl Runnable for Inverter {
                             .into_iter()
                             .map(|bindings| invert_partials(bindings, &self.vm, self.bsp))
                             .collect();
-                        for (i, asdf) in inverted.iter().enumerate() {
-                            eprintln!("NUMBER {}", i);
-                            for Binding(x, y) in asdf.iter() {
-                                eprintln!("  {} -> {}", x, y.to_polar());
-                            }
-                        }
                         let (reduced, ordered_vars) = reduce_constraints(inverted);
-                        eprintln!("REDUCED");
-                        for (x, y) in reduced.iter() {
-                            eprintln!("  {} -> {}", x, y.to_polar());
-                        }
                         let simplified = simplify_bindings(reduced.clone(), &self.vm)
                             .unwrap_or_else(Bindings::new);
-                        eprintln!("SIMPLIFIED");
-                        for (x, y) in simplified.iter() {
-                            eprintln!("  {} -> {}", x, y.to_polar());
-                        }
 
                         let simplified_keys = simplified.keys().collect::<HashSet<&Symbol>>();
                         let reduced_keys = reduced.keys().collect::<HashSet<&Symbol>>();
@@ -270,7 +214,6 @@ impl Runnable for Inverter {
                                         todo!("BOUND: {} -> {}", var, x.to_polar())
                                     }
                                     VariableState::Cycle(c) => {
-                                        eprintln!("CYCLE: {:?}", c);
                                         let constraint = cycle_constraints(c.clone())
                                             .clone_with_new_constraint(value)
                                             .into_term();

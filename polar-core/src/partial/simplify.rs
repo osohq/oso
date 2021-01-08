@@ -291,7 +291,6 @@ impl<'vm> Folder for Simplifier<'vm> {
                     }
                     _ => false,
                 }) {
-                    eprintln!("CHOSEN CONSTRAINT: {}", &o.args[i].to_polar());
                     o.args.remove(i);
                 }
                 fold_operation(o, self)
@@ -355,9 +354,7 @@ impl<'vm> Simplifier<'vm> {
     pub fn simplify_partial(&mut self, mut term: Term) -> Term {
         let mut new;
         loop {
-            eprintln!("SIMPLIFYING {}: {}", self.this_var, term.to_polar());
             new = self.fold_term(term.clone());
-            eprintln!(" ⇒ {}", new.to_polar());
             if new == term {
                 break;
             }

@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use crate::folder::{fold_operation, fold_term, Folder};
-use crate::formatting::ToPolarString;
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 use crate::visitor::{walk_operation, Visitor};
 use crate::vm::compare;
@@ -128,15 +127,6 @@ impl Operation {
                         let r = self.fold_term(o.args[1].clone());
                         if l.is_ground() && r.is_ground() {
                             let consistent = if neq { l != r } else { l == r };
-                            eprintln!(
-                                "Checking consistency...\n  op: {} {} {}\n  inverted: {}\n  Neq: {}\n  consistent: {}",
-                                l.to_polar(),
-                                o.operator.to_polar(),
-                                r.to_polar(),
-                                self.invert,
-                                neq,
-                                consistent
-                            );
                             if self.invert {
                                 if consistent {
                                     self.consistent = false;

@@ -631,8 +631,6 @@ impl PolarVirtualMachine {
     /// Bind each variable that occurs in a constraint to the constraint.
     fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
         assert_eq!(o.operator, Operator::And, "bad constraint {}", o.to_polar());
-
-        eprintln!("Constraining with `{}`", o.to_polar());
         for var in o.variables() {
             match self.variable_state(&var) {
                 VariableState::Bound(_) => (),
@@ -803,8 +801,7 @@ impl PolarVirtualMachine {
     /// Print a message to the output stream.
     fn print<S: Into<String>>(&self, message: S) {
         let message = message.into();
-        eprintln!("{}", message);
-        // self.messages.push(MessageKind::Print, message);
+        self.messages.push(MessageKind::Print, message);
     }
 
     fn log(&self, message: &str, terms: &[&Term]) {
@@ -1188,15 +1185,9 @@ impl PolarVirtualMachine {
                 }
             }
             Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
-                eprintln!(
-                    "isa_expr\n  existing expr: {}\n  new operation: {} matches {}",
-                    operation.to_polar(),
-                    left.to_polar(),
-                    right.to_polar()
-                );
-
                 // TODO(gj): assert that a simplified expression contains at most 1 unification
                 // involving a particular variable.
+                // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.
 
                 let var = left.value().as_symbol()?;
                 let simplified = simplify_partial(var, operation.clone().into_term(), &self);
@@ -1227,22 +1218,7 @@ impl PolarVirtualMachine {
                 let mut operation =
                     operation.clone_with_new_constraint(type_constraint.into_term());
 
-                eprintln!(
-                    "Pre-simplification\n  of proposed {}\n  in the context of {}",
-                    operation.to_polar(),
-                    var,
-                );
                 let new_matches = op!(Isa, lhs_of_matches, right.clone());
-                // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.
-
-                // left
-                // _value_1_15
-                //
-                // x matches A{} and x.c = _value_1_15 and _value_1_15 matches C{}
-                //
-                // x matches A{} and x.c matches C{}
-                eprintln!("Post-simplification of proposed: {}", simplified.to_polar());
-
                 let runnable = Box::new(IsaConstraintCheck::new(
                     simplified.constraints(),
                     new_matches,
@@ -2112,13 +2088,6 @@ impl PolarVirtualMachine {
         assert_eq!(args.len(), 2);
         let left = args[0].clone();
         let right = args[1].clone();
-        eprintln!(
-            "CMP: {} {} {}",
-            left.to_polar(),
-            op.to_polar(),
-            right.to_polar(),
-        );
-
         self.log_with(
             || {
                 format!(
@@ -2467,7 +2436,6 @@ impl PolarVirtualMachine {
                 // Both variables are unbound. Bind them in a new cycle,
                 // but do not create 1-cycles.
                 if l != r {
-                    eprintln!("new cycle: {} = {}", l, r);
                     self.bind(l, right.clone());
                     self.bind(r, left.clone());
                 }
@@ -2475,7 +2443,6 @@ impl PolarVirtualMachine {
             (VariableState::Cycle(c), VariableState::Unbound) => {
                 // Left is in a cycle. Extend it to include right.
                 let p = c.last().unwrap();
-                eprintln!("extend cycle from left: {}({}) = {}", l, p, r);
                 assert_ne!(p, l);
                 self.bind(p, right.clone());
                 self.bind(r, left.clone());
@@ -2483,7 +2450,6 @@ impl PolarVirtualMachine {
             (VariableState::Unbound, VariableState::Cycle(d)) => {
                 // Right is in a cycle. Extend it to include left.
                 let q = d.last().unwrap();
-                eprintln!("extend cycle from right: {} = {}({})", l, r, q);
                 assert_ne!(q, r);
                 self.bind(q, left.clone());
                 self.bind(l, right.clone());
@@ -2497,7 +2463,6 @@ impl PolarVirtualMachine {
                 if p == r || q == l {
                     // The cycles are the same. Do nothing.
                 } else {
-                    eprintln!("join cycles: {}({}) = {}({})", l, p, r, q);
                     self.bind(p, right.clone());
                     self.bind(q, left.clone());
                 }
