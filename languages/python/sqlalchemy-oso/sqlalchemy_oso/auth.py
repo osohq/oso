@@ -1,5 +1,7 @@
 from oso import Oso
-from polar.partial import Partial, TypeConstraint
+from polar import Variable
+from polar.partial import TypeConstraint
+from polar.expression import Expression
 
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
@@ -48,10 +50,11 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
     except AttributeError:
         raise TypeError(f"Expected a model; received: {model}")
 
-    partial_resource = Partial(
-        "resource", TypeConstraint(polar_model_name(mapped_class))
+    resource = Variable("resource")
+    oso.register_constant(
+        Expression("And", [TypeConstraint(resource, polar_model_name(mapped_class))]), resource
     )
-    results = oso.query_rule("allow", actor, action, partial_resource)
+    results = oso.query_rule("allow", actor, action, resource)
 
     combined_filter = None
     has_result = False
