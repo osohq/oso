@@ -8,7 +8,7 @@ from sqlalchemy import orm
 
 from oso import Oso
 
-from sqlalchemy_oso.auth import authorize_model
+from sqlalchemy_oso.auth import authorize_model, authorize_model_actions
 
 
 class _OsoSession:
@@ -51,6 +51,44 @@ def _before_compile(query):
     return _authorize_query(query)
 
 
+def authorize_query_by_action(query: Query):
+    session = query.session
+
+    # Check whether this is an oso session.
+    if not isinstance(session, AuthorizedSessionBase):
+        # Not an authorized session.
+        return None
+
+    oso = session.oso_context["oso"]
+    user = session.oso_context["user"]
+    action = session.oso_context["action"]
+
+    # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
+    # on queries that have already been made.  If a query has a LIMIT or OFFSET
+    # applied, SQLAlchemy will by default throw an error if filters are applied.
+    # This prevents these errors from occuring, but could result in some
+    # incorrect queries. We should remove this if possible.
+    query = query.enable_assertions(False)
+
+    entities = {column["entity"] for column in query.column_descriptions}
+    for entity in entities:
+        # Only apply authorization to columns that represent a mapper entity.
+        if entity is None:
+            continue
+
+        authorized_filters = authorize_model_actions(
+            oso, user, action, query.session, entity
+        )
+        authorized_queries = {
+            action: query.filter(authorized_filter)
+            for (action, authorized_filter) in authorized_filters.items()
+        }
+        # for action, filter in authorized_filters:
+        #     query = query.filter(authorized_filter)
+
+    return authorized_queries
+
+
 def _authorize_query(query: Query) -> Optional[Query]:
     """Authorize an existing query with an oso instance, user and action."""
     # Get the query session.
@@ -79,8 +117,9 @@ def _authorize_query(query: Query) -> Optional[Query]:
             continue
 
         authorized_filter = authorize_model(oso, user, action, query.session, entity)
-        if authorized_filter is not None:
-            query = query.filter(authorized_filter)
+        query = query.filter(authorized_filter)
+        # for action, filter in authorized_filters:
+        #     query = query.filter(authorized_filter)
 
     return query
 

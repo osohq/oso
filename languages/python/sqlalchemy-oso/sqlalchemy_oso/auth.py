@@ -1,4 +1,4 @@
-from oso import Oso
+from oso import Oso, Variable
 from polar.partial import Partial, TypeConstraint
 
 from sqlalchemy.orm.query import Query
@@ -28,6 +28,40 @@ def register_models(oso: Oso, base):
             continue
 
         oso.register_class(model)
+
+
+def authorize_model_actions(oso: Oso, actor, action, session: Session, model):
+    assert type(action) == Variable
+
+    try:
+        mapped_class = inspect(model, raiseerr=True).class_
+    except AttributeError:
+        raise TypeError(f"Expected a model; received: {model}")
+
+    partial_resource = Partial(
+        "resource", TypeConstraint(polar_model_name(mapped_class))
+    )
+    results = oso.query_rule("allow", actor, action, partial_resource)
+
+    combined_filter = {}
+    has_result = False
+    for result in results:
+        has_result = True
+
+        resource_partial = result["bindings"]["resource"]
+        action = result["bindings"]["action"]
+        filter = partial_to_filter(
+            resource_partial, session, model, get_model=oso.get_class
+        )
+        if combined_filter.get(action) is None:
+            combined_filter[action] = filter
+        else:
+            combined_filter[action] = combined_filter[action] | filter
+
+    if not has_result:
+        return sql.false()
+
+    return combined_filter
 
 
 def authorize_model(oso: Oso, actor, action, session: Session, model):
