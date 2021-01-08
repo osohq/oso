@@ -75,7 +75,6 @@ pub fn simplify_partial(var: &Symbol, term: Term, vm: &PolarVirtualMachine) -> T
 ///
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref.
-/// TODO(ap): deep deref.
 pub fn simplify_bindings(bindings: Bindings, vm: &PolarVirtualMachine) -> Option<Bindings> {
     let mut unsatisfiable = false;
     let mut simplify = |var: Symbol, term: Term| {
@@ -89,15 +88,12 @@ pub fn simplify_bindings(bindings: Bindings, vm: &PolarVirtualMachine) -> Option
 
     let bindings: Bindings = bindings
         .iter()
-        // Filter out temp vars...
-        // .filter(|(var, _)| !var.is_temporary_var())
         .map(|(var, value)| match value.value() {
             Value::Expression(o) => {
                 assert_eq!(o.operator, Operator::And);
                 (var.clone(), simplify(var.clone(), value.clone()))
             }
-            // ...but if a non-temp var is bound to a temp var, look through the temp var and
-            // simplify the value to which it's bound.
+            // Single-level deref. TODO(gj/ap): deep deref.
             Value::Variable(v) | Value::RestVariable(v) => {
                 (var.clone(), simplify(var.clone(), bindings[v].clone()))
             }
@@ -268,7 +264,10 @@ impl<'vm> Folder for Simplifier<'vm> {
                                             self.bind(l.clone(), right.clone());
                                             true
                                         }
-                                        VariableState::Cycle(_) => todo!(),
+                                        VariableState::Cycle(_) => {
+                                            self.bind(l.clone(), right.clone());
+                                            true
+                                        }
                                         VariableState::Partial(_) => {
                                             self.bind(l.clone(), right.clone());
                                             true

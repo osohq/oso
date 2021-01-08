@@ -1025,66 +1025,83 @@ mod test {
                p(x) if x > 1 and not x = 1 and x = 2;
                q(x) if not (x = 2 or x = 3 or x = 4) and x = 1;
                r(x) if not (x = 2 or x > 3 or x = 4) and x = 1;
-               s(x) if not (x = 2 or x > 3 or x = 4) and x > 1;"#,
+               s(x) if not (x = 2 or x > 3 or x = 4) and x > 1;
+               t(x) if not (x <= 0 or x <= 1 or x <= 2 or not (x > 3 or x > 4 or x > 5));
+               u(x) if not ((x <= 0 or x <= 1 or x <= 2 or not (x > 3 or x > 4 or x > 5)) and x = 6);"#,
         )?;
 
-        // let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        // assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(3));
-        // assert_query_done!(q);
-        //
-        // let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
-        // assert_query_done!(q);
-        //
-        // let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
-        // assert_partial_expression!(next_binding(&mut q)?, "x", "_this != 1");
-        // assert_query_done!(q);
-        //
-        // let mut q = p.new_query_from_term(term!(call!("i", [sym!("x")])), false);
-        // assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
-        // assert_query_done!(q);
-        //
-        // let mut q = p.new_query_from_term(term!(call!("j", [sym!("x")])), false);
-        // assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
-        // assert_query_done!(q);
-        //
-        // let mut q = p.new_query_from_term(term!(call!("k", [sym!("x")])), false);
-        // assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
-        // assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
-        // assert_query_done!(q);
-        //
-        // let mut q = p.new_query_from_term(term!(call!("l", [sym!("x")])), false);
-        // assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
-        // assert_query_done!(q);
-        //
-        // let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
-        // assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
-        // assert_query_done!(q);
-        //
-        // let mut q = p.new_query_from_term(term!(call!("n", [sym!("x")])), false);
-        // assert_query_done!(q);
-        //
-        // let mut q = p.new_query_from_term(term!(call!("o", [sym!("x")])), false);
-        // assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1");
-        // assert_query_done!(q);
-        //
-        // let mut q = p.new_query_from_term(term!(call!("p", [sym!("x")])), false);
-        // assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(2));
-        // assert_query_done!(q);
-        //
-        // let mut q = p.new_query_from_term(term!(call!("q", [sym!("x")])), false);
-        // assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
-        // assert_query_done!(q);
-        //
-        // let mut q = p.new_query_from_term(term!(call!("r", [sym!("x")])), false);
-        // // TODO(gj): this is simplifiable to 1.
-        // assert_partial_expression!(next_binding(&mut q)?, "x", "_this = 1 and _this <= 3");
-        // assert_query_done!(q);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(3));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this != 1");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("i", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("j", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("k", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("l", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("n", [sym!("x")])), false);
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("o", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("p", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(2));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("q", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("r", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("s", [sym!("x")])), false);
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
             "_this != 2 and _this <= 3 and _this != 4 and _this > 1"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("t", [sym!("x")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q)?,
+            "x",
+            "_this > 0 and _this > 1 and _this > 2 and _this > 3 or _this > 4 or _this > 5"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("u", [sym!("x")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q)?,
+            "x",
+            "_this != 6 or _this > 3 or _this > 4 or _this > 5"
         );
         assert_query_done!(q);
 
