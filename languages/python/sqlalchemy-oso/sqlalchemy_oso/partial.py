@@ -1,5 +1,6 @@
+from collections import defaultdict
 import functools
-from typing import Any, Callable, Tuple
+from typing import Any, Callable, Tuple, Dict, Optional
 
 from sqlalchemy.orm.session import Session
 from sqlalchemy import inspect
@@ -14,10 +15,132 @@ from polar.exceptions import UnsupportedError
 # TODO (dhatch) Better types here, first any is model, second any is a sqlalchemy expr.
 EmitFunction = Callable[[Session, Any], Any]
 
+COMPARISONS = {
+    "Unify": lambda p, v: p == v,
+    "Eq": lambda p, v: p == v,
+    "Neq": lambda p, v: p != v,
+    "Geq": lambda p, v: p >= v,
+    "Gt": lambda p, v: p > v,
+    "Leq": lambda p, v: p <= v,
+    "Lt": lambda p, v: p < v,
+}
+
+
+def flip_op(operator):
+    flips = {
+        'Eq': 'Eq',
+        'Unify': 'Unify',
+        'Neq': 'Neq',
+        'Geq': 'Lt',
+        'Gt': 'Leq',
+        'Leq': 'Gt',
+        'Lt': 'Geq'
+    }
+    return flips[operator]
+
 
 def partial_to_filter(expression: Expression, session: Session, model, get_model):
     """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
+    expression = preprocess(expression)
     return translate_expr(expression, session, model, get_model)
+
+
+def preprocess(expression: Expression) -> Expression:
+    variables = defaultdict(list)
+    new_expr = preprocess_expression(expression, variables)
+
+    # Make conjunctions
+    variables = {var: Expression("And", args) for var, args in variables.items()}
+
+    # Subsitute this
+    variables = {var: sub_this(var, expression) for var, expression in variables.items()}
+
+    # TODO recursive preprocessing.
+
+    # Subsitute expressions for variables
+    for var, expr in variables.items():
+        new_expr = sub_var(var, expr, new_expr)
+
+    return new_expr
+
+def preprocess_expression(expression: Expression, variables: Dict[Variable, Expression]) -> Optional[Expression]:
+    # Walk expression and collect variable expressions
+    if expression.operator == "And":
+        expression = preprocess_and(expression, variables)
+    elif expression.operator in ("Or", "Not"):
+        raise UnsupportedError(f"{expression.operator}")
+    else:
+        expression = preprocess_leaf(expression, variables)
+
+    return expression
+
+
+def preprocess_and(expression: Expression, variables: Dict[Variable, Expression]) -> Expression:
+    new_expression = []
+
+    for expression in expression.args:
+        maybe_expr = preprocess_expression(expression, variables)
+        if maybe_expr:
+            new_expression.append(maybe_expr)
+
+    return Expression("And", new_expression)
+
+
+def get_variable(expression_or_variable):
+    if isinstance(expression_or_variable, Variable):
+        return expression_or_variable
+    elif isinstance(expression_or_variable, Expression):
+        if expression_or_variable.operator == "Dot":
+            if isinstance(expression_or_variable.args[0], Variable):
+                return expression_or_variable.args[0]
+            elif getattr(expression_or_variable, "operator", False) == "Dot":
+                return get_variable(expression_or_variable.args[0])
+            else:
+                assert False
+
+    return None
+
+
+def is_this(variable):
+    return variable == Variable("_this")
+
+
+def sub_this(variable: Variable, expression: Expression) -> Expression:
+    """Substitute _this for ``variable`` in ``expression``."""
+    return sub_var(variable, Variable("_this"), expression)
+
+
+def sub_var(variable: Variable, value, expression: Expression) -> Expression:
+    """Substitute ``value`` for ``variable`` in ``expression``."""
+    new_expr = []
+    for arg in expression.args:
+        if isinstance(arg, Expression):
+            arg = sub_var(variable, value, arg)
+        elif arg == variable:
+            arg = value
+
+        new_expr.append(arg)
+
+    return Expression(expression.operator, new_expr)
+
+
+def preprocess_leaf(expression: Expression, variables: Dict[Variable, Expression]) -> Optional[Expression]:
+    assert len(expression.args) == 2
+    left, right = expression.args
+    left_var = get_variable(left)
+    right_var = get_variable(right)
+
+    if is_this(left_var) or is_this(right_var):
+        return expression
+
+    if left_var is not None:
+        variables[left_var].append(expression)
+        return None
+    elif right_var is not None:
+        variables[right_var].append(expression)
+        return None
+
+    return expression
 
 
 def translate_expr(expression: Expression, session: Session, model, get_model):
@@ -48,7 +171,7 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "Isa"
     left, right = expression.args
     if dot_path(left) == ():
-        # assert left == Variable("_this")
+        assert left == Variable("_this")
         pass
     else:
         for field_name in dot_path(left):
@@ -76,7 +199,7 @@ def translate_compare(expression: Expression, session: Session, model, get_model
         )
     elif right_path:
         return translate_compare(
-            Expression(expression.operator, [right, left]), session, model, get_model)
+            Expression(flip_op(expression.operator), [right, left]), session, model, get_model)
     else:
         assert left == Variable("_this")
         if not isinstance(right, model):
@@ -113,6 +236,15 @@ def translate_in(expression, session, model, get_model):
         return translate_dot(
             path, session, model, functools.partial(emit_subexpression, left, get_model)
         )
+    elif isinstance(left, Variable):
+        # A variable with no additional constraints
+        path = dot_path(right)
+        assert path
+
+        return translate_dot(
+            path, session, model, functools.partial(emit_subexpression, Expression("And", []),
+                                                    get_model)
+        )
     else:
         # Contains: LHS is not an expression.
         # TODO (dhatch) Missing check, left type must match type of the target?
@@ -146,17 +278,6 @@ def get_relationship(model, field_name: str):
     model = property.entity.class_
 
     return (property, model, relationship.uselist)
-
-
-COMPARISONS = {
-    "Unify": lambda p, v: p == v,
-    "Eq": lambda p, v: p == v,
-    "Neq": lambda p, v: p != v,
-    "Geq": lambda p, v: p >= v,
-    "Gt": lambda p, v: p > v,
-    "Leq": lambda p, v: p <= v,
-    "Lt": lambda p, v: p < v,
-}
 
 
 def emit_compare(field_name, value, operator, session, model):

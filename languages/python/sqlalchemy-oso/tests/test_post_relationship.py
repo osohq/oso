@@ -470,6 +470,25 @@ def test_in_with_constraints_but_no_matching_objects(
     assert len(posts) == 0
 
 
+def test_redundant_in_on_same_field(
+    session, oso, tag_nested_many_many_test_fixture
+):
+    oso.load_str(
+        """
+        allow(_, "read", post: Post) if
+            tag in post.tags and tag2 in post.tags
+            and tag.name = "random" and tag2.is_public = true;
+        """
+    )
+
+    posts = session.query(Post).filter(
+        authorize_model(oso, "user", "read", session, Post)
+    )
+
+    posts = posts.all()
+    assert len(posts) == 2
+
+
 # TODO combine with test in test_django_oso.
 def test_partial_subfield_isa(session, oso, tag_nested_many_many_test_fixture):
     oso.load_str(
