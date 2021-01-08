@@ -86,10 +86,8 @@ impl Folder for PartialInverter {
 /// Invert partial values in `bindings` with respect to the old VM bindings.
 fn invert_partials(bindings: BindingStack, vm: &PolarVirtualMachine, bsp: usize) -> BindingStack {
     let mut new_bindings = vec![];
-    let mut special_vm = vm.clone();
-    special_vm.bindings = vm.bindings[..bsp].to_vec();
     for Binding(var, value) in bindings {
-        match special_vm.variable_state(&var) {
+        match vm.variable_state_at_point(&var, bsp) {
             VariableState::Unbound => (),
             VariableState::Bound(x) => assert_eq!(x, value, "inconsistent bindings"),
             VariableState::Cycle(c) => {
@@ -201,12 +199,8 @@ impl Runnable for Inverter {
                             result = true;
 
                             let value = simplified[&var].clone();
-
-                            let mut special_vm = self.vm.clone();
-                            special_vm.bindings = self.vm.bindings[..self.bsp].to_vec();
-
                             if let Value::Expression(_) = value.value() {
-                                match special_vm.variable_state(&var) {
+                                match self.vm.variable_state_at_point(&var, self.bsp) {
                                     VariableState::Unbound => {
                                         vec![Binding(var, value)]
                                     }

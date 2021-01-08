@@ -690,18 +690,18 @@ impl PolarVirtualMachine {
 
     /// Look up a variable in the bindings stack and return
     /// a reference to its value if it's bound.
-    fn value(&self, variable: &Symbol) -> Option<&Term> {
-        self.bindings
+    fn value(&self, variable: &Symbol, bsp: usize) -> Option<&Term> {
+        self.bindings[..bsp]
             .iter()
             .rev()
             .find(|Binding(var, _)| var == variable)
             .map(|Binding(_, val)| val)
     }
 
-    /// Investigate the state of a variable and return a variable state variant.
-    pub fn variable_state(&self, variable: &Symbol) -> VariableState {
+    /// Investigate the state of a variable at some point and return a variable state variant.
+    pub fn variable_state_at_point(&self, variable: &Symbol, bsp: usize) -> VariableState {
         let mut path = vec![variable];
-        while let Some(value) = self.value(path.last().unwrap()) {
+        while let Some(value) = self.value(path.last().unwrap(), bsp) {
             match value.value() {
                 Value::Expression(e) => return VariableState::Partial(e.clone()),
                 Value::Variable(v) | Value::RestVariable(v) => {
@@ -715,6 +715,11 @@ impl PolarVirtualMachine {
             }
         }
         VariableState::Unbound
+    }
+
+    /// Investigate the current state of a variable and return a variable state variant.
+    pub fn variable_state(&self, variable: &Symbol) -> VariableState {
+        self.variable_state_at_point(variable, self.bsp())
     }
 
     /// Recursively dereference variables in a term, including subterms, except operations.
