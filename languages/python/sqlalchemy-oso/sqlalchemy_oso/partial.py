@@ -48,7 +48,8 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "Isa"
     left, right = expression.args
     if dot_path(left) == ():
-        assert left == Variable("_this")
+        # assert left == Variable("_this")
+        pass
     else:
         for field_name in dot_path(left):
             _, model, __ = get_relationship(model, field_name)
@@ -62,7 +63,10 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
 def translate_compare(expression: Expression, session: Session, model, get_model):
     (left, right) = expression.args
     left_path = dot_path(left)
+    right_path = dot_path(right)
+
     if left_path:
+        assert not right_path
         path, field_name = left_path[:-1], left_path[-1]
         return translate_dot(
             path,
@@ -70,6 +74,9 @@ def translate_compare(expression: Expression, session: Session, model, get_model
             model,
             functools.partial(emit_compare, field_name, right, expression.operator),
         )
+    elif right_path:
+        return translate_compare(
+            Expression(expression.operator, [right, left]), session, model, get_model)
     else:
         assert left == Variable("_this")
         if not isinstance(right, model):
@@ -154,6 +161,7 @@ COMPARISONS = {
 
 def emit_compare(field_name, value, operator, session, model):
     """Emit a comparison operation comparing the value of ``field_name`` on ``model`` to ``value``."""
+    assert not isinstance(value, Variable), "value is a variable #fail"
     property = getattr(model, field_name)
     return COMPARISONS[operator](property, value)
 
