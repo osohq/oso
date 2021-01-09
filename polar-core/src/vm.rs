@@ -2241,41 +2241,32 @@ impl PolarVirtualMachine {
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         match (left.value(), right.value()) {
+            (Value::Expression(_), _) | (_, Value::Expression(_)) => {
+                return Err(self.type_error(
+                    &left,
+                    format!(
+                        "cannot unify expressions directly `{}` = `{}`",
+                        left.to_polar(),
+                        right.to_polar()
+                    ),
+                ));
+            }
+            (Value::Pattern(_), _) | (_, Value::Pattern(_)) => {
+                return Err(self.type_error(
+                    &left,
+                    format!(
+                        "cannot unify patterns directly `{}` = `{}`",
+                        left.to_polar(),
+                        right.to_polar()
+                    ),
+                ));
+            }
+
             // Unify two variables.
             (Value::Variable(_), Value::Variable(_))
             | (Value::Variable(_), Value::RestVariable(_))
             | (Value::RestVariable(_), Value::Variable(_))
             | (Value::RestVariable(_), Value::RestVariable(_)) => self.unify_vars(left, right)?,
-
-            // Can't bind expressions directly.
-            (Value::Variable(var), Value::Expression(expr))
-            | (Value::RestVariable(var), Value::Expression(expr))
-            | (Value::Expression(expr), Value::Variable(var))
-            | (Value::Expression(expr), Value::RestVariable(var)) => {
-                return Err(self.type_error(
-                    &left,
-                    format!(
-                        "cannot bind variable `{}` to expression `{}`",
-                        var,
-                        expr.to_polar()
-                    ),
-                ));
-            }
-
-            // Can't bind patterns directly.
-            (Value::Variable(var), Value::Pattern(pattern))
-            | (Value::RestVariable(var), Value::Pattern(pattern))
-            | (Value::Pattern(pattern), Value::Variable(var))
-            | (Value::Pattern(pattern), Value::RestVariable(var)) => {
-                return Err(self.type_error(
-                    &left,
-                    format!(
-                        "cannot bind variable `{}` to pattern `{}`",
-                        var,
-                        pattern.to_polar()
-                    ),
-                ));
-            }
 
             // Unify/bind a variable on the left with/to the term on the right.
             (Value::Variable(var), _) | (Value::RestVariable(var), _) => {

@@ -1904,7 +1904,7 @@ fn test_list_matches() {
 
 #[test]
 fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
-    qruntime!("x matches y", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind variable `x` to pattern `y{}`");
+    qruntime!("x matches y", RuntimeError::TypeError { msg: m, .. }, m == "cannot unify patterns directly `x` = `y{}`");
     Ok(())
 }
 
