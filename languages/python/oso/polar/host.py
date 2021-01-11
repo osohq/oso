@@ -18,18 +18,18 @@ from .expression import Expression, Pattern
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
-    def __init__(self, polar, classes={}, instances={}):
+    def __init__(self, polar, classes=None, instances=None):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
-        self.classes = classes.copy()
-        self.instances = instances.copy()
+        self.classes = (classes or {}).copy()
+        self.instances = (instances or {}).copy()
 
     def copy(self):
         """Copy an existing cache."""
         return type(self)(
             self.ffi_polar,
-            classes=self.classes.copy(),
-            instances=self.instances.copy(),
+            classes=self.classes,
+            instances=self.instances,
         )
 
     def get_class(self, name):
