@@ -202,16 +202,14 @@ def test_partial_subfield_isa():
     authorize_filter = authorize_model(None, Post, actor="foo", action="bar")
     assert (
         str(authorize_filter)
-        == "(OR:"
-        + " (AND: (NOT (AND: ('pk__in', []))), (NOT (AND: ('pk__in', []))), ('created_by__name', 'alice')),"
-        + " ('pk__in', []))"
+        == "(AND: (NOT (AND: ('pk__in', []))), ('created_by__name', 'alice'))"
     )
     authorized_posts = Post.objects.filter(authorize_filter)
     assert (
         str(authorized_posts.query)
         == 'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",'
         + ' "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"'
-        + ' FROM "test_app_post" LEFT OUTER JOIN "test_app_user"'
+        + ' FROM "test_app_post" INNER JOIN "test_app_user"'
         + ' ON ("test_app_post"."created_by_id" = "test_app_user"."id") WHERE "test_app_user"."name" = alice'
     )
     assert authorized_posts.count() == 2

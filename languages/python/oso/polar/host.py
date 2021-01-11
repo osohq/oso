@@ -18,11 +18,16 @@ from .expression import Expression, Pattern
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
-    def __init__(self, polar, classes=None, instances=None):
+    def __init__(self, polar, classes=None, instances=None, get_field=None):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
         self.classes = (classes or {}).copy()
         self.instances = (instances or {}).copy()
+
+        def default_get_field(_obj, _field):
+            raise PolarRuntimeError("Cannot generically walk fields of a Python class")
+
+        self.get_field = get_field or default_get_field
 
     def copy(self):
         """Copy an existing cache."""
@@ -30,6 +35,7 @@ class Host:
             self.ffi_polar,
             classes=self.classes,
             instances=self.instances,
+            get_field=self.get_field,
         )
 
     def get_class(self, name):
@@ -81,14 +87,15 @@ class Host:
     def isa(self, instance, class_tag) -> bool:
         instance = self.to_python(instance)
         cls = self.get_class(class_tag)
-        if isinstance(instance, list):
-            base, *path = instance
-            base = self.get_class(base.tag)()
-            for segment in path:
-                base = getattr(base, segment)
-            return isinstance(base, cls)
-        else:
-            return isinstance(instance, cls)
+        return isinstance(instance, cls)
+
+    def subfield_isa(self, base_tag, path, class_tag) -> bool:
+        base = self.get_class(base_tag)
+        cls = self.get_class(class_tag)
+        for field in path:
+            field = self.to_python(field)
+            base = self.get_field(base, field)
+        return issubclass(base, cls)
 
     def is_subclass(self, left_tag, right_tag) -> bool:
         """Return true if left is a subclass (or the same class) as right."""

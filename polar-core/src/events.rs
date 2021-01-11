@@ -56,6 +56,15 @@ pub enum QueryEvent {
         class_tag: Symbol,
     },
 
+    /// Starting from `base_tag`, traverse `path` fields and check if the result is an instance of
+    /// `class_tag`.
+    ExternalSubfieldIsa {
+        call_id: u64,
+        base_tag: Symbol,
+        path: TermList,
+        class_tag: Symbol,
+    },
+
     /// Checks if the left is more specific than right with respect to instance.
     ExternalIsSubSpecializer {
         call_id: u64,

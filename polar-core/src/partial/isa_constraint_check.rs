@@ -117,18 +117,15 @@ impl IsaConstraintCheck {
             match (proposed.value(), existing.value()) {
                 (
                     Value::Pattern(Pattern::Instance(proposed)),
-                    Value::Pattern(Pattern::Instance(_)),
+                    Value::Pattern(Pattern::Instance(existing)),
                 ) => {
                     let call_id = counter.next();
                     self.last_call_id = call_id;
-
-                    let mut instance = vec![existing];
-                    instance.append(&mut proposed_path[constraint_path.len()..].to_vec());
-
                     (
-                        Some(QueryEvent::ExternalIsa {
+                        Some(QueryEvent::ExternalSubfieldIsa {
                             call_id,
-                            instance: term!(Value::List(instance)),
+                            base_tag: existing.tag.clone(),
+                            path: proposed_path[constraint_path.len()..].to_vec(),
                             class_tag: proposed.tag.clone(),
                         }),
                         None,

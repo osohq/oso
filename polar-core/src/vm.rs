@@ -3163,7 +3163,8 @@ impl Runnable for PolarVirtualMachine {
         Ok(QueryEvent::Result { bindings, trace })
     }
 
-    /// Handle an external response to ExternalIsSubSpecializer and ExternalIsa
+    /// Handle response to a predicate posed to the application, e.g., `ExternalIsa`.
+    // TODO(gj): CheckError? Might make sense for ExternalSubfieldIsa; not sure about others.
     fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
         let var = self.call_id_symbols.remove(&call_id).expect("bad call id");
         self.bind(&var, Term::new_temporary(Value::Boolean(answer)));

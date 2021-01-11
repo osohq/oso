@@ -880,17 +880,10 @@ def test_partial_rule_filtering(polar):
 
     x = Variable("x")
     polar.register_constant(Expression("And", [TypeConstraint(x, "A")]), x)
-    results = polar.query_rule("f", x)
 
-    first = next(results)["bindings"]["x"]
-    and_args = unwrap_and(first)
-    assert len(and_args) == 2
-
-    assert and_args[0] == Expression("Isa", [Variable("_this"), Pattern("A", {})])
-    assert and_args[1] == Expression("Isa", [Expression("Dot", [Variable('_this'), 'c']), Pattern("C", {})])
-
-    with pytest.raises(StopIteration):
-        next(results)
+    with pytest.raises(exceptions.PolarRuntimeError) as e:
+        next(polar.query_rule("f", x))
+    assert str(e.value) == "Cannot generically walk fields of a Python class"
 
 
 def test_iterators(polar, qeval, qvar):
