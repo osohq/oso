@@ -781,11 +781,16 @@ impl PolarVirtualMachine {
 
                 term.clone_with_value(Value::List(derefed))
             }
-            Value::Variable(var) | Value::RestVariable(var) => match self.variable_state(var) {
+            Value::Variable(v) => match self.variable_state(v) {
                 VariableState::Bound(value) => value,
-                VariableState::Unbound | VariableState::Cycle(_) | VariableState::Partial(_) => {
-                    term.clone()
-                }
+                _ => term.clone(),
+            },
+            Value::RestVariable(v) => match self.variable_state(v) {
+                VariableState::Bound(value) => match value.value() {
+                    Value::List(l) if has_rest_var(l) => self.deref(&value),
+                    _ => value,
+                },
+                _ => term.clone(),
             },
             _ => term.clone(),
         }
