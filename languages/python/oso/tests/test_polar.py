@@ -38,9 +38,9 @@ def test_data_conversions(polar, qvar, query):
     assert qvar("b(x)", "x", one=True) == "two"
     assert qvar("c(x)", "x", one=True)
     assert qvar("d(x)", "x", one=True) == [1, "two", True]
-    y = qvar("x = y", "x", one=True)
-    assert str(y) == "Variable('x')"
-    assert repr(y) == "Variable('x')"
+    x = qvar("x = y", "x", one=True)
+    assert str(x) == "Variable('y')"
+    assert repr(x) == "Variable('y')"
 
 
 def test_load_function(polar, query, qvar):
