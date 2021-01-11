@@ -26,6 +26,14 @@ impl Folder for VariableSubber {
             v
         }
     }
+
+    fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
+        if v == self.this_var {
+            sym!("_this")
+        } else {
+            v
+        }
+    }
 }
 
 /// Substitute `sym!("_this")` for a variable in a partial.
@@ -48,11 +56,24 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
             let left = &o.args[0];
             let right = &o.args[1];
             match (left.value(), right.value()) {
-                (Value::Variable(v), Value::Variable(w)) if v == &this && w == &this => {
+                (Value::Variable(v), Value::Variable(w))
+                | (Value::Variable(v), Value::RestVariable(w))
+                | (Value::RestVariable(v), Value::Variable(w))
+                | (Value::RestVariable(v), Value::RestVariable(w))
+                    if v == &this && w == &this =>
+                {
                     TRUE.into_term()
                 }
-                (Value::Variable(l), _) if l == &this && right.is_ground() => right.clone(),
-                (_, Value::Variable(r)) if r == &this && left.is_ground() => left.clone(),
+                (Value::Variable(l), _) | (Value::RestVariable(l), _)
+                    if l == &this && right.is_ground() =>
+                {
+                    right.clone()
+                }
+                (_, Value::Variable(r)) | (_, Value::RestVariable(r))
+                    if r == &this && left.is_ground() =>
+                {
+                    left.clone()
+                }
                 _ => term,
             }
         }
@@ -344,7 +365,7 @@ impl<'vm> Simplifier<'vm> {
 
     fn is_this_var(&self, t: &Term) -> bool {
         match t.value() {
-            Value::Variable(v) => v == &self.this_var,
+            Value::Variable(v) | Value::RestVariable(v) => v == &self.this_var,
             Value::Expression(e) => e.operator == Operator::Dot && self.is_this_var(&e.args[0]),
             _ => false,
         }

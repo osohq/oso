@@ -739,10 +739,9 @@ impl PolarVirtualMachine {
                 match t.value() {
                     Value::List(_) | Value::Variable(_) | Value::RestVariable(_) => {
                         let derefed = self.vm.deref(&t);
-                        if let Value::Expression(_) = derefed.value() {
-                            t
-                        } else {
-                            fold_term(derefed, self)
+                        match derefed.value() {
+                            Value::Expression(_) => t,
+                            _ => fold_term(derefed, self),
                         }
                     }
                     _ => fold_term(t, self),
@@ -759,17 +758,13 @@ impl PolarVirtualMachine {
     pub fn deref(&self, term: &Term) -> Term {
         match &term.value() {
             Value::List(list) => {
-                let ends_with_rest = list
-                    .last()
-                    .map_or(false, |el| matches!(el.value(), Value::RestVariable(_)));
-
                 // Deref all elements.
                 let mut derefed: Vec<Term> =
                     // TODO(gj): reduce recursion here.
                     list.iter().map(|t| self.deref(t)).collect();
 
                 // If last element was a rest variable, append the list it derefed to.
-                if ends_with_rest {
+                if has_rest_var(list) {
                     if let Some(last_term) = derefed.pop() {
                         if let Value::List(terms) = last_term.value() {
                             derefed.append(&mut terms.clone());
@@ -2312,12 +2307,10 @@ impl PolarVirtualMachine {
             }
 
             // Unify lists by recursively unifying their elements.
-            (Value::List(left), Value::List(right)) => {
-                self.unify_lists(left, right, |(left, right)| Goal::Unify {
-                    left: left.clone(),
-                    right: right.clone(),
-                })?
-            }
+            (Value::List(l), Value::List(r)) => self.unify_lists(l, r, |(l, r)| Goal::Unify {
+                left: l.clone(),
+                right: r.clone(),
+            })?,
 
             (Value::Dictionary(left), Value::Dictionary(right)) => {
                 // Check that the set of keys are the same.
