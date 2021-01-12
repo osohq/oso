@@ -723,7 +723,7 @@ impl PolarVirtualMachine {
     }
 
     /// Recursively dereference variables in a term, including subterms, except operations.
-    pub fn deep_deref(&self, term: &Term) -> Term {
+    fn deep_deref(&self, term: &Term) -> Term {
         pub struct Derefer<'vm> {
             vm: &'vm PolarVirtualMachine,
         }
@@ -737,7 +737,8 @@ impl PolarVirtualMachine {
         impl<'vm> Folder for Derefer<'vm> {
             fn fold_term(&mut self, t: Term) -> Term {
                 match t.value() {
-                    Value::List(_) | Value::Variable(_) | Value::RestVariable(_) => {
+                    Value::List(_) => fold_term(self.vm.deref(&t), self),
+                    Value::Variable(_) | Value::RestVariable(_) => {
                         let derefed = self.vm.deref(&t);
                         match derefed.value() {
                             Value::Expression(_) => t,
@@ -755,7 +756,7 @@ impl PolarVirtualMachine {
     /// Recursively dereference variables, but do not descend into (most) subterms.
     /// The exception is for lists, so that we can correctly handle rest variables.
     /// We also support cycle detection, in which case we return the original term.
-    pub fn deref(&self, term: &Term) -> Term {
+    fn deref(&self, term: &Term) -> Term {
         match &term.value() {
             Value::List(list) => {
                 // Deref all elements.
@@ -1174,7 +1175,23 @@ impl PolarVirtualMachine {
                 let to_unify = |(field, value): (&Symbol, &Term)| -> Operation {
                     let field = right.clone_with_value(value!(field.0.as_ref()));
                     let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
-                    op!(Unify, left, value.clone())
+                    let unify = op!(Unify, left.clone(), value.clone());
+                    match value.value() {
+                        Value::Variable(v) | Value::RestVariable(v) => {
+                            match self.variable_state(v) {
+                                VariableState::Cycle(c) => cycle_constraints(c)
+                                    .clone_with_new_constraint(unify.into_term()),
+                                VariableState::Bound(b) => {
+                                    op!(Unify, left, b)
+                                }
+                                VariableState::Partial(e) => {
+                                    e.clone_with_new_constraint(unify.into_term())
+                                }
+                                VariableState::Unbound => unify,
+                            }
+                        }
+                        _ => unify,
+                    }
                 };
 
                 let mut operation = operation.clone();
@@ -1185,9 +1202,8 @@ impl PolarVirtualMachine {
                 }
 
                 // Add the last field constraint and trigger the bind dance.
-                for op in fields.fields.iter().take(1).map(to_unify) {
-                    self.constrain(&operation.clone_with_new_constraint(op.into_term()))?;
-                }
+                let op = fields.fields.iter().take(1).map(to_unify).next().unwrap();
+                self.constrain(&operation.clone_with_new_constraint(op.into_term()))?;
             }
             Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
                 // TODO(gj): assert that a simplified expression contains at most 1 unification
@@ -1233,7 +1249,25 @@ impl PolarVirtualMachine {
                 fields.fields.iter().rev().for_each(|(f, v)| {
                     let field = right.clone_with_value(value!(f.0.as_ref()));
                     let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
-                    let unify = op!(Unify, left, v.clone());
+                    let mut unify = op!(Unify, left.clone(), v.clone());
+                    match v.value() {
+                        Value::Variable(v) | Value::RestVariable(v) => {
+                            match self.variable_state(v) {
+                                VariableState::Cycle(c) => {
+                                    unify = cycle_constraints(c)
+                                        .clone_with_new_constraint(unify.into_term());
+                                }
+                                VariableState::Bound(b) => {
+                                    unify = op!(Unify, left, b);
+                                }
+                                VariableState::Partial(e) => {
+                                    unify = e.clone_with_new_constraint(unify.into_term());
+                                }
+                                VariableState::Unbound => (),
+                            }
+                        }
+                        _ => (),
+                    }
                     operation = operation.clone_with_new_constraint(term!(unify));
                 });
 

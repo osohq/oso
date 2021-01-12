@@ -114,13 +114,6 @@ pub fn simplify_bindings(bindings: Bindings, vm: &PolarVirtualMachine) -> Option
                 assert_eq!(o.operator, Operator::And);
                 (var.clone(), simplify(var.clone(), value.clone()))
             }
-            // If var is bound to a temporary, deref it.
-            // TODO(gj): cycle detection and dereferencing.
-            Value::Variable(v) | Value::RestVariable(v)
-                if bindings.contains_key(v) && v.is_temporary_var() =>
-            {
-                (var.clone(), simplify(var.clone(), bindings[v].clone()))
-            }
             _ => (var.clone(), value.clone()),
         })
         .collect();
