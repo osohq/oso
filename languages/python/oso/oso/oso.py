@@ -2,7 +2,7 @@
 
 __version__ = "0.9.0"
 
-from polar import Polar
+from polar import Polar, Variable, exceptions
 
 
 class Oso(Polar):
@@ -38,3 +38,24 @@ class Oso(Polar):
             return True
         except StopIteration:
             return False
+
+    def get_allowed_actions(self, actor, resource, allow_unbound=False):
+        # Get allowed actions on the resource
+        results = self.query_rule("allow", actor, Variable("action"), resource)
+        actions = set()
+        for result in results:
+            action = result.get("bindings").get("action")
+            if type(action) == Variable:
+                # TODO: is this the correct behavior?
+                if not allow_unbound:
+                    raise exceptions.OsoError(
+                        """get_allowed_actions() found an unbound action. To get allowed actions, specify allowed actions in the policy.
+    E.g., instead of `allow(actor: User, _action, resource: MyResource);`,
+    use `allow(actor: User, action, resource: MyResource) if action in ["CREATE", "READ", "WRITE", "DELETE"];`
+                        """
+                    )
+                else:
+                    return ["UNBOUND"]
+            actions.add(action)
+
+        return list(actions)
