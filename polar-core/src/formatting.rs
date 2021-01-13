@@ -232,6 +232,9 @@ pub mod display {
             }
 
             match self {
+                Goal::Bind { var, value } => {
+                    write!(fmt, "Bind({}, {})", var, value.to_polar())
+                }
                 Goal::Isa { left, right } => {
                     write!(fmt, "Isa({}, {})", left.to_polar(), right.to_polar())
                 }
@@ -271,6 +274,7 @@ pub mod display {
                 ),
                 Goal::PopQuery { term } => write!(fmt, "PopQuery({})", term.to_polar()),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
+                Goal::Run { .. } => write!(fmt, "Run(...)"),
                 Goal::FilterRules {
                     applicable_rules,
                     unfiltered_rules,
