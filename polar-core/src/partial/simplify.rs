@@ -95,7 +95,7 @@ pub fn simplify_partial(var: &Symbol, term: Term, vm: &PolarVirtualMachine) -> T
 /// Simplify the values of the bindings to be returned to the host language.
 ///
 /// - For partials, simplify the constraint expressions.
-/// - For non-partials, deep deref.
+/// - For non-partials, deep deref. TODO(ap/gj): deep deref.
 pub fn simplify_bindings(bindings: Bindings, vm: &PolarVirtualMachine) -> Option<Bindings> {
     let mut unsatisfiable = false;
     let mut simplify = |var: Symbol, term: Term| {
@@ -113,6 +113,13 @@ pub fn simplify_bindings(bindings: Bindings, vm: &PolarVirtualMachine) -> Option
             Value::Expression(o) => {
                 assert_eq!(o.operator, Operator::And);
                 (var.clone(), simplify(var.clone(), value.clone()))
+            }
+            Value::Variable(v) | Value::RestVariable(v)
+                if v.is_temporary_var()
+                    && bindings.contains_key(v)
+                    && matches!(bindings[v].value(), Value::Variable(_) | Value::RestVariable(_)) =>
+            {
+                (var.clone(), bindings[v].clone())
             }
             _ => (var.clone(), value.clone()),
         })
@@ -186,29 +193,34 @@ impl<'vm> Folder for Simplifier<'vm> {
             // Non-trivial conjunctions. Choose a unification constraint to
             // make a binding from, maybe throw it away, and fold the rest.
             Operator::And if o.args.len() > 1 => {
-                if let Some(i) = o.constraints().iter().position(|o| match o.operator {
+                if let Some(i) = o.constraints().iter().position(|p| match p.operator {
                     // A conjunction of TRUE with X is X, so drop TRUE.
-                    Operator::And if o.args.is_empty() => true,
+                    Operator::And if p.args.is_empty() => true,
 
                     // Choose a unification to maybe drop.
                     Operator::Unify | Operator::Eq => {
-                        let left = &o.args[0];
-                        let right = &o.args[1];
+                        let left = &p.args[0];
+                        let right = &p.args[1];
+                        let q = o.clone_with_constraints(
+                            o.constraints().into_iter().filter(|r| r != p).collect(),
+                        );
                         left == right
                             || match (left.value(), right.value()) {
                                 (Value::Variable(l), _) | (Value::RestVariable(l), _)
-                                    if self.is_this_var(right) =>
+                                    if self.is_dot_this(right)
+                                        && (self.is_this(right) || q.variables().contains(l)) =>
                                 {
                                     self.bind(l.clone(), right.clone());
                                     true
                                 }
                                 (_, Value::Variable(r)) | (_, Value::RestVariable(r))
-                                    if self.is_this_var(left) =>
+                                    if self.is_dot_this(left)
+                                        && (self.is_this(left) || q.variables().contains(r)) =>
                                 {
                                     self.bind(r.clone(), left.clone());
                                     true
                                 }
-                                _ if self.is_this_var(left) || self.is_this_var(right) => false,
+                                _ if self.is_dot_this(left) || self.is_dot_this(right) => false,
                                 (Value::Variable(l), Value::Variable(r))
                                 | (Value::Variable(l), Value::RestVariable(r))
                                 | (Value::RestVariable(l), Value::Variable(r))
@@ -359,11 +371,17 @@ impl<'vm> Simplifier<'vm> {
         self.bindings.contains_key(var)
     }
 
-    fn is_this_var(&self, t: &Term) -> bool {
+    fn is_this(&self, t: &Term) -> bool {
         match t.value() {
             Value::Variable(v) | Value::RestVariable(v) => v == &self.this_var,
-            Value::Expression(e) => e.operator == Operator::Dot && self.is_this_var(&e.args[0]),
             _ => false,
+        }
+    }
+
+    fn is_dot_this(&self, t: &Term) -> bool {
+        match t.value() {
+            Value::Expression(e) => e.operator == Operator::Dot && self.is_dot_this(&e.args[0]),
+            _ => self.is_this(t),
         }
     }
 

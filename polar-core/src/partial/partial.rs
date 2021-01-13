@@ -432,8 +432,7 @@ mod test {
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
-        // TODO(gj): do something with the x <-> _x_5 cycle?
-        assert_eq!(next[&sym!("x")], term!(sym!("_x_5")));
+        assert_eq!(next[&sym!("x")], term!(sym!("x")));
         assert_eq!(
             next[&sym!("y")],
             // TODO(gj): do something with the x <-> _x_5 cycle?
@@ -491,7 +490,7 @@ mod test {
         );
         assert_query_done!(q);
 
-        let next_binding = |q: &mut Query| loop {
+        let binding = |q: &mut Query| loop {
             match q.next_event().unwrap() {
                 QueryEvent::Result { bindings, .. } => return bindings,
                 QueryEvent::ExternalIsa { call_id, .. } => {
@@ -501,11 +500,76 @@ mod test {
             }
         };
         let mut q = p.new_query_from_term(term!(call!("h", [1, sym!("y")])), false);
-        assert_partial_expression!(next_binding(&mut q), "y", "_this.x = 1");
+        assert_partial_expression!(binding(&mut q), "y", "_this.x = 1");
         assert_query_done!(q);
 
-        // TODO(gj): add case(s) where second parameter is a tagged dict instead of a dict.
+        let p = Polar::new();
+        p.load_str("i(x, _: Y{x: x});")?;
 
+        let maybe_binding = |q: &mut Query| loop {
+            match q.next_event().unwrap() {
+                QueryEvent::Result { bindings, .. } => return Some(bindings),
+                QueryEvent::ExternalIsa { call_id, .. } => {
+                    q.question_result(call_id, true).unwrap();
+                }
+                QueryEvent::Done { .. } => return None,
+                e => panic!("unexpected event: {:?}", e),
+            }
+        };
+        let mut q = p.new_query_from_term(term!(call!("i", [sym!("x"), btreemap! {}])), false);
+        assert!(maybe_binding(&mut q).is_none());
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(
+            term!(call!("i", [sym!("x"), btreemap! {sym!("x") => term!(1)}])),
+            false,
+        );
+        assert_eq!(maybe_binding(&mut q).unwrap()[&sym!("x")], term!(1));
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("i", [sym!("x"), sym!("y")])), false);
+        assert_partial_expressions!(next_binding(&mut q)?,
+            "x" => "y matches Y{} and y.x = _this",
+            "y" => "_this matches Y{} and _this.x = x");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("i", [1, sym!("y")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q)?,
+            "y",
+            "_this matches Y{} and _this.x = 1"
+        );
+        assert_query_done!(q);
+
+        let p = Polar::new();
+        p.load_str("j(x: X, _: Y{x: x});")?;
+
+        let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), btreemap! {}])), false);
+        assert!(maybe_binding(&mut q).is_none());
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(
+            term!(call!("j", [sym!("x"), btreemap! {sym!("x") => term!(1)}])),
+            false,
+        );
+        assert_partial_expression!(
+            maybe_binding(&mut q).unwrap(),
+            "x",
+            "_this matches X{} and 1 = _this"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), sym!("y")])), false);
+        assert_partial_expressions!(next_binding(&mut q)?,
+            "x" => "y matches Y{} and _this matches X{} and y.x = _this",
+            "x" => "y matches Y{} and _this matches X{} and y.x = _this",
+            "y" => "_this matches Y{} and _this.x matches X{}"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("j", [1, sym!("y")])), false);
+        assert_partial_expression!(binding(&mut q), "y", "_this matches Y{} and _this.x = 1");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -813,17 +877,7 @@ mod test {
                i(y: B{bar: 2}) if y.b > 0;"#,
         )?;
 
-        // Register `x` as a partial.
-        p.register_constant(
-            sym!("x"),
-            op!(
-                And,
-                op!(Isa, term!(sym!("x")), term!(pattern!(instance!("A")))).into_term()
-            )
-            .into_term(),
-        );
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        let mut next_binding = || loop {
+        let next_binding = |q: &mut Query| loop {
             match q.next_event().unwrap() {
                 QueryEvent::Result { bindings, .. } => return bindings,
                 QueryEvent::ExternalIsSubclass { call_id, .. } => {
@@ -853,8 +907,20 @@ mod test {
                 e => panic!("not bindings: {:?}", e),
             }
         };
+
+        // Register `x` as a partial.
+        p.register_constant(
+            sym!("x"),
+            op!(
+                And,
+                op!(Isa, term!(sym!("x")), term!(pattern!(instance!("A")))).into_term()
+            )
+            .into_term(),
+        );
+
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_partial_expression!(
-            next_binding(),
+            next_binding(&mut q),
             "x",
             "_this matches A{} and _this.c matches C{} and _this.c.foo = 1 and _this.c.bar = 2 and _this.c.c > 0"
         );
