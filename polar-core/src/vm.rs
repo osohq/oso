@@ -2188,7 +2188,11 @@ impl PolarVirtualMachine {
                         let e = e.clone_with_new_constraint(term.clone());
                         self.constrain(&e)?;
                     }
-                    (s, t) => todo!("({:?}, {:?}]", s, t),
+                    (VariableState::Cycle(c), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Cycle(c)) => {
+                        let e = cycle_constraints(c).clone_with_new_constraint(term.clone());
+                        self.constrain(&e)?;
+                    }
                 }
                 Ok(QueryEvent::None)
             }

@@ -664,7 +664,10 @@ mod test {
             r#"f(x) if x > 1 and y = z and x = z and y = 1;
                g(x) if x > 1 and y = z and x == z and y = 1;
                h(x) if x > 1 and y = z and x = z and y = 2;
-               i(x) if x > 1 and y = z and x == z and y = 2;"#,
+               i(x) if x > 1 and y = z and x == z and y = 2;
+
+               j(y) if x = y and y == z and z = 1 and x = 1;
+               k(y) if x = y and y == z and z = 1 and x = 2;"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this = 1");
@@ -680,6 +683,14 @@ mod test {
 
         let mut q = p.new_query_from_term(term!(call!("i", [sym!("x")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this == 2");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("j", [sym!("y")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "y", "_this = 1 and _this == 1");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("k", [sym!("y")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "y", "_this = 2 and _this == 1");
         assert_query_done!(q);
         Ok(())
     }
