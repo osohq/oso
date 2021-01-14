@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 
 from oso import Oso, polar_class
-import polar
 from polar import exceptions
 
 # Fake global actor name → company ID map.
