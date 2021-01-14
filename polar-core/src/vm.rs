@@ -2136,10 +2136,10 @@ impl PolarVirtualMachine {
                     args: vec![left, right],
                 })
             }
-            (Value::RestVariable(_), Value::RestVariable(_)) => todo!("*rest, *rest"),
             (Value::Variable(l), Value::Variable(r))
+            | (Value::Variable(l), Value::RestVariable(r))
             | (Value::RestVariable(l), Value::Variable(r))
-            | (Value::Variable(l), Value::RestVariable(r)) => {
+            | (Value::RestVariable(l), Value::RestVariable(r)) => {
                 // Two variables.
                 match (self.variable_state(l), self.variable_state(r)) {
                     (VariableState::Unbound, VariableState::Unbound) => {
