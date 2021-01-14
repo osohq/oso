@@ -39,7 +39,7 @@ class Oso(Polar):
         except StopIteration:
             return False
 
-    def get_allowed_actions(self, actor, resource, allow_unbound=False):
+    def get_allowed_actions(self, actor, resource, allow_wildcard=False):
         # Get allowed actions on the resource
         results = self.query_rule("allow", actor, Variable("action"), resource)
         actions = set()
@@ -47,7 +47,7 @@ class Oso(Polar):
             action = result.get("bindings").get("action")
             if type(action) == Variable:
                 # TODO: is this the correct behavior?
-                if not allow_unbound:
+                if not allow_wildcard:
                     raise exceptions.OsoError(
                         """get_allowed_actions() found an unbound action. To get allowed actions, specify allowed actions in the policy.
     E.g., instead of `allow(actor: User, _action, resource: MyResource);`,
@@ -55,7 +55,7 @@ class Oso(Polar):
                         """
                     )
                 else:
-                    return ["UNBOUND"]
+                    return ["*"]
             actions.add(action)
 
         return list(actions)
