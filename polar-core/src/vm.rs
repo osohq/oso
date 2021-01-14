@@ -2173,7 +2173,8 @@ impl PolarVirtualMachine {
                         let e = e.clone_with_new_constraint(term.clone());
                         self.constrain(&e)?;
                     }
-                    (VariableState::Partial(e), VariableState::Unbound) => {
+                    (VariableState::Partial(e), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Partial(e)) => {
                         let e = e.clone_with_new_constraint(term.clone());
                         self.constrain(&e)?;
                     }
