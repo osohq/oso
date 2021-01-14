@@ -658,6 +658,33 @@ mod test {
     }
 
     #[test]
+    fn test_partial_comparison_with_variable_indirection() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"f(x) if x > 1 and y = z and x = z and y = 1;
+               g(x) if x > 1 and y = z and x == z and y = 1;
+               h(x) if x > 1 and y = z and x = z and y = 2;
+               i(x) if x > 1 and y = z and x == z and y = 2;"#,
+        )?;
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this = 1");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this == 1");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this = 2");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("i", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this == 2");
+        assert_query_done!(q);
+        Ok(())
+    }
+
+    #[test]
     fn test_partial_comparison_dot() -> TestResult {
         let p = Polar::new();
         p.load_str("a_positive(x) if x.a > 0 and 0 < x.a;")?;

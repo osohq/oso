@@ -2182,6 +2182,12 @@ impl PolarVirtualMachine {
                         e.merge_constraints(f);
                         self.constrain(&e.clone_with_new_constraint(term.clone()))?;
                     }
+                    (VariableState::Partial(mut e), VariableState::Cycle(c))
+                    | (VariableState::Cycle(c), VariableState::Partial(mut e)) => {
+                        e.merge_constraints(cycle_constraints(c));
+                        let e = e.clone_with_new_constraint(term.clone());
+                        self.constrain(&e)?;
+                    }
                     (s, t) => todo!("({:?}, {:?}]", s, t),
                 }
                 Ok(QueryEvent::None)
@@ -2189,7 +2195,9 @@ impl PolarVirtualMachine {
             (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
                 // A variable on the left, ground on the right.
                 match self.variable_state(l) {
-                    VariableState::Unbound => todo!("cmp w/unbound"),
+                    VariableState::Unbound => {
+                        self.constrain(&op!(And, term.clone()))?;
+                    }
                     VariableState::Bound(x) => {
                         return self.comparison_op_helper(term, op, vec![x, right]);
                     }
@@ -2207,7 +2215,9 @@ impl PolarVirtualMachine {
             (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => {
                 // Ground on the left, a variable on the right.
                 match self.variable_state(r) {
-                    VariableState::Unbound => todo!("cmp w/unbound"),
+                    VariableState::Unbound => {
+                        self.constrain(&op!(And, term.clone()))?;
+                    }
                     VariableState::Bound(y) => {
                         return self.comparison_op_helper(term, op, vec![left, y]);
                     }
