@@ -1086,6 +1086,9 @@ fn test_comparisons() -> TestResult {
     qeval(&mut p, "1.0 <= 1");
     qeval(&mut p, "1 == 1");
     qeval(&mut p, "0.0 == 0");
+
+    qeval(&mut p, "x == y and x = 1 and y = 1");
+    qnull(&mut p, "x == y and x = 1 and y = 2");
     Ok(())
 }
 

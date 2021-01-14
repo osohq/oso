@@ -2143,7 +2143,7 @@ impl PolarVirtualMachine {
                 // Two variables.
                 match (self.variable_state(l), self.variable_state(r)) {
                     (VariableState::Unbound, VariableState::Unbound) => {
-                        todo!("unbound, unbound");
+                        self.constrain(&op!(And, term.clone()))?;
                     }
                     (VariableState::Bound(x), _) => {
                         let args = vec![x, right];
