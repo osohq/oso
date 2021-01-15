@@ -1,4 +1,3 @@
-// TODO(gj): fix term! macro lineage
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::HashSet;
@@ -87,8 +86,17 @@ impl Folder for PartialInverter {
 fn invert_partials(bindings: BindingStack, vm: &PolarVirtualMachine, bsp: usize) -> BindingStack {
     let mut new_bindings = vec![];
     for Binding(var, value) in bindings {
+        // Determine whether to invert partials based on the state of the variable in the VM
+        // before inversion.
         match vm.variable_state_at_point(&var, bsp) {
+            // TODO: This case is for something like
+            // w(x) if not (y = 1) and y = x;
+            //
+            // Ultimately this should add constraints, but for now this query always succeeds with
+            // no constraints because a negation is performed over a variable that is not
+            // bound.
             VariableState::Unbound => (),
+            // during the negation to a different value (the negated query would backtrack).
             VariableState::Bound(x) => assert_eq!(x, value, "inconsistent bindings"),
             VariableState::Cycle(c) => {
                 let constraints =
@@ -102,7 +110,7 @@ fn invert_partials(bindings: BindingStack, vm: &PolarVirtualMachine, bsp: usize)
                             new_bindings.push(Binding(var.clone(), f.clone().into_term()));
                         }
                     }
-                    _ => todo!("constraints is {}", constraints.to_polar()),
+                    _ => unreachable!("Constraint from partial inverter must be expression."),
                 }
             }
             // Three states of a partial x
@@ -113,12 +121,21 @@ fn invert_partials(bindings: BindingStack, vm: &PolarVirtualMachine, bsp: usize)
             // - post-inversion but pre-simplification partial (>2 constraints)
             // - post-inversion post-simplification partial (>2 constraints)
             //
-            VariableState::Partial(e) => todo!(
-                "{} was partial {} in VM, now {}",
-                var,
-                e.to_polar(),
-                value.to_polar()
-            ),
+            VariableState::Partial(e) => {
+                let constraints =
+                    PartialInverter::new(var.clone(), VariableState::Partial(e.clone()))
+                        .fold_term(value);
+                match constraints.value() {
+                    Value::Expression(f) => {
+                        let mut e = e.clone();
+                        e.merge_constraints(f.clone());
+                        for var in e.variables() {
+                            new_bindings.push(Binding(var.clone(), e.clone().into_term()));
+                        }
+                    }
+                    _ => unreachable!("Constraint from partial inverter must be expression."),
+                }
+            }
         }
     }
     new_bindings
@@ -149,7 +166,12 @@ fn reduce_constraints(bindings: Vec<BindingStack>) -> (Bindings, Vec<Symbol>) {
                             x.merge_constraints(y.clone());
                             o.insert(value.clone_with_value(value!(x)));
                         }
-                        (existing, new) => todo!("Encountered new state while reducing constraints.\n  Existing: {} -> {}\n  New: {} -> {}", var, existing.to_polar(), var, new.to_polar()),
+                        (existing, new) => panic!(
+                            "Illegal state reached while reducing constraints for {}: {} → {}",
+                            var,
+                            existing.to_polar(),
+                            new.to_polar()
+                        ),
                     },
                     Entry::Vacant(v) => {
                         v.insert(value);
@@ -181,11 +203,16 @@ impl Runnable for Inverter {
                             .drain(..)
                             .collect::<Vec<BindingStack>>()
                             .into_iter()
+                            // Inverts each result
                             .map(|bindings| invert_partials(bindings, &self.vm, self.bsp))
                             .collect();
+
+                        // Now have disjunction of results. not OR[result1, result2, ...]
+                        // Reduce constraints converts it into a conjunct of negated results.
+                        // AND[!result1, ...]
                         let (reduced, ordered_vars) = reduce_constraints(inverted);
-                        let simplified = simplify_bindings(reduced.clone(), &self.vm)
-                            .unwrap_or_else(Bindings::new);
+                        let simplified =
+                            simplify_bindings(reduced.clone()).unwrap_or_else(Bindings::new);
 
                         let simplified_keys = simplified.keys().collect::<HashSet<&Symbol>>();
                         let reduced_keys = reduced.keys().collect::<HashSet<&Symbol>>();
@@ -194,6 +221,8 @@ impl Runnable for Inverter {
                         assert_eq!(simplified_keys, reduced_keys);
                         assert_eq!(reduced_keys, ordered_keys);
 
+                        // Figure out which bindings should go into parent VM's binding
+                        // stack.
                         let new_bindings = ordered_vars.into_iter().flat_map(|var| {
                             // We have at least one binding to return, so succeed.
                             result = true;
@@ -201,11 +230,10 @@ impl Runnable for Inverter {
                             let value = simplified[&var].clone();
                             if let Value::Expression(_) = value.value() {
                                 match self.vm.variable_state_at_point(&var, self.bsp) {
-                                    VariableState::Unbound => {
-                                        vec![Binding(var, value)]
-                                    }
+                                    VariableState::Unbound => vec![Binding(var, value)],
                                     VariableState::Bound(x) => {
-                                        todo!("BOUND: {} -> {}", var, x.to_polar())
+                                        assert_eq!(x, value, "inconsistent bindings");
+                                        vec![Binding(var, value)]
                                     }
                                     VariableState::Cycle(c) => {
                                         let constraint = cycle_constraints(c.clone())
@@ -216,7 +244,11 @@ impl Runnable for Inverter {
                                             .collect()
                                     }
                                     VariableState::Partial(e) => {
-                                        todo!("PARTIAL: {} -> {}", var, e.to_polar())
+                                        let e = e.clone_with_new_constraint(value);
+                                        e.variables()
+                                            .into_iter()
+                                            .map(|var| Binding(var, e.clone().into_term()))
+                                            .collect()
                                     }
                                 }
                             } else {
@@ -229,6 +261,7 @@ impl Runnable for Inverter {
                 }
                 QueryEvent::Result { .. } => {
                     let bindings: BindingStack = self.vm.bindings.drain(self.bsp..).collect();
+                    // Add new part of binding stack from inversion to results.
                     self.results.push(bindings);
                 }
                 event => return Ok(event),

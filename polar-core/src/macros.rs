@@ -212,7 +212,7 @@ impl<T> From<T> for TestHelper<T> {
 
 impl From<Value> for TestHelper<Term> {
     fn from(other: Value) -> Self {
-        Self(Term::new_from_test(other))
+        Self(Term::new_temporary(other))
     }
 }
 
@@ -237,7 +237,7 @@ impl From<Value> for TestHelper<Parameter> {
     /// a specializer.
     fn from(name: Value) -> Self {
         Self(Parameter {
-            parameter: Term::new_from_test(name),
+            parameter: Term::new_temporary(name),
             specializer: None,
         })
     }
@@ -332,6 +332,6 @@ impl From<InstanceLiteral> for TestHelper<Pattern> {
 }
 impl From<Pattern> for TestHelper<Term> {
     fn from(other: Pattern) -> Self {
-        Self(Term::new_from_test(value!(other)))
+        Self(Term::new_temporary(value!(other)))
     }
 }

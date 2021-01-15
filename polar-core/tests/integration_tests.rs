@@ -1086,6 +1086,9 @@ fn test_comparisons() -> TestResult {
     qeval(&mut p, "1.0 <= 1");
     qeval(&mut p, "1 == 1");
     qeval(&mut p, "0.0 == 0");
+
+    qeval(&mut p, "x == y and x = 1 and y = 1");
+    qnull(&mut p, "x == y and x = 1 and y = 2");
     Ok(())
 }
 
@@ -1601,6 +1604,9 @@ fn test_cut() -> TestResult {
 fn test_forall() -> TestResult {
     let mut p = Polar::new();
     p.load_str("all_ones(l) if forall(item in l, item = 1);")?;
+    // not (item in l and not item = 1) _item != 2
+
+    qnull(&mut p, "all_ones([2])");
 
     qeval(&mut p, "all_ones([1])");
     qeval(&mut p, "all_ones([1, 1, 1])");
@@ -1892,6 +1898,8 @@ fn test_list_matches() {
     qvar(&mut p, "[*xs] matches []", "xs", vec![value!([])]);
     qvar(&mut p, "[*xs] matches [1]", "xs", vec![value!([1])]);
     qvar(&mut p, "[1] matches [*ys]", "ys", vec![value!([1])]);
+    qeval(&mut p, "[xs] matches [*ys]");
+    qeval(&mut p, "[*xs] matches [ys]");
     qeval(&mut p, "[*xs] matches [*ys]");
     qvar(&mut p, "[1,2,3] matches [1,2,*xs]", "xs", vec![value!([3])]);
     qvar(
