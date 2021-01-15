@@ -32,6 +32,7 @@ class Oso(Polar):
         :param resource: The resource being accessed.
 
         :return: ``True`` if the request is allowed, ``False`` otherwise.
+
         """
         try:
             next(self.query_rule("allow", actor, action, resource))
@@ -49,10 +50,10 @@ class Oso(Polar):
 
         :param resource: The resource being accessed
 
-        :param allow_wildcard: Flag to determine behavior if the policy
-        includes a wildcard action. E.g., a rule allowing any action:
-        ``allow(_actor, _action, _resource)``. If ``True``, the method will
-        return ``["*"]``, if ``False``, the method will raise an exception.
+        :param allow_wildcard: Flag to determine behavior if the policy \
+            includes a wildcard action. E.g., a rule allowing any action: \
+            ``allow(_actor, _action, _resource)``. If ``True``, the method will \
+            return ``["*"]``, if ``False``, the method will raise an exception.
 
         :type allow_wildcard: bool
 
@@ -63,7 +64,6 @@ class Oso(Polar):
         for result in results:
             action = result.get("bindings").get("action")
             if isinstance(action, Variable):
-                # TODO: is this the correct behavior?
                 if not allow_wildcard:
                     raise exceptions.OsoError(
                         """The result of get_allowed_actions() contained an
