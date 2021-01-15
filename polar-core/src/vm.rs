@@ -1030,6 +1030,7 @@ impl PolarVirtualMachine {
     }
 
     /// Comparison operator that essentially performs partial unification.
+    #[allow(clippy::many_single_char_names)]
     pub fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         self.log_with(
             || format!("MATCHES: {} matches {}", left.to_polar(), right.to_polar()),
@@ -1042,10 +1043,11 @@ impl PolarVirtualMachine {
                 unreachable!("encountered bare expression")
             }
 
+            // TODO(gj): (Var, Rest) + (Rest, Var) cases might be unreachable.
             (Value::Variable(l), Value::Variable(r))
-            | (Value::RestVariable(l), Value::RestVariable(r))
+            | (Value::Variable(l), Value::RestVariable(r))
             | (Value::RestVariable(l), Value::Variable(r))
-            | (Value::Variable(l), Value::RestVariable(r)) => {
+            | (Value::RestVariable(l), Value::RestVariable(r)) => {
                 // Two variables.
                 match (self.variable_state(l), self.variable_state(r)) {
                     (VariableState::Unbound, VariableState::Unbound) => {
@@ -1068,7 +1070,35 @@ impl PolarVirtualMachine {
                         e.add_constraint(op!(Isa, left.clone(), right.clone()));
                         self.constrain(&e)?;
                     }
-                    (s, t) => todo!("({:?}, {:?}]", s, t),
+                    (VariableState::Cycle(c), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Cycle(c)) => {
+                        let e = cycle_constraints(c).clone_with_new_constraint(
+                            op!(Isa, left.clone(), right.clone()).into_term(),
+                        );
+                        self.constrain(&e)?;
+                    }
+                    (VariableState::Partial(e), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Partial(e)) => {
+                        let e = e.clone_with_new_constraint(
+                            op!(Isa, left.clone(), right.clone()).into_term(),
+                        );
+                        self.constrain(&e)?;
+                    }
+                    (VariableState::Partial(mut e), VariableState::Cycle(c))
+                    | (VariableState::Cycle(c), VariableState::Partial(mut e)) => {
+                        e.merge_constraints(cycle_constraints(c));
+                        let e = e.clone_with_new_constraint(
+                            op!(Isa, left.clone(), right.clone()).into_term(),
+                        );
+                        self.constrain(&e)?;
+                    }
+                    (VariableState::Partial(mut e), VariableState::Partial(f)) => {
+                        e.merge_constraints(f);
+                        let e = e.clone_with_new_constraint(
+                            op!(Isa, left.clone(), right.clone()).into_term(),
+                        );
+                        self.constrain(&e)?;
+                    }
                 }
             }
             (Value::Variable(l), _) | (Value::RestVariable(l), _) => match self.variable_state(l) {
@@ -1818,7 +1848,7 @@ impl PolarVirtualMachine {
                     Goal::CheckError,
                 ])?;
             }
-            Value::Variable(v) | Value::RestVariable(v) => {
+            Value::Variable(v) => {
                 let constraints = match self.variable_state(v) {
                     VariableState::Bound(x) => {
                         return self.dot_op_helper(vec![x, field.clone(), value.clone()]);
@@ -1841,6 +1871,7 @@ impl PolarVirtualMachine {
                     .clone_with_new_constraint(op!(Unify, value.clone(), dot_op).into_term());
                 self.constrain(&constraints)?;
             }
+            Value::RestVariable(_) => unreachable!("invalid syntax"),
             _ => {
                 return Err(self.type_error(
                     &object,
@@ -1854,6 +1885,7 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
+    #[allow(clippy::many_single_char_names)]
     fn in_op_helper(
         &mut self,
         term: &Term,
@@ -1864,7 +1896,11 @@ impl PolarVirtualMachine {
         let item = &args[0];
         let iterable = &args[1];
         match (item.value(), iterable.value()) {
-            (Value::Expression(_), _) | (_, Value::Expression(_)) => unreachable!(),
+            (Value::Expression(_), _)
+            | (_, Value::Expression(_))
+            | (Value::RestVariable(_), _)
+            | (_, Value::RestVariable(_)) => unreachable!("invalid syntax"),
+
             (_, Value::List(list)) if list.is_empty() => {
                 // Nothing is in an empty list.
                 self.backtrack()?;
@@ -1878,10 +1914,7 @@ impl PolarVirtualMachine {
                 self.backtrack()?;
             }
 
-            (Value::RestVariable(_), Value::RestVariable(_)) => todo!("*rest, *rest"),
-            (Value::Variable(l), Value::Variable(r))
-            | (Value::RestVariable(l), Value::Variable(r))
-            | (Value::Variable(l), Value::RestVariable(r)) => {
+            (Value::Variable(l), Value::Variable(r)) => {
                 // Two variables.
                 match (self.variable_state(l), self.variable_state(r)) {
                     (VariableState::Bound(item), _) => {
@@ -1910,7 +1943,8 @@ impl PolarVirtualMachine {
                         let constraint = op!(And, term.clone());
                         self.constrain(&constraint)?;
                     }
-                    (VariableState::Cycle(c), VariableState::Unbound) => {
+                    (VariableState::Cycle(c), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Cycle(c)) => {
                         let e = cycle_constraints(c);
                         self.constrain(&e.clone_with_new_constraint(term.clone()))?;
                     }
@@ -1932,12 +1966,13 @@ impl PolarVirtualMachine {
                         e.merge_constraints(f);
                         self.constrain(&e.clone_with_new_constraint(term.clone()))?;
                     }
-                    (s, t) => todo!("({:?}, {:?}]", s, t),
                 }
             }
 
-            (_, Value::Variable(v)) | (_, Value::RestVariable(v)) => match self.variable_state(v) {
-                VariableState::Unbound => todo!(),
+            (_, Value::Variable(v)) => match self.variable_state(v) {
+                VariableState::Unbound => {
+                    self.constrain(&op!(And, term.clone()))?;
+                }
                 VariableState::Bound(iterable) => {
                     let args = vec![item.clone(), iterable];
                     return self.in_op_helper(
@@ -2118,6 +2153,7 @@ impl PolarVirtualMachine {
     }
 
     /// Evaluate comparisons.
+    #[allow(clippy::many_single_char_names)]
     fn comparison_op_helper(
         &mut self,
         term: &Term,
@@ -2141,9 +2177,13 @@ impl PolarVirtualMachine {
 
         // Do the comparison.
         match (left.value(), right.value()) {
-            (Value::Expression(_), _) | (_, Value::Expression(_)) => unreachable!(
-                "should never encounter a bare expression; only variables bound to expressions"
-            ),
+            (Value::Expression(_), _)
+            | (_, Value::Expression(_))
+            | (Value::RestVariable(_), _)
+            | (_, Value::RestVariable(_)) => {
+                unreachable!("invalid syntax")
+            }
+
             (Value::Number(_), Value::Number(_))
             | (Value::Number(_), Value::Boolean(_))
             | (Value::Boolean(_), Value::Number(_))
@@ -2170,14 +2210,11 @@ impl PolarVirtualMachine {
                     args: vec![left, right],
                 })
             }
-            (Value::RestVariable(_), Value::RestVariable(_)) => todo!("*rest, *rest"),
-            (Value::Variable(l), Value::Variable(r))
-            | (Value::RestVariable(l), Value::Variable(r))
-            | (Value::Variable(l), Value::RestVariable(r)) => {
+            (Value::Variable(l), Value::Variable(r)) => {
                 // Two variables.
                 match (self.variable_state(l), self.variable_state(r)) {
                     (VariableState::Unbound, VariableState::Unbound) => {
-                        todo!("unbound, unbound");
+                        self.constrain(&op!(And, term.clone()))?;
                     }
                     (VariableState::Bound(x), _) => {
                         let args = vec![x, right];
@@ -2207,7 +2244,8 @@ impl PolarVirtualMachine {
                         let e = e.clone_with_new_constraint(term.clone());
                         self.constrain(&e)?;
                     }
-                    (VariableState::Partial(e), VariableState::Unbound) => {
+                    (VariableState::Partial(e), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Partial(e)) => {
                         let e = e.clone_with_new_constraint(term.clone());
                         self.constrain(&e)?;
                     }
@@ -2215,14 +2253,26 @@ impl PolarVirtualMachine {
                         e.merge_constraints(f);
                         self.constrain(&e.clone_with_new_constraint(term.clone()))?;
                     }
-                    (s, t) => todo!("({:?}, {:?}]", s, t),
+                    (VariableState::Partial(mut e), VariableState::Cycle(c))
+                    | (VariableState::Cycle(c), VariableState::Partial(mut e)) => {
+                        e.merge_constraints(cycle_constraints(c));
+                        let e = e.clone_with_new_constraint(term.clone());
+                        self.constrain(&e)?;
+                    }
+                    (VariableState::Cycle(c), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Cycle(c)) => {
+                        let e = cycle_constraints(c).clone_with_new_constraint(term.clone());
+                        self.constrain(&e)?;
+                    }
                 }
                 Ok(QueryEvent::None)
             }
-            (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
+            (Value::Variable(l), _) => {
                 // A variable on the left, ground on the right.
                 match self.variable_state(l) {
-                    VariableState::Unbound => todo!("cmp w/unbound"),
+                    VariableState::Unbound => {
+                        self.constrain(&op!(And, term.clone()))?;
+                    }
                     VariableState::Bound(x) => {
                         return self.comparison_op_helper(term, op, vec![x, right]);
                     }
@@ -2237,10 +2287,12 @@ impl PolarVirtualMachine {
                 }
                 Ok(QueryEvent::None)
             }
-            (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => {
+            (_, Value::Variable(r)) => {
                 // Ground on the left, a variable on the right.
                 match self.variable_state(r) {
-                    VariableState::Unbound => todo!("cmp w/unbound"),
+                    VariableState::Unbound => {
+                        self.constrain(&op!(And, term.clone()))?;
+                    }
                     VariableState::Bound(y) => {
                         return self.comparison_op_helper(term, op, vec![left, y]);
                     }
@@ -2297,6 +2349,7 @@ impl PolarVirtualMachine {
             }
 
             // Unify two variables.
+            // TODO(gj): (Var, Rest) + (Rest, Var) cases might be unreachable.
             (Value::Variable(_), Value::Variable(_))
             | (Value::Variable(_), Value::RestVariable(_))
             | (Value::RestVariable(_), Value::Variable(_))
@@ -2439,6 +2492,7 @@ impl PolarVirtualMachine {
 
     /// Unify two variables. May produce new bindings, `Unify` goals,
     /// or unification constraints.
+    #[allow(clippy::many_single_char_names)]
     fn unify_vars(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         let l = left.value().as_symbol().expect("variable");
         let r = right.value().as_symbol().expect("variable");
