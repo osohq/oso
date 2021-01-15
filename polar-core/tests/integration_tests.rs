@@ -1895,6 +1895,8 @@ fn test_list_matches() {
     qvar(&mut p, "[*xs] matches []", "xs", vec![value!([])]);
     qvar(&mut p, "[*xs] matches [1]", "xs", vec![value!([1])]);
     qvar(&mut p, "[1] matches [*ys]", "ys", vec![value!([1])]);
+    qeval(&mut p, "[xs] matches [*ys]");
+    qeval(&mut p, "[*xs] matches [ys]");
     qeval(&mut p, "[*xs] matches [*ys]");
     qvar(&mut p, "[1,2,3] matches [1,2,*xs]", "xs", vec![value!([3])]);
     qvar(

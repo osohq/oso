@@ -1042,10 +1042,11 @@ impl PolarVirtualMachine {
                 unreachable!("encountered bare expression")
             }
 
+            // TODO(gj): (Var, Rest) + (Rest, Var) cases might be unreachable.
             (Value::Variable(l), Value::Variable(r))
-            | (Value::RestVariable(l), Value::RestVariable(r))
+            | (Value::Variable(l), Value::RestVariable(r))
             | (Value::RestVariable(l), Value::Variable(r))
-            | (Value::Variable(l), Value::RestVariable(r)) => {
+            | (Value::RestVariable(l), Value::RestVariable(r)) => {
                 // Two variables.
                 match (self.variable_state(l), self.variable_state(r)) {
                     (VariableState::Unbound, VariableState::Unbound) => {
@@ -1813,7 +1814,7 @@ impl PolarVirtualMachine {
                     Goal::CheckError,
                 ])?;
             }
-            Value::Variable(v) | Value::RestVariable(v) => {
+            Value::Variable(v) => {
                 let constraints = match self.variable_state(v) {
                     VariableState::Bound(x) => {
                         return self.dot_op_helper(vec![x, field.clone(), value.clone()]);
@@ -1836,6 +1837,7 @@ impl PolarVirtualMachine {
                     .clone_with_new_constraint(op!(Unify, value.clone(), dot_op).into_term());
                 self.constrain(&constraints)?;
             }
+            Value::RestVariable(_) => unreachable!("invalid syntax"),
             _ => {
                 return Err(self.type_error(
                     &object,
@@ -1860,7 +1862,11 @@ impl PolarVirtualMachine {
         let item = &args[0];
         let iterable = &args[1];
         match (item.value(), iterable.value()) {
-            (Value::Expression(_), _) | (_, Value::Expression(_)) => unreachable!(),
+            (Value::Expression(_), _)
+            | (_, Value::Expression(_))
+            | (Value::RestVariable(_), _)
+            | (_, Value::RestVariable(_)) => unreachable!("invalid syntax"),
+
             (_, Value::List(list)) if list.is_empty() => {
                 // Nothing is in an empty list.
                 self.backtrack()?;
@@ -1874,13 +1880,7 @@ impl PolarVirtualMachine {
                 self.backtrack()?;
             }
 
-            (Value::Variable(l), Value::Variable(r))
-            // TODO(gj): I don't think it's possible to encounter a RestVariable here given that
-            // the *rest syntax is not valid as an operand in a comparison. The closest you could
-            // come is a regular variable bound to a rest variable.
-            | (Value::RestVariable(l), Value::Variable(r))
-            | (Value::Variable(l), Value::RestVariable(r))
-            | (Value::RestVariable(l), Value::RestVariable(r)) => {
+            (Value::Variable(l), Value::Variable(r)) => {
                 // Two variables.
                 match (self.variable_state(l), self.variable_state(r)) {
                     (VariableState::Bound(item), _) => {
@@ -1935,7 +1935,7 @@ impl PolarVirtualMachine {
                 }
             }
 
-            (_, Value::Variable(v)) | (_, Value::RestVariable(v)) => match self.variable_state(v) {
+            (_, Value::Variable(v)) => match self.variable_state(v) {
                 VariableState::Unbound => {
                     self.constrain(&op!(And, term.clone()))?;
                 }
@@ -2143,9 +2143,13 @@ impl PolarVirtualMachine {
 
         // Do the comparison.
         match (left.value(), right.value()) {
-            (Value::Expression(_), _) | (_, Value::Expression(_)) => unreachable!(
-                "should never encounter a bare expression; only variables bound to expressions"
-            ),
+            (Value::Expression(_), _)
+            | (_, Value::Expression(_))
+            | (Value::RestVariable(_), _)
+            | (_, Value::RestVariable(_)) => {
+                unreachable!("invalid syntax")
+            }
+
             (Value::Number(_), Value::Number(_))
             | (Value::Number(_), Value::Boolean(_))
             | (Value::Boolean(_), Value::Number(_))
@@ -2172,10 +2176,7 @@ impl PolarVirtualMachine {
                     args: vec![left, right],
                 })
             }
-            (Value::Variable(l), Value::Variable(r))
-            | (Value::Variable(l), Value::RestVariable(r))
-            | (Value::RestVariable(l), Value::Variable(r))
-            | (Value::RestVariable(l), Value::RestVariable(r)) => {
+            (Value::Variable(l), Value::Variable(r)) => {
                 // Two variables.
                 match (self.variable_state(l), self.variable_state(r)) {
                     (VariableState::Unbound, VariableState::Unbound) => {
@@ -2232,7 +2233,7 @@ impl PolarVirtualMachine {
                 }
                 Ok(QueryEvent::None)
             }
-            (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
+            (Value::Variable(l), _) => {
                 // A variable on the left, ground on the right.
                 match self.variable_state(l) {
                     VariableState::Unbound => {
@@ -2252,7 +2253,7 @@ impl PolarVirtualMachine {
                 }
                 Ok(QueryEvent::None)
             }
-            (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => {
+            (_, Value::Variable(r)) => {
                 // Ground on the left, a variable on the right.
                 match self.variable_state(r) {
                     VariableState::Unbound => {
@@ -2314,6 +2315,7 @@ impl PolarVirtualMachine {
             }
 
             // Unify two variables.
+            // TODO(gj): (Var, Rest) + (Rest, Var) cases might be unreachable.
             (Value::Variable(_), Value::Variable(_))
             | (Value::Variable(_), Value::RestVariable(_))
             | (Value::RestVariable(_), Value::Variable(_))
