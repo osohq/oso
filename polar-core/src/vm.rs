@@ -1067,7 +1067,35 @@ impl PolarVirtualMachine {
                         e.add_constraint(op!(Isa, left.clone(), right.clone()));
                         self.constrain(&e)?;
                     }
-                    (s, t) => todo!("({:?}, {:?}]", s, t),
+                    (VariableState::Cycle(c), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Cycle(c)) => {
+                        let e = cycle_constraints(c).clone_with_new_constraint(
+                            op!(Isa, left.clone(), right.clone()).into_term(),
+                        );
+                        self.constrain(&e)?;
+                    }
+                    (VariableState::Partial(e), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Partial(e)) => {
+                        let e = e.clone_with_new_constraint(
+                            op!(Isa, left.clone(), right.clone()).into_term(),
+                        );
+                        self.constrain(&e)?;
+                    }
+                    (VariableState::Partial(mut e), VariableState::Cycle(c))
+                    | (VariableState::Cycle(c), VariableState::Partial(mut e)) => {
+                        e.merge_constraints(cycle_constraints(c));
+                        let e = e.clone_with_new_constraint(
+                            op!(Isa, left.clone(), right.clone()).into_term(),
+                        );
+                        self.constrain(&e)?;
+                    }
+                    (VariableState::Partial(mut e), VariableState::Partial(f)) => {
+                        e.merge_constraints(f);
+                        let e = e.clone_with_new_constraint(
+                            op!(Isa, left.clone(), right.clone()).into_term(),
+                        );
+                        self.constrain(&e)?;
+                    }
                 }
             }
             (Value::Variable(l), _) | (Value::RestVariable(l), _) => match self.variable_state(l) {
