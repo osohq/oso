@@ -1321,7 +1321,7 @@ impl PolarVirtualMachine {
                 self.choose_conditional(
                     vec![Goal::Run { runnable }],
                     binds.collect(),
-                    vec![Goal::Backtrack],
+                    vec![Goal::CheckError, Goal::Backtrack],
                 )?;
             }
             _ => self
