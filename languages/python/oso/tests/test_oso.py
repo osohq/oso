@@ -146,9 +146,9 @@ def test_get_allowed_actions(test_oso):
     user = Actor(name="John")
     with pytest.raises(exceptions.OsoError):
         test_oso.get_allowed_actions(user, resource)
-    assert set(test_oso.get_allowed_actions(user, resource, allow_unbound=True)) == set(
-        ["UNBOUND"]
-    )
+    assert set(
+        test_oso.get_allowed_actions(user, resource, allow_wildcard=True)
+    ) == set(["*"])
 
 
 if __name__ == "__main__":
