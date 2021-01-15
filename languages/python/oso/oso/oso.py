@@ -51,9 +51,9 @@ class Oso(Polar):
         :param resource: The resource being accessed
 
         :param allow_wildcard: Flag to determine behavior if the policy \
-            includes a wildcard action. E.g., a rule allowing any action: \
-            ``allow(_actor, _action, _resource)``. If ``True``, the method will \
-            return ``["*"]``, if ``False``, the method will raise an exception.
+        includes a wildcard action. E.g., a rule allowing any action: \
+        ``allow(_actor, _action, _resource)``. If ``True``, the method will \
+        return ``["*"]``, if ``False``, the method will raise an exception.
 
         :type allow_wildcard: bool
 
