@@ -453,6 +453,11 @@ mod test {
             "_this matches _this and _y_58 matches _this"
         );
         assert_query_done!(q);
+
+        // TODO(gj): Make the below work.
+        // let mut q = p.new_query("x matches Integer and x = 1", false)?;
+        // assert_partial_expression!(next_binding(&mut q)?, "x", "1 matches Integer");
+        // assert_query_done!(q);
         Ok(())
     }
 
