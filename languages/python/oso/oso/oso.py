@@ -39,20 +39,38 @@ class Oso(Polar):
         except StopIteration:
             return False
 
-    def get_allowed_actions(self, actor, resource, allow_wildcard=False):
-        # Get allowed actions on the resource
+    def get_allowed_actions(self, actor, resource, allow_wildcard=False) -> list:
+        """Determine the actions ``actor`` is allowed to take on ``resource``.
+
+        Collects all actions allowed by allow rules in the Polar policy for the
+        given combination of actor and resource.
+
+        :param actor: The actor for whom to collect allowed actions
+
+        :param resource: The resource being accessed
+
+        :param allow_wildcard: Flag to determine behavior if the policy
+        includes a wildcard action. E.g., a rule allowing any action:
+        ``allow(_actor, _action, _resource)``. If ``True``, the method will
+        return ``["*"]``, if ``False``, the method will raise an exception.
+
+        :type allow_wildcard: bool
+
+        :return: A list of the unique allowed actions.
+        """
         results = self.query_rule("allow", actor, Variable("action"), resource)
         actions = set()
         for result in results:
             action = result.get("bindings").get("action")
-            if type(action) == Variable:
+            if isinstance(action, Variable):
                 # TODO: is this the correct behavior?
                 if not allow_wildcard:
                     raise exceptions.OsoError(
-                        """get_allowed_actions() found an unbound action. To get allowed actions, specify allowed actions in the policy.
-    E.g., instead of `allow(actor: User, _action, resource: MyResource);`,
-    use `allow(actor: User, action, resource: MyResource) if action in ["CREATE", "READ", "WRITE", "DELETE"];`
-                        """
+                        """The result of get_allowed_actions() contained an
+                        "unconstrained" action that could represent any
+                        action, but allow_wildcard was set to False. To fix,
+                        set allow_wildcard to True and compare with the "*"
+                        string."""
                     )
                 else:
                     return ["*"]
