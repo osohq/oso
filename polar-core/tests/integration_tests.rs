@@ -1604,6 +1604,9 @@ fn test_cut() -> TestResult {
 fn test_forall() -> TestResult {
     let mut p = Polar::new();
     p.load_str("all_ones(l) if forall(item in l, item = 1);")?;
+    // not (item in l and not item = 1) _item != 2
+
+    qnull(&mut p, "all_ones([2])");
 
     qeval(&mut p, "all_ones([1])");
     qeval(&mut p, "all_ones([1, 1, 1])");

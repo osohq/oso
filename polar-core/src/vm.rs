@@ -271,6 +271,7 @@ pub struct PolarVirtualMachine {
     /// Logging flag.
     log: bool,
     polar_log: bool,
+    polar_log_stderr: bool,
     polar_log_mute: bool,
 
     // Other flags.
@@ -326,6 +327,9 @@ impl PolarVirtualMachine {
             call_id_symbols: HashMap::new(),
             log: std::env::var("RUST_LOG").is_ok(),
             polar_log: std::env::var("POLAR_LOG").is_ok(),
+            polar_log_stderr: std::env::var("POLAR_LOG")
+                .map(|pl| pl == "now")
+                .unwrap_or(false),
             polar_log_mute: false,
             query_contains_partial: false,
             inverting: false,
@@ -807,6 +811,10 @@ impl PolarVirtualMachine {
     /// Print a message to the output stream.
     fn print<S: Into<String>>(&self, message: S) {
         let message = message.into();
+        if self.polar_log_stderr {
+            eprintln!("{}", message);
+        }
+
         self.messages.push(MessageKind::Print, message);
     }
 
@@ -1241,7 +1249,7 @@ impl PolarVirtualMachine {
                 // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.
 
                 let var = left.value().as_symbol()?;
-                let simplified = simplify_partial(var, operation.clone().into_term(), &self);
+                let simplified = simplify_partial(var, operation.clone().into_term());
                 let simplified = simplified.value().as_expression()?;
                 let lhs_of_matches = simplified
                     .constraints()
@@ -3134,7 +3142,7 @@ impl Runnable for PolarVirtualMachine {
 
         let mut bindings = self.bindings(true);
         if !self.inverting {
-            if let Some(bs) = simplify_bindings(bindings, &self) {
+            if let Some(bs) = simplify_bindings(bindings) {
                 bindings = bs;
             } else {
                 return Ok(QueryEvent::None);
