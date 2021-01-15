@@ -1876,7 +1876,8 @@ impl PolarVirtualMachine {
                         let constraint = op!(And, term.clone());
                         self.constrain(&constraint)?;
                     }
-                    (VariableState::Cycle(c), VariableState::Unbound) => {
+                    (VariableState::Cycle(c), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Cycle(c)) => {
                         let e = cycle_constraints(c);
                         self.constrain(&e.clone_with_new_constraint(term.clone()))?;
                     }
@@ -1898,7 +1899,6 @@ impl PolarVirtualMachine {
                         e.merge_constraints(f);
                         self.constrain(&e.clone_with_new_constraint(term.clone()))?;
                     }
-                    (s, t) => todo!("({:?}, {:?}]", s, t),
                 }
             }
 

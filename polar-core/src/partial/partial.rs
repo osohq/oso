@@ -1254,7 +1254,8 @@ mod test {
                h(x) if y in x.values and (y.bar = 1 and y.baz = 2) or y.bar = 3;
                i() if x in y;
                j() if x in [];
-               k(x) if x > 1 and x in [2, 3];"#,
+               k(x) if x > 1 and x in [2, 3];
+               l(x) if y in x;"#,
         )?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
@@ -1297,6 +1298,9 @@ mod test {
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(3));
         assert_query_done!(q);
 
+        let mut q = p.new_query_from_term(term!(call!("l", [sym!("x")])), false);
+        assert_partial_expressions!(next_binding(&mut q)?, "x" => "_y_39 in _this");
+        assert_query_done!(q);
         Ok(())
     }
 
