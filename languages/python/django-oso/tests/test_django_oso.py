@@ -179,7 +179,7 @@ def test_partial(rf, partial_policy):
 
 
 @pytest.mark.django_db
-def test_partial_subfield_isa():
+def test_partial_isa_with_path():
     from test_app.models import Post, User
 
     alice = User(name="alice")

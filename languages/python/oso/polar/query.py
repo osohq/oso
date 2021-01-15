@@ -47,7 +47,7 @@ class Query:
                 "ExternalCall": self.handle_external_call,
                 "ExternalOp": self.handle_external_op,
                 "ExternalIsa": self.handle_external_isa,
-                "ExternalSubfieldIsa": self.handle_external_subfield_isa,
+                "ExternalIsaWithPath": self.handle_external_isa_with_path,
                 "ExternalUnify": self.handle_external_unify,
                 "ExternalIsSubSpecializer": self.handle_external_is_subspecializer,
                 "ExternalIsSubclass": self.handle_external_is_subclass,
@@ -122,12 +122,12 @@ class Query:
         answer = self.host.isa(instance, class_tag)
         self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_external_subfield_isa(self, data):
+    def handle_external_isa_with_path(self, data):
         base_tag = data["base_tag"]
         path = data["path"]
         class_tag = data["class_tag"]
         try:
-            answer = self.host.subfield_isa(base_tag, path, class_tag)
+            answer = self.host.isa_with_path(base_tag, path, class_tag)
             self.ffi_query.question_result(data["call_id"], answer)
         except AttributeError as e:
             # TODO(gj): Does this ever get hit?

@@ -396,7 +396,7 @@ mod test {
                 QueryEvent::ExternalIsa { call_id, .. } => {
                     q.question_result(call_id, true).unwrap();
                 }
-                QueryEvent::ExternalSubfieldIsa { call_id, .. } => {
+                QueryEvent::ExternalIsaWithPath { call_id, .. } => {
                     q.question_result(call_id, true).unwrap();
                 }
                 e => panic!("unexpected event: {:?}", e),
@@ -973,7 +973,7 @@ mod test {
                 QueryEvent::ExternalIsSubclass { call_id, .. } => {
                     q.question_result(call_id, false).unwrap();
                 }
-                QueryEvent::ExternalSubfieldIsa {
+                QueryEvent::ExternalIsaWithPath {
                     call_id,
                     path,
                     class_tag,

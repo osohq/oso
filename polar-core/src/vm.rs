@@ -3164,7 +3164,7 @@ impl Runnable for PolarVirtualMachine {
     }
 
     /// Handle response to a predicate posed to the application, e.g., `ExternalIsa`.
-    // TODO(gj): CheckError? Might make sense for ExternalSubfieldIsa; not sure about others.
+    // TODO(gj): CheckError? Might make sense for ExternalIsaWithPath; not sure about others.
     fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
         let var = self.call_id_symbols.remove(&call_id).expect("bad call id");
         self.bind(&var, Term::new_temporary(Value::Boolean(answer)));

@@ -89,7 +89,7 @@ class Host:
         cls = self.get_class(class_tag)
         return isinstance(instance, cls)
 
-    def subfield_isa(self, base_tag, path, class_tag) -> bool:
+    def isa_with_path(self, base_tag, path, class_tag) -> bool:
         base = self.get_class(base_tag)
         cls = self.get_class(class_tag)
         for field in path:

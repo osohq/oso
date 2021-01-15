@@ -122,7 +122,7 @@ impl IsaConstraintCheck {
                     let call_id = counter.next();
                     self.last_call_id = call_id;
                     (
-                        Some(QueryEvent::ExternalSubfieldIsa {
+                        Some(QueryEvent::ExternalIsaWithPath {
                             call_id,
                             base_tag: existing.tag.clone(),
                             path: proposed_path[constraint_path.len()..].to_vec(),

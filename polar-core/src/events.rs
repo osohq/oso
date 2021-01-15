@@ -58,7 +58,7 @@ pub enum QueryEvent {
 
     /// Starting from `base_tag`, traverse `path` fields and check if the result is an instance of
     /// `class_tag`.
-    ExternalSubfieldIsa {
+    ExternalIsaWithPath {
         call_id: u64,
         base_tag: Symbol,
         path: TermList,

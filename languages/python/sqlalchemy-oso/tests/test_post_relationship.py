@@ -705,7 +705,7 @@ def test_deeply_nested_in(session, oso, tag_nested_many_many_test_fixture):
 
 
 # TODO combine with test in test_django_oso.
-def test_partial_subfield_isa(session, oso, tag_nested_many_many_test_fixture):
+def test_partial_isa_with_path(session, oso, tag_nested_many_many_test_fixture):
     oso.load_str(
         """
             allow(_, _, post: Post) if check_user(post.created_by);
