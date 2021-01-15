@@ -1373,8 +1373,10 @@ mod test {
     #[test]
     fn test_doubly_negated_ground() -> TestResult {
         let p = Polar::new();
-        p.load_str(r#"f(x) if not (x != 1);
-                      g(x) if not (not (x = 1));"#)?;
+        p.load_str(
+            r#"f(x) if not (x != 1);
+               g(x) if not (not (x = 1));"#,
+        )?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
@@ -1390,8 +1392,10 @@ mod test {
     #[test]
     fn test_partial_before_negation() -> TestResult {
         let p = Polar::new();
-        p.load_str(r#"f(x) if x > 1 and not (x < 0);
-                      g(x) if x > 1 and not (x = 2);"#)?;
+        p.load_str(
+            r#"f(x) if x > 1 and not (x < 0);
+               g(x) if x > 1 and not (x = 2);"#,
+        )?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this >= 0");
