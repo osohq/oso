@@ -1029,6 +1029,7 @@ impl PolarVirtualMachine {
     }
 
     /// Comparison operator that essentially performs partial unification.
+    #[allow(clippy::many_single_char_names)]
     pub fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         self.log_with(
             || format!("MATCHES: {} matches {}", left.to_polar(), right.to_polar()),
@@ -1848,6 +1849,7 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
+    #[allow(clippy::many_single_char_names)]
     fn in_op_helper(
         &mut self,
         term: &Term,
@@ -2117,6 +2119,7 @@ impl PolarVirtualMachine {
     }
 
     /// Evaluate comparisons.
+    #[allow(clippy::many_single_char_names)]
     fn comparison_op_helper(
         &mut self,
         term: &Term,
@@ -2453,6 +2456,7 @@ impl PolarVirtualMachine {
 
     /// Unify two variables. May produce new bindings, `Unify` goals,
     /// or unification constraints.
+    #[allow(clippy::many_single_char_names)]
     fn unify_vars(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         let l = left.value().as_symbol().expect("variable");
         let r = right.value().as_symbol().expect("variable");
