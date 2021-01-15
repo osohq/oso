@@ -1844,10 +1844,13 @@ impl PolarVirtualMachine {
                 self.backtrack()?;
             }
 
-            (Value::RestVariable(_), Value::RestVariable(_)) => todo!("*rest, *rest"),
             (Value::Variable(l), Value::Variable(r))
+            // TODO(gj): I don't think it's possible to encounter a RestVariable here given that
+            // the *rest syntax is not valid as an operand in a comparison. The closest you could
+            // come is a regular variable bound to a rest variable.
             | (Value::RestVariable(l), Value::Variable(r))
-            | (Value::Variable(l), Value::RestVariable(r)) => {
+            | (Value::Variable(l), Value::RestVariable(r))
+            | (Value::RestVariable(l), Value::RestVariable(r)) => {
                 // Two variables.
                 match (self.variable_state(l), self.variable_state(r)) {
                     (VariableState::Bound(item), _) => {
