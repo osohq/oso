@@ -1255,7 +1255,8 @@ mod test {
                i() if x in y;
                j() if x in [];
                k(x) if x > 1 and x in [2, 3];
-               l(x) if y in x;"#,
+               l(x) if y in x;
+               m(x) if 1 in y and y = x;"#,
         )?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
@@ -1300,6 +1301,10 @@ mod test {
 
         let mut q = p.new_query_from_term(term!(call!("l", [sym!("x")])), false);
         assert_partial_expressions!(next_binding(&mut q)?, "x" => "_y_39 in _this");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
+        assert_partial_expressions!(next_binding(&mut q)?, "x" => "1 in _this");
         assert_query_done!(q);
         Ok(())
     }

@@ -1906,7 +1906,9 @@ impl PolarVirtualMachine {
             }
 
             (_, Value::Variable(v)) | (_, Value::RestVariable(v)) => match self.variable_state(v) {
-                VariableState::Unbound => todo!(),
+                VariableState::Unbound => {
+                    self.constrain(&op!(And, term.clone()))?;
+                }
                 VariableState::Bound(iterable) => {
                     let args = vec![item.clone(), iterable];
                     return self.in_op_helper(
