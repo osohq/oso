@@ -29,6 +29,16 @@ Link to migration guide
 New features
 ============
 
+``get_allowed_actions`` introduced for Python
+---------------------------------------------
+
+Use :py:meth:`Oso.get_allowed_actions` to get a list of actions that a user
+is allowed to take on a resource. These actions can be used for making
+additional authorization decisions, especially in the frontend (e.g., hiding
+or showing a button based on the current user's allowed actions).
+
+See our guide :doc:`here<TODO>`!
+
 ``PolarClass`` implemented for versions 0.7 & 0.8 of the ``uuid`` crate
 -----------------------------------------------------------------------
 

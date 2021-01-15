@@ -9,7 +9,7 @@ Classes
 =======
 
 .. autoclass:: oso.Oso
-   :members: is_allowed, load_str, load_file, register_class, query_rule, query, clear_rules
+   :members: is_allowed, load_str, load_file, register_class, query_rule, query, clear_rules, get_allowed_actions
 
 .. autoclass:: oso.Variable
 
