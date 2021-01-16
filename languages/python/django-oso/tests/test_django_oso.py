@@ -307,7 +307,7 @@ def test_negated_matches_with_partial(rf):
 
     request.user = 4
     authorize_filter = authorize_model(request, Post)
-    assert str(authorize_filter) == ("(AND: (NOT (AND: ('pk__in', []))))")
+    assert str(authorize_filter) == ("(NOT (AND: ('pk__in', [])))")
     authorized_posts = Post.objects.filter(authorize_filter)
     assert str(authorized_posts.query) == (
         'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", '
