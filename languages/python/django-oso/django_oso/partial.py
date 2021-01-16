@@ -67,32 +67,13 @@ class FilterBuilder:
             model = model._meta.get_field(attr).related_model
         return model
 
-    # def translate_path(self, arg: Union[Expression, Variable]):
-    #     """Convert arg to a path, looking up variables where necessary.
-    #     Returns None if arg is not a path-like
-    #     """
-    #     # return dot_path(arg)
-    #     if isinstance(arg, Variable) and arg in self.variables:
-    #         path = self.variables[arg]
-    #         return path
-    #     elif isinstance(arg, Expression) and arg.operator == "Dot":
-    #         path = dot_path(arg)
-    #         translated = []
-    #         for segment in path:
-    #             tp = dot_path(segment)
-    #             if tp:
-    #                 translated += tp
-    #             else:
-    #                 translated.append(segment)
-    #         return translated
-    #     else:
-    #         # This is not a path-like object
-    #         return None
-
     def translate_expr(self, expr: Expression):
         """Translate a Polar expression to a Django Q object."""
         assert isinstance(expr, Expression), "expected a Polar expression"
 
+        # Check if either side of the expression starts with a lookup on
+        # a variable. In which case, enter the subquery for that variable
+        # instead and proceed as usual
         if len(expr.args) == 2:
             left, right = expr.args
             left_path = dot_path(left)
@@ -147,25 +128,11 @@ class FilterBuilder:
         left_path = dot_path(left)
         right_path = dot_path(right)
         if left_path:
-            if isinstance(left_path[0], Variable):
-                path = self.variables[left_path[0]]
-                subq = self.subqueries[path]
-                subq.filter &= COMPARISONS[expr.operator](
-                    "__".join(left_path[1:]), right
-                )
-            else:
-                self.filter &= COMPARISONS[expr.operator]("__".join(left_path), right)
+            self.filter &= COMPARISONS[expr.operator]("__".join(left_path), right)
         elif right_path:
-            if isinstance(right_path[0], Variable):
-                path = self.variables[right_path[0]]
-                subq = self.subqueries[path]
-                subq.filter &= REFLECTED_COMPARISONS[expr.operator](
-                    "__".join(right_path[1:]), left
-                )
-            else:
-                self.filter &= REFLECTED_COMPARISONS[expr.operator](
-                    "__".join(right_path), left
-                )
+            self.filter &= REFLECTED_COMPARISONS[expr.operator](
+                "__".join(right_path), left
+            )
         elif left == Variable("_this"):
             if self.model is None:
                 self.filter &= FALSE_FILTER
@@ -225,21 +192,6 @@ class FilterBuilder:
             self.filter &= COMPARISONS["Unify"]("__".join(right_path), left)
         else:
             breakpoint()
-
-    # if isinstance(left, Expression):
-    #     if left.operator == "And" and not left.args:
-    #         # An unconstrained partial is in a list if the list is non-empty.
-    #         count = Count("__".join(right_path))
-    #         filter = COMPARISONS["Gt"]("__".join(right_path + ("count",)), 0)
-    #         subquery = Subquery(
-    #             model.objects.annotate(count).filter(filter).values("pk")
-    #         )
-    #
-    #         return contained_in("pk", subquery)
-    #     else:
-    #         return translate_expr(left, model, path=right_path)
-    # else:
-    #     return COMPARISONS["Unify"]("__".join(right_path), left)
 
     def not_expr(self, expr: Expression):
         assert expr.operator == "Not"
