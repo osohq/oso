@@ -25,7 +25,7 @@ COMPARISONS = {
 }
 
 # So that 0 < field can be written
-# as field < 0 instead
+# as field > 0 instead
 REFLECTED_COMPARISONS = {
     "Unify": COMPARISONS["Unify"],
     "Eq": COMPARISONS["Eq"],
