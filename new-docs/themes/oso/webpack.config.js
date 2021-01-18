@@ -7,8 +7,6 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, 'static'),
         filename: 'bundle.js',
-        // ensures we load all resources from root of site
-        publicPath: "/",
     },
     mode: 'development',
     resolve: {

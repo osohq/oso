@@ -85,26 +85,26 @@
 /******/ 					"__wbindgen_object_drop_ref": function(p0i32) {
 /******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbindgen_object_drop_ref"](p0i32);
 /******/ 					},
-/******/ 					"__wbg_new_e13110f81ae347cf": function() {
-/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_new_e13110f81ae347cf"]();
+/******/ 					"__wbg_new_9dff83a08f5994f3": function() {
+/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_new_9dff83a08f5994f3"]();
 /******/ 					},
-/******/ 					"__wbg_push_b46eeec52d2b03bb": function(p0i32,p1i32) {
-/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_push_b46eeec52d2b03bb"](p0i32,p1i32);
+/******/ 					"__wbg_push_3ddd8187ff2ff82d": function(p0i32,p1i32) {
+/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_push_3ddd8187ff2ff82d"](p0i32,p1i32);
 /******/ 					},
-/******/ 					"__wbg_new_1192d65414040ad9": function(p0i32,p1i32) {
-/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_new_1192d65414040ad9"](p0i32,p1i32);
+/******/ 					"__wbg_new_94a7dfa9529ec6e8": function(p0i32,p1i32) {
+/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_new_94a7dfa9529ec6e8"](p0i32,p1i32);
 /******/ 					},
-/******/ 					"__wbg_setname_a2f5f3bdfc971d1d": function(p0i32,p1i32,p2i32) {
-/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_setname_a2f5f3bdfc971d1d"](p0i32,p1i32,p2i32);
+/******/ 					"__wbg_setname_3b4b98a44f7164ab": function(p0i32,p1i32,p2i32) {
+/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_setname_3b4b98a44f7164ab"](p0i32,p1i32,p2i32);
 /******/ 					},
-/******/ 					"__wbg_new_e4679013d435841e": function() {
-/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_new_e4679013d435841e"]();
+/******/ 					"__wbg_new_caaee1a4adcc6164": function() {
+/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_new_caaee1a4adcc6164"]();
 /******/ 					},
-/******/ 					"__wbg_set_155dce297caef4bd": function(p0i32,p1i32,p2i32) {
-/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_set_155dce297caef4bd"](p0i32,p1i32,p2i32);
+/******/ 					"__wbg_set_cc9a0fe818d4e028": function(p0i32,p1i32,p2i32) {
+/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_set_cc9a0fe818d4e028"](p0i32,p1i32,p2i32);
 /******/ 					},
-/******/ 					"__wbg_now_4de5b53a19e45567": function() {
-/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_now_4de5b53a19e45567"]();
+/******/ 					"__wbg_now_ba10664caf7c834a": function() {
+/******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbg_now_ba10664caf7c834a"]();
 /******/ 					},
 /******/ 					"__wbindgen_throw": function(p0i32,p1i32) {
 /******/ 						return installedModules["../../../languages/js/dist/bundler/polar_wasm_api_bg.js"].exports["__wbindgen_throw"](p0i32,p1i32);
@@ -213,7 +213,7 @@
 /******/ 				promises.push(installedWasmModuleData);
 /******/ 			else {
 /******/ 				var importObject = wasmImportObjects[wasmModuleId]();
-/******/ 				var req = fetch(__webpack_require__.p + "" + {"../../../languages/js/dist/bundler/polar_wasm_api_bg.wasm":"7a62131a4399e52fdb4c"}[wasmModuleId] + ".module.wasm");
+/******/ 				var req = fetch(__webpack_require__.p + "" + {"../../../languages/js/dist/bundler/polar_wasm_api_bg.wasm":"1b1ae16dc0bf6a833e20"}[wasmModuleId] + ".module.wasm");
 /******/ 				var promise;
 /******/ 				if(importObject instanceof Promise && typeof WebAssembly.compileStreaming === 'function') {
 /******/ 					promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
@@ -285,7 +285,7 @@
 /******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
 /******/
 /******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "/";
+/******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// on error function for async loading
 /******/ 	__webpack_require__.oe = function(err) { console.error(err); throw err; };

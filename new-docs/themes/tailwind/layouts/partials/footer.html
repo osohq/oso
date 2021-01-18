@@ -3,7 +3,8 @@
             href="https://tailwindcss.com" class="underline hover:text-blue-400">TailwindCSS</a></p>
 </footer>
 
-<script async="true" src="/app.js"></script>
+{{ $appJs := resources.Get "js/app.js" }}
+<script async="true" type="text/javascript" src="{{ $appJs.RelPermalink }}"></script>
 {{ $navJs := resources.Get "js/nav.js" }}
 {{ $js := slice $navJs | resources.Concat "js/docs.js" | resources.Minify }}
 <script async="true" type="text/javascript" src="{{ $js.RelPermalink }}"></script>

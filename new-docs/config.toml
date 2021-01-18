@@ -1,7 +1,8 @@
-baseURL = "https://docs.osohq.com/"
+baseURL = "https://docs-preview.oso.dev/v2/"
 languageCode = "en-us"
 title = "oso Documentation"
 theme = ["tailwind", "oso"]
+uglyurls = true
 
 defaultContentLanguage = "any"
 

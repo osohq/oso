@@ -17,7 +17,7 @@
 
     {{- $styles := resources.Get "css/styles.css" | postCSS (dict "config" "./assets/css/postcss.config.js") -}}
 
-    <script src="/bundle.js"></script>
+    <script async src="{{ $.Site.BaseURL }}bundle.js"></script>
 
     {{- if .Site.IsServer }}
     <link rel="stylesheet" href="{{ $styles.RelPermalink }}">
