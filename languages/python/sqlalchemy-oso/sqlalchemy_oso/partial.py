@@ -76,7 +76,6 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
     left, right = expression.args
     if dot_path(left) == ():
         assert left == Variable("_this")
-        pass
     else:
         for field_name in dot_path(left):
             _, model, __ = get_relationship(model, field_name)
@@ -186,7 +185,7 @@ def get_relationship(model, field_name: str):
 
 def emit_compare(field_name, value, operator, session, model):
     """Emit a comparison operation comparing the value of ``field_name`` on ``model`` to ``value``."""
-    assert not isinstance(value, Variable), "value is a variable #fail"
+    assert not isinstance(value, Variable), "value is a variable"
     property = getattr(model, field_name)
     return COMPARISONS[operator](property, value)
 

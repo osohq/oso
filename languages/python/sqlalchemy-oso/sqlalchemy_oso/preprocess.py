@@ -1,7 +1,7 @@
 """Convert expressions from oso into a format that the SQLAlchemy translation can use."""
 
 from collections import defaultdict
-from typing import Dict, Optional, List, Iterable, Set
+from typing import Dict, Optional, List, Iterable
 
 from polar.expression import Expression
 from polar.variable import Variable
@@ -31,9 +31,10 @@ def preprocess(expression: Expression) -> Expression:
 
 
 def preprocess_expression(expression: Expression, variables: TGroupedExpressions) -> Optional[Expression]:
-    """Collect expressions over variables in ``extract`` into ``variables``.
+    """Collect expressions over variables into ``variables``.
 
-    Return the expression with those removed."""
+    Return the expression with those removed.
+    """
     # Walk expression and collect variable expressions
     new_expr = expression
     if expression.operator == "And":
@@ -106,82 +107,8 @@ def preprocess_leaf(expression: Expression, variables: TGroupedExpressions) -> O
     if right_var is not None:
         variables[right_var].append(expression)
         return None
-    if left_var is not None:
+    elif left_var is not None:
         variables[left_var].append(expression)
         return None
 
     return expression
-
-
-# NOTE: Didn't need to use find_related_variables, but I think there may be
-# a more principled implementation that requires this.
-
-def find_related_variables(expression: Expression) -> Dict[Variable, Iterable[Variable]]:
-    """From an input expression, output variables that are compared to other variables.
-
-    _this is special, and will only appear as a key in the output.
-    other variables that are not _this will appear bi-directionally.
-
-    Example:
-
-        _tag_1 in _this.tags
-
-        {
-            "_this": ["_tag_1"]
-        }
-
-        _tag_1 in _this.tags and
-        _user_1 in _this.users
-
-        {
-            "_this": ["_tag_1", "user_1"]
-        }
-
-        _tag_1 in _this.tags and
-        _user_1 in _this.users and
-        _post_1 in _tag_1 and
-        _post_1.id = 1
-
-        {
-            "_this": ["_tag_1", "user_1"]
-            "_tag_1": ["_post_1"],
-            "post_1": ["_tag_1"]
-        }
-    """
-    return find_related_variables_expression(expression)
-
-
-def find_related_variables_expression(expression: Expression) -> Dict[Variable, Iterable[Variable]]:
-    if expression.operator == "And":
-        related_variables: Dict[Variable, Set[Variable]] = defaultdict(set)
-        for expression in expression.args:
-            rv = find_related_variables_expression(expression)
-            for k, vs in rv.items():
-                for var in vs:
-                    related_variables[k].add(var)
-        return related_variables
-    elif expression.operator in ("Or", "Not"):
-        raise UnsupportedError("Not implemented expression")
-    else:
-        return find_related_variables_leaf(expression)
-
-
-def find_related_variables_leaf(expression: Expression) -> Dict[Variable, Iterable[Variable]]:
-    assert len(expression.args) == 2
-    left, right = expression.args
-    left_var = get_variable(left)
-    right_var = get_variable(right)
-    left_var = get_variable(left)
-
-    if left_var is None or right_var is None:
-        # Both are not variables
-        return {}
-
-    if is_this(left_var):
-        assert not is_this(right_var)
-        return {left_var: [right_var]}
-    elif is_this(right_var):
-        assert not is_this(left_var)
-        return {right_var: [left_var]}
-    else:
-        return {left_var: [right_var], right_var: [left_var]}
