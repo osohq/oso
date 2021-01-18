@@ -1,4 +1,4 @@
-Authorization-Dependent UI Element
+Authorization-Dependent UI Elements
 ==================================
 
 Using oso to control UI components
@@ -39,7 +39,7 @@ resource, not just whether or not she can read it. In this case, you can
 use the ``Oso.get_allowed_actions()`` method to get a list of Alice's
 allowed actions and return them to your frontend.
 
-Let's look at an example. Imagine we have a GitHub-like app, that gives
+Let's look at an example. Imagine we have a GitHub-like app that gives
 users access to repositories. The page to view a specific repository
 looks like this:
 
@@ -69,7 +69,7 @@ view to get the user's allowed actions for the current repo:
         actions = current_app.base_oso.get_allowed_actions(
             get_current_user(), repo
         )
-            # Send allowed actions to template (or frontend)
+        # Send allowed actions to template (or frontend)
         return render_template(
             "repos/show.html",
             repo=repo,
@@ -143,7 +143,7 @@ we could have a policy that looks like this instead:
     role_allow(_role: RepositoryRole{name: "READ"}, action: String, _repo: Repository) if
         action in ["READ", "LIST_ISSUES"];
 
-    # Users with the "ADMIN" role can list roles and delete repo the repo
+    # Users with the "ADMIN" role can list roles and delete the repo
     role_allow(_role: RepositoryRole{name: "ADMIN"}, action: String, _repo: Repository) if
         action in ["LIST_ROLES", "DELETE"];
 
@@ -172,7 +172,7 @@ template:
 
 .. code:: python
 
-    {% if  "LIST_ROLES" in actions %}
+    {% if "LIST_ROLES" in actions %}
     <div>
       <a href={{ url_for('routes.repo_roles_index', org_id=org_id, repo_id=repo.id) }}>
         <h4 class="text-primary">
@@ -183,7 +183,7 @@ template:
       </a>
     </div>
     {% endif %}
-    {% if  "DELETE" in actions %}
+    {% if "DELETE" in actions %}
     <br />
     <form action={{ url_for('routes.repos_show', org_id=org_id, repo_id=repo.id) }} method="POST">
       <button class="btn btn-primary" type="submit" name="delete_repo" value="">
