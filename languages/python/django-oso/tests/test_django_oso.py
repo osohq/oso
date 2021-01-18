@@ -332,3 +332,15 @@ def test_partial_unification():
     first = next(results)["bindings"]
     assert first["x"] == Expression("And", [Expression("Gt", [Variable("_this"), 1])])
     assert first["y"] == Expression("And", [Expression("Gt", [Variable("_this"), 1])])
+
+
+def test_rewrite_parameters():
+    from test_app.models import Post
+
+    Oso.load_str(
+        """allow(_, _, resource) if g(resource.created_by);
+           g(resource) if resource matches test_app::User;
+        """
+    )
+    authorize_filter = authorize_model(None, Post, actor="foo", action="bar")
+    assert str(authorize_filter) == "(AND: (NOT (AND: ('pk__in', []))))"

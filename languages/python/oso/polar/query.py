@@ -23,14 +23,20 @@ class QueryResult:
 class Query:
     """Execute a Polar query through the FFI/event interface."""
 
-    def __init__(self, ffi_query, *, host=None):
+    def __init__(self, ffi_query, *, host=None, bindings=None):
         self.ffi_query = ffi_query
         self.host = host
         self.calls = {}
+        for (k, v) in (bindings or {}).items():
+            self.bind(k, v)
 
     def __del__(self):
         del self.host
         del self.ffi_query
+
+    def bind(self, name, value):
+        """Bind `name` to `value` for the duration of the query."""
+        self.ffi_query.bind(name, self.host.to_polar(value))
 
     def run(self):
         """Run the event loop and yield results."""

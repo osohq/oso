@@ -625,7 +625,7 @@ impl PolarVirtualMachine {
     }
 
     /// Push a binding onto the binding stack.
-    fn bind(&mut self, var: &Symbol, val: Term) {
+    pub fn bind(&mut self, var: &Symbol, val: Term) {
         if self.log {
             self.print(&format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()));
         }

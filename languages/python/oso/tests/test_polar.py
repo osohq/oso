@@ -833,8 +833,7 @@ def test_partial_constraint(polar):
     polar.load_str("f(x: Post) if x.post = 1;")
 
     x = Variable("x")
-    polar.register_constant(Expression("And", [TypeConstraint(x, "User")]), x)
-    results = polar.query_rule("f", x)
+    results = polar.query_rule("f", x, bindings={x: TypeConstraint(x, "User")})
 
     first = next(results)["bindings"]["x"]
     and_args = unwrap_and(first)
@@ -879,10 +878,8 @@ def test_partial_rule_filtering(polar):
     )
 
     x = Variable("x")
-    polar.register_constant(Expression("And", [TypeConstraint(x, "A")]), x)
-
     with pytest.raises(exceptions.PolarRuntimeError) as e:
-        next(polar.query_rule("f", x))
+        next(polar.query_rule("f", x, bindings={x: TypeConstraint(x, "A")}))
     assert str(e.value) == "Cannot generically walk fields of a Python class"
 
 

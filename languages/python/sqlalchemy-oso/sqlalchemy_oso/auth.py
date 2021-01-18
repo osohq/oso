@@ -65,10 +65,10 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
         raise TypeError(f"Expected a model; received: {model}")
 
     resource = Variable("resource")
-    oso.register_constant(
-        Expression("And", [TypeConstraint(resource, polar_model_name(mapped_class))]), resource
+    constraint = TypeConstraint(resource, polar_model_name(mapped_class))
+    results = oso.query_rule(
+        "allow", actor, action, resource, bindings={resource: constraint}
     )
-    results = oso.query_rule("allow", actor, action, resource)
 
     combined_filter = None
     has_result = False

@@ -79,10 +79,10 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
 
     assert issubclass(model, Model), f"Expected a model; received: {model}"
     resource = Variable("resource")
-    Oso.register_constant(
-        Expression("And", [TypeConstraint(resource, polar_model_name(model))]), resource
+    constraint = TypeConstraint(resource, polar_model_name(model))
+    results = Oso.query_rule(
+        "allow", actor, action, resource, bindings={resource: constraint}
     )
-    results = Oso.query_rule("allow", actor, action, resource)
 
     filter = None
     for result in results:

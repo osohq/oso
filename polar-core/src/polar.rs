@@ -100,6 +100,10 @@ impl Query {
     pub fn source_info(&self) -> String {
         self.vm.term_source(&self.term, true)
     }
+
+    pub fn bind(&mut self, name: Symbol, value: Term) {
+        self.vm.bind(&name, value);
+    }
 }
 
 // Query as an iterator returns `None` after the first time `Done` is seen

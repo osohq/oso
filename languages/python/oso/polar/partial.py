@@ -2,10 +2,11 @@ from .expression import Expression, Pattern
 from .variable import Variable
 
 
+# And(Isa(left, right))
 class TypeConstraint(Expression):
     def __init__(self, left, type_name):
-        self.operator = "Isa"
-        self.args = [left, Pattern(type_name, {})]
+        self.operator = "And"
+        self.args = [Expression("Isa", [left, Pattern(type_name, {})])]
 
 
 def dot_path(expr):
