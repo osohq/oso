@@ -8,6 +8,7 @@ wasm: clean
 	mkdir -p dist/bundler
 	$(MAKE) -C ../../polar-wasm-api nodejs
 	cp -r ../../polar-wasm-api/pkg/* dist/
+	cp -r ../../polar-wasm-api/pkg/* src/
 	$(MAKE) -C ../../polar-wasm-api bundler
 	cp -r ../../polar-wasm-api/pkg/* dist/bundler/
 
