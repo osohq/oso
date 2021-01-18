@@ -1,7 +1,5 @@
-const extname: Function | null =
-  typeof window === 'object' ? null : require('path').extname;
-const createInterface: Function | null =
-  typeof window === 'object' ? null : require('readline').createInterface;
+const extname = require('path')?.extname;
+const createInterface = require('readline')?.createInterface;
 
 import {
   InlineQueryFailedError,
