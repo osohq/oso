@@ -46,6 +46,7 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
     :param session: The SQLAlchemy session.
     :param model: The model to authorize, must be a SQLAlchemy model or alias.
     """
+
     def get_field_type(model, field):
         try:
             field = getattr(model, field)
@@ -55,7 +56,9 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
         try:
             return field.entity.class_
         except AttributeError as e:
-            raise PolarRuntimeError(f"Cannot determine type of {field} on {model}.") from e
+            raise PolarRuntimeError(
+                f"Cannot determine type of {field} on {model}."
+            ) from e
 
     oso.host.get_field = get_field_type
 
