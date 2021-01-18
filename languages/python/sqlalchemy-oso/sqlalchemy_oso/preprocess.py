@@ -39,7 +39,7 @@ def preprocess_expression(expression: Expression, variables: TGroupedExpressions
     new_expr = expression
     if expression.operator == "And":
         new_expr = preprocess_and(expression, variables)
-    elif expression.operator in ("Or", "Not"):
+    elif expression.operator in ("Or", "Not"):  # Or and Not are not supported by SQLAlchemy translation.
         raise UnsupportedError(f"{expression.operator}")
     else:
         new_expr = preprocess_leaf(expression, variables)
