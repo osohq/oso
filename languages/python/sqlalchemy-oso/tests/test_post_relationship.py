@@ -350,8 +350,6 @@ def tag_nested_many_many_test_fixture(session):
     return objects
 
 
-# TODO constraints on nested many many (will not work w/ preprocessor without more recursion)
-
 def test_nested_relationship_many_many(session, oso, tag_nested_many_many_test_fixture):
     """Test that nested relationships work.
 
@@ -388,6 +386,34 @@ def test_nested_relationship_many_many(session, oso, tag_nested_many_many_test_f
     assert not tag_nested_many_many_test_fixture["user_eng_post"] in posts
     assert not tag_nested_many_many_test_fixture["user_user_post"] in posts
     assert tag_nested_many_many_test_fixture["random_post"] in posts
+    assert not tag_nested_many_many_test_fixture["not_tagged_post"] in posts
+    assert tag_nested_many_many_test_fixture["all_tagged_post"] in posts
+
+
+def test_nested_relationship_many_many_constrained(session, oso, tag_nested_many_many_test_fixture):
+    """Test that nested relationships work.
+
+    post - (many) -> tags - (many) -> User
+
+    A user can read a post with a tag if the tag's creator is the user.
+    """
+    oso.load_str(
+        """
+    allow(_, "read", post: Post) if tag in post.tags and user in tag.users and
+        user.username = "user";
+    """
+    )
+
+    posts = session.query(Post).filter(
+        authorize_model(
+            oso, tag_nested_many_many_test_fixture["user"], "read", session, Post
+        )
+    )
+    # TODO (dhatch): Check that this SQL query is correct, seems right from results.
+    print_query(posts)
+    assert tag_nested_many_many_test_fixture["user_eng_post"] in posts
+    assert tag_nested_many_many_test_fixture["user_user_post"] in posts
+    assert not tag_nested_many_many_test_fixture["random_post"] in posts
     assert not tag_nested_many_many_test_fixture["not_tagged_post"] in posts
     assert tag_nested_many_many_test_fixture["all_tagged_post"] in posts
 
