@@ -1,6 +1,8 @@
 import type { Query as FfiQuery } from './polar_wasm_api';
 
-import { createInterface } from 'readline';
+const createInterface: Function | null = typeof window === 'object'
+  ? null
+  : eval('require("readline").createInterface');
 
 import { parseQueryEvent } from './helpers';
 import {
@@ -235,6 +237,10 @@ export class Query {
             break;
           }
           case QueryEventKind.Debug:
+            if (createInterface == null) {
+              console.warn("debug events not supported in browser oso");
+              break;
+            }
             const { message } = event.data as Debug;
             if (message) console.log(message);
             createInterface({
@@ -242,7 +248,7 @@ export class Query {
               output: process.stdout,
               prompt: 'debug> ',
               tabSize: 4,
-            }).on('line', line => {
+            }).on('line', (line: string) => {
               const trimmed = line.trim().replace(/;+$/, '');
               const command = this.#host.toPolar(trimmed);
               this.#ffiQuery.debugCommand(JSON.stringify(command));

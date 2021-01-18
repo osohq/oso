@@ -3,11 +3,13 @@
 build: wasm
 	yarn build
 
+
 wasm: clean
-	rm -f src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.wasm.d.ts
-	$(MAKE) -C ../../polar-wasm-api build
-	mkdir -p dist/src
-	cp src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.wasm.d.ts dist/src/
+	mkdir -p dist/bundler
+	$(MAKE) -C ../../polar-wasm-api nodejs
+	cp -r ../../polar-wasm-api/pkg/* dist/
+	$(MAKE) -C ../../polar-wasm-api bundler
+	cp -r ../../polar-wasm-api/pkg/* dist/bundler/
 
 install:
 	yarn install --network-timeout 100000

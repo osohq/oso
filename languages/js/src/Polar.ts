@@ -1,9 +1,14 @@
-import { extname } from 'path';
-import { createInterface } from 'readline';
+const extname: Function | null = typeof window === 'object'
+  ? null
+  : require("path").extname;
+const createInterface: Function | null = typeof window === 'object'
+  ? null
+  : require("readline").createInterface;
 
 import {
   InlineQueryFailedError,
   InvalidConstructorError,
+  PolarError,
   PolarFileExtensionError,
   PolarFileNotFoundError,
 } from './errors';
@@ -83,6 +88,9 @@ export class Polar {
    * Load a Polar policy file.
    */
   async loadFile(file: string): Promise<void> {
+    if (!extname) {
+      throw new PolarError("loadFile is not supported in the browser");
+    }
     if (extname(file) !== '.polar') throw new PolarFileExtensionError(file);
     let contents;
     try {
@@ -155,6 +163,9 @@ export class Polar {
 
   /** Start a REPL session. */
   async repl(files?: string[]): Promise<void> {
+    if (createInterface == null) {
+      throw new PolarError("REPL is not supported in the browser");
+    }
     try {
       if (files?.length) await Promise.all(files.map(f => this.loadFile(f)));
     } catch (e) {
@@ -183,7 +194,7 @@ export class Polar {
         tabSize: 4,
       });
       rl.prompt();
-      rl.on('line', async line => {
+      rl.on('line', async (line: string) => {
         const result = await this.evalReplInput(line);
         if (result !== undefined) console.log(result);
         rl.prompt();
