@@ -1,5 +1,3 @@
-import pytest
-
 from collections import defaultdict
 
 from polar.expression import Expression, Pattern

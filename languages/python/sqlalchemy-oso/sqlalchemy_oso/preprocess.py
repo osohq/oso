@@ -1,7 +1,7 @@
 """Convert expressions from oso into a format that the SQLAlchemy translation can use."""
 
 from collections import defaultdict
-from typing import Dict, Optional, List, Iterable
+from typing import Dict, Optional, List
 
 from polar.expression import Expression
 from polar.variable import Variable
