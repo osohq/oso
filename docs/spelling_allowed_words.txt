@@ -34,6 +34,7 @@ duplicative
 metaprogramming
 natively
 backend
+frontend
 quickstart
 boolean
 bodiless
@@ -65,6 +66,7 @@ moduli
 enumerables
 mixin
 stdout
+repo
 
 ## Product names
 sqlite
@@ -87,6 +89,8 @@ cURL
 django
 sqlalchemy
 macOS
+Vue
+React
 
 
 ## Misc terms
