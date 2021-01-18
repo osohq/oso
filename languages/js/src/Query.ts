@@ -1,8 +1,9 @@
 import type { Query as FfiQuery } from './polar_wasm_api';
 
-const createInterface: Function | null = typeof window === 'object'
-  ? null
-  : eval('require("readline").createInterface');
+const createInterface: Function | null =
+  typeof window === 'object'
+    ? null
+    : eval('require("readline").createInterface');
 
 import { parseQueryEvent } from './helpers';
 import {
@@ -238,7 +239,7 @@ export class Query {
           }
           case QueryEventKind.Debug:
             if (createInterface == null) {
-              console.warn("debug events not supported in browser oso");
+              console.warn('debug events not supported in browser oso');
               break;
             }
             const { message } = event.data as Debug;

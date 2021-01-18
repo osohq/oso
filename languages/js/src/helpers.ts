@@ -1,8 +1,7 @@
 import { inspect } from 'util';
 
-const _readFile: Function | null = typeof window === 'object'
-  ? null
-  : require("fs")._readFile;
+const _readFile: Function | null =
+  typeof window === 'object' ? null : require('fs')._readFile;
 
 import {
   InvalidQueryEventError,

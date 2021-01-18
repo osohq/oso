@@ -1,9 +1,7 @@
-const extname: Function | null = typeof window === 'object'
-  ? null
-  : require("path").extname;
-const createInterface: Function | null = typeof window === 'object'
-  ? null
-  : require("readline").createInterface;
+const extname: Function | null =
+  typeof window === 'object' ? null : require('path').extname;
+const createInterface: Function | null =
+  typeof window === 'object' ? null : require('readline').createInterface;
 
 import {
   InlineQueryFailedError,
@@ -89,7 +87,7 @@ export class Polar {
    */
   async loadFile(file: string): Promise<void> {
     if (!extname) {
-      throw new PolarError("loadFile is not supported in the browser");
+      throw new PolarError('loadFile is not supported in the browser');
     }
     if (extname(file) !== '.polar') throw new PolarFileExtensionError(file);
     let contents;
@@ -164,7 +162,7 @@ export class Polar {
   /** Start a REPL session. */
   async repl(files?: string[]): Promise<void> {
     if (createInterface == null) {
-      throw new PolarError("REPL is not supported in the browser");
+      throw new PolarError('REPL is not supported in the browser');
     }
     try {
       if (files?.length) await Promise.all(files.map(f => this.loadFile(f)));
