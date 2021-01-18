@@ -86,7 +86,7 @@ impl Query {
     }
 
     pub fn application_error(&mut self, message: String) -> PolarResult<()> {
-        self.top_runnable().external_error(message)
+        self.vm.external_error(message)
     }
 
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {

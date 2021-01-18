@@ -1503,9 +1503,8 @@ impl PolarVirtualMachine {
 
     pub fn check_error(&self) -> PolarResult<QueryEvent> {
         if let Some(error) = &self.external_error {
-            let trace = self.trace.last().unwrap();
-            let term = match &trace.node {
-                Node::Term(t) => Some(t),
+            let term = match self.trace.last().map(|t| t.node.clone()) {
+                Some(Node::Term(t)) => Some(t),
                 _ => None,
             };
             let stack_trace = self.stack_trace();
@@ -1514,7 +1513,7 @@ impl PolarVirtualMachine {
                 stack_trace: Some(stack_trace),
             };
             if let Some(term) = term {
-                Err(self.set_error_context(term, error))
+                Err(self.set_error_context(&term, error))
             } else {
                 Err(error.into())
             }
@@ -3090,6 +3089,12 @@ impl PolarVirtualMachine {
 
         Ok(QueryEvent::Run { runnable, call_id })
     }
+
+    /// Handle an error coming from outside the vm.
+    pub fn external_error(&mut self, message: String) -> PolarResult<()> {
+        self.external_error = Some(message);
+        Ok(())
+    }
 }
 
 impl Runnable for PolarVirtualMachine {
@@ -3164,7 +3169,6 @@ impl Runnable for PolarVirtualMachine {
     }
 
     /// Handle response to a predicate posed to the application, e.g., `ExternalIsa`.
-    // TODO(gj): CheckError? Might make sense for ExternalIsaWithPath; not sure about others.
     fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
         let var = self.call_id_symbols.remove(&call_id).expect("bad call id");
         self.bind(&var, Term::new_temporary(Value::Boolean(answer)));
@@ -3214,12 +3218,6 @@ impl Runnable for PolarVirtualMachine {
                 self.push_goal(Goal::CheckError)?;
             }
         }
-        Ok(())
-    }
-
-    /// Handle an error coming from outside the vm.
-    fn external_error(&mut self, message: String) -> PolarResult<()> {
-        self.external_error = Some(message);
         Ok(())
     }
 
