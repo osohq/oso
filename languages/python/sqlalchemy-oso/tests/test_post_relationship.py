@@ -371,8 +371,6 @@ def test_nested_relationship_many_many(session, oso, tag_nested_many_many_test_f
             oso, tag_nested_many_many_test_fixture["user"], "read", session, Post
         )
     )
-    # TODO (dhatch): Check that this SQL query is correct, seems right from results.
-    print_query(posts)
     assert tag_nested_many_many_test_fixture["user_eng_post"] in posts
     assert tag_nested_many_many_test_fixture["user_user_post"] in posts
     assert not tag_nested_many_many_test_fixture["random_post"] in posts
@@ -410,8 +408,6 @@ def test_nested_relationship_many_many_constrained(session, oso, tag_nested_many
             oso, tag_nested_many_many_test_fixture["user"], "read", session, Post
         )
     )
-    # TODO (dhatch): Check that this SQL query is correct, seems right from results.
-    print_query(posts)
     assert tag_nested_many_many_test_fixture["user_eng_post"] in posts
     assert tag_nested_many_many_test_fixture["user_user_post"] in posts
     assert not tag_nested_many_many_test_fixture["random_post"] in posts
@@ -464,8 +460,6 @@ def test_nested_relationship_many_many_many_constrained(session, engine, oso):
             oso, foo, "read", session, Post
         )
     )
-    # TODO (dhatch): Check that this SQL query is correct, seems right from results.
-    print_query(posts)
     posts = posts.all()
 
     assert foo_post in posts
