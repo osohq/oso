@@ -61,7 +61,7 @@ view to get the user's allowed actions for the current repo:
     def repos_show(org_id, repo_id):
         # Get repo
         repo = Repository.query.get(repo_id)
-        
+
         # Authorize repo access
         current_app.oso.authorize(repo, action="READ")
 
@@ -128,7 +128,7 @@ With this relatively straightforward policy, it's easy to trace where
 the users' allowed actions come from. But ``Oso.get_allowed_actions()`` can
 be especially powerful with more complicated policies. For example, if
 we used oso's `SQLAlchemy Roles library
-features <https://docs.oso.dev/getting-started/roles/sqlalchemy/basic_roles.html>`,
+features <https://docs.oso.dev/getting-started/roles/sqlalchemy/basic_roles.html>`_,
 we could have a policy that looks like this instead:
 
 .. code:: python
@@ -156,8 +156,8 @@ we could have a policy that looks like this instead:
 Now the users' allowed actions depend on their assigned roles for both
 the repository and the parent organization, as well as the hierarchy of
 the repository roles (for more information on implementing RBAC with
-oso, check out `our
-guide <https://docs.oso.dev/getting-started/roles/index.html>`).
+oso, `check out our
+guide <https://docs.oso.dev/getting-started/roles/index.html>`_).
 
 Even with this more complicated policy, we'll still get the correct
 allowed actions for Mike and Sully.
@@ -197,5 +197,5 @@ Now when Sully logs in, the buttons are hidden:
 .. image:: /getting-started/ui/b.png
 
 Our example uses Flask templates for the UI, but the allowed actions
-could be sent to the frontend to make UI decisions in React or Vue or
+could be sent to the frontend to make UI decisions in React, Vue or
 any other client UI framework.
