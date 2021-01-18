@@ -1,5 +1,5 @@
 Authorization-Dependent UI Elements
-==================================
+===================================
 
 Using oso to control UI components
 ----------------------------------
@@ -53,7 +53,7 @@ depending on whether the user is allowed to take those actions.
 In this situation, the ``Oso.get_allowed_actions()`` method can be very
 helpful. The method returns a list of actions that a user is allowed to
 take on a specific resource. In our example, we call
-``get_allowed_actions()`` in the route handler for the "Show repository"
+``Oso.get_allowed_actions()`` in the route handler for the "Show repository"
 view to get the user's allowed actions for the current repo:
 
 .. code:: python
@@ -77,7 +77,7 @@ view to get the user's allowed actions for the current repo:
             actions=actions,
         )
 
-In our demo app, when we call ``get_allowed_actions()`` with the user
+In our demo app, when we call ``Oso.get_allowed_actions()`` with the user
 ``mike@monsters.com``, we get back:
 
 .. code:: python
@@ -125,7 +125,7 @@ Based on these user attributes and our policy, we can see why Mike is
 allowed to take more actions on the repository than Sully.
 
 With this relatively straightforward policy, it's easy to trace where
-the users' allowed actions come from. But ``get_allowed_actions()`` can
+the users' allowed actions come from. But ``Oso.get_allowed_actions()`` can
 be especially powerful with more complicated policies. For example, if
 we used oso's `SQLAlchemy Roles library
 features <https://docs.oso.dev/getting-started/roles/sqlalchemy/basic_roles.html>`,
