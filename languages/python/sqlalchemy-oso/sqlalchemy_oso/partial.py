@@ -43,9 +43,7 @@ def flip_op(operator):
 
 def partial_to_filter(expression: Expression, session: Session, model, get_model):
     """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
-    print(expression)
     expression = preprocess(expression)
-    print("rewritten", expression)
     return translate_expr(expression, session, model, get_model)
 
 
