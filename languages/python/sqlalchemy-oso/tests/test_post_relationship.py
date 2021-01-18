@@ -5,9 +5,10 @@ https://www.notion.so/osohq/Relationships-621b884edbc6423f93d29e6066e58d16.
 """
 import pytest
 
+from sqlalchemy.orm import Session
 from sqlalchemy_oso.auth import authorize_model
 
-from .models import Post, Tag, User
+from .models import Post, Tag, User, Category
 from .conftest import print_query
 
 
@@ -416,6 +417,132 @@ def test_nested_relationship_many_many_constrained(session, oso, tag_nested_many
     assert not tag_nested_many_many_test_fixture["random_post"] in posts
     assert not tag_nested_many_many_test_fixture["not_tagged_post"] in posts
     assert tag_nested_many_many_test_fixture["all_tagged_post"] in posts
+
+
+def test_nested_relationship_many_many_many_constrained(session, engine, oso):
+    """Test that nested relationships work.
+
+    post - (many) -> tags - (many) -> category - (many) -> User
+    """
+    foo = User(username="foo")
+    bar = User(username="bar")
+
+    foo_category = Category(name="foo_category", users=[foo])
+    bar_category = Category(name="bar_category", users=[bar])
+    both_category = Category(name="both_category", users=[foo, bar])
+    public_category = Category(name="public", users=[foo, bar])
+
+    foo_tag = Tag(name="foo", categories=[foo_category])
+    bar_tag = Tag(name="bar", categories=[bar_category])
+    both_tag = Tag(name="both", categories=[foo_category, bar_category, public_category], is_public=True)
+
+    foo_post = Post(contents="foo_post", tags=[foo_tag])
+    bar_post = Post(contents="bar_post", tags=[bar_tag])
+    both_post = Post(contents="both_post", tags=[both_tag])
+    none_post = Post(contents="none_post", tags=[])
+    foo_post_2 = Post(contents="foo_post_2", tags=[foo_tag])
+    public_post = Post(contents="public_post", tags=[both_tag], access_level="public")
+
+    session.add_all([foo, bar, foo_category, bar_category, both_category, foo_tag, bar_tag,
+                     both_tag, foo_post, bar_post, both_post, none_post, foo_post_2,
+                     public_category, public_post])
+    session.commit()
+
+    # A user can read a post that they are the moderator of the category of.
+    oso.load_str(
+        """
+        allow(user, "read", post: Post) if
+            tag in post.tags and
+            category in tag.categories and
+            moderator in category.users
+            and moderator = user;
+    """
+    )
+
+    posts = session.query(Post).filter(
+        authorize_model(
+            oso, foo, "read", session, Post
+        )
+    )
+    # TODO (dhatch): Check that this SQL query is correct, seems right from results.
+    print_query(posts)
+    posts = posts.all()
+
+    assert foo_post in posts
+    assert both_post in posts
+    assert public_post in posts
+    assert foo_post_2 in posts
+    assert bar_post not in posts
+    assert len(posts) == 4
+
+    posts = session.query(Post).filter(
+        authorize_model(
+            oso, bar, "read", session, Post
+        )
+    )
+    posts = posts.all()
+
+    assert bar_post in posts
+    assert both_post in posts
+    assert public_post in posts
+    assert foo_post not in posts
+    assert foo_post_2 not in posts
+    assert len(posts) == 3
+
+    # A user can read a post that they are the moderator of the category of if the
+    # tag is public.
+    oso.load_str(
+        """
+        allow(user, "read_2", post: Post) if
+            tag in post.tags and
+            tag.is_public = true and
+            category in tag.categories and
+            moderator in category.users
+            and moderator = user;
+    """
+    )
+
+    posts = session.query(Post).filter(
+        authorize_model(
+            oso, bar, "read_2", session, Post
+        )
+    )
+
+    posts = posts.all()
+
+    # Only the both tag is public.
+    assert both_post in posts
+    assert public_post in posts
+    assert bar_post not in posts
+    assert foo_post not in posts
+    assert foo_post_2 not in posts
+    assert len(posts) == 2
+
+    # A user can read a post that they are the moderator of the category of if the
+    # tag is public and the category name is public.
+    oso.load_str(
+        """
+        allow(user, "read_3", post: Post) if
+            post.access_level = "public" and
+            tag in post.tags and
+            tag.is_public = true and
+            category in tag.categories and
+            category.name = "public" and
+            moderator in category.users and
+            moderator = user;
+    """
+    )
+
+    posts = session.query(Post).filter(
+        authorize_model(
+            oso, bar, "read_3", session, Post
+        )
+    )
+    print_query(posts)
+    posts = posts.all()
+
+    # Only the both tag is public but the category name is not correct.
+    assert len(posts) == 1
 
 
 def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
