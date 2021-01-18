@@ -1,9 +1,6 @@
 import type { Query as FfiQuery } from './polar_wasm_api';
 
-const createInterface: Function | null =
-  typeof window === 'object'
-    ? null
-    : eval('require("readline").createInterface');
+const createInterface = require("readline")?.createInterface;
 
 import { parseQueryEvent } from './helpers';
 import {
