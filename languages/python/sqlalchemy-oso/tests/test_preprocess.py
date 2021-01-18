@@ -35,7 +35,6 @@ def test_find_related_variables(test_expression, related):
     assert find_related_variables(test_expression) == related
 
 
-@pytest.mark.xfail(reason="Need to update this test.")
 def test_preprocess_nested_many_many():
     _this = Variable("_this")
     expression = Expression("And", [
@@ -62,8 +61,12 @@ def test_preprocess_nested_many_many():
                                                                                 "username"])])]
     }
 
+    users_expr = Expression("And", [Expression("Unify", ["admin", Expression("Dot", [_this,
+                                                                                     "username"])])])
+    tags_expr = Expression("And", [Expression("In", [users_expr, Expression("Dot", [_this,
+                                                                                    "users"])])])
+
     assert preprocess(expression) == Expression("And", [
         Expression("Isa", [_this, Pattern("Post", {})]),
-        Expression("In", [Variable("_tag_16"), Expression("Dot", [_this, "tags"])]),
+        Expression("In", [tags_expr, Expression("Dot", [_this, "tags"])]),
     ])
-
