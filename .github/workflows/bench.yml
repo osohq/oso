@@ -3,8 +3,8 @@ on:
   push:
     branches:
       - main
-  pull_request_target:
-    branches:
+  # pull_request:
+  #   types: [opened, synchronize, reopened]
 
 jobs:
   benchmark:
@@ -12,26 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          # This prevents the Action from persisting the credentials it uses to
-          # perform the fetch/checkout to the Runner's local Git config. On
-          # `pull_request_target` events, the GITHUB_TOKEN provided to the
-          # Runner has Write permissions to the base repository. We do **not**
-          # want to allow untrusted code from forks to execute arbitrary Git
-          # commands with those elevated permissions.
-          #
-          # More info:
-          # https://github.blog/2020-08-03-github-actions-improvements-for-fork-and-pull-request-workflows/#improvements-for-public-repository-forks
-          persist-credentials: false
-          # Explicitly setting the `repository` and `ref` inputs ensures that
-          # `pull_request_target` events trigger CI runs against the code from
-          # the HEAD branch. By default, this Action checks out code from the
-          # BASE branch. On `push` events, the `github.event.pull_request` path
-          # will yield a null value, and passing nulls to these inputs causes
-          # them to fall back to the defaults of `osohq/oso` and
-          # `refs/heads/main`, respectively.
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/cache@v2
         with:
           path: |
