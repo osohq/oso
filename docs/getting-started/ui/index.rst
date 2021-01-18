@@ -77,7 +77,7 @@ view to get the user's allowed actions for the current repo:
             actions=actions,
         )
 
-In our demo app, when we call ``get_allowed_actions`` with the user
+In our demo app, when we call ``get_allowed_actions()`` with the user
 ``mike@monsters.com``, we get back:
 
 .. code:: python
@@ -88,7 +88,7 @@ But when we call with a different user, ``sully@monsters.com``, we get:
 
 .. code:: python
 
-    actions = ['READ', 'LIST_ISSUES', 'CREATE']
+    actions = ['READ', 'CREATE', 'LIST_ISSUES']
 
 The allowed actions for each user are determined by the **oso policy.**
 In this case, our policy has the following rules:
@@ -128,7 +128,7 @@ With this relatively straightforward policy, it's easy to trace where
 the users' allowed actions come from. But ``get_allowed_actions()`` can
 be especially powerful with more complicated policies. For example, if
 we used oso's `SQLAlchemy Roles library
-features <https://docs.oso.dev/getting-started/roles/sqlalchemy/basic_roles.html>`__,
+features <https://docs.oso.dev/getting-started/roles/sqlalchemy/basic_roles.html>`,
 we could have a policy that looks like this instead:
 
 .. code:: python
@@ -157,7 +157,7 @@ Now the users' allowed actions depend on their assigned roles for both
 the repository and the parent organization, as well as the hierarchy of
 the repository roles (for more information on implementing RBAC with
 oso, check out `our
-guide <https://docs.oso.dev/getting-started/roles/index.html>`__).
+guide <https://docs.oso.dev/getting-started/roles/index.html>`).
 
 Even with this more complicated policy, we'll still get the correct
 allowed actions for Mike and Sully.
@@ -165,7 +165,7 @@ allowed actions for Mike and Sully.
 Using allowed actions in the frontend
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Since Mike has permission to "LIST\_ROLES" and "DELETE" the repo, he
+Since Mike has permission to "LIST_ROLES" and "DELETE" the repo, he
 should be able to see the "Manage Access" and "Delete" buttons, but
 Sully should not. We can implement this with a simple check in our
 template:
