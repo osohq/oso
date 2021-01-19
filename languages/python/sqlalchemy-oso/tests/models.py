@@ -18,10 +18,10 @@ class Category(ModelBase):
 
 
 category_users = Table(
-    'category_users',
+    "category_users",
     ModelBase.metadata,
     Column("user_id", Integer, ForeignKey("users.id")),
-    Column("category_name", String, ForeignKey('category.name'))
+    Column("category_name", String, ForeignKey("category.name")),
 )
 
 
@@ -29,7 +29,7 @@ category_tags = Table(
     "category_tags",
     ModelBase.metadata,
     Column("tag_name", String, ForeignKey("tags.name")),
-    Column("category_name", String, ForeignKey("category.name"))
+    Column("category_name", String, ForeignKey("category.name")),
 )
 
 

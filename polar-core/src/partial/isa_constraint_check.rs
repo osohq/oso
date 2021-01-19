@@ -105,30 +105,24 @@ impl IsaConstraintCheck {
                 }
                 _ => (None, None),
             }
-        } else if constraint_path.len() > proposed_path.len() {
-            // comparing existing x.a.b matches B{} vs. proposed x.a matches A{}
-            panic!("AAAAAAAAAAAAAAAAAAAA");
-        } else {
+        } else if constraint_path.len() < proposed_path.len() {
             // Proposed path is a superset of existing path. Take the existing tag, the additional
             // path segments from the proposed path, and the proposed tag.
             //
             // E.g., given `a.b matches B{}` and `a.b.c.d matches D{}`, we want to assemble an
-            // `ExternalIsa` of `[B, c, d] matches D`.
+            // `ExternalIsaWithPath` of `B`, [c, d], and `D`.
             match (proposed.value(), existing.value()) {
                 (
                     Value::Pattern(Pattern::Instance(proposed)),
-                    Value::Pattern(Pattern::Instance(_)),
+                    Value::Pattern(Pattern::Instance(existing)),
                 ) => {
                     let call_id = counter.next();
                     self.last_call_id = call_id;
-
-                    let mut instance = vec![existing];
-                    instance.append(&mut proposed_path[constraint_path.len()..].to_vec());
-
                     (
-                        Some(QueryEvent::ExternalIsa {
+                        Some(QueryEvent::ExternalIsaWithPath {
                             call_id,
-                            instance: term!(Value::List(instance)),
+                            base_tag: existing.tag.clone(),
+                            path: proposed_path[constraint_path.len()..].to_vec(),
                             class_tag: proposed.tag.clone(),
                         }),
                         None,
@@ -136,6 +130,9 @@ impl IsaConstraintCheck {
                 }
                 _ => (None, None),
             }
+        } else {
+            // Comparing existing `x.a.b matches B{}` vs. `proposed x.a matches A{}`.
+            (None, None)
         }
     }
 }
