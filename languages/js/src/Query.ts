@@ -1,6 +1,6 @@
 import type { Query as FfiQuery } from './polar_wasm_api';
 
-const createInterface = require("readline")?.createInterface;
+const createInterface = require('readline')?.createInterface;
 
 import { parseQueryEvent } from './helpers';
 import {
