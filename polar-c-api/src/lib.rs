@@ -365,6 +365,30 @@ pub extern "C" fn polar_query_source_info(query_ptr: *mut Query) -> *const c_cha
 }
 
 #[no_mangle]
+pub extern "C" fn polar_bind(
+    query_ptr: *mut Query,
+    name: *const c_char,
+    value: *const c_char,
+) -> i32 {
+    ffi_try!({
+        let query = unsafe { ffi_ref!(query_ptr) };
+        let name = unsafe { ffi_string!(name) };
+        let value = unsafe { ffi_string!(value) };
+        let value = serde_json::from_str(&value);
+        match value {
+            Ok(value) => {
+                query.bind(terms::Symbol::new(name.as_ref()), value);
+                POLAR_SUCCESS
+            }
+            Err(e) => {
+                set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
+                POLAR_FAILURE
+            }
+        }
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn polar_get_external_id(polar_ptr: *mut Polar) -> u64 {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };

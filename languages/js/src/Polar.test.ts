@@ -572,7 +572,7 @@ describe('#registerConstant', () => {
   test('errors when calling host language methods on booleans', () => {
     const p = new Polar();
     expect(query(p, 'b = true and b.constructor = Boolean')).rejects.toThrow(
-      'Type error: can only perform lookups on dicts and instances, this is Boolean(true) at line 1, column 5'
+      'Type error: can only perform lookups on dicts and instances, this is true at line 1, column 5'
     );
   });
 

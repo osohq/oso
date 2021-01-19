@@ -8,4 +8,7 @@ class Variable(str):
         return repr(self)
 
     def __eq__(self, other):
-        return isinstance(other, type(self)) and super().__eq__(other)
+        return super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
