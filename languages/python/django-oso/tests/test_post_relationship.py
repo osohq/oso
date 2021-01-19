@@ -670,6 +670,7 @@ def test_unify_ins(tag_nested_many_many_fixtures):
     assert len(posts) == 1
 
 
+@pytest.mark.skip("Don't currently handle this case.")
 @pytest.mark.django_db
 def test_this_in_var(tag_nested_many_many_fixtures):
     Oso.load_str(
@@ -689,6 +690,7 @@ def test_this_in_var(tag_nested_many_many_fixtures):
     assert len(posts) == 5050
 
 
+@pytest.mark.skip("Don't currently handle this case.")
 @pytest.mark.django_db
 def test_var_in_other_var(tag_nested_many_many_fixtures):
     Oso.load_str(

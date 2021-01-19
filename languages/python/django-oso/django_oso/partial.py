@@ -182,7 +182,7 @@ class FilterBuilder:
             else:
                 # _this in _this
                 # _this in _some_var
-                breakpoint()
+                raise UnsupportedError(f"Unsupported partial expression: {expr}")
         elif isinstance(left, Variable) and right_path:
             if right_path[1:]:
                 # var in _this.foo.bar
@@ -221,7 +221,7 @@ class FilterBuilder:
             else:
                 # var in _this
                 # var in other_var
-                breakpoint()
+                raise UnsupportedError(f"Unsupported partial expression: {expr}")
         else:
             # <value> in <partial>
             self.filter &= COMPARISONS["Unify"]("__".join(right_path[1:]), left)
