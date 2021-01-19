@@ -803,7 +803,7 @@ fn test_bindings() -> TestResult {
         values![[sym!("y"), sym!("x")]],
     );
 
-    // 3-cycle, 2 ways.
+    // 3-cycle, 3 ways.
     qvars(
         &mut p,
         "x=y and y=z",
@@ -835,6 +835,14 @@ fn test_bindings() -> TestResult {
         "x=y and w=z and z=x",
         &["x", "y", "z", "w"],
         values![[sym!("y"), sym!("z"), sym!("w"), sym!("x")]],
+    );
+
+    // Don't create sub-cycles.
+    qvars(
+        &mut p,
+        "x=y and y=z and z=w and w=x and y=x",
+        &["x", "y", "z", "w"],
+        values![[sym!("w"), sym!("x"), sym!("y"), sym!("z")]],
     );
 
     // 6-cycle, 2 ways.

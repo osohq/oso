@@ -2546,13 +2546,13 @@ impl PolarVirtualMachine {
             }
             (VariableState::Cycle(c), VariableState::Cycle(d)) => {
                 // Both variables are in cycles.
-                let p = c.last().unwrap();
-                let q = d.last().unwrap();
-                assert_ne!(p, l);
-                assert_ne!(q, r);
-                if p == r || q == l {
+                if c.iter().collect::<HashSet<&Symbol>>() == d.iter().collect::<HashSet<&Symbol>>() {
                     // The cycles are the same. Do nothing.
                 } else {
+                    let p = c.last().unwrap();
+                    let q = d.last().unwrap();
+                    assert_ne!(p, l);
+                    assert_ne!(q, r);
                     self.bind(p, right.clone());
                     self.bind(q, left.clone());
                 }
