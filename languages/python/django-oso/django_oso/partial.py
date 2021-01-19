@@ -37,7 +37,6 @@ REFLECTED_COMPARISONS = {
 }
 
 
-# TODO: put in comparisons dict above?
 def contained_in(f, v):
     return Q(**{f"{f}__in": v})
 
