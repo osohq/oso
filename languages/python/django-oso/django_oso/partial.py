@@ -12,7 +12,6 @@ from .oso import django_model_name
 
 
 TRUE_FILTER = ~Q(pk__in=[])
-FALSE_FILTER = Q(pk__in=[])
 
 COMPARISONS = {
     "Unify": lambda f, v: Q(**{f: v}),
@@ -140,11 +139,6 @@ class FilterBuilder:
         assert expr.operator == "And"
         for arg in expr.args:
             self.translate_expr(arg)
-            # TODO: Remove once we can perform method selection in the presence of partials.
-            # Short-circuit: if any expr is false, the whole AND is false.
-            if self.filter == FALSE_FILTER:
-                breakpoint()
-                return
 
     def compare_expr(self, expr: Expression):
         assert expr.operator in COMPARISONS
