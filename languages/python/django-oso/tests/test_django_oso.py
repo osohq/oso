@@ -7,7 +7,6 @@ from django.core.exceptions import PermissionDenied, EmptyResultSet
 from django_oso.oso import Oso, reset_oso
 from django_oso.auth import authorize, authorize_model
 from polar import Variable, Expression
-from django_oso.partial import partial_to_query_filter
 
 from oso import OsoError
 
@@ -151,7 +150,8 @@ def test_partial(rf, partial_policy):
 
     q = Post.objects.filter(authorize_filter)
     expected = """
-        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
         FROM "test_app_post"
         WHERE (NOT "test_app_post"."is_private"
                AND "test_app_post"."timestamp" > 0
@@ -168,7 +168,8 @@ def test_partial(rf, partial_policy):
 
     q = Post.objects.filter(authorize_filter)
     expected = """
-        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
         FROM "test_app_post"
     """
     assert str(q.query) == " ".join(expected.split())
@@ -206,7 +207,8 @@ def test_partial_isa_with_path():
     )
     authorized_posts = Post.objects.filter(authorize_filter)
     expected = """
-        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
         FROM "test_app_post"
         INNER JOIN "test_app_user" ON ("test_app_post"."created_by_id" = "test_app_user"."id")
         WHERE "test_app_user"."name" = alice
@@ -248,7 +250,8 @@ def test_null_with_partial(rf):
     )
     authorized_posts = Post.objects.filter(authorize_filter)
     expected = """
-        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
         FROM "test_app_post"
         WHERE "test_app_post"."option" IS NULL
     """
@@ -288,7 +291,8 @@ def test_negated_matches_with_partial(rf):
     assert str(authorize_filter) == ("(NOT (AND: ('pk__in', [])))")
     authorized_posts = Post.objects.filter(authorize_filter)
     expected = """
-        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
         FROM "test_app_post"
     """
     assert str(authorized_posts.query) == " ".join(expected.split())
@@ -310,7 +314,8 @@ def test_negated_matches_with_partial(rf):
     assert str(authorize_filter) == ("(NOT (AND: ('pk__in', [])))")
     authorized_posts = Post.objects.filter(authorize_filter)
     expected = """
-        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
         FROM "test_app_post"
     """
     assert str(authorized_posts.query) == " ".join(expected.split())

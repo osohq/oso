@@ -4,7 +4,6 @@ from django.db.models import Q, Model
 from .oso import Oso, polar_model_name
 from polar.partial import TypeConstraint
 from polar.variable import Variable
-from polar.expression import Expression
 
 from .partial import partial_to_query_filter
 

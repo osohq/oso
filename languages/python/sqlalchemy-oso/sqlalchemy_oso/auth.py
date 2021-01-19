@@ -2,7 +2,6 @@ from oso import Oso
 from polar import Variable
 from polar.exceptions import PolarRuntimeError
 from polar.partial import TypeConstraint
-from polar.expression import Expression
 
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
