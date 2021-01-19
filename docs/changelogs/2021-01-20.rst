@@ -6,14 +6,30 @@
 Release 2021-01-20
 ##################
 
-=============
+==============
 ``oso`` 0.10.0
-=============
+==============
 
 Breaking changes
 ================
 
 Bug fix for rest vars. @TODO
+
+Anonymous rest variables now properly anonymized
+------------------------------------------------
+
+Previously, we were not generating unique identifiers for anonymous rest
+variables (``*_``) during the rewriting pass. This resulted in unexpected
+results for queries containing multiple anonymous rest variables, such as:
+
+.. code-block:: polar
+
+  [*_] in [*a] and [*b] in [*_] and b = 1
+
+The above query would return a result with ``a`` bound to ``[1]`` because
+``*a`` and ``*b`` interacted through the pair of un-anonymized rest variables.
+After this change, that query now correctly returns a result with ``a`` bound
+to ``[*_1]``, where ``*_1`` is the rewritten, anonymized rest variable.
 
 New features
 ============
