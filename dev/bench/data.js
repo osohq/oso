@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1611085579496,
+  "lastUpdate": 1611088640337,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -22677,6 +22677,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 6105,
             "range": "± 85",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f18e9fba0cdd678b9546b777dd2feb00ddc10d0d",
+          "message": "Revert changes to included files in TS library. (#659)\n\n* Revert changes to included files in TS library.\r\n\r\n* Fix package json paths.\r\n\r\nCo-authored-by: Stephen Olsen <dev@steve.computer>",
+          "timestamp": "2021-01-19T15:28:54-05:00",
+          "tree_id": "dca020c3c50a3d03146d67bf930854819075b38f",
+          "url": "https://github.com/osohq/oso/commit/f18e9fba0cdd678b9546b777dd2feb00ddc10d0d"
+        },
+        "date": 1611088632039,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 38687,
+            "range": "± 1450",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 1555515,
+            "range": "± 71356",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 7705582,
+            "range": "± 11135",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 15295684,
+            "range": "± 29874",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 745,
+            "range": "± 29",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2218,
+            "range": "± 45",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 50882,
+            "range": "± 1293",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 383438,
+            "range": "± 5429",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 13445,
+            "range": "± 440",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 13460,
+            "range": "± 429",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 13450,
+            "range": "± 469",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 15201,
+            "range": "± 530",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 13791,
+            "range": "± 458",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5260,
+            "range": "± 497",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 6211,
+            "range": "± 1653",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 7747,
+            "range": "± 295",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 23925,
+            "range": "± 1198",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 4966,
+            "range": "± 77",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 8634,
+            "range": "± 186",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 5394,
+            "range": "± 82",
             "unit": "ns/iter"
           }
         ]
