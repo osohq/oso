@@ -33,10 +33,10 @@ def flip_op(operator):
         "Eq": "Eq",
         "Unify": "Unify",
         "Neq": "Neq",
-        "Geq": "Lt",
-        "Gt": "Leq",
-        "Leq": "Gt",
-        "Lt": "Geq",
+        "Geq": "Leq",
+        "Gt": "Lt",
+        "Leq": "Gtq",
+        "Lt": "Gt",
     }
     return flips[operator]
 
