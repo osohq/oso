@@ -51,19 +51,9 @@ def get_model_by_path(
     return model
 
 
-# pylint: disable=E1136 # PyCQA/pylint/issues/3882
-def sub_this(
-    expr,
-) -> Union[Expression, Variable]:
-    if isinstance(expr, Variable):
-        return Variable("_this")
-    else:
-        isinstance(expr, Expression) and expr.operator == "Dot"
-        return Expression("Dot", [sub_this(expr.args[0]), expr.args[1]])
-
-
 class FilterBuilder:
-    def __init__(self, model: Model, parent=None):
+    def __init__(self, model: Model, name="_this", parent=None):
+        self.name = name
         self.model = model
         self.filter = Q()
         # Map variables to field paths
@@ -72,19 +62,19 @@ class FilterBuilder:
         self.subqueries = {}
         self.parent = parent
 
-    def translate_path_to_field(self, path):
-        if path[0] == "_this":
-            # breakpoint()
-            return F("__".join(path[1:]))
+    def translate_path_to_field(self, path, outer=False):
+        if path[0] == self.name:
+            path = "__".join(path[1:])
+            return F(path)
         elif path[0] in self.variables:
-            breakpoint()
             return F("__".join(self.variables[path[0]] + path[1:]))
         elif self.parent:
             parental_path = self.parent.translate_path_to_field(path)
-            breakpoint()
+            if isinstance(parental_path, F):
+                parental_path = parental_path.name
             return OuterRef(parental_path)
         else:
-            breakpoint()
+            raise Exception(f"{path} cannot be handled")
 
     def get_query_from_var(self, var):
         if var in self.variables:
@@ -119,16 +109,14 @@ class FilterBuilder:
             left_path = dot_path(left)
             right_path = dot_path(right)
 
-            if left_path and left_path[1:]:
+            if left_path:
                 query = self.get_query_from_var(left_path[0])
-                if query:
-                    expr.args[0] = sub_this(left)
+                if query and query != self:
                     query.translate_expr(expr)
                     return self
-            if right_path and right_path[1:]:
+            if right_path:
                 query = self.get_query_from_var(right_path[0])
-                if query:
-                    expr.args[1] = sub_this(right)
+                if query and query != self:
                     query.translate_expr(expr)
                     return self
 
@@ -161,25 +149,32 @@ class FilterBuilder:
         (left, right) = expr.args
         left_path = dot_path(left)
         right_path = dot_path(right)
-        if left_path and left_path[1:]:
-            self.filter &= COMPARISONS[expr.operator]("__".join(left_path[1:]), right)
-        elif right_path and right_path[1:]:
-            self.filter &= REFLECTED_COMPARISONS[expr.operator](
-                "__".join(right_path[1:]), left
-            )
-        elif left == Variable("_this"):
-            assert self.model is not None
-            assert isinstance(right, self.model)
-            if expr.operator not in ("Eq", "Unify"):
-                raise UnsupportedError(
-                    f"Unsupported comparison: {expr}. Models can only be compared"
-                    " with `=` or `==`"
+        left_field = "__".join(left_path[1:]) if left_path[1:] else "pk"
+        right_field = "__".join(right_path[1:]) if right_path[1:] else "pk"
+
+        if left_path and right_path:
+            # compare partials
+            if left_path[0] == "_this":
+                self.filter &= COMPARISONS[expr.operator](
+                    left_field, self.translate_path_to_field(right_path)
                 )
             else:
-                self.filter &= COMPARISONS[expr.operator]("pk", right.pk)
-        elif right == Variable("_this"):
-            breakpoint()
+                assert right_path[0] == "_this"
+                self.filter &= REFLECTED_COMPARISONS[expr.operator](
+                    right_field, self.translate_path_to_field(left_path)
+                )
+        elif left_path:
+            # partial cmp grounded
+            if isinstance(right, Model):
+                right = right.pk
+            self.filter &= COMPARISONS[expr.operator](left_field, right)
+        elif right_path:
+            # grounded cmp partial
+            if isinstance(left, Model):
+                left = left.pk
+            self.filter &= REFLECTED_COMPARISONS[expr.operator](right_field, left)
         else:
+            # grounded cmp grounded???
             breakpoint()
 
     def in_expr(self, expr: Expression):
@@ -203,30 +198,33 @@ class FilterBuilder:
                 # var in _this.foo.bar
                 # var in other_var.foo.bar
 
+                # get the base query for the RHS of the `in`
+                base_query = self.get_query_from_var(right_path[0])
+
                 # Left is a variable => apply constraints to the subquery.
-                if left not in self.variables:
-                    self.variables[left] = right_path[1:]
+                if left not in base_query.variables:
+                    base_query.variables[left] = right_path[1:]
                 else:
                     breakpoint()
                     # This means we have two paths for the same variable
                     # the subquery will handle the intersection
 
                 # Get the model for the subfield
-                model = get_model_by_path(self.model, right_path[1:])
-                if right_path[1:] not in self.subqueries:
-                    self.subqueries[right_path[1:]] = FilterBuilder(model, parent=self)
+                model = get_model_by_path(base_query.model, right_path[1:])
+                if right_path[1:] not in base_query.subqueries:
+                    base_query.subqueries[right_path[1:]] = FilterBuilder(
+                        model, parent=base_query, name=left
+                    )
 
-                subquery = self.subqueries[right_path[1:]]
+                subquery = base_query.subqueries[right_path[1:]]
                 # <var> in <partial>
                 # => set up <var> as a new filtered query over the model
                 # filtered to the entries of right_path
-                path = self.translate_path_to_field(right_path)
-                if isinstance(path, F):
-                    subquery.filter &= Q(pk=OuterRef(path.name))
-                else:
-                    subquery.filter &= Q(pk=OuterRef(path))
+                path = base_query.translate_path_to_field(right_path)
+                field = OuterRef(path.name) if isinstance(path, F) else OuterRef(path)
+                subquery.filter &= COMPARISONS["Unify"]("pk", field)
                 # Maybe redundant, but want to be sure
-                self.subqueries[right_path[1:]] = subquery
+                base_query.subqueries[right_path[1:]] = subquery
             else:
                 # var in _this
                 # var in other_var
@@ -276,7 +274,6 @@ def partial_to_query_filter(partial: Expression, model: Model):
 
         Q(is_private=False)
     """
-
     fb = FilterBuilder(model)
     fb.translate_expr(partial)
     return fb.finish()

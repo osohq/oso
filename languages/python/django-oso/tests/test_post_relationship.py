@@ -499,12 +499,12 @@ def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
                                         LEFT OUTER JOIN "test_app2_post_tags" V1
                                         ON (V0."id" = V1."post_id")
                                         WHERE
-                                            (EXISTS(SELECT U0."id", U0."name", U0."created_by_id", U0."is_public"
+                                            (EXISTS(SELECT U0."id"
                                                     FROM "test_app2_tag" U0
                                                     WHERE (U0."id" = V1."tag_id" AND U0."name" = eng))
                                              OR V0."access_level" = public))
     """
-    assert (str(posts.query) == ' '.join(expected.split()))
+    assert str(posts.query) == " ".join(expected.split())
     # all should be returned with no duplicates
     assert list(posts) == list(tag_nested_many_many_fixtures.values())
 
@@ -526,11 +526,11 @@ def test_empty_constraints_in(tag_nested_many_many_fixtures):
         SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level", "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         LEFT OUTER JOIN "test_app2_post_tags" ON ("test_app2_post"."id" = "test_app2_post_tags"."post_id")
-        WHERE EXISTS(SELECT U0."id", U0."name", U0."created_by_id", U0."is_public"
+        WHERE EXISTS(SELECT U0."id"
                      FROM "test_app2_tag" U0
                      WHERE U0."id" = "test_app2_post_tags"."tag_id")
     """
-    assert (str(posts.query) == ' '.join(expected.split()))
+    assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 4
     assert tag_nested_many_many_fixtures["not_tagged_post"] not in posts
 
@@ -553,11 +553,11 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
                                         FROM "test_app2_post" V0
                                         LEFT OUTER JOIN "test_app2_post_tags" V1
                                         ON (V0."id" = V1."post_id")
-                                        WHERE EXISTS(SELECT U0."id", U0."name", U0."created_by_id", U0."is_public"
+                                        WHERE EXISTS(SELECT U0."id"
                                                      FROM "test_app2_tag" U0
                                                      WHERE (U0."id" = V1."tag_id" AND U0."name" = bloop)))
     """
-    assert (str(posts.query) == ' '.join(expected.split()))
+    assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 0
 
 
@@ -585,8 +585,9 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
         INNER JOIN "test_app2_user_posts" ON ("test_app2_post"."id" = "test_app2_user_posts"."post_id")
         WHERE "test_app2_user_posts"."user_id" = 1
     """
-    assert (str(posts.query) == ' '.join(expected.split()))
+    assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 4
+
 
 @pytest.mark.django_db
 def test_this_in_that(tag_nested_many_many_fixtures):
@@ -611,24 +612,24 @@ def test_this_in_that(tag_nested_many_many_fixtures):
         """
     )
 
-    """
+    expected = """
     SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level", "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
     FROM "test_app2_post"
     INNER JOIN "test_app2_user" ON ("test_app2_post"."created_by_id" = "test_app2_user"."id")
     LEFT OUTER JOIN "test_app2_user_posts" ON ("test_app2_user"."id" = "test_app2_user_posts"."user_id")
-    WHERE EXISTS(SELECT X0."id", X0."contents", X0."access_level", X0."created_by_id", X0."needs_moderation"
+    WHERE EXISTS(SELECT X0."id"
                  FROM "test_app2_post" X0
                  INNER JOIN "test_app2_user" X1 ON (X0."created_by_id" = X1."id")
                  LEFT OUTER JOIN "test_app2_user_posts" X2 ON (X1."id" = X2."user_id")
-                 WHERE (EXISTS(SELECT W0."id", W0."contents", W0."access_level", W0."created_by_id", W0."needs_moderation"
+                 WHERE (EXISTS(SELECT W0."id"
                                FROM "test_app2_post" W0
                                INNER JOIN "test_app2_user" W1 ON (W0."created_by_id" = W1."id")
                                LEFT OUTER JOIN "test_app2_user_posts" W2 ON (W1."id" = W2."user_id")
-                               WHERE (EXISTS(SELECT V0."id", V0."contents", V0."access_level", V0."created_by_id", V0."needs_moderation"
+                               WHERE (EXISTS(SELECT V0."id"
                                              FROM "test_app2_post" V0
                                              INNER JOIN "test_app2_user" V1 ON (V0."created_by_id" = V1."id")
                                              LEFT OUTER JOIN "test_app2_user_posts" V2 ON (V1."id" = V2."user_id")
-                                             WHERE (EXISTS(SELECT U0."id", U0."contents", U0."access_level", U0."created_by_id", U0."needs_moderation"
+                                             WHERE (EXISTS(SELECT U0."id"
                                                            FROM "test_app2_post" U0
                                                            WHERE (U0."id" = V2."post_id" AND U0."id" > 4))
                                                     AND V0."id" = W2."post_id" AND V0."id" > 3))
@@ -638,19 +639,9 @@ def test_this_in_that(tag_nested_many_many_fixtures):
 
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
-    # assert (
-    #     str(authorize_filter)
-    #     == "(AND: (NOT (AND: ('pk__in', []))), ('users', <User: User object (1)>))"
-    # )
     posts = Post.objects.filter(authorize_filter)
-    expected = """
-        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level", "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
-        FROM "test_app2_post"
-        INNER JOIN "test_app2_user_posts" ON ("test_app2_post"."id" = "test_app2_user_posts"."post_id")
-        WHERE "test_app2_user_posts"."user_id" = 1
-    """
-    assert (str(posts.query) == ' '.join(expected.split()))
-    assert len(posts) == 4
+    assert str(posts.query) == " ".join(expected.split())
+    assert len(posts) == 12
 
 
 # todo test_nested_relationship_single_many
