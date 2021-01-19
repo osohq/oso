@@ -1,5 +1,6 @@
 import { inspect } from 'util';
-import { readFile as _readFile } from 'fs';
+
+const _readFile = require('fs')?.readFile;
 
 import {
   InvalidQueryEventError,
@@ -268,7 +269,7 @@ function parseDebug({ message }: obj): QueryEvent {
  */
 export function readFile(file: string): Promise<string> {
   return new Promise((res, rej) =>
-    _readFile(file, { encoding: 'utf8' }, (err, contents) =>
+    _readFile!(file, { encoding: 'utf8' }, (err: string, contents: string) =>
       err === null ? res(contents) : rej(err)
     )
   );
@@ -279,6 +280,7 @@ let RESET = '';
 let FG_BLUE = '';
 let FG_RED = '';
 if (
+  typeof window !== 'object' &&
   typeof process.stdout.getColorDepth === 'function' &&
   process.stdout.getColorDepth() >= 4 &&
   typeof process.stderr.getColorDepth === 'function' &&
