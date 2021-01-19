@@ -1252,19 +1252,6 @@ mod test {
         Ok(())
     }
 
-    #[ignore]
-    #[test]
-    fn test_in_partial_2() -> TestResult {
-        let p = Polar::new();
-        p.load_str(r#"f(x) if y in x and y = 1;"#)?;
-
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "y in _this and y = 1");
-        assert_query_done!(q);
-
-        Ok(())
-    }
-
     #[test]
     fn partially_negated_constraints() -> TestResult {
         let p = Polar::new();
@@ -1533,16 +1520,12 @@ mod test {
         )?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        // TODO (dhatch): This doesn't work now, but ultimately this should have
-        // no constraints since nothing is added to `y`.
         assert_partial_expressions!(
             next_binding(&mut q)?,
             "x" => "_y_12 in _this.values"
         );
         assert_query_done!(q);
 
-        // Not sure about this one, where there's an output binding.  There are still
-        // no constraints on b.
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "x", "y in _this.values");
@@ -1583,6 +1566,18 @@ mod test {
     }
 
     #[test]
+    fn test_in_partial_2() -> TestResult {
+        let p = Polar::new();
+        p.load_str(r#"f(x) if y in x and y = 1;"#)?;
+
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "1 in _this");
+        assert_query_done!(q);
+
+        Ok(())
+    }
+
+    #[test]
     fn test_that_cut_with_partial_errors() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x) if cut;")?;
@@ -1595,7 +1590,6 @@ mod test {
     }
 
     #[test]
-    #[ignore = "cut not yet implemented with partials"]
     fn test_cut_with_partial() -> TestResult {
         let p = Polar::new();
         p.load_str(
@@ -1611,27 +1605,24 @@ mod test {
     }
 
     #[test]
-    #[ignore = "cut not yet implemented with partials"]
     fn test_conditional_cut_with_partial() -> TestResult {
         let p = Polar::new();
         p.load_str(
-            r#"f(x) if x = 1 or x = 2 and cut and x = 2;
+            r#"f(x) if x > 1 and cut or x = 2 and x = 3;
                g(1) if cut;
                g(2);"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1 and _this = 2");
+        assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(3));
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(1));
-        assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(2));
         assert_query_done!(q);
         Ok(())
     }
 
     #[test]
-    #[ignore = "cut not yet implemented with partials"]
     fn test_method_sorting_with_cut_and_partial() -> TestResult {
         let p = Polar::new();
         p.load_str(
