@@ -206,6 +206,7 @@ Releases
     :maxdepth: 1
     :caption: See below for release notes:
 
+    changelogs/2021-01-20
     changelogs/2020-12-22
     changelogs/2020-12-08
     changelogs/2020-11-25

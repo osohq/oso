@@ -1,0 +1,64 @@
+.. title:: Changelog for Release 2021-01-20
+.. meta::
+  :description: Changelog for Release 2021-01-20 (oso 0.10.0) containing new features, bug fixes, and more.
+
+##################
+Release 2021-01-20
+##################
+
+==============
+``oso`` 0.10.0
+==============
+
+Breaking changes
+================
+
+Bug fix for rest vars. @TODO
+
+Anonymous rest variables now properly anonymized
+------------------------------------------------
+
+Previously, we were not generating unique identifiers for anonymous rest
+variables (``*_``) during the rewriting pass. This resulted in unexpected
+results for queries containing multiple anonymous rest variables, such as:
+
+.. code-block:: polar
+
+  [*_] in [*a] and [*b] in [*_] and b = 1
+
+The above query would return a result with ``a`` bound to ``[1]`` because
+``*a`` and ``*b`` interacted through the pair of un-anonymized rest variables.
+After this change, that query now correctly returns a result with ``a`` bound
+to ``[*_1]``, where ``*_1`` is the rewritten, anonymized rest variable.
+
+New features
+============
+
+``get_allowed_actions`` introduced for Python
+---------------------------------------------
+
+Use `Oso.get_allowed_actions` to get a list of actions that a user
+is allowed to take on a resource. These actions can be used for making
+additional authorization decisions, especially in the frontend (e.g., hiding
+or showing a button based on the current user's allowed actions).
+
+See our guide :doc:`here </getting-started/ui/index>`!
+
+``PolarClass`` implemented for versions 0.7 & 0.8 of the ``uuid`` crate
+-----------------------------------------------------------------------
+
+``PolarClass`` is now implemented for versions 0.7 & 0.8 of the ``uuid`` crate
+behind the optional ``uuid-07`` feature flag.
+
+Ruby library now supports Ruby 3.0
+----------------------------------
+
+There are no breaking changes. Happy Rubying!
+
+Running oso in the browser
+--------------------------
+
+The oso JavaScript/TypeScript package on NPM has been updated to work with
+browser environments using bundlers like webpack.
+
+Stay tuned for more information on how to use oso in the browser!
