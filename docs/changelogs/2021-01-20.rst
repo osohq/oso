@@ -13,8 +13,6 @@ Release 2021-01-20
 Breaking changes
 ================
 
-Bug fix for rest vars. @TODO
-
 Anonymous rest variables now properly anonymized
 ------------------------------------------------
 
@@ -62,3 +60,69 @@ The oso JavaScript/TypeScript package on NPM has been updated to work with
 browser environments using bundlers like webpack.
 
 Stay tuned for more information on how to use oso in the browser!
+
+
+====================
+``oso`` 0.11.0-alpha
+====================
+
+New features
+============
+
+Improved support for constraint propagation and interactions between variables in Polar VM
+------------------------------------------------------------------------------------------
+
+The Polar VM now supports adding constraints during query execution on any
+unbound variable, including constraints over multiple unbound variables.
+Constraints can be used within any query, without requiring partial objects to
+be passed in to `oso.query_rule`.  This allows writing queries in a more
+declarative style, and allows Polar to correctly answer more queries with
+unbound variables.  The change enables consistent support for the following
+queries, when run using `oso.query_rule` or using list filtering adapters with
+Django or SQLAlchemy:
+
+- Rules involving intersections between multiple collections on objects.
+
+    ```rust
+    allow(actor, action, post: Post) if
+    	tag in post.tags and
+    	tag in actor.allowed_tags;
+    ```
+
+- Calling rules on a field of a constrained variable
+
+    ```rust
+    allow(actor, action, post: Post) if allow(actor, action, post.tag);
+    ```
+
+- Comparison operations between constrained partials.
+
+    ```rust
+    allow(actor, action, post: Post) if
+    	post_tag in post.tags and
+    	actor_tag in actor.tags and
+    	post_tag = actor_tag;
+    ```
+
+- Support for more queries involving negation and constraints.
+- Creation of constrained variables from unbound variables during query execution.
+
+    ```rust
+    f(x) if not (x = 1) and x = 2;
+    ```
+
+Since this is a substantial change, we are releasing an alpha build. This build
+provides an opportunity to give feedback to our engineering team as we complete
+this functionality. We're available in Slack for questions and feedback.
+
+==============================
+``sqlalchemy-oso`` 0.5.0-alpha
+==============================
+
+Includes support for ``oso`` 0.11.0-alpha.
+
+==============================
+``django-oso`` 0.7.0-alpha
+==============================
+
+Includes support for ``oso`` 0.11.0-alpha.
