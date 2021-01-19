@@ -30,13 +30,13 @@ COMPARISONS = {
 
 def flip_op(operator):
     flips = {
-        'Eq': 'Eq',
-        'Unify': 'Unify',
-        'Neq': 'Neq',
-        'Geq': 'Lt',
-        'Gt': 'Leq',
-        'Leq': 'Gt',
-        'Lt': 'Geq'
+        "Eq": "Eq",
+        "Unify": "Unify",
+        "Neq": "Neq",
+        "Geq": "Lt",
+        "Gt": "Leq",
+        "Leq": "Gt",
+        "Lt": "Geq",
     }
     return flips[operator]
 
@@ -74,10 +74,11 @@ def translate_and(expression: Expression, session: Session, model, get_model):
 def translate_isa(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "Isa"
     left, right = expression.args
-    if dot_path(left) == ():
-        assert left == Variable("_this")
-    else:
-        for field_name in dot_path(left):
+    left_path = dot_path(left)
+    assert left_path[0] == Variable("_this")
+    left_path = left_path[1:]  # Drop _this.
+    if left_path:
+        for field_name in left_path:
             _, model, __ = get_relationship(model, field_name)
 
     assert not right.fields, "Unexpected fields in isa expression"
@@ -91,18 +92,23 @@ def translate_compare(expression: Expression, session: Session, model, get_model
     left_path = dot_path(left)
     right_path = dot_path(right)
 
-    if left_path:
+    if left_path[1:]:
+        assert left_path[0] == Variable("_this")
         assert not right_path
-        path, field_name = left_path[:-1], left_path[-1]
+        path, field_name = left_path[1:-1], left_path[-1]
         return translate_dot(
             path,
             session,
             model,
             functools.partial(emit_compare, field_name, right, expression.operator),
         )
-    elif right_path:
+    elif right_path and right_path[0] == "_this":
         return translate_compare(
-            Expression(flip_op(expression.operator), [right, left]), session, model, get_model)
+            Expression(flip_op(expression.operator), [right, left]),
+            session,
+            model,
+            get_model,
+        )
     else:
         assert left == Variable("_this")
         if not isinstance(right, model):
@@ -131,28 +137,30 @@ def translate_in(expression, session, model, get_model):
     # There are two possible types of in operations. In both, the right hand side
     # should be a dot op.
 
+    path = dot_path(right)
+    assert path[0] == "_this"
+    path = path[1:]
+    assert path
+
     # Partial In: LHS is an expression
     if isinstance(left, Expression):
-        path = dot_path(right)
-        assert path
-
         return translate_dot(
-            path, session, model, functools.partial(emit_subexpression, left, get_model)
+            path,
+            session,
+            model,
+            functools.partial(emit_subexpression, left, get_model),
         )
     elif isinstance(left, Variable):
         # A variable with no additional constraints
-        path = dot_path(right)
-        assert path
-
         return translate_dot(
-            path, session, model, functools.partial(emit_subexpression, Expression("And", []),
-                                                    get_model)
+            path,
+            session,
+            model,
+            functools.partial(emit_subexpression, Expression("And", []), get_model),
         )
     else:
         # Contains: LHS is not an expression.
         # TODO (dhatch) Missing check, left type must match type of the target?
-        path = dot_path(right)
-        assert path
         path, field_name = path[:-1], path[-1]
         return translate_dot(
             path, session, model, functools.partial(emit_contains, field_name, left)

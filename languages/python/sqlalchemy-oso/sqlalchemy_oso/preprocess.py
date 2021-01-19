@@ -21,7 +21,9 @@ def preprocess(expression: Expression) -> Expression:
     expressions = {var: Expression("And", args) for var, args in variables.items()}
 
     # Subsitute _this for each variable.
-    expressions = {var: sub_this(var, expression) for var, expression in expressions.items()}
+    expressions = {
+        var: sub_this(var, expression) for var, expression in expressions.items()
+    }
 
     # Subsitute new expressions for variables in original expression.
     for var, expr in expressions.items():
@@ -30,16 +32,21 @@ def preprocess(expression: Expression) -> Expression:
     return new_expr
 
 
-def preprocess_expression(expression: Expression, variables: TGroupedExpressions) -> Optional[Expression]:
+def preprocess_expression(
+    expression: Expression, variables: TGroupedExpressions
+) -> Optional[Expression]:
     """Collect expressions over variables into ``variables``.
 
     Return the expression with those removed.
     """
     # Walk expression and collect variable expressions
-    new_expr = expression
+    new_expr: Optional[Expression] = expression
     if expression.operator == "And":
         new_expr = preprocess_and(expression, variables)
-    elif expression.operator in ("Or", "Not"):  # Or and Not are not supported by SQLAlchemy translation.
+    elif expression.operator in (
+        "Or",
+        "Not",
+    ):  # Or and Not are not supported by SQLAlchemy translation.
         raise UnsupportedError(f"{expression.operator}")
     else:
         new_expr = preprocess_leaf(expression, variables)
@@ -47,7 +54,9 @@ def preprocess_expression(expression: Expression, variables: TGroupedExpressions
     return new_expr
 
 
-def preprocess_and(expression: Expression, variables: TGroupedExpressions) -> Expression:
+def preprocess_and(
+    expression: Expression, variables: TGroupedExpressions
+) -> Expression:
     new_expression = []
 
     for expression in expression.args:
@@ -93,7 +102,9 @@ def sub_var(variable: Variable, value, expression: Expression) -> Expression:
     return Expression(expression.operator, new_expr)
 
 
-def preprocess_leaf(expression: Expression, variables: TGroupedExpressions) -> Optional[Expression]:
+def preprocess_leaf(
+    expression: Expression, variables: TGroupedExpressions
+) -> Optional[Expression]:
     """If leaf is a variable other than _this, add the expression to variables and return None."""
     assert len(expression.args) == 2
     left, right = expression.args

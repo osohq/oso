@@ -5,7 +5,6 @@ https://www.notion.so/osohq/Relationships-621b884edbc6423f93d29e6066e58d16.
 """
 import pytest
 
-from sqlalchemy.orm import Session
 from sqlalchemy_oso.auth import authorize_model
 
 from .models import Post, Tag, User, Category
@@ -393,7 +392,9 @@ def test_nested_relationship_many_many(session, oso, tag_nested_many_many_test_f
     assert tag_nested_many_many_test_fixture["all_tagged_post"] in posts
 
 
-def test_nested_relationship_many_many_constrained(session, oso, tag_nested_many_many_test_fixture):
+def test_nested_relationship_many_many_constrained(
+    session, oso, tag_nested_many_many_test_fixture
+):
     """Test that nested relationships work.
 
     post - (many) -> tags - (many) -> User
@@ -434,7 +435,11 @@ def test_nested_relationship_many_many_many_constrained(session, engine, oso):
 
     foo_tag = Tag(name="foo", categories=[foo_category])
     bar_tag = Tag(name="bar", categories=[bar_category])
-    both_tag = Tag(name="both", categories=[foo_category, bar_category, public_category], is_public=True)
+    both_tag = Tag(
+        name="both",
+        categories=[foo_category, bar_category, public_category],
+        is_public=True,
+    )
 
     foo_post = Post(contents="foo_post", tags=[foo_tag])
     bar_post = Post(contents="bar_post", tags=[bar_tag])
@@ -443,9 +448,25 @@ def test_nested_relationship_many_many_many_constrained(session, engine, oso):
     foo_post_2 = Post(contents="foo_post_2", tags=[foo_tag])
     public_post = Post(contents="public_post", tags=[both_tag], access_level="public")
 
-    session.add_all([foo, bar, foo_category, bar_category, both_category, foo_tag, bar_tag,
-                     both_tag, foo_post, bar_post, both_post, none_post, foo_post_2,
-                     public_category, public_post])
+    session.add_all(
+        [
+            foo,
+            bar,
+            foo_category,
+            bar_category,
+            both_category,
+            foo_tag,
+            bar_tag,
+            both_tag,
+            foo_post,
+            bar_post,
+            both_post,
+            none_post,
+            foo_post_2,
+            public_category,
+            public_post,
+        ]
+    )
     session.commit()
 
     # A user can read a post that they are the moderator of the category of.
@@ -459,11 +480,7 @@ def test_nested_relationship_many_many_many_constrained(session, engine, oso):
     """
     )
 
-    posts = session.query(Post).filter(
-        authorize_model(
-            oso, foo, "read", session, Post
-        )
-    )
+    posts = session.query(Post).filter(authorize_model(oso, foo, "read", session, Post))
     posts = posts.all()
 
     assert foo_post in posts
@@ -473,11 +490,7 @@ def test_nested_relationship_many_many_many_constrained(session, engine, oso):
     assert bar_post not in posts
     assert len(posts) == 4
 
-    posts = session.query(Post).filter(
-        authorize_model(
-            oso, bar, "read", session, Post
-        )
-    )
+    posts = session.query(Post).filter(authorize_model(oso, bar, "read", session, Post))
     posts = posts.all()
 
     assert bar_post in posts
@@ -501,9 +514,7 @@ def test_nested_relationship_many_many_many_constrained(session, engine, oso):
     )
 
     posts = session.query(Post).filter(
-        authorize_model(
-            oso, bar, "read_2", session, Post
-        )
+        authorize_model(oso, bar, "read_2", session, Post)
     )
 
     posts = posts.all()
@@ -532,9 +543,7 @@ def test_nested_relationship_many_many_many_constrained(session, engine, oso):
     )
 
     posts = session.query(Post).filter(
-        authorize_model(
-            oso, bar, "read_3", session, Post
-        )
+        authorize_model(oso, bar, "read_3", session, Post)
     )
     print_query(posts)
     posts = posts.all()
@@ -623,9 +632,7 @@ def test_in_with_constraints_but_no_matching_objects(
     assert len(posts) == 0
 
 
-def test_redundant_in_on_same_field(
-    session, oso, tag_nested_many_many_test_fixture
-):
+def test_redundant_in_on_same_field(session, oso, tag_nested_many_many_test_fixture):
     oso.load_str(
         """
         allow(_, "read", post: Post) if
@@ -643,9 +650,7 @@ def test_redundant_in_on_same_field(
 
 
 @pytest.mark.xfail(reason="Unification between fields of partials not supported.")
-def test_unify_ins(
-    session, oso, tag_nested_many_many_test_fixture
-):
+def test_unify_ins(session, oso, tag_nested_many_many_test_fixture):
     oso.load_str(
         """
         allow(_, _, post) if
@@ -654,7 +659,8 @@ def test_unify_ins(
             tag1.name = tag2.name and
             tag1.name > "a" and
             tag2.name <= "z";
-        """)
+        """
+    )
 
     posts = session.query(Post).filter(
         authorize_model(oso, "user", "read", session, Post)
@@ -663,20 +669,23 @@ def test_unify_ins(
     assert posts.count() == 1
 
 
+@pytest.mark.xfail(reason="Cannot compare item in subquery to outer item.")
 def test_deeply_nested_in(session, oso, tag_nested_many_many_test_fixture):
-    oso.load_str("""
+    oso.load_str(
+        """
         allow(_, _, post: Post) if
             foo in post.created_by.posts and foo.id > 1 and
             bar in foo.created_by.posts and bar.id > 2 and
             baz in bar.created_by.posts and baz.id > 3 and
             post in baz.created_by.posts and post.id > 4;
-    """)
+    """
+    )
 
     posts = session.query(Post).filter(
         authorize_model(oso, "user", "read", session, Post)
     )
 
-    query_str = """\
+    query_str = """
         SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.access_level AS
         posts_access_level, posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS
         posts_needs_moderation
@@ -697,7 +706,7 @@ def test_deeply_nested_in(session, oso, tag_nested_many_many_test_fixture):
         FROM users
         WHERE users.id = posts.created_by_id AND (EXISTS (SELECT 1
         FROM posts
-        WHERE users.id = posts.created_by_id)))) AND posts.id > ?
+        WHERE users.id = posts.created_by_id)))) AND posts.id > ? AND posts.id =
     """
 
     assert_query_equals(posts, query_str)
