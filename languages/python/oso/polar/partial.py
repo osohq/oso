@@ -19,9 +19,9 @@ def dot_path(
     is returned as a tuple. The empty tuple is returned if input is not a dot
     operation.
 
-    _this => ()
-    _this.created_by => ('created_by',)
-    _this.created_by.username => ('created_by', 'username')"""
+    _this => (_this,)
+    _this.created_by => (_this, 'created_by',)
+    _this.created_by.username => (_this, 'created_by', 'username')"""
 
     if isinstance(expr, Variable):
         return (expr,)
