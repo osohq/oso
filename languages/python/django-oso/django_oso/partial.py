@@ -91,7 +91,7 @@ class FilterBuilder:
         assert expr.operator == "Isa"
         (left, right) = expr.args
         left_path = dot_path(left)
-        # assert left_path[0] == "_this"
+        assert left_path[0] == self.name
         root = self.get_query_from_var(left_path[0])
         model = get_model_by_path(root.model, left_path[1:])
         constraint_type = apps.get_model(django_model_name(right.tag))
