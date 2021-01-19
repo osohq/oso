@@ -156,12 +156,12 @@ class FilterBuilder:
 
         if left_path and right_path:
             # compare partials
-            if left_path[0] == "_this":
+            if left_path[0] == self.name:
                 self.filter &= COMPARISONS[expr.operator](
                     left_field, self.translate_path_to_field(right_path)
                 )
             else:
-                assert right_path[0] == "_this"
+                assert right_path[0] == self.name
                 self.filter &= REFLECTED_COMPARISONS[expr.operator](
                     right_field, self.translate_path_to_field(left_path)
                 )
