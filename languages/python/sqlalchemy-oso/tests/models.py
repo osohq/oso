@@ -8,6 +8,31 @@ from sqlalchemy import Column, Integer, String, Enum, Boolean, ForeignKey
 ModelBase = declarative_base(name="ModelBase")
 
 
+class Category(ModelBase):
+    __tablename__ = "category"
+
+    name = Column(String, primary_key=True)
+
+    tags = relationship("Tag", secondary="category_tags")
+    users = relationship("User", secondary="category_users")
+
+
+category_users = Table(
+    "category_users",
+    ModelBase.metadata,
+    Column("user_id", Integer, ForeignKey("users.id")),
+    Column("category_name", String, ForeignKey("category.name")),
+)
+
+
+category_tags = Table(
+    "category_tags",
+    ModelBase.metadata,
+    Column("tag_name", String, ForeignKey("tags.name")),
+    Column("category_name", String, ForeignKey("category.name")),
+)
+
+
 class Tag(ModelBase):
     __tablename__ = "tags"
 
@@ -16,6 +41,7 @@ class Tag(ModelBase):
     created_by = relationship("User", foreign_keys=[created_by_id])
 
     users = relationship("User", secondary="user_tags")
+    categories = relationship("Category", secondary="category_tags")
 
     # If provided, posts in this tag always have the public access level.
     is_public = Column(Boolean, default=False, nullable=False)
@@ -41,7 +67,7 @@ class Post(ModelBase):
 
     id = Column(Integer, primary_key=True)
     contents = Column(String)
-    access_level = Column(Enum("public", "private"), nullable=False)
+    access_level = Column(Enum("public", "private"), nullable=False, default="private")
 
     created_by_id = Column(Integer, ForeignKey("users.id"))
     created_by = relationship("User", backref="posts")

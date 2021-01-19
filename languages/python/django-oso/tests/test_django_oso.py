@@ -6,6 +6,7 @@ from django.core.exceptions import PermissionDenied, EmptyResultSet
 
 from django_oso.oso import Oso, reset_oso
 from django_oso.auth import authorize, authorize_model
+from polar import Variable, Expression
 
 from oso import OsoError
 
@@ -148,13 +149,15 @@ def test_partial(rf, partial_policy):
     )
 
     q = Post.objects.filter(authorize_filter)
-    assert (
-        str(q.query)
-        == 'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",'
-        + ' "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"'
-        + ' FROM "test_app_post"'
-        + ' WHERE (NOT "test_app_post"."is_private" AND "test_app_post"."timestamp" > 0 AND "test_app_post"."option" IS NULL)'
-    )
+    expected = """
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        FROM "test_app_post"
+        WHERE (NOT "test_app_post"."is_private"
+               AND "test_app_post"."timestamp" > 0
+               AND "test_app_post"."option" IS NULL)
+    """
+    assert str(q.query) == " ".join(expected.split())
     assert q.count() == 2
 
     request = rf.get("/")
@@ -164,12 +167,12 @@ def test_partial(rf, partial_policy):
     assert str(authorize_filter) == "(NOT (AND: ('pk__in', [])))"
 
     q = Post.objects.filter(authorize_filter)
-    assert (
-        str(q.query)
-        == 'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",'
-        + ' "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"'
-        + ' FROM "test_app_post"'
-    )
+    expected = """
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        FROM "test_app_post"
+    """
+    assert str(q.query) == " ".join(expected.split())
     assert q.count() == len(posts)
 
     q = Post.objects.authorize(request, action="get")
@@ -177,7 +180,7 @@ def test_partial(rf, partial_policy):
 
 
 @pytest.mark.django_db
-def test_partial_subfield_isa():
+def test_partial_isa_with_path():
     from test_app.models import Post, User
 
     alice = User(name="alice")
@@ -200,18 +203,17 @@ def test_partial_subfield_isa():
     authorize_filter = authorize_model(None, Post, actor="foo", action="bar")
     assert (
         str(authorize_filter)
-        == "(OR:"
-        + " (AND: (NOT (AND: ('pk__in', []))), (NOT (AND: ('pk__in', []))), ('created_by__name', 'alice')),"
-        + " ('pk__in', []))"
+        == "(AND: (NOT (AND: ('pk__in', []))), ('created_by__name', 'alice'))"
     )
     authorized_posts = Post.objects.filter(authorize_filter)
-    assert (
-        str(authorized_posts.query)
-        == 'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",'
-        + ' "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"'
-        + ' FROM "test_app_post" LEFT OUTER JOIN "test_app_user"'
-        + ' ON ("test_app_post"."created_by_id" = "test_app_user"."id") WHERE "test_app_user"."name" = alice'
-    )
+    expected = """
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        FROM "test_app_post"
+        INNER JOIN "test_app_user" ON ("test_app_post"."created_by_id" = "test_app_user"."id")
+        WHERE "test_app_user"."name" = alice
+    """
+    assert str(authorized_posts.query) == " ".join(expected.split())
     assert authorized_posts.count() == 2
 
 
@@ -247,12 +249,13 @@ def test_null_with_partial(rf):
         str(authorize_filter) == "(AND: (NOT (AND: ('pk__in', []))), ('option', None))"
     )
     authorized_posts = Post.objects.filter(authorize_filter)
-    assert str(authorized_posts.query) == (
-        'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", '
-        + '"test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"'
-        + ' FROM "test_app_post"'
-        + ' WHERE "test_app_post"."option" IS NULL'
-    )
+    expected = """
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        FROM "test_app_post"
+        WHERE "test_app_post"."option" IS NULL
+    """
+    assert str(authorized_posts.query) == " ".join(expected.split())
     assert authorized_posts.count() == 1
 
 
@@ -287,11 +290,12 @@ def test_negated_matches_with_partial(rf):
     authorize_filter = authorize_model(request, Post)
     assert str(authorize_filter) == ("(NOT (AND: ('pk__in', [])))")
     authorized_posts = Post.objects.filter(authorize_filter)
-    assert str(authorized_posts.query) == (
-        'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", '
-        + '"test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"'
-        + ' FROM "test_app_post"'
-    )
+    expected = """
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        FROM "test_app_post"
+    """
+    assert str(authorized_posts.query) == " ".join(expected.split())
     assert authorized_posts.count() == 1
 
     request.user = 3
@@ -307,11 +311,41 @@ def test_negated_matches_with_partial(rf):
 
     request.user = 4
     authorize_filter = authorize_model(request, Post)
-    assert str(authorize_filter) == ("(AND: (NOT (AND: ('pk__in', []))))")
+    assert str(authorize_filter) == ("(NOT (AND: ('pk__in', [])))")
     authorized_posts = Post.objects.filter(authorize_filter)
-    assert str(authorized_posts.query) == (
-        'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", '
-        + '"test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"'
-        + ' FROM "test_app_post"'
-    )
+    expected = """
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        FROM "test_app_post"
+    """
+    assert str(authorized_posts.query) == " ".join(expected.split())
     assert authorized_posts.count() == 1
+
+
+def test_partial_unification():
+    Oso.load_str("f(x, y) if x = y and x = 1;")
+    results = Oso.query_rule("f", Variable("x"), Variable("y"))
+    first = next(results)["bindings"]
+    assert first["x"] == 1
+    assert first["y"] == 1
+
+    with pytest.raises(StopIteration):
+        next(results)
+
+    Oso.load_str("g(x, y) if x = y and y > 1;")
+    results = Oso.query_rule("g", Variable("x"), Variable("y"))
+    first = next(results)["bindings"]
+    assert first["x"] == Expression("And", [Expression("Gt", [Variable("_this"), 1])])
+    assert first["y"] == Expression("And", [Expression("Gt", [Variable("_this"), 1])])
+
+
+def test_rewrite_parameters():
+    from test_app.models import Post
+
+    Oso.load_str(
+        """allow(_, _, resource) if g(resource.created_by);
+           g(resource) if resource matches test_app::User;
+        """
+    )
+    authorize_filter = authorize_model(None, Post, actor="foo", action="bar")
+    assert str(authorize_filter) == "(AND: (NOT (AND: ('pk__in', []))))"
