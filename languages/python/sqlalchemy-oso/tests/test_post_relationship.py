@@ -12,6 +12,10 @@ from .models import Post, Tag, User, Category
 from .conftest import print_query
 
 
+def assert_query_equals(query, expected_str):
+    assert " ".join(str(query).split()) == " ".join(expected_str.split())
+
+
 def test_authorize_model_basic(session, oso, fixture_data):
     """Test that a simple policy with checks on non-relationship attributes is correct."""
     oso.load_str('allow("user", "read", post: Post) if post.access_level = "public";')
@@ -636,6 +640,67 @@ def test_redundant_in_on_same_field(
 
     posts = posts.all()
     assert len(posts) == 2
+
+
+def test_unify_ins(
+    session, oso, tag_nested_many_many_test_fixture
+):
+    oso.load_str(
+        """
+        allow(_, _, post) if
+            tag1 in post.tags and
+            tag2 in post.tags and
+            tag1.name = tag2.name and
+            tag1.name > "a" and
+            tag2.name <= "z";
+        """)
+
+    posts = session.query(Post).filter(
+        authorize_model(oso, "user", "read", session, Post)
+    )
+
+    assert posts.count() == 1
+
+
+def test_deeply_nested_in(session, oso, tag_nested_many_many_test_fixture):
+    oso.load_str("""
+        allow(_, _, post: Post) if
+            foo in post.created_by.posts and foo.id > 1 and
+            bar in foo.created_by.posts and bar.id > 2 and
+            baz in bar.created_by.posts and baz.id > 3 and
+            post in baz.created_by.posts and post.id > 4;
+    """)
+
+    posts = session.query(Post).filter(
+        authorize_model(oso, "user", "read", session, Post)
+    )
+
+    query_str = """\
+        SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.access_level AS
+        posts_access_level, posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS
+        posts_needs_moderation
+        FROM posts
+        WHERE (EXISTS (SELECT 1
+        FROM users
+        WHERE users.id = posts.created_by_id AND (EXISTS (SELECT 1
+        FROM posts
+        WHERE users.id = posts.created_by_id AND posts.id > ? AND (EXISTS (SELECT 1
+        FROM users
+        WHERE users.id = posts.created_by_id AND (EXISTS (SELECT 1
+        FROM posts
+        WHERE users.id = posts.created_by_id AND posts.id > ? AND (EXISTS (SELECT 1
+        FROM users
+        WHERE users.id = posts.created_by_id AND (EXISTS (SELECT 1
+        FROM posts
+        WHERE users.id = posts.created_by_id AND posts.id > ?)))))))))))) AND (EXISTS (SELECT 1
+        FROM users
+        WHERE users.id = posts.created_by_id AND (EXISTS (SELECT 1
+        FROM posts
+        WHERE users.id = posts.created_by_id)))) AND posts.id > ?
+    """
+
+    assert_query_equals(posts, query_str)
+    assert posts.count() == 1
 
 
 # TODO combine with test in test_django_oso.
