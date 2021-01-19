@@ -3,11 +3,20 @@ from polar.partial import dot_path
 
 
 def test_dot_path():
-    single = Expression("Dot", [Variable("_this"), "created_by"])
-    assert dot_path(single) == ("created_by",)
+    non_dot = Expression("And", [])
+    assert dot_path(non_dot) == ()
 
-    double = Expression("Dot", [single, "username"])
-    assert dot_path(double) == ("created_by", "username")
+    this = Variable("_this")
+    assert dot_path(this) == (this,)
 
-    triple = Expression("Dot", [double, "first"])
-    assert dot_path(triple) == ("created_by", "username", "first")
+    var = Variable("x")
+    assert dot_path(var) == (var,)
+
+    single_dot = Expression("Dot", [this, "created_by"])
+    assert dot_path(single_dot) == (this, "created_by")
+
+    double_dot = Expression("Dot", [single_dot, "username"])
+    assert dot_path(double_dot) == (this, "created_by", "username")
+
+    triple_dot = Expression("Dot", [double_dot, "first"])
+    assert dot_path(triple_dot) == (this, "created_by", "username", "first")
