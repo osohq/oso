@@ -77,7 +77,7 @@ unbound variable, including constraints over multiple unbound variables.
 Constraints can be used within any query, without requiring partial objects to
 be passed in to `oso.query_rule`.  This allows writing queries in a more
 declarative style, and allows Polar to correctly answer more queries with
-unbound variables.  The change enables consistent support for the following
+unbound variables.  The change improves support for the following
 queries, when run using `oso.query_rule` or using list filtering adapters with
 Django or SQLAlchemy:
 
