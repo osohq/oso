@@ -14,6 +14,9 @@ jobs:
         env:
           github_ref: ${{ github.ref }}
         run: echo "oso_version=${github_ref/refs\/tags\/django-v/}" >> $GITHUB_ENV
+      - name: Check python version matches
+        run: grep "__version__ = \"$oso_version\"" django_oso/__init__.py
+        working-directory: languages/python/django-oso
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
