@@ -2546,9 +2546,13 @@ impl PolarVirtualMachine {
             }
             (VariableState::Cycle(c), VariableState::Cycle(d)) => {
                 // Both variables are in cycles.
-                if c.iter().collect::<HashSet<&Symbol>>() == d.iter().collect::<HashSet<&Symbol>>() {
-                    // The cycles are the same. Do nothing.
+                let h = c.iter().collect::<HashSet<&Symbol>>();
+                let i = d.iter().collect::<HashSet<&Symbol>>();
+                if h.intersection(&i).next().is_some() {
+                    // The cycles must be the same. Do nothing.
+                    assert_eq!(h, i);
                 } else {
+                    // Join the two cycles.
                     let p = c.last().unwrap();
                     let q = d.last().unwrap();
                     assert_ne!(p, l);
