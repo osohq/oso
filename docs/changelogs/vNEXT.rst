@@ -1,14 +1,14 @@
-.. title:: Changelog for Release 2021-01-06
+.. title:: Changelog for Release DATE
 .. meta::
-  :description: Changelog for Release 2021-01-06 (oso 0.9.1) containing new features, bug fixes, and more.
+  :description: Changelog for Release DATE (RELEASED_VERSIONS) containing new features, bug fixes, and more.
 
-##################
-Release 2021-01-06
-##################
+############
+Release DATE
+############
 
-=============
-``oso`` 0.9.1
-=============
+==================================
+``RELEASED_PACKAGE_1`` NEW_VERSION
+==================================
 
 Breaking changes
 ================
@@ -29,16 +29,14 @@ Link to migration guide
 New features
 ============
 
-``PolarClass`` implemented for versions 0.7 & 0.8 of the ``uuid`` crate
------------------------------------------------------------------------
+Feature 1
+---------
 
-``PolarClass`` is now implemented for versions 0.7 & 0.8 of the ``uuid`` crate
-behind the optional ``uuid-07`` feature flag.
+- summary
+- of
+- user facing changes
 
-Ruby library now supports Ruby 3.0
-----------------------------------
-
-There are no breaking changes. Happy Rubying!
+Link to relevant documentation section
 
 Other bugs & improvements
 =========================
