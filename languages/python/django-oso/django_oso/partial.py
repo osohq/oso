@@ -57,10 +57,8 @@ class FilterBuilder:
         self.name = name
         self.model = model
         self.filter = Q()
-        # Map variables to field paths
+        # Map variables to subquery
         self.variables = {}
-        # Map of field path to FilterBuilders
-        self.subqueries = {}
         self.parent = parent
 
     def translate_path_to_field(self, path):
@@ -80,9 +78,7 @@ class FilterBuilder:
     def get_query_from_var(self, var):
         if var == self.name:
             return self
-        elif var in self.variables:
-            return self.subqueries[self.variables[var]]
-        for subquery in self.subqueries.values():
+        for subquery in self.variables.values():
             query = subquery.get_query_from_var(var)
             if query is not None:
                 return query
@@ -156,10 +152,11 @@ class FilterBuilder:
         left_field = "__".join(left_path[1:]) if left_path[1:] else "pk"
 
         if left_path and right_path:
+            raise UnsupportedError(f"Unsupported partial expression: {expr}")
             # compare partials
-            self.filter &= COMPARISONS[expr.operator](
-                left_field, self.translate_path_to_field(right_path)
-            )
+            # self.filter &= COMPARISONS[expr.operator](
+            #     left_field, self.translate_path_to_field(right_path)
+            # )
         else:
             # partial cmp grounded
             assert left_path
@@ -196,21 +193,19 @@ class FilterBuilder:
 
                 # Left is a variable => apply constraints to the subquery.
                 if left not in base_query.variables:
-                    base_query.variables[left] = right_path[1:]
+                    subquery_path = right_path[1:]
+                    model = get_model_by_path(base_query.model, subquery_path)
+                    base_query.variables[left] = FilterBuilder(
+                        model, parent=base_query, name=left
+                    )
                 else:
                     # This means we have two paths for the same variable
                     # the subquery will handle the intersection
                     pass
 
                 # Get the model for the subfield
-                subquery_path = base_query.variables[left]
-                model = get_model_by_path(base_query.model, subquery_path)
-                if subquery_path not in base_query.subqueries:
-                    base_query.subqueries[subquery_path] = FilterBuilder(
-                        model, parent=base_query, name=left
-                    )
 
-                subquery = base_query.subqueries[subquery_path]
+                subquery = base_query.variables[left]
                 # <var> in <partial>
                 # => set up <var> as a new filtered query over the model
                 # filtered to the entries of right_path
@@ -218,7 +213,7 @@ class FilterBuilder:
                 field = OuterRef(path.name) if isinstance(path, F) else OuterRef(path)
                 subquery.filter &= COMPARISONS["Unify"]("pk", field)
                 # Maybe redundant, but want to be sure
-                base_query.subqueries[subquery_path] = subquery
+                base_query.variables[left] = subquery
             else:
                 # var in _this
                 # var in other_var
@@ -236,8 +231,7 @@ class FilterBuilder:
 
     def finish(self):
         # For every subquery, finish off by checking these are non-empty
-        for path in self.variables.values():
-            subq = self.subqueries[path]
+        for subq in self.variables.values():
             filtered = subq.model.objects.filter(subq.finish()).values("pk")
             exists = Exists(filtered)
             self.filter = exists & self.filter  # This _has_ to be this way around
