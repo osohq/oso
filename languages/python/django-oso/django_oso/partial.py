@@ -77,7 +77,9 @@ class FilterBuilder:
             raise Exception(f"{path} cannot be handled")
 
     def get_query_from_var(self, var):
-        if var in self.variables:
+        if var == self.name:
+            return self
+        elif var in self.variables:
             return self.subqueries[self.variables[var]]
         for subquery in self.subqueries.values():
             query = subquery.get_query_from_var(var)
@@ -88,8 +90,9 @@ class FilterBuilder:
         assert expr.operator == "Isa"
         (left, right) = expr.args
         left_path = dot_path(left)
-        assert left_path[0] == "_this"
-        model = get_model_by_path(self.model, left_path[1:])
+        # assert left_path[0] == "_this"
+        root = self.get_query_from_var(left_path[0])
+        model = get_model_by_path(root.model, left_path[1:])
         constraint_type = apps.get_model(django_model_name(right.tag))
         assert not right.fields, "Unexpected fields in matches expression"
         assert issubclass(
@@ -199,15 +202,18 @@ class FilterBuilder:
                 # var in other_var.foo.bar
 
                 # get the base query for the RHS of the `in`
-                base_query = self.get_query_from_var(right_path[0])
+                root = self
+                while root.parent:
+                    root = root.parent
+                base_query = root.get_query_from_var(right_path[0]) or root
 
                 # Left is a variable => apply constraints to the subquery.
                 if left not in base_query.variables:
                     base_query.variables[left] = right_path[1:]
                 else:
-                    breakpoint()
                     # This means we have two paths for the same variable
                     # the subquery will handle the intersection
+                    pass
 
                 # Get the model for the subfield
                 model = get_model_by_path(base_query.model, right_path[1:])
