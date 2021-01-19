@@ -396,6 +396,9 @@ mod test {
                 QueryEvent::ExternalIsa { call_id, .. } => {
                     q.question_result(call_id, true).unwrap();
                 }
+                QueryEvent::ExternalIsaWithPath { call_id, .. } => {
+                    q.question_result(call_id, true).unwrap();
+                }
                 e => panic!("unexpected event: {:?}", e),
             }
         };
@@ -970,25 +973,18 @@ mod test {
                 QueryEvent::ExternalIsSubclass { call_id, .. } => {
                     q.question_result(call_id, false).unwrap();
                 }
-                QueryEvent::ExternalIsa {
+                QueryEvent::ExternalIsaWithPath {
                     call_id,
-                    instance,
+                    path,
                     class_tag,
+                    ..
                 } => {
-                    let (_base_class, path) = if let Value::List(l) = instance.value() {
-                        l.split_at(1)
-                    } else {
-                        panic!();
-                    };
-                    if let Some(segment) = path.last() {
-                        q.question_result(
-                            call_id,
-                            segment.value().as_string().unwrap().to_uppercase() == class_tag.0,
-                        )
-                        .unwrap();
-                    } else {
-                        panic!();
-                    }
+                    let last_segment = path.last().unwrap();
+                    q.question_result(
+                        call_id,
+                        last_segment.value().as_string().unwrap().to_uppercase() == class_tag.0,
+                    )
+                    .unwrap();
                 }
                 QueryEvent::None => (),
                 e => panic!("not bindings: {:?}", e),

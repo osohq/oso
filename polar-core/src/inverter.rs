@@ -273,10 +273,6 @@ impl Runnable for Inverter {
         self.vm.external_question_result(call_id, answer)
     }
 
-    fn external_error(&mut self, message: String) -> PolarResult<()> {
-        self.vm.external_error(message)
-    }
-
     fn external_call_result(&mut self, call_id: u64, term: Option<Term>) -> PolarResult<()> {
         self.vm.external_call_result(call_id, term)
     }
