@@ -60,7 +60,7 @@ class FilterBuilder:
         self.subqueries = {}
         self.parent = parent
 
-    def translate_path_to_field(self, path, outer=False):
+    def translate_path_to_field(self, path):
         if path[0] == self.name:
             path = "__".join(path[1:])
             return F(path)
