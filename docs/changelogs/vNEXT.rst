@@ -1,13 +1,13 @@
 .. title:: Changelog for Release 2021-01-06
 .. meta::
-  :description: Changelog for Release 2021-01-06 (oso 0.9.1) containing new features, bug fixes, and more.
+  :description: Changelog for Release 2021-01-06 (oso 0.10.0) containing new features, bug fixes, and more.
 
 ##################
 Release 2021-01-06
 ##################
 
 =============
-``oso`` 0.9.1
+``oso`` 0.10.0
 =============
 
 Breaking changes
