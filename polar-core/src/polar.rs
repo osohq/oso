@@ -86,7 +86,7 @@ impl Query {
     }
 
     pub fn application_error(&mut self, message: String) -> PolarResult<()> {
-        self.top_runnable().external_error(message)
+        self.vm.external_error(message)
     }
 
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
@@ -99,6 +99,10 @@ impl Query {
 
     pub fn source_info(&self) -> String {
         self.vm.term_source(&self.term, true)
+    }
+
+    pub fn bind(&mut self, name: Symbol, value: Term) {
+        self.vm.bind(&name, value);
     }
 }
 

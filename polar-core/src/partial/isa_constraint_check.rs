@@ -4,20 +4,30 @@ use crate::events::QueryEvent;
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Pattern, Term, Value};
 
+fn path(x: &Term) -> Vec<Term> {
+    match x.value() {
+        Value::Expression(Operation {
+            operator: Operator::Dot,
+            args,
+        }) => [vec![args[0].clone()], path(&args[1])].concat(),
+        _ => vec![x.clone()],
+    }
+}
+
 #[derive(Clone)]
 pub struct IsaConstraintCheck {
     existing: Vec<Operation>,
-    proposed: Term,
+    proposed: Operation,
     result: Option<bool>,
     alternative_check: Option<QueryEvent>,
     last_call_id: u64,
 }
 
 impl IsaConstraintCheck {
-    pub fn new(existing: Vec<Operation>, mut proposed: Operation) -> Self {
+    pub fn new(existing: Vec<Operation>, proposed: Operation) -> Self {
         Self {
             existing,
-            proposed: proposed.args.pop().unwrap(),
+            proposed,
             result: None,
             alternative_check: None,
             last_call_id: 0,
@@ -42,36 +52,87 @@ impl IsaConstraintCheck {
         &mut self,
         mut constraint: Operation,
         counter: &Counter,
-    ) -> Option<(QueryEvent, QueryEvent)> {
+    ) -> (Option<QueryEvent>, Option<QueryEvent>) {
         // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
         // partial, Integer)`.
         if constraint.operator != Operator::Isa {
-            return None;
+            return (None, None);
         }
 
-        let right = constraint.args.pop().unwrap();
-        match (self.proposed.value(), right.value()) {
-            (
-                Value::Pattern(Pattern::Instance(proposed)),
-                Value::Pattern(Pattern::Instance(existing)),
-            ) if proposed.tag != existing.tag => {
-                let call_id = counter.next();
-                self.last_call_id = call_id;
+        let constraint_path = path(&constraint.args[0]);
+        let proposed_path = path(&self.proposed.args[0]);
 
-                Some((
-                    QueryEvent::ExternalIsSubclass {
-                        call_id,
-                        left_class_tag: proposed.tag.clone(),
-                        right_class_tag: existing.tag.clone(),
-                    },
-                    QueryEvent::ExternalIsSubclass {
-                        call_id,
-                        left_class_tag: existing.tag.clone(),
-                        right_class_tag: proposed.tag.clone(),
-                    },
-                ))
+        // Not comparable b/c one of the matches statements has a LHS that isn't a variable or dot
+        // op.
+        if constraint_path.is_empty() || proposed_path.is_empty() {
+            return (None, None);
+        }
+
+        // a.b.c vs. d
+        if constraint_path
+            .iter()
+            .zip(proposed_path.iter())
+            .any(|(a, b)| a != b)
+        {
+            return (None, None);
+        }
+
+        let proposed = self.proposed.args.pop().unwrap();
+        let existing = constraint.args.pop().unwrap();
+
+        // x matches A{} vs. x matches B{}
+        if constraint_path == proposed_path {
+            match (proposed.value(), existing.value()) {
+                (
+                    Value::Pattern(Pattern::Instance(proposed)),
+                    Value::Pattern(Pattern::Instance(existing)),
+                ) if proposed.tag != existing.tag => {
+                    let call_id = counter.next();
+                    self.last_call_id = call_id;
+
+                    (
+                        Some(QueryEvent::ExternalIsSubclass {
+                            call_id,
+                            left_class_tag: proposed.tag.clone(),
+                            right_class_tag: existing.tag.clone(),
+                        }),
+                        Some(QueryEvent::ExternalIsSubclass {
+                            call_id,
+                            left_class_tag: existing.tag.clone(),
+                            right_class_tag: proposed.tag.clone(),
+                        }),
+                    )
+                }
+                _ => (None, None),
             }
-            _ => None,
+        } else if constraint_path.len() < proposed_path.len() {
+            // Proposed path is a superset of existing path. Take the existing tag, the additional
+            // path segments from the proposed path, and the proposed tag.
+            //
+            // E.g., given `a.b matches B{}` and `a.b.c.d matches D{}`, we want to assemble an
+            // `ExternalIsaWithPath` of `B`, [c, d], and `D`.
+            match (proposed.value(), existing.value()) {
+                (
+                    Value::Pattern(Pattern::Instance(proposed)),
+                    Value::Pattern(Pattern::Instance(existing)),
+                ) => {
+                    let call_id = counter.next();
+                    self.last_call_id = call_id;
+                    (
+                        Some(QueryEvent::ExternalIsaWithPath {
+                            call_id,
+                            base_tag: existing.tag.clone(),
+                            path: proposed_path[constraint_path.len()..].to_vec(),
+                            class_tag: proposed.tag.clone(),
+                        }),
+                        None,
+                    )
+                }
+                _ => (None, None),
+            }
+        } else {
+            // Comparing existing `x.a.b matches B{}` vs. `proposed x.a matches A{}`.
+            (None, None)
         }
     }
 }
@@ -94,8 +155,12 @@ impl Runnable for IsaConstraintCheck {
             if let Some(alternative) = self.alternative_check.take() {
                 return Ok(alternative);
             } else if let Some(constraint) = self.existing.pop() {
-                if let Some((primary, alternative)) = self.check_constraint(constraint, &counter) {
+                let (maybe_primary, maybe_alternative) =
+                    self.check_constraint(constraint, &counter);
+                if let Some(alternative) = maybe_alternative {
                     self.alternative_check = Some(alternative);
+                }
+                if let Some(primary) = maybe_primary {
                     return Ok(primary);
                 }
             } else {

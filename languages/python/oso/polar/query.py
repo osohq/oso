@@ -23,14 +23,20 @@ class QueryResult:
 class Query:
     """Execute a Polar query through the FFI/event interface."""
 
-    def __init__(self, ffi_query, *, host=None):
+    def __init__(self, ffi_query, *, host=None, bindings=None):
         self.ffi_query = ffi_query
         self.host = host
         self.calls = {}
+        for (k, v) in (bindings or {}).items():
+            self.bind(k, v)
 
     def __del__(self):
         del self.host
         del self.ffi_query
+
+    def bind(self, name, value):
+        """Bind `name` to `value` for the duration of the query."""
+        self.ffi_query.bind(name, self.host.to_polar(value))
 
     def run(self):
         """Run the event loop and yield results."""
@@ -47,6 +53,7 @@ class Query:
                 "ExternalCall": self.handle_external_call,
                 "ExternalOp": self.handle_external_op,
                 "ExternalIsa": self.handle_external_isa,
+                "ExternalIsaWithPath": self.handle_external_isa_with_path,
                 "ExternalUnify": self.handle_external_unify,
                 "ExternalIsSubSpecializer": self.handle_external_is_subspecializer,
                 "ExternalIsSubclass": self.handle_external_is_subclass,
@@ -120,6 +127,17 @@ class Query:
         class_tag = data["class_tag"]
         answer = self.host.isa(instance, class_tag)
         self.ffi_query.question_result(data["call_id"], answer)
+
+    def handle_external_isa_with_path(self, data):
+        base_tag = data["base_tag"]
+        path = data["path"]
+        class_tag = data["class_tag"]
+        try:
+            answer = self.host.isa_with_path(base_tag, path, class_tag)
+            self.ffi_query.question_result(data["call_id"], answer)
+        except AttributeError as e:
+            self.ffi_query.application_error(str(e))
+            self.ffi_query.question_result(data["call_id"], False)
 
     def handle_external_unify(self, data):
         left_instance_id = data["left_instance_id"]
