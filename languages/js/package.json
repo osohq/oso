@@ -3,13 +3,13 @@
   "version": "0.10.0",
   "description": "oso authorization library.",
   "bin": "bin/repl.js",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "browser": {
     "fs": false,
     "readline": false,
     "repl": false,
-    "./dist/polar_wasm_api.js": "./dist/bundler/polar_wasm_api.js",
-    "./dist/polar_wasm_api_bg.js": "./dist/bundler/polar_wasm_api_bg.js"
+    "./dist/src/polar_wasm_api.js": "./dist/bundler/polar_wasm_api.js",
+    "./dist/src/polar_wasm_api_bg.js": "./dist/bundler/polar_wasm_api_bg.js"
   },
   "repository": "https://github.com/osohq/oso",
   "collaborators": [
