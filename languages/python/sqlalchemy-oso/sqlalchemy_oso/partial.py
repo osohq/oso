@@ -30,13 +30,13 @@ COMPARISONS = {
 
 def flip_op(operator):
     flips = {
-        'Eq': 'Eq',
-        'Unify': 'Unify',
-        'Neq': 'Neq',
-        'Geq': 'Lt',
-        'Gt': 'Leq',
-        'Leq': 'Gt',
-        'Lt': 'Geq'
+        "Eq": "Eq",
+        "Unify": "Unify",
+        "Neq": "Neq",
+        "Geq": "Lt",
+        "Gt": "Leq",
+        "Leq": "Gt",
+        "Lt": "Geq",
     }
     return flips[operator]
 
