@@ -1,0 +1,40 @@
+.. title:: Changelog for Release 2021-01-06
+.. meta::
+  :description: Changelog for Release 2021-01-06 (oso 0.10.0) containing new features, bug fixes, and more.
+
+##################
+Release 2021-01-06
+##################
+
+=============
+``oso`` 0.10.0
+=============
+
+Breaking changes
+================
+
+Bug fix for rest vars. @TODO
+
+New features
+============
+
+``get_allowed_actions`` introduced for Python
+---------------------------------------------
+
+Use :py:meth:`Oso.get_allowed_actions` to get a list of actions that a user
+is allowed to take on a resource. These actions can be used for making
+additional authorization decisions, especially in the frontend (e.g., hiding
+or showing a button based on the current user's allowed actions).
+
+See our guide :doc:`here <https://docs.oso.dev/getting-started/ui/index.html>`!
+
+``PolarClass`` implemented for versions 0.7 & 0.8 of the ``uuid`` crate
+-----------------------------------------------------------------------
+
+``PolarClass`` is now implemented for versions 0.7 & 0.8 of the ``uuid`` crate
+behind the optional ``uuid-07`` feature flag.
+
+Ruby library now supports Ruby 3.0
+----------------------------------
+
+There are no breaking changes. Happy Rubying!
