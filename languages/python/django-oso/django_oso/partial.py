@@ -94,11 +94,9 @@ class FilterBuilder:
         assert left_path[0] == self.name
         root = self.get_query_from_var(left_path[0])
         model = get_model_by_path(root.model, left_path[1:])
-        constraint_type = apps.get_model(django_model_name(right.tag))
+        ty = apps.get_model(django_model_name(right.tag))
         assert not right.fields, "Unexpected fields in matches expression"
-        assert issubclass(
-            model, constraint_type
-        ), "Inapplicable rule should have been filtered out"
+        assert issubclass(model, ty), "Inapplicable rule should have been filtered out"
         self.filter &= TRUE_FILTER
 
     def translate_expr(self, expr: Expression):
@@ -237,7 +235,7 @@ class FilterBuilder:
 
     def finish(self):
         # For every subquery, finish off by checking these are non-empty
-        for _var, path in self.variables.items():
+        for path in self.variables.values():
             subq = self.subqueries[path]
             filtered = subq.model.objects.filter(subq.finish()).values("pk")
             exists = Exists(filtered)

@@ -636,10 +636,6 @@ def test_deeply_nested_in(tag_nested_many_many_fixtures):
 def test_unify_ins(tag_nested_many_many_fixtures):
     Oso.load_str(
         """
-        # allow(actor, _, post: test_app2::Post) if
-        #     user in post.users and
-        #     actor = user;
-
         allow(_, _, post) if
             user1 in post.users and
             user2 in post.users and
@@ -648,7 +644,6 @@ def test_unify_ins(tag_nested_many_many_fixtures):
             user2.id <= 2;
         """
     )
-
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
