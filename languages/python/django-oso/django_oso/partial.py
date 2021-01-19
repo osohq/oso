@@ -148,7 +148,7 @@ class FilterBuilder:
         right_path = dot_path(right)
 
         # Normalize partial to LHS.
-        if right_path and right_path[0] == self.name:
+        if right_path:
             expr = reflect_expr(expr)
             left, right = right, left
             left_path, right_path = right_path, left_path
