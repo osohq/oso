@@ -23,17 +23,20 @@ COMPARISONS = {
     "Lt": lambda f, v: Q(**{f"{f}__lt": v}),
 }
 
+
 # So that 0 < field can be written
 # as field > 0 instead
-REFLECTED_COMPARISONS = {
-    "Unify": COMPARISONS["Unify"],
-    "Eq": COMPARISONS["Eq"],
-    "Neq": COMPARISONS["Neq"],
-    "Lt": COMPARISONS["Gt"],
-    "Leq": COMPARISONS["Geq"],
-    "Gt": COMPARISONS["Lt"],
-    "Geq": COMPARISONS["Leq"],
-}
+def reflect_expr(expr: Expression):
+    def reflect_operator(o):
+        if o in ["Lt", "Leq"]:
+            return "G" + o[1:]
+        elif o in ["Gt", "Geq"]:
+            return "L" + o[1:]
+        else:
+            return o
+
+    assert expr.operator in COMPARISONS
+    return Expression(reflect_operator(expr.operator), [expr.args[1], expr.args[0]])
 
 
 def contained_in(f, v):
@@ -145,33 +148,26 @@ class FilterBuilder:
         (left, right) = expr.args
         left_path = dot_path(left)
         right_path = dot_path(right)
+
+        # Normalize partial to LHS.
+        if right_path and right_path[0] == self.name:
+            expr = reflect_expr(expr)
+            left, right = right, left
+            left_path, right_path = right_path, left_path
+
         left_field = "__".join(left_path[1:]) if left_path[1:] else "pk"
-        right_field = "__".join(right_path[1:]) if right_path[1:] else "pk"
 
         if left_path and right_path:
             # compare partials
-            if left_path[0] == self.name:
-                self.filter &= COMPARISONS[expr.operator](
-                    left_field, self.translate_path_to_field(right_path)
-                )
-            else:
-                assert right_path[0] == self.name
-                self.filter &= REFLECTED_COMPARISONS[expr.operator](
-                    right_field, self.translate_path_to_field(left_path)
-                )
-        elif left_path:
+            self.filter &= COMPARISONS[expr.operator](
+                left_field, self.translate_path_to_field(right_path)
+            )
+        else:
             # partial cmp grounded
+            assert left_path
             if isinstance(right, Model):
                 right = right.pk
             self.filter &= COMPARISONS[expr.operator](left_field, right)
-        elif right_path:
-            # grounded cmp partial
-            if isinstance(left, Model):
-                left = left.pk
-            self.filter &= REFLECTED_COMPARISONS[expr.operator](right_field, left)
-        else:
-            # grounded cmp grounded???
-            breakpoint()
 
     def in_expr(self, expr: Expression):
         assert expr.operator == "In"
