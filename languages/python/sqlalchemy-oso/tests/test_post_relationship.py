@@ -663,7 +663,7 @@ def test_unify_ins(
     assert posts.count() == 1
 
 
-@pytest.mark.xfail("Cannot compare item in subquery to outer item.")
+@pytest.mark.xfail(reason="Cannot compare item in subquery to outer item.")
 def test_deeply_nested_in(session, oso, tag_nested_many_many_test_fixture):
     oso.load_str("""
         allow(_, _, post: Post) if
@@ -698,7 +698,7 @@ def test_deeply_nested_in(session, oso, tag_nested_many_many_test_fixture):
         FROM users
         WHERE users.id = posts.created_by_id AND (EXISTS (SELECT 1
         FROM posts
-        WHERE users.id = posts.created_by_id)))) AND posts.id > ? AND posts.id = 
+        WHERE users.id = posts.created_by_id)))) AND posts.id > ? AND posts.id =
     """
 
     assert_query_equals(posts, query_str)
