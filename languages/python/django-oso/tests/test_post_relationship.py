@@ -731,17 +731,54 @@ def test_in_intersection(tag_nested_many_many_fixtures):
         LEFT OUTER JOIN "test_app2_post_tags" ON ("test_app2_post"."id" = "test_app2_post_tags"."post_id")
         LEFT OUTER JOIN "test_app2_user_posts" ON ("test_app2_post"."id" = "test_app2_user_posts"."post_id")
         WHERE (EXISTS(SELECT V0."id"
-            FROM "test_app2_tag" V0
-            LEFT OUTER JOIN "test_app2_tag_users" V1 ON (V0."id" = V1."tag_id")
-            WHERE (EXISTS(SELECT U0."id"
-                FROM "test_app2_user" U0
-                WHERE U0."id" = V1."user_id") AND V0."id" = "test_app2_post_tags"."tag_id"))
-            AND EXISTS(SELECT U0."id"
-                FROM "test_app2_user" U0
-                WHERE U0."id" = "test_app2_user_posts"."user_id"))
+                      FROM "test_app2_tag" V0
+                      LEFT OUTER JOIN "test_app2_tag_users" V1 ON (V0."id" = V1."tag_id")
+                      WHERE (EXISTS(SELECT U0."id"
+                                    FROM "test_app2_user" U0
+                                    WHERE U0."id" = V1."user_id")
+                             AND V0."id" = "test_app2_post_tags"."tag_id"))
+                      AND EXISTS(SELECT U0."id"
+                                 FROM "test_app2_user" U0
+                                 WHERE U0."id" = "test_app2_user_posts"."user_id"))
     """
     assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 6
+
+
+@pytest.mark.django_db
+def test_redundant_in_on_same_field(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        allow(_, "read", post) if
+            tag1 in post.tags and
+            tag2 in post.tags and
+            tag1.name = "random" and
+            tag2.is_public = true;
+        """
+    )
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+    expected = """
+
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level", "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
+        FROM "test_app2_post"
+        LEFT OUTER JOIN "test_app2_post_tags" ON ("test_app2_post"."id" = "test_app2_post_tags"."post_id")
+        WHERE (EXISTS(SELECT U0."id"
+                      FROM "test_app2_tag" U0
+                      WHERE (U0."id" = "test_app2_post_tags"."tag_id"
+                             AND U0."id" = "test_app2_post_tags"."tag_id"
+                             AND U0."name" = random
+                             AND U0."is_public"))
+               AND EXISTS(SELECT U0."id"
+                          FROM "test_app2_tag" U0
+                          WHERE (U0."id" = "test_app2_post_tags"."tag_id"
+                                 AND U0."id" = "test_app2_post_tags"."tag_id"
+                                 AND U0."name" = random
+                                 AND U0."is_public")))
+    """
+    assert str(posts.query) == " ".join(expected.split())
+    assert len(posts) == 2
 
 
 # todo test_nested_relationship_single_many
