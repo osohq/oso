@@ -259,15 +259,11 @@ def partial_to_query_filter(partial: Expression, model: Model):
             Expression(Isa, [
                 Variable('_this'),
                 Pattern(test_app::Post, {})]),
-            Expression(Isa, [
-                Variable('_this'),
-                Pattern(test_app::Post, {})]),
             Expression(Unify, [
                 False,
-                Expression(
-                    Dot, [
-                        Variable('_this'),
-                        'is_private'])])])
+                Expression(Dot, [
+                    Variable('_this'),
+                    'is_private'])])])
 
     Output::
 
