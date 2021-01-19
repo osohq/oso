@@ -20,7 +20,7 @@ COMPARISONS = {
     "Neq": lambda f, v: ~Q(**{f: v}),
     "Geq": lambda f, v: Q(**{f"{f}__gte": v}),
     "Gt": lambda f, v: Q(**{f"{f}__gt": v}),
-    "Leq": lambda f, v: Q(**{f"{f}__leq": v}),
+    "Leq": lambda f, v: Q(**{f"{f}__lte": v}),
     "Lt": lambda f, v: Q(**{f"{f}__lt": v}),
 }
 
