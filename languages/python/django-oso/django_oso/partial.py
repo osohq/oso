@@ -27,16 +27,16 @@ COMPARISONS = {
 # So that 0 < field can be written
 # as field > 0 instead
 def reflect_expr(expr: Expression):
-    def reflect_operator(o):
-        if o in ["Lt", "Leq"]:
-            return "G" + o[1:]
-        elif o in ["Gt", "Geq"]:
-            return "L" + o[1:]
-        else:
-            return o
-
     assert expr.operator in COMPARISONS
-    return Expression(reflect_operator(expr.operator), [expr.args[1], expr.args[0]])
+    reflections = {
+        "Gt": "Lt",
+        "Geq": "Leq",
+        "Lt": "Gt",
+        "Leq": "Geq",
+    }
+    left, right = expr.args
+    op = expr.operator
+    return Expression(reflections.get(op, op), [right, left])
 
 
 def contained_in(f, v):
