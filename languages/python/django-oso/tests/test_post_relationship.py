@@ -670,6 +670,45 @@ def test_unify_ins(tag_nested_many_many_fixtures):
     assert len(posts) == 1
 
 
+@pytest.mark.django_db
+def test_this_in_var(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        # _this in var
+        allow(_, _, post: test_app2::Post) if
+            post in x and
+            x in post.created_by.posts;
+        """
+    )
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+    expected = """
+    """
+    assert str(posts.query) == " ".join(expected.split())
+    assert len(posts) == 5050
+
+
+@pytest.mark.django_db
+def test_var_in_other_var(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        # var in other_var
+        allow(_, _, post: test_app2::Post) if
+            x in y and
+            y in post.created_by.posts
+            and post.id = x.id;
+        """
+    )
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+    expected = """
+    """
+    assert str(posts.query) == " ".join(expected.split())
+    assert len(posts) == 5050
+
+
 # todo test_nested_relationship_single_many
 # todo test_nested_relationship_single_single
 # todo test_nested_relationship_single_single_single ... etc
