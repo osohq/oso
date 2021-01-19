@@ -203,13 +203,14 @@ class FilterBuilder:
                     pass
 
                 # Get the model for the subfield
-                model = get_model_by_path(base_query.model, right_path[1:])
-                if right_path[1:] not in base_query.subqueries:
-                    base_query.subqueries[right_path[1:]] = FilterBuilder(
+                subquery_path = base_query.variables[left]
+                model = get_model_by_path(base_query.model, subquery_path)
+                if subquery_path not in base_query.subqueries:
+                    base_query.subqueries[subquery_path] = FilterBuilder(
                         model, parent=base_query, name=left
                     )
 
-                subquery = base_query.subqueries[right_path[1:]]
+                subquery = base_query.subqueries[subquery_path]
                 # <var> in <partial>
                 # => set up <var> as a new filtered query over the model
                 # filtered to the entries of right_path
@@ -217,7 +218,7 @@ class FilterBuilder:
                 field = OuterRef(path.name) if isinstance(path, F) else OuterRef(path)
                 subquery.filter &= COMPARISONS["Unify"]("pk", field)
                 # Maybe redundant, but want to be sure
-                base_query.subqueries[right_path[1:]] = subquery
+                base_query.subqueries[subquery_path] = subquery
             else:
                 # var in _this
                 # var in other_var
