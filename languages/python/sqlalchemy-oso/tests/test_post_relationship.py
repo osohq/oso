@@ -642,6 +642,7 @@ def test_redundant_in_on_same_field(
     assert len(posts) == 2
 
 
+@pytest.mark.xfail(reason="Unification between fields of partials not supported.")
 def test_unify_ins(
     session, oso, tag_nested_many_many_test_fixture
 ):
