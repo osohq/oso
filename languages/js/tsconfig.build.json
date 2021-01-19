@@ -2,12 +2,11 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": false,
-    "stripInternal": true,
-    "rootDir": "src",
-    "outDir": "dist"
+    "stripInternal": true
   },
   "include": [
     "src/**/*",
+    "test/parity.ts"
   ],
   "exclude": [
     "src/**/*.test.ts",
