@@ -2612,7 +2612,7 @@ optionator@^0.8.1:
     word-wrap "~1.2.3"
 
 oso@../../../../languages/js:
-  version "0.9.0"
+  version "0.10.0"
 
 p-each-series@^2.1.0:
   version "2.2.0"

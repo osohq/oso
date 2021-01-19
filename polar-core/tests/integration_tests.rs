@@ -1370,6 +1370,9 @@ fn test_rest_vars() -> TestResult {
     qeval(&mut p, "append([1,2], [3], [1,2,3])");
     qeval(&mut p, "append([1,2,3], [], [1,2,3])");
     qeval(&mut p, "not append([1,2,3], [4], [1,2,3])");
+
+    let a = &var(&mut p, "[*_] in [*a] and [*b] in [*_] and b = 1", "a")[0];
+    assert!(matches!(a, Value::List(b) if matches!(b[0].value(), Value::RestVariable(_))));
     Ok(())
 }
 

@@ -4,6 +4,12 @@
     "noEmit": false,
     "stripInternal": true
   },
-  "include": ["src/**/*", "test/parity.ts"],
-  "exclude": ["src/**/*.test.ts", "src/polar_wasm_api*"]
+  "include": [
+    "src/**/*",
+    "test/parity.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/polar_wasm_api*"
+  ]
 }

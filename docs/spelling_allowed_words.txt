@@ -91,7 +91,9 @@ sqlalchemy
 macOS
 Vue
 React
-
+Rubying
+webpack
+bundlers
 
 ## Misc terms
 roadmap
@@ -106,6 +108,8 @@ hardcoding
 hardcoded
 pre
 declaratively
+un
+anonymized
 
 # Release specifiers
 rc

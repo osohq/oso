@@ -1,3 +1,4 @@
+django==3.1.5
 pytest==5.3.5
 pytest-django==3.9.0
 six # required for pytest-django it seems?
