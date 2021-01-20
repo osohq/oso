@@ -57,7 +57,6 @@ pub fn has_rest_var(list: &TermList) -> bool {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[serde(transparent)]
 pub struct Symbol(pub String);
 
 impl Symbol {
@@ -225,12 +224,11 @@ impl Value {
 
 /// Represents a concrete instance of a Polar value
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(transparent)]
 pub struct Term {
     /// Information about where the term was created from
     #[serde(skip, default = "SourceInfo::ffi")]
     source_info: SourceInfo,
-    
+
     /// The actual underlying value
     value: Arc<Value>,
 }

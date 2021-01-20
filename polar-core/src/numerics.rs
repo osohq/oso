@@ -46,21 +46,7 @@ where
         type Value = f64;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("An integer (42), a float (1.2), or a string (\"NaN\")")
-        }
-
-        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(v as f64)
-        }
-
-        fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(v as f64)
+            formatter.write_str("JSON encoded data")
         }
 
         fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
