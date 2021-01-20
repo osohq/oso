@@ -11,6 +11,7 @@ from polar import Variable, Expression
 from oso import OsoError
 from .conftest import negated_condition
 
+
 @pytest.fixture(autouse=True)
 def reset():
     reset_oso()

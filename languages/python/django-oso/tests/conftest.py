@@ -24,6 +24,7 @@ def pytest_configure():
         },
     )
 
+
 def negated_condition(variable):
     if VERSION >= (3, 0, 0, 0):
         return f"NOT {variable}"
