@@ -42,6 +42,16 @@ or showing a button based on the current user's allowed actions).
 
 See our guide :doc:`here </getting-started/ui/index>`!
 
+Running oso in the browser
+--------------------------
+
+The oso JavaScript/TypeScript package on NPM has been updated to work with
+browser environments using bundlers like webpack.
+
+You can see it in action on our `new docs site <https://docs.osohq.com/v2/index.html>`_
+and to see how to use in the browser, see `this example <https://github.com/osohq/oso-browser-quickstart>`_.
+
+
 ``PolarClass`` implemented for versions 0.7 & 0.8 of the ``uuid`` crate
 -----------------------------------------------------------------------
 
@@ -52,14 +62,6 @@ Ruby library now supports Ruby 3.0
 ----------------------------------
 
 There are no breaking changes. Happy Rubying!
-
-Running oso in the browser
---------------------------
-
-The oso JavaScript/TypeScript package on NPM has been updated to work with
-browser environments using bundlers like webpack.
-
-Stay tuned for more information on how to use oso in the browser!
 
 
 ====================
@@ -82,43 +84,43 @@ queries, when run using `oso.query_rule` or using list filtering adapters with
 Django or SQLAlchemy:
 
 - Rules involving intersections between multiple collections on objects.
+.. code-block:: polar
 
-::
   allow(actor, action, post: Post) if
-  	tag in post.tags and
-  	tag in actor.allowed_tags;
+    tag in post.tags and
+    tag in actor.allowed_tags;
 
 - Calling rules on a field of a constrained variable
+.. code-block:: polar
 
-::
   allow(actor, action, post: Post) if allow(actor, action, post.tag);
 
 - Comparison operations between constrained partials.
+.. code-block:: polar
 
-::
   allow(actor, action, post: Post) if
-  	post_tag in post.tags and
-  	actor_tag in actor.tags and
-  	post_tag = actor_tag;
+    post_tag in post.tags and
+    actor_tag in actor.tags and
+    post_tag = actor_tag;
 
 - Support for more queries involving negation and constraints.
 - Creation of constrained variables from unbound variables during query execution.
+.. code-block:: polar
 
-::
   f(x) if not (x = 1) and x = 2;
 
 Since this is a substantial change, we are releasing an alpha build. This build
 provides an opportunity to give feedback to our engineering team as we complete
 this functionality. We're available in Slack for questions and feedback.
 
-==============================
-``sqlalchemy-oso`` 0.5.0-alpha
-==============================
+==========================
+``sqlalchemy-oso`` 0.5.0a0
+==========================
 
-Includes support for ``oso`` 0.11.0-alpha.
+Includes support for ``oso`` 0.11.0a0.
 
-==============================
-``django-oso`` 0.7.0-alpha
-==============================
+======================
+``django-oso`` 0.7.0a0
+======================
 
 Includes support for ``oso`` 0.11.0-alpha.
