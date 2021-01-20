@@ -9,6 +9,8 @@ from django_oso.models import authorize_model
 from django_oso.oso import Oso, reset_oso
 from test_app2.models import Post, Tag, User
 
+from .conftest import is_true, parenthesize
+
 
 @pytest.fixture(autouse=True)
 def reset():
@@ -491,7 +493,7 @@ def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
     )
     user = User.objects.get(username="user")
     posts = Post.objects.authorize(None, actor=user, action="read")
-    expected = """
+    expected = f"""
        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
               "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
        FROM "test_app2_post"
@@ -505,7 +507,7 @@ def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
                                                 WHERE
                                                     EXISTS(SELECT U0."id"
                                                            FROM "test_app2_tag" U0
-                                                           WHERE (U0."id" = (V1."tag_id") AND U0."name" = eng)) = True)
+                                                           WHERE (U0."id" = {parenthesize('V1."tag_id"')} AND U0."name" = eng)){is_true()})
                                                     OR W0."access_level" = public))
     """
     assert str(posts.query) == " ".join(expected.split())
@@ -526,7 +528,7 @@ def test_empty_constraints_in(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter).distinct()
-    expected = """
+    expected = f"""
         SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents",
                         "test_app2_post"."access_level", "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
@@ -536,7 +538,7 @@ def test_empty_constraints_in(tag_nested_many_many_fixtures):
              LEFT OUTER JOIN "test_app2_post_tags" V1 ON (V0."id" = V1."post_id")
              WHERE EXISTS(SELECT U0."id"
                           FROM "test_app2_tag" U0
-                          WHERE U0."id" = (V1."tag_id")) = True)
+                          WHERE U0."id" = {parenthesize('V1."tag_id"')}){is_true()})
     """
     assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 4
@@ -554,7 +556,7 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
     )
     user = User.objects.get(username="user")
     posts = Post.objects.authorize(None, actor=user, action="read")
-    expected = """
+    expected = f"""
         SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
@@ -566,8 +568,8 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
                                              LEFT OUTER JOIN "test_app2_post_tags" V1 ON (V0."id" = V1."post_id")
                                              WHERE EXISTS(SELECT U0."id"
                                                           FROM "test_app2_tag" U0
-                                                          WHERE (U0."id" = (V1."tag_id")
-                                                          AND U0."name" = bloop)) = True))
+                                                          WHERE (U0."id" = {parenthesize('V1."tag_id"')}
+                                                          AND U0."name" = bloop)){is_true()}))
     """
     assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 0
@@ -591,7 +593,7 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
         == "(AND: (NOT (AND: ('pk__in', []))), ('users', <User: User object (1)>))"
     )
     posts = Post.objects.filter(authorize_filter)
-    expected = """
+    expected = f"""
         SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
@@ -617,7 +619,7 @@ def test_deeply_nested_in(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter).distinct()
-    expected = """
+    expected = f"""
         SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents",
                         "test_app2_post"."access_level", "test_app2_post"."created_by_id",
                         "test_app2_post"."needs_moderation"
@@ -668,7 +670,7 @@ def test_unify_ins(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
-    expected = """
+    expected = f"""
         SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
@@ -699,7 +701,7 @@ def test_this_in_var(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
-    expected = """
+    expected = f"""
     """
     assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 5050
@@ -720,7 +722,7 @@ def test_var_in_other_var(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
-    expected = """
+    expected = f"""
     """
     assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 5050
@@ -739,7 +741,7 @@ def test_in_intersection(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
-    expected = """
+    expected = f"""
         SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
@@ -750,16 +752,16 @@ def test_in_intersection(tag_nested_many_many_fixtures):
             LEFT OUTER JOIN "test_app2_post_tags" X3 ON (X0."id" = X3."post_id")
             WHERE (EXISTS(SELECT U0."id"
                         FROM "test_app2_user" U0
-                        WHERE U0."id" = (X1."user_id")) = True
+                        WHERE U0."id" = {parenthesize('X1."user_id"')}){is_true()}
                         AND EXISTS(SELECT W0."id"
                                     FROM "test_app2_tag" W0
-                                    WHERE (W0."id" = (X3."tag_id")
+                                    WHERE (W0."id" = {parenthesize('X3."tag_id"')}
                                     AND W0."id" IN (SELECT V0."id"
                                                     FROM "test_app2_tag" V0
                                                     LEFT OUTER JOIN "test_app2_tag_users" V1 ON (V0."id" = V1."tag_id")
                                                     WHERE EXISTS(SELECT U0."id"
                                                                 FROM "test_app2_user" U0
-                                                                WHERE U0."id" = (V1."user_id")) = True))) = True))
+                                                                WHERE U0."id" = {parenthesize('V1."user_id"')}){is_true()}))){is_true()}))
     """
     assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 4
@@ -779,7 +781,7 @@ def test_redundant_in_on_same_field(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
-    expected = """
+    expected = f"""
 
         SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
@@ -789,12 +791,12 @@ def test_redundant_in_on_same_field(tag_nested_many_many_fixtures):
                                         LEFT OUTER JOIN "test_app2_post_tags" V1 ON (V0."id" = V1."post_id")
                                         WHERE (EXISTS(SELECT U0."id"
                                                       FROM "test_app2_tag" U0
-                                                      WHERE (U0."id" = (V1."tag_id")
-                                                      AND U0."name" = random)) = True
+                                                      WHERE (U0."id" = {parenthesize('V1."tag_id"')}
+                                                      AND U0."name" = random)){is_true()}
                                                       AND EXISTS(SELECT U0."id"
                                                                  FROM "test_app2_tag" U0
-                                                                 WHERE (U0."id" = (V1."tag_id")
-                                                                 AND U0."is_public" = True)) = True))
+                                                                 WHERE (U0."id" = {parenthesize('V1."tag_id"')}
+                                                                 AND U0."is_public"{is_true()})){is_true()}))
     """
     assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 2

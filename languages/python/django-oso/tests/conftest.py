@@ -26,7 +26,21 @@ def pytest_configure():
 
 
 def negated_condition(variable):
-    if VERSION >= (3, 0, 0, 0):
+    if VERSION >= (3, 1):
         return f"NOT {variable}"
     else:
         return f"{variable} = False"
+
+
+def parenthesize(variable):
+    if VERSION >= (3,):
+        return variable
+    else:
+        return f"({variable})"
+
+
+def is_true():
+    if VERSION >= (3, 1):
+        return f""
+    else:
+        return f" = True"
