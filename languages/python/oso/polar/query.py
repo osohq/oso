@@ -7,22 +7,6 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
-from .polar_types import (
-    Call,
-    QueryEventDebug,
-    QueryEventDone,
-    QueryEventExternalCall,
-    QueryEventExternalIsSubSpecializer,
-    QueryEventExternalIsSubclass,
-    QueryEventExternalIsa,
-    QueryEventExternalOp,
-    QueryEventExternalUnify,
-    QueryEventMakeExternal,
-    QueryEventNextExternal,
-    QueryEventResult,
-    deserialize_json,
-    QueryEvent,
-)
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -53,50 +37,53 @@ class Query:
         assert self.ffi_query, "no query to run"
         while True:
             ffi_event = self.ffi_query.next_event()
-            event = deserialize_json(ffi_event.get(), QueryEvent)
+            event = json.loads(ffi_event.get())
             del ffi_event
+            kind = [*event][0]
+            data = event[kind]
 
             call_map = {
-                QueryEventMakeExternal: self.handle_make_external,
-                QueryEventExternalCall: self.handle_external_call,
-                QueryEventExternalOp: self.handle_external_op,
-                QueryEventExternalIsa: self.handle_external_isa,
-                QueryEventExternalUnify: self.handle_external_unify,
-                QueryEventExternalIsSubSpecializer: self.handle_external_is_subspecializer,
-                QueryEventExternalIsSubclass: self.handle_external_is_subclass,
-                QueryEventNextExternal: self.handle_next_external,
-                QueryEventDebug: self.handle_debug,
+                "MakeExternal": self.handle_make_external,
+                "ExternalCall": self.handle_external_call,
+                "ExternalOp": self.handle_external_op,
+                "ExternalIsa": self.handle_external_isa,
+                "ExternalUnify": self.handle_external_unify,
+                "ExternalIsSubSpecializer": self.handle_external_is_subspecializer,
+                "ExternalIsSubclass": self.handle_external_is_subclass,
+                "NextExternal": self.handle_next_external,
+                "Debug": self.handle_debug,
             }
 
-            if isinstance(event, QueryEventDone):
+            if kind == "Done":
                 break
-            elif isinstance(event, QueryEventResult):
+            elif kind == "Result":
                 bindings = {
-                    k: self.host.to_python(v) for k, v in event.bindings.items()
+                    k: self.host.to_python(v) for k, v in data["bindings"].items()
                 }
-                trace = event.trace
+                trace = data["trace"]
                 yield {"bindings": bindings, "trace": trace}
-            elif type(event) in call_map:
-                call_map[type(event)](event)
+            elif kind in call_map:
+                call_map[kind](data)
             else:
                 raise PolarRuntimeError(f"Unhandled event: {json.dumps(event)}")
 
-    def handle_make_external(self, data: QueryEventMakeExternal):
-        id = data.instance_id
-        constructor = data.constructor
-        if isinstance(constructor, Call):
-            cls_name = constructor.name
-            args = [self.host.to_python(arg) for arg in constructor.args]
-            kwargs = constructor.kwargs or {}
+    def handle_make_external(self, data):
+        id = data["instance_id"]
+        constructor = data["constructor"]["value"]
+        if "Call" in constructor:
+            cls_name = constructor["Call"]["name"]
+            args = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
+            kwargs = constructor["Call"]["kwargs"] or {}
             kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
         else:
             raise InvalidConstructorError()
         self.host.make_instance(cls_name, args, kwargs, id)
 
-    def handle_external_call(self, data: QueryEventExternalCall):
-        call_id = data.call_id
-        instance = self.host.to_python(data.instance)
-        attribute = data.attribute
+    def handle_external_call(self, data):
+        call_id = data["call_id"]
+        instance = self.host.to_python(data["instance"])
+
+        attribute = data["attribute"]
 
         # Lookup the attribute on the instance.
         try:
@@ -106,13 +93,13 @@ class Query:
             self.ffi_query.call_result(call_id, None)
             return
         if (
-            callable(attr) and data.args is not None
+            callable(attr) and not data["args"] is None
         ):  # If it's a function, call it with the args.
-            args = [self.host.to_python(arg) for arg in data.args]
-            kwargs = data.kwargs or {}
+            args = [self.host.to_python(arg) for arg in data["args"]]
+            kwargs = data["kwargs"] or {}
             kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
             result = attr(*args, **kwargs)
-        elif data.args is not None:
+        elif not data["args"] is None:
             raise InvalidCallError(
                 f"tried to call '{attribute}' but it is not callable"
             )
@@ -122,34 +109,40 @@ class Query:
         # Return the result of the call.
         self.ffi_query.call_result(call_id, self.host.to_polar(result))
 
-    def handle_external_op(self, data: QueryEventExternalOp):
-        args = [self.host.to_python(arg) for arg in data.args]
-        answer = self.host.operator(data.operator, args)
-        self.ffi_query.question_result(data.call_id, answer)
+    def handle_external_op(self, data):
+        op = data["operator"]
+        args = [self.host.to_python(arg) for arg in data["args"]]
+        answer = self.host.operator(op, args)
+        self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_external_isa(self, data: QueryEventExternalIsa):
-        answer = self.host.isa(data.instance, data.class_tag)
-        self.ffi_query.question_result(data.call_id, answer)
+    def handle_external_isa(self, data):
+        instance = data["instance"]
+        class_tag = data["class_tag"]
+        answer = self.host.isa(instance, class_tag)
+        self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_external_unify(self, data: QueryEventExternalUnify):
-        answer = self.host.unify(data.left_instance_id, data.right_instance_id)
-        self.ffi_query.question_result(data.call_id, answer)
+    def handle_external_unify(self, data):
+        left_instance_id = data["left_instance_id"]
+        right_instance_id = data["right_instance_id"]
+        answer = self.host.unify(left_instance_id, right_instance_id)
+        self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_external_is_subspecializer(
-        self, data: QueryEventExternalIsSubSpecializer
-    ):
-        answer = self.host.is_subspecializer(
-            data.instance_id, data.left_class_tag, data.right_class_tag
-        )
-        self.ffi_query.question_result(data.call_id, answer)
+    def handle_external_is_subspecializer(self, data):
+        instance_id = data["instance_id"]
+        left_tag = data["left_class_tag"]
+        right_tag = data["right_class_tag"]
+        answer = self.host.is_subspecializer(instance_id, left_tag, right_tag)
+        self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_external_is_subclass(self, data: QueryEventExternalIsSubclass):
-        answer = self.host.is_subclass(data.left_class_tag, data.right_class_tag)
-        self.ffi_query.question_result(data.call_id, answer)
+    def handle_external_is_subclass(self, data):
+        left_tag = data["left_class_tag"]
+        right_tag = data["right_class_tag"]
+        answer = self.host.is_subclass(left_tag, right_tag)
+        self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_next_external(self, data: QueryEventNextExternal):
-        call_id = data.call_id
-        iterable = data.iterable
+    def handle_next_external(self, data):
+        call_id = data["call_id"]
+        iterable = data["iterable"]
 
         if call_id not in self.calls:
             value = self.host.to_python(iterable)
@@ -165,9 +158,9 @@ class Query:
         except StopIteration:
             self.ffi_query.call_result(call_id, None)
 
-    def handle_debug(self, data: QueryEventDebug):
-        if data.message:
-            print(data.message)
+    def handle_debug(self, data):
+        if data["message"]:
+            print(data["message"])
         try:
             command = input("debug> ").strip(";")
         except EOFError:
