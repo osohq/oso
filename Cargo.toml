@@ -2,7 +2,6 @@
 
 members = [
     "polar-core",
-    "polar-crossgen",
     "polar-c-api",
     "polar-wasm-api",
     "languages/rust/oso",
