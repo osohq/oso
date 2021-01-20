@@ -62,9 +62,9 @@ browser environments using bundlers like webpack.
 Stay tuned for more information on how to use oso in the browser!
 
 
-====================
-``oso`` 0.11.0-alpha
-====================
+================
+``oso`` 0.11.0a0
+================
 
 New features
 ============
@@ -81,44 +81,48 @@ unbound variables.  The change improves support for the following
 queries, when run using `oso.query_rule` or using list filtering adapters with
 Django or SQLAlchemy:
 
-- Rules involving intersections between multiple collections on objects.
+- Rules involving intersections between multiple collections on objects
 
-::
-  allow(actor, action, post: Post) if
-  	tag in post.tags and
-  	tag in actor.allowed_tags;
+  .. code-block:: polar
+
+      allow(actor, action, post: Post) if
+          tag in post.tags and
+          tag in actor.allowed_tags;
 
 - Calling rules on a field of a constrained variable
 
-::
-  allow(actor, action, post: Post) if allow(actor, action, post.tag);
+  .. code-block:: polar
 
-- Comparison operations between constrained partials.
+      allow(actor, action, post: Post) if allow(actor, action, post.tag);
 
-::
-  allow(actor, action, post: Post) if
-  	post_tag in post.tags and
-  	actor_tag in actor.tags and
-  	post_tag = actor_tag;
+- Comparison operations between constrained partials
+
+  .. code-block:: polar
+
+      allow(actor, action, post: Post) if
+          post_tag in post.tags and
+          actor_tag in actor.tags and
+          post_tag = actor_tag;
 
 - Support for more queries involving negation and constraints.
-- Creation of constrained variables from unbound variables during query execution.
+- Creation of constrained variables from unbound variables during query execution
 
-::
-  f(x) if not (x = 1) and x = 2;
+  .. code-block:: polar
+
+      f(x) if not (x = 1) and x = 2;
 
 Since this is a substantial change, we are releasing an alpha build. This build
 provides an opportunity to give feedback to our engineering team as we complete
 this functionality. We're available in Slack for questions and feedback.
 
-==============================
-``sqlalchemy-oso`` 0.5.0-alpha
-==============================
+==========================
+``sqlalchemy-oso`` 0.5.0a0
+==========================
 
-Includes support for ``oso`` 0.11.0-alpha.
+Includes support for ``oso`` 0.11.0a0.
 
-==============================
-``django-oso`` 0.7.0-alpha
-==============================
+======================
+``django-oso`` 0.7.0a0
+======================
 
-Includes support for ``oso`` 0.11.0-alpha.
+Includes support for ``oso`` 0.11.0a0.
