@@ -189,7 +189,7 @@ func (q QueryFfi) callResult(callID int, value *Value) error {
 		}
 	}
 
-	result := C.polar_call_result(q.ptr, C.ulong(callID), s)
+	result := C.polar_call_result(q.ptr, C.__uint64_t(callID), s)
 	if result == 0 {
 		return getError()
 	}
@@ -203,7 +203,7 @@ func (q QueryFfi) questionResult(callID int, answer bool) error {
 	} else {
 		intAnswer = 0
 	}
-	result := C.polar_question_result(q.ptr, C.ulong(callID), C.int(intAnswer))
+	result := C.polar_question_result(q.ptr, C.__uint64_t(callID), C.int(intAnswer))
 	if result == 0 {
 		return getError()
 	}
