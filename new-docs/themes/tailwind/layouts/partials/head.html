@@ -6,6 +6,8 @@
         {{ end }}</title>
     {{- if .Description }}
     <meta name="description" content="{{ .Description }}" />
+    {{ else }}
+    <meta name="description" content="Explore our guides and reference articles for learning oso and adding it to your application." />
     {{ end -}}
     {{- if .Keywords }}
     <meta name="keywords" content="{{ delimit .Keywords " ," }}" />
@@ -14,6 +16,9 @@
     <meta name="author" content="{{ .Params.Author}}" />
     {{ end -}}
     {{ hugo.Generator }}
+
+    {{ template "_internal/opengraph.html" . }}
+    {{ template "_internal/twitter_cards.html" . }}
 
     {{- $styles := resources.Get "css/styles.css" | postCSS (dict "config" "./assets/css/postcss.config.js") -}}
 

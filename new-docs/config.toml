@@ -6,6 +6,11 @@ uglyurls = true
 
 defaultContentLanguage = "any"
 
+# used for Twitter card etc
+[params]
+description = "Explore our guides and reference articles for learning oso and adding it to your application."
+images = ["img/oso-2020-white-on-black-rounded.png"]
+
 [languages]
 
 [languages.any]
