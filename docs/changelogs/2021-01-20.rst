@@ -42,6 +42,16 @@ or showing a button based on the current user's allowed actions).
 
 See our guide :doc:`here </getting-started/ui/index>`!
 
+Running oso in the browser
+--------------------------
+
+The oso JavaScript/TypeScript package on NPM has been updated to work with
+browser environments using bundlers like webpack.
+
+You can see it in action on our `new docs site <https://docs.osohq.com/v2/index.html>`_
+and to see how to use in the browser, see `this example <https://github.com/osohq/oso-browser-quickstart>`_.
+
+
 ``PolarClass`` implemented for versions 0.7 & 0.8 of the ``uuid`` crate
 -----------------------------------------------------------------------
 
@@ -52,14 +62,6 @@ Ruby library now supports Ruby 3.0
 ----------------------------------
 
 There are no breaking changes. Happy Rubying!
-
-Running oso in the browser
---------------------------
-
-The oso JavaScript/TypeScript package on NPM has been updated to work with
-browser environments using bundlers like webpack.
-
-Stay tuned for more information on how to use oso in the browser!
 
 
 ================
