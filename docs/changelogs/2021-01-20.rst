@@ -83,7 +83,6 @@ unbound variables.  The change improves support for the following
 queries, when run using `oso.query_rule` or using list filtering adapters with
 Django or SQLAlchemy:
 
-
 - Rules involving intersections between multiple collections on objects
 
   .. code-block:: polar
@@ -93,7 +92,6 @@ Django or SQLAlchemy:
           tag in actor.allowed_tags;
 
 - Calling rules on a field of a constrained variable
-.. code-block:: polar
 
   .. code-block:: polar
 
