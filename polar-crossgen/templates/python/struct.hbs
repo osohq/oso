@@ -1,5 +1,0 @@
-@dataclasses.dataclass(frozen=True)
-class {{name}}:
-    {{~#each fields}}
-    {{snake-case this.variable}}: {{this.type_name}}{{/each}}
-

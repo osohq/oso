@@ -13,7 +13,6 @@ use polar_core::traces::{Node, Trace};
 
 mod codegen;
 mod go;
-mod python;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     simple_logging::log_to_stderr(log::LevelFilter::Info);
@@ -49,12 +48,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let registry = tracer.registry()?;
 
     // Uncomment for Go branch
-    // let mut f = File::create("../languages/go/pkg/polar_types.go")?;
-    // let source = codegen::Codegen::new("go", &go::Go)?.output(&registry)?;
-    // f.write_all(&source.as_bytes())?;
-
-    let mut f = File::create("../languages/python/oso/polar/polar_types.py")?;
-    let source = codegen::Codegen::new("python", &python::Python)?.output(&registry)?;
+    let mut f = File::create("../languages/go/pkg/polar_types.go")?;
+    let source = codegen::Codegen::new("go", &go::Go)?.output(&registry)?;
     f.write_all(&source.as_bytes())?;
 
     Ok(())
