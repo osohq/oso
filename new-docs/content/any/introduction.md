@@ -14,7 +14,7 @@ Think about oso as providing you a structured way to implement concepts like
 patterns like role-based access control.
 
 {{< callout "Ready to go?" "primary" >}}
-Dive straight into using oso with the [Getting Started guides](../getting-started/).
+Dive straight into using oso with the [Getting Started guides](getting-started).
 {{< /callout >}}
 
 Under the surface, oso is powered by a declarative policy language called Polar.

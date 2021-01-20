@@ -2,10 +2,10 @@
 title: Reference
 weight: 4
 any: false
+aliases:
+  - /reference/library
 ---
 # Java Authorization Library
-
-Java
 
 The Java version of oso is available on [Maven Central](https://search.maven.org/artifact/com.osohq/oso).
 

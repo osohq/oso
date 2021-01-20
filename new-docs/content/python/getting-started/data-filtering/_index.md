@@ -76,8 +76,7 @@ In effect, authorization is being enforced by the policy engine and the ORM
 cooperatively.
 
 
-
-![image](./list-filtering.svg)
+![image](/img/list-filtering.svg)
 
 ## Alternative solutions
 
@@ -95,14 +94,8 @@ lead to more complex policies and is a bit of a leaky abstraction.
 
 To learn more about this feature and see usage examples, see our ORM specific documentation:
 
-    
-    * Django
-
-
-    * SQLAlchemy
-
-
-    * Odoo (coming soon)
+* [Django](./django)
+* [SQLAlchemy](./sqlalchemy)
 
 More framework integrations are coming soon - join us on [Slack](http://join-slack.osohq.com/) to discuss your
 use case or open an issue on [GitHub](https://github.com/osohq/oso).

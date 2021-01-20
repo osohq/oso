@@ -19,7 +19,7 @@
                 {{ .Content }}
             </article>
             <!--/ Post Content-->
-            {{- partial "useful.html" . -}}
+            <!-- {{- partial "useful.html" . -}} -->
         </div>
         {{ if not (or .Params.hideContents (lt .WordCount 400)) }}
         <div class="hidden xl:text-sm xl:block flex-none w-64 pl-8 mr-8">

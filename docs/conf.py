@@ -73,7 +73,6 @@ extensions = [
     "sphinxcontrib.contentui",
     "sphinxcontrib.spelling",
     "notfound.extension",
-    "sphinx_jekyll_builder",
 ]
 
 

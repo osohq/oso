@@ -148,7 +148,7 @@ class User {
     }
  }
 ```
-
+<!-- 
 ### Summary
 
 ### JavaScript → Polar Types Summary
@@ -183,4 +183,4 @@ class User {
 
                                                          | String
 
-                                                                                  |
+                                                                                  | -->

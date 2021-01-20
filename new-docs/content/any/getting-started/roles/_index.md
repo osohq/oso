@@ -16,7 +16,7 @@ A well-designed role system has roles that map to an intuitive concept of what a
 be able to do in the application.
 
 
--- Insert image along this lines of [this](https://slides.com/samscott/access-python#/13/0/0) -- 
+<!-- -- Insert image along this lines of [this](https://slides.com/samscott/access-python#/13/0/0) --  -->
 
 
 For example, when I invite someone to a document in Google Drive, I can choose from the options

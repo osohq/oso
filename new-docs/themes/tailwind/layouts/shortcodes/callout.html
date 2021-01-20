@@ -9,6 +9,6 @@
         {{ .Get 0 }}
     </div>
     <div class="px-2 pb-0.5">
-        {{ .Inner | markdownify }}
+        {{ .Inner | .Page.RenderString }}
     </div>
 </div>

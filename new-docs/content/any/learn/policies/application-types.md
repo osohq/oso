@@ -2,8 +2,8 @@
 title: Application types
 weight: 2
 ---
-
-TODO: convert into language-specific guides
+<!-- 
+TODO: convert into language-specific guides -->
 
 <!-- JAVA EXAMPLES -->
 # Application Types

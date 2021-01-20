@@ -1,5 +1,14 @@
 <nav id="header"
-    class="static lg:sticky top-0 pin-t h-16 lg:h-20 lg:z-50 w-full max-w-8xl mx-auto bg-primary-dark flex flex-none items-center">
+    class="static z-50 lg:sticky top-0 pin-t h-8 w-full max-w-8xl mx-auto bg-primary flex flex-none items-center">
+    <div id="header-page-title" class="flex-grow">
+        <p class="text-white font-base text-sm  text-center px-6 truncate">
+            Welcome to our new Docs Site! We’re under development 🚧
+            Have feedback? File a <a class="underline" href="https://github.com/osohq/oso/issues">GitHub Issue!</a>
+        </p>
+    </div>
+</nav>
+<nav id="header"
+    class="static lg:sticky top-8 pin-t h-16 lg:h-20 lg:z-50 w-full max-w-8xl mx-auto bg-primary-dark flex flex-none items-center">
     <div id="header-logo" class="pl-6">
         <a class="text-white text-base no-underline hover:no-underline text-xl" href="{{ $.Site.BaseURL }}">
             <!-- h-12 is 48px -- double for quality sakes -->

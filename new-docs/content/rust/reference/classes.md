@@ -159,7 +159,7 @@ allow(actor, action, resource) if "Jimmy" in actor.nickname or actor.get_optiona
   assert!(oso.is_allowed(user, "foo", "bar")?);
 ```
 
-### Summary
+<!-- ### Summary
 
 ### Rust → Polar Types Summary
 
@@ -198,4 +198,4 @@ allow(actor, action, resource) if "Jimmy" in actor.nickname or actor.get_optiona
 
                                       | String
 
-                                                                                  |
+                                                                                  | -->

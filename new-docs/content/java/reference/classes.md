@@ -226,7 +226,7 @@ public class User {
  }
 ```
 
-### Summary
+<!-- ### Summary
 
 ### Java → Polar Types Summary
 
@@ -275,4 +275,4 @@ public class User {
 
                                                          | String
 
-                                                                                  |
+                                                                                  | -->

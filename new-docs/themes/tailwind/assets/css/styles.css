@@ -51,12 +51,24 @@ button > * {
         @apply ml-4
     }
 
+    .prose code::before {
+      content: none;
+    }
+
+    .prose code::after {
+      content: none;
+    }
+
+    .prose a {
+      @apply text-primary
+    }
+
 }
 :target::before {
   content: "";
   display: block;
-  height: 80px; /* fixed header height*/
-  margin: -80px 0 0; /* negative fixed header height */
+  height: 120px; /* fixed header height*/
+  margin: -120px 0 0; /* negative fixed header height */
 }
 
 /* Making the sidebar sticky. See: https://github.com/tailwindlabs/discuss/issues/193 */

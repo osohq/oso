@@ -164,7 +164,7 @@ user = User.new
 raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 ```
 
-### Summary
+<!-- ### Summary
 
 ### Ruby → Polar Types Summary
 
@@ -208,4 +208,4 @@ raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
                                                          | String
 
-                                                                                  |
+                                                                                  | -->

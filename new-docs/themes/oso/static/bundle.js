@@ -213,7 +213,7 @@
 /******/ 				promises.push(installedWasmModuleData);
 /******/ 			else {
 /******/ 				var importObject = wasmImportObjects[wasmModuleId]();
-/******/ 				var req = fetch(__webpack_require__.p + "" + {"../../../languages/js/dist/bundler/polar_wasm_api_bg.wasm":"1b1ae16dc0bf6a833e20"}[wasmModuleId] + ".module.wasm");
+/******/ 				var req = fetch(__webpack_require__.p + "" + {"../../../languages/js/dist/bundler/polar_wasm_api_bg.wasm":"88f8071678f8e923e896"}[wasmModuleId] + ".module.wasm");
 /******/ 				var promise;
 /******/ 				if(importObject instanceof Promise && typeof WebAssembly.compileStreaming === 'function') {
 /******/ 					promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
@@ -314,7 +314,7 @@
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-eval("Promise.all(/*! import() */[__webpack_require__.e(1), __webpack_require__.e(0)]).then(__webpack_require__.t.bind(null, /*! oso */ \"../../../languages/js/dist/index.js\", 7)).catch(e =>\n    console.error(\"Error importing `oso`:\", e)\n).then(m => window.oso = m)\n\n\n//# sourceURL=webpack:///./index.js?");
+eval("Promise.all(/*! import() */[__webpack_require__.e(1), __webpack_require__.e(0)]).then(__webpack_require__.t.bind(null, /*! oso */ \"../../../languages/js/dist/src/index.js\", 7)).catch(e =>\n    console.error(\"Error importing `oso`:\", e)\n).then(m => window.oso = m)\n\n\n//# sourceURL=webpack:///./index.js?");
 
 /***/ })
 

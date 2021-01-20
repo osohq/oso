@@ -141,7 +141,7 @@ user = User()
 assert(oso.is_allowed(user, "foo", "bar))
 ```
 
-### Summary
+<!-- ### Summary
 
 ### Python → Polar Types Summary
 
@@ -180,4 +180,4 @@ assert(oso.is_allowed(user, "foo", "bar))
 
                                                             | String
 
-                                                                                  |
+                                                                                  | -->
