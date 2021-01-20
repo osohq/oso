@@ -106,6 +106,7 @@ Django or SQLAlchemy:
 
 - Support for more queries involving negation and constraints.
 - Creation of constrained variables from unbound variables during query execution
+
   .. code-block:: polar
 
       f(x) if not (x = 1) and x = 2;
