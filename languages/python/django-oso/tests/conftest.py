@@ -1,6 +1,7 @@
 from pathlib import Path
 import sys
 
+from django import VERSION
 from django.conf import settings
 
 
@@ -22,3 +23,9 @@ def pytest_configure():
             "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}
         },
     )
+
+def negated_condition(variable):
+    if VERSION >= (3, 0, 0, 0):
+        return f"NOT {variable}"
+    else:
+        return f"{variable} = False"

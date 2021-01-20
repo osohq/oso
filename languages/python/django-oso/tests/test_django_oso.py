@@ -9,7 +9,7 @@ from django_oso.auth import authorize, authorize_model
 from polar import Variable, Expression
 
 from oso import OsoError
-
+from .conftest import negated_condition
 
 @pytest.fixture(autouse=True)
 def reset():
@@ -149,11 +149,12 @@ def test_partial(rf, partial_policy):
     )
 
     q = Post.objects.filter(authorize_filter)
-    expected = """
+    bool_cond = negated_condition('"test_app_post"."is_private"')
+    expected = f"""
         SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
                "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
         FROM "test_app_post"
-        WHERE (NOT "test_app_post"."is_private"
+        WHERE ({bool_cond}
                AND "test_app_post"."timestamp" > 0
                AND "test_app_post"."option" IS NULL)
     """
