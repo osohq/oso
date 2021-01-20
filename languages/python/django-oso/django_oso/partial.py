@@ -1,4 +1,5 @@
 from typing import Tuple, Union
+import django
 from django.db.models import F, Q, Model
 from django.apps import apps
 from django.db.models.expressions import Exists, OuterRef
@@ -229,13 +230,31 @@ class FilterBuilder:
         fb.translate_expr(expr.args[0])
         self.filter &= ~fb.finish()
 
-    def finish(self):
-        # For every subquery, finish off by checking these are non-empty
+    def _finish_django22(self):
+        if len(self.variables) == 0:
+            return self.filter
+        objects = self.model.objects.all()
+        for subq in self.variables.values():
+            filtered = subq.model.objects.filter(subq.finish()).values("pk")
+            exists = Exists(filtered)
+            name = f"{self.name}__exists"
+            objects = objects.annotate(**{name: exists}).filter(**{name: True})
+        self.filter &= Q(pk__in=objects.values("pk"))
+        return self.filter
+
+    def _finish_django3(self):
         for subq in self.variables.values():
             filtered = subq.model.objects.filter(subq.finish()).values("pk")
             exists = Exists(filtered)
             self.filter = exists & self.filter  # This _has_ to be this way around
         return self.filter
+
+    def finish(self):
+        # For every subquery, finish off by checking these are non-empty
+        if django.VERSION >= (3, 0, 0, 0):
+            return self._finish_django3()
+        else:
+            return self._finish_django22()
 
 
 def partial_to_query_filter(partial: Expression, model: Model):
