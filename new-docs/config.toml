@@ -1,4 +1,4 @@
-baseURL = "https://docs-preview.oso.dev/v2/"
+baseURL = "https://docs.osohq.com/v2/"
 languageCode = "en-us"
 title = "oso Documentation"
 theme = ["tailwind", "oso"]
