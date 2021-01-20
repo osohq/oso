@@ -87,7 +87,7 @@ Django or SQLAlchemy:
     	tag in post.tags and
     	tag in actor.allowed_tags;
 
-- Calling rules on a field of a constrained variable
+- Calling rules on a field of a constrained variable.
   ::
     allow(actor, action, post: Post) if allow(actor, action, post.tag);
 
