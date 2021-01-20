@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from oso import Oso, polar_class
+from polar import exceptions
 
 # Fake global actor name → company ID map.
 # Should be an external database lookup.
@@ -127,6 +128,27 @@ def test_allow_model(test_oso):
     user = Actor(name="auditor")
     assert not test_oso.is_allowed(user, "list", Widget)
     assert test_oso.is_allowed(user, "list", Company)
+
+
+def test_get_allowed_actions(test_oso):
+    rule = """allow(_actor: test_oso::Actor{name: "Sally"}, action, _resource: test_oso::Widget{id: "1"}) if
+        action in ["CREATE", "READ"];"""
+
+    test_oso.load_str(rule)
+    user = Actor(name="Sally")
+    resource = Widget(id="1")
+    assert set(test_oso.get_allowed_actions(user, resource)) == set(
+        ["get", "CREATE", "READ"]
+    )
+
+    rule = """allow(_actor: test_oso::Actor{name: "John"}, _action, _resource: test_oso::Widget{id: "1"});"""
+    test_oso.load_str(rule)
+    user = Actor(name="John")
+    with pytest.raises(exceptions.OsoError):
+        test_oso.get_allowed_actions(user, resource)
+    assert set(
+        test_oso.get_allowed_actions(user, resource, allow_wildcard=True)
+    ) == set(["*"])
 
 
 if __name__ == "__main__":

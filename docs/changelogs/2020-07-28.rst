@@ -1,24 +1,23 @@
-.. title:: 0.3.0 Changelog
+.. title:: Changelog for Release 2020-07-28
 .. meta::
-  :description: Check out our changelog for oso 0.3.0 to learn about new features, bug fixes, and more. 
+  :description: Changelog for Release 2020-07-28 (oso 0.3.0) containing new features, bug fixes, and more.
 
-=====
-0.3.0
-=====
+##################
+Release 2020-07-28
+##################
 
-**Release date:** 2020-07-28
-
+=============
+``oso`` 0.3.0
+=============
 
 Major news
 ==========
 
-
 Java support
 ------------
 
-Java support for version >= 10 Linux and Mac OS X are now published in our
- `Maven Repository <https://github.com/osohq/oso/packages/321403>`_.
-
+Java packages for version >= 10 (Linux and macOS) are now published in our
+`Maven Repository <https://github.com/osohq/oso/packages/321403>`_.
 
 Breaking changes
 ================
@@ -26,21 +25,21 @@ Breaking changes
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
 
-oso.query_predicate() renamed in oso libraries
-----------------------------------------------
+``oso.query_predicate()`` renamed in oso libraries
+--------------------------------------------------
 
-To improve our API & better match documentation, ``oso.query_predicate()``
-has been renamed ``oso.query_rule()``. The Python API now returns
-a generator instead of a ``QueryResult`` object to improve consistency
-across libraries.
+To improve our API & better match documentation, ``oso.query_predicate()`` has
+been renamed ``oso.query_rule()``. The Python API now returns a generator
+instead of a ``QueryResult`` object to improve consistency across libraries.
 
-allow() method renamed in oso libraries
----------------------------------------
+``allow()`` method renamed in oso libraries
+-------------------------------------------
 
-To eliminate ambiguity, the ``allow()`` method of the oso library has been renamed to:
+To eliminate ambiguity, the ``allow()`` method of the oso library has been
+renamed to:
 
-- ``is_allowed()`` in Python,
-- ``#allowed?`` in Ruby, and
+- ``is_allowed()`` in Python
+- ``#allowed?`` in Ruby
 - ``isAllowed()`` in Java
 
 ``print()`` predicate in policies
@@ -53,19 +52,19 @@ values of variables.
 ``isa`` operator replaced with ``matches``
 ------------------------------------------
 
-To improve readability of Polar policies, the ``isa`` operator has
-been replaced with ``matches`` (:ref:`operator-matches`). Any policies using the
+To improve readability of Polar policies, the ``isa`` operator has been
+replaced with ``matches`` (:ref:`operator-matches`). Any policies using the
 ``isa`` operator will need to be migrated.
 
-cut() predicate replaced with cut keyword
------------------------------------------
+``cut()`` predicate replaced with ``cut`` keyword
+-------------------------------------------------
 
-The Polar "cut" operator was previously parsed like a predicate, but
-it isn't one. The new syntax ``cut`` (without the empty parentheses)
-emphasizes its role as an operator.
+The Polar ``cut`` operator was previously parsed like a predicate, but it isn't
+one. The new syntax (``cut``, without the empty parentheses) emphasizes its
+role as an operator.
 
 New features
-==============
+============
 
 Basic Arithmetic
 ----------------
@@ -83,8 +82,8 @@ See :ref:`numbers` for more.
 Debugger
 --------
 
-The :doc:`Polar debugger </more/dev-tools/debugger>` will now
-display the host language representation of class instances.
+The :doc:`Polar debugger </more/dev-tools/debugger>` will now display the host
+language representation of class instances.
 
 .. code-block:: oso
 
@@ -94,8 +93,8 @@ display the host language representation of class instances.
 Error Traces
 ------------
 
-Some runtime errors will now return a trace of the policy location where it happened.
-For example:
+Some runtime errors will now return a trace of the policy location where it
+happened. For example:
 
 .. code-block:: irb
 
@@ -117,14 +116,13 @@ For example:
         from irb:1:in `each'
         from irb:1:in `each'
 
-
 Other bugs & improvements
 =========================
 
-- Boolean values can now be queried directly.  The statement ``x = true and x``
+- Boolean values can now be queried directly. The statement ``x = true and x``
   now tests for the truthiness of ``x`` as the second argument of the
   conjunction. Previously this would be invalid.
-- Fixes for comparing numbers
-- Comparing a variable to itself no longer loops infinitely
-- Allow unbound variables to be returned from queries
-- Additional warnings for singletons
+- Fixes for comparing numbers.
+- Comparing a variable to itself no longer loops infinitely.
+- Allow unbound variables to be returned from queries.
+- Additional warnings for singletons.

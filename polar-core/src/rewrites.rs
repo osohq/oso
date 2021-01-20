@@ -160,6 +160,14 @@ impl<'kb> Folder for Rewriter<'kb> {
         }
     }
 
+    fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
+        if v.0 == "_" {
+            self.kb.gensym("_")
+        } else {
+            v
+        }
+    }
+
     fn fold_variable(&mut self, v: Symbol) -> Symbol {
         if v.0 == "_" {
             self.kb.gensym("_")

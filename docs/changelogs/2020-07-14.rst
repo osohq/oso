@@ -1,12 +1,14 @@
-.. title:: 0.2.0 Changelog
+.. title:: Changelog for Release 2020-07-14
 .. meta::
-  :description: Check out our changelog for oso 0.2.0 to learn about new features, bug fixes, and more. 
+  :description: Changelog for Release 2020-07-14 (oso 0.2.0) containing new features, bug fixes, and more.
 
-======
-0.2.0
-======
+##################
+Release 2020-07-14
+##################
 
-**Release date:** 2020-07-14
+=============
+``oso`` 0.2.0
+=============
 
 .. highlight:: polar
 
@@ -19,8 +21,8 @@ Breaking changes
 New rule syntax
 ---------------
 
-We have made several major changes to Polar syntax used in writing rules to make
-the policy more intuitive for non-technical policy readers.
+We have made several major changes to Polar syntax used in writing rules to
+make the policy more intuitive for non-technical policy readers.
 
 - The **if** operator is now written as ``if`` instead of ``:=``.
 - The **and** operator is now written as ``and`` instead of ``,``.
@@ -53,7 +55,7 @@ called ``Foo``::
 Rest operator for lists
 -----------------------
 
-Lists can now be destructured using the ``*rest`` operator.  This allows
+Lists can now be destructured using the ``*rest`` operator. This allows
 statements like::
 
     [x, *rest] = [1, 2, 3]
@@ -76,13 +78,12 @@ Host language list, string, dictionary and number methods
 ---------------------------------------------------------
 
 Because your application objects probably use your language's built-in
-primitive types such as ``str``, ``dict``, and ``int``, Polar allows you
-to use methods on those types for its built-ins, too. That way you can use
-familiar methods like ``str.startswith()`` on strings regardless of whether
-they originated in your application or as a literal in your policy.
-This applies to all of the Polar :ref:`primitive types <basic-types>`:
-strings, lists, dictionaries, and numbers, in any supported application
-language.
+primitive types such as ``str``, ``dict``, and ``int``, Polar allows you to use
+methods on those types for its built-ins, too. That way you can use familiar
+methods like ``str.startswith()`` on strings regardless of whether they
+originated in your application or as a literal in your policy. This applies to
+all of the Polar :ref:`primitive types <basic-types>`: strings, lists,
+dictionaries, and numbers, in any supported application language.
 
 More info: :ref:`built-in-types`.
 
@@ -113,5 +114,6 @@ Singleton variable warnings
 ---------------------------
 
 The usage of a variable only once will now emit a warning on standard error.
-These often indicate logical errors.  This warning can be silenced by prefixing
-a variable with an underscore.  More information: :ref:`singleton variables <singletons>`.
+These often indicate logical errors. This warning can be silenced by prefixing
+a variable with an underscore. More information: :ref:`singleton variables
+<singletons>`.
