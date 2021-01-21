@@ -15,10 +15,6 @@ test-requirements: .make.test-requirements-install
 test: test-requirements
 	pytest
 
-parity-tests:
-	cd tests/parity/policy && ln -sf ../../../../../../test/policies/* .
-	cd tests/parity/spec && ln -sf ../../../../../../test/spec/* .
-
 fmt:
 	black .
 
