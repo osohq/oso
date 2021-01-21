@@ -1731,7 +1731,9 @@ impl PolarVirtualMachine {
                 let left = args.pop().unwrap();
                 self.push_goal(Goal::Unify { left, right })?
             }
-            Operator::Dot => self.dot_op_helper(args)?,
+            Operator::Dot => {
+                return self.query_op_helper(term, Self::dot_op_helper, false, false);
+            }
 
             Operator::Lt
             | Operator::Gt
@@ -1739,7 +1741,7 @@ impl PolarVirtualMachine {
             | Operator::Geq
             | Operator::Eq
             | Operator::Neq => {
-                return self.query_op_helper(term, Self::comparison_op_helper, true);
+                return self.query_op_helper(term, Self::comparison_op_helper, true, true);
             }
 
             Operator::Add
@@ -1748,11 +1750,11 @@ impl PolarVirtualMachine {
             | Operator::Div
             | Operator::Mod
             | Operator::Rem => {
-                return self.query_op_helper(term, Self::arithmetic_op_helper, true);
+                return self.query_op_helper(term, Self::arithmetic_op_helper, true, true);
             }
 
             Operator::In => {
-                return self.query_op_helper(term, Self::in_op_helper, false);
+                return self.query_op_helper(term, Self::in_op_helper, false, true);
             }
 
             Operator::Debug => {
@@ -1892,7 +1894,11 @@ impl PolarVirtualMachine {
     }
 
     /// Push appropriate goals for lookups on dictionaries and instances.
-    fn dot_op_helper(&mut self, mut args: Vec<Term>) -> PolarResult<()> {
+    fn dot_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
+        let Operation { operator: op, args } = term.value().as_expression().unwrap();
+        assert_eq!(*op, Operator::Dot, "expected a dot operation");
+
+        let mut args = args.clone();
         assert_eq!(args.len(), 3);
         let object = &args[0];
         let field = &args[1];
@@ -1933,9 +1939,7 @@ impl PolarVirtualMachine {
             }
             Value::Variable(v) => {
                 let constraints = match self.variable_state(v) {
-                    VariableState::Bound(x) => {
-                        return self.dot_op_helper(vec![x, field.clone(), value.clone()]);
-                    }
+                    VariableState::Bound(_) => panic!("should have already dereferenced {}", v),
                     _ if matches!(field.value(), Value::Call(_)) => {
                         return Err(self.set_error_context(
                             object,
@@ -1948,13 +1952,13 @@ impl PolarVirtualMachine {
                     VariableState::Partial(expr) => expr,
                     VariableState::Cycle(c) => cycle_constraints(c),
                 };
-                let dot_op =
-                    object.clone_with_value(value!(op!(Dot, object.clone(), field.clone())));
-                let constraints = constraints
-                    .clone_with_new_constraint(op!(Unify, value.clone(), dot_op).into_term());
-                self.constrain(&constraints)?;
+                // Translate `.(object, field, value)` → `value = .(object, field)`.
+                let dot2 = object.clone_with_value(value!(op!(Dot, object.clone(), field.clone())));
+                self.constrain(
+                    &constraints
+                        .clone_with_new_constraint(op!(Unify, value.clone(), dot2).into_term()),
+                )?;
             }
-            Value::RestVariable(_) => unreachable!("invalid syntax"),
             _ => {
                 return Err(self.type_error(
                     &object,
@@ -1965,7 +1969,7 @@ impl PolarVirtualMachine {
                 ))
             }
         }
-        Ok(())
+        Ok(QueryEvent::None)
     }
 
     /// Handle variables & constraints as arguments to various operations.
@@ -1975,25 +1979,27 @@ impl PolarVirtualMachine {
     ///
     /// - handle_unbound_left_var: If set to `false`, allow `eval` to handle
     ///   operations with an unbound left variable, instead of adding a constraint.
-    ///   Some operations, like in emit new goals or choice points when the left
+    ///   Some operations, like `In`, emit new goals or choice points when the left
     ///   operand is a variable.
+    /// - handle_unbound_right_var: Same as above but for the RHS. `Dot` uses this.
     #[allow(clippy::many_single_char_names)]
     fn query_op_helper<F>(
         &mut self,
         term: &Term,
         eval: F,
-        handle_left_var: bool,
+        handle_unbound_left_var: bool,
+        handle_unbound_right_var: bool,
     ) -> PolarResult<QueryEvent>
     where
         F: Fn(&mut Self, &Term) -> PolarResult<QueryEvent>,
     {
-        let operation = term.value().as_expression().unwrap();
-        let op = operation.operator;
+        let Operation { operator: op, args } = term.value().as_expression().unwrap();
 
-        let mut args = operation.args.clone();
+        let mut args = args.clone();
         assert!(args.len() >= 2);
         let left = &args[0];
         let right = &args[1];
+
         match (left.value(), right.value()) {
             (Value::Expression(_), _)
             | (_, Value::Expression(_))
@@ -2001,58 +2007,40 @@ impl PolarVirtualMachine {
             | (_, Value::RestVariable(_)) => {
                 panic!("invalid query");
             }
-
-            // TODO(ap): ExternalInstance on one side.
-            (Value::ExternalInstance(_), Value::ExternalInstance(_)) => {
-                // Generate a symbol for the external result and bind to `false` (default).
-                let (call_id, answer) =
-                    self.new_call_var("external_op_result", Value::Boolean(false));
-
-                // Check that the external result is `true` when we return.
-                self.push_goal(Goal::Unify {
-                    left: answer,
-                    right: Term::new_temporary(Value::Boolean(true)),
-                })?;
-
-                // Emit an event for the external operation.
-                return Ok(QueryEvent::ExternalOp {
-                    call_id,
-                    operator: op,
-                    args: vec![left.clone(), right.clone()],
-                });
-            }
             _ => {}
         };
 
         if let Value::Variable(r) = right.value() {
             // A variable on the right, ground on the left.
-            match self.variable_state(r) {
-                VariableState::Bound(x) => {
-                    args[1] = x;
-                    self.push_goal(Goal::Query {
-                        term: Operation { operator: op, args }.into_term(),
-                    })?;
-                    return Ok(QueryEvent::None);
-                }
-                _ => {}
+            if let VariableState::Bound(x) = self.variable_state(r) {
+                args[1] = x;
+                self.push_goal(Goal::Query {
+                    term: Operation {
+                        operator: *op,
+                        args,
+                    }
+                    .into_term(),
+                })?;
+                return Ok(QueryEvent::None);
+            } else if !handle_unbound_right_var && left.value().as_symbol().is_err() {
+                return eval(self, term);
             }
         }
 
         if let Value::Variable(l) = left.value() {
             // A variable on the left, ground on the right.
-            match self.variable_state(l) {
-                VariableState::Bound(x) => {
-                    args[0] = x;
-                    self.push_goal(Goal::Query {
-                        term: Operation { operator: op, args }.into_term(),
-                    })?;
-                    return Ok(QueryEvent::None);
-                }
-                _ => {
-                    if !handle_left_var && right.value().as_symbol().is_err() {
-                        return eval(self, term);
+            if let VariableState::Bound(x) = self.variable_state(l) {
+                args[0] = x;
+                self.push_goal(Goal::Query {
+                    term: Operation {
+                        operator: *op,
+                        args,
                     }
-                }
+                    .into_term(),
+                })?;
+                return Ok(QueryEvent::None);
+            } else if !handle_unbound_left_var && right.value().as_symbol().is_err() {
+                return eval(self, term);
             }
         }
 
@@ -2072,10 +2060,33 @@ impl PolarVirtualMachine {
         let left = &args[0];
         let right = &args[1];
 
-        if !compare(*op, left, right) {
-            self.push_goal(Goal::Backtrack)?;
+        match (left.value(), right.value()) {
+            // TODO(ap): ExternalInstance on one side.
+            (Value::ExternalInstance(_), Value::ExternalInstance(_)) => {
+                // Generate a symbol for the external result and bind to `false` (default).
+                let (call_id, answer) =
+                    self.new_call_var("external_op_result", Value::Boolean(false));
+
+                // Check that the external result is `true` when we return.
+                self.push_goal(Goal::Unify {
+                    left: answer,
+                    right: Term::new_temporary(Value::Boolean(true)),
+                })?;
+
+                // Emit an event for the external operation.
+                return Ok(QueryEvent::ExternalOp {
+                    call_id,
+                    operator: *op,
+                    args: vec![left.clone(), right.clone()],
+                });
+            }
+            _ => {
+                if !compare(*op, left, right) {
+                    self.push_goal(Goal::Backtrack)?;
+                }
+                Ok(QueryEvent::None)
+            }
         }
-        Ok(QueryEvent::None)
     }
 
     // TODO(ap, dhatch): This does not strip the 3rd argument like Dot op (the unbound variable).
