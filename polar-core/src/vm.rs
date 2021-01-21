@@ -654,9 +654,8 @@ impl PolarVirtualMachine {
             "Should be called with single constraint."
         );
         assert_ne!(op, &Operator::Or, "Not or");
-        assert_eq!(args.len(), 2);
+        assert!(args.len() >= 2);
 
-        // Constrain only called in this function.
         let (left, right) = (&args[0], &args[1]);
         match (left.value(), right.value()) {
             (Value::Variable(lv), Value::Variable(rv)) => {
@@ -689,13 +688,13 @@ impl PolarVirtualMachine {
                     }
                     (VariableState::Bound(val), _) => {
                         panic!(
-                            "Variable passed to constrain must be unbound left bound to: {}.",
+                            "Variable passed to constrain must be unbound, left bound to: {}.",
                             val.to_polar()
                         );
                     }
                     (_, VariableState::Bound(val)) => {
                         panic!(
-                            "Variable passed to constrain must be unbound right bound to: {}.",
+                            "Variable passed to constrain must be unbound, right bound to: {}.",
                             val.to_polar()
                         );
                     }
@@ -716,7 +715,7 @@ impl PolarVirtualMachine {
                     panic!("Variable passed to constrain must be unbound.");
                 }
             },
-            (_, _) => panic!("Must call with at least one side as a variable"), // Cases for two variables based on variables states.
+            (_, _) => panic!("Must call with at least one side as a variable."),
         }
 
         Ok(())
@@ -2005,12 +2004,11 @@ impl PolarVirtualMachine {
 
             // TODO(ap): ExternalInstance on one side.
             (Value::ExternalInstance(_), Value::ExternalInstance(_)) => {
-                // Generate symbol for external result and bind to `false` (default).
+                // Generate a symbol for the external result and bind to `false` (default).
                 let (call_id, answer) =
                     self.new_call_var("external_op_result", Value::Boolean(false));
 
-                // Unify the answer with the external result.
-                // TODO(ap): Why true?
+                // Check that the external result is `true` when we return.
                 self.push_goal(Goal::Unify {
                     left: answer,
                     right: Term::new_temporary(Value::Boolean(true)),
@@ -2027,7 +2025,7 @@ impl PolarVirtualMachine {
         };
 
         if let Value::Variable(r) = right.value() {
-            // A variable on the left, ground on the right.
+            // A variable on the right, ground on the left.
             match self.variable_state(r) {
                 VariableState::Bound(x) => {
                     args[1] = x;
@@ -2050,14 +2048,15 @@ impl PolarVirtualMachine {
                     })?;
                     return Ok(QueryEvent::None);
                 }
-                _ => if !handle_left_var && !right.value().as_symbol().is_ok() {
-                    return eval(self, term);
-                },
+                _ => {
+                    if !handle_left_var && right.value().as_symbol().is_err() {
+                        return eval(self, term);
+                    }
+                }
             }
         }
 
-        if left.value().as_symbol().is_ok() || right.value().as_symbol().is_ok()
-        {
+        if left.value().as_symbol().is_ok() || right.value().as_symbol().is_ok() {
             self.add_constraint(term)?;
             return Ok(QueryEvent::None);
         }
