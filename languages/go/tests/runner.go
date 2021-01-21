@@ -205,7 +205,7 @@ func (tc TestCase) RunTest(t *testing.T) {
 				queryErr = o.LoadString(*c.Load)
 			}
 
-			results := make([]map[string]interface{}, 0)
+			results := make([]map[oso.Symbol]interface{}, 0)
 			if queryErr == nil {
 				for {
 					v, err := testQuery.Next()
@@ -242,7 +242,7 @@ func (tc TestCase) RunTest(t *testing.T) {
 					for idx, expectedResult := range expectedResults {
 						result := results[idx]
 						for k, v := range expectedResult {
-							if v2, ok := result[k]; ok {
+							if v2, ok := result[oso.Symbol(k)]; ok {
 								if !cmp.Equal(v2, v2) {
 									t.Error(fmt.Errorf("incorrect query result:\n%s", cmp.Diff(v2, v)))
 								}

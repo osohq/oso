@@ -4,23 +4,85 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-)
-
-// Call struct
+) // Call struct
 type Call struct {
 	// Name
-	Name string `json:"name"`
+	Name Symbol `json:"name"`
 	// Args
-	Args []Value `json:"args"`
+	Args []Term `json:"args"`
 	// Kwargs
-	Kwargs *map[string]Value `json:"kwargs"`
+	Kwargs *map[Symbol]Term `json:"kwargs"`
 }
 
 // Dictionary struct
 type Dictionary struct {
 	// Fields
-	Fields map[string]Value `json:"fields"`
+	Fields map[Symbol]Term `json:"fields"`
 }
+
+// ErrorKindParse newtype
+type ErrorKindParse ParseError
+
+func (variant ErrorKindParse) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ParseError(variant))
+}
+
+func (variant *ErrorKindParse) UnmarshalJSON(b []byte) error {
+	inner := ParseError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindParse(inner)
+	return err
+}
+
+func (ErrorKindParse) isErrorKind() {}
+
+// ErrorKindRuntime newtype
+type ErrorKindRuntime RuntimeError
+
+func (variant ErrorKindRuntime) MarshalJSON() ([]byte, error) {
+	return json.Marshal(RuntimeError(variant))
+}
+
+func (variant *ErrorKindRuntime) UnmarshalJSON(b []byte) error {
+	inner := RuntimeError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindRuntime(inner)
+	return err
+}
+
+func (ErrorKindRuntime) isErrorKind() {}
+
+// ErrorKindOperational newtype
+type ErrorKindOperational OperationalError
+
+func (variant ErrorKindOperational) MarshalJSON() ([]byte, error) {
+	return json.Marshal(OperationalError(variant))
+}
+
+func (variant *ErrorKindOperational) UnmarshalJSON(b []byte) error {
+	inner := OperationalError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindOperational(inner)
+	return err
+}
+
+func (ErrorKindOperational) isErrorKind() {}
+
+// ErrorKindParameter newtype
+type ErrorKindParameter ParameterError
+
+func (variant ErrorKindParameter) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ParameterError(variant))
+}
+
+func (variant *ErrorKindParameter) UnmarshalJSON(b []byte) error {
+	inner := ParameterError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindParameter(inner)
+	return err
+}
+
+func (ErrorKindParameter) isErrorKind() {}
 
 // ErrorKind enum
 type ErrorKindVariant interface {
@@ -131,76 +193,12 @@ func (variant ErrorKind) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
-// ErrorKindParse newtype
-type ErrorKindParse ParseError
-
-func (variant ErrorKindParse) MarshalJSON() ([]byte, error) {
-	return json.Marshal(ParseError(variant))
-}
-
-func (variant *ErrorKindParse) UnmarshalJSON(b []byte) error {
-	inner := ParseError(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ErrorKindParse(inner)
-	return err
-}
-
-func (ErrorKindParse) isErrorKind() {}
-
-// ErrorKindRuntime newtype
-type ErrorKindRuntime RuntimeError
-
-func (variant ErrorKindRuntime) MarshalJSON() ([]byte, error) {
-	return json.Marshal(RuntimeError(variant))
-}
-
-func (variant *ErrorKindRuntime) UnmarshalJSON(b []byte) error {
-	inner := RuntimeError(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ErrorKindRuntime(inner)
-	return err
-}
-
-func (ErrorKindRuntime) isErrorKind() {}
-
-// ErrorKindOperational newtype
-type ErrorKindOperational OperationalError
-
-func (variant ErrorKindOperational) MarshalJSON() ([]byte, error) {
-	return json.Marshal(OperationalError(variant))
-}
-
-func (variant *ErrorKindOperational) UnmarshalJSON(b []byte) error {
-	inner := OperationalError(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ErrorKindOperational(inner)
-	return err
-}
-
-func (ErrorKindOperational) isErrorKind() {}
-
-// ErrorKindParameter newtype
-type ErrorKindParameter ParameterError
-
-func (variant ErrorKindParameter) MarshalJSON() ([]byte, error) {
-	return json.Marshal(ParameterError(variant))
-}
-
-func (variant *ErrorKindParameter) UnmarshalJSON(b []byte) error {
-	inner := ParameterError(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ErrorKindParameter(inner)
-	return err
-}
-
-func (ErrorKindParameter) isErrorKind() {}
-
 // ExternalInstance struct
 type ExternalInstance struct {
 	// InstanceId
 	InstanceId uint64 `json:"instance_id"`
 	// Constructor
-	Constructor *Value `json:"constructor"`
+	Constructor *Term `json:"constructor"`
 	// Repr
 	Repr *string `json:"repr"`
 }
@@ -216,7 +214,7 @@ type FormattedPolarError struct {
 // InstanceLiteral struct
 type InstanceLiteral struct {
 	// Tag
-	Tag string `json:"tag"`
+	Tag Symbol `json:"tag"`
 	// Fields
 	Fields Dictionary `json:"fields"`
 }
@@ -228,6 +226,13 @@ type Message struct {
 	// Msg
 	Msg string `json:"msg"`
 }
+type MessageKindPrint struct{}
+
+func (MessageKindPrint) isMessageKind() {}
+
+type MessageKindWarning struct{}
+
+func (MessageKindWarning) isMessageKind() {}
 
 // MessageKind enum
 type MessageKindVariant interface {
@@ -306,13 +311,37 @@ func (variant MessageKind) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
-type MessageKindPrint struct{}
+// NodeRule newtype
+type NodeRule Rule
 
-func (MessageKindPrint) isMessageKind() {}
+func (variant NodeRule) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Rule(variant))
+}
 
-type MessageKindWarning struct{}
+func (variant *NodeRule) UnmarshalJSON(b []byte) error {
+	inner := Rule(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = NodeRule(inner)
+	return err
+}
 
-func (MessageKindWarning) isMessageKind() {}
+func (NodeRule) isNode() {}
+
+// NodeTerm newtype
+type NodeTerm Term
+
+func (variant NodeTerm) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Term(variant))
+}
+
+func (variant *NodeTerm) UnmarshalJSON(b []byte) error {
+	inner := Term(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = NodeTerm(inner)
+	return err
+}
+
+func (NodeTerm) isNode() {}
 
 // Node enum
 type NodeVariant interface {
@@ -391,37 +420,37 @@ func (variant Node) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
-// NodeRule newtype
-type NodeRule Rule
+// NumericInteger newtype
+type NumericInteger int64
 
-func (variant NodeRule) MarshalJSON() ([]byte, error) {
-	return json.Marshal(Rule(variant))
+func (variant NumericInteger) MarshalJSON() ([]byte, error) {
+	return json.Marshal(int64(variant))
 }
 
-func (variant *NodeRule) UnmarshalJSON(b []byte) error {
-	inner := Rule(*variant)
+func (variant *NumericInteger) UnmarshalJSON(b []byte) error {
+	inner := int64(*variant)
 	err := json.Unmarshal(b, &inner)
-	*variant = NodeRule(inner)
+	*variant = NumericInteger(inner)
 	return err
 }
 
-func (NodeRule) isNode() {}
+func (NumericInteger) isNumeric() {}
 
-// NodeTerm newtype
-type NodeTerm Value
+// NumericFloat newtype
+type NumericFloat float64
 
-func (variant NodeTerm) MarshalJSON() ([]byte, error) {
-	return json.Marshal(Value(variant))
+func (variant NumericFloat) MarshalJSON() ([]byte, error) {
+	return json.Marshal(float64(variant))
 }
 
-func (variant *NodeTerm) UnmarshalJSON(b []byte) error {
-	inner := Value(*variant)
+func (variant *NumericFloat) UnmarshalJSON(b []byte) error {
+	inner := float64(*variant)
 	err := json.Unmarshal(b, &inner)
-	*variant = NodeTerm(inner)
+	*variant = NumericFloat(inner)
 	return err
 }
 
-func (NodeTerm) isNode() {}
+func (NumericFloat) isNumeric() {}
 
 // Numeric enum
 type NumericVariant interface {
@@ -500,45 +529,49 @@ func (variant Numeric) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
-// NumericInteger newtype
-type NumericInteger int64
-
-func (variant NumericInteger) MarshalJSON() ([]byte, error) {
-	return json.Marshal(int64(variant))
-}
-
-func (variant *NumericInteger) UnmarshalJSON(b []byte) error {
-	inner := int64(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = NumericInteger(inner)
-	return err
-}
-
-func (NumericInteger) isNumeric() {}
-
-// NumericFloat newtype
-type NumericFloat float64
-
-func (variant NumericFloat) MarshalJSON() ([]byte, error) {
-	return json.Marshal(float64(variant))
-}
-
-func (variant *NumericFloat) UnmarshalJSON(b []byte) error {
-	inner := float64(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = NumericFloat(inner)
-	return err
-}
-
-func (NumericFloat) isNumeric() {}
-
 // Operation struct
 type Operation struct {
 	// Operator
 	Operator Operator `json:"operator"`
 	// Args
-	Args []Value `json:"args"`
+	Args []Term `json:"args"`
 }
+
+// OperationalErrorUnimplemented newtype
+type OperationalErrorUnimplemented string
+
+func (variant OperationalErrorUnimplemented) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(variant))
+}
+
+func (variant *OperationalErrorUnimplemented) UnmarshalJSON(b []byte) error {
+	inner := string(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = OperationalErrorUnimplemented(inner)
+	return err
+}
+
+func (OperationalErrorUnimplemented) isOperationalError() {}
+
+type OperationalErrorUnknown struct{}
+
+func (OperationalErrorUnknown) isOperationalError() {}
+
+// OperationalErrorInvalidState newtype
+type OperationalErrorInvalidState string
+
+func (variant OperationalErrorInvalidState) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(variant))
+}
+
+func (variant *OperationalErrorInvalidState) UnmarshalJSON(b []byte) error {
+	inner := string(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = OperationalErrorInvalidState(inner)
+	return err
+}
+
+func (OperationalErrorInvalidState) isOperationalError() {}
 
 // OperationalError enum
 type OperationalErrorVariant interface {
@@ -633,41 +666,105 @@ func (variant OperationalError) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
-// OperationalErrorUnimplemented newtype
-type OperationalErrorUnimplemented string
+type OperatorDebug struct{}
 
-func (variant OperationalErrorUnimplemented) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(variant))
-}
+func (OperatorDebug) isOperator() {}
 
-func (variant *OperationalErrorUnimplemented) UnmarshalJSON(b []byte) error {
-	inner := string(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = OperationalErrorUnimplemented(inner)
-	return err
-}
+type OperatorPrint struct{}
 
-func (OperationalErrorUnimplemented) isOperationalError() {}
+func (OperatorPrint) isOperator() {}
 
-type OperationalErrorUnknown struct{}
+type OperatorCut struct{}
 
-func (OperationalErrorUnknown) isOperationalError() {}
+func (OperatorCut) isOperator() {}
 
-// OperationalErrorInvalidState newtype
-type OperationalErrorInvalidState string
+type OperatorIn struct{}
 
-func (variant OperationalErrorInvalidState) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(variant))
-}
+func (OperatorIn) isOperator() {}
 
-func (variant *OperationalErrorInvalidState) UnmarshalJSON(b []byte) error {
-	inner := string(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = OperationalErrorInvalidState(inner)
-	return err
-}
+type OperatorIsa struct{}
 
-func (OperationalErrorInvalidState) isOperationalError() {}
+func (OperatorIsa) isOperator() {}
+
+type OperatorNew struct{}
+
+func (OperatorNew) isOperator() {}
+
+type OperatorDot struct{}
+
+func (OperatorDot) isOperator() {}
+
+type OperatorNot struct{}
+
+func (OperatorNot) isOperator() {}
+
+type OperatorMul struct{}
+
+func (OperatorMul) isOperator() {}
+
+type OperatorDiv struct{}
+
+func (OperatorDiv) isOperator() {}
+
+type OperatorMod struct{}
+
+func (OperatorMod) isOperator() {}
+
+type OperatorRem struct{}
+
+func (OperatorRem) isOperator() {}
+
+type OperatorAdd struct{}
+
+func (OperatorAdd) isOperator() {}
+
+type OperatorSub struct{}
+
+func (OperatorSub) isOperator() {}
+
+type OperatorEq struct{}
+
+func (OperatorEq) isOperator() {}
+
+type OperatorGeq struct{}
+
+func (OperatorGeq) isOperator() {}
+
+type OperatorLeq struct{}
+
+func (OperatorLeq) isOperator() {}
+
+type OperatorNeq struct{}
+
+func (OperatorNeq) isOperator() {}
+
+type OperatorGt struct{}
+
+func (OperatorGt) isOperator() {}
+
+type OperatorLt struct{}
+
+func (OperatorLt) isOperator() {}
+
+type OperatorUnify struct{}
+
+func (OperatorUnify) isOperator() {}
+
+type OperatorOr struct{}
+
+func (OperatorOr) isOperator() {}
+
+type OperatorAnd struct{}
+
+func (OperatorAnd) isOperator() {}
+
+type OperatorForAll struct{}
+
+func (OperatorForAll) isOperator() {}
+
+type OperatorAssign struct{}
+
+func (OperatorAssign) isOperator() {}
 
 // Operator enum
 type OperatorVariant interface {
@@ -1114,112 +1211,12 @@ func (variant Operator) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
-type OperatorDebug struct{}
-
-func (OperatorDebug) isOperator() {}
-
-type OperatorPrint struct{}
-
-func (OperatorPrint) isOperator() {}
-
-type OperatorCut struct{}
-
-func (OperatorCut) isOperator() {}
-
-type OperatorIn struct{}
-
-func (OperatorIn) isOperator() {}
-
-type OperatorIsa struct{}
-
-func (OperatorIsa) isOperator() {}
-
-type OperatorNew struct{}
-
-func (OperatorNew) isOperator() {}
-
-type OperatorDot struct{}
-
-func (OperatorDot) isOperator() {}
-
-type OperatorNot struct{}
-
-func (OperatorNot) isOperator() {}
-
-type OperatorMul struct{}
-
-func (OperatorMul) isOperator() {}
-
-type OperatorDiv struct{}
-
-func (OperatorDiv) isOperator() {}
-
-type OperatorMod struct{}
-
-func (OperatorMod) isOperator() {}
-
-type OperatorRem struct{}
-
-func (OperatorRem) isOperator() {}
-
-type OperatorAdd struct{}
-
-func (OperatorAdd) isOperator() {}
-
-type OperatorSub struct{}
-
-func (OperatorSub) isOperator() {}
-
-type OperatorEq struct{}
-
-func (OperatorEq) isOperator() {}
-
-type OperatorGeq struct{}
-
-func (OperatorGeq) isOperator() {}
-
-type OperatorLeq struct{}
-
-func (OperatorLeq) isOperator() {}
-
-type OperatorNeq struct{}
-
-func (OperatorNeq) isOperator() {}
-
-type OperatorGt struct{}
-
-func (OperatorGt) isOperator() {}
-
-type OperatorLt struct{}
-
-func (OperatorLt) isOperator() {}
-
-type OperatorUnify struct{}
-
-func (OperatorUnify) isOperator() {}
-
-type OperatorOr struct{}
-
-func (OperatorOr) isOperator() {}
-
-type OperatorAnd struct{}
-
-func (OperatorAnd) isOperator() {}
-
-type OperatorForAll struct{}
-
-func (OperatorForAll) isOperator() {}
-
-type OperatorAssign struct{}
-
-func (OperatorAssign) isOperator() {}
-
 // Parameter struct
 type Parameter struct {
 	// Parameter
-	Parameter Value `json:"parameter"`
+	Parameter Term `json:"parameter"`
 	// Specializer
-	Specializer *Value `json:"specializer"`
+	Specializer *Term `json:"specializer"`
 }
 
 // ParameterError newtype
@@ -1235,6 +1232,96 @@ func (variant *ParameterError) UnmarshalJSON(b []byte) error {
 	*variant = ParameterError(inner)
 	return err
 }
+
+// ParseErrorIntegerOverflow struct
+type ParseErrorIntegerOverflow struct {
+	// Token
+	Token string `json:"token"`
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (ParseErrorIntegerOverflow) isParseError() {}
+
+// ParseErrorInvalidTokenCharacter struct
+type ParseErrorInvalidTokenCharacter struct {
+	// Token
+	Token string `json:"token"`
+	// C
+	C string `json:"c"`
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (ParseErrorInvalidTokenCharacter) isParseError() {}
+
+// ParseErrorInvalidToken struct
+type ParseErrorInvalidToken struct {
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (ParseErrorInvalidToken) isParseError() {}
+
+// ParseErrorUnrecognizedEOF struct
+type ParseErrorUnrecognizedEOF struct {
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (ParseErrorUnrecognizedEOF) isParseError() {}
+
+// ParseErrorUnrecognizedToken struct
+type ParseErrorUnrecognizedToken struct {
+	// Token
+	Token string `json:"token"`
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (ParseErrorUnrecognizedToken) isParseError() {}
+
+// ParseErrorExtraToken struct
+type ParseErrorExtraToken struct {
+	// Token
+	Token string `json:"token"`
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (ParseErrorExtraToken) isParseError() {}
+
+// ParseErrorReservedWord struct
+type ParseErrorReservedWord struct {
+	// Token
+	Token string `json:"token"`
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (ParseErrorReservedWord) isParseError() {}
+
+// ParseErrorInvalidFloat struct
+type ParseErrorInvalidFloat struct {
+	// Token
+	Token string `json:"token"`
+	// Loc
+	Loc uint64 `json:"loc"`
+}
+
+func (ParseErrorInvalidFloat) isParseError() {}
+
+// ParseErrorWrongValueType struct
+type ParseErrorWrongValueType struct {
+	// Loc
+	Loc uint64 `json:"loc"`
+	// Term
+	Term Term `json:"term"`
+	// Expected
+	Expected string `json:"expected"`
+}
+
+func (ParseErrorWrongValueType) isParseError() {}
 
 // ParseError enum
 type ParseErrorVariant interface {
@@ -1425,103 +1512,45 @@ func (variant ParseError) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
-// ParseErrorIntegerOverflow struct
-type ParseErrorIntegerOverflow struct {
-	// Token
-	Token string `json:"token"`
-	// Loc
-	Loc uint64 `json:"loc"`
-}
-
-func (ParseErrorIntegerOverflow) isParseError() {}
-
-// ParseErrorInvalidTokenCharacter struct
-type ParseErrorInvalidTokenCharacter struct {
-	// Token
-	Token string `json:"token"`
-	// C
-	C string `json:"c"`
-	// Loc
-	Loc uint64 `json:"loc"`
-}
-
-func (ParseErrorInvalidTokenCharacter) isParseError() {}
-
-// ParseErrorInvalidToken struct
-type ParseErrorInvalidToken struct {
-	// Loc
-	Loc uint64 `json:"loc"`
-}
-
-func (ParseErrorInvalidToken) isParseError() {}
-
-// ParseErrorUnrecognizedEOF struct
-type ParseErrorUnrecognizedEOF struct {
-	// Loc
-	Loc uint64 `json:"loc"`
-}
-
-func (ParseErrorUnrecognizedEOF) isParseError() {}
-
-// ParseErrorUnrecognizedToken struct
-type ParseErrorUnrecognizedToken struct {
-	// Token
-	Token string `json:"token"`
-	// Loc
-	Loc uint64 `json:"loc"`
-}
-
-func (ParseErrorUnrecognizedToken) isParseError() {}
-
-// ParseErrorExtraToken struct
-type ParseErrorExtraToken struct {
-	// Token
-	Token string `json:"token"`
-	// Loc
-	Loc uint64 `json:"loc"`
-}
-
-func (ParseErrorExtraToken) isParseError() {}
-
-// ParseErrorReservedWord struct
-type ParseErrorReservedWord struct {
-	// Token
-	Token string `json:"token"`
-	// Loc
-	Loc uint64 `json:"loc"`
-}
-
-func (ParseErrorReservedWord) isParseError() {}
-
-// ParseErrorInvalidFloat struct
-type ParseErrorInvalidFloat struct {
-	// Token
-	Token string `json:"token"`
-	// Loc
-	Loc uint64 `json:"loc"`
-}
-
-func (ParseErrorInvalidFloat) isParseError() {}
-
-// ParseErrorWrongValueType struct
-type ParseErrorWrongValueType struct {
-	// Loc
-	Loc uint64 `json:"loc"`
-	// Term
-	Term Value `json:"term"`
-	// Expected
-	Expected string `json:"expected"`
-}
-
-func (ParseErrorWrongValueType) isParseError() {}
-
 // Partial struct
 type Partial struct {
 	// Constraints
 	Constraints []Operation `json:"constraints"`
 	// Variable
-	Variable string `json:"variable"`
+	Variable Symbol `json:"variable"`
 }
+
+// PatternDictionary newtype
+type PatternDictionary Dictionary
+
+func (variant PatternDictionary) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Dictionary(variant))
+}
+
+func (variant *PatternDictionary) UnmarshalJSON(b []byte) error {
+	inner := Dictionary(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = PatternDictionary(inner)
+	return err
+}
+
+func (PatternDictionary) isPattern() {}
+
+// PatternInstance newtype
+type PatternInstance InstanceLiteral
+
+func (variant PatternInstance) MarshalJSON() ([]byte, error) {
+	return json.Marshal(InstanceLiteral(variant))
+}
+
+func (variant *PatternInstance) UnmarshalJSON(b []byte) error {
+	inner := InstanceLiteral(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = PatternInstance(inner)
+	return err
+}
+
+func (PatternInstance) isPattern() {}
 
 // Pattern enum
 type PatternVariant interface {
@@ -1600,37 +1629,133 @@ func (variant Pattern) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
-// PatternDictionary newtype
-type PatternDictionary Dictionary
+type QueryEventNone struct{}
 
-func (variant PatternDictionary) MarshalJSON() ([]byte, error) {
-	return json.Marshal(Dictionary(variant))
+func (QueryEventNone) isQueryEvent() {}
+
+// QueryEventDone struct
+type QueryEventDone struct {
+	// Result
+	Result bool `json:"result"`
 }
 
-func (variant *PatternDictionary) UnmarshalJSON(b []byte) error {
-	inner := Dictionary(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = PatternDictionary(inner)
-	return err
+func (QueryEventDone) isQueryEvent() {}
+
+// QueryEventDebug struct
+type QueryEventDebug struct {
+	// Message
+	Message string `json:"message"`
 }
 
-func (PatternDictionary) isPattern() {}
+func (QueryEventDebug) isQueryEvent() {}
 
-// PatternInstance newtype
-type PatternInstance InstanceLiteral
-
-func (variant PatternInstance) MarshalJSON() ([]byte, error) {
-	return json.Marshal(InstanceLiteral(variant))
+// QueryEventMakeExternal struct
+type QueryEventMakeExternal struct {
+	// InstanceId
+	InstanceId uint64 `json:"instance_id"`
+	// Constructor
+	Constructor Term `json:"constructor"`
 }
 
-func (variant *PatternInstance) UnmarshalJSON(b []byte) error {
-	inner := InstanceLiteral(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = PatternInstance(inner)
-	return err
+func (QueryEventMakeExternal) isQueryEvent() {}
+
+// QueryEventExternalCall struct
+type QueryEventExternalCall struct {
+	// CallId
+	CallId uint64 `json:"call_id"`
+	// Instance
+	Instance Term `json:"instance"`
+	// Attribute
+	Attribute Symbol `json:"attribute"`
+	// Args
+	Args *[]Term `json:"args"`
+	// Kwargs
+	Kwargs *map[Symbol]Term `json:"kwargs"`
 }
 
-func (PatternInstance) isPattern() {}
+func (QueryEventExternalCall) isQueryEvent() {}
+
+// QueryEventExternalIsa struct
+type QueryEventExternalIsa struct {
+	// CallId
+	CallId uint64 `json:"call_id"`
+	// Instance
+	Instance Term `json:"instance"`
+	// ClassTag
+	ClassTag Symbol `json:"class_tag"`
+}
+
+func (QueryEventExternalIsa) isQueryEvent() {}
+
+// QueryEventExternalIsSubSpecializer struct
+type QueryEventExternalIsSubSpecializer struct {
+	// CallId
+	CallId uint64 `json:"call_id"`
+	// InstanceId
+	InstanceId uint64 `json:"instance_id"`
+	// LeftClassTag
+	LeftClassTag Symbol `json:"left_class_tag"`
+	// RightClassTag
+	RightClassTag Symbol `json:"right_class_tag"`
+}
+
+func (QueryEventExternalIsSubSpecializer) isQueryEvent() {}
+
+// QueryEventExternalIsSubclass struct
+type QueryEventExternalIsSubclass struct {
+	// CallId
+	CallId uint64 `json:"call_id"`
+	// LeftClassTag
+	LeftClassTag Symbol `json:"left_class_tag"`
+	// RightClassTag
+	RightClassTag Symbol `json:"right_class_tag"`
+}
+
+func (QueryEventExternalIsSubclass) isQueryEvent() {}
+
+// QueryEventExternalUnify struct
+type QueryEventExternalUnify struct {
+	// CallId
+	CallId uint64 `json:"call_id"`
+	// LeftInstanceId
+	LeftInstanceId uint64 `json:"left_instance_id"`
+	// RightInstanceId
+	RightInstanceId uint64 `json:"right_instance_id"`
+}
+
+func (QueryEventExternalUnify) isQueryEvent() {}
+
+// QueryEventResult struct
+type QueryEventResult struct {
+	// Bindings
+	Bindings map[Symbol]Term `json:"bindings"`
+	// Trace
+	Trace *TraceResult `json:"trace"`
+}
+
+func (QueryEventResult) isQueryEvent() {}
+
+// QueryEventExternalOp struct
+type QueryEventExternalOp struct {
+	// CallId
+	CallId uint64 `json:"call_id"`
+	// Operator
+	Operator Operator `json:"operator"`
+	// Args
+	Args []Term `json:"args"`
+}
+
+func (QueryEventExternalOp) isQueryEvent() {}
+
+// QueryEventNextExternal struct
+type QueryEventNextExternal struct {
+	// CallId
+	CallId uint64 `json:"call_id"`
+	// Iterable
+	Iterable Term `json:"iterable"`
+}
+
+func (QueryEventNextExternal) isQueryEvent() {}
 
 // QueryEvent enum
 type QueryEventVariant interface {
@@ -1869,143 +1994,91 @@ func (variant QueryEvent) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
-type QueryEventNone struct{}
-
-func (QueryEventNone) isQueryEvent() {}
-
-// QueryEventDone struct
-type QueryEventDone struct {
-	// Result
-	Result bool `json:"result"`
-}
-
-func (QueryEventDone) isQueryEvent() {}
-
-// QueryEventDebug struct
-type QueryEventDebug struct {
-	// Message
-	Message string `json:"message"`
-}
-
-func (QueryEventDebug) isQueryEvent() {}
-
-// QueryEventMakeExternal struct
-type QueryEventMakeExternal struct {
-	// InstanceId
-	InstanceId uint64 `json:"instance_id"`
-	// Constructor
-	Constructor Value `json:"constructor"`
-}
-
-func (QueryEventMakeExternal) isQueryEvent() {}
-
-// QueryEventExternalCall struct
-type QueryEventExternalCall struct {
-	// CallId
-	CallId uint64 `json:"call_id"`
-	// Instance
-	Instance Value `json:"instance"`
-	// Attribute
-	Attribute string `json:"attribute"`
-	// Args
-	Args *[]Value `json:"args"`
-	// Kwargs
-	Kwargs *map[string]Value `json:"kwargs"`
-}
-
-func (QueryEventExternalCall) isQueryEvent() {}
-
-// QueryEventExternalIsa struct
-type QueryEventExternalIsa struct {
-	// CallId
-	CallId uint64 `json:"call_id"`
-	// Instance
-	Instance Value `json:"instance"`
-	// ClassTag
-	ClassTag string `json:"class_tag"`
-}
-
-func (QueryEventExternalIsa) isQueryEvent() {}
-
-// QueryEventExternalIsSubSpecializer struct
-type QueryEventExternalIsSubSpecializer struct {
-	// CallId
-	CallId uint64 `json:"call_id"`
-	// InstanceId
-	InstanceId uint64 `json:"instance_id"`
-	// LeftClassTag
-	LeftClassTag string `json:"left_class_tag"`
-	// RightClassTag
-	RightClassTag string `json:"right_class_tag"`
-}
-
-func (QueryEventExternalIsSubSpecializer) isQueryEvent() {}
-
-// QueryEventExternalIsSubclass struct
-type QueryEventExternalIsSubclass struct {
-	// CallId
-	CallId uint64 `json:"call_id"`
-	// LeftClassTag
-	LeftClassTag string `json:"left_class_tag"`
-	// RightClassTag
-	RightClassTag string `json:"right_class_tag"`
-}
-
-func (QueryEventExternalIsSubclass) isQueryEvent() {}
-
-// QueryEventExternalUnify struct
-type QueryEventExternalUnify struct {
-	// CallId
-	CallId uint64 `json:"call_id"`
-	// LeftInstanceId
-	LeftInstanceId uint64 `json:"left_instance_id"`
-	// RightInstanceId
-	RightInstanceId uint64 `json:"right_instance_id"`
-}
-
-func (QueryEventExternalUnify) isQueryEvent() {}
-
-// QueryEventResult struct
-type QueryEventResult struct {
-	// Bindings
-	Bindings map[string]Value `json:"bindings"`
-	// Trace
-	Trace *TraceResult `json:"trace"`
-}
-
-func (QueryEventResult) isQueryEvent() {}
-
-// QueryEventExternalOp struct
-type QueryEventExternalOp struct {
-	// CallId
-	CallId uint64 `json:"call_id"`
-	// Operator
-	Operator Operator `json:"operator"`
-	// Args
-	Args []Value `json:"args"`
-}
-
-func (QueryEventExternalOp) isQueryEvent() {}
-
-// QueryEventNextExternal struct
-type QueryEventNextExternal struct {
-	// CallId
-	CallId uint64 `json:"call_id"`
-	// Iterable
-	Iterable Value `json:"iterable"`
-}
-
-func (QueryEventNextExternal) isQueryEvent() {}
-
 // Rule struct
 type Rule struct {
 	// Name
-	Name string `json:"name"`
+	Name Symbol `json:"name"`
 	// Params
 	Params []Parameter `json:"params"`
 	// Body
-	Body Value `json:"body"`
+	Body Term `json:"body"`
 }
+
+// RuntimeErrorArithmeticError struct
+type RuntimeErrorArithmeticError struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (RuntimeErrorArithmeticError) isRuntimeError() {}
+
+// RuntimeErrorSerialization struct
+type RuntimeErrorSerialization struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (RuntimeErrorSerialization) isRuntimeError() {}
+
+// RuntimeErrorUnsupported struct
+type RuntimeErrorUnsupported struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (RuntimeErrorUnsupported) isRuntimeError() {}
+
+// RuntimeErrorTypeError struct
+type RuntimeErrorTypeError struct {
+	// Msg
+	Msg string `json:"msg"`
+	// StackTrace
+	StackTrace *string `json:"stack_trace"`
+}
+
+func (RuntimeErrorTypeError) isRuntimeError() {}
+
+// RuntimeErrorUnboundVariable struct
+type RuntimeErrorUnboundVariable struct {
+	// Sym
+	Sym Symbol `json:"sym"`
+}
+
+func (RuntimeErrorUnboundVariable) isRuntimeError() {}
+
+// RuntimeErrorStackOverflow struct
+type RuntimeErrorStackOverflow struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (RuntimeErrorStackOverflow) isRuntimeError() {}
+
+// RuntimeErrorQueryTimeout struct
+type RuntimeErrorQueryTimeout struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (RuntimeErrorQueryTimeout) isRuntimeError() {}
+
+// RuntimeErrorApplication struct
+type RuntimeErrorApplication struct {
+	// Msg
+	Msg string `json:"msg"`
+	// StackTrace
+	StackTrace *string `json:"stack_trace"`
+}
+
+func (RuntimeErrorApplication) isRuntimeError() {}
+
+// RuntimeErrorFileLoading struct
+type RuntimeErrorFileLoading struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (RuntimeErrorFileLoading) isRuntimeError() {}
 
 // RuntimeError enum
 type RuntimeErrorVariant interface {
@@ -2196,81 +2269,25 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
-// RuntimeErrorArithmeticError struct
-type RuntimeErrorArithmeticError struct {
-	// Msg
-	Msg string `json:"msg"`
+// Symbol newtype
+type Symbol string
+
+func (variant Symbol) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(variant))
 }
 
-func (RuntimeErrorArithmeticError) isRuntimeError() {}
-
-// RuntimeErrorSerialization struct
-type RuntimeErrorSerialization struct {
-	// Msg
-	Msg string `json:"msg"`
+func (variant *Symbol) UnmarshalJSON(b []byte) error {
+	inner := string(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = Symbol(inner)
+	return err
 }
 
-func (RuntimeErrorSerialization) isRuntimeError() {}
-
-// RuntimeErrorUnsupported struct
-type RuntimeErrorUnsupported struct {
-	// Msg
-	Msg string `json:"msg"`
+// Term struct
+type Term struct {
+	// Value
+	Value Value `json:"value"`
 }
-
-func (RuntimeErrorUnsupported) isRuntimeError() {}
-
-// RuntimeErrorTypeError struct
-type RuntimeErrorTypeError struct {
-	// Msg
-	Msg string `json:"msg"`
-	// StackTrace
-	StackTrace *string `json:"stack_trace"`
-}
-
-func (RuntimeErrorTypeError) isRuntimeError() {}
-
-// RuntimeErrorUnboundVariable struct
-type RuntimeErrorUnboundVariable struct {
-	// Sym
-	Sym string `json:"sym"`
-}
-
-func (RuntimeErrorUnboundVariable) isRuntimeError() {}
-
-// RuntimeErrorStackOverflow struct
-type RuntimeErrorStackOverflow struct {
-	// Msg
-	Msg string `json:"msg"`
-}
-
-func (RuntimeErrorStackOverflow) isRuntimeError() {}
-
-// RuntimeErrorQueryTimeout struct
-type RuntimeErrorQueryTimeout struct {
-	// Msg
-	Msg string `json:"msg"`
-}
-
-func (RuntimeErrorQueryTimeout) isRuntimeError() {}
-
-// RuntimeErrorApplication struct
-type RuntimeErrorApplication struct {
-	// Msg
-	Msg string `json:"msg"`
-	// StackTrace
-	StackTrace *string `json:"stack_trace"`
-}
-
-func (RuntimeErrorApplication) isRuntimeError() {}
-
-// RuntimeErrorFileLoading struct
-type RuntimeErrorFileLoading struct {
-	// Msg
-	Msg string `json:"msg"`
-}
-
-func (RuntimeErrorFileLoading) isRuntimeError() {}
 
 // Trace struct
 type Trace struct {
@@ -2287,6 +2304,198 @@ type TraceResult struct {
 	// Formatted
 	Formatted string `json:"formatted"`
 }
+
+// ValueNumber newtype
+type ValueNumber Numeric
+
+func (variant ValueNumber) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Numeric(variant))
+}
+
+func (variant *ValueNumber) UnmarshalJSON(b []byte) error {
+	inner := Numeric(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ValueNumber(inner)
+	return err
+}
+
+func (ValueNumber) isValue() {}
+
+// ValueString newtype
+type ValueString string
+
+func (variant ValueString) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(variant))
+}
+
+func (variant *ValueString) UnmarshalJSON(b []byte) error {
+	inner := string(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ValueString(inner)
+	return err
+}
+
+func (ValueString) isValue() {}
+
+// ValueBoolean newtype
+type ValueBoolean bool
+
+func (variant ValueBoolean) MarshalJSON() ([]byte, error) {
+	return json.Marshal(bool(variant))
+}
+
+func (variant *ValueBoolean) UnmarshalJSON(b []byte) error {
+	inner := bool(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ValueBoolean(inner)
+	return err
+}
+
+func (ValueBoolean) isValue() {}
+
+// ValueExternalInstance newtype
+type ValueExternalInstance ExternalInstance
+
+func (variant ValueExternalInstance) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ExternalInstance(variant))
+}
+
+func (variant *ValueExternalInstance) UnmarshalJSON(b []byte) error {
+	inner := ExternalInstance(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ValueExternalInstance(inner)
+	return err
+}
+
+func (ValueExternalInstance) isValue() {}
+
+// ValueDictionary newtype
+type ValueDictionary Dictionary
+
+func (variant ValueDictionary) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Dictionary(variant))
+}
+
+func (variant *ValueDictionary) UnmarshalJSON(b []byte) error {
+	inner := Dictionary(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ValueDictionary(inner)
+	return err
+}
+
+func (ValueDictionary) isValue() {}
+
+// ValuePattern newtype
+type ValuePattern Pattern
+
+func (variant ValuePattern) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Pattern(variant))
+}
+
+func (variant *ValuePattern) UnmarshalJSON(b []byte) error {
+	inner := Pattern(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ValuePattern(inner)
+	return err
+}
+
+func (ValuePattern) isValue() {}
+
+// ValueCall newtype
+type ValueCall Call
+
+func (variant ValueCall) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Call(variant))
+}
+
+func (variant *ValueCall) UnmarshalJSON(b []byte) error {
+	inner := Call(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ValueCall(inner)
+	return err
+}
+
+func (ValueCall) isValue() {}
+
+// ValueList newtype
+type ValueList []Term
+
+func (variant ValueList) MarshalJSON() ([]byte, error) {
+	return json.Marshal([]Term(variant))
+}
+
+func (variant *ValueList) UnmarshalJSON(b []byte) error {
+	inner := []Term(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ValueList(inner)
+	return err
+}
+
+func (ValueList) isValue() {}
+
+// ValueVariable newtype
+type ValueVariable Symbol
+
+func (variant ValueVariable) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Symbol(variant))
+}
+
+func (variant *ValueVariable) UnmarshalJSON(b []byte) error {
+	inner := Symbol(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ValueVariable(inner)
+	return err
+}
+
+func (ValueVariable) isValue() {}
+
+// ValueRestVariable newtype
+type ValueRestVariable Symbol
+
+func (variant ValueRestVariable) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Symbol(variant))
+}
+
+func (variant *ValueRestVariable) UnmarshalJSON(b []byte) error {
+	inner := Symbol(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ValueRestVariable(inner)
+	return err
+}
+
+func (ValueRestVariable) isValue() {}
+
+// ValueExpression newtype
+type ValueExpression Operation
+
+func (variant ValueExpression) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Operation(variant))
+}
+
+func (variant *ValueExpression) UnmarshalJSON(b []byte) error {
+	inner := Operation(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ValueExpression(inner)
+	return err
+}
+
+func (ValueExpression) isValue() {}
+
+// ValuePartial newtype
+type ValuePartial Partial
+
+func (variant ValuePartial) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Partial(variant))
+}
+
+func (variant *ValuePartial) UnmarshalJSON(b []byte) error {
+	inner := Partial(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ValuePartial(inner)
+	return err
+}
+
+func (ValuePartial) isValue() {}
 
 // Value enum
 type ValueVariant interface {
@@ -2524,195 +2733,3 @@ func (variant Value) MarshalJSON() ([]byte, error) {
 
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
-
-// ValueNumber newtype
-type ValueNumber Numeric
-
-func (variant ValueNumber) MarshalJSON() ([]byte, error) {
-	return json.Marshal(Numeric(variant))
-}
-
-func (variant *ValueNumber) UnmarshalJSON(b []byte) error {
-	inner := Numeric(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValueNumber(inner)
-	return err
-}
-
-func (ValueNumber) isValue() {}
-
-// ValueString newtype
-type ValueString string
-
-func (variant ValueString) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(variant))
-}
-
-func (variant *ValueString) UnmarshalJSON(b []byte) error {
-	inner := string(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValueString(inner)
-	return err
-}
-
-func (ValueString) isValue() {}
-
-// ValueBoolean newtype
-type ValueBoolean bool
-
-func (variant ValueBoolean) MarshalJSON() ([]byte, error) {
-	return json.Marshal(bool(variant))
-}
-
-func (variant *ValueBoolean) UnmarshalJSON(b []byte) error {
-	inner := bool(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValueBoolean(inner)
-	return err
-}
-
-func (ValueBoolean) isValue() {}
-
-// ValueExternalInstance newtype
-type ValueExternalInstance ExternalInstance
-
-func (variant ValueExternalInstance) MarshalJSON() ([]byte, error) {
-	return json.Marshal(ExternalInstance(variant))
-}
-
-func (variant *ValueExternalInstance) UnmarshalJSON(b []byte) error {
-	inner := ExternalInstance(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValueExternalInstance(inner)
-	return err
-}
-
-func (ValueExternalInstance) isValue() {}
-
-// ValueDictionary newtype
-type ValueDictionary Dictionary
-
-func (variant ValueDictionary) MarshalJSON() ([]byte, error) {
-	return json.Marshal(Dictionary(variant))
-}
-
-func (variant *ValueDictionary) UnmarshalJSON(b []byte) error {
-	inner := Dictionary(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValueDictionary(inner)
-	return err
-}
-
-func (ValueDictionary) isValue() {}
-
-// ValuePattern newtype
-type ValuePattern Pattern
-
-func (variant ValuePattern) MarshalJSON() ([]byte, error) {
-	return json.Marshal(Pattern(variant))
-}
-
-func (variant *ValuePattern) UnmarshalJSON(b []byte) error {
-	inner := Pattern(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValuePattern(inner)
-	return err
-}
-
-func (ValuePattern) isValue() {}
-
-// ValueCall newtype
-type ValueCall Call
-
-func (variant ValueCall) MarshalJSON() ([]byte, error) {
-	return json.Marshal(Call(variant))
-}
-
-func (variant *ValueCall) UnmarshalJSON(b []byte) error {
-	inner := Call(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValueCall(inner)
-	return err
-}
-
-func (ValueCall) isValue() {}
-
-// ValueList newtype
-type ValueList []Value
-
-func (variant ValueList) MarshalJSON() ([]byte, error) {
-	return json.Marshal([]Value(variant))
-}
-
-func (variant *ValueList) UnmarshalJSON(b []byte) error {
-	inner := []Value(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValueList(inner)
-	return err
-}
-
-func (ValueList) isValue() {}
-
-// ValueVariable newtype
-type ValueVariable string
-
-func (variant ValueVariable) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(variant))
-}
-
-func (variant *ValueVariable) UnmarshalJSON(b []byte) error {
-	inner := string(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValueVariable(inner)
-	return err
-}
-
-func (ValueVariable) isValue() {}
-
-// ValueRestVariable newtype
-type ValueRestVariable string
-
-func (variant ValueRestVariable) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(variant))
-}
-
-func (variant *ValueRestVariable) UnmarshalJSON(b []byte) error {
-	inner := string(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValueRestVariable(inner)
-	return err
-}
-
-func (ValueRestVariable) isValue() {}
-
-// ValueExpression newtype
-type ValueExpression Operation
-
-func (variant ValueExpression) MarshalJSON() ([]byte, error) {
-	return json.Marshal(Operation(variant))
-}
-
-func (variant *ValueExpression) UnmarshalJSON(b []byte) error {
-	inner := Operation(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValueExpression(inner)
-	return err
-}
-
-func (ValueExpression) isValue() {}
-
-// ValuePartial newtype
-type ValuePartial Partial
-
-func (variant ValuePartial) MarshalJSON() ([]byte, error) {
-	return json.Marshal(Partial(variant))
-}
-
-func (variant *ValuePartial) UnmarshalJSON(b []byte) error {
-	inner := Partial(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValuePartial(inner)
-	return err
-}
-
-func (ValuePartial) isValue() {}

@@ -128,16 +128,16 @@ func (p Polar) Query(query interface{}) (*Query, error) {
 }
 
 func (p Polar) QueryRule(name string, args ...interface{}) (*Query, error) {
-	polarArgs := make([]Value, len(args))
+	polarArgs := make([]Term, len(args))
 	for idx, arg := range args {
 		converted, err := p.host.toPolar(arg)
 		if err != nil {
 			return nil, err
 		}
-		polarArgs[idx] = *converted
+		polarArgs[idx] = Term{*converted}
 	}
 	query := Call{
-		Name: name,
+		Name: Symbol(name),
 		Args: polarArgs,
 	}
 	return p.Query(query)
@@ -202,5 +202,6 @@ func (p Polar) RegisterConstant(value interface{}, name string) error {
 	if err != nil {
 		return err
 	}
+	print(polarValue)
 	return p.ffiPolar.registerConstant(*polarValue, name)
 }

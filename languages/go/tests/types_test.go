@@ -40,12 +40,14 @@ func TestDeserialize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	kwargs := make(map[oso.Symbol]oso.Term)
+	kwargs[oso.Symbol("bar")] = oso.Term{oso.Value{oso.ValueNumber{oso.NumericInteger(1)}}}
 	expectedCall := oso.ValueCall{
 		Name: "foo",
-		Args: []oso.Value{{
-			oso.ValueNumber{oso.NumericInteger(0)},
-		}},
-		Kwargs: &map[string]oso.Value{"bar": {oso.ValueNumber{oso.NumericInteger(1)}}},
+		Args: []oso.Term{{
+			oso.Value{oso.ValueNumber{oso.NumericInteger(0)}}},
+		},
+		Kwargs: &kwargs,
 	}
 	expected := oso.Value{expectedCall}
 	if !cmp.Equal(term, expected) || !reflect.DeepEqual(term, expected) {

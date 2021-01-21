@@ -113,7 +113,7 @@ func (h Host) unify(leftID int, rightID int) (bool, error) {
 	return reflect.DeepEqual(left, right), nil
 }
 
-func (h Host) isa(value Value, classTag string) (bool, error) {
+func (h Host) isa(value Term, classTag string) (bool, error) {
 	instance, err := h.toGo(value)
 	if err != nil {
 		return false, err
@@ -228,6 +228,7 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 	if rt.Kind() == reflect.Ptr {
 		rtDeref := rt.Elem()
 		if rt.IsNil() {
+			// TODO: what is this?
 			return h.toPolar(none{})
 		}
 		return h.toPolar(rtDeref.Interface())
@@ -235,18 +236,20 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 
 	switch rt.Kind() {
 	case reflect.Slice, reflect.Array:
-		slice := make([]Value, rt.Len())
+		// Make a new array of values
+		slice := make([]Term, rt.Len())
 		for i := 0; i < rt.Len(); i++ {
+			// call toPolar on each element
 			converted, err := h.toPolar(rt.Index(i).Interface())
 			if err != nil {
 				return nil, err
 			}
-			slice[i] = *converted
+			slice[i] = Term{*converted}
 		}
 		inner := ValueList(slice)
 		return &Value{inner}, nil
 	case reflect.Map:
-		fields := make(map[string]Value)
+		fields := make(map[Symbol]Term)
 		iter := rt.MapRange()
 		for iter.Next() {
 			k := iter.Key().String()
@@ -255,7 +258,7 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 			if err != nil {
 				return nil, err
 			}
-			fields[k] = *converted
+			fields[Symbol(k)] = Term{*converted}
 		}
 		inner := ValueDictionary{Fields: fields}
 		return &Value{inner}, nil
@@ -274,7 +277,7 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 	}
 }
 
-func (h Host) listToGo(v []Value) ([]interface{}, error) {
+func (h Host) listToGo(v []Term) ([]interface{}, error) {
 	retList := make([]interface{}, len(v))
 	for idx, v := range v {
 		ret, err := h.toGo(v)
@@ -286,8 +289,8 @@ func (h Host) listToGo(v []Value) ([]interface{}, error) {
 	return retList, nil
 }
 
-func (h Host) toGo(v Value) (interface{}, error) {
-	switch inner := v.ValueVariant.(type) {
+func (h Host) toGo(v Term) (interface{}, error) {
+	switch inner := v.Value.ValueVariant.(type) {
 	case ValueBoolean:
 		return bool(inner), nil
 	case ValueNumber:
@@ -302,7 +305,7 @@ func (h Host) toGo(v Value) (interface{}, error) {
 	case ValueList:
 		return h.listToGo(inner)
 	case ValueDictionary:
-		retMap := make(map[string]interface{})
+		retMap := make(map[Symbol]interface{})
 		for k, v := range inner.Fields {
 			ret, err := h.toGo(v)
 			if err != nil {

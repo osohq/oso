@@ -22,7 +22,7 @@ func newQuery(ffiQuery QueryFfi, host Host) Query {
 	}
 }
 
-func (q *Query) Next() (*map[string]interface{}, error) {
+func (q *Query) Next() (*map[Symbol]interface{}, error) {
 	if q == nil {
 		return nil, fmt.Errorf("query has already finished")
 	}
@@ -48,7 +48,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			// TODO
 			return nil, fmt.Errorf("not yet implemented")
 		case QueryEventResult:
-			results := make(map[string]interface{})
+			results := make(map[Symbol]interface{})
 			for k, v := range ev.Bindings {
 				converted, err := q.host.toGo(v)
 				if err != nil {
@@ -84,7 +84,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 }
 
 func (q Query) handleMakeExternal(event QueryEventMakeExternal) error {
-	if ctor, ok := event.Constructor.ValueVariant.(ValueCall); ok {
+	if ctor, ok := event.Constructor.Value.ValueVariant.(ValueCall); ok {
 		args := make([]interface{}, len(ctor.Args))
 		for idx, arg := range ctor.Args {
 			converted, err := q.host.toGo(arg)
@@ -100,13 +100,13 @@ func (q Query) handleMakeExternal(event QueryEventMakeExternal) error {
 				if err != nil {
 					return err
 				}
-				kwargs[k] = converted
+				kwargs[string(k)] = converted
 			}
 		}
-		_, err := q.host.makeInstance(ctor.Name, args, kwargs, int(event.InstanceId))
+		_, err := q.host.makeInstance(string(ctor.Name), args, kwargs, int(event.InstanceId))
 		return err
 	}
-	return &InvalidConstructorError{ctor: event.Constructor}
+	return &InvalidConstructorError{ctor: event.Constructor.Value}
 }
 
 func (q Query) handleExternalCall(event QueryEventExternalCall) error {
@@ -119,9 +119,9 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 
 	// if we provided Args, it should be callable
 	if event.Args != nil {
-		method := reflect.ValueOf(instance).MethodByName(event.Attribute)
+		method := reflect.ValueOf(instance).MethodByName(string(event.Attribute))
 		if !method.IsValid() {
-			q.ffiQuery.applicationError((&MissingAttributeError{instance: instance, field: event.Attribute}).Error())
+			q.ffiQuery.applicationError((&MissingAttributeError{instance: instance, field: string(event.Attribute)}).Error())
 			q.ffiQuery.callResult(int(event.CallId), nil)
 			return nil
 		}
@@ -137,7 +137,7 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 			if !method.Type().IsVariadic() {
 				if len(args) != numIn {
 					return &ErrorWithAdditionalInfo{
-						Inner: &InvalidCallError{instance: instance, field: event.Attribute},
+						Inner: &InvalidCallError{instance: instance, field: string(event.Attribute)},
 						Info:  fmt.Sprintf("incorrect number of arguments. Expected %v, got %v", numIn, len(args)),
 					}
 				}
@@ -159,7 +159,7 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 				err := setFieldTo(callArgs[i], arg)
 				if err != nil {
 					return &ErrorWithAdditionalInfo{
-						Inner: &InvalidCallError{instance: instance, field: event.Attribute},
+						Inner: &InvalidCallError{instance: instance, field: string(event.Attribute)},
 						Info:  err.Error(),
 					}
 				}
@@ -170,7 +170,7 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 				err := setFieldTo(callArgs[end], remainingArgs)
 				if err != nil {
 					return &ErrorWithAdditionalInfo{
-						Inner: &InvalidCallError{instance: instance, field: event.Attribute},
+						Inner: &InvalidCallError{instance: instance, field: string(event.Attribute)},
 						Info:  err.Error(),
 					}
 				}
@@ -192,12 +192,12 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 				result = interface{}(arrayResult)
 			}
 		} else {
-			return &InvalidCallError{instance: instance, field: event.Attribute}
+			return &InvalidCallError{instance: instance, field: string(event.Attribute)}
 		}
 	} else {
-		attr := reflect.ValueOf(instance).FieldByName(event.Attribute)
+		attr := reflect.ValueOf(instance).FieldByName(string(event.Attribute))
 		if !attr.IsValid() {
-			q.ffiQuery.applicationError((&MissingAttributeError{instance: instance, field: event.Attribute}).Error())
+			q.ffiQuery.applicationError((&MissingAttributeError{instance: instance, field: string(event.Attribute)}).Error())
 			q.ffiQuery.callResult(int(event.CallId), nil)
 			return nil
 		}
@@ -211,7 +211,7 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 	return q.ffiQuery.callResult(int(event.CallId), polarValue)
 }
 func (q Query) handleExternalIsa(event QueryEventExternalIsa) error {
-	isa, err := q.host.isa(event.Instance, event.ClassTag)
+	isa, err := q.host.isa(event.Instance, string(event.ClassTag))
 	if err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ func (q Query) handleExternalIsa(event QueryEventExternalIsa) error {
 }
 
 func (q Query) handleExternalIsSubSpecializer(event QueryEventExternalIsSubSpecializer) error {
-	res, err := q.host.isSubspecializer(int(event.InstanceId), event.LeftClassTag, event.RightClassTag)
+	res, err := q.host.isSubspecializer(int(event.InstanceId), string(event.LeftClassTag), string(event.RightClassTag))
 	if err != nil {
 		return err
 	}
@@ -227,7 +227,7 @@ func (q Query) handleExternalIsSubSpecializer(event QueryEventExternalIsSubSpeci
 }
 
 func (q Query) handleExternalIsSubclass(event QueryEventExternalIsSubclass) error {
-	res, err := q.host.isSubclass(event.LeftClassTag, event.RightClassTag)
+	res, err := q.host.isSubclass(string(event.LeftClassTag), string(event.RightClassTag))
 	if err != nil {
 		return err
 	}
@@ -285,7 +285,7 @@ func (q Query) handleNextExternal(event QueryEventNextExternal) error {
 		if iter, ok := instance.(Iterator); ok {
 			q.calls[int(event.CallId)] = iter.Iter()
 		} else {
-			return &InvalidIteratorError{instance: event.Iterable}
+			return &InvalidIteratorError{instance: event.Iterable.Value}
 		}
 	}
 
