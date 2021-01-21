@@ -1,7 +1,6 @@
 from typing import Tuple, Union
 from django.db.models import F, Q, Model
 from django.apps import apps
-from django.db.models.expressions import Exists, OuterRef
 
 from polar.expression import Expression
 from polar.exceptions import UnsupportedError

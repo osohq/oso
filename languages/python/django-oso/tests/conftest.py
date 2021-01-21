@@ -41,6 +41,6 @@ def parenthesize(variable):
 
 def is_true():
     if VERSION >= (3, 1):
-        return f""
+        return ""
     else:
-        return f" = True"
+        return " = True"

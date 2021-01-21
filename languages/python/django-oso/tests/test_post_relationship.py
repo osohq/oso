@@ -493,7 +493,7 @@ def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
     )
     user = User.objects.get(username="user")
     posts = Post.objects.authorize(None, actor=user, action="read")
-    expected = f"""
+    expected = """
         SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
@@ -522,7 +522,7 @@ def test_empty_constraints_in(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter).distinct()
-    expected = f"""
+    expected = """
         SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents",
                "test_app2_post"."access_level", "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
@@ -545,7 +545,7 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
     )
     user = User.objects.get(username="user")
     posts = Post.objects.authorize(None, actor=user, action="read")
-    expected = f"""
+    expected = """
         SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
@@ -577,7 +577,7 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
         == "(AND: (NOT (AND: ('pk__in', []))), ('users', <User: User object (1)>))"
     )
     posts = Post.objects.filter(authorize_filter)
-    expected = f"""
+    expected = """
         SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
@@ -670,7 +670,7 @@ def test_this_in_var(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
-    expected = f"""
+    expected = """
     """
     assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 5050
@@ -691,7 +691,7 @@ def test_var_in_other_var(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
-    expected = f"""
+    expected = """
     """
     assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 5050
