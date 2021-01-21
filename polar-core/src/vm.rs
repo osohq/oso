@@ -1655,24 +1655,28 @@ impl PolarVirtualMachine {
                 self.push_goal(Goal::Unify { left, right })?
             }
             Operator::Dot => self.dot_op_helper(args)?,
+
             Operator::Lt
             | Operator::Gt
             | Operator::Leq
             | Operator::Geq
             | Operator::Eq
             | Operator::Neq => {
-                return self.comparison_op_helper(term);
+                return self.query_op_helper(term, Self::comparison_op_helper, true);
             }
+
             Operator::Add
             | Operator::Sub
             | Operator::Mul
             | Operator::Div
             | Operator::Mod
             | Operator::Rem => {
-                return self.arithmetic_op_helper(term);
+                return self.query_op_helper(term, Self::arithmetic_op_helper, true);
             }
 
-            Operator::In => return self.in_op_helper(term),
+            Operator::In => {
+                return self.query_op_helper(term, Self::in_op_helper, false);
+            }
 
             Operator::Debug => {
                 let mut message = "".to_string();
@@ -1887,22 +1891,219 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
+    /// Handle variables & constraints as arguments to various operations.
+    /// Calls the `eval` method to handle ground terms.
     #[allow(clippy::many_single_char_names)]
-    fn in_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
+    fn query_op_helper<F>(
+        &mut self,
+        term: &Term,
+        eval: F,
+        handle_left_var: bool,
+    ) -> PolarResult<QueryEvent>
+    where
+        F: Fn(&mut Self, &Term) -> PolarResult<QueryEvent>,
+    {
         let operation = term.value().as_expression().unwrap();
         let op = operation.operator;
 
-        let args = operation.args.clone();
-        assert_eq!(args.len(), 2);
-
-        let item = &args[0];
-        let iterable = &args[1];
-        match (item.value(), iterable.value()) {
+        let mut args = operation.args.clone();
+        assert!(args.len() >= 2);
+        let left = &args[0];
+        let right = &args[1];
+        match (left.value(), right.value()) {
             (Value::Expression(_), _)
             | (_, Value::Expression(_))
             | (Value::RestVariable(_), _)
-            | (_, Value::RestVariable(_)) => unreachable!("invalid syntax"),
+            | (_, Value::RestVariable(_)) => {
+                panic!("invalid query");
+            }
 
+            // TODO(ap): ExternalInstance on one side.
+            (Value::ExternalInstance(_), Value::ExternalInstance(_)) => {
+                // Generate symbol for external result and bind to `false` (default).
+                let (call_id, answer) =
+                    self.new_call_var("external_op_result", Value::Boolean(false));
+
+                // Unify the answer with the external result.
+                // TODO(ap): Why true?
+                self.push_goal(Goal::Unify {
+                    left: answer,
+                    right: Term::new_temporary(Value::Boolean(true)),
+                })?;
+
+                // Emit an event for the external operation.
+                Ok(QueryEvent::ExternalOp {
+                    call_id,
+                    operator: op,
+                    args: vec![left.clone(), right.clone()],
+                })
+            }
+
+            (Value::Variable(l), Value::Variable(r)) => {
+                // Two variables.
+                match (self.variable_state(l), self.variable_state(r)) {
+                    (VariableState::Bound(x), _) => {
+                        args[0] = x;
+                        self.push_goal(Goal::Query {
+                            term: Operation { operator: op, args }.into_term(),
+                        })?;
+                    }
+                    (_, VariableState::Bound(y)) => {
+                        args[1] = y;
+                        self.push_goal(Goal::Query {
+                            term: Operation { operator: op, args }.into_term(),
+                        })?;
+                    }
+                    (VariableState::Unbound, VariableState::Unbound) => {
+                        self.constrain(&op!(And, term.clone()))?;
+                    }
+                    (VariableState::Cycle(c), VariableState::Cycle(d)) => {
+                        let mut e = cycle_constraints(c);
+                        e.merge_constraints(cycle_constraints(d));
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    }
+                    (VariableState::Partial(e), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Partial(e)) => {
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    }
+                    (VariableState::Partial(mut e), VariableState::Partial(f)) => {
+                        e.merge_constraints(f);
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    }
+                    (VariableState::Partial(mut e), VariableState::Cycle(c))
+                    | (VariableState::Cycle(c), VariableState::Partial(mut e)) => {
+                        e.merge_constraints(cycle_constraints(c));
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    }
+                    (VariableState::Cycle(c), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Cycle(c)) => {
+                        let e = cycle_constraints(c);
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    }
+                }
+                Ok(QueryEvent::None)
+            }
+            (Value::Variable(l), _) if handle_left_var => {
+                // A variable on the left, ground on the right.
+                match self.variable_state(l) {
+                    VariableState::Bound(x) => {
+                        args[0] = x;
+                        self.push_goal(Goal::Query {
+                            term: Operation { operator: op, args }.into_term(),
+                        })?;
+                    }
+                    VariableState::Unbound => {
+                        self.constrain(&op!(And, term.clone()))?;
+                    }
+                    VariableState::Cycle(c) => {
+                        let e = cycle_constraints(c);
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    }
+                    VariableState::Partial(e) => {
+                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    }
+                }
+                Ok(QueryEvent::None)
+            }
+            (_, Value::Variable(r)) => {
+                // Ground on the left, a variable on the right.
+                match self.variable_state(r) {
+                    VariableState::Bound(y) => {
+                        args[1] = y;
+                        self.push_goal(Goal::Query {
+                            term: Operation { operator: op, args }.into_term(),
+                        })?;
+                    }
+                    VariableState::Unbound => {
+                        self.constrain(&op!(And, term.clone()))?;
+                    }
+                    VariableState::Cycle(d) => {
+                        let f = cycle_constraints(d);
+                        self.constrain(&f.clone_with_new_constraint(term.clone()))?;
+                    }
+                    VariableState::Partial(f) => {
+                        self.constrain(&f.clone_with_new_constraint(term.clone()))?;
+                    }
+                }
+                Ok(QueryEvent::None)
+            }
+            (_, _) => eval(self, term),
+        }
+    }
+
+    /// Evaluate comparison operations.
+    fn comparison_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
+        let Operation { operator: op, args } = term.value().as_expression().unwrap();
+
+        assert_eq!(args.len(), 2);
+        let left = &args[0];
+        let right = &args[1];
+
+        if !compare(*op, left, right) {
+            self.push_goal(Goal::Backtrack)?;
+        }
+        Ok(QueryEvent::None)
+    }
+
+    /// Evaluate arithmetic operations.
+    fn arithmetic_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
+        let Operation { operator: op, args } = term.value().as_expression().unwrap();
+
+        assert_eq!(args.len(), 3);
+        let left = &args[0];
+        let right = &args[1];
+        let result = &args[2];
+        assert!(matches!(result.value(), Value::Variable(_)));
+
+        match (left.value(), right.value()) {
+            (Value::Number(left), Value::Number(right)) => {
+                if let Some(answer) = match op {
+                    Operator::Add => *left + *right,
+                    Operator::Sub => *left - *right,
+                    Operator::Mul => *left * *right,
+                    Operator::Div => *left / *right,
+                    Operator::Mod => (*left).modulo(*right),
+                    Operator::Rem => *left % *right,
+                    _ => {
+                        return Err(self.set_error_context(
+                            &term,
+                            error::RuntimeError::Unsupported {
+                                msg: format!("numeric operation {}", op.to_polar()),
+                            },
+                        ));
+                    }
+                } {
+                    self.push_goal(Goal::Unify {
+                        left: term.clone_with_value(Value::Number(answer)),
+                        right: result.clone(),
+                    })?;
+                    Ok(QueryEvent::None)
+                } else {
+                    Err(self.set_error_context(
+                        &term,
+                        error::RuntimeError::ArithmeticError {
+                            msg: term.to_polar(),
+                        },
+                    ))
+                }
+            }
+            (_, _) => Err(self.set_error_context(
+                &term,
+                error::RuntimeError::Unsupported {
+                    msg: format!("unsupported arithmetic operands: {}", term.to_polar()),
+                },
+            )),
+        }
+    }
+
+    fn in_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
+        let Operation { args, .. } = term.value().as_expression().unwrap();
+
+        assert_eq!(args.len(), 2);
+        let item = &args[0];
+        let iterable = &args[1];
+
+        match (item.value(), iterable.value()) {
             (_, Value::List(list)) if list.is_empty() => {
                 // Nothing is in an empty list.
                 self.backtrack()?;
@@ -1915,70 +2116,6 @@ impl PolarVirtualMachine {
                 // Nothing is in an empty dict.
                 self.backtrack()?;
             }
-
-            (Value::Variable(l), Value::Variable(r)) => {
-                // Two variables.
-                match (self.variable_state(l), self.variable_state(r)) {
-                    (VariableState::Bound(item), _) => {
-                        let args = vec![item, iterable.clone()];
-                        return self.in_op_helper(&term.clone_with_value(Value::Expression(
-                            Operation { operator: op, args },
-                        )));
-                    }
-                    (_, VariableState::Bound(iterable)) => {
-                        let args = vec![item.clone(), iterable];
-                        return self.in_op_helper(&term.clone_with_value(Value::Expression(
-                            Operation { operator: op, args },
-                        )));
-                    }
-                    (VariableState::Unbound, VariableState::Unbound) => {
-                        let constraint = op!(And, term.clone());
-                        self.constrain(&constraint)?;
-                    }
-                    (VariableState::Cycle(c), VariableState::Unbound)
-                    | (VariableState::Unbound, VariableState::Cycle(c)) => {
-                        let e = cycle_constraints(c);
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (VariableState::Cycle(c), VariableState::Cycle(d)) => {
-                        let mut e = cycle_constraints(c);
-                        e.merge_constraints(cycle_constraints(d));
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (VariableState::Unbound, VariableState::Partial(e))
-                    | (VariableState::Partial(e), VariableState::Unbound) => {
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (VariableState::Cycle(c), VariableState::Partial(mut e))
-                    | (VariableState::Partial(mut e), VariableState::Cycle(c)) => {
-                        e.merge_constraints(cycle_constraints(c));
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (VariableState::Partial(mut e), VariableState::Partial(f)) => {
-                        e.merge_constraints(f);
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                    }
-                }
-            }
-
-            (_, Value::Variable(v)) => match self.variable_state(v) {
-                VariableState::Unbound => {
-                    self.constrain(&op!(And, term.clone()))?;
-                }
-                VariableState::Bound(iterable) => {
-                    let args = vec![item.clone(), iterable];
-                    return self.in_op_helper(
-                        &term.clone_with_value(Value::Expression(Operation { operator: op, args })),
-                    );
-                }
-                VariableState::Cycle(c) => {
-                    let e = cycle_constraints(c);
-                    self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                }
-                VariableState::Partial(e) => {
-                    self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                }
-            },
 
             (_, Value::List(terms)) => {
                 // Unify item with each element of the list, skipping non-matching ground terms.
@@ -2068,200 +2205,6 @@ impl PolarVirtualMachine {
             }
         }
         Ok(QueryEvent::None)
-    }
-
-    #[allow(clippy::many_single_char_names)]
-    fn query_op_helper<F>(&mut self, term: &Term, eval: F) -> PolarResult<QueryEvent>
-    where
-        F: Fn(&Operation) -> Result<Goal, error::RuntimeError>,
-    {
-        let operation = term.value().as_expression().unwrap();
-        let op = operation.operator;
-
-        let mut args = operation.args.clone();
-        assert!(args.len() >= 2);
-        let left = &args[0];
-        let right = &args[1];
-        match (left.value(), right.value()) {
-            (Value::Expression(_), _)
-            | (_, Value::Expression(_))
-            | (Value::RestVariable(_), _)
-            | (_, Value::RestVariable(_)) => {
-                panic!("invalid query");
-            }
-
-            (Value::ExternalInstance(_), Value::ExternalInstance(_)) => {
-                // Generate symbol for external result and bind to `false` (default).
-                let (call_id, answer) =
-                    self.new_call_var("external_op_result", Value::Boolean(false));
-
-                // Unify the answer with the external result.
-                // TODO(ap): true???
-                self.push_goal(Goal::Unify {
-                    left: answer,
-                    right: Term::new_temporary(Value::Boolean(true)),
-                })?;
-
-                // Emit an event for the external operation.
-                Ok(QueryEvent::ExternalOp {
-                    call_id,
-                    operator: op,
-                    args: vec![left.clone(), right.clone()],
-                })
-            }
-
-            (Value::Variable(l), Value::Variable(r)) => {
-                // Two variables.
-                match (self.variable_state(l), self.variable_state(r)) {
-                    (VariableState::Bound(x), _) => {
-                        args[0] = x;
-                        self.push_goal(Goal::Query {
-                            term: Operation { operator: op, args }.into_term(),
-                        })?;
-                    }
-                    (_, VariableState::Bound(y)) => {
-                        args[1] = y;
-                        self.push_goal(Goal::Query {
-                            term: Operation { operator: op, args }.into_term(),
-                        })?;
-                    }
-                    (VariableState::Unbound, VariableState::Unbound) => {
-                        self.constrain(&op!(And, term.clone()))?;
-                    }
-                    (VariableState::Cycle(c), VariableState::Cycle(d)) => {
-                        let mut e = cycle_constraints(c);
-                        e.merge_constraints(cycle_constraints(d));
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (VariableState::Partial(e), VariableState::Unbound)
-                    | (VariableState::Unbound, VariableState::Partial(e)) => {
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (VariableState::Partial(mut e), VariableState::Partial(f)) => {
-                        e.merge_constraints(f);
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (VariableState::Partial(mut e), VariableState::Cycle(c))
-                    | (VariableState::Cycle(c), VariableState::Partial(mut e)) => {
-                        e.merge_constraints(cycle_constraints(c));
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (VariableState::Cycle(c), VariableState::Unbound)
-                    | (VariableState::Unbound, VariableState::Cycle(c)) => {
-                        let e = cycle_constraints(c);
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                    }
-                }
-                Ok(QueryEvent::None)
-            }
-            (Value::Variable(l), _) => {
-                // A variable on the left, ground on the right.
-                match self.variable_state(l) {
-                    VariableState::Bound(x) => {
-                        args[0] = x;
-                        self.push_goal(Goal::Query {
-                            term: Operation { operator: op, args }.into_term(),
-                        })?;
-                    }
-                    VariableState::Unbound => {
-                        self.constrain(&op!(And, term.clone()))?;
-                    }
-                    VariableState::Cycle(c) => {
-                        let e = cycle_constraints(c);
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                    }
-                    VariableState::Partial(e) => {
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
-                    }
-                }
-                Ok(QueryEvent::None)
-            }
-            (_, Value::Variable(r)) => {
-                // Ground on the left, a variable on the right.
-                match self.variable_state(r) {
-                    VariableState::Bound(y) => {
-                        args[1] = y;
-                        self.push_goal(Goal::Query {
-                            term: Operation { operator: op, args }.into_term(),
-                        })?;
-                    }
-                    VariableState::Unbound => {
-                        self.constrain(&op!(And, term.clone()))?;
-                    }
-                    VariableState::Cycle(d) => {
-                        let f = cycle_constraints(d);
-                        self.constrain(&f.clone_with_new_constraint(term.clone()))?;
-                    }
-                    VariableState::Partial(f) => {
-                        self.constrain(&f.clone_with_new_constraint(term.clone()))?;
-                    }
-                }
-                Ok(QueryEvent::None)
-            }
-            (_, _) => match eval(operation) {
-                Ok(goal) => {
-                    self.push_goal(goal)?;
-                    Ok(QueryEvent::None)
-                }
-                Err(error) => Err(self.set_error_context(term, error)),
-            },
-        }
-    }
-
-    /// Evaluate comparison operations.
-    fn comparison_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
-        self.query_op_helper(term, |Operation { operator: op, args }| {
-            assert_eq!(args.len(), 2);
-            let left = &args[0];
-            let right = &args[1];
-
-            if !compare(*op, left, right) {
-                Ok(Goal::Backtrack)
-            } else {
-                Ok(Goal::Noop)
-            }
-        })
-    }
-
-    /// Evaluate arithmetic operations.
-    fn arithmetic_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
-        self.query_op_helper(term, |Operation { operator: op, args }| {
-            assert_eq!(args.len(), 3);
-            let left = &args[0];
-            let right = &args[1];
-            let result = &args[2];
-            assert!(matches!(result.value(), Value::Variable(_)));
-
-            match (left.value(), right.value()) {
-                (Value::Number(left), Value::Number(right)) => {
-                    if let Some(answer) = match op {
-                        Operator::Add => *left + *right,
-                        Operator::Sub => *left - *right,
-                        Operator::Mul => *left * *right,
-                        Operator::Div => *left / *right,
-                        Operator::Mod => (*left).modulo(*right),
-                        Operator::Rem => *left % *right,
-                        _ => {
-                            return Err(error::RuntimeError::Unsupported {
-                                msg: format!("numeric operation {}", op.to_polar()),
-                            })
-                        }
-                    } {
-                        Ok(Goal::Unify {
-                            left: term.clone_with_value(Value::Number(answer)),
-                            right: result.clone(),
-                        })
-                    } else {
-                        Err(error::RuntimeError::ArithmeticError {
-                            msg: term.to_polar(),
-                        })
-                    }
-                }
-                (_, _) => Err(error::RuntimeError::Unsupported {
-                    msg: format!("unsupported arithmetic operands: {}", term.to_polar()),
-                }),
-            }
-        })
     }
 
     /// Unify `left` and `right` terms.
