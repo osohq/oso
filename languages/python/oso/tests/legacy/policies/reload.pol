@@ -1,2 +1,0 @@
-
-allow(actor, "make", resource: Widget);
