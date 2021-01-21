@@ -3,6 +3,7 @@ from django.db import models
 from django.core.exceptions import PermissionDenied
 
 from django_oso.auth import authorize_model
+from django_oso.partial import TRUE_FILTER
 
 
 class AuthorizedQuerySet(models.QuerySet):
@@ -32,7 +33,10 @@ class AuthorizedQuerySet(models.QuerySet):
 
         # SELECT DISTINCT on inner query to support chaining methods on
         # returned QuerySet.
-        return self.filter(pk__in=self.filter(filter).distinct())
+        if filter == TRUE_FILTER:
+            return self.filter(filter)
+        else:
+            return self.filter(pk__in=self.filter(filter).distinct())
 
 
 class AuthorizedModel(models.Model):
