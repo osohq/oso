@@ -2487,48 +2487,17 @@ impl PolarVirtualMachine {
             }
 
             // Expressions.
-            (VariableState::Partial(e), VariableState::Bound(y)) => {
-                // Add a unification constraint.
-                let e = e.clone_with_new_constraint(op!(Unify, left.clone(), y).into_term());
-                self.constrain(&e)?;
+            (VariableState::Partial(_), VariableState::Bound(right_value)) => {
+                // Add a unification constraint with the value of the bound right side.
+                self.add_constraint(&op!(Unify, left.clone(), right_value).into_term())?;
             }
-            (VariableState::Bound(x), VariableState::Partial(f)) => {
-                // Add a unification constraint.
-                let f = f.clone_with_new_constraint(op!(Unify, x, right.clone()).into_term());
-                self.constrain(&f)?;
+            (VariableState::Bound(left_value), VariableState::Partial(_)) => {
+                // Add a unification constraint with the value of the bound left side.
+                self.add_constraint(&op!(Unify, left_value, right.clone()).into_term())?;
             }
-            (VariableState::Partial(mut e), VariableState::Partial(f)) => {
-                // Merge existing constraints and add a unification constraint.
-                e.merge_constraints(f);
-                let e = e
-                    .clone_with_new_constraint(op!(Unify, left.clone(), right.clone()).into_term());
-                self.constrain(&e)?;
-            }
-            (VariableState::Partial(e), VariableState::Unbound) => {
-                // Add a unification constraint.
-                let e = e
-                    .clone_with_new_constraint(op!(Unify, left.clone(), right.clone()).into_term());
-                self.constrain(&e)?;
-            }
-            (VariableState::Unbound, VariableState::Partial(f)) => {
-                // Add a unification constraint.
-                let f = f
-                    .clone_with_new_constraint(op!(Unify, left.clone(), right.clone()).into_term());
-                self.constrain(&f)?;
-            }
-            (VariableState::Partial(mut e), VariableState::Cycle(c)) => {
-                // Bind the entire cycle to the expression.
-                e.merge_constraints(cycle_constraints(c));
-                let e = e
-                    .clone_with_new_constraint(op!(Unify, left.clone(), right.clone()).into_term());
-                self.constrain(&e)?;
-            }
-            (VariableState::Cycle(c), VariableState::Partial(mut f)) => {
-                // Bind the entire cycle to the expression.
-                f.merge_constraints(cycle_constraints(c));
-                let f = f
-                    .clone_with_new_constraint(op!(Unify, left.clone(), right.clone()).into_term());
-                self.constrain(&f)?;
+            (VariableState::Partial(_), _) | (_, VariableState::Partial(_)) => {
+                // Add a unification constraint with both partials.
+                self.add_constraint(&op!(Unify, left.clone(), right.clone()).into_term())?;
             }
         }
         Ok(())
