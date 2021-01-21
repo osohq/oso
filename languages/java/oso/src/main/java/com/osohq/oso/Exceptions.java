@@ -228,12 +228,8 @@ public class Exceptions {
   }
 
   public static class InvalidIteratorError extends PolarRuntimeException {
-    public InvalidIteratorError(String msg) {
-      super(msg);
-    }
-
-    public InvalidIteratorError(String msg, Map<String, Object> details) {
-      super(msg, details);
+    public InvalidIteratorError(Object value) {
+      super(String.format("value %s of type %s is not iterable", value, value.getClass()));
     }
   }
 

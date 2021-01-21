@@ -123,8 +123,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
       } else if (result instanceof Iterable<?>) {
         enumResult = IteratorUtils.asEnumeration(((Iterable<?>) result).iterator());
       } else {
-        throw new Exceptions.InvalidIteratorError(
-            String.format("value %s of type %s is not iterable", result, result.getClass()));
+        throw new Exceptions.InvalidIteratorError(result);
       }
       calls.put(callId, enumResult);
     }
