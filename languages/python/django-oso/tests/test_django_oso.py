@@ -1,4 +1,5 @@
 from pathlib import Path
+from django_oso.partial import TRUE_FILTER
 
 import pytest
 
@@ -146,7 +147,7 @@ def test_partial(rf, partial_policy):
     authorize_filter = authorize_model(request, action="get", model=Post)
     assert (
         str(authorize_filter)
-        == "(AND: (NOT (AND: ('pk__in', []))), ('is_private', False), ('timestamp__gt', 0), ('option', None))"
+        == f"(AND: {str(TRUE_FILTER)}, ('is_private', False), ('timestamp__gt', 0), ('option', None))"
     )
 
     q = Post.objects.filter(authorize_filter)
@@ -166,7 +167,7 @@ def test_partial(rf, partial_policy):
     request.user = "test_admin"
 
     authorize_filter = authorize_model(request, action="get", model=Post)
-    assert str(authorize_filter) == "(NOT (AND: ('pk__in', [])))"
+    assert str(authorize_filter) == str(TRUE_FILTER)
 
     q = Post.objects.filter(authorize_filter)
     expected = """
@@ -205,7 +206,7 @@ def test_partial_isa_with_path():
     authorize_filter = authorize_model(None, Post, actor="foo", action="bar")
     assert (
         str(authorize_filter)
-        == "(AND: (NOT (AND: ('pk__in', []))), ('created_by__name', 'alice'))"
+        == f"(AND: {str(TRUE_FILTER)}, ('created_by__name', 'alice'))"
     )
     authorized_posts = Post.objects.filter(authorize_filter)
     expected = """
@@ -247,9 +248,7 @@ def test_null_with_partial(rf):
     request.user = "test_user"
 
     authorize_filter = authorize_model(request, Post)
-    assert (
-        str(authorize_filter) == "(AND: (NOT (AND: ('pk__in', []))), ('option', None))"
-    )
+    assert str(authorize_filter) == f"(AND: {str(TRUE_FILTER)}, ('option', None))"
     authorized_posts = Post.objects.filter(authorize_filter)
     expected = """
         SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
@@ -279,8 +278,7 @@ def test_negated_matches_with_partial(rf):
     request.user = 1
     authorize_filter = authorize_model(request, Post)
     assert str(authorize_filter) == (
-        "(AND: (NOT (AND: ('pk__in', []))),"
-        + " (NOT (AND: (NOT (AND: ('pk__in', []))))))"
+        f"(AND: {str(TRUE_FILTER)}, (NOT (AND: {str(TRUE_FILTER)})))"
     )
     authorized_posts = Post.objects.filter(authorize_filter)
     # For some reason, this only seems to be raised when stringifying.
@@ -290,7 +288,7 @@ def test_negated_matches_with_partial(rf):
 
     request.user = 2
     authorize_filter = authorize_model(request, Post)
-    assert str(authorize_filter) == ("(NOT (AND: ('pk__in', [])))")
+    assert str(authorize_filter) == str(TRUE_FILTER)
     authorized_posts = Post.objects.filter(authorize_filter)
     expected = """
         SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
@@ -303,7 +301,7 @@ def test_negated_matches_with_partial(rf):
     request.user = 3
     authorize_filter = authorize_model(request, Post)
     assert str(authorize_filter) == (
-        "(AND: (NOT (AND: ('pk__in', []))), (NOT (AND: (NOT (AND: ('pk__in', []))))))"
+        f"(AND: {str(TRUE_FILTER)}, (NOT (AND: {str(TRUE_FILTER)})))"
     )
     authorized_posts = Post.objects.filter(authorize_filter)
     # For some reason, this only seems to be raised when stringifying.
@@ -313,7 +311,7 @@ def test_negated_matches_with_partial(rf):
 
     request.user = 4
     authorize_filter = authorize_model(request, Post)
-    assert str(authorize_filter) == ("(NOT (AND: ('pk__in', [])))")
+    assert str(authorize_filter) == str(TRUE_FILTER)
     authorized_posts = Post.objects.filter(authorize_filter)
     expected = """
         SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
@@ -350,4 +348,25 @@ def test_rewrite_parameters():
         """
     )
     authorize_filter = authorize_model(None, Post, actor="foo", action="bar")
-    assert str(authorize_filter) == "(AND: (NOT (AND: ('pk__in', []))))"
+    assert str(authorize_filter) == str(TRUE_FILTER)
+
+
+@pytest.mark.django_db
+def test_partial_with_allow_all(rf):
+    from test_app.models import Post
+
+    Post(name="test", is_private=False, timestamp=1).save()
+    Oso.load_str("allow(_, _, _);")
+    request = rf.get("/")
+    request.user = "test_user"
+
+    authorize_filter = authorize_model(request, Post)
+    assert str(authorize_filter) == str(TRUE_FILTER)
+    authorized_posts = Post.objects.filter(authorize_filter)
+    expected = """
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        FROM "test_app_post"
+    """
+    assert str(authorized_posts.query) == " ".join(expected.split())
+    assert authorized_posts.count() == 1

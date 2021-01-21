@@ -5,7 +5,7 @@ from .oso import Oso, polar_model_name
 from polar.partial import TypeConstraint
 from polar.variable import Variable
 
-from .partial import partial_to_query_filter
+from .partial import TRUE_FILTER, partial_to_query_filter
 
 
 def authorize(request, resource, *, actor=None, action=None):
@@ -90,8 +90,8 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
             filter = Q()
 
         next_filter = partial_to_query_filter(resource_partial, model)
-        if next_filter == Q():
-            return next_filter
+        if next_filter == TRUE_FILTER:
+            return TRUE_FILTER
 
         filter |= next_filter
 

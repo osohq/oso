@@ -10,7 +10,10 @@ from oso import Variable
 
 from .oso import django_model_name
 
-
+# A query filter that is always true, but can still be combined
+# with other filters to narrow the scope.
+# See: https://forum.djangoproject.com/t/improving-q-objects-with-true-false-and-none/851/1
+# for more details
 TRUE_FILTER = ~Q(pk__in=[])
 
 COMPARISONS = {
@@ -56,7 +59,7 @@ class FilterBuilder:
     def __init__(self, model: Model, name="_this", parent=None):
         self.name = name
         self.model = model
-        self.filter = Q()
+        self.filter = TRUE_FILTER
         # Map variables to subquery
         self.variables = {}
         self.parent = parent
@@ -93,7 +96,6 @@ class FilterBuilder:
         ty = apps.get_model(django_model_name(right.tag))
         assert not right.fields, "Unexpected fields in matches expression"
         assert issubclass(model, ty), "Inapplicable rule should have been filtered out"
-        self.filter &= TRUE_FILTER
 
     def translate_expr(self, expr: Expression):
         """Translate a Polar expression to a Django Q object."""
