@@ -88,9 +88,8 @@ describe('#registerClass', () => {
     new Foo(\"A\").a() = x
   in query at line 1, column 1
     new Foo(\"A\").a() = x
-  in query at line 1, column 1
-    new Foo(\"A\").a()
-Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
+      Foo(\"A\").a() = _value_4
+Application error: Foo { a: 'A' }.a is not a function`
     );
     expect(qvar(p, 'x in new Foo("A").b', 'x', true)).rejects.toThrow(
       'function is not iterable'
@@ -692,8 +691,7 @@ describe('errors', () => {
         `trace (most recent evaluation last):
   in query at line 1, column 1
     foo(1,2)
-  in rule foo at line 1, column 13
-    a in b
+      1 in 2
 Type error: can only use \`in\` on an iterable value, this is Number(Integer(2)) at line 1, column 7`
       );
     });
@@ -705,9 +703,8 @@ Type error: can only use \`in\` on an iterable value, this is Number(Integer(2))
         `trace (most recent evaluation last):
   in query at line 1, column 1
     undefined.foo
-  in query at line 1, column 1
-    undefined.foo
-Application error: Cannot read property 'foo' of undefined at line 1, column 1`
+      undefined.foo = _value_1
+Application error: Cannot read property 'foo' of undefined`
       );
     });
   });
