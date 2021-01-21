@@ -208,7 +208,7 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 	if err != nil {
 		return err
 	}
-	return q.ffiQuery.callResult(int(event.CallId), polarValue)
+	return q.ffiQuery.callResult(int(event.CallId), &Term{*polarValue})
 }
 func (q Query) handleExternalIsa(event QueryEventExternalIsa) error {
 	isa, err := q.host.isa(event.Instance, string(event.ClassTag))
@@ -298,7 +298,7 @@ func (q Query) handleNextExternal(event QueryEventNextExternal) error {
 	if err != nil {
 		return err
 	}
-	return q.ffiQuery.callResult(int(event.CallId), retValue)
+	return q.ffiQuery.callResult(int(event.CallId), &Term{*retValue})
 }
 
 //     def handle_next_external(self, data):

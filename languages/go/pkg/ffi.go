@@ -122,7 +122,7 @@ func (p PolarFfi) newQueryFromStr(queryStr string) (*QueryFfi, error) {
 	return newQueryFfi(result), nil
 }
 
-func (p PolarFfi) newQueryFromTerm(queryTerm interface{}) (*QueryFfi, error) {
+func (p PolarFfi) newQueryFromTerm(queryTerm Term) (*QueryFfi, error) {
 	json, err := ffiSerialize(queryTerm)
 	if err != nil {
 		return nil, err
@@ -145,14 +145,14 @@ func (p PolarFfi) nextInlineQuery() (*QueryFfi, error) {
 	return newQueryFfi(queryPtr), nil
 }
 
-func (p PolarFfi) registerConstant(v Value, name string) error {
+func (p PolarFfi) registerConstant(term Term, name string) error {
 	cName := C.CString(name)
-	cValue, err := ffiSerialize(v)
+	cTerm, err := ffiSerialize(term)
 	if err != nil {
 		defer C.free(unsafe.Pointer(cName))
 		return err
 	}
-	result := C.polar_register_constant(p.ptr, cName, cValue)
+	result := C.polar_register_constant(p.ptr, cName, cTerm)
 	processMessages(p)
 	if result == 0 {
 		return getError()
@@ -179,11 +179,11 @@ func (q QueryFfi) nextMessage() *C.char {
 	return C.polar_next_query_message(q.ptr)
 }
 
-func (q QueryFfi) callResult(callID int, value *Value) error {
+func (q QueryFfi) callResult(callID int, term *Term) error {
 	var s *C.char
 	var err error
-	if value != nil {
-		s, err = ffiSerialize(value)
+	if term != nil {
+		s, err = ffiSerialize(term)
 		if err != nil {
 			return err
 		}
@@ -228,7 +228,7 @@ func (q QueryFfi) nextEvent() (*string, error) {
 	return &goEvent, nil
 }
 
-func (q QueryFfi) debugCommand(command interface{}) error {
+func (q QueryFfi) debugCommand(command *string) error {
 	cStr, err := ffiSerialize(command)
 	if err != nil {
 		return err

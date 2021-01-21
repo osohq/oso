@@ -116,7 +116,7 @@ func (p Polar) Query(query interface{}) (*Query, error) {
 		return &newQuery, nil
 	case Call:
 		inner := ValueCall(q)
-		ffiQuery, err := p.ffiPolar.newQueryFromTerm(Value{inner})
+		ffiQuery, err := p.ffiPolar.newQueryFromTerm(Term{Value{inner}})
 		if err != nil {
 			return nil, err
 		}
@@ -202,6 +202,5 @@ func (p Polar) RegisterConstant(value interface{}, name string) error {
 	if err != nil {
 		return err
 	}
-	print(polarValue)
-	return p.ffiPolar.registerConstant(*polarValue, name)
+	return p.ffiPolar.registerConstant(Term{*polarValue}, name)
 }
