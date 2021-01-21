@@ -505,7 +505,7 @@ def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
               "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
        FROM "test_app2_post"
        WHERE "test_app2_post"."id" IN
-           (SELECT DISTINCT W0."id"
+           (SELECT W0."id"
             FROM "test_app2_post" W0
             WHERE
                 (W0."id" IN
@@ -568,7 +568,7 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
         SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
-        WHERE "test_app2_post"."id" IN (SELECT DISTINCT W0."id"
+        WHERE "test_app2_post"."id" IN (SELECT W0."id"
                                         FROM "test_app2_post" W0
                                         WHERE W0."id" IN
                                             (SELECT V0."id"

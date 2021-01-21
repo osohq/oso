@@ -36,7 +36,7 @@ class AuthorizedQuerySet(models.QuerySet):
         if filter == TRUE_FILTER:
             return self.filter(filter)
         else:
-            return self.filter(pk__in=self.filter(filter).distinct())
+            return self.filter(pk__in=self.filter(filter))
 
 
 class AuthorizedModel(models.Model):
