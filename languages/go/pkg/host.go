@@ -149,46 +149,12 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 	case bool:
 		inner := ValueBoolean(v)
 		return &Value{inner}, nil
-	case int, int8, int16, int32, int64:
-		var intVal int64
-		switch vv := v.(type) {
-		case int:
-			intVal = int64(vv)
-		case int8:
-			intVal = int64(vv)
-		case int16:
-			intVal = int64(vv)
-		case int32:
-			intVal = int64(vv)
-		case int64:
-			intVal = int64(vv)
-		}
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32:
+		intVal, _ := v.(int64)
 		inner := ValueNumber{NumericInteger(intVal)}
 		return &Value{inner}, nil
-	case uint, uint8, uint16, uint32, uint64:
-		var uintVal int64
-		switch vv := v.(type) {
-		case uint:
-			uintVal = int64(vv)
-		case uint8:
-			uintVal = int64(vv)
-		case uint16:
-			uintVal = int64(vv)
-		case uint32:
-			uintVal = int64(vv)
-		case uint64:
-			uintVal = int64(vv)
-		}
-		inner := ValueNumber{NumericInteger(uintVal)}
-		return &Value{inner}, nil
 	case float32, float64:
-		var floatVal float64
-		switch vv := v.(type) {
-		case float32:
-			floatVal = float64(vv)
-		case float64:
-			floatVal = float64(vv)
-		}
+		floatVal, _ := v.(float64)
 		inner := ValueNumber{NumericFloat(floatVal)}
 		return &Value{inner}, nil
 	case string:
@@ -207,7 +173,7 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 	if rt.Kind() == reflect.Ptr {
 		rtDeref := rt.Elem()
 		if rt.IsNil() {
-			// TODO: what is this?
+			// TODO: Is `nil` a reflect.Ptr?
 			return h.toPolar(none{})
 		}
 		return h.toPolar(rtDeref.Interface())
@@ -248,7 +214,7 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 		}
 		repr := fmt.Sprintf("%v", v)
 		inner := ValueExternalInstance{
-			InstanceId:  uint64(*instanceID),
+			InstanceId:  *instanceID,
 			Constructor: nil,
 			Repr:        &repr,
 		}
@@ -284,13 +250,13 @@ func (h Host) toGo(v Term) (interface{}, error) {
 	case ValueList:
 		return h.listToGo(inner)
 	case ValueDictionary:
-		retMap := make(map[Symbol]interface{})
+		retMap := make(map[string]interface{})
 		for k, v := range inner.Fields {
 			ret, err := h.toGo(v)
 			if err != nil {
 				return nil, err
 			}
-			retMap[k] = ret
+			retMap[string(k)] = ret
 		}
 		return retMap, nil
 	case ValueExternalInstance:
