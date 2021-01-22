@@ -104,28 +104,24 @@ func (p Polar) ClearRules() error {
 	return p.ffiPolar.clearRules()
 }
 
-// Query accepts string and predicates
-func (p Polar) Query(query interface{}) (*Query, error) {
-	switch q := query.(type) {
-	case string:
-		ffiQuery, err := p.ffiPolar.newQueryFromStr(q)
-		if err != nil {
-			return nil, err
-		}
-		newQuery := newQuery(*ffiQuery, p.host.copy())
-		return &newQuery, nil
-	case Call:
-		inner := ValueCall(q)
-		ffiQuery, err := p.ffiPolar.newQueryFromTerm(Term{Value{inner}})
-		if err != nil {
-			return nil, err
-		}
-		newQuery := newQuery(*ffiQuery, p.host.copy())
-		return &newQuery, nil
+func (p Polar) QueryStr(query string) (*Query, error) {
+	ffiQuery, err := p.ffiPolar.newQueryFromStr(query)
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, fmt.Errorf("Unsupported query type: %v", query)
+	newQuery := newQuery(*ffiQuery, p.host.copy())
+	return &newQuery, nil
 }
+
+// func (p Polar) QueryCall(query Call) (*Query, error) {
+// 	inner := ValueCall(query)
+// 	ffiQuery, err := p.ffiPolar.newQueryFromTerm(Term{Value{inner}})
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	newQuery := newQuery(*ffiQuery, p.host.copy())
+// 	return &newQuery, nil
+// }
 
 func (p Polar) QueryRule(name string, args ...interface{}) (*Query, error) {
 	polarArgs := make([]Term, len(args))
@@ -140,7 +136,13 @@ func (p Polar) QueryRule(name string, args ...interface{}) (*Query, error) {
 		Name: Symbol(name),
 		Args: polarArgs,
 	}
-	return p.Query(query)
+	inner := ValueCall(query)
+	ffiQuery, err := p.ffiPolar.newQueryFromTerm(Term{Value{inner}})
+	if err != nil {
+		return nil, err
+	}
+	newQuery := newQuery(*ffiQuery, p.host.copy())
+	return &newQuery, nil
 }
 
 func (p Polar) Repl(files ...string) error {

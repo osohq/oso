@@ -170,6 +170,8 @@ func (tc TestCase) RunTest(t *testing.T) {
 			testName += c.Query
 		}
 		t.Run(testName, func(t *testing.T) {
+			name := t.Name()
+			_ = name
 			oPtr := oso.NewPolar()
 			if oPtr == nil {
 				t.Fatal("Failed to setup Polar")
@@ -182,7 +184,7 @@ func (tc TestCase) RunTest(t *testing.T) {
 			var testQuery *oso.Query
 			var queryErr error
 			if c.Inputs == nil {
-				testQuery, queryErr = o.Query(c.Query)
+				testQuery, queryErr = o.QueryStr(c.Query)
 			} else {
 				Inputs := make([]interface{}, len(*c.Inputs))
 				for idx, v := range *c.Inputs {
