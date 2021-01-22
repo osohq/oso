@@ -2015,11 +2015,10 @@ impl PolarVirtualMachine {
             if let VariableState::Bound(x) = self.variable_state(r) {
                 args[1] = x;
                 self.push_goal(Goal::Query {
-                    term: Operation {
+                    term: term.clone_with_value(Value::Expression(Operation {
                         operator: *op,
                         args,
-                    }
-                    .into_term(),
+                    })),
                 })?;
                 return Ok(QueryEvent::None);
             } else if !handle_unbound_right_var && left.value().as_symbol().is_err() {
@@ -2032,11 +2031,10 @@ impl PolarVirtualMachine {
             if let VariableState::Bound(x) = self.variable_state(l) {
                 args[0] = x;
                 self.push_goal(Goal::Query {
-                    term: Operation {
+                    term: term.clone_with_value(Value::Expression(Operation {
                         operator: *op,
                         args,
-                    }
-                    .into_term(),
+                    })),
                 })?;
                 return Ok(QueryEvent::None);
             } else if !handle_unbound_left_var && right.value().as_symbol().is_err() {
