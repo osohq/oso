@@ -81,12 +81,12 @@ func processMessages(i ffiInterface) {
 	}
 }
 
-func (p PolarFfi) newId() (int, error) {
+func (p PolarFfi) newId() (uint64, error) {
 	id := C.polar_get_external_id(p.ptr)
 	if id == 0 {
 		return 0, getError()
 	}
-	return int(id), nil
+	return uint64(id), nil
 }
 
 func (p PolarFfi) load(s string, filename *string) error {

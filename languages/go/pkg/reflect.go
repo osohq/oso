@@ -10,6 +10,7 @@ func String(s string) *string {
 }
 
 func setFieldTo(field reflect.Value, input interface{}) error {
+	// todo: explain how this works and why.
 	if !field.CanSet() {
 		return fmt.Errorf("cannot set field")
 	}

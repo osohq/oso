@@ -20,7 +20,7 @@ func (e *DuplicateClassAliasError) Error() string {
 }
 
 type DuplicateInstanceRegistrationError struct {
-	id int
+	id uint64
 }
 
 func (e *DuplicateInstanceRegistrationError) Error() string {
@@ -117,7 +117,7 @@ func (e *UnregisteredClassError) Error() string {
 }
 
 type UnregisteredInstanceError struct {
-	id int
+	id uint64
 }
 
 func (e *UnregisteredInstanceError) Error() string {

@@ -51,6 +51,7 @@ func (q *Query) Next() (*map[Symbol]interface{}, error) {
 			results := make(map[Symbol]interface{})
 			for k, v := range ev.Bindings {
 				converted, err := q.host.toGo(v)
+				// todo: turn back into interface (after toGo returns reflect.Value)
 				if err != nil {
 					return nil, err
 				}
@@ -84,9 +85,9 @@ func (q *Query) Next() (*map[Symbol]interface{}, error) {
 }
 
 func (q Query) handleMakeExternal(event QueryEventMakeExternal) error {
-	if ctor, ok := event.Constructor.Value.ValueVariant.(ValueCall); ok {
-		args := make([]interface{}, len(ctor.Args))
-		for idx, arg := range ctor.Args {
+	if constructor, ok := event.Constructor.Value.ValueVariant.(ValueCall); ok {
+		args := make([]interface{}, len(constructor.Args))
+		for idx, arg := range constructor.Args {
 			converted, err := q.host.toGo(arg)
 			if err != nil {
 				return err
@@ -94,8 +95,8 @@ func (q Query) handleMakeExternal(event QueryEventMakeExternal) error {
 			args[idx] = converted
 		}
 		kwargs := make(map[string]interface{})
-		if ctor.Kwargs != nil {
-			for k, v := range *ctor.Kwargs {
+		if constructor.Kwargs != nil {
+			for k, v := range *constructor.Kwargs {
 				converted, err := q.host.toGo(v)
 				if err != nil {
 					return err
@@ -103,7 +104,7 @@ func (q Query) handleMakeExternal(event QueryEventMakeExternal) error {
 				kwargs[string(k)] = converted
 			}
 		}
-		_, err := q.host.makeInstance(string(ctor.Name), args, kwargs, int(event.InstanceId))
+		_, err := q.host.makeInstance(string(constructor.Name), args, kwargs, event.InstanceId)
 		return err
 	}
 	return &InvalidConstructorError{ctor: event.Constructor.Value}
@@ -142,7 +143,7 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 					}
 				}
 			}
-
+			// todo: maybe refactor how these args are handled
 			var end int
 			if method.Type().IsVariadic() {
 				// stop one before the end so we can make this a slice
@@ -182,6 +183,11 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 				results = method.Call(callArgs)
 			}
 
+			// maybe: This is kind of odd, maybe error instead if len(results) > 1
+			// Right now if you called a function that returns an error you'll get back
+			// a list [result, nil] or something.
+			// It does work the same way in python if you return a tuple though so maybe it's fine.
+			// You could destructure it in polar if you want.
 			if len(results) == 1 {
 				result = results[0].Interface()
 			} else {
@@ -195,6 +201,7 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 			return &InvalidCallError{instance: instance, field: string(event.Attribute)}
 		}
 	} else {
+		// look up field
 		attr := reflect.ValueOf(instance).FieldByName(string(event.Attribute))
 		if !attr.IsValid() {
 			q.ffiQuery.applicationError((&MissingAttributeError{instance: instance, field: string(event.Attribute)}).Error())
@@ -235,7 +242,7 @@ func (q Query) handleExternalIsSubclass(event QueryEventExternalIsSubclass) erro
 }
 
 func (q Query) handleExternalUnify(event QueryEventExternalUnify) error {
-	res, err := q.host.unify(int(event.LeftInstanceId), int(event.RightInstanceId))
+	res, err := q.host.unify(event.LeftInstanceId, event.RightInstanceId)
 	if err != nil {
 		return err
 	}
@@ -257,6 +264,7 @@ func (q Query) handleExternalOp(event QueryEventExternalOp) error {
 	var answer bool
 	leftCmp := left.(Comparer)
 	rightCmp := right.(Comparer)
+	// @TODO: Where are the implementations for these for builtin stuff (numbers mainly)
 	switch event.Operator.OperatorVariant.(type) {
 	case OperatorLt:
 		answer = leftCmp.Lt(rightCmp)
