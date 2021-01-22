@@ -1,0 +1,10 @@
+<footer class="w-full pin-b text-center text-white bg-black border-t border-gray-200 p-4 text-xs text-gray-400">
+    <!-- <p>made with <a href="https://gohugo.io" class="underline hover:text-blue-400">Hugo</a> and <a
+            href="https://tailwindcss.com" class="underline hover:text-blue-400">TailwindCSS</a></p> -->
+</footer>
+
+{{ $appJs := resources.Get "js/app.js" }}
+<script async="true" type="text/javascript" src="{{ $appJs.RelPermalink }}"></script>
+{{ $navJs := resources.Get "js/nav.js" }}
+{{ $js := slice $navJs | resources.Concat "js/docs.js" | resources.Minify }}
+<script async="true" type="text/javascript" src="{{ $js.RelPermalink }}"></script>
