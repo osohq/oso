@@ -149,9 +149,9 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 	case bool:
 		inner := ValueBoolean(v)
 		return &Value{inner}, nil
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32:
-		intVal, _ := v.(int64)
-		inner := ValueNumber{NumericInteger(intVal)}
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		intVal, _ := v.(uint64)
+		inner := ValueNumber{NumericInteger(int64(intVal))}
 		return &Value{inner}, nil
 	case float32, float64:
 		floatVal, _ := v.(float64)
