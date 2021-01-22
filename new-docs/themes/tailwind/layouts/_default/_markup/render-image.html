@@ -1,0 +1,7 @@
+<p class="">
+    {{ $img := printf "%s%s" .Page.Site.BaseURL .Destination }}
+    {{ with resources.Get .Destination }}
+      {{ $img = .RelPermalink }}
+    {{ end }}
+    <img src="{{ $img | safeURL }}" alt="{{ .Text }}" {{ with .Title}} title="{{ . }}"{{ end }} />
+  </p>

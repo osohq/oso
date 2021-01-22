@@ -1,0 +1,6 @@
+{{ $target := printf "data/%s.md" (.Get 0)}}
+{{ with $.Page.Resources.GetMatch $target }}
+{{- .RawContent | safeHTML -}}
+{{ else }}
+{{ warnf "Example %s not found for language %s \n%s" $target $.Page.Language.LanguageName .Position }}
+{{ end }}

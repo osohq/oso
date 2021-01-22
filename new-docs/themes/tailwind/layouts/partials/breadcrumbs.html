@@ -1,0 +1,29 @@
+<nav id="breadcrumbs" class="
+sticky top-0 fixed w-full
+w-full z-40 bg-primary text-primary-lightest py-2 font-base">
+
+    <ol class="flex">
+        {{ template "breadcrumbnav" (dict "p1" . "p2" .) }}
+    </ol>
+    {{ define "breadcrumbnav" }}
+    {{ if .p1.Parent }}
+    {{ template "breadcrumbnav" (dict "p1" .p1.Parent "p2" .p2 ) }}
+    {{ else if not .p1.IsHome }}
+    {{ template "breadcrumbnav" (dict "p1" .p1.Site.Home "p2" .p2 ) }}
+    {{ end }}
+    <li class={{ if eq .p1 .p2 }} "underline" {{else}} "" {{ end }}>
+        {{ if .p1.IsHome }}
+        <a href="/" class="table-cell pt-1 block h-5 w-5">
+            {{ partial "fontawesome.html" "home" }}
+        </a>
+        {{ else }}
+        <a href="{{ .p1.RelPermalink }}">{{ .p1.Title }}</a>
+        {{ end }}
+    </li>
+    {{ if ne .p1 .p2 }}
+    <li><span class="mx-2"> / </span></li>
+    {{ end }}
+
+    {{ end }}
+
+</nav>

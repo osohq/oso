@@ -1,0 +1,90 @@
+<aside class="w-full lg:w-auto  text-black border-r-4 pt-8 px-4">
+    <div class="block lg:hidden sticky pin">
+        <button id="menu-toggle"
+            class="justify-between flex w-full px-3 py-3 border rounded border-grey-dark  appearance-none focus:outline-none">
+            <p>
+                Menu
+            </p>
+            <svg class="fill-current h-3 float-right" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+            </svg>
+        </button>
+    </div>
+    <div class="pr-4 w-full sticky pin hidden h-64 top-24 lg:h-auto overflow-x-hidden overflow-y-auto lg:overflow-y-hidden lg:block mt-0 shadow lg:shadow-none lg:bg-transparent z-50 text-lg"
+        id="menu-content">
+        <div class="pb-4">
+            <input type="search" placeholder="Search"
+                class="w-full bg-grey-lightest text-sm text-grey-darkest transition border focus:outline-none focus:border-purple rounded py-1 px-2 pl-8 appearance-none leading-normal">
+            <div class="absolute search-icon" style="top: 0.5rem;left: 0.75rem;">
+                <svg class="fill-current pointer-events-none text-grey-darkest w-4 h-4"
+                    xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path
+                        d="M12.9 14.32a8 8 0 1 1 1.41-1.41l5.35 5.33-1.42 1.42-5.33-5.34zM8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12z">
+                    </path>
+                </svg>
+            </div>
+        </div>
+        {{ $currentNode := . }}
+        {{ template "section-tree-nav" dict "sect" (.GetPage "/introduction") "currentNode" $currentNode "level" 0 }}
+        {{ range .Site.Home.Sections.ByWeight }}
+        {{ template "section-tree-nav" dict "sect" . "currentNode" $currentNode "level" 0 }}
+        {{ end }}
+    </div>
+</aside>
+
+
+<!-- templates -->
+{{ define "section-tree-nav" }}
+{{ $currentNode := .currentNode }}
+{{ $currentFileUniqueID := "" }}
+{{ $level := .level }}
+{{ with $currentNode.File }}{{ $currentFileUniqueID = .UniqueID }}{{ end }}
+{{ with $currentNode.File }}{{ $currentFileUniqueID = .UniqueID }}{{ end }}
+{{with .sect}}
+{{if .IsSection }}
+{{ $isCurrent := .InSection $currentNode }}
+<li data-nav-id="{{.RelPermalink}}" title="{{.Title}}" class="
+    pl-2
+    {{ if eq $level 0 }}font-bold py-2{{else}}font-normal{{end}} 
+    {{ if $isCurrent}}active text-primary{{else}} text-black{{ end }}
+">
+    <a href="{{.RelPermalink}}">
+        {{or .Params.menuTitle .LinkTitle .Title}}
+    </a>
+    {{ $numberOfPages := (add (len .Pages) (len .Sections)) }}
+    {{ if ne $numberOfPages 0 }}
+    <ul>
+        {{ $currentNode.Scratch.Set "pages" .Pages }}
+        {{ if .Sections}}
+        {{ $currentNode.Scratch.Set "pages" (.Pages | union .Sections) }}
+        {{end}}
+        {{ $pages := ($currentNode.Scratch.Get "pages").ByWeight }}
+        {{ if .Params.reverse }}
+        {{ $pages = $pages.Reverse }}
+        {{ end }}
+        {{ range $pages }}
+        {{ $templateParams := dict "sect" . "currentNode" $currentNode "active" $isCurrent "level" (add $level 1) }}
+        {{ template "section-tree-nav" $templateParams }}
+        {{ end }}
+    </ul>
+    {{ end }}
+</li>
+{{else}}
+{{ $isCurrent := eq .File.UniqueID $currentFileUniqueID }}
+<li data-nav-id="{{.RelPermalink}}" title="{{.Title}}" class="{{if $isCurrent }}
+        active text-primary
+        {{ else}}
+        {{ if or (lt $level 2) ($currentNode.InSection .)  }}
+        {{ else }}
+        hidden
+        {{ end }}
+        {{end}} 
+        {{ if eq $level 0 }} font-bold {{ else }} font-normal {{ end}}
+        text-black pl-2">
+    <a href="{{ .RelPermalink}}">
+        {{or .Params.menuTitle .LinkTitle .Title}}
+    </a>
+</li>
+{{ end }}
+{{ end }}
+{{ end }}

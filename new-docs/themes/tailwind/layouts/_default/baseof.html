@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang='{{ .Site.LanguageCode }}'>
+{{ partial "head.html" . }}
+
+<body>
+    {{- partial "header.html" . -}}
+    <div class="w-full max-w-8xl mx-auto">
+        <div class="lg:flex">
+            {{- block "main" . }}{{ end -}}
+        </div>
+    </div>
+    {{- partial "footer.html" . -}}
+    {{/* {{- partial "dev-parameters.html" . -}} */}}
+</body>
+
+</html>

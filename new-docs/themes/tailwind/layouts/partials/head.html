@@ -1,0 +1,43 @@
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ block "title" . }}
+        {{- .Title }} - {{ .Site.Title -}}
+        {{ end }}</title>
+    {{- if .Description }}
+    <meta name="description" content="{{ .Description }}" />
+    {{ else }}
+    <meta name="description" content="Explore our guides and reference articles for learning oso and adding it to your application." />
+    {{ end -}}
+    {{- if .Keywords }}
+    <meta name="keywords" content="{{ delimit .Keywords " ," }}" />
+    {{ end -}}
+    {{- if .Params.Author }}
+    <meta name="author" content="{{ .Params.Author}}" />
+    {{ end -}}
+    {{ hugo.Generator }}
+
+    {{ template "_internal/opengraph.html" . }}
+    {{ template "_internal/twitter_cards.html" . }}
+
+    {{- $styles := resources.Get "css/styles.css" | postCSS (dict "config" "./assets/css/postcss.config.js") -}}
+
+    {{ if .IsHome }}
+    <script async src="{{ $.Site.BaseURL }}bundle.js"></script>
+    {{ end }}
+
+    {{- if .Site.IsServer }}
+    <link rel="stylesheet" href="{{ $styles.RelPermalink }}">
+    {{ else }}
+    {{- $styles := $styles| minify | fingerprint | resources.PostProcess -}}
+    <link rel="stylesheet" href="{{ $styles.RelPermalink }}" integrity="{{ $styles.Data.Integrity }}">
+    {{ end -}}
+
+    {{ if .Params.any }}
+    {{ range .Translations }}
+    {{ if eq .Lang "any" }}
+    <link rel="canonical" href="{{ .Permalink }}" />
+    {{ end }}
+    {{ end }}
+    {{ end }}
+</head>
