@@ -2072,11 +2072,11 @@ impl PolarVirtualMachine {
                 })?;
 
                 // Emit an event for the external operation.
-                return Ok(QueryEvent::ExternalOp {
+                Ok(QueryEvent::ExternalOp {
                     call_id,
                     operator: *op,
                     args: vec![left.clone(), right.clone()],
-                });
+                })
             }
             _ => {
                 if !compare(*op, left, right) {

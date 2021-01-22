@@ -426,7 +426,8 @@ def test_runtime_errors(polar, query):
         == """trace (most recent evaluation last):
   in query at line 1, column 1
     foo(1,2)
-      1 in 2
+  in rule foo at line 2, column 17
+    a in b
 Type error: can only use `in` on an iterable value, this is Number(Integer(2)) at line 1, column 7"""
     )
 
