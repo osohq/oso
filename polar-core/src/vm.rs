@@ -1900,85 +1900,6 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// Push appropriate goals for lookups on dictionaries and instances.
-    fn dot_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
-        let Operation { operator: op, args } = term.value().as_expression().unwrap();
-        assert_eq!(*op, Operator::Dot, "expected a dot operation");
-
-        let mut args = args.clone();
-        assert_eq!(args.len(), 3);
-        let object = &args[0];
-        let field = &args[1];
-        let value = &args[2];
-
-        match object.value() {
-            // Push a `Lookup` goal for simple field lookups on dictionaries.
-            Value::Dictionary(dict) if matches!(field.value(), Value::String(_) | Value::Variable(_)) => {
-                self.push_goal(Goal::Lookup {
-                    dict: dict.clone(),
-                    field: field.clone(),
-                    value: args.remove(2),
-                })?
-            }
-            // Push an `ExternalLookup` goal for external instances and built-ins.
-            Value::Dictionary(_)
-            | Value::ExternalInstance(_)
-            | Value::List(_)
-            | Value::Number(_)
-            | Value::String(_) => {
-                let value = value
-                    .value()
-                    .as_symbol()
-                    .map_err(|mut e| {
-                        e.add_stack_trace(self);
-                        e
-                    })
-                    .expect("bad lookup value");
-                let call_id = self.new_call_id(value);
-                self.append_goals(vec![
-                    Goal::LookupExternal {
-                        call_id,
-                        field: field.clone(),
-                        instance: object.clone(),
-                    },
-                    Goal::CheckError,
-                ])?;
-            }
-            Value::Variable(v) => {
-                let constraints = match self.variable_state(v) {
-                    VariableState::Bound(_) => panic!("should have already dereferenced {}", v),
-                    _ if matches!(field.value(), Value::Call(_)) => {
-                        return Err(self.set_error_context(
-                            object,
-                            error::RuntimeError::Unsupported {
-                                msg: format!("cannot call method on unbound variable {}", v),
-                            },
-                        ));
-                    }
-                    VariableState::Unbound => op!(And),
-                    VariableState::Partial(expr) => expr,
-                    VariableState::Cycle(c) => cycle_constraints(c),
-                };
-                // Translate `.(object, field, value)` → `value = .(object, field)`.
-                let dot2 = object.clone_with_value(value!(op!(Dot, object.clone(), field.clone())));
-                self.constrain(
-                    &constraints
-                        .clone_with_new_constraint(op!(Unify, value.clone(), dot2).into_term()),
-                )?;
-            }
-            _ => {
-                return Err(self.type_error(
-                    &object,
-                    format!(
-                        "can only perform lookups on dicts and instances, this is {}",
-                        object.to_polar()
-                    ),
-                ))
-            }
-        }
-        Ok(QueryEvent::None)
-    }
-
     /// Handle variables & constraints as arguments to various operations.
     /// Calls the `eval` method to handle ground terms.
     ///
@@ -2145,6 +2066,85 @@ impl PolarVirtualMachine {
                 },
             )),
         }
+    }
+
+    /// Push appropriate goals for lookups on dictionaries and instances.
+    fn dot_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
+        let Operation { operator: op, args } = term.value().as_expression().unwrap();
+        assert_eq!(*op, Operator::Dot, "expected a dot operation");
+
+        let mut args = args.clone();
+        assert_eq!(args.len(), 3);
+        let object = &args[0];
+        let field = &args[1];
+        let value = &args[2];
+
+        match object.value() {
+            // Push a `Lookup` goal for simple field lookups on dictionaries.
+            Value::Dictionary(dict) if matches!(field.value(), Value::String(_) | Value::Variable(_)) => {
+                self.push_goal(Goal::Lookup {
+                    dict: dict.clone(),
+                    field: field.clone(),
+                    value: args.remove(2),
+                })?
+            }
+            // Push an `ExternalLookup` goal for external instances and built-ins.
+            Value::Dictionary(_)
+            | Value::ExternalInstance(_)
+            | Value::List(_)
+            | Value::Number(_)
+            | Value::String(_) => {
+                let value = value
+                    .value()
+                    .as_symbol()
+                    .map_err(|mut e| {
+                        e.add_stack_trace(self);
+                        e
+                    })
+                    .expect("bad lookup value");
+                let call_id = self.new_call_id(value);
+                self.append_goals(vec![
+                    Goal::LookupExternal {
+                        call_id,
+                        field: field.clone(),
+                        instance: object.clone(),
+                    },
+                    Goal::CheckError,
+                ])?;
+            }
+            Value::Variable(v) => {
+                let constraints = match self.variable_state(v) {
+                    VariableState::Bound(_) => panic!("should have already dereferenced {}", v),
+                    _ if matches!(field.value(), Value::Call(_)) => {
+                        return Err(self.set_error_context(
+                            object,
+                            error::RuntimeError::Unsupported {
+                                msg: format!("cannot call method on unbound variable {}", v),
+                            },
+                        ));
+                    }
+                    VariableState::Unbound => op!(And),
+                    VariableState::Partial(expr) => expr,
+                    VariableState::Cycle(c) => cycle_constraints(c),
+                };
+                // Translate `.(object, field, value)` → `value = .(object, field)`.
+                let dot2 = object.clone_with_value(value!(op!(Dot, object.clone(), field.clone())));
+                self.constrain(
+                    &constraints
+                        .clone_with_new_constraint(op!(Unify, value.clone(), dot2).into_term()),
+                )?;
+            }
+            _ => {
+                return Err(self.type_error(
+                    &object,
+                    format!(
+                        "can only perform lookups on dicts and instances, this is {}",
+                        object.to_polar()
+                    ),
+                ))
+            }
+        }
+        Ok(QueryEvent::None)
     }
 
     fn in_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
