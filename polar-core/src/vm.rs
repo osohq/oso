@@ -642,24 +642,22 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
-    /// Add a single constraint to the variables referenced in it.
+    /// Add a single constraint operation to the variables referenced in it.
+    /// Precondition: Operation is either binary or ternary (binary + result var),
+    /// and at least one of the first two arguments is an unbound variable.
+    #[allow(clippy::many_single_char_names)]
     fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
-        // Preconditions: At least one argument of operation is a variable & is unbound.
-        // Basically want to assert here that this is a binary operation.
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
-
-        assert_ne!(
-            op,
-            &Operator::And,
-            "Should be called with single constraint."
+        assert!(
+            !matches!(*op, Operator::And | Operator::Or),
+            "Expected a bare constraint."
         );
-        assert_ne!(op, &Operator::Or, "Not or");
         assert!(args.len() >= 2);
 
         let (left, right) = (&args[0], &args[1]);
         match (left.value(), right.value()) {
-            (Value::Variable(lv), Value::Variable(rv)) => {
-                match (self.variable_state(lv), self.variable_state(rv)) {
+            (Value::Variable(l), Value::Variable(r)) => {
+                match (self.variable_state(l), self.variable_state(r)) {
                     (VariableState::Unbound, VariableState::Unbound) => {
                         self.constrain(&op!(And, term.clone()))?;
                     }
@@ -686,16 +684,20 @@ impl PolarVirtualMachine {
                         let e = cycle_constraints(c);
                         self.constrain(&e.clone_with_new_constraint(term.clone()))?;
                     }
-                    (VariableState::Bound(val), _) => {
+                    (VariableState::Bound(x), _) => {
                         panic!(
-                            "Variable passed to constrain must be unbound, left bound to: {}.",
-                            val.to_polar()
+                            "Variable {} unexpectedly bound to {} in constraint {}.",
+                            left.to_polar(),
+                            x.to_polar(),
+                            term.to_polar(),
                         );
                     }
-                    (_, VariableState::Bound(val)) => {
+                    (_, VariableState::Bound(x)) => {
                         panic!(
-                            "Variable passed to constrain must be unbound, right bound to: {}.",
-                            val.to_polar()
+                            "Variable {} unexpectedly bound to {} in constraint {}.",
+                            right.to_polar(),
+                            x.to_polar(),
+                            term.to_polar(),
                         );
                     }
                 }
@@ -711,11 +713,16 @@ impl PolarVirtualMachine {
                 VariableState::Partial(e) => {
                     self.constrain(&e.clone_with_new_constraint(term.clone()))?;
                 }
-                VariableState::Bound(_) => {
-                    panic!("Variable passed to constrain must be unbound.");
+                VariableState::Bound(x) => {
+                    panic!(
+                        "Variable {} unexpectedly bound to {} in constraint {}.",
+                        v.0,
+                        x.to_polar(),
+                        term.to_polar()
+                    );
                 }
             },
-            (_, _) => panic!("Must call with at least one side as a variable."),
+            (_, _) => panic!("At least one side of a constraint expression must be a variable."),
         }
 
         Ok(())
