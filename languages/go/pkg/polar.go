@@ -113,16 +113,6 @@ func (p Polar) QueryStr(query string) (*Query, error) {
 	return &newQuery, nil
 }
 
-// func (p Polar) QueryCall(query Call) (*Query, error) {
-// 	inner := ValueCall(query)
-// 	ffiQuery, err := p.ffiPolar.newQueryFromTerm(Term{Value{inner}})
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	newQuery := newQuery(*ffiQuery, p.host.copy())
-// 	return &newQuery, nil
-// }
-
 func (p Polar) QueryRule(name string, args ...interface{}) (*Query, error) {
 	polarArgs := make([]Term, len(args))
 	for idx, arg := range args {
