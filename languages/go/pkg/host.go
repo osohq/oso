@@ -270,6 +270,8 @@ func (h Host) toGo(v Term) (interface{}, error) {
 			return nil, nil
 		}
 		return (*instance).Interface(), nil
+	case ValueVariable:
+		return inner, nil
 	}
 	return nil, fmt.Errorf("Unexpected Polar type %v", v)
 }
