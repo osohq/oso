@@ -1939,7 +1939,6 @@ impl PolarVirtualMachine {
         };
 
         if let Value::Variable(r) = right.value() {
-            // A variable on the right, ground on the left.
             if let VariableState::Bound(x) = self.variable_state(r) {
                 args[1] = x;
                 self.push_goal(Goal::Query {
@@ -1955,7 +1954,6 @@ impl PolarVirtualMachine {
         }
 
         if let Value::Variable(l) = left.value() {
-            // A variable on the left, ground on the right.
             if let VariableState::Bound(x) = self.variable_state(l) {
                 args[0] = x;
                 self.push_goal(Goal::Query {
