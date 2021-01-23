@@ -105,9 +105,11 @@ func (h Host) unify(leftID uint64, rightID uint64) (bool, error) {
 	if err2 != nil {
 		return false, err2
 	}
-	if leftEq, ok := left.Interface().(Comparer); ok {
-		if rightEq, ok := right.Interface().(Comparer); ok {
-			return leftEq.Equal(rightEq), nil
+	if left.IsValid() && right.IsValid() {
+		if leftEq, ok := left.Interface().(Comparer); ok {
+			if rightEq, ok := right.Interface().(Comparer); ok {
+				return leftEq.Equal(rightEq), nil
+			}
 		}
 	}
 	return reflect.DeepEqual(left, right), nil
