@@ -1985,8 +1985,7 @@ impl PolarVirtualMachine {
         let right = &args[1];
 
         match (left.value(), right.value()) {
-            // TODO(ap): ExternalInstance on one side.
-            (Value::ExternalInstance(_), Value::ExternalInstance(_)) => {
+            (Value::ExternalInstance(_), _) | (_, Value::ExternalInstance(_)) => {
                 // Generate a symbol for the external result and bind to `false` (default).
                 let (call_id, answer) =
                     self.new_call_var("external_op_result", Value::Boolean(false));
