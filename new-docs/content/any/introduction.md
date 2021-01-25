@@ -31,5 +31,6 @@ authorization for everything from multitenant applications, organizational roles
 filesystem-like structures, hierarchical data and more.
 
 {{< callout "Want to know more?" "primary" >}}
-Learn more about oso, the Polar language, and building authorization with the [Learn oso](../learn/) information.
+  Learn more about oso, the Polar language, and building authorization in
+  [Learn oso](../learn/).
 {{< /callout >}}
