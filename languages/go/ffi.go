@@ -4,9 +4,9 @@ package oso
 // #include <stdint.h>
 // #include <stdlib.h>
 // #include "native/polar.h"
-// #cgo linux,amd64 LDFLAGS:-L${SRCDIR}/native/linux/libpolar.a -ldl -lm
-// #cgo darwin,amd64 LDFLAGS:-L${SRCDIR}/native/macos/libpolar.a -ldl -lm
-// #cgo windows,amd64 LDFLAGS:-L${SRCDIR}/native/windows/polar.lib -ldl -lm
+// #cgo linux,amd64 LDFLAGS: ${SRCDIR}/native/linux/libpolar.a -ldl -lm
+// #cgo darwin,amd64 LDFLAGS: ${SRCDIR}/native/macos/libpolar.a -ldl -lm
+// #cgo windows,amd64 LDFLAGS: ${SRCDIR}/native/windows/polar.lib -ldl -lm
 import "C"
 
 import (
