@@ -135,6 +135,7 @@ jobs:
           cp -r oso_static_library/libpolar-macOS.a languages/go/native/macos/libpolar.a
           mkdir -p languages/go/native/windows
           cp -r oso_static_library/polar.lib languages/go/native/windows/polar.lib
+          rm languages/go/Makefile
       - uses: actions/upload-artifact@v2
         with:
           name: go
