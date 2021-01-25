@@ -109,3 +109,6 @@ lang = "rust"
 source = "content/rust"
 target = "content"
 lang = "rust"
+
+[build]
+  writeStats = true
