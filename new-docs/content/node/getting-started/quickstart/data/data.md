@@ -10,6 +10,7 @@ installation: |
     $ npm start
     server running on port 5050
     ```
+submitted_by: submittedBy
 endswith: endsWith
 endswithURL: >
    [the `String.prototype.endsWith` method.](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith)
