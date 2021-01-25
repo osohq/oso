@@ -152,12 +152,40 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 		inner := ValueBoolean(v)
 		return &Value{inner}, nil
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		intVal, _ := v.(uint64)
-		inner := ValueNumber{NumericInteger(int64(intVal))}
+		var intVal int64
+		switch vv := v.(type) {
+		case int:
+			intVal = int64(vv)
+		case int8:
+			intVal = int64(vv)
+		case int16:
+			intVal = int64(vv)
+		case int32:
+			intVal = int64(vv)
+		case int64:
+			intVal = int64(vv)
+		case uint:
+			intVal = int64(vv)
+		case uint8:
+			intVal = int64(vv)
+		case uint16:
+			intVal = int64(vv)
+		case uint32:
+			intVal = int64(vv)
+		case uint64:
+			intVal = int64(vv)
+		}
+		inner := ValueNumber{NumericInteger(intVal)}
 		return &Value{inner}, nil
 	case float32, float64:
-		floatVal, _ := v.(float64)
-		inner := ValueNumber{NumericFloat(floatVal)}
+		var floatVal float64
+		switch vv := v.(type) {
+		case float32:
+			floatVal = float64(vv)
+		case float64:
+			floatVal = float64(vv)
+		}
+		inner := ValueNumber{NumericInteger(floatVal)}
 		return &Value{inner}, nil
 	case string:
 		inner := ValueString(v)
