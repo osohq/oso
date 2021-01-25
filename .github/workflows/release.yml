@@ -112,7 +112,7 @@ jobs:
           name: oso_static_library
           path: polar-c-api/polar.h
 
-  build_go_pkg:
+  build_go:
     name: Build go.
     runs-on: ubuntu-latest
     needs: build_dylib
@@ -362,6 +362,32 @@ jobs:
   #       with:
   #         name: oso_js_node
   #         path: languages/js/*
+
+  validate_go:
+    name: Test go on ${{ matrix.os }}
+    needs: [build_go]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version env
+        id: version
+        run: echo "::set-output name=oso_version::$(cat VERSION)"
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.15"
+      - name: Download go package from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: go
+      - name: "test"
+        run: |
+          go build
+          go test -v ./tests/
+        working-directory: go
 
   # validate_python:
   #   name: Test python ${{ matrix.python-version }} on ${{ matrix.os }}
