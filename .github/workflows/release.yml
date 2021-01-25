@@ -76,7 +76,7 @@ jobs:
       - name: Build release library
         run: cargo build --release
       - if: runner.os != 'Windows'
-        run: mv target/release/libpolar.a target/release/libpolar-{runner.os}.a
+        run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - uses: actions/upload-artifact@v2
         if: runner.os == 'Linux'
         with:
@@ -96,12 +96,12 @@ jobs:
         if: runner.os == 'Linux'
         with:
           name: oso_static_library
-          path: target/release/libpolar-{runner.os}.a
+          path: target/release/libpolar-${{runner.os}}.a
       - uses: actions/upload-artifact@v2
         if: runner.os == 'macOS'
         with:
           name: oso_static_library
-          path: target/release/libpolar-{runner.os}.a
+          path: target/release/libpolar-${{runner.os}}.a
       - uses: actions/upload-artifact@v2
         if: runner.os == 'Windows'
         with:
