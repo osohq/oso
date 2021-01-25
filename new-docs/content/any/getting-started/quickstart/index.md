@@ -30,8 +30,9 @@ One file defines a simple `Expense` class and some sample data stored in a map.
 
 A second file has our HTTP server code, where we have defined a route handler
 for `GET` requests to the path `/expenses/:id`. We’ve already added an
-authorization check using the oso library to control access to expense
-resources. You can learn more about how to add oso to your application here.
+authorization check using the [oso library](reference) to control access to
+expense resources. <!-- TODO(gj): You can learn more about how to add oso to
+your application [here](Add To Your Application). -->
 
 The third file is the oso policy file, `expenses.polar`, and is currently
 empty.
