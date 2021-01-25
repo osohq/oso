@@ -156,7 +156,7 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 			callArgs := make([]reflect.Value, numIn)
 			for i := 0; i < end; i++ {
 				arg := args[i]
-				callArgs[i] = reflect.New(method.Type().In(i))
+				callArgs[i] = reflect.New(method.Type().In(i)).Elem()
 				err := setFieldTo(callArgs[i], arg)
 				if err != nil {
 					return &ErrorWithAdditionalInfo{
