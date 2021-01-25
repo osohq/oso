@@ -23,7 +23,7 @@ Polar. The Polar language is designed to make simple use cases easy, and
 complex use cases _possible_. Expressing "users can see their own data" is as
 straightforward as:
 
-```prolog
+```polar
 allow(user: User, "read", expense: Expense) if
     user = expense.owner;
 ```
