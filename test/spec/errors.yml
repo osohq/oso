@@ -29,5 +29,5 @@ cases:
 
   # lookup errors
   - description: invalid lookup
-    query: new UnitClass().missing_attribute
+    query: UnitClass.New().missing_attribute
     err: "Application error: 'UnitClass' object has no attribute 'missing_attribute'"

@@ -13,6 +13,10 @@ func (u UnitClass) String() string {
 	return "UnitClass"
 }
 
+func (u UnitClass) New() UnitClass {
+	return UnitClass{}
+}
+
 type IterableClass struct {
 	Elems []int
 }

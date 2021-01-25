@@ -4,7 +4,7 @@ description: Check core host class functionality
 cases:
   # construct test cases
   - description: can construct simple instance
-    query: x = new UnitClass()
+    query: x = UnitClass.New()
     result: [{x: {repr: UnitClass}}]
   - description: can construct with no args
     query: new Constructor().NumKwargs() = 0

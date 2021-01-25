@@ -12,5 +12,5 @@ cases:
     query: x = new IterableClass([1, 2, 3]).Sum()
     result: [{x: 6}]
   - description: fail if not iterable
-    query: x in new UnitClass()
+    query: x in UnitClass.New()
     err: is not iterable
