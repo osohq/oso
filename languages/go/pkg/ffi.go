@@ -3,8 +3,8 @@ package oso
 // #cgo CFLAGS: -g -Wall
 // #include <stdint.h>
 // #include <stdlib.h>
-// #include "../../../polar-c-api/polar.h"
-// #cgo LDFLAGS: ${SRCDIR}/../../../target/debug/libpolar.a -ldl -lm
+// #include "../native/polar.h"
+// #cgo LDFLAGS: ${SRCDIR}/../native/macos/libpolar.a -ldl -lm
 import "C"
 
 import (
