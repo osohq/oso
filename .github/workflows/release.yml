@@ -52,7 +52,7 @@ jobs:
   #         client-payload: '{"commit": "${{ github.sha }}"}'
 
   build_dylib:
-    name: Build release dylib on ${{ matrix.os }}
+    name: Build release libraries on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -107,6 +107,38 @@ jobs:
         with:
           name: oso_static_library
           path: target/release/polar.lib
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: polar-c-api/polar.h
+
+  build_go_pkg:
+    name: Build go.
+    runs-on: ubuntu-latest
+    needs: build_dylib
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version env
+        id: version
+        run: echo "::set-output name=oso_version::$(cat VERSION)"
+      - name: Download static libs
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_static_library
+      - name: Copy libraries into go package.
+        run: |
+          mkdir -p languages/go/native
+          cp -r oso_static_library/polar.h languages/go/native/polar.h
+          mkdir -p languages/go/native/linux
+          cp -r oso_static_library/libpolar-Linux.a languages/go/native/linux/libpolar.a
+          mkdir -p languages/go/native/macos
+          cp -r oso_static_library/libpolar-macOS.a languages/go/native/macos/libpolar.a
+          mkdir -p languages/go/native/windows
+          cp -r oso_static_library/polar.lib languages/go/native/windows/polar.lib
+      - uses: actions/upload-artifact@v2
+        with:
+          name: go
+          path: languages/go
 
   # build_jar:
   #   name: Build jar.
