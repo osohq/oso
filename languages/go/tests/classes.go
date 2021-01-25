@@ -21,6 +21,10 @@ type IterableClass struct {
 	Elems []int
 }
 
+func (ic IterableClass) New(elems []int) IterableClass {
+	return IterableClass{Elems: elems}
+}
+
 func (ic IterableClass) Sum() int {
 	res := 0
 	for _, v := range ic.Elems {
