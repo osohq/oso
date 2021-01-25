@@ -51,9 +51,9 @@ cases:
   - description: can call methods with iterators
     query: x in new MethodVariants().GetIter()
     result: [{x: 1},{x: 2},{x: 3}]
-  - description: can call methods with generators
-    query: x in new MethodVariants().GetGenerator()
-    result: [{x: 1},{x: 2},{x: 3}]
+  # - description: can call methods with generators
+  #   query: x in new MethodVariants().GetGenerator()
+  #   result: [{x: 1},{x: 2},{x: 3}]
 
   # calling inherited methods
   # - description: can call methods on parent classes
@@ -67,4 +67,3 @@ cases:
   - description: cannot call on nil
     query: new ValueFactory().GetNil().BadCall()
     err: has no attribute 'BadCall'
-  
