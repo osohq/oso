@@ -8,107 +8,100 @@ defaultContentLanguage = "any"
 
 # used for Twitter card etc
 [params]
-description = "Explore our guides and reference articles for learning oso and adding it to your application."
-images = ["img/oso-2020-white-on-black-rounded.png"]
+  description = "Explore our guides and reference articles for learning oso and adding it to your application."
+  images = ["img/oso-2020-white-on-black-rounded.png"]
 
 [languages]
+  [languages.any]
+    weight = -1
+    contentDir = "content/any"
+    languageName = "Any"
 
-[languages.any]
-weight = -1
-contentDir = "content/any"
-languageName = "Any"
+  [languages.java]
+    languageName = "Java"
+    contentDir = "content/java"
+    weight = 1
+    [languages.java.params]
+      icon = "java"
 
-[languages.java]
-languageName = "Java"
-contentDir = "content/java"
-weight = 1
-[languages.java.params]
-icon = "java"
+  [languages.node]
+    languageName = "NodeJS"
+    contentDir = "content/node"
+    weight = 2
+    [languages.node.params]
+      icon = "node-js"
 
-[languages.node]
-languageName = "NodeJS"
-contentDir = "content/node"
-weight = 2
-[languages.node.params]
-icon = "node-js"
+  [languages.python]
+    languageName = "Python"
+    contentDir = "content/python"
+    weight = 3
+    [languages.python.params]
+      icon = "python"
 
-[languages.python]
-languageName = "Python"
-contentDir = "content/python"
-weight = 3
-[languages.python.params]
-icon = "python"
+  [languages.ruby]
+    languageName = "Ruby"
+    contentDir = "content/ruby"
+    weight = 4
+    [languages.ruby.params]
+      icon = "gem"
 
-[languages.ruby]
-languageName = "Ruby"
-contentDir = "content/ruby"
-weight = 4
-[languages.ruby.params]
-icon = "gem"
-
-[languages.rust]
-languageName = "Rust"
-contentDir = "content/rust"
-weight = 5
-[languages.rust.params]
-icon = "rust"
+  [languages.rust]
+    languageName = "Rust"
+    contentDir = "content/rust"
+    weight = 5
+    [languages.rust.params]
+      icon = "rust"
 
 [module]
-[[module.mounts]]
-source = "content/any"
-target = "content"
-lang = "any"
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "any"
 
-[[module.mounts]]
-source = "content/any"
-target = "content"
-lang = "java"
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "java"
+  [[module.mounts]]
+    source = "content/java"
+    target = "content"
+    lang = "java"
 
-[[module.mounts]]
-source = "content/java"
-target = "content"
-lang = "java"
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "node"
+  [[module.mounts]]
+    source = "content/node"
+    target = "content"
+    lang = "node"
 
-[[module.mounts]]
-source = "content/any"
-target = "content"
-lang = "node"
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "python"
+  [[module.mounts]]
+    source = "content/python"
+    target = "content"
+    lang = "python"
 
-[[module.mounts]]
-source = "content/node"
-target = "content"
-lang = "node"
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "ruby"
+  [[module.mounts]]
+    source = "content/ruby"
+    target = "content"
+    lang = "ruby"
 
-
-[[module.mounts]]
-source = "content/any"
-target = "content"
-lang = "python"
-
-[[module.mounts]]
-source = "content/python"
-target = "content"
-lang = "python"
-
-[[module.mounts]]
-source = "content/any"
-target = "content"
-lang = "ruby"
-
-[[module.mounts]]
-source = "content/ruby"
-target = "content"
-lang = "ruby"
-
-[[module.mounts]]
-source = "content/any"
-target = "content"
-lang = "rust"
-
-[[module.mounts]]
-source = "content/rust"
-target = "content"
-lang = "rust"
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "rust"
+  [[module.mounts]]
+    source = "content/rust"
+    target = "content"
+    lang = "rust"
 
 [build]
   writeStats = true
