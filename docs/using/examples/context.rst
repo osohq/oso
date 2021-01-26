@@ -43,7 +43,7 @@ variables.
         .. literalinclude:: /examples/context/python/02-context.py
             :caption: :fab:`python` context.py
             :language: python
-            :lines: 1-7
+            :lines: 1-9
 
     .. group-tab:: Ruby
 
