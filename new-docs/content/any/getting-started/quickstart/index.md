@@ -59,8 +59,8 @@ oso policy.
 
 oso rules are written in a declarative policy language called Polar. You can
 include any kind of rule in a policy, but the oso library is designed to
-evaluate allow rules, which specify the conditions that allow an **actor** to
-perform an **action** on a **resource**.
+evaluate [allow rules](glossary#allow-rules), which specify the conditions that
+allow an **actor** to perform an **action** on a **resource**.
 
 {{< callout "Edit it!" "blue" >}}
   In our policy file (`expenses.polar`), let's add a rule that allows anyone
@@ -77,10 +77,10 @@ perform an **action** on a **resource**.
 {{< /callout >}}
 
 The `Expense` and `String` terms following the colons in the head of the rule
-are specializers, patterns that control rule execution based on whether they
-match the supplied argument. This syntax ensures that the rule will only be
-evaluated when the actor is a string and the resource is an instance of the
-`Expense` class.
+are [specializers](polar-syntax#specialization), patterns that control rule
+execution based on whether they match the supplied argument. This syntax
+ensures that the rule will only be evaluated when the actor is a string and the
+resource is an instance of the `Expense` class.
 
 {{< callout "Try it!" "green" >}}
   Once we've added our new rule and restarted the web server, every user with
