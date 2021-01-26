@@ -4,6 +4,11 @@ docname: using/examples/user_types
 images: {}
 path: /using-examples-user-types
 title: Multiple Actor Types
+description: |
+    Applications may have multiple types of users. Frequently, internal user
+    accounts for support reps, operations teams, or testing. oso policies can
+    recognize different user types & apply different rules when necessary,
+    avoiding the need for multiple authorization systems.
 ---
 
 # Multiple Actor Types

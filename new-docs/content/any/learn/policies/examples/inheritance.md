@@ -4,6 +4,10 @@ docname: using/examples/inheritance
 images: {}
 path: /using-examples-inheritance
 title: Resources with Inheritance
+description: |
+    Some applications have common authorization rules that apply to many
+    different types of resources. oso policies make it possible to share rules
+    across related resource types, and override them as needed.
 ---
 
 # Resources with Inheritance
