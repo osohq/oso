@@ -15,5 +15,5 @@ installation: |
 submitted_by: submitted_by
 endswith: end_with?
 endswithURL: >
-   [the `String#end_with` method.](https://ruby-doc.org/core/String.html#method-i-end_with-3F)
+   [the `String#end_with` method](https://ruby-doc.org/core/String.html#method-i-end_with-3F)
 ---

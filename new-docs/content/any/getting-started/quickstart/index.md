@@ -72,7 +72,7 @@ allow an **actor** to perform an **action** on a **resource**.
   ```
 
   Note that the call to **{{< exampleGet "endswith" >}}** is actually calling
-  out to {{< exampleGet "endswithURL" >}} The actor value passed to oso is a
+  out to {{< exampleGet "endswithURL" >}}. The actor value passed to oso is a
   string, and oso allows us to call methods on it.
 {{< /callout >}}
 
@@ -127,7 +127,7 @@ including expenses submitted by others.
 
   ```polar
   allow(actor: String, "GET", expense: Expense) if
-      expense.{{< exampleGet "submitted_by" "submitted_by" >}} = actor;
+      expense.{{< exampleGet "submitted_by" >}} = actor;
   ```
 {{< /callout >}}
 

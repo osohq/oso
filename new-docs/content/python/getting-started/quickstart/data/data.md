@@ -13,5 +13,5 @@ installation: |
 submitted_by: submitted_by
 endswith: endswith
 endswithURL: >
-   [the `str.endswith` method.](https://docs.python.org/3/library/stdtypes.html#str.endswith)
+   [the `str.endswith` method](https://docs.python.org/3/library/stdtypes.html#str.endswith)
 ---
