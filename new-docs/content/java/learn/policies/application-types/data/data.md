@@ -9,12 +9,8 @@ userParams: "\"alice\", true"
 
 classMethodExample: |
   ```java
-  public class User {
-      ...
-
-      public static List<String> superusers() {
-          return List.of("alice", "bhavik", "clarice");
-      }
+  public static List<String> superusers() {
+      return List.of("alice", "bhavik", "clarice");
   }
 
   public static void main(String[] args) {
