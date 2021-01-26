@@ -46,7 +46,7 @@ java-test:
 		javac -classpath "../languages/java/oso/target/*:." Test.java && \
 		java -classpath "../languages/java/oso/target/*:." -enableassertions Test
 
-go-test:
+go-test: rust-build
 	$(MAKE) -C languages/go test
 
 # Ensure jq is installed.
