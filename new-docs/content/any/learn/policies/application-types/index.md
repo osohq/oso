@@ -1,13 +1,14 @@
 ---
 title: Application types
 weight: 2
+any: false
 ---
 
 # Application Types
 
-Any type defined in an application can be passed into oso, and its
-attributes may be accessed from within a policy. Using application types
-make it possible to take advantage of an app’s existing domain model. For example:
+Any type defined in an application can be passed into oso, and its attributes
+may be accessed from within a policy. Using application types make it possible
+to take advantage of an app’s existing domain model. For example:
 
 ```polar
 allow(actor, action, resource) if actor.{{% exampleGet "isAdmin" %}};
@@ -392,7 +393,6 @@ or the boolean value `false`. It is intended to be used with application
 methods that return a null value.
 
 ## Summary
-
 
 * **Application types** and their associated application data are available
   within policies.
