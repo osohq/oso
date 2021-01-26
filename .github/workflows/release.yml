@@ -126,7 +126,7 @@ jobs:
         with:
           name: oso_static_library
       - name: Copy specs into go test package.
-        run: cp -r tests/spec languages/go/tests/spec
+        run: cp -r test/spec languages/go/tests/spec
       - name: Copy libraries into go package.
         run: |
           mkdir -p languages/go/native
