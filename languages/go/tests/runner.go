@@ -27,6 +27,72 @@ var CLASSES = map[string]reflect.Type{
 	"Comparable":      reflect.TypeOf(Comparable{}),
 }
 
+func setStructFields(instance reflect.Value, args []interface{}) error {
+	for idx, arg := range args {
+		f := instance.Field(idx)
+		if !f.IsValid() {
+			return fmt.Errorf("Cannot set field #%v", idx)
+		}
+		err := oso.SetFieldTo(f, arg)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func setMapFields(instance reflect.Value, kwargs map[string]interface{}) error {
+	for k, v := range kwargs {
+		f := instance.FieldByName(k)
+		if !f.IsValid() {
+			return fmt.Errorf("Cannot set field %v", k)
+		}
+		err := oso.SetFieldTo(f, v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// InstantiateClass sets the fields of a new instance of `class` to those provided in `args` and `kwargs`
+func instantiateClass(class reflect.Type, args []interface{}, kwargs map[string]interface{}) (*interface{}, error) {
+	instancePtr := reflect.New(class)
+	instance := instancePtr.Elem()
+
+	switch class.Kind() {
+	case reflect.Struct:
+		err := setStructFields(instance, args)
+		if err != nil {
+			return nil, err
+		}
+		err = setMapFields(instance, kwargs)
+		if err != nil {
+			return nil, err
+		}
+	case reflect.Array, reflect.Slice:
+		if len(kwargs) != 0 {
+			return nil, fmt.Errorf("Cannot assign kwargs to a class of type: %s", class.Kind())
+		}
+		err := oso.SetFieldTo(instance, args)
+		if err != nil {
+			return nil, err
+		}
+	case reflect.Map:
+		if len(args) != 0 {
+			return nil, fmt.Errorf("Cannot assign args to a class of type: %s", class.Kind())
+		}
+		err := oso.SetFieldTo(instance, kwargs)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("Cannot instantiate a class of type: %s", class.Kind())
+	}
+	instanceInterface := instance.Interface()
+	return &instanceInterface, nil
+}
+
 type TestCase struct {
 	// Raw         string                   `yaml:omit`
 	Name        string   `yaml:"name"`
@@ -96,7 +162,7 @@ func toInput(o oso.Polar, v interface{}, t *testing.T) interface{} {
 			if vMap["kwargs"] != nil {
 				kwargs = vMap["kwargs"].(map[string]interface{})
 			}
-			instance, err := oso.InstantiateClass(class, args, kwargs)
+			instance, err := instantiateClass(class, args, kwargs)
 			if err != nil {
 				t.Fatal(err)
 			}

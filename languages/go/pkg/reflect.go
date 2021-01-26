@@ -9,7 +9,7 @@ func String(s string) *string {
 	return &s
 }
 
-func setFieldTo(field reflect.Value, input interface{}) error {
+func SetFieldTo(field reflect.Value, input interface{}) error {
 	// todo: explain how this works and why.
 	if !field.CanSet() {
 		return fmt.Errorf("cannot set field")
@@ -23,7 +23,7 @@ func setFieldTo(field reflect.Value, input interface{}) error {
 			return fmt.Errorf("Cannot assign to array from %s", reflect.TypeOf(input).Kind())
 		}
 		for idx, v := range inputArray {
-			err := setFieldTo(field.Index(idx), v)
+			err := SetFieldTo(field.Index(idx), v)
 			if err != nil {
 				return err
 			}
@@ -34,7 +34,7 @@ func setFieldTo(field reflect.Value, input interface{}) error {
 		field.Set(reflect.MakeMap(field.Type()))
 		for k, v := range inputMap {
 			entry := reflect.New(field.Type().Elem())
-			err := setFieldTo(entry, v)
+			err := SetFieldTo(entry, v)
 			if err != nil {
 				return err
 			}
@@ -42,7 +42,7 @@ func setFieldTo(field reflect.Value, input interface{}) error {
 		}
 	case reflect.Ptr:
 		deref := field.Elem()
-		return setFieldTo(deref, input)
+		return SetFieldTo(deref, input)
 	case reflect.Bool:
 		field.SetBool(reflect.ValueOf(input).Convert(fieldType).Bool())
 	case reflect.Float32, reflect.Float64:
@@ -65,70 +65,4 @@ func setFieldTo(field reflect.Value, input interface{}) error {
 		}
 	}
 	return nil
-}
-
-func setStructFields(instance reflect.Value, args []interface{}) error {
-	for idx, arg := range args {
-		f := instance.Field(idx)
-		if !f.IsValid() {
-			return fmt.Errorf("Cannot set field #%v", idx)
-		}
-		err := setFieldTo(f, arg)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func setMapFields(instance reflect.Value, kwargs map[string]interface{}) error {
-	for k, v := range kwargs {
-		f := instance.FieldByName(k)
-		if !f.IsValid() {
-			return fmt.Errorf("Cannot set field %v", k)
-		}
-		err := setFieldTo(f, v)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// InstantiateClass sets the fields of a new instance of `class` to those provided in `args` and `kwargs`
-func InstantiateClass(class reflect.Type, args []interface{}, kwargs map[string]interface{}) (*interface{}, error) {
-	instancePtr := reflect.New(class)
-	instance := instancePtr.Elem()
-
-	switch class.Kind() {
-	case reflect.Struct:
-		err := setStructFields(instance, args)
-		if err != nil {
-			return nil, err
-		}
-		err = setMapFields(instance, kwargs)
-		if err != nil {
-			return nil, err
-		}
-	case reflect.Array, reflect.Slice:
-		if len(kwargs) != 0 {
-			return nil, fmt.Errorf("Cannot assign kwargs to a class of type: %s", class.Kind())
-		}
-		err := setFieldTo(instance, args)
-		if err != nil {
-			return nil, err
-		}
-	case reflect.Map:
-		if len(args) != 0 {
-			return nil, fmt.Errorf("Cannot assign args to a class of type: %s", class.Kind())
-		}
-		err := setFieldTo(instance, kwargs)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("Cannot instantiate a class of type: %s", class.Kind())
-	}
-	instanceInterface := instance.Interface()
-	return &instanceInterface, nil
 }
