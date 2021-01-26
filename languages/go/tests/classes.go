@@ -1,244 +1,244 @@
 package oso
 
-import (
-	"fmt"
-	"reflect"
+// import (
+// 	"fmt"
+// 	"reflect"
 
-	oso "github.com/osohq/oso/languages/go/pkg"
-)
+// 	oso "github.com/osohq/oso/languages/go/pkg"
+// )
 
-type UnitClass struct{}
+// type UnitClass struct{}
 
-func (u UnitClass) String() string {
-	return "UnitClass"
-}
+// func (u UnitClass) String() string {
+// 	return "UnitClass"
+// }
 
-func (u UnitClass) New() UnitClass {
-	return UnitClass{}
-}
+// func (u UnitClass) New() UnitClass {
+// 	return UnitClass{}
+// }
 
-type IterableClass struct {
-	Elems []int
-}
+// type IterableClass struct {
+// 	Elems []int
+// }
 
-func (ic IterableClass) New(elems []int) IterableClass {
-	return IterableClass{Elems: elems}
-}
+// func (ic IterableClass) New(elems []int) IterableClass {
+// 	return IterableClass{Elems: elems}
+// }
 
-func (ic IterableClass) Sum() int {
-	res := 0
-	for _, v := range ic.Elems {
-		res += v
-	}
-	return res
-}
-
-func (ic IterableClass) Iter() chan interface{} {
-	c := make(chan interface{})
-	go func() {
-		for _, v := range ic.Elems {
-			c <- v
-		}
-		close(c)
-	}()
-	return c
-}
-
-type ValueFactory struct {
-	StringAttr string
-	ListAttr   []int
-	DictAttr   map[string]int
-	InnerClass struct{}
-}
-
-func (vf ValueFactory) New() ValueFactory {
-	return ValueFactory{}
-}
-
-func NewValueFactory() ValueFactory {
-	return ValueFactory{
-		StringAttr: "abc",
-		ListAttr:   []int{1, 2, 3},
-		DictAttr:   map[string]int{"a": 1, "b": 2},
-	}
-}
-
-func (vf ValueFactory) GetNil() *int {
-	return nil
-}
-
-func (vf ValueFactory) GetString() string {
-	return NewValueFactory().StringAttr
-}
-
-func (vf ValueFactory) GetList() []int {
-	return NewValueFactory().ListAttr
-}
-
-func (vf ValueFactory) GetDict() map[string]int {
-	return NewValueFactory().DictAttr
-}
-
-func (vf ValueFactory) GetClass() error {
-	return fmt.Errorf("unimplemented")
-}
-
-func (vf ValueFactory) GetInstance() error {
-	// TODO: What does this return?
-	return fmt.Errorf("unimplemented")
-}
-
-func (vf ValueFactory) GetType() reflect.Type {
-	return reflect.TypeOf(vf.InnerClass)
-}
-
-type Constructor map[string]interface{}
-
-func (u Constructor) String() string {
-	return "Constructor"
-}
-
-// func NewConstructor(args ...interface{}) Constructor {
-// 	Args := make([]interface{}, len(args))
-// 	for idx, v := range args {
-// 		Args[idx] = v
+// func (ic IterableClass) Sum() int {
+// 	res := 0
+// 	for _, v := range ic.Elems {
+// 		res += v
 // 	}
-// 	return Constructor{
-// 		Args:   Args,
-// 		Kwargs: make(map[string]interface{}),
+// 	return res
+// }
+
+// func (ic IterableClass) Iter() chan interface{} {
+// 	c := make(chan interface{})
+// 	go func() {
+// 		for _, v := range ic.Elems {
+// 			c <- v
+// 		}
+// 		close(c)
+// 	}()
+// 	return c
+// }
+
+// type ValueFactory struct {
+// 	StringAttr string
+// 	ListAttr   []int
+// 	DictAttr   map[string]int
+// 	InnerClass struct{}
+// }
+
+// func (vf ValueFactory) New() ValueFactory {
+// 	return ValueFactory{}
+// }
+
+// func NewValueFactory() ValueFactory {
+// 	return ValueFactory{
+// 		StringAttr: "abc",
+// 		ListAttr:   []int{1, 2, 3},
+// 		DictAttr:   map[string]int{"a": 1, "b": 2},
 // 	}
 // }
 
-// func (c Constructor) numArgs() int {
-// 	return len(c.Args)
+// func (vf ValueFactory) GetNil() *int {
+// 	return nil
 // }
 
-func (c Constructor) NumKwargs() int {
-	return len(map[string]interface{}(c))
-}
+// func (vf ValueFactory) GetString() string {
+// 	return NewValueFactory().StringAttr
+// }
 
-type MethodVariants struct {
-}
+// func (vf ValueFactory) GetList() []int {
+// 	return NewValueFactory().ListAttr
+// }
 
-func (u MethodVariants) New() MethodVariants {
-	return MethodVariants{}
-}
+// func (vf ValueFactory) GetDict() map[string]int {
+// 	return NewValueFactory().DictAttr
+// }
 
-func (u MethodVariants) String() string {
-	return "MethodVariants"
-}
+// func (vf ValueFactory) GetClass() error {
+// 	return fmt.Errorf("unimplemented")
+// }
 
-func (m MethodVariants) ClassMethodReturnsString() string {
-	return "abc"
-}
+// func (vf ValueFactory) GetInstance() error {
+// 	// TODO: What does this return?
+// 	return fmt.Errorf("unimplemented")
+// }
 
-func (m MethodVariants) SumInputArgs(args ...int) int {
-	sum := 0
-	for _, arg := range args {
-		sum += arg
-	}
-	return sum
-}
+// func (vf ValueFactory) GetType() reflect.Type {
+// 	return reflect.TypeOf(vf.InnerClass)
+// }
 
-func (MethodVariants) GetIter() oso.Iterator {
-	return IterableClass{Elems: NewValueFactory().ListAttr}
-}
+// type Constructor map[string]interface{}
 
-func (MethodVariants) GetEmptyIter() oso.Iterator {
-	return IterableClass{}
-}
+// func (u Constructor) String() string {
+// 	return "Constructor"
+// }
 
-//     def is_key_in_kwargs(self, key, **kwargs):
-//         return key in kwargs
+// // func NewConstructor(args ...interface{}) Constructor {
+// // 	Args := make([]interface{}, len(args))
+// // 	for idx, v := range args {
+// // 		Args[idx] = v
+// // 	}
+// // 	return Constructor{
+// // 		Args:   Args,
+// // 		Kwargs: make(map[string]interface{}),
+// // 	}
+// // }
 
-//     def set_x_or_y(self, x=1, y=2):
-//         return [x, y]
+// // func (c Constructor) numArgs() int {
+// // 	return len(c.Args)
+// // }
 
-//     def get_generator(self):
-//         yield from iter(ValueFactory.list_attr)
+// func (c Constructor) NumKwargs() int {
+// 	return len(map[string]interface{}(c))
+// }
 
-//     def get_empty_generator(self):
-//         yield from iter([])
+// type MethodVariants struct {
+// }
 
-// TODO: I don't think these make sense. Maybe as interfaces?
-type ParentClass struct{}
+// func (u MethodVariants) New() MethodVariants {
+// 	return MethodVariants{}
+// }
 
-// class ParentClass:
-//     def inherit_parent(self):
-//         return "parent"
+// func (u MethodVariants) String() string {
+// 	return "MethodVariants"
+// }
 
-//     def override_parent(self):
-//         return "parent"
+// func (m MethodVariants) ClassMethodReturnsString() string {
+// 	return "abc"
+// }
 
-type ChildClass struct{}
+// func (m MethodVariants) SumInputArgs(args ...int) int {
+// 	sum := 0
+// 	for _, arg := range args {
+// 		sum += arg
+// 	}
+// 	return sum
+// }
 
-// class ChildClass(ParentClass):
-//     def inherit_child(self):
-//         return "child"
+// func (MethodVariants) GetIter() oso.Iterator {
+// 	return IterableClass{Elems: NewValueFactory().ListAttr}
+// }
 
-//     def override_parent(self):
-//         return "child"
+// func (MethodVariants) GetEmptyIter() oso.Iterator {
+// 	return IterableClass{}
+// }
 
-type GrandchildClass struct{}
+// //     def is_key_in_kwargs(self, key, **kwargs):
+// //         return key in kwargs
 
-// class GrandchildClass(ChildClass):
-//     def inherit_grandchild(self):
-//         return "grandchild"
+// //     def set_x_or_y(self, x=1, y=2):
+// //         return [x, y]
 
-//     def override_parent(self):
-//         return "grandchild"
+// //     def get_generator(self):
+// //         yield from iter(ValueFactory.list_attr)
 
-type Animal struct {
-	Species string
-	Genus   string
-	Family  string
-}
+// //     def get_empty_generator(self):
+// //         yield from iter([])
 
-func (a Animal) String() string {
-	return fmt.Sprintf("Animal { %s, %s, %s }", a.Species, a.Genus, a.Family)
-}
+// // TODO: I don't think these make sense. Maybe as interfaces?
+// type ParentClass struct{}
 
-type ImplementsEq struct {
-	Val int
-}
+// // class ParentClass:
+// //     def inherit_parent(self):
+// //         return "parent"
 
-func (u ImplementsEq) New(val int) ImplementsEq {
-	return ImplementsEq{Val: val}
-}
+// //     def override_parent(self):
+// //         return "parent"
 
-func (u ImplementsEq) String() string {
-	return fmt.Sprintf("ImplementsEq { %v }", u.Val)
-}
+// type ChildClass struct{}
 
-func (left ImplementsEq) Equal(right oso.Comparer) bool {
-	return left.Val == right.(ImplementsEq).Val
-}
-func (left ImplementsEq) Lt(right oso.Comparer) bool {
-	panic("unsupported")
-}
+// // class ChildClass(ParentClass):
+// //     def inherit_child(self):
+// //         return "child"
 
-type Comparable struct {
-	Val int
-}
+// //     def override_parent(self):
+// //         return "child"
 
-func (u Comparable) New(val int) Comparable {
-	return Comparable{Val: val}
-}
+// type GrandchildClass struct{}
 
-func (u Comparable) String() string {
-	return fmt.Sprintf("Comparable { %v }", u.Val)
-}
+// // class GrandchildClass(ChildClass):
+// //     def inherit_grandchild(self):
+// //         return "grandchild"
 
-func (a Comparable) Equal(b oso.Comparer) bool {
-	if other, ok := b.(Comparable); ok {
-		return a.Val == other.Val
-	}
-	panic(fmt.Sprintf("cannot compare Comparable with %v", b))
-}
+// //     def override_parent(self):
+// //         return "grandchild"
 
-func (a Comparable) Lt(b oso.Comparer) bool {
-	if other, ok := b.(Comparable); ok {
-		return a.Val < other.Val
-	}
-	panic(fmt.Sprintf("cannot compare Comparable with %v", b))
-}
+// type Animal struct {
+// 	Species string
+// 	Genus   string
+// 	Family  string
+// }
+
+// func (a Animal) String() string {
+// 	return fmt.Sprintf("Animal { %s, %s, %s }", a.Species, a.Genus, a.Family)
+// }
+
+// type ImplementsEq struct {
+// 	Val int
+// }
+
+// func (u ImplementsEq) New(val int) ImplementsEq {
+// 	return ImplementsEq{Val: val}
+// }
+
+// func (u ImplementsEq) String() string {
+// 	return fmt.Sprintf("ImplementsEq { %v }", u.Val)
+// }
+
+// func (left ImplementsEq) Equal(right oso.Comparer) bool {
+// 	return left.Val == right.(ImplementsEq).Val
+// }
+// func (left ImplementsEq) Lt(right oso.Comparer) bool {
+// 	panic("unsupported")
+// }
+
+// type Comparable struct {
+// 	Val int
+// }
+
+// func (u Comparable) New(val int) Comparable {
+// 	return Comparable{Val: val}
+// }
+
+// func (u Comparable) String() string {
+// 	return fmt.Sprintf("Comparable { %v }", u.Val)
+// }
+
+// func (a Comparable) Equal(b oso.Comparer) bool {
+// 	if other, ok := b.(Comparable); ok {
+// 		return a.Val == other.Val
+// 	}
+// 	panic(fmt.Sprintf("cannot compare Comparable with %v", b))
+// }
+
+// func (a Comparable) Lt(b oso.Comparer) bool {
+// 	if other, ok := b.(Comparable); ok {
+// 		return a.Val < other.Val
+// 	}
+// 	panic(fmt.Sprintf("cannot compare Comparable with %v", b))
+// }
