@@ -9,7 +9,8 @@ users a role for a widget like “OWNER” or “USER”. Using the roles librar
 can generate a `WidgetRole` model which allows you to assign a user a role for
 a `Widget`. The schema for this new model’s table looks like this:
 
-![Schema diagram showing a WidgetRole relating a User and a Widget](/img/roles.svg)
+![Schema diagram showing a WidgetRole relating a User and a
+Widget](img/roles.svg)
 
 The `WidgetRole` table is a join table between `User` and `Widget` that
 contains additional `id` (Integer) and `name` (String) attributes.
