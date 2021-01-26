@@ -51,6 +51,10 @@ type ValueFactory struct {
 	InnerClass struct{}
 }
 
+func (vf ValueFactory) New() ValueFactory {
+	return ValueFactory{}
+}
+
 func NewValueFactory() ValueFactory {
 	return ValueFactory{
 		StringAttr: "abc",
@@ -114,6 +118,10 @@ func (c Constructor) NumKwargs() int {
 }
 
 type MethodVariants struct {
+}
+
+func (u MethodVariants) New() MethodVariants {
+	return MethodVariants{}
 }
 
 func (u MethodVariants) String() string {
@@ -194,6 +202,10 @@ type ImplementsEq struct {
 	Val int
 }
 
+func (u ImplementsEq) New(val int) ImplementsEq {
+	return ImplementsEq{Val: val}
+}
+
 func (u ImplementsEq) String() string {
 	return fmt.Sprintf("ImplementsEq { %v }", u.Val)
 }
@@ -207,6 +219,10 @@ func (left ImplementsEq) Lt(right oso.Comparer) bool {
 
 type Comparable struct {
 	Val int
+}
+
+func (u Comparable) New(val int) Comparable {
+	return Comparable{Val: val}
 }
 
 func (u Comparable) String() string {
