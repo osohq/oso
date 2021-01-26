@@ -112,3 +112,9 @@ lang = "rust"
 
 [build]
   writeStats = true
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.extensions]
+      strikethrough = true
+      table = true
