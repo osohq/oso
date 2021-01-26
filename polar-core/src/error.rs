@@ -52,7 +52,8 @@ impl PolarError {
                 | ParseError::UnrecognizedEOF { loc }
                 | ParseError::UnrecognizedToken { loc, .. }
                 | ParseError::ExtraToken { loc, .. }
-                | ParseError::WrongValueType { loc, .. } => {
+                | ParseError::WrongValueType { loc, .. }
+                | ParseError::ReservedWord { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),

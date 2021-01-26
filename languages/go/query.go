@@ -85,29 +85,30 @@ func (q *Query) Next() (*map[Symbol]interface{}, error) {
 }
 
 func (q Query) handleMakeExternal(event QueryEventMakeExternal) error {
-	if constructor, ok := event.Constructor.Value.ValueVariant.(ValueCall); ok {
-		args := make([]interface{}, len(constructor.Args))
-		for idx, arg := range constructor.Args {
-			converted, err := q.host.toGo(arg)
-			if err != nil {
-				return err
-			}
-			args[idx] = converted
-		}
-		kwargs := make(map[string]interface{})
-		if constructor.Kwargs != nil {
-			for k, v := range *constructor.Kwargs {
-				converted, err := q.host.toGo(v)
-				if err != nil {
-					return err
-				}
-				kwargs[string(k)] = converted
-			}
-		}
-		_, err := q.host.makeInstance(string(constructor.Name), args, kwargs, event.InstanceId)
-		return err
-	}
-	return &InvalidConstructorError{ctor: event.Constructor.Value}
+	return fmt.Errorf("new operator is not supported in Go")
+	// if constructor, ok := event.Constructor.Value.ValueVariant.(ValueCall); ok {
+	// 	args := make([]interface{}, len(constructor.Args))
+	// 	for idx, arg := range constructor.Args {
+	// 		converted, err := q.host.toGo(arg)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		args[idx] = converted
+	// 	}
+	// 	kwargs := make(map[string]interface{})
+	// 	if constructor.Kwargs != nil {
+	// 		for k, v := range *constructor.Kwargs {
+	// 			converted, err := q.host.toGo(v)
+	// 			if err != nil {
+	// 				return err
+	// 			}
+	// 			kwargs[string(k)] = converted
+	// 		}
+	// 	}
+	// 	_, err := q.host.makeInstance(string(constructor.Name), args, kwargs, event.InstanceId)
+	// 	return err
+	// }
+	// return &InvalidConstructorError{ctor: event.Constructor.Value}
 }
 
 func (q Query) handleExternalCall(event QueryEventExternalCall) error {
@@ -156,8 +157,8 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 			callArgs := make([]reflect.Value, numIn)
 			for i := 0; i < end; i++ {
 				arg := args[i]
-				callArgs[i] = reflect.New(method.Type().In(i))
-				err := setFieldTo(callArgs[i], arg)
+				callArgs[i] = reflect.New(method.Type().In(i)).Elem()
+				err := SetFieldTo(callArgs[i], arg)
 				if err != nil {
 					return &ErrorWithAdditionalInfo{
 						Inner: &InvalidCallError{instance: instance, field: string(event.Attribute)},
@@ -168,7 +169,7 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 			if method.Type().IsVariadic() {
 				remainingArgs := args[end:]
 				callArgs[end] = reflect.New(method.Type().In(end)).Elem()
-				err := setFieldTo(callArgs[end], remainingArgs)
+				err := SetFieldTo(callArgs[end], remainingArgs)
 				if err != nil {
 					return &ErrorWithAdditionalInfo{
 						Inner: &InvalidCallError{instance: instance, field: string(event.Attribute)},
