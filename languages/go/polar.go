@@ -25,7 +25,7 @@ func NewPolar() *Polar {
 		host:     NewHost(ffiPolar),
 	}
 
-	err := polar.RegisterConstant(nil, "nil")
+	err := polar.RegisterConstant(none{}, "nil")
 	if err != nil {
 		fmt.Printf(err.Error())
 		return nil
