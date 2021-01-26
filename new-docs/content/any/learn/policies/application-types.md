@@ -516,18 +516,10 @@ methods that return a null value.
 
 
 * **Application types** and their associated application data are available
-within policies.
-
-
+  within policies.
 * Types can be **registered** with oso, in order to:
-
-    
-        * Create instances of application types in policies
-
-
-        * Leverage the inheritance structure of application types with **specialized
+  * Create instances of application types in policies
+  * Leverage the inheritance structure of application types with **specialized
     rules**, supporting more sophisticated access control models.
-
-
 * You can use **built-in methods** on primitive types & literals like strings
-and dictionaries, exactly as if they were application types.
+  and dictionaries, exactly as if they were application types.
