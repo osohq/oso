@@ -29,8 +29,8 @@ func TestDeserialize(t *testing.T) {
 	jsonTerm := []byte(`{
         "Call": {
             "name": "foo",
-            "args": [{"Number": {"Integer": 0}}],
-            "kwargs": {"bar": {"Number": {"Integer": 1}}}
+            "args": [{"value": {"Number": {"Integer": 0}}}],
+            "kwargs": {"bar": {"value": {"Number": {"Integer": 1}}}}
         }
 	}`)
 
