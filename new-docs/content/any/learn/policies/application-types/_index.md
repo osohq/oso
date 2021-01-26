@@ -2,154 +2,33 @@
 title: Application types
 weight: 2
 ---
-<!-- 
-TODO: convert into language-specific guides -->
 
-<!-- JAVA EXAMPLES -->
 # Application Types
 
 Any type defined in an application can be passed into oso, and its
 attributes may be accessed from within a policy. Using application types
 make it possible to take advantage of an app’s existing domain model. For example:
 
-Python
-
-```
-allow(actor, action, resource) if actor.is_admin;
+```polar
+allow(actor, action, resource) if actor.{{% exampleGet "isAdmin" %}};
 ```
 
-The above rule expects the `actor` variable to be a Python instance with the attribute `is_admin`.
-The Python instance is passed into oso with a call to `is_allowed()`:
+The above rule expects the `actor` variable to be a {{% exampleGet "langName"
+%}} {{% exampleGet "instance" %}} with the field `{{% exampleGet "isAdmin"
+%}}`. The {{% exampleGet "langName" %}} {{% exampleGet "instance" %}} is passed
+into oso with a call to `Oso.{{% exampleGet "isAllowed" %}}()`:
 
-```
-class User:
-    def __init__(self, name, is_admin):
-        self.name = name
-        self.is_admin = is_admin
+{{% exampleGet "userClass" %}}
 
-user = User("alice", True)
-assert(oso.is_allowed(user, "foo", "bar"))
-```
-
-The code above provides a `User` object as the *actor* for our `allow` rule. Since `User` has an attribute
-called `is_admin`, it is evaluated by the policy and found to be true.
-
-Ruby
-
-```
-allow(actor, action, resource) if actor.is_admin;
-```
-
-The above rule expects the `actor` variable to be a Ruby instance with the attribute `is_admin`.
-The Ruby instance is passed into oso with a call to `Oso#allowed?`:
-
-```
-class User
-  attr_reader :name
-  attr_reader :is_admin
-
-  def initialize(name, is_admin:)
-    @name = name
-    @is_admin = is_admin
-  end
-end
-
-user = User.new("alice", is_admin: true)
-raise "should be allowed" unless OSO.allowed?(actor: user, action: "foo", resource: "bar")
-```
-
-The code above provides a `User` object as the *actor* for our `allow` rule. Since `User` has an attribute
-called `is_admin`, it is evaluated by the policy and found to be true.
-
-Java
-
-```
-allow(actor, action, resource) if actor.isAdmin;
-```
-
-The above rule expects the `actor` variable to be a Java instance with the field `isAdmin`.
-The Java instance is passed into oso with a call to `Oso.isAllowed`:
-
-```
-public class User {
-    public boolean isAdmin;
-    public String name;
-
-    public User(String name, boolean isAdmin) {
-        this.isAdmin = isAdmin;
-        this.name = name;
-    }
-
-    public static void main(String[] args) {
-        User user = new User("alice", true);
-        assert oso.isAllowed(user, "foo", "bar");
-    }
-}
-```
-
-The code above provides a `User` object as the *actor* for our `allow` rule. Since `User` has a field
-called `isAdmin`, it is evaluated by the Polar rule and found to be true.
-
-Node.js
-
-```
-allow(actor, action, resource) if actor.isAdmin;
-```
-
-The above rule expects the `actor` variable to be a JavaScript object
-with an `isAdmin` field. The JavaScript object is passed into oso
-with a call to `Oso.isAllowed`:
-
-```
-class User {
-  constructor (name, isAdmin) {
-    this.name = name;
-    this.isAdmin = isAdmin;
-  }
-}
-
-const user = new User("alice", true);
-
-(async () => {
-  const decision = await oso.isAllowed(user, 'foo', 'bar');
-  assert(decision);
-})();
-```
-
-The code above provides a `User` instance as the *actor* for our
-`allow` rule. Since `User` has a field called `isAdmin`, it is
-evaluated by the Polar rule and found to be true.
-
-Rust
-
-```
-allow(actor, action, resource) if actor.is_admin;
-```
-
-The above rule expects the `actor` variable to be a Rust instance with the attribute `is_admin`.
-The Rust instance is passed into oso with a call to `oso.is_allowed`:
-
-```
-#[derive(Clone, PolarClass)]
-struct User {
-    #[polar(attribute)]
-    name: String,
-    #[polar(attribute)]
-    is_admin: bool,
-}
-oso.register_class(User::get_polar_class())?;
-let user = User { name: "alice".to_string(), is_admin: true };
-assert!(oso.is_allowed(user, "foo", "bar")?);
-```
-
-The code above provides a `User` object as the *actor* for our `allow` rule. Since `User` has an attribute
-called `is_admin`, it is evaluated by the policy and found to be true.
+The code above provides a `User` object as the *actor* for our `allow` rule.
+Since `User` has a field called `{{% exampleGet "isAdmin" %}}`, it is checked
+during evaluation of the Polar rule and found to be true.
 
 In addition to accessing attributes, you can also call methods on application
 instances in a policy:
 
-```
-allow(actor, action, resource) if actor.isAdminOf(resource);
+```polar
+allow(actor, action, resource) if actor.{{% exampleGet "isAdminOf" %}}(resource);
 ```
 
 If the method takes arguments, they must currently be supplied as
