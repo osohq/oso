@@ -1,8 +1,8 @@
-.PHONY: test rust-test rust-build python-build python-test python-flask-build \
+.PHONY: test go-test rust-test rust-build python-build python-test python-flask-build \
 	python-flask-test python-django-test python-sqlalchemy-test ruby-test \
 	java-test docs-test fmt clippy lint wasm-build wasm-test js-test
 
-test: rust-test python-test ruby-test java-test python-flask-test \
+test: go-test rust-test python-test ruby-test java-test python-flask-test \
 	python-django-test python-sqlalchemy-test wasm-test js-test
 
 rust-test:
@@ -45,6 +45,9 @@ java-test:
 	cd test && \
 		javac -classpath "../languages/java/oso/target/*:." Test.java && \
 		java -classpath "../languages/java/oso/target/*:." -enableassertions Test
+
+go-test:
+	$(MAKE) -C languages/go test
 
 # Ensure jq is installed.
 $(if $(shell command -v jq 2> /dev/null),,$(error Please install jq <https://stedolan.github.io/jq/>))
