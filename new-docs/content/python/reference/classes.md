@@ -5,65 +5,80 @@ title: Application Data
 
 ## Working with Python Objects
 
-oso’s Python authorization library allows you to write policy rules over Python objects directly.
-This document explains how different types of Python objects can be used in oso policies.
+oso’s Python authorization library allows you to write policy rules over Python
+objects directly. This document explains how different types of Python objects
+can be used in oso policies.
 
-**NOTE**: More detailed examples of working with application classes can be found in Policy Examples.
+{{< callout "Note" "blue" >}}
+  More detailed examples of working with application classes can be found in
+  [Policy Examples](learn/policies/examples).
+{{< /callout >}}
 
 ### Class Instances
 
-You can pass an instance of any Python class into oso and access its methods and fields from your policy (see Application Types).
+You can pass an instance of any Python class into oso and access its methods
+and fields from your policy (see [Application
+Types](learn/policies/application-types)).
 
-Python instances can be constructed from inside an oso policy using the New operator if the Python class has been **registered** using
-either the `register_class()` method or the `polar_class()` decorator.
-An example of this can be found here.
+<!-- TODO(gj): link to API docs. -->
+Python instances can be constructed from inside an oso policy using the
+[`new`](polar-syntax#new) operator if the Python class has been **registered**
+using either the `register_class()` method or the `polar_class()` decorator. An
+example of this can be found [here](learn/policies/application-types).
 
 ### Numbers and Booleans
 
-Polar supports integer and floating point real numbers, as well as booleans (see Primitive Types).
-These map to the Python `int`, `float`, and `bool` types.
+Polar supports integer and floating point real numbers, as well as booleans
+(see [Primitive Types](polar-syntax#primitive-types)). These map to the Python
+`int`, `float`, and `bool` types.
 
 ### Strings
 
-Python strings are mapped to Polar Strings. Python’s string methods may be accessed from policies:
+Python strings are mapped to Polar [strings](polar-syntax#strings). Python’s
+string methods may be accessed from policies:
 
-```
+```polar
 allow(actor, action, resource) if actor.username.endswith("example.com");
 ```
 
-```
+```python
 user = User()
 user.username = "alice@example.com"
 assert(oso.is_allowed(user, "foo", "bar))
 ```
 
-**WARNING**: Polar does not support methods that mutate strings in place. E.g. `capitalize()` will have no effect on
-a string in Polar.
+{{< callout "Warning" "orange" >}}
+  Polar does not support methods that mutate strings in place. E.g.,
+  `capitalize()` will have no effect on a string in Polar.
+{{< /callout >}}
 
 ### Lists
 
-Python lists are mapped to Polar Lists. Python’s list methods may be accessed from policies:
+Python lists are mapped to Polar [lists](polar-syntax#lists). Python’s list
+methods may be accessed from policies:
 
-```
+```polar
 allow(actor, action, resource) if actor.groups.index("HR") == 0;
 ```
 
-```
+```python
 user = User()
 user.groups = ["HR", "payroll"]
 assert(oso.is_allowed(user, "foo", "bar"))
 ```
 
-**WARNING**: Polar does not support methods that mutate lists in place. E.g. `reverse()` will have no effect on
-a list in Polar.
+{{< callout "Warning" "orange" >}}
+  Polar does not support methods that mutate lists in place. E.g. `reverse()`
+  will have no effect on a list in Polar.
+{{< /callout >}}
 
 Likewise, lists constructed in Polar may be passed into Python methods:
 
-```
+```polar
 allow(actor, action, resource) if actor.has_groups(["HR", "payroll"]);
 ```
 
-```
+```python
 class User:
    def has_groups(self, groups):
       """ Check if a user has all of the provided groups. """
@@ -77,20 +92,22 @@ user.groups = ["HR", "payroll"]
 assert(oso.is_allowed(user, "foo", "bar))
 ```
 
-There is currently no syntax for random access to a list element within a policy;
-i.e., there is no Polar equivalent of the Python expression `user.groups[1]`.
-To access the elements of a list, you may iterate over it with In (List Membership)
-or destructure it with pattern matching.
+There is currently no syntax for random access to a list element within a
+policy; i.e., there is no Polar equivalent of the Python expression
+`user.groups[1]`. To access the elements of a list, you may iterate over it
+with [the `in` operator](polar-syntax#in-list-membership) or destructure it
+with [pattern matching](polar-syntax#patterns-and-matching).
 
 ### Dictionaries
 
-Python dictionaries are mapped to Polar Dictionaries:
+Python dictionaries are mapped to Polar
+[dictionaries](polar-syntax#dictionaries):
 
-```
+```polar
 allow(actor, action, resource) if actor.roles.project1 = "admin";
 ```
 
-```
+```python
 user = User()
 user.roles = {"project1": "admin"}
 assert(oso.is_allowed(user, "foo", "bar))
@@ -100,15 +117,17 @@ Likewise, dictionaries constructed in Polar may be passed into Python methods.
 
 ### Iterables
 
-You may iterate over any Python [iterable](https://docs.python.org/3/glossary.html#term-iterable),
-such as those yielded by a [generator](https://docs.python.org/3/glossary.html#term-generator),
-using the Polar In (List Membership) operator:
+You may iterate over any Python
+[iterable](https://docs.python.org/3/glossary.html#term-iterable), such as
+those yielded by a
+[generator](https://docs.python.org/3/glossary.html#term-generator), using
+Polar's [`in` operator](polar-syntax#in-list-membership):
 
-```
+```polar
 allow(actor, action, resource) if "payroll" in actor.get_groups();
 ```
 
-```
+```python
 class User:
    def get_groups(self):
       """Generator method to yield user groups."""
@@ -120,15 +139,14 @@ assert(oso.is_allowed(user, "foo", "bar))
 
 ### `None`
 
-The Python value `None` is registered as the Polar constant nil.
-If a Python method can return `None`, you may want to compare the result
-to `nil`:
+The Python value `None` is registered as the Polar constant nil. If a Python
+method can return `None`, you may want to compare the result to `nil`:
 
-```
+```polar
 allow(actor, action, resource) if actor.get_optional() != nil;
 ```
 
-```
+```python
 class User:
    def get_optional(self):
       """Return something or None."""
@@ -141,43 +159,13 @@ user = User()
 assert(oso.is_allowed(user, "foo", "bar))
 ```
 
-<!-- ### Summary
-
 ### Python → Polar Types Summary
 
-| Python type
-
- | Polar type
-
- |     |
- | --- ||  |  |  |  |  ||  |  |  |  |  |  |  |
-| int
-
-                                                            | Integer
-
-                                                                                 |
-| float
-
-                                                          | Float
-
-                                                                                   |
-| bool
-
-                                                           | Boolean
-
-                                                                                 |
-| list
-
-                                                           | List
-
-                                                                                    |
-| dict
-
-                                                           | Dictionary
-
-                                                                              |
-| str
-
-                                                            | String
-
-                                                                                  | -->
+| Python type | Polar type |
+| ----------- | ---------- |
+| int         | Integer    |
+| float       | Float      |
+| bool        | Boolean    |
+| list        | List       |
+| dict        | Dictionary |
+| str         | String     |
