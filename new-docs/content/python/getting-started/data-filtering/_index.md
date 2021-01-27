@@ -1,5 +1,5 @@
 ---
-title: Get data filtered by authorization
+title: Data filtering
 weight: 5
 description: |
     Efficiently enforce authorization over entire collections
