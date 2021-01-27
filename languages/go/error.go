@@ -125,7 +125,7 @@ func (e *UnregisteredInstanceError) Error() string {
 }
 
 func (e *FormattedPolarError) Error() string {
-	return fmt.Sprintf("Error: %#v\n%s", e.Kind, e.Formatted)
+	return fmt.Sprintf("Error: %#v\n%s", e.Kind.ErrorKindVariant, e.Formatted)
 }
 
 type ErrorWithAdditionalInfo struct {

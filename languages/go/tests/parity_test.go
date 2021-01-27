@@ -483,11 +483,12 @@ func (tc TestCase) RunTest(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			name := t.Name()
 			_ = name
-			oPtr := oso.NewPolar()
-			if oPtr == nil {
-				t.Fatal("Failed to setup Polar")
+			var o oso.Polar
+			if oPtr, err := oso.NewPolar(); err != nil {
+				t.Fatalf("Failed to setup Polar: %s", err.Error())
+			} else {
+				o = *oPtr
 			}
-			var o oso.Polar = *oPtr
 			err := tc.setupTest(o, t)
 			if err != nil {
 				t.Fatal(err)
@@ -518,7 +519,7 @@ func (tc TestCase) RunTest(t *testing.T) {
 				queryErr = o.LoadString(*c.Load)
 			}
 
-			results := make([]map[oso.Symbol]interface{}, 0)
+			results := make([]map[string]interface{}, 0)
 			if queryErr == nil {
 				for {
 					v, err := testQuery.Next()
@@ -555,7 +556,7 @@ func (tc TestCase) RunTest(t *testing.T) {
 					for idx, expectedResult := range expectedResults {
 						result := results[idx]
 						for k, v := range expectedResult {
-							if v2, ok := result[oso.Symbol(k)]; ok {
+							if v2, ok := result[k]; ok {
 								if !cmp.Equal(v2, v2) {
 									t.Error(fmt.Errorf("incorrect query result:\n%s", cmp.Diff(v2, v)))
 								}

@@ -22,7 +22,30 @@ func newQuery(ffiQuery QueryFfi, host Host) Query {
 	}
 }
 
-func (q *Query) Next() (*map[Symbol]interface{}, error) {
+// TODO: add GetAllResults() method
+
+func (q *Query) resultsChannel() (<-chan map[string]interface{}, <-chan error) {
+
+	results := make(chan map[string]interface{}, 1)
+	errors := make(chan error, 1)
+
+	go func() {
+		r, err := q.Next()
+		for r != nil && err == nil {
+			results <- *r
+			r, err = q.Next()
+		}
+		if err != nil {
+			errors <- err
+		}
+		close(results)
+		close(errors)
+	}()
+
+	return results, errors
+}
+
+func (q *Query) Next() (*map[string]interface{}, error) {
 	if q == nil {
 		return nil, fmt.Errorf("query has already finished")
 	}
@@ -48,14 +71,14 @@ func (q *Query) Next() (*map[Symbol]interface{}, error) {
 			// TODO
 			return nil, fmt.Errorf("not yet implemented")
 		case QueryEventResult:
-			results := make(map[Symbol]interface{})
+			results := make(map[string]interface{})
 			for k, v := range ev.Bindings {
 				converted, err := q.host.toGo(v)
 				// todo: turn back into interface (after toGo returns reflect.Value)
 				if err != nil {
 					return nil, err
 				}
-				results[k] = converted
+				results[string(k)] = converted
 			}
 			return &results, nil
 		case QueryEventMakeExternal:

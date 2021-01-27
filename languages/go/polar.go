@@ -18,7 +18,7 @@ type Polar struct {
 
 type none struct{}
 
-func NewPolar() *Polar {
+func NewPolar() (*Polar, error) {
 	ffiPolar := NewPolarFfi()
 	polar := Polar{
 		ffiPolar: ffiPolar,
@@ -27,8 +27,7 @@ func NewPolar() *Polar {
 
 	err := polar.RegisterConstant(none{}, "nil")
 	if err != nil {
-		fmt.Printf(err.Error())
-		return nil
+		return nil, err
 	}
 
 	builtinClasses := map[string]reflect.Type{
@@ -43,13 +42,12 @@ func NewPolar() *Polar {
 	for k, v := range builtinClasses {
 		err := polar.RegisterClass(v, &k)
 		if err != nil {
-			fmt.Printf(err.Error())
-			return nil
+			return nil, err
 		}
 	}
 
 	// register global constants
-	return &polar
+	return &polar, nil
 }
 
 func (p Polar) checkInlineQueries() error {
