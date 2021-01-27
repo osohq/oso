@@ -1,17 +1,11 @@
 package oso_test
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
 	oso "github.com/osohq/go-oso"
 )
-
-func TestSomething(t *testing.T) {
-	fmt.Println("Hello, World!")
-
-}
 
 func TestNewOso(t *testing.T) {
 	if o, err := oso.NewOso(); err != nil {
