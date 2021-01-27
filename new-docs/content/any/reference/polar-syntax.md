@@ -12,10 +12,10 @@ language.
 
 This guide is a brief description of the core syntax elements of Polar.
 
-Each Polar file defines a set of rules.  When a Polar file is loaded into the
+Each Polar file defines a set of rules. When a Polar file is loaded into the
 authorization engine, all rules are added to the engine’s knowledge base.
 
-The knowledge base may be queried.  The behavior of queries is described further
+The knowledge base may be queried. The behavior of queries is described further
 here.
 
 ## Primitive Types
@@ -92,14 +92,14 @@ For example:
 
 ### Class Instances
 
-A similar syntax can be used to represent instances of classes.  The class
-name is specified before the dictionary:
+A similar syntax can be used to represent instances of classes. The class name
+is specified before the dictionary:
 
 ```
 Person{first_name: "Yogi", last_name: "Bear"}
 ```
 
-Classes can be registered with the oso library to integrate with Polar.  See
+Classes can be registered with the oso library to integrate with Polar. See
 Application Types for more information.
 
 An instance literal can only be used with the new operator
@@ -107,7 +107,7 @@ or as a pattern.
 
 ## Rules
 
-Every statement in a Polar file is part of a rule.  Rules allow us to express
+Every statement in a Polar file is part of a rule. Rules allow us to express
 conditional (“**if** this **then** that”) statements.
 
 A rule in Polar takes the form:
@@ -138,10 +138,10 @@ A *term* is either a data type or a combination of facts using Operators.
 
 ### Variables
 
-The example rule above is static. More powerful rules can be
-formed using variables.  In Polar, a variable does not need a separate
-declaration; it is created the first time it is referenced. Variables can be
-substituted for values in dictionaries, or items in a list or rule call.
+The example rule above is static. More powerful rules can be formed using
+variables. In Polar, a variable does not need a separate declaration; it is
+created the first time it is referenced. Variables can be substituted for
+values in dictionaries, or items in a list or rule call.
 
 The following are all variables:
 
@@ -414,9 +414,8 @@ hexstring(s) if
   forall(c in s, c in "0123456789abcdef");
 ```
 
-Iterating over  `Dictionary` returns a list with two elements for the key
-(as a string)
-and the value:
+Iterating over `Dictionary` returns a list with two elements for the key (as a
+string) and the value:
 
 ```
 x in {a: 1, b: 2}
@@ -495,7 +494,7 @@ rules execute & in what order.
 #### Specialization
 
 Rule heads (the part of the rule before the `if` keyword) can contain
-specializers.  For example, the rule:
+specializers. For example, the rule:
 
 ```
 has_first_name(person: Person, name) if person.name = name;
@@ -518,7 +517,7 @@ Application Types.
 
 #### Patterns
 
-The expression after the `:` is called a pattern.  The following are valid
+The expression after the `:` is called a pattern. The following are valid
 patterns:
 
 
@@ -534,10 +533,10 @@ patterns:
 * a type name (used above)
 
 When a rule is evaluated, the value of the argument is matched against the
-pattern.  For primitive types, a value matches a pattern if it is equal.
+pattern. For primitive types, a value matches a pattern if it is equal.
 
 For dictionary types, a value matches a pattern if the pattern is a subset of
-the dictionary.  For example:
+the dictionary. For example:
 
 ```
 {x: 1, y: 2} matches {x: 1}
@@ -555,14 +554,14 @@ new Person() matches Person
 new Person(x: 1, y: 2) matches Person{x: 1}
 ```
 
-For type matching, subclasses are also considered.  So, a class that is a
+For type matching, subclasses are also considered. So, a class that is a
 subclass of `Person` would match `Person{x: 1}`.
 
 #### Matches Operator
 
 The above example used the `matches` operator to describe the behavior of
-pattern matching.  This operator can be used anywhere within a rule body to
-perform a match.  The same operation is used by the engine to test whether a
+pattern matching. This operator can be used anywhere within a rule body to
+perform a match. The same operation is used by the engine to test whether a
 rule argument matches the specializer.
 
 ### Inline Queries (`?=`)
