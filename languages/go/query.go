@@ -332,30 +332,3 @@ func (q Query) handleNextExternal(event QueryEventNextExternal) error {
 	}
 	return q.ffiQuery.callResult(int(event.CallId), &Term{*retValue})
 }
-
-//     def handle_next_external(self, data):
-//         call_id = data["call_id"]
-//         iterable = data["iterable"]
-
-//         if call_id not in self.calls:
-//             value = self.host.to_python(iterable)
-//             if isinstance(value, Iterable):
-//                 self.calls[call_id] = iter(value)
-//             else:
-//                 raise InvalidIteratorError(f"{value} is not iterable")
-
-//         # Return the next result of the call.
-//         try:
-//             value = next(self.calls[call_id])
-//             self.ffi_query.call_result(call_id, self.host.to_polar(value))
-//         except StopIteration:
-//             self.ffi_query.call_result(call_id, None)
-
-//     def handle_debug(self, data):
-//         if data["message"]:
-//             print(data["message"])
-//         try:
-//             command = input("debug> ").strip(";")
-//         except EOFError:
-//             command = "continue"
-//         self.ffi_query.debug_command(self.host.to_polar(command))

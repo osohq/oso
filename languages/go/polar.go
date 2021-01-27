@@ -137,39 +137,6 @@ func (p Polar) Repl(files ...string) error {
 	return fmt.Errorf("Go REPL is not yet implemented")
 }
 
-//     def repl(self, files=[]):
-//         """Start an interactive REPL session."""
-//         for f in files:
-//             self.load_file(f)
-
-//         while True:
-//             try:
-//                 query = input(FG_BLUE + "query> " + RESET).strip(";")
-//             except (EOFError, KeyboardInterrupt):
-//                 return
-//             try:
-//                 ffi_query = self.ffi_polar.new_query_from_str(query)
-//             except ParserError as e:
-//                 print_error(e)
-//                 continue
-
-//             result = False
-//             try:
-//                 query = Query(ffi_query, host=self.host.copy()).run()
-//                 for res in query:
-//                     result = True
-//                     bindings = res["bindings"]
-//                     if bindings:
-//                         for variable, value in bindings.items():
-//                             print(variable + " = " + repr(value))
-//                     else:
-//                         print(True)
-//             except PolarRuntimeError as e:
-//                 print_error(e)
-//                 continue
-//             if not result:
-//                 print(False)
-
 func (p Polar) RegisterClass(cls reflect.Type, name *string) error {
 	var className string
 	if name == nil {
