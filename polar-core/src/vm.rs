@@ -2012,8 +2012,8 @@ impl PolarVirtualMachine {
         }
     }
 
-    // TODO(ap, dhatch): This does not strip the 3rd argument like Dot op (the unbound variable).
-    // So may be incorrect currently.
+    // TODO(ap, dhatch): Rewrite 3-arg arithmetic ops as 2-arg + unify,
+    // like we do for dots; e.g., `+(a, b, c)` → `c = +(a, b)`.
     /// Evaluate arithmetic operations.
     fn arithmetic_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
