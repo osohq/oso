@@ -39,7 +39,7 @@ For example:
 are all parsed as numbers.
 
 You can also perform basic arithmetic on numbers with the operators `+`,
-`-`, `\*`, `/`, `mod`, and `rem`.
+`-`, `*`, `/`, `mod`, and `rem`.
 
 ### Boolean
 
@@ -467,9 +467,9 @@ forall(role = user.roles(), role = "admin")
 Any bindings made inside a `forall` (`role` or `x` in the example above)
 cannot be accessed after the `forall` operator.
 
-#### `\*rest` Operator
+#### `*rest` Operator
 
-The rest operator (`\*`) can be used to destructure a list. For example:
+The rest operator (`*`) can be used to destructure a list. For example:
 
 ```
 x = [1, 2, 3] and
@@ -480,7 +480,7 @@ After executing the above, the variable `first` will have the value `1`, and
 `tail` the value `[2, 3]`.
 
 The rest operator is only valid within a list literal and in front of a
-variable. It **must** be the last element of the list literal (`[\*rest,
+variable. It **must** be the last element of the list literal (`[*rest,
 tail]`) is invalid. Any number of elements can come before the rest operator.
 
 The rest operator is only useful when combined with a unification operation that
