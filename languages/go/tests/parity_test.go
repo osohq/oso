@@ -443,7 +443,14 @@ func (tc TestCase) setupTest(o oso.Polar, t *testing.T) error {
 		}
 	}
 
-	err := filepath.Walk("../../../test/policies/", func(path string, info os.FileInfo, err error) error {
+	var policies_folder string
+	if _, err := os.Stat("policies"); !os.IsNotExist(err) {
+		policies_folder = "policies/"
+	} else {
+		policies_folder = "../../../test/policies/"
+	}
+
+	err := filepath.Walk(policies_folder, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
