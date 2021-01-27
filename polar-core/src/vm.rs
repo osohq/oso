@@ -1658,7 +1658,7 @@ impl PolarVirtualMachine {
                 let args = predicate.args.iter().map(|t| self.deep_deref(t)).collect();
                 let pre_filter = generic_rule.get_applicable_rules(&args);
 
-                // self.polar_log_mute = true;
+                self.polar_log_mute = true;
 
                 // Filter rules by applicability.
                 vec![
