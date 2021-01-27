@@ -1111,8 +1111,6 @@ fn test_modulo_and_remainder() {
     qeval(&mut p, "0 rem 1 == 0");
     qeval(&mut p, "0 mod -1 == 0");
     qeval(&mut p, "0 rem -1 == 0");
-    qruntime!("1 mod 0 = x", RuntimeError::ArithmeticError { .. });
-    qruntime!("1 rem 0 = x", RuntimeError::ArithmeticError { .. });
     let res = var(&mut p, "1 mod 0.0 = x", "x")[0].clone();
     if let Value::Number(Numeric::Float(x)) = res {
         assert!(x.is_nan());
