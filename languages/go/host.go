@@ -79,24 +79,6 @@ func (h Host) cacheInstance(instance interface{}, id *uint64) (*uint64, error) {
 	return &instanceID, nil
 }
 
-// makeInstance construct and cache a Go instance.
-// TODO: should we even allow any arguments?
-func (h Host) makeInstance(name string, args []interface{}, kwargs map[string]interface{}, id uint64) (*uint64, error) {
-	return nil, fmt.Errorf("Constructing new instance is not supported in Go")
-	// if _, ok := h.instances[id]; ok {
-	// 	return nil, &DuplicateInstanceRegistrationError{id: id}
-	// }
-	// class, err := h.getClass(name)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// instance, err := InstantiateClass(*class, args, kwargs)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// return h.cacheInstance(*instance, &id)
-}
-
 func (h Host) unify(leftID uint64, rightID uint64) (bool, error) {
 	left, err1 := h.getInstance(leftID)
 	right, err2 := h.getInstance(rightID)

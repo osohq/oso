@@ -69,7 +69,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			return nil, nil
 		case QueryEventDebug:
 			// TODO
-			return nil, fmt.Errorf("not yet implemented")
+			return nil, fmt.Errorf("Polar debugger is not yet implemented in Go.")
 		case QueryEventResult:
 			results := make(map[string]interface{})
 			for k, v := range ev.Bindings {
@@ -82,7 +82,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			}
 			return &results, nil
 		case QueryEventMakeExternal:
-			err = q.handleMakeExternal(ev)
+			return nil, fmt.Errorf("`new` operator is not yet supported in Go.")
 		case QueryEventExternalCall:
 			err = q.handleExternalCall(ev)
 		case QueryEventExternalIsa:
@@ -105,33 +105,6 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 		}
 	}
 
-}
-
-func (q Query) handleMakeExternal(event QueryEventMakeExternal) error {
-	return fmt.Errorf("new operator is not supported in Go")
-	// if constructor, ok := event.Constructor.Value.ValueVariant.(ValueCall); ok {
-	// 	args := make([]interface{}, len(constructor.Args))
-	// 	for idx, arg := range constructor.Args {
-	// 		converted, err := q.host.toGo(arg)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		args[idx] = converted
-	// 	}
-	// 	kwargs := make(map[string]interface{})
-	// 	if constructor.Kwargs != nil {
-	// 		for k, v := range *constructor.Kwargs {
-	// 			converted, err := q.host.toGo(v)
-	// 			if err != nil {
-	// 				return err
-	// 			}
-	// 			kwargs[string(k)] = converted
-	// 		}
-	// 	}
-	// 	_, err := q.host.makeInstance(string(constructor.Name), args, kwargs, event.InstanceId)
-	// 	return err
-	// }
-	// return &InvalidConstructorError{ctor: event.Constructor.Value}
 }
 
 func (q Query) handleExternalCall(event QueryEventExternalCall) error {
