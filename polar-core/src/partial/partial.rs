@@ -163,7 +163,7 @@ impl Operation {
                             | (Value::Boolean(_), Value::Number(_))
                             | (Value::Boolean(_), Value::Boolean(_))
                             | (Value::String(_), Value::String(_)) => {
-                                if compare(&o.operator, left, right) {
+                                if compare(o.operator, &left, &right) {
                                     TRUE
                                 } else {
                                     self.consistent = false;
@@ -937,9 +937,8 @@ mod test {
         let p = Polar::new();
         p.load_str("f(x) if x = x + 0;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this + 0 = _this");
+        assert_query_done!(q);
         Ok(())
     }
 
