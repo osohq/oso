@@ -16,7 +16,7 @@ Each Polar file defines a set of rules. When a Polar file is loaded into the
 authorization engine, all rules are added to the engine’s knowledge base.
 
 The knowledge base may be queried. The behavior of queries is described further
-here.
+[here](project/language/polar-foundations#the-search-procedure).
 
 ## Primitive Types
 
@@ -24,10 +24,10 @@ Polar has only a few primitive data types.
 
 ### Numbers
 
-Polar parses unquoted integers or floating point numbers as numeric values.
-For example:
+Polar parses unquoted integers or floating point numbers as numeric values. For
+example, all of the following are parsed as numbers:
 
-```
+```polar
 22
 43
 -7
@@ -36,10 +36,8 @@ For example:
 2.0e9
 ```
 
-are all parsed as numbers.
-
-You can also perform basic arithmetic on numbers with the operators `+`,
-`-`, `*`, `/`, `mod`, and `rem`.
+You can also perform basic arithmetic on numbers with the operators `+`, `-`,
+`*`, `/`, `mod`, and `rem`.
 
 ### Boolean
 
@@ -48,12 +46,12 @@ Polar parses the keywords `true` and `false` as boolean values.
 ### Strings
 
 Polar supports quoted strings, which can be used to represent any textual data.
-Polar strings are quoted with double quotes (`"`). Quotes within strings can
-be escaped with a single backslash. Two strings are considered equal if they
-have the same length and each of their corresponding characters are equal.
+Polar strings are quoted with double quotes (`"`). Quotes within strings can be
+escaped with a single backslash. Two strings are considered equal if they have
+the same length and each of their corresponding characters are equal.
 
-The string type can be referenced (for use in specializers, or with the `matches` operator),
-as `String`.
+The string type can be referenced (for use in specializers, or with the
+`matches` operator) as `String`.
 
 ## Compound Types
 
@@ -61,91 +59,80 @@ To support more complex data, Polar includes the following compound data types.
 
 ### Lists
 
-A list is a sequence of values, defined using brackets `[v1, v2, ...,
-vn]`.
+A list is a sequence of values defined using brackets: `[v1, v2, ..., vn]`. For
+example:
 
-For example:
-
-```
+```polar
 ["polar", "lang", "oso"]
 ["oso", ["polar", "lang"]]
 ```
 
-Lists may have any length. List membership can be determined using the in operator.
+Lists may have any length. List membership can be determined using [the `in`
+operator](#in-list-membership).
 
 ### Dictionaries
 
-While lists are useful for representing ordered data, dictionaries
-(aka hash tables or associative arrays) can be more expressive for
-relational data such as mappings. Dictionaries are another core type
-in Polar, represented as:
-
-```
-{key1: value1, key2: value2, ..., keyN: valueN}
-```
+While lists are useful for representing ordered data, dictionaries (sometimes
+known as hash tables or associative arrays) can express unordered relational
+data such as mappings: `{key1: value1, key2: value2, ..., keyN: valueN}`.
 
 For example:
 
-```
+```polar
 {first_name: "Yogi", last_name: "Bear"}
 ```
 
 ### Class Instances
 
-A similar syntax can be used to represent instances of classes. The class name
-is specified before the dictionary:
+A similar syntax is used to represent instances of classes. The class name is
+specified before the dictionary:
 
-```
-Person{first_name: "Yogi", last_name: "Bear"}
+```polar
+Bear{first_name: "Yogi", last_name: "Bear"}
 ```
 
 Classes can be registered with the oso library to integrate with Polar. See
-Application Types for more information.
+[Application Types](learn/policies/application-types) for more information.
 
-An instance literal can only be used with the new operator
-or as a pattern.
+An instance literal can only be used with [the `new` operator](#new) or as a
+[pattern](#patterns).
 
 ## Rules
 
 Every statement in a Polar file is part of a rule. Rules allow us to express
-conditional (“**if** this **then** that”) statements.
+conditional statements ("**if** this **then** that").
 
-A rule in Polar takes the form:
-
-```
-HEAD if BODY;
-```
-
-where `HEAD` must be a *fact* and `BODY` any number of *terms*.
-The meaning of a rule is that `HEAD` is true **if** each of the `BODY`
-terms is true. If there are be multiple rules with the same head, each
-`BODY` will be tried in turn, and any or all may succeed. For more
-on how rules are defined and applied see
-Polar Background.
+A rule in Polar takes the form `HEAD if BODY;` where `HEAD` must be a *fact*
+and `BODY` any number of *terms*. The meaning of a rule is that `HEAD` is true
+**if** each of the `BODY` terms is true. If there are be multiple rules with
+the same head, each `BODY` will be tried in turn, and any or all may succeed.
+For more on how rules are defined and applied see [Polar
+Background](project/language/polar-foundations).
 
 The following is an example of a rule:
 
-```
-user("yogi", "bear") if person("yogi", "bear");
+```polar
+person("yogi", "bear") if bear("yogi", "bear");
 ```
 
-This example says that Sam is a user **if** he is also defined
-as a person.
+This example says that Yogi is a person **if** Yogi is a bear. Bears are
+people, too.
 
 ### Terms
 
-A *term* is either a data type or a combination of facts using Operators.
+A *term* is either a data type or a combination of facts using
+[operators](#operators).
 
 ### Variables
 
 The example rule above is static. More powerful rules can be formed using
 variables. In Polar, a variable does not need a separate declaration; it is
 created the first time it is referenced. Variables can be substituted for
-values in dictionaries, or items in a list or rule call.
+values in dictionaries or items in a list or rule call.
 
 The following are all variables:
 
-```
+```polar
 foo
 bar
 myvar
@@ -153,57 +140,52 @@ myvar
 
 To make the above rule more useful, we could write:
 
-```
-user(first, last) if person(first, last);
+```polar
+person(first, last) if bear(first, last);
 ```
 
-This rule says that **if** there is a person with some name,
-**then** that person is also a user.
+This rule says that **if** there is a bear with some name, **then** that bear
+is also a person.
 
 #### Singletons
 
-If a variable occurs only once, then its value can’t be used
-for anything. Such variables are called *singletons*, and Polar
-will warn you if they occur in a rule; e.g., if you try to load
-the rule:
+If a variable occurs only once, then its value can’t be used for anything. Such
+variables are called *singletons*, and Polar will warn you if they occur in a
+rule. For example, if you try to load the rule…
 
-```
+```polar
 user(first, last) if person("George", last);
 ```
 
-Polar will say:
+…you'll see the following message:
 
-```
+```console
 Singleton variable first is unused or undefined
 001: user(first, last) if person("George", last);
           ^
 ```
 
-The reason these warnings are important is that, as in this case,
-they indicate potential logical errors. Here, the error is forgetting
-to use the first name, and instead using a literal string in the
-call to `person`.
+The reason these warnings are important is that, as in this case, they indicate
+potential logical errors. Here, the error is forgetting to use the first name,
+and instead using a literal string in the call to `person`.
 
-There are cases, however, where it *isn’t* an error to have
-a singleton variable. For example:
+There are cases, however, where it *isn’t* an error to have a singleton
+variable. For example:
 
-
-* As a parameter with a specializer: `allow(_actor: Person{first_name: "George"}, ..);`
-
-
+* As a parameter with a specializer: `allow(_actor: Person{first_name:
+  "George"}, …);`
 * As a parameter that is explicitly ignored: `always_true(_);`
 
-In such cases, you can suppress the singleton variable warning by
-starting your variable’s name with an `_` (underscore), e.g.,
-`_actor` in the first example above.
+In such cases, you can suppress the singleton variable warning by starting your
+variable’s name with an `_` (underscore), e.g., `_actor` in the first example
+above.
 
-A variable named *just* `_` (as in the second example above) is called
-an **anonymous** variable, and it is *always* a singleton (but will never
-generate a warning). Each occurrence is translated into a fresh variable,
-guaranteed not to match any other variable. You may therefore have as many
-anonymous variables in a rule as you like, and each will be unique.
-It’s up to you whether to use an anonymous variable or a singleton with
-a descriptive name.
+A variable named *just* `_` (as in the second example above) is called an
+**anonymous** variable, and it is *always* a singleton (but will never generate
+a warning). Each occurrence is translated into a fresh variable, guaranteed not
+to match any other variable. You may therefore have as many anonymous variables
+in a rule as you like, and each will be unique. It’s up to you whether to use
+an anonymous variable or a singleton with a descriptive name.
 
 ### Operators
 
@@ -211,21 +193,20 @@ Operators are used to combine terms in rule bodies into expressions.
 
 #### Unification
 
-Unification is the basic matching operation in Polar. Two values are
-said to *unify* if they are equal or if there is a consistent set of
-variable bindings that makes them equal. Unification is defined
-recursively over compound types (e.g., lists and dictionaries):
-two compound values unify if all of their corresponding elements
-unify.:warn
+Unification is the basic matching operation in Polar. Two values are said to
+*unify* if they are equal or if there is a consistent set of variable bindings
+that makes them equal. Unification is defined recursively over compound types
+(e.g., lists and dictionaries): two compound values unify if all of their
+corresponding elements unify.:warn
 
-Unification may be performed explicitly with the unification operator
-(`=`), which is true if its two operands unify; e.g., `1 = 1`,
-`"a" = "a"`, or `x = 1` where the variable `x` is either
-bound to `1` or unbound.
+Unification may be performed explicitly with the unification operator (`=`),
+which is true if its two operands unify; e.g., `1 = 1`, `"a" = "a"`, or `x = 1`
+where the variable `x` is either bound to `1` or unbound.
 
-Unification is also used to determine if queries match rule `HEAD` s,
-and if the `BODY` of rules match other facts in the knowledge base.
-We will cover unification further in The Search Procedure.
+Unification is also used to determine if queries match rule `HEAD` s, and if
+the `BODY` of rules match other facts in the knowledge base. We will cover
+unification further in [The Search
+Procedure](project/language/polar-foundations#the-search-procedure).
 
 #### Assignment
 
@@ -238,39 +219,39 @@ while attempting to assign to a bound variable will result in a runtime error.
 
 #### Conjunction (and)
 
-To say that two terms in a rule’s body must **both** be true,
-the and operator (`and`) can be used. For
-example, the rule:
+To say that two terms in a rule’s body must **both** be true, the `and`
+operator can be used. For example, the rule…
 
-```
+```polar
 oso_user(first, last) if
-  user(first, last) and
-  employee(company("oso"), person(first, last));
+    user(first, last) and
+    employee(company("oso"), person(first, last));
 ```
 
-will be satisfied if the named person is a user **and** that
-person is an employee of oso.
+…will be satisfied if the named person is a user **and** that person is an
+employee of oso.
 
 #### Disjunction (or)
 
-The or operator (`or`) will be true if either
-its left **or** its right operand is true. Disjunctions can always
-be replaced by multiple rules with identical heads but different bodies
-(the operands), but may help simplify writing rules with alternatives.
+The `or` operator will be true if either its left **or** its right operand is
+true. Disjunctions can always be replaced by multiple rules with identical
+heads but different bodies (the operands), but may help simplify writing rules
+with alternatives.
 
 #### Dictionary Key Access
 
-The dot `.` operator can be used to access the value associated with
-a key in a dictionary. For example:
+The dot `.` operator can be used to access the value associated with a key in a
+dictionary. For example:
 
-```
+```polar
 dict = { hello: "world" } and
 dict.hello = "world"
 ```
 
-A string stored in a variable can be used as the key in a dot lookup using the following syntax:
+A string stored in a variable can be used as the key in a dot lookup using the
+following syntax:
 
-```
+```polar
 dict = { hello: "world" } and
 key = "hello" and
 dict.(key) = "world"
@@ -278,51 +259,52 @@ dict.(key) = "world"
 
 #### Application Field or Method Access
 
-The dot `.` operator can also be used to access methods or fields on application instances or
-constants. Arguments can be passed into methods as positional or keyword arguments, depending on the application
-language. Keyword arguments are only supported in languages that themselves support them (e.g. Python, Ruby).
+The dot `.` operator can also be used to access methods or fields on
+application instances or constants. Arguments can be passed into methods as
+positional or keyword arguments, depending on the application language. Keyword
+arguments are only supported in languages that themselves support them (e.g.,
+Python, Ruby).
 
 Accessing a field on an application instance looks like:
 
-```
+```polar
 person = new Person() and
 first_name = person.first_name
 ```
 
 Calling an application method from a policy looks like this:
 
-```
+```polar
 person = new Person() and
 person.check_address("12345 Broadway", city: "New York", state: "NY");
 ```
 
-Calling a class method on a class that has been registered as a constant could look like:
+Calling a class method on a class that has been registered as a constant could
+look like:
 
-```
+```polar
 person = new Person() and
 Person.log("created new person")
 ```
 
 #### Numerical Comparison
 
-The typical numerical comparison operators can be used to compare values.
-`< <= > >= == !=`
+The typical numerical comparison operators can be used to compare values (`> >=
+< <= == !=`). For example…
 
-For example:
-
-```
+```polar
 age < 10
 ```
 
-will compare the value of the variable age with 10 and unify if it’s less than 10.
+…will check that the value of the variable `age` is less than 10.
 
 #### Print
 
-`print` is a built-in operator that prints its arguments to the console. It always succeeds, and can therefore be added anywhere in the body of a Polar rule.
+`print()` is a built-in operator that prints its arguments to the console. It
+always succeeds and can therefore be added anywhere in the body of a Polar
+rule. For example:
 
-For example:
-
-```
+```polar
 hello(x) if print("hello", x) and x = "world";
 
 query> hello("world");
@@ -334,90 +316,87 @@ True
 
 By default, Polar runs all of the definitions for a given rule that are
 applicable to the given set of arguments (i.e., whose specializers are
-matched). The `cut` operator overrides this behavior by *committing* to
-the enclosing rule definition: the query engine will not run any others.
-Rule definitions that have already run are not “un-run”, though, or avoided
-by using cut; it just ensures that no *others* will run.
+matched). The `cut` operator overrides this behavior by *committing* to the
+enclosing rule definition: the query engine will not run any others. Rule
+definitions that have already run are not “un-run”, though, or avoided by using
+cut; it just ensures that no *others* will run.
 
-Because Polar runs rules in most-to-least-specific order, these “other”
-rule definitions are always *less specific* than the current one; i.e.,
-they may have specializers that are superclasses (and therefore less specific)
-of those in the current rule. This allows `cut` to override a rule that
-is specialized on a less specific class. You can think of `cut` as a sort
-of dual to `super()` in other object-oriented languages (e.g., Python):
-in Polar, the behavior of “methods” (rules) is to implicitly call the
-next method, but `cut` overrides that behavior; it says *not* to call
-any more methods (rules).
+Because Polar runs rules in most-to-least-specific order, these “other” rule
+definitions are always *less specific* than the current one; i.e., they may
+have specializers that are superclasses (and therefore less specific) of those
+in the current rule. This allows `cut` to override a rule that is specialized
+on a less specific class. You can think of `cut` as a sort of dual to `super()`
+in other object-oriented languages (e.g., Python): in Polar, the behavior of
+“methods” (rules) is to implicitly call the next method, but `cut` overrides
+that behavior; it says *not* to call any more methods (rules).
 
-`cut` can appear anywhere in a rule body, but terms before it must
-succeed for it to be reached, so it frequently appears at the end of
-the body: **if** so-and-so is true, then **cut** out all other alternatives.
+`cut` can appear anywhere in a rule body, but terms before it must succeed for
+it to be reached, so it frequently appears at the end of the body: **if**
+so-and-so is true, then **cut** out all other alternatives.
 
 `cut` should be used sparingly.
 
 #### New
 
-The `new` operator is used to construct a new instance of an application
-class. (See Application Types for more
-about how to define and register application classes.) The name of the class
-to instantiate comes next, followed by a set of initialization arguments
-that are passed to the class’s constructor:
+The `new` operator is used to construct a new instance of an application class.
+(See [Application Types](application-types) for more about how to define and
+register application classes.) The name of the class to instantiate comes next,
+followed by a set of initialization arguments that are passed to the class’s
+constructor:
 
-```
-new Person("yogi", "bear")
+```polar
+new Bear("yogi", "bear")
 ```
 
-In host languages that support keyword arguments (e.g., Python & Ruby, but
-not Java), you can pass initialization arguments as keywords with the
-following syntax:
+In host languages that support keyword arguments (e.g., Python & Ruby, but not
+Java), you can pass initialization arguments as keywords with the following
+syntax:
 
-```
-new Person(first_name: "yogi", last_name: "bear")
+```polar
+new Bear(first_name: "yogi", last_name: "bear")
 ```
 
 If using a constructor with mixed positional and keyword arguments, positional
 arguments must come before keyword arguments:
 
-```
-new Person("yogi", last_name: "bear")
+```polar
+new Bear("yogi", last_name: "bear")
 ```
 
 #### In (List Membership)
 
-The `in` operator can be used to iterate over elements of
-builtin and application types. Iterable builtin types are
-`List`, `String`, and `Dictionary`.
+The `in` operator can be used to iterate over elements of built-in and
+application types. Iterable built-in types are `List`, `String`, and
+`Dictionary`.
 
-The first operand will be unified with each element. If the
-second operand is not iterable, the operation will fail.
+The first operand will be unified with each element. If the second operand is
+not iterable, the operation will fail. For example…
 
-For example:
-
-```
+```polar
 x in [1, 2, 3] and x = 1
 ```
 
-Will bind `x` to `1`, `2`, `3`, in turn, and check that `x = 1`
-for each. This expression will only succeed for the first item (`1`).
-The left-hand side does not need to be a variable, for example:
+…will bind `x` to `1`, `2`, `3`, in turn, and check that `x = 1` for each. This
+expression will only succeed for the first item (`1`). The left-hand side does
+not need to be a variable. for example…
 
-```
+```polar
 1 in [1, 2, 3, 1]
 ```
 
-Will succeed *twice*: 1 is in the first and fourth position.
+…will succeed *twice*: 1 is in the first and fourth position.
 
 Iterating over a `String` returns each character (as another string):
 
-```
+```polar
 hexstring(s) if
   forall(c in s, c in "0123456789abcdef");
 ```
 
-Iterating over `Dictionary` returns a list with two elements for the key (as a
+Iterating over a dictionary returns a list with two elements, the key (as a
 string) and the value:
 
-```
+```polar
 x in {a: 1, b: 2}
 [key, _] in {a: 1, b: 2}
 [_, value] in {a: 1, b: 2}
@@ -425,7 +404,7 @@ x in {a: 1, b: 2}
 
 The above returns:
 
-```
+```polar
 x => ["a", 1]
 x => ["b", 2]
 
@@ -440,51 +419,49 @@ value => 2
 
 The `forall` operator is often useful in conjunction with the `in` operator.
 `forall(condition, action)` checks that `action` succeeds for every alternative
-produced by `condition`.
+produced by `condition`. For example…
 
-For example:
-
-```
+```polar
 forall(x in [1, 2, 3], x = 1)
 ```
 
-Would fail because `x` only unifies with `1` for the first element in the
-list (the first alternative of condition).
+…would fail because `x` only unifies with `1` for the first element in the list
+(the first alternative of the condition). In contrast…
 
-```
+```polar
 forall(x in [1, 1, 1], x = 1)
 ```
 
-succeeds because the `action` holds for all values in the list.
+…succeeds because the `action` holds for all values in the list.
 
 `forall` can also be used with application data to check all elements returned
-by an application method.
+by an application method:
 
-```
+```polar
 forall(role = user.roles(), role = "admin")
 ```
 
-Any bindings made inside a `forall` (`role` or `x` in the example above)
-cannot be accessed after the `forall` operator.
+Any bindings made inside a `forall` (`role` or `x` in the example above) cannot
+be accessed outside the `forall` operation.
 
 #### `*rest` Operator
 
 The rest operator (`*`) can be used to destructure a list. For example:
 
-```
+```polar
 x = [1, 2, 3] and
 [first, *tail] = x
 ```
 
-After executing the above, the variable `first` will have the value `1`, and
-`tail` the value `[2, 3]`.
+After evaluating the above, the variable `first` will have the value `1` and
+`tail` will have the value `[2, 3]`.
 
 The rest operator is only valid within a list literal and in front of a
-variable. It **must** be the last element of the list literal (`[*rest,
-tail]`) is invalid. Any number of elements can come before the rest operator.
+variable. It **must** be the last element of the list literal (`[*rest, tail]`)
+is invalid. Any number of elements can come before the rest operator.
 
-The rest operator is only useful when combined with a unification operation that
-assigns a value to it.
+The rest operator is only useful when combined with a unification operation
+that assigns a value to it.
 
 ### Patterns and Matching
 
@@ -494,42 +471,34 @@ rules execute & in what order.
 #### Specialization
 
 Rule heads (the part of the rule before the `if` keyword) can contain
-specializers. For example, the rule:
+specializers. For example, the rule…
 
-```
+```polar
 has_first_name(person: Person, name) if person.name = name;
 ```
 
-Would only execute if the `person` argument is of the type `Person`.
+…would only execute if the `person` argument is of the type `Person`.
 
 Multiple rules of the same structure can be written with different
 specializers:
 
-```
+```polar
 has_first_name(user: User, name) if user.name = name;
 ```
 
-Now, the `first_name` rule can be used with instances of the `User` or
-`Person` type.
+Now, the `first_name` rule can be used with instances of the `User` or `Person`
+type.
 
-For more on this feature, see
-Application Types.
+For more on this feature, see [Application Types](application-types).
 
 #### Patterns
 
 The expression after the `:` is called a pattern. The following are valid
 patterns:
 
-
 * any primitive type
-
-
 * a dictionary literal
-
-
 * an instance literal (without the new operator)
-
-
 * a type name (used above)
 
 When a rule is evaluated, the value of the argument is matched against the
@@ -538,19 +507,25 @@ pattern. For primitive types, a value matches a pattern if it is equal.
 For dictionary types, a value matches a pattern if the pattern is a subset of
 the dictionary. For example:
 
-```
+```polar
 {x: 1, y: 2} matches {x: 1}
 {x: 1, y: 3} matches {y: 3}
-{x: 1, y: 3} matches {x:1, y: 3}
+{x: 1, y: 3} matches {x: 1, y: 3}
 
 # Does not match because y value are not equal
-not {x: 1, y: 3} matches {x:1, y: 4}
+not {x: 1, y: 3} matches {x: 1, y: 4}
+```
 
-# a type name matches if the value has the same type
+A type name matches if the value has the same type:
+
+```polar
 new Person() matches Person
+```
 
-# The fields are checked in the same manner as dictionaries, and the type is
-# checked like above.
+The fields are checked in the same manner as dictionaries, and the type is
+checked in the same manner as the previous example:
+
+```polar
 new Person(x: 1, y: 2) matches Person{x: 1}
 ```
 
@@ -572,11 +547,8 @@ expected.
 
 To add an inline query to a Polar file, use the `?=` operator:
 
-```
-# policy.polar
+```polar
 ?= allow("foo", "read", "bar")
 ```
 
 An inline query is only valid at the beginning of a line.
-
-Inline queries are particularly useful for testing policies.
