@@ -179,6 +179,7 @@ using the :ref:`operator-new` operator if the class has been **registered**:
 
 .. tabs::
     .. group-tab:: Python
+
         We can register a Python class using :py:meth:`oso.Oso.register_class`
         or the :py:func:`~oso.polar_class` decorator:
 
@@ -204,7 +205,8 @@ using the :ref:`operator-new` operator if the class has been **registered**:
             ?= allow(new User("alice", true), "foo", "bar");
 
     .. group-tab:: Ruby
-        Ruby classes are registered using ``register_class()``(see :doc:`/ruby/index`):
+
+        Ruby classes are registered using ``register_class()`` (see :doc:`/ruby/index`):
 
         .. code-block:: ruby
             :caption: :fas:`gem` app.rb
@@ -220,6 +222,7 @@ using the :ref:`operator-new` operator if the class has been **registered**:
             ?= allow(new User("alice", is_admin: true), "foo", "bar");
 
     .. group-tab:: Java
+
         Java classes are registered using ``registerClass()``:
 
         .. code-block:: java
@@ -249,6 +252,7 @@ using the :ref:`operator-new` operator if the class has been **registered**:
         Java does not support keyword arguments.
 
     .. group-tab:: Node.js
+
         JavaScript classes are registered using ``registerClass()``:
 
         .. code-block:: javascript
@@ -268,6 +272,7 @@ using the :ref:`operator-new` operator if the class has been **registered**:
         JavaScript does not support keyword arguments.
 
     .. group-tab:: Rust
+
         We can register a Rust struct or enum using ``Oso::register_class``.
         ``register_class`` takes as input a ``Class``, which can be constructed
         either using the ``#[derive(PolarClass)]`` proc-macro, or manually using
