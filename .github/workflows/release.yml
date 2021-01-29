@@ -138,6 +138,8 @@ jobs:
           mkdir -p languages/go/native/macos
           cp -r oso_static_library/libpolar-macOS.a languages/go/native/macos/libpolar.a
           rm languages/go/Makefile
+      - name: Copy license.
+        run: cp LICENSE languages/go/LICENSE
       - uses: actions/upload-artifact@v2
         with:
           name: go
