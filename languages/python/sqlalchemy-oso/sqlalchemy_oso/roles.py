@@ -255,15 +255,17 @@ def enable_roles(oso):
     for role_model in ROLE_CLASSES:
         user_model = role_model["user_model"]
         user = user_model.__name__
+        user_pk = inspect(user_model).primary_key[0].name
         resource_model = role_model["resource_model"]
         resource = resource_model.__name__
+        resource_pk = inspect(resource_model).primary_key[0].name
         role = get_role_model_for_resource_model(resource_model).__name__
 
         policy += f"""
         user_in_role(user: {user}, role, resource: {resource}) if
             session = OsoSession.get() and
             role in session.query({role}).filter_by(user: user) and
-            role.{resource.lower()}.id = resource.id;
+            role.{resource.lower()}.{resource_pk} = resource.{resource_pk};
 
         inherits_role(role: {role}, inherited_role) if
             {resource.lower()}_role_order(role_order) and
