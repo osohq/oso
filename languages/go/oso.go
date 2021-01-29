@@ -6,6 +6,9 @@ type Oso struct {
 	p *Polar
 }
 
+/*
+Construct a new Oso instance.
+*/
 func NewOso() (Oso, error) {
 	if p, e := newPolar(); e != nil {
 		return Oso{}, e

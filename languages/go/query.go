@@ -139,6 +139,7 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 				return &KwargsError{}
 			}
 			numIn := method.Type().NumIn()
+			var end int
 			if !method.Type().IsVariadic() {
 				if len(args) != numIn {
 					return &ErrorWithAdditionalInfo{
@@ -146,18 +147,16 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 						Info:  fmt.Sprintf("incorrect number of arguments. Expected %v, got %v", numIn, len(args)),
 					}
 				}
-			}
-			// todo: maybe refactor how these args are handled
-			var end int
-			if method.Type().IsVariadic() {
+				end = numIn
+			} else {
 				// stop one before the end so we can make this a slice
 				end = numIn - 1
-			} else {
-				end = numIn
 			}
 
-			// convert args
 			callArgs := make([]reflect.Value, numIn)
+			var results []reflect.Value
+
+			// construct callArgs by converting them to typed values, then call method to get results
 			for i := 0; i < end; i++ {
 				arg := args[i]
 				callArgs[i] = reflect.New(method.Type().In(i)).Elem()
@@ -169,6 +168,7 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 					}
 				}
 			}
+			// Construct a slice for the last variadic arg for variadic methods
 			if method.Type().IsVariadic() {
 				remainingArgs := args[end:]
 				callArgs[end] = reflect.New(method.Type().In(end)).Elem()
@@ -179,9 +179,6 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 						Info:  err.Error(),
 					}
 				}
-			}
-			var results []reflect.Value
-			if method.Type().IsVariadic() {
 				results = method.CallSlice(callArgs)
 			} else {
 				results = method.Call(callArgs)
