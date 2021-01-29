@@ -255,7 +255,7 @@ def enable_roles(oso):
     for role_model in ROLE_CLASSES:
         user_model = role_model["user_model"]
         user = user_model.__name__
-        user_pk = inspect(user_model).primary_key[0].name
+        # user_pk = inspect(user_model).primary_key[0].name
         resource_model = role_model["resource_model"]
         resource = resource_model.__name__
         resource_pk = inspect(resource_model).primary_key[0].name
