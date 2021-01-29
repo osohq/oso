@@ -121,6 +121,15 @@ func TestQueryRule(t *testing.T) {
 		t.Error("Expected Polar runtime error, got none")
 	}
 
+	o.LoadString("h(x) if h = 1; h(x) if h.Fake();")
+	results, errors = o.QueryRule("h", 1)
+	if r := <-results; !reflect.DeepEqual(r, map[string]interface{}{}) {
+		t.Error("Expected result, got none")
+	}
+	if e := <-errors; e == nil {
+		t.Error("Expected Polar runtime error, got none")
+	}
+
 }
 
 func TestIsAllowed(t *testing.T) {
