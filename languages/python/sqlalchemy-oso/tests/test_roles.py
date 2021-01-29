@@ -20,46 +20,46 @@ Base = declarative_base(name="RoleBase")
 class Organization(Base):
     __tablename__ = "organizations"
 
-    id = Column(Integer, primary_key=True)
+    org_id = Column(Integer, primary_key=True)
     name = Column(String())
     base_repo_role = Column(String())
 
     def repr(self):
-        return {"id": self.id, "name": self.name}
+        return {"id": self.org_id, "name": self.name}
 
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, primary_key=True)
     email = Column(String())
 
     def repr(self):
-        return {"id": self.id, "email": self.email}
+        return {"id": self.user_id, "email": self.email}
 
 
 class Team(Base):
     __tablename__ = "teams"
 
-    id = Column(Integer, primary_key=True)
+    team_id = Column(Integer, primary_key=True)
     name = Column(String(256))
 
     # many-to-one relationship with organizations
-    organization_id = Column(Integer, ForeignKey("organizations.id"))
+    organization_id = Column(Integer, ForeignKey("organizations.org_id"))
     organization = relationship("Organization", backref="teams", lazy=True)
 
     def repr(self):
-        return {"id": self.id, "name": self.name}
+        return {"id": self.team_id, "name": self.name}
 
 
 class Repository(Base):
     __tablename__ = "repositories"
 
-    id = Column(Integer, primary_key=True)
+    repo_id = Column(Integer, primary_key=True)
     name = Column(String(256))
 
     # many-to-one relationship with organizations
-    organization_id = Column(Integer, ForeignKey("organizations.id"))
+    organization_id = Column(Integer, ForeignKey("organizations.org_id"))
     organization = relationship("Organization", backref="repositories", lazy=True)
 
     # time info
@@ -67,15 +67,15 @@ class Repository(Base):
     updated_date = Column(DateTime, default=datetime.datetime.utcnow)
 
     def repr(self):
-        return {"id": self.id, "name": self.name}
+        return {"id": self.repo_id, "name": self.name}
 
 
 class Issue(Base):
     __tablename__ = "issues"
 
-    id = Column(Integer, primary_key=True)
+    issue_id = Column(Integer, primary_key=True)
     name = Column(String(256))
-    repository_id = Column(Integer, ForeignKey("repositories.id"))
+    repository_id = Column(Integer, ForeignKey("repositories.repo_id"))
     repository = relationship("Repository", backref="issues", lazy=True)
 
 
@@ -293,7 +293,7 @@ def test_get_user_roles_for_resource(test_db_session, john, beatles):
 
     # Test with oso method
     resource_roles = oso_roles.get_user_roles(
-        test_db_session, john, Organization, beatles.id
+        test_db_session, john, Organization, beatles.org_id
     )
     assert len(resource_roles) == 1
     assert resource_roles[0].name == "OWNER"
