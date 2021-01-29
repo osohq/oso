@@ -20,12 +20,11 @@ Base = declarative_base(name="RoleBase")
 class Organization(Base):
     __tablename__ = "organizations"
 
-    org_id = Column(Integer, primary_key=True)
-    name = Column(String())
+    name = Column(String(), primary_key=True)
     base_repo_role = Column(String())
 
     def repr(self):
-        return {"id": self.org_id, "name": self.name}
+        return {"name": self.name, "base_role": self.base_repo_role}
 
 
 class User(Base):
@@ -45,7 +44,7 @@ class Team(Base):
     name = Column(String(256))
 
     # many-to-one relationship with organizations
-    organization_id = Column(Integer, ForeignKey("organizations.org_id"))
+    organization_id = Column(Integer, ForeignKey("organizations.name"))
     organization = relationship("Organization", backref="teams", lazy=True)
 
     def repr(self):
@@ -59,7 +58,7 @@ class Repository(Base):
     name = Column(String(256))
 
     # many-to-one relationship with organizations
-    organization_id = Column(Integer, ForeignKey("organizations.org_id"))
+    organization_id = Column(Integer, ForeignKey("organizations.name"))
     organization = relationship("Organization", backref="repositories", lazy=True)
 
     # time info
@@ -293,7 +292,7 @@ def test_get_user_roles_for_resource(test_db_session, john, beatles):
 
     # Test with oso method
     resource_roles = oso_roles.get_user_roles(
-        test_db_session, john, Organization, beatles.org_id
+        test_db_session, john, Organization, beatles.name
     )
     assert len(resource_roles) == 1
     assert resource_roles[0].name == "OWNER"
