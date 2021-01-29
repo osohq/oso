@@ -1,10 +1,12 @@
 <!-- This example requires Tailwind CSS v2.0+ -->
 <nav id="language-selector" class="relative">
     <button type="button" id="language-selector-toggle"
-        class="
-        max-w-7xl mx-auto px-4 sm:px-6
-        py-2
-        bg-primary rounded-md text-white inline-flex items-center text-base font-medium hover:text-yellow hover:font-bold">
+        class="max-w-7xl mx-auto px-4 sm:px-6 py-2 bg-primary rounded-md
+               text-white inline-flex items-center text-base font-medium
+               hover:text-yellow hover:font-bold tooltip">
+        <span class="tooltip-text" aria-hidden="true">
+          Pick a language
+        </span>
         {{ if eq .Site.Language.Lang "any" }}
         Pick Language
         {{ else }}
