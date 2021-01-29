@@ -22,10 +22,7 @@ func newQuery(ffiQuery QueryFfi, host Host) Query {
 	}
 }
 
-// TODO: add GetAllResults() method
-
 func (q *Query) resultsChannel() (<-chan map[string]interface{}, <-chan error) {
-
 	results := make(chan map[string]interface{}, 1)
 	errors := make(chan error, 1)
 
@@ -43,6 +40,20 @@ func (q *Query) resultsChannel() (<-chan map[string]interface{}, <-chan error) {
 	}()
 
 	return results, errors
+}
+
+func (q *Query) GetAllResults() ([]map[string]interface{}, error) {
+	results := make([]map[string]interface{}, 0)
+	for {
+		if v, err := q.Next(); err != nil {
+			return nil, err
+		} else if v == nil {
+			break
+		} else {
+			results = append(results, *v)
+		}
+	}
+	return results, nil
 }
 
 func (q *Query) Next() (*map[string]interface{}, error) {

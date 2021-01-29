@@ -470,20 +470,11 @@ func (tc TestCase) RunTest(t *testing.T) {
 				queryErr = o.LoadString(*c.Load)
 			}
 
-			results := make([]map[string]interface{}, 0)
+			var results []map[string]interface{}
 			if queryErr == nil {
-				for {
-					v, err := testQuery.Next()
-					if err != nil {
-						queryErr = err
-						break
-					}
-					if v == nil {
-						break
-					}
-					results = append(results, *v)
-				}
+				results, queryErr = testQuery.GetAllResults()
 			}
+
 			if c.Err != nil {
 				if queryErr != nil {
 					re, err := regexp.Compile(*c.Err)
