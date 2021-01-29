@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1611944929707,
+  "lastUpdate": 1611958624841,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -23685,6 +23685,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 7082,
             "range": "± 485",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b7e2dc9d835e66ad6ce767c7c7a9959b46169155",
+          "message": "Remove resource ID hardcoding from roles policy (#671)\n\n* don't hardcode resource IDs in roles policy'\r\n\r\n* alpha version\r\n\r\n* i dont like the linter\r\n\r\n* test anonymizing resource PKs and fix helpers\r\n\r\n* test using string as PK\r\n\r\nCo-authored-by: steve olsen <dev@steve.computer>",
+          "timestamp": "2021-01-29T17:07:58-05:00",
+          "tree_id": "b78e2a4c539c68cac9d2e5e4b40cc46ca6ee6602",
+          "url": "https://github.com/osohq/oso/commit/b7e2dc9d835e66ad6ce767c7c7a9959b46169155"
+        },
+        "date": 1611958622954,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 45025,
+            "range": "± 1192",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 1844458,
+            "range": "± 38678",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 8849052,
+            "range": "± 144123",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 17550419,
+            "range": "± 259300",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 884,
+            "range": "± 42",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2597,
+            "range": "± 379",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 68177,
+            "range": "± 1985",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 507755,
+            "range": "± 10263",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 17999,
+            "range": "± 677",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17994,
+            "range": "± 680",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17877,
+            "range": "± 702",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 17839,
+            "range": "± 811",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16016,
+            "range": "± 496",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6079,
+            "range": "± 455",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 7292,
+            "range": "± 1397",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 8663,
+            "range": "± 302",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 20802,
+            "range": "± 1866",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 6000,
+            "range": "± 121",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 11626,
+            "range": "± 1022",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 7295,
+            "range": "± 112",
             "unit": "ns/iter"
           }
         ]
