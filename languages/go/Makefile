@@ -1,4 +1,4 @@
-# NOTE: This only works on linux and osx 
+# NOTE: This only works on linux and osx
 # (but then again none of our makefiles work on windows so it's not surprising)
 # To see how we build all the release versions of the lib and include them see the
 # release github action.
@@ -7,12 +7,12 @@
 UNAME_S := $(shell uname -s)
 
 copy_lib:
-	cp ../../polar-c-api/polar.h native/
+	cp ../../polar-c-api/polar.h ffi/native/
 ifeq ($(UNAME_S),Linux)
-	cp ../../target/debug/libpolar.a native/linux/
+	cp ../../target/debug/libpolar.a ffi/native/linux/
 endif
 ifeq ($(UNAME_S),Darwin)
-	cp ../../target/debug/libpolar.a native/macos/
+	cp ../../target/debug/libpolar.a ffi/native/macos/
 endif
 
 test: copy_lib
