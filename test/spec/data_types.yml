@@ -64,11 +64,6 @@ cases:
   - query: is_null(x)
     result: [{x: null}]
 
-  # inf/nan
-  # - query: x = nan
-  #   result: [{x: {repr: nan}}]
-  # - query: x = inf
-  #   result: [{x: {repr: inf}}]
 
   # unbound variables
   - query: x = y

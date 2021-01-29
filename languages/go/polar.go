@@ -18,14 +18,14 @@ type Polar struct {
 
 type none struct{}
 
-func NewPolar() (*Polar, error) {
+func newPolar() (*Polar, error) {
 	ffiPolar := NewPolarFfi()
 	polar := Polar{
 		ffiPolar: ffiPolar,
 		host:     NewHost(ffiPolar),
 	}
 
-	err := polar.RegisterConstant(none{}, "nil")
+	err := polar.registerConstant(none{}, "nil")
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func NewPolar() (*Polar, error) {
 	}
 
 	for k, v := range builtinClasses {
-		err := polar.RegisterClass(v, &k)
+		err := polar.registerClass(v, &k)
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +74,7 @@ func (p Polar) checkInlineQueries() error {
 	}
 }
 
-func (p Polar) LoadFile(f string) error {
+func (p Polar) loadFile(f string) error {
 	if filepath.Ext(f) != ".polar" {
 		return &PolarFileExtensionError{file: f}
 	}
@@ -90,7 +90,7 @@ func (p Polar) LoadFile(f string) error {
 	return p.checkInlineQueries()
 }
 
-func (p Polar) LoadString(s string) error {
+func (p Polar) loadString(s string) error {
 	err := p.ffiPolar.load(s, nil)
 	if err != nil {
 		return err
@@ -98,11 +98,11 @@ func (p Polar) LoadString(s string) error {
 	return p.checkInlineQueries()
 }
 
-func (p Polar) ClearRules() error {
+func (p Polar) clearRules() error {
 	return p.ffiPolar.clearRules()
 }
 
-func (p Polar) QueryStr(query string) (*Query, error) {
+func (p Polar) queryStr(query string) (*Query, error) {
 	ffiQuery, err := p.ffiPolar.newQueryFromStr(query)
 	if err != nil {
 		return nil, err
@@ -111,7 +111,7 @@ func (p Polar) QueryStr(query string) (*Query, error) {
 	return &newQuery, nil
 }
 
-func (p Polar) QueryRule(name string, args ...interface{}) (*Query, error) {
+func (p Polar) queryRule(name string, args ...interface{}) (*Query, error) {
 	polarArgs := make([]Term, len(args))
 	for idx, arg := range args {
 		converted, err := p.host.toPolar(arg)
@@ -133,11 +133,11 @@ func (p Polar) QueryRule(name string, args ...interface{}) (*Query, error) {
 	return &newQuery, nil
 }
 
-func (p Polar) Repl(files ...string) error {
+func (p Polar) repl(files ...string) error {
 	return fmt.Errorf("Go REPL is not yet implemented")
 }
 
-func (p Polar) RegisterClass(cls reflect.Type, name *string) error {
+func (p Polar) registerClass(cls reflect.Type, name *string) error {
 	var className string
 	if name == nil {
 		className = cls.Name()
@@ -149,12 +149,11 @@ func (p Polar) RegisterClass(cls reflect.Type, name *string) error {
 	if err != nil {
 		return err
 	}
-	// zeroVal := reflect.Zero(cls)
 	newVal := reflect.New(cls)
-	return p.RegisterConstant(newVal.Interface(), className)
+	return p.registerConstant(newVal.Interface(), className)
 }
 
-func (p Polar) RegisterConstant(value interface{}, name string) error {
+func (p Polar) registerConstant(value interface{}, name string) error {
 	polarValue, err := p.host.toPolar(value)
 	if err != nil {
 		return err

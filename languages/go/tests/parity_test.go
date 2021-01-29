@@ -106,21 +106,6 @@ func (u Constructor) String() string {
 	return "Constructor"
 }
 
-// func NewConstructor(args ...interface{}) Constructor {
-// 	Args := make([]interface{}, len(args))
-// 	for idx, v := range args {
-// 		Args[idx] = v
-// 	}
-// 	return Constructor{
-// 		Args:   Args,
-// 		Kwargs: make(map[string]interface{}),
-// 	}
-// }
-
-// func (c Constructor) numArgs() int {
-// 	return len(c.Args)
-// }
-
 func (c Constructor) NumKwargs() int {
 	return len(map[string]interface{}(c))
 }
@@ -156,45 +141,12 @@ func (MethodVariants) GetEmptyIter() oso.Iterator {
 	return IterableClass{}
 }
 
-//     def is_key_in_kwargs(self, key, **kwargs):
-//         return key in kwargs
-
-//     def set_x_or_y(self, x=1, y=2):
-//         return [x, y]
-
-//     def get_generator(self):
-//         yield from iter(ValueFactory.list_attr)
-
-//     def get_empty_generator(self):
-//         yield from iter([])
-
 // TODO: I don't think these make sense. Maybe as interfaces?
 type ParentClass struct{}
 
-// class ParentClass:
-//     def inherit_parent(self):
-//         return "parent"
-
-//     def override_parent(self):
-//         return "parent"
-
 type ChildClass struct{}
 
-// class ChildClass(ParentClass):
-//     def inherit_child(self):
-//         return "child"
-
-//     def override_parent(self):
-//         return "child"
-
 type GrandchildClass struct{}
-
-// class GrandchildClass(ChildClass):
-//     def inherit_grandchild(self):
-//         return "grandchild"
-
-//     def override_parent(self):
-//         return "grandchild"
 
 type Animal struct {
 	Species string
@@ -385,7 +337,7 @@ func (left Result) Equal(right interface{}) bool {
 	return cmp.Equal(left.inner, right)
 }
 
-func toInput(o oso.Polar, v interface{}, t *testing.T) interface{} {
+func toInput(v interface{}, t *testing.T) interface{} {
 	if vMap, ok := v.(map[string]interface{}); ok {
 		if ty, ok := vMap["type"]; ok {
 			class := CLASSES[ty.(string)]
@@ -435,9 +387,9 @@ func String(s string) *string {
 	return &s
 }
 
-func (tc TestCase) setupTest(o oso.Polar, t *testing.T) error {
+func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
 	for k, v := range CLASSES {
-		err := o.RegisterClass(v, &k)
+		err := o.RegisterClassWithName(v, k)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -483,27 +435,26 @@ func (tc TestCase) RunTest(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			name := t.Name()
 			_ = name
-			var o oso.Polar
-			if oPtr, err := oso.NewPolar(); err != nil {
-				t.Fatalf("Failed to setup Polar: %s", err.Error())
-			} else {
-				o = *oPtr
+			var o oso.Oso
+			var err error
+			if o, err = oso.NewOso(); err != nil {
+				t.Fatalf("Failed to setup Oso: %s", err.Error())
 			}
-			err := tc.setupTest(o, t)
+			err = tc.setupTest(o, t)
 			if err != nil {
 				t.Fatal(err)
 			}
 			var testQuery *oso.Query
 			var queryErr error
 			if c.Inputs == nil {
-				testQuery, queryErr = o.QueryStr(c.Query)
+				testQuery, queryErr = o.NewQueryFromStr(c.Query)
 			} else {
 				Inputs := make([]interface{}, len(*c.Inputs))
 				for idx, v := range *c.Inputs {
-					input := toInput(o, v, t)
+					input := toInput(v, t)
 					Inputs[idx] = input
 				}
-				testQuery, queryErr = o.QueryRule(c.Query, Inputs...)
+				testQuery, queryErr = o.NewQueryFromRule(c.Query, Inputs...)
 			}
 
 			expectedResults := make([]map[string]Result, 0)

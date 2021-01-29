@@ -71,7 +71,6 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			results := make(map[string]interface{})
 			for k, v := range ev.Bindings {
 				converted, err := q.host.toGo(v)
-				// todo: turn back into interface (after toGo returns reflect.Value)
 				if err != nil {
 					return nil, err
 				}
