@@ -7,6 +7,8 @@ import (
 	oso "github.com/osohq/go-oso"
 )
 
+// TEST oso.go
+
 func TestNewOso(t *testing.T) {
 	if o, err := oso.NewOso(); err != nil {
 		t.Fatalf("Failed to set up Oso: %v", err)
@@ -121,13 +123,21 @@ func TestQueryRule(t *testing.T) {
 		t.Error("Expected Polar runtime error, got none")
 	}
 
-	o.LoadString("h(x) if h = 1; h(x) if h.Fake();")
+	o.LoadString("h(x) if x = 1; h(x) if x.Fake();")
 	results, errors = o.QueryRule("h", 1)
 	if r := <-results; !reflect.DeepEqual(r, map[string]interface{}{}) {
 		t.Error("Expected result, got none")
 	}
 	if e := <-errors; e == nil {
 		t.Error("Expected Polar runtime error, got none")
+	}
+
+	results, errors = o.QueryRule("v", 1)
+	if r := <-results; r != nil {
+		t.Error("Got result; expected none")
+	}
+	if e := <-errors; e != nil {
+		t.Error(e)
 	}
 
 }
@@ -153,3 +163,5 @@ func TestIsAllowed(t *testing.T) {
 	}
 
 }
+
+// TEST polar.go
