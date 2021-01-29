@@ -61,9 +61,6 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 		}
 
 		switch ev := event.QueryEventVariant.(type) {
-		case QueryEventNone:
-			// nothing to do
-			continue
 		case QueryEventDone:
 			defer q.ffiQuery.delete()
 			return nil, nil
