@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	oso "github.com/osohq/go-oso"
+	. "github.com/osohq/go-oso/types"
 )
 
 // TEST oso.go
@@ -99,7 +100,7 @@ func TestQueryRule(t *testing.T) {
 	}
 
 	o.LoadString("f(1, 2);")
-	results, errors := o.QueryRule("f", oso.ValueVariable("x"), oso.ValueVariable("y"))
+	results, errors := o.QueryRule("f", ValueVariable("x"), ValueVariable("y"))
 
 	if err = <-errors; err != nil {
 		t.Error(err.Error())

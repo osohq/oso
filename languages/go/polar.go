@@ -1,6 +1,6 @@
 // """Communicate with the Polar virtual machine: load rules, make queries, etc."""
 
-package host
+package oso
 
 import (
 	"fmt"
@@ -8,24 +8,25 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"github.com/osohq/go-oso/ffi"
+	"github.com/osohq/go-oso/errors"
+	host "github.com/osohq/go-oso/host"
+	"github.com/osohq/go-oso/internal/ffi"
+	. "github.com/osohq/go-oso/types"
 )
 
 type Polar struct {
 	ffiPolar ffi.PolarFfi
-	host     Host
+	host     host.Host
 }
 
-type None struct{}
-
 func newPolar() (*Polar, error) {
-	ffiPolar := NewPolarFfi()
+	ffiPolar := ffi.NewPolarFfi()
 	polar := Polar{
 		ffiPolar: ffiPolar,
-		host:     NewHost(ffiPolar),
+		host:     host.NewHost(ffiPolar),
 	}
 
-	err := polar.registerConstant(None{}, "nil")
+	err := polar.registerConstant(host.None{}, "nil")
 	if err != nil {
 		return nil, err
 	}
@@ -52,38 +53,38 @@ func newPolar() (*Polar, error) {
 
 func (p Polar) checkInlineQueries() error {
 	for {
-		ffiQuery, err := p.ffiPolar.nextInlineQuery()
+		ffiQuery, err := p.ffiPolar.NextInlineQuery()
 		if err != nil {
 			return err
 		}
 		if ffiQuery == nil {
 			return nil
 		}
-		query := newQuery(*ffiQuery, p.host.copy())
+		query := newQuery(*ffiQuery, p.host.Copy())
 		res, err := query.Next()
 		if err != nil {
 			return err
 		}
 		if res == nil {
-			querySource, err := query.ffiQuery.source()
+			querySource, err := query.ffiQuery.Source()
 			if err != nil {
 				return err
 			}
-			return &InlineQueryFailedError{source: *querySource}
+			return errors.NewInlineQueryFailedError(*querySource)
 		}
 	}
 }
 
 func (p Polar) loadFile(f string) error {
 	if filepath.Ext(f) != ".polar" {
-		return &PolarFileExtensionError{file: f}
+		return errors.NewPolarFileExtensionError(f)
 	}
 
 	data, err := ioutil.ReadFile(f)
 	if err != nil {
 		return err
 	}
-	err = p.ffiPolar.load(string(data), &f)
+	err = p.ffiPolar.Load(string(data), &f)
 	if err != nil {
 		return err
 	}
@@ -91,7 +92,7 @@ func (p Polar) loadFile(f string) error {
 }
 
 func (p Polar) loadString(s string) error {
-	err := p.ffiPolar.load(s, nil)
+	err := p.ffiPolar.Load(s, nil)
 	if err != nil {
 		return err
 	}
@@ -99,22 +100,22 @@ func (p Polar) loadString(s string) error {
 }
 
 func (p Polar) clearRules() error {
-	return p.ffiPolar.clearRules()
+	return p.ffiPolar.ClearRules()
 }
 
 func (p Polar) queryStr(query string) (*Query, error) {
-	ffiQuery, err := p.ffiPolar.newQueryFromStr(query)
+	ffiQuery, err := p.ffiPolar.NewQueryFromStr(query)
 	if err != nil {
 		return nil, err
 	}
-	newQuery := newQuery(*ffiQuery, p.host.copy())
+	newQuery := newQuery(*ffiQuery, p.host.Copy())
 	return &newQuery, nil
 }
 
 func (p Polar) queryRule(name string, args ...interface{}) (*Query, error) {
 	polarArgs := make([]Term, len(args))
 	for idx, arg := range args {
-		converted, err := p.host.toPolar(arg)
+		converted, err := p.host.ToPolar(arg)
 		if err != nil {
 			return nil, err
 		}
@@ -125,11 +126,11 @@ func (p Polar) queryRule(name string, args ...interface{}) (*Query, error) {
 		Args: polarArgs,
 	}
 	inner := ValueCall(query)
-	ffiQuery, err := p.ffiPolar.newQueryFromTerm(Term{Value{inner}})
+	ffiQuery, err := p.ffiPolar.NewQueryFromTerm(Term{Value{inner}})
 	if err != nil {
 		return nil, err
 	}
-	newQuery := newQuery(*ffiQuery, p.host.copy())
+	newQuery := newQuery(*ffiQuery, p.host.Copy())
 	return &newQuery, nil
 }
 
@@ -145,7 +146,7 @@ func (p Polar) registerClass(cls reflect.Type, name *string) error {
 		className = *name
 	}
 
-	err := p.host.cacheClass(cls, className)
+	err := p.host.CacheClass(cls, className)
 	if err != nil {
 		return err
 	}
@@ -154,9 +155,9 @@ func (p Polar) registerClass(cls reflect.Type, name *string) error {
 }
 
 func (p Polar) registerConstant(value interface{}, name string) error {
-	polarValue, err := p.host.toPolar(value)
+	polarValue, err := p.host.ToPolar(value)
 	if err != nil {
 		return err
 	}
-	return p.ffiPolar.registerConstant(Term{*polarValue}, name)
+	return p.ffiPolar.RegisterConstant(Term{*polarValue}, name)
 }

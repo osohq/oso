@@ -7,13 +7,14 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	oso "github.com/osohq/go-oso"
+	"github.com/osohq/go-oso/errors"
+	. "github.com/osohq/go-oso/types"
 )
 
 func TestSerialize(t *testing.T) {
 	expected := `{"Number":{"Integer":123}}`
-	term := oso.Value{oso.ValueNumber{
-		oso.NumericInteger(123),
+	term := Value{ValueNumber{
+		NumericInteger(123),
 	}}
 	s, err := json.Marshal(term)
 	if err != nil {
@@ -34,35 +35,35 @@ func TestDeserialize(t *testing.T) {
         }
 	}`)
 
-	var term oso.Value
+	var term Value
 	err := json.Unmarshal(jsonTerm, &term)
 	if err != nil {
 		t.Fatal(err)
 	}
-	kwargs := make(map[oso.Symbol]oso.Term)
-	kwargs[oso.Symbol("bar")] = oso.Term{oso.Value{oso.ValueNumber{oso.NumericInteger(1)}}}
-	expectedCall := oso.ValueCall{
+	kwargs := make(map[Symbol]Term)
+	kwargs[Symbol("bar")] = Term{Value{ValueNumber{NumericInteger(1)}}}
+	expectedCall := ValueCall{
 		Name: "foo",
-		Args: []oso.Term{{
-			oso.Value{oso.ValueNumber{oso.NumericInteger(0)}}},
+		Args: []Term{{
+			Value{ValueNumber{NumericInteger(0)}}},
 		},
 		Kwargs: &kwargs,
 	}
-	expected := oso.Value{expectedCall}
+	expected := Value{expectedCall}
 	if !cmp.Equal(term, expected) || !reflect.DeepEqual(term, expected) {
 		t.Error(fmt.Errorf("Result differs from expected:\n%s", cmp.Diff(term, expected)))
 	}
 
 	jsonErrTerm := []byte(`{"kind":{"Parse":{"InvalidTokenCharacter":{"token":"this is not","c":"\n","loc":24}}},"formatted":"'\\n' is not a valid character. Found in this is not at line 1, column 25"}`)
-	var errTerm oso.FormattedPolarError
+	var errTerm errors.FormattedPolarError
 	err = json.Unmarshal(jsonErrTerm, &errTerm)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedErr := oso.FormattedPolarError{
-		Kind: oso.ErrorKind{
-			oso.ErrorKindParse{
-				oso.ParseErrorInvalidTokenCharacter{
+	expectedErr := errors.FormattedPolarError{
+		Kind: ErrorKind{
+			ErrorKindParse{
+				ParseErrorInvalidTokenCharacter{
 					Token: "this is not",
 					C:     "\n",
 					Loc:   24,

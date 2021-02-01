@@ -1,23 +1,26 @@
-package host
+package oso
 
 import (
 	"encoding/json"
 	"fmt"
 	"reflect"
 
-	"github.com/osohq/go-oso/ffi"
+	"github.com/osohq/go-oso/errors"
+	"github.com/osohq/go-oso/host"
+	"github.com/osohq/go-oso/internal/ffi"
 	"github.com/osohq/go-oso/types"
+	. "github.com/osohq/go-oso/types"
 )
 
 type Query struct {
 	ffiQuery ffi.QueryFfi
-	host     Host
+	host     host.Host
 	calls    map[uint64]chan interface{}
 }
 
 // NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
-func newQuery(ffiQuery ffi.QueryFfi, host Host) Query {
+func newQuery(ffiQuery ffi.QueryFfi, host host.Host) Query {
 	return Query{
 		ffiQuery: ffiQuery,
 		host:     host,
@@ -64,7 +67,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 		return nil, fmt.Errorf("query has already finished")
 	}
 	for {
-		ffiEvent, err := q.ffiQuery.nextEvent()
+		ffiEvent, err := q.ffiQuery.NextEvent()
 		if err != nil {
 			return nil, err
 		}
@@ -76,7 +79,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 
 		switch ev := event.QueryEventVariant.(type) {
 		case QueryEventDone:
-			defer q.ffiQuery.delete()
+			defer q.ffiQuery.Delete()
 			return nil, nil
 		case QueryEventDebug:
 			// TODO
@@ -84,7 +87,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 		case QueryEventResult:
 			results := make(map[string]interface{})
 			for k, v := range ev.Bindings {
-				converted, err := q.host.toGo(v)
+				converted, err := q.host.ToGo(v)
 				if err != nil {
 					return nil, err
 				}
@@ -118,7 +121,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 }
 
 func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
-	instance, err := q.host.toGo(event.Instance)
+	instance, err := q.host.ToGo(event.Instance)
 	if err != nil {
 		return err
 	}
@@ -129,26 +132,23 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 	if event.Args != nil {
 		method := reflect.ValueOf(instance).MethodByName(string(event.Attribute))
 		if !method.IsValid() {
-			q.ffiQuery.applicationError((&MissingAttributeError{instance: instance, field: string(event.Attribute)}).Error())
-			q.ffiQuery.callResult(event.CallId, nil)
+			q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, string(event.Attribute))).Error())
+			q.ffiQuery.CallResult(event.CallId, nil)
 			return nil
 		}
 		if method.Kind() == reflect.Func {
-			args, err := q.host.listToGo(*event.Args)
+			args, err := q.host.ListToGo(*event.Args)
 			if err != nil {
 				return err
 			}
 			if event.Kwargs != nil {
-				return &KwargsError{}
+				return &errors.KwargsError{}
 			}
 			numIn := method.Type().NumIn()
 			var end int
 			if !method.Type().IsVariadic() {
 				if len(args) != numIn {
-					return &ErrorWithAdditionalInfo{
-						Inner: &InvalidCallError{instance: instance, field: string(event.Attribute)},
-						Info:  fmt.Sprintf("incorrect number of arguments. Expected %v, got %v", numIn, len(args)),
-					}
+					return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidCallError(instance, string(event.Attribute)), Info: fmt.Sprintf("incorrect number of arguments. Expected %v, got %v", numIn, len(args))}
 				}
 				end = numIn
 			} else {
@@ -163,10 +163,10 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 			for i := 0; i < end; i++ {
 				arg := args[i]
 				callArgs[i] = reflect.New(method.Type().In(i)).Elem()
-				err := SetFieldTo(callArgs[i], arg)
+				err := host.SetFieldTo(callArgs[i], arg)
 				if err != nil {
-					return &ErrorWithAdditionalInfo{
-						Inner: &InvalidCallError{instance: instance, field: string(event.Attribute)},
+					return &errors.ErrorWithAdditionalInfo{
+						Inner: errors.NewInvalidCallError(instance, string(event.Attribute)),
 						Info:  err.Error(),
 					}
 				}
@@ -175,10 +175,10 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 			if method.Type().IsVariadic() {
 				remainingArgs := args[end:]
 				callArgs[end] = reflect.New(method.Type().In(end)).Elem()
-				err := SetFieldTo(callArgs[end], remainingArgs)
+				err := host.SetFieldTo(callArgs[end], remainingArgs)
 				if err != nil {
-					return &ErrorWithAdditionalInfo{
-						Inner: &InvalidCallError{instance: instance, field: string(event.Attribute)},
+					return &errors.ErrorWithAdditionalInfo{
+						Inner: errors.NewInvalidCallError(instance, string(event.Attribute)),
 						Info:  err.Error(),
 					}
 				}
@@ -202,72 +202,72 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 				result = interface{}(arrayResult)
 			}
 		} else {
-			return &InvalidCallError{instance: instance, field: string(event.Attribute)}
+			return errors.NewInvalidCallError(instance, string(event.Attribute))
 		}
 	} else {
 		// look up field
 		attr := reflect.ValueOf(instance).FieldByName(string(event.Attribute))
 		if !attr.IsValid() {
-			q.ffiQuery.applicationError((&MissingAttributeError{instance: instance, field: string(event.Attribute)}).Error())
-			q.ffiQuery.callResult(event.CallId, nil)
+			q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, string(event.Attribute))).Error())
+			q.ffiQuery.CallResult(event.CallId, nil)
 			return nil
 		}
 		result = attr.Interface()
 	}
 
-	polarValue, err := q.host.toPolar(result)
+	polarValue, err := q.host.ToPolar(result)
 	if err != nil {
 		return err
 	}
-	return q.ffiQuery.callResult(event.CallId, &Term{*polarValue})
+	return q.ffiQuery.CallResult(event.CallId, &Term{*polarValue})
 }
 func (q Query) handleExternalIsa(event types.QueryEventExternalIsa) error {
-	isa, err := q.host.isa(event.Instance, string(event.ClassTag))
+	isa, err := q.host.Isa(event.Instance, string(event.ClassTag))
 	if err != nil {
 		return err
 	}
-	return q.ffiQuery.questionResult(event.CallId, isa)
+	return q.ffiQuery.QuestionResult(event.CallId, isa)
 }
 
 func (q Query) handleExternalIsSubSpecializer(event types.QueryEventExternalIsSubSpecializer) error {
-	res, err := q.host.isSubspecializer(int(event.InstanceId), string(event.LeftClassTag), string(event.RightClassTag))
+	res, err := q.host.IsSubspecializer(int(event.InstanceId), string(event.LeftClassTag), string(event.RightClassTag))
 	if err != nil {
 		return err
 	}
-	return q.ffiQuery.questionResult(event.CallId, res)
+	return q.ffiQuery.QuestionResult(event.CallId, res)
 }
 
 func (q Query) handleExternalIsSubclass(event types.QueryEventExternalIsSubclass) error {
-	res, err := q.host.isSubclass(string(event.LeftClassTag), string(event.RightClassTag))
+	res, err := q.host.IsSubclass(string(event.LeftClassTag), string(event.RightClassTag))
 	if err != nil {
 		return err
 	}
-	return q.ffiQuery.questionResult(event.CallId, res)
+	return q.ffiQuery.QuestionResult(event.CallId, res)
 }
 
 func (q Query) handleExternalUnify(event types.QueryEventExternalUnify) error {
-	res, err := q.host.unify(event.LeftInstanceId, event.RightInstanceId)
+	res, err := q.host.Unify(event.LeftInstanceId, event.RightInstanceId)
 	if err != nil {
 		return err
 	}
-	return q.ffiQuery.questionResult(event.CallId, res)
+	return q.ffiQuery.QuestionResult(event.CallId, res)
 }
 
 func (q Query) handleExternalOp(event types.QueryEventExternalOp) error {
 	if len(event.Args) != 2 {
 		return fmt.Errorf("Unexpected number of arguments for operation: %v", len(event.Args))
 	}
-	left, err := q.host.toGo(event.Args[0])
+	left, err := q.host.ToGo(event.Args[0])
 	if err != nil {
 		return err
 	}
-	right, err := q.host.toGo(event.Args[1])
+	right, err := q.host.ToGo(event.Args[1])
 	if err != nil {
 		return err
 	}
 	var answer bool
-	leftCmp := left.(Comparer)
-	rightCmp := right.(Comparer)
+	leftCmp := left.(host.Comparer)
+	rightCmp := right.(host.Comparer)
 	// @TODO: Where are the implementations for these for builtin stuff (numbers mainly)
 	switch event.Operator.OperatorVariant.(type) {
 	case OperatorLt:
@@ -285,16 +285,16 @@ func (q Query) handleExternalOp(event types.QueryEventExternalOp) error {
 	default:
 		return fmt.Errorf("Unsupported operation: %v", event.Operator.OperatorVariant)
 	}
-	return q.ffiQuery.questionResult(event.CallId, answer)
+	return q.ffiQuery.QuestionResult(event.CallId, answer)
 }
 
 func (q Query) handleNextExternal(event types.QueryEventNextExternal) error {
 	if _, ok := q.calls[event.CallId]; !ok {
-		instance, err := q.host.toGo(event.Iterable)
+		instance, err := q.host.ToGo(event.Iterable)
 		if err != nil {
 			return err
 		}
-		if iter, ok := instance.(Iterator); ok {
+		if iter, ok := instance.(host.Iterator); ok {
 			q.calls[event.CallId] = iter.Iter()
 		} else {
 			return errors.NewInvalidIteratorError(instance)
@@ -304,11 +304,11 @@ func (q Query) handleNextExternal(event types.QueryEventNextExternal) error {
 	iter := q.calls[event.CallId]
 	nextValue, ok := <-iter
 	if !ok { // iterator is done
-		return q.ffiQuery.callResult(event.CallId, nil)
+		return q.ffiQuery.CallResult(event.CallId, nil)
 	}
-	retValue, err := q.host.toPolar(nextValue)
+	retValue, err := q.host.ToPolar(nextValue)
 	if err != nil {
 		return err
 	}
-	return q.ffiQuery.callResult(event.CallId, &Term{*retValue})
+	return q.ffiQuery.CallResult(event.CallId, &Term{*retValue})
 }

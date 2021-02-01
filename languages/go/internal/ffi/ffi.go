@@ -93,7 +93,7 @@ func (p PolarFfi) NewId() (uint64, error) {
 	return uint64(id), nil
 }
 
-func (p PolarFfi) load(s string, filename *string) error {
+func (p PolarFfi) Load(s string, filename *string) error {
 	cString := C.CString(s)
 	var cFilename *C.char
 	if filename != nil {
@@ -107,7 +107,7 @@ func (p PolarFfi) load(s string, filename *string) error {
 	return nil
 }
 
-func (p PolarFfi) clearRules() error {
+func (p PolarFfi) ClearRules() error {
 	result := C.polar_clear_rules(p.ptr)
 	processMessages(p)
 	if result == 0 {
@@ -116,7 +116,7 @@ func (p PolarFfi) clearRules() error {
 	return nil
 }
 
-func (p PolarFfi) newQueryFromStr(queryStr string) (*QueryFfi, error) {
+func (p PolarFfi) NewQueryFromStr(queryStr string) (*QueryFfi, error) {
 	cs := C.CString(queryStr)
 	result := C.polar_new_query(p.ptr, cs, 0)
 	processMessages(p)
@@ -126,7 +126,7 @@ func (p PolarFfi) newQueryFromStr(queryStr string) (*QueryFfi, error) {
 	return newQueryFfi(result), nil
 }
 
-func (p PolarFfi) newQueryFromTerm(queryTerm types.Term) (*QueryFfi, error) {
+func (p PolarFfi) NewQueryFromTerm(queryTerm types.Term) (*QueryFfi, error) {
 	json, err := ffiSerialize(queryTerm)
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (p PolarFfi) newQueryFromTerm(queryTerm types.Term) (*QueryFfi, error) {
 	return newQueryFfi(result), nil
 }
 
-func (p PolarFfi) nextInlineQuery() (*QueryFfi, error) {
+func (p PolarFfi) NextInlineQuery() (*QueryFfi, error) {
 	queryPtr := C.polar_next_inline_query(p.ptr, 0)
 	processMessages(p)
 	if queryPtr == nil {
@@ -149,7 +149,7 @@ func (p PolarFfi) nextInlineQuery() (*QueryFfi, error) {
 	return newQueryFfi(queryPtr), nil
 }
 
-func (p PolarFfi) registerConstant(term types.Term, name string) error {
+func (p PolarFfi) RegisterConstant(term types.Term, name string) error {
 	cName := C.CString(name)
 	cTerm, err := ffiSerialize(term)
 	if err != nil {
@@ -174,7 +174,7 @@ func newQueryFfi(ptr *C.polar_Query) *QueryFfi {
 	}
 }
 
-func (q *QueryFfi) delete() {
+func (q *QueryFfi) Delete() {
 	C.query_free(q.ptr)
 	q = nil
 }
@@ -183,7 +183,7 @@ func (q QueryFfi) nextMessage() *C.char {
 	return C.polar_next_query_message(q.ptr)
 }
 
-func (q QueryFfi) callResult(callID uint64, term *types.Term) error {
+func (q QueryFfi) CallResult(callID uint64, term *types.Term) error {
 	var s *C.char
 	var err error
 	if term != nil {
@@ -200,7 +200,7 @@ func (q QueryFfi) callResult(callID uint64, term *types.Term) error {
 	return nil
 }
 
-func (q QueryFfi) questionResult(callID uint64, answer bool) error {
+func (q QueryFfi) QuestionResult(callID uint64, answer bool) error {
 	var intAnswer int
 	if answer {
 		intAnswer = 1
@@ -214,7 +214,7 @@ func (q QueryFfi) questionResult(callID uint64, answer bool) error {
 	return nil
 }
 
-func (q QueryFfi) applicationError(message string) error {
+func (q QueryFfi) ApplicationError(message string) error {
 	result := C.polar_application_error(q.ptr, C.CString(message))
 	if result == 0 {
 		return getError()
@@ -222,7 +222,7 @@ func (q QueryFfi) applicationError(message string) error {
 	return nil
 }
 
-func (q QueryFfi) nextEvent() (*string, error) {
+func (q QueryFfi) NextEvent() (*string, error) {
 	event := C.polar_next_query_event(q.ptr)
 	processMessages(q)
 	if event == nil {
@@ -245,7 +245,7 @@ func (q QueryFfi) debugCommand(command *string) error {
 	return nil
 }
 
-func (q QueryFfi) source() (*string, error) {
+func (q QueryFfi) Source() (*string, error) {
 	source := C.polar_query_source_info(q.ptr)
 	if source == nil {
 		return nil, getError()

@@ -10,6 +10,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/osohq/go-oso/host"
+	. "github.com/osohq/go-oso/types"
+
 	yaml "github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
 	oso "github.com/osohq/go-oso"
@@ -133,11 +136,11 @@ func (m MethodVariants) SumInputArgs(args ...int) int {
 	return sum
 }
 
-func (MethodVariants) GetIter() oso.Iterator {
+func (MethodVariants) GetIter() host.Iterator {
 	return IterableClass{Elems: NewValueFactory().ListAttr}
 }
 
-func (MethodVariants) GetEmptyIter() oso.Iterator {
+func (MethodVariants) GetEmptyIter() host.Iterator {
 	return IterableClass{}
 }
 
@@ -170,10 +173,10 @@ func (u ImplementsEq) String() string {
 	return fmt.Sprintf("ImplementsEq { %v }", u.Val)
 }
 
-func (left ImplementsEq) Equal(right oso.Comparer) bool {
+func (left ImplementsEq) Equal(right host.Comparer) bool {
 	return left.Val == right.(ImplementsEq).Val
 }
-func (left ImplementsEq) Lt(right oso.Comparer) bool {
+func (left ImplementsEq) Lt(right host.Comparer) bool {
 	panic("unsupported")
 }
 
@@ -189,14 +192,14 @@ func (u Comparable) String() string {
 	return fmt.Sprintf("Comparable { %v }", u.Val)
 }
 
-func (a Comparable) Equal(b oso.Comparer) bool {
+func (a Comparable) Equal(b host.Comparer) bool {
 	if other, ok := b.(Comparable); ok {
 		return a.Val == other.Val
 	}
 	panic(fmt.Sprintf("cannot compare Comparable with %v", b))
 }
 
-func (a Comparable) Lt(b oso.Comparer) bool {
+func (a Comparable) Lt(b host.Comparer) bool {
 	if other, ok := b.(Comparable); ok {
 		return a.Val < other.Val
 	}
@@ -223,7 +226,7 @@ func setStructFields(instance reflect.Value, args []interface{}) error {
 		if !f.IsValid() {
 			return fmt.Errorf("Cannot set field #%v", idx)
 		}
-		err := oso.SetFieldTo(f, arg)
+		err := host.SetFieldTo(f, arg)
 		if err != nil {
 			return err
 		}
@@ -237,7 +240,7 @@ func setMapFields(instance reflect.Value, kwargs map[string]interface{}) error {
 		if !f.IsValid() {
 			return fmt.Errorf("Cannot set field %v", k)
 		}
-		err := oso.SetFieldTo(f, v)
+		err := host.SetFieldTo(f, v)
 		if err != nil {
 			return err
 		}
@@ -264,7 +267,7 @@ func instantiateClass(class reflect.Type, args []interface{}, kwargs map[string]
 		if len(kwargs) != 0 {
 			return nil, fmt.Errorf("Cannot assign kwargs to a class of type: %s", class.Kind())
 		}
-		err := oso.SetFieldTo(instance, args)
+		err := host.SetFieldTo(instance, args)
 		if err != nil {
 			return nil, err
 		}
@@ -272,7 +275,7 @@ func instantiateClass(class reflect.Type, args []interface{}, kwargs map[string]
 		if len(args) != 0 {
 			return nil, fmt.Errorf("Cannot assign args to a class of type: %s", class.Kind())
 		}
-		err := oso.SetFieldTo(instance, kwargs)
+		err := host.SetFieldTo(instance, kwargs)
 		if err != nil {
 			return nil, err
 		}
@@ -359,7 +362,7 @@ func toInput(v interface{}, t *testing.T) interface{} {
 			return instance
 		}
 		if v, ok := vMap["var"]; ok {
-			return oso.ValueVariable(v.(string))
+			return ValueVariable(v.(string))
 		}
 	}
 	return v

@@ -13,7 +13,7 @@ type DuplicateClassAliasError struct {
 	existing reflect.Type
 }
 
-func NewDuplicateClassAliasError(name string, cls reflect.Type, existing reflect.Type) error {
+func NewDuplicateClassAliasError(name string, cls reflect.Type, existing reflect.Type) *DuplicateClassAliasError {
 	return &DuplicateClassAliasError{name: name, cls: cls, existing: existing}
 }
 
@@ -25,12 +25,20 @@ type DuplicateInstanceRegistrationError struct {
 	id uint64
 }
 
+func NewDuplicateInstanceRegistrationError(id uint64) *DuplicateInstanceRegistrationError {
+	return &DuplicateInstanceRegistrationError{id: id}
+}
+
 func (e *DuplicateInstanceRegistrationError) Error() string {
 	return fmt.Sprintf("Attempted to register instance %d, but an instance with that ID already exists.", e.id)
 }
 
 type InlineQueryFailedError struct {
 	source string
+}
+
+func NewInlineQueryFailedError(source string) *InlineQueryFailedError {
+	return &InlineQueryFailedError{source: source}
 }
 
 func (e *InlineQueryFailedError) Error() string {
@@ -42,6 +50,10 @@ type MissingAttributeError struct {
 	field    string
 }
 
+func NewMissingAttributeError(instance interface{}, field string) *MissingAttributeError {
+	return &MissingAttributeError{instance: instance, field: field}
+}
+
 func (e *MissingAttributeError) Error() string {
 	return fmt.Sprintf("'%v' object has no attribute '%s'", e.instance, e.field)
 }
@@ -51,12 +63,20 @@ type InvalidCallError struct {
 	field    string
 }
 
+func NewInvalidCallError(instance interface{}, field string) *InvalidCallError {
+	return &InvalidCallError{instance: instance, field: field}
+}
+
 func (e *InvalidCallError) Error() string {
 	return fmt.Sprintf("%v.%s is not a function", e.instance, e.field)
 }
 
 type InvalidIteratorError struct {
-	instance types.Value
+	instance interface{}
+}
+
+func NewInvalidIteratorError(instance interface{}) *InvalidIteratorError {
+	return &InvalidIteratorError{instance: instance}
 }
 
 func (e *InvalidIteratorError) Error() string {
@@ -75,6 +95,10 @@ type InvalidQueryEventError struct {
 	event string
 }
 
+func NewInvalidQueryEventError(event string) *InvalidQueryEventError {
+	return &InvalidQueryEventError{event: event}
+}
+
 func (e *InvalidQueryEventError) Error() string {
 	return fmt.Sprintf("Invalid query event: %s", e.event)
 }
@@ -90,12 +114,20 @@ type PolarFileExtensionError struct {
 	file string
 }
 
+func NewPolarFileExtensionError(file string) *PolarFileExtensionError {
+	return &PolarFileExtensionError{file: file}
+}
+
 func (e *PolarFileExtensionError) Error() string {
 	return fmt.Sprintf("Polar files must have .polar extension. Offending file: %s", e.file)
 }
 
 type PolarFileNotFoundError struct {
 	file string
+}
+
+func NewPolarFileNotFoundError(file string) *PolarFileNotFoundError {
+	return &PolarFileNotFoundError{file: file}
 }
 
 func (e *PolarFileNotFoundError) Error() string {
@@ -106,6 +138,10 @@ type UnimplementedOperationError struct {
 	operation string
 }
 
+func NewUnimplementedOperationError(operation string) *UnimplementedOperationError {
+	return &UnimplementedOperationError{operation: operation}
+}
+
 func (e *UnimplementedOperationError) Error() string {
 	return fmt.Sprintf("%s are unimplemented in the oso Go library", e.operation)
 }
@@ -114,12 +150,20 @@ type UnregisteredClassError struct {
 	name string
 }
 
+func NewUnregisteredClassError(name string) *UnregisteredClassError {
+	return &UnregisteredClassError{name: name}
+}
+
 func (e *UnregisteredClassError) Error() string {
 	return fmt.Sprintf("Unregistered class: %s", e.name)
 }
 
 type UnregisteredInstanceError struct {
 	id uint64
+}
+
+func NewUnregisteredInstanceError(id uint64) *UnregisteredInstanceError {
+	return &UnregisteredInstanceError{id: id}
 }
 
 func (e *UnregisteredInstanceError) Error() string {

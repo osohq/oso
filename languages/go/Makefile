@@ -7,12 +7,12 @@
 UNAME_S := $(shell uname -s)
 
 copy_lib:
-	cp ../../polar-c-api/polar.h ffi/native/
+	cp ../../polar-c-api/polar.h internal/ffi/native/
 ifeq ($(UNAME_S),Linux)
-	cp ../../target/debug/libpolar.a ffi/native/linux/
+	cp ../../target/debug/libpolar.a internal/ffi/native/linux/
 endif
 ifeq ($(UNAME_S),Darwin)
-	cp ../../target/debug/libpolar.a ffi/native/macos/
+	cp ../../target/debug/libpolar.a internal/ffi/native/macos/
 endif
 
 test: copy_lib

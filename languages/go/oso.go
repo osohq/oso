@@ -2,19 +2,17 @@ package oso
 
 import (
 	"reflect"
-
-	"github.com/osohq/go-oso/host"
 )
 
 type Oso struct {
-	p *host.Polar
+	p *Polar
 }
 
 /*
 Construct a new Oso instance.
 */
 func NewOso() (Oso, error) {
-	if p, e := host.newPolar(); e != nil {
+	if p, e := newPolar(); e != nil {
 		return Oso{}, e
 	} else {
 		return Oso{p: p}, nil

@@ -8,10 +8,14 @@ import (
 	"reflect"
 
 	"github.com/osohq/go-oso/errors"
-	"github.com/osohq/go-oso/ffi"
+	"github.com/osohq/go-oso/internal/ffi"
+	"github.com/osohq/go-oso/types"
+	. "github.com/osohq/go-oso/types"
 )
 
 var CLASSES = make(map[string]reflect.Type)
+
+type None struct{}
 
 type Host struct {
 	ffiPolar  ffi.PolarFfi
@@ -32,7 +36,7 @@ func NewHost(polar ffi.PolarFfi) Host {
 	}
 }
 
-func (h Host) copy() Host {
+func (h Host) Copy() Host {
 	classes := make(map[string]reflect.Type)
 	for k, v := range h.classes {
 		classes[k] = v
@@ -55,7 +59,7 @@ func (h Host) getClass(name string) (*reflect.Type, error) {
 	return nil, errors.NewUnregisteredClassError(name)
 }
 
-func (h Host) cacheClass(cls reflect.Type, name string) error {
+func (h Host) CacheClass(cls reflect.Type, name string) error {
 	if v, ok := h.classes[name]; ok {
 		return errors.NewDuplicateClassAliasError(name, cls, v)
 	}
@@ -85,7 +89,7 @@ func (h Host) cacheInstance(instance interface{}, id *uint64) (*uint64, error) {
 	return &instanceID, nil
 }
 
-func (h Host) unify(leftID uint64, rightID uint64) (bool, error) {
+func (h Host) Unify(leftID uint64, rightID uint64) (bool, error) {
 	left, err1 := h.getInstance(leftID)
 	right, err2 := h.getInstance(rightID)
 	if err1 != nil {
@@ -102,8 +106,8 @@ func (h Host) unify(leftID uint64, rightID uint64) (bool, error) {
 	return reflect.DeepEqual(left, right), nil
 }
 
-func (h Host) isa(value types.Term, classTag string) (bool, error) {
-	instance, err := h.toGo(value)
+func (h Host) Isa(value types.Term, classTag string) (bool, error) {
+	instance, err := h.ToGo(value)
 	if err != nil {
 		return false, err
 	}
@@ -116,7 +120,7 @@ func (h Host) isa(value types.Term, classTag string) (bool, error) {
 	return res, nil
 }
 
-func (h Host) isSubclass(leftTag string, rightTag string) (bool, error) {
+func (h Host) IsSubclass(leftTag string, rightTag string) (bool, error) {
 	left, err := h.getClass(leftTag)
 	if err != nil {
 		return false, err
@@ -129,18 +133,18 @@ func (h Host) isSubclass(leftTag string, rightTag string) (bool, error) {
 	return *left == *right, nil
 }
 
-func (h Host) isSubspecializer(instanceID int, leftTag string, rightTag string) (bool, error) {
+func (h Host) IsSubspecializer(instanceID int, leftTag string, rightTag string) (bool, error) {
 	return false, nil
 }
 
-func (h Host) toPolar(v interface{}) (*types.Value, error) {
+func (h Host) ToPolar(v interface{}) (*Value, error) {
 	if v == nil {
-		return h.toPolar(None{})
+		return h.ToPolar(None{})
 	}
 	switch v := v.(type) {
 	case bool:
-		inner := types.ValueBoolean(v)
-		return &types.Value{inner}, nil
+		inner := ValueBoolean(v)
+		return &Value{inner}, nil
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		var intVal int64
 		switch vv := v.(type) {
@@ -169,8 +173,8 @@ func (h Host) toPolar(v interface{}) (*types.Value, error) {
 			}
 			intVal = int64(vv)
 		}
-		inner := types.ValueNumber{types.NumericInteger(intVal)}
-		return &types.Value{inner}, nil
+		inner := ValueNumber{types.NumericInteger(intVal)}
+		return &Value{inner}, nil
 	case float32, float64:
 		var floatVal float64
 		switch vv := v.(type) {
@@ -179,16 +183,16 @@ func (h Host) toPolar(v interface{}) (*types.Value, error) {
 		case float64:
 			floatVal = float64(vv)
 		}
-		inner := types.ValueNumber{types.NumericInteger(floatVal)}
-		return &types.Value{inner}, nil
+		inner := ValueNumber{types.NumericInteger(floatVal)}
+		return &Value{inner}, nil
 	case string:
-		inner := types.ValueString(v)
-		return &types.Value{inner}, nil
-	case types.Value:
+		inner := ValueString(v)
+		return &Value{inner}, nil
+	case Value:
 		return &v, nil
-	case types.ValueVariant:
+	case ValueVariant:
 		// if its already a variant, return that
-		return &types.Value{v}, nil
+		return &Value{v}, nil
 	}
 
 	// check composite types
@@ -198,9 +202,9 @@ func (h Host) toPolar(v interface{}) (*types.Value, error) {
 		rtDeref := rt.Elem()
 		if rt.IsNil() {
 			// TODO: Is `nil` a reflect.Ptr?
-			return h.toPolar(None{})
+			return h.ToPolar(None{})
 		}
-		return h.toPolar(rtDeref.Interface())
+		return h.ToPolar(rtDeref.Interface())
 	}
 
 	switch rt.Kind() {
@@ -209,28 +213,28 @@ func (h Host) toPolar(v interface{}) (*types.Value, error) {
 		slice := make([]types.Term, rt.Len())
 		for i := 0; i < rt.Len(); i++ {
 			// call toPolar on each element
-			converted, err := h.toPolar(rt.Index(i).Interface())
+			converted, err := h.ToPolar(rt.Index(i).Interface())
 			if err != nil {
 				return nil, err
 			}
 			slice[i] = types.Term{*converted}
 		}
-		inner := types.ValueList(slice)
-		return &types.Value{inner}, nil
+		inner := ValueList(slice)
+		return &Value{inner}, nil
 	case reflect.Map:
 		fields := make(map[types.Symbol]types.Term)
 		iter := rt.MapRange()
 		for iter.Next() {
 			k := iter.Key().String()
 			v := iter.Value().Interface()
-			converted, err := h.toPolar(v)
+			converted, err := h.ToPolar(v)
 			if err != nil {
 				return nil, err
 			}
 			fields[types.Symbol(k)] = types.Term{*converted}
 		}
-		inner := types.ValueDictionary{Fields: fields}
-		return &types.Value{inner}, nil
+		inner := ValueDictionary{Fields: fields}
+		return &Value{inner}, nil
 	default:
 		instanceID, err := h.cacheInstance(v, nil)
 		if err != nil {
@@ -246,10 +250,10 @@ func (h Host) toPolar(v interface{}) (*types.Value, error) {
 	}
 }
 
-func (h Host) listToGo(v []types.Term) ([]interface{}, error) {
+func (h Host) ListToGo(v []types.Term) ([]interface{}, error) {
 	retList := make([]interface{}, len(v))
 	for idx, v := range v {
-		ret, err := h.toGo(v)
+		ret, err := h.ToGo(v)
 		if err != nil {
 			return nil, err
 		}
@@ -258,7 +262,7 @@ func (h Host) listToGo(v []types.Term) ([]interface{}, error) {
 	return retList, nil
 }
 
-func (h Host) toGo(v types.Term) (interface{}, error) {
+func (h Host) ToGo(v types.Term) (interface{}, error) {
 	switch inner := v.Value.ValueVariant.(type) {
 	case ValueBoolean:
 		return bool(inner), nil
@@ -272,11 +276,11 @@ func (h Host) toGo(v types.Term) (interface{}, error) {
 	case ValueString:
 		return string(inner), nil
 	case ValueList:
-		return h.listToGo(inner)
+		return h.ListToGo(inner)
 	case ValueDictionary:
 		retMap := make(map[string]interface{})
 		for k, v := range inner.Fields {
-			ret, err := h.toGo(v)
+			ret, err := h.ToGo(v)
 			if err != nil {
 				return nil, err
 			}
