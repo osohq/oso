@@ -240,6 +240,7 @@ class FilterBuilder:
             filtered = subq.model.objects.filter(subq.finish()).values("pk")
             exists = Exists(filtered)
             name = f"{self.name}__exists"
+            # https://docs.djangoproject.com/en/2.2/ref/models/expressions/#filtering-on-a-subquery-expression
             objects = objects.annotate(**{name: exists}).filter(**{name: True})
         self.filter &= Q(pk__in=objects.values("pk"))
         return self.filter
