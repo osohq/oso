@@ -16,4 +16,4 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 test: copy_lib
-	go test -v ./tests/
+	go test -v ./tests/ -count=1
