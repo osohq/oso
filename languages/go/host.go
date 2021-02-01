@@ -4,6 +4,7 @@ package oso
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 )
 
@@ -157,6 +158,10 @@ func (h Host) toPolar(v interface{}) (*Value, error) {
 		case uint32:
 			intVal = int64(vv)
 		case uint64:
+			uintVal := uint64(vv)
+			if uintVal > uint64(math.MaxInt64) {
+				return nil, fmt.Errorf("Invalid integer %v, max %v", v, math.MaxInt64)
+			}
 			intVal = int64(vv)
 		}
 		inner := ValueNumber{NumericInteger(intVal)}
