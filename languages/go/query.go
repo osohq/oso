@@ -13,6 +13,9 @@ import (
 	. "github.com/osohq/go-oso/types"
 )
 
+/*
+Execute a Polar query through the FFI/event interface.
+*/
 type Query struct {
 	ffiQuery ffi.QueryFfi
 	host     host.Host
@@ -49,6 +52,10 @@ func (q *Query) resultsChannel() (<-chan map[string]interface{}, <-chan error) {
 	return results, errors
 }
 
+/*
+Executes the query until all results have been returned, and returns results
+as a list of binding maps.
+*/
 func (q *Query) GetAllResults() ([]map[string]interface{}, error) {
 	results := make([]map[string]interface{}, 0)
 	for {
@@ -63,6 +70,10 @@ func (q *Query) GetAllResults() ([]map[string]interface{}, error) {
 	return results, nil
 }
 
+/*
+Get the next query result (). Returns a pointer to a map of result bindings,
+or a nil pointer if there are no results.
+*/
 func (q *Query) Next() (*map[string]interface{}, error) {
 	if q == nil {
 		return nil, fmt.Errorf("query has already finished")
