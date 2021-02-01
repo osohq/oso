@@ -1,4 +1,4 @@
-const colors = require('tailwindcss/colors')
+const colors = require('tailwindcss/colors');
 
 osoBlue = {
   100: '#e1dbf6',
@@ -22,7 +22,7 @@ osoYellow = {
   700: '#a16207',
   800: '#854d0e',
   900: '#713f12',
-}
+};
 
 function withShadeNames(palette) {
   return {
@@ -32,7 +32,7 @@ function withShadeNames(palette) {
     DEFAULT: palette[500],
     dark: palette[700],
     darkest: palette[900],
-  }
+  };
 }
 
 module.exports = {
@@ -44,13 +44,12 @@ module.exports = {
       red: withShadeNames(colors.red),
       green: withShadeNames(colors.green),
       blue: withShadeNames(colors.blue),
+      orange: withShadeNames(colors.orange),
       primary: withShadeNames(osoBlue),
       yellow: withShadeNames(osoYellow),
     },
-    extend: {}
+    extend: {},
   },
   variants: {},
-  plugins: [
-    require('@tailwindcss/typography'),
-  ]
-}
+  plugins: [require('@tailwindcss/typography')],
+};

@@ -8,7 +8,8 @@ installation: |
     the latest JAR file and add it to your Java project libraries.
 
     Once you have oso installed, run `Server.java`.
+submitted_by: submittedBy
 endswith: endsWith
 endswithURL: >
-   [the `String.endsWith` method.](https://docs.oracle.com/javase/10/docs/api/java/lang/String.html#endsWith(java.lang.String))
+   [the `String.endsWith` method](https://docs.oracle.com/javase/10/docs/api/java/lang/String.html#endsWith(java.lang.String))
 ---

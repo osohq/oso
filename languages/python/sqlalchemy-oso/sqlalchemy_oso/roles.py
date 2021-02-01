@@ -255,15 +255,17 @@ def enable_roles(oso):
     for role_model in ROLE_CLASSES:
         user_model = role_model["user_model"]
         user = user_model.__name__
+        # user_pk = inspect(user_model).primary_key[0].name
         resource_model = role_model["resource_model"]
         resource = resource_model.__name__
+        resource_pk = inspect(resource_model).primary_key[0].name
         role = get_role_model_for_resource_model(resource_model).__name__
 
         policy += f"""
         user_in_role(user: {user}, role, resource: {resource}) if
             session = OsoSession.get() and
             role in session.query({role}).filter_by(user: user) and
-            role.{resource.lower()}.id = resource.id;
+            role.{resource.lower()}.{resource_pk} = resource.{resource_pk};
 
         inherits_role(role: {role}, inherited_role) if
             {resource.lower()}_role_order(role_order) and
@@ -337,17 +339,18 @@ def get_user_roles(session, user, resource_model, resource_id=None):
     _check_valid_instance(user)
     _check_valid_model(resource_model)
     role_model = get_role_model_for_resource_model(resource_model)
+    resource_pk = inspect(resource_model).primary_key[0].name
 
     roles = (
         session.query(role_model)
         .join(resource_model)
         .filter(role_model.user == user)
-        .order_by(resource_model.id)
+        .order_by(getattr(resource_model, resource_pk))
         .order_by(role_model.name)
     )
 
     if resource_id:
-        roles = roles.filter(resource_model.id == resource_id)
+        roles = roles.filter(getattr(resource_model, resource_pk) == resource_id)
     return roles.all()
 
 
@@ -400,7 +403,7 @@ def get_resource_users_by_role(session, resource, role_name):
         session.query(user_model)
         .join(role_model)
         .filter_by(repository=resource, name=role_name)
-        .order_by(user_model.id)
+        .order_by(user_model.user_id)
         .all()
     )
 

@@ -139,9 +139,11 @@ Check out the Django integration example app below on GitHub:
 
 The oso Django integration includes list filtering support for Django models.
 
-**NOTE**: These features are in preview and will be stabilized in a
-future release. Please [join our Slack](http://join-slack.osohq.com/) to provide feedback or discuss with
-the engineering team.
+{{< callout "Note" "green" >}}
+  These features are in preview and will be stabilized in a future release.
+  Please [join our Slack](https://join-slack.osohq.com/) to provide feedback or
+  discuss with the engineering team.
+{{< /callout >}}
 
 #### Usage
 
