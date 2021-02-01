@@ -1,6 +1,7 @@
 package oso
 
 import (
+	"fmt"
 	"reflect"
 )
 
@@ -68,6 +69,26 @@ Register a Go value as a Polar constant variable called `name`.
 */
 func (o Oso) RegisterConstant(value interface{}, name string) error {
 	return (*o.p).registerConstant(value, name)
+}
+
+func (o Oso) RegisterFunction(name string, fptr interface{}, ptype interface{}) error {
+	fn := reflect.ValueOf(fptr).Elem()
+	t := fn.Type()
+	in := t.NumIn()
+	out := t.NumOut()
+	for i := 0; i < in; i++ {
+		fmt.Printf("%v\n", t.In(i))
+	}
+	for i := 0; i < out; i++ {
+		fmt.Printf("%v\n", t.Out(i))
+	}
+	args := make([]reflect.Value, 0)
+	args = append(args, reflect.ValueOf(1), reflect.ValueOf("hello"))
+	s := fn.Call(args)
+
+	fmt.Printf("%v: %v => %v", fn, t, s)
+
+	return nil
 }
 
 /*
