@@ -76,9 +76,7 @@ Alternative solutions
 =====================
 
 Partial evaluation is not the only way to efficiently apply authorization to
-collections of data. On the :doc:`Access Patterns
-</getting-started/application/patterns>` page, we describe :ref:`several
-alternatives <authorizing-list-endpoints>`. Manually applying ``WHERE`` clauses
+collections of data. Manually applying ``WHERE`` clauses
 to reduce the search space (or using `ActiveRecord-style scopes
 <https://guides.rubyonrails.org/active_record_querying.html#scopes>`_) requires
 additional application code and still needs to iterate over a potentially large
