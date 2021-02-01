@@ -71,7 +71,7 @@ func (q *Query) GetAllResults() ([]map[string]interface{}, error) {
 }
 
 /*
-Get the next query result (). Returns a pointer to a map of result bindings,
+Get the next query result. Returns a pointer to a map of result bindings,
 or a nil pointer if there are no results.
 */
 func (q *Query) Next() (*map[string]interface{}, error) {
