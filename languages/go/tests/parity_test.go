@@ -319,7 +319,7 @@ func NewResult(input interface{}) Result {
 		return Result{result}
 	case uint64:
 		// standardise uints to ints
-		return Result{inner: int64(inputVal)}
+		return Result{inner: inputVal}
 	default:
 		return Result{input}
 	}
