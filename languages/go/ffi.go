@@ -180,7 +180,7 @@ func (q QueryFfi) nextMessage() *C.char {
 	return C.polar_next_query_message(q.ptr)
 }
 
-func (q QueryFfi) callResult(callID int, term *Term) error {
+func (q QueryFfi) callResult(callID uint64, term *Term) error {
 	var s *C.char
 	var err error
 	if term != nil {
@@ -197,7 +197,7 @@ func (q QueryFfi) callResult(callID int, term *Term) error {
 	return nil
 }
 
-func (q QueryFfi) questionResult(callID int, answer bool) error {
+func (q QueryFfi) questionResult(callID uint64, answer bool) error {
 	var intAnswer int
 	if answer {
 		intAnswer = 1
