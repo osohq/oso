@@ -31,7 +31,7 @@ to get the roles directly.
 {{< /callout >}}
 
 The library also provides [`helper methods`]({{< relref
-path="reference/sqlalchemy#sqlalchemy_osoroles" lang="python" >}}) for
+path="reference/frameworks/sqlalchemy#sqlalchemy_osoroles" lang="python" >}}) for
 inspecting and managing roles.
 
 ## Base policy
