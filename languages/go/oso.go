@@ -28,8 +28,7 @@ func NewOso() (Oso, error) {
 }
 
 /*
-Load in polar policies from a ".polar" file, checking that all inline queries
-succeed.
+Load Polar policy from a ".polar" file, checking that all inline queries succeed.
 */
 func (o Oso) LoadFile(f string) error {
 	return (*o.p).loadFile(f)
