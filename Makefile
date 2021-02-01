@@ -36,6 +36,7 @@ python-flask-test: python-build python-flask-build
 
 python-django-test: python-build python-django-build
 	$(MAKE) -C languages/python/django-oso test
+	$(MAKE) -C languages/python/django-oso test22
 
 python-sqlalchemy-test: python-build python-sqlalchemy-build
 	$(MAKE) -C languages/python/sqlalchemy-oso test
