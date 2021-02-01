@@ -1,5 +1,6 @@
 ---
-title: Application Data
+title: Rust Types in Polar
+weight: 2
 ---
 
 [rust-string]: https://doc.rust-lang.org/std/string/struct.String.html

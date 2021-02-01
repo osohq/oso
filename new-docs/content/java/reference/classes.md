@@ -1,5 +1,6 @@
 ---
-title: Application Data
+title: Java Types in Polar
+weight: 2
 ---
 
 ## Working with Java Types

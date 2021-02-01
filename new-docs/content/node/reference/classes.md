@@ -1,5 +1,6 @@
 ---
-title: Application Data
+title: JavaScript Types in Polar
+weight: 2
 ---
 
 [mdn-array]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array

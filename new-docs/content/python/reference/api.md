@@ -1,6 +1,6 @@
 ---
-weight: 3
 title: Python API
+weight: 3
 ---
 
 # Python API
