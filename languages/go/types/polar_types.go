@@ -1,5 +1,7 @@
 package types
 
+// Code generated. DO NOT EDIT.
+
 import (
 	"encoding/json"
 	"errors"
