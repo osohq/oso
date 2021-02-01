@@ -1,10 +1,20 @@
-.. title:: Changelog for Release DATE
+.. title:: Changelog for Release 2021-2-3
 .. meta::
-  :description: Changelog for Release DATE (RELEASED_VERSIONS) containing new features, bug fixes, and more.
+  :description: Changelog for Release 2021-2-3 (RELEASED_VERSIONS) containing new features, bug fixes, and more.
 
-############
-Release DATE
-############
+################
+Release 2021-2-3
+################
+
+==================================
+``go-oso`` VERSION
+==================================
+
+This week we are releasing ``go-oso`` as an alpha release!
+Download the package `here<NEED LINK>`_, and check out our `quick start<NEED LINK>`_!
+``go-oso`` supports Go versions 1.11+.
+
+.. Include more details on why it's alpha?
 
 ==================================
 ``RELEASED_PACKAGE_1`` NEW_VERSION
