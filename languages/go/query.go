@@ -6,8 +6,9 @@ import (
 	"reflect"
 
 	"github.com/osohq/go-oso/errors"
-	"github.com/osohq/go-oso/host"
+	"github.com/osohq/go-oso/interfaces"
 	"github.com/osohq/go-oso/internal/ffi"
+	"github.com/osohq/go-oso/internal/host"
 	"github.com/osohq/go-oso/types"
 	. "github.com/osohq/go-oso/types"
 )
@@ -266,8 +267,8 @@ func (q Query) handleExternalOp(event types.QueryEventExternalOp) error {
 		return err
 	}
 	var answer bool
-	leftCmp := left.(host.Comparer)
-	rightCmp := right.(host.Comparer)
+	leftCmp := left.(interfaces.Comparer)
+	rightCmp := right.(interfaces.Comparer)
 	// @TODO: Where are the implementations for these for builtin stuff (numbers mainly)
 	switch event.Operator.OperatorVariant.(type) {
 	case OperatorLt:
@@ -294,7 +295,7 @@ func (q Query) handleNextExternal(event types.QueryEventNextExternal) error {
 		if err != nil {
 			return err
 		}
-		if iter, ok := instance.(host.Iterator); ok {
+		if iter, ok := instance.(interfaces.Iterator); ok {
 			q.calls[event.CallId] = iter.Iter()
 		} else {
 			return errors.NewInvalidIteratorError(instance)

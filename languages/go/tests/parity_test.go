@@ -10,7 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/osohq/go-oso/host"
+	"github.com/osohq/go-oso/interfaces"
+	"github.com/osohq/go-oso/internal/host"
 	. "github.com/osohq/go-oso/types"
 
 	yaml "github.com/goccy/go-yaml"
@@ -136,11 +137,11 @@ func (m MethodVariants) SumInputArgs(args ...int) int {
 	return sum
 }
 
-func (MethodVariants) GetIter() host.Iterator {
+func (MethodVariants) GetIter() interfaces.Iterator {
 	return IterableClass{Elems: NewValueFactory().ListAttr}
 }
 
-func (MethodVariants) GetEmptyIter() host.Iterator {
+func (MethodVariants) GetEmptyIter() interfaces.Iterator {
 	return IterableClass{}
 }
 
@@ -173,10 +174,10 @@ func (u ImplementsEq) String() string {
 	return fmt.Sprintf("ImplementsEq { %v }", u.Val)
 }
 
-func (left ImplementsEq) Equal(right host.Comparer) bool {
+func (left ImplementsEq) Equal(right interfaces.Comparer) bool {
 	return left.Val == right.(ImplementsEq).Val
 }
-func (left ImplementsEq) Lt(right host.Comparer) bool {
+func (left ImplementsEq) Lt(right interfaces.Comparer) bool {
 	panic("unsupported")
 }
 
@@ -192,14 +193,14 @@ func (u Comparable) String() string {
 	return fmt.Sprintf("Comparable { %v }", u.Val)
 }
 
-func (a Comparable) Equal(b host.Comparer) bool {
+func (a Comparable) Equal(b interfaces.Comparer) bool {
 	if other, ok := b.(Comparable); ok {
 		return a.Val == other.Val
 	}
 	panic(fmt.Sprintf("cannot compare Comparable with %v", b))
 }
 
-func (a Comparable) Lt(b host.Comparer) bool {
+func (a Comparable) Lt(b interfaces.Comparer) bool {
 	if other, ok := b.(Comparable); ok {
 		return a.Val < other.Val
 	}

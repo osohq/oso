@@ -1,4 +1,4 @@
-package host
+package interfaces
 
 type Comparer interface {
 	Equal(other Comparer) bool

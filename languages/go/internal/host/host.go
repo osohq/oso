@@ -8,6 +8,7 @@ import (
 	"reflect"
 
 	"github.com/osohq/go-oso/errors"
+	"github.com/osohq/go-oso/interfaces"
 	"github.com/osohq/go-oso/internal/ffi"
 	"github.com/osohq/go-oso/types"
 	. "github.com/osohq/go-oso/types"
@@ -98,8 +99,8 @@ func (h Host) Unify(leftID uint64, rightID uint64) (bool, error) {
 	if err2 != nil {
 		return false, err2
 	}
-	if leftEq, ok := left.Interface().(Comparer); ok {
-		if rightEq, ok := right.Interface().(Comparer); ok {
+	if leftEq, ok := left.Interface().(interfaces.Comparer); ok {
+		if rightEq, ok := right.Interface().(interfaces.Comparer); ok {
 			return leftEq.Equal(rightEq), nil
 		}
 	}

@@ -9,8 +9,8 @@ import (
 	"reflect"
 
 	"github.com/osohq/go-oso/errors"
-	host "github.com/osohq/go-oso/host"
 	"github.com/osohq/go-oso/internal/ffi"
+	"github.com/osohq/go-oso/internal/host"
 	. "github.com/osohq/go-oso/types"
 )
 
