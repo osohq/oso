@@ -19,7 +19,7 @@ Execute a Polar query through the FFI/event interface.
 type Query struct {
 	ffiQuery ffi.QueryFfi
 	host     host.Host
-	calls    map[uint64]chan interface{}
+	calls    map[uint64]<-chan interface{}
 }
 
 // NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
@@ -28,7 +28,7 @@ func newQuery(ffiQuery ffi.QueryFfi, host host.Host) Query {
 	return Query{
 		ffiQuery: ffiQuery,
 		host:     host,
-		calls:    make(map[uint64]chan interface{}),
+		calls:    make(map[uint64]<-chan interface{}),
 	}
 }
 
