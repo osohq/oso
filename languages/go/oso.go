@@ -5,8 +5,7 @@ import (
 )
 
 /*
-The central object to manage application policy state, e.g.
-the policy data, and verify requests.
+The central object to manage policy state and verify requests.
 */
 type Oso struct {
 	p *Polar
