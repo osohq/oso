@@ -12,7 +12,7 @@ Release 2021-2-3
 
 This week we are releasing ``go-oso`` as an alpha release!
 Download the package `here<NEED LINK>`_, and check out our `quick start<NEED LINK>`_!
-``go-oso`` supports Go versions 1.11+.
+``go-oso`` supports Go versions 1.12+.
 
 .. Include more details on why it's alpha?
 
