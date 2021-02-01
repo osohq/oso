@@ -35,7 +35,7 @@ func (o Oso) LoadFile(f string) error {
 }
 
 /*
-Load in polar policies from a string, checking that all inline queries succeed.
+Load Polar policy from a string, checking that all inline queries succeed.
 */
 func (o Oso) LoadString(s string) error {
 	return (*o.p).loadString(s)
