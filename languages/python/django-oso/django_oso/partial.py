@@ -10,7 +10,10 @@ from oso import Variable
 
 from .oso import django_model_name
 
-
+# A query filter that is always true, but can still be combined
+# with other filters to narrow the scope.
+# See: https://forum.djangoproject.com/t/improving-q-objects-with-true-false-and-none/851/1
+# for more details
 TRUE_FILTER = ~Q(pk__in=[])
 
 COMPARISONS = {
@@ -56,7 +59,7 @@ class FilterBuilder:
     def __init__(self, model: Model, name="_this", parent=None):
         self.name = name
         self.model = model
-        self.filter = Q()
+        self.filter = TRUE_FILTER
         # Map variables to subquery
         self.variables = {}
         self.parent = parent
@@ -93,7 +96,6 @@ class FilterBuilder:
         ty = apps.get_model(django_model_name(right.tag))
         assert not right.fields, "Unexpected fields in matches expression"
         assert issubclass(model, ty), "Inapplicable rule should have been filtered out"
-        self.filter &= TRUE_FILTER
 
     def translate_expr(self, expr: Expression):
         """Translate a Polar expression to a Django Q object."""
@@ -230,11 +232,17 @@ class FilterBuilder:
         self.filter &= ~fb.finish()
 
     def finish(self):
-        # For every subquery, finish off by checking these are non-empty
+        """For every subquery, construct a filter to make sure the result set is non-empty"""
+        if len(self.variables) == 0:
+            return self.filter
+        objects = self.model.objects.all()
         for subq in self.variables.values():
             filtered = subq.model.objects.filter(subq.finish()).values("pk")
             exists = Exists(filtered)
-            self.filter = exists & self.filter  # This _has_ to be this way around
+            name = f"{self.name}__exists"
+            # https://docs.djangoproject.com/en/2.2/ref/models/expressions/#filtering-on-a-subquery-expression
+            objects = objects.annotate(**{name: exists}).filter(**{name: True})
+        self.filter &= Q(pk__in=objects.values("pk"))
         return self.filter
 
 

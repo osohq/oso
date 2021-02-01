@@ -13,6 +13,10 @@ test-requirements: .make.test-requirements-install
 test: test-requirements
 	pytest tests
 
+test22: test-requirements
+	pip install django==2.2
+	pytest tests
+
 fmt:
 	black .
 
