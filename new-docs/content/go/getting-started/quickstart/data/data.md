@@ -14,4 +14,6 @@ submitted_by: SubmittedBy
 endswith: EndsWith
 amount: Amount
 manager: Manager
+endswithURL: >
+   [the `EndsWith` method](https://github.com/osohq/oso-go-quickstart/blob/main/quickstart.go#L16-L18)
 ---
