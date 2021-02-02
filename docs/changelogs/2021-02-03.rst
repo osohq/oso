@@ -11,7 +11,8 @@ Release 2021-02-03
 =======================
 
 This week we are releasing ``go-oso`` as an alpha release!
-Download the package `here<NEED LINK>`_, and check out our `quick start<NEED LINK>`_!
+Download the package `here <https://pkg.go.dev/github.com/osohq/go-oso>`_,
+and check out our `quick start <https://docs.osohq.com/v2/go/getting-started/quickstart.html>`_!
 ``go-oso`` supports Go versions 1.12+.
 
 The ``go-oso`` library is released as an alpha to provide an opportunity for
