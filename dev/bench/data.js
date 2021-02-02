@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1612285527018,
+  "lastUpdate": 1612286251502,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -24549,6 +24549,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 7266,
             "range": "± 88",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "alex@osohq.com",
+            "name": "Alex Plotnick",
+            "username": "plotnick"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "25b06d84776a9c1091ad2cacf47ad78ec85fb706",
+          "message": "Add API documentation for Rust, JavaScript, Ruby and Java to new documentation (#674)\n\n* Remove unused _static directory\r\n\r\n* \"Reference/Application Data\" → \"Reference/$LANG Types in Polar\"\r\n\r\n* Move Python frameworks docs to subdirectory\r\n\r\n* Generate API docs and link to them\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\n\r\n* Update rust API docs.\r\n\r\n* Add api docs as make target.\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\nCo-authored-by: David Hatch <david@osohq.com>",
+          "timestamp": "2021-02-02T12:08:30-05:00",
+          "tree_id": "0bb72e15970b226b1729200984ca6e52620cbdc6",
+          "url": "https://github.com/osohq/oso/commit/25b06d84776a9c1091ad2cacf47ad78ec85fb706"
+        },
+        "date": 1612286249348,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 45660,
+            "range": "± 1764",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 1847753,
+            "range": "± 37437",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 8997080,
+            "range": "± 361992",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 17940112,
+            "range": "± 396897",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 874,
+            "range": "± 43",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2607,
+            "range": "± 101",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 69348,
+            "range": "± 2233",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 517406,
+            "range": "± 19833",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18440,
+            "range": "± 1128",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18426,
+            "range": "± 1625",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18293,
+            "range": "± 981",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18430,
+            "range": "± 785",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16464,
+            "range": "± 652",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6333,
+            "range": "± 727",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 8056,
+            "range": "± 1855",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 9925,
+            "range": "± 1160",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 26025,
+            "range": "± 8945",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 5974,
+            "range": "± 195",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 11756,
+            "range": "± 449",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 7310,
+            "range": "± 127",
             "unit": "ns/iter"
           }
         ]
