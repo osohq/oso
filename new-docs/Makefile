@@ -34,5 +34,5 @@ install:
 	cd themes/tailwind && npm install
 	cd themes/oso && npm install && npm run-script build
 
-run:
+run: api_docs
 	hugo server
