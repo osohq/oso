@@ -1,5 +1,7 @@
 ---
 title: Internals
+aliases: 
+    - /more/internals.html
 ---
 
 # Internals

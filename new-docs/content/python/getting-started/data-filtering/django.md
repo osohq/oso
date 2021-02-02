@@ -4,6 +4,8 @@ docname: getting-started/list-filtering/django
 images: {}
 path: /getting-started-list-filtering-django
 title: Django Adapter
+aliases: 
+    - /getting-started/list-filtering/django.html
 ---
 
 # Django Adapter
