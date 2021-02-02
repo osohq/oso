@@ -1,5 +1,7 @@
 ---
 title: Performance
+aliases: 
+    - /more/performance/index.html
 ---
 
 # Performance

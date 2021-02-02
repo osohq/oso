@@ -1,6 +1,8 @@
 ---
 weight: 2
 title: Flask
+aliases: 
+    - /using/frameworks/flask.html
 ---
 
 # Flask

@@ -2,6 +2,8 @@
 title: Application types
 weight: 2
 any: false
+aliases: 
+    - /getting-started/policies/application-types.html
 ---
 
 # Application Types

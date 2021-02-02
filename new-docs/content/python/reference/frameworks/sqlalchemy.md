@@ -1,6 +1,8 @@
 ---
 weight: 3
 title: SQLAlchemy
+aliases: 
+    - /using/frameworks/sqlalchemy.html
 ---
 
 # SQLAlchemy

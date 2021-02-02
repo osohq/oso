@@ -1,6 +1,8 @@
 ---
 weight: 1
 title: Django
+aliases: 
+    - /using/frameworks/django.html
 ---
 
 # Django

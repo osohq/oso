@@ -7,6 +7,8 @@ title: Global RBAC
 description: |
     Role-based access control (RBAC) assigns each actor a role. Instead of
     granting permissions to individual actors, they are granted to roles.
+aliases: 
+    - /using/examples/rbac.html
 ---
 
 # Global RBAC

@@ -1,5 +1,7 @@
 ---
 title: FAQ
+aliases: 
+    - /more/faq.html
 ---
 
 # FAQ

@@ -9,6 +9,8 @@ description: |
     each actor to make authorization decisions. This model is often used when
     RBAC is not expressive enough, and is a natural extension of RBAC when
     using oso.
+aliases: 
+    - /using/examples/abac.html
 ---
 
 # ABAC
