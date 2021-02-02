@@ -9,15 +9,10 @@ The Python version of oso is available on [PyPI](https://pypi.org/project/oso/) 
 `pip`:
 
 ```
-$ pip install oso==0.9.0
+$ pip install oso
 ```
 
-To install Python framework integrations, see:
-
-
-* [Flask](./flask)
-* [Django](./django)
-* [SQLAlchemy](./sqlalchemy)
+See also our [Python framework integrations](frameworks).
 
 
 **Requirements**
@@ -29,7 +24,7 @@ To install Python framework integrations, see:
    * OS X
    * Windows
 
-The Python version is known to work on glibc-based distributions but not on musl-based ones
-(like Alpine Linux).  Wheels built against musl that you can use on
-Alpine Linux can be downloaded from [the releases page on GitHub](https://github.com/osohq/oso/releases/latest).
-
+The standard Python package is known to work on glibc-based distributions,
+but not on musl-based ones like Alpine Linux.  Wheels built against musl
+that you can use on Alpine Linux can be downloaded from [the releases page
+on GitHub](https://github.com/osohq/oso/releases/latest).

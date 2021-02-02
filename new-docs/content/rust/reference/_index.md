@@ -5,9 +5,9 @@ any: false
 ---
 # Rust Authorization Library
 
-Rust
+The Rust version of oso is available on [crates.io](https://crates.io/crates/oso).
 
-The rust version of oso is available on [crates.io](https://crates.io/crates/oso).
+Documentation is on [docs.rs](https://docs.rs/oso/).
 
 Add oso and oso-derive as dependencies in your Cargo.toml
 
