@@ -11,5 +11,5 @@ installation: |
     server running on port 8080
     ```
 submitted_by: SubmittedBy
-endswith: Lib.HasSuffix
+endswith: "Lib.HasSuffix(actor, "
 ---
