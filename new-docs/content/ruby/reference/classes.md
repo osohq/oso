@@ -1,12 +1,13 @@
 ---
-title: Application Data
+title: Ruby Types in Polar
+weight: 2
 ---
 
 [rb-array]: https://ruby-doc.org/core/Array.html
 [rb-array-at]: https://ruby-doc.org/core/Array.html#method-i-at
 [rb-enumerable]: https://ruby-doc.org/core/Enumerable.html
 
-## Working with Ruby Objects
+## Working with Ruby Types
 
 oso’s Ruby authorization library allows you to write policy rules over Ruby
 objects directly. This document explains how different types of Ruby objects

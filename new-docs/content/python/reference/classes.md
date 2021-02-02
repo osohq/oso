@@ -1,9 +1,9 @@
 ---
-weight: 1
-title: Application Data
+title: Python Types in Polar
+weight: 2
 ---
 
-## Working with Python Objects
+## Working with Python Types
 
 oso’s Python authorization library allows you to write policy rules over Python
 objects directly. This document explains how different types of Python objects
