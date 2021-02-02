@@ -1,0 +1,33 @@
+name: Errors
+policies: []
+description: Test for common errors
+cases:
+  # parser errors
+  - description: invalid floats
+    load: >
+      f(a) if a = 18446744073709551616;
+    err: caused an integer overflow
+  - description: invalid newline
+    load: |
+      f(a) if a = "this is not
+        allowed";
+    err: is not a valid character
+  - description: missing semi-colon
+    load: >
+      f(a)
+    err: hit the end of the file unexpectedly. Did you forget a semi-colon
+  - description: missing semi-colon
+    load: |
+      1;
+    err: did not expect to find the token
+  
+
+  # runtime errors
+  - description: invalid in
+    query: 1 in false
+    err: "Type error: can only use `in` on an iterable value"
+
+  # lookup errors
+  - description: invalid lookup
+    query: UnitClass.New().missing_attribute
+    err: "Application error: 'UnitClass' object has no attribute 'missing_attribute'"

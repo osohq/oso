@@ -1,0 +1,71 @@
+name: Check data types
+policies: [data_types]
+description: Conversion between host and Polar works
+cases:
+  # Success cases
+  - query: example_integer
+    input: [1]
+  - query: example_string
+    input: ["abc"]
+  - query: example_bool
+    input: [true]
+  - query: example_homogeneous_list
+    input: [[1, 2, 3]]
+  - query: example_heteregenous_list
+    input: [[1, "abc", true]]
+
+  # Failure cases
+  - query: example_integer
+    input: [2]
+    result: []
+  - query: example_string
+    input: ["cba"]
+    result: []
+  - query: example_bool
+    input: [false]
+    result: []
+  - query: example_homogeneous_list
+    input: [[3, 2, 1]]
+    result: []
+  - query: example_heteregenous_list
+    input: [[]]
+    result: []
+
+  # Get values back out
+  - query: example_integer(x)
+    result: [{x: 1}]
+  - query: example_string(x)
+    result: [{x: "abc"}]
+  - query: example_bool(x)
+    result: [{x: true}]
+  - query: example_homogeneous_list(x)
+    result: [{x: [1, 2, 3]}]
+  - query: example_heteregenous_list(x)
+    result: [{x: [1, "abc", true]}]
+
+  # specializers to check input types
+  - query: is_integer
+    input: [2]
+  - query: is_string
+    input: ["cba"]
+  - query: is_bool
+    input: [false]
+  - query: is_list
+    input: [[3, 2, 1]]
+  - query: is_dict
+    input: [{x: 1, y: 2}]
+
+  # nil/none
+  - query: is_null
+    input: [null]
+  - query: is_null
+    input: [[]]
+    result: []
+  - query: is_null(x)
+    result: [{x: null}]
+
+
+  # unbound variables
+  - query: x = y
+    result: [{x: {repr: "Variable('y')"}}]
+
