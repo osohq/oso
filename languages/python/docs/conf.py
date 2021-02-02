@@ -18,6 +18,9 @@ from sphinxcontrib.spelling.filters import ContractionFilter
 
 from enchant.tokenize import Filter
 
+sys.path.insert(0, os.path.abspath("../django-oso"))
+sys.path.insert(0, os.path.abspath("../flask-oso"))
+sys.path.insert(0, os.path.abspath("../sqlalchemy-oso"))
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
 sys.path.append(os.path.abspath("_ext"))

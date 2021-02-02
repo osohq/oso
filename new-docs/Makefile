@@ -7,7 +7,8 @@ rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(su
 
 JAVA_FILES := $(call rwildcard ../languages/java/oso/src,*.java)
 JS_FILES := $(call rwildcard ../languages/js/src,*.ts)
-PYTHON_FILES := $(call rwildcard,../languages/python/lib,*.py)
+PYTHON_FILES := $(call rwildcard,../languages/python,*.py)
+PYTHON_RST_FILES := $(call rwildcard,../languages/python,*.rst)
 RUBY_FILES := $(call rwildcard,../languages/ruby/lib,*.rb)
 
 content/java/reference/api: $(JAVA_FILES)
@@ -20,7 +21,7 @@ content/node/reference/api: $(JS_FILES)
 	rm -rf $@
 	cp -R "$(JS_DIR)/docs" $@
 
-content/python/reference/api: $(PYTHON_FILES)
+content/python/reference/api: $(PYTHON_FILES) $(PYTHON_RST_FILES)
 	$(MAKE) -C "$(PYTHON_DIR)" docs
 	rm -rf $@
 	cp -R "$(PYTHON_DIR)/docs/_build/html" $@
