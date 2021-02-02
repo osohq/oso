@@ -1,8 +1,13 @@
-Authorization-Dependent UI Elements
-===================================
+---
+title: UI Authorization
+weight: 5
+description: |
+  Control what you expose in the UI with Oso policies.
+---
 
-Using oso to control UI components
-----------------------------------
+# Authorization-Dependent UI Elements
+
+## Using oso to control UI components
 
 The access control rules that you use to authorize data access in your
 application's backend often have implications for the frontend as well.
@@ -15,9 +20,11 @@ These are examples of what we at oso call "Authorization-Dependent UI
 Elements." In this guide we'll explain how you can use oso to implement
 these kinds of features in your app.
 
-> Note: we don't currently provide a version of oso that runs in the
-> browser. This guide covers how to query for information in the backend
-> that can be sent to your frontend service.
+{{< callout "Note" "blue" >}}
+We don't currently provide a version of oso that runs in the
+browser. This guide covers how to query for information in the backend
+that can be sent to your frontend service.
+{{< /callout >}}
 
 ### Getting a user's allowed actions
 
@@ -55,7 +62,7 @@ take on a specific resource. In our example, we call
 `Oso.get_allowed_actions()` in the route handler for the "Show
 repository" view to get the user's allowed actions for the current repo:
 
-``` {.sourceCode .python}
+```{.sourceCode .python}
 def repos_show(org_id, repo_id):
     # Get repo
     repo = Repository.query.get(repo_id)
@@ -79,20 +86,20 @@ def repos_show(org_id, repo_id):
 In our demo app, when we call `Oso.get_allowed_actions()` with the user
 `mike@monsters.com`, we get back:
 
-``` {.sourceCode .python}
+```{.sourceCode .python}
 actions = ['READ', 'LIST_ROLES', 'CREATE', 'DELETE', 'LIST_ISSUES']
 ```
 
 But when we call with a different user, `sully@monsters.com`, we get:
 
-``` {.sourceCode .python}
+```{.sourceCode .python}
 actions = ['READ', 'CREATE', 'LIST_ISSUES']
 ```
 
 The allowed actions for each user are determined by the **oso policy.**
 In this case, our policy has the following rules:
 
-``` {.sourceCode .python}
+```{.sourceCode .python}
 # Repository Permissions
 # ----------------------
 
@@ -113,12 +120,12 @@ allow(user: User, "CREATE", repo: Repository) if
 
 The users Mike and Sully have the following attributes:
 
--   Mike and Sully are both members of the parent organization (Monsters
-    Inc.), so they can both create repositories in the organization
--   Mike is the admin of the "Paperwork" repository, so he can list
-    roles and delete the repo, in addition to reading and listing issues
--   Sully is a member of the "Paperwork" repository, so he can only read
-    the repo and list issues
+- Mike and Sully are both members of the parent organization (Monsters
+  Inc.), so they can both create repositories in the organization
+- Mike is the admin of the "Paperwork" repository, so he can list
+  roles and delete the repo, in addition to reading and listing issues
+- Sully is a member of the "Paperwork" repository, so he can only read
+  the repo and list issues
 
 Based on these user attributes and our policy, we can see why Mike is
 allowed to take more actions on the repository than Sully.
@@ -130,7 +137,7 @@ if we used oso's [SQLAlchemy Roles library
 features](https://docs.oso.dev/getting-started/roles/sqlalchemy/basic_roles.html),
 we could have a policy that looks like this instead:
 
-``` {.sourceCode .python}
+```{.sourceCode .python}
 # Repository Permissions
 # ----------------------
 
@@ -163,12 +170,12 @@ allowed actions for Mike and Sully.
 
 ### Using allowed actions in the frontend
 
-Since Mike has permission to "LIST\_ROLES" and "DELETE" the repo, he
+Since Mike has permission to "LIST_ROLES" and "DELETE" the repo, he
 should be able to see the "Manage Access" and "Delete" buttons, but
 Sully should not. We can implement this with a simple check in our
 template:
 
-``` {.sourceCode .python}
+```{.sourceCode .python}
 {% if "LIST_ROLES" in actions %}
 <div>
   <a href={{ url_for('routes.repo_roles_index', org_id=org_id, repo_id=repo.id) }}>
