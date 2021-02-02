@@ -87,8 +87,7 @@ class Polar:
         del self.ffi_polar
 
     def load_file(self, policy_file):
-        """Load in polar policies. By default, defers loading of knowledge base
-        until a query is made."""
+        """Load Polar policy from a ".polar" file."""
         policy_file = Path(policy_file)
         extension = policy_file.suffix
         fname = str(policy_file)

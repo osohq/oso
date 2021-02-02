@@ -45,7 +45,7 @@ func (ic IterableClass) Sum() int {
 	return res
 }
 
-func (ic IterableClass) Iter() chan interface{} {
+func (ic IterableClass) Iter() <-chan interface{} {
 	c := make(chan interface{})
 	go func() {
 		for _, v := range ic.Elems {
