@@ -52,6 +52,13 @@ defaultContentLanguage = "any"
     [languages.rust.params]
       icon = "rust"
 
+  [languages.go]
+    languageName = "Go"
+    contentDir = "content/go"
+    weight = 5
+    [languages.go.params]
+      icon = "go"
+
 [module]
   [[module.mounts]]
     source = "content/any"
@@ -102,6 +109,15 @@ defaultContentLanguage = "any"
     source = "content/rust"
     target = "content"
     lang = "rust"
+
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "go"
+  [[module.mounts]]
+    source = "content/go"
+    target = "content"
+    lang = "go"
 
 [build]
   writeStats = true

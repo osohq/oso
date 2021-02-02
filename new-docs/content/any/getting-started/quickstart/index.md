@@ -159,8 +159,8 @@ and the expense’s amount is less than $100.00:
 
 ```polar
 allow(approver: User, "approve", expense: Expense) if
-    approver = expense.{{% exampleGet "submitted_by" %}}.manager
-    and expense.amount < 10000;
+    approver = expense.{{% exampleGet "submitted_by" %}}.{{% exampleGet "manager" %}}
+    and expense.{{% exampleGet "amount" %}} < 10000;
 ```
 
 In the process of evaluating that rule, the oso engine would call back into the

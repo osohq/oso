@@ -10,6 +10,8 @@ installation: |
     $ python server.py
     server running on port 5050
     ```
+amount: amount
+manager: manager
 submitted_by: submitted_by
 endswith: endswith
 endswithURL: >

@@ -8,6 +8,8 @@ installation: |
     the latest JAR file and add it to your Java project libraries.
 
     Once you have oso installed, run `Server.java`.
+amount: amount
+manager: manager
 submitted_by: submittedBy
 endswith: endsWith
 endswithURL: >
