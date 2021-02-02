@@ -1,6 +1,8 @@
 ---
 title: Ruby Types in Polar
 weight: 2
+aliases: 
+    - /using/libraries/ruby/index.html
 ---
 
 [rb-array]: https://ruby-doc.org/core/Array.html

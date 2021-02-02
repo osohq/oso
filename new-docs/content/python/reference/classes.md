@@ -1,6 +1,8 @@
 ---
 title: Python Types in Polar
 weight: 2
+aliases: 
+    - /using/libraries/python/index.html
 ---
 
 ## Working with Python Types

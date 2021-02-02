@@ -2,6 +2,8 @@
 title: Ruby API
 weight: 3
 any: false
+aliases: 
+    - /ruby/index.html
 ---
 
 # Ruby API

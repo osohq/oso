@@ -4,6 +4,8 @@ description: |
     Ready to get started? See oso in action, and walk through our quick
     tutorial for adding authorization to a simple web server.
 weight: 1
+aliases: 
+    - /getting-started/quickstart.html
 ---
 
 ## oso in 5 minutes

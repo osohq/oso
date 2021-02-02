@@ -1,6 +1,8 @@
 ---
 title: JavaScript Types in Polar
 weight: 2
+aliases: 
+    - /using/libraries/node/index.html
 ---
 
 [mdn-array]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array

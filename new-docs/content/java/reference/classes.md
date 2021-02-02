@@ -1,6 +1,8 @@
 ---
 title: Java Types in Polar
 weight: 2
+aliases: 
+    - /using/libraries/java/index.html
 ---
 
 ## Working with Java Types
