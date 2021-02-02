@@ -11,7 +11,7 @@ installation: |
     server running on port 5050
     ```
 submitted_by: submitted_by
-endswith: endswith
+endswith: actor.endswith
 endswithURL: >
    [the `str.endswith` method](https://docs.python.org/3/library/stdtypes.html#str.endswith)
 ---

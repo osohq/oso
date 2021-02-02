@@ -9,7 +9,7 @@ installation: |
 
     Once you have oso installed, run `Server.java`.
 submitted_by: submittedBy
-endswith: endsWith
+endswith: actor.endsWith
 endswithURL: >
    [the `String.endsWith` method](https://docs.oracle.com/javase/10/docs/api/java/lang/String.html#endsWith(java.lang.String))
 ---

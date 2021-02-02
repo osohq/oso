@@ -68,7 +68,7 @@ allow an **actor** to perform an **action** on a **resource**.
 
   ```polar
   allow(actor: String, "GET", _expense: Expense) if
-      actor.{{< exampleGet "endswith" >}}("@example.com");
+      {{< exampleGet "endswith" >}}("@example.com");
   ```
 
   Note that the call to **{{< exampleGet "endswith" >}}** is actually calling
