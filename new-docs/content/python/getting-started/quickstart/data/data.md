@@ -10,8 +10,10 @@ installation: |
     $ python server.py
     server running on port 5050
     ```
+amount: amount
+manager: manager
 submitted_by: submitted_by
-endswith: actor.endswith(
+endswith: endswith
 endswithURL: >
    [the `str.endswith` method](https://docs.python.org/3/library/stdtypes.html#str.endswith)
 ---

@@ -10,8 +10,10 @@ installation: |
     $ npm start
     server running on port 5050
     ```
+amount: amount
+manager: manager
 submitted_by: submittedBy
-endswith: actor.endsWith(
+endswith: endsWith
 endswithURL: >
    [the `String.prototype.endsWith` method](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith)
 ---

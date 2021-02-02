@@ -8,8 +8,10 @@ installation: |
     installing requirements
     
     $ go run quickstart.go
-    server running on port 8080
+    server running on port 5050
     ```
 submitted_by: SubmittedBy
-endswith: "Lib.HasSuffix(actor, "
+endswith: EndsWith
+amount: Amount
+manager: Manager
 ---

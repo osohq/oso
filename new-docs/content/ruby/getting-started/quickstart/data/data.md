@@ -13,7 +13,9 @@ installation: |
     [2020-10-06 12:22:26] INFO  WEBrick::HTTPServer#start: pid=47366 port=5050
     ```
 submitted_by: submitted_by
-endswith: actor.end_with?(
+amount: amount
+manager: manager
+endswith: end_with?
 endswithURL: >
    [the `String#end_with` method](https://ruby-doc.org/core/String.html#method-i-end_with-3F)
 ---
