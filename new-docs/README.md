@@ -17,6 +17,8 @@ npm install
 npm run-script build
 ```
 
+Install hugo: https://gohugo.io/getting-started/installing
+
 Ready to go!
 
 ```
