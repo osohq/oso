@@ -132,6 +132,8 @@ jobs:
       - name: package oso-derive
         working-directory: languages/rust/oso-derive
         run: cargo publish
+      - name: Sleep so that oso-derive is available.
+        run: sleep 10
       - name: package oso
         working-directory: languages/rust/oso
         run: cargo package
