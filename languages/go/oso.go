@@ -4,12 +4,20 @@ import (
 	"reflect"
 )
 
+/*
+The central object to manage policy state and verify requests.
+*/
 type Oso struct {
 	p *Polar
 }
 
 /*
 Construct a new Oso instance.
+
+	import oso "github.com/osohq/go-oso"
+	if o, err := oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
 */
 func NewOso() (Oso, error) {
 	if p, e := newPolar(); e != nil {
@@ -19,26 +27,45 @@ func NewOso() (Oso, error) {
 	}
 }
 
+/*
+Load Polar policy from a ".polar" file, checking that all inline queries succeed.
+*/
 func (o Oso) LoadFile(f string) error {
 	return (*o.p).loadFile(f)
 }
 
+/*
+Load Polar policy from a string, checking that all inline queries succeed.
+*/
 func (o Oso) LoadString(s string) error {
 	return (*o.p).loadString(s)
 }
 
+/*
+Clear all rules from the Oso knowledge base (i.e., remove all loaded policies).
+*/
 func (o Oso) ClearRules() error {
 	return (*o.p).clearRules()
 }
 
+/*
+Register a Go type so that it can be referenced within Polar files.
+*/
 func (o Oso) RegisterClass(cls reflect.Type) error {
 	return (*o.p).registerClass(cls, nil)
 }
 
+/*
+Register a Go type under a certain name/alias, so that it can be referenced
+within Polar files by that name.
+*/
 func (o Oso) RegisterClassWithName(cls reflect.Type, name string) error {
 	return (*o.p).registerClass(cls, &name)
 }
 
+/*
+Register a Go value as a Polar constant variable called `name`.
+*/
 func (o Oso) RegisterConstant(value interface{}, name string) error {
 	return (*o.p).registerConstant(value, name)
 }

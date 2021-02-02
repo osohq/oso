@@ -18,9 +18,7 @@ go get github.com/osohq/go-oso
 And imported into a go file.
 
 ```
-import (
-    oso "github.com/osohq/go-oso"
-)
+import "github.com/osohq/go-oso"
 ```
 
 For more information on the oso go library, see the
@@ -28,7 +26,7 @@ library documentation.
 
 **Requirements**
 
-* Go version 1.11 or higher
+* Go version 1.12 or higher
 * Supported platforms:
   * Linux
   * OS X
