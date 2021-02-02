@@ -41,8 +41,8 @@ django.setup()
 project = "oso"
 copyright = "2020 Oso Security, Inc"
 author = "oso"
-version = "0.10"
-release = "0.10.2"
+version = "0.11"
+release = "0.11.0-beta"
 
 
 # -- General configuration ---------------------------------------------------
