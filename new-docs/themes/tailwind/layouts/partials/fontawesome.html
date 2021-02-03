@@ -1,20 +1,20 @@
-{{ if eq . "go" }}
-{{ readFile "fontawesome/go.svg" | safeHTML }}
-{{ else }}
-{{ $icon := .}}
+{{- if eq . "go" -}}
+{{- readFile "fontawesome/go.svg" | safeHTML -}}
+{{- else -}}
+{{- $icon := . }}
 
-{{ $solidIcons := slice "blog" "download" "gem" "chevron-down" "home" "search" }}
-{{ $brandIcons := slice "linkedin-in" "twitter" "github" "slack" "python" "java" "node-js" "rust" }}
-{{ $map := dict "rb" "gem" "py" "python"}}
+{{- $solidIcons := slice "blog" "download" "gem" "chevron-down" "home" "search" -}}
+{{- $brandIcons := slice "linkedin-in" "twitter" "github" "slack" "python" "java" "node-js" "rust" -}}
+{{- $map := dict "rb" "gem" "py" "python"}}
 
-{{ with index $map $icon }}
-{{ $icon = index $map $icon}}
-{{ end }}
+{{- with index $map $icon -}}
+{{- $icon = index $map $icon}}
+{{- end -}}
 
-{{ $class := printf "fas fa-%s" $icon }}
-{{ if in $brandIcons $icon }}
-{{ $class = printf "fab fa-%s" $icon }}
-{{ end }}
+{{- $class := printf "fa-lg fas fa-%s" $icon -}}
+{{- if in $brandIcons $icon -}}
+{{- $class = printf "fa-lg fab fa-%s" $icon -}}
+{{- end -}}
 
 <i class="{{ $class }}"></i>
-{{ end }}
+{{- end -}}

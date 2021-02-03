@@ -1,3 +1,4 @@
+{{ $contents := trim .Inner " \n" }}
 {{ $file := .Get "file" }}
 {{ $codeLang := "" }}
 {{ $suffix := findRE "(\\.[^.]+)$" $file 1 }}
@@ -6,20 +7,13 @@
 {{ end }}
 {{ with .Get "codeLang" }}{{ $codeLang = . }}{{ end }}
 <div class="code" id="{{ $file | urlize}}">
-<div class="code" {{with .Get "download"}}id="{{.}}"{{end}}>
 {{- with $file -}}
-<div class="filename rounded-md bg-gray-200 text-gray-700 text-sm pl-1 py-1">
-{{- with $codeLang -}}
-{{- partial "fontawesome.html" $codeLang -}}
-{{- end -}}
-{{- . -}}</div>
-{{ end }}
-{{ if  .Get "nocode" }}
-{{ trim $.Inner " \n" }}
-{{ else }}
-{{ with $codeLang }}
-{{- highlight (trim $.Inner " \n") . "" -}}
-{{ else }}
-<pre><code>{{- .Inner | string -}}</code></pre>{{ end }}{{ end }}
+<div class="filename rounded-md bg-gray-200 text-gray-700 text-sm py-2">
+{{- with $codeLang -}}<span class="px-2">{{- partial "fontawesome.html" $codeLang -}}</span>{{- end -}}{{- . -}}
 </div>
+{{- end -}}
+{{ with $codeLang }}
+{{- highlight $contents . "" -}}
+{{ else }}
+<pre><code>{{- $contents | string -}}</code></pre>{{ end }}
 </div>
