@@ -1,12 +1,12 @@
 ---
 title: Quickstart
 description: |
-    Ready to get started? See Oso in action, and walk through our quick
-    tutorial for adding authorization to a simple web server.
+  Ready to get started? See Oso in action, and walk through our quick
+  tutorial for adding authorization to a simple web server.
 weight: 1
 ---
 
-## Oso in 5 minutes
+# Oso in 5 minutes
 
 Oso helps developers build authorization into their applications. If you’ve
 never used Oso before and want to see it in action, this guide is for you.
@@ -14,11 +14,12 @@ We’re going to walk through how to use Oso to add authorization to a simple we
 server.
 
 {{< callout "Try it!" "green" >}}
-  To follow along, clone the {{% exampleGet "githubApp" %}}:
+To follow along, clone the {{% exampleGet "githubApp" %}}:
 
-  ```console
-  git clone {{% exampleGet "githubURL" %}}
-  ```
+```console
+git clone {{% exampleGet "githubURL" %}}
+```
+
 {{< /callout >}}
 
 ## Run the server
@@ -38,18 +39,18 @@ The third file is the Oso policy file, `expenses.polar`, and is currently
 empty.
 
 {{< callout "Try it!" "green" >}}
-  {{% exampleGet "installation" %}}
+{{% exampleGet "installation" %}}
 
-  With the server running, open a second terminal and make a request using
-  cURL:
+With the server running, open a second terminal and make a request using
+cURL:
 
-  ```console
-  $ curl localhost:5050/expenses/1
-  Not Authorized!
-  ```
+```console
+$ curl localhost:5050/expenses/1
+Not Authorized!
+```
 
-  You’ll get a “Not Authorized!” response because we haven’t added any rules to
-  our Oso policy (in `expenses.polar`), and Oso is deny-by-default.
+You’ll get a “Not Authorized!” response because we haven’t added any rules to
+our Oso policy (in `expenses.polar`), and Oso is deny-by-default.
 {{< /callout >}}
 
 Let’s start implementing our access control scheme by adding some rules to the
@@ -63,17 +64,17 @@ evaluate [allow rules](glossary#allow-rules), which specify the conditions that
 allow an **actor** to perform an **action** on a **resource**.
 
 {{< callout "Edit it!" "blue" >}}
-  In our policy file (`expenses.polar`), let's add a rule that allows anyone
-  with an email ending in `"@example.com"` to view all expenses:
+In our policy file (`expenses.polar`), let's add a rule that allows anyone
+with an email ending in `"@example.com"` to view all expenses:
 
-  ```polar
-  allow(actor: String, "GET", _expense: Expense) if
-      actor.{{< exampleGet "endswith" >}}("@example.com");
-  ```
+```polar
+allow(actor: String, "GET", _expense: Expense) if
+    actor.{{< exampleGet "endswith" >}}("@example.com");
+```
 
-  Note that the call to **{{< exampleGet "endswith" >}}** is actually calling
-  out to {{< exampleGet "endswithURL" >}}. The actor value passed to Oso is a
-  string, and Oso allows us to call methods on it.
+Note that the call to **{{< exampleGet "endswith" >}}** is actually calling
+out to {{< exampleGet "endswithURL" >}}. The actor value passed to Oso is a
+string, and Oso allows us to call methods on it.
 {{< /callout >}}
 
 The `Expense` and `String` terms following the colons in the head of the rule
@@ -83,13 +84,14 @@ ensures that the rule will only be evaluated when the actor is a string and the
 resource is an instance of the `Expense` class.
 
 {{< callout "Try it!" "green" >}}
-  Once we've added our new rule and restarted the web server, every user with
-  an `@example.com` email should be allowed to view any expense:
+Once we've added our new rule and restarted the web server, every user with
+an `@example.com` email should be allowed to view any expense:
 
-  ```console
-  $ curl -H "user: alice@example.com" localhost:5050/expenses/1
-  Expense(...)
-  ```
+```console
+$ curl -H "user: alice@example.com" localhost:5050/expenses/1
+Expense(...)
+```
+
 {{< /callout >}}
 
 Okay, so what just happened?
@@ -103,16 +105,16 @@ above case, we passed in `"alice@example.com"` as the **actor**, `"GET"` as the
 Alice is allowed to view the requested expense.
 
 {{< callout "Try it!" "green" >}}
-  If a user's email doesn't end in `"@example.com"`, the rule fails, and they
-  are denied access:
+If a user's email doesn't end in `"@example.com"`, the rule fails, and they
+are denied access:
 
-  ```console
-  $ curl -H "user: alice@foo.com" localhost:5050/expenses/1
-  Not Authorized!
-  ```
+```console
+$ curl -H "user: alice@foo.com" localhost:5050/expenses/1
+Not Authorized!
+```
 
-  If you aren’t seeing the same thing, make sure you created your policy
-  correctly in `expenses.polar`.
+If you aren’t seeing the same thing, make sure you created your policy
+correctly in `expenses.polar`.
 {{< /callout >}}
 
 ## Using application data
@@ -122,13 +124,14 @@ Currently, anyone with an email ending in `@example.com` can see all expenses �
 including expenses submitted by others.
 
 {{< callout "Edit it!" "blue" >}}
-  Let's modify our existing rule such that users can only see their own
-  expenses:
+Let's modify our existing rule such that users can only see their own
+expenses:
 
-  ```polar
-  allow(actor: String, "GET", expense: Expense) if
-      expense.{{< exampleGet "submitted_by" >}} = actor;
-  ```
+```polar
+allow(actor: String, "GET", expense: Expense) if
+    expense.{{< exampleGet "submitted_by" >}} = actor;
+```
+
 {{< /callout >}}
 
 Behind the scenes, Oso looks up the `submitted_by` field on the provided
@@ -136,17 +139,18 @@ Behind the scenes, Oso looks up the `submitted_by` field on the provided
 just like that, an actor can only see an expense if they submitted it!
 
 {{< callout "Try it!" "green" >}}
-  Alice can see her own expenses but not Bhavik's:
+Alice can see her own expenses but not Bhavik's:
 
-  ```console
-  $ curl -H "user: alice@example.com" localhost:5050/expenses/1
-  Expense(...)
-  ```
+```console
+$ curl -H "user: alice@example.com" localhost:5050/expenses/1
+Expense(...)
+```
 
-  ```console
-  $ curl -H "user: alice@example.com" localhost:5050/expenses/3
-  Not Authorized!
-  ```
+```console
+$ curl -H "user: alice@example.com" localhost:5050/expenses/3
+Not Authorized!
+```
+
 {{< /callout >}}
 
 Feel free to play around with the current policy and experiment with adding
@@ -167,11 +171,10 @@ In the process of evaluating that rule, the Oso engine would call back into the
 application in order to make determinations that rely on application data, such
 as:
 
-
-* Which user submitted the expense in question?
-* Who is their manager?
-* Is their manager the user who’s attempting to approve the expense?
-* Does the expense’s `amount` field contain a value less than $100.00?
+- Which user submitted the expense in question?
+- Who is their manager?
+- Is their manager the user who’s attempting to approve the expense?
+- Does the expense’s `amount` field contain a value less than $100.00?
 
 For more on leveraging application data in an Oso policy, check out
 [Application Types](application-types).
