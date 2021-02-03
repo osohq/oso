@@ -1,5 +1,3 @@
-const monaco = import('monaco-editor');
-
 // Basic navigation functionality
 document.querySelector('button > svg').addEventListener('click', function(e) {
   e.stopPropagation();
