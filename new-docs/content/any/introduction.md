@@ -14,8 +14,7 @@ Think about Oso as providing you a structured way to implement concepts like
 patterns like role-based access control.
 
 {{% callout "Ready to go?" "primary" %}}
-  Dive straight into using Oso with the [Getting Started
-  guides](getting-started).
+  Dive straight into using Oso with the [Quickstart](quickstart).
 {{% /callout %}}
 
 Under the surface, Oso is powered by a declarative policy language called
