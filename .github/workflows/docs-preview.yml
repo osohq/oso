@@ -32,6 +32,10 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
 
       ### Build Rust WASM target
       - name: Add WebAssembly target
