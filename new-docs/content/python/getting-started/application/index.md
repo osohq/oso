@@ -1,6 +1,6 @@
 ---
 title: Add Oso to your app
-weight: 5
+weight: 2
 description: |
   An in-depth walkthrough of adding Oso to an example expense application.
 aliases:
