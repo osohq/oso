@@ -67,7 +67,7 @@ jobs:
       ### Push to S3 + invalidate cachje
       - name: s3 preview publish
         run: |
-          aws s3 sync --delete docs/_build/html s3://${{ github.event.inputs.url }}
+          aws s3 sync --delete docs/_build/html s3://docs-preview.oso.dev/
           aws s3 sync new-docs/public/ s3://docs-preview.oso.dev/v2/
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
@@ -75,4 +75,3 @@ jobs:
 
       - name: cloudfront invalidate docs preview
         run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
-        if: github.event.inputs.url == 'docs-preview.oso.dev'
