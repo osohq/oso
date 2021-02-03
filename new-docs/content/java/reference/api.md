@@ -1,8 +1,6 @@
 ---
 title: Java API
 weight: 3
-aliases: 
-    - /java/index.html
 ---
 
 # Java API

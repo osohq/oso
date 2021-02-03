@@ -1,7 +1,7 @@
 ---
 title: Security
 aliases: 
-    - /more/security.html
+    - ../more/security.html
 ---
 
 # Security

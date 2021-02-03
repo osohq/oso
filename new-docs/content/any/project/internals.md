@@ -1,7 +1,7 @@
 ---
 title: Internals
 aliases: 
-    - /more/internals.html
+    - ../more/internals.html
 ---
 
 # Internals

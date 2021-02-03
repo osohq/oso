@@ -10,7 +10,7 @@ description: |
     recognize different user types & apply different rules when necessary,
     avoiding the need for multiple authorization systems.
 aliases: 
-    - /using/examples/user_types.html
+    - ../../../using/examples/user_types.html
 ---
 
 # Multiple Actor Types

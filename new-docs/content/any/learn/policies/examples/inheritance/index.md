@@ -9,7 +9,7 @@ description: |
     different types of resources. oso policies make it possible to share rules
     across related resource types, and override them as needed.
 aliases: 
-    - /using/examples/inheritance.html
+    - ../../../using/examples/inheritance.html
 ---
 
 # Resources with Inheritance

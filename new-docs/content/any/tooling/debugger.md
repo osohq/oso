@@ -1,7 +1,7 @@
 ---
 title: Debugger
 aliases: 
-    - /more/dev-tools/debugger.html
+    - ../more/dev-tools/debugger.html
 ---
 
 # Debugger

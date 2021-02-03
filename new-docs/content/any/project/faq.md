@@ -1,7 +1,7 @@
 ---
 title: FAQ
 aliases: 
-    - /more/faq.html
+    - ../more/faq.html
 ---
 
 # FAQ

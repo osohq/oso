@@ -1,7 +1,7 @@
 ---
 title: Patterns
 aliases: 
-    - /getting-started/rbac.html
+    - ../../getting-started/rbac.html
 ---
 
 # Role-Based Access Control Patterns

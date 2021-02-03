@@ -1,7 +1,7 @@
 ---
 title: Design Principles
 aliases: 
-    - /more/design-principles.html
+    - ../more/design-principles.html
 ---
 
 # Design Principles

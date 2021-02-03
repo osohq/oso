@@ -3,7 +3,7 @@ title: Glossary
 any: true
 weight: 50
 aliases: 
-    - /more/glossary.html
+    - ../more/glossary.html
 ---
 
 # Glossary

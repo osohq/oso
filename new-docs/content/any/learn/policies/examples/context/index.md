@@ -9,7 +9,7 @@ description: |
     actor, and resource. This could be information about the HTTP request, or
     the environment the application is running in.
 aliases: 
-    - /using/examples/context.html
+    - ../../../using/examples/context.html
 ---
 
 ## Context

@@ -2,7 +2,7 @@
 title: RBAC Design Patterns
 any: true
 aliases: 
-    - /getting-started/roles/index.html
+    - ../../getting-started/roles/index.html
 ---
 <!-- 
 Possibly copy content from [Introduction to Roles](../../getting-started/roles/_index.md)?

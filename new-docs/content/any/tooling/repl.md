@@ -1,7 +1,7 @@
 ---
 title: REPL
 aliases: 
-    - /more/dev-tools/repl.html
+    - ../more/dev-tools/repl.html
 ---
 
 # REPL

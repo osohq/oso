@@ -1,7 +1,7 @@
 ---
 title: Policy Examples
 aliases: 
-    - /using/examples/index.html
+    - ../../using/examples/index.html
 ---
 
 # Policy Examples

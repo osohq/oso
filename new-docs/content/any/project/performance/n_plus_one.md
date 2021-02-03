@@ -2,7 +2,7 @@
 title: |
     The "N+1 Problem"
 aliases: 
-    - /more/performance/n_plus_one.html
+    - ../../more/performance/n_plus_one.html
 ---
 
 # The “N+1 Problem”

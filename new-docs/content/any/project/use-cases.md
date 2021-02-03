@@ -1,7 +1,7 @@
 ---
 title: Use Cases
 aliases: 
-    - /more/use-cases.html
+    - ../more/use-cases.html
 ---
 
 # Use Cases
