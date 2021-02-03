@@ -24,10 +24,7 @@
 
     <script async src="{{ $.Site.BaseURL }}bundle.js"></script>
 
-    <script
-    src="https://kit.fontawesome.com/2c76e395a4.js"
-    crossorigin="anonymous"
-    ></script>
+    <link href="{{ $.Site.BaseURL}}all.min.css" rel="stylesheet"> <!--load all styles -->
 
     {{- if .Site.IsServer }}
     <link rel="stylesheet" href="{{ $styles.RelPermalink }}">
