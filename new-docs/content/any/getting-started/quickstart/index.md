@@ -38,18 +38,18 @@ The third file is the Oso policy file, `expenses.polar`, and is currently
 empty.
 
 {{% callout "Try it!" "green" %}}
-    {{% exampleGet "installation" %}}
+{{% exampleGet "installation" %}}
 
-    With the server running, open a second terminal and make a request using
-    cURL:
+With the server running, open a second terminal and make a request using
+cURL:
 
-    ```console
-    $ curl localhost:5050/expenses/1
-    Not Authorized!
-    ```
+```console
+$ curl localhost:5050/expenses/1
+Not Authorized!
+```
 
-    You’ll get a “Not Authorized!” response because we haven’t added any rules to
-    our Oso policy (in `expenses.polar`), and Oso is deny-by-default.
+You’ll get a “Not Authorized!” response because we haven’t added any rules to
+our Oso policy (in `expenses.polar`), and Oso is deny-by-default.
 {{% /callout %}}
 
 Let’s start implementing our access control scheme by adding some rules to the
@@ -125,10 +125,10 @@ including expenses submitted by others.
   Let's modify our existing rule such that users can only see their own
   expenses:
 
-  ```polar
+  {{< code file="expenses.polar" >}}
   allow(actor: String, "GET", expense: Expense) if
       expense.{{< exampleGet "submitted_by" >}} = actor;
-  ```
+  {{< /code >}}
 {{% /callout %}}
 
 Behind the scenes, Oso looks up the `submitted_by` field on the provided
@@ -162,11 +162,11 @@ application, you could write a policy rule in Oso that says a `User` may
 `"approve"` an `Expense` if they manage the `User` who submitted the expense
 and the expense’s amount is less than $100.00:
 
-```polar
+{{< code file="expenses.polar" >}}
 allow(approver: User, "approve", expense: Expense) if
     approver = expense.{{% exampleGet "submitted_by" %}}.{{% exampleGet "manager" %}}
     and expense.{{% exampleGet "amount" %}} < 10000;
-```
+{{< /code >}}
 
 In the process of evaluating that rule, the Oso engine would call back into the
 application in order to make determinations that rely on application data, such
