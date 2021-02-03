@@ -63,7 +63,7 @@ jobs:
       - name: Build Hugo docs
         run: |
           make install
-          HUGO_ENV=production hugo --minify -b "https://docs-preview.oso.dev"
+          HUGO_ENV=production hugo --minify -b "https://docs-preview.oso.dev/"
         working-directory: new-docs
 
 
