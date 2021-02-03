@@ -1,4 +1,4 @@
-baseURL = "https://docs.osohq.com/v2/"
+baseURL = "https://docs.osohq.com/"
 languageCode = "en-us"
 title = "oso Documentation"
 theme = ["tailwind", "oso"]
@@ -118,6 +118,11 @@ defaultContentLanguage = "any"
     source = "content/go"
     target = "content"
     lang = "go"
+
+  # Mount the old docs as a subdirectory for now
+  [[module.mounts]]
+  source = "../docs/_build/html"
+  target = "static/v1/"
 
 [build]
   writeStats = true
