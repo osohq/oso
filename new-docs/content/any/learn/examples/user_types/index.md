@@ -24,10 +24,10 @@ authorization logic.
 In this guide, we’ll walk through a policy for an application with two actor
 types: **Customers** and **Internal Users**.
 
-{{< callout "Note" "blue" >}}
-This guide assumes you are familiar with terms from Oso’s
-[glossary](glossary).
-{{< /callout >}}
+{{% callout "Note" "blue" %}}
+  This guide assumes you are familiar with terms from Oso’s
+  [glossary](glossary).
+{{% /callout %}}
 
 ## A Tale of Two Actors
 

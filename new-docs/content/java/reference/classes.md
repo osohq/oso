@@ -11,10 +11,10 @@ Oso’s Java authorization library lets you write policy rules over Java objects
 directly. This document explains how different types of Java objects can be
 used in Oso policies.
 
-{{< callout "Note" "blue" >}}
-More detailed examples of working with application classes can be found in
-[Policy Examples](learn/examples).
-{{< /callout >}}
+{{% callout "Note" "blue" %}}
+  More detailed examples of working with application classes can be found in
+  [Policy Examples](learn/examples).
+{{% /callout %}}
 
 ### Class Instances
 
@@ -63,29 +63,29 @@ interfaces to properly match the constructor’s parameter types.
 Polar supports integer and floating point real numbers, as well as booleans
 (see [Primitive Types](polar-syntax#primitive-types)).
 
-{{< callout "Note" "blue" >}}
-Java primitives may be passed into Oso, but numbers and booleans created in
-an Oso policy will be converted to
-[autoboxed](https://docs.oracle.com/javase/tutorial/java/data/autoboxing.html)
-Integer, Float, and Boolean types respectively.
+{{% callout "Note" "blue" %}}
+  Java primitives may be passed into Oso, but numbers and booleans created in
+  an Oso policy will be converted to
+  [autoboxed](https://docs.oracle.com/javase/tutorial/java/data/autoboxing.html)
+  Integer, Float, and Boolean types respectively.
 
-This means that methods called from Oso must have autoboxed argument types.
-E.g.:
+  This means that methods called from Oso must have autoboxed argument types.
+  E.g.:
 
-```java
-class Foo {
-    public static unboxed(int a, int b) {
-        // ...
-    }
-    public static boxed(Integer a, Integer b) {
-        // ...
-    }
-}
-```
+  ```java
+  class Foo {
+      public static unboxed(int a, int b) {
+          // ...
+      }
+      public static boxed(Integer a, Integer b) {
+          // ...
+      }
+  }
+  ```
 
-The `boxed()` method may be called from a policy, but attempting to call
-`unboxed()` will fail.
-{{< /callout >}}
+  The `boxed()` method may be called from a policy, but attempting to call
+  `unboxed()` will fail.
+{{% /callout %}}
 
 ### Strings
 
@@ -141,10 +141,10 @@ public class User {
 
 Note that the `isAllowed()` call would also succeed if `groups` were an Array.
 
-{{< callout "Warning" "orange" >}}
-Polar does not support methods that mutate lists in place. E.g., `add()` will
-have no effect on a list in Polar.
-{{< /callout >}}
+{{% callout "Warning" "orange" %}}
+  Polar does not support methods that mutate lists in place. E.g., `add()` will
+  have no effect on a list in Polar.
+{{% /callout %}}
 
 Likewise, lists constructed in Polar may be passed into Java methods:
 

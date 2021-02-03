@@ -1,7 +1,7 @@
 ---
 title: Ruby Types in Polar
 weight: 2
-aliases: 
+aliases:
     - /using/libraries/ruby/index.html
 ---
 
@@ -15,10 +15,10 @@ Oso’s Ruby authorization library allows you to write policy rules over Ruby
 objects directly. This document explains how different types of Ruby objects
 can be used in Oso policies.
 
-{{< callout "Note" "blue" >}}
+{{% callout "Note" "blue" %}}
 More detailed examples of working with application objects can be found in
 [Policy Examples](learn/examples).
-{{< /callout >}}
+{{% /callout %}}
 
 ### Class Instances
 
@@ -58,9 +58,9 @@ user = User.new("alice@example.com")
 raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 ```
 
-{{< callout "Warning" "orange" >}}
-Polar does not support methods that mutate strings in place.
-{{< /callout >}}
+{{% callout "Warning" "orange" %}}
+  Polar does not support methods that mutate strings in place.
+{{% /callout %}}
 
 ### Lists
 
@@ -84,10 +84,10 @@ user = User.new(["HR", "payroll"])
 raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 ```
 
-{{< callout "Warning" "orange" >}}
-Polar does not support methods that mutate lists in place unless the list is
-also returned from the method.
-{{< /callout >}}
+{{% callout "Warning" "orange" %}}
+  Polar does not support methods that mutate lists in place unless the list is
+  also returned from the method.
+{{% /callout %}}
 
 Likewise, lists constructed in Polar may be passed into Ruby methods:
 

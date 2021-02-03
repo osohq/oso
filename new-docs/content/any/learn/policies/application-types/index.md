@@ -70,12 +70,12 @@ Either way, using the rule could look like this:
 
 {{% exampleGet "specializedExample" %}}
 
-{{< callout "Note" "green" >}}
-Type specializers automatically respect the **inheritance** hierarchy of
-application classes. See the [Resources with
-Inheritance](learn/examples/inheritance) guide for an in-depth
-example of how this works.
-{{< /callout >}}
+{{% callout "Note" "green" %}}
+  Type specializers automatically respect the **inheritance** hierarchy of
+  application classes. See the [Resources with
+  Inheritance](learn/examples/inheritance) guide for an in-depth
+  example of how this works.
+{{% /callout %}}
 
 Once a class is registered, class or static methods can also be called from Oso
 policies:
@@ -97,11 +97,11 @@ types](polar-syntax#primitive-types) in any supported application language. For
 examples using built-in types, see [the {{% exampleGet "langName" %}}
 library](reference/classes) guide.
 
-{{< callout "Warning" "orange" >}}
-Do not attempt to mutate a literal using a method on it. Literals in Polar
-are constant, and any changes made to such objects by calling a method will
-not be persisted.
-{{< /callout >}}
+{{% callout "Warning" "orange" %}}
+  Do not attempt to mutate a literal using a method on it. Literals in Polar
+  are constant, and any changes made to such objects by calling a method will
+  not be persisted.
+{{% /callout %}}
 
 ### `nil`
 

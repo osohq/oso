@@ -11,10 +11,10 @@ Oso’s Python authorization library allows you to write policy rules over Pytho
 objects directly. This document explains how different types of Python objects
 can be used in Oso policies.
 
-{{< callout "Note" "blue" >}}
+{{% callout "Note" "blue" %}}
 More detailed examples of working with application classes can be found in
 [Policy Examples](learn/examples).
-{{< /callout >}}
+{{% /callout %}}
 
 ### Class Instances
 
@@ -50,10 +50,10 @@ user.username = "alice@example.com"
 assert(oso.is_allowed(user, "foo", "bar))
 ```
 
-{{< callout "Warning" "orange" >}}
-Polar does not support methods that mutate strings in place. E.g.,
-`capitalize()` will have no effect on a string in Polar.
-{{< /callout >}}
+{{% callout "Warning" "orange" %}}
+  Polar does not support methods that mutate strings in place. E.g.,
+  `capitalize()` will have no effect on a string in Polar.
+{{% /callout %}}
 
 ### Lists
 
@@ -70,10 +70,10 @@ user.groups = ["HR", "payroll"]
 assert(oso.is_allowed(user, "foo", "bar"))
 ```
 
-{{< callout "Warning" "orange" >}}
-Polar does not support methods that mutate lists in place. E.g. `reverse()`
-will have no effect on a list in Polar.
-{{< /callout >}}
+{{% callout "Warning" "orange" %}}
+  Polar does not support methods that mutate lists in place. E.g. `reverse()`
+  will have no effect on a list in Polar.
+{{% /callout %}}
 
 Likewise, lists constructed in Polar may be passed into Python methods:
 
