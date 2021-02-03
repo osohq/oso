@@ -61,7 +61,10 @@ jobs:
       - name: Build Hugo API docs
         run: make -C new-docs api_docs
       - name: Build Hugo docs
-        run: make -C new-docs build
+        run: |
+          make install
+          HUGO_ENV=production hugo --minify -b "https://docs-preview.oso.dev"
+        working-directory: new-docs
 
 
       ### Push to S3 + invalidate cache
