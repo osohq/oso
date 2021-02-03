@@ -2,7 +2,7 @@ name: Development
 on:
   push:
     branches:
-      - docs-v2
+      - main
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -158,31 +158,13 @@ jobs:
       ## Publish docs
       ## Also easier to do here with above deps installed
       - name: s3 preview publish
-        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/docs-v2' }}
+        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
         run: aws s3 sync --delete docs/_build/html s3://docs-preview.oso.dev
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
-
-      ### New docs CI
-      - name: Setup Hugo
-        uses: peaceiris/actions-hugo@v2
-        with:
-          hugo-version: '0.79.1'
-      - name: Build Hugo API docs
-        run: make -C new-docs api-docs
-      - name: Build Hugo docs
-        run: make -C new-docs build
-      - name: s3 preview publish
-        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/docs-v2' }}
-        run: aws s3 sync public/ s3://docs-preview.oso.dev/v2/
-        working-directory: new-docs
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
-
       - name: cloudfront invalidate docs preview
-        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/docs-v2' }}
+        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
         run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
