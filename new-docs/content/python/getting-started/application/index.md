@@ -2,7 +2,7 @@
 title: Add Oso to your app
 weight: 5
 description: |
-  Control what you expose in the UI with Oso policies.
+  An in-depth walkthrough of adding Oso to an example expense application.
 aliases:
   - /getting-started/application/index.html
 ---
