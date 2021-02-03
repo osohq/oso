@@ -1,7 +1,20 @@
-{{ if eq . "polar" }}
-<i class="fa-oso"></i>
+{{ if eq . "go" }}
+{{ readFile "fontawesome/go.svg" | safeHTML }}
 {{ else }}
-<i class="flex justify-center">
-    <i class="fab fab-{{ . }}"></i>
-</i>
+{{ $icon := .}}
+
+{{ $solidIcons := slice "blog" "download" "gem" "chevron-down" "home" "search" }}
+{{ $brandIcons := slice "linkedin-in" "twitter" "github" "slack" "python" "java" "node-js" "rust" }}
+{{ $map := dict "rb" "gem" "py" "python"}}
+
+{{ with index $map $icon }}
+{{ $icon = index $map $icon}}
+{{ end }}
+
+{{ $class := printf "fas fa-%s" $icon }}
+{{ if in $brandIcons $icon }}
+{{ $class = printf "fab fa-%s" $icon }}
+{{ end }}
+
+<i class="{{ $class }}"></i>
 {{ end }}

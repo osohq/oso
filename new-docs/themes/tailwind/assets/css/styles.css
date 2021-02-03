@@ -66,6 +66,10 @@ button > * {
     .polar-code-in-here {
       @apply bg-primary-800 !important
     }
+
+    .code pre {
+      @apply rounded-t-none mt-0
+    }
 }
 :target::before {
   content: "";
@@ -86,8 +90,8 @@ button > * {
   }
 }
 
-.fa-oso {
-  content: url("../img/oso_logo.png");
+.fa-polar {
+  content: url("../oso_logo.png");
   filter: opacity(75%);
   height: 1rem;
   vertical-align: middle;

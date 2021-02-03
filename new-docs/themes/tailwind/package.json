@@ -24,8 +24,5 @@
         "> 1%",
         "maintained node versions",
         "not dead"
-    ],
-    "dependencies": {
-        "lodash": "^4.17.20"
-    }
+    ]
 }

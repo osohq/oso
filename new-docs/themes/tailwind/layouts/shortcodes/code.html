@@ -8,7 +8,7 @@
 <div class="code" id="{{ $file | urlize}}">
 <div class="code" {{with .Get "download"}}id="{{.}}"{{end}}>
 {{- with $file -}}
-<div class="filename -mb-6 rounded-md bg-gray-200 text-gray-700 text-sm pl-1">
+<div class="filename rounded-md bg-gray-200 text-gray-700 text-sm pl-1 py-1">
 {{- with $codeLang -}}
 {{- partial "fontawesome.html" $codeLang -}}
 {{- end -}}
