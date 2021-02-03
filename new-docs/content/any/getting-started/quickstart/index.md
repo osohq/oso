@@ -67,10 +67,10 @@ allow an **actor** to perform an **action** on a **resource**.
 In our policy file (`expenses.polar`), let's add a rule that allows anyone
 with an email ending in `"@example.com"` to view all expenses:
 
-```polar
+{{< code file="expenses.polar" >}}
 allow(actor: String, "GET", _expense: Expense) if
     actor.{{< exampleGet "endswith" >}}("@example.com");
-```
+{{< /code >}}
 
 Note that the call to **{{< exampleGet "endswith" >}}** is actually calling
 out to {{< exampleGet "endswithURL" >}}. The actor value passed to Oso is a
