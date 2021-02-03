@@ -1,6 +1,58 @@
-<footer class="w-full pin-b text-center text-white bg-black border-t border-gray-200 p-4 text-xs text-gray-400">
-    <!-- <p>made with <a href="https://gohugo.io" class="underline hover:text-blue-400">Hugo</a> and <a
-            href="https://tailwindcss.com" class="underline hover:text-blue-400">TailwindCSS</a></p> -->
+<footer class="w-full pin-b bg-black border-t border-gray-200 p-4 grid grid-cols-2 md:grid-cols-3 justify-between">
+    <p class="text-gray-400 text-left py-4">
+        © 2021 Oso Security, Inc.
+    </p>
+
+    <div class="flex-grow grid justify-center justify-items-center">
+        <div class="flex">
+            {{ $twitter := slice "twitter" "https://twitter.com/osoHQ"}}
+            {{ $linkedin := slice "linkedin-in" "https://www.linkedin.com/company/13056430/"}}
+            {{ $github := slice "github" "https://github.com/osohq/oso/"}}
+            {{ $slack := slice "slack" "https://join-slack.osohq.com/"}}
+            {{ range slice $twitter $linkedin $github $slack }}
+            <div>
+                <a href="{{ index . 1 }}">
+                    <button class="text-gray-200 hover:text-white">
+                        <div class=" h-5 w-5 mr-2">
+                            {{ partial "fontawesome.html" (index . 0) }}
+                        </div>
+                    </button>
+                </a>
+            </div>
+            {{ end }}
+        </div>
+        <div>
+            <form id="subscribe-form-docs" name="subscribe-form-docs" class="flex py-2">
+                <label>
+                    <input placeholder="Email Address"
+                    class="focus:ring-primary-500 focus:border-primary-500 px-3 py-2 sm:text-sm rounded-md"
+                    type="email" maxlength="256" name="Email-Address" id="Email-Address" required="True"/>
+                </label>
+                <button
+                    type="submit"
+                    data-wait="Churning..."
+                    class="ml-2 px-3 py-2 rounded-md sm:text-sm text-gray-600 bg-gray-300 text-gray-700 hover:bg-gray-600 hover:text-gray-900 appearance-none focus:outline-none">
+                    Subscribe
+                </button>
+            </form>
+        </div>
+    </div>
+
+
+
+        
+      </div>
+      <div class="subscribe-form">
+        <a href="https://github.com/osohq/">
+          <em class="fab fa-github" aria-hidden="true"></em>
+        </a>
+        <a href="https://join-slack.osohq.com/">
+          <em class="fab fa-slack" aria-hidden="true"></em>
+        </a>
+        <a href="https://twitter.com/osohq">
+          <em class="fab fa-twitter" aria-hidden="true"></em>
+        </a>
+      </div>
 </footer>
 
 {{ $appJs := resources.Get "js/app.js" }}

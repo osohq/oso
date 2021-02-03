@@ -18,6 +18,6 @@ module.exports = {
     require('autoprefixer')({
       path: [themeDir],
     }),
-    purgecss,
+    ...(process.env.HUGO_PURGECSS !== 'off' ? [purgecss] : [])
   ],
 };
