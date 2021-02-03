@@ -6,7 +6,7 @@ weight: 2
 [mdn-array]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
 [mdn-new]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/new
 [mdn-iterator]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols
-[mdn-asyncIterator]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/asyncIterator
+[mdn-asynciterator]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/asyncIterator
 [mdn-promise]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
 
 ## Working with JavaScript Types
@@ -16,8 +16,8 @@ JavaScript types directly. This document explains how different types of
 JavaScript values can be used in oso policies.
 
 {{< callout "Note" "blue" >}}
-  More detailed examples of working with application objects can be found in
-  [Policy Examples](learn/policies/examples).
+More detailed examples of working with application objects can be found in
+[Policy Examples](learn/examples).
 {{< /callout >}}
 
 ### Objects
@@ -55,16 +55,15 @@ class User {
   }
 }
 
-const user = new User('alice@example.com');
-oso.isAllowed(user, 'foo', 'bar').then(assert);
+const user = new User("alice@example.com");
+oso.isAllowed(user, "foo", "bar").then(assert);
 ```
 
 {{< callout "Warning" "orange" >}}
-  Polar does not support methods that mutate strings in place.
+Polar does not support methods that mutate strings in place.
 {{< /callout >}}
 
 ### Lists
-
 
 JavaScript [Arrays][mdn-array] are mapped to Polar [lists](polar-syntax#lists).
 JavaScript’s Array methods may be called in policies:
@@ -81,12 +80,12 @@ class User {
 }
 
 const user = new User(["HR", "payroll"]);
-oso.isAllowed(user, 'foo', 'bar').then(assert);
+oso.isAllowed(user, "foo", "bar").then(assert);
 ```
 
 {{< callout "Warning" "orange" >}}
-  Polar does not support methods that mutate lists in place unless the list is
-  also returned from the method.
+Polar does not support methods that mutate lists in place unless the list is
+also returned from the method.
 {{< /callout >}}
 
 Likewise, lists constructed in Polar may be passed into JavaScript methods:
@@ -102,12 +101,12 @@ class User {
   }
 
   hasGroups(other) {
-    return other.every(group => this.groups.includes(group));
+    return other.every((group) => this.groups.includes(group));
   }
 }
 
 const user = new User(["HR", "payroll"]);
-oso.isAllowed(user, 'foo', 'bar').then(assert);
+oso.isAllowed(user, "foo", "bar").then(assert);
 ```
 
 There is currently no syntax for random access to a list element within a
@@ -119,7 +118,7 @@ with [pattern matching](polar-syntax#patterns-and-matching).
 ### Iterables
 
 You may iterate over any [synchronous][mdn-iterator] or
-[asynchronous][mdn-asyncIterator]) JavaScript iterables using Polar's [in
+[asynchronous][mdn-asynciterator]) JavaScript iterables using Polar's [in
 operator](polar-syntax#in-list-membership):
 
 ```polar
@@ -134,7 +133,7 @@ class User {
 }
 
 const user = new User();
-oso.isAllowed(user, 'foo', 'bar').then(assert);
+oso.isAllowed(user, "foo", "bar").then(assert);
 ```
 
 ### Promises

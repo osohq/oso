@@ -15,8 +15,8 @@ types directly. This document explains how different Rust types can be used in
 oso policies.
 
 {{< callout "Note" "blue" >}}
-  More detailed examples of working with application objects can be found in
-  [Policy Examples](learn/policies/examples).
+More detailed examples of working with application objects can be found in
+[Policy Examples](learn/examples).
 {{< /callout >}}
 
 ### Structs + Enums
@@ -57,13 +57,12 @@ assert!(oso.is_allowed(user, "foo", "bar")?);
 ```
 
 {{< callout "Warning" "orange" >}}
-  Polar does not support methods that mutate strings in place.
+Polar does not support methods that mutate strings in place.
 {{< /callout >}}
 
 ### Vectors
 
-[Vec\<T>][rust-vec] maps to a Polar [list](polar-syntax#lists), given that `T:
-ToPolar`.
+[Vec\<T>][rust-vec] maps to a Polar [list](polar-syntax#lists), given that `T: ToPolar`.
 
 Currently, no methods on `Vec` are exposed to Polar.
 
@@ -85,8 +84,8 @@ assert!(oso.is_allowed(user, "foo", "bar")?);
 ```
 
 {{< callout "Warning" "orange" >}}
-  Polar does not support methods that mutate lists in place unless the list is
-  also returned from the method.
+Polar does not support methods that mutate lists in place unless the list is
+also returned from the method.
 {{< /callout >}}
 
 Rust methods like [`Vec::get`][rust-vec-get] may be used for random access to

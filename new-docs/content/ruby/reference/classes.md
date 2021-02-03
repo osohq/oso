@@ -14,8 +14,8 @@ objects directly. This document explains how different types of Ruby objects
 can be used in oso policies.
 
 {{< callout "Note" "blue" >}}
-  More detailed examples of working with application objects can be found in
-  [Policy Examples](learn/policies/examples).
+More detailed examples of working with application objects can be found in
+[Policy Examples](learn/examples).
 {{< /callout >}}
 
 ### Class Instances
@@ -57,7 +57,7 @@ raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 ```
 
 {{< callout "Warning" "orange" >}}
-  Polar does not support methods that mutate strings in place.
+Polar does not support methods that mutate strings in place.
 {{< /callout >}}
 
 ### Lists
@@ -83,8 +83,8 @@ raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 ```
 
 {{< callout "Warning" "orange" >}}
-  Polar does not support methods that mutate lists in place unless the list is
-  also returned from the method.
+Polar does not support methods that mutate lists in place unless the list is
+also returned from the method.
 {{< /callout >}}
 
 Likewise, lists constructed in Polar may be passed into Ruby methods:

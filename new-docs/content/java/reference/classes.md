@@ -10,8 +10,8 @@ directly. This document explains how different types of Java objects can be
 used in oso policies.
 
 {{< callout "Note" "blue" >}}
-  More detailed examples of working with application classes can be found in
-  [Policy Examples](learn/policies/examples).
+More detailed examples of working with application classes can be found in
+[Policy Examples](learn/examples).
 {{< /callout >}}
 
 ### Class Instances
@@ -42,10 +42,9 @@ oso.registerClass(Person.class, "User")
 ```
 
 At instantiation time, oso will search the list returned by
-[Class.getConstructors()](https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getConstructors())
+[Class.getConstructors()](<https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getConstructors()>)
 for a constructor that is applicable to the supplied positional constructor
-arguments. For example, given the Polar expression `new
-User("alice@example.com")`, oso will search for a `Constructor` with one
+arguments. For example, given the Polar expression `new User("alice@example.com")`, oso will search for a `Constructor` with one
 parameter compatible with `String.class`, e.g.:
 
 ```java
@@ -53,7 +52,7 @@ public User(String username) { ... }
 ```
 
 Applicability is determined using [Class.isAssignableFrom(Class<?>
-cls)](https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#isAssignableFrom(java.lang.Class)),
+cls)](<https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#isAssignableFrom(java.lang.Class)>),
 which allows arguments that are instances of subclasses or implementations of
 interfaces to properly match the constructor’s parameter types.
 
@@ -63,27 +62,27 @@ Polar supports integer and floating point real numbers, as well as booleans
 (see [Primitive Types](polar-syntax#primitive-types)).
 
 {{< callout "Note" "blue" >}}
-  Java primitives may be passed into oso, but numbers and booleans created in
-  an oso policy will be converted to
-  [autoboxed](https://docs.oracle.com/javase/tutorial/java/data/autoboxing.html)
-  Integer, Float, and Boolean types respectively.
+Java primitives may be passed into oso, but numbers and booleans created in
+an oso policy will be converted to
+[autoboxed](https://docs.oracle.com/javase/tutorial/java/data/autoboxing.html)
+Integer, Float, and Boolean types respectively.
 
-  This means that methods called from oso must have autoboxed argument types.
-  E.g.:
+This means that methods called from oso must have autoboxed argument types.
+E.g.:
 
-  ```java
-  class Foo {
-      public static unboxed(int a, int b) {
-          // ...
-      }
-      public static boxed(Integer a, Integer b) {
-          // ...
-      }
-  }
-  ```
+```java
+class Foo {
+    public static unboxed(int a, int b) {
+        // ...
+    }
+    public static boxed(Integer a, Integer b) {
+        // ...
+    }
+}
+```
 
-  The `boxed()` method may be called from a policy, but attempting to call
-  `unboxed()` will fail.
+The `boxed()` method may be called from a policy, but attempting to call
+`unboxed()` will fail.
 {{< /callout >}}
 
 ### Strings
@@ -114,7 +113,7 @@ public class User {
 
 Java
 [Arrays](https://docs.oracle.com/javase/tutorial/java/nutsandbolts/arrays.html)
-*and* objects that implement the
+_and_ objects that implement the
 [List](https://docs.oracle.com/javase/10/docs/api/java/util/List.html)
 interface are mapped to Polar [lists](polar-syntax#lists). Java’s `List`
 methods may be accessed from policies:
@@ -141,8 +140,8 @@ public class User {
 Note that the `isAllowed()` call would also succeed if `groups` were an Array.
 
 {{< callout "Warning" "orange" >}}
-  Polar does not support methods that mutate lists in place. E.g., `add()` will
-  have no effect on a list in Polar.
+Polar does not support methods that mutate lists in place. E.g., `add()` will
+have no effect on a list in Polar.
 {{< /callout >}}
 
 Likewise, lists constructed in Polar may be passed into Java methods:
@@ -171,7 +170,7 @@ public class User {
 ```
 
 Java methods like
-[`List.get`](https://docs.oracle.com/javase/10/docs/api/java/util/List.html#get(int))
+[`List.get`](<https://docs.oracle.com/javase/10/docs/api/java/util/List.html#get(int)>)
 may be used for random access to list elements, but there is currently no Polar
 syntax for that is equivalent to the Java expression `user.groups[1]`. To
 access the elements of a list without using a method, you may iterate over it
@@ -191,11 +190,11 @@ allow(actor, action, resource) if actor.roles.project1 = "admin";
 ```java
 public class User {
     public Map<String, String> roles;
- 
+
     public User(Map<String, String> roles) {
         this.roles = roles;
     }
- 
+
     public static void main(String[] args) {
         User user = new User(Map.of("project1", "admin"));
         assert oso.isAllowed(user, "foo", "bar");
@@ -221,7 +220,7 @@ public class User {
     public List<String> getGroups() {
         return List.of("HR", "payroll");
     }
- 
+
     public static void main(String[] args) {
         User user = new User(Map.of("project1", "admin"));
         assert oso.isAllowed(user, "foo", "bar");
