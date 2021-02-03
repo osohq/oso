@@ -36,3 +36,6 @@ install:
 
 run: api_docs
 	hugo server
+
+build: install
+	HUGO_ENV=production hugo --minify
