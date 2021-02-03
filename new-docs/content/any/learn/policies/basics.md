@@ -6,7 +6,7 @@ weight: 1
 # Rule basics
 
 Policies are made up of [rules](polar-syntax#rules). Each rule defines a
-statement that is either true or false. oso answers queries by evaluating rules
+statement that is either true or false. Oso answers queries by evaluating rules
 that match the query name and parameters. Let’s take a basic [allow
 rule](glossary#allow-rules) as an example:
 
@@ -16,7 +16,7 @@ allow(actor, action, resource);
 
 <!-- TODO(gj): link `Oso.is_allowed()` once API docs are hooked up. -->
 When we use `Oso.is_allowed()` (or equivalent), we are making a query that asks
-oso to evaluate all rules that match *(a)* on the rule name (`allow`), and
+Oso to evaluate all rules that match *(a)* on the rule name (`allow`), and
 *(b)* on all the inputs.
 
 In the rule above, `actor`, `action`, and `resource` are simply the parameter

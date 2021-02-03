@@ -1,6 +1,6 @@
 baseURL = "https://docs.osohq.com/"
 languageCode = "en-us"
-title = "oso Documentation"
+title = "Oso Documentation"
 theme = ["tailwind", "oso"]
 uglyurls = true
 
@@ -8,7 +8,7 @@ defaultContentLanguage = "any"
 
 # used for Twitter card etc
 [params]
-  description = "Explore our guides and reference articles for learning oso and adding it to your application."
+  description = "Explore our guides and reference articles for learning Oso and adding it to your application."
   images = ["img/oso-2020-white-on-black-rounded.png"]
 
 [languages]

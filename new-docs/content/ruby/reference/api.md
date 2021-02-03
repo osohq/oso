@@ -9,4 +9,4 @@ aliases:
 # Ruby API
 
 The [Ruby API reference]({{% apiLink "reference/api/index.html" %}})
-is automatically generated from the oso Ruby library source files.
+is automatically generated from the Oso Ruby library source files.

@@ -6,7 +6,7 @@ path: /using-examples-inheritance
 title: Resources with Inheritance
 description: |
     Some applications have common authorization rules that apply to many
-    different types of resources. oso policies make it possible to share rules
+    different types of resources. Oso policies make it possible to share rules
     across related resource types, and override them as needed.
 aliases: 
     - ../../../using/examples/inheritance.html
@@ -19,7 +19,7 @@ rules applied to them. This is a common scenario in workflow driven
 applications that have different user types and a large number of resources.
 
 A common set of rules will apply to many resources, with some exceptions. In
-this guide, we will cover various ways for modeling this scenario with oso.
+this guide, we will cover various ways for modeling this scenario with Oso.
 
 ## Setup
 
@@ -81,7 +81,7 @@ allow(actor: Actor, "read", resource) if
 ```
 
 Now, we’ve taken the repeated logic and expressed it as the
-`can_read_patient_data` rule. When the `allow` rule is evaluated, oso will
+`can_read_patient_data` rule. When the `allow` rule is evaluated, Oso will
 check if the `can_read_patient_data` is satisfied. The policy is much shorter!
 
 Unfortunately, we’ve lost one property of our last policy: the specializers.

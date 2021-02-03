@@ -9,7 +9,7 @@ aliases:
 
 # Authorization-Dependent UI Elements
 
-## Using oso to control UI components
+## Using Oso to control UI components
 
 The access control rules that you use to authorize data access in your
 application's backend often have implications for the frontend as well.
@@ -18,19 +18,19 @@ the current user doesn't have access to that page. Or perhaps you'd like
 to display an "edit" button only if the user is actually allowed to edit
 the resource in question.
 
-These are examples of what we at oso call "Authorization-Dependent UI
-Elements." In this guide we'll explain how you can use oso to implement
+These are examples of what we at Oso call "Authorization-Dependent UI
+Elements." In this guide we'll explain how you can use Oso to implement
 these kinds of features in your app.
 
 {{< callout "Note" "blue" >}}
-We don't currently provide a version of oso that runs in the
+We don't currently provide a version of Oso that runs in the
 browser. This guide covers how to query for information in the backend
 that can be sent to your frontend service.
 {{< /callout >}}
 
 ### Getting a user's allowed actions
 
-If you're familiar with oso, you know that oso policies contain `allow`
+If you're familiar with Oso, you know that Oso policies contain `allow`
 rules that specify that an **actor** is allowed to take an **action** on
 a **resource.**
 
@@ -98,7 +98,7 @@ But when we call with a different user, `sully@monsters.com`, we get:
 actions = ['READ', 'CREATE', 'LIST_ISSUES']
 ```
 
-The allowed actions for each user are determined by the **oso policy.**
+The allowed actions for each user are determined by the **Oso policy.**
 In this case, our policy has the following rules:
 
 ```python
@@ -135,8 +135,8 @@ allowed to take more actions on the repository than Sully.
 With this relatively straightforward policy, it's easy to trace where
 the users' allowed actions come from. But `Oso.get_allowed_actions()`
 can be especially powerful with more complicated policies. For example,
-if we used oso's [SQLAlchemy Roles library
-features](https://docs.oso.dev/getting-started/roles/sqlalchemy/basic_roles.html),
+if we used Oso's [SQLAlchemy Roles library
+features](https://docs.osohq.com/getting-started/roles/sqlalchemy/basic_roles.html),
 we could have a policy that looks like this instead:
 
 ```python
@@ -164,8 +164,8 @@ repository_role_order(["ADMIN", "MAINTAIN", "WRITE", "TRIAGE", "READ"]);
 Now the users' allowed actions depend on their assigned roles for both
 the repository and the parent organization, as well as the hierarchy of
 the repository roles (for more information on implementing RBAC with
-oso, [check out our
-guide](https://docs.oso.dev/getting-started/roles/index.html)).
+Oso, [check out our
+guide](https://docs.osohq.com/getting-started/roles/index.html)).
 
 Even with this more complicated policy, we'll still get the correct
 allowed actions for Mike and Sully.

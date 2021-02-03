@@ -13,9 +13,9 @@ aliases:
 
 ## Working with JavaScript Types
 
-oso’s Node.js authorization library allows you to write policy rules over
+Oso’s Node.js authorization library allows you to write policy rules over
 JavaScript types directly. This document explains how different types of
-JavaScript values can be used in oso policies.
+JavaScript values can be used in Oso policies.
 
 {{< callout "Note" "blue" >}}
   More detailed examples of working with application objects can be found in
@@ -24,13 +24,13 @@ JavaScript values can be used in oso policies.
 
 ### Objects
 
-You can pass any JavaScript object into oso and access its properties from your
+You can pass any JavaScript object into Oso and access its properties from your
 policy (see [Application Types](learn/policies/application-types)).
 
 ### Class Instances
 
 Any `new`-able JavaScript object (including ES6-style classes) can be
-constructed from inside an oso policy using Polar's [`new`
+constructed from inside an Oso policy using Polar's [`new`
 operator](polar-syntax#new) if the constructor (a `class` or `function` that
 responds to JavaScript's [`new` operator][mdn-new]) has been **registered**
 using the `oso.registerClass()` method. An example of this can be found
@@ -141,7 +141,7 @@ oso.isAllowed(user, 'foo', 'bar').then(assert);
 
 ### Promises
 
-oso will `await` any [Promise][mdn-promise] and then use the resolved value
+Oso will `await` any [Promise][mdn-promise] and then use the resolved value
 during evaluation of a policy.
 
 ### `null`

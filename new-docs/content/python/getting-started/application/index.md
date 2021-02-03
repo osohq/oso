@@ -18,7 +18,7 @@ example of authorization in a simple web server, in this guide we'll show
 some more practical examples in the context of a more realistic application.
 
 Our sample expenses application is built with Flask, but we are not using
-anything from oso that is unique to Flask, and the same patterns we cover here
+anything from Oso that is unique to Flask, and the same patterns we cover here
 can be used anywhere.
 
 We highly encourage you to follow along with the code by cloning the example repository
@@ -30,7 +30,7 @@ Our expenses application reads from a sqlite database, and has a few simple endp
 
 ## Running The Example
 
-The application has a few requirements, including Flask and, of course, oso.
+The application has a few requirements, including Flask and, of course, Oso.
 We recommend installing these within a virtual environment:
 
 ```console
@@ -50,7 +50,7 @@ $ sqlite3 expenses.db ".read expenses.sql"
 
 ## In Your Application
 
-There are two pieces to get started with oso in your application.
+There are two pieces to get started with Oso in your application.
 The policy file, and the `oso.is_allowed` call.
 
 The policy file captures the authorization logic you want to apply in your application, and the `oso.is_allowed` call is used to enforce that policy in your application.
@@ -72,10 +72,10 @@ file, and all of the authorization in the application is managed through the
 
 In the application, we need to:
 
-1. Create the oso instance
+1. Create the Oso instance
 2. Load in policy files.
 3. [Register application classes](application-types)
-4. Attach the oso instance to the application
+4. Attach the Oso instance to the application
 
 We have achieved this using the `init_oso` method:
 

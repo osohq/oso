@@ -10,7 +10,7 @@ cd themes/tailwind
 npm install
 ```
 
-Install oso package
+Install Oso package
 ```
 cd themes/oso
 npm install

@@ -8,7 +8,7 @@ description: |
     Attribute-based access control relies on rich attributes associated with
     each actor to make authorization decisions. This model is often used when
     RBAC is not expressive enough, and is a natural extension of RBAC when
-    using oso.
+    using Oso.
 aliases: 
     - ../../../using/examples/abac.html
 ---
@@ -25,7 +25,7 @@ control](https://en.wikipedia.org/wiki/Attribute-based_access_control) (ABAC).
 
 Suppose we want to allow employees to view *their own* expenses.
 
-We can register our user classes with oso:
+We can register our user classes with Oso:
 
 {{% exampleGet "userClass" %}}
 

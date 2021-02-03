@@ -16,7 +16,7 @@ authorize each object individually.
 
 ## Installation
 
-The oso Django integration is available on [PyPI](https://pypi.org/project/django-oso/) and can be installed using
+The Oso Django integration is available on [PyPI](https://pypi.org/project/django-oso/) and can be installed using
 `pip`:
 
 ```
@@ -32,9 +32,9 @@ filtering policy is to have them inherit from
 under the hood to return Django QuerySets with authorization filters applied.
 
 The policies you write will largely look the same with or without the list
-filtering feature, and the oso engine will follow similar evaluation paths.
+filtering feature, and the Oso engine will follow similar evaluation paths.
 
-In the list filtering case, oso consults the policy to build up a list of
+In the list filtering case, Oso consults the policy to build up a list of
 conditions that must be met in order for a model to be authorized. These
 conditions are translated into Django ORM filters and applied to the query
 before retrieving objects from the database.
@@ -100,7 +100,7 @@ allow(user: app::User, "GET", post: app::Post) if
 
 ### Trying it out
 
-If you want to follow along, clone the oso repository from [GitHub](https://github.com/osohq/oso) and `cd`
+If you want to follow along, clone the Oso repository from [GitHub](https://github.com/osohq/oso) and `cd`
 into it and then into the `docs/examples/list-filtering/django` directory.
 Then, run `make setup` to install dependencies (primarily Django and
 `django-oso`) and seed the database.

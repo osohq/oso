@@ -18,7 +18,7 @@ example of authorization in a simple web server, in this guide we'll show
 some more practical examples in the context of a more realistic application.
 
 Our sample expenses application is a Maven project built with Spring Boot.
-We are not using anything from oso that is unique to Spring Boot, and the same patterns we cover here
+We are not using anything from Oso that is unique to Spring Boot, and the same patterns we cover here
 can be used anywhere.
 
 We highly encourage you to follow along with the code by cloning the example repository
@@ -48,7 +48,7 @@ $ mvn spring-boot:run
 
 ## In Your Application
 
-There are two pieces to get started with oso in your application.
+There are two pieces to get started with Oso in your application.
 The policy file, and the `oso.isAllowed` call.
 
 The policy file captures the authorization logic you want to apply in
@@ -78,10 +78,10 @@ file.
 
 In the application, we need to:
 
-1. Create the oso instance
+1. Create the Oso instance
 2. Load in policy files.
 3. [Register application classes](application-types)
-4. Attach the oso instance to the application
+4. Attach the Oso instance to the application
 
 We have achieved this using the `setupOso` method, in `Application.java`.
 
@@ -267,7 +267,7 @@ for us to use throughout the application:
 public Object authorize(String action, Object resource) {
     try {
       if (!oso.isAllowed(currentUser.get(), action, resource)) {
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "oso authorization");
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Oso authorization");
       }
     } catch (OsoException e) {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, null, e);

@@ -129,7 +129,7 @@ Now we can write a few more tests to ensure everything is hooked up correctly:
 
 Our accounting firm’s authorization scheme is flexible, hierarchical, and —
 let’s just go ahead and say it — beautiful. However, it’s entirely based on
-data that lives in our policy. One of the distinguishing features of oso is the
+data that lives in our policy. One of the distinguishing features of Oso is the
 ability to [reach into existing domain models](application-types) to retrieve
 context for an authorization decision.
 
@@ -141,7 +141,7 @@ that can look up its assigned roles from the database:
 
 {{% exampleGet "userClass" %}}
 
-By registering the `User` class with oso, we can begin leveraging it from
+By registering the `User` class with Oso, we can begin leveraging it from
 within our policy. Our policy currently expects actors to be simple strings,
 but we can update that by adding the `User` type specializer to our `role()`
 rules:
@@ -187,7 +187,7 @@ role(actor: User, "admin") if
 ```
 
 There’s something really powerful happening in the above that bears
-highlighting: oso allowed us to not only create policies over existing
+highlighting: Oso allowed us to not only create policies over existing
 application data but, crucially, *to arrange that data in novel ways*,
 enriching the pool of contextual data that informs authorization decisions
 without littering complex logic all over the application. The hierarchy we
@@ -202,7 +202,7 @@ roles to actors in Polar. We saw how simple it is to construct arbitrary role
 hierarchies, and we added a few inline queries to test our policy.
 
 Things started to get really interesting when we registered the `User` model
-with oso, with that one-line change in our application code unlocking the
+with Oso, with that one-line change in our application code unlocking the
 powerful pattern of writing authorization logic directly over the fields and
 methods of our existing application model.
 
@@ -218,4 +218,4 @@ attribute lookup for what it is: a pinch of [attribute-based access
 control](https://en.wikipedia.org/wiki/Attribute-based_access_control) (ABAC)
 hiding amongst our RBAC policy. In the next section, we’ll dive fully into
 attribute-based authorization and show how intuitive it is to write concise,
-flexible, and powerful ABAC rules with oso.
+flexible, and powerful ABAC rules with Oso.

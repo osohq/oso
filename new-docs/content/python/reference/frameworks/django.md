@@ -7,12 +7,12 @@ aliases:
 
 # Django
 
-The oso Django integration adopts Django conventions and provides middleware,
-view decorators and ORM integrations to make it easier to use oso with Django.
+The Oso Django integration adopts Django conventions and provides middleware,
+view decorators and ORM integrations to make it easier to use Oso with Django.
 
 ## Installation
 
-The oso Django integration is available on [PyPI](https://pypi.org/project/django-oso/) and can be installed using
+The Oso Django integration is available on [PyPI](https://pypi.org/project/django-oso/) and can be installed using
 `pip`:
 
 ```
@@ -22,7 +22,7 @@ $ pip install django-oso
 ## Usage
 
 The `django_oso` django plugin contains a reusable django app that makes
-authorization with oso and django easy.  To use, ensure `django_oso` is in
+authorization with Oso and django easy.  To use, ensure `django_oso` is in
 `INSTALLED_APPS`:
 
 ```
@@ -53,10 +53,10 @@ directories, call `load_file()` on
 
 Often, authorization rules will be expressed over django models.  Therefore,
 `django_oso` will register every model for each installed app upon startup as
-a class with oso. The `django.http.HttpRequest` is also registered
+a class with Oso. The `django.http.HttpRequest` is also registered
 under `HttpRequest`.  Django models are referenced in a Polar file using the
 syntax `app_name::ModelName`. If an app name contains `.`, for example
-`django.contrib.auth`, it will be referenced in oso as
+`django.contrib.auth`, it will be referenced in Oso as
 `django::contrib::auth`.
 
 Additional classes can be registered as needed using
@@ -131,4 +131,4 @@ Check out the Django integration example app on GitHub:
 ## API Reference
 
 The [Django API reference]({{% apiLink "reference/api/django.html" %}})
-is automatically generated from the oso Django library source files.
+is automatically generated from the Oso Django library source files.

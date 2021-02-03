@@ -6,7 +6,7 @@ path: /using-examples-user-types
 title: Multiple Actor Types
 description: |
     Applications may have multiple types of users. Frequently, internal user
-    accounts for support reps, operations teams, or testing. oso policies can
+    accounts for support reps, operations teams, or testing. Oso policies can
     recognize different user types & apply different rules when necessary,
     avoiding the need for multiple authorization systems.
 aliases: 
@@ -15,7 +15,7 @@ aliases:
 
 # Multiple Actor Types
 
-Recall that in oso, [actors](glossary#actors) represent request-makers, the
+Recall that in Oso, [actors](glossary#actors) represent request-makers, the
 “who” of an authorization request. Actors are commonly human users, but might
 also be machines, servers, or other applications. Many applications support
 multiple types of actors, and often different actor types require different
@@ -25,7 +25,7 @@ In this guide, we’ll walk through a policy for an application with two actor
 types: **Customers** and **Internal Users**.
 
 {{< callout "Note" "blue" >}}
-  This guide assumes you are familiar with terms from oso’s
+  This guide assumes you are familiar with terms from Oso’s
   [glossary](glossary).
 {{< /callout >}}
 
@@ -141,7 +141,7 @@ We’ve now successfully secured all three dashboards and customer account data.
 
 It is common to require different authorization logic for different types of
 application users. In this example, we showed how to use different actor types
-to represent different users in oso. We wrote policies with rules that
+to represent different users in Oso. We wrote policies with rules that
 specialized on the type of actor and even added attributes to some actor types
 that we used in the policy. We also demonstrated how inheritance can be used to
 match rules to multiple types of actors.

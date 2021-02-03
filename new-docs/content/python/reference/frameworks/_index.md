@@ -7,7 +7,7 @@ aliases:
 ---
 # Python Frameworks
 
-In addition to the [base oso Python library](..), we offer specialized
+In addition to the [base Oso Python library](..), we offer specialized
 libraries for the following Python frameworks:
 
 * [Flask](flask)

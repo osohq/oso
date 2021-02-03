@@ -8,4 +8,4 @@ aliases:
 # Python API
 
 The [Python API reference]({{% apiLink "reference/api/index.html" %}})
-is automatically generated from the oso Python library source files.
+is automatically generated from the Oso Python library source files.

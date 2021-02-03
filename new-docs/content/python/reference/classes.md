@@ -7,9 +7,9 @@ aliases:
 
 ## Working with Python Types
 
-oso’s Python authorization library allows you to write policy rules over Python
+Oso’s Python authorization library allows you to write policy rules over Python
 objects directly. This document explains how different types of Python objects
-can be used in oso policies.
+can be used in Oso policies.
 
 {{< callout "Note" "blue" >}}
   More detailed examples of working with application classes can be found in
@@ -18,12 +18,12 @@ can be used in oso policies.
 
 ### Class Instances
 
-You can pass an instance of any Python class into oso and access its methods
+You can pass an instance of any Python class into Oso and access its methods
 and fields from your policy (see [Application
 Types](learn/policies/application-types)).
 
 <!-- TODO(gj): link to API docs. -->
-Python instances can be constructed from inside an oso policy using the
+Python instances can be constructed from inside an Oso policy using the
 [`new`](polar-syntax#new) operator if the Python class has been **registered**
 using either the `register_class()` method or the `polar_class()` decorator. An
 example of this can be found [here](learn/policies/application-types).

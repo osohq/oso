@@ -39,7 +39,7 @@ variables:
 {{% exampleGet "envClass" %}}
 
 The above class exposes a `var` method that reads the application’s environment
-variables and returns the requested value. We register the class with oso,
+variables and returns the requested value. We register the class with Oso,
 allowing us to instantiate it in the policy.
 
 We can add a new `allow` rule that permits an actor to access a resource if the

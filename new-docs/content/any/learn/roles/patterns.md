@@ -18,10 +18,10 @@ relationships that must be considered in a roles system:
    indirect relationship that depends on additional information.
 
 2. **Role-permission relationships** define the access permissions that a role
-   grants to a user. In oso, permissions generally consist of an **action** and
+   grants to a user. In Oso, permissions generally consist of an **action** and
    a **resource.**
 
-oso represents these relationships as rules in a policy file, written in our
+Oso represents these relationships as rules in a policy file, written in our
 declarative logic programming language called [Polar](polar-syntax). In
 general, a policy specifies user-role relationships with `user_in_role` rules
 and role-permission relationships with `role_allow` rules. The general form of
@@ -243,7 +243,7 @@ organization may have a “manager” role and a “programmer” role. The “m
 role is more senior than the “programmer”, and therefore it inherits the
 permissions of the “programmer” role in addition to its own permissions.
 
-With roles represented as strings in oso policies, role inheritance can be
+With roles represented as strings in Oso policies, role inheritance can be
 represented with the following structure:
 
 ```polar

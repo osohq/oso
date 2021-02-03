@@ -1,5 +1,5 @@
 ---
-title: How roles work in oso
+title: How roles work in Oso
 ---
 
 ## Data model

@@ -8,7 +8,7 @@ aliases:
 
 # Application Types
 
-Any type defined in an application can be passed into oso, and its attributes
+Any type defined in an application can be passed into Oso, and its attributes
 may be accessed from within a policy. Using application types make it possible
 to take advantage of an app’s existing domain model. For example:
 
@@ -20,7 +20,7 @@ allow(actor, action, resource) if actor.{{% exampleGet "isAdmin" %}};
 The above rule expects the `actor` variable to be a {{% exampleGet "langName"
 %}} {{% exampleGet "instance" %}} with the field `{{% exampleGet "isAdmin"
 %}}`. The {{% exampleGet "langName" %}} {{% exampleGet "instance" %}} is passed
-into oso with a call to `Oso.{{% exampleGet "isAllowed" %}}()`:
+into Oso with a call to `Oso.{{% exampleGet "isAllowed" %}}()`:
 
 {{% exampleGet "userClass" %}}
 
@@ -37,7 +37,7 @@ allow(actor, action, resource) if actor.{{% exampleGet "isAdminOf" %}}(resource)
 
 ## Registering Application Types
 
-Instances of application types can be constructed from inside an oso policy
+Instances of application types can be constructed from inside an Oso policy
 using [the `new` operator](polar-syntax#new) if the class has been
 **registered**. {{% exampleGet "registerClass" %}}
 
@@ -77,7 +77,7 @@ Either way, using the rule could look like this:
   example of how this works.
 {{< /callout >}}
 
-Once a class is registered, class or static methods can also be called from oso
+Once a class is registered, class or static methods can also be called from Oso
 policies:
 
 ```polar
@@ -120,7 +120,7 @@ methods that return a null value.
 
 * **Application types** and their associated application data are available
   within policies.
-* Types can be **registered** with oso, in order to:
+* Types can be **registered** with Oso, in order to:
   * Create instances of application types in policies
   * Leverage the inheritance structure of application types with **specialized
     rules**, supporting more sophisticated access control models.

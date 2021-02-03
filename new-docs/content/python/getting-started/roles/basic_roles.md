@@ -6,7 +6,7 @@ weight: 1
 The [`sqlalchemy_oso.roles`](reference/frameworks/sqlalchemy#sqlalchemy_osoroles) module
 provides out-of-the-box Role-Based Access Control features that let you create
 a roles system  with a few lines of code, and specify role permissions in a
-declarative oso policy.
+declarative Oso policy.
 
 This guide walks you through how to use `sqlalchemy_oso` to add basic roles to a multi-tenant app.
 
@@ -17,7 +17,7 @@ We’re using a Flask app for this example, but the
 
 ## 1. Set up the application
 
-### Install the oso SQLAlchemy package
+### Install the Oso SQLAlchemy package
 
 Install the `sqlalchemy_oso` package.
 
@@ -33,12 +33,12 @@ use the provided `requirements.txt` file:
 $ pip install -r requirements.txt
 ```
 
-Add a method to initialize oso and make the oso instance available to your
-application code. This method should initialize oso and load your policy file,
+Add a method to initialize Oso and make the Oso instance available to your
+application code. This method should initialize Oso and load your policy file,
 which can be an empty `.polar` file. It should also call
 `sqlalchemy_oso.session.set_get_session()` to configure access to the
-SQLALchemy session oso should use to make queries. Then call
-`sqlalchemy_oso.roles.enable_roles()` to load the base oso policy for roles:
+SQLALchemy session Oso should use to make queries. Then call
+`sqlalchemy_oso.roles.enable_roles()` to load the base Oso policy for roles:
 
 ```python
 from .models import Base, User
@@ -135,7 +135,7 @@ return a `403 Forbidden` response to all requests.
 
 ### Create the OrganizationRole class using the role mixin
 
-The oso SQLAlchemy library provides the
+The Oso SQLAlchemy library provides the
 `sqlalchemy_oso.roles.resource_role_class()` method to generate a mixin which
 creates a role model. Create the mixin by passing in the base, user, and
 organization models, as well as the role names. Then create a role model that
@@ -155,7 +155,7 @@ class OrganizationRole(Base, OrganizationRoleMixin):
 
 ### Specify role permissions
 
-To give the roles permissions, write an oso policy.
+To give the roles permissions, write an Oso policy.
 
 Since we already called `sqlalchemy_oso.roles.enable_roles()` in our
 `init_oso()` method, you can write Polar `role_allow` rules over
@@ -192,7 +192,7 @@ they try to access either protected endpoint.
 
 Next, add a new endpoint to your application that users can hit to assign
 roles. To control who can assign roles, add another call to
-`flask_oso.FlaskOso.authorize()`. Additionally, use the oso role API to create
+`flask_oso.FlaskOso.authorize()`. Additionally, use the Oso role API to create
 role assignments with `sqlalchemy_oso.roles.add_user_role()` and
 `sqlalchemy_oso.roles.reassign_user_role()`:
 
@@ -219,7 +219,7 @@ def org_roles_new(org_id):
 
 ### Configure permissions for role assignments
 
-Update the oso policy to specify who is allowed to assign roles:
+Update the Oso policy to specify who is allowed to assign roles:
 
 ```polar
 ### The owner role can assign roles within the org

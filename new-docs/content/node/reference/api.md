@@ -8,4 +8,4 @@ aliases:
 # JavaScript API
 
 The [JavaScript API reference]({{% apiLink "reference/api/index.html" %}})
-is automatically generated from the oso JavaScript library source files.
+is automatically generated from the Oso JavaScript library source files.

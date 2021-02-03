@@ -7,9 +7,9 @@ aliases:
 
 ## Working with Java Types
 
-oso’s Java authorization library lets you write policy rules over Java objects
+Oso’s Java authorization library lets you write policy rules over Java objects
 directly. This document explains how different types of Java objects can be
-used in oso policies.
+used in Oso policies.
 
 {{< callout "Note" "blue" >}}
   More detailed examples of working with application classes can be found in
@@ -18,11 +18,11 @@ used in oso policies.
 
 ### Class Instances
 
-You may pass an instance of any Java class into oso and access its methods and
+You may pass an instance of any Java class into Oso and access its methods and
 fields from your policy (see [Application
 Types](learn/policies/application-types)).
 
-Java instances can be constructed from within an oso policy using the
+Java instances can be constructed from within an Oso policy using the
 [`new`](polar-syntax#new) operator:
 
 ```polar
@@ -43,11 +43,11 @@ may supply an alias:
 oso.registerClass(Person.class, "User")
 ```
 
-At instantiation time, oso will search the list returned by
+At instantiation time, Oso will search the list returned by
 [Class.getConstructors()](https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getConstructors())
 for a constructor that is applicable to the supplied positional constructor
 arguments. For example, given the Polar expression `new
-User("alice@example.com")`, oso will search for a `Constructor` with one
+User("alice@example.com")`, Oso will search for a `Constructor` with one
 parameter compatible with `String.class`, e.g.:
 
 ```java
@@ -65,12 +65,12 @@ Polar supports integer and floating point real numbers, as well as booleans
 (see [Primitive Types](polar-syntax#primitive-types)).
 
 {{< callout "Note" "blue" >}}
-  Java primitives may be passed into oso, but numbers and booleans created in
-  an oso policy will be converted to
+  Java primitives may be passed into Oso, but numbers and booleans created in
+  an Oso policy will be converted to
   [autoboxed](https://docs.oracle.com/javase/tutorial/java/data/autoboxing.html)
   Integer, Float, and Boolean types respectively.
 
-  This means that methods called from oso must have autoboxed argument types.
+  This means that methods called from Oso must have autoboxed argument types.
   E.g.:
 
   ```java

@@ -6,7 +6,7 @@ any: false
 ---
 # Java Authorization Library
 
-The Java version of oso is available on [Maven Central](https://search.maven.org/artifact/com.osohq/oso).
+The Java version of Oso is available on [Maven Central](https://search.maven.org/artifact/com.osohq/oso).
 
 It can be added as a dependency to a **Maven** project:
 
@@ -34,7 +34,7 @@ $ javac -classpath "oso-0.9.0.jar:." MyProject.java
 $ java -classpath "oso-0.9.0.jar:." MyProject
 ```
 
-For more information on the oso Java library, see the
+For more information on the Oso Java library, see the
 library documentation.
 
 **Requirements**

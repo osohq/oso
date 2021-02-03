@@ -10,7 +10,7 @@ aliases:
 
 # Polar Background
 
-The **oso** authorization library uses the **Polar** programming language
+The **Oso** authorization library uses the **Polar** programming language
 to express authorization logic and policies. This guide is meant to serve
 as a gentle introduction to Polar: what it is, how it works, and what you
 can do with it. It is not meant to be an exhaustive or precise description
@@ -84,7 +84,7 @@ take this action on this resource”? By using the information in
 the knowledge base together with a built-in logical deduction process,
 the system can answer such queries with either “yes” or “no”
 *even when the answer does not appear explicitly in the knowledge base*.
-This is the essence of the oso authorization system.
+This is the essence of the Oso authorization system.
 
 ### Advantages
 

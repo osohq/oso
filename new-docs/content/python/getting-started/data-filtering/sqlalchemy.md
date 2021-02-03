@@ -16,7 +16,7 @@ authorize each object individually.
 
 ## Installation
 
-The oso SQLAlchemy integration is available on
+The Oso SQLAlchemy integration is available on
 [PyPI](https://pypi.org/project/sqlalchemy-oso/) and can be installed using
 `pip`:
 
@@ -31,13 +31,13 @@ modification.
 
 To get started, we need to:
 
-1. Make oso aware of our SQLAlchemy model types so that we can write policies
+1. Make Oso aware of our SQLAlchemy model types so that we can write policies
    over them.
 2. Create a SQLAlchemy
    [Session](https://docs.sqlalchemy.org/en/13/orm/session_api.html#sqlalchemy.orm.session.Session)
-   that uses oso to authorize access to data.
+   that uses Oso to authorize access to data.
 
-### Register models with oso
+### Register models with Oso
 
 `sqlalchemy_oso.register_models()` registers all models that descend from a
 declarative base class as types that are available in the policy.
@@ -45,14 +45,14 @@ declarative base class as types that are available in the policy.
 Alternatively, the `oso.Oso.register_class()` method can be called on each
 SQLAlchemy model that you want to reference in your policy.
 
-### Create a SQLAlchemy Session that uses oso
+### Create a SQLAlchemy Session that uses Oso
 
-oso performs authorization by integrating with SQLAlchemy sessions. Use the
+Oso performs authorization by integrating with SQLAlchemy sessions. Use the
 `sqlalchemy_oso.authorized_sessionmaker()` session factory instead of the
 default SQLAlchemy `sessionmaker`. Every query made using sessions from the
 `authorized_sessionmaker()` factory will have authorization applied.
 
-Before executing a query, oso consults the policy and obtains a list of
+Before executing a query, Oso consults the policy and obtains a list of
 conditions that must be met for a model to be authorized. These conditions are
 translated into SQLAlchemy expressions and applied to the query before
 retrieving objects from the database.
@@ -270,13 +270,13 @@ above).
 This full example is available on
 [GitHub](https://github.com/osohq/oso/tree/main/docs/examples/list-filtering/sqlalchemy).
 
-## How oso authorizes SQLAlchemy Data
+## How Oso authorizes SQLAlchemy Data
 
-As you can see from the above example, the SQLAlchemy oso integration allows
+As you can see from the above example, the SQLAlchemy Oso integration allows
 regular SQLAlchemy queries to be executed with authorization applied.
 
 Before compiling a SQLAlchemy query, the entities in the query are authorized
-with oso. oso returns authorization decisions for each entity that indicate
+with Oso. Oso returns authorization decisions for each entity that indicate
 what constraints must be met for the entity to be authorized. These constraints
 are then translated into filters on the SQLAlchemy query object.
 
@@ -288,7 +288,7 @@ allow(user: User, "read", post: Post) if
     post.created_by = user;
 ```
 
-The oso library converts the constraints on `Post` expressed in this policy
+The Oso library converts the constraints on `Post` expressed in this policy
 into a SQLAlchemy query like:
 
 ```python

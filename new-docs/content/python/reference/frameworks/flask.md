@@ -7,12 +7,12 @@ aliases:
 
 # Flask
 
-The oso Flask integration provides a more convenient interface to oso for
+The Oso Flask integration provides a more convenient interface to Oso for
 usage with [Flask](https://flask.palletsprojects.com/).
 
 ## Installation
 
-The oso Flask integration is available on [PyPI](https://pypi.org/project/flask-oso/) and can be installed using
+The Oso Flask integration is available on [PyPI](https://pypi.org/project/flask-oso/) and can be installed using
 `pip`:
 
 ```
@@ -24,7 +24,7 @@ $ pip install flask-oso
 ### Initialization
 
 The `FlaskOso` class is the entrypoint to the integration.
-It must be initialized with the Flask app and oso:
+It must be initialized with the Flask app and Oso:
 
 ```
 from flask import Flask
@@ -50,7 +50,7 @@ flask_oso = FlaskOso(oso=oso)
 def create_app():
     app = Flask("app")
 
-    # Initialize oso for this application
+    # Initialize Oso for this application
     flask_oso.init_app(app)
 
     return app
@@ -199,4 +199,4 @@ Check out the Flask integration example app on GitHub:
 ## API Reference
 
 The [Flask API reference]({{% apiLink "reference/api/flask.html" %}})
-is automatically generated from the oso Flask library source files.
+is automatically generated from the Oso Flask library source files.

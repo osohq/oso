@@ -11,9 +11,9 @@ aliases:
 
 ## Working with Ruby Types
 
-oso’s Ruby authorization library allows you to write policy rules over Ruby
+Oso’s Ruby authorization library allows you to write policy rules over Ruby
 objects directly. This document explains how different types of Ruby objects
-can be used in oso policies.
+can be used in Oso policies.
 
 {{< callout "Note" "blue" >}}
   More detailed examples of working with application objects can be found in
@@ -22,10 +22,10 @@ can be used in oso policies.
 
 ### Class Instances
 
-You can pass any Ruby instance into oso and access its methods and fields from
+You can pass any Ruby instance into Oso and access its methods and fields from
 your policy (see [Application Types](learn/policies/application-types)).
 
-Ruby instances can be constructed from inside an oso policy using the [`new`
+Ruby instances can be constructed from inside an Oso policy using the [`new`
 operator](polar-syntax#new) if the Ruby class has been **registered** using the
 `Oso#register_class` method. An example of this can be found
 [here](learn/policies/application-types).

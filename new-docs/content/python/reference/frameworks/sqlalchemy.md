@@ -7,12 +7,12 @@ aliases:
 
 # SQLAlchemy
 
-The oso SQLAlchemy integration enables list filtering
+The Oso SQLAlchemy integration enables list filtering
 to be used with SQLAlchemy models.
 
 ## Installation
 
-The oso SQLAlchemy integration is available on [PyPI](https://pypi.org/project/sqlalchemy-oso/) and can be installed using
+The Oso SQLAlchemy integration is available on [PyPI](https://pypi.org/project/sqlalchemy-oso/) and can be installed using
 `pip`:
 
 ```
@@ -26,4 +26,4 @@ See the list filtering usage guide for more information.
 ## API Reference
 
 The [SQLAlchemy API reference]({{% apiLink "reference/api/sqlalchemy.html" %}})
-is automatically generated from the oso SQLAlchemy library source files.
+is automatically generated from the Oso SQLAlchemy library source files.
