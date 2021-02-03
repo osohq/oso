@@ -57,8 +57,7 @@ jobs:
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
-          hugo-version: '0.78.2'
-          extended: true
+          hugo-version: '0.79.1'
       - name: Build Hugo API docs
         run: make -C new-docs api_docs
       - name: Build Hugo docs
