@@ -2,11 +2,11 @@
 title: Add roles
 weight: 2
 description: >
-    Roles are an intuitive way to group permissions and expose them to end
-    users. Use Oso to add roles to your application.
+  Roles are an intuitive way to group permissions and expose them to end
+  users. Use Oso to add roles to your application.
 ---
 
-## Introduction to Roles
+# Introduction to Roles
 
 <!-- TODO: Review me  -->
 

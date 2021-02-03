@@ -185,7 +185,7 @@ You are alice@foo.com, the CEO at Foo Industries. (User ID: 1)
 
 {{< callout "Tip" "green" >}}
 Interested in understanding more about what is happening here? Check
-out the [user types](user_types) example.
+out the [user types](learn/examples/user_types) example.
 {{< /callout >}}
 
 The inputs to the `is_allowed` call are the current user, the HTTP method,
