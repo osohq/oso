@@ -69,7 +69,7 @@ Let’s look at an example usage of this library. Our example is a social media
 app that allows users to create posts. There is a `Post` model and a `User`
 model:
 
-```python
+{{< code file="models.py" >}}
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -113,7 +113,7 @@ class User(Model):
         backref="managed_by"
     )
 
-```
+{{< /code >}}
 
 Now, we’ll write a policy over these models. Our policy contains the following
 rules:
@@ -124,7 +124,7 @@ rules:
    `user.manages` relationship).
 4. A user can read all other users.
 
-```polar
+{{< code file="policy.polar" >}}
 allow(_: User, "read", post: Post) if
     post.access_level = "public";
 
@@ -137,7 +137,7 @@ allow(user: User, "read", post: Post) if
     post.created_by in user.manages;
 
 allow(_: User, "read", _: User);
-```
+{{< /code >}}
 
 {{% callout "Note" "blue" %}}
   The SQLAlchemy integration is deny by default. The final rule for `User` is

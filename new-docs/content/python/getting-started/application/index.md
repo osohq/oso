@@ -79,9 +79,7 @@ In the application, we need to:
 
 We have achieved this using the `init_oso` method:
 
-```python
-# authorization.py
-
+{{< code file="authorization.py" >}}
 def init_oso(app):
     from .expense import Expense
     from .organization import Organization
@@ -99,7 +97,7 @@ def init_oso(app):
         oso.load_file(policy)
 
     app.oso = oso
-```
+{{< /code >}}
 
 We can now access this `oso` instance anywhere in our application, and specify
 which policy files are loaded in the application configuration.
@@ -109,26 +107,22 @@ which policy files are loaded in the application configuration.
 We can apply apply authorization to **every** incoming request by setting up
 a middleware function that runs before every request using `before_app_request`:
 
-```python
-# authorization.py
-
+{{< code file="authorization.py" >}}
 @bp.before_app_request
 def authorize_request():
     """Authorize the incoming request"""
     r = request._get_current_object()
     if not current_app.oso.is_allowed(g.current_user, r.method, r):
         return Forbidden("Not Authorized!")
-```
+{{< /code >}}
 
 Now that this is in place, we can write a simple policy to allow anyone
 to call our index route, and see the hello message:
 
-```python
-# authorization.polar
-
+{{< code file="authorization.polar" >}}
 allow(_user, "GET", request: Request) if
     request.getServletPath() = "/";
-```
+{{< /code >}}
 
 ```console
 $ curl localhost:5000/
@@ -144,9 +138,7 @@ this.
 We have two different user types here: the `Guest` class and the `User`
 class. The latter corresponds to users who have authenticated.
 
-```python
-# user.py
-
+{{< code file="user.py" >}}
 class Guest(Actor):
     """Anonymous user."""
 
@@ -160,17 +152,15 @@ class User(Actor):
     location_id: int
     organization_id: int
     manager_id: int
-```
+{{< /code >}}
 
 We can use [specializer rules](polar-syntax#specialization) to only allow the request
 when the actor is an instance of a `User`:
 
-```python
-# authorization.polar
-
+{{< code file="authorization.polar" >}}
 allow(_user: User, "GET", request: Request) if
     request.getServletPath() = "/whoami";
-```
+{{< /code >}}
 
 ```console
 $ curl localhost:5000/whoami
@@ -198,13 +188,11 @@ logic from the HTTP path to actions and classes in the application.
 
 For example:
 
-```python
-# authorization.polar
-
+{{< code file="authorization.polar" >}}
 allow(user, "GET", http_request) if
     http_request.startswith("/expenses/")
     and allow(user, "read", Expense);
-```
+{{< /code >}}
 
 This rule is translating something like `GET /expenses/3` into a check
 whether the user should be allowed to "read" the `Expense` class.
@@ -218,50 +206,42 @@ that in the next section.
 In the [Quickstart](quickstart), our main objective was to
 determine who could "GET" expenses. Our final policy looked like:
 
-```python
-# expenses.polar
-
+{{< code file="expenses.polar" >}}
 allow(actor: String, "GET", expense: Expense) if
     expense.submitted_by = actor;
-```
+{{< /code >}}
 
 In our expenses sample application, we have something similar,
 but we've rewritten the policy to use a new `submitted` predicate in case we want
 to change the logic in the future.
 
-```python
-# authorization.polar
-
+{{< code file="authorization.polar" >}}
 allow(user: User, "read", expense: Expense) if
     submitted(user, expense);
 
 submitted(user: User, expense: Expense) if
     user.id = expense.user_id;
-```
+{{< /code >}}
 
 To handle authorizing access to data, we've implemented a little helper method
 for us to use throughout the application:
 
-```python
-# authorization.py
-
+{{< code file="authorization.py" >}}
 def authorize(action, resource):
     """Authorize whether the current user can perform `action` on `resource`"""
     if current_app.oso.is_allowed(g.current_user, action, resource):
         return resource
     else:
         raise Forbidden("Not Authorized!")
-```
+{{< /code >}}
 
 ... so authorizing the GET request looks like:
 
-```python
-# expense.py
-
+{{< code file="expense.py" >}}
 def get_expense(id):
     expense = Expense.lookup(id)
     return str(authorize("read", expense))
-```
+{{< /code >}}
 
 Let's give it a try!
 
@@ -278,13 +258,11 @@ Expense(amount=17743, description='Pug irony.', user_id=1, id=2)
 
 This pattern is pretty convenient. We can easily apply it elsewhere:
 
-```python
-# organization.py
-
+{{< code file="organization.py" >}}
 def get_organization(id):
     organization = Organization.lookup(id)
     return str(authorize("read", organization))
-```
+{{< /code >}}
 
 ```console
 $ curl -H "user: alice@foo.com" localhost:5000/organizations/1
@@ -312,11 +290,9 @@ We currently have a route with no authorization - the submit endpoint.
 We have a rule that allows anyone to PUT to the submit endpoint, but we
 want to make sure only authorized expenses are submitted.
 
-```python
-# authorization.polar
-
+{{< code file="authorization.polar" >}}
 allow_by_path(_user, "PUT", "expenses", ["submit"]);
-```
+{{< /code >}}
 
 {{% callout "Tip" "green" %}}
 The `allow_by_path` rule is a custom rule in our policy that operates
@@ -341,9 +317,7 @@ We would like to do the authorization on the full `Expense` object,
 but before it is persisted to the database, so perhaps between these two
 lines:
 
-```python {hl_lines=[7-8]}
-# expense.py
-
+{{< code file="expense.py">}} # hl_lines=[7-8]
 def submit_expense():
     expense_data = request.get_json(force=True)
     if not expense_data:
@@ -353,7 +327,7 @@ def submit_expense():
     expense = Expense(**expense_data)
     expense.save()
     return str(expense)
-```
+{{< /code >}}
 
 We could change the first highlighted line to:
 
