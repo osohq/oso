@@ -11,18 +11,21 @@ class Expense {
     }
 }
 
-document.getElementById("tryitbutton").addEventListener("click", async (e) => {
-    console.log(e)
-    var oso = new window.oso.Oso();
-    oso.registerClass(User);
-    oso.registerClass(Expense);
-    var input = document.getElementById("tryitin").innerText;
-    var jsInput = document.getElementById("tryitinjs").innerText;
-    var actor;
-    var action;
-    var resource;
-    var out = eval(jsInput);
-    oso.loadStr(input);
-    var res = await oso.isAllowed(actor, action, resource);
-    document.getElementById("tryitout").innerText = res ? "True" : "False"
-})
+const tryItButton = document.getElementById("tryitbutton");
+if (tryItButton) {
+    tryItButton.addEventListener("click", async (e) => {
+        console.log(e)
+        var oso = new window.oso.Oso();
+        oso.registerClass(User);
+        oso.registerClass(Expense);
+        var input = document.getElementById("tryitin").innerText;
+        var jsInput = document.getElementById("tryitinjs").innerText;
+        var actor;
+        var action;
+        var resource;
+        var out = eval(jsInput);
+        oso.loadStr(input);
+        var res = await oso.isAllowed(actor, action, resource);
+        document.getElementById("tryitout").innerText = res ? "True" : "False"
+    })
+}

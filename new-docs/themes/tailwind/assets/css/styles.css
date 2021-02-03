@@ -63,6 +63,9 @@ button > * {
       @apply text-primary
     }
 
+    .polar-code-in-here {
+      @apply bg-primary-800 !important
+    }
 }
 :target::before {
   content: "";

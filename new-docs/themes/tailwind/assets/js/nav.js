@@ -1,5 +1,5 @@
 // Basic navigation functionality
-document.querySelector('button > svg').addEventListener('click', function(e) {
+document.querySelector('button > svg').addEventListener('click', function (e) {
   e.stopPropagation();
   e.preventDefault();
 });
@@ -9,12 +9,14 @@ const navButton = document.getElementById('nav-toggle');
 const navToggleOpen = document.getElementById('nav-toggle-open');
 const navToggleClosed = document.getElementById('nav-toggle-closed');
 const navTitle = document.getElementById('header-page-title');
-navButton.addEventListener('click', () => {
-  navContent.classList.toggle('hidden');
-  navTitle.classList.toggle('hidden');
-  navToggleOpen.classList.toggle('hidden');
-  navToggleClosed.classList.toggle('hidden');
-});
+if (navButton) {
+  navButton.addEventListener('click', () => {
+    navContent.classList.toggle('hidden');
+    navTitle.classList.toggle('hidden');
+    navToggleOpen.classList.toggle('hidden');
+    navToggleClosed.classList.toggle('hidden');
+  });
+}
 
 const sideBarContent = document.getElementById('sidebar-content');
 const sideBarButton = document.getElementById('sidebar-toggle');
@@ -26,12 +28,14 @@ if (sideBarButton) {
 
 const langButton = document.getElementById('language-selector-toggle');
 const langsideBar = document.getElementById('language-selector-content');
-langButton.addEventListener('click', () =>
-  langsideBar.classList.toggle('hidden')
-);
+if (langButton) {
+  langButton.addEventListener('click', () =>
+    langsideBar.classList.toggle('hidden')
+  );
+}
 
 // Close dropdown sideBars if the user clicks outside of them
-window.onclick = function(event) {
+window.onclick = function (event) {
   console.log(event.target);
   switch (event.target) {
     case navButton:
@@ -64,25 +68,3 @@ window.onclick = function(event) {
       break;
   }
 };
-
-//Get the button:
-mybutton = document.getElementById('scroll-to-top');
-
-// When the user scrolls down 20px from the top of the document, show the button
-window.onscroll = function() {
-  scrollFunction();
-};
-
-function scrollFunction() {
-  if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
-    mybutton.style.display = 'block';
-  } else {
-    mybutton.style.display = 'none';
-  }
-}
-
-// When the user clicks on the button, scroll to the top of the document
-function topFunction() {
-  document.body.scrollTop = 0; // For Safari
-  document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
-}
