@@ -1,7 +1,7 @@
-<span class="flex justify-center">
-    {{- $fname:=print "fontawesome/" . ".svg" -}}
-    {{- $path:="<path" -}}
-    {{- $fill:="<path fill=\" currentColor\"" -}}
-    {{ $svg := replace (readFile $fname) $path $fill }}
-    {{ replace $svg "<svg" "<svg width=\"100%\" height=\"100%\"" | safeHTML }}
-</span>
+{{ if eq . "polar" }}
+<i class="fa-oso"></i>
+{{ else }}
+<i class="flex justify-center">
+    <i class="fab fab-{{ . }}"></i>
+</i>
+{{ end }}

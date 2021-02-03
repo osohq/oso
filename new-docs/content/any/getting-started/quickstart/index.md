@@ -13,14 +13,13 @@ never used Oso before and want to see it in action, this guide is for you.
 We’re going to walk through how to use Oso to add authorization to a simple web
 server.
 
-{{< callout "Try it!" "green" >}}
-To follow along, clone the {{% exampleGet "githubApp" %}}:
+{{% callout "Try it!" "green" %}}
+  To follow along, clone the {{% exampleGet "githubApp" %}}:
 
-```console
-git clone {{% exampleGet "githubURL" %}}
-```
-
-{{< /callout >}}
+  ```console
+  git clone {{% exampleGet "githubURL" %}}
+  ```
+{{% /callout %}}
 
 ## Run the server
 
@@ -38,20 +37,20 @@ your application [here](Add To Your Application). -->
 The third file is the Oso policy file, `expenses.polar`, and is currently
 empty.
 
-{{< callout "Try it!" "green" >}}
-{{% exampleGet "installation" %}}
+{{% callout "Try it!" "green" %}}
+    {{% exampleGet "installation" %}}
 
-With the server running, open a second terminal and make a request using
-cURL:
+    With the server running, open a second terminal and make a request using
+    cURL:
 
-```console
-$ curl localhost:5050/expenses/1
-Not Authorized!
-```
+    ```console
+    $ curl localhost:5050/expenses/1
+    Not Authorized!
+    ```
 
-You’ll get a “Not Authorized!” response because we haven’t added any rules to
-our Oso policy (in `expenses.polar`), and Oso is deny-by-default.
-{{< /callout >}}
+    You’ll get a “Not Authorized!” response because we haven’t added any rules to
+    our Oso policy (in `expenses.polar`), and Oso is deny-by-default.
+{{% /callout %}}
 
 Let’s start implementing our access control scheme by adding some rules to the
 Oso policy.
@@ -67,10 +66,10 @@ allow an **actor** to perform an **action** on a **resource**.
 In our policy file (`expenses.polar`), let's add a rule that allows anyone
 with an email ending in `"@example.com"` to view all expenses:
 
-```polar
+{{< code file="expenses.polar" >}}
 allow(actor: String, "GET", _expense: Expense) if
     actor.{{< exampleGet "endswith" >}}("@example.com");
-```
+{{< /code >}}
 
 Note that the call to **{{< exampleGet "endswith" >}}** is actually calling
 out to {{< exampleGet "endswithURL" >}}. The actor value passed to Oso is a
@@ -83,16 +82,15 @@ execution based on whether they match the supplied argument. This syntax
 ensures that the rule will only be evaluated when the actor is a string and the
 resource is an instance of the `Expense` class.
 
-{{< callout "Try it!" "green" >}}
-Once we've added our new rule and restarted the web server, every user with
-an `@example.com` email should be allowed to view any expense:
+{{% callout "Try it!" "green" %}}
+  Once we've added our new rule and restarted the web server, every user with
+  an `@example.com` email should be allowed to view any expense:
 
-```console
-$ curl -H "user: alice@example.com" localhost:5050/expenses/1
-Expense(...)
-```
-
-{{< /callout >}}
+  ```console
+  $ curl -H "user: alice@example.com" localhost:5050/expenses/1
+  Expense(...)
+  ```
+{{% /callout %}}
 
 Okay, so what just happened?
 
@@ -104,18 +102,18 @@ above case, we passed in `"alice@example.com"` as the **actor**, `"GET"` as the
 `"alice@example.com"` ends with `@example.com`, our rule is satisfied, and
 Alice is allowed to view the requested expense.
 
-{{< callout "Try it!" "green" >}}
-If a user's email doesn't end in `"@example.com"`, the rule fails, and they
-are denied access:
+{{% callout "Try it!" "green" %}}
+  If a user's email doesn't end in `"@example.com"`, the rule fails, and they
+  are denied access:
 
 ```console
 $ curl -H "user: alice@foo.com" localhost:5050/expenses/1
 Not Authorized!
 ```
 
-If you aren’t seeing the same thing, make sure you created your policy
-correctly in `expenses.polar`.
-{{< /callout >}}
+  If you aren’t seeing the same thing, make sure you created your policy
+  correctly in `expenses.polar`.
+{{% /callout %}}
 
 ## Using application data
 
@@ -123,23 +121,22 @@ We now have some basic access control in place, but we can do better.
 Currently, anyone with an email ending in `@example.com` can see all expenses —
 including expenses submitted by others.
 
-{{< callout "Edit it!" "blue" >}}
-Let's modify our existing rule such that users can only see their own
-expenses:
+{{% callout "Edit it!" "blue" %}}
+  Let's modify our existing rule such that users can only see their own
+  expenses:
 
-```polar
-allow(actor: String, "GET", expense: Expense) if
-    expense.{{< exampleGet "submitted_by" >}} = actor;
-```
-
-{{< /callout >}}
+  ```polar
+  allow(actor: String, "GET", expense: Expense) if
+      expense.{{< exampleGet "submitted_by" >}} = actor;
+  ```
+{{% /callout %}}
 
 Behind the scenes, Oso looks up the `submitted_by` field on the provided
 `Expense` instance and compares that value against the provided **actor**. And
 just like that, an actor can only see an expense if they submitted it!
 
-{{< callout "Try it!" "green" >}}
-Alice can see her own expenses but not Bhavik's:
+{{% callout "Try it!" "green" %}}
+  Alice can see her own expenses but not Bhavik's:
 
 ```console
 $ curl -H "user: alice@example.com" localhost:5050/expenses/1
@@ -151,7 +148,11 @@ $ curl -H "user: alice@example.com" localhost:5050/expenses/3
 Not Authorized!
 ```
 
-{{< /callout >}}
+  ```console
+  $ curl -H "user: alice@example.com" localhost:5050/expenses/3
+  Not Authorized!
+  ```
+{{% /callout %}}
 
 Feel free to play around with the current policy and experiment with adding
 your own rules!

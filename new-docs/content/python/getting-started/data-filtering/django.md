@@ -45,7 +45,7 @@ Let’s look at an example usage of this library. Our example is a social media
 app that allows users to view posts. There is a `User` model and a `Post`
 model:
 
-```
+{{< code file="models.py" >}}
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
@@ -69,7 +69,7 @@ class Post(AuthorizedModel):
 
     class Meta:
         app_label = "app"
-```
+{{< /code >}}
 
 We want to enforce the following authorization scheme for posts:
 
@@ -85,7 +85,7 @@ We want to enforce the following authorization scheme for posts:
 
 The corresponding policy looks as follows:
 
-```
+{{< code file="example.polar" >}}
 allow(_: app::User, "GET", post: app::Post) if
     post.access_level = "public";
 
@@ -96,7 +96,7 @@ allow(user: app::User, "GET", post: app::Post) if
 allow(user: app::User, "GET", post: app::Post) if
     post.access_level = "private" and
     post.creator in user.direct_reports.all();
-```
+{{< /code >}}
 
 ### Trying it out
 
@@ -155,11 +155,11 @@ constraints derived from the policy.
 
 For example, the above policy has the following rule:
 
-```
+{{< code file="example.polar" >}}
 allow(user: app::User, "GET", post: app::Post) if
     post.access_level = "private" and
     post.creator = user;
-```
+{{< /code >}}
 
 When determining which `Post` objects `User(id=2)` is authorized to see,
 the `django-oso` adapter converts the constraints on Post expressed in this

@@ -18,7 +18,7 @@ The syntax might feel a bit foreign at first, but fear not: almost anything you
 can express in imperative code can equally be expressed in Polar — often more
 concisely and closer to how you might explain the logic in natural language.
 
-{{< callout "Note" "green" >}}
-Policies are stored in Polar files (extension `.polar`), which are loaded
-into the authorization engine using the [Oso library](reference).
-{{< /callout >}}
+{{% callout "Note" "green" %}}
+  Policies are stored in Polar files (extension `.polar`), which are loaded
+  into the authorization engine using the [Oso library](reference).
+{{% /callout %}}

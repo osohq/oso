@@ -28,7 +28,7 @@ cases, check out [Role-Based Access Control Patterns](learn/roles).
 Representing roles in our policy is as simple as creating `role()`
 [rules](polar-syntax#rules):
 
-```polar
+{{< code file="rbac.polar" >}}
 role(actor: String, "employee") if
     actor = "alice" or
     actor = "bhavik" or
@@ -43,13 +43,13 @@ role(actor: String, "admin") if
     actor = "greta" or
     actor = "han" or
     actor = "iqbal";
-```
+{{< /code >}}
 
 In the above snippet of Polar, we create three `role()` rules and match on the
 `actor`’s name to assign them the appropriate role. Let’s write some **allow**
 rules that leverage our new roles:
 
-```polar
+{{< code file="rbac.polar" >}}
 # Employees can submit expenses
 allow(actor: String, "submit", "expense") if
     role(actor, "employee");
@@ -61,19 +61,19 @@ allow(actor: String, "view", "expense") if
 # Admins can approve expenses
 allow(actor: String, "approve", "expense") if
     role(actor, "admin");
-```
+{{< /code >}}
 
 To test that the roles are working, we can write a few [inline
 queries](polar-syntax#inline-queries-) in the same Polar file:
 
-```polar
+{{< code file="rbac.polar" >}}
 # Deirdre the accountant can view expenses
 ?= allow("deirdre", "view", "expense");
 
 # but cannot submit or approve them
 ?= not allow("deirdre", "submit", "expense");
 ?= not allow("deirdre", "approve", "expense");
-```
+{{< /code >}}
 
 Inline queries run when the file is loaded, and check that the query after the
 `?=` succeeds.
@@ -87,31 +87,31 @@ accurately mirrors the role relationships of our business domain. Since
 accountants are also employees, we can extend our `role(actor, “employee”)`
 rule as follows:
 
-```polar
+{{< code file="rbac.polar" >}}
 # Accountants can do anything an employee can do
 role(actor, "employee") if
     actor = "alice" or
     actor = "bhavik" or
     actor = "cora" or
     role(actor, "accountant");
-```
+{{< /code >}}
 
 Administrators should be able to do anything that accountants and employees
 can, and we can grant them those permissions through the same inheritance
 structure:
 
-```polar
+{{< code file="rbac.polar" >}}
 # Admins can do anything an accountant can do
 role(actor, "accountant") if
     actor = "deirdre" or
     actor = "ebrahim" or
     actor = "frantz" or
     role(actor, "admin");
-```
+{{< /code >}}
 
 Now we can write a few more tests to ensure everything is hooked up correctly:
 
-```polar
+{{< code file="rbac.polar" >}}
 # Deirdre the accountant can view and submit expenses
 ?= allow("deirdre", "view", "expense");
 ?= allow("deirdre", "submit", "expense");
@@ -123,7 +123,7 @@ Now we can write a few more tests to ensure everything is hooked up correctly:
 ?= allow("iqbal", "view", "expense");
 ?= allow("iqbal", "submit", "expense");
 ?= allow("iqbal", "approve", "expense");
-```
+{{< /code >}}
 
 ## RBAC with Existing Roles
 
@@ -146,7 +146,7 @@ within our policy. Our policy currently expects actors to be simple strings,
 but we can update that by adding the `User` type specializer to our `role()`
 rules:
 
-```polar
+{{< code file="rbac.polar" >}}
 role(actor: User, "employee") if
     actor.name = "alice" or
     actor.name = "bhavik" or
@@ -163,7 +163,7 @@ role(actor: User, "admin") if
     actor.name = "greta" or
     actor.name = "han" or
     actor.name = "iqbal";
-```
+{{< /code >}}
 
 Our policy is a bit more verbose now, but don’t let that distract from the
 momentous shift that just occurred: by adding a single decorator to our
@@ -173,7 +173,7 @@ and methods… and we aren’t finished yet!
 We’re still mapping users to roles in the policy despite having access to the
 existing mappings through the `User.role()` method. Let’s amend that:
 
-```polar
+{{< code file="rbac.polar" >}}
 role(actor: User, "employee") if
     actor.role = "employee" or
     role(actor, "accountant");
@@ -184,7 +184,7 @@ role(actor: User, "accountant") if
 
 role(actor: User, "admin") if
     actor.role = "admin";
-```
+{{< /code >}}
 
 There’s something really powerful happening in the above that bears
 highlighting: Oso allowed us to not only create policies over existing

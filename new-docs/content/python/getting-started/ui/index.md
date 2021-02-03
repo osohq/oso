@@ -22,11 +22,11 @@ These are examples of what we at Oso call "Authorization-Dependent UI
 Elements." In this guide we'll explain how you can use Oso to implement
 these kinds of features in your app.
 
-{{< callout "Note" "blue" >}}
+{{% callout "Note" "blue" %}}
 We don't currently provide a version of Oso that runs in the
 browser. This guide covers how to query for information in the backend
 that can be sent to your frontend service.
-{{< /callout >}}
+{{% /callout %}}
 
 ### Getting a user's allowed actions
 

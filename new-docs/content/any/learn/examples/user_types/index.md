@@ -24,10 +24,10 @@ authorization logic.
 In this guide, we’ll walk through a policy for an application with two actor
 types: **Customers** and **Internal Users**.
 
-{{< callout "Note" "blue" >}}
-This guide assumes you are familiar with terms from Oso’s
-[glossary](glossary).
-{{< /callout >}}
+{{% callout "Note" "blue" %}}
+  This guide assumes you are familiar with terms from Oso’s
+  [glossary](glossary).
+{{% /callout %}}
 
 ## A Tale of Two Actors
 
@@ -45,7 +45,7 @@ customers and internal users:
 
 We can now write a simple policy over these actor types:
 
-```polar
+{{< code file="user_types.polar" >}}
 # Internal users have access to both the
 # internal and customer dashboards
 allow(actor: InternalUser, "view", "internal_dashboard");
@@ -53,7 +53,7 @@ allow(actor: InternalUser, "view", "customer_dashboard");
 
 # Customers only have access to the customer dashboard
 allow(actor: Customer, "view", "customer_dashboard");
-```
+{{< /code >}}
 
 This policy uses [specialized
 rules](application-types#registering-application-types) to control rules
@@ -85,12 +85,12 @@ We can add a `role()` method to our `InternalUser` class:
 
 Then add the following rule to our policy:
 
-```polar
+{{< code file="user_types.polar" >}}
 # Internal users can access the accounts dashboard if
 # they are an account manager
 allow(actor: InternalUser, "view", "accounts_dashboard") if
     actor.role() = "account_manager";
-```
+{{< /code >}}
 
 This example shows a clear benefit of using different classes to represent
 different actor types: the ability to add custom attributes. We can add
@@ -118,7 +118,7 @@ For the purposes of this example, we'll assume that `AccountData` is a resource
 that has an `{{% exampleGet "accountId" %}}` attribute. Let’s add the following
 lines to our policy:
 
-```polar
+{{< code file="user_types.polar" >}}
 # Account managers can access the accounts dashboard
 allow(actor: AccountManager, "view", "accounts_dashboard");
 
@@ -126,7 +126,7 @@ allow(actor: AccountManager, "view", "accounts_dashboard");
 # that they manage
 allow(actor: AccountManager, "view", resource: AccountData) if
     resource.{{% exampleGet "accountId" %}} in actor.{{% exampleGet "customerAccounts" %}}();
-```
+{{< /code >}}
 
 The first rule replaces the RBAC rule we previously used to control access to
 the accounts dashboard. The second rule controls access to account data.

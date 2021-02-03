@@ -132,3 +132,5 @@ defaultContentLanguage = "any"
     [markup.goldmark.extensions]
       strikethrough = true
       table = true
+    [markup.goldmark.renderer]
+      unsafe = true

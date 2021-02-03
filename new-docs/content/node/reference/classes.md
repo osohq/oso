@@ -1,7 +1,7 @@
 ---
 title: JavaScript Types in Polar
 weight: 2
-aliases: 
+aliases:
     - /using/libraries/node/index.html
 ---
 
@@ -17,10 +17,10 @@ Oso’s Node.js authorization library allows you to write policy rules over
 JavaScript types directly. This document explains how different types of
 JavaScript values can be used in Oso policies.
 
-{{< callout "Note" "blue" >}}
-More detailed examples of working with application objects can be found in
-[Policy Examples](learn/examples).
-{{< /callout >}}
+{{% callout "Note" "blue" %}}
+  More detailed examples of working with application objects can be found in
+  [Policy Examples](learn/examples).
+{{% /callout %}}
 
 ### Objects
 
@@ -61,9 +61,9 @@ const user = new User("alice@example.com");
 oso.isAllowed(user, "foo", "bar").then(assert);
 ```
 
-{{< callout "Warning" "orange" >}}
-Polar does not support methods that mutate strings in place.
-{{< /callout >}}
+{{% callout "Warning" "orange" %}}
+  Polar does not support methods that mutate strings in place.
+{{% /callout %}}
 
 ### Lists
 
@@ -85,10 +85,10 @@ const user = new User(["HR", "payroll"]);
 oso.isAllowed(user, "foo", "bar").then(assert);
 ```
 
-{{< callout "Warning" "orange" >}}
-Polar does not support methods that mutate lists in place unless the list is
-also returned from the method.
-{{< /callout >}}
+{{% callout "Warning" "orange" %}}
+  Polar does not support methods that mutate lists in place unless the list is
+  also returned from the method.
+{{% /callout %}}
 
 Likewise, lists constructed in Polar may be passed into JavaScript methods:
 

@@ -69,7 +69,7 @@ Let’s look at an example usage of this library. Our example is a social media
 app that allows users to create posts. There is a `Post` model and a `User`
 model:
 
-```python
+{{< code file="models.py" >}}
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -113,7 +113,7 @@ class User(Model):
         backref="managed_by"
     )
 
-```
+{{< /code >}}
 
 Now, we’ll write a policy over these models. Our policy contains the following
 rules:
@@ -124,7 +124,7 @@ rules:
    `user.manages` relationship).
 4. A user can read all other users.
 
-```polar
+{{< code file="policy.polar" >}}
 allow(_: User, "read", post: Post) if
     post.access_level = "public";
 
@@ -137,15 +137,15 @@ allow(user: User, "read", post: Post) if
     post.created_by in user.manages;
 
 allow(_: User, "read", _: User);
-```
+{{< /code >}}
 
-{{< callout "Note" "blue" >}}
+{{% callout "Note" "blue" %}}
   The SQLAlchemy integration is deny by default. The final rule for `User` is
   needed to allow access to user objects for any user.
 
   If a query is made for a model that does not have an explicit rule in the
   policy, no results will be returned.
-{{< /callout >}}
+{{% /callout %}}
 
 These rules are written over single model objects.
 
@@ -244,11 +244,11 @@ new authorized session with user set to `manager`:
 >>> manager_session = AuthorizedSession()
 ```
 
-{{< callout "Note" "blue" >}}
+{{% callout "Note" "blue" %}}
   In a real application, `get_user` would be a function returning the current
   user based on the current request context. For example, in Flask this might
   be `lambda: flask.g.current_user` or some other proxy object.
-{{< /callout >}}
+{{% /callout %}}
 
 And issue the same query as before…
 
