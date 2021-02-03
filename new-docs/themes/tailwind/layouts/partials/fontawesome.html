@@ -3,5 +3,5 @@
     {{- $path:="<path" -}}
     {{- $fill:="<path fill=\" currentColor\"" -}}
     {{ $svg := replace (readFile $fname) $path $fill }}
-    {{ replace $svg "<svg " "<svg width=\"100%\" height=\"100%\"" | safeHTML }}
+    {{ replace $svg "<svg" "<svg width=\"100%\" height=\"100%\"" | safeHTML }}
 </span>
