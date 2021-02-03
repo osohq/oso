@@ -62,19 +62,19 @@ include any kind of rule in a policy, but the Oso library is designed to
 evaluate [allow rules](glossary#allow-rules), which specify the conditions that
 allow an **actor** to perform an **action** on a **resource**.
 
-{{< callout "Edit it!" "blue" >}}
+{{% callout "Edit it!" "blue" %}}
   In our policy file (`expenses.polar`), let's add a rule that allows anyone
   with an email ending in `"@example.com"` to view all expenses:
 
-  ```polar
+  {{< code file="expenses.polar" >}}
   allow(actor: String, "GET", _expense: Expense) if
       actor.{{< exampleGet "endswith" >}}("@example.com");
-  ```
+  {{< /code >}}
 
   Note that the call to **{{< exampleGet "endswith" >}}** is actually calling
   out to {{< exampleGet "endswithURL" >}}. The actor value passed to Oso is a
   string, and Oso allows us to call methods on it.
-{{< /callout >}}
+{{% /callout %}}
 
 The `Expense` and `String` terms following the colons in the head of the rule
 are [specializers](polar-syntax#specialization), patterns that control rule
