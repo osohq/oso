@@ -57,12 +57,7 @@ master_doc = "index"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "button",
-    "email_role",
-    "form_role",
-    "fontawesome",
     "sphinx_copybutton",
-    "sphinx_tabs.tabs",
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
     "sphinx.ext.extlinks",
