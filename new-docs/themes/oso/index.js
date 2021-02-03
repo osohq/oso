@@ -156,7 +156,8 @@ import('monaco-editor-core').then(monaco => {
     ]
   });
 
-  console.log('<<<<< >>>>>');
+  monaco.editor.setTheme('polarTheme');
+
   window.addEventListener('load', () => {
     let polarCode = document.getElementsByClassName('language-polar');
     for (let i = 0; i < polarCode.length; i++) {
