@@ -10,10 +10,10 @@ declarative Oso policy.
 
 This guide walks you through how to use `sqlalchemy_oso` to add basic roles to a multi-tenant app.
 
-{{< callout "Note" "green" >}}
+{{% callout "Note" "green" %}}
 We’re using a Flask app for this example, but the
 `sqlalchemy_oso` library can be used with any Python application.
-{{< /callout >}}
+{{% /callout %}}
 
 ## 1. Set up the application
 

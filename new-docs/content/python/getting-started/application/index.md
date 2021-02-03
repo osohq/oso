@@ -183,10 +183,10 @@ $ curl -H "user: alice@foo.com"  localhost:5000/whoami
 You are alice@foo.com, the CEO at Foo Industries. (User ID: 1)
 ```
 
-{{< callout "Tip" "green" >}}
+{{% callout "Tip" "green" %}}
 Interested in understanding more about what is happening here? Check
 out the [user types](user_types) example.
-{{< /callout >}}
+{{% /callout %}}
 
 The inputs to the `is_allowed` call are the current user, the HTTP method,
 and the HTTP request. This information can often be enough to cover a large
@@ -318,13 +318,13 @@ want to make sure only authorized expenses are submitted.
 allow_by_path(_user, "PUT", "expenses", ["submit"]);
 ```
 
-{{< callout "Tip" "green" >}}
+{{% callout "Tip" "green" %}}
 The `allow_by_path` rule is a custom rule in our policy that operates
 on an actor, action, first url path fragment, and the remaining path
 fragment. A `PUT /expenses/submit` request would try to authorize
 using the `allow_by_path(actor, "PUT", "expenses", ["submit"])` rule.
 See [our policy](https://github.com/osohq/oso-flask-tutorial/blob/ecc39c601057bcfdb952e35da616fe2e1ea00a22/app/authorization.polar#L10) for more detail.
-{{< /callout >}}
+{{% /callout %}}
 
 Right now you can see that anyone can submit an expense:
 
@@ -366,11 +366,11 @@ If this passes, then we can happily move on to the `expense.save()`.
 Now, nobody will be able to submit expenses, since we haven't yet
 added any rules saying they can.
 
-{{< callout "Add a new rule" "green" >}}
+{{% callout "Add a new rule" "green" %}}
 Try editing `authorization.polar` to add a rule saying that
 a user can create an expense for which they are assigned as the
 submitter of the expense.
-{{< /callout >}}
+{{% /callout %}}
 
 Try editing `authorization.polar` to add a rule saying that a user can
 create an expense for which they are assigned as the submitter of the
@@ -397,7 +397,7 @@ control who is allowed to make requests to certain routes. We also used
 a new `authorize` method to make it convenient to add data access
 controls to our route handlers.
 
-{{< callout "What's next" "green" >}}
+{{% callout "What's next" "green" %}}
 
 - To explore integrating Oso in your app in more depth continue to [Access Patterns](https://docs.oso.dev/getting-started/application/patterns.html).
 - For a deeper introduction to policy syntax, see [Writing Policies](policies).
@@ -405,4 +405,4 @@ controls to our route handlers.
 - Clone this example on [GitHub](https://github.com/osohq/oso-spring-tutorial)
   to check it out further.
 
-{{< /callout >}}
+{{% /callout %}}

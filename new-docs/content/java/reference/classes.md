@@ -11,10 +11,10 @@ Oso’s Java authorization library lets you write policy rules over Java objects
 directly. This document explains how different types of Java objects can be
 used in Oso policies.
 
-{{< callout "Note" "blue" >}}
+{{% callout "Note" "blue" %}}
   More detailed examples of working with application classes can be found in
   [Policy Examples](learn/policies/examples).
-{{< /callout >}}
+{{% /callout %}}
 
 ### Class Instances
 
@@ -64,7 +64,7 @@ interfaces to properly match the constructor’s parameter types.
 Polar supports integer and floating point real numbers, as well as booleans
 (see [Primitive Types](polar-syntax#primitive-types)).
 
-{{< callout "Note" "blue" >}}
+{{% callout "Note" "blue" %}}
   Java primitives may be passed into Oso, but numbers and booleans created in
   an Oso policy will be converted to
   [autoboxed](https://docs.oracle.com/javase/tutorial/java/data/autoboxing.html)
@@ -86,7 +86,7 @@ Polar supports integer and floating point real numbers, as well as booleans
 
   The `boxed()` method may be called from a policy, but attempting to call
   `unboxed()` will fail.
-{{< /callout >}}
+{{% /callout %}}
 
 ### Strings
 
@@ -142,10 +142,10 @@ public class User {
 
 Note that the `isAllowed()` call would also succeed if `groups` were an Array.
 
-{{< callout "Warning" "orange" >}}
+{{% callout "Warning" "orange" %}}
   Polar does not support methods that mutate lists in place. E.g., `add()` will
   have no effect on a list in Polar.
-{{< /callout >}}
+{{% /callout %}}
 
 Likewise, lists constructed in Polar may be passed into Java methods:
 

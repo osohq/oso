@@ -16,10 +16,10 @@ Oso’s Rust authorization library allows you to write policy rules over Rust
 types directly. This document explains how different Rust types can be used in
 Oso policies.
 
-{{< callout "Note" "blue" >}}
+{{% callout "Note" "blue" %}}
   More detailed examples of working with application objects can be found in
   [Policy Examples](learn/policies/examples).
-{{< /callout >}}
+{{% /callout %}}
 
 ### Structs + Enums
 
@@ -58,9 +58,9 @@ let user = User{username: "alice@example.com".to_owned()};
 assert!(oso.is_allowed(user, "foo", "bar")?);
 ```
 
-{{< callout "Warning" "orange" >}}
+{{% callout "Warning" "orange" %}}
   Polar does not support methods that mutate strings in place.
-{{< /callout >}}
+{{% /callout %}}
 
 ### Vectors
 
@@ -86,10 +86,10 @@ let user = User { groups: vec!["HR".to_string(), "payroll".to_string()] };
 assert!(oso.is_allowed(user, "foo", "bar")?);
 ```
 
-{{< callout "Warning" "orange" >}}
+{{% callout "Warning" "orange" %}}
   Polar does not support methods that mutate lists in place unless the list is
   also returned from the method.
-{{< /callout >}}
+{{% /callout %}}
 
 Rust methods like [`Vec::get`][rust-vec-get] may be used for random access to
 list elements, but there is currently no Polar syntax that is equivalent to the

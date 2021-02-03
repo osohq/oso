@@ -139,13 +139,13 @@ allow(user: User, "read", post: Post) if
 allow(_: User, "read", _: User);
 ```
 
-{{< callout "Note" "blue" >}}
+{{% callout "Note" "blue" %}}
   The SQLAlchemy integration is deny by default. The final rule for `User` is
   needed to allow access to user objects for any user.
 
   If a query is made for a model that does not have an explicit rule in the
   policy, no results will be returned.
-{{< /callout >}}
+{{% /callout %}}
 
 These rules are written over single model objects.
 
@@ -244,11 +244,11 @@ new authorized session with user set to `manager`:
 >>> manager_session = AuthorizedSession()
 ```
 
-{{< callout "Note" "blue" >}}
+{{% callout "Note" "blue" %}}
   In a real application, `get_user` would be a function returning the current
   user based on the current request context. For example, in Flask this might
   be `lambda: flask.g.current_user` or some other proxy object.
-{{< /callout >}}
+{{% /callout %}}
 
 And issue the same query as before…
 
