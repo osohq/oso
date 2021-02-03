@@ -62,7 +62,7 @@ take on a specific resource. In our example, we call
 `Oso.get_allowed_actions()` in the route handler for the "Show
 repository" view to get the user's allowed actions for the current repo:
 
-```{.sourceCode .python}
+```python
 def repos_show(org_id, repo_id):
     # Get repo
     repo = Repository.query.get(repo_id)
@@ -86,20 +86,20 @@ def repos_show(org_id, repo_id):
 In our demo app, when we call `Oso.get_allowed_actions()` with the user
 `mike@monsters.com`, we get back:
 
-```{.sourceCode .python}
+```python
 actions = ['READ', 'LIST_ROLES', 'CREATE', 'DELETE', 'LIST_ISSUES']
 ```
 
 But when we call with a different user, `sully@monsters.com`, we get:
 
-```{.sourceCode .python}
+```python
 actions = ['READ', 'CREATE', 'LIST_ISSUES']
 ```
 
 The allowed actions for each user are determined by the **oso policy.**
 In this case, our policy has the following rules:
 
-```{.sourceCode .python}
+```python
 # Repository Permissions
 # ----------------------
 
@@ -137,7 +137,7 @@ if we used oso's [SQLAlchemy Roles library
 features](https://docs.oso.dev/getting-started/roles/sqlalchemy/basic_roles.html),
 we could have a policy that looks like this instead:
 
-```{.sourceCode .python}
+```python
 # Repository Permissions
 # ----------------------
 
@@ -175,7 +175,7 @@ should be able to see the "Manage Access" and "Delete" buttons, but
 Sully should not. We can implement this with a simple check in our
 template:
 
-```{.sourceCode .python}
+```python
 {% if "LIST_ROLES" in actions %}
 <div>
   <a href={{ url_for('routes.repo_roles_index', org_id=org_id, repo_id=repo.id) }}>

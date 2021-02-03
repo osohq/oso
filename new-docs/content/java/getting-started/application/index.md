@@ -34,7 +34,7 @@ After cloning the example app, make sure to run `mvn install` to download the ne
 
 The example comes with some example data, which you can load by running:
 
-```{.sourceCode .console}
+```console
 $ sqlite3 expenses.db ".read expenses.sql"
 ```
 
@@ -131,7 +131,7 @@ public boolean preHandle(HttpServletRequest request, HttpServletResponse respons
 Now that this is in place, we can write a simple policy to allow anyone
 to call our index route, and see the hello message:
 
-```
+```python
 # authorization.polar
 
 allow(_user, "GET", request: Request) if
@@ -188,7 +188,7 @@ public class User {
 We can use [specializer rules](polar-syntax#specialization) to only allow the request
 when the actor is an instance of a `User`:
 
-```
+```python
 # authorization.polar
 
 allow(_user: User, "GET", request: Request) if
@@ -218,7 +218,7 @@ logic from the HTTP path to actions and classes in the application.
 
 For example:
 
-```
+```python
 # authorization.polar
 
 allow(user, "GET", http_request) if
@@ -238,7 +238,7 @@ that in the next section.
 In the [Quickstart](quickstart), our main objective was to
 determine who could "GET" expenses. Our final policy looked like:
 
-```
+```python
 # expenses.polar
 
 allow(actor: String, "GET", expense: Expense) if
@@ -249,7 +249,7 @@ In our expenses sample application, we have something similar,
 but we've rewritten the policy to use a new `submitted` predicate in case we want
 to change the logic in the future.
 
-```
+```python
 # authorization.polar
 
 allow(user: User, "read", expense: Expense) if
