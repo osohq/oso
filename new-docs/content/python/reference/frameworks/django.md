@@ -123,38 +123,10 @@ initialization.
 
 ## Example
 
-Check out the Django integration example app below on GitHub:
-
-** [osohq/oso-django-integration](https://github.com/osohq/oso-django-integration)
+Check out the Django integration example app on GitHub:
+[osohq/oso-django-integration](https://github.com/osohq/oso-django-integration).
 
 ## API Reference
 
-### Authorization
-
-### Middleware
-
-### View Decorators
-
-### List endpoint authorization
-
-The oso Django integration includes list filtering support for Django models.
-
-{{< callout "Note" "green" >}}
-  These features are in preview and will be stabilized in a future release.
-  Please [join our Slack](https://join-slack.osohq.com/) to provide feedback or
-  discuss with the engineering team.
-{{< /callout >}}
-
-#### Usage
-
-See the list filtering usage guide for more information.
-
-#### API Reference
-
-### Oso
-
-
-### django_oso.oso.Oso( = <oso.oso.Oso object>)
-Singleton `oso.Oso` instance.
-
-Use for loading policy files and registering classes.
+The [Django API reference]({{% apiLink "reference/api/django.html" %}})
+is automatically generated from the oso Django library source files.

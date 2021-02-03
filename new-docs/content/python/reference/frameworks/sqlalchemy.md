@@ -19,17 +19,9 @@ $ pip install sqlalchemy-oso
 
 ## Usage
 
-See the list filtering usage guide
-for more information.
+See the list filtering usage guide for more information.
 
 ## API Reference
 
-### `sqlalchemy_oso`
-
-### `sqlalchemy_oso.session`
-
-### `sqlalchemy_oso.flask`
-
-### `sqlalchemy_oso.roles`
-
-**WARNING**: This module is still experimental and subject to breaking changes in the near-term.
+The [SQLAlchemy API reference]({{% apiLink "reference/api/sqlalchemy.html" %}})
+is automatically generated from the oso SQLAlchemy library source files.
