@@ -1,12 +1,12 @@
 ---
-date: '2021-01-07T02:46:33.217Z'
+date: "2021-01-07T02:46:33.217Z"
 docname: using/examples/rbac
 images: {}
 path: /using-examples-rbac
 title: Global RBAC
 description: |
-    Role-based access control (RBAC) assigns each actor a role. Instead of
-    granting permissions to individual actors, they are granted to roles.
+  Role-based access control (RBAC) assigns each actor a role. Instead of
+  granting permissions to individual actors, they are granted to roles.
 ---
 
 # Global RBAC
@@ -18,8 +18,8 @@ permission being the ability to perform an [action](glossary#actions) on a
 [resource](glossary#resources) — can be grouped into roles.
 
 This guide shows an example of implementing [global
-roles](learn/roles/patterns#global-roles). For guidance on other RBAC use
-cases, check out [Role-Based Access Control Patterns](learn/roles/patterns).
+roles](learn/roles#global-roles). For guidance on other RBAC use
+cases, check out [Role-Based Access Control Patterns](learn/roles).
 
 ## RBAC Basics
 
@@ -78,7 +78,7 @@ Inline queries run when the file is loaded, and check that the query after the
 
 We have a working RBAC system, but at this point it’s not quite as flexible as
 we’d like. For example, Deirdre is in the Accounting department, but she’s
-*also* an employee and should be able to submit her own expenses. We could
+_also_ an employee and should be able to submit her own expenses. We could
 define a second **allow** rule enabling accountants to `“submit”` expenses, but
 it would be better to avoid that duplication and write our policy in a way that
 accurately mirrors the role relationships of our business domain. Since
@@ -186,7 +186,7 @@ role(actor: User, "admin") if
 
 There’s something really powerful happening in the above that bears
 highlighting: oso allowed us to not only create policies over existing
-application data but, crucially, *to arrange that data in novel ways*,
+application data but, crucially, _to arrange that data in novel ways_,
 enriching the pool of contextual data that informs authorization decisions
 without littering complex logic all over the application. The hierarchy we
 created among the `“admin”`, `“accountant”`, and `“employee”` roles extends the

@@ -1,14 +1,16 @@
 ---
 title: Policy Examples
+weight: 3
 ---
 
 # Policy Examples
 
-In many cases, knowing *what* authorization logic you want to write
+In many cases, knowing _what_ authorization logic you want to write
 is just as hard as actually writing the logic itself. Here, we take you
 through some common authorization patterns that exist, and how you
 might represent and build these in oso.
-<!-- 
+
+<!--
 ## Role-based Access Control (RBAC)
 
 Role-based access control (RBAC) assigns each actor a role.  Instead of granting

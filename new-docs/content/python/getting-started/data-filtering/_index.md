@@ -2,18 +2,18 @@
 title: Data filtering
 weight: 5
 description: |
-    Efficiently enforce authorization over entire collections
-    using oso data filtering
+  Efficiently enforce authorization over entire collections
+  using oso data filtering
 ---
 
-## Data Filtering
+# Data Filtering
 
 oso supports applying authorization logic at the ORM layer so that you can
 efficiently authorize entire data sets. For example, suppose you have millions
 of posts in a social media application created by thousands of users, and
 regular users are only authorized to view posts from their friends. It would be
 inefficient to fetch all of the posts and authorize them one by one. It would
-be much more efficient to distill from the policy a *filter* that can be
+be much more efficient to distill from the policy a _filter_ that can be
 applied by the ORM to return only the authorized posts. This idea can be used
 in any scenario where you need to authorize a subset of a large collection of
 data.
@@ -22,8 +22,8 @@ The oso policy engine can now produce such filters from your policy. Below
 we’ll briefly explain how it works and link to instructions and examples for
 the supported ORMs (currently Django & SQLAlchemy).
 
-* [Django Adapter](./django)
-* [SQLAlchemy Adapter](./sqlalchemy)
+- [Django Adapter](./django)
+- [SQLAlchemy Adapter](./sqlalchemy)
 
 ## How it works
 
@@ -43,9 +43,9 @@ the above rule:
 2. Which posts is that user allowed to view?
 
 The answer to the first question is a boolean. The answer to the second is a
-set of *constraints* that must hold in order for *any* `Post` to be authorized.
+set of _constraints_ that must hold in order for _any_ `Post` to be authorized.
 
-oso can produce such constraints through *partial evaluation* of a policy.
+oso can produce such constraints through _partial evaluation_ of a policy.
 Instead of querying with concrete object (e.g., `Post{id: 1}`), you can pass a
 `Partial` value, which signals to the engine that constraints should be
 collected for it. A successful query for a `Partial` value returns constraint
@@ -94,8 +94,8 @@ abstraction.
 To learn more about this feature and see usage examples, see our ORM specific
 documentation:
 
-* [Django](./django)
-* [SQLAlchemy](./sqlalchemy)
+- [Django](./django)
+- [SQLAlchemy](./sqlalchemy)
 
 More framework integrations are coming soon — join us on
 [Slack](https://join-slack.osohq.com/) to discuss your use case or open an

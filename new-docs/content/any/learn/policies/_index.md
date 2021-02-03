@@ -1,6 +1,6 @@
 ---
 title: Writing policies
-weight: 2
+weight: 1
 any: true
 ---
 
@@ -17,6 +17,6 @@ can express in imperative code can equally be expressed in Polar — often more
 concisely and closer to how you might explain the logic in natural language.
 
 {{< callout "Note" "green" >}}
-  Policies are stored in Polar files (extension `.polar`), which are loaded
-  into the authorization engine using the [oso library](reference).
+Policies are stored in Polar files (extension `.polar`), which are loaded
+into the authorization engine using the [oso library](reference).
 {{< /callout >}}
