@@ -51,7 +51,7 @@ Let's look at an example. Imagine we have a GitHub-like app that gives
 users access to repositories. The page to view a specific repository
 looks like this:
 
-![image](/getting-started/ui/a.png)
+![image](python/getting-started/ui/a.png)
 
 On this page there are several components that we may want to control
 based on the actions the current user is allowed to take. For example,
@@ -201,7 +201,7 @@ template:
 
 Now when Sully logs in, the buttons are hidden:
 
-![image](/getting-started/ui/b.png)
+![image](python/getting-started/ui/b.png)
 
 Our example uses Flask templates for the UI, but the allowed actions
 could be sent to the frontend to make UI decisions in React, Vue or any

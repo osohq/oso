@@ -1,16 +1,16 @@
 ---
-date: '2021-01-07T02:46:33.217Z'
+date: "2021-01-07T02:46:33.217Z"
 docname: using/examples/user_types
 images: {}
 path: /using-examples-user-types
 title: Multiple Actor Types
 description: |
-    Applications may have multiple types of users. Frequently, internal user
-    accounts for support reps, operations teams, or testing. Oso policies can
-    recognize different user types & apply different rules when necessary,
-    avoiding the need for multiple authorization systems.
-aliases: 
-    - ../../../using/examples/user_types.html
+  Applications may have multiple types of users. Frequently, internal user
+  accounts for support reps, operations teams, or testing. Oso policies can
+  recognize different user types & apply different rules when necessary,
+  avoiding the need for multiple authorization systems.
+aliases:
+  - ../../../using/examples/user_types.html
 ---
 
 # Multiple Actor Types
@@ -25,8 +25,8 @@ In this guide, we’ll walk through a policy for an application with two actor
 types: **Customers** and **Internal Users**.
 
 {{< callout "Note" "blue" >}}
-  This guide assumes you are familiar with terms from Oso’s
-  [glossary](glossary).
+This guide assumes you are familiar with terms from Oso’s
+[glossary](glossary).
 {{< /callout >}}
 
 ## A Tale of Two Actors
@@ -112,7 +112,7 @@ that has a method for retrieving a collection of managed accounts:
 Since account managers are also internal users, we’ve made the `AccountManager`
 type extend `InternalUser`. This means that our rules that specialize on
 `InternalUser` will still execute for account managers (see [Resources with
-Inheritance](learn/policies/examples/inheritance)).
+Inheritance](learn/examples/inheritance)).
 
 For the purposes of this example, we'll assume that `AccountData` is a resource
 that has an `{{% exampleGet "accountId" %}}` attribute. Let’s add the following

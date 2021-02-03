@@ -1,6 +1,6 @@
 ---
 title: Add Oso to your app
-weight: 5
+weight: 2
 description: |
   An in-depth walkthrough of adding Oso to an example expense application.
 aliases:
@@ -204,7 +204,7 @@ You are alice@foo.com, the CEO at Foo Industries. (User ID: 1)
 
 {{< callout "Tip" "green" >}}
 Interested in understanding more about what is happening here? Check
-out the [user types](user_types) example.
+out the [user types](learn/examples/user_types) example.
 {{< /callout >}}
 
 The inputs to the `isAllowed` call are the current user, the HTTP method,
