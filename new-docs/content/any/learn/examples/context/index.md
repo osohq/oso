@@ -21,9 +21,9 @@ write rules over.
 
 For example, let’s say you have a policy like this:
 
-```polar
+{{< code file="context.polar" >}}
 allow(actor, _action, _resource) if role(actor, "admin");
-```
+{{< /code >}}
 
 Here we have a very simple allow rule that allows an actor to access any
 resource if they are an admin.  Maybe we want to also let any actor access any
@@ -45,9 +45,9 @@ allowing us to instantiate it in the policy.
 We can add a new `allow` rule that permits an actor to access a resource if the
 application is in development mode:
 
-```polar
+{{< code file="context.polar" >}}
 allow(_actor, _action, _resource) if Env.var("ENV") = "development";
-```
+{{< /code >}}
 
 ## Summary
 

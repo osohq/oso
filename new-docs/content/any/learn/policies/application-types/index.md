@@ -12,9 +12,9 @@ Any type defined in an application can be passed into Oso, and its attributes
 may be accessed from within a policy. Using application types make it possible
 to take advantage of an app’s existing domain model. For example:
 
-```polar
+{{< code file="policy.polar" >}}
 allow(actor, action, resource) if actor.{{% exampleGet "isAdmin" %}};
-```
+{{< /code >}}
 
 <!-- TODO(gj): Link `Oso.isAllowed()` once API docs are setup. -->
 
@@ -31,9 +31,9 @@ during evaluation of the Polar rule and found to be true.
 In addition to accessing attributes, you can also call methods on application
 instances in a policy:
 
-```polar
+{{< code file="policy.polar" >}}
 allow(actor, action, resource) if actor.{{% exampleGet "isAdminOf" %}}(resource);
-```
+{{< /code >}}
 
 ## Registering Application Types
 
@@ -54,17 +54,17 @@ In our previous example, the **allow** rule expected the actor to be a `User`,
 but we couldn’t actually check that type assumption in the policy. If we
 register the `User` class, we can write the following rule:
 
-```polar
+{{< code file="policy.polar" >}}
 allow(actor: User, action, resource) if actor.name = "alice";
-```
+{{< /code >}}
 
 This rule will only be evaluated when the actor is a `User`; the `actor`
 argument is _specialized_ on that type. We could also use `matches` to express
 the same logic on an unspecialized rule:
 
-```polar
+{{< code file="policy.polar" >}}
 allow(actor, action, resource) if actor matches User{name: "alice"};
-```
+{{< /code >}}
 
 Either way, using the rule could look like this:
 
@@ -80,9 +80,9 @@ Either way, using the rule could look like this:
 Once a class is registered, class or static methods can also be called from Oso
 policies:
 
-```polar
+{{< code file="policy.polar" >}}
 allow(actor: User, action, resource) if actor.name in User.superusers();
-```
+{{< /code >}}
 
 {{% exampleGet "classMethodExample" %}}
 

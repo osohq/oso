@@ -36,10 +36,10 @@ We can do the same with the resources being requested:
 An `allow` rule that checks that the user reading the
 expense is the same person who submitted the expense, would look like:
 
-```polar
+{{< code file="abac.polar" >}}
 allow(actor: User, "view", resource: Expense) if
     resource.{{% exampleGet "submitted_by" %}} = actor.name;
-```
+{{< /code >}}
 
 This simple example shows the potential for ABAC: we took an intuitive concept
 of “can see their own expenses” and represented it as a single comparison.
@@ -64,12 +64,12 @@ suppose our company has taken off and now spans multiple locations, and now
 accountants can only view expenses from their own locations. We can combine our
 previous roles with some simple ABAC conditions to achieve this:
 
-```polar
+{{< code file="abac.polar" >}}
 # Accountants can view expenses from their location
 allow(actor: User, "view", resource: Expense) if
     role(actor, "accountant") and
     actor.location = resource.location;
-```
+{{< /code >}}
 
 This is great when what we need is an intersection of models, and you want to
 apply both RBAC and ABAC policies simultaneously. However, the ABAC model
@@ -79,14 +79,14 @@ include attributes.
 For example, an employee might be an administrator of a *project*,
 and therefore is allowed to see all expenses related to that project.
 
-```polar
+{{< code file="abac.polar" >}}
 # Alice is an admin of Project 1
 role(_: User { name: "alice" }, "admin", _: Project { id: 1 });
 
 # Project admins can view expenses of the project
 allow(actor: User, "view", resource: Expense) if
     role(actor, "admin", Project.id(resource.project{{% exampleGet "postfixId" %}}));
-```
+{{< /code >}}
 
 What we can see is happening here, is that we are associated roles not just
 globally to a user, but to a user for some specific resource. Other examples
@@ -94,7 +94,7 @@ might be team-, or organization- specific roles.
 
 And these can also follow inheritance patterns like we saw with regular roles.
 
-```polar
+{{< code file="abac.polar" >}}
 # Bhavik is an admin of ACME
 role(_: User { name: "bhavik" }, "admin",  _: Organization { name: "ACME" });
 
@@ -105,7 +105,7 @@ role(actor: User, role: String, team: Team) if
 # Project roles inherit from Team roles
 role(actor: User, role: String, project: Project) if
     role(actor, role, Team.id(project.team{{% exampleGet "postfixId" %}}));
-```
+{{< /code >}}
 
 ## Hierarchies
 
@@ -118,29 +118,29 @@ policy.
 Starting out with a simple example, suppose managers can view employees’
 expenses:
 
-```polar
+{{< code file="abac.polar" >}}
 allow(actor: User, "view", resource: Expense) if
     employee in actor.employees() and
     employee.name = resource.{{% exampleGet "submitted_by" %}};
-```
+{{< /code >}}
 
 First thing we can do, is extract out the logic for checking whether the user
 manages someone:
 
-```polar
+{{< code file="abac.polar" >}}
 allow(actor: User, "view", resource: Expense) if
     manages(actor, employee) and
     employee.name = resource.{{% exampleGet "submitted_by" %}};
-```
+{{< /code >}}
 
 Now if we want this logic to apply for managers, and managers’ managers, and so
 on… then we need to make sure this logic is evaluated recursively:
 
-```polar
+{{< code file="abac.polar" >}}
 # Management hierarchies
 manages(manager: User, employee) if
     report in manager.employees()
     and (report = employee or manages(report, employee));
-```
+{{< /code >}}
 
 <!-- TODO: Summary -->
