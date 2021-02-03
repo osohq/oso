@@ -23,5 +23,5 @@ See the list filtering usage guide for more information.
 
 ## API Reference
 
-The [SQLAlchemy API reference]({{% apiLink "reference/api/frameworks/sqlalchemy.html" %}})
+The [SQLAlchemy API reference]({{% apiLink "reference/api/sqlalchemy.html" %}})
 is automatically generated from the oso SQLAlchemy library source files.

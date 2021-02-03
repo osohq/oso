@@ -25,6 +25,16 @@ sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
 sys.path.append(os.path.abspath("_ext"))
 
+# DJANGO SETUP FOR DJANGO-OSO #
+
+import django
+from django.conf import settings
+
+settings.configure()
+django.setup()
+
+##
+
 import lexer
 
 # -- Project information -----------------------------------------------------
@@ -63,6 +73,12 @@ extensions = [
     "sphinxcontrib.spelling",
     "notfound.extension",
 ]
+
+
+lexers["node"] = lexer.NodeShellLexer()
+lexers["polar"] = lexer.PolarLexer()
+lexers["jshell"] = lexer.JShellLexer()
+lexers["oso"] = lexer.OsoLexer()
 
 
 class HyphenatedWordFilter(Filter):

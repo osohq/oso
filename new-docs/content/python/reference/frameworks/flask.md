@@ -196,5 +196,5 @@ Check out the Flask integration example app on GitHub:
 
 ## API Reference
 
-The [Flask API reference]({{% apiLink "reference/api/frameworks/flask.html" %}})
+The [Flask API reference]({{% apiLink "reference/api/flask.html" %}})
 is automatically generated from the oso Flask library source files.

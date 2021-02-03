@@ -128,5 +128,5 @@ Check out the Django integration example app on GitHub:
 
 ## API Reference
 
-The [Django API reference]({{% apiLink "reference/api/frameworks/django.html" %}})
+The [Django API reference]({{% apiLink "reference/api/django.html" %}})
 is automatically generated from the oso Django library source files.
