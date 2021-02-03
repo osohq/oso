@@ -2,8 +2,8 @@
 title: Application types
 weight: 2
 any: false
-aliases: 
-    - ../../getting-started/policies/application-types.html
+aliases:
+  - ../../getting-started/policies/application-types.html
 ---
 
 # Application Types
@@ -17,14 +17,14 @@ allow(actor, action, resource) if actor.{{% exampleGet "isAdmin" %}};
 ```
 
 <!-- TODO(gj): Link `Oso.isAllowed()` once API docs are setup. -->
+
 The above rule expects the `actor` variable to be a {{% exampleGet "langName"
-%}} {{% exampleGet "instance" %}} with the field `{{% exampleGet "isAdmin"
-%}}`. The {{% exampleGet "langName" %}} {{% exampleGet "instance" %}} is passed
+%}} {{% exampleGet "instance" %}} with the field `{{% exampleGet "isAdmin" %}}`. The {{% exampleGet "langName" %}} {{% exampleGet "instance" %}} is passed
 into Oso with a call to `Oso.{{% exampleGet "isAllowed" %}}()`:
 
 {{% exampleGet "userClass" %}}
 
-The code above provides a `User` object as the *actor* for our `allow` rule.
+The code above provides a `User` object as the _actor_ for our `allow` rule.
 Since `User` has a field called `{{% exampleGet "isAdmin" %}}`, it is checked
 during evaluation of the Polar rule and found to be true.
 
@@ -59,7 +59,7 @@ allow(actor: User, action, resource) if actor.name = "alice";
 ```
 
 This rule will only be evaluated when the actor is a `User`; the `actor`
-argument is *specialized* on that type. We could also use `matches` to express
+argument is _specialized_ on that type. We could also use `matches` to express
 the same logic on an unspecialized rule:
 
 ```polar
@@ -71,10 +71,10 @@ Either way, using the rule could look like this:
 {{% exampleGet "specializedExample" %}}
 
 {{< callout "Note" "green" >}}
-  Type specializers automatically respect the **inheritance** hierarchy of
-  application classes. See the [Resources with
-  Inheritance](learn/policies/examples/inheritance) guide for an in-depth
-  example of how this works.
+Type specializers automatically respect the **inheritance** hierarchy of
+application classes. See the [Resources with
+Inheritance](learn/examples/inheritance) guide for an in-depth
+example of how this works.
 {{< /callout >}}
 
 Once a class is registered, class or static methods can also be called from Oso
@@ -98,9 +98,9 @@ examples using built-in types, see [the {{% exampleGet "langName" %}}
 library](reference/classes) guide.
 
 {{< callout "Warning" "orange" >}}
-  Do not attempt to mutate a literal using a method on it. Literals in Polar
-  are constant, and any changes made to such objects by calling a method will
-  not be persisted.
+Do not attempt to mutate a literal using a method on it. Literals in Polar
+are constant, and any changes made to such objects by calling a method will
+not be persisted.
 {{< /callout >}}
 
 ### `nil`
@@ -118,11 +118,13 @@ methods that return a null value.
 
 ## Summary
 
-* **Application types** and their associated application data are available
+- **Application types** and their associated application data are available
   within policies.
+
 * Types can be **registered** with Oso, in order to:
-  * Create instances of application types in policies
-  * Leverage the inheritance structure of application types with **specialized
+  - Create instances of application types in policies
+  - Leverage the inheritance structure of application types with **specialized
     rules**, supporting more sophisticated access control models.
-* You can use **built-in methods** on primitive types & literals like strings
+
+- You can use **built-in methods** on primitive types & literals like strings
   and dictionaries, exactly as if they were application types.
