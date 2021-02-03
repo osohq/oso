@@ -2,10 +2,7 @@
     class="static pin-t lg:sticky lg:z-50  top-0 pin-t h-8 w-full max-w-8xl mx-auto bg-primary flex flex-none items-center">
     <div id="header-page-title" class="flex-grow">
         <p class="text-white font-base text-sm  text-center truncate">
-            <span class="hidden md:inline">
-                Have feedback? File a <a class="underline" href="https://github.com/osohq/oso/issues">GitHub Issue!</a>
-            </span>
-            Previous docs are available <a class="underline" href="{{ $.Site.BaseURL }}v1/index.html">here</a>.
+            Miss the old docs? They're still <a class="underline" href="{{ $.Site.BaseURL }}v1/index.html">here</a> for a bit.
         </p>
     </div>
 </nav>
@@ -20,9 +17,6 @@
         </a>
     </div>
     <div id="header-page-title" class="flex-grow flex items-center">
-        <h1 class="text-white font-base text-2xl px-6 truncate">
-            {{ .Name }}
-        </h1>
     </div>
     {{ if not .IsHome }}
     <div class="flex-none px-6">
