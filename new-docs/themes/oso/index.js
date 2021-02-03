@@ -1,6 +1,6 @@
-import('oso')
-  .catch(e => console.error('Error importing `oso`:', e))
-  .then(m => (window.oso = m));
+// import('oso')
+//   .catch(e => console.error('Error importing `oso`:', e))
+//   .then(m => (window.oso = m));
 
 import('monaco-editor-core').then(monaco => {
   // Monokai colors
