@@ -347,10 +347,6 @@ want to make sure only authorized expenses are submitted.
 allow_by_path(_user, "PUT", "expenses", ["submit"]);
 ```
 
-.. literalinclude:: /examples/application/expenses-flask/app/authorization.polar
-:caption: :fa:`oso` authorization.polar
-:lines: 18
-
 {{< callout "Tip" "green" >}}
 The `allow_by_path` rule is a custom rule in our policy that operates
 on an actor, action, first url path fragment, and the remaining path
@@ -362,7 +358,10 @@ See [our policy](https://github.com/osohq/oso-flask-tutorial/blob/ecc39c601057bc
 Right now you can see that anyone can submit an expense:
 
 ```console
-$ curl -H "user: alice@foo.com" -H "Content-Type: application/json" -X PUT -d '{"amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
+$ curl -H "user: alice@foo.com" \
+  -H "Content-Type: application/json" \
+  -X PUT -d '{"amount": 100, "description": "Gummy Bears"}' \
+  localhost:5000/expenses/submit
 Expense(amount=100, description='Gummy Bears', user_id=1, id=108)
 ```
 
@@ -371,7 +370,7 @@ we check the user is allowed to `create` this expense?
 We would like to do the authorization on the full `Expense` object,
 but before it is persisted to the database, so perhaps before this line:
 
-```java {linenos=table,hl_lines=[8],linenostart=73}
+```java {hl_lines=[8]}
 // Controller.java
 
 @PutMapping("/expenses/submit")
@@ -389,7 +388,7 @@ public String submitExpense(@RequestBody Expense expense) {
 
 We could change the highlighted line to:
 
-```java {linenos=table,hl_lines=[8],linenostart=73}
+```java
     ((Expense) authorizer.authorize("create", expense)).save();
 ```
 
@@ -429,14 +428,10 @@ controls to our route handlers.
 
 {{< callout "What's next" "green" >}}
 
-- To explore integrating Oso in your app in more depth continue to
-  /getting-started/application/patterns.
-- For a deeper introduction to policy syntax see:
-  /getting-started/policies/index.
-- For reference on using Oso with your language, see
-  /using/libraries/index.
-- Clone this example on
-  [GitHub](https://github.com/osohq/oso-flask-tutorial) to check it
-  out further.
+- To explore integrating Oso in your app in more depth continue to [Access Patterns]().
+- For a deeper introduction to policy syntax, see [Writing Policies](policies).
+- For reference on using the Java Oso library, see [Java Authorization Library](reference).
+- Clone this example on [GitHub](https://github.com/osohq/oso-spring-tutorial)
+  to check it out further.
 
 {{< /callout >}}
