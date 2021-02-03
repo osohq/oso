@@ -3,6 +3,8 @@ title: Add Oso to your app
 weight: 5
 description: |
   Control what you expose in the UI with Oso policies.
+aliases:
+  - /getting-started/application/index.html
 ---
 
 # Add To Your Application

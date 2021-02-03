@@ -3,6 +3,8 @@ title: UI Authorization
 weight: 5
 description: |
   Control what you expose in the UI with Oso policies.
+aliases:
+  - /getting-started/ui/index.html
 ---
 
 # Authorization-Dependent UI Elements
