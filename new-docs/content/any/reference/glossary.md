@@ -2,6 +2,8 @@
 title: Glossary
 any: true
 weight: 50
+aliases: 
+    - ../more/glossary.html
 ---
 
 # Glossary

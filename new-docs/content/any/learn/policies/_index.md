@@ -2,6 +2,8 @@
 title: Writing policies
 weight: 2
 any: true
+aliases: 
+    - ../getting-started/policies/index.html
 ---
 
 # Writing Policies

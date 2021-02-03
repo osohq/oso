@@ -1,5 +1,7 @@
 ---
 title: Security
+aliases: 
+    - ../more/security.html
 ---
 
 # Security

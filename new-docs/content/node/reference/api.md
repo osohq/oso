@@ -1,6 +1,8 @@
 ---
 title: JavaScript API
 weight: 3
+aliases: 
+    - /js/node/index.html
 ---
 
 # JavaScript API

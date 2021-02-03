@@ -2,6 +2,8 @@
 title: Python Frameworks
 weight: 3
 any: false
+aliases: 
+    - /using/frameworks/index.html
 ---
 # Python Frameworks
 

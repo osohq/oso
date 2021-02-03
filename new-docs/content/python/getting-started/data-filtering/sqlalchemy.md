@@ -4,6 +4,8 @@ docname: getting-started/list-filtering/sqlalchemy
 images: {}
 path: /getting-started-list-filtering-sqlalchemy
 title: SQLAlchemy Adapter
+aliases: 
+    - /getting-started/list-filtering/sqlalchemy.html
 ---
 
 # SQLAlchemy Adapter

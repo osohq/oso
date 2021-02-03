@@ -4,6 +4,8 @@ docname: more/language/polar-foundations
 images: {}
 path: /more-language-polar-foundations
 title: Polar Background
+aliases: 
+    - ../../more/language/polar-foundations.html
 ---
 
 # Polar Background

@@ -2,6 +2,8 @@
 title: Polar Syntax
 any: true
 weight: 1
+aliases: 
+    - ../using/polar-syntax.html
 ---
 
 # Polar Syntax

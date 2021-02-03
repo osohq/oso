@@ -2,8 +2,6 @@
 title: Reference
 weight: 4
 any: false
-aliases:
-  - /reference/library
 ---
 # Go Authorization Library
 

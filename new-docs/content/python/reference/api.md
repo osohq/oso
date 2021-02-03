@@ -1,6 +1,8 @@
 ---
 title: Python API
 weight: 3
+aliases: 
+    - /using/libraries/python/api.html
 ---
 
 # Python API

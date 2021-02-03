@@ -1,5 +1,7 @@
 ---
 title: Policy Examples
+aliases: 
+    - ../../using/examples/index.html
 ---
 
 # Policy Examples

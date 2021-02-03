@@ -1,5 +1,7 @@
 ---
 title: IDE Support
+aliases: 
+    - ../more/dev-tools/ide.html
 ---
 
 # IDE Support
