@@ -91,7 +91,7 @@ button > * {
 }
 
 .fa-polar {
-  content: url("../oso_logo.png");
+  content: url("../oso_icon.png");
   filter: opacity(75%);
   height: 1rem;
   vertical-align: middle;
