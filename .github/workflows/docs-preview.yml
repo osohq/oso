@@ -2,7 +2,7 @@ name: Publish Docs Preview
 on:
   push:
     branches:
-      - docs-v2
+      - main
 
 jobs:
   publish-preview:
