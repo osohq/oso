@@ -2,40 +2,42 @@
 title: Application types
 weight: 2
 any: false
+aliases:
+  - ../../getting-started/policies/application-types.html
 ---
 
 # Application Types
 
-Any type defined in an application can be passed into oso, and its attributes
+Any type defined in an application can be passed into Oso, and its attributes
 may be accessed from within a policy. Using application types make it possible
 to take advantage of an app’s existing domain model. For example:
 
-```polar
+{{< code file="policy.polar" >}}
 allow(actor, action, resource) if actor.{{% exampleGet "isAdmin" %}};
-```
+{{< /code >}}
 
 <!-- TODO(gj): Link `Oso.isAllowed()` once API docs are setup. -->
+
 The above rule expects the `actor` variable to be a {{% exampleGet "langName"
-%}} {{% exampleGet "instance" %}} with the field `{{% exampleGet "isAdmin"
-%}}`. The {{% exampleGet "langName" %}} {{% exampleGet "instance" %}} is passed
-into oso with a call to `Oso.{{% exampleGet "isAllowed" %}}()`:
+%}} {{% exampleGet "instance" %}} with the field `{{% exampleGet "isAdmin" %}}`. The {{% exampleGet "langName" %}} {{% exampleGet "instance" %}} is passed
+into Oso with a call to `Oso.{{% exampleGet "isAllowed" %}}()`:
 
 {{% exampleGet "userClass" %}}
 
-The code above provides a `User` object as the *actor* for our `allow` rule.
+The code above provides a `User` object as the _actor_ for our `allow` rule.
 Since `User` has a field called `{{% exampleGet "isAdmin" %}}`, it is checked
 during evaluation of the Polar rule and found to be true.
 
 In addition to accessing attributes, you can also call methods on application
 instances in a policy:
 
-```polar
+{{< code file="policy.polar" >}}
 allow(actor, action, resource) if actor.{{% exampleGet "isAdminOf" %}}(resource);
-```
+{{< /code >}}
 
 ## Registering Application Types
 
-Instances of application types can be constructed from inside an oso policy
+Instances of application types can be constructed from inside an Oso policy
 using [the `new` operator](polar-syntax#new) if the class has been
 **registered**. {{% exampleGet "registerClass" %}}
 
@@ -52,35 +54,35 @@ In our previous example, the **allow** rule expected the actor to be a `User`,
 but we couldn’t actually check that type assumption in the policy. If we
 register the `User` class, we can write the following rule:
 
-```polar
+{{< code file="policy.polar" >}}
 allow(actor: User, action, resource) if actor.name = "alice";
-```
+{{< /code >}}
 
 This rule will only be evaluated when the actor is a `User`; the `actor`
-argument is *specialized* on that type. We could also use `matches` to express
+argument is _specialized_ on that type. We could also use `matches` to express
 the same logic on an unspecialized rule:
 
-```polar
+{{< code file="policy.polar" >}}
 allow(actor, action, resource) if actor matches User{name: "alice"};
-```
+{{< /code >}}
 
 Either way, using the rule could look like this:
 
 {{% exampleGet "specializedExample" %}}
 
-{{< callout "Note" "green" >}}
+{{% callout "Note" "green" %}}
   Type specializers automatically respect the **inheritance** hierarchy of
   application classes. See the [Resources with
-  Inheritance](learn/policies/examples/inheritance) guide for an in-depth
+  Inheritance](learn/examples/inheritance) guide for an in-depth
   example of how this works.
-{{< /callout >}}
+{{% /callout %}}
 
-Once a class is registered, class or static methods can also be called from oso
+Once a class is registered, class or static methods can also be called from Oso
 policies:
 
-```polar
+{{< code file="policy.polar" >}}
 allow(actor: User, action, resource) if actor.name in User.superusers();
-```
+{{< /code >}}
 
 {{% exampleGet "classMethodExample" %}}
 
@@ -95,11 +97,11 @@ types](polar-syntax#primitive-types) in any supported application language. For
 examples using built-in types, see [the {{% exampleGet "langName" %}}
 library](reference/classes) guide.
 
-{{< callout "Warning" "orange" >}}
+{{% callout "Warning" "orange" %}}
   Do not attempt to mutate a literal using a method on it. Literals in Polar
   are constant, and any changes made to such objects by calling a method will
   not be persisted.
-{{< /callout >}}
+{{% /callout %}}
 
 ### `nil`
 
@@ -116,11 +118,13 @@ methods that return a null value.
 
 ## Summary
 
-* **Application types** and their associated application data are available
+- **Application types** and their associated application data are available
   within policies.
-* Types can be **registered** with oso, in order to:
-  * Create instances of application types in policies
-  * Leverage the inheritance structure of application types with **specialized
+
+* Types can be **registered** with Oso, in order to:
+  - Create instances of application types in policies
+  - Leverage the inheritance structure of application types with **specialized
     rules**, supporting more sophisticated access control models.
-* You can use **built-in methods** on primitive types & literals like strings
+
+- You can use **built-in methods** on primitive types & literals like strings
   and dictionaries, exactly as if they were application types.

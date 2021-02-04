@@ -2,13 +2,15 @@
 title: Glossary
 any: true
 weight: 50
+aliases: 
+    - ../more/glossary.html
 ---
 
 # Glossary
 
-**oso** is an authorization system: its purpose is to allow you
+**Oso** is an authorization system: its purpose is to allow you
 to selectively control access to certain application resources.
-In this document, we’ll explore the basic concepts that oso uses
+In this document, we’ll explore the basic concepts that Oso uses
 to help you accomplish this goal.
 
 ## Actors
@@ -34,15 +36,15 @@ a URI or other string, or may be an application type.
 
 ## Queries
 
-In oso, an **authorization query** takes the form:
+In Oso, an **authorization query** takes the form:
 
 > May **actor** perform **action** on **resource**?
 
-Queries are made using the oso library.
+Queries are made using the Oso library.
 
 ## Policies
 
-oso evaluates queries using authorization logic contained in **policies**.
+Oso evaluates queries using authorization logic contained in **policies**.
 Policies are written as code in a declarative policy language called Polar.
 Polar is designed to provide a simple but expressive syntax for authorization
 logic. For more information on Polar, see the language documentation,
@@ -50,13 +52,13 @@ and for examples of different kinds of policies you can express with it,
 see the Policy Examples section.
 
 Policies are stored in Polar files (extension `.polar`), which are loaded
-into the authorization engine using the oso Libraries.
+into the authorization engine using the Oso Libraries.
 Once loaded, policies can be used to evaluate authorization queries.
 
 Policies are made up of rules. Each rule defines
 a statement that is either true or false.
 
-In oso, one such rule is distinguished, and used to drive the authorization
+In Oso, one such rule is distinguished, and used to drive the authorization
 decision: the `allow` rule.
 
 ## Allow Rules
@@ -71,11 +73,11 @@ We could read this as:
 
 > `actor` may perform `action` on `resource`
 
-oso answers an authorization query by matching the supplied `actor`,
+Oso answers an authorization query by matching the supplied `actor`,
 `action`, and `resource` arguments with the parameters of `allow`
 rules specified in the policy.
 
-For instance, let’s imagine we are using oso to write an authorization system
+For instance, let’s imagine we are using Oso to write an authorization system
 for an airport. We’ll start with a very simple policy: suppose that passengers
 Alice and Bob are allowed to board any flight. One simple way to write such
 a policy in Polar would be:
@@ -112,12 +114,12 @@ default”.
 ## Summary
 
 
-* In oso, authorization begins with a **query**, which is evaluated against a
+* In Oso, authorization begins with a **query**, which is evaluated against a
 **policy** written in the **Polar** language.
 
 
 * Policies are made up of **rules**, and `allow` rules are used to grant
 access from the `oso.is_allowed()` method.
 
-For more detailed examples of oso in action, check out our
+For more detailed examples of Oso in action, check out our
 authorization model guides.

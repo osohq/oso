@@ -1,10 +1,12 @@
 ---
 title: Design Principles
+aliases: 
+    - ../more/design-principles.html
 ---
 
 # Design Principles
 
-oso helps developers build authorization into their applications.
+Oso helps developers build authorization into their applications.
 Authorization typically starts simple – perhaps a few `if` statements
 in your code – but can grow complex as you add:
 
@@ -20,7 +22,7 @@ number of simple `if` statements can become a large amount of custom
 authorization logic spread throughout a codebase, which can be hard to maintain,
 modify, debug, and secure.
 
-oso is designed to solve these problems based on three principles, which we’ll
+Oso is designed to solve these problems based on three principles, which we’ll
 describe briefly here, then in more detail below.
 
 **1. Separation of concerns, but not data.** Authorization logic is distinct
@@ -72,7 +74,7 @@ etc. become complicated ordeals, because there is no single place where
 The maintainable solution to this problem is to factor out the
 authorization logic from that of the application, and make a single,
 uniform call when we need to authorize a request. Here’s what that
-might look like with oso:
+might look like with Oso:
 
 Before
 
@@ -121,21 +123,21 @@ submitted(user, expense) if
 ```
 
 In this example, we’ve factored out the authorization logic into an
-oso policy file, and inserted calls to `oso.is_allowed` in its place.
-All of the actual logic now resides in oso, which means that changing
+Oso policy file, and inserted calls to `oso.is_allowed` in its place.
+All of the actual logic now resides in Oso, which means that changing
 permissions, auditing, etc. can all happen in one place.
 
 The key thing we did *not* do, however, was to separate the authorization
-logic from the objects it is *about*. Because oso operates as a library
+logic from the objects it is *about*. Because Oso operates as a library
 embedded within your application, it has direct access to application
 data, objects, and methods. For instance, in the last line of the policy
 above, the term `expense.submitted_by` means just what you’d think:
 it looks up the `submitted_by` attribute on the `expense` object,
 and returns the value of that field. But the `expense` object is passed
-directly into oso from your application; it “lives” in the application.
+directly into Oso from your application; it “lives” in the application.
 If that attribute happened to name a method instead of a field, it would
 be called (with no arguments) *within your application’s runtime context*,
-and the result passed back to oso. Thus, oso can use your application’s
+and the result passed back to Oso. Thus, Oso can use your application’s
 native objects to make its authorization decisions, while at the same time
 keeping authorization logic separate from application logic.
 
@@ -146,9 +148,9 @@ using natural language, you will generally find they have no problem doing so.
 What often happens, however, is that authorization systems make it hard to
 take an intuitive concept and implement it as a concrete security policy.
 
-oso policies are written using a declarative language designed specifically
+Oso policies are written using a declarative language designed specifically
 for expressing authorization logic in applications. This means that you write
-permissions as simple logical statements, and oso performs the necessary
+permissions as simple logical statements, and Oso performs the necessary
 inferences to go from what you have (application objects and information
 about the request you’re trying to authorize) to a yes/no authorization
 decision. Rule ordering, access to application objects, and other such
@@ -156,7 +158,7 @@ ancillary tasks are handled transparently by the system.
 
 Let’s illustrate this by continuing our example from above.
 Suppose that we now have two different user types who can approve expenses:
-direct managers, and project managers. With oso, that might look like this:
+direct managers, and project managers. With Oso, that might look like this:
 
 ```
 # managers can approve their employees' expenses
@@ -181,25 +183,25 @@ role(user, "manager", project: Project) if
     user in project.managers();
 ```
 
-The policy stays short and relatively flat because oso handles the evaluation.
-You don’t need to specify *how* to apply these rules. If we query oso using the
-above policy to see if a user can read an expense, oso will handle everything
+The policy stays short and relatively flat because Oso handles the evaluation.
+You don’t need to specify *how* to apply these rules. If we query Oso using the
+above policy to see if a user can read an expense, Oso will handle everything
 from determining which rules it needs to apply and their relative ordering, to
 calling into the host application to lookup the email field on the user object.
-You give oso all the ingredients, then oso searches through everything and puts
+You give Oso all the ingredients, then Oso searches through everything and puts
 them together in the necessary order to make a decision.
 
 ## Freedom to Extend
 
 Some applications may never need to go beyond basic role-based access control
-(RBAC). You can express that in oso easily.
+(RBAC). You can express that in Oso easily.
 And likewise ABAC,
 and inheritance, etc.
-oso is purposefully agnostic to the *kind* of authorization logic
+Oso is purposefully agnostic to the *kind* of authorization logic
 that you need; its job is to make expressing simple policies easy,
 and complex policies possible.
 
-Because the oso policy engine is an interpreter for a Turing-complete
+Because the Oso policy engine is an interpreter for a Turing-complete
 domain specific language, it is not limited to a fixed set of configuration
 parameters, or prescribed authorization structures. And because it offers
 direct integration with your application’s data and methods, it is not
@@ -209,7 +211,7 @@ in policy code. Instead, it acts as an *extension of your application*
 that encapsulates, but does not limit, your authorization logic.
 
 <!-- kill this paragraph? -->
-As we developed oso, we talked to a lot of organizations with a lot
+As we developed Oso, we talked to a lot of organizations with a lot
 of different kinds of authorization requirements. Internally-facing,
 customer-facing, subject to stringent regulations, dependent on data
 that lives in a foreign system, etc. Endless variations. Most of the
@@ -218,7 +220,7 @@ heavily in custom code and frameworks, either up front, before the
 complexity exploded (rare) or after the fact (much more common, and
 much more costly).
 
-oso helps you tame complex authorization problems by *abstraction*
+Oso helps you tame complex authorization problems by *abstraction*
 and *extension*. By abstracting away from, and yet fully supporting:
 
 
@@ -226,7 +228,7 @@ and *extension*. By abstracting away from, and yet fully supporting:
 * specific authorization schemes
 * rigid network-based interfaces
 
-You can adapt oso to meet even the most complex authorization requirements,
+You can adapt Oso to meet even the most complex authorization requirements,
 because you extend the built-in system to encapsulate them, and then
 embed the whole engine in your application – extending your application –
 so that it can make decisions that are intrinsically coupled to the data

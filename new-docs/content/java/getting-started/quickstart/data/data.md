@@ -3,11 +3,11 @@ githubApp: "[Java sample app](https://github.com/osohq/oso-java-quickstart)"
 githubURL: "https://github.com/osohq/oso-java-quickstart.git"
 installation: |
     Go to the [Maven Repository](https://search.maven.org/artifact/com.osohq/oso)
-    to install oso.
-    Either add oso as a dependency to your build system, or download
+    to install Oso.
+    Either add Oso as a dependency to your build system, or download
     the latest JAR file and add it to your Java project libraries.
 
-    Once you have oso installed, run `Server.java`.
+    Once you have Oso installed, run `Server.java`.
 amount: amount
 manager: manager
 submitted_by: submittedBy

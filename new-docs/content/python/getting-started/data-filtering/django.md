@@ -4,6 +4,8 @@ docname: getting-started/list-filtering/django
 images: {}
 path: /getting-started-list-filtering-django
 title: Django Adapter
+aliases: 
+    - /getting-started/list-filtering/django.html
 ---
 
 # Django Adapter
@@ -14,7 +16,7 @@ authorize each object individually.
 
 ## Installation
 
-The oso Django integration is available on [PyPI](https://pypi.org/project/django-oso/) and can be installed using
+The Oso Django integration is available on [PyPI](https://pypi.org/project/django-oso/) and can be installed using
 `pip`:
 
 ```
@@ -30,9 +32,9 @@ filtering policy is to have them inherit from
 under the hood to return Django QuerySets with authorization filters applied.
 
 The policies you write will largely look the same with or without the list
-filtering feature, and the oso engine will follow similar evaluation paths.
+filtering feature, and the Oso engine will follow similar evaluation paths.
 
-In the list filtering case, oso consults the policy to build up a list of
+In the list filtering case, Oso consults the policy to build up a list of
 conditions that must be met in order for a model to be authorized. These
 conditions are translated into Django ORM filters and applied to the query
 before retrieving objects from the database.
@@ -43,7 +45,7 @@ Let’s look at an example usage of this library. Our example is a social media
 app that allows users to view posts. There is a `User` model and a `Post`
 model:
 
-```
+{{< code file="models.py" >}}
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
@@ -67,7 +69,7 @@ class Post(AuthorizedModel):
 
     class Meta:
         app_label = "app"
-```
+{{< /code >}}
 
 We want to enforce the following authorization scheme for posts:
 
@@ -83,7 +85,7 @@ We want to enforce the following authorization scheme for posts:
 
 The corresponding policy looks as follows:
 
-```
+{{< code file="example.polar" >}}
 allow(_: app::User, "GET", post: app::Post) if
     post.access_level = "public";
 
@@ -94,11 +96,11 @@ allow(user: app::User, "GET", post: app::Post) if
 allow(user: app::User, "GET", post: app::Post) if
     post.access_level = "private" and
     post.creator in user.direct_reports.all();
-```
+{{< /code >}}
 
 ### Trying it out
 
-If you want to follow along, clone the oso repository from [GitHub](https://github.com/osohq/oso) and `cd`
+If you want to follow along, clone the Oso repository from [GitHub](https://github.com/osohq/oso) and `cd`
 into it and then into the `docs/examples/list-filtering/django` directory.
 Then, run `make setup` to install dependencies (primarily Django and
 `django-oso`) and seed the database.
@@ -153,11 +155,11 @@ constraints derived from the policy.
 
 For example, the above policy has the following rule:
 
-```
+{{< code file="example.polar" >}}
 allow(user: app::User, "GET", post: app::Post) if
     post.access_level = "private" and
     post.creator = user;
-```
+{{< /code >}}
 
 When determining which `Post` objects `User(id=2)` is authorized to see,
 the `django-oso` adapter converts the constraints on Post expressed in this

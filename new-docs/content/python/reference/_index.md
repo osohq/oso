@@ -5,7 +5,7 @@ any: false
 ---
 # Python Authorization Library
 
-The Python version of oso is available on [PyPI](https://pypi.org/project/oso/) and can be installed using
+The Python version of Oso is available on [PyPI](https://pypi.org/project/oso/) and can be installed using
 `pip`:
 
 ```

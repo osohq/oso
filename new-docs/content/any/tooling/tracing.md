@@ -1,5 +1,7 @@
 ---
 title: Tracing
+aliases: 
+    - ../more/dev-tools/tracing.html
 ---
 
 # Tracing

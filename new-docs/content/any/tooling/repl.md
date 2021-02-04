@@ -1,16 +1,18 @@
 ---
 title: REPL
+aliases: 
+    - ../more/dev-tools/repl.html
 ---
 
 # REPL
 
-The usual way to query an oso knowledge base is through the API in your
+The usual way to query an Oso knowledge base is through the API in your
 application’s language. But especially during development and debugging,
-it can be useful to interactively query a knowledge base. So oso provides
+it can be useful to interactively query a knowledge base. So Oso provides
 a simple REPL (Read, Evaluate, Print, Loop). To run it, first make sure
-that you have installed oso.
+that you have installed Oso.
 
-Once oso is installed, launch the REPL from the terminal:
+Once Oso is installed, launch the REPL from the terminal:
 
 Python
 
@@ -36,9 +38,9 @@ query>
 Node.js
 
 There are three ways to start the REPL depending on how you installed
-oso.
+Oso.
 
-If you installed oso globally (with `npm install -g oso`), you should
+If you installed Oso globally (with `npm install -g oso`), you should
 have an `oso` executable on your PATH:
 
 ```
@@ -46,14 +48,14 @@ $ oso
 query>
 ```
 
-If you installed oso into a project and are using [Yarn](https://yarnpkg.com/), you can run `yarn oso` to start the REPL:
+If you installed Oso into a project and are using [Yarn](https://yarnpkg.com/), you can run `yarn oso` to start the REPL:
 
 ```
 $ yarn oso
 query>
 ```
 
-If you installed oso into a project and are using NPM, you can add a
+If you installed Oso into a project and are using NPM, you can add a
 script to [the `scripts` property of your project’s package.json](https://docs.npmjs.com/files/package.json#scripts):
 
 ```
@@ -73,7 +75,7 @@ query>
 
 Rust
 
-To install the oso REPL, you can use `cargo install --features=cli oso`
+To install the Oso REPL, you can use `cargo install --features=cli oso`
 to download + install it from crates.io. Or run `cargo run --features=cli`
 from the `languages/rust/oso` directory in the [GitHub repository](https://github.com/osohq/oso).
 
