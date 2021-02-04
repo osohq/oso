@@ -14,7 +14,7 @@ w-full z-40 bg-primary text-primary-lightest py-2 font-base">
     <li class={{ if eq .p1 .p2 }} "underline" {{else}} "" {{ end }}>
         {{ if .p1.IsHome }}
         <a href="/" class="table-cell pt-1 block h-5 w-5">
-            {{ partial "fontawesome.html" "home" }}
+            {{ partialCached "fontawesome.html" "home" "home" }}
         </a>
         {{ else }}
         <a href="{{ .p1.RelPermalink }}">{{ .p1.Title }}</a>

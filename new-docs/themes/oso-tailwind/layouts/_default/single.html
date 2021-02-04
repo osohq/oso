@@ -25,7 +25,7 @@
         Choose your language:
       </h2>
       <div class="grid mx-6 grid-cols-3  gap-8 content-evenly">
-        {{ partial "language-chooser.html" . }}
+        {{ partialCached "language-chooser.html" . }}
       </div>
     </div>
   {{ end }}

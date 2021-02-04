@@ -9,7 +9,7 @@
 <div class="code" id="{{ $file | urlize}}">
 {{- with $file -}}
 <div class="filename rounded-md bg-gray-200 text-gray-700 text-sm py-2">
-{{- with $codeLang -}}<span class="px-2">{{- partial "fontawesome.html" $codeLang -}}</span>{{- end -}}{{- . -}}
+{{- with $codeLang -}}<span class="px-2">{{- partialCached "fontawesome.html" $codeLang -}}</span>{{- end -}}{{- . -}}
 </div>
 {{- end -}}
 {{ with $codeLang }}

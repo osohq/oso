@@ -2,7 +2,7 @@
 <a href="{{ .RelPermalink }}" class="flex flex-col justify-between items-center shadow-md rounded-lg w-full  bg-primary text-white
         hover:bg-yellow hover:text-black py-1">
     <div class="flex flex-shrink h-14 w-14 text-2xl pt-1 justify-center align-center items-center">
-        {{ partial "fontawesome.html" .Language.Params.icon }}
+        {{ partialCached "fontawesome.html" .Language.Params.icon .Language.Lang }}
     </div>
     <div class="flex text-lg font-semibold text-center align-baseline">{{ .Language.LanguageName }}</div>
 </a>

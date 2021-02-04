@@ -14,7 +14,7 @@
                 <a href="{{ index . 1 }}">
                     <button class="text-gray-200 hover:text-white">
                         <div class=" h-5 w-5 mr-2">
-                            {{ partial "fontawesome.html" (index . 0) }}
+                            {{ partialCached "fontawesome.html" (index . 0) (index . 0) }}
                         </div>
                     </button>
                 </a>
@@ -44,3 +44,7 @@
 {{ $navJs := resources.Get "js/nav.js" }}
 {{ $js := slice $navJs | resources.Concat "js/docs.js" | resources.Minify }}
 <script async="true" type="text/javascript" src="{{ $js.RelPermalink }}"></script>
+
+{{ if not .Site.IsServer }}
+<script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/8091225.js"></script>
+{{ end }}

@@ -11,7 +11,7 @@
     <div id="header-logo" class="pl-6">
         <a class="text-white text-base no-underline hover:no-underline text-xl" href="{{ $.Site.BaseURL }}index.html">
             <!-- h-12 is 48px -- double for quality sakes -->
-            {{- $image := resources.Get "oso_logo.png" -}}
+            {{- $image := resources.Get "img/oso_logo.png" -}}
             {{ $image = $image.Resize "x96" }}
             <img src="{{ $image.Permalink }}" class="mr-12 lg:mr-16 h-8 lg:h-12">
         </a>
@@ -45,7 +45,7 @@
                     <span class="tooltip-text" aria-hidden="true">Join our
                         community on Slack</span>
                     <div class=" h-5 w-5 mr-2">
-                        {{ partial "fontawesome.html" "slack" }}
+                        {{ partialCached "fontawesome.html" "slack" "slack" }}
                     </div>
                     <span class="hidden md:block">
                         Slack
@@ -56,7 +56,7 @@
                 <button class="nav-btn tooltip">
                     <span class="tooltip-text" aria-hidden="true">Browse the code on GitHub</span>
                     <div class=" h-5 w-5 mr-2">
-                        {{ partial "fontawesome.html" "github" }}
+                        {{ partialCached "fontawesome.html" "github" "github" }}
                     </div>
                     <span class="hidden md:block">
                         GitHub
@@ -68,7 +68,7 @@
                     <span class="tooltip-text" aria-hidden="true">Read the latest from the engineering
                         team</span>
                     <div class=" h-5 w-5 mr-2">
-                        {{ partial "fontawesome.html" "blog" }}
+                        {{ partialCached "fontawesome.html" "blog" "blog" }}
                     </div>
                     <span class="hidden md:block">
                         Blog
@@ -80,7 +80,7 @@
                 <button class=" nav-btn bg-yellow text-black tooltip">
                     <span class="tooltip-text" aria-hidden="true">Get the latest releases of Oso</span>
                     <div class=" h-5 w-5 mr-2">
-                        {{ partial "fontawesome.html" "download" }}
+                        {{ partialCached "fontawesome.html" "download" "download" }}
                     </div>
                     <span class="hidden md:block">
                         Download

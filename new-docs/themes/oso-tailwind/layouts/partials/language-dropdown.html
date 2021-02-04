@@ -11,11 +11,11 @@
         Pick Language
         {{ else }}
         <span class="w-6 mr-2 align-middle">
-            {{ partial "fontawesome.html" .Site.Language.Params.icon }}
+            {{ partialCached "fontawesome.html" .Site.Language.Params.icon .Site.Language.Lang }}
         </span>
         {{ end }}
         <div class="h-4 w-4 ml-4">
-            {{ partial "fontawesome.html" "chevron-down" }}
+            {{ partialCached "fontawesome.html" "chevron-down" }}
         </div>
     </button>
     <div id="language-selector-content"
@@ -31,7 +31,7 @@
                 {{ if eq $lang.Lang $.Site.Language.Lang }}
                 <div class="-m-3 p-3 flex items-start rounded-lg bg-primary text-white">
                     <span class="h-6 w-6 mr-2">
-                        {{ partial "fontawesome.html" $lang.Params.icon }}
+                        {{ partialCached "fontawesome.html" $lang.Params.icon $lang.Lang }}
                     </span>
                     {{ $lang.LanguageName }}
                 </div>
@@ -41,7 +41,7 @@
                 {{ range where $basePage.CurrentSection.Translations ".Lang" $lang.Lang }}
                 <a href="{{ .RelPermalink }}" class="-m-3 p-3 flex items-start rounded-lg hover:bg-gray-50">
                     <span class="w-6 h-6 mr-2">
-                        {{ partial "fontawesome.html" $lang.Params.icon }}
+                        {{ partialCached "fontawesome.html" $lang.Params.icon $lang.Lang }}
                     </span>
                     {{ $lang.LanguageName }}
                 </a>
@@ -50,7 +50,7 @@
                 {{ range where $basePage.Translations ".Lang" $lang.Lang }}
                 <a href="{{ .RelPermalink }}" class="-m-3 p-3 flex items-start rounded-lg hover:bg-gray-50">
                     <span class="w-6 h-6 mr-2">
-                        {{ partial "fontawesome.html" $lang.Params.icon }}
+                        {{ partialCached "fontawesome.html" $lang.Params.icon $lang.Lang }}
                     </span>
                     {{ $lang.LanguageName }}
                 </a>

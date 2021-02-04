@@ -2,8 +2,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ block "title" . }}
+        {{- if .Title -}}
         {{- .Title }} - {{ .Site.Title -}}
-        {{ end }}</title>
+        {{- else -}}
+        {{ .Site.Title }}
+        {{- end -}}{{- end -}}</title>
     {{- if .Description }}
     <meta name="description" content="{{ .Description }}" />
     {{ else }}
@@ -13,7 +16,7 @@
     <meta name="keywords" content="{{ delimit .Keywords " ," }}" />
     {{ end -}}
     {{- if .Params.Author }}
-    <meta name="author" content="{{ .Params.Author}}" />
+    <meta name="author" content="{{ .Params.Author }}" />
     {{ end -}}
     {{ hugo.Generator }}
 
@@ -31,6 +34,12 @@
     {{ else }}
     {{- $styles := $styles| minify | fingerprint | resources.PostProcess -}}
     <link rel="stylesheet" href="{{ $styles.RelPermalink }}" integrity="{{ $styles.Data.Integrity }}">
+    
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer','GTM-MK29QFG');</script>
     {{ end -}}
 
     {{ if .Params.any }}
@@ -40,4 +49,6 @@
     {{ end }}
     {{ end }}
     {{ end }}
+
+    
 </head>
