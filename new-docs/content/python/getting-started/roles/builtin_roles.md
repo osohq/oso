@@ -7,13 +7,6 @@ any: true
 weight: 1
 ---
 
-<!--
-Possibly copy content from [Introduction to Roles](../../getting-started/roles/_index.md)?
-
-How to not be duplicative? This should extend that guide, and elaborate on how we approach
-roles in general
-
--- Copy in the content from the existing roles guide -- -->
 
 # Built-in Role-Based Access Control
 
