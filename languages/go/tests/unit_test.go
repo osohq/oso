@@ -1,7 +1,6 @@
 package oso_test
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -163,22 +162,5 @@ func TestIsAllowed(t *testing.T) {
 	} else if a {
 		t.Error("IsAllowed returned true, expected false")
 	}
-
-}
-
-// TEST polar.go
-func MyFunc(a int, b string) string {
-	return fmt.Sprintf("%v %v", a, b)
-}
-
-func TestRegisterFunc(t *testing.T) {
-	var o oso.Oso
-	var err error
-	if o, err = oso.NewOso(); err != nil {
-		t.Fatalf("Failed to set up Oso: %v", err)
-	}
-	var myFunc = MyFunc
-
-	o.RegisterFunction("fn", &myFunc, nil)
 
 }
