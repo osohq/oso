@@ -143,8 +143,6 @@ func (h Host) CallFunction(fn reflect.Value, termArgs []types.Term) ([]reflect.V
 	// construct callArgs by converting them to typed values, then call method to get results
 	for i := 0; i < end; i++ {
 		arg := args[i]
-		// callArg := reflect.ValueOf(arg)
-		// callArgs[i] = callArg
 		callArgs[i] = reflect.New(fn.Type().In(i)).Elem()
 		err := SetFieldTo(callArgs[i], arg)
 		if err != nil {
