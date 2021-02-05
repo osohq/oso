@@ -50,7 +50,7 @@ func (o Oso) ClearRules() error {
 
 /*
 Register a Go type so that it can be referenced within Polar files.
-Accepts a pointer to constructor function, or nil if no constructor is required.
+Accepts a constructor function, or nil if no constructor is required.
 */
 func (o Oso) RegisterClass(cls reflect.Type, cptr interface{}) error {
 	return (*o.p).registerClass(cls, cptr, nil)
@@ -59,7 +59,7 @@ func (o Oso) RegisterClass(cls reflect.Type, cptr interface{}) error {
 /*
 Register a Go type under a certain name/alias, so that it can be referenced
 within Polar files by that name.
-Accepts a pointer to constructor function, or nil if no constructor is required.
+Accepts a constructor function, or nil if no constructor is required.
 */
 func (o Oso) RegisterClassWithName(cls reflect.Type, cptr interface{}, name string) error {
 	return (*o.p).registerClass(cls, cptr, &name)

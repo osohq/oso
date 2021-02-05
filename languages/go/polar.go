@@ -138,11 +138,14 @@ func (p Polar) repl(files ...string) error {
 	return fmt.Errorf("Go REPL is not yet implemented")
 }
 
-func (p Polar) registerClass(cls reflect.Type, cptr interface{}, name *string) error {
+/*
+Register a class with Polar. Accepts the class, a constructor function (or nil), and a name (or nil)
+*/
+func (p Polar) registerClass(cls reflect.Type, ctor interface{}, name *string) error {
 	// Get constructor
 	constructor := reflect.ValueOf(nil)
-	if cptr != nil {
-		constructor = reflect.ValueOf(cptr).Elem()
+	if ctor != nil {
+		constructor = reflect.ValueOf(ctor)
 		if constructor.Type().Kind() != reflect.Func {
 			return fmt.Errorf("Constructor must be a function, got: %v", constructor.Type().Kind())
 		}
