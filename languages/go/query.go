@@ -184,8 +184,6 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 			// construct callArgs by converting them to typed values, then call method to get results
 			for i := 0; i < end; i++ {
 				arg := args[i]
-				// callArg := reflect.ValueOf(arg)
-				// callArgs[i] = callArg
 				callArgs[i] = reflect.New(method.Type().In(i)).Elem()
 				err := host.SetFieldTo(callArgs[i], arg)
 				if err != nil {
