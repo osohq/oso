@@ -1,0 +1,24 @@
+backend:
+  name: github
+  repo: osohq/oso # Path to your GitHub repository
+  open_authoring: true
+  branch: sam/netlify-cms
+media_folder: static/img
+public_folder: /img
+publish_mode: editorial_workflow
+collections:
+  - name: 'content'
+    label: 'Content'
+    folder: 'new-docs/content/any'
+    create: true
+    slug: '{{slug}}'
+    # adding a nested object will show the collection folder structure
+    nested:
+      depth: 100 # max depth to show in the collection tree
+      summary: '{{title}}' # optional summary for a tree node, defaults to the inferred title field
+    editor:
+      preview: false
+    fields:
+      - { label: 'Title', name: 'title', widget: 'string' }
+      - { label: 'Description', name: 'description', widget: 'string' }
+      - { label: 'Body', name: 'body', widget: 'markdown' }
