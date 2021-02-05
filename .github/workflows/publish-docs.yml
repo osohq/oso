@@ -21,6 +21,8 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
     steps:
       - uses: actions/checkout@v2
+
+      ### Setup dependencies
       - uses: actions/setup-python@v2
         name: Install Python
         with:
@@ -33,6 +35,27 @@ jobs:
           working-directory: "languages/ruby"
       - name: Install yard
         run: gem install yard
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+
+      # Uncomment this when we want WASM on the docs site again
+      # - name: Install Rust stable toolchain
+      #   uses: actions-rs/toolchain@v1
+      #   with:
+      #     profile: minimal
+      #     toolchain: stable
+      #
+      # ### Build Rust WASM target
+      # - name: Add WebAssembly target
+      #   run: rustup target add wasm32-unknown-unknown
+      # - name: Install wasm-pack
+      #   run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      # - name: Build Rust WASM
+      #   run: make wasm-build
+
+      ### Install release version of Oso libraries
       - name: Download oso (Node.js) from release
         run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.oso_version }} | jq -r '.assets[] | select(.name == "oso-js-node-${{ github.event.inputs.oso_version }}.tgz") | .url') --output oso-js-node-${{ github.event.inputs.oso_version }}.tgz
@@ -58,10 +81,35 @@ jobs:
         run: pip install django_oso==${{ github.event.inputs.django_oso_version }} -f django-oso-python
       - name: Install sqlalchemy-oso from release
         run: pip install sqlalchemy_oso[flask]==${{ github.event.inputs.sqlalchemy_oso_version }} -f sqlalchemy-oso-python
+
+
+      ### Build old docs
       - name: Build docs
         run: SPHINXOPTS="-W" make -C docs build
+
+      ### Build new docs
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v2
+        with:
+          hugo-version: '0.79.1'
+      - name: Build Hugo API docs
+        run: make -C new-docs api_docs
+      - name: Build Hugo docs
+        if: github.event.inputs.url == 'docs-preview.oso.dev'
+        run: |
+          make install
+          HUGO_ENV=production hugo -b "https://docs-preview.oso.dev/"
+        working-directory: new-docs
+      - name: Build Hugo docs
+        if: github.event.inputs.url == 'docs.oso.dev'
+        run: |
+          make install
+          HUGO_ENV=production hugo -b "https://docs.osohq.com/"
+        working-directory: new-docs
+
+      ### Push to S3 + invalidate cache
       - name: s3 publish
-        run: aws s3 sync --delete docs/_build/html s3://${{ github.event.inputs.url }}
+        run: aws s3 sync --delete new-docs/public/ s3://${{ github.event.inputs.url }}
       - name: cloudfront invalidate docs preview
         run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
         if: github.event.inputs.url == 'docs-preview.oso.dev'
