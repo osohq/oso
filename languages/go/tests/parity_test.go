@@ -67,10 +67,6 @@ type ValueFactory struct {
 	InnerClass struct{}
 }
 
-func (vf ValueFactory) New() ValueFactory {
-	return ValueFactory{}
-}
-
 func NewValueFactory() ValueFactory {
 	return ValueFactory{
 		StringAttr: "abc",
@@ -397,8 +393,10 @@ func String(s string) *string {
 
 func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
 	var unit_class_const = NewUnitClass
+	var val_factory_const = NewValueFactory
 	var CONSTRUCTORS = map[string]interface{}{
-		"UnitClass": &unit_class_const,
+		"UnitClass":    &unit_class_const,
+		"ValueFactory": &val_factory_const,
 	}
 	for k, v := range CLASSES {
 		c := CONSTRUCTORS[k]

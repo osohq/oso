@@ -20,7 +20,7 @@ cases:
     load: |
       1;
     err: did not expect to find the token
-  
+
 
   # runtime errors
   - description: invalid in
@@ -29,5 +29,5 @@ cases:
 
   # lookup errors
   - description: invalid lookup
-    query: UnitClass.New().missing_attribute
+    query: x = new UnitClass() and x.missing_attribute
     err: "Application error: 'UnitClass' object has no attribute 'missing_attribute'"
