@@ -159,54 +159,9 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 			return nil
 		}
 		if method.Kind() == reflect.Func {
-			args, err := q.host.ListToGo(*event.Args)
+			results, err := q.host.CallFunction(method, *event.Args)
 			if err != nil {
-				return err
-			}
-			if event.Kwargs != nil {
-				return &errors.KwargsError{}
-			}
-			numIn := method.Type().NumIn()
-			var end int
-			if !method.Type().IsVariadic() {
-				if len(args) != numIn {
-					return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidCallError(instance, string(event.Attribute)), Info: fmt.Sprintf("incorrect number of arguments. Expected %v, got %v", numIn, len(args))}
-				}
-				end = numIn
-			} else {
-				// stop one before the end so we can make this a slice
-				end = numIn - 1
-			}
-
-			callArgs := make([]reflect.Value, numIn)
-			var results []reflect.Value
-
-			// construct callArgs by converting them to typed values, then call method to get results
-			for i := 0; i < end; i++ {
-				arg := args[i]
-				callArgs[i] = reflect.New(method.Type().In(i)).Elem()
-				err := host.SetFieldTo(callArgs[i], arg)
-				if err != nil {
-					return &errors.ErrorWithAdditionalInfo{
-						Inner: errors.NewInvalidCallError(instance, string(event.Attribute)),
-						Info:  err.Error(),
-					}
-				}
-			}
-			// Construct a slice for the last variadic arg for variadic methods
-			if method.Type().IsVariadic() {
-				remainingArgs := args[end:]
-				callArgs[end] = reflect.New(method.Type().In(end)).Elem()
-				err := host.SetFieldTo(callArgs[end], remainingArgs)
-				if err != nil {
-					return &errors.ErrorWithAdditionalInfo{
-						Inner: errors.NewInvalidCallError(instance, string(event.Attribute)),
-						Info:  err.Error(),
-					}
-				}
-				results = method.CallSlice(callArgs)
-			} else {
-				results = method.Call(callArgs)
+				return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidCallError(instance, string(event.Attribute)), Info: err.Error()}
 			}
 
 			// maybe: This is kind of odd, maybe error instead if len(results) > 1
