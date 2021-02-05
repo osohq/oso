@@ -5,7 +5,7 @@ cases:
   # construct test cases
   # TODO: add tests back in once constructor implementation is complete
   - description: can construct simple instance
-    query: x = UnitClass.New()
+    query: x = new UnitClass()
     result: [{x: {repr: UnitClass}}]
   # - description: can construct with no args
   #   query: new Constructor().NumKwargs() = 0

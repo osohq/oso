@@ -21,6 +21,10 @@ import (
 
 type UnitClass struct{}
 
+func NewUnitClass() UnitClass {
+	return UnitClass{}
+}
+
 func (u UnitClass) String() string {
 	return "UnitClass"
 }
@@ -392,8 +396,13 @@ func String(s string) *string {
 }
 
 func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
+	var unit_class_const = NewUnitClass
+	var CONSTRUCTORS = map[string]interface{}{
+		"UnitClass": &unit_class_const,
+	}
 	for k, v := range CLASSES {
-		err := o.RegisterClassWithName(v, k)
+		c := CONSTRUCTORS[k]
+		err := o.RegisterClassWithName(v, c, k)
 		if err != nil {
 			t.Fatal(err)
 		}

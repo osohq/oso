@@ -107,7 +107,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			}
 			return &results, nil
 		case QueryEventMakeExternal:
-			return nil, fmt.Errorf("`new` operator is not yet supported in Go.")
+			err = q.handleMakeExternal(ev)
 		case QueryEventExternalCall:
 			err = q.handleExternalCall(ev)
 		case QueryEventExternalIsa:
@@ -130,6 +130,16 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 		}
 	}
 
+}
+
+func (q Query) handleMakeExternal(event types.QueryEventMakeExternal) error {
+	fmt.Printf("%v", event)
+	id := uint64(event.InstanceId)
+	call, _ := event.Constructor.Value.ValueVariant.(ValueCall)
+	if call.Kwargs != nil {
+		return &errors.KwargsError{}
+	}
+	return q.host.MakeInstance(call, id)
 }
 
 func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
