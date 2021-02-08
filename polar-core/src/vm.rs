@@ -639,7 +639,7 @@ impl PolarVirtualMachine {
         for (var, value) in bindings.iter() {
             self.bind(var, value.clone());
         }
-        self.csp += bindings.len();
+        self.csp = self.bsp();
     }
 
     // TODO remove this
@@ -649,8 +649,7 @@ impl PolarVirtualMachine {
 
     /// Retrieve the current non-constant bindings as a hash map.
     pub fn bindings(&self, include_temps: bool) -> Bindings {
-        // TODO constants
-        self.binding_manager.bindings(include_temps)
+        self.binding_manager.bindings_after(include_temps, self.csp)
     }
 
     /// Returns bindings for all vars used by terms in terms.

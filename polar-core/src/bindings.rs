@@ -248,8 +248,12 @@ impl BindingManager {
     }
 
     pub fn bindings(&self, include_temps: bool) -> Bindings {
+        self.bindings_after(include_temps, 0)
+    }
+
+    pub fn bindings_after(&self, include_temps: bool, after: Bsp) -> Bindings {
         let mut bindings = HashMap::new();
-        for Binding(var, value) in &self.bindings {
+        for Binding(var, value) in &self.bindings[after..] {
             if !include_temps && var.is_temporary_var() {
                 continue;
             }
