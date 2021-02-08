@@ -392,8 +392,6 @@ func String(s string) *string {
 }
 
 func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
-	// TODO: how sketchy of a thing is this to do?
-	// is there a better way to pass around functions?
 	var CONSTRUCTORS = map[string]interface{}{
 		"UnitClass":    NewUnitClass,
 		"ValueFactory": NewValueFactory,
