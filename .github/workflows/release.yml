@@ -115,8 +115,6 @@ jobs:
         run: |
           rustup target add x86_64-pc-windows-gnu
           cargo build --target x86_64-pc-windows-gnu --release
-          ls target/x86_64-pc-windows-gnu
-          ls target/x86_64-pc-windows-gnu/release
       - if: runner.os == 'Windows'
         run: mv target/x86_64-pc-windows-gnu/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
       - uses: actions/upload-artifact@v2
