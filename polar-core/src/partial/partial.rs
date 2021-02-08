@@ -1729,5 +1729,62 @@ mod test {
         Ok(())
     }
 
+    #[test]
+    fn test_multiple_gt_three_variables() -> TestResult {
+        let p = Polar::new();
+        p.load_str(r#"f(x, y, z) if x > z and y > z;"#)?;
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y"), sym!("z")])), false);
+        assert_partial_expressions!(
+            next_binding(&mut q)?,
+            "x" => "_this > z and y > z",
+            "y" => "x > z and _this > z",
+            "z" => "x > _this and y > _this"
+        );
+        assert_query_done!(q);
+        Ok(())
+    }
+
+    #[test]
+    fn test_negated_any_value() -> TestResult {
+        let p = Polar::new();
+        p.load_str(r#"f(x, y) if x = 1 and not (y = 1 and x = 2);"#)?;
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
+        let bindings = next_binding(&mut q)?;
+        assert_eq!(bindings.get(&sym!("x")).unwrap(), &term!(1));
+        // y is unbound (to itself)
+        assert_eq!(bindings.get(&sym!("y")).unwrap(), &term!(sym!("y")));
+        assert_query_done!(q);
+        Ok(())
+    }
+
+    #[test]
+    fn test_negation_two_rules() -> TestResult {
+        let p = Polar::new();
+        // TODO: More complicated version:
+        //  f(x) if not g(z) and z = x;
+        //  g(y) if y = 1;
+        p.load_str(r#"f(x) if not g(x);
+                      g(y) if y = 1;
+                      "#)?;
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        let bindings = next_binding(&mut q)?;
+        assert_partial_expressions!(
+            &bindings,
+            "x" => "_this != 1"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("f", [2])), false);
+        assert_eq!(next_binding(&mut q)?.len(), 0);
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("f", [1])), false);
+        assert_query_done!(q);
+
+        Ok(())
+    }
+
+
     // TODO(gj): add test where we have a partial prior to an inversion
+    // TODO (dhatch): We have few tests involving multiple rules and partials.
 }
