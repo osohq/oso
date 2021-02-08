@@ -111,6 +111,19 @@ jobs:
         with:
           name: oso_static_library
           path: polar-c-api/polar.h
+      - if: runner.os == 'Windows'
+        run: |
+          rustup target add x86_64-pc-windows-gnu
+          cargo build --target x86_64-pc-windows-gnu --release
+          ls target/x86_64-pc-windows-gnu
+          ls target/x86_64-pc-windows-gnu/release
+      - if: runner.os == 'Windows'
+        run: mv target/x86_64-pc-windows-gnu/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
+      - uses: actions/upload-artifact@v2
+        if: runner.os == 'Windows'
+        with:
+          name: oso_static_library
+          path: target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
 
   build_go:
     name: Build go.
@@ -137,6 +150,8 @@ jobs:
           cp -r oso_static_library/libpolar-Linux.a languages/go/internal/ffi/native/linux/libpolar.a
           mkdir -p languages/go/native/macos
           cp -r oso_static_library/libpolar-macOS.a languages/go/internal/ffi/native/macos/libpolar.a
+          mkdir -p languages/go/native/windows
+          cp -r oso_static_library/libpolar-Windows.a languages/go/internal/ffi/native/windows/libpolar.a
           rm languages/go/Makefile
       - name: Copy license.
         run: cp LICENSE languages/go/LICENSE
@@ -373,7 +388,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
