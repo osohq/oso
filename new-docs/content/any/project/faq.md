@@ -1,35 +1,37 @@
 ---
 title: FAQ
+aliases: 
+    - ../more/faq.html
 ---
 
 # FAQ
 
-## How do I integrate oso into my app?
+## How do I integrate Oso into my app?
 
-There are two main steps to adding oso.
+There are two main steps to adding Oso.
 
-First, you express authorization logic as declarative rules, written in Polar and stored in oso policy files.
+First, you express authorization logic as declarative rules, written in Polar and stored in Oso policy files.
 
-Second, you install the oso library for your application language/framework,
+Second, you install the Oso library for your application language/framework,
 and add the `is_allowed` checks to wherever it is most suitable for your use case.
 For example, it is common to have checks at the API layer – for example checking
 the HTTP request, and the path supplied – as well as checks on the data access,
 e.g. when your application is retrieving data from the database.
 
-For more detailed discussion on where to integrate oso in your application
+For more detailed discussion on where to integrate Oso in your application
 depending on your requirements, please visit our guide, Add To Your Application.
 
-## What data does oso store?
+## What data does Oso store?
 
-When you load policy files into oso, oso stores in memory the rules defined in
-the policy. In addition, oso stores any registered classes on the oso instance.
+When you load policy files into Oso, Oso stores in memory the rules defined in
+the policy. In addition, Oso stores any registered classes on the Oso instance.
 
-In the course of executing a query, oso caches any instances of classes/objects
+In the course of executing a query, Oso caches any instances of classes/objects
 that it sees, but it clears these when the query finishes.
 
-oso *does not*, for example, store any data about the users, what groups they
+Oso *does not*, for example, store any data about the users, what groups they
 are in, or what permissions have been assigned to them. The expectation is that
-this data lives in your application, and that oso accesses it as needed when evaluating queries.
+this data lives in your application, and that Oso accesses it as needed when evaluating queries.
 
 Because of this, it is rare to need to change policies while the application
 is running. For example, if you need to revoke a user’s access because they leave
@@ -38,24 +40,24 @@ the company or change roles, then updating the application data will immediately
 Changes to policy should be seen as the same as making source code changes,
 and can be implemented through existing deployment processes.
 
-## Can I query oso arbitrarily?
+## Can I query Oso arbitrarily?
 
 Absolutely, you can!
 
-We use `allow` as convention to make it easy to get started with oso.
-However, all oso libraries additionally expose a `query_rule` method,
+We use `allow` as convention to make it easy to get started with Oso.
+However, all Oso libraries additionally expose a `query_rule` method,
 which enables you to query any rule you want.
 
 Beyond this, you can even query using inputs that are not yet set by
 passing in variables. However, this is currently an experimental feature, and
 full documentation is coming soon.
 
-## How does oso access my application data?
+## How does Oso access my application data?
 
 When a policy contains an attribute or method lookup, e.g., `actor.email`, the
-policy evaluation pauses and oso returns control to the application.
+policy evaluation pauses and Oso returns control to the application.
 It creates an event to say “please lookup the field `email` on the object
-`instance with id 123`”. (The oso library stores a lookup from instance IDs to the
+`instance with id 123`”. (The Oso library stores a lookup from instance IDs to the
 concrete application instance.)
 
 What happens next depends on the specific language, but it will use some form of
@@ -78,7 +80,7 @@ The answer, of course, varies by use case, but we suggest the following rules of
 
 
 * Yes, you can and should have multiple policy files. All rules loaded
-into oso live in the same namespace; you can reference rules in other
+into Oso live in the same namespace; you can reference rules in other
 policy files without importing.
 
 
@@ -89,19 +91,19 @@ rules, where each rule captures a self-contained piece of logic.
 
 * You can organize source files according to the components they refer to.
 
-## What are the performance characteristics of oso?
+## What are the performance characteristics of Oso?
 
-oso is designed to be lightweight and to have a limited performance footprint. The core library is written in Rust, and is
+Oso is designed to be lightweight and to have a limited performance footprint. The core library is written in Rust, and is
 driven directly by your application. There are no background threads, no garbage collection, no
 IO to wait on. Each instruction takes about 1-2 us, and typical queries take approximately 1-20 ms.
 
-For a more detailed discussion of the performance characteristics of oso,
+For a more detailed discussion of the performance characteristics of Oso,
 please the performance page.
 
-## Use cases, i.e., When should I use oso, and when should I use something else?
+## Use cases, i.e., When should I use Oso, and when should I use something else?
 
-The foundation of oso is designed to support a wide variety of use cases, though
-given oso’s focus on application integration there are some use cases that are
+The foundation of Oso is designed to support a wide variety of use cases, though
+given Oso’s focus on application integration there are some use cases that are
 currently a more natural fit than others. For a more detailed discussion of this
 topic, please see our use cases page.
 
@@ -119,21 +121,21 @@ to stay up to speed on the latest product updates.
 
 We currently support Linux, Mac OS X and Windows.
 
-## What license does oso use?
+## What license does Oso use?
 
-oso is licensed under [the *Apache 2.0 license*](https://github.com/osohq/oso/blob/master/LICENSE).
+Oso is licensed under [the *Apache 2.0 license*](https://github.com/osohq/oso/blob/master/LICENSE).
 
 ## How does pricing work?
 
-oso is freely available as an open source product and will always be free and open source.
+Oso is freely available as an open source product and will always be free and open source.
 
 We are also working on an enterprise product that extends the open source core with
-additional features. If you are interested in support for oso or enterprise
+additional features. If you are interested in support for Oso or enterprise
 features, please [contact us](https://osohq.com/company/contact-us).
 
-## Who builds and maintains oso?
+## Who builds and maintains Oso?
 
-oso is built by [oso](https://www.osohq.com/company/about-us)! We are headquartered in New York City with engineers across 3 time zones, and we are
+Oso is built by [Oso](https://www.osohq.com/company/about-us)! We are headquartered in New York City with engineers across 3 time zones, and we are
 hard at work on new features and improvements. If you have feedback or ideas about
 how we can make the product better, we would be delighted to hear from you.
 Please feel free to reach out to us at <a href="mailto:engineering@osohq.com">engineering@osohq.com</a>.

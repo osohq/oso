@@ -9,7 +9,7 @@ rust-test:
 	cargo test --all-targets --all-features
 
 rust-build:
-	cargo build
+	cargo build -p polar-c-api
 
 python-build: rust-build
 	$(MAKE) -C languages/python/oso build

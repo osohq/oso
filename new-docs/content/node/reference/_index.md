@@ -9,7 +9,7 @@ any: false
 
 Node.js
 
-The Node.js version of oso is available on [NPM](https://www.npmjs.com/package/oso) and can be installed
+The Node.js version of Oso is available on [NPM](https://www.npmjs.com/package/oso) and can be installed
 globally with NPM:
 
 ```
@@ -29,7 +29,7 @@ or Yarn:
 $ yarn add oso@0.9.0
 ```
 
-For more information on the oso Node.js library, see the library
+For more information on the Oso Node.js library, see the library
 documentation.
 
 **Requirements**

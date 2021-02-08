@@ -1,6 +1,6 @@
 #!/bin/sh
 set -ex
-brand_icons="twitter github slack python java node-js rust"
+brand_icons="linkedin-in twitter github slack python java node-js rust"
 
 dest=fontawesome
 url=https://raw.githubusercontent.com/FortAwesome/Font-Awesome/master/svgs/brands

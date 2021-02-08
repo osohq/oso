@@ -1,10 +1,10 @@
 # Access Patterns
 
-oso supports numerous access control schemes.
+Oso supports numerous access control schemes.
 In this guide, we will cover:
 
 
-1. How to use oso to protect data access over three different dimensions:
+1. How to use Oso to protect data access over three different dimensions:
 
 
     * model (table)
@@ -16,13 +16,13 @@ In this guide, we will cover:
     * field (column)
 
 
-2. Where to integrate oso’s policy evaluation in your application.
+2. Where to integrate Oso’s policy evaluation in your application.
 
 ## Access Control Dimensions
 
 Authorization is fundamentally about controlling data access or modification
 based on properties of the actor. This is why `actor` and `resource` are
-primary concepts in oso.
+primary concepts in Oso.
 
 Control over data access is commonly exercised over several dimensions:
 
@@ -37,7 +37,7 @@ matching certain conditions)
 * **field** or column level (an actor can access or update only certain fields of a
 record)
 
-An oso policy can restrict access along one or several of these dimensions.
+An Oso policy can restrict access along one or several of these dimensions.
 
 ```
 allow(actor, "approve", expense: Expense) if
@@ -241,7 +241,7 @@ control to only load the columns the user can access:
 from oso import Variable
 
 def get_expense(user, expense_id):
-    # Query oso for all fields allowed for this user.
+    # Query Oso for all fields allowed for this user.
     allowed_fields = oso.query_rule("allow_field",
                                user, "view", expense, Variable("field"))
     # Convert the returned query response into a list of fields
@@ -261,7 +261,7 @@ def get_expense(user, expense_id):
         return NotAuthorizedResponse()
 ```
 
-Now, we are using oso to tell us what fields to query for.  In this example, the
+Now, we are using Oso to tell us what fields to query for.  In this example, the
 policy is evaluated both **before and after data fetch** for greater efficiency.
 
 ## Authorizing List Endpoints
@@ -281,7 +281,7 @@ allow(actor: User, "view", resource: Expense) if
 To authorize this request for a single record fetch, for example
 `GET /expense/1`, we could fetch the record (the equivalent of
 `SELECT \* FROM expenses WHERE id = 1`) then evaluate the allow rule, passing
-the record to oso as a resource.
+the record to Oso as a resource.
 
 A list endpoint involves multiple records that must be fetched from the data
 layer, then authorized. Usually a filter must be applied when querying for
@@ -300,7 +300,7 @@ individually authorize every record.
 instead of the resource.
 
 
-4. Have oso output the filter to be applied to the query before data fetch.
+4. Have Oso output the filter to be applied to the query before data fetch.
 
 Let’s see an example of how each of these would work. We will use Python
 pseudocode for this example, but the same concepts translate to any web application.
@@ -310,7 +310,7 @@ pseudocode for this example, but the same concepts translate to any web applicat
 In this example, we apply a filter in our application (how restrictive this is
 depends on the use case & expected amount of records).  For example, suppose each
 user has an associated organization id.  Users can only view expenses by
-organization.  We could apply this filter, then further restrict access using oso.
+organization.  We could apply this filter, then further restrict access using Oso.
 
 ```
 def get_expenses(user):
@@ -334,10 +334,10 @@ fetch requests.  It is not performant if the record set is large.
 
 **Duplicating filter logic**
 
-Above, we only use oso to confirm that access is allowed.  While oso
+Above, we only use Oso to confirm that access is allowed.  While Oso
 remains the authoritative source of authorization information, it is not used
 to determine which records to fetch.  This approach is helpful if you have
-authorization rules that must be applied to highly sensitive data using oso,
+authorization rules that must be applied to highly sensitive data using Oso,
 but still need the performance gains from explicitly filtering records
 in your application.
 
@@ -358,7 +358,7 @@ def get_expenses(user):
         if not oso.is_allowed(actor=user, action="view", resource=record):
             if DEBUG:
                 # In debug mode, this is a programming error.
-                # The logic in oso should be kept in sync with the filters
+                # The logic in Oso should be kept in sync with the filters
                 # in the above query.
                 assert False
 
@@ -384,7 +384,7 @@ assertion in debug mode.
 
 **Authorizing the filter to be applied, instead of the resource**
 
-Instead of duplicating logic in oso and our application, we could authorize the
+Instead of duplicating logic in Oso and our application, we could authorize the
 request filter.
 
 ```
@@ -429,10 +429,10 @@ allow_filter(actor, "view", "expense", filters) if
 
 While we have abstracted the policy slightly further and no longer need
 as many `oso.is_allowed()` checks to complete the request, we still must keep
-the filter in sync between oso and our code. Instead, we can make oso the
+the filter in sync between Oso and our code. Instead, we can make Oso the
 authoritative source of query filters that perform authorization.
 
-**Have oso output the filter**
+**Have Oso output the filter**
 
 This is a similar structure to above, but instead the authorization filter is
 contained only in the policy.  This structure can simplify application code, and
@@ -465,7 +465,7 @@ Now, in our app:
 
 ```
 def get_expenses(user):
-    # Get authorization filters from oso
+    # Get authorization filters from Oso
     filters = oso.query_rule(
         "allow_with_filter", actor, "view", "expense", Variable("filters"))
 
@@ -492,7 +492,7 @@ application code, without any duplication.
 ## Summary
 
 In this guide, we covered the various access control levels
-(model, attribute & field) and showed you how to integrate oso in your application
+(model, attribute & field) and showed you how to integrate Oso in your application
 at various spots. We then covered list endpoints — which are often difficult to
 write complex authorization for — in detail. We discussed several potential
 techniques for structuring a policy that handles these types of requests.

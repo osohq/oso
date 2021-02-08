@@ -1,15 +1,15 @@
-baseURL = "https://docs.osohq.com/v2/"
+baseURL = "https://docs.osohq.com/"
 languageCode = "en-us"
-title = "oso Documentation"
-theme = ["tailwind", "oso"]
+title = "Oso Documentation"
+theme = ["oso-tailwind", "oso-webpack"]
 uglyurls = true
 
 defaultContentLanguage = "any"
 
 # used for Twitter card etc
 [params]
-  description = "Explore our guides and reference articles for learning oso and adding it to your application."
-  images = ["img/oso-2020-white-on-black-rounded.png"]
+  description = "Explore our guides and reference articles for learning Oso and adding it to your application."
+  images = ["oso-2020-white-on-black-rounded.png"]
 
 [languages]
   [languages.any]
@@ -119,6 +119,11 @@ defaultContentLanguage = "any"
     target = "content"
     lang = "go"
 
+  # Mount the old docs as a subdirectory for now
+  [[module.mounts]]
+  source = "../docs/_build/html"
+  target = "static/v1/"
+
 [build]
   writeStats = true
 
@@ -127,3 +132,5 @@ defaultContentLanguage = "any"
     [markup.goldmark.extensions]
       strikethrough = true
       table = true
+    [markup.goldmark.renderer]
+      unsafe = true

@@ -1,6 +1,8 @@
 ---
 title: Ruby Types in Polar
 weight: 2
+aliases:
+    - /using/libraries/ruby/index.html
 ---
 
 [rb-array]: https://ruby-doc.org/core/Array.html
@@ -9,21 +11,21 @@ weight: 2
 
 ## Working with Ruby Types
 
-oso’s Ruby authorization library allows you to write policy rules over Ruby
+Oso’s Ruby authorization library allows you to write policy rules over Ruby
 objects directly. This document explains how different types of Ruby objects
-can be used in oso policies.
+can be used in Oso policies.
 
-{{< callout "Note" "blue" >}}
-  More detailed examples of working with application objects can be found in
-  [Policy Examples](learn/policies/examples).
-{{< /callout >}}
+{{% callout "Note" "blue" %}}
+More detailed examples of working with application objects can be found in
+[Policy Examples](learn/examples).
+{{% /callout %}}
 
 ### Class Instances
 
-You can pass any Ruby instance into oso and access its methods and fields from
+You can pass any Ruby instance into Oso and access its methods and fields from
 your policy (see [Application Types](learn/policies/application-types)).
 
-Ruby instances can be constructed from inside an oso policy using the [`new`
+Ruby instances can be constructed from inside an Oso policy using the [`new`
 operator](polar-syntax#new) if the Ruby class has been **registered** using the
 `Oso#register_class` method. An example of this can be found
 [here](learn/policies/application-types).
@@ -56,9 +58,9 @@ user = User.new("alice@example.com")
 raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 ```
 
-{{< callout "Warning" "orange" >}}
+{{% callout "Warning" "orange" %}}
   Polar does not support methods that mutate strings in place.
-{{< /callout >}}
+{{% /callout %}}
 
 ### Lists
 
@@ -82,10 +84,10 @@ user = User.new(["HR", "payroll"])
 raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 ```
 
-{{< callout "Warning" "orange" >}}
+{{% callout "Warning" "orange" %}}
   Polar does not support methods that mutate lists in place unless the list is
   also returned from the method.
-{{< /callout >}}
+{{% /callout %}}
 
 Likewise, lists constructed in Polar may be passed into Ruby methods:
 
