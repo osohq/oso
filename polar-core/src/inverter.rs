@@ -13,8 +13,9 @@ use crate::partial::simplify_bindings;
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 use crate::vm::{
-    cycle_constraints, Binding, BindingStack, Goals, PolarVirtualMachine, VariableState,
+    cycle_constraints, Goals, PolarVirtualMachine,
 };
+use crate::bindings::{VariableState, BindingStack, Binding};
 
 #[derive(Clone)]
 pub struct Inverter {
@@ -141,6 +142,8 @@ fn invert_partials(bindings: BindingStack, vm: &PolarVirtualMachine, bsp: usize)
     new_bindings
 }
 
+// TODO remove dedupe bindings
+
 /// Only keep latest bindings.
 fn dedupe_bindings(bindings: BindingStack) -> BindingStack {
     let mut seen = HashSet::new();
@@ -260,7 +263,7 @@ impl Runnable for Inverter {
                     return Ok(QueryEvent::Done { result });
                 }
                 QueryEvent::Result { .. } => {
-                    let bindings: BindingStack = self.vm.bindings.drain(self.bsp..).collect();
+                    let bindings: BindingStack = self.vm.bindings_for_inverter().drain(self.bsp..).collect();
                     // Add new part of binding stack from inversion to results.
                     self.results.push(bindings);
                 }
