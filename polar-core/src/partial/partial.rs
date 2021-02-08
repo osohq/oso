@@ -286,7 +286,7 @@ mod test {
     use crate::error::{ErrorKind, PolarError, RuntimeError};
     use crate::events::QueryEvent;
     use crate::formatting::ToPolarString;
-    use crate::kb::Bindings;
+    use crate::bindings::Bindings;
     use crate::polar::{Polar, Query};
     use crate::terms::{Call, Dictionary, InstanceLiteral, Pattern};
 
