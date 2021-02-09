@@ -2,7 +2,7 @@ TODO: TBD where to add
 
 # Add To Your Application
 
-This guide covers a little more detail about how to add oso to your application.
+This guide covers a little more detail about how to add Oso to your application.
 
 Whereas in the Quickstart we zoomed through an example
 of authorization in a simple web server, in this guide we’ll show some more
@@ -11,7 +11,7 @@ practical examples in the context of a more realistic application.
 Python
 
 Our sample expenses application is built with Flask, but we are not using
-anything from oso that is unique to Flask, and the same patterns we cover here
+anything from Oso that is unique to Flask, and the same patterns we cover here
 can be used anywhere.
 
 We highly encourage you to follow along with the code by cloning the example repository
@@ -22,7 +22,7 @@ and trying it out. The code can be found here:
 Java
 
 Our sample expenses application is a Maven project built with Spring Boot.
-We are not using anything from oso that is unique to Spring Boot, and the same patterns we cover here
+We are not using anything from Oso that is unique to Spring Boot, and the same patterns we cover here
 can be used anywhere.
 
 We highly encourage you to follow along with the code by cloning the example repository
@@ -37,7 +37,7 @@ results. We encourage you to take a look around before continuing!
 
 Python
 
-The application has a few requirements, including Flask and, of course, oso.
+The application has a few requirements, including Flask and, of course, Oso.
 We recommend installing these within a virtual environment:
 
 ```
@@ -75,7 +75,7 @@ $ mvn spring-boot:run
 
 Python
 
-There are two pieces to get started with oso in your application.
+There are two pieces to get started with Oso in your application.
 The policy file, and the `oso.is_allowed` call.
 
 The policy file captures the authorization logic you want to apply in
@@ -84,7 +84,7 @@ enforce that policy in your application.
 
 Java
 
-There are two pieces to get started with oso in your application.
+There are two pieces to get started with Oso in your application.
 The policy file, and the `oso.isAllowed` call.
 
 The policy file captures the authorization logic you want to apply in
@@ -107,7 +107,7 @@ expenses report via the `GET /expenses/report` route.
 The goal of the latter is to restrict them from viewing data they shouldn’t have
 access to, e.g. they should not be able to see other users’ data.
 
-### Add oso
+### Add Oso
 
 Python
 
@@ -118,7 +118,7 @@ file, and all of the authorization in the application is managed through the
 In the application, we need to:
 
 
-1. Create the oso instance
+1. Create the Oso instance
 
 
 2. Load in policy files.
@@ -127,7 +127,7 @@ In the application, we need to:
 3. Register application classes
 
 
-4. Attach the oso instance to the application
+4. Attach the Oso instance to the application
 
 We have achieved this using the `init_oso` method:
 
@@ -159,7 +159,7 @@ file.
 In the application, we need to:
 
 
-1. Create the oso instance
+1. Create the Oso instance
 
 
 2. Load in policy files.
@@ -168,7 +168,7 @@ In the application, we need to:
 3. Register application classes
 
 
-4. Attach the oso instance to the application
+4. Attach the Oso instance to the application
 
 We have achieved this using the `setupOso` method, in `Application.java`.
 
@@ -660,7 +660,7 @@ HTTP/1.1 403
 
 ## Summary
 
-In this guide, we showed a few examples of how to add oso to a more realistic
+In this guide, we showed a few examples of how to add Oso to a more realistic
 application. We added some route-level authorization to control who is allowed
 to make requests to certain routes. We also used a new `authorize` method to
 make it convenient to add data access controls to our route handlers.

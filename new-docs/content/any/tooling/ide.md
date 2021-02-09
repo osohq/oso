@@ -1,10 +1,12 @@
 ---
 title: IDE Support
+aliases: 
+    - ../more/dev-tools/ide.html
 ---
 
 # IDE Support
 
-oso’s IDE (Integrated Development Environment) integrations provide syntax highlighting for `.polar` files.
+Oso’s IDE (Integrated Development Environment) integrations provide syntax highlighting for `.polar` files.
 
 ## Supported IDEs
 

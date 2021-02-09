@@ -1,5 +1,8 @@
 ---
-title: Application Data
+title: Rust Types in Polar
+weight: 2
+aliases:
+    - /using/libraries/rust/index.html
 ---
 
 [rust-string]: https://doc.rust-lang.org/std/string/struct.String.html
@@ -9,22 +12,22 @@ title: Application Data
 
 ## Working with Rust Types
 
-oso’s Rust authorization library allows you to write policy rules over Rust
+Oso’s Rust authorization library allows you to write policy rules over Rust
 types directly. This document explains how different Rust types can be used in
-oso policies.
+Oso policies.
 
-{{< callout "Note" "blue" >}}
-  More detailed examples of working with application objects can be found in
-  [Policy Examples](learn/policies/examples).
-{{< /callout >}}
+{{% callout "Note" "blue" %}}
+More detailed examples of working with application objects can be found in
+[Policy Examples](learn/examples).
+{{% /callout %}}
 
 ### Structs + Enums
 
-Rust structs and enums can be registered with oso, which lets you pass them in
+Rust structs and enums can be registered with Oso, which lets you pass them in
 and access their methods and fields in your policy (see [Application
 Types](learn/policies/application-types)).
 
-Rust structs can also be constructed from inside an oso policy using [the `new`
+Rust structs can also be constructed from inside an Oso policy using [the `new`
 operator](polar-syntax#new) if a type constructor is provided at registration.
 
 ### Numbers and Booleans
@@ -55,14 +58,13 @@ let user = User{username: "alice@example.com".to_owned()};
 assert!(oso.is_allowed(user, "foo", "bar")?);
 ```
 
-{{< callout "Warning" "orange" >}}
+{{% callout "Warning" "orange" %}}
   Polar does not support methods that mutate strings in place.
-{{< /callout >}}
+{{% /callout %}}
 
 ### Vectors
 
-[Vec\<T>][rust-vec] maps to a Polar [list](polar-syntax#lists), given that `T:
-ToPolar`.
+[Vec\<T>][rust-vec] maps to a Polar [list](polar-syntax#lists), given that `T: ToPolar`.
 
 Currently, no methods on `Vec` are exposed to Polar.
 
@@ -83,10 +85,10 @@ let user = User { groups: vec!["HR".to_string(), "payroll".to_string()] };
 assert!(oso.is_allowed(user, "foo", "bar")?);
 ```
 
-{{< callout "Warning" "orange" >}}
+{{% callout "Warning" "orange" %}}
   Polar does not support methods that mutate lists in place unless the list is
   also returned from the method.
-{{< /callout >}}
+{{% /callout %}}
 
 Rust methods like [`Vec::get`][rust-vec-get] may be used for random access to
 list elements, but there is currently no Polar syntax that is equivalent to the

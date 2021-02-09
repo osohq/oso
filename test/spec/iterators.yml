@@ -1,0 +1,16 @@
+name: Iterable application classes
+policies: []
+description: Application classes that extend/implement some concept of iteration
+cases:
+  - description: can be iterated over
+    query: iter = IterableClass.New([1,2,3]) and x in iter
+    result: [{x: 1}, {x: 2}, {x: 3}]
+  - description: can be empty
+    query: x in IterableClass.New([])
+    result: []
+  - description: can call methods on them
+    query: x = IterableClass.New([1, 2, 3]).Sum()
+    result: [{x: 6}]
+  - description: fail if not iterable
+    query: x in UnitClass.New()
+    err: is not iterable

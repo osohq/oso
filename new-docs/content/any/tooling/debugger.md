@@ -1,5 +1,7 @@
 ---
 title: Debugger
+aliases: 
+    - ../more/dev-tools/debugger.html
 ---
 
 # Debugger
@@ -352,11 +354,11 @@ Print variables in the current scope. If one or more arguments are provided,
 print the value of those variables. If a provided variable does not exist in
 the current scope, print `<unbound>`.
 
-{{< callout "Note" "green" >}}
+{{% callout "Note" "green" %}}
   Due to temporaries used inside the engine, variables may not be available
   under the names used in the Polar file. `var` with no argument will list
   variable names in the current scope.
-{{< /callout >}}
+{{% /callout %}}
 
 ```
 debug> line

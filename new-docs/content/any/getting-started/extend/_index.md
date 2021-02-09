@@ -1,5 +1,5 @@
 ---
-title: "Extending oso"
+title: "Extending Oso"
 weight: 10
 draft: True
 ---

@@ -2,6 +2,8 @@
 title: Polar Syntax
 any: true
 weight: 1
+aliases: 
+    - ../using/polar-syntax.html
 ---
 
 # Polar Syntax
@@ -91,7 +93,7 @@ specified before the dictionary:
 Bear{first_name: "Yogi", last_name: "Bear"}
 ```
 
-Classes can be registered with the oso library to integrate with Polar. See
+Classes can be registered with the Oso library to integrate with Polar. See
 [Application Types](learn/policies/application-types) for more information.
 
 An instance literal can only be used with [the `new` operator](#new) or as a
@@ -225,11 +227,11 @@ operator can be used. For example, the rule…
 ```polar
 oso_user(first, last) if
     user(first, last) and
-    employee(company("oso"), person(first, last));
+    employee(company("Oso"), person(first, last));
 ```
 
 …will be satisfied if the named person is a user **and** that person is an
-employee of oso.
+employee of Oso.
 
 #### Disjunction (or)
 

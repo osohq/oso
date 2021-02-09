@@ -1,3 +1,6 @@
+docs:
+	cd docs && sphinx-build -M html . _build
+
 lint: lint-requirements typecheck
 	$(MAKE) -C oso lint
 	$(MAKE) -C django-oso lint
@@ -14,4 +17,4 @@ lint-requirements: .make.lint-requirements.installed
 	pip install -r requirements-lint.txt
 	touch $@
 
-.PHONY: lint lint-requirements typecheck
+.PHONY: docs lint lint-requirements typecheck

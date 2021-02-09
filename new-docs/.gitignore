@@ -1,3 +1,5 @@
+content/*/reference/api/
 public/**/*
 resources/**/
 hugo_stats.json
+themes/oso/static/*

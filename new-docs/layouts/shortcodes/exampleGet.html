@@ -10,13 +10,11 @@
     {{- with $default -}}
       {{- safeHTML $default -}}
     {{- else -}}
-      {{ warnf "Example data \"%s\" not found for language %s\n  %s" $key $.Page.Language.LanguageName $position }}
     {{- end -}}
   {{- end -}}
 {{- else -}}
   {{- with $default -}}
     {{- safeHTML $default -}}
   {{- else -}}
-    {{ warnf "Example data \"%s\" not found for language %s\n  %s" $key $.Page.Language.LanguageName $position }}
   {{- end -}}
 {{- end -}}

@@ -1,12 +1,14 @@
 ---
 title: |
     The "N+1 Problem"
+aliases: 
+    - ../../more/performance/n_plus_one.html
 ---
 
 # The “N+1 Problem”
 
-A core part of understanding how oso will perform under regular
-workloads is recognizing that oso applies a search algorithm to
+A core part of understanding how Oso will perform under regular
+workloads is recognizing that Oso applies a search algorithm to
 evaluate the policy.
 
 Since it is common in policies to iterate over members or attributes
@@ -33,11 +35,11 @@ called, which may make another DB query, ultimately resulting in N+1
 queries - one for the initial query, and one for each grandchild.
 
 The answer to solving this ultimately lies in how your application accesses
-data. Since this problem is not unique to oso and authorization queries,
+data. Since this problem is not unique to Oso and authorization queries,
 there already exist a few patterns for this, such as [eager-loading ORMs](https://guides.rubyonrails.org/active_record_querying.html#eager-loading-associations)
 and [dataloaders](https://github.com/graphql/dataloader) for [GraphQL](https://github.com/Shopify/graphql-batch).
 
-Here we will show how these patterns can be leveraged in oso.
+Here we will show how these patterns can be leveraged in Oso.
 
 **Option 1.**  Implement a lookup method that accepts as input a list.
 
@@ -85,6 +87,6 @@ has_grandchild_called(grandparent: Person, name) if
     and grandchild.name = name;
 ```
 
-Since oso is able to work directly with native objects, using the
+Since Oso is able to work directly with native objects, using the
 existing Django methods to prefetch the grandchildren in this case
 can be applied directly where it’s used.

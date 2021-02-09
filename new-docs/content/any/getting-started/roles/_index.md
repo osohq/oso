@@ -1,12 +1,12 @@
 ---
 title: Add roles
-weight: 2
+weight: 3
 description: >
-    Roles are an intuitive way to group permissions and expose them to end
-    users. Use oso to add roles to your application.
+  Roles are an intuitive way to group permissions and expose them to end
+  users. Use Oso to add roles to your application.
 ---
 
-## Introduction to Roles
+# Introduction to Roles
 
 <!-- TODO: Review me  -->
 
@@ -30,5 +30,5 @@ an entire folder. Now they will _inherit_ this role for all files and
 subfolders.
 
 Keep reading to learn more about roles or head over to [Role-Based Access
-Control](learn/roles) to learn about how roles work in oso and about RBAC
+Control](learn/roles) to learn about how roles work in Oso and about RBAC
 design patterns.

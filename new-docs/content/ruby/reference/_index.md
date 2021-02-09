@@ -4,7 +4,7 @@ weight: 4
 any: false
 ---
 
-The Ruby version of oso is available on [RubyGems](https://rubygems.org/gems/oso-oso) and can be installed
+The Ruby version of Oso is available on [RubyGems](https://rubygems.org/gems/oso-oso) and can be installed
 into your local Ruby:
 
 ```

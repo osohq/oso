@@ -1,27 +1,30 @@
 ---
-weight: 1
-title: Application Data
+title: Python Types in Polar
+weight: 2
+aliases:
+  - /using/libraries/python/index.html
 ---
 
-## Working with Python Objects
+## Working with Python Types
 
-oso’s Python authorization library allows you to write policy rules over Python
+Oso’s Python authorization library allows you to write policy rules over Python
 objects directly. This document explains how different types of Python objects
-can be used in oso policies.
+can be used in Oso policies.
 
-{{< callout "Note" "blue" >}}
-  More detailed examples of working with application classes can be found in
-  [Policy Examples](learn/policies/examples).
-{{< /callout >}}
+{{% callout "Note" "blue" %}}
+More detailed examples of working with application classes can be found in
+[Policy Examples](learn/examples).
+{{% /callout %}}
 
 ### Class Instances
 
-You can pass an instance of any Python class into oso and access its methods
+You can pass an instance of any Python class into Oso and access its methods
 and fields from your policy (see [Application
 Types](learn/policies/application-types)).
 
 <!-- TODO(gj): link to API docs. -->
-Python instances can be constructed from inside an oso policy using the
+
+Python instances can be constructed from inside an Oso policy using the
 [`new`](polar-syntax#new) operator if the Python class has been **registered**
 using either the `register_class()` method or the `polar_class()` decorator. An
 example of this can be found [here](learn/policies/application-types).
@@ -47,10 +50,10 @@ user.username = "alice@example.com"
 assert(oso.is_allowed(user, "foo", "bar))
 ```
 
-{{< callout "Warning" "orange" >}}
+{{% callout "Warning" "orange" %}}
   Polar does not support methods that mutate strings in place. E.g.,
   `capitalize()` will have no effect on a string in Polar.
-{{< /callout >}}
+{{% /callout %}}
 
 ### Lists
 
@@ -67,10 +70,10 @@ user.groups = ["HR", "payroll"]
 assert(oso.is_allowed(user, "foo", "bar"))
 ```
 
-{{< callout "Warning" "orange" >}}
+{{% callout "Warning" "orange" %}}
   Polar does not support methods that mutate lists in place. E.g. `reverse()`
   will have no effect on a list in Polar.
-{{< /callout >}}
+{{% /callout %}}
 
 Likewise, lists constructed in Polar may be passed into Python methods:
 

@@ -6,7 +6,7 @@ weight: 1
 # Rule basics
 
 Policies are made up of [rules](polar-syntax#rules). Each rule defines a
-statement that is either true or false. oso answers queries by evaluating rules
+statement that is either true or false. Oso answers queries by evaluating rules
 that match the query name and parameters. Let’s take a basic [allow
 rule](glossary#allow-rules) as an example:
 
@@ -16,7 +16,7 @@ allow(actor, action, resource);
 
 <!-- TODO(gj): link `Oso.is_allowed()` once API docs are hooked up. -->
 When we use `Oso.is_allowed()` (or equivalent), we are making a query that asks
-oso to evaluate all rules that match *(a)* on the rule name (`allow`), and
+Oso to evaluate all rules that match *(a)* on the rule name (`allow`), and
 *(b)* on all the inputs.
 
 In the rule above, `actor`, `action`, and `resource` are simply the parameter
@@ -74,14 +74,14 @@ allow(actor, "approve", _report) if
     or actor.title = "CFO";
 ```
 
-{{< callout "Tip" "green" >}}
+{{% callout "Tip" "green" %}}
   In these rules we declared some variables with leading underscores
   (`_actor`, `_report`). A leading underscore indicates that the variable will
   only be used once (Polar does not distinguish between definition and use).
   These variables are called *singleton variables*, and will match any value.
   To help prevent errors, a warning will be emitted if a singleton variable is
   not preceded by an underscore.
-{{< /callout >}}
+{{% /callout %}}
 
 ### As Specializers in a Rule Head
 
@@ -111,11 +111,11 @@ This is another example of the rule matching process: instead of matching
 against a concrete value, we are instead checking to make sure the type of the
 input matches the expected type — in this case, an `Admin`.
 
-{{< callout "Tip" "green" >}}
+{{% callout "Tip" "green" %}}
   Try to use type specializers as often as possible. It will help make sure you
   don't accidentally allow access to an unrelated resource which happens to
   have matching fields.
-{{< /callout >}}
+{{% /callout %}}
 
 ## Combining Rules
 
@@ -172,7 +172,7 @@ alice = User("alice", "accountant")
 assert list(oso.query_rule("role", alice, "accountant"))
 ```
 
-{{< callout "Tip" "green" >}}
+{{% callout "Tip" "green" %}}
   Try setting the `POLAR_LOG` environment variable before executing a polar
   query to see a [trace](tracing) of how the query is evaluated:
 
@@ -193,7 +193,7 @@ assert list(oso.query_rule("role", alice, "accountant"))
   [debug]           BACKTRACK
   [debug]           HALT
   ```
-{{< /callout >}}
+{{% /callout %}}
 
 ## Summary
 

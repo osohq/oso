@@ -42,7 +42,7 @@ project = "oso"
 copyright = "2020 Oso Security, Inc"
 author = "oso"
 version = "0.10"
-release = "0.10.0"
+release = "0.10.1"
 
 
 # -- General configuration ---------------------------------------------------
@@ -168,7 +168,7 @@ html_theme_options = {
     "nav_title": "oso Documentation",
     # Specify a base_url used to generate sitemap.xml. If not
     # specified, then no sitemap will be built.
-    "base_url": "https://docs.osohq.com/",
+    "base_url": "https://docs.osohq.com/v1/",
     # Set the color and the accent color
     "color_primary": "#0E024E",
     "color_accent": "#FFFFFF",

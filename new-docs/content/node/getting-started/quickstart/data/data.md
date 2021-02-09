@@ -10,6 +10,8 @@ installation: |
     $ npm start
     server running on port 5050
     ```
+amount: amount
+manager: manager
 submitted_by: submittedBy
 endswith: endsWith
 endswithURL: >
