@@ -642,7 +642,9 @@ impl PolarVirtualMachine {
         self.csp = self.bsp();
     }
 
-    // TODO remove this
+    // TODO(dhatch): Would like to replace this with bindings_after, but for now
+    // new cycles are transferred through this and get destroyed without it.
+    // This is leaky.
     pub fn bindings_for_inverter(&self) -> BindingStack {
         self.binding_manager.bindings_debug().clone()
     }
