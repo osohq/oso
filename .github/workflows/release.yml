@@ -352,7 +352,7 @@ jobs:
           name: wheel
           path: languages/python/oso/wheelhouse/*.whl
 
-build_windows_wheels:
+  build_windows_wheels:
     name: Build wheels on Windows
     runs-on: windows-latest
     needs: [version, windows_libs]
