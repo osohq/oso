@@ -71,8 +71,14 @@ jobs:
           override: true
       - name: Build release libraries
         run: cargo build --release
+      - name: Build release musl library
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          cargo build --target x86_64-unknown-linux-musl --release
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
+      - name: Rename static lib
+        run: mv target/x86_64-unknown-linux-musl/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-musl.a
       - uses: actions/upload-artifact@v2
         with:
           name: oso_library
@@ -81,6 +87,10 @@ jobs:
         with:
           name: oso_static_library
           path: target/release/libpolar-${{runner.os}}.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: target/release/libpolar-musl.a
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
@@ -394,7 +404,6 @@ jobs:
           name: wheel
           path: languages/python/oso/wheelhouse/*.whl
 
-  # @TODO: Build these in the build_linux_wheels job.
   build_musl_wheels:
     name: Build musl wheels
     runs-on: ubuntu-latest
@@ -403,24 +412,15 @@ jobs:
       RUSTFLAGS: "-C target-feature=-crt-static -C relocation-model=pic"
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - name: Download static libs
+        uses: actions/download-artifact@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install Rust stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup target add x86_64-unknown-linux-musl
-      - run: cargo build --target x86_64-unknown-linux-musl --release
-      - run: mkdir -p languages/python/oso/native
-      - run: cp polar-c-api/polar.h languages/python/oso/native/
-      - run: cp target/x86_64-unknown-linux-musl/release/libpolar.a languages/python/oso/native/
+          name: oso_static_library
+      - name: Copy static library.
+        run: |
+          mkdir -p languages/python/oso/native
+          cp -r oso_static_library/libpolar-musl.a languages/python/oso/native/libpolar.a
+          cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
       - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.6-alpine oso/scripts/build_musl.sh
       - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.7-alpine oso/scripts/build_musl.sh
       - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.8-alpine oso/scripts/build_musl.sh
