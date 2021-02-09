@@ -522,7 +522,7 @@ jobs:
   validate_python_macos:
     name: Test python ${{ matrix.python-version }} on MacOS
     needs: [build_macos_wheels]
-    runs-on: macos_latest
+    runs-on: macos-latest
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
@@ -548,7 +548,7 @@ jobs:
   validate_python_windows:
     name: Test python ${{ matrix.python-version }} on Windows
     needs: [build_windows_wheels]
-    runs-on: windows_latest
+    runs-on: windows-latest
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
