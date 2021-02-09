@@ -6,6 +6,7 @@ package ffi
 // #include "native/polar.h"
 // #cgo linux,amd64 LDFLAGS: ${SRCDIR}/native/linux/libpolar.a -ldl -lm
 // #cgo darwin,amd64 LDFLAGS: ${SRCDIR}/native/macos/libpolar.a -ldl -lm
+// #cgo windows,amd64 LDFLAGS: ${SRCDIR}/native/windows/libpolar.a -lm -lws2_32 -luserenv
 import "C"
 
 import (
@@ -193,7 +194,7 @@ func (q QueryFfi) CallResult(callID uint64, term *types.Term) error {
 		}
 	}
 
-	result := C.polar_call_result(q.ptr, C.__uint64_t(callID), s)
+	result := C.polar_call_result(q.ptr, C.uint64_t(callID), s)
 	if result == 0 {
 		return getError()
 	}
@@ -207,7 +208,7 @@ func (q QueryFfi) QuestionResult(callID uint64, answer bool) error {
 	} else {
 		intAnswer = 0
 	}
-	result := C.polar_question_result(q.ptr, C.__uint64_t(callID), C.int(intAnswer))
+	result := C.polar_question_result(q.ptr, C.uint64_t(callID), C.int(intAnswer))
 	if result == 0 {
 		return getError()
 	}
