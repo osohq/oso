@@ -1,29 +1,10 @@
-
-## Development
+# Development
 
 To get started:
 
-Install tailwind theme
-```
-npm install -g postcss postcss-cli autoprefixer
-cd themes/tailwind
-npm install
-```
-
-Install Oso package
-```
-cd themes/oso
-npm install
-npm run-script build
-```
-
-Install hugo: https://gohugo.io/getting-started/installing
-
-Ready to go!
-
-```
-hugo server
-```
+1. `make install`
+2. Install [Hugo][]
+3. `make run`
 
 ## Useful resoruces
 
@@ -35,3 +16,4 @@ hugo server
 
 ### Components
 
+[Hugo]: https://gohugo.io/getting-started/installing
