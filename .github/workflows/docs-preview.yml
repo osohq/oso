@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - main
+    pull_request:
+      types: [opened, synchronize, reopened]
 
 jobs:
   publish-preview:
@@ -69,6 +71,7 @@ jobs:
 
       ### Push to S3 + invalidate cache
       - name: s3 preview publish
+        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
         run: |
           aws s3 sync --delete new-docs/public/ s3://docs-preview.oso.dev/
         env:
@@ -76,4 +79,5 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
 
       - name: cloudfront invalidate docs preview
+        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
         run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
