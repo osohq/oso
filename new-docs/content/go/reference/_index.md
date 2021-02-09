@@ -25,6 +25,9 @@ library documentation.
 **Requirements**
 
 * Go version 1.12 or higher
-* Supported platforms:
+* Supported platforms (x64 only):
   * Linux
   * OS X
+  * Windows
+
+Oso uses cgo to embed our vm and on windows cgo depends on a [[MinGW toolchain]](https://jmeubank.github.io/tdm-gcc/).
