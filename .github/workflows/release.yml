@@ -78,7 +78,7 @@ jobs:
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
-        run: mv target/x86_64-unknown-linux-musl/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-musl.a
+        run: mv target/x86_64-unknown-linux-musl/release/libpolar.a target/x86_64-unknown-linux-musl/release/libpolar-musl.a
       - uses: actions/upload-artifact@v2
         with:
           name: oso_library
@@ -90,7 +90,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
-          path: target/release/libpolar-musl.a
+          path: target/x86_64-unknown-linux-musl/release/libpolar-musl.a
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
