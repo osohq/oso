@@ -407,6 +407,7 @@ jobs:
   build_musl_wheels:
     name: Build musl wheels
     runs-on: ubuntu-latest
+    needs: [version, linux_libs]
     env:
       OSO_ENV: CI
       RUSTFLAGS: "-C target-feature=-crt-static -C relocation-model=pic"
