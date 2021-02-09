@@ -170,7 +170,10 @@ impl BindingManager {
         assert!(args.len() >= 2);
 
         let (left, right) = (&args[0], &args[1]);
-        match (left.value(), right.value()) {
+        match (
+            extract_variable(left.value()),
+            extract_variable(right.value()),
+        ) {
             (Value::Variable(left_name), Value::Variable(right_name)) => {
                 match (
                     self.variable_state(left_name),
@@ -245,7 +248,11 @@ impl BindingManager {
                     }
                 }
             }
-            (_, _) => panic!("At least one side of a constraint expression must be a variable."),
+            (_, _) => panic!(
+                "At least one side of a constraint expression must be a variable. This is {} {}",
+                left.to_polar(),
+                right.to_polar()
+            ),
         }
 
         Ok(())
@@ -310,4 +317,20 @@ impl BindingManager {
     // relevant_bindings
     // variable_bindings
     // bindings
+}
+
+/// Get variable out of a term for ``add_constraint`` to determine where the
+/// constraint is stored.
+///
+/// If the term is a variable, the variable is returned.
+/// If the term is a dot expression, the VAR from VAR.field is returned.
+/// Otherwise, the term is returned.
+fn extract_variable(value: &Value) -> &Value {
+    match value {
+        Value::Variable(_) => value,
+        Value::Expression(expr) if expr.operator == Operator::Dot => {
+            extract_variable(expr.args[0].value())
+        }
+        _ => value,
+    }
 }
