@@ -1,12 +1,15 @@
 """Test hooks & SQLAlchemy API integrations."""
 import pytest
 
+from oso import Variable
+
 from sqlalchemy.orm import aliased
 
 from sqlalchemy_oso.session import (
     authorized_sessionmaker,
     scoped_session,
     AuthorizedSession,
+    authorize_query_by_action,
 )
 
 from .models import User, Post
@@ -68,10 +71,73 @@ def test_authorize_query_basic(engine, oso, fixture_data, query):
     print_query(posts)
     assert posts.all()[0].contents == "private for moderation"
     assert posts.all()[1].contents == "public for moderation"
+    assert posts.count() == 4
 
     session = AuthorizedSession(oso, "guest", "read", bind=engine)
     posts = query(session)
     assert posts.count() == 0
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        lambda session: session.query(Post),
+    ],
+)
+def test_authorize_query_by_action(engine, oso, fixture_data, query):
+    oso.load_str('allow("user", "read", post: Post) if post.access_level = "public";')
+    oso.load_str('allow("user", "write", post: Post) if post.access_level = "private";')
+    oso.load_str('allow("admin", "read", post: Post);')
+    oso.load_str(
+        'allow("moderator", "read", post: Post) if '
+        '(post.access_level = "private" or post.access_level = "public") and '
+        "post.needs_moderation = true;"
+    )
+
+    # Get allowed posts by action for "user"
+    session = AuthorizedSession(oso, "user", Variable("action"), bind=engine)
+    posts = query(session)
+    queries_by_action = authorize_query_by_action(posts)
+    posts_by_action = {
+        action: query.all() for (action, query) in queries_by_action.items()
+    }
+    readable_posts = posts_by_action.get("read")
+    writable_posts = posts_by_action.get("write")
+
+    assert len(readable_posts) == 5
+    assert len(writable_posts) == 4
+    for post in readable_posts:
+        assert post.access_level == "public"
+    for post in writable_posts:
+        assert post.access_level == "private"
+
+    # Get allowed posts by action for "admin"
+    session = AuthorizedSession(oso, "admin", Variable("action"), bind=engine)
+    posts = query(session)
+    queries_by_action = authorize_query_by_action(posts)
+    posts_by_action = {
+        action: query.all() for (action, query) in queries_by_action.items()
+    }
+    readable_posts = posts_by_action.get("read")
+    writable_posts = posts_by_action.get("write")
+
+    assert len(readable_posts) == 9
+    assert writable_posts == None
+
+    # Get allowed posts by action for "moderator"
+    session = AuthorizedSession(oso, "moderator", Variable("action"), bind=engine)
+    posts = query(session)
+    queries_by_action = authorize_query_by_action(posts)
+    posts_by_action = {
+        action: query.all() for (action, query) in queries_by_action.items()
+    }
+    readable_posts = posts_by_action.get("read")
+    writable_posts = posts_by_action.get("write")
+
+    assert len(readable_posts) == 4
+    assert writable_posts == None
+    for post in readable_posts:
+        assert post.needs_moderation == True
 
 
 def test_authorize_query_multiple_types(engine, oso, fixture_data):
