@@ -493,33 +493,6 @@ jobs:
         working-directory: go
 
   validate_python_linux:
-    name: Test python ${{ matrix.python-version }} on ${{ matrix.os }}
-    needs: [build_wheels]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [3.6, 3.7, 3.8, 3.9]
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set version env
-        id: version
-        run: echo "::set-output name=oso_version::$(cat VERSION)"
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Download oso python wheels from package run
-        uses: actions/download-artifact@v1
-        with:
-          name: wheel
-      - name: "test"
-        run: |
-          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
-          python test.py
-        working-directory: test
-
-  validate_python_linux:
     name: Test python ${{ matrix.python-version }} on Linux
     needs: [build_linux_wheels]
     runs-on: ubuntu-latest
