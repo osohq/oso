@@ -202,6 +202,7 @@ impl Operation {
     }
 
     // TODO(gj): simpler way to write this function.
+    // Invert constraints in operation after CSP.
     pub fn inverted_constraints(&self, csp: usize) -> Vec<Operation> {
         let constraints = self.constraints();
         let (old, new) = constraints.split_at(csp);
