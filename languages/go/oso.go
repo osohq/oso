@@ -150,3 +150,7 @@ func (o Oso) IsAllowed(actor interface{}, action interface{}, resource interface
 		return false, nil
 	}
 }
+
+func (o Oso) Repl() error {
+	return (*o.p).repl()
+}

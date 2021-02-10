@@ -1,0 +1,19 @@
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/osohq/go-oso"
+)
+
+func main() {
+	oso_instance, err := oso.NewOso()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+	err = oso_instance.Repl()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+}
