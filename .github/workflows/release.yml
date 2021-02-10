@@ -462,6 +462,8 @@ jobs:
         run: |
           make CARGO_FLAGS=--release build
           rm -rf node_modules
+      - name: Copy main README into project directory
+        run: cp ../../README.md .
       - uses: actions/upload-artifact@v2
         with:
           name: oso_js_node
