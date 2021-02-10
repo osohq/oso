@@ -87,6 +87,10 @@ type InvalidConstructorError struct {
 	ctor types.Value
 }
 
+func NewInvalidConstructorError(ctor types.Value) *InvalidConstructorError {
+	return &InvalidConstructorError{ctor: ctor}
+}
+
 func (e *InvalidConstructorError) Error() string {
 	return fmt.Sprintf("%v is not a constructor", e.ctor)
 }

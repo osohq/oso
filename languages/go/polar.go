@@ -41,7 +41,7 @@ func newPolar() (*Polar, error) {
 	}
 
 	for k, v := range builtinClasses {
-		err := polar.registerClass(v, &k)
+		err := polar.registerClass(v, nil, &k)
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +138,20 @@ func (p Polar) repl(files ...string) error {
 	return fmt.Errorf("Go REPL is not yet implemented")
 }
 
-func (p Polar) registerClass(cls reflect.Type, name *string) error {
+/*
+Register a class with Polar. Accepts the class, a constructor function (or nil), and a name (or nil)
+*/
+func (p Polar) registerClass(cls reflect.Type, ctor interface{}, name *string) error {
+	// Get constructor
+	constructor := reflect.ValueOf(nil)
+	if ctor != nil {
+		constructor = reflect.ValueOf(ctor)
+		if constructor.Type().Kind() != reflect.Func {
+			return fmt.Errorf("Constructor must be a function, got: %v", constructor.Type().Kind())
+		}
+	}
+
+	// Get class name
 	var className string
 	if name == nil {
 		className = cls.Name()
@@ -146,7 +159,7 @@ func (p Polar) registerClass(cls reflect.Type, name *string) error {
 		className = *name
 	}
 
-	err := p.host.CacheClass(cls, className)
+	err := p.host.CacheClass(cls, className, constructor)
 	if err != nil {
 		return err
 	}
