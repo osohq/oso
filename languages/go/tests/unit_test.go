@@ -165,4 +165,42 @@ func TestIsAllowed(t *testing.T) {
 
 }
 
-// TEST polar.go
+type Foo struct {
+	Name string
+	Num  int
+}
+
+func MakeFoo(name string, num int) Foo {
+	return Foo{name, num}
+}
+
+func TestConstructors(t *testing.T) {
+	var o oso.Oso
+	var err error
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	o.RegisterClass(reflect.TypeOf(Foo{}), MakeFoo)
+
+	o.LoadString("f(y) if x = new Foo(\"hello\", 123) and y = x.Name;")
+	results, errors := o.QueryRule("f", ValueVariable("y"))
+
+	if err = <-errors; err != nil {
+		t.Error(err.Error())
+	} else {
+		var got []map[string]interface{}
+		expected := map[string]interface{}{"y": "hello"}
+		for elem := range results {
+			got = append(got, elem)
+		}
+		if len(got) != 1 {
+			t.Errorf("Received incorrect number of results: %v", got)
+		} else if !reflect.DeepEqual(got[0], expected) {
+			t.Errorf("Expected: %v, got: %v", expected, got[0])
+		}
+	}
+	y := reflect.TypeOf(nil)
+	_ = y
+	//o.RegisterClass(reflect.TypeOf(nil), MakeFoo)
+}

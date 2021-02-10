@@ -19,9 +19,10 @@ var CLASSES = make(map[string]reflect.Type)
 type None struct{}
 
 type Host struct {
-	ffiPolar  ffi.PolarFfi
-	classes   map[string]reflect.Type
-	instances map[uint64]reflect.Value
+	ffiPolar     ffi.PolarFfi
+	classes      map[string]reflect.Type
+	constructors map[string]reflect.Value
+	instances    map[uint64]reflect.Value
 }
 
 func NewHost(polar ffi.PolarFfi) Host {
@@ -30,10 +31,12 @@ func NewHost(polar ffi.PolarFfi) Host {
 		classes[k] = v
 	}
 	instances := make(map[uint64]reflect.Value)
+	constructors := make(map[string]reflect.Value)
 	return Host{
-		ffiPolar:  polar,
-		classes:   classes,
-		instances: instances,
+		ffiPolar:     polar,
+		classes:      classes,
+		instances:    instances,
+		constructors: constructors,
 	}
 }
 
@@ -46,10 +49,15 @@ func (h Host) Copy() Host {
 	for k, v := range h.instances {
 		instances[k] = v
 	}
+	constructors := make(map[string]reflect.Value)
+	for k, v := range h.constructors {
+		constructors[k] = v
+	}
 	return Host{
-		ffiPolar:  h.ffiPolar,
-		classes:   classes,
-		instances: instances,
+		ffiPolar:     h.ffiPolar,
+		classes:      classes,
+		instances:    instances,
+		constructors: constructors,
 	}
 }
 
@@ -60,11 +68,14 @@ func (h Host) getClass(name string) (*reflect.Type, error) {
 	return nil, errors.NewUnregisteredClassError(name)
 }
 
-func (h Host) CacheClass(cls reflect.Type, name string) error {
+func (h Host) CacheClass(cls reflect.Type, name string, constructor reflect.Value) error {
 	if v, ok := h.classes[name]; ok {
 		return errors.NewDuplicateClassAliasError(name, cls, v)
 	}
 	h.classes[name] = cls
+	if constructor.IsValid() {
+		h.constructors[name] = constructor
+	}
 	return nil
 }
 
@@ -73,6 +84,85 @@ func (h Host) getInstance(id uint64) (*reflect.Value, error) {
 		return &v, nil
 	}
 	return nil, errors.NewUnregisteredInstanceError(id)
+}
+
+func (h Host) MakeInstance(call types.ValueCall, id uint64) error {
+	// Check for duplicate instance
+	if _, ok := h.instances[id]; ok {
+		return errors.NewDuplicateInstanceRegistrationError(id)
+	}
+	name := string(call.Name)
+	args := call.Args
+
+	cls, err := h.getClass(name)
+	if err != nil {
+		return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: err.Error()}
+	}
+	if constructor, ok := h.constructors[name]; ok {
+		results, err := h.CallFunction(constructor, args)
+		if err != nil {
+			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: err.Error()}
+		}
+		if len(results) != 1 {
+			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: fmt.Sprintf("Constructor must retun 1 result; returned %v", len(results))}
+		}
+		instance := results[0]
+		if instance.Type() != *cls {
+			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: fmt.Sprintf("Expected constructor to return %v; returned %v", *cls, instance.Type())}
+		}
+		h.cacheInstance(instance.Interface(), &id)
+		return nil
+	} else {
+		return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: fmt.Sprintf("Missing constructor for class %v", name)}
+	}
+}
+
+func (h Host) CallFunction(fn reflect.Value, termArgs []types.Term) ([]reflect.Value, error) {
+	if fn.Kind() != reflect.Func {
+		panic(fmt.Errorf("CallFunction expects a reflect.Func value; got: %v", fn.Kind()))
+	}
+	args, err := h.ListToGo(termArgs)
+	if err != nil {
+		return nil, err
+	}
+	numIn := fn.Type().NumIn()
+	var end int
+	if !fn.Type().IsVariadic() {
+		if len(args) != numIn {
+			return nil, fmt.Errorf("incorrect number of arguments. Expected %v, got %v", numIn, len(args))
+		}
+		end = numIn
+	} else {
+		// stop one before the end so we can make this a slice
+		end = numIn - 1
+	}
+
+	callArgs := make([]reflect.Value, numIn)
+	var results []reflect.Value
+
+	// construct callArgs by converting them to typed values, then call method to get results
+	for i := 0; i < end; i++ {
+		arg := args[i]
+		callArgs[i] = reflect.New(fn.Type().In(i)).Elem()
+		err := SetFieldTo(callArgs[i], arg)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Construct a slice for the last variadic arg for variadic methods
+	if fn.Type().IsVariadic() {
+		remainingArgs := args[end:]
+		callArgs[end] = reflect.New(fn.Type().In(end)).Elem()
+		err := SetFieldTo(callArgs[end], remainingArgs)
+		if err != nil {
+			return nil, err
+		}
+		results = fn.CallSlice(callArgs)
+	} else {
+		results = fn.Call(callArgs)
+	}
+
+	return results, nil
 }
 
 func (h Host) cacheInstance(instance interface{}, id *uint64) (*uint64, error) {
