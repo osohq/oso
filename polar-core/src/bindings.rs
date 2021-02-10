@@ -23,6 +23,10 @@ pub type Bsp = usize;
 pub enum VariableState {
     Unbound,
     Bound(Term),
+
+    // NOTE (dhatch): The simplifier only cares about variables that are bound
+    // together if the variable is constrained. If the variable is still in the
+    // Cycle state, the simplifier does nothing.
     Cycle(Vec<Symbol>),
     Partial(Operation),
 }
