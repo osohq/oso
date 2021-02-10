@@ -51,16 +51,85 @@ jobs:
           event-type: oso_release
           client-payload: '{"commit": "${{ github.sha }}"}'
 
-  build_dylib:
-    name: Build release libraries on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+  linux_libs:
+    name: Build release libraries on Linux
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
-        if: runner.os != 'macOS'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Build release libraries
+        run: cargo build --release
+      - name: Build release musl library
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          cargo build --target x86_64-unknown-linux-musl --release
+      - name: Rename static lib
+        run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
+      - name: Rename static lib
+        run: mv target/x86_64-unknown-linux-musl/release/libpolar.a target/x86_64-unknown-linux-musl/release/libpolar-musl.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_library
+          path: target/release/libpolar.so
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: target/release/libpolar-${{runner.os}}.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: target/x86_64-unknown-linux-musl/release/libpolar-musl.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: polar-c-api/polar.h
+
+  macos_libs:
+    name: Build release libraries on MacOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Build release library
+        run: cargo build --release
+      - name: Rename static lib
+        run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_library
+          path: target/release/libpolar.dylib
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: target/release/libpolar-${{runner.os}}.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: polar-c-api/polar.h
+
+  windows_libs:
+    name: Build release libraries on Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
         with:
           path: |
             ~/.cargo/registry
@@ -75,58 +144,33 @@ jobs:
           override: true
       - name: Build release library
         run: cargo build --release
-      - if: runner.os != 'Windows'
-        run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
+      - name: Build release MinGW library
+        run: |
+          rustup target add x86_64-pc-windows-gnu
+          cargo build --target x86_64-pc-windows-gnu --release
+      - name: Rename static lib
+        run: mv target/x86_64-pc-windows-gnu/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
       - uses: actions/upload-artifact@v2
-        if: runner.os == 'Linux'
-        with:
-          name: oso_library
-          path: target/release/libpolar.so
-      - uses: actions/upload-artifact@v2
-        if: runner.os == 'macOS'
-        with:
-          name: oso_library
-          path: target/release/libpolar.dylib
-      - uses: actions/upload-artifact@v2
-        if: runner.os == 'Windows'
         with:
           name: oso_library
           path: target/release/polar.dll
       - uses: actions/upload-artifact@v2
-        if: runner.os == 'Linux'
-        with:
-          name: oso_static_library
-          path: target/release/libpolar-${{runner.os}}.a
-      - uses: actions/upload-artifact@v2
-        if: runner.os == 'macOS'
-        with:
-          name: oso_static_library
-          path: target/release/libpolar-${{runner.os}}.a
-      - uses: actions/upload-artifact@v2
-        if: runner.os == 'Windows'
         with:
           name: oso_static_library
           path: target/release/polar.lib
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
-          path: polar-c-api/polar.h
-      - if: runner.os == 'Windows'
-        run: |
-          rustup target add x86_64-pc-windows-gnu
-          cargo build --target x86_64-pc-windows-gnu --release
-      - if: runner.os == 'Windows'
-        run: mv target/x86_64-pc-windows-gnu/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
+          path: target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
       - uses: actions/upload-artifact@v2
-        if: runner.os == 'Windows'
         with:
           name: oso_static_library
-          path: target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
+          path: polar-c-api/polar.h
 
   build_go:
     name: Build go.
     runs-on: ubuntu-latest
-    needs: build_dylib
+    needs: [linux_libs, macos_libs, windows_libs]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -161,7 +205,7 @@ jobs:
   build_jar:
     name: Build jar.
     runs-on: ubuntu-latest
-    needs: build_dylib
+    needs: [linux_libs, macos_libs, windows_libs]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -198,7 +242,7 @@ jobs:
   build_gem:
     name: Build Gem.
     runs-on: ubuntu-latest
-    needs: build_dylib
+    needs: [linux_libs, macos_libs, windows_libs]
     steps:
       - uses: actions/checkout@v2
       - name: Install Ruby + gems
@@ -234,14 +278,10 @@ jobs:
           name: gem
           path: languages/ruby/*.gem
 
-  build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    needs: version
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-
+  build_linux_wheels:
+    name: Build wheels on Linux
+    runs-on: ubuntu-latest
+    needs: [version, linux_libs]
     env:
       # Skip Python 2.7 and Python 3.5
       CIBW_SKIP: "cp27-* cp35-* pp27-*"
@@ -249,53 +289,108 @@ jobs:
       CIBW_BUILD: "*64"
       # Used in build.py to find right files
       CIBW_ENVIRONMENT: OSO_ENV=CI
-
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v2
-        if: runner.os != 'macOS'
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions/setup-python@v2
         name: Install Python
         with:
           python-version: "3.7"
-
       - name: Install cibuildwheel
         run: |
           python -m pip install cibuildwheel==1.6.2
-
-      - name: Install Rust stable toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Download static libs
+        uses: actions/download-artifact@v1
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Build Rust library (Linux)
-        if: runner.os == 'Linux'
+          name: oso_static_library
+      - name: Copy static library.
         run: |
-          cargo build --release
           mkdir -p languages/python/oso/native
-          cp polar-c-api/polar.h languages/python/oso/native/
-          cp target/release/libpolar.a languages/python/oso/native/
-      - name: Build Rust library (OSX)
-        if: runner.os == 'macOS'
+          cp -r oso_static_library/libpolar-Linux.a languages/python/oso/native/libpolar.a
+          cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
+      - name: Copy in readme
         run: |
-          cargo build --release
-          mkdir -p languages/python/oso/native
-          cp polar-c-api/polar.h languages/python/oso/native/
-          cp target/release/libpolar.a languages/python/oso/native/
-      - name: Build Rust library (Windows)
-        if: runner.os == 'Windows'
+          rm languages/python/oso/README.md
+          cp README.md languages/python/oso/README.md
+      - name: Build wheels
         run: |
-          cargo build --release
+          python -m cibuildwheel --output-dir wheelhouse
+        working-directory: languages/python/oso
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheel
+          path: languages/python/oso/wheelhouse/*.whl
+
+  build_macos_wheels:
+    name: Build wheels on MacOS
+    runs-on: macos-latest
+    needs: [version, macos_libs]
+    env:
+      # Skip Python 2.7 and Python 3.5
+      CIBW_SKIP: "cp27-* cp35-* pp27-*"
+      # 64-bit builds only
+      CIBW_BUILD: "*64"
+      # Used in build.py to find right files
+      CIBW_ENVIRONMENT: OSO_ENV=CI
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: "3.7"
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install cibuildwheel==1.6.2
+      - name: Download static libs
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_static_library
+      - name: Copy static library.
+        run: |
           mkdir -p languages/python/oso/native
-          cp polar-c-api/polar.h languages/python/oso/native/
-          cp target/release/polar.lib languages/python/oso/native/
+          cp -r oso_static_library/libpolar-macOS.a languages/python/oso/native/libpolar.a
+          cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
+      - name: Copy in readme
+        run: |
+          rm languages/python/oso/README.md
+          cp README.md languages/python/oso/README.md
+      - name: Build wheels
+        run: |
+          python -m cibuildwheel --output-dir wheelhouse
+        working-directory: languages/python/oso
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheel
+          path: languages/python/oso/wheelhouse/*.whl
+
+  build_windows_wheels:
+    name: Build wheels on Windows
+    runs-on: windows-latest
+    needs: [version, windows_libs]
+    env:
+      # Skip Python 2.7 and Python 3.5
+      CIBW_SKIP: "cp27-* cp35-* pp27-*"
+      # 64-bit builds only
+      CIBW_BUILD: "*64"
+      # Used in build.py to find right files
+      CIBW_ENVIRONMENT: OSO_ENV=CI
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: "3.7"
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install cibuildwheel==1.6.2
+      - name: Download static libs
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_static_library
+      - name: Copy static library.
+        run: |
+          mkdir -p languages/python/oso/native
+          cp -r oso_static_library/polar.lib languages/python/oso/native/polar.lib
+          cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
       - name: Copy in readme
         run: |
           rm languages/python/oso/README.md
@@ -312,29 +407,21 @@ jobs:
   build_musl_wheels:
     name: Build musl wheels
     runs-on: ubuntu-latest
+    needs: [version, linux_libs]
     env:
       OSO_ENV: CI
       RUSTFLAGS: "-C target-feature=-crt-static -C relocation-model=pic"
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - name: Download static libs
+        uses: actions/download-artifact@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install Rust stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup target add x86_64-unknown-linux-musl
-      - run: cargo build --target x86_64-unknown-linux-musl --release
-      - run: mkdir -p languages/python/oso/native
-      - run: cp polar-c-api/polar.h languages/python/oso/native/
-      - run: cp target/x86_64-unknown-linux-musl/release/libpolar.a languages/python/oso/native/
+          name: oso_static_library
+      - name: Copy static library.
+        run: |
+          mkdir -p languages/python/oso/native
+          cp -r oso_static_library/libpolar-musl.a languages/python/oso/native/libpolar.a
+          cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
       - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.6-alpine oso/scripts/build_musl.sh
       - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.7-alpine oso/scripts/build_musl.sh
       - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.8-alpine oso/scripts/build_musl.sh
@@ -406,13 +493,64 @@ jobs:
           go test -v ./tests/
         working-directory: go
 
-  validate_python:
-    name: Test python ${{ matrix.python-version }} on ${{ matrix.os }}
-    needs: [build_wheels]
-    runs-on: ${{ matrix.os }}
+  validate_python_linux:
+    name: Test python ${{ matrix.python-version }} on Linux
+    needs: [build_linux_wheels]
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: [3.6, 3.7, 3.8, 3.9]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version env
+        id: version
+        run: echo "::set-output name=oso_version::$(cat VERSION)"
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Download oso python wheels from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      - name: "test"
+        run: |
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          python test.py
+        working-directory: test
+
+  validate_python_macos:
+    name: Test python ${{ matrix.python-version }} on MacOS
+    needs: [build_macos_wheels]
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version env
+        id: version
+        run: echo "::set-output name=oso_version::$(cat VERSION)"
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Download oso python wheels from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      - name: "test"
+        run: |
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          python test.py
+        working-directory: test
+
+  validate_python_windows:
+    name: Test python ${{ matrix.python-version }} on Windows
+    needs: [build_windows_wheels]
+    runs-on: windows-latest
+    strategy:
+      matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
     steps:
       - uses: actions/checkout@v2
@@ -601,12 +739,16 @@ jobs:
     if: github.ref != 'refs/heads/main'
     needs:
       [
-        build_wheels,
+        build_linux_wheels,
+        build_macos_wheels,
+        build_windows_wheels,
         build_musl_wheels,
         build_jar,
         build_gem,
         build_go,
-        validate_python,
+        validate_python_linux,
+        validate_python_macos,
+        validate_python_windows,
         validate_python_musl,
         validate_ruby,
         validate_java,
@@ -729,7 +871,9 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       [
-        validate_python,
+        validate_python_linux,
+        validate_python_macos,
+        validate_python_windows,
         validate_python_musl,
         validate_ruby,
         validate_java,
