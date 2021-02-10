@@ -103,6 +103,8 @@ fn invert_partials(bindings: BindingStack, vm: &PolarVirtualMachine, bsp: usize)
                 let constraints =
                     PartialInverter::new(var.clone(), VariableState::Cycle(c.clone()))
                         .fold_term(value);
+
+                // TODO (dhatch): This whole thing could just be an add constraints call.
                 match constraints.value() {
                     Value::Expression(e) => {
                         let mut f = cycle_constraints(c);
@@ -126,6 +128,7 @@ fn invert_partials(bindings: BindingStack, vm: &PolarVirtualMachine, bsp: usize)
                 let constraints =
                     PartialInverter::new(var.clone(), VariableState::Partial(e.clone()))
                         .fold_term(value);
+                // Same thing here.
                 match constraints.value() {
                     Value::Expression(f) => {
                         let mut e = e.clone();
@@ -201,6 +204,11 @@ impl Runnable for Inverter {
                 QueryEvent::Done { .. } => {
                     let mut result = self.results.is_empty();
                     if !result {
+                        // If there are results, the inversion should usually fail. However,
+                        // if those results have constraints we collect them and pass them
+                        // out to the parent VM.
+
+
                         let inverted: Vec<BindingStack> = self
                             .results
                             .drain(..)
@@ -258,11 +266,15 @@ impl Runnable for Inverter {
                                 vec![Binding(var, value)]
                             }
                         });
+
+                        // Return new bindings created by inverter to parent VM.
                         self.bindings.borrow_mut().extend(new_bindings);
                     }
                     return Ok(QueryEvent::Done { result });
                 }
                 QueryEvent::Result { .. } => {
+                    // Retrieve new bindings made when running inverted query.
+                    // Bindings are retrieved as the raw BindingStack.
                     let bindings: BindingStack = self.vm.bindings_for_inverter().drain(self.bsp..).collect();
                     // Add new part of binding stack from inversion to results.
                     self.results.push(bindings);
