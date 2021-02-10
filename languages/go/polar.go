@@ -3,10 +3,13 @@
 package oso
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	"github.com/osohq/go-oso/errors"
 	"github.com/osohq/go-oso/internal/ffi"
@@ -135,7 +138,41 @@ func (p Polar) queryRule(name string, args ...interface{}) (*Query, error) {
 }
 
 func (p Polar) repl(files ...string) error {
-	return fmt.Errorf("Go REPL is not yet implemented")
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("query> ")
+		text, _ := reader.ReadString('\n')
+		text = strings.TrimSuffix(text, "\r\n")
+		text = strings.TrimSuffix(text, "\n")
+		text = strings.TrimSuffix(text, ";")
+
+		ffi_query, err := p.ffiPolar.NewQueryFromStr(text)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		query := newQuery(*ffi_query, p.host.Copy())
+		results, err := query.GetAllResults()
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		if len(results) == 0 {
+			fmt.Println(false)
+		} else {
+			for _, bindings := range results {
+				for k, v := range bindings {
+					switch v := v.(type) {
+					// print strings with quotes but not variables or other types represented by strings
+					case string:
+						fmt.Printf("%v = %#v\n", k, v)
+					default:
+						fmt.Printf("%v = %v\n", k, v)
+					}
+				}
+			}
+		}
+	}
 }
 
 /*
