@@ -2,6 +2,9 @@
 	python-flask-test python-django-test python-sqlalchemy-test ruby-test \
 	java-test docs-test fmt clippy lint wasm-build wasm-test js-test
 
+#! If you add another dependency to this you must also add it to the Test
+#! github action or it won't run in CI. All jobs run in parallel on CI and
+#! `make test` is just a local convienence.
 test: go-test rust-test python-test ruby-test java-test python-flask-test \
 	python-django-test python-sqlalchemy-test wasm-test js-test
 
