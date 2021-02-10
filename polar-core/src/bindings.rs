@@ -261,6 +261,35 @@ impl BindingManager {
         Derefer::new(self).fold_term(term.clone())
     }
 
+    // TODO (dhatch): Replace variable state with this.
+    // Instead of returning a Cycle, it returns a Partial with the constraints
+    // in the partial.
+    pub fn variable_state_new(&self, variable: &Symbol) -> VariableState {
+        match self.variable_state_at_point(variable, self.bsp()) {
+            // NOTE: (dhatch) Investigating this... changing to partial seems fine, but
+            // it may cause every variable to always be a partial in the VM and never
+            // become bound.
+            // I also think representing this as Unbound would be fine, except the
+            // inverter needs the information as a constraint. not (x = y) adds a constraint
+            // x != y.
+            VariableState::Cycle(c) => VariableState::Partial(cycle_constraints(c)),
+            vs => vs,
+        }
+    }
+
+    pub fn variable_state_new_at_point(&self, variable: &Symbol, bsp: Bsp) -> VariableState {
+        match self.variable_state_at_point(variable, bsp) {
+            // NOTE: (dhatch) Investigating this... changing to partial seems fine, but
+            // it may cause every variable to always be a partial in the VM and never
+            // become bound.
+            // I also think representing this as Unbound would be fine, except the
+            // inverter needs the information as a constraint. not (x = y) adds a constraint
+            // x != y.
+            VariableState::Cycle(c) => VariableState::Partial(cycle_constraints(c)),
+            vs => vs,
+        }
+    }
+
     /// Check the state of `variable`.
     pub fn variable_state(&self, variable: &Symbol) -> VariableState {
         self.variable_state_at_point(variable, self.bsp())
@@ -399,6 +428,41 @@ impl BindingManager {
     /// Reset the state of `BindingManager` to what it was at `to`.
     pub fn backtrack(&mut self, to: Bsp) {
         self.bindings.truncate(to)
+    }
+
+    /// Return a new binding manager that only contains bindings or constraints
+    /// made after `after`.
+    pub fn new_bindings_after(&mut self, after: Bsp) -> BindingManager {
+        let mut new = self.clone();
+        new.bindings.drain(..after);
+
+        let new_constraints = vec![];
+        for Binding(var, value) in &mut new.bindings {
+            if let Ok(expr) = value.value().as_expression() {
+                // Get only new parts of expression
+                let old_len = match self.variable_state_new_at_point(&var, after) {
+                    VariableState::Partial(e) => e.args.len(),
+                    _ => 0,
+                };
+
+                let constraints_after = expr.after(old_len);
+                *value = constraints_after.into_term();
+            }
+        }
+
+        for constraint in new_constraints.into_iter() {
+            new.constrain(&constraint);
+        }
+
+        new
+    }
+
+    /// Return all variables used in this binding manager.
+    fn variables(&self) -> HashSet<Symbol> {
+        self.bindings
+            .iter()
+            .map(|Binding(v, _)| v.clone())
+            .collect()
     }
 
     /// Retrieve an opaque value representing the current state of `BindingManager`.

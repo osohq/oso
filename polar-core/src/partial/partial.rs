@@ -217,6 +217,12 @@ impl Operation {
         combined
     }
 
+    pub fn after(&self, csp: usize) -> Operation {
+        assert_eq!(self.operator, Operator::And);
+        let (_, new) = self.constraints().split_at(csp);
+        self.clone_with_constraints(Vec::from(new))
+    }
+
     pub fn constraints(&self) -> Vec<Operation> {
         self.args
             .iter()
@@ -1733,7 +1739,8 @@ mod test {
     fn test_multiple_gt_three_variables() -> TestResult {
         let p = Polar::new();
         p.load_str(r#"f(x, y, z) if x > z and y > z;"#)?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y"), sym!("z")])), false);
+        let mut q =
+            p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y"), sym!("z")])), false);
         assert_partial_expressions!(
             next_binding(&mut q)?,
             "x" => "_this > z and y > z",
@@ -1763,9 +1770,11 @@ mod test {
         // TODO: More complicated version:
         //  f(x) if not g(z) and z = x;
         //  g(y) if y = 1;
-        p.load_str(r#"f(x) if not g(x);
+        p.load_str(
+            r#"f(x) if not g(x);
                       g(y) if y = 1;
-                      "#)?;
+                      "#,
+        )?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let bindings = next_binding(&mut q)?;
         assert_partial_expressions!(
@@ -1783,7 +1792,6 @@ mod test {
 
         Ok(())
     }
-
 
     // TODO(gj): add test where we have a partial prior to an inversion
     // TODO (dhatch): We have few tests involving multiple rules and partials.

@@ -681,7 +681,7 @@ impl PolarVirtualMachine {
 
     /// Investigate the current state of a variable and return a variable state variant.
     pub fn variable_state(&self, variable: &Symbol) -> VariableState {
-        self.binding_manager.variable_state(variable)
+        self.binding_manager.variable_state_new(variable)
     }
 
     /// Recursively dereference variables in a term, including subterms, except operations.
