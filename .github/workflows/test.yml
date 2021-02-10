@@ -212,10 +212,10 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-    - name: Install Java
-      uses: actions/setup-java@v1
-      with:
-        java-version: "11"
+      - name: Install Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: "11"
       - name: Test java
         run: make java-test
         env:
@@ -272,9 +272,6 @@ jobs:
           components: rustfmt, clippy
       - name: Test go
         run: make go-test
-  
-
-
 # python-flask-test python-django-test python-sqlalchemy-test
 
 # test:
