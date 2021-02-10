@@ -110,6 +110,29 @@ jobs:
       - name: Build Polar
         run: cargo build -p polar-c-api
 
+  # tests all core polar code and the rust language integration
+  rust_test:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+      - name: Test rust
+        run: make rust-test
+
   python_test:
     runs-on: ubuntu-latest
     needs: [build]
@@ -135,8 +158,124 @@ jobs:
           python-version: "3.6"
       - name: Test python
         run: make python-test
-# go-test rust-test python-test ruby-test java-test python-flask-test \
-# python-django-test python-sqlalchemy-test wasm-test js-test
+      - name: Test flask
+        run: make python-flask-test
+      - name: Test django
+        run: make python-django-test
+      - name: Test sqlalchemy
+        run: make python-sqlalchemy-test
+
+  ruby_test:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+    - name: Install Ruby + gems
+      uses: ruby/setup-ruby@v1
+      with:
+        bundler-cache: true
+        ruby-version: 2.4
+        working-directory: "languages/ruby"
+      - name: Test ruby
+        run: make ruby-test
+
+  java_test:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+    - name: Install Java
+      uses: actions/setup-java@v1
+      with:
+        java-version: "11"
+      - name: Test java
+        run: make java-test
+        env:
+          MVN_FLAGS: "-q"
+
+  js_test:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+      - name: Use Node.js 10.14.2
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10.14.2
+      - name: Add WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Test js
+        run: make js-test
+
+  go_test:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+      - name: Test go
+        run: make go-test
+  
+
+
+# python-flask-test python-django-test python-sqlalchemy-test
 
 # test:
 #   runs-on: ubuntu-latest
