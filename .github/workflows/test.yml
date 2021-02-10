@@ -319,6 +319,8 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: "11"
+      - name: Build python lib
+        run: make python-build
       - name: Install yard (for doc build)
         run: gem install yard
       - name: Install spelling check
