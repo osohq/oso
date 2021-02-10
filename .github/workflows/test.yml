@@ -322,7 +322,10 @@ jobs:
       - name: Build python lib
         run: make python-build
       - name: Build js lib
-        run: make -C languages/js build
+        run: |
+          rustup target add wasm32-unknown-unknown
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          make -C languages/js build
       - name: Install yard (for doc build)
         run: gem install yard
       - name: Install spelling check
