@@ -92,113 +92,112 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
-    - name: Install Rust stable toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
-        components: rustfmt, clippy
-    - name: Build Polar
-      run: cargo build -p polar-c-api
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+      - name: Build Polar
+        run: cargo build -p polar-c-api
 
   python_test:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
-    - name: Install Rust stable toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
-        components: rustfmt, clippy
-    - name: Install Python 3.6
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+      - name: Install Python 3.6
         uses: actions/setup-python@v1
         with:
           python-version: "3.6"
-    - name: Test python
+      - name: Test python
         run: make python-test
-
 # go-test rust-test python-test ruby-test java-test python-flask-test \
 # python-django-test python-sqlalchemy-test wasm-test js-test
 
-  # test:
-  #   runs-on: ubuntu-latest
-    
-  #     - name: Install Python 3.6
-  #       uses: actions/setup-python@v1
-  #       with:
-  #         python-version: "3.6"
-  #     - name: Install Ruby + gems
-  #       uses: ruby/setup-ruby@v1
-  #       with:
-  #         bundler-cache: true
-  #         ruby-version: 2.4
-  #         working-directory: "languages/ruby"
-  #     - name: Use Node.js 10.14.2
-  #       uses: actions/setup-node@v1
-  #       with:
-  #         node-version: 10.14.2
-  #     - name: Add WebAssembly target
-  #       run: rustup target add wasm32-unknown-unknown
-  #     - name: Install wasm-pack
-  #       run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-  #     - name: Install Java
-  #       uses: actions/setup-java@v1
-  #       with:
-  #         java-version: "11"
+# test:
+#   runs-on: ubuntu-latest
 
-  #     ## Run tests
-  #     - name: Test everything
-  #       run: make test
-  #       env:
-  #         MVN_FLAGS: "-q"
+#     - name: Install Python 3.6
+#       uses: actions/setup-python@v1
+#       with:
+#         python-version: "3.6"
+#     - name: Install Ruby + gems
+#       uses: ruby/setup-ruby@v1
+#       with:
+#         bundler-cache: true
+#         ruby-version: 2.4
+#         working-directory: "languages/ruby"
+#     - name: Use Node.js 10.14.2
+#       uses: actions/setup-node@v1
+#       with:
+#         node-version: 10.14.2
+#     - name: Add WebAssembly target
+#       run: rustup target add wasm32-unknown-unknown
+#     - name: Install wasm-pack
+#       run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+#     - name: Install Java
+#       uses: actions/setup-java@v1
+#       with:
+#         java-version: "11"
 
-  #     # Python lint requires python build.
-  #     - name: Lint Python code
-  #       run: make -C languages/python lint
+#     ## Run tests
+#     - name: Test everything
+#       run: make test
+#       env:
+#         MVN_FLAGS: "-q"
 
-  #     ## Test + check docs
-  #     ## (easier to do here once all above deps are installed)
-  #     - name: Install yard (for doc build)
-  #       run: gem install yard
-  #     - name: Install spelling check
-  #       run: sudo apt-get install -y libenchant-dev
-  #     - name: Spelling
-  #       run: SPHINXOPTS="-W" make -C docs spelling
-  #     - name: Doc test
-  #       run: make -C docs test
-  #     - name: Docs build
-  #       run: SPHINXOPTS="-W" make -C docs build
+#     # Python lint requires python build.
+#     - name: Lint Python code
+#       run: make -C languages/python lint
 
-  #     ## Publish docs
-  #     ## Also easier to do here with above deps installed
-  #     - name: s3 preview publish
-  #       if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
-  #       run: aws s3 sync --delete docs/_build/html s3://docs-preview.oso.dev
-  #       env:
-  #         AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
-  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
-  #     - name: cloudfront invalidate docs preview
-  #       if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
-  #       run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
-  #       env:
-  #         AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
-  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
+#     ## Test + check docs
+#     ## (easier to do here once all above deps are installed)
+#     - name: Install yard (for doc build)
+#       run: gem install yard
+#     - name: Install spelling check
+#       run: sudo apt-get install -y libenchant-dev
+#     - name: Spelling
+#       run: SPHINXOPTS="-W" make -C docs spelling
+#     - name: Doc test
+#       run: make -C docs test
+#     - name: Docs build
+#       run: SPHINXOPTS="-W" make -C docs build
+
+#     ## Publish docs
+#     ## Also easier to do here with above deps installed
+#     - name: s3 preview publish
+#       if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
+#       run: aws s3 sync --delete docs/_build/html s3://docs-preview.oso.dev
+#       env:
+#         AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
+#         AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
+#     - name: cloudfront invalidate docs preview
+#       if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
+#       run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
+#       env:
+#         AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
+#         AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
