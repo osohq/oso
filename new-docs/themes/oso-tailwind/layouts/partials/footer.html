@@ -39,6 +39,7 @@
     </div>
 </footer>
 
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
 {{ $appJs := resources.Get "js/app.js" }}
 <script async="true" type="text/javascript" src="{{ $appJs.RelPermalink }}"></script>
 {{ $navJs := resources.Get "js/nav.js" }}

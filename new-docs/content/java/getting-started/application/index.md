@@ -83,20 +83,25 @@ In the application, we need to:
 3. [Register application classes](getting-started/policies#application-types)
 4. Attach the Oso instance to the application
 
-We have achieved this using the `setupOso` method, in `Application.java`.
+We have achieved this using the `setupOso` method, in `Application.java`:
 
-```java
-@Bean
-public Oso setupOso() throws IOException, Exceptions.OsoException {
-    Oso oso = new Oso();
-    oso.registerClass(User.class, "User");
-    oso.registerClass(Expense.class, "Expense");
-    oso.registerClass(Organization.class, "Organization");
-    oso.registerClass(HttpServletRequest.class, "Request");
-    oso.loadFile("src/main/oso/authorization.polar");
-    return oso;
-}
-```
+{{% includeSnippet
+    repo="osohq/oso-spring-tutorial"
+    file="src/main/java/com/example/springboot/Application.java"
+    loc="25-34" %}}
+
+<!-- ```java -->
+<!-- @Bean -->
+<!-- public Oso setupOso() throws IOException, Exceptions.OsoException { -->
+<!--     Oso oso = new Oso(); -->
+<!--     oso.registerClass(User.class, "User"); -->
+<!--     oso.registerClass(Expense.class, "Expense"); -->
+<!--     oso.registerClass(Organization.class, "Organization"); -->
+<!--     oso.registerClass(HttpServletRequest.class, "Request"); -->
+<!--     oso.loadFile("src/main/oso/authorization.polar"); -->
+<!--     return oso; -->
+<!-- } -->
+<!-- ``` -->
 
 We can now access this `oso` instance anywhere in our application, and specify
 which policy files are loaded in the application configuration.
@@ -110,22 +115,27 @@ if they are logged in.
 We can apply apply authorization to **every** incoming request by setting up
 a request `Interceptor`, with a `prehandle` function that runs before every request:
 
-```java
-@Override
-public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-    try {
-        setCurrentUser(request);
+{{% includeSnippet
+    repo="osohq/oso-spring-tutorial"
+    file="src/main/java/com/example/springboot/Authorizer.java"
+    loc="22-36" %}}
 
-        // Authorize the incoming request
-        if (!oso.isAllowed(currentUser.get(), request.getMethod(), request)) {
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "oso authorization: unauthorized");
-        }
-    } catch (SQLException e) {
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found", e);
-    }
-    return true;
-}
-```
+<!-- ```java -->
+<!-- @Override -->
+<!-- public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception { -->
+<!--     try { -->
+<!--         setCurrentUser(request); -->
+<!--  -->
+<!--         // Authorize the incoming request -->
+<!--         if (!oso.isAllowed(currentUser.get(), request.getMethod(), request)) { -->
+<!--         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "oso authorization: unauthorized"); -->
+<!--         } -->
+<!--     } catch (SQLException e) { -->
+<!--         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found", e); -->
+<!--     } -->
+<!--     return true; -->
+<!-- } -->
+<!-- ``` -->
 
 Now that this is in place, we can write a simple policy to allow anyone
 to call our index route, and see the hello message:

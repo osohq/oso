@@ -1,0 +1,52 @@
+{{ $repo := .Params.repo }}
+{{ $ref := .Get "ref" | default "main" }}
+{{ $file := .Params.file }}
+{{ $path := printf "%s/%s/%s" $repo $ref $file }}
+{{ $syntax := index (split $file ".") 1 }}
+{{ $syntaxoverride := .Get "syntax" }}
+{{ $id := printf "%s%s" .Ordinal $file }}
+{{ $codeId := md5 $id }}
+{{ $loc := .Get "loc" }}
+
+<div class="code-copy" id="{{ $id | urlize }}">
+	<div class="code-copy-header">
+    <div class="action-buttons"></div>
+    <span title="" class="filename">{{ $file }}</span>
+    <i class="icon-{{ $syntax }} input"></i>
+  </div>
+	<button class="copy-button" title="Copy to clipboard" data-clipboard-snippet>
+    <div class="copy-text"><i class="icon-clipboard"></i> COPY</div>
+	</button>
+  <pre id="{{ $codeId }}"><code class="language-{{ with $syntaxoverride }}{{ . }}{{ else }}{{ $syntax }}{{ end }}">
+    Loading snippet...
+  </code></pre>
+</div>
+
+<script async="true">
+  (async () => {
+    // Helpers.
+    const range = (from, to) => Array.from({length: (to - from + 1)}, (v, k) => k + from);
+    const toInt = x => parseInt(x, 10);
+    const maybeRange = x => {
+      if (x.includes('-')) {
+        const [from, to] = x.split('-').map(toInt);
+        return range(from, to);
+      } else {
+        return toInt(x);
+      }
+    };
+
+    const res = await fetch('https://raw.githubusercontent.com/{{ $path }}');
+    let text = await res.text();
+
+    const lines = new Set('{{ $loc }}'.replace(/ /g, '').split(",").filter(Boolean).flatMap(maybeRange));
+    if (lines.size) {
+      text = text.split('\n').filter((_, i) => lines.has(i + 1)).join('\n')
+    }
+
+    const pre = document.getElementById('{{ $codeId }}');
+    const code = pre.children[0];
+    code.textContent = text;
+    window.hljs.highlightBlock(pre);
+  })();
+</script>
