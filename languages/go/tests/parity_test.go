@@ -21,6 +21,10 @@ import (
 
 type UnitClass struct{}
 
+func NewUnitClass() UnitClass {
+	return UnitClass{}
+}
+
 func (u UnitClass) String() string {
 	return "UnitClass"
 }
@@ -61,10 +65,6 @@ type ValueFactory struct {
 	ListAttr   []int
 	DictAttr   map[string]int
 	InnerClass struct{}
-}
-
-func (vf ValueFactory) New() ValueFactory {
-	return ValueFactory{}
 }
 
 func NewValueFactory() ValueFactory {
@@ -392,8 +392,13 @@ func String(s string) *string {
 }
 
 func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
+	var CONSTRUCTORS = map[string]interface{}{
+		"UnitClass":    NewUnitClass,
+		"ValueFactory": NewValueFactory,
+	}
 	for k, v := range CLASSES {
-		err := o.RegisterClassWithName(v, k)
+		c := CONSTRUCTORS[k]
+		err := o.RegisterClassWithName(v, c, k)
 		if err != nil {
 			t.Fatal(err)
 		}

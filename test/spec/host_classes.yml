@@ -5,7 +5,7 @@ cases:
   # construct test cases
   # TODO: add tests back in once constructor implementation is complete
   - description: can construct simple instance
-    query: x = UnitClass.New()
+    query: x = new UnitClass()
     result: [{x: {repr: UnitClass}}]
   # - description: can construct with no args
   #   query: new Constructor().NumKwargs() = 0
@@ -21,13 +21,13 @@ cases:
 
   # attributes + methods
   - description: can read attributes from a struct
-    query: x = ValueFactory.New().StringAttr
+    query: x = new ValueFactory().StringAttr
     result: [{x: "abc"}]
   - description: can call methods on struct
-    query: x = ValueFactory.New().GetString()
+    query: x = new ValueFactory().GetString()
     result: [{x: "abc"}]
   - description: can get lists back
-    query: 1 in ValueFactory.New().GetList()
+    query: 1 in new ValueFactory().GetList()
   - description: can call class methods
     query: |
       "abc" = MethodVariants.ClassMethodReturnsString()
@@ -64,7 +64,7 @@ cases:
 
   # methods returning nil
   - description: can get nil back and compare
-    query: ValueFactory.New().GetNil() = nil
+    query: new ValueFactory().GetNil() = nil
   - description: cannot call on nil
-    query: ValueFactory.New().GetNil().BadCall()
+    query: new ValueFactory().GetNil().BadCall()
     err: has no attribute 'BadCall'
