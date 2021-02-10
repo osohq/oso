@@ -184,12 +184,12 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-    - name: Install Ruby + gems
-      uses: ruby/setup-ruby@v1
-      with:
-        bundler-cache: true
-        ruby-version: 2.4
-        working-directory: "languages/ruby"
+      - name: Install Ruby + gems
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 2.4
+          working-directory: "languages/ruby"
       - name: Test ruby
         run: make ruby-test
 
