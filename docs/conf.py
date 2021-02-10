@@ -42,7 +42,7 @@ project = "oso"
 copyright = "2020 Oso Security, Inc"
 author = "oso"
 version = "0.10"
-release = "0.10.1"
+release = "0.10.2"
 
 
 # -- General configuration ---------------------------------------------------
