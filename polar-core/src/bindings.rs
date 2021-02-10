@@ -32,14 +32,23 @@ pub struct BindingManager {
     bindings: BindingStack,
 }
 
+/// The `BindingManager` maintains associations between variables and values,
+/// and constraints.
+///
+/// A variable may be:
+/// - unbound
+/// - bound
+/// - constrained
+///
+/// Variables may also be bound together such that their values or constraints
+/// will be the same.
+///
+/// A binding is created with the `bind` method.
+///
+/// The constraints or value associated with a variable is retrieved with `variable_state`.
 impl BindingManager {
     pub fn new() -> Self {
         Self { bindings: vec![] }
-    }
-
-    /// Bind `var` to `val`, overwriting any already bound value.
-    pub fn rebind(&mut self, var: &Symbol, val: Term) {
-        self.add_binding(var, val);
     }
 
     /// Bind `var` to `val`.
@@ -48,6 +57,13 @@ impl BindingManager {
     /// If `var` is already bound or constrained, the
     /// binding or constraints are replaced with `val`.
     pub fn bind(&mut self, var: &Symbol, val: Term) {
+        // TODO (dhatch): Would like to disable rebinding, but this has a large fallout.
+        // We use it extensively for testing and in external_question_result to give the result
+        // variable a default value (we could probably fix this some other way).
+        // If we don't disable rebinding, we need to do something with the rebind_variable_group
+        // test so that the behavior is better defined.
+        // assert!(!matches!(self.variable_state(var), VariableState::Bound(_)), "Variable is bound");
+
         if let Ok(symbol) = val.value().as_symbol() {
             self.bind_variables(var, symbol);
         } else {
@@ -462,4 +478,28 @@ mod test {
         assert_eq!(bindings.variable_state(&x), VariableState::Partial(op!(And)));
     }
 
+    #[test]
+    /// Test creating a group of variables bound together, and rebinding them.
+    fn rebind_variable_group() {
+        let mut bindings = BindingManager::new();
+        bindings.bind(&sym!("x"), term!(sym!("y")));
+        bindings.bind(&sym!("y"), term!(sym!("z")));
+
+        bindings.bind(&sym!("z"), term!(1));
+
+        // All have value 1.
+        assert_eq!(bindings.variable_state(&sym!("x")), VariableState::Bound(term!(1)));
+        assert_eq!(bindings.variable_state(&sym!("y")), VariableState::Bound(term!(1)));
+        assert_eq!(bindings.variable_state(&sym!("z")), VariableState::Bound(term!(1)));
+
+        bindings.bind(&sym!("x"), term!(2));
+
+        // This doesn't always change all variables, and sometimes changes more than one variable.
+        // What should happen here?
+        // If we don't support rebinding, it's easier, but some parts of the VM subtly
+        // require rebinding.
+        assert_eq!(bindings.variable_state(&sym!("x")), VariableState::Bound(term!(2)));
+        assert_eq!(bindings.variable_state(&sym!("y")), VariableState::Bound(term!(1)));
+        assert_eq!(bindings.variable_state(&sym!("z")), VariableState::Bound(term!(1)));
+    }
 }
