@@ -321,6 +321,8 @@ jobs:
           java-version: "11"
       - name: Build python lib
         run: make python-build
+      - name: Build js lib
+        run: make -C languages/js build
       - name: Install yard (for doc build)
         run: gem install yard
       - name: Install spelling check
