@@ -134,7 +134,9 @@ jobs:
           rustup target add x86_64-pc-windows-gnu
           cargo build --target x86_64-pc-windows-gnu --release
       - name: Rename static lib
-        run: mv target/x86_64-pc-windows-gnu/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
+        run: |
+          rm target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
+          mv target/x86_64-pc-windows-gnu/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
       - uses: actions/upload-artifact@v2
         with:
           name: oso_library
