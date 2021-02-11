@@ -34,6 +34,7 @@ jobs:
       - name: Check JS version matches
         run: |
           grep "\"version\": \"$oso_version\"" package.json
+        working-directory: languages/js
       - name: Check rust version matches
         run: |
           grep "^version = \"$oso_version\"$" oso/Cargo.toml
