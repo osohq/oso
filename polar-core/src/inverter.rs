@@ -142,8 +142,7 @@ fn invert_partials(bindings: BindingStack, vm: &PolarVirtualMachine, bsp: usize)
     new_bindings
 }
 
-// TODO remove dedupe bindings
-
+// TODO Remove dedupe bindings once inverter operates over BindingManager instead of binding stack.
 /// Only keep latest bindings.
 fn dedupe_bindings(bindings: BindingStack) -> BindingStack {
     let mut seen = HashSet::new();

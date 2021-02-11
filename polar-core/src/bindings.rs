@@ -12,7 +12,8 @@ use crate::vm::cycle_constraints;
 #[derive(Clone, Debug)]
 pub struct Binding(pub Symbol, pub Term);
 
-// TODO only public for debugger.. how can we handle this
+// TODO This is only public for debugger and inverter.
+// Eventually this should be an internal interface.
 pub type BindingStack = Vec<Binding>;
 pub type Bindings = HashMap<Symbol, Term>;
 
@@ -29,6 +30,16 @@ pub enum VariableState {
 
 
 #[derive(Clone, Debug)]
+/// The binding manager is responsible for managing binding & constraint state.
+/// It is updated primarily using:
+/// - `bind`
+/// - `add_constraint`
+///
+/// Bindings are retrived with:
+/// - `deref`
+/// - `value`
+/// - `variable_state`
+/// - `bindings`
 pub struct BindingManager {
     bindings: BindingStack
 }
@@ -41,6 +52,7 @@ impl BindingManager {
         }
     }
 
+    /// Bind `var` to `val`.
     pub fn bind(&mut self, var: &Symbol, val: Term) {
         self.bindings.push(Binding(var.clone(), val));
     }
@@ -55,6 +67,9 @@ impl BindingManager {
             .map(|Binding(_, val)| val)
     }
 
+    /// If `term` is a variable, return the value bound to that variable.
+    /// If `term` is a list, dereference all items in the list.
+    /// Otherwise, return `term`.
     pub fn deref(&self, term: &Term) -> Term {
         match &term.value() {
             Value::List(list) => {
@@ -91,6 +106,9 @@ impl BindingManager {
         }
     }
 
+    /// Dereference all variables in term, including within nested structures like
+    /// lists and dictionaries.
+    /// Do not dereference variables inside expressions.
     pub fn deep_deref(&self, term: &Term) -> Term {
         pub struct Derefer<'a> {
             binding_manager: &'a BindingManager,
@@ -121,11 +139,13 @@ impl BindingManager {
         Derefer::new(self).fold_term(term.clone())
     }
 
+    /// Check the state of `variable`.
     pub fn variable_state(&self, variable: &Symbol) -> VariableState {
         self.variable_state_at_point(variable, self.bsp())
     }
 
-    // TODO: get rid of this.
+    // TODO: Get rid of this, only used in inverter.
+    /// Check the state of `variable` at `bsp`.
     pub fn variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> VariableState {
         let mut path = vec![variable];
         while let Some(value) = self.value(path.last().unwrap(), bsp) {
@@ -144,7 +164,7 @@ impl BindingManager {
         VariableState::Unbound
     }
 
-
+    /// Add `term` as a constraint.
     pub fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
         assert!(
@@ -227,7 +247,7 @@ impl BindingManager {
         Ok(())
     }
 
-    // TODO: non pub.
+    // TODO: non public, the only way to add constraints should be `add_constraint`.
     pub fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
         assert_eq!(o.operator, Operator::And, "bad constraint {}", o.to_polar());
         for var in o.variables() {
@@ -239,10 +259,13 @@ impl BindingManager {
         Ok(())
     }
 
+    /// Reset the state of `BindingManager` to what it was at `to`.
     pub fn backtrack(&mut self, to: Bsp) {
         self.bindings.truncate(to)
     }
 
+    /// Retrieve an opaque value representing the current state of `BindingManager`.
+    /// Can be used to reset state with `backtrack`.
     pub fn bsp(&self) -> Bsp {
         self.bindings.len()
     }
@@ -279,9 +302,8 @@ impl BindingManager {
         &self.bindings
     }
 
-    // TODO maybe relevant_bindings
+    // TODO maybe port from VM:
+    // relevant_bindings
     // variable_bindings
     // bindings
-    // bind_constants
-    //
 }
