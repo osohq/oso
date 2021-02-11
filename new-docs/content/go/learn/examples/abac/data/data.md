@@ -1,7 +1,0 @@
----
-userClass: |
-  xxx
-
-expenseClass: |
-  xxx
----

@@ -26,14 +26,14 @@ control](https://en.wikipedia.org/wiki/Attribute-based_access_control) (ABAC).
 
 Suppose we want to allow employees to view *their own* expenses.
 
-We can register our user classes with Oso:
+We can register our user class with Oso:
 
 {{< literalInclude dynPath="userClassPath"
                    from="user-class-start"
                    to="user-class-end"
                    fallback="userClass" >}}
 
-We can do the same with the resources being requested:
+We can do the same with the resource being requested:
 
 {{< literalInclude dynPath="expenseClassPath"
                    from="expense-class-start"
@@ -43,10 +43,9 @@ We can do the same with the resources being requested:
 An `allow` rule that checks that the user reading the
 expense is the same person who submitted the expense, would look like:
 
-{{< code file="abac.polar" >}}
-allow(actor: User, "view", resource: Expense) if
-    resource.{{% exampleGet "submitted_by" %}} = actor.name;
-{{< /code >}}
+{{< literalInclude path="examples/abac/01-simple.polar"
+                   from="rule-start"
+                   to="rule-end" >}}
 
 This simple example shows the potential for ABAC: we took an intuitive concept
 of “can see their own expenses” and represented it as a single comparison.
@@ -83,14 +82,9 @@ include attributes.
 For example, an employee might be an administrator of a *project*,
 and therefore is allowed to see all expenses related to that project.
 
-{{< code file="abac.polar" >}}
-# Alice is an admin of Project 1
-role(_: User { name: "alice" }, "admin", _: Project { id: 1 });
-
-# Project admins can view expenses of the project
-allow(actor: User, "view", resource: Expense) if
-    role(actor, "admin", Project.id(resource.project{{% exampleGet "postfixId" %}}));
-{{< /code >}}
+{{< literalInclude path="examples/abac/02-rbac.polar"
+                   from="project-rule-start"
+                   to="project-rule-end" >}}
 
 What we can see is happening here, is that we are associated roles not just
 globally to a user, but to a user for some specific resource. Other examples
@@ -98,18 +92,9 @@ might be team-, or organization- specific roles.
 
 And these can also follow inheritance patterns like we saw with regular roles.
 
-{{< code file="abac.polar" >}}
-# Bhavik is an admin of ACME
-role(_: User { name: "bhavik" }, "admin",  _: Organization { name: "ACME" });
-
-# Team roles inherit from Organization roles
-role(actor: User, role: String, team: Team) if
-    role(actor, role, Organization.id(team.organization{{% exampleGet "postfixId" %}}));
-
-# Project roles inherit from Team roles
-role(actor: User, role: String, project: Project) if
-    role(actor, role, Team.id(project.team{{% exampleGet "postfixId" %}}));
-{{< /code >}}
+{{< literalInclude path="examples/abac/02-rbac.polar"
+                   from="role-inherit-start"
+                   to="role-inherit-end" >}}
 
 ## Hierarchies
 
@@ -122,29 +107,22 @@ policy.
 Starting out with a simple example, suppose managers can view employees’
 expenses:
 
-{{< code file="abac.polar" >}}
-allow(actor: User, "view", resource: Expense) if
-    employee in actor.employees() and
-    employee.name = resource.{{% exampleGet "submitted_by" %}};
-{{< /code >}}
+{{< literalInclude path="examples/abac/03-hierarchy.polar"
+                   from="start-simple-rule"
+                   to="end-simple-rule" >}}
 
 First thing we can do, is extract out the logic for checking whether the user
 manages someone:
 
-{{< code file="abac.polar" >}}
-allow(actor: User, "view", resource: Expense) if
-    manages(actor, employee) and
-    employee.name = resource.{{% exampleGet "submitted_by" %}};
-{{< /code >}}
+{{< literalInclude path="examples/abac/03-hierarchy.polar"
+                   from="start-manages-rule"
+                   to="end-manages-rule" >}}
 
 Now if we want this logic to apply for managers, and managers’ managers, and so
 on… then we need to make sure this logic is evaluated recursively:
 
-{{< code file="abac.polar" >}}
-# Management hierarchies
-manages(manager: User, employee) if
-    report in manager.employees()
-    and (report = employee or manages(report, employee));
-{{< /code >}}
+{{< literalInclude path="examples/abac/03-hierarchy.polar"
+                   from="start-hierarchy-rule"
+                   to="end-hierarchy-rule" >}}
 
 <!-- TODO: Summary -->

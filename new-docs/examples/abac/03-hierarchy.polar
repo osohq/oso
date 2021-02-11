@@ -4,9 +4,11 @@
 # - recursive attributes
 # - representing hierachies
 
+# start-simple-rule
 allow(actor: User, "view", resource: Expense) if
     employee in actor.employees() and
     employee.name = resource.submitted_by;
+# end-simple-rule
 
 # start-manages-rule
 allow(actor: User, "view", resource: Expense) if
