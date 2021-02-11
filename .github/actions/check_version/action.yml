@@ -5,29 +5,37 @@ runs:
   steps:
     - name: Set version env
       run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
+      shell: bash
     - name: Check python version matches
       run: grep "__version__ = \"$oso_version\"" oso/oso.py
+      shell: bash
       working-directory: languages/python/oso
     - name: Check ruby version matches
       run: grep "VERSION = '$oso_version'" lib/oso/version.rb
+      shell: bash
       working-directory: languages/ruby
     - name: Check java version matches
       run: grep "<version>$oso_version</version>" pom.xml
+      shell: bash
       working-directory: languages/java/oso
     - name: Check JS version matches
       run: |
         grep "\"version\": \"$oso_version\"" package.json
+      shell: bash
       working-directory: languages/js
     - name: Check rust version matches
       run: |
         grep "^version = \"$oso_version\"$" oso/Cargo.toml
         grep "^version = \"$oso_version\"$" oso-derive/Cargo.toml
+      shell: bash
       working-directory: languages/rust
     - name: Check polar version matches
       run: |
         grep "^version = \"$oso_version\"$" polar-core/Cargo.toml
         grep "^version = \"$oso_version\"$" polar-c-api/Cargo.toml
         grep "^version = \"$oso_version\"$" polar-wasm-api/Cargo.toml
+      shell: bash
     - name: Check docs release matches
       run: grep "release = \"$oso_version\"" conf.py
+      shell: bash
       working-directory: docs
