@@ -1,20 +1,5 @@
 ---
 langName: Ruby
-
-userClass: |
-    ```ruby
-    OSO ||= Oso.new
-
-    class User:
-      def initialize(name:)
-        @name = name
-      end
-
-      def role
-        db.query("SELECT role FROM user_roles WHERE username = ?", [@name])
-      end
-    end
-
-    OSO.register_class(User)
-    ```
+userClassPath: examples/rbac/ruby/03-external.rb
+registeredUserClassPath: examples/rbac/ruby/04-external.rb
 ---

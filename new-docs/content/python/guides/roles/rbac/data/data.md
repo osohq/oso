@@ -1,16 +1,5 @@
 ---
 langName: Python
-
-userClass: |
-    ```python
-    @polar_class
-    @dataclass
-    class User:
-        name: str = ""
-
-        def role(self):
-            yield from db.query(
-                "SELECT role FROM user_roles WHERE username = ?", [self.name]
-            )
-    ```
+userClassPath: examples/rbac/python/03-external.py
+registeredUserClassPath: examples/rbac/python/04-external.py
 ---
