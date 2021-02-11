@@ -37,8 +37,6 @@ to access the customer dashboard, and internal users are allowed to access the
 customer dashboard as well as an internal dashboard. We can write a simple
 policy to express this logic.
 
-Python
-
 Let’s start by defining {{% exampleGet "langName" %}} classes to represent
 customers and internal users:
 
