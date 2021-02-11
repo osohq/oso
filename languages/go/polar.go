@@ -146,6 +146,10 @@ func (p Polar) repl(files ...string) error {
 		text = strings.TrimSuffix(text, "\n")
 		text = strings.TrimSuffix(text, ";")
 
+		if text == "" {
+			continue
+		}
+
 		ffi_query, err := p.ffiPolar.NewQueryFromStr(text)
 		if err != nil {
 			fmt.Println(err)
