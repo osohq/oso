@@ -3,6 +3,7 @@ languageCode = "en-us"
 title = "Oso Documentation"
 theme = ["oso-tailwind", "oso-webpack"]
 uglyurls = true
+staticDir = ["examples"]
 
 defaultContentLanguage = "any"
 

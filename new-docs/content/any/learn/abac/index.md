@@ -28,11 +28,17 @@ Suppose we want to allow employees to view *their own* expenses.
 
 We can register our user classes with Oso:
 
-{{% exampleGet "userClass" %}}
+{{< literalInclude dynPath="userClassPath"
+                   from="user-class-start"
+                   to="user-class-end"
+                   fallback="userClass" >}}
 
 We can do the same with the resources being requested:
 
-{{% exampleGet "expenseClass" %}}
+{{< literalInclude dynPath="expenseClassPath"
+                   from="expense-class-start"
+                   to="expense-class-end"
+                   fallback="expenseClass" >}}
 
 An `allow` rule that checks that the user reading the
 expense is the same person who submitted the expense, would look like:
@@ -65,12 +71,9 @@ suppose our company has taken off and now spans multiple locations, and now
 accountants can only view expenses from their own locations. We can combine our
 previous roles with some simple ABAC conditions to achieve this:
 
-{{< code file="abac.polar" >}}
-# Accountants can view expenses from their location
-allow(actor: User, "view", resource: Expense) if
-    role(actor, "accountant") and
-    actor.location = resource.location;
-{{< /code >}}
+{{< literalInclude path="examples/abac/02-rbac.polar"
+                   from="simple-rule-start"
+                   to="simple-rule-end" >}}
 
 This is great when what we need is an intersection of models, and you want to
 apply both RBAC and ABAC policies simultaneously. However, the ABAC model

@@ -1,0 +1,7 @@
+---
+userClass: |
+  xxx
+
+expenseClass: |
+  xxx
+---
