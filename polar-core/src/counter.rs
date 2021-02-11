@@ -32,7 +32,11 @@ impl Counter {
     /// Wraps around at 52 bits of precision so that it can be safely
     /// coerced to an IEEE-754 double-float (f64).
     pub fn next(&self) -> u64 {
-        if self.next.compare_and_swap(MAX_ID, 1, Ordering::SeqCst) == MAX_ID {
+        if self
+            .next
+            .compare_exchange(MAX_ID, 1, Ordering::SeqCst, Ordering::SeqCst)
+            == MAX_ID
+        {
             MAX_ID
         } else {
             self.next.fetch_add(1, Ordering::SeqCst)
