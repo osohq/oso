@@ -11,6 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
+      ## Check Version
+      - uses: ./.github/actions/check_version
+
       - uses: actions/cache@v2
         with:
           path: |
@@ -18,9 +22,6 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock') }}
-
-      ## Check Version
-      - uses: ./.github/actions/check_version
 
       ## Check Rust
       - name: Install Rust stable toolchain
