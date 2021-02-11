@@ -35,7 +35,7 @@ impl Counter {
         if self
             .next
             .compare_exchange(MAX_ID, 1, Ordering::SeqCst, Ordering::SeqCst)
-            == MAX_ID
+            == Ok(MAX_ID)
         {
             MAX_ID
         } else {
