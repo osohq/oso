@@ -28,7 +28,7 @@ Using oso consists of two parts:
 
 oso currently offers libraries for [Java][badge-java-link],
 [Node.js][badge-nodejs-link], [Python][badge-python-link],
-[Ruby][badge-ruby-link], and [Rust][badge-rust-link].
+[Ruby][badge-ruby-link], [Rust][badge-rust-link] and [Go][go-link].
 
 ## Getting started
 
@@ -65,6 +65,7 @@ requirements:
 - Ruby: 2.4+
   - Bundler 2.1.4+
 - Rust: 1.46+
+- Go: 1.12+
 
 ## Contributing
 
@@ -91,6 +92,7 @@ See: [LICENSE][license].
 [badge-ruby-link]: https://rubygems.org/gems/oso-oso
 [badge-rust]: https://img.shields.io/crates/v/oso
 [badge-rust-link]: https://crates.io/crates/oso
+[go-link]: https://pkg.go.dev/github.com/osohq/go-oso
 
 <!-- [languages-java]: https://github.com/osohq/oso/tree/main/languages/java -->
 <!-- [languages-nodejs]: https://github.com/osohq/oso/tree/main/languages/js -->
