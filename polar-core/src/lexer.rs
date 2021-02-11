@@ -687,7 +687,7 @@ mod tests {
         let mut lexer = Lexer::new(&f);
         assert!(matches!(
             lexer.next(),
-            Some(Err(ParseError::InvalidFloat{ .. }))
+            Some(Err(ParseError::InvalidFloat { .. }))
         ));
 
         let f = "1.1";
