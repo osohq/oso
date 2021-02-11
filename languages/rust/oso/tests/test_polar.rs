@@ -300,7 +300,7 @@ fn test_clear_rules() -> oso::Result<()> {
 }
 
 #[test]
-fn test_basic_queries() -> oso::Result<()> {
+fn test_basic_queries() {
     common::setup();
 
     let mut oso = test_oso();
@@ -315,8 +315,6 @@ fn test_basic_queries() -> oso::Result<()> {
             .unwrap_or_default(),
         true
     );
-
-    Ok(())
 }
 
 // TODO unit test
@@ -789,14 +787,12 @@ fn test_variables_as_arguments() -> oso::Result<()> {
 // TODO ^
 
 #[test]
-fn test_lookup_runtime_error() -> oso::Result<()> {
+fn test_lookup_runtime_error() {
     common::setup();
 
     let mut oso = test_oso();
     oso.query(r#"new Widget(1) = {bar: "bar"}"#);
     oso.query_err(r#"new Widget(1).bar = "bar""#);
-
-    Ok(())
 }
 
 #[test]

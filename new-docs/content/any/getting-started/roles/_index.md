@@ -4,6 +4,8 @@ weight: 3
 description: >
   Roles are an intuitive way to group permissions and expose them to end
   users. Use Oso to add roles to your application.
+aliases:
+  - roles/index.html
 ---
 
 # Introduction to Roles

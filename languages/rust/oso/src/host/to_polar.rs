@@ -30,6 +30,7 @@ use crate::PolarValue;
 /// `ToPolar` implementors must also be concrete, sized types without
 /// any borrows.
 pub trait ToPolar {
+    #[allow(clippy::wrong_self_convention)]
     fn to_polar(self) -> PolarValue;
 }
 
@@ -54,6 +55,7 @@ impl<C: crate::PolarClass + Send + Sync> ToPolar for C {
 }
 
 pub trait ToPolarResult {
+    #[allow(clippy::wrong_self_convention)]
     fn to_polar_result(self) -> crate::Result<PolarValue>;
 }
 
@@ -80,6 +82,7 @@ mod private {
 }
 
 pub trait ToPolarList: private::Sealed {
+    #[allow(clippy::wrong_self_convention)]
     fn to_polar_list(self) -> Vec<PolarValue>
     where
         Self: Sized;
