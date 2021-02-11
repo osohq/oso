@@ -69,7 +69,7 @@ impl Symbol {
     }
 
     pub fn is_namespaced_var(&self) -> bool {
-        self.0.find("::").is_some()
+        self.0.contains("::")
     }
 
     pub fn is_this_var(&self) -> bool {
