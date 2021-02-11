@@ -28,7 +28,7 @@ pub enum VariableState {
     Partial(Operation),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 /// The binding manager is responsible for managing binding & constraint state.
 /// It is updated primarily using:
 /// - `bind`
@@ -45,7 +45,7 @@ pub struct BindingManager {
 
 impl BindingManager {
     pub fn new() -> Self {
-        Self { bindings: vec![] }
+        Self::default()
     }
 
     /// Bind `var` to `val`.
@@ -171,68 +171,68 @@ impl BindingManager {
 
         let (left, right) = (&args[0], &args[1]);
         match (left.value(), right.value()) {
-            (Value::Variable(l), Value::Variable(r)) => {
-                match (self.variable_state(l), self.variable_state(r)) {
+            (Value::Variable(left_name), Value::Variable(right_name)) => {
+                match (self.variable_state(left_name), self.variable_state(right_name)) {
                     (VariableState::Unbound, VariableState::Unbound) => {
                         self.constrain(&op!(And, term.clone()))?;
                     }
-                    (VariableState::Cycle(c), VariableState::Cycle(d)) => {
-                        let mut e = cycle_constraints(c);
-                        e.merge_constraints(cycle_constraints(d));
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    (VariableState::Cycle(left_cycle), VariableState::Cycle(right_cycle)) => {
+                        let mut merged_cycles = cycle_constraints(left_cycle);
+                        merged_cycles.merge_constraints(cycle_constraints(right_cycle));
+                        self.constrain(&merged_cycles.clone_with_new_constraint(term.clone()))?;
                     }
-                    (VariableState::Partial(e), VariableState::Unbound)
-                    | (VariableState::Unbound, VariableState::Partial(e)) => {
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    (VariableState::Partial(partial), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Partial(partial)) => {
+                        self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
                     }
-                    (VariableState::Partial(mut e), VariableState::Partial(f)) => {
-                        e.merge_constraints(f);
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    (VariableState::Partial(mut left_partial), VariableState::Partial(right_partial)) => {
+                        left_partial.merge_constraints(right_partial);
+                        self.constrain(&left_partial.clone_with_new_constraint(term.clone()))?;
                     }
-                    (VariableState::Partial(mut e), VariableState::Cycle(c))
-                    | (VariableState::Cycle(c), VariableState::Partial(mut e)) => {
-                        e.merge_constraints(cycle_constraints(c));
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    (VariableState::Partial(mut partial), VariableState::Cycle(cycle))
+                    | (VariableState::Cycle(cycle), VariableState::Partial(mut partial)) => {
+                        partial.merge_constraints(cycle_constraints(cycle));
+                        self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
                     }
-                    (VariableState::Cycle(c), VariableState::Unbound)
-                    | (VariableState::Unbound, VariableState::Cycle(c)) => {
-                        let e = cycle_constraints(c);
-                        self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                    (VariableState::Cycle(cycle), VariableState::Unbound)
+                    | (VariableState::Unbound, VariableState::Cycle(cycle)) => {
+                        let partial = cycle_constraints(cycle);
+                        self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
                     }
-                    (VariableState::Bound(x), _) => {
+                    (VariableState::Bound(left_value), _) => {
                         panic!(
                             "Variable {} unexpectedly bound to {} in constraint {}.",
                             left.to_polar(),
-                            x.to_polar(),
+                            left_value.to_polar(),
                             term.to_polar(),
                         );
                     }
-                    (_, VariableState::Bound(x)) => {
+                    (_, VariableState::Bound(right_value)) => {
                         panic!(
                             "Variable {} unexpectedly bound to {} in constraint {}.",
                             right.to_polar(),
-                            x.to_polar(),
+                            right_value.to_polar(),
                             term.to_polar(),
                         );
                     }
                 }
             }
-            (Value::Variable(v), _) | (_, Value::Variable(v)) => match self.variable_state(v) {
+            (Value::Variable(name), _) | (_, Value::Variable(name)) => match self.variable_state(name) {
                 VariableState::Unbound => {
                     self.constrain(&op!(And, term.clone()))?;
                 }
-                VariableState::Cycle(c) => {
-                    let e = cycle_constraints(c);
-                    self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                VariableState::Cycle(cycle) => {
+                    let partial = cycle_constraints(cycle);
+                    self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
                 }
-                VariableState::Partial(e) => {
-                    self.constrain(&e.clone_with_new_constraint(term.clone()))?;
+                VariableState::Partial(partial) => {
+                    self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
                 }
-                VariableState::Bound(x) => {
+                VariableState::Bound(value) => {
                     panic!(
                         "Variable {} unexpectedly bound to {} in constraint {}.",
-                        v.0,
-                        x.to_polar(),
+                        name.0,
+                        value.to_polar(),
                         term.to_polar()
                     );
                 }
