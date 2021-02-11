@@ -34,7 +34,16 @@ jobs:
       - name: Check JS version matches
         run: |
           grep "\"version\": \"$oso_version\"" package.json
-        working-directory: languages/js
+      - name: Check rust version matches
+        run: |
+          grep "^version = \"$oso_version\"$" oso/Cargo.toml
+          grep "^version = \"$oso_version\"$" oso-derive/Cargo.toml
+        working-directory: languages/rust
+      - name: Check polar version matches
+        run: |
+          grep "^version = \"$oso_version\"$" polar-core/Cargo.toml
+          grep "^version = \"$oso_version\"$" polar-c-api/Cargo.toml
+          grep "^version = \"$oso_version\"$" polar-wasm-api/Cargo.toml
       - name: Check docs release matches
         run: grep "release = \"$oso_version\"" conf.py
         working-directory: docs
