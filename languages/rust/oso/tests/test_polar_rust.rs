@@ -352,19 +352,19 @@ fn test_results_and_options() {
         fn new() -> Self {
             Self
         }
-
+        #[allow(clippy::unnecessary_wraps)]
         fn ok(&self) -> Result<i32, Error> {
             Ok(1)
         }
-
+        #[allow(clippy::unnecessary_wraps)]
         fn err(&self) -> Result<i32, Error> {
             Err(Error)
         }
-
+        #[allow(clippy::unnecessary_wraps)]
         fn some(&self) -> Option<i32> {
             Some(1)
         }
-
+        #[allow(clippy::unnecessary_wraps)]
         fn none(&self) -> Option<i32> {
             None
         }
@@ -584,10 +584,11 @@ fn test_option() {
     struct Foo;
 
     impl Foo {
+        #[allow(clippy::unnecessary_wraps)]
         fn get_some(&self) -> Option<i32> {
             Some(12)
         }
-
+        #[allow(clippy::unnecessary_wraps)]
         fn get_none(&self) -> Option<i32> {
             None
         }
