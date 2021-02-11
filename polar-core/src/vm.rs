@@ -1694,7 +1694,9 @@ impl PolarVirtualMachine {
 
         match object.value() {
             // Push a `Lookup` goal for simple field lookups on dictionaries.
-            Value::Dictionary(dict) if matches!(field.value(), Value::String(_) | Value::Variable(_)) => {
+            Value::Dictionary(dict)
+                if matches!(field.value(), Value::String(_) | Value::Variable(_)) =>
+            {
                 self.push_goal(Goal::Lookup {
                     dict: dict.clone(),
                     field,
@@ -3570,10 +3572,15 @@ mod tests {
             match result {
                 Ok(event) => assert!(matches!(event, QueryEvent::ExternalUnify { .. })),
                 Err(err) => {
-                    assert!(matches!(err, error::PolarError {
-                        kind: error::ErrorKind::Runtime(error::RuntimeError::QueryTimeout { .. }),
-                        ..
-                    }));
+                    assert!(matches!(
+                        err,
+                        error::PolarError {
+                            kind: error::ErrorKind::Runtime(
+                                error::RuntimeError::QueryTimeout { .. }
+                            ),
+                            ..
+                        }
+                    ));
 
                     // End test.
                     break;

@@ -8,6 +8,6 @@ All development happens on https://github.com/osohq/oso.
 `go get github.com/osohq/go-oso`
 
 ```
-    import oso "github.com/osohq/go-oso"
+    import "github.com/osohq/go-oso"
     ...
 ```

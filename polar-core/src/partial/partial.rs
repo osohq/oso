@@ -664,8 +664,13 @@ mod test {
         p.load_str("f(x) if x = x + 0;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        assert!(matches!(
+            error,
+            PolarError {
+                kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
+                ..
+            }
+        ));
         Ok(())
     }
 
@@ -675,8 +680,13 @@ mod test {
         p.load_str("g(x) if x.foo();")?;
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
         let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        assert!(matches!(
+            error,
+            PolarError {
+                kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
+                ..
+            }
+        ));
         Ok(())
     }
 
@@ -686,8 +696,13 @@ mod test {
         p.load_str("h(x, y) if x = y;")?;
         let mut q = p.new_query_from_term(term!(call!("h", [partial!("a"), partial!("b")])), false);
         let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        assert!(matches!(
+            error,
+            PolarError {
+                kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
+                ..
+            }
+        ));
         Ok(())
     }
 
@@ -697,8 +712,13 @@ mod test {
         p.load_str("f(x, y) if x > y;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a"), partial!("b")])), false);
         let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        assert!(matches!(
+            error,
+            PolarError {
+                kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
+                ..
+            }
+        ));
         Ok(())
     }
 
@@ -708,8 +728,13 @@ mod test {
         p.load_str("f(x) if {}.(x);")?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }), ..}));
+        assert!(matches!(
+            error,
+            PolarError {
+                kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }),
+                ..
+            }
+        ));
         Ok(())
     }
 
@@ -963,8 +988,13 @@ mod test {
         p.load_str("f(x) if cut;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        assert!(matches!(
+            error,
+            PolarError {
+                kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
+                ..
+            }
+        ));
         Ok(())
     }
 
@@ -1028,8 +1058,13 @@ mod test {
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }), ..}));
+        assert!(matches!(
+            error,
+            PolarError {
+                kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }),
+                ..
+            }
+        ));
 
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1");

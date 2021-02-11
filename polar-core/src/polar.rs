@@ -42,7 +42,7 @@ impl Query {
         let mut counter = self.vm.id_counter();
         match self.top_runnable().run(Some(&mut counter))? {
             QueryEvent::Run { runnable, call_id } => {
-                self.push_runnable(runnable, call_id)?;
+                self.push_runnable(runnable, call_id);
                 self.next_event()
             }
             QueryEvent::Done { result } => {
@@ -67,9 +67,8 @@ impl Query {
             .unwrap_or(&mut self.vm)
     }
 
-    fn push_runnable(&mut self, runnable: Box<dyn Runnable>, call_id: u64) -> PolarResult<()> {
+    fn push_runnable(&mut self, runnable: Box<dyn Runnable>, call_id: u64) {
         self.runnable_stack.push((runnable, call_id));
-        Ok(())
     }
 
     fn pop_runnable(&mut self) -> Option<(Box<dyn Runnable>, u64)> {
