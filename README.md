@@ -83,7 +83,7 @@ See: [LICENSE][license].
 [badge-slack]: https://img.shields.io/badge/slack-oso--oss-orange
 [badge-slack-link]: https://join-slack.osohq.com/
 
-[badge-go]: https://img.shields.io/github/v/tag/osohq/go-oso?color=7fd5ea&label=go
+[badge-go]: https://img.shields.io/github/v/tag/osohq/go-oso?color=7fd5ea&label=go.dev
 [badge-go-link]: https://pkg.go.dev/github.com/osohq/go-oso
 [badge-java]: https://img.shields.io/maven-central/v/com.osohq/oso
 [badge-java-link]: https://search.maven.org/artifact/com.osohq/oso
