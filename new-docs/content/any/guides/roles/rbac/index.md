@@ -28,52 +28,24 @@ cases, check out [Role-Based Access Control Patterns](learn/roles).
 Representing roles in our policy is as simple as creating `role()`
 [rules](polar-syntax#rules):
 
-{{< code file="rbac.polar" >}}
-role(actor: String, "employee") if
-    actor = "alice" or
-    actor = "bhavik" or
-    actor = "cora";
-
-role(actor: String, "accountant") if
-    actor = "deirdre" or
-    actor = "ebrahim" or
-    actor = "frantz";
-
-role(actor: String, "admin") if
-    actor = "greta" or
-    actor = "han" or
-    actor = "iqbal";
-{{< /code >}}
+{{< literalInclude path="examples/rbac/01-simple.polar"
+                   from="roles-start"
+                   to="roles-end" >}}
 
 In the above snippet of Polar, we create three `role()` rules and match on the
 `actor`’s name to assign them the appropriate role. Let’s write some **allow**
 rules that leverage our new roles:
 
-{{< code file="rbac.polar" >}}
-# Employees can submit expenses
-allow(actor: String, "submit", "expense") if
-    role(actor, "employee");
-
-# Accountants can view expenses
-allow(actor: String, "view", "expense") if
-    role(actor, "accountant");
-
-# Admins can approve expenses
-allow(actor: String, "approve", "expense") if
-    role(actor, "admin");
-{{< /code >}}
+{{< literalInclude path="examples/rbac/01-simple.polar"
+                   from="allows-start"
+                   to="allows-end" >}}
 
 To test that the roles are working, we can write a few [inline
 queries](polar-syntax#inline-queries-) in the same Polar file:
 
-{{< code file="rbac.polar" >}}
-# Deirdre the accountant can view expenses
-?= allow("deirdre", "view", "expense");
-
-# but cannot submit or approve them
-?= not allow("deirdre", "submit", "expense");
-?= not allow("deirdre", "approve", "expense");
-{{< /code >}}
+{{< literalInclude path="examples/rbac/01-simple.polar"
+                   from="inline-queries-start"
+                   to="inline-queries-end" >}}
 
 Inline queries run when the file is loaded, and check that the query after the
 `?=` succeeds.
@@ -87,43 +59,23 @@ accurately mirrors the role relationships of our business domain. Since
 accountants are also employees, we can extend our `role(actor, “employee”)`
 rule as follows:
 
-{{< code file="rbac.polar" >}}
-# Accountants can do anything an employee can do
-role(actor, "employee") if
-    actor = "alice" or
-    actor = "bhavik" or
-    actor = "cora" or
-    role(actor, "accountant");
-{{< /code >}}
+{{< literalInclude path="examples/rbac/02-simple.polar"
+                   from="accountant-inherits-from-employee-start"
+                   to="accountant-inherits-from-employee-end" >}}
 
 Administrators should be able to do anything that accountants and employees
 can, and we can grant them those permissions through the same inheritance
 structure:
 
-{{< code file="rbac.polar" >}}
-# Admins can do anything an accountant can do
-role(actor, "accountant") if
-    actor = "deirdre" or
-    actor = "ebrahim" or
-    actor = "frantz" or
-    role(actor, "admin");
-{{< /code >}}
+{{< literalInclude path="examples/rbac/02-simple.polar"
+                   from="admin-inherits-from-accountant-start"
+                   to="admin-inherits-from-accountant-end" >}}
 
 Now we can write a few more tests to ensure everything is hooked up correctly:
 
-{{< code file="rbac.polar" >}}
-# Deirdre the accountant can view and submit expenses
-?= allow("deirdre", "view", "expense");
-?= allow("deirdre", "submit", "expense");
-
-# but cannot approve them
-?= not allow("deirdre", "approve", "expense");
-
-# Iqbal the administrator can do everything
-?= allow("iqbal", "view", "expense");
-?= allow("iqbal", "submit", "expense");
-?= allow("iqbal", "approve", "expense");
-{{< /code >}}
+{{< literalInclude path="examples/rbac/02-simple.polar"
+                   from="inline-queries-start"
+                   to="inline-queries-end" >}}
 
 ## RBAC with Existing Roles
 
@@ -139,31 +91,23 @@ between users and the roles they’ve been assigned.
 Our {{% exampleGet "langName" %}} application has the following `User` model
 that can look up its assigned roles from the database:
 
-{{% exampleGet "userClass" %}}
+{{< literalInclude dynPath="userClassPath"
+                   fallback="userClass" >}}
 
 By registering the `User` class with Oso, we can begin leveraging it from
-within our policy. Our policy currently expects actors to be simple strings,
-but we can update that by adding the `User` type specializer to our `role()`
-rules:
+within our policy:
 
-{{< code file="rbac.polar" >}}
-role(actor: User, "employee") if
-    actor.name = "alice" or
-    actor.name = "bhavik" or
-    actor.name = "cora" or
-    role(actor, "accountant");
+{{< literalInclude dynPath="registeredUserClassPath"
+                   from="user-start"
+                   to="user-end"
+                   fallback="registeredUserClass" >}}
 
-role(actor: User, "accountant") if
-    actor.name = "deirdre" or
-    actor.name = "ebrahim" or
-    actor.name = "frantz" or
-    role(actor, "admin");
+Our policy currently expects actors to be simple strings, but we can update
+that by adding the `User` type specializer to our `role()` rules:
 
-role(actor: User, "admin") if
-    actor.name = "greta" or
-    actor.name = "han" or
-    actor.name = "iqbal";
-{{< /code >}}
+{{< literalInclude path="examples/rbac/05-external.polar"
+                   from="roles-start"
+                   to="roles-end" >}}
 
 Our policy is a bit more verbose now, but don’t let that distract from the
 momentous shift that just occurred: by adding a single decorator to our
@@ -173,18 +117,9 @@ and methods… and we aren’t finished yet!
 We’re still mapping users to roles in the policy despite having access to the
 existing mappings through the `User.role()` method. Let’s amend that:
 
-{{< code file="rbac.polar" >}}
-role(actor: User, "employee") if
-    actor.role = "employee" or
-    role(actor, "accountant");
-
-role(actor: User, "accountant") if
-    actor.role = "accountant" or
-    role(actor, "admin");
-
-role(actor: User, "admin") if
-    actor.role = "admin";
-{{< /code >}}
+{{< literalInclude path="examples/rbac/06-external.polar"
+                   from="roles-start"
+                   to="roles-end" >}}
 
 There’s something really powerful happening in the above that bears
 highlighting: Oso allowed us to not only create policies over existing
