@@ -3,7 +3,7 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 use polar_core::*;
-use polar_core::{events::*, bindings::Bindings, polar::Polar, polar::Query, terms::*};
+use polar_core::{bindings::Bindings, events::*, polar::Polar, polar::Query, terms::*};
 
 fn runner_from_query(q: &str) -> Runner {
     let polar = Polar::new();

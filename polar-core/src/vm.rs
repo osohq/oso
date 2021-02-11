@@ -7,6 +7,7 @@ use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use super::visitor::{walk_term, Visitor};
+use crate::bindings::{Binding, BindingManager, BindingStack, Bindings, Bsp, VariableState};
 use crate::counter::Counter;
 use crate::debugger::{DebugEvent, Debugger};
 use crate::error::{self, PolarResult};
@@ -25,7 +26,6 @@ use crate::runnable::Runnable;
 use crate::sources::*;
 use crate::terms::*;
 use crate::traces::*;
-use crate::bindings::{BindingStack, Bindings, BindingManager, VariableState, Bsp, Binding};
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 #[cfg(not(target_arch = "wasm32"))]

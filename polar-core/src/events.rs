@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use super::bindings::Bindings;
 use super::runnable::Runnable;
 use super::terms::*;
 use super::traces::*;
-use super::bindings::Bindings;
 
 #[allow(clippy::large_enum_variant)]
 #[must_use]

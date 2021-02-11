@@ -173,11 +173,11 @@ pub mod display {
     use std::sync::Arc;
 
     use super::ToPolarString;
+    use crate::bindings::Binding;
     use crate::numerics::Numeric;
     use crate::rules::Rule;
     use crate::terms::{Operation, Operator, Symbol, Term, Value};
     use crate::vm::*;
-    use crate::bindings::Binding;
 
     impl fmt::Display for Binding {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {

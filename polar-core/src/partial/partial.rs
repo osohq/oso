@@ -283,10 +283,10 @@ impl Operation {
 mod test {
     use super::*;
 
+    use crate::bindings::Bindings;
     use crate::error::{ErrorKind, PolarError, RuntimeError};
     use crate::events::QueryEvent;
     use crate::formatting::ToPolarString;
-    use crate::bindings::Bindings;
     use crate::polar::{Polar, Query};
     use crate::terms::{Call, Dictionary, InstanceLiteral, Pattern};
 

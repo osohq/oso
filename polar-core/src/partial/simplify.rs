@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use crate::folder::{fold_operation, fold_term, Folder};
 use crate::bindings::Bindings;
+use crate::folder::{fold_operation, fold_term, Folder};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 
 use super::partial::{invert_operation, FALSE, TRUE};

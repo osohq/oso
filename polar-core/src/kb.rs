@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
+pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
-pub use super::bindings::Bindings;
 
 /// A map of bindings: variable name → value. The VM uses a stack internally,
 /// but can translate to and from this type.

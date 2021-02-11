@@ -3,6 +3,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashSet;
 use std::rc::Rc;
 
+use crate::bindings::{Binding, BindingStack, VariableState};
 use crate::counter::Counter;
 use crate::error::PolarResult;
 use crate::events::QueryEvent;
@@ -12,10 +13,7 @@ use crate::kb::Bindings;
 use crate::partial::simplify_bindings;
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
-use crate::vm::{
-    cycle_constraints, Goals, PolarVirtualMachine,
-};
-use crate::bindings::{VariableState, BindingStack, Binding};
+use crate::vm::{cycle_constraints, Goals, PolarVirtualMachine};
 
 #[derive(Clone)]
 pub struct Inverter {
@@ -262,7 +260,8 @@ impl Runnable for Inverter {
                     return Ok(QueryEvent::Done { result });
                 }
                 QueryEvent::Result { .. } => {
-                    let bindings: BindingStack = self.vm.bindings_for_inverter().drain(self.bsp..).collect();
+                    let bindings: BindingStack =
+                        self.vm.bindings_for_inverter().drain(self.bsp..).collect();
                     // Add new part of binding stack from inversion to results.
                     self.results.push(bindings);
                 }

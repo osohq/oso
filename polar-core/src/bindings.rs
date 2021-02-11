@@ -3,10 +3,10 @@
 /// Bindings associate variables in the VM with constraints or values.
 use std::collections::{HashMap, HashSet};
 
-use crate::terms::{Symbol, Term, Value, has_rest_var, Operation, Operator};
 use crate::error::PolarResult;
-use crate::folder::{Folder, fold_term};
+use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
+use crate::terms::{has_rest_var, Operation, Operator, Symbol, Term, Value};
 use crate::vm::cycle_constraints;
 
 #[derive(Clone, Debug)]
@@ -28,7 +28,6 @@ pub enum VariableState {
     Partial(Operation),
 }
 
-
 #[derive(Clone, Debug)]
 /// The binding manager is responsible for managing binding & constraint state.
 /// It is updated primarily using:
@@ -41,15 +40,12 @@ pub enum VariableState {
 /// - `variable_state`
 /// - `bindings`
 pub struct BindingManager {
-    bindings: BindingStack
+    bindings: BindingStack,
 }
-
 
 impl BindingManager {
     pub fn new() -> Self {
-        Self {
-            bindings: vec![]
-        }
+        Self { bindings: vec![] }
     }
 
     /// Bind `var` to `val`.
