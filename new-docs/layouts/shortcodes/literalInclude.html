@@ -95,6 +95,9 @@
       {{ end }}
     {{ end }}
   {{ end }}
+{{ else }}
+  {{/* If we aren't loading a file, hash the content for a unique ID. */}}
+  {{ $id = md5 $content }}
 {{ end }}
 
 {{ if (not $syntax) }}
@@ -107,11 +110,11 @@
 
 <div class="code" id="{{ $id | urlize }}">
   <div class="filename rounded-t-md bg-gray-200 text-gray-700 text-sm py-2">
-    {{ with $syntax }}
+    {{- with $syntax -}}
       <span class="px-2">
-        {{ partialCached "fontawesome.html" . . }}
+        {{- partialCached "fontawesome.html" . . -}}
       </span>
-    {{ end }}
+    {{- end -}}
     {{ $file }}
   </div>
   {{ with $syntax }}
