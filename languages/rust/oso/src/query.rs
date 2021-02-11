@@ -260,6 +260,7 @@ impl Query {
         Ok(())
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     fn handle_debug(&mut self, message: String) -> crate::Result<()> {
         eprintln!("TODO: {}", message);
         check_messages!(self.inner);

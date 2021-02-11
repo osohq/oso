@@ -1084,8 +1084,14 @@ fn test_arithmetic() -> TestResult {
     qeval(&mut p, "odd(3)");
     qnull(&mut p, "odd(4)");
 
-    qruntime!("9223372036854775807 + 1 > 0", RuntimeError::ArithmeticError { .. });
-    qruntime!("-9223372036854775807 - 2 < 0", RuntimeError::ArithmeticError { .. });
+    qruntime!(
+        "9223372036854775807 + 1 > 0",
+        RuntimeError::ArithmeticError { .. }
+    );
+    qruntime!(
+        "-9223372036854775807 - 2 < 0",
+        RuntimeError::ArithmeticError { .. }
+    );
 
     // x / 0 = ∞
     qvar(&mut p, "x=1/0", "x", values![f64::INFINITY]);
@@ -1451,9 +1457,15 @@ fn test_keyword_bug() {
 #[test]
 fn test_unify_rule_head() -> TestResult {
     qparse!("f(Foo{a: 1});", ParseError::UnrecognizedToken { .. });
-    qparse!("f(new Foo(a: Foo{a: 1}));", ParseError::UnrecognizedToken { .. });
+    qparse!(
+        "f(new Foo(a: Foo{a: 1}));",
+        ParseError::UnrecognizedToken { .. }
+    );
     qparse!("f(x: new Foo(a: 1));", ParseError::ReservedWord { .. });
-    qparse!("f(x: Foo{a: new Foo(a: 1)});", ParseError::ReservedWord { .. });
+    qparse!(
+        "f(x: Foo{a: new Foo(a: 1)});",
+        ParseError::ReservedWord { .. }
+    );
 
     let p = Polar::new();
     p.register_constant(sym!("Foo"), term!(true));
@@ -1607,8 +1619,11 @@ fn test_float_parsing() {
 fn test_assignment() {
     let mut p = Polar::new();
     qeval(&mut p, "x := 5 and x == 5");
-    qruntime!("x := 5 and x := 6", RuntimeError::TypeError { msg: s, .. },
-        s == "Can only assign to unbound variables, x is bound to value 5.");
+    qruntime!(
+        "x := 5 and x := 6",
+        RuntimeError::TypeError { msg: s, .. },
+        s == "Can only assign to unbound variables, x is bound to value 5."
+    );
     qnull(&mut p, "x := 5 and x > 6");
     qeval(&mut p, "x := y and y = 6 and x = 6");
 
@@ -1828,14 +1843,28 @@ fn test_list_matches() {
 
 #[test]
 fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
-    qruntime!("x matches y", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind pattern 'y' to 'x'");
+    qruntime!(
+        "x matches y",
+        RuntimeError::TypeError { msg: m, .. },
+        m == "cannot bind pattern 'y' to 'x'"
+    );
     let mut p = Polar::new();
     p.load_str(
         r#"f(x: y) if x = 1;
            g(x: {}) if x = 1;"#,
     )?;
-    qruntime!(&mut p, "f(x)", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind pattern 'y' to '_x_1'");
-    qruntime!(&mut p, "g(x)", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind pattern '{}' to '_x_2'");
+    qruntime!(
+        &mut p,
+        "f(x)",
+        RuntimeError::TypeError { msg: m, .. },
+        m == "cannot bind pattern 'y' to '_x_1'"
+    );
+    qruntime!(
+        &mut p,
+        "g(x)",
+        RuntimeError::TypeError { msg: m, .. },
+        m == "cannot bind pattern '{}' to '_x_2'"
+    );
     Ok(())
 }
 

@@ -2,6 +2,7 @@
 
 [![Development][badge-ci]][badge-ci-link]
 [![GitHub release (latest SemVer)][badge-release]][badge-release-link]
+[![Go version][badge-go]][badge-go-link]
 [![Maven version][badge-java]][badge-java-link]
 [![NPM version][badge-nodejs]][badge-nodejs-link]
 [![PyPI version][badge-python]][badge-python-link]
@@ -28,7 +29,7 @@ Using oso consists of two parts:
 
 oso currently offers libraries for [Java][badge-java-link],
 [Node.js][badge-nodejs-link], [Python][badge-python-link],
-[Ruby][badge-ruby-link], and [Rust][badge-rust-link].
+[Ruby][badge-ruby-link], [Rust][badge-rust-link] and [Go][badge-go-link].
 
 ## Getting started
 
@@ -65,6 +66,7 @@ requirements:
 - Ruby: 2.4+
   - Bundler 2.1.4+
 - Rust: 1.46+
+- Go: 1.12+
 
 ## Contributing
 
@@ -81,6 +83,8 @@ See: [LICENSE][license].
 [badge-slack]: https://img.shields.io/badge/slack-oso--oss-orange
 [badge-slack-link]: https://join-slack.osohq.com/
 
+[badge-go]: https://img.shields.io/github/v/tag/osohq/go-oso?color=7fd5ea&label=go.dev
+[badge-go-link]: https://pkg.go.dev/github.com/osohq/go-oso
 [badge-java]: https://img.shields.io/maven-central/v/com.osohq/oso
 [badge-java-link]: https://search.maven.org/artifact/com.osohq/oso
 [badge-nodejs]: https://badge.fury.io/js/oso.svg
@@ -91,12 +95,7 @@ See: [LICENSE][license].
 [badge-ruby-link]: https://rubygems.org/gems/oso-oso
 [badge-rust]: https://img.shields.io/crates/v/oso
 [badge-rust-link]: https://crates.io/crates/oso
-
-<!-- [languages-java]: https://github.com/osohq/oso/tree/main/languages/java -->
-<!-- [languages-nodejs]: https://github.com/osohq/oso/tree/main/languages/js -->
-<!-- [languages-python]: https://github.com/osohq/oso/tree/main/languages/python -->
-<!-- [languages-ruby]: https://github.com/osohq/oso/tree/main/languages/ruby -->
-<!-- [languages-rust]: https://github.com/osohq/oso/tree/main/languages/rust -->
+[go-link]: https://pkg.go.dev/github.com/osohq/go-oso
 
 [contributing]: https://github.com/osohq/oso/blob/main/CONTRIBUTING.md
 [core]: https://github.com/osohq/oso/tree/main/polar-core
