@@ -1938,26 +1938,8 @@ fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
     qruntime!(
         "x matches y",
         RuntimeError::TypeError { msg: m, .. },
-        m == "cannot bind pattern 'y' to 'x'"
+        m == "cannot unify patterns directly `x` = `y{}`"
     );
-    let mut p = Polar::new();
-    p.load_str(
-        r#"f(x: y) if x = 1;
-           g(x: {}) if x = 1;"#,
-    )?;
-    qruntime!(
-        &mut p,
-        "f(x)",
-        RuntimeError::TypeError { msg: m, .. },
-        m == "cannot bind pattern 'y' to '_x_1'"
-    );
-    qruntime!(
-        &mut p,
-        "g(x)",
-        RuntimeError::TypeError { msg: m, .. },
-        m == "cannot bind pattern '{}' to '_x_2'"
-    );
-    qruntime!("x matches y", RuntimeError::TypeError { msg: m, .. }, m == "cannot unify patterns directly `x` = `y{}`");
     Ok(())
 }
 

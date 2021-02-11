@@ -115,7 +115,10 @@ pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
             Value::Variable(v) | Value::RestVariable(v)
                 if v.is_temporary_var()
                     && bindings.contains_key(v)
-                    && matches!(bindings[v].value(), Value::Variable(_) | Value::RestVariable(_)) =>
+                    && matches!(
+                        bindings[v].value(),
+                        Value::Variable(_) | Value::RestVariable(_)
+                    ) =>
             {
                 (var.clone(), bindings[v].clone())
             }
