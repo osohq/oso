@@ -7,6 +7,35 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
+  version:
+    name: Compute and verify the version number
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version env
+        run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
+      - name: Check github ref matches
+        if: github.ref != 'refs/heads/main'
+        env:
+          github_ref: ${{ github.ref }}
+        run: grep "${github_ref/refs\/tags\/v/}" VERSION
+      - name: Check python version matches
+        run: grep "__version__ = \"$oso_version\"" oso/oso.py
+        working-directory: languages/python/oso
+      - name: Check ruby version matches
+        run: grep "VERSION = '$oso_version'" lib/oso/version.rb
+        working-directory: languages/ruby
+      - name: Check java version matches
+        run: grep "<version>$oso_version</version>" pom.xml
+        working-directory: languages/java/oso
+      - name: Check JS version matches
+        run: |
+          grep "\"version\": \"$oso_version\"" package.json
+        working-directory: languages/js
+      - name: Check docs release matches
+        run: grep "release = \"$oso_version\"" conf.py
+        working-directory: docs
+
   check:
     runs-on: ubuntu-latest
     steps:
