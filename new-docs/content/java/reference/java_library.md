@@ -1,9 +1,10 @@
 ---
-title: Reference
+title: Java Library
 weight: 4
 any: false
-
+description: Download instructions and API reference for the Oso Java library.
 ---
+
 # Java Authorization Library
 
 The Java version of Oso is available on [Maven Central](https://search.maven.org/artifact/com.osohq/oso).
@@ -44,3 +45,8 @@ library documentation.
   * Linux
   * OS X
   * Windows
+
+## API Reference
+
+The [Java API reference]({{% apiLink "reference/api/index.html" %}})
+is automatically generated from the Oso Java library source files.
