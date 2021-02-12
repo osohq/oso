@@ -1,12 +1,12 @@
 ---
-title: Writing policies
+title: Write Oso Policies (15 min)
 weight: 3
-any: true
+any: false
 aliases:
   - ../getting-started/policies/index.html
 ---
 
-# Writing Policies
+# Write Oso Policies
 
 Policies are the source of truth for the authorization logic used to evaluate
 queries in Oso. As a reminder: Oso policies are written in a declarative
