@@ -47,6 +47,10 @@ pub enum VariableState {
 pub struct BindingManager {
     bindings: BindingStack,
     followers: HashMap<FollowerId, BindingManager>,
+
+    /// Track the bsp of followers when they were added so they can be
+    /// backtracked.
+    follower_bsps: HashMap<FollowerId, Bsp>,
     next_follower_id: usize,
 }
 
@@ -75,7 +79,7 @@ impl BindingManager {
     /// If `var` is already bound or constrained, the
     /// binding or constraints are replaced with `val`.
     pub fn bind(&mut self, var: &Symbol, val: Term) {
-        self.do_followers(|follower| {
+        self.do_followers(|_, follower| {
             follower.bind(var, val.clone());
             Ok(())
         }).unwrap();
@@ -96,6 +100,7 @@ impl BindingManager {
                     // TODO (dhatch): Return error.
                     self.constrain(&grounded).unwrap();
                 } else {
+                    println!("ground failed for {}", p.to_polar());
                     panic!("check ground precondition");
                     // TODO (dhatch): Return error.
                 }
@@ -347,7 +352,7 @@ impl BindingManager {
     }
 
     pub fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
-        self.do_followers(|follower| follower.add_constraint(term))?;
+        self.do_followers(|_, follower| follower.add_constraint(term))?;
 
         assert!(term.value().as_expression().is_ok());
         let mut op = op!(And, term.clone());
@@ -486,6 +491,12 @@ impl BindingManager {
 
     /// Reset the state of `BindingManager` to what it was at `to`.
     pub fn backtrack(&mut self, to: Bsp) {
+        self.do_followers(|follower_bsp, follower| {
+            let follower_backtrack_to = to.saturating_sub(follower_bsp);
+            follower.backtrack(follower_backtrack_to);
+            Ok(())
+        }).unwrap();
+
         self.bindings.truncate(to)
     }
 
@@ -538,6 +549,7 @@ impl BindingManager {
     pub fn add_follower(&mut self, follower: BindingManager) -> FollowerId {
         let follower_id = self.next_follower_id;
         self.followers.insert(follower_id, follower);
+        self.follower_bsps.insert(follower_id, self.bsp());
         self.next_follower_id += 1;
 
         follower_id
@@ -549,10 +561,11 @@ impl BindingManager {
 
     fn do_followers<F>(&mut self, func: F) -> PolarResult<()>
     where
-        F: Fn(&mut BindingManager) -> PolarResult<()>,
+        F: Fn(Bsp, &mut BindingManager) -> PolarResult<()>,
     {
-        for (_, follower) in self.followers.iter_mut() {
-            func(follower)?
+        for (id, follower) in self.followers.iter_mut() {
+            let bsp = self.follower_bsps.get(id).unwrap();
+            func(*bsp, follower)?
         }
 
         Ok(())

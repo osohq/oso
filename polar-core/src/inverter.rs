@@ -126,6 +126,15 @@ fn invert_partials(bindings: BindingStack, vm: &PolarVirtualMachine, bsp: usize)
             // TODO: This case is for something like
             // w(x) if not (y = 1) and y = x;
             //
+            // f(x) if not g(x);
+            // g(y) if y = 1
+            //
+            // f(1) -> fail
+            // g(y)
+            //  bind _y_5 = 1
+            //
+            //  _y_5 != 1
+            //
             // Ultimately this should add constraints, but for now this query always succeeds with
             // no constraints because a negation is performed over a variable that is not
             // bound.

@@ -375,6 +375,7 @@ impl PolarVirtualMachine {
         let mut vm = Self::new(self.kb.clone(), self.tracing, goals, self.messages.clone());
         vm.binding_manager.clone_from(&self.binding_manager);
         vm.query_contains_partial = self.query_contains_partial;
+        vm.debugger = self.debugger.clone();
         vm
     }
 
@@ -511,7 +512,24 @@ impl PolarVirtualMachine {
             Goal::AddConstraintsBatch { add_constraints } => add_constraints
                 .borrow_mut()
                 .drain()
-                .map(|(_, constraint)| self.add_constraint(&constraint))
+                .map(|(_, constraint)| {
+                    println!("bindings before add_constraint: ");
+                    for val in self.binding_manager.variables() {
+                        println!("{:?}",
+                            self.binding_manager.variable_state(&val));
+                    }
+                    self.add_constraint(&constraint);
+                    println!("bindings after add_constraint: ");
+                    for val in self.binding_manager.variables() {
+                        println!("{val} {:?}",
+                            self.binding_manager.variable_state(&val), val=val);
+                        if let VariableState::Partial(p) = self.binding_manager.variable_state(&val) {
+                            println!("formatted {}", p.to_polar());
+                        }
+                    }
+
+                    Ok(())
+                })
                 .collect::<PolarResult<()>>()?,
             Goal::Run { runnable } => return self.run_runnable(runnable.clone_runnable()),
         }
@@ -834,21 +852,23 @@ impl PolarVirtualMachine {
 
     #[cfg(not(target_arch = "wasm32"))]
     fn check_timeout(&self) -> PolarResult<()> {
+        // TODO (dhatch): How do we reliably not do this when debugging.
+
         let now = std::time::Instant::now();
         let start_time = self
             .query_start_time
             .expect("Query start time not recorded");
 
-        if now - start_time > self.query_timeout {
-            return Err(error::RuntimeError::QueryTimeout {
-                msg: format!(
-                    "Query running for {}. Exceeded query timeout of {} seconds",
-                    (now - start_time).as_secs(),
-                    self.query_timeout.as_secs()
-                ),
-            }
-            .into());
-        }
+         if now - start_time > self.query_timeout {
+             return Err(error::RuntimeError::QueryTimeout {
+                 msg: format!(
+                     "Query running for {}. Exceeded query timeout of {} seconds",
+                     (now - start_time).as_secs(),
+                     self.query_timeout.as_secs()
+                 ),
+             }
+             .into());
+         }
 
         Ok(())
     }
@@ -2074,8 +2094,8 @@ impl PolarVirtualMachine {
                     }
                     VariableState::Partial(f) => {
                         println!("ground!");
-                        if let Some(_) = f.ground(var.clone(), right.clone()) {
-                            println!("ground ok!");
+                        if let Some(n) = f.ground(var.clone(), right.clone()) {
+                            println!("ground ok! for {f} to {n}", f=f.to_polar(), n=n.to_polar());
                             self.bind(var, right);
                         } else {
                             self.push_goal(Goal::Backtrack)?;

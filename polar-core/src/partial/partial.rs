@@ -1281,7 +1281,8 @@ mod test {
                s(x) if not (x = 2 or x > 3 or x = 4) and x > 1;
                t(x) if not (x <= 0 or x <= 1 or x <= 2 or not (x > 3 or x > 4 or x > 5));
                u(x) if not ((x <= 0 or x <= 1 or x <= 2 or not (x > 3 or x > 4 or x > 5)) and x = 6);
-               v(x) if x = y and not (y = 1) and x = y;"#
+               v(x) if x = y and not (y = 1) and x = y;
+               w(x) if not ((x <= 0 or x <= 1 or x <= 2 or not (x > 9 or x > 8 or x > 7)) and x = 6);"#
         )?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
@@ -1351,17 +1352,23 @@ mod test {
         );
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("u", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q)?,
-            "x",
-            "_this != 6 or _this > 3 or _this > 4 or _this > 5"
-        );
-        assert_query_done!(q);
+         let mut q = p.new_query_from_term(term!(call!("u", [sym!("x")])), false);
+         let binding = next_binding(&mut q)?;
+         // This is unbound because any input succeeds.
+         assert_eq!(binding.get(&sym!("x")).unwrap(), &term!(sym!("x")));
+         assert_query_done!(q);
 
         let mut v = p.new_query_from_term(term!(call!("v", [sym!("x")])), false);
         assert_partial_expression!(next_binding(&mut v)?, "x", "_this != 1");
         assert_query_done!(v);
+
+        let mut q = p.new_query_from_term(term!(call!("w", [sym!("x")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q)?,
+            "x",
+            "_this != 6"
+        );
+        assert_query_done!(q);
 
         Ok(())
     }
@@ -1790,6 +1797,24 @@ mod test {
         //assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("f", [1])), false);
+        assert_query_done!(q);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_constraint_no_input_variables() -> TestResult {
+        let p = Polar::new();
+        // TODO: More complicated version:
+        //  f(x) if not g(z) and z = x;
+        //  g(y) if y = 1;
+        p.load_str(
+            r#"f() if x = 1;"#,
+        )?;
+
+        let mut q = p.new_query_from_term(term!(call!("f", [])), false);
+        let r = next_binding(&mut q)?;
+        assert_eq!(r.len(), 0);
         assert_query_done!(q);
 
         Ok(())
