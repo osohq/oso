@@ -2,7 +2,7 @@
 title: Ruby Types in Polar
 weight: 2
 aliases:
-    - /using/libraries/ruby/index.html
+  - /using/libraries/ruby/index.html
 ---
 
 [rb-array]: https://ruby-doc.org/core/Array.html
@@ -16,19 +16,19 @@ objects directly. This document explains how different types of Ruby objects
 can be used in Oso policies.
 
 {{% callout "Note" "blue" %}}
-More detailed examples of working with application objects can be found in
-[Policy Examples](learn/examples).
+More detailed examples of working with application objects can be found in our
+[Guides](guides).
 {{% /callout %}}
 
 ### Class Instances
 
 You can pass any Ruby instance into Oso and access its methods and fields from
-your policy (see [Application Types](learn/policies/application-types)).
+your policy (see [Application Types](getting-started/policies#application-types)).
 
 Ruby instances can be constructed from inside an Oso policy using the [`new`
 operator](polar-syntax#new) if the Ruby class has been **registered** using the
 `Oso#register_class` method. An example of this can be found
-[here](learn/policies/application-types).
+[here](getting-started/policies#application-types).
 
 ### Numbers and Booleans
 
@@ -59,7 +59,7 @@ raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 ```
 
 {{% callout "Warning" "orange" %}}
-  Polar does not support methods that mutate strings in place.
+Polar does not support methods that mutate strings in place.
 {{% /callout %}}
 
 ### Lists
@@ -85,8 +85,8 @@ raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 ```
 
 {{% callout "Warning" "orange" %}}
-  Polar does not support methods that mutate lists in place unless the list is
-  also returned from the method.
+Polar does not support methods that mutate lists in place unless the list is
+also returned from the method.
 {{% /callout %}}
 
 Likewise, lists constructed in Polar may be passed into Ruby methods:
@@ -164,7 +164,7 @@ raise "should be allowed" unless oso.allowed?(User.new, "foo", "bar")
 ### `nil`
 
 The Ruby value `nil` is registered as the Polar constant
-[`nil`](learn/policies/application-types#nil). If a Ruby method can return
+[`nil`](reference/polar/polar-syntax#nil). If a Ruby method can return
 `nil`, you may want to compare the result to Polar's `nil` in your policy:
 
 ```polar

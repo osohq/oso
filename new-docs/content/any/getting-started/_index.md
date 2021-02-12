@@ -5,8 +5,6 @@ weight: 1
 any: false
 ---
 
-# Learn by doing
+# Jump in
 
-Here are a collection of practice-oriented guides for using Oso.
-
-Each guide is focused around implementing specific functionality in your application.
+Learn the basics of using Oso and get Oso set up in your application.

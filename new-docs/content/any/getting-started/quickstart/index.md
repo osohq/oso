@@ -178,4 +178,4 @@ as:
 - Does the expense’s `amount` field contain a value less than $100.00?
 
 For more on leveraging application data in an Oso policy, check out
-[Application Types](application-types).
+[Application Types](policies#application-types).
