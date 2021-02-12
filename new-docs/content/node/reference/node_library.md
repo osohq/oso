@@ -1,5 +1,5 @@
 ---
-title: Reference
+title: Node Library
 weight: 4
 any: false
 ---
@@ -39,3 +39,8 @@ documentation.
   * Linux
   * OS X
   * Windows
+
+## API Reference
+
+The [JavaScript API reference]({{% apiLink "reference/api/index.html" %}})
+is automatically generated from the Oso JavaScript library source files.
