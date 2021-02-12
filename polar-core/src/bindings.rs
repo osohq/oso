@@ -356,7 +356,7 @@ impl BindingManager {
 
         assert!(term.value().as_expression().is_ok());
         let mut op = op!(And, term.clone());
-        for var in op.variables().clone() {
+        for var in op.variables().clone().iter().rev() {
             match self.variable_state(&var) {
                 VariableState::Unbound => {},
                 VariableState::Cycle(c) => {
@@ -781,4 +781,6 @@ mod test {
             panic!("unexpected");
         }
     }
+
+    // TODO (dhatch): Test backtrack with followers.
 }

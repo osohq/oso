@@ -622,9 +622,9 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), sym!("y")])), false);
         assert_partial_expressions!(next_binding(&mut q)?,
             // TODO dhatch change in order here
-            "x" => "_this matches X{} and y matches Y{} and y.x = _this",
-            "x" => "_this matches X{} and y matches Y{} and y.x = _this",
-            "y" => "_this.x matches X{} and _this matches Y{}"
+            "x" => "y matches Y{} and _this matches X{} and y.x = _this",
+            "x" => "y matches Y{} and _this matches X{} and y.x = _this",
+            "y" => "_this matches Y{} and _this.x matches X{}"
         );
         assert_query_done!(q);
 
@@ -1733,12 +1733,12 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "_this = 1 and not _this matches Foo{}"
+            "1 = _this and not 1 matches Foo{}"
         );
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "_this = 1 and not _this matches Bar{}"
+            "1 = _this and not 1 matches Bar{}"
         );
         assert_query_done!(q);
         Ok(())
