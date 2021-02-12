@@ -654,11 +654,6 @@ impl PolarVirtualMachine {
         self.binding_manager.bind(var, val);
     }
 
-    /// Bind each variable that occurs in a constraint to the constraint.
-    fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
-        self.binding_manager.constrain(o)
-    }
-
     pub fn add_binding_follower(&mut self) -> FollowerId {
         self.binding_manager.add_follower(BindingManager::new())
     }
@@ -687,13 +682,6 @@ impl PolarVirtualMachine {
             self.bind(var, value.clone());
         }
         self.csp = self.bsp();
-    }
-
-    // TODO(dhatch): Would like to replace this with bindings_after, but for now
-    // new cycles are transferred through this and get destroyed without it.
-    // This is leaky.
-    pub fn bindings_for_inverter(&self) -> BindingStack {
-        self.binding_manager.bindings_debug().clone()
     }
 
     /// Retrieve the current non-constant bindings as a hash map.
@@ -1489,12 +1477,10 @@ impl PolarVirtualMachine {
                 // Query in a sub-VM and invert the results.
                 assert_eq!(args.len(), 1);
                 let term = args.pop().unwrap();
-                let bindings = Rc::new(RefCell::new(BindingStack::new()));
                 let add_constraints = Rc::new(RefCell::new(Bindings::new()));
                 let inverter = Box::new(Inverter::new(
                     self,
                     vec![Goal::Query { term }],
-                    bindings.clone(),
                     add_constraints.clone(),
                     self.bsp(),
                 ));

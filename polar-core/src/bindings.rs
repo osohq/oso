@@ -377,106 +377,6 @@ impl BindingManager {
         self.constrain(&op)
     }
 
-    /// Add `term` as a constraint.
-    //pub fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
-        //self.do_followers(|follower| follower.add_constraint(term))?;
-
-        //let Operation { operator: op, args } = term.value().as_expression().unwrap();
-        //assert!(
-            // !matches!(*op, Operator::And | Operator::Or),
-            // "Expected a bare constraint."
-        //);
-        //assert!(args.len() >= 2);
-
-        //let (left, right) = (&args[0], &args[1]);
-        //match (
-            //extract_variable(left.value()),
-            //extract_variable(right.value()),
-        //) {
-            //(Value::Variable(left_name), Value::Variable(right_name)) => {
-                //match (
-                    //self.variable_state(left_name),
-                    //self.variable_state(right_name),
-                //) {
-                    //(VariableState::Unbound, VariableState::Unbound) => {
-                        //self.constrain(&op!(And, term.clone()))?;
-                    //}
-                    //(VariableState::Cycle(left_cycle), VariableState::Cycle(right_cycle)) => {
-                        //let mut merged_cycles = cycle_constraints(left_cycle);
-                        //merged_cycles.merge_constraints(cycle_constraints(right_cycle));
-                        //self.constrain(&merged_cycles.clone_with_new_constraint(term.clone()))?;
-                    //}
-                    //(VariableState::Partial(partial), VariableState::Unbound)
-                    //| (VariableState::Unbound, VariableState::Partial(partial)) => {
-                        //self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
-                    //}
-                    //(
-                        //VariableState::Partial(mut left_partial),
-                        //VariableState::Partial(right_partial),
-                    //) => {
-                        //left_partial.merge_constraints(right_partial);
-                        //self.constrain(&left_partial.clone_with_new_constraint(term.clone()))?;
-                    //}
-                    //(VariableState::Partial(mut partial), VariableState::Cycle(cycle))
-                    //| (VariableState::Cycle(cycle), VariableState::Partial(mut partial)) => {
-                        //partial.merge_constraints(cycle_constraints(cycle));
-                        //self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
-                    //}
-                    //(VariableState::Cycle(cycle), VariableState::Unbound)
-                    //| (VariableState::Unbound, VariableState::Cycle(cycle)) => {
-                        //let partial = cycle_constraints(cycle);
-                        //self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
-                    //}
-                    //(VariableState::Bound(left_value), _) => {
-                        //panic!(
-                            //"Variable {} unexpectedly bound to {} in constraint {}.",
-                            //left.to_polar(),
-                            //left_value.to_polar(),
-                            //term.to_polar(),
-                        //);
-                    //}
-                    //(_, VariableState::Bound(right_value)) => {
-                        //panic!(
-                            //"Variable {} unexpectedly bound to {} in constraint {}.",
-                            //right.to_polar(),
-                            //right_value.to_polar(),
-                            //term.to_polar(),
-                        //);
-                    //}
-                //}
-            //}
-            //(Value::Variable(name), _) | (_, Value::Variable(name)) => {
-                //match self.variable_state(name) {
-                    //VariableState::Unbound => {
-                        //self.constrain(&op!(And, term.clone()))?;
-                    //}
-                    //VariableState::Cycle(cycle) => {
-                        //let partial = cycle_constraints(cycle);
-                        //self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
-                    //}
-                    //VariableState::Partial(partial) => {
-                        //self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
-                    //}
-                    //VariableState::Bound(value) => {
-                        //panic!(
-                            //"Variable {} unexpectedly bound to {} in constraint {}.",
-                            //name.0,
-                            //value.to_polar(),
-                            //term.to_polar()
-                        //);
-                    //}
-                //}
-            //}
-            //(_, _) => panic!(
-                //"At least one side of a constraint expression must be a variable. This is {} {}",
-                //left.to_polar(),
-                //right.to_polar()
-            //),
-        //}
-
-        //Ok(())
-    //}
-
     // TODO (dhatch) This is still called from the VM, breaks followers.
     pub fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
         assert_eq!(o.operator, Operator::And, "bad constraint {}", o.to_polar());
@@ -575,22 +475,6 @@ impl BindingManager {
     // relevant_bindings
     // variable_bindings
     // bindings
-}
-
-/// Get variable out of a term for ``add_constraint`` to determine where the
-/// constraint is stored.
-///
-/// If the term is a variable, the variable is returned.
-/// If the term is a dot expression, the VAR from VAR.field is returned.
-/// Otherwise, the term is returned.
-fn extract_variable(value: &Value) -> &Value {
-    match value {
-        Value::Variable(_) => value,
-        Value::Expression(expr) if expr.operator == Operator::Dot => {
-            extract_variable(expr.args[0].value())
-        }
-        _ => value,
-    }
 }
 
 #[cfg(test)]
