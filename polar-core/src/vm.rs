@@ -516,14 +516,14 @@ impl PolarVirtualMachine {
                     println!("bindings before add_constraint: ");
                     for val in self.binding_manager.variables() {
                         println!("{:?}",
-                            self.binding_manager.variable_state(&val));
+                            self.variable_state(&val));
                     }
                     self.add_constraint(&constraint);
                     println!("bindings after add_constraint: ");
                     for val in self.binding_manager.variables() {
                         println!("{val} {:?}",
-                            self.binding_manager.variable_state(&val), val=val);
-                        if let VariableState::Partial(p) = self.binding_manager.variable_state(&val) {
+                            self.variable_state(&val), val=val);
+                        if let VariableState::Partial(p) = self.variable_state(&val) {
                             println!("formatted {}", p.to_polar());
                         }
                     }
@@ -705,7 +705,7 @@ impl PolarVirtualMachine {
 
     /// Investigate the state of a variable at some point and return a variable state variant.
     pub fn variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> VariableState {
-        self.binding_manager.variable_state_at_point(variable, bsp)
+        self.binding_manager.variable_state_new_at_point(variable, bsp)
     }
 
     /// Investigate the current state of a variable and return a variable state variant.

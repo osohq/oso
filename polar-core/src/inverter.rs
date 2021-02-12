@@ -20,8 +20,8 @@ pub struct Inverter {
     bsp: usize,
     results: Vec<BindingManager>,
     add_constraints: Rc<RefCell<Bindings>>,
+    follower: Option<usize>,
     _debug_id: u64,
-    follower: Option<usize>
 }
 
 static ID: AtomicU64 = AtomicU64::new(0);
@@ -40,8 +40,8 @@ impl Inverter {
             bsp,
             add_constraints,
             results: vec![],
+            follower: None,
             _debug_id: ID.fetch_add(1, Ordering::AcqRel),
-            follower: None
         }
     }
 }

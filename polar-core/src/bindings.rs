@@ -326,14 +326,16 @@ impl BindingManager {
         }
     }
 
+
+    // TODO: These functions are now internal, separate internal variable state from
+    // external variable state.
     /// Check the state of `variable`.
-    pub fn variable_state(&self, variable: &Symbol) -> VariableState {
+    fn variable_state(&self, variable: &Symbol) -> VariableState {
         self.variable_state_at_point(variable, self.bsp())
     }
 
-    // TODO: Get rid of this, only used in inverter.
     /// Check the state of `variable` at `bsp`.
-    pub fn variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> VariableState {
+    fn variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> VariableState {
         let mut path = vec![variable];
         while let Some(value) = self.value(path.last().unwrap(), bsp) {
             match value.value() {
@@ -377,8 +379,7 @@ impl BindingManager {
         self.constrain(&op)
     }
 
-    // TODO (dhatch) This is still called from the VM, breaks followers.
-    pub fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
+    fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
         assert_eq!(o.operator, Operator::And, "bad constraint {}", o.to_polar());
         for var in o.variables() {
             match self.variable_state(&var) {
