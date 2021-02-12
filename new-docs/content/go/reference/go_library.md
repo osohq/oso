@@ -1,5 +1,5 @@
 ---
-title: Reference
+title: Go Library
 weight: 4
 any: false
 ---
