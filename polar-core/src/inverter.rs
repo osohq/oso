@@ -3,7 +3,7 @@ use std::collections::hash_map::Entry;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::bindings::{VariableState, BindingManager};
+use crate::bindings::{VariableState, BindingManager, Bsp};
 use crate::counter::Counter;
 use crate::error::PolarResult;
 use crate::events::QueryEvent;
@@ -14,13 +14,32 @@ use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Term, Value};
 use crate::vm::{Goals, PolarVirtualMachine};
 
+/// The inverter implements the `not` operation in Polar.
+///
+/// It is a `Runnable` that runs `goals` using `vm`, and returns inverted results.
+///
+/// If the inverter has no results, the inverted query is considered successful.
+/// If the inverter has results, the new bindings or constraints made during the query
+/// are inverted, and returned to the outer VM.
 #[derive(Clone)]
 pub struct Inverter {
     vm: PolarVirtualMachine,
-    bsp: usize,
+
+    /// The bsp in VM when the inverter started.
+    /// Used to determine which variables can have added constraints.
+    bsp: Bsp,
+
+    /// Acculumates new bindings from VM.
     results: Vec<BindingManager>,
+
+    /// Constraints to return to parent VM.
     add_constraints: Rc<RefCell<Bindings>>,
+
+    /// The ID of the current binding manager follower. Initialized in `run`.
     follower: Option<usize>,
+
+    /// An ID to distinguish logging from each inverter, useful when debugging
+    /// queries with multiple nested `not` operations.
     _debug_id: u64,
 }
 
@@ -46,16 +65,23 @@ impl Inverter {
     }
 }
 
+/// Convert a list of new bindings into inverted constraints.
+///
+/// `results` represents a disjunction not OR[result1, result2, ...].
+///
+/// To invert results, we:
+///
+/// 1. Invert each result.
+/// 2. AND the inverted constraints together.
+///
+/// The output constraints are AND[!result1, !result2, ...].
 fn results_to_constraints(results: Vec<BindingManager>) -> Bindings {
     let inverted = results
         .into_iter()
-        .map(|bindings| invert_partials_bm(bindings))
+        .map(|bindings| invert_partials(bindings))
         .collect();
 
-    // Now have disjunction of results. not OR[result1, result2, ...]
-    // Reduce constraints converts it into a conjunct of negated results.
-    // AND[!result1, ...]
-    let reduced = reduce_constraints_bm(inverted);
+    let reduced = reduce_constraints(inverted);
     let simplified =
         simplify_bindings(reduced.clone()).unwrap_or_else(Bindings::new);
 
@@ -68,27 +94,22 @@ fn results_to_constraints(results: Vec<BindingManager>) -> Bindings {
     }).collect()
 }
 
-
-fn invert_partials_bm(bindings: BindingManager) -> Bindings {
+/// Invert constraints in `bindings`.
+///
+/// Constraints are inverted by getting each binding as a constraint.
+/// Simplification is performed, to subsitute bindings and remove temporary variables.
+/// Then, each simplified expression is inverted.
+/// A binding of `var` to `val` after simplification is converted into `var != bound.
+fn invert_partials(bindings: BindingManager) -> Bindings {
      let mut new_bindings = Bindings::new();
 
      for var in bindings.variables() {
          let constraint = bindings.get_constraints(&var);
          new_bindings.insert(var.clone(), term!(constraint));
      }
-    println!("1 before simplified: ");
-    for (constraint, val) in new_bindings.iter() {
-        println!("{:?} {}", constraint, val.to_polar());
-    }
-
-    //let new_bindings = bindings.bindings(true);
 
     let simplified =
         simplify_bindings(new_bindings.clone()).unwrap_or_else(Bindings::new);
-    println!("1 simplified: ");
-    for (constraint, val) in simplified.iter() {
-        println!("{:?} {}", constraint, val.to_polar());
-    }
 
     let inverted = simplified.into_iter().filter_map(|(k, v)| {
         match v.value() {
@@ -97,16 +118,11 @@ fn invert_partials_bm(bindings: BindingManager) -> Bindings {
         }
     }).collect::<Bindings>();
 
-    println!("1 inverted: ");
-    for (constraint, val) in inverted.iter() {
-        println!("{:?} {}", constraint, val.to_polar());
-    }
-
     inverted
 }
 
-/// Reduce + merge constraints.
-fn reduce_constraints_bm(bindings: Vec<Bindings>) -> Bindings {
+/// Takes a vec of bindings and merges constraints on each variable.
+fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
     let reduced = bindings
         .into_iter()
         .fold(Bindings::new(), |mut acc, bindings| {
@@ -135,6 +151,31 @@ fn reduce_constraints_bm(bindings: Vec<Bindings>) -> Bindings {
     reduced
 }
 
+/// Decide which variables come out of negation. This is hacky.
+/// HACK: Remove known internal vars like _value and _runnable.
+/// HACK: Do not emit constraints for variables that were unbound before
+/// the inversion.
+///
+/// This prevents queries like f(x) if not (w = 1) and x = w from working)
+/// But, without this, an inverted query like:
+///
+/// f(x) if not g(x);
+/// g(y) if y = 1;
+///
+/// ?= f(1);
+///
+/// incorrectly emits constraints on temporaries made when calling g,
+/// like _y_5.
+///
+/// We can improve this by explicitly indicating to the simplifier
+/// which variables are allowed.
+fn filter_inverted_constraints(constraints: Bindings, vm: &PolarVirtualMachine, bsp: Bsp) -> Bindings {
+    constraints.into_iter().filter(|(k, _)| !(
+            k.0.starts_with("_value") || k.0.starts_with("_runnable")
+    ) && vm.variable_state_at_point(k, bsp) != VariableState::Unbound).collect::<Bindings>()
+}
+
+
 /// A Runnable that runs a query and inverts the results in three ways:
 ///
 /// 1. If no results are emitted (indicating failure), return true.
@@ -145,47 +186,37 @@ fn reduce_constraints_bm(bindings: Vec<Bindings>) -> Bindings {
 impl Runnable for Inverter {
     fn run(&mut self, _: Option<&mut Counter>) -> PolarResult<QueryEvent> {
         if self.follower.is_none() {
+            // Binding followers are used to collect new bindings made during
+            // the inversion.
             self.follower = Some(self.vm.add_binding_follower());
-            println!("{} added follower {}", self._debug_id, self.follower.unwrap());
         }
 
         loop {
             // Pass most events through, but collect results and invert them.
             match self.vm.run(None)? {
                 QueryEvent::Done { .. } => {
-                    let mut result = self.results.is_empty();
+                    let result = self.results.is_empty();
                     if !result {
                         // If there are results, the inversion should usually fail. However,
                         // if those results have constraints we collect them and pass them
                         // out to the parent VM.
                         let constraints = results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
-
-                        // Decide which variables come out of negation. This is hacky.
-                        // And the unbound one should sometimes come out I think...
-                        // HACK: Remove vars with _value.
-                        let constraints = constraints.into_iter().filter(|(k, _)| !(
-                                k.0.starts_with("_value") || k.0.starts_with("_runnable")
-                        ) && self.vm.variable_state_at_point(k, self.bsp) != VariableState::Unbound).collect::<Bindings>();
-                        println!("inverter constraints: ");
-                        for (constraint, val) in constraints.iter() {
-                            println!("{:?} {}", constraint, val.to_polar());
-                        }
+                        let constraints = filter_inverted_constraints(constraints, &self.vm, self.bsp);
                         if !constraints.is_empty() {
-                            result = true;
+                            // Return inverted constraints to parent VM.
+                            // TODO (dhatch): Would be nice to come up with a better way of doing this.
+                            self.add_constraints.borrow_mut().extend(constraints);
+
+                            return Ok(QueryEvent::Done { result: true });
                         }
-                        self.add_constraints.borrow_mut().extend(constraints);
                     }
-                    println!("{} done {}", self._debug_id, result);
                     return Ok(QueryEvent::Done { result });
                 }
                 QueryEvent::Result { .. } => {
                     // Retrieve new bindings made when running inverted query.
-                    // Bindings are retrieved as the raw BindingStack.
                     let binding_follower = self.vm.remove_binding_follower(&self.follower.unwrap()).unwrap();
-                    println!("{} removed follower {}", self._debug_id, self.follower.unwrap());
                     self.results.push(binding_follower);
                     self.follower = Some(self.vm.add_binding_follower());
-                    println!("{} added follower {}", self._debug_id, self.follower.unwrap());
                 }
                 event => return Ok(event),
             }
