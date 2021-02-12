@@ -665,7 +665,6 @@ impl PolarVirtualMachine {
     /// Add a single constraint operation to the variables referenced in it.
     /// Precondition: Operation is either binary or ternary (binary + result var),
     /// and at least one of the first two arguments is an unbound variable.
-    #[allow(clippy::many_single_char_names)]
     fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
         if self.log {
             self.print(&format!("⇒ add_constraint: {}", term.to_polar()));
@@ -847,16 +846,16 @@ impl PolarVirtualMachine {
             .query_start_time
             .expect("Query start time not recorded");
 
-         if now - start_time > self.query_timeout {
-             return Err(error::RuntimeError::QueryTimeout {
-                 msg: format!(
-                     "Query running for {}. Exceeded query timeout of {} seconds",
-                     (now - start_time).as_secs(),
-                     self.query_timeout.as_secs()
-                 ),
-             }
-             .into());
-         }
+        if now - start_time > self.query_timeout {
+            return Err(error::RuntimeError::QueryTimeout {
+                msg: format!(
+                    "Query running for {}. Exceeded query timeout of {} seconds",
+                    (now - start_time).as_secs(),
+                    self.query_timeout.as_secs()
+                ),
+            }
+            .into());
+        }
 
         Ok(())
     }
