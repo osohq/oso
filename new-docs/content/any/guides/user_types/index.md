@@ -40,26 +40,18 @@ policy to express this logic.
 Let’s start by defining {{% exampleGet "langName" %}} classes to represent
 customers and internal users:
 
-{{% exampleGet "actorClasses" %}}
+{{< literalInclude dynPath="userClassesPath"
+                   from="classes-start"
+                   to="classes-end" >}}
 
 We can now write a simple policy over these actor types:
 
-{{< code file="user_types.polar" >}}
-
-# Internal users have access to both the
-
-# internal and customer dashboards
-
-allow(actor: InternalUser, "view", "internal_dashboard");
-allow(actor: InternalUser, "view", "customer_dashboard");
-
-# Customers only have access to the customer dashboard
-
-allow(actor: Customer, "view", "customer_dashboard");
-{{< /code >}}
+{{< literalInclude dynPath="userPolicyPath"
+                   from="simple-start"
+                   to="simple-end" >}}
 
 This policy uses [specialized
-rules](application-types#registering-application-types) to control rules
+rules](getting-started/policies#registering-application-types) to control rules
 execution based on the actor type that is passed into the authorization
 request.
 
@@ -69,7 +61,9 @@ are used is up to the application developer.
 
 For our example, making a request might look like this:
 
-{{% exampleGet "customerDashboardHandler" %}}
+{{< literalInclude dynPath="userClassesPath"
+                   from="app-start"
+                   to="app-end" >}}
 
 Hooray, our customer and internal dashboards are now secure!
 
@@ -84,19 +78,15 @@ problem is with RBAC.
 
 We can add a `role()` method to our `InternalUser` class:
 
-{{% exampleGet "internalUserRole" %}}
+{{< literalInclude dynPath="userClassesPath2"
+                   from="internal-start"
+                   to="internal-end" >}}
 
 Then add the following rule to our policy:
 
-{{< code file="user_types.polar" >}}
-
-# Internal users can access the accounts dashboard if
-
-# they are an account manager
-
-allow(actor: InternalUser, "view", "accounts_dashboard") if
-actor.role() = "account_manager";
-{{< /code >}}
+{{< literalInclude dynPath="userPolicyPath"
+                   from="rbac-start"
+                   to="rbac-end" >}}
 
 This example shows a clear benefit of using different classes to represent
 different actor types: the ability to add custom attributes. We can add
@@ -113,7 +103,9 @@ the accounts of each account manager.
 This is a compelling case for creating a new actor type for account managers
 that has a method for retrieving a collection of managed accounts:
 
-{{% exampleGet "accountManager" %}}
+{{< literalInclude dynPath="userClassesPath2"
+                   from="account-start"
+                   to="account-end" >}}
 
 Since account managers are also internal users, we’ve made the `AccountManager`
 type extend `InternalUser`. This means that our rules that specialize on
@@ -124,26 +116,18 @@ For the purposes of this example, we'll assume that `AccountData` is a resource
 that has an `{{% exampleGet "accountId" %}}` attribute. Let’s add the following
 lines to our policy:
 
-{{< code file="user_types.polar" >}}
-
-# Account managers can access the accounts dashboard
-
-allow(actor: AccountManager, "view", "accounts_dashboard");
-
-# Account managers can access account data for the accounts
-
-# that they manage
-
-allow(actor: AccountManager, "view", resource: AccountData) if
-resource.{{% exampleGet "accountId" %}} in actor.{{% exampleGet "customerAccounts" %}}();
-{{< /code >}}
+{{< literalInclude dynPath="userPolicyPath"
+                   from="manager-start"
+                   to="manager-end" >}}
 
 The first rule replaces the RBAC rule we previously used to control access to
 the accounts dashboard. The second rule controls access to account data.
 
 We can update our application code slightly to generate `AccountManager` users:
 
-{{% exampleGet "generateAccountManagers" %}}
+{{< literalInclude dynPath="userClassesPath2"
+                   from="generate-start"
+                   to="generate-end" >}}
 
 We’ve now successfully secured all three dashboards and customer account data.
 
