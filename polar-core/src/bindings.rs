@@ -18,6 +18,7 @@ pub type BindingStack = Vec<Binding>;
 pub type Bindings = HashMap<Symbol, Term>;
 
 pub type Bsp = usize;
+pub type FollowerId = usize;
 
 /// Variable binding state.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -45,6 +46,8 @@ pub enum VariableState {
 /// - `bindings`
 pub struct BindingManager {
     bindings: BindingStack,
+    followers: HashMap<FollowerId, BindingManager>,
+    next_follower_id: usize,
 }
 
 /// The `BindingManager` maintains associations between variables and values,
@@ -72,6 +75,11 @@ impl BindingManager {
     /// If `var` is already bound or constrained, the
     /// binding or constraints are replaced with `val`.
     pub fn bind(&mut self, var: &Symbol, val: Term) {
+        self.do_followers(|follower| {
+            follower.bind(var, val.clone());
+            Ok(())
+        }).unwrap();
+
         // TODO (dhatch): Would like to disable rebinding, but this has a large fallout.
         // We use it extensively for testing and in external_question_result to give the result
         // variable a default value (we could probably fix this some other way).
@@ -317,6 +325,8 @@ impl BindingManager {
 
     /// Add `term` as a constraint.
     pub fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
+        self.do_followers(|follower| follower.add_constraint(term))?;
+
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
         assert!(
             !matches!(*op, Operator::And | Operator::Or),
@@ -413,7 +423,7 @@ impl BindingManager {
         Ok(())
     }
 
-    // TODO: non public, the only way to add constraints should be `add_constraint`.
+    // TODO (dhatch) This is still called from the VM, breaks followers.
     pub fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
         assert_eq!(o.operator, Operator::And, "bad constraint {}", o.to_polar());
         for var in o.variables() {
@@ -428,33 +438,6 @@ impl BindingManager {
     /// Reset the state of `BindingManager` to what it was at `to`.
     pub fn backtrack(&mut self, to: Bsp) {
         self.bindings.truncate(to)
-    }
-
-    /// Return a new binding manager that only contains bindings or constraints
-    /// made after `after`.
-    pub fn new_bindings_after(&mut self, after: Bsp) -> BindingManager {
-        let mut new = self.clone();
-        new.bindings.drain(..after);
-
-        let new_constraints = vec![];
-        for Binding(var, value) in &mut new.bindings {
-            if let Ok(expr) = value.value().as_expression() {
-                // Get only new parts of expression
-                let old_len = match self.variable_state_new_at_point(&var, after) {
-                    VariableState::Partial(e) => e.args.len(),
-                    _ => 0,
-                };
-
-                let constraints_after = expr.after(old_len);
-                *value = constraints_after.into_term();
-            }
-        }
-
-        for constraint in new_constraints.into_iter() {
-            new.constrain(&constraint);
-        }
-
-        new
     }
 
     /// Return all variables used in this binding manager.
@@ -501,6 +484,29 @@ impl BindingManager {
     /// Get the bindings stack *for debugging purposes only*.
     pub fn bindings_debug(&self) -> &BindingStack {
         &self.bindings
+    }
+
+    pub fn add_follower(&mut self, follower: BindingManager) -> FollowerId {
+        let follower_id = self.next_follower_id;
+        self.followers.insert(follower_id, follower);
+        self.next_follower_id += 1;
+
+        follower_id
+    }
+
+    pub fn remove_follower(&mut self, follower_id: &FollowerId) -> Option<BindingManager> {
+        self.followers.remove(follower_id)
+    }
+
+    fn do_followers<F>(&mut self, func: F) -> PolarResult<()>
+    where
+        F: Fn(&mut BindingManager) -> PolarResult<()>,
+    {
+        for (_, follower) in self.followers.iter_mut() {
+            func(follower)?
+        }
+
+        Ok(())
     }
 
     // TODO maybe port from VM:
@@ -630,5 +636,87 @@ mod test {
             bindings.variable_state(&sym!("z")),
             VariableState::Bound(term!(1))
         );
+    }
+
+    #[test]
+    fn test_followers() {
+        // Regular bindings
+        let mut b1 = BindingManager::new();
+        b1.bind(&sym!("x"), term!(1));
+        b1.bind(&sym!("y"), term!(2));
+
+        assert_eq!(b1.variable_state(&sym!("x")), VariableState::Bound(term!(1)));
+        assert_eq!(b1.variable_state(&sym!("y")), VariableState::Bound(term!(2)));
+
+        let b2 = BindingManager::new();
+        let b2_id = b1.add_follower(b2);
+
+        b1.bind(&sym!("z"), term!(3));
+
+        assert_eq!(b1.variable_state(&sym!("x")), VariableState::Bound(term!(1)));
+        assert_eq!(b1.variable_state(&sym!("y")), VariableState::Bound(term!(2)));
+        assert_eq!(b1.variable_state(&sym!("z")), VariableState::Bound(term!(3)));
+
+        let b2 = b1.remove_follower(&b2_id).unwrap();
+        assert_eq!(b2.variable_state(&sym!("x")), VariableState::Unbound);
+        assert_eq!(b2.variable_state(&sym!("y")), VariableState::Unbound);
+        assert_eq!(b2.variable_state(&sym!("z")), VariableState::Bound(term!(3)));
+
+        // Extending cycle.
+        let mut b1 = BindingManager::new();
+        b1.bind(&sym!("x"), term!(sym!("y")));
+        b1.bind(&sym!("x"), term!(sym!("z")));
+
+        let b2 = BindingManager::new();
+        let b2_id = b1.add_follower(b2);
+
+        assert!(matches!(b1.variable_state(&sym!("x")), VariableState::Cycle(_)));
+        assert!(matches!(b1.variable_state(&sym!("y")), VariableState::Cycle(_)));
+        assert!(matches!(b1.variable_state(&sym!("z")), VariableState::Cycle(_)));
+
+        b1.bind(&sym!("x"), term!(sym!("a")));
+        if let VariableState::Cycle(c) = b1.variable_state(&sym!("a")) {
+            assert_eq!(c, vec![sym!("a"), sym!("x"), sym!("y"), sym!("z")], "c was {:?}", c);
+        }
+
+        let b2 = b1.remove_follower(&b2_id).unwrap();
+        if let VariableState::Cycle(c) = b2.variable_state(&sym!("a")) {
+            assert_eq!(c, vec![sym!("a"), sym!("x")], "c was {:?}", c);
+        } else {
+            panic!("unexpected");
+        }
+        if let VariableState::Cycle(c) = b2.variable_state(&sym!("x")) {
+            assert_eq!(c, vec![sym!("x"), sym!("a")], "c was {:?}", c);
+        } else {
+            panic!("unexpected");
+        }
+
+        // Adding constraints to cycles.
+        let mut b1 = BindingManager::new();
+        b1.bind(&sym!("x"), term!(sym!("y")));
+        b1.bind(&sym!("x"), term!(sym!("z")));
+
+        let b2 = BindingManager::new();
+        let b2_id = b1.add_follower(b2);
+
+        assert!(matches!(b1.variable_state(&sym!("x")), VariableState::Cycle(_)));
+        assert!(matches!(b1.variable_state(&sym!("y")), VariableState::Cycle(_)));
+        assert!(matches!(b1.variable_state(&sym!("z")), VariableState::Cycle(_)));
+
+        b1.add_constraint(&term!(op!(Gt, term!(sym!("x")), term!(sym!("y"))))).unwrap();
+
+        let b2 = b1.remove_follower(&b2_id).unwrap();
+
+        if let VariableState::Partial(p) = b1.variable_state(&sym!("x")) {
+            assert_eq!(p.to_polar(), "x = y and y = z and y = z and z = x and x > y");
+        } else {
+            panic!("unexpected");
+        }
+
+        if let VariableState::Partial(p) = b2.variable_state(&sym!("x")) {
+            assert_eq!(p.to_polar(), "x > y");
+        } else {
+            panic!("unexpected");
+        }
     }
 }

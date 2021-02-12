@@ -7,7 +7,7 @@ use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use super::visitor::{walk_term, Visitor};
-use crate::bindings::{Binding, BindingManager, BindingStack, Bindings, Bsp, VariableState};
+use crate::bindings::{Binding, BindingManager, BindingStack, Bindings, Bsp, VariableState, FollowerId};
 use crate::counter::Counter;
 use crate::debugger::{DebugEvent, Debugger};
 use crate::error::{self, PolarResult};
@@ -628,6 +628,14 @@ impl PolarVirtualMachine {
     /// Bind each variable that occurs in a constraint to the constraint.
     fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
         self.binding_manager.constrain(o)
+    }
+
+    fn add_binding_follower(&mut self) -> FollowerId {
+        self.binding_manager.add_follower(BindingManager::new())
+    }
+
+    fn remove_binding_follower(&mut self, follower_id: FollowerId) -> Option<BindingManager> {
+        self.binding_manager.remove_follower(&follower_id)
     }
 
     /// Add a single constraint operation to the variables referenced in it.

@@ -219,7 +219,8 @@ impl Operation {
 
     pub fn after(&self, csp: usize) -> Operation {
         assert_eq!(self.operator, Operator::And);
-        let (_, new) = self.constraints().split_at(csp);
+        let constraints = self.constraints();
+        let (_, new) = constraints.split_at(csp);
         self.clone_with_constraints(Vec::from(new))
     }
 
