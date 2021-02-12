@@ -1,5 +1,5 @@
 ---
-title: Reference
+title: Rust Library
 weight: 4
 any: false
 ---
@@ -26,3 +26,6 @@ library documentation.
   * OS X
   * Windows
 
+## API Reference
+
+Rust API Documentation is on [docs.rs](https://docs.rs/oso/).
