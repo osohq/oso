@@ -69,51 +69,7 @@ Let’s look at an example usage of this library. Our example is a social media
 app that allows users to create posts. There is a `Post` model and a `User`
 model:
 
-{{< code file="models.py" >}}
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
-
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, Enum, Table
-
-Model = declarative_base(name="Model")
-
-class Post(Model):
-    __tablename__ = "posts"
-
-    id = Column(Integer, primary_key=True)
-
-    contents = Column(String)
-    access_level = Column(Enum("public", "private"), nullable=False)
-
-    created_by_id = Column(Integer, ForeignKey("users.id"))
-    created_by = relationship("User")
-
-"""Represent a management relationship between users. A record in this table
-indicates that ``user_id``'s account can be managed by the ``manager_id``
-user."""
-user_manages = Table(
-    "user_manages",
-    Model.metadata,
-    Column("managed_user_id", Integer, ForeignKey("users.id")),
-    Column("manager_user_id", Integer, ForeignKey("users.id"))
-)
-
-class User(Model):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True)
-    username = Column(String, nullable=False)
-
-    is_admin = Column(Boolean, nullable=False, default=False)
-
-    manages = relationship("User",
-        secondary="user_manages",
-        primaryjoin=(id == user_manages.c.manager_user_id),
-        secondaryjoin=(id == user_manages.c.managed_user_id),
-        backref="managed_by"
-    )
-
-{{< /code >}}
+{{< literalInclude path="examples/data_access/sqlalchemy/sqlalchemy_example/models.py" >}}
 
 Now, we’ll write a policy over these models. Our policy contains the following
 rules:
@@ -124,20 +80,7 @@ rules:
    `user.manages` relationship).
 4. A user can read all other users.
 
-{{< code file="policy.polar" >}}
-allow(_: User, "read", post: Post) if
-    post.access_level = "public";
-
-allow(user: User, "read", post: Post) if
-    post.access_level = "private" and
-    post.created_by = user;
-
-allow(user: User, "read", post: Post) if
-    post.access_level = "private" and
-    post.created_by in user.manages;
-
-allow(_: User, "read", _: User);
-{{< /code >}}
+{{< literalInclude path="examples/data_access/sqlalchemy/sqlalchemy_example/policy.polar" >}}
 
 {{% callout "Note" "blue" %}}
   The SQLAlchemy integration is deny by default. The final rule for `User` is

@@ -45,58 +45,18 @@ Let’s look at an example usage of this library. Our example is a social media
 app that allows users to view posts. There is a `User` model and a `Post`
 model:
 
-{{< code file="models.py" >}}
-from django.db import models
-from django.contrib.auth.models import AbstractUser
-
-from django_oso.models import AuthorizedModel
-
-
-class User(AbstractUser):
-    is_admin = models.BooleanField(default=False)
-    manager = models.ForeignKey(
-        "self", null=True, related_name="direct_reports", on_delete=models.CASCADE
-    )
-
-
-class Post(AuthorizedModel):
-    contents = models.CharField(max_length=255)
-    AccessLevelType = models.TextChoices("AccessLevelType", "public private")
-    access_level = models.CharField(
-        choices=AccessLevelType.choices, max_length=7, default="private"
-    )
-    creator = models.ForeignKey(User, on_delete=models.CASCADE)
-
-    class Meta:
-        app_label = "app"
-{{< /code >}}
+{{< literalInclude path="examples/data_access/django/example/app/models.py" >}}
 
 We want to enforce the following authorization scheme for posts:
 
-
 1. Anyone is allowed to `GET` any public post.
-
-
 2. A user is allowed to `GET` their own private posts.
-
-
-3. A user is allowed to `GET` private posts made by users they manage
-(defined through the `user.manager` relationship).
+3. A user is allowed to `GET` private posts made by users they manage (defined
+   through the `user.manager` relationship).
 
 The corresponding policy looks as follows:
 
-{{< code file="example.polar" >}}
-allow(_: app::User, "GET", post: app::Post) if
-    post.access_level = "public";
-
-allow(user: app::User, "GET", post: app::Post) if
-    post.access_level = "private" and
-    post.creator = user;
-
-allow(user: app::User, "GET", post: app::Post) if
-    post.access_level = "private" and
-    post.creator in user.direct_reports.all();
-{{< /code >}}
+{{< literalInclude path="examples/data_access/django/example/app/policy/example.polar" >}}
 
 ### Trying it out
 
@@ -107,7 +67,7 @@ Then, run `make setup` to install dependencies (primarily Django and
 
 The database now contains a set of four posts made by two users:
 
-```
+```py
 manager = User(username="manager")
 user = User(username="user", manager=manager)
 
@@ -122,7 +82,7 @@ the Django app. We can now use cURL to interact with the application.
 
 A guest user may view public posts:
 
-```
+```console
 $ curl localhost:8000/posts
 1 - @user - public - public user post
 3 - @manager - public - public manager post
@@ -130,7 +90,7 @@ $ curl localhost:8000/posts
 
 A non-manager may view public posts and their own private posts:
 
-```
+```console
 $ curl --user user:user localhost:8000/posts
 1 - @user - public - public user post
 2 - @user - private - private user post
@@ -140,7 +100,7 @@ $ curl --user user:user localhost:8000/posts
 A manager may view public posts, their own private posts, and private posts of
 their direct reports:
 
-```
+```console
 $ curl --user manager:manager localhost:8000/posts
 1 - @user - public - public user post
 2 - @user - private - private user post
@@ -155,17 +115,15 @@ constraints derived from the policy.
 
 For example, the above policy has the following rule:
 
-{{< code file="example.polar" >}}
-allow(user: app::User, "GET", post: app::Post) if
-    post.access_level = "private" and
-    post.creator = user;
-{{< /code >}}
+{{< literalInclude path="examples/data_access/django/example/app/policy/example.polar"
+                   from="their own private posts"
+                   to="created by users who they manage" >}}
 
 When determining which `Post` objects `User(id=2)` is authorized to see,
 the `django-oso` adapter converts the constraints on Post expressed in this
 rule into a Django `Q` filter:
 
-```
+```py
 (AND: ('access_level', 'private'), ('creator__pk', 2))
 ```
 
@@ -173,7 +131,7 @@ When composed with filters generated from the other rules, the QuerySet is
 scoped down to include only authorized objects. The result is the following SQL
 statement, with the highlighted clause corresponding to the above filter:
 
-```
+```sql
 SELECT "app_post"."id", "app_post"."contents", "app_post"."access_level", "app_post"."creator_id"
 FROM "app_post"
 WHERE "app_post"."id" IN (
@@ -194,18 +152,12 @@ recommend getting in touch with us on [Slack](http://join-slack.osohq.com/) befo
 There are some operators and features that do not currently work with the
 Django adapter when used **anywhere in the policy**:
 
-
 * The `cut` operator.
-
-
 * Rules that rely on ordered execution based on class inheritance.
 
 Some operations cannot be performed on **authorized models** in rules used with
 the Django adapter. These operations can still be used on regular Django models
 or Python objects:
 
-
 * Application method calls.
-
-
 * Arithmetic operators.
