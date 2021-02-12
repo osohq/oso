@@ -1514,9 +1514,9 @@ impl PolarVirtualMachine {
                             return Err(self.type_error(&left, format!("Can only assign to unbound variables, {} is bound to value {}.", var.to_polar(), value.to_polar())));
                         }
                         // TODO should this one be allowed?
-                        VariableState::Partial(e) => {
-                            return Err(self.type_error(&left, format!("Can only assign to unbound variables, {} is bound to expression {}.", var.to_polar(), e.to_polar())));
-                        }
+                        //VariableState::Partial(e) => {
+                            //return Err(self.type_error(&left, format!("Can only assign to unbound variables, {} is bound to expression {}.", var.to_polar(), e.to_polar())));
+                        //}
                         _ => {
                             self.push_goal(Goal::Unify { left, right })?;
                         }
