@@ -1,12 +1,3 @@
 ---
-envClass: |
-    ```js
-    class Env {
-      static var(variable) {
-        return process.env[variable];
-      }
-    }
-
-    oso.registerClass(Env);
-    ```
+envClassPath: examples/context/nodejs/02-context.js
 ---

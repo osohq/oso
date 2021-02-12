@@ -22,9 +22,9 @@ write rules over.
 
 For example, let’s say you have a policy like this:
 
-{{< code file="context.polar" >}}
-allow(actor, _action, _resource) if role(actor, "admin");
-{{< /code >}}
+{{< literalInclude path="examples/context/01-context.polar"
+                   from="admin-start"
+                   to="admin-end" >}}
 
 Here we have a very simple allow rule that allows an actor to access any
 resource if they are an admin. Maybe we want to also let any actor access any
@@ -37,7 +37,9 @@ How would we read that environment variable from our policy though?
 We can use a application class that lets us directly access the environment
 variables:
 
-{{% exampleGet "envClass" %}}
+{{< literalInclude dynPath="envClassPath"
+                   from="context-start"
+                   to="context-end" >}}
 
 The above class exposes a `var` method that reads the application’s environment
 variables and returns the requested value. We register the class with Oso,
@@ -46,9 +48,9 @@ allowing us to instantiate it in the policy.
 We can add a new `allow` rule that permits an actor to access a resource if the
 application is in development mode:
 
-{{< code file="context.polar" >}}
-allow(_actor, _action, _resource) if Env.var("ENV") = "development";
-{{< /code >}}
+{{< literalInclude path="examples/context/01-context.polar"
+                   from="env-start"
+                   to="env-end" >}}
 
 ## Summary
 
