@@ -217,13 +217,6 @@ impl Operation {
         combined
     }
 
-    pub fn after(&self, csp: usize) -> Operation {
-        assert_eq!(self.operator, Operator::And);
-        let constraints = self.constraints();
-        let (_, new) = constraints.split_at(csp);
-        self.clone_with_constraints(Vec::from(new))
-    }
-
     pub fn constraints(&self) -> Vec<Operation> {
         self.args
             .iter()
@@ -621,7 +614,6 @@ mod test {
 
         let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), sym!("y")])), false);
         assert_partial_expressions!(next_binding(&mut q)?,
-            // TODO dhatch change in order here
             "x" => "y matches Y{} and _this matches X{} and y.x = _this",
             "x" => "y matches Y{} and _this matches X{} and y.x = _this",
             "y" => "_this matches Y{} and _this.x matches X{}"
