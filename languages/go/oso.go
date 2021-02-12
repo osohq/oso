@@ -151,6 +151,9 @@ func (o Oso) IsAllowed(actor interface{}, action interface{}, resource interface
 	}
 }
 
+/*
+Start the oso repl where you can make queries and see results printed out.
+*/
 func (o Oso) Repl() error {
 	return (*o.p).repl()
 }
