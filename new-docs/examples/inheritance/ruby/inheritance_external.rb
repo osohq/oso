@@ -15,7 +15,7 @@ end
 
 OSO.register_class(Actor)
 
-## START MARKER ##
+# start-patient-data
 class PatientData
   attr_accessor :patient
 
@@ -23,20 +23,14 @@ class PatientData
     @patient = patient
   end
 end
-
 OSO.register_class(PatientData)
 
-class Lab < PatientData
-end
-
+class Lab < PatientData; end
 OSO.register_class(Lab)
 
-class Order < PatientData
-end
-
+class Order < PatientData; end
 OSO.register_class(Order)
 
-class Test < PatientData
-end
-
+class Test < PatientData; end
 OSO.register_class(Test)
+# end-patient-data
