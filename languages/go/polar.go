@@ -9,11 +9,11 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
 
 	"github.com/osohq/go-oso/errors"
 	"github.com/osohq/go-oso/internal/ffi"
 	"github.com/osohq/go-oso/internal/host"
+	"github.com/osohq/go-oso/internal/util"
 	. "github.com/osohq/go-oso/types"
 )
 
@@ -142,20 +142,18 @@ func (p Polar) repl(files ...string) error {
 	for {
 		fmt.Print("query> ")
 		text, _ := reader.ReadString('\n')
-		text = strings.TrimSuffix(text, "\r\n")
-		text = strings.TrimSuffix(text, "\n")
-		text = strings.TrimSuffix(text, ";")
+		text = util.QueryStrip(text)
 
 		if text == "" {
 			continue
 		}
 
-		ffi_query, err := p.ffiPolar.NewQueryFromStr(text)
+		ffiQuery, err := p.ffiPolar.NewQueryFromStr(text)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		query := newQuery(*ffi_query, p.host.Copy())
+		query := newQuery(*ffiQuery, p.host.Copy())
 		results, err := query.GetAllResults()
 		if err != nil {
 			fmt.Println(err)
