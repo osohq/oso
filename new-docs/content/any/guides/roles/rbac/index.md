@@ -130,7 +130,7 @@ Now we can write a few more tests to ensure everything is hooked up correctly:
 Our accounting firm’s authorization scheme is flexible, hierarchical, and —
 let’s just go ahead and say it — beautiful. However, it’s entirely based on
 data that lives in our policy. One of the distinguishing features of Oso is the
-ability to [reach into existing domain models](application-types) to retrieve
+ability to [reach into existing domain models](getting-started/policies#application-types) to retrieve
 context for an authorization decision.
 
 Imagine we have a `user_roles` database table that contains mappings
