@@ -194,9 +194,7 @@ impl BindingManager {
                     op = e;
                 },
                 BindingManagerVariableState::Bound(v) => {
-                    let ground_op = op.ground(var.clone(), v.clone()).unwrap();
-                    println!("variable {:?} bound to {} in constraint {} grounded to {ground_op}", var, v, op.to_polar(), ground_op=ground_op.to_polar());
-                    op = ground_op;
+                    panic!("Unexpected bound variable in constraint.");
                 }
             }
         }
