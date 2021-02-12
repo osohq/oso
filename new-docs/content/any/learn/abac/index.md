@@ -11,7 +11,7 @@ description: |
     using Oso.
 aliases:
     - ../../../using/examples/abac.html
-weight: 2
+weight: 3
 ---
 
 # Attribute-Based Access Control (ABAC)

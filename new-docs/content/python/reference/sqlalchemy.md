@@ -8,7 +8,8 @@ aliases:
 # SQLAlchemy
 
 The Oso SQLAlchemy integration enables list filtering
-to be used with SQLAlchemy models.
+to be used with SQLAlchemy models and provides built-in SQLAlchemy models for
+Role-Based Access Control.
 
 ## Installation
 
@@ -21,9 +22,13 @@ $ pip install sqlalchemy-oso
 
 ## Usage
 
-See the list filtering usage guide for more information.
+See the [data filtering guide](guides/data_access/sqlalchemy) and [roles guide](guides/roles/sqlalchemy_roles) for usage information.
 
 ## API Reference
 
 The [SQLAlchemy API reference]({{% apiLink "reference/api/sqlalchemy.html" %}})
 is automatically generated from the Oso SQLAlchemy library source files.
+
+## Roles Reference
+
+The [SQLAlchemy Roles Reference](sqlalchemy_roles_ref) has more details on the library's built-in roles features.

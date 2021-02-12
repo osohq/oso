@@ -3,9 +3,10 @@ date: '2021-01-07T02:46:33.217Z'
 docname: more/language/polar-foundations
 images: {}
 path: /more-language-polar-foundations
-title: Polar Background
-aliases: 
+title: What is Polar?
+aliases:
     - ../../more/language/polar-foundations.html
+weight: 1
 ---
 
 # Polar Background
@@ -182,7 +183,7 @@ Suppose we are given the following fragment of a family tree:
 
 
 
-![image](./olympians.svg)
+![image](learn/olympians.svg)
 
 We could represent the direct relations as the following facts in Polar:
 

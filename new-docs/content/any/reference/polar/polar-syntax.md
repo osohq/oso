@@ -18,7 +18,7 @@ Each Polar file defines a set of rules. When a Polar file is loaded into the
 authorization engine, all rules are added to the engine’s knowledge base.
 
 The knowledge base may be queried. The behavior of queries is described further
-[here](project/language/polar-foundations#the-search-procedure).
+[here](learn/polar-foundations#the-search-procedure).
 
 ## Primitive Types
 
@@ -109,7 +109,7 @@ and `BODY` any number of _terms_. The meaning of a rule is that `HEAD` is true
 **if** each of the `BODY` terms is true. If there are be multiple rules with
 the same head, each `BODY` will be tried in turn, and any or all may succeed.
 For more on how rules are defined and applied see [Polar
-Background](project/language/polar-foundations).
+Background](learn/polar-foundations).
 
 The following is an example of a rule:
 
@@ -207,7 +207,7 @@ where the variable `x` is either bound to `1` or unbound.
 Unification is also used to determine if queries match rule `HEAD` s, and if
 the `BODY` of rules match other facts in the knowledge base. We will cover
 unification further in [The Search
-Procedure](project/language/polar-foundations#the-search-procedure).
+Procedure](learn/polar-foundations#the-search-procedure).
 
 #### Assignment
 
