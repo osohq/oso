@@ -90,7 +90,18 @@ impl BindingManager {
         if let Ok(symbol) = val.value().as_symbol() {
             self.bind_variables(var, symbol);
         } else {
-            self.add_binding(var, val);
+            if let VariableState::Partial(p) = self.variable_state(var) {
+                if let Some(grounded) = p.ground(var.clone(), val.clone()) {
+                    self.add_binding(var, val);
+                    // TODO (dhatch): Return error.
+                    self.constrain(&grounded).unwrap();
+                } else {
+                    panic!("check ground precondition");
+                    // TODO (dhatch): Return error.
+                }
+            } else {
+                self.add_binding(var, val);
+            }
         }
     }
 
@@ -269,6 +280,18 @@ impl BindingManager {
         Derefer::new(self).fold_term(term.clone())
     }
 
+    /// Get constraints on variable `variable`. If the variable is in a cycle,
+    /// the cycle is expressed as a partial.
+    pub fn get_constraints(&self, variable: &Symbol) -> Operation {
+        match self.variable_state(variable) {
+            VariableState::Unbound => op!(And),
+            VariableState::Bound(val) => op!(And, term!(op!(Unify, term!(variable.clone()), val))),
+            VariableState::Partial(expr) => expr,
+            VariableState::Cycle(c) => cycle_constraints(c)
+        }
+    }
+
+
     // TODO (dhatch): Replace variable state with this.
     // Instead of returning a Cycle, it returns a Partial with the constraints
     // in the partial.
@@ -323,105 +346,131 @@ impl BindingManager {
         VariableState::Unbound
     }
 
-    /// Add `term` as a constraint.
     pub fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
         self.do_followers(|follower| follower.add_constraint(term))?;
 
-        let Operation { operator: op, args } = term.value().as_expression().unwrap();
-        assert!(
-            !matches!(*op, Operator::And | Operator::Or),
-            "Expected a bare constraint."
-        );
-        assert!(args.len() >= 2);
-
-        let (left, right) = (&args[0], &args[1]);
-        match (
-            extract_variable(left.value()),
-            extract_variable(right.value()),
-        ) {
-            (Value::Variable(left_name), Value::Variable(right_name)) => {
-                match (
-                    self.variable_state(left_name),
-                    self.variable_state(right_name),
-                ) {
-                    (VariableState::Unbound, VariableState::Unbound) => {
-                        self.constrain(&op!(And, term.clone()))?;
-                    }
-                    (VariableState::Cycle(left_cycle), VariableState::Cycle(right_cycle)) => {
-                        let mut merged_cycles = cycle_constraints(left_cycle);
-                        merged_cycles.merge_constraints(cycle_constraints(right_cycle));
-                        self.constrain(&merged_cycles.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (VariableState::Partial(partial), VariableState::Unbound)
-                    | (VariableState::Unbound, VariableState::Partial(partial)) => {
-                        self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (
-                        VariableState::Partial(mut left_partial),
-                        VariableState::Partial(right_partial),
-                    ) => {
-                        left_partial.merge_constraints(right_partial);
-                        self.constrain(&left_partial.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (VariableState::Partial(mut partial), VariableState::Cycle(cycle))
-                    | (VariableState::Cycle(cycle), VariableState::Partial(mut partial)) => {
-                        partial.merge_constraints(cycle_constraints(cycle));
-                        self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (VariableState::Cycle(cycle), VariableState::Unbound)
-                    | (VariableState::Unbound, VariableState::Cycle(cycle)) => {
-                        let partial = cycle_constraints(cycle);
-                        self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
-                    }
-                    (VariableState::Bound(left_value), _) => {
-                        panic!(
-                            "Variable {} unexpectedly bound to {} in constraint {}.",
-                            left.to_polar(),
-                            left_value.to_polar(),
-                            term.to_polar(),
-                        );
-                    }
-                    (_, VariableState::Bound(right_value)) => {
-                        panic!(
-                            "Variable {} unexpectedly bound to {} in constraint {}.",
-                            right.to_polar(),
-                            right_value.to_polar(),
-                            term.to_polar(),
-                        );
-                    }
+        assert!(term.value().as_expression().is_ok());
+        let mut op = op!(And, term.clone());
+        for var in op.variables().clone() {
+            match self.variable_state(&var) {
+                VariableState::Unbound => {},
+                VariableState::Cycle(c) => {
+                    let mut cycle = cycle_constraints(c);
+                    cycle.merge_constraints(op.clone());
+                    op = cycle;
+                },
+                VariableState::Partial(mut e) => {
+                    e.merge_constraints(op);
+                    op = e;
+                },
+                VariableState::Bound(_) => {
+                    panic!("variable {:?} bound in constraint", var);
                 }
             }
-            (Value::Variable(name), _) | (_, Value::Variable(name)) => {
-                match self.variable_state(name) {
-                    VariableState::Unbound => {
-                        self.constrain(&op!(And, term.clone()))?;
-                    }
-                    VariableState::Cycle(cycle) => {
-                        let partial = cycle_constraints(cycle);
-                        self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
-                    }
-                    VariableState::Partial(partial) => {
-                        self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
-                    }
-                    VariableState::Bound(value) => {
-                        panic!(
-                            "Variable {} unexpectedly bound to {} in constraint {}.",
-                            name.0,
-                            value.to_polar(),
-                            term.to_polar()
-                        );
-                    }
-                }
-            }
-            (_, _) => panic!(
-                "At least one side of a constraint expression must be a variable. This is {} {}",
-                left.to_polar(),
-                right.to_polar()
-            ),
         }
 
-        Ok(())
+        self.constrain(&op)
     }
+
+    /// Add `term` as a constraint.
+    //pub fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
+        //self.do_followers(|follower| follower.add_constraint(term))?;
+
+        //let Operation { operator: op, args } = term.value().as_expression().unwrap();
+        //assert!(
+            // !matches!(*op, Operator::And | Operator::Or),
+            // "Expected a bare constraint."
+        //);
+        //assert!(args.len() >= 2);
+
+        //let (left, right) = (&args[0], &args[1]);
+        //match (
+            //extract_variable(left.value()),
+            //extract_variable(right.value()),
+        //) {
+            //(Value::Variable(left_name), Value::Variable(right_name)) => {
+                //match (
+                    //self.variable_state(left_name),
+                    //self.variable_state(right_name),
+                //) {
+                    //(VariableState::Unbound, VariableState::Unbound) => {
+                        //self.constrain(&op!(And, term.clone()))?;
+                    //}
+                    //(VariableState::Cycle(left_cycle), VariableState::Cycle(right_cycle)) => {
+                        //let mut merged_cycles = cycle_constraints(left_cycle);
+                        //merged_cycles.merge_constraints(cycle_constraints(right_cycle));
+                        //self.constrain(&merged_cycles.clone_with_new_constraint(term.clone()))?;
+                    //}
+                    //(VariableState::Partial(partial), VariableState::Unbound)
+                    //| (VariableState::Unbound, VariableState::Partial(partial)) => {
+                        //self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
+                    //}
+                    //(
+                        //VariableState::Partial(mut left_partial),
+                        //VariableState::Partial(right_partial),
+                    //) => {
+                        //left_partial.merge_constraints(right_partial);
+                        //self.constrain(&left_partial.clone_with_new_constraint(term.clone()))?;
+                    //}
+                    //(VariableState::Partial(mut partial), VariableState::Cycle(cycle))
+                    //| (VariableState::Cycle(cycle), VariableState::Partial(mut partial)) => {
+                        //partial.merge_constraints(cycle_constraints(cycle));
+                        //self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
+                    //}
+                    //(VariableState::Cycle(cycle), VariableState::Unbound)
+                    //| (VariableState::Unbound, VariableState::Cycle(cycle)) => {
+                        //let partial = cycle_constraints(cycle);
+                        //self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
+                    //}
+                    //(VariableState::Bound(left_value), _) => {
+                        //panic!(
+                            //"Variable {} unexpectedly bound to {} in constraint {}.",
+                            //left.to_polar(),
+                            //left_value.to_polar(),
+                            //term.to_polar(),
+                        //);
+                    //}
+                    //(_, VariableState::Bound(right_value)) => {
+                        //panic!(
+                            //"Variable {} unexpectedly bound to {} in constraint {}.",
+                            //right.to_polar(),
+                            //right_value.to_polar(),
+                            //term.to_polar(),
+                        //);
+                    //}
+                //}
+            //}
+            //(Value::Variable(name), _) | (_, Value::Variable(name)) => {
+                //match self.variable_state(name) {
+                    //VariableState::Unbound => {
+                        //self.constrain(&op!(And, term.clone()))?;
+                    //}
+                    //VariableState::Cycle(cycle) => {
+                        //let partial = cycle_constraints(cycle);
+                        //self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
+                    //}
+                    //VariableState::Partial(partial) => {
+                        //self.constrain(&partial.clone_with_new_constraint(term.clone()))?;
+                    //}
+                    //VariableState::Bound(value) => {
+                        //panic!(
+                            //"Variable {} unexpectedly bound to {} in constraint {}.",
+                            //name.0,
+                            //value.to_polar(),
+                            //term.to_polar()
+                        //);
+                    //}
+                //}
+            //}
+            //(_, _) => panic!(
+                //"At least one side of a constraint expression must be a variable. This is {} {}",
+                //left.to_polar(),
+                //right.to_polar()
+            //),
+        //}
+
+        //Ok(())
+    //}
 
     // TODO (dhatch) This is still called from the VM, breaks followers.
     pub fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
@@ -441,7 +490,7 @@ impl BindingManager {
     }
 
     /// Return all variables used in this binding manager.
-    fn variables(&self) -> HashSet<Symbol> {
+    pub fn variables(&self) -> HashSet<Symbol> {
         self.bindings
             .iter()
             .map(|Binding(v, _)| v.clone())

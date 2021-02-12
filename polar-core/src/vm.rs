@@ -135,6 +135,12 @@ pub enum Goal {
     AddConstraint {
         term: Term,
     },
+
+    /// TODO hack.
+    /// Add a new constraint
+    AddConstraintsBatch {
+        add_constraints: Rc<RefCell<Bindings>>,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -502,6 +508,11 @@ impl PolarVirtualMachine {
                 .drain(..)
                 .for_each(|Binding(var, value)| self.bind(&var, value)),
             Goal::AddConstraint { term } => self.add_constraint(&term)?,
+            Goal::AddConstraintsBatch { add_constraints } => add_constraints
+                .borrow_mut()
+                .drain()
+                .map(|(_, constraint)| self.add_constraint(&constraint))
+                .collect::<PolarResult<()>>()?,
             Goal::Run { runnable } => return self.run_runnable(runnable.clone_runnable()),
         }
         Ok(QueryEvent::None)
@@ -630,11 +641,11 @@ impl PolarVirtualMachine {
         self.binding_manager.constrain(o)
     }
 
-    fn add_binding_follower(&mut self) -> FollowerId {
+    pub fn add_binding_follower(&mut self) -> FollowerId {
         self.binding_manager.add_follower(BindingManager::new())
     }
 
-    fn remove_binding_follower(&mut self, follower_id: FollowerId) -> Option<BindingManager> {
+    pub fn remove_binding_follower(&mut self, follower_id: &FollowerId) -> Option<BindingManager> {
         self.binding_manager.remove_follower(&follower_id)
     }
 
@@ -643,6 +654,10 @@ impl PolarVirtualMachine {
     /// and at least one of the first two arguments is an unbound variable.
     #[allow(clippy::many_single_char_names)]
     fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
+        if self.log {
+            self.print(&format!("⇒ add_constraint: {}", term.to_polar()));
+        }
+
         self.binding_manager.add_constraint(term)
     }
 
@@ -1455,15 +1470,17 @@ impl PolarVirtualMachine {
                 assert_eq!(args.len(), 1);
                 let term = args.pop().unwrap();
                 let bindings = Rc::new(RefCell::new(BindingStack::new()));
+                let add_constraints = Rc::new(RefCell::new(Bindings::new()));
                 let inverter = Box::new(Inverter::new(
                     self,
                     vec![Goal::Query { term }],
                     bindings.clone(),
+                    add_constraints.clone(),
                     self.bsp(),
                 ));
                 self.choose_conditional(
                     vec![Goal::Run { runnable: inverter }],
-                    vec![Goal::BindBatch { bindings }],
+                    vec![Goal::AddConstraintsBatch { add_constraints }],
                     vec![Goal::Backtrack],
                 )?;
             }
@@ -2056,9 +2073,10 @@ impl PolarVirtualMachine {
                         self.push_goal(Goal::Unify { left: value, right })?;
                     }
                     VariableState::Partial(f) => {
-                        if let Some(grounded) = f.ground(var.clone(), right.clone()) {
+                        println!("ground!");
+                        if let Some(_) = f.ground(var.clone(), right.clone()) {
+                            println!("ground ok!");
                             self.bind(var, right);
-                            self.constrain(&grounded)?;
                         } else {
                             self.push_goal(Goal::Backtrack)?;
                         }
@@ -2075,9 +2093,10 @@ impl PolarVirtualMachine {
                         self.push_goal(Goal::Unify { left, right: value })?;
                     }
                     VariableState::Partial(f) => {
-                        if let Some(grounded) = f.ground(var.clone(), left.clone()) {
+                        println!("ground!");
+                        if let Some(_) = f.ground(var.clone(), left.clone()) {
+                            println!("ground ok!");
                             self.bind(var, left);
-                            self.constrain(&grounded)?;
                         } else {
                             self.push_goal(Goal::Backtrack)?;
                         }
