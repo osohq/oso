@@ -1,7 +1,9 @@
 ---
-title: Polar Language
+title: Polar Reference
 weight: 1
 any: false
 ---
 
 # Polar Language Reference
+
+Reference guides for the Polar policy language.

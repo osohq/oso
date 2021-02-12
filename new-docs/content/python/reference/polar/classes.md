@@ -5,7 +5,7 @@ aliases:
   - /using/libraries/python/index.html
 ---
 
-## Working with Python Types
+# Working with Python Types
 
 Oso’s Python authorization library allows you to write policy rules over Python
 objects directly. This document explains how different types of Python objects
@@ -16,7 +16,7 @@ More detailed examples of working with application classes can be found in our
 [Guides](guides).
 {{% /callout %}}
 
-### Class Instances
+## Class Instances
 
 You can pass an instance of any Python class into Oso and access its methods
 and fields from your policy (see [Application
@@ -29,13 +29,13 @@ Python instances can be constructed from inside an Oso policy using the
 using either the `register_class()` method or the `polar_class()` decorator. An
 example of this can be found [here](getting-started/policies#application-types).
 
-### Numbers and Booleans
+## Numbers and Booleans
 
 Polar supports integer and floating point real numbers, as well as booleans
 (see [Primitive Types](polar-syntax#primitive-types)). These map to the Python
 `int`, `float`, and `bool` types.
 
-### Strings
+## Strings
 
 Python strings are mapped to Polar [strings](polar-syntax#strings). Python’s
 string methods may be accessed from policies:
@@ -55,7 +55,7 @@ Polar does not support methods that mutate strings in place. E.g.,
 `capitalize()` will have no effect on a string in Polar.
 {{% /callout %}}
 
-### Lists
+## Lists
 
 Python lists are mapped to Polar [lists](polar-syntax#lists). Python’s list
 methods may be accessed from policies:
@@ -101,7 +101,7 @@ policy; i.e., there is no Polar equivalent of the Python expression
 with [the `in` operator](polar-syntax#in-list-membership) or destructure it
 with [pattern matching](polar-syntax#patterns-and-matching).
 
-### Dictionaries
+## Dictionaries
 
 Python dictionaries are mapped to Polar
 [dictionaries](polar-syntax#dictionaries):
@@ -118,7 +118,7 @@ assert(oso.is_allowed(user, "foo", "bar))
 
 Likewise, dictionaries constructed in Polar may be passed into Python methods.
 
-### Iterables
+## Iterables
 
 You may iterate over any Python
 [iterable](https://docs.python.org/3/glossary.html#term-iterable), such as
@@ -140,7 +140,7 @@ user = User()
 assert(oso.is_allowed(user, "foo", "bar))
 ```
 
-### `None`
+## `None`
 
 The Python value `None` is registered as the Polar constant nil. If a Python
 method can return `None`, you may want to compare the result to `nil`:
@@ -162,7 +162,7 @@ user = User()
 assert(oso.is_allowed(user, "foo", "bar))
 ```
 
-### Python → Polar Types Summary
+## Python → Polar Types Summary
 
 | Python type | Polar type |
 | ----------- | ---------- |

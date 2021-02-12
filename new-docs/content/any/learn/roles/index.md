@@ -4,7 +4,7 @@ any: true
 description: Overview of Role-Based Access Control Design Patterns
 aliases:
   - ../../getting-started/rbac.html
-weight: 1
+weight: 2
 ---
 
 # Role-Based Access Control (RBAC) Patterns
