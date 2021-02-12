@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.authors       = ['Oso Security, Inc.']
   spec.email         = ['support@osohq.com']
   spec.licenses      = ['Apache-2.0']
-  spec.summary       = 'oso authorization library.'
+  spec.summary       = 'Oso authorization library.'
   spec.homepage      = 'https://www.osohq.com/'
 
   spec.required_ruby_version = Gem::Requirement.new('>= 2.4.0')
