@@ -1819,6 +1819,20 @@ mod test {
         Ok(())
     }
 
+    #[test]
+    fn test_output_variable() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"f(a, b) if a = b;"#)?;
+
+        let mut q = p.new_query_from_term(term!(call!("f", [1, sym!("x")])), false);
+        let r = next_binding(&mut q)?;
+        assert_eq!(r.get(&sym!("x")).unwrap(), &term!(1));
+        assert_query_done!(q);
+
+        Ok(())
+    }
+
     // TODO(gj): add test where we have a partial prior to an inversion
     // TODO (dhatch): We have few tests involving multiple rules and partials.
 }

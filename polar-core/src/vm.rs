@@ -704,12 +704,12 @@ impl PolarVirtualMachine {
 
     /// Investigate the state of a variable at some point and return a variable state variant.
     pub fn variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> VariableState {
-        self.binding_manager.variable_state_new_at_point(variable, bsp)
+        self.binding_manager.variable_state_at_point(variable, bsp)
     }
 
     /// Investigate the current state of a variable and return a variable state variant.
     pub fn variable_state(&self, variable: &Symbol) -> VariableState {
-        self.binding_manager.variable_state_new(variable)
+        self.binding_manager.variable_state(variable)
     }
 
     /// Recursively dereference variables in a term, including subterms, except operations.
@@ -1130,7 +1130,6 @@ impl PolarVirtualMachine {
                     VariableState::Partial(expr) => expr,
                     // This branch is unneeded. A cycle variable has no constraints,
                     // so lhs of matches below will return None.
-                    VariableState::Cycle(c) => cycle_constraints(c),
                     _ => panic!("Invariant violated. left must be a variable"),
                 };
 
