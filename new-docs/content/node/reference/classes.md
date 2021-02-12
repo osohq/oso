@@ -2,7 +2,7 @@
 title: JavaScript Types in Polar
 weight: 2
 aliases:
-    - /using/libraries/node/index.html
+  - /using/libraries/node/index.html
 ---
 
 [mdn-array]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
@@ -18,14 +18,14 @@ JavaScript types directly. This document explains how different types of
 JavaScript values can be used in Oso policies.
 
 {{% callout "Note" "blue" %}}
-  More detailed examples of working with application objects can be found in
-  [Policy Examples](learn/examples).
+More detailed examples of working with application objects can be found in our
+[Guides](guides).
 {{% /callout %}}
 
 ### Objects
 
 You can pass any JavaScript object into Oso and access its properties from your
-policy (see [Application Types](learn/policies/application-types)).
+policy (see [Application Types](getting-started/policies#application-types)).
 
 ### Class Instances
 
@@ -34,7 +34,7 @@ constructed from inside an Oso policy using Polar's [`new`
 operator](polar-syntax#new) if the constructor (a `class` or `function` that
 responds to JavaScript's [`new` operator][mdn-new]) has been **registered**
 using the `oso.registerClass()` method. An example of this can be found
-[here](learn/policies/application-types).
+[here](getting-started/policies#application-types).
 
 ### Numbers and Booleans
 
@@ -62,7 +62,7 @@ oso.isAllowed(user, "foo", "bar").then(assert);
 ```
 
 {{% callout "Warning" "orange" %}}
-  Polar does not support methods that mutate strings in place.
+Polar does not support methods that mutate strings in place.
 {{% /callout %}}
 
 ### Lists
@@ -86,8 +86,8 @@ oso.isAllowed(user, "foo", "bar").then(assert);
 ```
 
 {{% callout "Warning" "orange" %}}
-  Polar does not support methods that mutate lists in place unless the list is
-  also returned from the method.
+Polar does not support methods that mutate lists in place unless the list is
+also returned from the method.
 {{% /callout %}}
 
 Likewise, lists constructed in Polar may be passed into JavaScript methods:
@@ -146,7 +146,7 @@ during evaluation of a policy.
 ### `null`
 
 The JavaScript `null` value is registered as the Polar constant
-[`nil`](learn/policies/application-types#nil). If a JavaScript function can
+[`nil`](reference/polar/polar-syntax#nil). If a JavaScript function can
 return `null`, you may want to compare the result to `nil`:
 
 ```polar

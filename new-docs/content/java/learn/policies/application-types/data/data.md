@@ -36,7 +36,7 @@ registerClass: |
   classes of the supplied arguments. For the example above, this would probably
   be a constructor with a signature like public User(String name, bool
   isAdmin). See [the Java library
-  documentation](reference/classes#class-instances) for more details.
+  documentation](reference/polar/classes#class-instances) for more details.
 
 specializedExample: |
   ```java

@@ -1,8 +1,8 @@
 ---
 title: |
-    The "N+1 Problem"
-aliases: 
-    - ../../more/performance/n_plus_one.html
+  The "N+1 Problem"
+aliases:
+  - ../../more/performance/n_plus_one.html
 ---
 
 # The “N+1 Problem”
@@ -14,7 +14,7 @@ evaluate the policy.
 Since it is common in policies to iterate over members or attributes
 in order to look for matching information, it can be common to encounter
 variants of the
-[N+1 problem](https://medium.com/@bretdoucette/n-1-queries-and-how-to-avoid-them-a12f02345be5).
+[N+1 problem](https://medium.com/@bretdoucette/n-1-queries-and-guides-avoid-them-a12f02345be5).
 
 For example, given the following policy:
 
@@ -41,7 +41,7 @@ and [dataloaders](https://github.com/graphql/dataloader) for [GraphQL](https://g
 
 Here we will show how these patterns can be leveraged in Oso.
 
-**Option 1.**  Implement a lookup method that accepts as input a list.
+**Option 1.** Implement a lookup method that accepts as input a list.
 
 For example:
 

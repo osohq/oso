@@ -12,15 +12,15 @@ directly. This document explains how different types of Java objects can be
 used in Oso policies.
 
 {{% callout "Note" "blue" %}}
-  More detailed examples of working with application classes can be found in
-  [Policy Examples](learn/examples).
+More detailed examples of working with application classes can be found in our
+[Guides](guides).
 {{% /callout %}}
 
 ### Class Instances
 
 You may pass an instance of any Java class into Oso and access its methods and
 fields from your policy (see [Application
-Types](learn/policies/application-types)).
+Types](getting-started/policies#application-types)).
 
 Java instances can be constructed from within an Oso policy using the
 [`new`](polar-syntax#new) operator:
@@ -64,27 +64,27 @@ Polar supports integer and floating point real numbers, as well as booleans
 (see [Primitive Types](polar-syntax#primitive-types)).
 
 {{% callout "Note" "blue" %}}
-  Java primitives may be passed into Oso, but numbers and booleans created in
-  an Oso policy will be converted to
-  [autoboxed](https://docs.oracle.com/javase/tutorial/java/data/autoboxing.html)
-  Integer, Float, and Boolean types respectively.
+Java primitives may be passed into Oso, but numbers and booleans created in
+an Oso policy will be converted to
+[autoboxed](https://docs.oracle.com/javase/tutorial/java/data/autoboxing.html)
+Integer, Float, and Boolean types respectively.
 
-  This means that methods called from Oso must have autoboxed argument types.
-  E.g.:
+This means that methods called from Oso must have autoboxed argument types.
+E.g.:
 
-  ```java
-  class Foo {
-      public static unboxed(int a, int b) {
-          // ...
-      }
-      public static boxed(Integer a, Integer b) {
-          // ...
-      }
-  }
-  ```
+```java
+class Foo {
+    public static unboxed(int a, int b) {
+        // ...
+    }
+    public static boxed(Integer a, Integer b) {
+        // ...
+    }
+}
+```
 
-  The `boxed()` method may be called from a policy, but attempting to call
-  `unboxed()` will fail.
+The `boxed()` method may be called from a policy, but attempting to call
+`unboxed()` will fail.
 {{% /callout %}}
 
 ### Strings
@@ -142,8 +142,8 @@ public class User {
 Note that the `isAllowed()` call would also succeed if `groups` were an Array.
 
 {{% callout "Warning" "orange" %}}
-  Polar does not support methods that mutate lists in place. E.g., `add()` will
-  have no effect on a list in Polar.
+Polar does not support methods that mutate lists in place. E.g., `add()` will
+have no effect on a list in Polar.
 {{% /callout %}}
 
 Likewise, lists constructed in Polar may be passed into Java methods:
@@ -233,7 +233,7 @@ public class User {
 ### `null`
 
 The Java `null` reference is registered as the Polar constant
-[nil](learn/policies/application-types#nil). If a Java method can return
+[nil](reference/polar/polar-syntax#nil). If a Java method can return
 `null`, you may want to compare the result to `nil`:
 
 ```polar

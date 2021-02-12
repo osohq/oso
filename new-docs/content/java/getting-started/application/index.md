@@ -80,7 +80,7 @@ In the application, we need to:
 
 1. Create the Oso instance
 2. Load in policy files.
-3. [Register application classes](application-types)
+3. [Register application classes](getting-started/policies#application-types)
 4. Attach the Oso instance to the application
 
 We have achieved this using the `setupOso` method, in `Application.java`.
@@ -202,10 +202,10 @@ $ curl -H "user: alice@foo.com"  localhost:5000/whoami
 You are alice@foo.com, the CEO at Foo Industries. (User ID: 1)
 ```
 
-{{% callout "Tip" "green" %}}
+<!-- {{% callout "Tip" "green" %}}
 Interested in understanding more about what is happening here? Check
-out the [user types](/learn/examples/user_types) example.
-{{% /callout %}}
+out the [user types](/guides/user_types) example.
+{{% /callout %}} -->
 
 The inputs to the `isAllowed` call are the current user, the HTTP method,
 and the HTTP request. This information can often be enough to cover a large

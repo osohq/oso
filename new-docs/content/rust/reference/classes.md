@@ -2,7 +2,7 @@
 title: Rust Types in Polar
 weight: 2
 aliases:
-    - /using/libraries/rust/index.html
+  - /using/libraries/rust/index.html
 ---
 
 [rust-string]: https://doc.rust-lang.org/std/string/struct.String.html
@@ -17,15 +17,15 @@ types directly. This document explains how different Rust types can be used in
 Oso policies.
 
 {{% callout "Note" "blue" %}}
-More detailed examples of working with application objects can be found in
-[Policy Examples](learn/examples).
+More detailed examples of working with application objects can be found in our
+[Guides](guides).
 {{% /callout %}}
 
 ### Structs + Enums
 
 Rust structs and enums can be registered with Oso, which lets you pass them in
 and access their methods and fields in your policy (see [Application
-Types](learn/policies/application-types)).
+Types](getting-started/policies#application-types)).
 
 Rust structs can also be constructed from inside an Oso policy using [the `new`
 operator](polar-syntax#new) if a type constructor is provided at registration.
@@ -59,7 +59,7 @@ assert!(oso.is_allowed(user, "foo", "bar")?);
 ```
 
 {{% callout "Warning" "orange" %}}
-  Polar does not support methods that mutate strings in place.
+Polar does not support methods that mutate strings in place.
 {{% /callout %}}
 
 ### Vectors
@@ -86,8 +86,8 @@ assert!(oso.is_allowed(user, "foo", "bar")?);
 ```
 
 {{% callout "Warning" "orange" %}}
-  Polar does not support methods that mutate lists in place unless the list is
-  also returned from the method.
+Polar does not support methods that mutate lists in place unless the list is
+also returned from the method.
 {{% /callout %}}
 
 Rust methods like [`Vec::get`][rust-vec-get] may be used for random access to
@@ -161,7 +161,7 @@ return 0 or 1 values depending on whether the value is `None` or `Some(T)`
 respectively.
 
 The `Option` variant `None` is registered as the Polar constant
-[`nil`](learn/policies/application-types#nil). If a Rust method can return
+[`nil`](reference/polar/polar-syntax#nil). If a Rust method can return
 `None`, you may want to compare the result to `nil`:
 
 ```polar
