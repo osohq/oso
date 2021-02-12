@@ -3,15 +3,15 @@
 <div class="md:w-4/5 lg:w-3/5 lg:mx-0 mx-auto pt-12">
     <div class="w-full md:mt-6 lg:mt-0 lg:mx-10 text-black">
         <h1 class="text-4xl font-bold pb-8 text-center"> A system for building authorization into your application</h1>
+        <div class="prose xl:prose-xl pb-12 mx-auto">
+            {{ .Content }}
+        </div>
         <h2 class="text-xl font-semibold text-center text-primary-dark pb-4">
             Choose your language to get started:
         </h2>
         <div class="grid grid-cols-3   gap-8  content-evenly md:mx-20 pb-8">
             {{ partial "language-chooser.html" ($.Site.GetPage "/getting-started/quickstart") }}
         </div>
-        <div class="prose xl:prose-xl pb-12 mx-auto">
-            {{ .Content }}
-        </div>
     </div>
 </div>
-{{ end -}}
+{{- end -}}
