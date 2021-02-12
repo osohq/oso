@@ -37,19 +37,7 @@ These resources are all examples of different types of patient data.
 Let’s start by considering a basic policy controlling access to these three
 resources:
 
-{{< code file="inheritance.polar" >}}
-allow(actor: Actor, "read", resource: Order) if
-    actor.role = "medical_staff" and
-    actor.treated(resource.patient);
-
-allow(actor: Actor, "read", resource: Test) if
-    actor.role = "medical_staff" and
-    actor.treated(resource.patient);
-
-allow(actor: Actor, "read", resource: Lab) if
-    actor.role = "medical_staff" and
-    actor.treated(resource.patient);
-{{< /code >}}
+{{< literalInclude path="examples/inheritance/01-polar.polar" >}}
 
 Let’s take a look at the first rule in the policy. This `allow` rule permits an
 actor to perform the `"read"` action on an `Order` if:
@@ -71,14 +59,7 @@ types of patient data, but it is a bit repetitive. Let’s try to improve it.
 Our policy doesn’t just need to contain `allow` rules. We can write any rules
 we’d like and compose them as needed to express our policy!
 
-{{< code file="inheritance.polar" >}}
-can_read_patient_data(actor, "read", resource) if
-    actor.role = "medical_staff" and
-    actor.treated(resource.patient);
-
-allow(actor: Actor, "read", resource) if
-    can_read_patient_data(actor, "read", resource);
-{{< /code >}}
+{{< literalInclude path="examples/inheritance/02-nested-rule.polar" >}}
 
 Now, we’ve taken the repeated logic and expressed it as the
 `can_read_patient_data` rule. When the `allow` rule is evaluated, Oso will
@@ -93,16 +74,8 @@ examples of patient data above. That’s not what we want.
 We can combine this idea with our first policy to make sure only our three
 patient data resources use the `can_read_patient_data` rule.
 
-{{< code file="inheritance.polar" >}}
-allow(actor: Actor, "read", resource: Order) if
-    can_read_patient_data(actor, "read", resource);
-
-allow(actor: Actor, "read", resource: Test) if
-    can_read_patient_data(actor, "read", resource);
-
-allow(actor: Actor, "read", resource: Lab) if
-    can_read_patient_data(actor, "read", resource);
-{{< /code >}}
+{{< literalInclude path="examples/inheritance/03-specializer.polar"
+                   from="START MARKER" >}}
 
 Now, we still have three rules, but the body isn’t repeated anymore.
 
@@ -113,18 +86,16 @@ We haven’t talked about the application side of this yet. So far, we’ve assu
 
 Here’s how they might be implemented:
 
-{{% exampleGet "actorClasses" %}}
+{{< literalInclude dynPath="classesPath"
+                   from="start-patient-data"
+                   to="end-patient-data" >}}
 
 We used inheritance to capture some of the common functionality needed (storing
 the patient). In a real application these would probably be ORM models.
 
 We can use the same idea to shorten our policy even further!
 
-{{< code file="inheritance.polar" >}}
-allow(actor: Actor, "read", resource: PatientData) if
-    actor.role = "medical_staff" and
-    actor.treated(resource.patient);
-{{< /code >}}
+{{< literalInclude path="examples/inheritance/04-one-specializer.polar" >}}
 
 Now, this `allow` rule will be evaluated for any instance that is a subclass of
 `PatientData`. Polar understands the class inheritance structure when selecting
