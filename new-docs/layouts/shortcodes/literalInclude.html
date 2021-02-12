@@ -9,9 +9,9 @@
 
 {{ if $path }}
   {{ if $dynPath }}
-    {{ errorf "[%v] Cannot specify 'path' and 'dynPath'. \n\t%v" $.Page.Language.LanguageName .Position }}
+    {{ errorf "[%v] Cannot specify 'path' and 'dynPath'.\n\t%v" $.Page.Language.LanguageName $.Position }}
   {{ else if $content }}
-    {{ errorf "[%v] Specifying 'fallback' not allowed when 'path' is present. \n\t%v" $.Page.Language.LanguageName .Position }}
+    {{ errorf "[%v] Specifying 'fallback' not allowed when 'path' is present.\n\t%v" $.Page.Language.LanguageName $.Position }}
   {{ end }}
 {{ else if $dynPath }}
   {{ with $.Page.Resources.GetMatch "data/data.md" }}
@@ -20,20 +20,20 @@
     {{ else }}
       {{ if $content }}
       {{ else }}
-        {{ errorf "[%v] Missing entry '%v' in data/data.md file with no 'fallback' specified. \n\t%v" $.Page.Language.LanguageName $dynPath .Position }}
+        {{ errorf "[%v] Missing entry '%v' in data/data.md file with no 'fallback' specified.\n\t%v" $.Page.Language.LanguageName $dynPath $.Position }}
       {{ end }}
     {{ end }}
   {{ else }}
     {{ if (eq $.Page.Language.Lang "any") }}
       {{ if .Params.any }}
-        {{ errorf "[%v] Missing data/data.md file. \n\t%v" $.Page.Language.LanguageName .Position }}
+        {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
       {{ else if (and (not (isset .Params "any")) (ne .Parent nil)) }}
         {{ if .Parent.Params.any }}
-          {{ errorf "[%v] Missing data/data.md file. \n\t%v" $.Page.Language.LanguageName .Position }}
+          {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
         {{ end }}
       {{ end }}
     {{ else }}
-      {{ errorf "[%v] Missing data/data.md file. \n\t%v" $.Page.Language.LanguageName .Position }}
+      {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
     {{ end }}
   {{ end }}
 {{ end }}
@@ -44,23 +44,33 @@
     {{ with (index .Params $content) }}
       {{ $content = . }}
     {{ else }}
-      {{ errorf "[%v] Missing fallback entry '%v' in data/data.md file. \n\t%v" $.Page.Language.LanguageName $content $.Position }}
+      {{ errorf "[%v] Missing fallback entry '%v' in data/data.md file.\n\t%v" $.Page.Language.LanguageName $content $.Position }}
     {{ end }}
   {{ else }}
     {{ if (eq $.Page.Language.Lang "any") }}
       {{ if .Params.any }}
-        {{ errorf "[%v] Missing data/data.md file. \n\t%v" $.Page.Language.LanguageName .Position }}
+        {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
       {{ else if (and (not (isset .Params "any")) (ne .Parent nil)) }}
         {{ if .Parent.Params.any }}
-          {{ errorf "[%v] Missing data/data.md file. \n\t%v" $.Page.Language.LanguageName .Position }}
+          {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
         {{ end }}
       {{ end }}
     {{ else }}
-      {{ errorf "[%v] Missing data/data.md file. \n\t%v" $.Page.Language.LanguageName .Position }}
+      {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
     {{ end }}
   {{ end }}
 {{ else }}
-  {{ errorf "[%v] What u doin' here w/ no 'fallback'?" $.Page.Language.LanguageName }}
+  {{ if (eq $.Page.Language.Lang "any") }}
+    {{ if .Params.any }}
+      {{ errorf "[%v] What u doin' here w/ no 'fallback'?\n\t%v" $.Page.Language.LanguageName $.Position }}
+    {{ else if (and (not (isset .Params "any")) (ne .Parent nil)) }}
+      {{ if .Parent.Params.any }}
+        {{ errorf "[%v] What u doin' here w/ no 'fallback'?\n\t%v" $.Page.Language.LanguageName $.Position }}
+      {{ end }}
+    {{ end }}
+  {{ else }}
+    {{ errorf "[%v] What u doin' here w/ no 'fallback'?\n\t%v" $.Page.Language.LanguageName $.Position }}
+  {{ end }}
 {{ end }}
 
 {{ if $path }}

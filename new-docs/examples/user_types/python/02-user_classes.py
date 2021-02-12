@@ -6,23 +6,27 @@ class Customer:
     pass
 
 
-# internal-start
 @polar_class
+# internal-start
 class InternalUser:
+    ...
+
     def role(self):
         yield db.query("SELECT role FROM internal_roles WHERE id = ?", self.id)
+        # internal-end
 
-
-# internal-end
 
 # account-start
 @polar_class
 class AccountManager(InternalUser):
+    ...
+
     def customer_accounts(self):
         yield db.query("SELECT id FROM customer_accounts WHERE manager_id = ?", self.id)
+        # account-end
 
 
-# account-end
+# generate-start
 def user_from_id(id):
     user_type = db.query("SELECT type FROM users WHERE id = ?", request.id)
     if user_type == "internal":
@@ -33,3 +37,4 @@ def user_from_id(id):
             return actor
     elif user_type == "customer":
         return Customer(request.id)
+        # generate-end
