@@ -325,6 +325,7 @@ impl BindingManager {
 
 }
 
+// Private impls.
 impl BindingManager {
     /// Bind two variables together.
     fn bind_variables(&mut self, left: &Symbol, right: &Symbol) {

@@ -126,11 +126,6 @@ pub enum Goal {
         value: Term,
     },
 
-    /// Augment the binding stack.
-    BindBatch {
-        bindings: Rc<RefCell<BindingStack>>,
-    },
-
     /// Add a new constraint
     AddConstraint {
         term: Term,
@@ -504,10 +499,6 @@ impl PolarVirtualMachine {
             }
             Goal::Unify { left, right } => self.unify(&left, &right)?,
             Goal::Bind { var, value } => self.bind(&var, value.clone()),
-            Goal::BindBatch { bindings } => bindings
-                .borrow_mut()
-                .drain(..)
-                .for_each(|Binding(var, value)| self.bind(&var, value)),
             Goal::AddConstraint { term } => self.add_constraint(&term)?,
             Goal::AddConstraintsBatch { add_constraints } => add_constraints
                 .borrow_mut()
@@ -2078,6 +2069,11 @@ impl PolarVirtualMachine {
                     }
                     VariableState::Partial(f) => {
                         println!("ground!");
+                        // TODO (dhatch): Right now, since this is external to the VM it uses the
+                        // grounding machinery, which is slower than just making a binding.
+                        // If we move grounding completely into the binding manager, it can decide
+                        // to use the faster path (cycles) since it knows the variable is actually
+                        // a partial.
                         if let Some(n) = f.ground(var.clone(), right.clone()) {
                             println!("ground ok! for {f} to {n}", f=f.to_polar(), n=n.to_polar());
                             self.bind(var, right);
