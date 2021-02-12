@@ -1,4 +1,4 @@
-# oso
+# Oso
 
 [![Development][badge-ci]][badge-ci-link]
 [![GitHub release (latest SemVer)][badge-release]][badge-release-link]
@@ -10,43 +10,43 @@
 [![Crates.io version][badge-rust]][badge-rust-link]
 [![Slack][badge-slack]][badge-slack-link]
 
-## What is oso?
+## What is Oso?
 
-oso is an **open source policy engine for authorization** that’s embedded in
+Oso is an **open source policy engine for authorization** that’s embedded in
 your application. It provides a declarative policy language for expressing
 authorization logic. You define this logic separately from the rest of your
 application code, but it executes inside the application and can call directly
-into it. oso ships as a library with a built-in debugger and REPL.
+into it. Oso ships as a library with a built-in debugger and REPL.
 
-oso is ideal for building permissions into user-facing applications, but you
-can check out [Use Cases][use-cases] to learn about other applications for oso.
+Oso is ideal for building permissions into user-facing applications, but you
+can check out [Use Cases][use-cases] to learn about other applications for Oso.
 
-Using oso consists of two parts:
+Using Oso consists of two parts:
 
-1. Writing oso policies in a declarative policy language called Polar.
-2. Embedding oso in your application using the appropriate language-specific
+1. Writing Oso policies in a declarative policy language called Polar.
+2. Embedding Oso in your application using the appropriate language-specific
    authorization library.
 
-oso currently offers libraries for [Java][badge-java-link],
+Oso currently offers libraries for [Java][badge-java-link],
 [Node.js][badge-nodejs-link], [Python][badge-python-link],
 [Ruby][badge-ruby-link], [Rust][badge-rust-link] and [Go][badge-go-link].
 
 ## Getting started
 
-To get up and running with oso, check out the [Getting Started
-guides](https://docs.osohq.com/getting-started/quickstart.html) in the [oso
+To get up and running with Oso, check out the [Getting Started
+guides](https://docs.osohq.com/getting-started/quickstart.html) in the [Oso
 documentation][docs].
 
 ## Development
 
 ### Core
 
-oso's Rust [core][core] is developed against [Rust's latest stable
+Oso's Rust [core][core] is developed against [Rust's latest stable
 release][rust].
 
 ### Language libraries
 
-oso's language libraries can be developed without touching the Rust core, but
+Oso's language libraries can be developed without touching the Rust core, but
 you will still need the Rust stable toolchain installed in order to build the
 core.
 

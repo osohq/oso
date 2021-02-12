@@ -1,14 +1,14 @@
-# Contributing to oso
+# Contributing to Oso
 
 ## Responsible disclosure
 
-If you believe you have discovered a security vulnerability in oso, please send
+If you believe you have discovered a security vulnerability in Oso, please send
 details of the issue to security@osohq.com. Please do not open a GitHub issue
 or otherwise comment about the issue in a public forum.
 
 ## Need help getting started?
 
-If you're struggling to get set up with oso or have questions about usage,
+If you're struggling to get set up with Oso or have questions about usage,
 check out [the documentation][docs] or [join us on Slack][slack] to ask
 questions.
 
