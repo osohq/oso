@@ -1,5 +1,5 @@
 ---
-title: Multiple Actor Types
+title: Global RBAC
 ---
 
 {{% coming_soon %}}
