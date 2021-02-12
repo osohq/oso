@@ -1,6 +1,6 @@
 ---
 title: Data filtering
-weight: 3
+weight: 5
 description: |
   Efficiently enforce authorization over entire collections
   using Oso data filtering
