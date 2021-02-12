@@ -258,6 +258,9 @@ pub enum RuntimeError {
     FileLoading {
         msg: String,
     },
+    IncompatibleBindings {
+        msg: String,
+    }
 }
 
 impl RuntimeError {
@@ -293,6 +296,7 @@ impl fmt::Display for RuntimeError {
                 write!(f, "Application error: {}", msg)
             }
             Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
+            Self::IncompatibleBindings { msg } => write!(f, "Attempted binding was incompatible: {}", msg),
         }
     }
 }

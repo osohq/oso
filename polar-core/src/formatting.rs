@@ -233,9 +233,6 @@ pub mod display {
             }
 
             match self {
-                Goal::Bind { var, value } => {
-                    write!(fmt, "Bind({}, {})", var, value.to_polar())
-                }
                 Goal::Isa { left, right } => {
                     write!(fmt, "Isa({}, {})", left.to_polar(), right.to_polar())
                 }

@@ -120,12 +120,6 @@ pub enum Goal {
         runnable: Box<dyn Runnable>,
     },
 
-    /// Bind `var` to `value`.
-    Bind {
-        var: Symbol,
-        value: Term,
-    },
-
     /// Add a new constraint
     AddConstraint {
         term: Term,
@@ -406,7 +400,7 @@ impl PolarVirtualMachine {
 
     fn new_call_var(&mut self, var_prefix: &str, initial_value: Value) -> (u64, Term) {
         let sym = self.kb.read().unwrap().gensym(var_prefix);
-        self.bind(&sym, Term::new_temporary(initial_value));
+        self.bind(&sym, Term::new_temporary(initial_value)).unwrap();
         let call_id = self.new_call_id(&sym);
         (call_id, Term::new_temporary(Value::Variable(sym)))
     }
@@ -498,7 +492,6 @@ impl PolarVirtualMachine {
                 self.trace.push(trace.clone());
             }
             Goal::Unify { left, right } => self.unify(&left, &right)?,
-            Goal::Bind { var, value } => self.bind(&var, value.clone()),
             Goal::AddConstraint { term } => self.add_constraint(&term)?,
             Goal::AddConstraintsBatch { add_constraints } => add_constraints
                 .borrow_mut()
@@ -636,13 +629,20 @@ impl PolarVirtualMachine {
         goals.into_iter().rev().try_for_each(|g| self.push_goal(g))
     }
 
+    /// Rebind an external answer variable.
+    ///
+    /// DO NOT USE THIS TO REBIND ANOTHER VARIABLE (see unsafe_rebind doc string).
+    fn rebind_external_answer(&mut self, var: &Symbol, val: Term) {
+        self.binding_manager.unsafe_rebind(var, val);
+    }
+
     /// Push a binding onto the binding stack.
-    pub fn bind(&mut self, var: &Symbol, val: Term) {
+    pub fn bind(&mut self, var: &Symbol, val: Term) -> PolarResult<()> {
         if self.log {
             self.print(&format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()));
         }
 
-        self.binding_manager.bind(var, val);
+        self.binding_manager.bind(var, val)
     }
 
     pub fn add_binding_follower(&mut self) -> FollowerId {
@@ -669,7 +669,7 @@ impl PolarVirtualMachine {
     pub fn bind_constants(&mut self, bindings: Bindings) {
         assert_eq!(self.bsp(), self.csp);
         for (var, value) in bindings.iter() {
-            self.bind(var, value.clone());
+            self.bind(var, value.clone()).unwrap();
         }
         self.csp = self.bsp();
     }
@@ -2068,20 +2068,13 @@ impl PolarVirtualMachine {
                         self.push_goal(Goal::Unify { left: value, right })?;
                     }
                     VariableState::Partial(f) => {
-                        println!("ground!");
-                        // TODO (dhatch): Right now, since this is external to the VM it uses the
-                        // grounding machinery, which is slower than just making a binding.
-                        // If we move grounding completely into the binding manager, it can decide
-                        // to use the faster path (cycles) since it knows the variable is actually
-                        // a partial.
-                        if let Some(n) = f.ground(var.clone(), right.clone()) {
-                            println!("ground ok! for {f} to {n}", f=f.to_polar(), n=n.to_polar());
-                            self.bind(var, right);
-                        } else {
+                        if self.bind(var, right).is_err() {
                             self.push_goal(Goal::Backtrack)?;
                         }
                     }
-                    _ => self.bind(var, right),
+                    _ => if self.bind(var, right).is_err() {
+                        self.push_goal(Goal::Backtrack)?;
+                    }
                 }
             }
 
@@ -2093,15 +2086,13 @@ impl PolarVirtualMachine {
                         self.push_goal(Goal::Unify { left, right: value })?;
                     }
                     VariableState::Partial(f) => {
-                        println!("ground!");
-                        if let Some(_) = f.ground(var.clone(), left.clone()) {
-                            println!("ground ok!");
-                            self.bind(var, left);
-                        } else {
+                        if self.bind(var, left).is_err() {
                             self.push_goal(Goal::Backtrack)?;
                         }
                     }
-                    _ => self.bind(var, left),
+                    _ => if self.bind(var, left).is_err() {
+                        self.push_goal(Goal::Backtrack)?;
+                    }
                 }
             }
 
@@ -2214,14 +2205,10 @@ impl PolarVirtualMachine {
                 // Both variables are bound. Unify their values.
                 self.push_goal(Goal::Unify { left: x, right: y })?;
             }
-            (VariableState::Bound(x), VariableState::Unbound) => {
-                self.bind(r, x);
-            }
-            (VariableState::Unbound, VariableState::Bound(y)) => {
-                self.bind(l, y);
-            }
             (_, _) => {
-                self.bind(l, right.clone());
+                if self.bind(l, right.clone()).is_err() {
+                    self.push_goal(Goal::Backtrack)?;
+                }
             }
         }
         Ok(())
@@ -2522,7 +2509,7 @@ impl PolarVirtualMachine {
                         // This is done here for safety to avoid a bug where `answer` is unbound by
                         // `IsSubspecializer` and the `Unify` Goal just assigns it to `true` instead
                         // of checking that is is equal to `true`.
-                        self.bind(&answer, Term::new_temporary(Value::Boolean(false)));
+                        self.bind(&answer, Term::new_temporary(Value::Boolean(false))).unwrap();
 
                         return self.append_goals(vec![
                             Goal::IsSubspecializer {
@@ -2611,11 +2598,11 @@ impl PolarVirtualMachine {
                 Ok(QueryEvent::None)
             }
             (_, Value::Pattern(Pattern::Instance(_)), Value::Pattern(Pattern::Dictionary(_))) => {
-                self.bind(&answer, Term::new_temporary(Value::Boolean(true)));
+                self.rebind_external_answer(&answer, Term::new_temporary(Value::Boolean(true)));
                 Ok(QueryEvent::None)
             }
             _ => {
-                self.bind(&answer, Term::new_temporary(Value::Boolean(false)));
+                self.rebind_external_answer(&answer, Term::new_temporary(Value::Boolean(false)));
                 Ok(QueryEvent::None)
             }
         }
@@ -2781,7 +2768,7 @@ impl Runnable for PolarVirtualMachine {
     /// Handle response to a predicate posed to the application, e.g., `ExternalIsa`.
     fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
         let var = self.call_id_symbols.remove(&call_id).expect("bad call id");
-        self.bind(&var, Term::new_temporary(Value::Boolean(answer)));
+        self.rebind_external_answer(&var, Term::new_temporary(Value::Boolean(answer)));
         Ok(())
     }
 
@@ -2798,7 +2785,7 @@ impl Runnable for PolarVirtualMachine {
         if let Some(value) = term {
             self.log_with(|| format!("=> {}", value.to_string()), &[]);
 
-            self.bind(
+            self.rebind_external_answer(
                 &self
                     .call_id_symbols
                     .get(&call_id)
@@ -2910,58 +2897,6 @@ mod tests {
             assert_query_events!($vm, [$($tail)*]);
         };
         // TODO (dhatch) Be able to use btreemap! to match on specific bindings.
-    }
-
-    #[test]
-    fn deref() {
-        let mut vm = PolarVirtualMachine::default();
-        let value = term!(1);
-        let x = sym!("x");
-        let y = sym!("y");
-        let term_x = term!(x.clone());
-        let term_y = term!(y.clone());
-
-        // unbound var
-        assert_eq!(vm.deref(&term_x), term_x);
-
-        // unbound var -> unbound var
-        vm.bind(&x, term_y.clone());
-        assert_eq!(vm.deref(&term_x), term_x);
-
-        // value
-        assert_eq!(vm.deref(&value), value.clone());
-
-        // unbound var -> value
-        vm.bind(&x, value.clone());
-        assert_eq!(vm.deref(&term_x), value);
-
-        // unbound var -> unbound var -> value
-        vm.bind(&x, term_y);
-        vm.bind(&y, value.clone());
-        assert_eq!(vm.deref(&term_x), value);
-    }
-
-    #[test]
-    fn deep_deref() {
-        let mut vm = PolarVirtualMachine::default();
-        let one = term!(1);
-        let two = term!(1);
-        let one_var = sym!("one");
-        let two_var = sym!("two");
-        vm.bind(&one_var, one.clone());
-        vm.bind(&two_var, two.clone());
-        let dict = btreemap! {
-            sym!("x") => term!(one_var),
-            sym!("y") => term!(two_var),
-        };
-        let list = term!([dict]);
-        assert_eq!(
-            vm.deep_deref(&list).value().clone(),
-            Value::List(vec![term!(btreemap! {
-                sym!("x") => one,
-                sym!("y") => two,
-            })])
-        );
     }
 
     #[test]
@@ -3366,17 +3301,6 @@ mod tests {
     }
 
     #[test]
-    fn bind() {
-        let x = sym!("x");
-        let y = sym!("y");
-        let zero = term!(0);
-        let mut vm = PolarVirtualMachine::default();
-        vm.bind(&x, zero.clone());
-        assert_eq!(vm.variable_state(&x), VariableState::Bound(zero));
-        assert_eq!(vm.variable_state(&y), VariableState::Unbound);
-    }
-
-    #[test]
     fn debug() {
         let mut vm = PolarVirtualMachine::new_test(
             Arc::new(RwLock::new(KnowledgeBase::new())),
@@ -3435,7 +3359,7 @@ mod tests {
         let mut vm = PolarVirtualMachine::default();
 
         // Left variable bound to bound right variable.
-        vm.bind(&y, one.clone());
+        vm.bind(&y, one.clone()).unwrap();
         vm.append_goals(vec![Goal::Unify {
             left: term!(x.clone()),
             right: term!(y),
@@ -3446,7 +3370,7 @@ mod tests {
         vm.backtrack().unwrap();
 
         // Left variable bound to value.
-        vm.bind(&z, one.clone());
+        vm.bind(&z, one.clone()).unwrap();
         vm.append_goals(vec![Goal::Unify {
             left: term!(z.clone()),
             right: one.clone(),
@@ -3456,7 +3380,6 @@ mod tests {
         assert_eq!(vm.deref(&term!(z.clone())), one);
 
         // Left variable bound to value, unify with something else, backtrack.
-        vm.bind(&z, one.clone());
         vm.append_goals(vec![Goal::Unify {
             left: term!(z.clone()),
             right: two,
@@ -3523,7 +3446,7 @@ mod tests {
         });
         let query = query!(call!("bar", [sym!("x")]));
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![query]);
-        vm.bind(&sym!("x"), Term::new_from_test(external_instance));
+        vm.bind(&sym!("x"), Term::new_from_test(external_instance)).unwrap();
 
         let mut external_isas = vec![];
 
@@ -3546,7 +3469,7 @@ mod tests {
         let expected = vec![sym!("b"), sym!("a"), sym!("a")];
         assert_eq!(external_isas, expected);
 
-        vm.bind(&sym!("x"), Term::new_from_test(value!(1)));
+        vm.bind(&sym!("x"), Term::new_from_test(value!(1))).unwrap();
         let _ = vm
             .query(&Term::new_from_test(Value::Call(call!("bar", [sym!("x")]))))
             .unwrap();
@@ -3723,7 +3646,7 @@ mod tests {
         kb.add_generic_rule(bar_rule);
 
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![]);
-        vm.bind(&sym!("x"), term!(1));
+        vm.bind(&sym!("x"), term!(1)).unwrap();
         let _ = vm.run(None);
         let _ = vm.next(Rc::new(query!(call!("bar", [value!([sym!("x")])]))));
         // After calling the query goal we should be left with the

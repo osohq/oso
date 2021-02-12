@@ -3,7 +3,7 @@
 /// Bindings associate variables in the VM with constraints or values.
 use std::collections::{HashMap, HashSet};
 
-use crate::error::PolarResult;
+use crate::error::{PolarResult, RuntimeError};
 use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
 use crate::terms::{has_rest_var, Operation, Operator, Symbol, Term, Value};
@@ -94,17 +94,33 @@ impl BindingManager {
 
     // **** State Mutation ***
 
+    // TODO (dhatch): Should this be polar result or boolean.
+
     /// Bind `var` to `val`.
     ///
+    /// If the binding succeeds, Ok is returned. If the binding is *incompatible*
+    /// an error is returned.
     ///
-    /// If `var` is already bound or constrained, the
-    /// binding or constraints are replaced with `val`.
-    pub fn bind(&mut self, var: &Symbol, val: Term) {
-        self.do_followers(|_, follower| {
-            follower.bind(var, val.clone());
-            Ok(())
-        }).unwrap();
-
+    /// A binding is considered *incompatible* if either:
+    ///
+    /// 1. `var` is already bound to some value (rebindings are not allowed, even if the
+    ///    rebinding is to the same value).
+    /// 2. `var` is constrained, and the new binding of `val` is not compatible with those
+    ///    constraints.
+    ///
+    /// If a binding is compatible, it is recorded. If the binding was to a ground value,
+    /// subsequent calls to `variable_state` or `deref` will return that value.
+    ///
+    /// If the binding was between two variables, the two will always have the same value
+    /// or constraints going forward. Further, a unification constraint is recorded between
+    /// the two variables.
+    ///
+    /// If either variable is bound in the future, both will be bound to that value
+    /// (`variable_state` and `deref` will return the same value).
+    ///
+    /// If a binding between two variables is made, and one is bound and the other unbound, the
+    /// unbound variable will take the value of the bound one.
+    pub fn bind(&mut self, var: &Symbol, val: Term) -> PolarResult<()> {
         // TODO (dhatch): Would like to disable rebinding, but this has a large fallout.
         // We use it extensively for testing and in external_question_result to give the result
         // variable a default value (we could probably fix this some other way).
@@ -113,24 +129,53 @@ impl BindingManager {
         // assert!(!matches!(self.variable_state(var), VariableState::Bound(_)), "Variable is bound");
 
         if let Ok(symbol) = val.value().as_symbol() {
-            self.bind_variables(var, symbol);
+            self.bind_variables(var, symbol)?;
         } else {
             if let BindingManagerVariableState::Partial(p) = self._variable_state(var) {
                 if let Some(grounded) = p.ground(var.clone(), val.clone()) {
-                    self.add_binding(var, val);
-                    // TODO (dhatch): Return error.
-                    self.constrain(&grounded).unwrap();
+                    self.add_binding(var, val.clone());
+                    self.constrain(&grounded)?;
                 } else {
-                    println!("ground failed for {}", p.to_polar());
-                    panic!("check ground precondition");
-                    // TODO (dhatch): Return error.
+                    return Err(RuntimeError::IncompatibleBindings { msg: "Grounding failed".into() }.into());
                 }
             } else {
-                self.add_binding(var, val);
+                // TODO already bound?
+                self.add_binding(var, val.clone());
             }
         }
+
+        // If the main binding succeeded, the follower binding must succeed.
+        self.do_followers(|_, follower| {
+            follower.bind(var, val.clone())
+        }).unwrap();
+
+        Ok(())
     }
 
+    /// Rebind `var` to `val`, regardless of compatibility.
+    ///
+    /// A rebinding is only allowed if a variable is unbound, or already bound.
+    ///
+    /// Constrained variables, or variables that have been bound with other variables
+    /// cannot be rebound.
+    ///
+    /// Note: Rebinding a variable that has been previously bound to other variables will place the
+    /// BindingManager in an invalid state. For this reason, rebinding should be used with care.
+    ///
+    /// (The only current usage is for replacing default values with call ids).
+    pub fn unsafe_rebind(&mut self, var: &Symbol, val: Term) {
+        assert!(matches!(self._variable_state(var), BindingManagerVariableState::Unbound | BindingManagerVariableState::Bound(_)));
+        self.add_binding(var, val);
+    }
+
+
+    /// Add a constraint. Constraints are represented as term expressions.
+    ///
+    /// `term` must be an expression`.
+    ///
+    /// An error is returned if the constraint is incompatible with existing constraints.
+    ///
+    /// (Currently all constraints are considered compatible).
     pub fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
         self.do_followers(|_, follower| follower.add_constraint(term))?;
 
@@ -148,12 +193,15 @@ impl BindingManager {
                     e.merge_constraints(op);
                     op = e;
                 },
-                BindingManagerVariableState::Bound(_) => {
-                    panic!("variable {:?} bound in constraint", var);
+                BindingManagerVariableState::Bound(v) => {
+                    let ground_op = op.ground(var.clone(), v.clone()).unwrap();
+                    println!("variable {:?} bound to {} in constraint {} grounded to {ground_op}", var, v, op.to_polar(), ground_op=ground_op.to_polar());
+                    op = ground_op;
                 }
             }
         }
 
+        println!("constrain: {}", op.to_polar());
         self.constrain(&op)
     }
 
@@ -328,19 +376,13 @@ impl BindingManager {
 // Private impls.
 impl BindingManager {
     /// Bind two variables together.
-    fn bind_variables(&mut self, left: &Symbol, right: &Symbol) {
+    fn bind_variables(&mut self, left: &Symbol, right: &Symbol) -> PolarResult<()> {
         match (self._variable_state(left), self._variable_state(right)) {
-            (BindingManagerVariableState::Bound(_), BindingManagerVariableState::Unbound) => {
-                // Replace binding and make variable unbound.
-                // TODO (dhatch): No rebindings.
-                self.add_binding(left, term!(right.clone()));
+            (BindingManagerVariableState::Bound(left_value), BindingManagerVariableState::Unbound) => {
+                self.add_binding(right, left_value);
             }
-            (BindingManagerVariableState::Unbound, BindingManagerVariableState::Bound(_)) => {
-                // Bind variables in cycle.
-                if left != right {
-                    self.add_binding(left, term!(right.clone()));
-                    self.add_binding(right, term!(left.clone()));
-                }
+            (BindingManagerVariableState::Unbound, BindingManagerVariableState::Bound(right_value)) => {
+                self.add_binding(left, right_value);
             }
 
             // Cycles: one or more variables are bound together.
@@ -391,28 +433,25 @@ impl BindingManager {
                 // Left is currently bound. Ground right cycle.
                 self.add_binding(right, left_value);
             }
-            (BindingManagerVariableState::Bound(_), BindingManagerVariableState::Bound(right_value)) => {
-                // Rebind.
-                // TODO (dhatch): No rebindings.
-                self.add_binding(left, right_value);
+            (BindingManagerVariableState::Bound(_), BindingManagerVariableState::Bound(_)) => {
+                return Err(RuntimeError::IncompatibleBindings { msg: format!("{} and {} are both bound", left, right) }.into());
             }
             (BindingManagerVariableState::Bound(left_value), BindingManagerVariableState::Partial(_)) => {
                 // Left is bound, right has constraints.
                 // TODO (dhatch): No unwrap.
-                self.add_constraint(&op!(Unify, left_value, term!(right.clone())).into_term())
-                    .unwrap();
+                self.add_constraint(&op!(Unify, left_value, term!(right.clone())).into_term())?;
             }
             (BindingManagerVariableState::Partial(_), BindingManagerVariableState::Bound(right_value)) => {
-                self.add_constraint(&op!(Unify, term!(left.clone()), right_value).into_term())
-                    .unwrap();
+                self.add_constraint(&op!(Unify, term!(left.clone()), right_value).into_term())?;
             }
             (BindingManagerVariableState::Partial(_), _) | (_, BindingManagerVariableState::Partial(_)) => {
                 self.add_constraint(
                     &op!(Unify, term!(left.clone()), term!(right.clone())).into_term(),
-                )
-                .unwrap();
+                )?;
             }
         }
+
+        Ok(())
     }
 
     fn add_binding(&mut self, var: &Symbol, val: Term) {
@@ -459,6 +498,9 @@ impl BindingManager {
         assert_eq!(o.operator, Operator::And, "bad constraint {}", o.to_polar());
         for var in o.variables() {
             match self._variable_state(&var) {
+                // TODO (dhatch): Is this causing us to lose some constraints?
+                // It means the variable is already bound but is still referenced in the
+                // constraint by name, not its bound value.
                 BindingManagerVariableState::Bound(_) => (),
                 _ => self.add_binding(&var, o.clone().into_term()),
             }
@@ -552,10 +594,10 @@ mod test {
     /// Test creating a group of variables bound together, and rebinding them.
     fn rebind_variable_group() {
         let mut bindings = BindingManager::new();
-        bindings.bind(&sym!("x"), term!(sym!("y")));
-        bindings.bind(&sym!("y"), term!(sym!("z")));
+        bindings.bind(&sym!("x"), term!(sym!("y"))).unwrap();
+        bindings.bind(&sym!("y"), term!(sym!("z"))).unwrap();
 
-        bindings.bind(&sym!("z"), term!(1));
+        bindings.bind(&sym!("z"), term!(1)).unwrap();
 
         // All have value 1.
         assert_eq!(
@@ -571,7 +613,7 @@ mod test {
             BindingManagerVariableState::Bound(term!(1))
         );
 
-        bindings.bind(&sym!("x"), term!(2));
+        bindings.bind(&sym!("x"), term!(2)).unwrap();
 
         // This doesn't always change all variables, and sometimes changes more than one variable.
         // What should happen here?
@@ -595,8 +637,8 @@ mod test {
     fn test_followers() {
         // Regular bindings
         let mut b1 = BindingManager::new();
-        b1.bind(&sym!("x"), term!(1));
-        b1.bind(&sym!("y"), term!(2));
+        b1.bind(&sym!("x"), term!(1)).unwrap();
+        b1.bind(&sym!("y"), term!(2)).unwrap();
 
         assert_eq!(b1._variable_state(&sym!("x")), BindingManagerVariableState::Bound(term!(1)));
         assert_eq!(b1._variable_state(&sym!("y")), BindingManagerVariableState::Bound(term!(2)));
@@ -604,7 +646,7 @@ mod test {
         let b2 = BindingManager::new();
         let b2_id = b1.add_follower(b2);
 
-        b1.bind(&sym!("z"), term!(3));
+        b1.bind(&sym!("z"), term!(3)).unwrap();
 
         assert_eq!(b1._variable_state(&sym!("x")), BindingManagerVariableState::Bound(term!(1)));
         assert_eq!(b1._variable_state(&sym!("y")), BindingManagerVariableState::Bound(term!(2)));
@@ -617,8 +659,8 @@ mod test {
 
         // Extending cycle.
         let mut b1 = BindingManager::new();
-        b1.bind(&sym!("x"), term!(sym!("y")));
-        b1.bind(&sym!("x"), term!(sym!("z")));
+        b1.bind(&sym!("x"), term!(sym!("y"))).unwrap();
+        b1.bind(&sym!("x"), term!(sym!("z"))).unwrap();
 
         let b2 = BindingManager::new();
         let b2_id = b1.add_follower(b2);
@@ -627,7 +669,7 @@ mod test {
         assert!(matches!(b1._variable_state(&sym!("y")), BindingManagerVariableState::Cycle(_)));
         assert!(matches!(b1._variable_state(&sym!("z")), BindingManagerVariableState::Cycle(_)));
 
-        b1.bind(&sym!("x"), term!(sym!("a")));
+        b1.bind(&sym!("x"), term!(sym!("a"))).unwrap();
         if let BindingManagerVariableState::Cycle(c) = b1._variable_state(&sym!("a")) {
             assert_eq!(c, vec![sym!("a"), sym!("x"), sym!("y"), sym!("z")], "c was {:?}", c);
         }
@@ -646,8 +688,8 @@ mod test {
 
         // Adding constraints to cycles.
         let mut b1 = BindingManager::new();
-        b1.bind(&sym!("x"), term!(sym!("y")));
-        b1.bind(&sym!("x"), term!(sym!("z")));
+        b1.bind(&sym!("x"), term!(sym!("y"))).unwrap();
+        b1.bind(&sym!("x"), term!(sym!("z"))).unwrap();
 
         let b2 = BindingManager::new();
         let b2_id = b1.add_follower(b2);
@@ -672,6 +714,72 @@ mod test {
             panic!("unexpected");
         }
     }
+
+    #[test]
+    fn deref() {
+        let mut bm = BindingManager::default();
+        let value = term!(1);
+        let x = sym!("x");
+        let y = sym!("y");
+        let term_x = term!(x.clone());
+        let term_y = term!(y.clone());
+
+        // unbound var
+        assert_eq!(bm.deref(&term_x), term_x);
+
+        // unbound var -> unbound var
+        bm.bind(&x, term_y.clone()).unwrap();
+        assert_eq!(bm.deref(&term_x), term_x);
+
+        // value
+        assert_eq!(bm.deref(&value), value.clone());
+
+        // unbound var -> value
+        let mut bm = BindingManager::default();
+        bm.bind(&x, value.clone()).unwrap();
+        assert_eq!(bm.deref(&term_x), value);
+
+        // unbound var -> unbound var -> value
+        let mut bm = BindingManager::default();
+        bm.bind(&x, term_y).unwrap();
+        bm.bind(&y, value.clone()).unwrap();
+        assert_eq!(bm.deref(&term_x), value);
+    }
+
+    #[test]
+    fn deep_deref() {
+        let mut bm = BindingManager::default();
+        let one = term!(1);
+        let two = term!(1);
+        let one_var = sym!("one");
+        let two_var = sym!("two");
+        bm.bind(&one_var, one.clone()).unwrap();
+        bm.bind(&two_var, two.clone()).unwrap();
+        let dict = btreemap! {
+            sym!("x") => term!(one_var),
+            sym!("y") => term!(two_var),
+        };
+        let list = term!([dict]);
+        assert_eq!(
+            bm.deep_deref(&list).value().clone(),
+            Value::List(vec![term!(btreemap! {
+                sym!("x") => one,
+                sym!("y") => two,
+            })])
+        );
+    }
+
+    #[test]
+    fn bind() {
+        let x = sym!("x");
+        let y = sym!("y");
+        let zero = term!(0);
+        let mut bm = BindingManager::default();
+        bm.bind(&x, zero.clone()).unwrap();
+        assert_eq!(bm.variable_state(&x), VariableState::Bound(zero));
+        assert_eq!(bm.variable_state(&y), VariableState::Unbound);
+    }
+
 
     // TODO (dhatch): Test backtrack with followers.
 }

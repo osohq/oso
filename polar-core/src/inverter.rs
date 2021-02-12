@@ -155,6 +155,8 @@ fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
 /// HACK: Remove known internal vars like _value and _runnable.
 /// HACK: Do not emit constraints for variables that were unbound before
 /// the inversion.
+/// HACK: Do not emit constraints for variables that were bound before
+/// the inversion.
 ///
 /// This prevents queries like f(x) if not (w = 1) and x = w from working)
 /// But, without this, an inverted query like:
@@ -172,7 +174,7 @@ fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
 fn filter_inverted_constraints(constraints: Bindings, vm: &PolarVirtualMachine, bsp: Bsp) -> Bindings {
     constraints.into_iter().filter(|(k, _)| !(
             k.0.starts_with("_value") || k.0.starts_with("_runnable")
-    ) && vm.variable_state_at_point(k, bsp) != VariableState::Unbound).collect::<Bindings>()
+    ) && vm.variable_state_at_point(k, bsp) != VariableState::Unbound && !matches!(vm.variable_state_at_point(k, bsp), VariableState::Bound(_))).collect::<Bindings>()
 }
 
 
@@ -202,6 +204,12 @@ impl Runnable for Inverter {
                         // out to the parent VM.
                         let constraints = results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
                         let constraints = filter_inverted_constraints(constraints, &self.vm, self.bsp);
+                        println!("constraints: ");
+                        for (var, cons) in constraints.iter() {
+                            println!("{} {}", var, cons.to_polar());
+                            println!("state: {:?}", self.vm.variable_state_at_point(var, self.bsp));
+                        }
+
                         if !constraints.is_empty() {
                             // Return inverted constraints to parent VM.
                             // TODO (dhatch): Would be nice to come up with a better way of doing this.
