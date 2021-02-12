@@ -51,7 +51,7 @@ pub struct BindingManager {
     /// Track the bsp of followers when they were added so they can be
     /// backtracked.
     follower_bsps: HashMap<FollowerId, Bsp>,
-    next_follower_id: usize,
+    next_follower_id: FollowerId,
 }
 
 /// The `BindingManager` maintains associations between variables and values,
@@ -205,7 +205,7 @@ impl BindingManager {
 
     /// Look up a variable in the bindings stack and return
     /// a reference to its value if it's bound.
-    pub fn value(&self, variable: &Symbol, bsp: usize) -> Option<&Term> {
+    pub fn value(&self, variable: &Symbol, bsp: Bsp) -> Option<&Term> {
         self.bindings[..bsp]
             .iter()
             .rev()
