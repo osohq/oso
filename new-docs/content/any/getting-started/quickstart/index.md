@@ -66,10 +66,8 @@ allow an **actor** to perform an **action** on a **resource**.
 In our policy file (`expenses.polar`), let's add a rule that allows anyone
 with an email ending in `"@example.com"` to view all expenses:
 
-{{< code file="expenses.polar" >}}
-allow(actor: String, "GET", _expense: Expense) if
-    actor.{{< exampleGet "endswith" >}}("@example.com");
-{{< /code >}}
+{{< literalInclude dynPath="expensesPath1"
+                   fallback="expenses1" >}}
 
 Note that the call to **{{< exampleGet "endswith" >}}** is actually calling
 out to {{< exampleGet "endswithURL" >}}. The actor value passed to Oso is a
@@ -125,10 +123,8 @@ including expenses submitted by others.
   Let's modify our existing rule such that users can only see their own
   expenses:
 
-  {{< code file="expenses.polar" >}}
-  allow(actor: String, "GET", expense: Expense) if
-      expense.{{< exampleGet "submitted_by" >}} = actor;
-  {{< /code >}}
+  {{< literalInclude dynPath="expensesPath2"
+                     fallback="expenses2" >}}
 {{% /callout %}}
 
 Behind the scenes, Oso looks up the `submitted_by` field on the provided
