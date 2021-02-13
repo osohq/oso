@@ -16,4 +16,10 @@ amount: Amount
 manager: Manager
 endswithURL: >
    [the `EndsWith` method](https://github.com/osohq/oso-go-quickstart/blob/main/quickstart.go#L16-L18)
+expenses1: |
+  allow(actor: String, "GET", _expense: Expense) if
+      actor.EndsWith("@example.com");
+expenses2: |
+  allow(actor: String, "GET", expense: Expense) if
+      expense.SubmittedBy = actor;
 ---
