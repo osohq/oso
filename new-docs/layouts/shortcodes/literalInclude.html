@@ -6,6 +6,29 @@
 {{ $id := "" }}
 {{ $file := "" }}
 {{ $hlOpts := .Params.hlOpts | default "" }}
+{{ $lines := .Params.lines }}
+{{ $loc := slice }}
+
+{{/* Turn "1,3-5,11-17" into a slice of maps consisting of a single key-value
+     pair where the key is the starting line and the value is the length of the
+     segment. */}}
+{{ with $lines }}
+  {{ with replace . " " "" }}
+    {{ with split . "," }}
+      {{ range . }}
+        {{ $nums := split . "-" }}
+        {{ if (eq (len $nums) 1) }}
+          {{ $start := index $nums 0 }}
+          {{ $loc = $loc | append (dict $start 1) }}
+        {{ else }}
+          {{ $start := index $nums 0 }}
+          {{ $count := (add 1 (sub (int (index $nums 1)) (int (index $nums 0)))) }}
+          {{ $loc = $loc | append (dict $start $count) }}
+        {{ end }}
+      {{ end }}
+    {{ end }}
+  {{ end }}
+{{ end }}
 
 {{ if $path }}
   {{ if $dynPath }}
@@ -101,7 +124,26 @@
 
       {{/* Trim snippet to boundaries. */}}
       {{ with first $length (after $firstLine .) }}
-        {{ $content = (delimit . "\n") }}
+        {{/* If 'lines' were provided, drop any lines that aren't specified and
+             fill gaps between line groups with ellipses. */}}
+        {{ if $loc }}
+          {{ $bounded := . }}
+          {{ $temp := slice }}
+          {{ $last := (sub (len $loc) 1) }}
+          {{ range $index, $segment := $loc }}
+            {{ range $start, $count := $segment }}
+              {{ with first $count (after (sub (int $start) 1) $bounded) }}
+                {{ $temp = $temp | append . }}
+                {{ if ne $index $last }}
+                  {{ $temp = $temp | append "" "..." "" }}
+                {{ end }}
+              {{ end }}
+            {{ end }}
+          {{ end }}
+          {{ $content = (delimit $temp "\n") }}
+        {{ else }}
+          {{ $content = (delimit . "\n") }}
+        {{ end }}
       {{ end }}
     {{ end }}
   {{ end }}
