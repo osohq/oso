@@ -1,14 +1,17 @@
 package oso
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"os"
 	"reflect"
 
 	"github.com/osohq/go-oso/errors"
 	"github.com/osohq/go-oso/interfaces"
 	"github.com/osohq/go-oso/internal/ffi"
 	"github.com/osohq/go-oso/internal/host"
+	"github.com/osohq/go-oso/internal/util"
 	"github.com/osohq/go-oso/types"
 	. "github.com/osohq/go-oso/types"
 )
@@ -94,8 +97,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			defer q.ffiQuery.Delete()
 			return nil, nil
 		case QueryEventDebug:
-			// TODO
-			return nil, fmt.Errorf("Polar debugger is not yet implemented in Go.")
+			err = q.handleDebug(ev)
 		case QueryEventResult:
 			results := make(map[string]interface{})
 			for k, v := range ev.Bindings {
@@ -288,4 +290,20 @@ func (q Query) handleNextExternal(event types.QueryEventNextExternal) error {
 		return err
 	}
 	return q.ffiQuery.CallResult(event.CallId, &Term{*retValue})
+}
+
+func (q Query) handleDebug(event types.QueryEventDebug) error {
+	fmt.Printf("%v\n", event.Message)
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("debug> ")
+	text, _ := reader.ReadString('\n')
+	text = util.QueryStrip(text)
+
+	if text == "" {
+		text = "continue"
+	}
+
+	err := q.ffiQuery.DebugCommand(&text)
+	return err
 }

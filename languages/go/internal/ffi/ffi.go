@@ -233,8 +233,9 @@ func (q QueryFfi) NextEvent() (*string, error) {
 	return &goEvent, nil
 }
 
-func (q QueryFfi) debugCommand(command *string) error {
-	cStr, err := ffiSerialize(command)
+func (q QueryFfi) DebugCommand(command *string) error {
+	term := types.Term{types.Value{types.ValueString(*command)}}
+	cStr, err := ffiSerialize(term)
 	if err != nil {
 		return err
 	}
