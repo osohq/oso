@@ -13,7 +13,7 @@ This guide covers a little more detail about how to add Oso to your
 application.
 
 Whereas in the [Quickstart]({{< relref path="getting-started/quickstart"
-lang="java" >}}) we zoomed through an
+lang="python" >}}) we zoomed through an
 example of authorization in a simple web server, in this guide we'll show
 some more practical examples in the context of a more realistic application.
 
@@ -375,8 +375,8 @@ controls to our route handlers.
 
 - To explore integrating Oso in your app in more depth continue to [Access Patterns](https://docs.oso.dev/getting-started/application/patterns.html).
 - For a deeper introduction to policy syntax, see [Writing Policies](policies).
-- For reference on using the Java Oso library, see [Java Authorization Library](reference).
-- Clone this example on [GitHub](https://github.com/osohq/oso-spring-tutorial)
+- For reference on using the Python Oso library, see [Python Authorization Library](reference).
+- Clone this example on [GitHub](https://github.com/osohq/oso-flask-tutorial)
   to check it out further.
 
 {{% /callout %}}
