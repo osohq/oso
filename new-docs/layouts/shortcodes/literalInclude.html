@@ -1,3 +1,43 @@
+{{/*
+  Options
+
+  - dynPath: specify this if you need to set a path to a different file for
+      each language. The value should be a key that will be looked up
+      dynamically in every language's data/data.md file. That value of that key
+      in each language's data/data.md file should be the relative path to the
+      file starting from the root of the new-docs directory, e.g.,
+      "examples/foo/bar.js". You should only specify one of dynPath and path;
+      not both.
+  - path: specify this if every language can use the same file, e.g., if they
+      all share the same Polar code. It should be the relative path to the file
+      starting from the root of the new-docs directory. E.g.,
+      "examples/foo/bar.polar". You should only specify one of dynPath and
+      path; not both.
+  - fallback: specify this if you're using a dynPath but not every language has
+      a file to include. This is useful when we haven't created example apps in
+      all languages and we're just using inline snippets for one of the
+      languages. The value should be a key that will be looked up dynamically
+      in every language's data/data.md file. That value of that key in each
+      language's data/data.md file should be a literal code snippet (without
+      code fence backticks). Every language's data/data.md file should only
+      contain the dynPath key *or* the fallback key, but not both.
+  - syntax: haven't had to use this yet and might remove. It's just a way to
+      manually override the file extension-based syntax detection.
+  - hlOpts: this is passed directly to the 'highlight' shortcode as its options
+      string. Useful for things like highlighting certain lines of a code
+      snippet.
+  - from: this should be a string that identifies a unique line in the file by
+      substring match. E.g., "user-class-start". The snippet will start after
+      that line.
+  - to: this should be a string that identifies a unique line in the file by
+      substring match. E.g., "user-class-end". The snippet will end before that line.
+  - lines: specify this if you want to display noncontiguous segments of a
+      file. E.g., `lines="2,5-7,10-15"`. Segments should be comma-separated and
+      can be either a single line number or a range of lines (represented as a
+      pair of numbers separated by a hyphen). In the resulting code snippet,
+      segments will be separated by an ellipsis to indicate elided code.
+*/}}
+
 {{ $dynPath := $.Params.dynPath }}
 {{ $path := $.Params.path }}
 {{ $content := $.Params.fallback }}
