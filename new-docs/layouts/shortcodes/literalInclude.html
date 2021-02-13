@@ -1,12 +1,12 @@
-{{ $dynPath := .Params.dynPath }}
-{{ $path := .Params.path }}
-{{ $content := .Params.fallback }}
+{{ $dynPath := $.Params.dynPath }}
+{{ $path := $.Params.path }}
+{{ $content := $.Params.fallback }}
 {{ $syntax := "" }}
-{{ $syntaxoverride := .Params.syntax }}
+{{ $syntaxoverride := $.Params.syntax }}
 {{ $id := "" }}
 {{ $file := "" }}
-{{ $hlOpts := .Params.hlOpts | default "" }}
-{{ $lines := .Params.lines }}
+{{ $hlOpts := $.Params.hlOpts | default "" }}
+{{ $lines := $.Params.lines }}
 {{ $loc := slice }}
 
 {{/* Turn "1,3-5,11-17" into a slice of maps consisting of a single key-value
@@ -48,11 +48,13 @@
     {{ end }}
   {{ else }}
     {{ if (eq $.Page.Language.Lang "any") }}
-      {{ if .Params.any }}
+      {{ if $.Params.any }}
         {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
-      {{ else if (and (not (isset .Params "any")) (ne .Parent nil)) }}
-        {{ if .Parent.Params.any }}
-          {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
+      {{ else if (and (not (isset $.Params "any")) (ne $.Parent nil)) }}
+        {{ if in $.Parent.Params "any" }}
+          {{ if $.Parent.Params.any }}
+            {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
+          {{ end }}
         {{ end }}
       {{ end }}
     {{ else }}
@@ -71,11 +73,13 @@
     {{ end }}
   {{ else }}
     {{ if (eq $.Page.Language.Lang "any") }}
-      {{ if .Params.any }}
+      {{ if $.Params.any }}
         {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
-      {{ else if (and (not (isset .Params "any")) (ne .Parent nil)) }}
-        {{ if .Parent.Params.any }}
-          {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
+      {{ else if (and (not (isset $.Params "any")) (ne $.Parent nil)) }}
+        {{ if in $.Parent.Params "any" }}
+          {{ if $.Parent.Params.any }}
+            {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
+          {{ end }}
         {{ end }}
       {{ end }}
     {{ else }}
@@ -84,11 +88,13 @@
   {{ end }}
 {{ else }}
   {{ if (eq $.Page.Language.Lang "any") }}
-    {{ if .Params.any }}
+    {{ if $.Params.any }}
       {{ errorf "[%v] What u doin' here w/ no 'fallback'?\n\t%v" $.Page.Language.LanguageName $.Position }}
-    {{ else if (and (not (isset .Params "any")) (ne .Parent nil)) }}
-      {{ if .Parent.Params.any }}
-        {{ errorf "[%v] What u doin' here w/ no 'fallback'?\n\t%v" $.Page.Language.LanguageName $.Position }}
+    {{ else if (and (not (isset $.Params "any")) (ne $.Parent nil)) }}
+      {{ if in $.Parent.Params "any" }}
+        {{ if $.Parent.Params.any }}
+          {{ errorf "[%v] What u doin' here w/ no 'fallback'?\n\t%v" $.Page.Language.LanguageName $.Position }}
+        {{ end }}
       {{ end }}
     {{ end }}
   {{ else }}
@@ -102,9 +108,9 @@
 
   {{ $syntax = (index (split $file "." | last 1) 0) }}
 
-  {{ $from := .Params.from }}
+  {{ $from := $.Params.from }}
   {{ $firstLine := 0 }}
-  {{ $to := .Params.to }}
+  {{ $to := $.Params.to }}
   {{ $length := 0 }}
   {{ $content = readFile $path }}
 
