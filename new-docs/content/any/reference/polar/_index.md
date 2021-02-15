@@ -1,5 +1,5 @@
 ---
-title: Polar Reference
+title: Polar
 weight: 1
 any: false
 ---

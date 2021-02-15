@@ -31,4 +31,4 @@ is automatically generated from the Oso SQLAlchemy library source files.
 
 ## Roles Reference
 
-The [SQLAlchemy Roles Reference](sqlalchemy_roles_ref) has more details on the library's built-in roles features.
+The SQLAlchemy Roles Reference has more details on the library's built-in roles features.

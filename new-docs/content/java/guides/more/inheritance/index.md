@@ -1,5 +1,5 @@
 ---
-title: Sharing Rules Across Resources
+title: Share Rules Across Resources
 ---
 
 {{% coming_soon %}}

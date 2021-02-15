@@ -1,10 +1,11 @@
 ---
-title: Python Library
+title: Python, Frameworks, & ORMs
 weight: 1
 any: false
 aliases:
     - /using/libraries/python/api.html
 ---
+
 # Python Authorization Library
 
 The Python version of Oso is available on [PyPI](https://pypi.org/project/oso/) and can be installed using
@@ -31,7 +32,11 @@ but not on musl-based ones like Alpine Linux.  Wheels built against musl
 that you can use on Alpine Linux can be downloaded from [the releases page
 on GitHub](https://github.com/osohq/oso/releases/latest).
 
-# Python API
+## Python API
 
 The [Python API reference]({{% apiLink "reference/api/index.html" %}})
 is automatically generated from the Oso Python library source files.
+
+## Framework & ORM Integrations
+
+Oso also provides the following libraries to integrate with Python frameworks and ORMS.

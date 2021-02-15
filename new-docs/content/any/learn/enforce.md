@@ -1,11 +1,11 @@
 ---
-title: Enforcement
-weight: 4
+title: Where to Enforce
+weight: 3
 description: |
     Learn how to apply authorization at different layers of your application.
 ---
 
-# Authorization Enforcement
+# Where to Enforce
 
 ## Where to apply authorization?
 

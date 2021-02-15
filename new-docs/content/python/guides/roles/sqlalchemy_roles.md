@@ -6,7 +6,7 @@ weight: 2
 
 # Adding roles with SQLAlchemy
 
-The [`sqlalchemy_oso.roles`](reference/sqlalchemy#sqlalchemy_osoroles) module
+The [`sqlalchemy_oso.roles`](reference/lib/sqlalchemy#sqlalchemy_osoroles) module
 provides out-of-the-box Role-Based Access Control features that let you create
 a roles system with a few lines of code, and specify role permissions in a
 declarative Oso policy.

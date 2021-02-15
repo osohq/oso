@@ -1,6 +1,6 @@
 ---
 title: Go Library
-weight: 4
+weight: 2
 any: false
 ---
 # Go Authorization Library
