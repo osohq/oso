@@ -86,11 +86,7 @@ enum BindingManagerVariableState {
 #[derive(Clone, Debug, Default)]
 pub struct BindingManager {
     bindings: BindingStack,
-    followers: HashMap<FollowerId, BindingManager>,
-
-    /// Track the bsp of followers when they were added so they can be
-    /// backtracked.
-    follower_bsps: HashMap<FollowerId, Bsp>,
+    followers: HashMap<FollowerId, (BindingManager, Bsp)>,
     next_follower_id: FollowerId,
 }
 
@@ -370,15 +366,14 @@ impl BindingManager {
 
     pub fn add_follower(&mut self, follower: BindingManager) -> FollowerId {
         let follower_id = self.next_follower_id;
-        self.followers.insert(follower_id, follower);
-        self.follower_bsps.insert(follower_id, self.bsp());
+        self.followers.insert(follower_id, (follower, self.bsp()));
         self.next_follower_id += 1;
 
         follower_id
     }
 
     pub fn remove_follower(&mut self, follower_id: &FollowerId) -> Option<BindingManager> {
-        self.followers.remove(follower_id)
+        self.followers.remove(follower_id).map(|(follower, _bsp)| follower)
     }
 }
 
@@ -549,8 +544,7 @@ impl BindingManager {
     where
         F: Fn(Bsp, &mut BindingManager) -> PolarResult<()>,
     {
-        for (id, follower) in self.followers.iter_mut() {
-            let bsp = self.follower_bsps.get(id).unwrap();
+        for (_id, (follower, bsp)) in self.followers.iter_mut() {
             func(*bsp, follower)?
         }
 
