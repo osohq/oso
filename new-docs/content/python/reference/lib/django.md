@@ -3,6 +3,7 @@ weight: 4
 title: Django Library
 aliases:
     - /using/frameworks/django.html
+description: The Oso Django integration provides request middleware and ORM integrations for data filtering.
 ---
 
 # Django

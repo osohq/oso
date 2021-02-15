@@ -1,14 +1,15 @@
 ---
 title: REPL
-aliases: 
+aliases:
     - ../more/dev-tools/repl.html
+description: Oso provides a simple REPL (Read, Evaluate, Print Loop) to interactively query a policy.
 ---
 
 # REPL
 
 The usual way to query an Oso knowledge base is through the API in your
 application’s language. But especially during development and debugging,
-it can be useful to interactively query a knowledge base. So Oso provides
+it can be useful to interactively query a policy. So Oso provides
 a simple REPL (Read, Evaluate, Print, Loop). To run it, first make sure
 that you have installed Oso.
 

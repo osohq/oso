@@ -6,9 +6,7 @@ path: /using-examples-context
 title: Use Context in Policies
 weight: 5
 description: |
-  Sometimes an authorization decision will require context beyond the action,
-  actor, and resource. This could be information about the HTTP request, or
-  the environment the application is running in.
+  Pass context beyond the actor, action, and resource into Oso policies.
 aliases:
   - ../../../using/examples/context.html
 ---

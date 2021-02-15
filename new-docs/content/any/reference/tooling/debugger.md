@@ -1,7 +1,9 @@
 ---
 title: Debugger
-aliases: 
+aliases:
     - ../more/dev-tools/debugger.html
+description: |
+  Use the Polar debugger to debug policy files.
 ---
 
 # Debugger

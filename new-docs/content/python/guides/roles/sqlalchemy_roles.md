@@ -1,6 +1,6 @@
 ---
 title: Add Roles with SQLAlchemy
-description: This guide walks you through how to use Oso's sqlalchemy integration to add basic roles to a multi-tenant app.
+description: Learn how to use Oso's SQLAlchemy integration to add roles to a multi-tenant app.
 weight: 2
 ---
 

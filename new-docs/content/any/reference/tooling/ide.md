@@ -1,7 +1,8 @@
 ---
 title: IDE Support
-aliases: 
+aliases:
     - ../more/dev-tools/ide.html
+description: IDE integrations provide syntax highlighting for Polar files.
 ---
 
 # IDE Support

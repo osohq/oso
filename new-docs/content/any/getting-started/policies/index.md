@@ -4,6 +4,7 @@ weight: 3
 any: false
 aliases:
   - ../getting-started/policies/index.html
+description: Learn about writing Oso policies - the source of truth for authorization logic.
 ---
 
 # Write Oso Policies

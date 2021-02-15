@@ -5,8 +5,7 @@ images: {}
 path: /using-examples-rbac
 title: Add Basic Roles
 description: |
-  Role-based access control (RBAC) assigns each actor a role. Instead of
-  granting permissions to individual actors, they are granted to roles.
+  Learn how to add basic roles to your application, no matter what data store/ORM you use.
 aliases:
   - ../../../using/examples/rbac.html
 ---

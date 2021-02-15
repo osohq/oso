@@ -3,11 +3,12 @@ weight: 2
 title: SQLAlchemy Library
 aliases:
     - /using/frameworks/sqlalchemy.html
+description: The Oso SQLAlchemy integration enables data filtering and provides built-in models for RBAC.
 ---
 
 # SQLAlchemy
 
-The Oso SQLAlchemy integration enables list filtering
+The Oso SQLAlchemy integration enables data filtering
 to be used with SQLAlchemy models and provides built-in SQLAlchemy models for
 Role-Based Access Control.
 
