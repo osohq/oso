@@ -7,7 +7,7 @@ use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use super::visitor::{walk_term, Visitor};
-use crate::bindings::{BindingManager, Bindings, Bsp, VariableState, FollowerId};
+use crate::bindings::{BindingManager, Bindings, Bsp, FollowerId, VariableState};
 use crate::counter::Counter;
 use crate::debugger::{DebugEvent, Debugger};
 use crate::error::{self, PolarResult};
@@ -499,14 +499,12 @@ impl PolarVirtualMachine {
                 .map(|(_, constraint)| {
                     println!("bindings before add_constraint: ");
                     for val in self.binding_manager.variables() {
-                        println!("{:?}",
-                            self.variable_state(&val));
+                        println!("{:?}", self.variable_state(&val));
                     }
                     self.add_constraint(&constraint)?;
                     println!("bindings after add_constraint: ");
                     for val in self.binding_manager.variables() {
-                        println!("{val} {:?}",
-                            self.variable_state(&val), val=val);
+                        println!("{val} {:?}", self.variable_state(&val), val = val);
                         if let VariableState::Partial(p) = self.variable_state(&val) {
                             println!("formatted {}", p.to_polar());
                         }
@@ -1490,7 +1488,7 @@ impl PolarVirtualMachine {
                         }
                         // TODO should this one be allowed?
                         //VariableState::Partial(e) => {
-                            //return Err(self.type_error(&left, format!("Can only assign to unbound variables, {} is bound to expression {}.", var.to_polar(), e.to_polar())));
+                        //    return Err(self.type_error(&left, format!("Can only assign to unbound variables, {} is bound to expression {}.", var.to_polar(), e.to_polar())));
                         //}
                         _ => {
                             self.push_goal(Goal::Unify { left, right })?;
@@ -2072,8 +2070,10 @@ impl PolarVirtualMachine {
                             self.push_goal(Goal::Backtrack)?;
                         }
                     }
-                    _ => if self.bind(var, right).is_err() {
-                        self.push_goal(Goal::Backtrack)?;
+                    _ => {
+                        if self.bind(var, right).is_err() {
+                            self.push_goal(Goal::Backtrack)?;
+                        }
                     }
                 }
             }
@@ -2090,8 +2090,10 @@ impl PolarVirtualMachine {
                             self.push_goal(Goal::Backtrack)?;
                         }
                     }
-                    _ => if self.bind(var, left).is_err() {
-                        self.push_goal(Goal::Backtrack)?;
+                    _ => {
+                        if self.bind(var, left).is_err() {
+                            self.push_goal(Goal::Backtrack)?;
+                        }
                     }
                 }
             }
@@ -2509,7 +2511,8 @@ impl PolarVirtualMachine {
                         // This is done here for safety to avoid a bug where `answer` is unbound by
                         // `IsSubspecializer` and the `Unify` Goal just assigns it to `true` instead
                         // of checking that is is equal to `true`.
-                        self.bind(&answer, Term::new_temporary(Value::Boolean(false))).unwrap();
+                        self.bind(&answer, Term::new_temporary(Value::Boolean(false)))
+                            .unwrap();
 
                         return self.append_goals(vec![
                             Goal::IsSubspecializer {
@@ -3446,7 +3449,8 @@ mod tests {
         });
         let query = query!(call!("bar", [sym!("x")]));
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![query]);
-        vm.bind(&sym!("x"), Term::new_from_test(external_instance)).unwrap();
+        vm.bind(&sym!("x"), Term::new_from_test(external_instance))
+            .unwrap();
 
         let mut external_isas = vec![];
 

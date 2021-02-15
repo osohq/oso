@@ -3,7 +3,7 @@ use std::collections::hash_map::Entry;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::bindings::{VariableState, BindingManager, Bsp};
+use crate::bindings::{BindingManager, Bsp, VariableState};
 use crate::counter::Counter;
 use crate::error::PolarResult;
 use crate::events::QueryEvent;
@@ -82,16 +82,19 @@ fn results_to_constraints(results: Vec<BindingManager>) -> Bindings {
         .collect();
 
     let reduced = reduce_constraints(inverted);
-    let simplified =
-        simplify_bindings(reduced.clone()).unwrap_or_else(Bindings::new);
+    let simplified = simplify_bindings(reduced.clone()).unwrap_or_else(Bindings::new);
 
     // TODO this logic is similar to get constraints in binding manager.
-    simplified.into_iter().map(|(k, v)| {
-        match v.value() {
+    simplified
+        .into_iter()
+        .map(|(k, v)| match v.value() {
             Value::Expression(_) => (k, v),
-            _ => (k.clone(), v.clone_with_value(Value::Expression(op!(Unify, term!(k), v.clone()))))
-        }
-    }).collect()
+            _ => (
+                k.clone(),
+                v.clone_with_value(Value::Expression(op!(Unify, term!(k), v.clone()))),
+            ),
+        })
+        .collect()
 }
 
 /// Invert constraints in `bindings`.
@@ -101,22 +104,29 @@ fn results_to_constraints(results: Vec<BindingManager>) -> Bindings {
 /// Then, each simplified expression is inverted.
 /// A binding of `var` to `val` after simplification is converted into `var != bound.
 fn invert_partials(bindings: BindingManager) -> Bindings {
-     let mut new_bindings = Bindings::new();
+    let mut new_bindings = Bindings::new();
 
-     for var in bindings.variables() {
-         let constraint = bindings.get_constraints(&var);
-         new_bindings.insert(var.clone(), term!(constraint));
-     }
+    for var in bindings.variables() {
+        let constraint = bindings.get_constraints(&var);
+        new_bindings.insert(var.clone(), term!(constraint));
+    }
 
-    let simplified =
-        simplify_bindings(new_bindings.clone()).unwrap_or_else(Bindings::new);
+    let simplified = simplify_bindings(new_bindings.clone()).unwrap_or_else(Bindings::new);
 
-    let inverted = simplified.into_iter().filter_map(|(k, v)| {
-        match v.value() {
-            Value::Expression(e) => Some((k, e.clone_with_constraints(e.inverted_constraints(0)).into_term())),
-            _ => Some((k.clone(), term!(op!(And, term!(op!(Neq, term!(k), v.clone())))))),
-        }
-    }).collect::<Bindings>();
+    let inverted = simplified
+        .into_iter()
+        .filter_map(|(k, v)| match v.value() {
+            Value::Expression(e) => Some((
+                k,
+                e.clone_with_constraints(e.inverted_constraints(0))
+                    .into_term(),
+            )),
+            _ => Some((
+                k.clone(),
+                term!(op!(And, term!(op!(Neq, term!(k), v.clone())))),
+            )),
+        })
+        .collect::<Bindings>();
 
     inverted
 }
@@ -171,12 +181,20 @@ fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
 ///
 /// We can improve this by explicitly indicating to the simplifier
 /// which variables are allowed.
-fn filter_inverted_constraints(constraints: Bindings, vm: &PolarVirtualMachine, bsp: Bsp) -> Bindings {
-    constraints.into_iter().filter(|(k, _)| !(
-            k.0.starts_with("_value") || k.0.starts_with("_runnable")
-    ) && vm.variable_state_at_point(k, bsp) != VariableState::Unbound && !matches!(vm.variable_state_at_point(k, bsp), VariableState::Bound(_))).collect::<Bindings>()
+fn filter_inverted_constraints(
+    constraints: Bindings,
+    vm: &PolarVirtualMachine,
+    bsp: Bsp,
+) -> Bindings {
+    constraints
+        .into_iter()
+        .filter(|(k, _)| {
+            !(k.0.starts_with("_value") || k.0.starts_with("_runnable"))
+                && vm.variable_state_at_point(k, bsp) != VariableState::Unbound
+                && !matches!(vm.variable_state_at_point(k, bsp), VariableState::Bound(_))
+        })
+        .collect::<Bindings>()
 }
-
 
 /// A Runnable that runs a query and inverts the results in three ways:
 ///
@@ -202,12 +220,17 @@ impl Runnable for Inverter {
                         // If there are results, the inversion should usually fail. However,
                         // if those results have constraints we collect them and pass them
                         // out to the parent VM.
-                        let constraints = results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
-                        let constraints = filter_inverted_constraints(constraints, &self.vm, self.bsp);
+                        let constraints =
+                            results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
+                        let constraints =
+                            filter_inverted_constraints(constraints, &self.vm, self.bsp);
                         println!("constraints: ");
                         for (var, cons) in constraints.iter() {
                             println!("{} {}", var, cons.to_polar());
-                            println!("state: {:?}", self.vm.variable_state_at_point(var, self.bsp));
+                            println!(
+                                "state: {:?}",
+                                self.vm.variable_state_at_point(var, self.bsp)
+                            );
                         }
 
                         if !constraints.is_empty() {
@@ -222,7 +245,10 @@ impl Runnable for Inverter {
                 }
                 QueryEvent::Result { .. } => {
                     // Retrieve new bindings made when running inverted query.
-                    let binding_follower = self.vm.remove_binding_follower(&self.follower.unwrap()).unwrap();
+                    let binding_follower = self
+                        .vm
+                        .remove_binding_follower(&self.follower.unwrap())
+                        .unwrap();
                     self.results.push(binding_follower);
                     self.follower = Some(self.vm.add_binding_follower());
                 }

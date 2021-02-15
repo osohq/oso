@@ -1344,22 +1344,18 @@ mod test {
         );
         assert_query_done!(q);
 
-         let mut q = p.new_query_from_term(term!(call!("u", [sym!("x")])), false);
-         let binding = next_binding(&mut q)?;
-         // This is unbound because any input succeeds.
-         assert_eq!(binding.get(&sym!("x")).unwrap(), &term!(sym!("x")));
-         assert_query_done!(q);
+        let mut q = p.new_query_from_term(term!(call!("u", [sym!("x")])), false);
+        let binding = next_binding(&mut q)?;
+        // This is unbound because any input succeeds.
+        assert_eq!(binding.get(&sym!("x")).unwrap(), &term!(sym!("x")));
+        assert_query_done!(q);
 
         let mut v = p.new_query_from_term(term!(call!("v", [sym!("x")])), false);
         assert_partial_expression!(next_binding(&mut v)?, "x", "_this != 1");
         assert_query_done!(v);
 
         let mut q = p.new_query_from_term(term!(call!("w", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q)?,
-            "x",
-            "_this != 6"
-        );
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this != 6");
         assert_query_done!(q);
 
         Ok(())
@@ -1808,9 +1804,7 @@ mod test {
         // TODO: More complicated version:
         //  f(x) if not g(z) and z = x;
         //  g(y) if y = 1;
-        p.load_str(
-            r#"f() if x = 1;"#,
-        )?;
+        p.load_str(r#"f() if x = 1;"#)?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [])), false);
         let r = next_binding(&mut q)?;
@@ -1823,8 +1817,7 @@ mod test {
     #[test]
     fn test_output_variable() -> TestResult {
         let p = Polar::new();
-        p.load_str(
-            r#"f(a, b) if a = b;"#)?;
+        p.load_str(r#"f(a, b) if a = b;"#)?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [1, sym!("x")])), false);
         let r = next_binding(&mut q)?;

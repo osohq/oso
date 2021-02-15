@@ -44,11 +44,10 @@ impl From<BindingManagerVariableState> for VariableState {
             BindingManagerVariableState::Unbound => VariableState::Unbound,
             BindingManagerVariableState::Bound(b) => VariableState::Bound(b),
             BindingManagerVariableState::Cycle(c) => VariableState::Partial(cycle_constraints(c)),
-            BindingManagerVariableState::Partial(p) => VariableState::Partial(p)
+            BindingManagerVariableState::Partial(p) => VariableState::Partial(p),
         }
     }
 }
-
 
 /// Internal variable binding state.
 ///
@@ -136,7 +135,10 @@ impl BindingManager {
                     self.add_binding(var, val.clone());
                     self.constrain(&grounded)?;
                 } else {
-                    return Err(RuntimeError::IncompatibleBindings { msg: "Grounding failed".into() }.into());
+                    return Err(RuntimeError::IncompatibleBindings {
+                        msg: "Grounding failed".into(),
+                    }
+                    .into());
                 }
             } else {
                 // TODO already bound?
@@ -145,9 +147,8 @@ impl BindingManager {
         }
 
         // If the main binding succeeded, the follower binding must succeed.
-        self.do_followers(|_, follower| {
-            follower.bind(var, val.clone())
-        }).unwrap();
+        self.do_followers(|_, follower| follower.bind(var, val.clone()))
+            .unwrap();
 
         Ok(())
     }
@@ -164,10 +165,12 @@ impl BindingManager {
     ///
     /// (The only current usage is for replacing default values with call ids).
     pub fn unsafe_rebind(&mut self, var: &Symbol, val: Term) {
-        assert!(matches!(self._variable_state(var), BindingManagerVariableState::Unbound | BindingManagerVariableState::Bound(_)));
+        assert!(matches!(
+            self._variable_state(var),
+            BindingManagerVariableState::Unbound | BindingManagerVariableState::Bound(_)
+        ));
         self.add_binding(var, val);
     }
-
 
     /// Add a constraint. Constraints are represented as term expressions.
     ///
@@ -183,16 +186,16 @@ impl BindingManager {
         let mut op = op!(And, term.clone());
         for var in op.variables().iter().rev() {
             match self._variable_state(&var) {
-                BindingManagerVariableState::Unbound => {},
+                BindingManagerVariableState::Unbound => {}
                 BindingManagerVariableState::Cycle(c) => {
                     let mut cycle = cycle_constraints(c);
                     cycle.merge_constraints(op.clone());
                     op = cycle;
-                },
+                }
                 BindingManagerVariableState::Partial(mut e) => {
                     e.merge_constraints(op);
                     op = e;
-                },
+                }
                 BindingManagerVariableState::Bound(_) => {
                     panic!("Unexpected bound variable {} in constraint.", var);
                 }
@@ -209,7 +212,8 @@ impl BindingManager {
             let follower_backtrack_to = to.saturating_sub(follower_bsp);
             follower.backtrack(follower_backtrack_to);
             Ok(())
-        }).unwrap();
+        })
+        .unwrap();
 
         self.bindings.truncate(to)
     }
@@ -293,12 +297,13 @@ impl BindingManager {
     pub fn get_constraints(&self, variable: &Symbol) -> Operation {
         match self._variable_state(variable) {
             BindingManagerVariableState::Unbound => op!(And),
-            BindingManagerVariableState::Bound(val) => op!(And, term!(op!(Unify, term!(variable.clone()), val))),
+            BindingManagerVariableState::Bound(val) => {
+                op!(And, term!(op!(Unify, term!(variable.clone()), val)))
+            }
             BindingManagerVariableState::Partial(expr) => expr,
-            BindingManagerVariableState::Cycle(c) => cycle_constraints(c)
+            BindingManagerVariableState::Cycle(c) => cycle_constraints(c),
         }
     }
-
 
     pub fn variable_state(&self, variable: &Symbol) -> VariableState {
         self._variable_state_at_point(variable, self.bsp()).into()
@@ -368,7 +373,6 @@ impl BindingManager {
     pub fn remove_follower(&mut self, follower_id: &FollowerId) -> Option<BindingManager> {
         self.followers.remove(follower_id)
     }
-
 }
 
 // Private impls.
@@ -376,10 +380,16 @@ impl BindingManager {
     /// Bind two variables together.
     fn bind_variables(&mut self, left: &Symbol, right: &Symbol) -> PolarResult<()> {
         match (self._variable_state(left), self._variable_state(right)) {
-            (BindingManagerVariableState::Bound(left_value), BindingManagerVariableState::Unbound) => {
+            (
+                BindingManagerVariableState::Bound(left_value),
+                BindingManagerVariableState::Unbound,
+            ) => {
                 self.add_binding(right, left_value);
             }
-            (BindingManagerVariableState::Unbound, BindingManagerVariableState::Bound(right_value)) => {
+            (
+                BindingManagerVariableState::Unbound,
+                BindingManagerVariableState::Bound(right_value),
+            ) => {
                 self.add_binding(left, right_value);
             }
 
@@ -406,7 +416,10 @@ impl BindingManager {
                 self.add_binding(last, term!(left.clone()));
                 self.add_binding(left, term!(right.clone()));
             }
-            (BindingManagerVariableState::Cycle(left_cycle), BindingManagerVariableState::Cycle(right_cycle)) => {
+            (
+                BindingManagerVariableState::Cycle(left_cycle),
+                BindingManagerVariableState::Cycle(right_cycle),
+            ) => {
                 // Both variables are in cycles.
                 let iter_left = left_cycle.iter().collect::<HashSet<&Symbol>>();
                 let iter_right = right_cycle.iter().collect::<HashSet<&Symbol>>();
@@ -423,26 +436,42 @@ impl BindingManager {
                     self.add_binding(last_right, term!(left.clone()));
                 }
             }
-            (BindingManagerVariableState::Cycle(_), BindingManagerVariableState::Bound(right_value)) => {
+            (
+                BindingManagerVariableState::Cycle(_),
+                BindingManagerVariableState::Bound(right_value),
+            ) => {
                 // Ground out the cycle.
                 self.add_binding(left, right_value);
             }
-            (BindingManagerVariableState::Bound(left_value), BindingManagerVariableState::Cycle(_)) => {
+            (
+                BindingManagerVariableState::Bound(left_value),
+                BindingManagerVariableState::Cycle(_),
+            ) => {
                 // Left is currently bound. Ground right cycle.
                 self.add_binding(right, left_value);
             }
             (BindingManagerVariableState::Bound(_), BindingManagerVariableState::Bound(_)) => {
-                return Err(RuntimeError::IncompatibleBindings { msg: format!("{} and {} are both bound", left, right) }.into());
+                return Err(RuntimeError::IncompatibleBindings {
+                    msg: format!("{} and {} are both bound", left, right),
+                }
+                .into());
             }
-            (BindingManagerVariableState::Bound(left_value), BindingManagerVariableState::Partial(_)) => {
+            (
+                BindingManagerVariableState::Bound(left_value),
+                BindingManagerVariableState::Partial(_),
+            ) => {
                 // Left is bound, right has constraints.
                 // TODO (dhatch): No unwrap.
                 self.add_constraint(&op!(Unify, left_value, term!(right.clone())).into_term())?;
             }
-            (BindingManagerVariableState::Partial(_), BindingManagerVariableState::Bound(right_value)) => {
+            (
+                BindingManagerVariableState::Partial(_),
+                BindingManagerVariableState::Bound(right_value),
+            ) => {
                 self.add_constraint(&op!(Unify, term!(left.clone()), right_value).into_term())?;
             }
-            (BindingManagerVariableState::Partial(_), _) | (_, BindingManagerVariableState::Partial(_)) => {
+            (BindingManagerVariableState::Partial(_), _)
+            | (_, BindingManagerVariableState::Partial(_)) => {
                 self.add_constraint(
                     &op!(Unify, term!(left.clone()), term!(right.clone())).into_term(),
                 )?;
@@ -481,7 +510,9 @@ impl BindingManager {
                 Value::Expression(e) => return BindingManagerVariableState::Partial(e.clone()),
                 Value::Variable(v) | Value::RestVariable(v) => {
                     if v == variable {
-                        return BindingManagerVariableState::Cycle(path.into_iter().cloned().collect());
+                        return BindingManagerVariableState::Cycle(
+                            path.into_iter().cloned().collect(),
+                        );
                     } else {
                         path.push(v);
                     }
@@ -537,11 +568,17 @@ mod test {
         let z = sym!("z");
 
         // Unbound.
-        assert_eq!(bindings._variable_state(&x), BindingManagerVariableState::Unbound);
+        assert_eq!(
+            bindings._variable_state(&x),
+            BindingManagerVariableState::Unbound
+        );
 
         // Bound.
         bindings.add_binding(&x, term!(1));
-        assert_eq!(bindings._variable_state(&x), BindingManagerVariableState::Bound(term!(1)));
+        assert_eq!(
+            bindings._variable_state(&x),
+            BindingManagerVariableState::Bound(term!(1))
+        );
 
         bindings.add_binding(&x, term!(x.clone()));
         assert_eq!(
@@ -638,22 +675,46 @@ mod test {
         b1.bind(&sym!("x"), term!(1)).unwrap();
         b1.bind(&sym!("y"), term!(2)).unwrap();
 
-        assert_eq!(b1._variable_state(&sym!("x")), BindingManagerVariableState::Bound(term!(1)));
-        assert_eq!(b1._variable_state(&sym!("y")), BindingManagerVariableState::Bound(term!(2)));
+        assert_eq!(
+            b1._variable_state(&sym!("x")),
+            BindingManagerVariableState::Bound(term!(1))
+        );
+        assert_eq!(
+            b1._variable_state(&sym!("y")),
+            BindingManagerVariableState::Bound(term!(2))
+        );
 
         let b2 = BindingManager::new();
         let b2_id = b1.add_follower(b2);
 
         b1.bind(&sym!("z"), term!(3)).unwrap();
 
-        assert_eq!(b1._variable_state(&sym!("x")), BindingManagerVariableState::Bound(term!(1)));
-        assert_eq!(b1._variable_state(&sym!("y")), BindingManagerVariableState::Bound(term!(2)));
-        assert_eq!(b1._variable_state(&sym!("z")), BindingManagerVariableState::Bound(term!(3)));
+        assert_eq!(
+            b1._variable_state(&sym!("x")),
+            BindingManagerVariableState::Bound(term!(1))
+        );
+        assert_eq!(
+            b1._variable_state(&sym!("y")),
+            BindingManagerVariableState::Bound(term!(2))
+        );
+        assert_eq!(
+            b1._variable_state(&sym!("z")),
+            BindingManagerVariableState::Bound(term!(3))
+        );
 
         let b2 = b1.remove_follower(&b2_id).unwrap();
-        assert_eq!(b2._variable_state(&sym!("x")), BindingManagerVariableState::Unbound);
-        assert_eq!(b2._variable_state(&sym!("y")), BindingManagerVariableState::Unbound);
-        assert_eq!(b2._variable_state(&sym!("z")), BindingManagerVariableState::Bound(term!(3)));
+        assert_eq!(
+            b2._variable_state(&sym!("x")),
+            BindingManagerVariableState::Unbound
+        );
+        assert_eq!(
+            b2._variable_state(&sym!("y")),
+            BindingManagerVariableState::Unbound
+        );
+        assert_eq!(
+            b2._variable_state(&sym!("z")),
+            BindingManagerVariableState::Bound(term!(3))
+        );
 
         // Extending cycle.
         let mut b1 = BindingManager::new();
@@ -663,13 +724,27 @@ mod test {
         let b2 = BindingManager::new();
         let b2_id = b1.add_follower(b2);
 
-        assert!(matches!(b1._variable_state(&sym!("x")), BindingManagerVariableState::Cycle(_)));
-        assert!(matches!(b1._variable_state(&sym!("y")), BindingManagerVariableState::Cycle(_)));
-        assert!(matches!(b1._variable_state(&sym!("z")), BindingManagerVariableState::Cycle(_)));
+        assert!(matches!(
+            b1._variable_state(&sym!("x")),
+            BindingManagerVariableState::Cycle(_)
+        ));
+        assert!(matches!(
+            b1._variable_state(&sym!("y")),
+            BindingManagerVariableState::Cycle(_)
+        ));
+        assert!(matches!(
+            b1._variable_state(&sym!("z")),
+            BindingManagerVariableState::Cycle(_)
+        ));
 
         b1.bind(&sym!("x"), term!(sym!("a"))).unwrap();
         if let BindingManagerVariableState::Cycle(c) = b1._variable_state(&sym!("a")) {
-            assert_eq!(c, vec![sym!("a"), sym!("x"), sym!("y"), sym!("z")], "c was {:?}", c);
+            assert_eq!(
+                c,
+                vec![sym!("a"), sym!("x"), sym!("y"), sym!("z")],
+                "c was {:?}",
+                c
+            );
         }
 
         let b2 = b1.remove_follower(&b2_id).unwrap();
@@ -692,16 +767,29 @@ mod test {
         let b2 = BindingManager::new();
         let b2_id = b1.add_follower(b2);
 
-        assert!(matches!(b1._variable_state(&sym!("x")), BindingManagerVariableState::Cycle(_)));
-        assert!(matches!(b1._variable_state(&sym!("y")), BindingManagerVariableState::Cycle(_)));
-        assert!(matches!(b1._variable_state(&sym!("z")), BindingManagerVariableState::Cycle(_)));
+        assert!(matches!(
+            b1._variable_state(&sym!("x")),
+            BindingManagerVariableState::Cycle(_)
+        ));
+        assert!(matches!(
+            b1._variable_state(&sym!("y")),
+            BindingManagerVariableState::Cycle(_)
+        ));
+        assert!(matches!(
+            b1._variable_state(&sym!("z")),
+            BindingManagerVariableState::Cycle(_)
+        ));
 
-        b1.add_constraint(&term!(op!(Gt, term!(sym!("x")), term!(sym!("y"))))).unwrap();
+        b1.add_constraint(&term!(op!(Gt, term!(sym!("x")), term!(sym!("y")))))
+            .unwrap();
 
         let b2 = b1.remove_follower(&b2_id).unwrap();
 
         if let BindingManagerVariableState::Partial(p) = b1._variable_state(&sym!("x")) {
-            assert_eq!(p.to_polar(), "x = y and y = z and y = z and z = x and x > y");
+            assert_eq!(
+                p.to_polar(),
+                "x = y and y = z and y = z and z = x and x > y"
+            );
         } else {
             panic!("unexpected");
         }
@@ -777,7 +865,6 @@ mod test {
         assert_eq!(bm.variable_state(&x), VariableState::Bound(zero));
         assert_eq!(bm.variable_state(&y), VariableState::Unbound);
     }
-
 
     // TODO (dhatch): Test backtrack with followers.
 }
