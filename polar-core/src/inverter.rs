@@ -76,13 +76,9 @@ impl Inverter {
 ///
 /// The output constraints are AND[!result1, !result2, ...].
 fn results_to_constraints(results: Vec<BindingManager>) -> Bindings {
-    let inverted = results
-        .into_iter()
-        .map(|bindings| invert_partials(bindings))
-        .collect();
-
+    let inverted = results.into_iter().map(invert_partials).collect();
     let reduced = reduce_constraints(inverted);
-    let simplified = simplify_bindings(reduced.clone()).unwrap_or_else(Bindings::new);
+    let simplified = simplify_bindings(reduced).unwrap_or_else(Bindings::new);
 
     // TODO this logic is similar to get constraints in binding manager.
     simplified
@@ -111,29 +107,27 @@ fn invert_partials(bindings: BindingManager) -> Bindings {
         new_bindings.insert(var.clone(), term!(constraint));
     }
 
-    let simplified = simplify_bindings(new_bindings.clone()).unwrap_or_else(Bindings::new);
+    let simplified = simplify_bindings(new_bindings).unwrap_or_else(Bindings::new);
 
-    let inverted = simplified
+    simplified
         .into_iter()
-        .filter_map(|(k, v)| match v.value() {
-            Value::Expression(e) => Some((
+        .map(|(k, v)| match v.value() {
+            Value::Expression(e) => (
                 k,
                 e.clone_with_constraints(e.inverted_constraints(0))
                     .into_term(),
-            )),
-            _ => Some((
+            ),
+            _ => (
                 k.clone(),
                 term!(op!(And, term!(op!(Neq, term!(k), v.clone())))),
-            )),
+            ),
         })
-        .collect::<Bindings>();
-
-    inverted
+        .collect::<Bindings>()
 }
 
 /// Takes a vec of bindings and merges constraints on each variable.
 fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
-    let reduced = bindings
+    bindings
         .into_iter()
         .fold(Bindings::new(), |mut acc, bindings| {
             bindings
@@ -157,8 +151,7 @@ fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
                     }
                 });
             acc
-        });
-    reduced
+        })
 }
 
 /// Decide which variables come out of negation. This is hacky.

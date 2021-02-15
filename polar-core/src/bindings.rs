@@ -129,21 +129,19 @@ impl BindingManager {
 
         if let Ok(symbol) = val.value().as_symbol() {
             self.bind_variables(var, symbol)?;
-        } else {
-            if let BindingManagerVariableState::Partial(p) = self._variable_state(var) {
-                if let Some(grounded) = p.ground(var.clone(), val.clone()) {
-                    self.add_binding(var, val.clone());
-                    self.constrain(&grounded)?;
-                } else {
-                    return Err(RuntimeError::IncompatibleBindings {
-                        msg: "Grounding failed".into(),
-                    }
-                    .into());
-                }
-            } else {
-                // TODO already bound?
+        } else if let BindingManagerVariableState::Partial(p) = self._variable_state(var) {
+            if let Some(grounded) = p.ground(var.clone(), val.clone()) {
                 self.add_binding(var, val.clone());
+                self.constrain(&grounded)?;
+            } else {
+                return Err(RuntimeError::IncompatibleBindings {
+                    msg: "Grounding failed".into(),
+                }
+                .into());
             }
+        } else {
+            // TODO already bound?
+            self.add_binding(var, val.clone());
         }
 
         // If the main binding succeeded, the follower binding must succeed.
@@ -523,6 +521,7 @@ impl BindingManager {
         BindingManagerVariableState::Unbound
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
         assert_eq!(o.operator, Operator::And, "bad constraint {}", o.to_polar());
         for var in o.variables() {

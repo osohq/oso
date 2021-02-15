@@ -496,7 +496,7 @@ impl PolarVirtualMachine {
             Goal::AddConstraintsBatch { add_constraints } => add_constraints
                 .borrow_mut()
                 .drain()
-                .map(|(_, constraint)| {
+                .try_for_each(|(_, constraint)| -> PolarResult<()> {
                     println!("bindings before add_constraint: ");
                     for val in self.binding_manager.variables() {
                         println!("{:?}", self.variable_state(&val));
@@ -511,8 +511,7 @@ impl PolarVirtualMachine {
                     }
 
                     Ok(())
-                })
-                .collect::<PolarResult<()>>()?,
+                })?,
             Goal::Run { runnable } => return self.run_runnable(runnable.clone_runnable()),
         }
         Ok(QueryEvent::None)
