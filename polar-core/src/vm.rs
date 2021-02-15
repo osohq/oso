@@ -2177,7 +2177,6 @@ impl PolarVirtualMachine {
 
     /// Unify two variables. May produce new bindings, `Unify` goals,
     /// or unification constraints.
-    #[allow(clippy::many_single_char_names)]
     fn unify_vars(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         let l = left.value().as_symbol().expect("variable");
         let r = right.value().as_symbol().expect("variable");
