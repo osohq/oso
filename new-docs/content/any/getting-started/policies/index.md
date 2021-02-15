@@ -287,7 +287,7 @@ Either way, using the rule could look like this:
 {{% callout "Note" "green" %}}
 Type specializers automatically respect the **inheritance** hierarchy of
 application classes. See the [Resources with
-Inheritance](guides/inheritance) guide for an in-depth
+Inheritance](guides/more/inheritance) guide for an in-depth
 example of how this works.
 {{% /callout %}}
 
