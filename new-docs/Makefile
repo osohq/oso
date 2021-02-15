@@ -33,6 +33,9 @@ content/ruby/reference/api: $(RUBY_FILES)
 
 api_docs:content/java/reference/api content/node/reference/api content/python/reference/api content/ruby/reference/api
 
+examples:
+	$(MAKE) -C examples submodules
+
 install: examples
 	# uncomment when we want to include Oso WASM
 	# $(MAKE) -C .. wasm-build
@@ -52,11 +55,8 @@ build-prod: install
 	cd themes/oso-webpack && npm run-script build-prod
 	HUGO_ENV=production hugo -b https://docs.osohq.com/
 
-examples:
-	$(MAKE) -C examples submodules
-
 test: install
 	### TODO: Add Hugo tests
 	$(MAKE) -C examples test
 
-.PHONY: api_docs run build
+.PHONY: api_docs run build examples
