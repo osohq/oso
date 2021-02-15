@@ -962,15 +962,6 @@ impl PolarVirtualMachine {
             | (Value::RestVariable(l), Value::RestVariable(r)) => {
                 // Two variables.
                 match (self.variable_state(l), self.variable_state(r)) {
-                    // TODO (dhatch): This special case does not seem right to me.
-                    // Do we need this to preserve some functionality, or can we add
-                    // a constraint?
-                    (VariableState::Unbound, VariableState::Unbound) => {
-                        self.push_goal(Goal::Unify {
-                            left: left.clone(),
-                            right: right.clone(),
-                        })?
-                    }
                     (VariableState::Bound(x), _) => self.push_goal(Goal::Isa {
                         left: x,
                         right: right.clone(),
@@ -994,7 +985,6 @@ impl PolarVirtualMachine {
                 _ => self.isa_expr(left, right)?,
             },
             (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => match self.variable_state(r) {
-                // TODO (dhatch): Is this case tested?
                 VariableState::Unbound => self.push_goal(Goal::Unify {
                     left: left.clone(),
                     right: right.clone(),
