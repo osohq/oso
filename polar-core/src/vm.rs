@@ -135,7 +135,7 @@ pub enum Goal {
 #[derive(Clone, Debug)]
 pub struct Choice {
     pub alternatives: Vec<GoalStack>,
-    bsp: usize,            // binding stack pointer
+    bsp: Bsp,              // binding stack pointer
     pub goals: GoalStack,  // goal stack snapshot
     queries: Queries,      // query stack snapshot
     trace: Vec<Rc<Trace>>, // trace snapshot
