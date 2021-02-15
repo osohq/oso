@@ -1,10 +1,10 @@
 ---
-title: Add roles with SQLAlchemy
+title: Add Roles with SQLAlchemy
 description: This guide walks you through how to use Oso's sqlalchemy integration to add basic roles to a multi-tenant app.
 weight: 2
 ---
 
-# Adding roles with SQLAlchemy
+# Add Roles with SQLAlchemy
 
 The [`sqlalchemy_oso.roles`](reference/lib/sqlalchemy#sqlalchemy_osoroles) module
 provides out-of-the-box Role-Based Access Control features that let you create
