@@ -2033,10 +2033,23 @@ impl PolarVirtualMachine {
 
             // Unify two variables.
             // TODO(gj): (Var, Rest) + (Rest, Var) cases might be unreachable.
-            (Value::Variable(_), Value::Variable(_))
-            | (Value::Variable(_), Value::RestVariable(_))
-            | (Value::RestVariable(_), Value::Variable(_))
-            | (Value::RestVariable(_), Value::RestVariable(_)) => self.unify_vars(left, right)?,
+            (Value::Variable(l), Value::Variable(r))
+            | (Value::Variable(l), Value::RestVariable(r))
+            | (Value::RestVariable(l), Value::Variable(r))
+            | (Value::RestVariable(l), Value::RestVariable(r)) => {
+                match (self.variable_state(l), self.variable_state(r)) {
+                    (VariableState::Bound(x), VariableState::Bound(y)) => {
+                        // Both variables are bound. Unify their values.
+                        self.push_goal(Goal::Unify { left: x, right: y })?;
+                    }
+                    (_, _) => {
+                        // At least one variable is unbound. Bind it.
+                        if self.bind(l, right.clone()).is_err() {
+                            self.push_goal(Goal::Backtrack)?;
+                        }
+                    }
+                }
+            }
 
             // Unify/bind a variable on the left with/to the term on the right.
             (Value::Variable(var), _) | (Value::RestVariable(var), _) => {
@@ -2172,26 +2185,6 @@ impl PolarVirtualMachine {
             (_, _) => self.push_goal(Goal::Backtrack)?,
         }
 
-        Ok(())
-    }
-
-    /// Unify two variables. May produce new bindings, `Unify` goals,
-    /// or unification constraints.
-    fn unify_vars(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
-        let l = left.value().as_symbol().expect("variable");
-        let r = right.value().as_symbol().expect("variable");
-        match (self.variable_state(l), self.variable_state(r)) {
-            // Base cases: at least one variable is bound.
-            (VariableState::Bound(x), VariableState::Bound(y)) => {
-                // Both variables are bound. Unify their values.
-                self.push_goal(Goal::Unify { left: x, right: y })?;
-            }
-            (_, _) => {
-                if self.bind(l, right.clone()).is_err() {
-                    self.push_goal(Goal::Backtrack)?;
-                }
-            }
-        }
         Ok(())
     }
 
