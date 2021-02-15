@@ -13,7 +13,7 @@ oso.registerClass(Customer);
 
 // internal-start
 class InternalUser {
-  ...
+  // ...
 
   role() {
     return db.query('SELECT role FROM internal_roles WHERE id = ?', this.id);
