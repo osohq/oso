@@ -493,25 +493,26 @@ impl PolarVirtualMachine {
             }
             Goal::Unify { left, right } => self.unify(&left, &right)?,
             Goal::AddConstraint { term } => self.add_constraint(&term)?,
-            Goal::AddConstraintsBatch { add_constraints } => add_constraints
-                .borrow_mut()
-                .drain()
-                .try_for_each(|(_, constraint)| -> PolarResult<()> {
-                    println!("bindings before add_constraint: ");
-                    for val in self.binding_manager.variables() {
-                        println!("{:?}", self.variable_state(&val));
-                    }
-                    self.add_constraint(&constraint)?;
-                    println!("bindings after add_constraint: ");
-                    for val in self.binding_manager.variables() {
-                        println!("{val} {:?}", self.variable_state(&val), val = val);
-                        if let VariableState::Partial(p) = self.variable_state(&val) {
-                            println!("formatted {}", p.to_polar());
+            Goal::AddConstraintsBatch { add_constraints } => {
+                add_constraints.borrow_mut().drain().try_for_each(
+                    |(_, constraint)| -> PolarResult<()> {
+                        println!("bindings before add_constraint: ");
+                        for val in self.binding_manager.variables() {
+                            println!("{:?}", self.variable_state(&val));
                         }
-                    }
+                        self.add_constraint(&constraint)?;
+                        println!("bindings after add_constraint: ");
+                        for val in self.binding_manager.variables() {
+                            println!("{val} {:?}", self.variable_state(&val), val = val);
+                            if let VariableState::Partial(p) = self.variable_state(&val) {
+                                println!("formatted {}", p.to_polar());
+                            }
+                        }
 
-                    Ok(())
-                })?,
+                        Ok(())
+                    },
+                )?
+            }
             Goal::Run { runnable } => return self.run_runnable(runnable.clone_runnable()),
         }
         Ok(QueryEvent::None)
