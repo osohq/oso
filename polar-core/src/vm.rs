@@ -2058,11 +2058,6 @@ impl PolarVirtualMachine {
                     VariableState::Bound(value) => {
                         self.push_goal(Goal::Unify { left: value, right })?;
                     }
-                    VariableState::Partial(_) => {
-                        if self.bind(var, right).is_err() {
-                            self.push_goal(Goal::Backtrack)?;
-                        }
-                    }
                     _ => {
                         if self.bind(var, right).is_err() {
                             self.push_goal(Goal::Backtrack)?;
@@ -2077,11 +2072,6 @@ impl PolarVirtualMachine {
                 match self.variable_state(var) {
                     VariableState::Bound(value) => {
                         self.push_goal(Goal::Unify { left, right: value })?;
-                    }
-                    VariableState::Partial(_) => {
-                        if self.bind(var, left).is_err() {
-                            self.push_goal(Goal::Backtrack)?;
-                        }
                     }
                     _ => {
                         if self.bind(var, left).is_err() {
