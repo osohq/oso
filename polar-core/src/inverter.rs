@@ -3,7 +3,7 @@ use std::collections::hash_map::Entry;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::bindings::{BindingManager, Bsp, VariableState};
+use crate::bindings::{BindingManager, Bsp, FollowerId, VariableState};
 use crate::counter::Counter;
 use crate::error::PolarResult;
 use crate::events::QueryEvent;
@@ -36,7 +36,7 @@ pub struct Inverter {
     add_constraints: Rc<RefCell<Bindings>>,
 
     /// The ID of the current binding manager follower. Initialized in `run`.
-    follower: Option<usize>,
+    follower: Option<FollowerId>,
 
     /// An ID to distinguish logging from each inverter, useful when debugging
     /// queries with multiple nested `not` operations.
@@ -50,7 +50,7 @@ impl Inverter {
         vm: &PolarVirtualMachine,
         goals: Goals,
         add_constraints: Rc<RefCell<Bindings>>,
-        bsp: usize,
+        bsp: Bsp,
     ) -> Self {
         let mut vm = vm.clone_with_goals(goals);
         vm.inverting = true;
