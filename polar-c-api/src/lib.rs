@@ -377,8 +377,13 @@ pub extern "C" fn polar_bind(
         let value = serde_json::from_str(&value);
         match value {
             Ok(value) => {
-                query.bind(terms::Symbol::new(name.as_ref()), value);
-                POLAR_SUCCESS
+                match query.bind(terms::Symbol::new(name.as_ref()), value) {
+                    Ok(_) => POLAR_SUCCESS,
+                    Err(e) => {
+                        set_error(e);
+                        POLAR_FAILURE
+                    }
+                }
             }
             Err(e) => {
                 set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());

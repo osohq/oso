@@ -7,7 +7,7 @@ use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use super::visitor::{walk_term, Visitor};
-use crate::bindings::{Binding, BindingManager, BindingStack, Bindings, Bsp, VariableState, FollowerId};
+use crate::bindings::{BindingManager, Bindings, Bsp, VariableState, FollowerId};
 use crate::counter::Counter;
 use crate::debugger::{DebugEvent, Debugger};
 use crate::error::{self, PolarResult};
@@ -502,7 +502,7 @@ impl PolarVirtualMachine {
                         println!("{:?}",
                             self.variable_state(&val));
                     }
-                    self.add_constraint(&constraint);
+                    self.add_constraint(&constraint)?;
                     println!("bindings after add_constraint: ");
                     for val in self.binding_manager.variables() {
                         println!("{val} {:?}",
@@ -2067,7 +2067,7 @@ impl PolarVirtualMachine {
                     VariableState::Bound(value) => {
                         self.push_goal(Goal::Unify { left: value, right })?;
                     }
-                    VariableState::Partial(f) => {
+                    VariableState::Partial(_) => {
                         if self.bind(var, right).is_err() {
                             self.push_goal(Goal::Backtrack)?;
                         }
@@ -2085,7 +2085,7 @@ impl PolarVirtualMachine {
                     VariableState::Bound(value) => {
                         self.push_goal(Goal::Unify { left, right: value })?;
                     }
-                    VariableState::Partial(f) => {
+                    VariableState::Partial(_) => {
                         if self.bind(var, left).is_err() {
                             self.push_goal(Goal::Backtrack)?;
                         }
@@ -2593,7 +2593,7 @@ impl PolarVirtualMachine {
                     self.bind(
                         &answer,
                         Term::new_temporary(Value::Boolean(right_fields.len() < left.fields.len())),
-                    );
+                    )?;
                 }
                 Ok(QueryEvent::None)
             }

@@ -181,7 +181,7 @@ impl BindingManager {
 
         assert!(term.value().as_expression().is_ok());
         let mut op = op!(And, term.clone());
-        for var in op.variables().clone().iter().rev() {
+        for var in op.variables().iter().rev() {
             match self._variable_state(&var) {
                 BindingManagerVariableState::Unbound => {},
                 BindingManagerVariableState::Cycle(c) => {
@@ -193,8 +193,8 @@ impl BindingManager {
                     e.merge_constraints(op);
                     op = e;
                 },
-                BindingManagerVariableState::Bound(v) => {
-                    panic!("Unexpected bound variable in constraint.");
+                BindingManagerVariableState::Bound(_) => {
+                    panic!("Unexpected bound variable {} in constraint.", var);
                 }
             }
         }
