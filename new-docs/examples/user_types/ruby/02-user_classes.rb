@@ -13,7 +13,7 @@ OSO.register_class(Customer)
 
 # internal-start
 class InternalUser
-  ...
+  # ...
 
   def role
     db.query('SELECT role FROM internal_roles WHERE id = ?', id)
