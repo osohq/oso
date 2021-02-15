@@ -7,7 +7,6 @@ use crate::error::{PolarResult, RuntimeError};
 use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
 use crate::terms::{has_rest_var, Operation, Operator, Symbol, Term, Value};
-use crate::vm::cycle_constraints;
 
 #[derive(Clone, Debug)]
 pub struct Binding(pub Symbol, pub Term);
@@ -30,6 +29,16 @@ pub enum VariableState {
     Unbound,
     Bound(Term),
     Partial(Operation),
+}
+
+/// Represent each binding in a cycle as a unification constraint.
+// TODO(gj): put this in an impl block on VariableState?
+fn cycle_constraints(cycle: Vec<Symbol>) -> Operation {
+    let mut constraints = op!(And);
+    for (x, y) in cycle.iter().zip(cycle.iter().skip(1)) {
+        constraints.add_constraint(op!(Unify, term!(x.clone()), term!(y.clone())));
+    }
+    constraints
 }
 
 impl From<BindingManagerVariableState> for VariableState {

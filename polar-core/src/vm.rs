@@ -172,16 +172,6 @@ impl std::ops::DerefMut for GoalStack {
 
 pub type Queries = TermList;
 
-/// Represent each binding in a cycle as a unification constraint.
-// TODO(gj): put this in an impl block on VariableState?
-pub fn cycle_constraints(cycle: Vec<Symbol>) -> Operation {
-    let mut constraints = op!(And);
-    for (x, y) in cycle.iter().zip(cycle.iter().skip(1)) {
-        constraints.add_constraint(op!(Unify, term!(x.clone()), term!(y.clone())));
-    }
-    constraints
-}
-
 // TODO(ap): don't panic.
 pub fn compare(op: Operator, left: &Term, right: &Term) -> bool {
     // Coerce booleans to integers.
