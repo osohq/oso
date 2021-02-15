@@ -33,9 +33,9 @@ python-test:
 	cd rbac/python && pytest .
 	cd context/python && pytest .
 	cd user_types/python && pytest .
-	cd data_access/sqlalchemy && pytest sqlalchemy_example
 	cd roles/sqlalchemy/basic && pytest .
 	$(MAKE) -C data_access/django test
+	$(MAKE) -C data_access/sqlalchemy test
 
 ruby-test:
 	cd abac/ruby && bundle exec rspec test_spec.rb
