@@ -786,6 +786,7 @@ fn test_non_instance_specializers() -> TestResult {
 }
 
 #[test]
+#[allow(clippy::unnecessary_wraps)]
 fn test_bindings() -> TestResult {
     let mut p = Polar::new();
 
@@ -1934,6 +1935,7 @@ fn test_list_matches() {
 }
 
 #[test]
+#[allow(clippy::unnecessary_wraps)]
 fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
     qruntime!(
         "x matches y",
