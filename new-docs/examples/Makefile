@@ -33,7 +33,7 @@ python-test:
 	cd rbac/python && pytest .
 	cd context/python && pytest .
 	cd user_types/python && pytest .
-	cd roles/sqlalchemy/basic && pytest .
+	cd roles/sqlalchemy/basic && pip install -r requirements.txt && pytest .
 	$(MAKE) -C data_access/django test
 	$(MAKE) -C data_access/sqlalchemy test
 
