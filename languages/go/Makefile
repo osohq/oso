@@ -19,4 +19,9 @@ test: copy_lib
 	go test -v ./tests/ -count=1
 
 fmt:
-	go fmt
+	go fmt ./...
+
+lint:
+	[ -n "$$(gofmt -l .)" ] && gofmt -l . && exit 1
+
+.PHONY: copy_lib test fmt lint

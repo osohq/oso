@@ -83,6 +83,7 @@ lint: clippy python-build python-flask-build python-sqlalchemy-build python-djan
 	$(MAKE) -C languages/python lint
 	$(MAKE) -C languages/ruby lint typecheck
 	$(MAKE) -C languages/js lint
+	$(MAKE) -C languages/go lint
 	$(MAKE) fmt
 
 wasm-build:
