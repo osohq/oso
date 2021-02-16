@@ -167,9 +167,11 @@ class Polar:
                 print_error(e)
                 continue
 
+            host = self.host.copy()
+            host.set_accept_expression(True)
             result = False
             try:
-                query = Query(ffi_query, host=self.host.copy()).run()
+                query = Query(ffi_query, host=host).run()
                 for res in query:
                     result = True
                     bindings = res["bindings"]
