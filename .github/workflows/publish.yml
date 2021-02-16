@@ -17,7 +17,7 @@ jobs:
           token: ${{ secrets.REPO_API_TOKEN }}
           repository: osohq/go-oso
           event-type: oso_release
-          client-payload: '{"tag": "v${{ github.event.inputs.version }}"}'
+          client-payload: '{"version": "${{ github.event.inputs.version }}"}'
 
   java:
     name: Publish java jar to maven repository
