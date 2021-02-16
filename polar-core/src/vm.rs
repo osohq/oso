@@ -3403,13 +3403,15 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         kb.add_generic_rule(gen_rule);
 
+        let kb = Arc::new(RwLock::new(kb));
+
         let external_instance = Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
             constructor: None,
             repr: None,
         });
         let query = query!(call!("bar", [sym!("x")]));
-        let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![query]);
+        let mut vm = PolarVirtualMachine::new_test(kb.clone(), false, vec![query]);
         vm.bind(&sym!("x"), Term::new_from_test(external_instance))
             .unwrap();
 
@@ -3434,10 +3436,9 @@ mod tests {
         let expected = vec![sym!("b"), sym!("a"), sym!("a")];
         assert_eq!(external_isas, expected);
 
+        let query = query!(call!("bar", [sym!("x")]));
+        let mut vm = PolarVirtualMachine::new_test(kb, false, vec![query]);
         vm.bind(&sym!("x"), Term::new_from_test(value!(1))).unwrap();
-        let _ = vm
-            .query(&Term::new_from_test(Value::Call(call!("bar", [sym!("x")]))))
-            .unwrap();
 
         let mut results = vec![];
         loop {

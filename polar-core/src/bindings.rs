@@ -43,13 +43,12 @@ fn cycle_constraints(cycle: Vec<Symbol>) -> Operation {
 
 impl From<BindingManagerVariableState> for VariableState {
     fn from(other: BindingManagerVariableState) -> Self {
+        // We represent Cycles as a Partial VariableState. This information is not
+        // needed in the VM, so unbound could be an acceptable representation as well.
+        // The partial representation does not slow down the VM since grounding happens
+        // within BindingManager::bind. The fast path of `bind_variables` is still taken
+        // instead of running Operation::ground.
         match other {
-            // NOTE: (dhatch) Investigating this... changing to partial seems fine, but
-            // it may cause every variable to always be a partial in the VM and never
-            // become bound.
-            // I also think representing this as Unbound would be fine, except the
-            // inverter needs the information as a constraint. not (x = y) adds a constraint
-            // x != y.
             BindingManagerVariableState::Unbound => VariableState::Unbound,
             BindingManagerVariableState::Bound(b) => VariableState::Bound(b),
             BindingManagerVariableState::Cycle(c) => VariableState::Partial(cycle_constraints(c)),
@@ -98,8 +97,6 @@ impl BindingManager {
 
     // **** State Mutation ***
 
-    // TODO (dhatch): Should this be polar result or boolean.
-
     /// Bind `var` to `val`.
     ///
     /// If the binding succeeds, Ok is returned. If the binding is *incompatible*
@@ -125,13 +122,6 @@ impl BindingManager {
     /// If a binding between two variables is made, and one is bound and the other unbound, the
     /// unbound variable will take the value of the bound one.
     pub fn bind(&mut self, var: &Symbol, val: Term) -> PolarResult<()> {
-        // TODO (dhatch): Would like to disable rebinding, but this has a large fallout.
-        // We use it extensively for testing and in external_question_result to give the result
-        // variable a default value (we could probably fix this some other way).
-        // If we don't disable rebinding, we need to do something with the rebind_variable_group
-        // test so that the behavior is better defined.
-        // assert!(!matches!(self.variable_state(var), VariableState::Bound(_)), "Variable is bound");
-
         if let Ok(symbol) = val.value().as_symbol() {
             self.bind_variables(var, symbol)?;
         } else if let BindingManagerVariableState::Partial(p) = self._variable_state(var) {
@@ -145,7 +135,13 @@ impl BindingManager {
                 .into());
             }
         } else {
-            // TODO already bound?
+            if let BindingManagerVariableState::Bound(_) = self._variable_state(var) {
+                return Err(RuntimeError::IncompatibleBindings {
+                    msg: format!("Cannot rebind {:?}", var),
+                }
+                .into());
+            }
+
             self.add_binding(var, val.clone());
         }
 
@@ -620,51 +616,6 @@ mod test {
         assert_eq!(
             bindings._variable_state(&x),
             BindingManagerVariableState::Partial(op!(And))
-        );
-    }
-
-    // Fails for now. See note in bind.
-    #[test]
-    #[ignore]
-    /// Test creating a group of variables bound together, and rebinding them.
-    fn rebind_variable_group() {
-        let mut bindings = BindingManager::new();
-        bindings.bind(&sym!("x"), term!(sym!("y"))).unwrap();
-        bindings.bind(&sym!("y"), term!(sym!("z"))).unwrap();
-
-        bindings.bind(&sym!("z"), term!(1)).unwrap();
-
-        // All have value 1.
-        assert_eq!(
-            bindings._variable_state(&sym!("x")),
-            BindingManagerVariableState::Bound(term!(1))
-        );
-        assert_eq!(
-            bindings._variable_state(&sym!("y")),
-            BindingManagerVariableState::Bound(term!(1))
-        );
-        assert_eq!(
-            bindings._variable_state(&sym!("z")),
-            BindingManagerVariableState::Bound(term!(1))
-        );
-
-        bindings.bind(&sym!("x"), term!(2)).unwrap();
-
-        // This doesn't always change all variables, and sometimes changes more than one variable.
-        // What should happen here?
-        // If we don't support rebinding, it's easier, but some parts of the VM subtly
-        // require rebinding.
-        assert_eq!(
-            bindings._variable_state(&sym!("x")),
-            BindingManagerVariableState::Bound(term!(2))
-        );
-        assert_eq!(
-            bindings._variable_state(&sym!("y")),
-            BindingManagerVariableState::Bound(term!(1))
-        );
-        assert_eq!(
-            bindings._variable_state(&sym!("z")),
-            BindingManagerVariableState::Bound(term!(1))
         );
     }
 
