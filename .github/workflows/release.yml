@@ -789,6 +789,12 @@ jobs:
       - name: Create JS release artifact
         working-directory: oso_js_node
         run: npm pack
+      - name: Download oso go lib
+        uses: actions/download-artifact@v1
+        with:
+          name: go
+      - name: Zip file
+        run: zip --junk-paths -r go-oso.zip go/
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
@@ -855,6 +861,15 @@ jobs:
           asset_path: ./oso_js_node/oso-${{ steps.version.outputs.oso_version }}.tgz
           asset_name: oso-js-node-${{ steps.version.outputs.oso_version }}.tgz
           asset_content_type: application/gzip
+      - name: Upload go package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./go-oso.zip
+          asset_name: go-oso-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
   alert-failure:
     name: Alert on failure
     if: ${{ !success() }}
