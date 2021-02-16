@@ -1083,7 +1083,6 @@ impl PolarVirtualMachine {
                     term!(unify)
                 };
 
-                // Add all but the last field constraint to the operation.
                 let constraints = fields.fields.iter().rev().map(to_unify).collect::<Vec<_>>();
                 for op in constraints {
                     self.add_constraint(&op)?;
