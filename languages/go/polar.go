@@ -5,6 +5,7 @@ package oso
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -141,12 +142,11 @@ func (p Polar) repl(files ...string) error {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("query> ")
-		text, _ := reader.ReadString('\n')
-		text = util.QueryStrip(text)
-
-		if text == "" {
-			continue
+		text, err := reader.ReadString('\n')
+		if err == io.EOF {
+			return nil
 		}
+		text = util.QueryStrip(text)
 
 		ffiQuery, err := p.ffiPolar.NewQueryFromStr(text)
 		if err != nil {
