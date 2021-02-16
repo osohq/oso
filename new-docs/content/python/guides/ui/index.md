@@ -1,5 +1,5 @@
 ---
-title: UI Access Control
+title: Authorize in the UI
 weight: 3
 description: |
   Control what you expose in the UI with Oso policies.
@@ -7,7 +7,7 @@ aliases:
   - /getting-started/ui/index.html
 ---
 
-# Authorization-Dependent UI Elements
+# Authorize in the UI
 
 ## Using Oso to control UI components
 

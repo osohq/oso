@@ -1,6 +1,6 @@
 ---
 # TODO: Rename?
-title: "Guides"
+title: "How-To Guides"
 weight: 2
 any: false
 ---

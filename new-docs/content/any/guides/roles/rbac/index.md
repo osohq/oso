@@ -3,25 +3,28 @@ date: "2021-01-07T02:46:33.217Z"
 docname: using/examples/rbac
 images: {}
 path: /using-examples-rbac
-title: Global RBAC
+title: Add Basic Roles
 description: |
-  Role-based access control (RBAC) assigns each actor a role. Instead of
-  granting permissions to individual actors, they are granted to roles.
+  Learn how to add basic roles to your application, no matter what data store/ORM you use.
 aliases:
   - ../../../using/examples/rbac.html
 ---
 
-# Global RBAC
+# Add Basic Roles to Your Application
 
-Many authorization systems in the wild are built on a [role-based access
-control](https://en.wikipedia.org/wiki/Role-based_access_control) model. The
-general thesis of RBAC is that the set of permissions for a system — a
-permission being the ability to perform an [action](glossary#actions) on a
-[resource](glossary#resources) — can be grouped into roles.
+Role-based access control (RBAC) refers to an authorization system that
+groups permissions into roles that are assigned to actors, rather than
+assigning permissions to actors directly. A permission is the ability to
+perform an [action](glossary#actions) on a [resource](glossary#resources). In
+an RBAC system, permissions are grouped into discrete roles (e.g., an "admin" role or
+"manager" role), and these roles are assigned to actors to confer
+permissions.
 
-This guide shows an example of implementing [global
-roles](learn/roles#global-roles). For guidance on other RBAC use
-cases, check out [Role-Based Access Control Patterns](learn/roles).
+This guide shows an example of implementing basic [global
+roles](learn/roles#global-roles) with Oso. Global Roles are roles that apply
+to users and resources globally across the application.
+
+For guidance on other RBAC use cases, check out [Role-Based Access Control Patterns](learn/roles).
 
 ## RBAC Basics
 
