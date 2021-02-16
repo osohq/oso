@@ -10,8 +10,7 @@ expenseClass: |
     ```
 
 userClass: |
-    ```python
-    @polar_class
+    ```go
     type User struct {
         name string
         location string
