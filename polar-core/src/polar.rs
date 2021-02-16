@@ -100,8 +100,8 @@ impl Query {
         self.vm.term_source(&self.term, true)
     }
 
-    pub fn bind(&mut self, name: Symbol, value: Term) {
-        self.vm.bind(&name, value);
+    pub fn bind(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
+        self.vm.bind(&name, value)
     }
 }
 

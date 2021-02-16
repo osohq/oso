@@ -173,6 +173,7 @@ pub mod display {
     use std::sync::Arc;
 
     use super::ToPolarString;
+    use crate::bindings::Binding;
     use crate::numerics::Numeric;
     use crate::rules::Rule;
     use crate::terms::{Operation, Operator, Symbol, Term, Value};
@@ -232,9 +233,6 @@ pub mod display {
             }
 
             match self {
-                Goal::Bind { var, value } => {
-                    write!(fmt, "Bind({}, {})", var, value.to_polar())
-                }
                 Goal::Isa { left, right } => {
                     write!(fmt, "Isa({}, {})", left.to_polar(), right.to_polar())
                 }

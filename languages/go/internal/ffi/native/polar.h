@@ -59,6 +59,8 @@ const char *polar_next_query_message(polar_Query *query_ptr);
 
 const char *polar_query_source_info(polar_Query *query_ptr);
 
+int32_t polar_bind(polar_Query *query_ptr, const char *name, const char *value);
+
 uint64_t polar_get_external_id(polar_Polar *polar_ptr);
 
 /**
