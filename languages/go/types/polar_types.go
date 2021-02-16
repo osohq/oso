@@ -2714,10 +2714,10 @@ func (variant Value) MarshalJSON() ([]byte, error) {
 		})
 
 	case ValueExpression:
-    return nil, fmt.Errorf(
-      "Recieved Expression from Polar VM. The Expression type is not yet supported in this language." +
-      "This may mean you performed an operation in your policy over an unbound variable.")
-  }
+		return nil, fmt.Errorf(
+			"Recieved Expression from Polar VM. The Expression type is not yet supported in this language.\n" +
+				"This may mean you performed an operation in your policy over an unbound variable.")
+	}
 
-  return nil, fmt.Errorf("unexpected variant of %v", variant)
+	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }

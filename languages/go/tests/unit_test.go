@@ -2,8 +2,8 @@ package oso_test
 
 import (
 	"reflect"
+	"strings"
 	"testing"
-  "strings"
 
 	oso "github.com/osohq/go-oso"
 	. "github.com/osohq/go-oso/types"
@@ -207,23 +207,23 @@ func TestConstructors(t *testing.T) {
 }
 
 func TestExpressionError(t *testing.T) {
-  var o oso.Oso
-  var err error
+	var o oso.Oso
+	var err error
 
 	if o, err = oso.NewOso(); err != nil {
 		t.Fatalf("Failed to set up Oso: %v", err)
 	}
 
-  if o.LoadString("f(x) if x > 2;") != nil {
-    t.Fatalf("Load string failed: %v", err)
-  }
+	if o.LoadString("f(x) if x > 2;") != nil {
+		t.Fatalf("Load string failed: %v", err)
+	}
 
-  _, errors := o.QueryRule("f", ValueVariable("x"));
-  err = <-errors;
+	_, errors := o.QueryRule("f", ValueVariable("x"))
+	err = <-errors
 
-  msg := err.Error();
+	msg := err.Error()
 
-  if !strings.Contains(msg, "unbound") {
-    t.Error("Does not contain unbound in error message.");
-  }
+	if !strings.Contains(msg, "unbound") {
+		t.Error("Does not contain unbound in error message.")
+	}
 }
