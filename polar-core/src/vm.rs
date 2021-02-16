@@ -7,7 +7,7 @@ use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use super::visitor::{walk_term, Visitor};
-use crate::bindings::{BindingManager, Bindings, Bsp, FollowerId, VariableState, BindingStack};
+use crate::bindings::{BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState};
 use crate::counter::Counter;
 use crate::debugger::{DebugEvent, Debugger};
 use crate::error::{self, PolarResult};
@@ -201,7 +201,10 @@ pub fn compare(op: Operator, left: &Term, right: &Term) -> PolarResult<bool> {
         (Value::Number(l), Value::Boolean(r)) => Ok(compare(op, l, &to_int(*r))),
         (Value::Number(l), Value::Number(r)) => Ok(compare(op, l, r)),
         (Value::String(l), Value::String(r)) => Ok(compare(op, l, r)),
-        _ => Err(error::RuntimeError::Unsupported { msg: format!("{} {} {}", left.to_polar(), op.to_polar(), right.to_polar()) }.into()),
+        _ => Err(error::RuntimeError::Unsupported {
+            msg: format!("{} {} {}", left.to_polar(), op.to_polar(), right.to_polar()),
+        }
+        .into()),
     }
 }
 
@@ -656,7 +659,6 @@ impl PolarVirtualMachine {
     pub fn bindings_debug(&self) -> &BindingStack {
         self.binding_manager.bindings_debug()
     }
-
 
     /// Returns bindings for all vars used by terms in terms.
     pub fn relevant_bindings(&self, terms: &[&Term]) -> Bindings {
