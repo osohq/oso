@@ -485,9 +485,7 @@ impl PolarVirtualMachine {
             Goal::AddConstraint { term } => self.add_constraint(&term)?,
             Goal::AddConstraintsBatch { add_constraints } => {
                 add_constraints.borrow_mut().drain().try_for_each(
-                    |(_, constraint)| -> PolarResult<()> {
-                        self.add_constraint(&constraint)
-                    },
+                    |(_, constraint)| -> PolarResult<()> { self.add_constraint(&constraint) },
                 )?
             }
             Goal::Run { runnable } => return self.run_runnable(runnable.clone_runnable()),

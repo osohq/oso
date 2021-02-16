@@ -111,10 +111,7 @@ fn invert_partials(bindings: BindingManager) -> Bindings {
     simplified
         .into_iter()
         .map(|(k, v)| match v.value() {
-            Value::Expression(e) => (
-                k,
-                e.invert().into_term(),
-            ),
+            Value::Expression(e) => (k, e.invert().into_term()),
             _ => (
                 k.clone(),
                 term!(op!(And, term!(op!(Neq, term!(k), v.clone())))),
@@ -179,9 +176,9 @@ fn filter_inverted_constraints(
         .into_iter()
         .filter(|(k, _)| {
             !(matches!(
-                    vm.variable_state_at_point(k, bsp),
-                    VariableState::Unbound | VariableState::Bound(_)
-                ))
+                vm.variable_state_at_point(k, bsp),
+                VariableState::Unbound | VariableState::Bound(_)
+            ))
         })
         .collect::<Bindings>()
 }

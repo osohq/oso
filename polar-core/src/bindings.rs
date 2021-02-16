@@ -524,7 +524,9 @@ impl BindingManager {
             match self._variable_state(&var) {
                 // A constraint should not contain a bound variable, it should have been removed in
                 // add_constraint by calling ground.
-                BindingManagerVariableState::Bound(_) => panic!("Unexpected bound variable in constraint."),
+                BindingManagerVariableState::Bound(_) => {
+                    panic!("Unexpected bound variable in constraint.")
+                }
                 _ => self.add_binding(&var, o.clone().into_term()),
             }
         }

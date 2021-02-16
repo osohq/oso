@@ -207,7 +207,12 @@ impl Operation {
             Not,
             term!(value!(Operation {
                 operator: Operator::And,
-                args: self.constraints().iter().cloned().map(|o| term!(value!(o))).collect()
+                args: self
+                    .constraints()
+                    .iter()
+                    .cloned()
+                    .map(|o| term!(value!(o)))
+                    .collect()
             }))
         )])
     }
