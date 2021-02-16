@@ -163,7 +163,7 @@ impl Operation {
                             | (Value::Boolean(_), Value::Number(_))
                             | (Value::Boolean(_), Value::Boolean(_))
                             | (Value::String(_), Value::String(_)) => {
-                                if compare(o.operator, &left, &right) {
+                                if compare(o.operator, &left, &right).unwrap() {
                                     TRUE
                                 } else {
                                     self.consistent = false;

@@ -286,7 +286,7 @@ impl Debugger {
             }
             "goals" => return Some(show(&vm.goals)),
             "bindings" => {
-                return Some(show(vm.binding_manager.bindings_debug().as_slice()))
+                return Some(show(vm.bindings_debug().as_slice()))
             }
             "var" => {
                 if parts.len() > 1 {

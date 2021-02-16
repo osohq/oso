@@ -7,7 +7,7 @@ use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use super::visitor::{walk_term, Visitor};
-use crate::bindings::{BindingManager, Bindings, Bsp, FollowerId, VariableState};
+use crate::bindings::{BindingManager, Bindings, Bsp, FollowerId, VariableState, BindingStack};
 use crate::counter::Counter;
 use crate::debugger::{DebugEvent, Debugger};
 use crate::error::{self, PolarResult};
@@ -173,7 +173,7 @@ impl std::ops::DerefMut for GoalStack {
 pub type Queries = TermList;
 
 // TODO(ap): don't panic.
-pub fn compare(op: Operator, left: &Term, right: &Term) -> bool {
+pub fn compare(op: Operator, left: &Term, right: &Term) -> PolarResult<bool> {
     // Coerce booleans to integers.
     fn to_int(x: bool) -> Numeric {
         if x {
@@ -196,12 +196,12 @@ pub fn compare(op: Operator, left: &Term, right: &Term) -> bool {
     }
 
     match (left.value(), right.value()) {
-        (Value::Boolean(l), Value::Boolean(r)) => compare(op, &to_int(*l), &to_int(*r)),
-        (Value::Boolean(l), Value::Number(r)) => compare(op, &to_int(*l), r),
-        (Value::Number(l), Value::Boolean(r)) => compare(op, l, &to_int(*r)),
-        (Value::Number(l), Value::Number(r)) => compare(op, l, r),
-        (Value::String(l), Value::String(r)) => compare(op, l, r),
-        _ => panic!("{} {} {}", left.to_polar(), op.to_polar(), right.to_polar()),
+        (Value::Boolean(l), Value::Boolean(r)) => Ok(compare(op, &to_int(*l), &to_int(*r))),
+        (Value::Boolean(l), Value::Number(r)) => Ok(compare(op, &to_int(*l), r)),
+        (Value::Number(l), Value::Boolean(r)) => Ok(compare(op, l, &to_int(*r))),
+        (Value::Number(l), Value::Number(r)) => Ok(compare(op, l, r)),
+        (Value::String(l), Value::String(r)) => Ok(compare(op, l, r)),
+        _ => Err(error::RuntimeError::Unsupported { msg: format!("{} {} {}", left.to_polar(), op.to_polar(), right.to_polar()) }.into()),
     }
 }
 
@@ -209,7 +209,7 @@ pub fn compare(op: Operator, left: &Term, right: &Term) -> bool {
 pub struct PolarVirtualMachine {
     /// Stacks.
     pub goals: GoalStack,
-    pub binding_manager: BindingManager,
+    binding_manager: BindingManager,
     choices: Choices,
     pub queries: Queries,
 
@@ -651,6 +651,12 @@ impl PolarVirtualMachine {
     pub fn bindings(&self, include_temps: bool) -> Bindings {
         self.binding_manager.bindings_after(include_temps, self.csp)
     }
+
+    /// Retrive internal binding stack for debugger.
+    pub fn bindings_debug(&self) -> &BindingStack {
+        self.binding_manager.bindings_debug()
+    }
+
 
     /// Returns bindings for all vars used by terms in terms.
     pub fn relevant_bindings(&self, terms: &[&Term]) -> Bindings {
@@ -1743,7 +1749,7 @@ impl PolarVirtualMachine {
                 })
             }
             _ => {
-                if !compare(*op, left, right) {
+                if !compare(*op, left, right)? {
                     self.push_goal(Goal::Backtrack)?;
                 }
                 Ok(QueryEvent::None)
