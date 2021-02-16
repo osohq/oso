@@ -7,6 +7,7 @@ use super::sources::*;
 use super::terms::*;
 use super::traces::*;
 
+use super::bindings::Binding;
 use super::vm::*;
 
 impl PolarVirtualMachine {
@@ -285,7 +286,7 @@ impl Debugger {
             }
             "goals" => return Some(show(&vm.goals)),
             "bindings" => {
-                return Some(show(&vm.bindings))
+                return Some(show(vm.bindings_debug().as_slice()))
             }
             "var" => {
                 if parts.len() > 1 {

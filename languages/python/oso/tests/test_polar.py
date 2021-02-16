@@ -8,12 +8,11 @@ from polar import (
     Polar,
     Predicate,
     Variable,
-    Partial,
     Expression,
     Pattern,
 )
 from polar.partial import TypeConstraint
-from polar.exceptions import InvalidCallError
+from polar.exceptions import InvalidCallError, UnexpectedPolarTypeError
 
 import pytest
 
@@ -39,9 +38,9 @@ def test_data_conversions(polar, qvar, query):
     assert qvar("b(x)", "x", one=True) == "two"
     assert qvar("c(x)", "x", one=True)
     assert qvar("d(x)", "x", one=True) == [1, "two", True]
-    y = qvar("x = y", "x", one=True)
-    assert str(y) == "Variable('y')"
-    assert repr(y) == "Variable('y')"
+    x = qvar("x = y", "x", one=True)
+    assert str(x) == "Variable('y')"
+    assert repr(x) == "Variable('y')"
 
 
 def test_load_function(polar, query, qvar):
@@ -779,37 +778,44 @@ def unwrap_and(x):
         return x.args
 
 
+def test_partial_unification(polar):
+    polar.load_str("f(x, y) if x = y;")
+    x = Variable("x")
+    y = Variable("y")
+    results = polar.query_rule("f", x, y)
+    result = next(results)["bindings"]
+    assert result["x"] == y
+    assert result["y"] == x
+    with pytest.raises(StopIteration):
+        next(results)
+
+
 def test_partial(polar):
     polar.load_str("f(1);")
     polar.load_str("f(x) if x = 1 and x = 2;")
 
-    results = polar.query_rule("f", Partial("x"))
+    results = polar.query_rule("f", Variable("x"), accept_expression=True)
     first = next(results)
 
     x = first["bindings"]["x"]
-    assert Expression("Unify", [Variable("_this"), 1])
+    assert x == 1
 
-    second = next(results)
-    x = second["bindings"]["x"]
-
-    # Top level should be and
-    and_args = unwrap_and(x)
-    assert and_args[0] == Expression("Unify", [Variable("_this"), 1])
-    assert and_args[1] == Expression("Unify", [Variable("_this"), 2])
+    with pytest.raises(StopIteration):
+        next(results)
 
     polar.load_str("g(x) if x.bar = 1 and x.baz = 2;")
 
-    results = polar.query_rule("g", Partial("x"))
+    results = polar.query_rule("g", Variable("x"), accept_expression=True)
     first = next(results)
 
     x = first["bindings"]["x"]
     and_args = unwrap_and(x)
     assert len(and_args) == 2
     assert and_args[0] == Expression(
-        "Unify", [Expression("Dot", [Variable("_this"), "bar"]), 1]
+        "Unify", [1, Expression("Dot", [Variable("_this"), "bar"])]
     )
     assert and_args[1] == Expression(
-        "Unify", [Expression("Dot", [Variable("_this"), "baz"]), 2]
+        "Unify", [2, Expression("Dot", [Variable("_this"), "baz"])]
     )
 
 
@@ -826,8 +832,10 @@ def test_partial_constraint(polar):
     polar.load_str("f(x: User) if x.user = 1;")
     polar.load_str("f(x: Post) if x.post = 1;")
 
-    partial = Partial("x", TypeConstraint("User"))
-    results = polar.query_rule("f", partial)
+    x = Variable("x")
+    results = polar.query_rule(
+        "f", x, bindings={x: TypeConstraint(x, "User")}, accept_expression=True
+    )
 
     first = next(results)["bindings"]["x"]
     and_args = unwrap_and(first)
@@ -838,11 +846,43 @@ def test_partial_constraint(polar):
 
     unify = and_args[1]
     assert unify == Expression(
-        "Unify", [Expression("Dot", [Variable("_this"), "user"]), 1]
+        "Unify", [1, Expression("Dot", [Variable("_this"), "user"])]
     )
 
     with pytest.raises(StopIteration):
         next(results)
+
+
+def test_partial_rule_filtering(polar):
+    class A:
+        def __init__(self):
+            self.c = C()
+
+    class B:
+        pass
+
+    class C:
+        pass
+
+    class D:
+        pass
+
+    polar.register_class(A)
+    polar.register_class(B)
+    polar.register_class(C)
+    polar.register_class(D)
+
+    polar.load_str(
+        """f(x: A) if g(x.c);
+           g(_: B);
+           g(_: C);
+           g(_: D);"""
+    )
+
+    x = Variable("x")
+    with pytest.raises(exceptions.PolarRuntimeError) as e:
+        next(polar.query_rule("f", x, bindings={x: TypeConstraint(x, "A")}))
+    assert str(e.value) == "Cannot generically walk fields of a Python class"
 
 
 def test_iterators(polar, qeval, qvar):
@@ -860,3 +900,11 @@ def test_iterators(polar, qeval, qvar):
     polar.register_class(Bar)
     assert qvar("x in new Bar([1, 2, 3])", "x") == [1, 2, 3]
     assert qvar("x = new Bar([1, 2, 3]).sum()", "x", one=True) == 6
+
+
+def test_unexpected_expression(polar):
+    """Ensure expression type raises error from core."""
+    polar.load_str("f(x) if x > 2;")
+
+    with pytest.raises(UnexpectedPolarTypeError):
+        next(polar.query_rule("f", Variable("x")))

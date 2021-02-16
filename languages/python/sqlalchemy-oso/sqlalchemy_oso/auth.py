@@ -1,5 +1,7 @@
 from oso import Oso
-from polar.partial import Partial, TypeConstraint
+from polar import Variable
+from polar.exceptions import PolarRuntimeError
+from polar.partial import TypeConstraint
 
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
@@ -43,15 +45,37 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
     :param session: The SQLAlchemy session.
     :param model: The model to authorize, must be a SQLAlchemy model or alias.
     """
+
+    def get_field_type(model, field):
+        try:
+            field = getattr(model, field)
+        except AttributeError:
+            raise PolarRuntimeError(f"Cannot get property {field} on {model}.")
+
+        try:
+            return field.entity.class_
+        except AttributeError as e:
+            raise PolarRuntimeError(
+                f"Cannot determine type of {field} on {model}."
+            ) from e
+
+    oso.host.get_field = get_field_type
+
     try:
         mapped_class = inspect(model, raiseerr=True).class_
     except AttributeError:
         raise TypeError(f"Expected a model; received: {model}")
 
-    partial_resource = Partial(
-        "resource", TypeConstraint(polar_model_name(mapped_class))
+    resource = Variable("resource")
+    constraint = TypeConstraint(resource, polar_model_name(mapped_class))
+    results = oso.query_rule(
+        "allow",
+        actor,
+        action,
+        resource,
+        bindings={resource: constraint},
+        accept_expression=True,
     )
-    results = oso.query_rule("allow", actor, action, partial_resource)
 
     combined_filter = None
     has_result = False

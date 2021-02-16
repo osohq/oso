@@ -102,6 +102,12 @@ mod tests {
     }
 
     #[test]
+    fn test_dot_lookups() {
+        let exp = parse_term("a.b");
+        assert_eq!(exp, term!(op!(Dot, term!(sym!("a")), term!("b"))));
+    }
+
+    #[test]
     fn try_it_with_macros() {
         let int = parse_term(" 123");
         assert_eq!(int, term!(123));

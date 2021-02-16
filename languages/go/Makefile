@@ -17,3 +17,14 @@ endif
 
 test: copy_lib
 	go test -v ./tests/ -count=1
+
+fmt:
+	go fmt ./...
+
+lint:
+	if [ -n "$$(gofmt -l .)" ]; then \
+		gofmt -l . && \
+		exit 1; \
+	fi
+
+.PHONY: copy_lib test fmt lint

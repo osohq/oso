@@ -11,12 +11,39 @@ from polar.expression import Expression
 from polar.variable import Variable
 from polar.exceptions import UnsupportedError
 
+from sqlalchemy_oso.preprocess import preprocess
+
 # TODO (dhatch) Better types here, first any is model, second any is a sqlalchemy expr.
 EmitFunction = Callable[[Session, Any], Any]
 
 
+COMPARISONS = {
+    "Unify": lambda p, v: p == v,
+    "Eq": lambda p, v: p == v,
+    "Neq": lambda p, v: p != v,
+    "Geq": lambda p, v: p >= v,
+    "Gt": lambda p, v: p > v,
+    "Leq": lambda p, v: p <= v,
+    "Lt": lambda p, v: p < v,
+}
+
+
+def flip_op(operator):
+    flips = {
+        "Eq": "Eq",
+        "Unify": "Unify",
+        "Neq": "Neq",
+        "Geq": "Leq",
+        "Gt": "Lt",
+        "Leq": "Gtq",
+        "Lt": "Gt",
+    }
+    return flips[operator]
+
+
 def partial_to_filter(expression: Expression, session: Session, model, get_model):
     """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
+    expression = preprocess(expression)
     return translate_expr(expression, session, model, get_model)
 
 
@@ -47,10 +74,11 @@ def translate_and(expression: Expression, session: Session, model, get_model):
 def translate_isa(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "Isa"
     left, right = expression.args
-    if dot_path(left) == ():
-        assert left == Variable("_this")
-    else:
-        for field_name in dot_path(left):
+    left_path = dot_path(left)
+    assert left_path[0] == Variable("_this")
+    left_path = left_path[1:]  # Drop _this.
+    if left_path:
+        for field_name in left_path:
             _, model, __ = get_relationship(model, field_name)
 
     assert not right.fields, "Unexpected fields in isa expression"
@@ -62,13 +90,24 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
 def translate_compare(expression: Expression, session: Session, model, get_model):
     (left, right) = expression.args
     left_path = dot_path(left)
-    if left_path:
-        path, field_name = left_path[:-1], left_path[-1]
+    right_path = dot_path(right)
+
+    if left_path[1:]:
+        assert left_path[0] == Variable("_this")
+        assert not right_path
+        path, field_name = left_path[1:-1], left_path[-1]
         return translate_dot(
             path,
             session,
             model,
             functools.partial(emit_compare, field_name, right, expression.operator),
+        )
+    elif right_path and right_path[0] == "_this":
+        return translate_compare(
+            Expression(flip_op(expression.operator), [right, left]),
+            session,
+            model,
+            get_model,
         )
     else:
         assert left == Variable("_this")
@@ -98,19 +137,30 @@ def translate_in(expression, session, model, get_model):
     # There are two possible types of in operations. In both, the right hand side
     # should be a dot op.
 
+    path = dot_path(right)
+    assert path[0] == "_this"
+    path = path[1:]
+    assert path
+
     # Partial In: LHS is an expression
     if isinstance(left, Expression):
-        path = dot_path(right)
-        assert path
-
         return translate_dot(
-            path, session, model, functools.partial(emit_subexpression, left, get_model)
+            path,
+            session,
+            model,
+            functools.partial(emit_subexpression, left, get_model),
+        )
+    elif isinstance(left, Variable):
+        # A variable with no additional constraints
+        return translate_dot(
+            path,
+            session,
+            model,
+            functools.partial(emit_subexpression, Expression("And", []), get_model),
         )
     else:
         # Contains: LHS is not an expression.
         # TODO (dhatch) Missing check, left type must match type of the target?
-        path = dot_path(right)
-        assert path
         path, field_name = path[:-1], path[-1]
         return translate_dot(
             path, session, model, functools.partial(emit_contains, field_name, left)
@@ -141,19 +191,9 @@ def get_relationship(model, field_name: str):
     return (property, model, relationship.uselist)
 
 
-COMPARISONS = {
-    "Unify": lambda p, v: p == v,
-    "Eq": lambda p, v: p == v,
-    "Neq": lambda p, v: p != v,
-    "Geq": lambda p, v: p >= v,
-    "Gt": lambda p, v: p > v,
-    "Leq": lambda p, v: p <= v,
-    "Lt": lambda p, v: p < v,
-}
-
-
 def emit_compare(field_name, value, operator, session, model):
     """Emit a comparison operation comparing the value of ``field_name`` on ``model`` to ``value``."""
+    assert not isinstance(value, Variable), "value is a variable"
     property = getattr(model, field_name)
     return COMPARISONS[operator](property, value)
 

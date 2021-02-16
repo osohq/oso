@@ -912,3 +912,14 @@ fn test_nil() {
     oso.qeval("nil.is_none()");
     oso.qnull("x in nil");
 }
+
+#[test]
+fn test_expression_error() {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.load_str("f(x) if x > 2;");
+
+    let err = oso.query_err("f(x)");
+    assert!(err.contains("unbound"));
+}
