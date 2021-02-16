@@ -1713,7 +1713,7 @@ fn test_assignment() {
     qruntime!(
         "x := 5 and x := 6",
         RuntimeError::TypeError { msg: s, .. },
-        s == "Can only assign to unbound variables, x is bound to value 5."
+        s == "Can only assign to unbound variables, x is not unbound."
     );
     qnull(&mut p, "x := 5 and x > 6");
     qeval(&mut p, "x := y and y = 6 and x = 6");

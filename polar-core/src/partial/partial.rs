@@ -1645,22 +1645,6 @@ mod test {
     }
 
     #[test]
-    fn test_assignment_to_partial() -> TestResult {
-        let p = Polar::new();
-        p.load_str(
-            r#"f(x) if x := 1;
-               g(x) if x = 1 and y := x;"#,
-        )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
-
-        let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
-        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
-        assert_query_done!(q);
-        Ok(())
-    }
-
-    #[test]
     fn nonlogical_inversions() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x) if not print(x);")?;
