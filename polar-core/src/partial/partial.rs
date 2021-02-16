@@ -1392,10 +1392,9 @@ mod test {
         assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this >= 0");
         assert_query_done!(q);
 
-        // TODO(ap): The below fails because of interaction between the simplifier and inverter.
-        // let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
-        // assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this != 2");
-        // assert_query_done!(q);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this != 2");
+        assert_query_done!(q);
 
         Ok(())
     }
