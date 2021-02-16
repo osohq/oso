@@ -1451,7 +1451,13 @@ impl PolarVirtualMachine {
                             self.push_goal(Goal::Unify { left, right })?;
                         }
                         _ => {
-                            return Err(self.type_error(&left, format!("Can only assign to unbound variables, {} is not unbound.", var.to_polar())));
+                            return Err(self.type_error(
+                                &left,
+                                format!(
+                                    "Can only assign to unbound variables, {} is not unbound.",
+                                    var.to_polar()
+                                ),
+                            ));
                         }
                     },
                     _ => {
