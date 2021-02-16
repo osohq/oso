@@ -24,7 +24,7 @@ class Host:
         self.ffi_polar = polar  # a "weak" handle, which we do not free
         self.classes = (classes or {}).copy()
         self.instances = (instances or {}).copy()
-        self._accept_expression = False # default, see set_accept_expression
+        self._accept_expression = False  # default, see set_accept_expression
 
         def default_get_field(_obj, _field):
             raise PolarRuntimeError("Cannot generically walk fields of a Python class")
