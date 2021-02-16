@@ -22,6 +22,9 @@ fmt:
 	go fmt ./...
 
 lint:
-	[ -n "$$(gofmt -l .)" ] && gofmt -l . && exit 1
+	if [ -n "$$(gofmt -l .)" ]; then \
+		gofmt -l . && \
+		exit 1; \
+	fi
 
 .PHONY: copy_lib test fmt lint
