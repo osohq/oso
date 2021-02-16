@@ -1,4 +1,4 @@
-__version__ = "0.4.1"
+__version__ = "0.5.0"
 
 from .auth import register_models
 from .session import authorized_sessionmaker, set_get_session
