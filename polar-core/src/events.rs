@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::kb::*;
+use super::bindings::Bindings;
 use super::runnable::Runnable;
 use super::terms::*;
 use super::traces::*;

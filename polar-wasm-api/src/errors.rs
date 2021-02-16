@@ -36,6 +36,7 @@ fn kind(err: &PolarError) -> String {
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
         Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
+        Runtime(IncompatibleBindings { .. }) => "RuntimeError::IncompatibleBindings",
         Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
         Runtime(Serialization { .. }) => "RuntimeError::Serialization",
         Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",

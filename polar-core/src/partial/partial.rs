@@ -201,19 +201,20 @@ impl Operation {
         self.args.extend(other.args);
     }
 
-    // TODO(gj): simpler way to write this function.
-    pub fn inverted_constraints(&self, csp: usize) -> Vec<Operation> {
-        let constraints = self.constraints();
-        let (old, new) = constraints.split_at(csp);
-        let mut combined = old.to_vec();
-        combined.push(op!(
+    // Invert constraints in operation after CSP.
+    pub fn invert(&self) -> Operation {
+        self.clone_with_constraints(vec![op!(
             Not,
             term!(value!(Operation {
                 operator: Operator::And,
-                args: new.iter().cloned().map(|o| term!(value!(o))).collect()
+                args: self
+                    .constraints()
+                    .iter()
+                    .cloned()
+                    .map(|o| term!(value!(o)))
+                    .collect()
             }))
-        ));
-        combined
+        )])
     }
 
     pub fn constraints(&self) -> Vec<Operation> {
@@ -283,10 +284,10 @@ impl Operation {
 mod test {
     use super::*;
 
+    use crate::bindings::Bindings;
     use crate::error::{ErrorKind, PolarError, RuntimeError};
     use crate::events::QueryEvent;
     use crate::formatting::ToPolarString;
-    use crate::kb::Bindings;
     use crate::polar::{Polar, Query};
     use crate::terms::{Call, Dictionary, InstanceLiteral, Pattern};
 
@@ -1272,7 +1273,8 @@ mod test {
                s(x) if not (x = 2 or x > 3 or x = 4) and x > 1;
                t(x) if not (x <= 0 or x <= 1 or x <= 2 or not (x > 3 or x > 4 or x > 5));
                u(x) if not ((x <= 0 or x <= 1 or x <= 2 or not (x > 3 or x > 4 or x > 5)) and x = 6);
-               v(x) if x = y and not (y = 1) and x = y;"#
+               v(x) if x = y and not (y = 1) and x = y;
+               w(x) if not ((x <= 0 or x <= 1 or x <= 2 or not (x > 9 or x > 8 or x > 7)) and x = 6);"#
         )?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
@@ -1343,16 +1345,18 @@ mod test {
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("u", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q)?,
-            "x",
-            "_this != 6 or _this > 3 or _this > 4 or _this > 5"
-        );
+        let binding = next_binding(&mut q)?;
+        // This is unbound because any input succeeds.
+        assert_eq!(binding.get(&sym!("x")).unwrap(), &term!(sym!("x")));
         assert_query_done!(q);
 
         let mut v = p.new_query_from_term(term!(call!("v", [sym!("x")])), false);
         assert_partial_expression!(next_binding(&mut v)?, "x", "_this != 1");
         assert_query_done!(v);
+
+        let mut q = p.new_query_from_term(term!(call!("w", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this != 6");
+        assert_query_done!(q);
 
         Ok(())
     }
@@ -1388,10 +1392,9 @@ mod test {
         assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this >= 0");
         assert_query_done!(q);
 
-        // TODO(ap): The below fails because of interaction between the simplifier and inverter.
-        // let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
-        // assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this != 2");
-        // assert_query_done!(q);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this > 1 and _this != 2");
+        assert_query_done!(q);
 
         Ok(())
     }
@@ -1642,22 +1645,6 @@ mod test {
     }
 
     #[test]
-    fn test_assignment_to_partial() -> TestResult {
-        let p = Polar::new();
-        p.load_str(
-            r#"f(x) if x := 1;
-               g(x) if x = 1 and y := x;"#,
-        )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
-
-        let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
-        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
-        assert_query_done!(q);
-        Ok(())
-    }
-
-    #[test]
     fn nonlogical_inversions() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x) if not print(x);")?;
@@ -1717,16 +1704,112 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "_this = 1 and not _this matches Foo{}"
+            "1 = _this and not 1 matches Foo{}"
         );
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "_this = 1 and not _this matches Bar{}"
+            "1 = _this and not 1 matches Bar{}"
         );
         assert_query_done!(q);
         Ok(())
     }
 
+    #[test]
+    fn test_multiple_gt_three_variables() -> TestResult {
+        let p = Polar::new();
+        p.load_str(r#"f(x, y, z) if x > z and y > z;"#)?;
+        let mut q =
+            p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y"), sym!("z")])), false);
+        assert_partial_expressions!(
+            next_binding(&mut q)?,
+            "x" => "_this > z and y > z",
+            "y" => "x > z and _this > z",
+            "z" => "x > _this and y > _this"
+        );
+        assert_query_done!(q);
+        Ok(())
+    }
+
+    #[test]
+    fn test_negated_any_value() -> TestResult {
+        let p = Polar::new();
+        p.load_str(r#"f(x, y) if x = 1 and not (y = 1 and x = 2);"#)?;
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
+        let bindings = next_binding(&mut q)?;
+        assert_eq!(bindings.get(&sym!("x")).unwrap(), &term!(1));
+        // y is unbound (to itself)
+        assert_eq!(bindings.get(&sym!("y")).unwrap(), &term!(sym!("y")));
+        assert_query_done!(q);
+        Ok(())
+    }
+
+    #[test]
+    fn test_negation_two_rules() -> TestResult {
+        let p = Polar::new();
+        // TODO: More complicated version:
+        //  f(x) if not g(z) and z = x;
+        //  g(y) if y = 1;
+        p.load_str(
+            r#"f(x) if not g(x);
+                      g(y) if y = 1;
+
+                h(x) if not (not g(x));
+                      "#,
+        )?;
+
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        let bindings = next_binding(&mut q)?;
+        assert_partial_expressions!(
+            &bindings,
+            "x" => "_this != 1"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("f", [2])), false);
+        assert_eq!(next_binding(&mut q)?.len(), 0);
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("f", [1])), false);
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
+        let bindings = next_binding(&mut q)?;
+        assert_eq!(bindings.get(&sym!("x")).unwrap(), &term!(1));
+        assert_query_done!(q);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_constraint_no_input_variables() -> TestResult {
+        let p = Polar::new();
+        // TODO: More complicated version:
+        //  f(x) if not g(z) and z = x;
+        //  g(y) if y = 1;
+        p.load_str(r#"f() if x = 1;"#)?;
+
+        let mut q = p.new_query_from_term(term!(call!("f", [])), false);
+        let r = next_binding(&mut q)?;
+        assert_eq!(r.len(), 0);
+        assert_query_done!(q);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_output_variable() -> TestResult {
+        let p = Polar::new();
+        p.load_str(r#"f(a, b) if a = b;"#)?;
+
+        let mut q = p.new_query_from_term(term!(call!("f", [1, sym!("x")])), false);
+        let r = next_binding(&mut q)?;
+        assert_eq!(r.get(&sym!("x")).unwrap(), &term!(1));
+        assert_query_done!(q);
+
+        Ok(())
+    }
+
     // TODO(gj): add test where we have a partial prior to an inversion
+    // TODO (dhatch): We have few tests involving multiple rules and partials.
 }
