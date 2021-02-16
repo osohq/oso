@@ -2475,22 +2475,6 @@ func (variant *ValueExpression) UnmarshalJSON(b []byte) error {
 
 func (ValueExpression) isValue() {}
 
-// ValuePartial newtype
-type ValuePartial Partial
-
-func (variant ValuePartial) MarshalJSON() ([]byte, error) {
-	return json.Marshal(Partial(variant))
-}
-
-func (variant *ValuePartial) UnmarshalJSON(b []byte) error {
-	inner := Partial(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ValuePartial(inner)
-	return err
-}
-
-func (ValuePartial) isValue() {}
-
 // Value enum
 type ValueVariant interface {
 	isValue()
@@ -2635,17 +2619,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 
 	case "Expression":
 		var variant ValueExpression
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = Value{variant}
-		return nil
-
-	case "Partial":
-		var variant ValuePartial
 		if variantValue != nil {
 			err := json.Unmarshal(*variantValue, &variant)
 			if err != nil {
