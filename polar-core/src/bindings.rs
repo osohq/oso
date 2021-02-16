@@ -264,7 +264,6 @@ impl BindingManager {
 
     /// Dereference all variables in term, including within nested structures like
     /// lists and dictionaries.
-    /// Do not dereference variables inside expressions.
     pub fn deep_deref(&self, term: &Term) -> Term {
         pub struct Derefer<'a> {
             binding_manager: &'a BindingManager,
@@ -282,10 +281,7 @@ impl BindingManager {
                     Value::List(_) => fold_term(self.binding_manager.deref(&t), self),
                     Value::Variable(_) | Value::RestVariable(_) => {
                         let derefed = self.binding_manager.deref(&t);
-                        match derefed.value() {
-                            Value::Expression(_) => t,
-                            _ => fold_term(derefed, self),
-                        }
+                        fold_term(derefed, self)
                     }
                     _ => fold_term(t, self),
                 }
