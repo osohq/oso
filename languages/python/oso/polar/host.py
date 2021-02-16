@@ -9,7 +9,7 @@ from .exceptions import (
     UnregisteredInstanceError,
     DuplicateInstanceRegistrationError,
     UnexpectedPolarTypeError,
-    UNEXPECTED_EXPRESSION_MESSAGE
+    UNEXPECTED_EXPRESSION_MESSAGE,
 )
 from .variable import Variable
 from .predicate import Predicate
@@ -256,4 +256,3 @@ class Host:
     def set_accept_expression(self, accept):
         """Set whether the Host accepts Expression types from Polar, or raises an error."""
         self._accept_expression = accept
-

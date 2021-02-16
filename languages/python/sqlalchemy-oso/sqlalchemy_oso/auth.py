@@ -69,8 +69,12 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
     resource = Variable("resource")
     constraint = TypeConstraint(resource, polar_model_name(mapped_class))
     results = oso.query_rule(
-        "allow", actor, action, resource, bindings={resource: constraint},
-        accept_expression=True
+        "allow",
+        actor,
+        action,
+        resource,
+        bindings={resource: constraint},
+        accept_expression=True,
     )
 
     combined_filter = None

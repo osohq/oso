@@ -297,9 +297,10 @@ public class Host implements Cloneable {
       default:
         if (tag.equals("Expression")) {
           throw new Exceptions.UnexpectedPolarTypeError(
-    "Recieved Expression from Polar VM. The Expression type is not yet supported in this language.\n" +
-    "This may mean you performed an operation in your policy over an unbound variable."
-          );
+              "Recieved Expression from Polar VM. The Expression type is not yet supported in this"
+                  + " language.\n"
+                  + "This may mean you performed an operation in your policy over an unbound"
+                  + " variable.");
         } else {
           throw new Exceptions.UnexpectedPolarTypeError(tag);
         }

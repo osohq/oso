@@ -80,8 +80,12 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
     resource = Variable("resource")
     constraint = TypeConstraint(resource, polar_model_name(model))
     results = Oso.query_rule(
-        "allow", actor, action, resource, bindings={resource: constraint},
-        accept_expression=True
+        "allow",
+        actor,
+        action,
+        resource,
+        bindings={resource: constraint},
+        accept_expression=True,
     )
 
     filter = None

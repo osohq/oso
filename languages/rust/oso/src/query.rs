@@ -272,22 +272,25 @@ pub struct ResultSet {
 }
 
 impl ResultSet {
-    pub fn from_bindings(bindings: polar_core::kb::Bindings, host: crate::host::Host) -> crate::Result<Self> {
+    pub fn from_bindings(
+        bindings: polar_core::kb::Bindings,
+        host: crate::host::Host,
+    ) -> crate::Result<Self> {
         // Check for expression.
         for term in bindings.values() {
             if term.value().as_expression().is_ok() {
-                return Err(OsoError::Custom { message: r#"
+                return Err(OsoError::Custom {
+                    message: r#"
 Recieved Expression from Polar VM. The Expression type is not yet supported in this language.
 
 This may mean you performed an operation in your policy over an unbound variable.
-                    "#.to_owned()});
+                    "#
+                    .to_owned(),
+                });
             }
         }
 
-        Ok(Self {
-            bindings,
-            host
-        })
+        Ok(Self { bindings, host })
     }
 
     /// Return the keys in bindings.

@@ -12,9 +12,7 @@ from polar import (
     Pattern,
 )
 from polar.partial import TypeConstraint
-from polar.exceptions import (
-    InvalidCallError,
-    UnexpectedPolarTypeError)
+from polar.exceptions import InvalidCallError, UnexpectedPolarTypeError
 
 import pytest
 
@@ -835,8 +833,9 @@ def test_partial_constraint(polar):
     polar.load_str("f(x: Post) if x.post = 1;")
 
     x = Variable("x")
-    results = polar.query_rule("f", x, bindings={x: TypeConstraint(x, "User")},
-                               accept_expression=True)
+    results = polar.query_rule(
+        "f", x, bindings={x: TypeConstraint(x, "User")}, accept_expression=True
+    )
 
     first = next(results)["bindings"]["x"]
     and_args = unwrap_and(first)

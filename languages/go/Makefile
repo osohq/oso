@@ -17,3 +17,6 @@ endif
 
 test: copy_lib
 	go test -v ./tests/ -count=1
+
+fmt:
+	go fmt

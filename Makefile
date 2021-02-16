@@ -74,6 +74,7 @@ fmt: java-fmt
 	$(MAKE) -C languages/python/django-oso fmt
 	$(MAKE) -C languages/python/sqlalchemy-oso fmt
 	$(MAKE) -C languages/js fmt
+	$(MAKE) -C languages/go fmt
 
 clippy:
 	cargo clippy --all-features --all-targets -- -D warnings

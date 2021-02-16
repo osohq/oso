@@ -594,9 +594,8 @@ public class PolarTest {
   public void testExpressionError() throws Exception {
     p.loadStr("f(x) if x > 2;");
 
-    Exception exception = assertThrows(
-        Exceptions.UnexpectedPolarTypeError.class,
-        () -> p.query("f(x)").results());
+    Exception exception =
+        assertThrows(Exceptions.UnexpectedPolarTypeError.class, () -> p.query("f(x)").results());
     assertTrue(exception.getMessage().contains("unbound"));
   }
 }
