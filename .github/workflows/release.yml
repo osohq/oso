@@ -756,31 +756,31 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: oso_library
-      - name: Zip file
+      - name: Zip libraries
         run: zip --junk-paths -r oso-lib.zip oso_library/
       - name: Download oso python wheels from package run
         uses: actions/download-artifact@v1
         with:
           name: wheel
-      - name: Zip file
+      - name: Zip wheels
         run: zip --junk-paths -r oso-python.zip wheel/
       - name: Download oso python musl wheels from package run
         uses: actions/download-artifact@v1
         with:
           name: musl-wheel
-      - name: Zip file
+      - name: Zip musl wheels
         run: zip --junk-paths -r oso-python-musl.zip musl-wheel/
       - name: Download oso gem from package run
         uses: actions/download-artifact@v1
         with:
           name: gem
-      - name: Zip file
+      - name: Zip ruby gem
         run: zip --junk-paths -r oso-ruby.zip gem/
       - name: Download oso jar from package run
         uses: actions/download-artifact@v1
         with:
           name: jar
-      - name: Zip file
+      - name: Zip Java JAR
         run: zip --junk-paths -r oso-java.zip jar/
       - name: Download oso javascript package from package run
         uses: actions/download-artifact@v1
@@ -793,8 +793,8 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: go
-      - name: Zip file
-        run: zip --junk-paths -r go-oso.zip go/
+      - name: Zip Go source code
+        run: zip -r go-oso.zip go/
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
