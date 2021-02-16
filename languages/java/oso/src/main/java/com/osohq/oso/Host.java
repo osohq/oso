@@ -295,7 +295,14 @@ public class Host implements Cloneable {
       case "Variable":
         return new Variable(value.getString(tag));
       default:
-        throw new Exceptions.UnexpectedPolarTypeError(tag);
+        if (tag.equals("Expression")) {
+          throw new Exceptions.UnexpectedPolarTypeError(
+    "Recieved Expression from Polar VM. The Expression type is not yet supported in this language.\n" +
+    "This may mean you performed an operation in your policy over an unbound variable."
+          );
+        } else {
+          throw new Exceptions.UnexpectedPolarTypeError(tag);
+        }
     }
   }
 

@@ -589,4 +589,14 @@ public class PolarTest {
         .equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)));
     p.query("x = new BarIterator([1, 2, 3]).sum()").results().equals(List.of(Map.of("x", 6)));
   }
+
+  @Test
+  public void testExpressionError() throws Exception {
+    p.loadStr("f(x) if x > 2;");
+
+    Exception exception = assertThrows(
+        Exceptions.UnexpectedPolarTypeError.class,
+        () -> p.query("f(x)").results());
+    assertTrue(exception.getMessage().contains("unbound"));
+  }
 }
