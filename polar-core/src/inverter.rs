@@ -155,22 +155,20 @@ fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
 }
 
 /// Decide which variables come out of negation. This is hacky.
-/// HACK: Remove known internal vars like _value and _runnable.
-/// HACK: Do not emit constraints for variables that were unbound before
-/// the inversion.
-/// HACK: Do not emit constraints for variables that were bound before
-/// the inversion.
+/// HACK: Remove known internal vars like `_value_*` and `_runnable_*`.
+/// HACK: Do not emit constraints for variables that were unconstrained
+/// (bound or unbound) before the inversion.
 ///
-/// This prevents queries like f(x) if not (w = 1) and x = w from working)
+/// This prevents rules like `f(x) if not (w = 1) and x = w;` from working.
 /// But, without this, an inverted query like:
-///
+/// ```
 /// f(x) if not g(x);
 /// g(y) if y = 1;
 ///
 /// ?= f(1);
-///
-/// incorrectly emits constraints on temporaries made when calling g,
-/// like _y_5.
+/// ```
+/// incorrectly emits constraints on temporaries made when calling `g`,
+/// like `_y_5`.
 ///
 /// We can improve this by explicitly indicating to the simplifier
 /// which variables are allowed.
@@ -182,9 +180,12 @@ fn filter_inverted_constraints(
     constraints
         .into_iter()
         .filter(|(k, _)| {
-            !(k.0.starts_with("_value") || k.0.starts_with("_runnable"))
-                && vm.variable_state_at_point(k, bsp) != VariableState::Unbound
-                && !matches!(vm.variable_state_at_point(k, bsp), VariableState::Bound(_))
+            !(k.0.starts_with("_value_")
+                || k.0.starts_with("_runnable_")
+                || matches!(
+                    vm.variable_state_at_point(k, bsp),
+                    VariableState::Unbound | VariableState::Bound(_)
+                ))
         })
         .collect::<Bindings>()
 }
