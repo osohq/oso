@@ -486,20 +486,7 @@ impl PolarVirtualMachine {
             Goal::AddConstraintsBatch { add_constraints } => {
                 add_constraints.borrow_mut().drain().try_for_each(
                     |(_, constraint)| -> PolarResult<()> {
-                        println!("bindings before add_constraint: ");
-                        for val in self.binding_manager.variables() {
-                            println!("{:?}", self.variable_state(&val));
-                        }
-                        self.add_constraint(&constraint)?;
-                        println!("bindings after add_constraint: ");
-                        for val in self.binding_manager.variables() {
-                            println!("{val} {:?}", self.variable_state(&val), val = val);
-                            if let VariableState::Partial(p) = self.variable_state(&val) {
-                                println!("formatted {}", p.to_polar());
-                            }
-                        }
-
-                        Ok(())
+                        self.add_constraint(&constraint)
                     },
                 )?
             }
@@ -2554,10 +2541,10 @@ impl PolarVirtualMachine {
                 // The assumption here is that rules have already been filtered
                 // for applicability.
                 if left_fields.len() != right_fields.len() {
-                    self.bind(
+                    self.rebind_external_answer(
                         &answer,
                         Term::new_temporary(Value::Boolean(right_fields.len() < left.fields.len())),
-                    )?;
+                    );
                 }
                 Ok(QueryEvent::None)
             }

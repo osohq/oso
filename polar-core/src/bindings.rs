@@ -201,7 +201,6 @@ impl BindingManager {
             }
         }
 
-        println!("constrain: {}", op.to_polar());
         self.constrain(&op)
     }
 
@@ -337,7 +336,6 @@ impl BindingManager {
         bindings
     }
 
-    // TODO rename to deep_deref_batch
     pub fn variable_bindings(&self, variables: &HashSet<Symbol>) -> Bindings {
         let mut bindings = HashMap::new();
         for var in variables.iter() {
@@ -524,10 +522,9 @@ impl BindingManager {
         assert_eq!(o.operator, Operator::And, "bad constraint {}", o.to_polar());
         for var in o.variables() {
             match self._variable_state(&var) {
-                // TODO (dhatch): Is this causing us to lose some constraints?
-                // It means the variable is already bound but is still referenced in the
-                // constraint by name, not its bound value.
-                BindingManagerVariableState::Bound(_) => (),
+                // A constraint should not contain a bound variable, it should have been removed in
+                // add_constraint by calling ground.
+                BindingManagerVariableState::Bound(_) => panic!("Unexpected bound variable in constraint."),
                 _ => self.add_binding(&var, o.clone().into_term()),
             }
         }
@@ -544,11 +541,6 @@ impl BindingManager {
 
         Ok(())
     }
-
-    // TODO maybe port from VM:
-    // relevant_bindings
-    // variable_bindings
-    // bindings
 }
 
 #[cfg(test)]

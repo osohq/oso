@@ -80,7 +80,6 @@ fn results_to_constraints(results: Vec<BindingManager>) -> Bindings {
     let reduced = reduce_constraints(inverted);
     let simplified = simplify_bindings(reduced).unwrap_or_else(Bindings::new);
 
-    // TODO this logic is similar to get constraints in binding manager.
     simplified
         .into_iter()
         .map(|(k, v)| match v.value() {
@@ -114,8 +113,7 @@ fn invert_partials(bindings: BindingManager) -> Bindings {
         .map(|(k, v)| match v.value() {
             Value::Expression(e) => (
                 k,
-                e.clone_with_constraints(e.inverted_constraints(0))
-                    .into_term(),
+                e.invert().into_term(),
             ),
             _ => (
                 k.clone(),
@@ -180,9 +178,7 @@ fn filter_inverted_constraints(
     constraints
         .into_iter()
         .filter(|(k, _)| {
-            !(k.0.starts_with("_value_")
-                || k.0.starts_with("_runnable_")
-                || matches!(
+            !(matches!(
                     vm.variable_state_at_point(k, bsp),
                     VariableState::Unbound | VariableState::Bound(_)
                 ))
@@ -218,14 +214,6 @@ impl Runnable for Inverter {
                             results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
                         let constraints =
                             filter_inverted_constraints(constraints, &self.vm, self.bsp);
-                        println!("constraints: ");
-                        for (var, cons) in constraints.iter() {
-                            println!("{} {}", var, cons.to_polar());
-                            println!(
-                                "state: {:?}",
-                                self.vm.variable_state_at_point(var, self.bsp)
-                            );
-                        }
 
                         if !constraints.is_empty() {
                             // Return inverted constraints to parent VM.

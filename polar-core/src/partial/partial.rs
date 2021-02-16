@@ -201,20 +201,15 @@ impl Operation {
         self.args.extend(other.args);
     }
 
-    // TODO(gj): simpler way to write this function.
     // Invert constraints in operation after CSP.
-    pub fn inverted_constraints(&self, csp: usize) -> Vec<Operation> {
-        let constraints = self.constraints();
-        let (old, new) = constraints.split_at(csp);
-        let mut combined = old.to_vec();
-        combined.push(op!(
+    pub fn invert(&self) -> Operation {
+        self.clone_with_constraints(vec![op!(
             Not,
             term!(value!(Operation {
                 operator: Operator::And,
-                args: new.iter().cloned().map(|o| term!(value!(o))).collect()
+                args: self.constraints().iter().cloned().map(|o| term!(value!(o))).collect()
             }))
-        ));
-        combined
+        )])
     }
 
     pub fn constraints(&self) -> Vec<Operation> {
