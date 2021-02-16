@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-
 module Oso
   module Polar
     # Base error type for Oso::Polar.
@@ -42,9 +41,9 @@ module Oso
     class InvalidIteratorError < PolarRuntimeError; end
     class InvalidQueryTypeError < PolarRuntimeError; end
     class NullByteInPolarFileError < PolarRuntimeError; end
-    class UnexpectedPolarTypeError < PolarRuntimeError
+    class UnexpectedPolarTypeError < PolarRuntimeError; # rubocop:disable Style/Documentation
       def initialize(tag)
-        if tag == "Expression"
+        if tag == 'Expression'
           super(UNEXPECTED_EXPRESSION_MESSAGE)
         else
           super(tag)
@@ -102,9 +101,9 @@ module Oso
     class ParameterError < ApiError; end
 
     UNEXPECTED_EXPRESSION_MESSAGE = <<~MSG
-    Recieved Expression from Polar VM. The Expression type is not yet supported in this language.
+      Recieved Expression from Polar VM. The Expression type is not yet supported in this language.
 
-    This may mean you performed an operation in your policy over an unbound variable.
+      This may mean you performed an operation in your policy over an unbound variable.
     MSG
   end
 end
