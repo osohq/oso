@@ -18,10 +18,6 @@ pub trait Runnable {
         Err(OperationalError::InvalidState("Unexpected query answer".to_string()).into())
     }
 
-    fn external_error(&mut self, _message: String) -> PolarResult<()> {
-        Err(OperationalError::InvalidState("Unexpected external error".to_string()).into())
-    }
-
     fn external_call_result(&mut self, _call_id: u64, _term: Option<Term>) -> PolarResult<()> {
         Err(OperationalError::InvalidState("Unexpected external call".to_string()).into())
     }

@@ -758,6 +758,12 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  it 'fails when receiving an expression type' do
+    expect { query(subject, 'x < 3') }.to raise_error(
+      Oso::Polar::UnexpectedPolarTypeError, Oso::Polar::UNEXPECTED_EXPRESSION_MESSAGE
+    )
+  end
+
   context 'when using iterators' do # rubocop:disable Metrics/BlockLength
     before do
       stub_const('Foo', Class.new do

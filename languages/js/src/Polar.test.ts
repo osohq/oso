@@ -38,6 +38,7 @@ import {
   PolarFileExtensionError,
   UnimplementedOperationError,
   InvalidIteratorError,
+  UnexpectedPolarTypeError,
 } from './errors';
 
 test('it works', async () => {
@@ -572,7 +573,7 @@ describe('#registerConstant', () => {
   test('errors when calling host language methods on booleans', () => {
     const p = new Polar();
     expect(query(p, 'b = true and b.constructor = Boolean')).rejects.toThrow(
-      'Type error: can only perform lookups on dicts and instances, this is Boolean(true) at line 1, column 5'
+      'Type error: can only perform lookups on dicts and instances, this is true at line 1, column 5'
     );
   });
 
@@ -639,6 +640,15 @@ describe('errors', () => {
       expect(p.loadStr('g(1); ?= g(2);')).rejects.toThrow(
         InlineQueryFailedError
       );
+    });
+  });
+
+  describe('with expressions', () => {
+    test('errors if an expression is received', () => {
+      const p = new Polar();
+      expect(p.loadStr('f(x) if x > 2;')).resolves;
+      let result = p.query('f(x)').next();
+      expect(result).rejects.toThrow(UnexpectedPolarTypeError);
     });
   });
 

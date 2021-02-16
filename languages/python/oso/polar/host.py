@@ -9,28 +9,35 @@ from .exceptions import (
     UnregisteredInstanceError,
     DuplicateInstanceRegistrationError,
     UnexpectedPolarTypeError,
+    UNEXPECTED_EXPRESSION_MESSAGE,
 )
 from .variable import Variable
 from .predicate import Predicate
-from .partial import Partial
 from .expression import Expression, Pattern
 
 
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
-    def __init__(self, polar, classes={}, instances={}):
+    def __init__(self, polar, classes=None, instances=None, get_field=None):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
-        self.classes = classes.copy()
-        self.instances = instances.copy()
+        self.classes = (classes or {}).copy()
+        self.instances = (instances or {}).copy()
+        self._accept_expression = False  # default, see set_accept_expression
+
+        def default_get_field(_obj, _field):
+            raise PolarRuntimeError("Cannot generically walk fields of a Python class")
+
+        self.get_field = get_field or default_get_field
 
     def copy(self):
         """Copy an existing cache."""
         return type(self)(
             self.ffi_polar,
-            classes=self.classes.copy(),
-            instances=self.instances.copy(),
+            classes=self.classes,
+            instances=self.instances,
+            get_field=self.get_field,
         )
 
     def get_class(self, name):
@@ -83,6 +90,14 @@ class Host:
         instance = self.to_python(instance)
         cls = self.get_class(class_tag)
         return isinstance(instance, cls)
+
+    def isa_with_path(self, base_tag, path, class_tag) -> bool:
+        base = self.get_class(base_tag)
+        cls = self.get_class(class_tag)
+        for field in path:
+            field = self.to_python(field)
+            base = self.get_field(base, field)
+        return issubclass(base, cls)
 
     def is_subclass(self, left_tag, right_tag) -> bool:
         """Return true if left is a subclass (or the same class) as right."""
@@ -155,8 +170,25 @@ class Host:
             }
         elif isinstance(v, Variable):
             val = {"Variable": v}
-        elif isinstance(v, Partial):
-            val = {"Partial": v.to_polar()}
+        elif isinstance(v, Expression):
+            val = {
+                "Expression": {
+                    "operator": v.operator,
+                    "args": [self.to_polar(v) for v in v.args],
+                }
+            }
+        elif isinstance(v, Pattern):
+            if v.tag is None:
+                val = {"Pattern": self.to_polar(v.fields)["value"]}
+            else:
+                val = {
+                    "Pattern": {
+                        "Instance": {
+                            "tag": v.tag,
+                            "fields": self.to_polar(v.fields)["value"]["Dictionary"],
+                        }
+                    }
+                }
         else:
             val = {
                 "ExternalInstance": {
@@ -202,6 +234,9 @@ class Host:
         elif tag == "Variable":
             return Variable(value[tag])
         elif tag == "Expression":
+            if not self._accept_expression:
+                raise UnexpectedPolarTypeError(UNEXPECTED_EXPRESSION_MESSAGE)
+
             args = list(map(self.to_python, value[tag]["args"]))
             operator = value[tag]["operator"]
 
@@ -218,3 +253,7 @@ class Host:
                 raise UnexpectedPolarTypeError("Pattern: " + value[tag])
 
         raise UnexpectedPolarTypeError(tag)
+
+    def set_accept_expression(self, accept):
+        """Set whether the Host accepts Expression types from Polar, or raises an error."""
+        self._accept_expression = accept

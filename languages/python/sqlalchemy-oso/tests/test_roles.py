@@ -503,7 +503,7 @@ def test_enable_roles(
 
     # test custom `resource_role_applies_to` rules (for nested resources)
     resource_role_applies_to_str = """resource_role_applies_to(repo: Repository, parent_org) if
-        parent_org := repo.organization and
+        parent_org = repo.organization and
         parent_org matches Organization;
         """
     oso.load_str(resource_role_applies_to_str)
