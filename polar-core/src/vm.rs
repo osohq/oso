@@ -1063,8 +1063,6 @@ impl PolarVirtualMachine {
     fn isa_expr(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         match right.value() {
             Value::Pattern(Pattern::Dictionary(fields)) => {
-                // ? is this tested
-
                 // Produce a constraint like left.field = value
                 let to_unify = |(field, value): (&Symbol, &Term)| -> Term {
                     let value = self.deref(value);

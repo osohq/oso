@@ -678,7 +678,6 @@ fn test_two_rule_bodies_not_nested() -> TestResult {
     Ok(())
 }
 
-// TODO(ap): ??
 #[test]
 fn test_two_rule_bodies_nested() -> TestResult {
     let mut p = Polar::new();
