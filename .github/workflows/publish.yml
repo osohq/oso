@@ -16,7 +16,7 @@ jobs:
         with:
           token: ${{ secrets.REPO_API_TOKEN }}
           repository: osohq/go-oso
-          event-type: oso_release
+          event-type: oso_publish
           client-payload: '{"version": "${{ github.event.inputs.version }}"}'
 
   java:
