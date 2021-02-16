@@ -373,7 +373,9 @@ impl BindingManager {
     }
 
     pub fn remove_follower(&mut self, follower_id: &FollowerId) -> Option<BindingManager> {
-        self.followers.remove(follower_id).map(|(follower, _bsp)| follower)
+        self.followers
+            .remove(follower_id)
+            .map(|(follower, _bsp)| follower)
     }
 }
 
