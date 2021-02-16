@@ -12,9 +12,13 @@ aliases:
 
 # Add Basic Roles to Your Application
 
-Role-based access control (RBAC) groups permissions — a permission being the ability
-to perform an [action](glossary#actions) on a [resource](glossary#resources)
-— into roles. Roles are assigned to actors to confer these permissions.
+Role-based access control (RBAC) refers to an authorization system that
+groups permissions into roles that are assigned to actors, rather than
+assigning permissions to actors directly. A permission is the ability to
+perform an [action](glossary#actions) on a [resource](glossary#resources). In
+an RBAC system, permissions are grouped into discrete roles (e.g., an "admin" role or
+"manager" role), and these roles are assigned to actors to confer
+permissions.
 
 This guide shows an example of implementing basic [global
 roles](learn/roles#global-roles) with Oso. Global Roles are roles that apply
