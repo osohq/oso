@@ -6,6 +6,19 @@ on:
         description: "Version Number"
         required: true
 jobs:
+  go:
+    # Notifies the go-oso repo there's a new release.
+    # CI over there then pulls this tag, commits and pushes their own tag.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.REPO_API_TOKEN }}
+          repository: osohq/go-oso
+          event-type: oso_release
+          client-payload: '{"tag": "v${{ github.event.inputs.version }}"}'
+
   java:
     name: Publish java jar to maven repository
     runs-on: ubuntu-latest
