@@ -156,12 +156,11 @@ fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
 ///
 /// This prevents rules like `f(x) if not (w = 1) and x = w;` from working.
 /// But, without this, an inverted query like:
-/// ```
 /// f(x) if not g(x);
 /// g(y) if y = 1;
 ///
 /// ?= f(1);
-/// ```
+///
 /// incorrectly emits constraints on temporaries made when calling `g`,
 /// like `_y_5`.
 ///
