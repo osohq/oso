@@ -163,13 +163,17 @@ func (p Polar) repl(files ...string) error {
 			fmt.Println(false)
 		} else {
 			for _, bindings := range results {
-				for k, v := range bindings {
-					switch v := v.(type) {
-					// print strings with quotes but not variables or other types represented by strings
-					case string:
-						fmt.Printf("%v = %#v\n", k, v)
-					default:
-						fmt.Printf("%v = %v\n", k, v)
+				if len(bindings) == 0 {
+					fmt.Println(true)
+				} else {
+					for k, v := range bindings {
+						switch v := v.(type) {
+						// print strings with quotes but not variables or other types represented by strings
+						case string:
+							fmt.Printf("%v = %#v\n", k, v)
+						default:
+							fmt.Printf("%v = %v\n", k, v)
+						}
 					}
 				}
 			}
