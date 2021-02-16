@@ -12,7 +12,7 @@ from polar import (
     Pattern,
 )
 from polar.partial import TypeConstraint
-from polar.exceptions import InvalidCallError
+from polar.exceptions import InvalidCallError, UnexpectedPolarTypeError
 
 import pytest
 
@@ -794,7 +794,7 @@ def test_partial(polar):
     polar.load_str("f(1);")
     polar.load_str("f(x) if x = 1 and x = 2;")
 
-    results = polar.query_rule("f", Variable("x"))
+    results = polar.query_rule("f", Variable("x"), accept_expression=True)
     first = next(results)
 
     x = first["bindings"]["x"]
@@ -805,7 +805,7 @@ def test_partial(polar):
 
     polar.load_str("g(x) if x.bar = 1 and x.baz = 2;")
 
-    results = polar.query_rule("g", Variable("x"))
+    results = polar.query_rule("g", Variable("x"), accept_expression=True)
     first = next(results)
 
     x = first["bindings"]["x"]
@@ -833,7 +833,9 @@ def test_partial_constraint(polar):
     polar.load_str("f(x: Post) if x.post = 1;")
 
     x = Variable("x")
-    results = polar.query_rule("f", x, bindings={x: TypeConstraint(x, "User")})
+    results = polar.query_rule(
+        "f", x, bindings={x: TypeConstraint(x, "User")}, accept_expression=True
+    )
 
     first = next(results)["bindings"]["x"]
     and_args = unwrap_and(first)
@@ -898,3 +900,11 @@ def test_iterators(polar, qeval, qvar):
     polar.register_class(Bar)
     assert qvar("x in new Bar([1, 2, 3])", "x") == [1, 2, 3]
     assert qvar("x = new Bar([1, 2, 3]).sum()", "x", one=True) == 6
+
+
+def test_unexpected_expression(polar):
+    """Ensure expression type raises error from core."""
+    polar.load_str("f(x) if x > 2;")
+
+    with pytest.raises(UnexpectedPolarTypeError):
+        next(polar.query_rule("f", Variable("x")))

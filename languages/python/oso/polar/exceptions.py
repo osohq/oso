@@ -1,6 +1,7 @@
 """Exceptions used within polar.
 """
 # @TODO: Should we just generate these from the rust code?
+from textwrap import dedent
 
 
 class OsoError(Exception):
@@ -187,3 +188,15 @@ class PolarApiError(OsoError):
 
 class ParameterError(PolarApiError):
     pass
+
+
+UNEXPECTED_EXPRESSION_MESSAGE = dedent(
+    """\
+Recieved Expression from Polar VM. The Expression type is only supported when
+using django-oso or sqlalchemy-oso's data filtering features. Did you perform an
+operation over an unbound variable in your policy?
+
+To silence this error and receive an Expression result, pass
+accept_expression=True to Oso.query.
+"""
+)

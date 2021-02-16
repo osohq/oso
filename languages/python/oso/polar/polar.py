@@ -121,7 +121,7 @@ class Polar:
     def clear_rules(self):
         self.ffi_polar.clear_rules()
 
-    def query(self, query, *, bindings=None):
+    def query(self, query, *, bindings=None, accept_expression=False):
         """Query for a predicate, parsing it if necessary.
 
         :param query: The predicate to query for.
@@ -129,6 +129,8 @@ class Polar:
         :return: The result of the query.
         """
         host = self.host.copy()
+        host.set_accept_expression(accept_expression)
+
         if isinstance(query, str):
             query = self.ffi_polar.new_query_from_str(query)
         elif isinstance(query, Predicate):

@@ -324,7 +324,7 @@ def test_negated_matches_with_partial(rf):
 
 def test_partial_unification():
     Oso.load_str("f(x, y) if x = y and x = 1;")
-    results = Oso.query_rule("f", Variable("x"), Variable("y"))
+    results = Oso.query_rule("f", Variable("x"), Variable("y"), accept_expression=True)
     first = next(results)["bindings"]
     assert first["x"] == 1
     assert first["y"] == 1
@@ -333,7 +333,7 @@ def test_partial_unification():
         next(results)
 
     Oso.load_str("g(x, y) if x = y and y > 1;")
-    results = Oso.query_rule("g", Variable("x"), Variable("y"))
+    results = Oso.query_rule("g", Variable("x"), Variable("y"), accept_expression=True)
     first = next(results)["bindings"]
     assert first["x"] == Expression("And", [Expression("Gt", [Variable("_this"), 1])])
     assert first["y"] == Expression("And", [Expression("Gt", [Variable("_this"), 1])])

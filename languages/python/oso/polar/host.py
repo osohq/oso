@@ -9,6 +9,7 @@ from .exceptions import (
     UnregisteredInstanceError,
     DuplicateInstanceRegistrationError,
     UnexpectedPolarTypeError,
+    UNEXPECTED_EXPRESSION_MESSAGE,
 )
 from .variable import Variable
 from .predicate import Predicate
@@ -232,6 +233,9 @@ class Host:
         elif tag == "Variable":
             return Variable(value[tag])
         elif tag == "Expression":
+            if not self._accept_expression:
+                raise UnexpectedPolarTypeError(UNEXPECTED_EXPRESSION_MESSAGE)
+
             args = list(map(self.to_python, value[tag]["args"]))
             operator = value[tag]["operator"]
 
@@ -248,3 +252,7 @@ class Host:
                 raise UnexpectedPolarTypeError("Pattern: " + value[tag])
 
         raise UnexpectedPolarTypeError(tag)
+
+    def set_accept_expression(self, accept):
+        """Set whether the Host accepts Expression types from Polar, or raises an error."""
+        self._accept_expression = accept
