@@ -6,6 +6,7 @@ path: /getting-started-list-filtering-django
 title: Filter collections with Django
 aliases:
     - /getting-started/list-filtering/django.html
+description: Learn to use Oso's Django integration to filter collections of data.
 ---
 
 # Filter collections with Django

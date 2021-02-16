@@ -1,12 +1,13 @@
 ---
-title: Writing policies
+title: Write Oso Policies (15 min)
 weight: 3
-any: true
+any: false
 aliases:
   - ../getting-started/policies/index.html
+description: Learn about writing Oso policies - the source of truth for authorization logic.
 ---
 
-# Writing Policies
+# Write Oso Policies
 
 Policies are the source of truth for the authorization logic used to evaluate
 queries in Oso. As a reminder: Oso policies are written in a declarative
@@ -287,7 +288,7 @@ Either way, using the rule could look like this:
 {{% callout "Note" "green" %}}
 Type specializers automatically respect the **inheritance** hierarchy of
 application classes. See the [Resources with
-Inheritance](guides/inheritance) guide for an in-depth
+Inheritance](guides/more/inheritance) guide for an in-depth
 example of how this works.
 {{% /callout %}}
 

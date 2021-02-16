@@ -1,6 +1,6 @@
 ---
 title: Java Library
-weight: 4
+weight: 2
 any: false
 description: Download instructions and API reference for the Oso Java library.
 ---

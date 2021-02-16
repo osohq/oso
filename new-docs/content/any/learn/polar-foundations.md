@@ -3,13 +3,13 @@ date: '2021-01-07T02:46:33.217Z'
 docname: more/language/polar-foundations
 images: {}
 path: /more-language-polar-foundations
-title: What is Polar?
+title: The Polar Language
 aliases:
     - ../../more/language/polar-foundations.html
-weight: 1
+weight: 4
 ---
 
-# Polar Background
+# The Polar Language
 
 The **Oso** authorization library uses the **Polar** programming language
 to express authorization logic and policies. This guide is meant to serve

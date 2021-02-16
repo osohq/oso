@@ -1,5 +1,5 @@
 ---
-title: Add Oso to your app
+title: Add Oso to an App (15 min)
 weight: 2
 description: |
   An in-depth walkthrough of adding Oso to an example expense application.
@@ -7,9 +7,9 @@ aliases:
   - /getting-started/application/index.html
 ---
 
-# Add To Your Application
+# Add Oso to an Application
 
-This guide covers a little more detail about how to add Oso to your
+This guide covers a little more detail about how to add Oso to an
 application.
 
 Whereas in the [Quickstart]({{< relref path="getting-started/quickstart"
