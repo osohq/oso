@@ -5,7 +5,7 @@
 
 {{- $solidIcons := slice "blog" "download" "gem" "chevron-down" "home" "search" -}}
 {{- $brandIcons := slice "linkedin-in" "twitter" "github" "slack" "python" "java" "node-js" "rust" -}}
-{{- $map := dict "rb" "gem" "py" "python"}}
+{{- $map := dict "js" "node-js"   "rs" "rust"   "rb" "gem"    "py" "python"}}
 
 {{- with index $map $icon -}}
 {{- $icon = index $map $icon}}

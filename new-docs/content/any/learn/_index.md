@@ -1,5 +1,5 @@
 ---
-title: "Learn Oso"
+title: "Concepts"
 weight: 3
 ---
 
@@ -7,5 +7,4 @@ weight: 3
 
 ## Diving deeper
 
-Learn about how to turn authorization logic into code with policy examples,
-and understand how roles work in Oso.
+Learn about key concepts in authorization and Oso.

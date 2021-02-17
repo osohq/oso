@@ -1,5 +1,5 @@
 ---
-title: Add Oso to your app
+title: Add Oso to an App (15 min)
 weight: 2
 description: |
   An in-depth walkthrough of adding Oso to an example expense application.
@@ -7,9 +7,9 @@ aliases:
   - /getting-started/application/index.html
 ---
 
-# Add To Your Application
+# Add Oso to an Application
 
-This guide covers a little more detail about how to add Oso to your
+This guide covers a little more detail about how to add Oso to an
 application.
 
 Whereas in the [Quickstart]({{< relref path="getting-started/quickstart"
@@ -80,23 +80,13 @@ In the application, we need to:
 
 1. Create the Oso instance
 2. Load in policy files.
-3. [Register application classes](application-types)
+3. [Register application classes](getting-started/policies#application-types)
 4. Attach the Oso instance to the application
 
-We have achieved this using the `setupOso` method, in `Application.java`.
+We have achieved this using the `setupOso` method, in `Application.java`:
 
-```java
-@Bean
-public Oso setupOso() throws IOException, Exceptions.OsoException {
-    Oso oso = new Oso();
-    oso.registerClass(User.class, "User");
-    oso.registerClass(Expense.class, "Expense");
-    oso.registerClass(Organization.class, "Organization");
-    oso.registerClass(HttpServletRequest.class, "Request");
-    oso.loadFile("src/main/oso/authorization.polar");
-    return oso;
-}
-```
+{{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/java/com/example/springboot/Application.java"
+                   lines="25-34" >}}
 
 We can now access this `oso` instance anywhere in our application, and specify
 which policy files are loaded in the application configuration.
@@ -110,32 +100,14 @@ if they are logged in.
 We can apply apply authorization to **every** incoming request by setting up
 a request `Interceptor`, with a `prehandle` function that runs before every request:
 
-```java
-@Override
-public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-    try {
-        setCurrentUser(request);
-
-        // Authorize the incoming request
-        if (!oso.isAllowed(currentUser.get(), request.getMethod(), request)) {
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "oso authorization: unauthorized");
-        }
-    } catch (SQLException e) {
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found", e);
-    }
-    return true;
-}
-```
+{{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/java/com/example/springboot/Authorizer.java"
+                   lines="22-36" >}}
 
 Now that this is in place, we can write a simple policy to allow anyone
 to call our index route, and see the hello message:
 
-```python
-# authorization.polar
-
-allow(_user, "GET", request: Request) if
-    request.getServletPath() = "/";
-```
+{{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/oso/authorization.polar"
+                   lines="3-4" >}}
 
 ```console
 $ curl localhost:5000/
@@ -151,48 +123,17 @@ this.
 We have two different user types here: the `Guest` class and the `User`
 class. The latter corresponds to users who have authenticated.
 
-```java
-// Guest.java
+{{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/java/com/example/springboot/Guest.java"
+                   lines="3-7" >}}
 
-public class Guest {
-  public String toString() {
-    return "Guest";
-  }
-}
-```
-
-```java
-// User.java
-
-public class User {
-  public Integer id, locationId, organizationId, managerId;
-  public String email, title;
-
-  public User(
-      Integer id,
-      Integer locationId,
-      Integer organizationId,
-      Integer managerId,
-      String email,
-      String title) {
-    this.id = id;
-    this.locationId = locationId;
-    this.organizationId = organizationId;
-    this.managerId = managerId;
-    this.email = email;
-    this.title = title;
-  }
-```
+{{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/java/com/example/springboot/User.java"
+                   lines="8-25" >}}
 
 We can use [specializer rules](polar-syntax#specialization) to only allow the request
 when the actor is an instance of a `User`:
 
-```python
-# authorization.polar
-
-allow(_user: User, "GET", request: Request) if
-    request.getServletPath() = "/whoami";
-```
+{{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/oso/authorization.polar"
+                   lines="6-7" >}}
 
 ```console
 $ curl -i localhost:5000/whoami
@@ -202,10 +143,10 @@ $ curl -H "user: alice@foo.com"  localhost:5000/whoami
 You are alice@foo.com, the CEO at Foo Industries. (User ID: 1)
 ```
 
-{{% callout "Tip" "green" %}}
+<!-- {{% callout "Tip" "green" %}}
 Interested in understanding more about what is happening here? Check
-out the [user types](/learn/examples/user_types) example.
-{{% /callout %}}
+out the [user types](/guides/user_types) example.
+{{% /callout %}} -->
 
 The inputs to the `isAllowed` call are the current user, the HTTP method,
 and the HTTP request. This information can often be enough to cover a large
@@ -237,59 +178,25 @@ that in the next section.
 In the [Quickstart](quickstart), our main objective was to
 determine who could "GET" expenses. Our final policy looked like:
 
-```python
-# expenses.polar
-
-allow(actor: String, "GET", expense: Expense) if
-    expense.submittedBy = actor;
-```
+{{< literalInclude path="examples/quickstart/expenses-02-java.polar" >}}
 
 In our expenses sample application, we have something similar,
 but we've rewritten the policy to use a new `submitted` predicate in case we want
 to change the logic in the future.
 
-```python
-# authorization.polar
-
-allow(user: User, "read", expense: Expense) if
-    submitted(user, expense);
-
-submitted(user: User, expense: Expense) if
-    user.id = expense.userId;
-```
+{{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/oso/authorization.polar"
+                   lines="21-25" >}}
 
 To handle authorizing access to data, we've implemented a little helper method
 for us to use throughout the application:
 
-```java
-// Authorizer.java
-
-public Object authorize(String action, Object resource) {
-    try {
-      if (!oso.isAllowed(currentUser.get(), action, resource)) {
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Oso authorization");
-      }
-    } catch (OsoException e) {
-      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, null, e);
-    }
-    return resource;
-}
-```
+{{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/java/com/example/springboot/Authorizer.java"
+                   lines="49-58" >}}
 
 ... so authorizing the GET request looks like:
 
-```java
-// Controller.java
-@GetMapping("/expenses/{id}")
-public String getExpense(@PathVariable(name = "id") int id) {
-    try {
-      Expense e = Expense.lookup(id);
-      return authorizer.authorize("read", e).toString();
-    } catch (SQLException e) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expense not found", e);
-    }
-}
-```
+{{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/java/com/example/springboot/Controller.java"
+                   lines="55-63" >}}
 
 Let's give it a try!
 
@@ -303,19 +210,8 @@ Expense(amount=17743, description='Pug irony.', user_id=1, id=2)
 
 This pattern is pretty convenient. We can easily apply it elsewhere:
 
-```java
-// Controller.java
-
-@GetMapping("/organizations/{id}")
-public String getOrganization(@PathVariable(name = "id") int id) {
-    try {
-      Organization org = Organization.lookup(id);
-      return authorizer.authorize("read", org).toString();
-    } catch (SQLException e) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Organization not found", e);
-    }
-}
-```
+{{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/java/com/example/springboot/Controller.java"
+                   lines="65-73" >}}
 
 ```console
 $ curl -H "user: alice@foo.com" localhost:5000/organizations/1
@@ -340,11 +236,8 @@ We currently have a route with no authorization - the submit endpoint.
 We have a rule that allows anyone to PUT to the submit endpoint, but we
 want to make sure only authorized expenses are submitted.
 
-```python
-# authorization.polar
-
-allow_by_path(_user, "PUT", "expenses", ["submit"]);
-```
+{{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/oso/authorization.polar"
+                   lines="18" >}}
 
 {{% callout "Tip" "green" %}}
 The `allow_by_path` rule is a custom rule in our policy that operates
@@ -369,21 +262,9 @@ we check the user is allowed to `create` this expense?
 We would like to do the authorization on the full `Expense` object,
 but before it is persisted to the database, so perhaps before this line:
 
-```java {hl_lines=[8]}
-// Controller.java
-
-@PutMapping("/expenses/submit")
-public String submitExpense(@RequestBody Expense expense) {
-    try {
-      User user = (User) currentUser.get();
-      if (expense.userId == 0) expense.userId = user.id;
-      expense.save();
-      return expense.toString();
-    } catch (SQLException e) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "failed to save expense", e);
-    }
-}
-```
+{{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/java/com/example/springboot/Controller.java"
+                   lines="75-85"
+                   hlOpts="hl_lines=6" >}}
 
 We could change the highlighted line to:
 

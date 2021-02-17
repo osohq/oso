@@ -1,7 +1,8 @@
 ---
 title: Design Principles
-aliases: 
+aliases:
     - ../more/design-principles.html
+draft: true
 ---
 
 # Design Principles

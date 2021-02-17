@@ -1,5 +1,5 @@
 ---
-title: Add Oso to your app
+title: Add Oso to an App (15 min)
 weight: 2
 description: |
   An in-depth walkthrough of adding Oso to an example expense application.
@@ -7,13 +7,13 @@ aliases:
   - /getting-started/application/index.html
 ---
 
-# Add To Your Application
+# Add Oso to an Application
 
-This guide covers a little more detail about how to add Oso to your
+This guide covers a little more detail about how to add Oso to an
 application.
 
 Whereas in the [Quickstart]({{< relref path="getting-started/quickstart"
-lang="java" >}}) we zoomed through an
+lang="python" >}}) we zoomed through an
 example of authorization in a simple web server, in this guide we'll show
 some more practical examples in the context of a more realistic application.
 
@@ -74,30 +74,13 @@ In the application, we need to:
 
 1. Create the Oso instance
 2. Load in policy files.
-3. [Register application classes](application-types)
+3. [Register application classes](getting-started/policies#application-types)
 4. Attach the Oso instance to the application
 
 We have achieved this using the `init_oso` method:
 
-{{< code file="authorization.py" >}}
-def init_oso(app):
-    from .expense import Expense
-    from .organization import Organization
-    from .user import Actor, Guest, User
-
-    oso = Oso()
-    oso.register_class(Actor)
-    oso.register_class(Guest)
-    oso.register_class(User)
-    oso.register_class(Expense)
-    oso.register_class(Organization)
-    oso.register_class(Request)
-
-    for policy in app.config.get("OSO_POLICIES", []):
-        oso.load_file(policy)
-
-    app.oso = oso
-{{< /code >}}
+{{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.py"
+                   from="start-init" >}}
 
 We can now access this `oso` instance anywhere in our application, and specify
 which policy files are loaded in the application configuration.
@@ -107,22 +90,14 @@ which policy files are loaded in the application configuration.
 We can apply apply authorization to **every** incoming request by setting up
 a middleware function that runs before every request using `before_app_request`:
 
-{{< code file="authorization.py" >}}
-@bp.before_app_request
-def authorize_request():
-    """Authorize the incoming request"""
-    r = request._get_current_object()
-    if not current_app.oso.is_allowed(g.current_user, r.method, r):
-        return Forbidden("Not Authorized!")
-{{< /code >}}
+{{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.py"
+                   lines="9-14" >}}
 
 Now that this is in place, we can write a simple policy to allow anyone
 to call our index route, and see the hello message:
 
-{{< code file="authorization.polar" >}}
-allow(_user, "GET", request: Request) if
-    request.getServletPath() = "/";
-{{< /code >}}
+{{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.polar"
+                   lines="3-4" >}}
 
 ```console
 $ curl localhost:5000/
@@ -138,29 +113,14 @@ this.
 We have two different user types here: the `Guest` class and the `User`
 class. The latter corresponds to users who have authenticated.
 
-{{< code file="user.py" >}}
-class Guest(Actor):
-    """Anonymous user."""
-
-@dataclass
-class User(Actor):
-    """Logged in user. Has an email address."""
-
-    id: int
-    email: str
-    title: str
-    location_id: int
-    organization_id: int
-    manager_id: int
-{{< /code >}}
+{{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/user.py"
+                   lines="16-25,52-53" >}}
 
 We can use [specializer rules](polar-syntax#specialization) to only allow the request
 when the actor is an instance of a `User`:
 
-{{< code file="authorization.polar" >}}
-allow(_user: User, "GET", request: Request) if
-    request.getServletPath() = "/whoami";
-{{< /code >}}
+{{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.polar"
+                   lines="6-7" >}}
 
 ```console
 $ curl localhost:5000/whoami
@@ -173,10 +133,10 @@ $ curl -H "user: alice@foo.com"  localhost:5000/whoami
 You are alice@foo.com, the CEO at Foo Industries. (User ID: 1)
 ```
 
-{{% callout "Tip" "green" %}}
+<!-- {{% callout "Tip" "green" %}}
 Interested in understanding more about what is happening here? Check
 out the [user types](learn/examples/user_types) example.
-{{% /callout %}}
+{{% /callout %}} -->
 
 The inputs to the `is_allowed` call are the current user, the HTTP method,
 and the HTTP request. This information can often be enough to cover a large
@@ -206,42 +166,25 @@ that in the next section.
 In the [Quickstart](quickstart), our main objective was to
 determine who could "GET" expenses. Our final policy looked like:
 
-{{< code file="expenses.polar" >}}
-allow(actor: String, "GET", expense: Expense) if
-    expense.submitted_by = actor;
-{{< /code >}}
+{{< literalInclude path="examples/quickstart/expenses-02-python.polar" >}}
 
 In our expenses sample application, we have something similar,
 but we've rewritten the policy to use a new `submitted` predicate in case we want
 to change the logic in the future.
 
-{{< code file="authorization.polar" >}}
-allow(user: User, "read", expense: Expense) if
-    submitted(user, expense);
-
-submitted(user: User, expense: Expense) if
-    user.id = expense.user_id;
-{{< /code >}}
+{{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.polar"
+                   lines="21-25" >}}
 
 To handle authorizing access to data, we've implemented a little helper method
 for us to use throughout the application:
 
-{{< code file="authorization.py" >}}
-def authorize(action, resource):
-    """Authorize whether the current user can perform `action` on `resource`"""
-    if current_app.oso.is_allowed(g.current_user, action, resource):
-        return resource
-    else:
-        raise Forbidden("Not Authorized!")
-{{< /code >}}
+{{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.py"
+                   lines="17-22" >}}
 
 ... so authorizing the GET request looks like:
 
-{{< code file="expense.py" >}}
-def get_expense(id):
-    expense = Expense.lookup(id)
-    return str(authorize("read", expense))
-{{< /code >}}
+{{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/expense.py"
+                   lines="50-52" >}}
 
 Let's give it a try!
 
@@ -258,11 +201,8 @@ Expense(amount=17743, description='Pug irony.', user_id=1, id=2)
 
 This pattern is pretty convenient. We can easily apply it elsewhere:
 
-{{< code file="organization.py" >}}
-def get_organization(id):
-    organization = Organization.lookup(id)
-    return str(authorize("read", organization))
-{{< /code >}}
+{{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/organization.py"
+                   lines="30-32" >}}
 
 ```console
 $ curl -H "user: alice@foo.com" localhost:5000/organizations/1
@@ -290,9 +230,8 @@ We currently have a route with no authorization - the submit endpoint.
 We have a rule that allows anyone to PUT to the submit endpoint, but we
 want to make sure only authorized expenses are submitted.
 
-{{< code file="authorization.polar" >}}
-allow_by_path(_user, "PUT", "expenses", ["submit"]);
-{{< /code >}}
+{{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.polar"
+                   lines="18" >}}
 
 {{% callout "Tip" "green" %}}
 The `allow_by_path` rule is a custom rule in our policy that operates
@@ -317,17 +256,9 @@ We would like to do the authorization on the full `Expense` object,
 but before it is persisted to the database, so perhaps between these two
 lines:
 
-{{< code file="expense.py">}} # hl_lines=[7-8]
-def submit_expense():
-    expense_data = request.get_json(force=True)
-    if not expense_data:
-        raise BadRequest()
-    # if no user id supplied, assume it is for the current user
-    expense_data.setdefault("user_id", g.current_user.id)
-    expense = Expense(**expense_data)
-    expense.save()
-    return str(expense)
-{{< /code >}}
+{{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/expense.py"
+                   lines="56-64"
+                   hlOpts="hl_lines=7-8" >}}
 
 We could change the first highlighted line to:
 
@@ -375,8 +306,8 @@ controls to our route handlers.
 
 - To explore integrating Oso in your app in more depth continue to [Access Patterns](https://docs.oso.dev/getting-started/application/patterns.html).
 - For a deeper introduction to policy syntax, see [Writing Policies](policies).
-- For reference on using the Java Oso library, see [Java Authorization Library](reference).
-- Clone this example on [GitHub](https://github.com/osohq/oso-spring-tutorial)
+- For reference on using the Python Oso library, see [Python Authorization Library](reference).
+- Clone this example on [GitHub](https://github.com/osohq/oso-flask-tutorial)
   to check it out further.
 
 {{% /callout %}}

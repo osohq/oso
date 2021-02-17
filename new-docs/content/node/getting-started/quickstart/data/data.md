@@ -16,4 +16,6 @@ submitted_by: submittedBy
 endswith: endsWith
 endswithURL: >
    [the `String.prototype.endsWith` method](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith)
+expensesPath1: examples/quickstart/expenses-01-nodejs.polar
+expensesPath2: examples/quickstart/expenses-02-nodejs.polar
 ---
