@@ -3,14 +3,17 @@
 
 ## What is Oso?
 
-Oso is an open-source library for building authorization in your
-application. Oso helps developers form a mental model for their authorization
-needs by providing a set of frameworks and templates built on top of a
-**declarative policy language** called Polar. The **Oso library** provides an
+Oso is an batteries-included, open-source library for building authorization
+into your application.
+
+Oso helps you form a mental model for your
+authorization needs by providing a set of frameworks and templates built on
+top of a
+declarative policy language called Polar. The Oso library provides an
 intuitve API for querying Polar policies, which centralize authorization
-logic, and middleware to help apply authorization in the right places.
-Oso also provides a **debugger and REPL** for Polar, to help developers learn
-the language and test their policies.
+logic, and middleware to help apply authorization in the right places. Oso
+also provides a debugger and REPL for Polar, to help developers learn the
+language and test their policies.
 
 
 Oso lets you offload the thinking of how to design authorization and build
