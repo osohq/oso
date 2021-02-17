@@ -122,7 +122,10 @@ deps-test:
 # in release mode, this means they should be installed
 # from the wheels
 check-deps:
-	python3 -c "import pkg_resources; pkg_resources.require(open('requirements-docs-test.txt'))"
+	pip3 show oso
+	pip3 show django-oso
+	pip3 show flask-oso
+	pip3 show sqlalchemy-oso
 
 submodules:
 	git submodule update --checkout --init --recursive --remote
