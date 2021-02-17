@@ -10,7 +10,7 @@ startRepl: |
     ```
 startReplWithFile: |
     ```
-    $ TODO
+    $ oso alice.polar
     ```
 replApi: |
     ```

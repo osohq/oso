@@ -18,6 +18,15 @@ startReplWithFile: |
     ```
 replApi: |
     ```go
-    TODO
+    import "github.com/osohq/go-oso"
+
+    func main() {
+        // error handling not shown
+        osoInstance, err := oso.NewOso()
+        osoInstance.RegisterClass(reflect.TypeOf(Expense{}), nil)
+        osoInstance.RegisterClass(reflect.TypeOf(User{}), nil)
+        osoInstance.LoadFile("policy.polar")
+        osoInstance.Repl()
+    }
     ```
 ---
