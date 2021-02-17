@@ -7,10 +7,10 @@ aliases:
   - /getting-started/application/index.html
 ---
 
-# Add Oso to an Application
+# Add Oso to a Python Application
 
 This guide covers a little more detail about how to add Oso to an
-application.
+application written in Python.
 
 Whereas in the [Quickstart]({{< relref path="getting-started/quickstart"
 lang="python" >}}) we zoomed through an
