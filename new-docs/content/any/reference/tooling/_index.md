@@ -1,6 +1,6 @@
 ---
 title: Developer Tools
-weight: 3
+weight: 4
 aliases:
     - ../more/dev-tools/index.html
 ---

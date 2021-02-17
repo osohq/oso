@@ -1,5 +1,5 @@
 ---
-title: Python, Frameworks, & ORMs
+title: Python Library
 weight: 2
 any: false
 aliases:
@@ -39,4 +39,4 @@ is automatically generated from the Oso Python library source files.
 
 ## Framework & ORM Integrations
 
-Oso also provides the following libraries to integrate with Python frameworks and ORMS.
+Oso also provides [libraries](frameworks) to integrate with Python frameworks and ORMS.
