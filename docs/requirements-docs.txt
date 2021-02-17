@@ -10,9 +10,4 @@ sphinx-copybutton
 sphinx-material
 # Temporary fix
 git+https://github.com/samscott89/sphinx-notfound-page@master
-# needed for API docs
--e ../languages/python/oso
--e ../languages/python/django-oso
--e ../languages/python/flask-oso
--e ../languages/python/sqlalchemy-oso[flask]
 django~=2.2
