@@ -17,7 +17,7 @@ that you can use in your oso policies to write rules based on the roles you
 defined, instead of writing rules over users directly.
 
 This feature is currently supported in [the SQLAlchemy library]({{< relref
-path="reference/lib/sqlalchemy" lang="python" >}}). If you want to get started with
+path="reference/frameworks/sqlalchemy" lang="python" >}}). If you want to get started with
 SQLAlchemy roles right away, check out [our tutorial](sqlalchemy_roles).
 
 For a more in-depth understanding of roles, check out our guide to [Role-Based
@@ -52,7 +52,7 @@ following conventions:
   {{% /callout %}}
 
 The library also provides [`helper methods`]({{< relref
-path="reference/lib/sqlalchemy#sqlalchemy_osoroles" lang="python" >}}) for
+path="reference/frameworks/sqlalchemy#sqlalchemy_osoroles" lang="python" >}}) for
 inspecting and managing roles.
 
 ## Base policy
