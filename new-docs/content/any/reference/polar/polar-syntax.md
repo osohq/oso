@@ -243,7 +243,7 @@ with alternatives.
 
 #### Negation (not)
 
-The `not` operator will succeed when the expression it precedes fails.
+The `not` operator will succeed when its argument fails.
 
 For example, the following rule will succeed when `x != 0` (and could be written as such).
 
@@ -254,14 +254,21 @@ non_zero(x) if not x == 0;
 `not` is helpful when negating the results of another rule call. For example,
 
 ```polar
-is_positive(x) if
+positive(x) if
     non_zero(x) and
-    not is_negative(x);
+    not negative(x);
 
-is_negative(x) if x < 0;
+negative(x) if x < 0;
 ```
 
-Above, `is_positive` will succeed if `is_negative(x)` returns no results.
+Above, `positive` will succeed if `negative(x)` returns no results.
+
+To negate multiple expressions, use parentheses to group them:
+
+```polar
+positive(x) if
+    not (x == 0 or negative(x));
+```
 
 #### Dictionary Key Access
 
