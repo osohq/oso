@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1613523151981,
+  "lastUpdate": 1613524024812,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -28437,6 +28437,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 8428,
             "range": "± 207",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "47e3bddbdabdf1bddf7fdd5c112f2086d110ba6c",
+          "message": "literalInclude Hugo shortcode (#710)\n\n* First pass reorganization\r\n\r\n* move data to the right place for python\r\n\r\n* move Polar foundations to concepts section\r\n\r\n* reorganize java docs\r\n\r\n* reorganize node docs\r\n\r\n* reorganize ruby docs\r\n\r\n* reorganize rust + go libraries\r\n\r\n* add enforce guide\r\n\r\n* messed up rebase\r\n\r\n* NPM is mystifying\r\n\r\n* Experiment: fetch content from GitHub via JS\r\n\r\n* Create literalInclude shortcode\r\n\r\n* Remove unused variable from exampleGet shortcode\r\n\r\n* ABAC guide updated\r\n\r\n* Copy over RBAC examples\r\n\r\n* RBAC guide updated\r\n\r\n* Copy over user_types examples\r\n\r\n* Wrangle stray Python\r\n\r\n* Update user_types guide\r\n\r\n* Context guide\r\n\r\n* Copy over inheritance examples\r\n\r\n* Update inheritance guide\r\n\r\n* Update data access guides\r\n\r\n* Update Download link\r\n\r\n* Update home page buttons to point to quickstart\r\n\r\n* Move homepage lang picker below content\r\n\r\n* Add ability to specify line ranges to literalInclude shortcode\r\n\r\n* Add SQLAlchemy example repo as a submodule\r\n\r\n* Update SQLAlchemy roles guide\r\n\r\n* Fix typos of Java -> Python\r\n\r\n* Copy 'Add Oso to your app' examples for Python (incl. some old quickstart stuff)\r\n\r\n* Update 'Add Oso to your app' guide for Python\r\n\r\n* Copy 'Add Oso to your app' examples for Java\r\n\r\n* Update 'Add Oso to your app' guide for Java\r\n\r\n* Update Quickstart\r\n\r\n* Use global context ($.)\r\n\r\nto make it clear what we're checking when we're deeply nested in\r\nconditional hell\r\n\r\n* Add explanation of options\r\n\r\n* Add testing new docs to CI.\r\n\r\n* Fix JS icons.\r\n\r\n* Fix SQLalchemy example test\r\n\r\n* Remove redundant rust action step and cache WASM build too.\r\n\r\n* Phony examples?\r\n\r\n* Install reqs in basic roles example.\r\n\r\n* Update submodule to include all reqs.\r\n\r\n* Add missing req.\r\n\r\n* Fix Ruby syntax.\r\n\r\n* Docs final touches (#722)\r\n\r\n* rename getting started guides\r\n\r\n* get rid of intro\r\n\r\n* fix formatting on home page\r\n\r\n* add 'more' section to guides and hide design principles\r\n\r\n* finish reorganizing/renaming based on graham's edits\r\n\r\n* move data filtering to internals\r\n\r\n* rename global roles\r\n\r\n* move where to enforce guide to python only\r\n\r\n* remove multiple actor types guide from every language\r\n\r\n* update descriptions\r\n\r\n* wording\r\n\r\n* Merge Go docs with new docs structure (#729)\r\n\r\n* application types\r\n* context\r\n* abac\r\n* add steve's new docs data to new docs org\r\n\r\nCo-authored-by: steve olsen <dev@steve.computer>\r\n\r\n* basic roles\r\n\r\n* Version for Java JAR in new docs CI test.\r\n\r\nCo-authored-by: Leina McDermott <leina05@gmail.com>\r\nCo-authored-by: Sam Scott <sam@osohq.com>\r\nCo-authored-by: steve olsen <dev@steve.computer>",
+          "timestamp": "2021-02-16T17:55:40-07:00",
+          "tree_id": "a0ea96c1d220e69f4c3355dc2a7420ef1b70662e",
+          "url": "https://github.com/osohq/oso/commit/47e3bddbdabdf1bddf7fdd5c112f2086d110ba6c"
+        },
+        "date": 1613524022726,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 53036,
+            "range": "± 2771",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2379161,
+            "range": "± 83533",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 11367973,
+            "range": "± 384219",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 22761731,
+            "range": "± 584778",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 934,
+            "range": "± 85",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2673,
+            "range": "± 110",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 66714,
+            "range": "± 3057",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 603156,
+            "range": "± 32674",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 23058,
+            "range": "± 1304",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 22960,
+            "range": "± 2258",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 22164,
+            "range": "± 1127",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 23231,
+            "range": "± 1487",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 20018,
+            "range": "± 1591",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6209,
+            "range": "± 619",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 7243,
+            "range": "± 1938",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 9176,
+            "range": "± 785",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 20825,
+            "range": "± 5812",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 6456,
+            "range": "± 430",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 13750,
+            "range": "± 544",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 9049,
+            "range": "± 561",
             "unit": "ns/iter"
           }
         ]
