@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1613524024812,
+  "lastUpdate": 1613524833334,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -28581,6 +28581,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 9049,
             "range": "± 561",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "331f08965398d12b514f1a022313b666782350f9",
+          "message": "Workaround to make Go icon scale properly in code blocks. (#732)\n\nRemove unused icons",
+          "timestamp": "2021-02-16T18:11:01-07:00",
+          "tree_id": "ff6a496e739871100f119ac006f15bc7f6e22bc6",
+          "url": "https://github.com/osohq/oso/commit/331f08965398d12b514f1a022313b666782350f9"
+        },
+        "date": 1613524831279,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 40172,
+            "range": "± 1429",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 1724956,
+            "range": "± 23242",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 8579587,
+            "range": "± 46602",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 17065603,
+            "range": "± 49490",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 734,
+            "range": "± 22",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2161,
+            "range": "± 44",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 52350,
+            "range": "± 1124",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 459078,
+            "range": "± 8279",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 17347,
+            "range": "± 657",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17335,
+            "range": "± 667",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17355,
+            "range": "± 608",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 17339,
+            "range": "± 632",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 15580,
+            "range": "± 447",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 4775,
+            "range": "± 529",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 5700,
+            "range": "± 1729",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 6947,
+            "range": "± 174",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 18825,
+            "range": "± 1762",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 4793,
+            "range": "± 102",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 10011,
+            "range": "± 132",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 6604,
+            "range": "± 130",
             "unit": "ns/iter"
           }
         ]
