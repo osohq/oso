@@ -50,10 +50,10 @@ _api_docs: _api_docs/ruby _api_docs/java _api_docs/js/node
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-html doctest spelling: Makefile deps _api_docs submodules
+html doctest spelling: Makefile deps deps_test _api_docs submodules
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-build: Makefile deps _api_docs submodules
+build: Makefile deps check-deps _api_docs submodules
 	@DOCS_RELEASE=1 $(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 clean:
@@ -114,6 +114,18 @@ test: doctest
 
 deps:
 	pip3 install -r requirements-docs.txt
+
+deps-test:
+	pip3 install -r requirements-docs-test.txt
+
+# Check that all the dependencies have been installed
+# in release mode, this means they should be installed
+# from the wheels
+check-deps:
+	pip3 show oso
+	pip3 show django-oso
+	pip3 show flask-oso
+	pip3 show sqlalchemy-oso
 
 submodules:
 	git submodule update --checkout --init --recursive --remote
