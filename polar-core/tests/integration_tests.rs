@@ -1711,10 +1711,14 @@ fn test_assignment() {
     qeval(&mut p, "x := 5 and x == 5");
     qruntime!(
         "x := 5 and x := 6",
-        RuntimeError::IncompatibleBindings{msg: s}, s == "Cannot rebind Symbol(\"x\")");
+        RuntimeError::IncompatibleBindings { msg: s },
+        s == "Cannot rebind Symbol(\"x\")"
+    );
     qruntime!(
         "x < 3 and x := 6",
-        RuntimeError::IncompatibleBindings{msg: s}, s == "Grounding failed");
+        RuntimeError::IncompatibleBindings { msg: s },
+        s == "Grounding failed"
+    );
     qnull(&mut p, "x := 5 and x > 6");
     qeval(&mut p, "x := y and y = 6 and x = 6");
 
