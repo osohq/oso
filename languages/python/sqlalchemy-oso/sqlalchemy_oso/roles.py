@@ -399,10 +399,7 @@ def get_resource_users_by_role(session, resource, role_name):
     role_model = get_role_model_for_resource_model(resource_model)
     user_model = get_user_model_for_resource_model(resource_model)
     resource_name = _get_resource_name_lower(resource_model)
-    filter_kwargs = {
-        resource_name: resource,
-        "name": role_name
-    }
+    filter_kwargs = {resource_name: resource, "name": role_name}
 
     users = (
         session.query(user_model)

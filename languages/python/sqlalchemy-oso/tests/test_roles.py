@@ -246,9 +246,11 @@ def ringo(test_db_session):
 def abbey_road(test_db_session):
     return test_db_session.query(Repository).filter_by(name="Abbey Road").first()
 
+
 @pytest.fixture
 def vocalists(test_db_session):
     return test_db_session.query(Team).filter_by(name="Vocalists").first()
+
 
 @pytest.fixture
 def beatles(test_db_session):
