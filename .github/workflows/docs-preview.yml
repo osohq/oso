@@ -53,7 +53,7 @@ jobs:
 
       ### Build old docs
       - name: Build docs
-        run: SPHINXOPTS="-W" make -C docs build
+        run: SPHINXOPTS="-W" make -C docs deps-test build
 
       ### Build new docs
       - name: Setup Hugo
