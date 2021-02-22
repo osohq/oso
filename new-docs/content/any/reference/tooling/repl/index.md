@@ -52,7 +52,8 @@ policy files. For instance, suppose we had just one `allow` rule for
 Alice, say, in the file `alice.polar`:
 
 ```
-allow("alice@example.com", "GET", _expense: Expense);
+allow("alice@example.com", "GET", expense: Dictionary) if
+    expense.id == 1;
 ```
 
 Then we can run the REPL, passing that filename (and any others we need)
@@ -62,10 +63,8 @@ on the command line:
 
 And now we can use the rule that was loaded:
 
-<!-- TODO(gj): it's a little unfortunate that we pass in a string here instead of
-an Expense, which is the specializer in the above-loaded rule. -->
 ```
-query> allow("alice@example.com", "GET", "expense")
+query> allow("alice@example.com", "GET", {name: "my expense", id: 1})
 true
 ```
 

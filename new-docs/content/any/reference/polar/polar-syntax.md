@@ -241,6 +241,35 @@ true. Disjunctions can always be replaced by multiple rules with identical
 heads but different bodies (the operands), but may help simplify writing rules
 with alternatives.
 
+#### Negation (not)
+
+The `not` operator will succeed when its argument fails.
+
+For example, the following rule will succeed when `x != 0` (and could be written as such).
+
+```polar
+non_zero(x) if not x == 0;
+```
+
+`not` is helpful when negating the results of another rule call. For example,
+
+```polar
+positive(x) if
+    non_zero(x) and
+    not negative(x);
+
+negative(x) if x < 0;
+```
+
+Above, `positive` will succeed if `negative(x)` returns no results.
+
+To negate multiple expressions, use parentheses to group them:
+
+```polar
+positive(x) if
+    not (x == 0 or negative(x));
+```
+
 #### Dictionary Key Access
 
 The dot `.` operator can be used to access the value associated with a key in a

@@ -398,11 +398,13 @@ def get_resource_users_by_role(session, resource, role_name):
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
     user_model = get_user_model_for_resource_model(resource_model)
+    resource_name = _get_resource_name_lower(resource_model)
+    filter_kwargs = {resource_name: resource, "name": role_name}
 
     users = (
         session.query(user_model)
         .join(role_model)
-        .filter_by(repository=resource, name=role_name)
+        .filter_by(**filter_kwargs)
         .order_by(user_model.user_id)
         .all()
     )
