@@ -48,7 +48,6 @@ run: api_docs
 	hugo server
 
 build: install
-	cd themes/oso-webpack && npm run-script build
 	HUGO_ENV=production hugo -b https://docs-preview.oso.dev/
 
 build-prod: install
