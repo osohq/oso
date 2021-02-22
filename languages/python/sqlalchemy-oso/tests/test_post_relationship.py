@@ -308,6 +308,7 @@ def tag_nested_many_many_test_fixture(session):
     eng = Tag(name="eng")
     user_posts = Tag(name="user_posts")
     random = Tag(name="random", is_public=True)
+    other = Tag(name="other")
 
     user = User(username="user", tags=[eng, user_posts])
     other_user = User(username="other_user", tags=[random])
@@ -341,6 +342,13 @@ def tag_nested_many_many_test_fixture(session):
         tags=[eng, user_posts, random],
     )
 
+    other_tagged_post = Post(
+        contents="other tagged post",
+        access_level="public",
+        created_by=user,
+        tags=[other]
+    )
+
     # HACK!
     objects = {}
     for (name, local) in locals().items():
@@ -348,6 +356,10 @@ def tag_nested_many_many_test_fixture(session):
             session.add(local)
 
         objects[name] = local
+
+    user.posts += [user_eng_post, user_user_post, not_tagged_post, all_tagged_post,
+                   other_tagged_post]
+    other_user.posts += [random_post]
 
     session.commit()
 
@@ -602,7 +614,7 @@ def test_empty_constraints_in(session, oso, tag_nested_many_many_test_fixture):
         + " \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_id))"
     )
     posts = posts.all()
-    assert len(posts) == 4
+    assert len(posts) == 5
     assert tag_nested_many_many_test_fixture["not_tagged_post"] not in posts
 
 
@@ -713,6 +725,24 @@ def test_deeply_nested_in(session, oso, tag_nested_many_many_test_fixture):
     assert posts.count() == 1
 
 
+def test_in_intersection(session, oso, tag_nested_many_many_test_fixture):
+    oso.load_str("""
+        allow(_, _, post: Post) if
+            u in post.users and
+            t in post.tags and
+            u in t.users;
+    """)
+
+    posts = session.query(Post).filter(
+        authorize_model(oso, "user", "read", session, Post)
+    )
+
+    # TODO (dhatch): Add query in here when this works.
+    assert_query_equals(posts, "")
+
+    assert posts.count() == 4
+
+
 # TODO combine with test in test_django_oso.
 def test_partial_isa_with_path(session, oso, tag_nested_many_many_test_fixture):
     oso.load_str(
@@ -733,7 +763,7 @@ def test_partial_isa_with_path(session, oso, tag_nested_many_many_test_fixture):
     for post in posts:
         assert post.created_by.username == "user"
 
-    assert len(posts) == 4
+    assert len(posts) == 5
 
 
 # TODO test_nested_relationship_single_many

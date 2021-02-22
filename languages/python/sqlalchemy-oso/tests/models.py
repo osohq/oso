@@ -62,6 +62,14 @@ user_tags = Table(
 )
 
 
+post_users = Table(
+    "post_users",
+    ModelBase.metadata,
+    Column("post_id", Integer, ForeignKey("posts.id")),
+    Column("user_id", Integer, ForeignKey("users.id"))
+)
+
+
 class Post(ModelBase):
     __tablename__ = "posts"
 
@@ -72,6 +80,8 @@ class Post(ModelBase):
 
     created_by_id = Column(Integer, ForeignKey("users.id"))
     created_by = relationship("User", backref="posts")
+
+    users = relationship("User", secondary=post_users)
 
     needs_moderation = Column(Boolean, nullable=False, default=False)
 
