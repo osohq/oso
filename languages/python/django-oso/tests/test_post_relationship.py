@@ -501,7 +501,7 @@ def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     posts = Post.objects.authorize(None, actor=user, action="read")
     expected = f"""
-       SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
+       SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
               "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
        FROM "test_app2_post"
        WHERE "test_app2_post"."id" IN
@@ -537,7 +537,7 @@ def test_empty_constraints_in(tag_nested_many_many_fixtures):
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter).distinct()
     expected = f"""
-        SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents",
+        SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title",
                         "test_app2_post"."access_level", "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         WHERE "test_app2_post"."id" IN
@@ -565,7 +565,7 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
     user = User.objects.get(username="user")
     posts = Post.objects.authorize(None, actor=user, action="read")
     expected = f"""
-        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         WHERE "test_app2_post"."id" IN (SELECT W0."id"
@@ -602,7 +602,7 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
     )
     posts = Post.objects.filter(authorize_filter)
     expected = """
-        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         INNER JOIN "test_app2_user_posts" ON ("test_app2_post"."id" = "test_app2_user_posts"."post_id")
@@ -628,7 +628,7 @@ def test_deeply_nested_in(tag_nested_many_many_fixtures):
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter).distinct()
     expected = """
-        SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents",
+        SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title",
                         "test_app2_post"."access_level", "test_app2_post"."created_by_id",
                         "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
@@ -679,7 +679,7 @@ def test_unify_ins(tag_nested_many_many_fixtures):
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
     expected = """
-        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         LEFT OUTER JOIN "test_app2_user_posts" ON ("test_app2_post"."id" = "test_app2_user_posts"."post_id")
@@ -750,7 +750,7 @@ def test_in_intersection(tag_nested_many_many_fixtures):
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
     expected = f"""
-        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         WHERE "test_app2_post"."id"
@@ -792,7 +792,7 @@ def test_redundant_in_on_same_field(tag_nested_many_many_fixtures):
     posts = Post.objects.filter(authorize_filter)
     expected = f"""
 
-        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         WHERE "test_app2_post"."id" IN (SELECT V0."id"

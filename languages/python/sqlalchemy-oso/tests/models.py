@@ -67,6 +67,7 @@ class Post(ModelBase):
 
     id = Column(Integer, primary_key=True)
     contents = Column(String)
+    title = Column(String)
     access_level = Column(Enum("public", "private"), nullable=False, default="private")
 
     created_by_id = Column(Integer, ForeignKey("users.id"))
