@@ -239,19 +239,18 @@ impl BindingManager {
                         }
                     }
                 }
-
                 term.clone_with_value(Value::List(derefed))
             }
-            Value::Variable(v) => match self._variable_state(v) {
-                BindingManagerVariableState::Bound(value) => value,
-                _ => term.clone(),
+            Value::Variable(v) => match self._variable_is_bound(v) {
+                Some(value) => value,
+                None => term.clone(),
             },
-            Value::RestVariable(v) => match self._variable_state(v) {
-                BindingManagerVariableState::Bound(value) => match value.value() {
+            Value::RestVariable(v) => match self._variable_is_bound(v) {
+                Some(value) => match value.value() {
                     Value::List(l) if has_rest_var(l) => self.deref(&value),
                     _ => value,
                 },
-                _ => term.clone(),
+                None => term.clone(),
             },
             _ => term.clone(),
         }
@@ -492,6 +491,29 @@ impl BindingManager {
     // TODO: These functions are now internal, separate internal variable state from
     // external variable state.
     /// Check the state of `variable`.
+    fn _variable_is_bound(&self, variable: &Symbol) -> Option<Term> {
+        self._variable_is_bound_at_point(variable, self.bsp())
+    }
+
+    /// Check the state of `variable` at `bsp`.
+    fn _variable_is_bound_at_point(&self, variable: &Symbol, bsp: Bsp) -> Option<Term> {
+        let mut path = vec![variable];
+        while let Some(value) = self.value(path.last().unwrap(), bsp) {
+            match value.value() {
+                Value::Expression(_) => return None,
+                Value::Variable(v) | Value::RestVariable(v) => {
+                    if v == variable {
+                        return None;
+                    } else {
+                        path.push(v);
+                    }
+                }
+                _ => return Some(value.clone()),
+            }
+        }
+        None
+    }
+
     fn _variable_state(&self, variable: &Symbol) -> BindingManagerVariableState {
         self._variable_state_at_point(variable, self.bsp())
     }
