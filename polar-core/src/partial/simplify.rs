@@ -268,113 +268,28 @@ impl Folder for Simplifier {
             // Non-trivial conjunctions. Choose a unification constraint to
             // make a binding from, maybe throw it away, and fold the rest.
             Operator::And if o.args.len() > 1 => {
-                let mut cycles: Vec<HashSet<Symbol>> = vec![];
-                let mut unifies: Vec<usize> = o
+                let removed: Vec<usize> = o
                     .constraints()
                     .iter()
                     .enumerate()
                     .filter(|(_, constraint)| {
-                        // Collect up unifies to prune out cycles.
-                        match constraint.operator {
-                            Operator::Unify | Operator::Eq => {
-                                let left = &constraint.args[0];
-                                let right = &constraint.args[1];
-                                match (left.value(), right.value()) {
-                                    _ if self.is_dot_this(left) || self.is_dot_this(right) => false,
-                                    // Both sides are variables, but neither is _this. Bind together.
-                                    (Value::Variable(l), Value::Variable(r))
-                                    | (Value::Variable(l), Value::RestVariable(r))
-                                    | (Value::RestVariable(l), Value::Variable(r))
-                                    | (Value::RestVariable(l), Value::RestVariable(r)) => {
-                                        let mut added = false;
-                                        for cycle in &mut cycles {
-                                            if cycle.contains(&l) {
-                                                cycle.insert(r.clone());
-                                                added = true;
-                                                break;
-                                            }
-                                            if cycle.contains(&r) {
-                                                cycle.insert(l.clone());
-                                                added = true;
-                                                break;
-                                            }
-                                        }
-                                        if !added {
-                                            let mut new_cycle = HashSet::new();
-                                            new_cycle.insert(r.clone());
-                                            new_cycle.insert(l.clone());
-                                            cycles.push(new_cycle);
-                                        }
-                                        true
-                                    }
-                                    _ => false,
-                                }
-                            }
-                            _ => false,
-                        }
+                        let other_constraints = o.clone_with_constraints(
+                            o.constraints()
+                                .into_iter()
+                                .filter(|r| r != *constraint)
+                                .collect(),
+                        );
+                        let variables = other_constraints.variables();
+                        self.maybe_bind_constraint(constraint, variables)
                     })
                     .map(|(i, _)| i)
+                    .rev()
                     .collect();
-
-                // Combine cycles.
-                let mut joined_cycles: Vec<HashSet<Symbol>> = vec![];
-                for new_cycle in cycles {
-                    let mut joined = false;
-                    for cycle in &mut joined_cycles {
-                        if !cycle.is_disjoint(&new_cycle) {
-                            cycle.extend(new_cycle.clone().into_iter());
-                            joined = true;
-                            break;
-                        }
-                    }
-                    if !joined {
-                        joined_cycles.push(new_cycle);
-                    }
-                }
-
-                // This is the part where we don't really know what to do.
-                // how do we bind these guys?
-                for cycle in joined_cycles {
-                    // Get any symbol in the cycle. Prefer a non temp one.
-                    let mut set_first = false;
-                    let mut cycle_sym = Symbol("".to_owned());
-                    for symbol in &cycle {
-                        if !set_first {
-                            cycle_sym = symbol.clone();
-                            set_first = true;
-                        }
-                        if !symbol.is_temporary_var() {
-                            cycle_sym = symbol.clone();
-                            break;
-                        }
-                    }
-
-                    let cycle_term = term!(cycle_sym.clone());
-
-                    for symbol in cycle {
-                        if symbol != cycle_sym {
-                            self.bind(symbol, cycle_term.clone());
-                        }
-                    }
-                }
-
-                unifies.reverse();
-                for i in unifies {
+                eprintln!("removed {:?}", removed);
+                for i in removed {
                     o.args.remove(i);
                 }
 
-                if let Some(i) = o.constraints().iter().position(|constraint| {
-                    let other_constraints = o.clone_with_constraints(
-                        o.constraints()
-                            .into_iter()
-                            .filter(|r| r != constraint)
-                            .collect(),
-                    );
-                    let variables = other_constraints.variables();
-                    self.maybe_bind_constraint(constraint, variables)
-                }) {
-                    o.args.remove(i);
-                }
                 fold_operation(o, self)
             }
 
