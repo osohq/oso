@@ -3,3 +3,4 @@ public/**/*
 resources/**/
 hugo_stats.json
 themes/oso-webpack/static/*
+spelling/extra.dic

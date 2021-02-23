@@ -1,0 +1,14 @@
+matrix:
+  - name: HTML
+    sources:
+      - ../public/**/*.html
+    pipeline:
+      - pyspelling.filters.html:
+          comments: false
+          ignores:
+            - :matches(code, head, pre, svg)
+            - div.filename
+    dictionary:
+      wordlists:
+        - extra.txt
+      output: extra.dic
