@@ -2705,7 +2705,7 @@ impl Runnable for PolarVirtualMachine {
 
         let mut bindings = self.bindings(true);
         if !self.inverting {
-            if let Some(bs) = simplify_bindings(bindings) {
+            if let Some(bs) = simplify_bindings(bindings, false) {
                 bindings = bs;
             } else {
                 return Ok(QueryEvent::None);

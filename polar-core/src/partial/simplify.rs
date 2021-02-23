@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::bindings::Bindings;
 use crate::folder::{fold_operation, fold_term, Folder};
@@ -94,7 +94,7 @@ pub fn simplify_partial(var: &Symbol, term: Term) -> Term {
 ///
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
-pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
+pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     let mut unsatisfiable = false;
     let mut simplify = |var: Symbol, term: Term| {
         let simplified = simplify_partial(&var, term);
@@ -102,34 +102,109 @@ pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
             Ok(o) if o == &FALSE => unsatisfiable = true,
             _ => (),
         }
-        simplified
+        let mut symbols = HashSet::new();
+        simplified.variables(&mut symbols);
+        (simplified, symbols)
     };
 
-    let bindings: Bindings = bindings
-        .iter()
-        .map(|(var, value)| match value.value() {
-            Value::Expression(o) => {
-                assert_eq!(o.operator, Operator::And);
-                (var.clone(), simplify(var.clone(), value.clone()))
+    let mut simplified_bindings = HashMap::new();
+    if all {
+        for (var, value) in &bindings {
+            match value.value() {
+                Value::Expression(o) => {
+                    assert_eq!(o.operator, Operator::And);
+                    let (simplified, _) = simplify(var.clone(), value.clone());
+                    simplified_bindings.insert(var.clone(), simplified)
+                }
+                Value::Variable(v) | Value::RestVariable(v)
+                    if v.is_temporary_var()
+                        && bindings.contains_key(v)
+                        && matches!(
+                            bindings[v].value(),
+                            Value::Variable(_) | Value::RestVariable(_)
+                        ) =>
+                {
+                    simplified_bindings.insert(var.clone(), bindings[v].clone())
+                }
+                _ => simplified_bindings.insert(var.clone(), value.clone()),
+            };
+        }
+    } else {
+        let mut referenced_vars: VecDeque<Symbol> = VecDeque::new();
+        for (var, value) in &bindings {
+            if !var.is_temporary_var() {
+                match value.value() {
+                    Value::Expression(o) => {
+                        assert_eq!(o.operator, Operator::And);
+                        let (simplified, mut symbols) = simplify(var.clone(), value.clone());
+                        simplified_bindings.insert(var.clone(), simplified);
+                        referenced_vars.extend(symbols.drain());
+                    }
+                    Value::Variable(v) | Value::RestVariable(v)
+                        if v.is_temporary_var()
+                            && bindings.contains_key(v)
+                            && matches!(
+                                bindings[v].value(),
+                                Value::Variable(_) | Value::RestVariable(_)
+                            ) =>
+                    {
+                        let mut symbols = HashSet::new();
+                        let simplified = bindings[v].clone();
+                        simplified.variables(&mut symbols);
+                        simplified_bindings.insert(var.clone(), simplified);
+                        referenced_vars.extend(symbols.drain());
+                    }
+                    _ => {
+                        let mut symbols = HashSet::new();
+                        let simplified = value.clone();
+                        simplified.variables(&mut symbols);
+                        simplified_bindings.insert(var.clone(), simplified);
+                        referenced_vars.extend(symbols.drain());
+                    }
+                };
             }
-            Value::Variable(v) | Value::RestVariable(v)
-                if v.is_temporary_var()
-                    && bindings.contains_key(v)
-                    && matches!(
-                        bindings[v].value(),
-                        Value::Variable(_) | Value::RestVariable(_)
-                    ) =>
-            {
-                (var.clone(), bindings[v].clone())
+        }
+        while let Some(var) = referenced_vars.pop_front() {
+            if !simplified_bindings.contains_key(&var) {
+                if let Some(value) = bindings.get(&var) {
+                    match value.value() {
+                        Value::Expression(o) => {
+                            assert_eq!(o.operator, Operator::And);
+                            let (simplified, mut symbols) = simplify(var.clone(), value.clone());
+                            simplified_bindings.insert(var.clone(), simplified);
+                            referenced_vars.extend(symbols.drain());
+                        }
+                        Value::Variable(v) | Value::RestVariable(v)
+                            if v.is_temporary_var()
+                                && bindings.contains_key(v)
+                                && matches!(
+                                    bindings[v].value(),
+                                    Value::Variable(_) | Value::RestVariable(_)
+                                ) =>
+                        {
+                            let mut symbols = HashSet::new();
+                            let simplified = bindings[v].clone();
+                            simplified.variables(&mut symbols);
+                            simplified_bindings.insert(var.clone(), simplified);
+                            referenced_vars.extend(symbols.drain());
+                        }
+                        _ => {
+                            let mut symbols = HashSet::new();
+                            let simplified = value.clone();
+                            simplified.variables(&mut symbols);
+                            simplified_bindings.insert(var.clone(), simplified);
+                            referenced_vars.extend(symbols.drain());
+                        }
+                    };
+                }
             }
-            _ => (var.clone(), value.clone()),
-        })
-        .collect();
+        }
+    };
 
     if unsatisfiable {
         None
     } else {
-        Some(bindings)
+        Some(simplified_bindings)
     }
 }
 
