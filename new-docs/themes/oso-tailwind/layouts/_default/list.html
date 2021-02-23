@@ -8,7 +8,7 @@
             {{ .Content }}
           </article>
           <!--/ Post Content-->
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-2 justify-center py-4 leading-normal">
+          <div class="multiblox grid grid-cols-2 md:grid-cols-3 gap-2 justify-center py-4 leading-normal">
             {{ $pages := .Pages }}
             {{ if .Params.reverse }}{{ $pages = $pages.Reverse }}{{ end }}
             {{ $pages = first 6 $pages }}
