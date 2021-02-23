@@ -9,14 +9,20 @@ description: Learn about writing Oso policies - the source of truth for authoriz
 
 # Write Oso Policies
 
-This tutorial will ...
+This tutorial will teach you how to write policies for the
+Oso authorization system. You will learn what policies are,
+how they're queried, and the basic structure and operations
+of the rules that comprise them. You will also learn how to
+write rules that refer to application classes, instances,
+and fields.
 
 # What is a policy in Oso?
 
-An _authorization policy_ is a set of logical _rules_ for who
-is allowed to access what resources in an application.
+An _authorization policy_ is a set of logical _rules_ for
+who is allowed to access what resources in an application.
 Some examples of rules expressed in English are:
-* The user named "Banned Bad User" may not access any resources.
+
+* The user named "Banned B. User" may not access any resources.
 * No user may access any resource before 06:00 in their local timezone.
 * A user may access any resource that they created.
 
