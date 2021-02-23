@@ -9,325 +9,382 @@ description: Learn about writing Oso policies - the source of truth for authoriz
 
 # Write Oso Policies
 
-Policies are the source of truth for the authorization logic used to evaluate
-queries in Oso. As a reminder: Oso policies are written in a declarative
-language called Polar. There is a full [Polar Syntax guide](polar-syntax) which
-you can use as a reference of all the available syntax, but here we’ll give an
-overview of getting started with writing policies.
+This tutorial will ...
 
-The syntax might feel a bit foreign at first, but fear not: almost anything you
-can express in imperative code can equally be expressed in Polar — often more
-concisely and closer to how you might explain the logic in natural language.
+# What is a policy in Oso?
 
-{{% callout "Note" "green" %}}
-Policies are stored in Polar files (extension `.polar`), which are loaded
-into the authorization engine using the [Oso library](reference).
-{{% /callout %}}
+An _authorization policy_ is a set of logical _rules_ for who
+is allowed to access what resources in an application.
+Some examples of rules expressed in English are:
+* The user named "Banned Bad User" may not access any resources.
+* No user may access any resource before 06:00 in their local timezone.
+* A user may access any resource that they created.
 
-## Rule basics
+In any particular application, such rules may be represented
+and enforced in many different ways; e.g., as `if` statements
+in code, with database access control, filesystem permissions, etc.
 
-Policies are made up of [rules](polar-syntax#rules). Each rule defines a
-statement that is either true or false. Oso answers queries by evaluating rules
-that match the query name and parameters. Let’s take a basic [allow
-rule](glossary#allow-rules) as an example:
+Oso is a library that makes it easy to express and enforce
+authorization policies. Policies are kept separate from both
+application code and the underlying database/filesystem/etc.
+But because Oso is a library that runs in your application
+process, it has direct access to application objects and types,
+which lets you express application-specific policies in a very
+natural way.
+
+Authorization policies in Oso are expressed in a declarative,
+logic-based programming language called Polar. You've probably
+already seen some Polar policies in the [Quickstart](quickstart)
+and [Add to an App]({{< ref path="/getting-started/application/index.md" lang="python" >}})
+guides, and the [Polar Syntax guide](polar-syntax) has a detailed
+description of the language syntax and features.
+
+The purpose of _this_ guide is to serve as a tutorial introduction
+to the Polar language. When you've finished it, you should be able
+to read and write simple Polar rules over your own application objects
+and types.
+
+If you have some prior exposure to logic programming, the Polar
+language will feel very familiar. If not, don't panic! Polar is
+designed to be simple, often allowing easier and more concise
+expression of authorization rules than equivalent code in an
+imperative language. If you can express an authorization rule
+as a simple declarative sentence of English (or other natural language),
+it should be straightforward to turn into a Polar rule.
+
+If you're unsure of what _kind_ of authorization policy to write,
+you may want to head over to the [Conceptual Guides](learn) or
+start with a familiar pattern such as [roles](/guides/roles).
+This tutorial will not be concerned with a specific kind of policy,
+but rather with the language in which many different kinds of
+policies may be expressed.
+
+## Application Setup
+
+In this guide, we'll use the sample expenses app from the
+[Quickstart](quickstart) guide as an example. It provides a
+simple `Expense` class that models an expense record (e.g.,
+for a work-related purchase) that a user might create, read,
+update, or delete.
+
+An authorization policy for such an application might include
+rules such as:
+* A user may read any `Expense` that they submitted.
+* A user may approve an `expense` instance if they manage the
+  user that submitted it and the amount is less than some maximum.
+
+The rest of this tutorial will be concerned with how to turn
+informal English rules like the above into concrete Polar rules
+that the Oso library can enforce.
+
+## Queries
+
+_FIXME: This suction sucks, but something like it is needed._
+
+Before we can fully explore policies, however, we'll talk
+briefly about how a policy is _used_ by Oso to make authorization
+decisions.
+
+To enforce policy decisions in your application, you call
+the Oso library function `is_allowed(actor, action, resource)`,
+supplying arbitrary objects for the three arguments. That
+function _queries_ the policy engine for the Polar term
+`allow(actor, action, resource)`, passing (references to)
+the arguments along to the query engine. If the query is
+successful (i.e., returns more than zero matching results),
+`is_allowed` returns true; otherwise, it returns false.
+
+An analogy to a relational database may be helpful here.
+A policy is like a set of tables, populated with data needed
+to make allow/deny authorization decisions. A query over those
+tables may include arguments that a row must match in some way
+to be returned as part of the result set.
+
+## Trivial Policies
+
+Policies in Oso are made up of [rules](polar-syntax#rules).
+A Polar policy file (extension `.polar`) consists of zero
+or more rules, each terminated by a semicolon (`;`).
+It may also contain comments (which start with `#`) and
+[inline queries](polar-syntax#inline-queries) (which begin
+with `?=`) for testing.
+
+Let's take the base case first: a policy with zero rules.
+If you don't load any Polar files (or load only empty ones),
+you get the _empty policy_, which has no rules defined. This
+is a perfectly valid policy, albeit not a very interesting one.
+Every query against the empty policy fails, because there are
+no rules that match. This means that nothing is authorized,
+i.e., _everything is denied by default_.
+
+Suppose we wanted the opposite default — to _allow_ everything.
+We can achieve that by loading a policy that defines a single
+rule that matches any three arguments:
 
 ```polar
 allow(actor, action, resource);
 ```
 
-<!-- TODO(gj): link `Oso.is_allowed()` once API docs are hooked up. -->
-When we use `Oso.is_allowed()` (or equivalent), we are making a query that asks
-Oso to evaluate all rules that match *(a)* on the rule name (`allow`), and
-*(b)* on all the inputs.
+Since this is our first rule definition, let's step through it
+in detail. The name of the rule is `allow`. It has three parameters,
+enclosed in parenthesis after the name: here they are _variables_
+named `actor`, `action`, and `resource`. The name and parameters
+together are called the _head_ of a rule. We'll see _bodies_ shortly,
+but this rule doesn't have one, since the terminating `;` comes
+immediately after the head.
 
-In the rule above, `actor`, `action`, and `resource` are simply the parameter
-names, i.e., they are variables that will match *anything*.
+Now let's talk about how rule definitions are used during a query.
+When a rule definition is loaded from a policy, it doesn't _do_
+anything; like a function definition, it is code that may be evaluated,
+but only in response to a "call" or query.
 
-But if we replace `action` with a concrete type…
+Many queries in Polar look superficially like function calls:
+`allow(1, 2, 3)` is a possible query. (You can use the Polar REPL to
+interactively query Polar; this can be useful for learning the language
+and for testing policies.) But queries are not exactly like function
+calls; in particular, they can only "return" true or false — they denote
+[logical predicates](https://en.wikipedia.org/wiki/Predicate_(mathematical_logic)).
+And in fact it's best not to think of them as returning anything;
+rather, we say a query either _succeeds_ (the predicate is true) or
+_fails_ (it is false).
 
-```polar
-allow(actor, "read", resource);
-```
+Queries for certain expressions may be answered even without any rule
+definitions. For example, the following queries all succeed:
+* `1 = 1`
+* `1 < 2`
+* `x = 1 and x < 2`
 
-…the rule will now only be evaluated if the second input exactly matches the
-string `"read"`.
+But a query for a predicate (e.g., an `allow` query for authorization)
+can only succeed if:
+* The name matches a defined rule, _and_
+* That rule has the same number of parameters as arguments
+  supplied to the query, _and_
+* Each of the supplied arguments match the corresponding parameters
+  from the rule head, _and_
+* Queries for each term in the rule's body (if any) all succeed.
 
-### `if`&nbsp;Statements
+Arguments match parameters by [unification](polar-syntax#unification),
+which is a binding/equality-checking operator: an unbound variable
+unifies with a value by binding to it, a bound variable unifies with
+a value if its value does, and two (non-variable) values unify if
+they are equal.
 
-There are several ways to represent imperative `if` logic in Polar.
+In the case of the rule definition above, each of the three variable
+parameters will unify with _any_ supplied argument. Since there is
+no body to restrict these variables' values, this rule will match any
+query of the form `allow(x, y, z)`. Hence, everything is allowed.
 
-#### In a Rule Body
-
-The most common way to write an `if` statement in Polar is to add a body to a
-rule. The following rule allows **any** actor to approve **any** expense
-report:
-
-```polar
-allow(_actor, "approve", _report);
-```
-
-To restrict the rule such that only administrators may approve any expense
-report, we can add a body:
-
-```polar
-allow(actor, "approve", _report) if
-    actor.is_admin = true;
-```
-
-To express multiple truth conditions (e.g., `if A or B, then...`), we can
-either create multiple rules…
-
-```polar
-allow(actor, "approve", _report) if
-    actor.is_admin = true;
-
-allow(actor, "approve", _report) if
-    actor.title = "CFO";
-```
-
-…or we can use Polar’s [disjunction operator
-(`or`)](polar-syntax#disjunction-or) to combine the conditions in a single rule
-body:
-
-```polar
-allow(actor, "approve", _report) if
-    actor.is_admin = true
-    or actor.title = "CFO";
-```
-
-{{% callout "Tip" "green" %}}
-  In these rules we declared some variables with leading underscores
-  (`_actor`, `_report`). A leading underscore indicates that the variable will
-  only be used once (Polar does not distinguish between definition and use).
-  These variables are called *singleton variables*, and will match any value.
-  To help prevent errors, a warning will be emitted if a singleton variable is
-  not preceded by an underscore.
-{{% /callout %}}
-
-#### As Specializers in a Rule Head
-
-Given the following application class structure…
+Now, if you try to actually load the above rule, you'll get a warning
+about [singleton variables](polar-syntax#singletons). That's Polar
+telling you that the variables aren't used, and so the rule might
+be buggy, or the variable names misspelled. In this case it's not
+an error, so we can silence the warning by prefixing the variable
+names with underscores:
 
 ```polar
-class User:
-    ...
-
-class Admin(User):
-    ...
+allow(_actor, _action, _resource);
 ```
 
-…we can modify our original bodiless rule to only allow `Admin` users to
-approve any expense report by adding a
-[specializer](#registering-application-types) to the rule
-head:
+That means exactly the same thing, it just tells Polar not to
+tell us that the variables are singletons. We can even take it
+one step further, and use the special _anonymous variable_ `_`:
 
 ```polar
-allow(_actor: Admin, "approve", _report);
+allow(_, _, _);
 ```
 
-The rule will fail when evaluated on a regular `User` and succeed when
-evaluated on an `Admin`, encoding an implicit `if Admin` condition.
+Each occurrence of the anonymous variable `_` is considered
+a unique variable, so this rule also accepts any three
+possibly-but-not-necessarily distinct arguments. It is the
+minimal "allow everything" rule.
 
-This is another example of the rule matching process: instead of matching
-against a concrete value, we are instead checking to make sure the type of the
-input matches the expected type — in this case, an `Admin`.
+## Non-trivial Policies
 
-{{% callout "Tip" "green" %}}
-  Try to use type specializers as often as possible. It will help make sure you
-  don't accidentally allow access to an unrelated resource which happens to
-  have matching fields.
-{{% /callout %}}
+The trivial policies (deny/allow everything) are obviously not useful
+in real-world applications. The goal of a real policy is to restrict
+the allowed values of `actor`, `action`, and `resource` _just enough_
+to allow authorized requests and deny everything else.
 
-### Combining Rules
-
-Rules can be thought of as equivalent to methods in imperative programming. The
-same idea should be applied when writing policies: any piece of logic that you
-want to reuse throughout a policy can be extracted out into a new rule.
-
-The benefits of that extraction are that it makes it easier to keep logic
-consistent throughout and often results in a much more readable policy.
-
-Take the following example. We want a rule saying that accountants can read
-expenses. Our initial version might look like:
+One simple way to do this is to replace variable parameters with
+literals that must be matched, for example:
 
 ```polar
-allow(user: User, "read", expense: Expense) if
-    user.role = "accountant";
+allow(_actor, "GET", _resource);
 ```
 
-This would be fine, but if, for example, we wanted to allow the CFO to do
-whatever an accountant can do, we would need to duplicate all the rules. Or if
-we want to change how an application determines roles we would need to change
-all locations using this.
+This rule allows arbitrary first and third arguments (singleton
+variables `_actor` and `_resource`), but the second argument
+(the action) must match the literal string `"GET"`. If the supplied
+action were, say, `"POST"`, that argument, and therefore the rule,
+would fail to match, so the query would fail, and so authorization
+would be denied.
 
-So instead, we can refactor the role check into its own rule:
+Suppose we started with the above, but soon realized that we also
+needed to allow `"POST"` and `"DELETE"` requests. There are several
+ways to write this, but the simplest is to just add more rules that
+match those actions:
 
 ```polar
-allow(user: User, "read", expense: Expense) if
-    role(user, "accountant");
-
-role(user, role_name) if
-    user.role = role_name;
+allow(_actor, "GET", _resource);
+allow(_actor, "POST", _resource);
+allow(_actor, "DELETE", _resource);
 ```
 
-`role(user, "accountant")` is another example of pattern matching in Polar. Any
-time a rule body contains a **predicate** like this, it is performing another
-query. That is, it will try to find all *matching* rules named `role` with two
-inputs.
+Here we have three `allow` rules, each of which matches a different
+value of its second argument. A query may succeed by matching any
+of them; e.g., the query `allow("foo", "GET", "bar")` will succeed
+by matching (only) the first rule, while `allow("foo", "DELETE", "bar")`
+would match (only) the third. The query `allow("foo", "FROB", "bar")`
+would fail, because it does not match any of them.
 
-You can also either use the [REPL](repl) or the `Oso.query_rule()` method to
-interact with this directly. For example:
+## Conditional Rules
 
-```python
-from oso import Oso
+Another way to express the policy above would be to use a single
+rule that checked for each of the three actions we wish to allow.
+We can write that by using a _conditional_ rule, i.e., one that
+has the keyword `if` after its parameter list, followed by zero
+or more _body_ terms that serve to restrict its applicability:
 
-class User:
-    def __init__(self, name, role):
-        self.name = name
-        self.role = role
-
-oso = Oso()
-oso.load_str("role(user, role_name) if user.role = role_name;")
-
-alice = User("alice", "accountant")
-assert list(oso.query_rule("role", alice, "accountant"))
+```polar
+allow(_actor, action, _resource) if
+    action = "GET" or
+    action = "POST" or
+    action = "DELETE";
 ```
 
-{{% callout "Tip" "green" %}}
-  Try setting the `POLAR_LOG` environment variable before executing a polar
-  query to see a [trace](tracing) of how the query is evaluated:
+Here we've recoded the implicit disjunction expressed by three rules
+as an explicit disjunction of conditions using the logical `or` operator.
+(As you might guess, there are also logical `and` and `not` operators.
+Like `or`, they may only be used in rule bodies, i.e., after an `if`.)
 
-  ```console
-  $ POLAR_LOG=1 python user.py
-  [debug]   QUERY: role(<__main__.User object at 0x105da6190>, "accountant"), BINDINGS: {}
-  [debug]     APPLICABLE_RULES:
-  [debug]       role(user, role_name) if user.role = role_name;
-  [debug]     RULE: role(user, role_name) if user.role = role_name;
-  [debug]       QUERY: .(_user_5, "role", _value_1_7) and _value_1_7 = _role_name_6, BINDINGS: {_role_name_6 = "accountant", _user_5 = <__main__.User object at 0x105da6190>}
-  [debug]         QUERY: .(_user_5, "role", _value_1_7), BINDINGS: {_user_5 = <__main__.User object at 0x105da6190>}
-  [debug]           LOOKUP: <__main__.User object at 0x105da6190>.role()
-  [debug]           => "accountant"
-  [debug]         QUERY: _value_1_7 = _role_name_6, BINDINGS: {_role_name_6 = "accountant", _value_1_7 = "accountant"}
-  [debug]   BACKTRACK
-  [debug]           LOOKUP: <__main__.User object at 0x105da6190>.role()
-  [debug]           => No more results.
-  [debug]           BACKTRACK
-  [debug]           HALT
-  ```
-{{% /callout %}}
+Yet another way to write this policy would be to use the `in` operator:
+```polar
+allow(_actor, action, _resource) if
+    action in ["GET", "POST", "DELETE"];
+```
 
-### Summary
+Here the list of allowed actions is encoded as a literal Polar list
+(comma separated terms between square brackets). The `in` operator
+is a membership check: it succeeds when its left-hand side (`action`)
+appears anywhere in its right-hand side (the list `["GET", "POST",
+"DELETE"]`), which is true just when the left-hand side equals the
+list's first element, *or* its second element, *or* its third
+element, .... So this rule means the same thing as the ones above.
 
-We covered some of the basics of policies, how to represent conditional logic,
-and briefly touched on the core mechanic of pattern matching.
+## Objects, Types, and Fields
 
-## Application Types
+In our example app, an action is represented by a string, but the
+resources we're protecting are instances of our `Expense` model class.
+Let's use its `submitted_by` field to implement the sample rule:
 
-Any type defined in an application can be passed into Oso, and its attributes
-may be accessed from within a policy. Using application types make it possible
-to take advantage of an app’s existing domain model. For example:
+* A user may read any `Expense` that they submitted.
 
-{{< code file="policy.polar" >}}
-allow(actor, action, resource) if actor.{{% exampleGet "isAdmin" %}};
-{{< /code >}}
+One way to write such a rule in Polar is like this:
 
-<!-- TODO(gj): Link `Oso.isAllowed()` once API docs are setup. -->
+```polar
+allow(actor, "GET", resource) if
+    resource.submitted_by = actor;
+```
 
-The above rule expects the `actor` variable to be a {{% exampleGet "langName"
-%}} {{% exampleGet "instance" %}} with the field `{{% exampleGet "isAdmin" %}}`. The {{% exampleGet "langName" %}} {{% exampleGet "instance" %}} is passed
-into Oso with a call to `Oso.{{% exampleGet "isAllowed" %}}()`:
+The Polar term `resource.submitted_by` refers to the `submitted_by`
+field of the `resource` object. Comparing that value to the `actor`
+represents the "that they submitted" constraint of the English rule
+above.
 
-{{% exampleGet "userClass" %}}
+This rule, however, has a problem: it assumes that there _is_
+a `submitted_by` field on the `resource` object. If we happened
+to pass a different kind of object, this rule would fail, but in
+a potentially confusing and error-prone way. To fix this, we can
+add an explicit type check using the `matches` operator:
 
-The code above provides a `User` object as the _actor_ for our `allow` rule.
-Since `User` has a field called `{{% exampleGet "isAdmin" %}}`, it is checked
-during evaluation of the Polar rule and found to be true.
+```polar
+allow(actor, "GET", resource) if
+    resource matches Expense and
+    resource.submitted_by = actor;
+```
 
-In addition to accessing attributes, you can also call methods on application
-instances in a policy:
+Here `Expense` is the application model class, and `matches` checks
+that its left-hand side is an instance of its right (or any subclass
+thereof). If that type check fails, the next term won't be evaluated.
 
-{{< code file="policy.polar" >}}
-allow(actor, action, resource) if actor.{{% exampleGet "isAdminOf" %}}(resource);
-{{< /code >}}
+In order for Polar to use a class in a type check, it must be
+_registered_. If you're using an ORM adapter, this happens
+automatically for all model classes; otherwise, you'll have
+to register classes manually using `Oso.register_class`. If
+you forget, Polar will raise an error at query time.
 
-### Registering Application Types
+### Specializers
 
-Instances of application types can be constructed from inside an Oso policy
-using [the `new` operator](polar-syntax#new) if the class has been
-**registered**. {{% exampleGet "registerClass" %}}
+Since type checks are common and helpful for rule arguments,
+Polar provides a shortcut syntax:
 
-Once the class is registered, we can make a `User` object in Polar. This can be
-helpful for writing inline test queries:
+```polar
+allow(actor, "GET", resource: Expense) if
+    resource.submitted_by = actor;
+```
 
-{{% exampleGet "testQueries" %}}
+This rule only matches a query whose third argument is an instance
+of the `Expense` class, and so we may safely access fields we know
+exist in such instances. These type restrictions are called
+_specializers_, and we say that, e.g., the `resource` argument
+is _specialized_ on the `Expense` class.
 
-Registering classes also makes it possible to use
-[specialization](polar-syntax#specialization) and [the `matches`
-operator](polar-syntax#matches-operator) with the registered class.
+You may specialize on any argument; if our actors were instances
+of a `User` class, for instance, we could write:
 
-In our previous example, the **allow** rule expected the actor to be a `User`,
-but we couldn’t actually check that type assumption in the policy. If we
-register the `User` class, we can write the following rule:
+```polar
+allow(actor: User, "GET", resource: Expense) if ...;
+```
 
-{{< code file="policy.polar" >}}
-allow(actor: User, action, resource) if actor.name = "alice";
-{{< /code >}}
+### Built-in Classes
 
-This rule will only be evaluated when the actor is a `User`; the `actor`
-argument is _specialized_ on that type. We could also use `matches` to express
-the same logic on an unspecialized rule:
+We said above that any class you wish to use as a specializer
+(or on the right-hand side of the `matches` operator) must be
+registered with Polar. For convenience, Polar automatically
+registers a few classes, such as:
 
-{{< code file="policy.polar" >}}
-allow(actor, action, resource) if actor matches User{name: "alice"};
-{{< /code >}}
+* `Dictionary`
+* `String`
+* `List`
+* `Integer`
+* `Float`
 
-Either way, using the rule could look like this:
+These classes correspond to ones in the application language,
+e.g., in Python, `String` is actually the built-in `str` class.
 
-{{% exampleGet "specializedExample" %}}
+## Method Calls
 
-{{% callout "Note" "green" %}}
-Type specializers automatically respect the **inheritance** hierarchy of
-application classes. See the [Resources with
-Inheritance](guides/more/inheritance) guide for an in-depth
-example of how this works.
-{{% /callout %}}
+In addition to accessing fields in a rule, you can also call methods
+on application objects. We'll demonstrate this using the built-in
+`String` class, but it applies to instances any registered class.
 
-Once a class is registered, class or static methods can also be called from Oso
-policies:
+Suppose we decided to change our encoding of actions so that
+every "read" action started with the letter "r". We could allow
+all such actions using a rule like this:
 
-{{< code file="policy.polar" >}}
-allow(actor: User, action, resource) if actor.name in User.superusers();
-{{< /code >}}
+```polar
+allow(_actor, action: String, _resource) if
+    action.startswith("r");
+```
 
-{{% exampleGet "classMethodExample" %}}
+## Other Rules
 
-### Built-in Types
+So far all of our examples have involved only `allow` rules
+with three parameters. That's a natural place to start with Oso,
+because the `is_allowed` function generates queries of the form
+`allow(actor, action, resource)`. But you can write rules for
+whatever you like, and query them from within your `allow` rules.
+For instance, the built-in [roles library](/guides/roles) supplies an
+`allow` rule that looks like this:
 
-Methods called on the Polar built-in types `String`, `Dictionary`, `Number`,
-and `List` punt to methods on the corresponding application language class.
-That way you can use familiar methods like `.{{% exampleGet "startswith" %}}()`
-on strings regardless of whether they originated in your application or as a
-literal in your policy. This applies to all of Polar's [supported
-types](polar-syntax#primitive-types) in any supported application language. For
-examples using built-in types, see [the {{% exampleGet "langName" %}}
-library](reference/polar/classes) guide.
+```polar
+allow(user, action, resource) if
+    resource_role_applies_to(resource, role_resource) and
+    user_in_role(user, role, role_resource) and
+    role_allow(role, action, resource);
+```
 
-{{% callout "Warning" "orange" %}}
-Do not attempt to mutate a literal using a method on it. Literals in Polar
-are constant, and any changes made to such objects by calling a method will
-not be persisted.
-{{% /callout %}}
-
-
-### Summary
-
-- **Application types** and their associated application data are available
-  within policies.
-
-* Types can be **registered** with Oso, in order to:
-  - Create instances of application types in policies
-  - Leverage the inheritance structure of application types with **specialized
-    rules**, supporting more sophisticated access control models.
-
-- You can use **built-in methods** on primitive types & literals like strings
-  and dictionaries, exactly as if they were application types.
+In order for this `allow` rule to succeed, each of the body terms
+must succeed, and so the rules `resource_role_applies_to`, `user_in_role`,
+and `role_allow` must be defined and match the supplied arguments.
+Rules may also be recursive, i.e., may refer to themselves.
