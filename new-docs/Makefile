@@ -36,18 +36,33 @@ api_docs:content/java/reference/api content/node/reference/api content/python/re
 examples:
 	$(MAKE) -C examples submodules
 
-install: examples
+install: examples global-deps tailwind-deps webpack-deps
 	# uncomment when we want to include Oso WASM
 	# $(MAKE) -C .. wasm-build
 	# $(MAKE) -C ../languages/js build
+
+global-deps: .make.global-deps.installed
+
+.make.global-deps.installed:
 	npm install -g postcss postcss-cli autoprefixer
+	touch $@
+
+tailwind-deps: .make.tailwind-deps.installed
+
+.make.tailwind-deps.installed: themes/oso-tailwind/package.json
 	cd themes/oso-tailwind && npm install
+	touch $@
+
+webpack-deps: .make.webpack-deps.installed
+
+.make.webpack-deps.installed: themes/oso-webpack/package.json
 	cd themes/oso-webpack && npm install && npm run-script build
+	touch $@
 
 run: api_docs
 	hugo server
 
-build: install
+build: install clean
 	HUGO_ENV=production hugo -b https://docs-preview.oso.dev/
 
 build-prod: install
@@ -58,4 +73,7 @@ test: install
 	### TODO: Add Hugo tests
 	$(MAKE) -C examples test
 
-.PHONY: api_docs run build examples
+clean:
+	ls -A public | grep -v 'favicon.ico' | xargs -I {} echo 'public/'{} | xargs rm -rf
+
+.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean
