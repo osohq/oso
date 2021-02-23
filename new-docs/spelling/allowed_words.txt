@@ -49,7 +49,6 @@ natively
 backend
 frontend
 quickstart
-boolean
 bodiless
 approver
 transactional
@@ -135,19 +134,15 @@ IDEs
 VPN
 NPM
 EMR
+JARs
 
 # Misc terms
 roadmap
-# de
-facto
-# hoc
-# Todo
 amongst
 hardcoding
 hardcoded
-# pre
 declaratively
-un-run
+un
 anonymized
 untaken
 
@@ -173,17 +168,16 @@ RubyGems
 # Rust terms
 struct
 structs
-usize
-Vec
-# toml
-# enums
-# proc
-# io
-HashMap
-HashMaps
+enum
+enums
+proc
+io
 
 # Go
 cgo
+
+# Java
+Gradle
 
 # Node.js
 js

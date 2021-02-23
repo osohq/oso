@@ -1,14 +1,15 @@
 matrix:
-  - name: HTML
+  - name: LANG
     sources:
-      - ../public/**/*.html
+      - ../public/LANG/**/*.html|!../public/LANG/reference/api/**
     pipeline:
       - pyspelling.filters.html:
           comments: false
           ignores:
             - :matches(code, head, pre, svg)
             - div.filename
+            - div.multiblox
     dictionary:
       wordlists:
-        - extra.txt
-      output: extra.dic
+        - allowed_words.txt
+      output: LANG.dic

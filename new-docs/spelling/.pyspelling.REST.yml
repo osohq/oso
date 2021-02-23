@@ -1,0 +1,15 @@
+matrix:
+  - name: rest
+    sources:
+      - ../public/**/*.html|!../public/go/**|!../public/java/**|!../public/node/**|!../public/python/**|!../public/ruby/**|!../public/rust/**
+    pipeline:
+      - pyspelling.filters.html:
+          comments: false
+          ignores:
+            - :matches(code, head, pre, svg)
+            - div.filename
+            - div.multiblox
+    dictionary:
+      wordlists:
+        - allowed_words.txt
+      output: rest.dic

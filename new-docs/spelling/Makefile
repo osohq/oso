@@ -1,5 +1,4 @@
-spelling: spelling-requirements
-	pyspelling
+spelling: rest go java node python ruby rust
 
 spelling-requirements: .make.spelling-requirements.installed
 
@@ -7,4 +6,11 @@ spelling-requirements: .make.spelling-requirements.installed
 	pip install -r requirements-spelling.txt
 	touch $@
 
-.PHONY: spelling spelling-requirements
+rest: spelling-requirements
+	pyspelling -c .pyspelling.REST.yml
+
+go java node python ruby rust: spelling-requirements
+	cat .pyspelling.LANG.yml | sed 's/LANG/$@/g' > .pyspelling.$@.yml
+	pyspelling -c .pyspelling.$@.yml
+
+.PHONY: spelling spelling-requirements rest go java node python ruby rust
