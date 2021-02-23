@@ -1,6 +1,7 @@
 use super::sources::SourceInfo;
 pub use super::{error, formatting::ToPolarString};
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -341,6 +342,12 @@ impl Term {
         } else {
             None
         }
+    }
+
+    pub fn hash_value(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        hasher.finish()
     }
 }
 

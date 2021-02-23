@@ -350,15 +350,16 @@ impl Simplifier {
 
     /// Simplify a partial until quiescence.
     pub fn simplify_partial(&mut self, mut term: Term) -> Term {
-        let mut new;
+        let mut before = term.hash_value();
         loop {
-            new = self.fold_term(term.clone());
-            if new == term {
+            term = self.fold_term(term);
+            let after = term.hash_value();
+            if before == after {
                 break;
             }
-            term = new;
+            before = after;
             self.bindings.clear();
         }
-        new
+        term
     }
 }
