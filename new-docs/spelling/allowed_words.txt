@@ -1,189 +1,150 @@
-# Oso
-osohq
-oso
-django-oso
-sqlalchemy-oso
-
-# Oso terms
-Http
-Pathmapper
-PolarClass
-forall
-
-# Technical terms
-embeddable
-codebase
-specializer
-specializers
-unspecialized
-subclasses
-destructure
-disjunction
-disjunctions
-unification
-unifications
-namespaces
-metacharacter
-metacharacters
-entrypoint
-prefetch
-dataloader
-dataloaders
-integrations
-changelog
-changelogs
-runtime
-destructured
-disambiguated
-instantiation
-precompiled
-arities
-latencies
-superclass
-superclasses
-pseudocode
-performant
-duplicative
-metaprogramming
-natively
-backend
-frontend
-quickstart
-bodiless
-approver
-transactional
-boolean
-booleans
-autoboxed
-iterable
-iterables
-lookups
-classpath
-javac
-coroutine
-namespace
-unsafety
-middleware
-url
-stderr
-musl
-glibc
-arity
-NaN
-constructable
-precommit
-args
-moduli
-enumerables
-mixin
-stdout
-repo
-MinGW
-toolchain
-traceback
-STDIN
-RESTful
-
-# Product names
-SQLite
-GitHub
-OAuth
-GSuite
-Prolog
-Bundler
-Casbin
-Okta
-Rego
-Hashicorp
-JShell
-Odoo
-cURL
-Django
-SQLAlchemy
-macOS
-Vue
-React
-Rubying
-webpack
-bundlers
-GraphQL
-ActiveRecord
-TypeScript
-
 # Acronyms
-SaaS
-IAM
-REPL
-RBAC
 ABAC
+DFA
+EMR
+EOF
+FFI
+GDB
+IAM
+IDEs
+JARs
+JDB
+JWT
+JWZ
+LDAP
+LLDB
+NFA
+NPM
 ORM
 ORMs
-JWZ
-DFA
-NFA
-FFI
-URI
-JWT
+RBAC
+REPL
+SaaS
 UI
+URI
 VM
-EOF
-GDB
-JDB
-LLDB
-IDEs
 VPN
-NPM
-EMR
-JARs
 
-# Misc terms
-roadmap
-amongst
-hardcoding
-hardcoded
-declaratively
-un
-anonymized
-untaken
-
-# Names
-Bhavik
-Aeacus
-Asclepius
-Atemis
-Leto
-Halbert
-Appleby
-
-# Release specifiers
-rc
-dev
-
-# Python
-PyPI
-
-# Ruby
-RubyGems
-
-# Rust terms
-struct
-structs
-enum
-enums
-proc
-io
+# data/data.md cruft
+alice
+EndsWith
+registerClass
+submittedBy
 
 # Go
 cgo
+dev
+
+# HTML stuff
+href
+mailto
 
 # Java
 Gradle
 
+# Misc terms
+anonymized
+declaratively
+hardcoded
+hardcoding
+roadmap
+un
+untaken
+
+# Names
+Appleby
+Halbert
+
 # Node.js
 js
+asyncIterator
+
+# Oso
+oso
+osohq
 
 # Possessives
 Oso's
 Bhavik's
 Polar's
 SQLAlchemy's
+
+# Product names
+ActiveRecord
+Bundler
+GSuite
+GraphQL
+OAuth
+SQLAlchemy
+SQLite
+TypeScript
+bundlers
+macOS
+webpack
+
+# Python
+PyPI
+
+# Ruby
+RubyGems
+Rubying
+
+# Rust terms
+struct
+io
+
+# Technical terms
+MinGW
+NaN
+RESTful
+STDIN
+args
+arities
+arity
+backend
+boolean
+classpath
+codebase
+constructable
+coroutine
+dataloader
+dataloaders
+destructure
+destructured
+disambiguated
+disjunction
+disjunctions
+embeddable
+entrypoint
+frontend
+glibc
+instantiation
+integrations
+iterable
+latencies
+lookups
+metacharacter
+metacharacters
+middleware
+moduli
+musl
+namespace
+namespaces
+natively
+performant
+precompiled
+prefetch
+pseudocode
+quickstart
+runtime
+specializer
+specializers
+stderr
+stdout
+subclasses
+superclasses
+toolchain
+traceback
+transactional
+unifications
+unsafety
