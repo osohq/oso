@@ -311,7 +311,8 @@ In order for Polar to use a class in a type check, it must be
 _registered_. If you're using an ORM adapter, this happens
 automatically for all model classes; otherwise, you'll have
 to register classes manually using `Oso.register_class`. If
-you forget, Polar will raise an error at query time.
+you forget, Polar will warn you about an "unknown specializer"
+at load time.
 
 ### Specializers
 
@@ -323,10 +324,10 @@ allow(actor, "GET", resource: Expense) if
     resource.submitted_by = actor;
 ```
 
-This rule only matches a query whose third argument is an instance
-of the `Expense` class, and so we may safely access fields we know
-exist in such instances. These type restrictions are called
-_specializers_, and we say that, e.g., the `resource` argument
+This rule only matches an `allow` query whose third argument is an
+instance of the `Expense` class, and so we may safely access fields
+we know exist in such instances. These type restrictions are called
+_specializers_, and we say that, e.g., the `resource` parameter
 is _specialized_ on the `Expense` class.
 
 You may specialize on any argument; if our actors were instances
