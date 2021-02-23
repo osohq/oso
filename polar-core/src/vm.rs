@@ -327,7 +327,7 @@ impl PolarVirtualMachine {
 
         impl<'vm> Visitor for VarVisitor<'vm> {
             fn visit_variable(&mut self, v: &Symbol) {
-                if matches!(self.vm.variable_state(v), VariableState::Partial(_)) {
+                if matches!(self.vm.variable_state(v), VariableState::Partial()) {
                     self.has_partial = true;
                 }
             }
@@ -1084,13 +1084,9 @@ impl PolarVirtualMachine {
                 // involving a particular variable.
                 // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.
                 let var = left.value().as_symbol()?;
+
                 // Get the existing partial on the LHS variable.
-                let partial = match self.variable_state(var) {
-                    VariableState::Partial(expr) => expr,
-                    // This branch is unneeded. A cycle variable has no constraints,
-                    // so lhs of matches below will return None.
-                    _ => panic!("Invariant violated. left must be a variable"),
-                };
+                let partial = self.binding_manager.get_constraints(var);
 
                 let simplified = simplify_partial(var, partial.into_term());
                 let simplified = simplified.value().as_expression()?;
