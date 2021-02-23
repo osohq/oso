@@ -96,38 +96,36 @@ pub fn simplify_partial(var: &Symbol, term: Term) -> Term {
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
 pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     let mut unsatisfiable = false;
-    let mut simplify_var = |bindings: &Bindings, var: &Symbol, value: &Term| {
-        match value.value() {
-            Value::Expression(o) => {
-                assert_eq!(o.operator, Operator::And);
-                let simplified = simplify_partial(var, value.clone());
-                match simplified.value().as_expression() {
-                    Ok(o) if o == &FALSE => unsatisfiable = true,
-                    _ => (),
-                }
-                let mut symbols = HashSet::new();
-                simplified.variables(&mut symbols);
-                (simplified, symbols)
+    let mut simplify_var = |bindings: &Bindings, var: &Symbol, value: &Term| match value.value() {
+        Value::Expression(o) => {
+            assert_eq!(o.operator, Operator::And);
+            let simplified = simplify_partial(var, value.clone());
+            match simplified.value().as_expression() {
+                Ok(o) if o == &FALSE => unsatisfiable = true,
+                _ => (),
             }
-            Value::Variable(v) | Value::RestVariable(v)
+            let mut symbols = HashSet::new();
+            simplified.variables(&mut symbols);
+            (simplified, symbols)
+        }
+        Value::Variable(v) | Value::RestVariable(v)
             if v.is_temporary_var()
                 && bindings.contains_key(v)
                 && matches!(
-                                    bindings[v].value(),
-                                    Value::Variable(_) | Value::RestVariable(_)
-                                ) =>
-                {
-                    let mut symbols = HashSet::new();
-                    let simplified = bindings[v].clone();
-                    simplified.variables(&mut symbols);
-                    (simplified, symbols)
-                }
-            _ => {
-                let mut symbols = HashSet::new();
-                let simplified = value.clone();
-                simplified.variables(&mut symbols);
-                (simplified, symbols)
-            }
+                    bindings[v].value(),
+                    Value::Variable(_) | Value::RestVariable(_)
+                ) =>
+        {
+            let mut symbols = HashSet::new();
+            let simplified = bindings[v].clone();
+            simplified.variables(&mut symbols);
+            (simplified, symbols)
+        }
+        _ => {
+            let mut symbols = HashSet::new();
+            let simplified = value.clone();
+            simplified.variables(&mut symbols);
+            (simplified, symbols)
         }
     };
 
