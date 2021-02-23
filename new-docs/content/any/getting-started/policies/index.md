@@ -277,7 +277,7 @@ appears anywhere in its right-hand side (the list `["GET", "POST",
 list's first element, *or* its second element, *or* its third
 element, .... So this rule means the same thing as the ones above.
 
-## Objects, Types, and Fields
+## Classes, Instances, and Fields
 
 In our example app, an action is represented by a string, but the
 resources we're protecting are instances of our `Expense` model class.
@@ -395,3 +395,15 @@ In order for this `allow` rule to succeed, each of the body terms
 must succeed, and so the rules `resource_role_applies_to`, `user_in_role`,
 and `role_allow` must be defined and match the supplied arguments.
 Rules may also be recursive, i.e., may refer to themselves.
+
+## Summary
+
+In this tutorial, we've seen that:
+
+* A policy in Oso is written as a set of Polar rules.
+* Authorization decisions are made by evaluating a query of the
+  form `allow(actor, action, resource)` with respect to a policy.
+* Rules have heads: names and parameters that may be matched by a query.
+* Rules may have bodies: conditions that must also succeed for a query
+  to be successful.
+* Rules may refer to application classes, instances, fields, and methods.
