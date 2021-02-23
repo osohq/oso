@@ -28,7 +28,7 @@ pub type FollowerId = usize;
 pub enum VariableState {
     Unbound,
     Bound(Term),
-    Partial(Operation),
+    Partial(),
 }
 
 /// Represent each binding in a cycle as a unification constraint.
@@ -51,8 +51,8 @@ impl From<BindingManagerVariableState> for VariableState {
         match other {
             BindingManagerVariableState::Unbound => VariableState::Unbound,
             BindingManagerVariableState::Bound(b) => VariableState::Bound(b),
-            BindingManagerVariableState::Cycle(c) => VariableState::Partial(cycle_constraints(c)),
-            BindingManagerVariableState::Partial(p) => VariableState::Partial(p),
+            BindingManagerVariableState::Cycle(_) => VariableState::Partial(),
+            BindingManagerVariableState::Partial(_) => VariableState::Partial(),
         }
     }
 }
@@ -241,16 +241,16 @@ impl BindingManager {
                 }
                 term.clone_with_value(Value::List(derefed))
             }
-            Value::Variable(v) => match self._variable_is_bound(v) {
-                Some(value) => value,
-                None => term.clone(),
+            Value::Variable(v) => match self.variable_state(v) {
+                VariableState::Bound(value) => value,
+                _ => term.clone(),
             },
-            Value::RestVariable(v) => match self._variable_is_bound(v) {
-                Some(value) => match value.value() {
+            Value::RestVariable(v) => match self.variable_state(v) {
+                VariableState::Bound(value) => match value.value() {
                     Value::List(l) if has_rest_var(l) => self.deref(&value),
                     _ => value,
                 },
-                None => term.clone(),
+                _ => term.clone(),
             },
             _ => term.clone(),
         }
@@ -299,11 +299,25 @@ impl BindingManager {
     }
 
     pub fn variable_state(&self, variable: &Symbol) -> VariableState {
-        self._variable_state_at_point(variable, self.bsp()).into()
+        self.variable_state_at_point(variable, self.bsp())
     }
 
     pub fn variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> VariableState {
-        self._variable_state_at_point(variable, bsp).into()
+        let mut next = variable;
+        while let Some(value) = self.value(next, bsp) {
+            match value.value() {
+                Value::Expression(_) => return VariableState::Partial(),
+                Value::Variable(v) | Value::RestVariable(v) => {
+                    if v == variable {
+                        return VariableState::Partial();
+                    } else {
+                        next = v;
+                    }
+                }
+                _ => return VariableState::Bound(value.clone()),
+            }
+        }
+        VariableState::Unbound
     }
 
     /// Return all variables used in this binding manager.
@@ -486,32 +500,6 @@ impl BindingManager {
             .rev()
             .find(|Binding(var, _)| var == variable)
             .map(|Binding(_, val)| val)
-    }
-
-    // TODO: These functions are now internal, separate internal variable state from
-    // external variable state.
-    /// Check the state of `variable`.
-    fn _variable_is_bound(&self, variable: &Symbol) -> Option<Term> {
-        self._variable_is_bound_at_point(variable, self.bsp())
-    }
-
-    /// Check the state of `variable` at `bsp`.
-    fn _variable_is_bound_at_point(&self, variable: &Symbol, bsp: Bsp) -> Option<Term> {
-        let mut path = vec![variable];
-        while let Some(value) = self.value(path.last().unwrap(), bsp) {
-            match value.value() {
-                Value::Expression(_) => return None,
-                Value::Variable(v) | Value::RestVariable(v) => {
-                    if v == variable {
-                        return None;
-                    } else {
-                        path.push(v);
-                    }
-                }
-                _ => return Some(value.clone()),
-            }
-        }
-        None
     }
 
     fn _variable_state(&self, variable: &Symbol) -> BindingManagerVariableState {
