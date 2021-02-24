@@ -1,3 +1,6 @@
+run: api_docs
+	hugo server
+
 export JAVA_DIR := $(abspath ../languages/java/oso)
 export JS_DIR := $(abspath ../languages/js)
 export PYTHON_DIR := $(abspath ../languages/python)
@@ -33,23 +36,47 @@ content/ruby/reference/api: $(RUBY_FILES)
 
 api_docs:content/java/reference/api content/node/reference/api content/python/reference/api content/ruby/reference/api
 
-install:
+examples:
+	$(MAKE) -C examples submodules
+
+install: examples global-deps tailwind-deps webpack-deps
 	# uncomment when we want to include Oso WASM
 	# $(MAKE) -C .. wasm-build
 	# $(MAKE) -C ../languages/js build
+
+global-deps: .make.global-deps.installed
+
+.make.global-deps.installed:
 	npm install -g postcss postcss-cli autoprefixer
+	touch $@
+
+tailwind-deps: .make.tailwind-deps.installed
+
+.make.tailwind-deps.installed: themes/oso-tailwind/package.json
 	cd themes/oso-tailwind && npm install
+	touch $@
+
+webpack-deps: .make.webpack-deps.installed
+
+.make.webpack-deps.installed: themes/oso-webpack/package.json
 	cd themes/oso-webpack && npm install && npm run-script build
+	touch $@
 
-run: api_docs
-	hugo server
-
-build: install
-	cd themes/oso-webpack && npm run-script build
+build: install clean
 	HUGO_ENV=production hugo -b https://docs-preview.oso.dev/
 
 build-prod: install
 	cd themes/oso-webpack && npm run-script build-prod
 	HUGO_ENV=production hugo -b https://docs.osohq.com/
 
-.PHONY: api_docs run build
+test: install
+	### TODO: Add Hugo tests
+	$(MAKE) -C examples test
+
+clean:
+	ls -A public | grep -v 'favicon.ico' | xargs -I {} echo 'public/'{} | xargs rm -rf
+
+spelling:
+	$(MAKE) -C spelling
+
+.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling

@@ -25,7 +25,7 @@ defaultContentLanguage = "any"
       icon = "java"
 
   [languages.node]
-    languageName = "NodeJS"
+    languageName = "Node.js"
     contentDir = "content/node"
     weight = 2
     [languages.node.params]

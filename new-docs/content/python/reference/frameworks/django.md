@@ -1,8 +1,9 @@
 ---
-weight: 1
-title: Django
-aliases: 
+weight: 4
+title: Django Library
+aliases:
     - /using/frameworks/django.html
+description: The Oso Django integration provides request middleware and ORM integrations for data filtering.
 ---
 
 # Django
@@ -15,17 +16,17 @@ view decorators and ORM integrations to make it easier to use Oso with Django.
 The Oso Django integration is available on [PyPI](https://pypi.org/project/django-oso/) and can be installed using
 `pip`:
 
-```
+```console
 $ pip install django-oso
 ```
 
 ## Usage
 
-The `django_oso` django plugin contains a reusable django app that makes
-authorization with Oso and django easy.  To use, ensure `django_oso` is in
+The `django_oso` Django plugin contains a reusable Django app that makes
+authorization with Oso and Django easy.  To use, ensure `django_oso` is in
 `INSTALLED_APPS`:
 
-```
+```python
 INSTALLED_APPS = [
     'django_oso',
     ...
@@ -51,7 +52,7 @@ directories, call `load_file()` on
 
 ### Registering classes & models
 
-Often, authorization rules will be expressed over django models.  Therefore,
+Often, authorization rules will be expressed over Django models.  Therefore,
 `django_oso` will register every model for each installed app upon startup as
 a class with Oso. The `django.http.HttpRequest` is also registered
 under `HttpRequest`.  Django models are referenced in a Polar file using the
@@ -76,7 +77,7 @@ the data access layer, depending upon how you want to express authorization.
 
 Here’s a basic example in a route:
 
-```
+```python
 def get_expense(request, id):
     try:
         expense = Expense.objects.get(pk=id)
@@ -101,7 +102,7 @@ One common usage of `django_oso.auth.authorize()` is to perform authorization
 based on the request object. The
 `authorize_request()` decorator does this:
 
-```
+```python
 from django_oso.decorators import authorize_request
 
 @authorize_request
@@ -112,7 +113,7 @@ def auth_route(request):
 Rules can then be written using request
 attributes, like the path:
 
-```
+```polar
 # Allow any actor to make a GET request to "/".
 allow(_user: User, "GET", http_request: HttpRequest) if
     http_request.path = "/";
@@ -125,8 +126,8 @@ initialization.
 
 ## Example
 
-Check out the Django integration example app on GitHub:
-[osohq/oso-django-integration](https://github.com/osohq/oso-django-integration).
+Check out [the Django integration example
+app](https://github.com/osohq/oso-django-integration) on GitHub.
 
 ## API Reference
 

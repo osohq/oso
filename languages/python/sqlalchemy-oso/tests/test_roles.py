@@ -248,6 +248,11 @@ def abbey_road(test_db_session):
 
 
 @pytest.fixture
+def vocalists(test_db_session):
+    return test_db_session.query(Team).filter_by(name="Vocalists").first()
+
+
+@pytest.fixture
 def beatles(test_db_session):
     return test_db_session.query(Organization).filter_by(name="The Beatles").first()
 
@@ -314,8 +319,10 @@ def test_get_resource_roles(test_db_session, abbey_road):
     assert user_roles[0].name == "READ"
 
 
-def test_get_resource_users_by_role(test_db_session, abbey_road):
+def test_get_resource_users_by_role(test_db_session, abbey_road, vocalists):
     # Test with ORM method
+
+    # Test RepoRoles
     users = (
         test_db_session.query(User)
         .join(RepositoryRole)
@@ -326,11 +333,28 @@ def test_get_resource_users_by_role(test_db_session, abbey_road):
     assert users[0].email == "john@beatles.com"
     assert users[1].email == "paul@beatles.com"
 
+    # Test TeamRoles
+    users = (
+        test_db_session.query(User)
+        .join(TeamRole)
+        .filter_by(team=vocalists, name="MEMBER")
+        .all()
+    )
+    assert len(users) == 1
+    assert users[0].email == "paul@beatles.com"
+
     # Test with oso method
+
+    # Test RepoRoles
     users = oso_roles.get_resource_users_by_role(test_db_session, abbey_road, "READ")
     assert len(users) == 2
     assert users[0].email == "john@beatles.com"
     assert users[1].email == "paul@beatles.com"
+
+    # Test TeamRoles
+    users = oso_roles.get_resource_users_by_role(test_db_session, vocalists, "MEMBER")
+    assert len(users) == 1
+    assert users[0].email == "paul@beatles.com"
 
 
 def test_add_user_role(test_db_session, abbey_road, ringo, beatles):
@@ -503,7 +527,7 @@ def test_enable_roles(
 
     # test custom `resource_role_applies_to` rules (for nested resources)
     resource_role_applies_to_str = """resource_role_applies_to(repo: Repository, parent_org) if
-        parent_org := repo.organization and
+        parent_org = repo.organization and
         parent_org matches Organization;
         """
     oso.load_str(resource_role_applies_to_str)

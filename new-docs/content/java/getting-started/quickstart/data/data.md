@@ -14,4 +14,6 @@ submitted_by: submittedBy
 endswith: endsWith
 endswithURL: >
    [the `String.endsWith` method](https://docs.oracle.com/javase/10/docs/api/java/lang/String.html#endsWith(java.lang.String))
+expensesPath1: examples/quickstart/expenses-01-java.polar
+expensesPath2: examples/quickstart/expenses-02-java.polar
 ---

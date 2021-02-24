@@ -2,6 +2,7 @@
 title: Introduction
 any: true
 hideContents: true
+draft: true
 ---
 
 ### What is Oso?

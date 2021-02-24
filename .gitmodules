@@ -1,18 +1,28 @@
 [submodule "docs/examples/quickstart/oso-java-quickstart"]
 	path = docs/examples/quickstart/oso-java-quickstart
 	url = https://github.com/osohq/oso-java-quickstart.git
+        branch = main
 [submodule "docs/examples/quickstart/oso-nodejs-quickstart"]
 	path = docs/examples/quickstart/oso-nodejs-quickstart
 	url = https://github.com/osohq/oso-nodejs-quickstart.git
+        branch = main
 [submodule "docs/examples/quickstart/oso-python-quickstart"]
 	path = docs/examples/quickstart/oso-python-quickstart
 	url = https://github.com/osohq/oso-python-quickstart.git
+        branch = main
 [submodule "docs/examples/quickstart/oso-ruby-quickstart"]
 	path = docs/examples/quickstart/oso-ruby-quickstart
 	url = https://github.com/osohq/oso-ruby-quickstart.git
+        branch = main
 [submodule "docs/examples/quickstart/oso-rust-quickstart"]
 	path = docs/examples/quickstart/oso-rust-quickstart
 	url = https://github.com/osohq/oso-rust-quickstart.git
+        branch = main
 [submodule "docs/examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide"]
 	path = docs/examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide
 	url = https://github.com/osohq/oso-sqlalchemy-roles-guide
+  branch = main
+[submodule "new-docs/examples/roles/sqlalchemy/basic"]
+	path = new-docs/examples/roles/sqlalchemy/basic
+	url = https://github.com/osohq/oso-sqlalchemy-roles-guide.git
+	branch = basic_roles_complete

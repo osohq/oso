@@ -105,6 +105,14 @@ class Query:
         source = check_result(source)
         return Source(source)
 
+    def bind(self, name, value):
+        name = to_c_str(name)
+        value = ffi_serialize(value)
+        result = lib.polar_bind(self.ptr, name, value)
+        # TODO(gj): Do we need to process_messages here?
+        process_messages(self.next_message)
+        check_result(result)
+
 
 class QueryEvent:
     def __init__(self, ptr):

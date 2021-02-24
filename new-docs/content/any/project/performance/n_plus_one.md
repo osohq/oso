@@ -1,8 +1,8 @@
 ---
 title: |
-    The "N+1 Problem"
-aliases: 
-    - ../../more/performance/n_plus_one.html
+  The "N+1 Problem"
+aliases:
+  - ../../more/performance/n_plus_one.html
 ---
 
 # The “N+1 Problem”
@@ -14,11 +14,11 @@ evaluate the policy.
 Since it is common in policies to iterate over members or attributes
 in order to look for matching information, it can be common to encounter
 variants of the
-[N+1 problem](https://medium.com/@bretdoucette/n-1-queries-and-how-to-avoid-them-a12f02345be5).
+[N+1 problem](https://medium.com/@bretdoucette/n-1-queries-and-guides-avoid-them-a12f02345be5).
 
 For example, given the following policy:
 
-```
+```polar
 has_grandchild_called(grandparent: Person, name) if
     child in grandparent.children and
     grandchild in child.children and
@@ -41,11 +41,11 @@ and [dataloaders](https://github.com/graphql/dataloader) for [GraphQL](https://g
 
 Here we will show how these patterns can be leveraged in Oso.
 
-**Option 1.**  Implement a lookup method that accepts as input a list.
+**Option 1.** Implement a lookup method that accepts as input a list.
 
 For example:
 
-```
+```python
 class Person:
     @classmethod
     def batch_lookup_children(cls, people: List[Person]):
@@ -58,7 +58,7 @@ class Person:
         return children
 ```
 
-```
+```polar
 has_grandchild_called(grandparent: Person, name) if
     children = grandparent.children # gets the _list_ of children
     and grandchild in Person.batch_lookup_children(children)
@@ -80,7 +80,7 @@ locally stored the child.children attribute.
 
 For example, in a Django application you might write:
 
-```
+```polar
 has_grandchild_called(grandparent: Person, name) if
     child in grandparent.children.prefetch_related("children")
     and grandchild in child.children.all()

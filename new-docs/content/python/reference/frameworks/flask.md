@@ -1,8 +1,9 @@
 ---
-weight: 2
-title: Flask
-aliases: 
+weight: 5
+title: Flask Library
+aliases:
     - /using/frameworks/flask.html
+description: The Oso Flask integration provides request authorization middleware for usage with Flask.
 ---
 
 # Flask

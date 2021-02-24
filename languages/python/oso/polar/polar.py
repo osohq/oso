@@ -121,7 +121,7 @@ class Polar:
     def clear_rules(self):
         self.ffi_polar.clear_rules()
 
-    def query(self, query):
+    def query(self, query, *, bindings=None, accept_expression=False):
         """Query for a predicate, parsing it if necessary.
 
         :param query: The predicate to query for.
@@ -129,6 +129,8 @@ class Polar:
         :return: The result of the query.
         """
         host = self.host.copy()
+        host.set_accept_expression(accept_expression)
+
         if isinstance(query, str):
             query = self.ffi_polar.new_query_from_str(query)
         elif isinstance(query, Predicate):
@@ -136,10 +138,10 @@ class Polar:
         else:
             raise InvalidQueryTypeError()
 
-        for res in Query(query, host=host).run():
+        for res in Query(query, host=host, bindings=bindings).run():
             yield res
 
-    def query_rule(self, name, *args):
+    def query_rule(self, name, *args, **kwargs):
         """Query for rule with name ``name`` and arguments ``args``.
 
         :param name: The name of the predicate to query.
@@ -147,7 +149,7 @@ class Polar:
 
         :return: The result of the query.
         """
-        return self.query(Predicate(name=name, args=args))
+        return self.query(Predicate(name=name, args=args), **kwargs)
 
     def repl(self, files=[]):
         """Start an interactive REPL session."""
@@ -165,9 +167,11 @@ class Polar:
                 print_error(e)
                 continue
 
+            host = self.host.copy()
+            host.set_accept_expression(True)
             result = False
             try:
-                query = Query(ffi_query, host=self.host.copy()).run()
+                query = Query(ffi_query, host=host).run()
                 for res in query:
                     result = True
                     bindings = res["bindings"]

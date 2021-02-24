@@ -1,16 +1,11 @@
 ---
-title: Python Frameworks
+title: Frameworks & ORMs
 weight: 3
 any: false
-aliases: 
-    - /using/frameworks/index.html
+aliases:
+    - /using/libraries/python/api.html
 ---
-# Python Frameworks
 
-In addition to the [base Oso Python library](..), we offer specialized
-libraries for the following Python frameworks:
+# Framework & ORM Integrations
 
-* [Flask](flask)
-* [Django](django)
-* [SQLAlchemy](sqlalchemy)
-
+Oso provides libraries to integrate with the following Python frameworks and ORMS.

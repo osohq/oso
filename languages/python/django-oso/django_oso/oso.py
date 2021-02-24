@@ -28,6 +28,8 @@ def django_model_name(polar_name: str):
 
 
 def init_oso():
+    Oso.host.get_field = lambda model, field: model._meta.get_field(field).related_model
+
     def register_class(model, name=None):
         try:
             Oso.register_class(model, name=name)

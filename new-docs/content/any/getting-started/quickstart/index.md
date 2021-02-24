@@ -1,5 +1,5 @@
 ---
-title: Quickstart
+title: Quickstart (5 min)
 description: |
   Ready to get started? See Oso in action, and walk through our quick
   tutorial for adding authorization to a simple web server.
@@ -66,12 +66,10 @@ allow an **actor** to perform an **action** on a **resource**.
 In our policy file (`expenses.polar`), let's add a rule that allows anyone
 with an email ending in `"@example.com"` to view all expenses:
 
-{{< code file="expenses.polar" >}}
-allow(actor: String, "GET", _expense: Expense) if
-    actor.{{< exampleGet "endswith" >}}("@example.com");
-{{< /code >}}
+{{< literalInclude dynPath="expensesPath1"
+                   fallback="expenses1" >}}
 
-Note that the call to **{{< exampleGet "endswith" >}}** is actually calling
+Note that the call to `{{< exampleGet "endswith" >}}` is actually calling
 out to {{< exampleGet "endswithURL" >}}. The actor value passed to Oso is a
 string, and Oso allows us to call methods on it.
 {{% /callout %}}
@@ -125,10 +123,8 @@ including expenses submitted by others.
   Let's modify our existing rule such that users can only see their own
   expenses:
 
-  {{< code file="expenses.polar" >}}
-  allow(actor: String, "GET", expense: Expense) if
-      expense.{{< exampleGet "submitted_by" >}} = actor;
-  {{< /code >}}
+  {{< literalInclude dynPath="expensesPath2"
+                     fallback="expenses2" >}}
 {{% /callout %}}
 
 Behind the scenes, Oso looks up the `submitted_by` field on the provided
@@ -178,4 +174,4 @@ as:
 - Does the expense’s `amount` field contain a value less than $100.00?
 
 For more on leveraging application data in an Oso policy, check out
-[Application Types](application-types).
+[Application Types](policies#application-types).

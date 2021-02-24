@@ -3,6 +3,7 @@ import {
   PolarError,
   UnregisteredClassError,
   UnregisteredInstanceError,
+  UnexpectedPolarTypeError,
 } from './errors';
 import { ancestors, repr } from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
@@ -331,6 +332,8 @@ export class Host {
       return new Predicate(name, args);
     } else if (isPolarVariable(t)) {
       return new Variable(t.Variable);
+    } else {
+      throw new UnexpectedPolarTypeError();
     }
   }
 }

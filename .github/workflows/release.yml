@@ -135,8 +135,7 @@ jobs:
           cargo build --target x86_64-pc-windows-gnu --release
       - name: Rename static lib
         run: |
-          rm target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
-          mv target/x86_64-pc-windows-gnu/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
+          mv -Force target/x86_64-pc-windows-gnu/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
       - uses: actions/upload-artifact@v2
         with:
           name: oso_library
@@ -756,31 +755,31 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: oso_library
-      - name: Zip file
+      - name: Zip libraries
         run: zip --junk-paths -r oso-lib.zip oso_library/
       - name: Download oso python wheels from package run
         uses: actions/download-artifact@v1
         with:
           name: wheel
-      - name: Zip file
+      - name: Zip wheels
         run: zip --junk-paths -r oso-python.zip wheel/
       - name: Download oso python musl wheels from package run
         uses: actions/download-artifact@v1
         with:
           name: musl-wheel
-      - name: Zip file
+      - name: Zip musl wheels
         run: zip --junk-paths -r oso-python-musl.zip musl-wheel/
       - name: Download oso gem from package run
         uses: actions/download-artifact@v1
         with:
           name: gem
-      - name: Zip file
+      - name: Zip ruby gem
         run: zip --junk-paths -r oso-ruby.zip gem/
       - name: Download oso jar from package run
         uses: actions/download-artifact@v1
         with:
           name: jar
-      - name: Zip file
+      - name: Zip Java JAR
         run: zip --junk-paths -r oso-java.zip jar/
       - name: Download oso javascript package from package run
         uses: actions/download-artifact@v1
@@ -789,6 +788,12 @@ jobs:
       - name: Create JS release artifact
         working-directory: oso_js_node
         run: npm pack
+      - name: Download oso go lib
+        uses: actions/download-artifact@v1
+        with:
+          name: go
+      - name: Zip Go source code
+        run: zip -r go-oso.zip go/
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
@@ -855,6 +860,15 @@ jobs:
           asset_path: ./oso_js_node/oso-${{ steps.version.outputs.oso_version }}.tgz
           asset_name: oso-js-node-${{ steps.version.outputs.oso_version }}.tgz
           asset_content_type: application/gzip
+      - name: Upload go package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./go-oso.zip
+          asset_name: go-oso-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
   alert-failure:
     name: Alert on failure
     if: ${{ !success() }}
