@@ -43,10 +43,6 @@ matrix:
       - pyspelling.filters.context:
           context_visible_first: true
           delimiters:
-            # Fenced code blocks
-            - open: '(?s)^(?P<open> *`{3,})(\w+)?$'
-              close: '^(?P=open)$'
-            # Inline backticks
             - open: '(?s)(?P<open>`+)'
               close: '(?P=open)'
 
@@ -109,9 +105,5 @@ matrix:
       - pyspelling.filters.context:
           context_visible_first: true
           delimiters:
-            # Fenced code blocks
-            - open: '(?s)^(?P<open> *`{3,})(\w+)?$'
-              close: '^(?P=open)$'
-            # Inline backticks
             - open: '(?s)(?P<open>`+)'
               close: '(?P=open)'
