@@ -24,7 +24,7 @@ library documentation.
 
 * Supported platforms:
   * Linux
-  * OS X
+  * macOS
   * Windows
 
 ## API Reference

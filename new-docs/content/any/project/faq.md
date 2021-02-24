@@ -119,11 +119,11 @@ to stay up to speed on the latest product updates.
 
 ## What operating systems do you support?
 
-We currently support Linux, Mac OS X and Windows.
+We currently support Linux, macOS, and Windows.
 
 ## What license does Oso use?
 
-Oso is licensed under [the *Apache 2.0 license*](https://github.com/osohq/oso/blob/master/LICENSE).
+Oso is licensed under [the *Apache 2.0 license*](https://github.com/osohq/oso/blob/main/LICENSE).
 
 ## How does pricing work?
 

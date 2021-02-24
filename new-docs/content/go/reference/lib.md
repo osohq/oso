@@ -27,7 +27,7 @@ library documentation.
 * Go version 1.12 or higher
 * Supported platforms (x64 only):
   * Linux
-  * OS X
+  * macOS
   * Windows
 
 Oso uses cgo to embed our VM and on Windows cgo depends on a [MinGW toolchain](https://jmeubank.github.io/tdm-gcc/).
