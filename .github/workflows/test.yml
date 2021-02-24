@@ -302,14 +302,6 @@ jobs:
       - name: Check spelling
         run: make -C new-docs spelling
 
-      - name: Set up Hugo
-        uses: peaceiris/actions-hugo@v2
-        with:
-          hugo-version: '0.79.1'
-      - name: Check that docs build successfully
-        run: make build
-        working-directory: new-docs
-
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
