@@ -335,7 +335,7 @@ impl Simplifier {
                     *o = operation.clone();
                     self.simplify_operation(o);
                 }
-                _ => unreachable!(),
+                _ => (),
             },
 
             // Non-trivial conjunctions. Choose a unification constraint to
@@ -420,6 +420,7 @@ impl Simplifier {
                 Value::Expression(operation) => {
                     self.simplify_operation(operation);
                 }
+                // If it's not in the matches above, it's not in here
                 _ => unreachable!(),
             }
         }
