@@ -7,14 +7,14 @@ any: false
 # Node.js Authorization Library
 
 The Node.js version of Oso is available on
-[NPM](https://www.npmjs.com/package/oso) and can be installed globally with
-NPM:
+[npm](https://www.npmjs.com/package/oso) and can be installed globally with
+npm:
 
 ```console
 $ npm install -g oso
 ```
 
-or added as a dependency to a project’s `package.json` manifest with NPM:
+or added as a dependency to a project’s `package.json` manifest with npm:
 
 ```console
 $ npm install oso

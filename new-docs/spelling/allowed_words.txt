@@ -1,6 +1,7 @@
 # Acronyms
 ABAC
 AWS
+CTO
 DFA
 EMR
 EOF
@@ -15,7 +16,7 @@ JWZ
 LDAP
 LLDB
 NFA
-NPM
+npm
 ORM
 ORMs
 RBAC
@@ -39,13 +40,17 @@ dev
 # HTML stuff
 href
 mailto
+nbsp
 
 # Java
+autoboxed
 classpath
 Gradle
 
 # Misc terms
+amongst
 anonymized
+bodiless
 declaratively
 hardcoded
 hardcoding
@@ -55,6 +60,7 @@ untaken
 
 # Names
 Appleby
+Bjerk
 Halbert
 Jullmann
 Sascha
@@ -75,8 +81,10 @@ SQLAlchemy's
 # Product names
 ActiveRecord
 Bundler
+cURL
 GSuite
 GraphQL
+NestJS
 OAuth
 SQLAlchemy
 SQLite
@@ -95,8 +103,10 @@ RubyGems
 Rubying
 
 # Rust terms
-struct
+enums
 io
+struct
+structs
 
 # Technical terms
 MinGW
@@ -108,6 +118,7 @@ arities
 arity
 backend
 boolean
+booleans
 codebase
 constructable
 coroutine
@@ -120,17 +131,22 @@ disjunction
 disjunctions
 embeddable
 entrypoint
+enumerables
+filesystem
 frontend
 glibc
 instantiation
 integrations
 iterable
+iterables
 latencies
 lookups
 metacharacter
 metacharacters
 middleware
+mixin
 moduli
+multitenant
 musl
 namespace
 namespaces
@@ -152,3 +168,4 @@ traceback
 transactional
 unifications
 unsafety
+unspecialized
