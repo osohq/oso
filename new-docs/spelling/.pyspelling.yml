@@ -1,4 +1,5 @@
 matrix:
+  # All content files (no data/data.md files)
   - name: content
     sources:
       - ../content/**/*.md|!../content/**/data/data.md
@@ -63,6 +64,7 @@ matrix:
             - open: '^ *\[.*\]:'
               close: '$'
 
+  # All data/data.md files
   - name: data
     sources:
       - ../content/**/data/data.md
@@ -108,7 +110,7 @@ matrix:
           context_visible_first: true
           delimiters:
             # Fenced code blocks
-            - open: '(?s)^(?P<open> *`{3,})([A-Za-z]+)?$'
+            - open: '(?s)^(?P<open> *`{3,})(\w+)?$'
               close: '^(?P=open)$'
             # Inline backticks
             - open: '(?s)(?P<open>`+)'
