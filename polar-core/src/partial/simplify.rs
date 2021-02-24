@@ -436,41 +436,18 @@ impl Simplifier {
 
             // Non-trivial conjunctions. Choose a unification constraint to
             // make a binding from, maybe throw it away, and fold the rest.
-            // Operator::And if o.args.len() > 1 => {
-            //     if let Some(i) = o.args.iter().position(|c| {
-            //         let op = c.value().as_expression().unwrap();
-            //         let variables = o.args.iter()
-            //             .map(|d| d.value().as_expression().unwrap())
-            //             .filter(|inner_op| *inner_op != op)
-            //             .map(|t| t.variables())
-            //             .fold(vec![], |mut vars, mut op_vars| {
-            //                 vars.append(&mut op_vars);
-            //                 vars
-            //             });
-            //         self.maybe_bind_constraint(op, variables)
-            //     }) {
-            //         o.args.remove(i);
-            //     }
-            //     // fold operation
-            //     for arg in &mut o.args {
-            //         self.simplify_term(arg);
-            //     }
-            // }
-
             Operator::And if o.args.len() > 1 => {
-                if let Some(i) = o.constraints().iter().position(|constraint| {
-                    let other_constraints = o.clone_with_constraints(
-                        o.constraints()
-                            .into_iter()
-                            .filter(|r| r != constraint)
-                            .collect(),
-                    );
-                    let variables = other_constraints.variables();
-                    let yes = self.maybe_bind_constraint(constraint, variables);
-                    // if yes {
-                    //     eprintln!("bind away {}", constraint.to_polar());
-                    // }
-                    yes
+                if let Some(i) = o.args.iter().position(|c| {
+                    let op = c.value().as_expression().unwrap();
+                    let variables = o.args.iter()
+                        .map(|d| d.value().as_expression().unwrap())
+                        .filter(|inner_op| *inner_op != op)
+                        .map(|t| t.variables())
+                        .fold(vec![], |mut vars, mut op_vars| {
+                            vars.append(&mut op_vars);
+                            vars
+                        });
+                    self.maybe_bind_constraint(op, variables)
                 }) {
                     o.args.remove(i);
                 }
