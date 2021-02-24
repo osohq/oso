@@ -8,6 +8,6 @@ spelling-requirements: .make.spelling-requirements.installed sort-allowed-words
 	touch $@
 
 sort-allowed-words:
-	sort -o allowed_words.txt allowed_words.txt
+	sort -fo allowed_words.txt allowed_words.txt
 
 .PHONY: spelling spelling-requirements sort-allowed-words
