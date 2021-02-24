@@ -76,7 +76,7 @@ test: install
 clean:
 	ls -A public | grep -v 'favicon.ico' | xargs -I {} echo 'public/'{} | xargs rm -rf
 
-spelling: build
+spelling:
 	$(MAKE) -C spelling
 
 .PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling
