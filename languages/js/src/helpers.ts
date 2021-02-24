@@ -8,7 +8,13 @@ import {
   PolarError,
   UnimplementedOperationError,
 } from './errors';
-import { isPolarTerm, QueryEventKind, PolarOperator, ExternalOp, isPolarInstance } from './types';
+import {
+  isPolarTerm,
+  QueryEventKind,
+  PolarOperator,
+  ExternalOp,
+  isPolarInstance,
+} from './types';
 import type { obj, QueryEvent } from './types';
 import { result } from 'lodash';
 import { util } from 'prettier';
@@ -228,25 +234,26 @@ function parseExternalIsa({
 function parseExternalOp({
   call_id: acallid,
   args,
-  operator
+  operator,
 }: obj): QueryEvent {
   if (!Number.isSafeInteger(acallid)) {
     throw new Error();
   }
 
-  args.forEach ( (arg: unknown, narg: number) => {
-    if(!isPolarTerm(arg)) {
+  args.forEach((arg: unknown, narg: number) => {
+    if (!isPolarTerm(arg)) {
       throw new Error();
     }
   });
   return {
     kind: QueryEventKind.ExternalOp,
     data: {
-      args, callId: acallid, operator
+      args,
+      callId: acallid,
+      operator,
     },
   };
 }
-
 
 /**
  * Try to parse a JSON payload received from across the WebAssembly boundary as
