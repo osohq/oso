@@ -1,7 +1,7 @@
 spelling: spelling-requirements
 	pyspelling
 
-spelling-requirements: .make.spelling-requirements.installed
+spelling-requirements: .make.spelling-requirements.installed sort-allowed-words
 
 .make.spelling-requirements.installed: requirements-spelling.txt
 	pip install -r requirements-spelling.txt
