@@ -62,7 +62,7 @@ assert!(oso.is_allowed(user, "foo", "bar")?);
 Polar does not support methods that mutate strings in place.
 {{% /callout %}}
 
-### Vectors
+### `Vec`
 
 [`Vec<T>`][rust-vec] maps to a Polar [list](polar-syntax#lists), given that `T: ToPolar`.
 
@@ -97,11 +97,11 @@ using a method, you may iterate over it with [the `in`
 operator](polar-syntax#in-list-membership) or destructure it with [pattern
 matching](polar-syntax#patterns-and-matching).
 
-### `HashMap`s
+### `HashMap`
 
-Rust [`HashMap`s][rust-hashmap] are mapped to Polar
-[dictionaries](polar-syntax#dictionaries), but require that the `HashMap` key
-is a `String`:
+A Rust [`HashMap`][rust-hashmap] maps to a Polar
+[dictionary](polar-syntax#dictionaries) but requires that the `HashMap` key is
+a `String`:
 
 ```polar
 allow(actor, action, resource) if actor.roles.project1 = "admin";
