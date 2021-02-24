@@ -7,4 +7,7 @@ spelling-requirements: .make.spelling-requirements.installed
 	pip install -r requirements-spelling.txt
 	touch $@
 
-.PHONY: spelling spelling-requirements
+sort-allowed-words:
+	sort -o allowed_words.txt allowed_words.txt
+
+.PHONY: spelling spelling-requirements sort-allowed-words
