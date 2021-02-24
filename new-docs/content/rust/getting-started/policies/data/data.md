@@ -38,7 +38,7 @@ classMethodExample: |
 registerClass: |
   We can register a Rust `struct` or `enum` using `Oso::register_class()`.
   `register_class`() takes as input a `Class`, which can be constructed either
-  using the `#[derive(PolarClass)]` proc-macro, or manually using
+  using the `#[derive(PolarClass)]` procedural macro, or manually using
   `Class::new::<T>()`:
 
   ```rust

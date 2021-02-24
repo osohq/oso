@@ -126,8 +126,8 @@ initialization.
 
 ## Example
 
-Check out the Django integration example app on GitHub:
-[osohq/oso-django-integration](https://github.com/osohq/oso-django-integration).
+Check out [the Django integration example
+app](https://github.com/osohq/oso-django-integration) on GitHub.
 
 ## API Reference
 

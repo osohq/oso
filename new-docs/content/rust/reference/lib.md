@@ -20,7 +20,7 @@ oso-derive = "0.9.0"
 For more information on the Oso Rust library, see the
 library documentation.
 
-**Requirements**
+## Requirements
 
 * Supported platforms:
   * Linux

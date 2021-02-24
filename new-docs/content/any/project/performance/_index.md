@@ -10,7 +10,7 @@ This page explores the performance of Oso across three main axes:
 
 **1. In practice**. How does Oso perform under typical workloads?
 
-**2. Internals and Microbenchmarks**. How is Oso built? What are the micro-benchmarks?
+**2. Internals and Micro-benchmarks**. How is Oso built? What are the micro-benchmarks?
 
 **3. Scaling**. What is the theoretical complexity of a query?
 
