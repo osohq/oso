@@ -1,11 +1,10 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::bindings::Bindings;
-use crate::folder::{fold_operation, fold_term, Folder};
+use crate::folder::{fold_term, Folder};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 
 use super::partial::{invert_operation, FALSE, TRUE};
-
 
 struct VariableSubber {
     this_var: Symbol,
@@ -80,15 +79,14 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
     }
 }
 
-pub fn simplify_partial(var: &Symbol, term: Term) -> Term {
+pub fn simplify_partial(var: &Symbol, mut term: Term) -> Term {
     let mut simplifier = Simplifier::new(var.clone());
-    let mut simplified = term.clone();
-    simplifier.simplify_partial(&mut simplified);
-    let simplified = simplify_trivial_constraint(var.clone(), simplified);
-    if matches!(simplified.value(), Value::Expression(e) if e.operator != Operator::And) {
-        op!(And, simplified).into_term()
+    simplifier.simplify_partial(&mut term);
+    term = simplify_trivial_constraint(var.clone(), term);
+    if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
+        op!(And, term).into_term()
     } else {
-        simplified
+        term
     }
 }
 
@@ -294,7 +292,9 @@ impl Simplifier {
         if o.operator == Operator::And {
             // Preprocess constraints.
             let mut seen: HashSet<Term> = HashSet::new();
-            o.args = o.args.clone()
+            o.args = o
+                .args
+                .clone()
                 .into_iter()
                 .filter(|a| {
                     let o = a.value().as_expression().unwrap();
@@ -305,7 +305,9 @@ impl Simplifier {
 
         if o.operator == Operator::And || o.operator == Operator::Or {
             // Toss trivial unifications.
-            o.args = o.args.clone()
+            o.args = o
+                .args
+                .clone()
                 .into_iter()
                 .filter(|c| {
                     let o = c.value().as_expression().unwrap();
@@ -328,22 +330,22 @@ impl Simplifier {
             Operator::And | Operator::Or if o.args.is_empty() => (),
 
             // Replace one-argument conjunctions & disjunctions with their argument.
-            Operator::And | Operator::Or if o.args.len() == 1 => {
-                match o.args[0].value() {
-                    Value::Expression(operation) => {
-                        *o = operation.clone();
-                        self.simplify_operation(o);
-                    },
-                    _ => unreachable!()
+            Operator::And | Operator::Or if o.args.len() == 1 => match o.args[0].value() {
+                Value::Expression(operation) => {
+                    *o = operation.clone();
+                    self.simplify_operation(o);
                 }
-            }
+                _ => unreachable!(),
+            },
 
             // Non-trivial conjunctions. Choose a unification constraint to
             // make a binding from, maybe throw it away, and fold the rest.
             Operator::And if o.args.len() > 1 => {
                 if let Some(i) = o.args.iter().position(|c| {
                     let op = c.value().as_expression().unwrap();
-                    let variables = o.args.iter()
+                    let variables = o
+                        .args
+                        .iter()
                         .map(|d| d.value().as_expression().unwrap())
                         .filter(|inner_op| *inner_op != op)
                         .map(|t| t.variables())
@@ -389,11 +391,10 @@ impl Simplifier {
 
     pub fn simplify_term(&mut self, term: &mut Term) {
         *term = self.deref(term);
-        let fold_value = match term.value() {
-            Value::Dictionary(_) | Value::Call(_) | Value::List(_) | Value::Expression(_) => true,
-            _ => false
-        };
-        if fold_value {
+        if matches!(
+            term.value(),
+            Value::Dictionary(_) | Value::Call(_) | Value::List(_) | Value::Expression(_)
+        ) {
             let value = term.mut_value();
             match value {
                 Value::Dictionary(dict) => {
@@ -418,8 +419,8 @@ impl Simplifier {
                 }
                 Value::Expression(operation) => {
                     self.simplify_operation(operation);
-                },
-                _ => unreachable!()
+                }
+                _ => unreachable!(),
             }
         }
     }
