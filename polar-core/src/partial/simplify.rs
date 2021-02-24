@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::bindings::Bindings;
-use crate::folder::{fold_operation, fold_term, Folder};
+use crate::folder::{fold_term, Folder};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 
 use super::partial::{invert_operation, FALSE, TRUE};
@@ -79,14 +79,14 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
     }
 }
 
-pub fn simplify_partial(var: &Symbol, term: Term) -> Term {
+pub fn simplify_partial(var: &Symbol, mut term: Term) -> Term {
     let mut simplifier = Simplifier::new(var.clone());
-    let simplified = simplifier.simplify_partial(term);
-    let simplified = simplify_trivial_constraint(var.clone(), simplified);
-    if matches!(simplified.value(), Value::Expression(e) if e.operator != Operator::And) {
-        op!(And, simplified).into_term()
+    simplifier.simplify_partial(&mut term);
+    term = simplify_trivial_constraint(var.clone(), term);
+    if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
+        op!(And, term).into_term()
     } else {
-        simplified
+        term
     }
 }
 
@@ -168,98 +168,6 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
 pub struct Simplifier {
     bindings: Bindings,
     this_var: Symbol,
-}
-
-impl Folder for Simplifier {
-    fn fold_term(&mut self, t: Term) -> Term {
-        fold_term(self.deref(&t), self)
-    }
-
-    fn fold_operation(&mut self, mut o: Operation) -> Operation {
-        if o.operator == Operator::And {
-            // Preprocess constraints.
-            let mut seen: HashSet<&Operation> = HashSet::new();
-            o = o.clone_with_constraints(
-                o.constraints()
-                    .iter()
-                    .filter(|o| *o != &TRUE) // Drop empty constraints.
-                    .filter(|o| !seen.contains(&o.mirror()) && seen.insert(o)) // Deduplicate constraints.
-                    .cloned()
-                    .collect(),
-            );
-        }
-
-        if o.operator == Operator::And || o.operator == Operator::Or {
-            // Toss trivial unifications.
-            o.args = o
-                .constraints()
-                .into_iter()
-                .filter(|c| match c.operator {
-                    Operator::Unify | Operator::Eq | Operator::Neq => {
-                        assert_eq!(c.args.len(), 2);
-                        let left = &c.args[0];
-                        let right = &c.args[1];
-                        left != right
-                    }
-                    _ => true,
-                })
-                .map(|c| c.into_term())
-                .collect();
-        }
-
-        match o.operator {
-            // Zero-argument conjunctions & disjunctions represent constants
-            // TRUE and FALSE, respectively. We do not simplify them.
-            Operator::And | Operator::Or if o.args.is_empty() => o,
-
-            // Replace one-argument conjunctions & disjunctions with their argument.
-            Operator::And | Operator::Or if o.args.len() == 1 => fold_operation(
-                o.args[0]
-                    .value()
-                    .as_expression()
-                    .expect("expression")
-                    .clone(),
-                self,
-            ),
-
-            // Non-trivial conjunctions. Choose a unification constraint to
-            // make a binding from, maybe throw it away, and fold the rest.
-            Operator::And if o.args.len() > 1 => {
-                if let Some(i) = o.constraints().iter().position(|constraint| {
-                    let other_constraints = o.clone_with_constraints(
-                        o.constraints()
-                            .into_iter()
-                            .filter(|r| r != constraint)
-                            .collect(),
-                    );
-                    let variables = other_constraints.variables();
-                    self.maybe_bind_constraint(constraint, variables)
-                }) {
-                    o.args.remove(i);
-                }
-                fold_operation(o, self)
-            }
-
-            // Negation. Simplify the negated term, saving & restoring the
-            // current bindings because bindings may not leak out of a negation.
-            Operator::Not => {
-                assert_eq!(o.args.len(), 1);
-                let bindings = self.bindings.clone();
-                let simplified = self.simplify_partial(o.args[0].clone());
-                self.bindings = bindings;
-                invert_operation(
-                    simplified
-                        .value()
-                        .as_expression()
-                        .expect("a simplified expression")
-                        .clone(),
-                )
-            }
-
-            // Default case.
-            _ => fold_operation(o, self),
-        }
-    }
 }
 
 impl Simplifier {
@@ -380,17 +288,153 @@ impl Simplifier {
         }
     }
 
+    pub fn simplify_operation(&mut self, o: &mut Operation) {
+        if o.operator == Operator::And {
+            // Preprocess constraints.
+            let mut seen: HashSet<Term> = HashSet::new();
+            o.args = o
+                .args
+                .clone()
+                .into_iter()
+                .filter(|a| {
+                    let o = a.value().as_expression().unwrap();
+                    o != &TRUE && !seen.contains(&o.mirror().into_term()) && seen.insert(a.clone())
+                })
+                .collect();
+        }
+
+        if o.operator == Operator::And || o.operator == Operator::Or {
+            // Toss trivial unifications.
+            o.args = o
+                .args
+                .clone()
+                .into_iter()
+                .filter(|c| {
+                    let o = c.value().as_expression().unwrap();
+                    match o.operator {
+                        Operator::Unify | Operator::Eq | Operator::Neq => {
+                            assert_eq!(o.args.len(), 2);
+                            let left = &o.args[0];
+                            let right = &o.args[1];
+                            left != right
+                        }
+                        _ => true,
+                    }
+                })
+                .collect();
+        }
+
+        match o.operator {
+            // Zero-argument conjunctions & disjunctions represent constants
+            // TRUE and FALSE, respectively. We do not simplify them.
+            Operator::And | Operator::Or if o.args.is_empty() => (),
+
+            // Replace one-argument conjunctions & disjunctions with their argument.
+            Operator::And | Operator::Or if o.args.len() == 1 => {
+                if let Value::Expression(operation) = o.args[0].value() {
+                    *o = operation.clone();
+                    self.simplify_operation(o);
+                }
+            }
+
+            // Non-trivial conjunctions. Choose a unification constraint to
+            // make a binding from, maybe throw it away, and fold the rest.
+            Operator::And if o.args.len() > 1 => {
+                if let Some(i) = o.args.iter().position(|c| {
+                    let op = c.value().as_expression().unwrap();
+                    let variables = o
+                        .args
+                        .iter()
+                        .map(|d| d.value().as_expression().unwrap())
+                        .filter(|inner_op| *inner_op != op)
+                        .map(|t| t.variables())
+                        .fold(vec![], |mut vars, mut op_vars| {
+                            vars.append(&mut op_vars);
+                            vars
+                        });
+                    self.maybe_bind_constraint(op, variables)
+                }) {
+                    o.args.remove(i);
+                }
+                // fold operation
+                for arg in &mut o.args {
+                    self.simplify_term(arg);
+                }
+            }
+
+            // Negation. Simplify the negated term, saving & restoring the
+            // current bindings because bindings may not leak out of a negation.
+            Operator::Not => {
+                assert_eq!(o.args.len(), 1);
+                let bindings = self.bindings.clone();
+                let mut simplified = o.args[0].clone();
+                self.simplify_partial(&mut simplified);
+                self.bindings = bindings;
+                *o = invert_operation(
+                    simplified
+                        .value()
+                        .as_expression()
+                        .expect("a simplified expression")
+                        .clone(),
+                )
+            }
+
+            // Default case.
+            _ => {
+                for arg in &mut o.args {
+                    self.simplify_term(arg);
+                }
+            }
+        }
+    }
+
+    pub fn simplify_term(&mut self, term: &mut Term) {
+        *term = self.deref(term);
+        if matches!(
+            term.value(),
+            Value::Dictionary(_) | Value::Call(_) | Value::List(_) | Value::Expression(_)
+        ) {
+            let value = term.mut_value();
+            match value {
+                Value::Dictionary(dict) => {
+                    for (_, v) in dict.fields.iter_mut() {
+                        self.simplify_term(v);
+                    }
+                }
+                Value::Call(call) => {
+                    for arg in call.args.iter_mut() {
+                        self.simplify_term(arg);
+                    }
+                    if let Some(kwargs) = &mut call.kwargs {
+                        for (_, v) in kwargs.iter_mut() {
+                            self.simplify_term(v);
+                        }
+                    }
+                }
+                Value::List(list) => {
+                    for elem in list.iter_mut() {
+                        self.simplify_term(elem);
+                    }
+                }
+                Value::Expression(operation) => {
+                    self.simplify_operation(operation);
+                }
+                // If it's not in the matches above, it's not in here
+                _ => unreachable!(),
+            }
+        }
+    }
+
     /// Simplify a partial until quiescence.
-    pub fn simplify_partial(&mut self, mut term: Term) -> Term {
-        let mut new;
+    pub fn simplify_partial(&mut self, term: &mut Term) {
+        let mut last = term.hash_value();
         loop {
-            new = self.fold_term(term.clone());
-            if new == term {
+            self.simplify_term(term);
+            let now = term.hash_value();
+            if last == now {
                 break;
             }
-            term = new;
-            self.bindings.clear();
+            last = now;
         }
-        new
     }
 }
