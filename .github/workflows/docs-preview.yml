@@ -61,9 +61,7 @@ jobs:
         with:
           hugo-version: '0.79.1'
       - name: Build Hugo docs
-        run: |
-          make build
-          HUGO_ENV=production hugo -b "https://docs-preview.oso.dev/"
+        run: make build
         working-directory: new-docs
 
 
