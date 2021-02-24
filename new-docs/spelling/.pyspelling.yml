@@ -1,0 +1,115 @@
+matrix:
+  - name: content
+    sources:
+      - ../content/**/*.md|!../content/**/data/data.md
+    dictionary:
+      wordlists:
+        - allowed_words.txt
+      output: content.dic
+    pipeline:
+      - pyspelling.filters.url:
+
+      # HTML comments
+      - pyspelling.filters.context:
+          context_visible_first: true
+          delimiters:
+            - open: '(?s)<!--'
+              close: '-->'
+
+      # Ignore shortcodes first
+      - pyspelling.filters.context:
+          context_visible_first: true
+          delimiters:
+            # Paired shortcodes
+            - open: '(?s)^ *(?P<open>{{(<|%)) *(?P<name>\w+).*(?P<close>(>|%)}})'
+              close: '^ *(?P=open) */(?P=name) *(?P=close)'
+            # Shortcode (processed)
+            - open: '(?s){{%'
+              close: '%}}'
+            # Shortcode (raw)
+            - open: '(?s){{<'
+              close: '>}}'
+
+      # Ignore YAML frontmatter
+      - pyspelling.filters.context:
+          context_visible_first: true
+          delimiters:
+            # Frontmatter
+            - open: '(?s)(?P<open> *-{3,})'
+              close: '^(?P=open)$'
+
+      # Ignore inline and fenced code snippets
+      - pyspelling.filters.context:
+          context_visible_first: true
+          delimiters:
+            # Fenced code blocks
+            - open: '(?s)^(?P<open> *`{3,})(\w+)?$'
+              close: '^(?P=open)$'
+            # Inline backticks
+            - open: '(?s)(?P<open>`+)'
+              close: '(?P=open)'
+
+      # Markdown links
+      - pyspelling.filters.context:
+          context_visible_first: true
+          delimiters:
+            # [text](link)
+            - open: '(?s)\]\('
+              close: '\)'
+            # [text][link]
+            - open: '(?s)\]\['
+              close: '\]'
+            # [text]: link
+            - open: '^ *\[.*\]:'
+              close: '$'
+
+  - name: data
+    sources:
+      - ../content/**/data/data.md
+    dictionary:
+      wordlists:
+        - allowed_words.txt
+      output: data.dic
+    pipeline:
+      - pyspelling.filters.url:
+
+      # HTML comments
+      - pyspelling.filters.context:
+          context_visible_first: true
+          delimiters:
+            - open: '(?s)<!--'
+              close: '-->'
+
+      # YAML values that case-insensitively match their key. E.g.,
+      # `submitted_by: submitted_by`
+      - pyspelling.filters.context:
+          context_visible_first: true
+          delimiters:
+            - open: '(?i)^(?P<key>[\w\d]+): (?P=key)'
+              close: '$'
+
+      # YAML keys
+      - pyspelling.filters.context:
+          context_visible_first: true
+          delimiters:
+            - open: '^[\w\d]+:'
+              close: ' '
+
+      # Example file paths
+      - pyspelling.filters.context:
+          context_visible_first: true
+          delimiters:
+            - open: 'examples/'
+              content: '([\w\d-]+/)*'
+              close: '[\w\d-]+\.\w+$'
+
+      # Ignore inline and fenced code snippets
+      - pyspelling.filters.context:
+          context_visible_first: true
+          delimiters:
+            # Fenced code blocks
+            - open: '(?s)^(?P<open> *`{3,})([A-Za-z]+)?$'
+              close: '^(?P=open)$'
+            # Inline backticks
+            - open: '(?s)(?P<open>`+)'
+              close: '(?P=open)'
