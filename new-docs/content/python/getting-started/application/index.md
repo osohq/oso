@@ -7,31 +7,37 @@ aliases:
   - /getting-started/application/index.html
 ---
 
-# Add Oso to an Application
+# Add Oso to a Python Application
 
 This guide covers a little more detail about how to add Oso to an
-application.
+application written in Python.
 
 Whereas in the [Quickstart]({{< relref path="getting-started/quickstart"
 lang="python" >}}) we zoomed through an
 example of authorization in a simple web server, in this guide we'll show
 some more practical examples in the context of a more realistic application.
 
-Our sample expenses application is built with Flask, but we are not using
-anything from Oso that is unique to Flask, and the same patterns we cover here
-can be used anywhere.
+Our sample expenses application is built with Flask, but the patterns we cover
+here can be used with almost any framework. Specific tutorials on integrating
+Oso with other common Python frameworks are coming soon, but in the meantime
+you may find some of our blog posts useful, especially
+[Building a Django app with data access control in 30 minutes](https://www.osohq.com/post/django-access-control)
+and [GraphQL Authorization with Graphene, SQLAlchemy and Oso](https://www.osohq.com/post/graphql-authorization-graphene-sqlalchemy-oso).
+Please also see our reference pages on [Framework & ORM Integrations](/reference/frameworks).
+
+## Getting The Example
 
 We highly encourage you to follow along with the code by cloning the example repository
 and trying it out. The code can be found here:
 
-[osohq/oso-flask-tutorial](https://github.com/osohq/oso-flask-tutorial)
+* [osohq/oso-flask-tutorial](https://github.com/osohq/oso-flask-tutorial)
 
 Our expenses application reads from a sqlite database, and has a few simple endpoints for returning results. We encourage you to take a look around before continuing!
 
 ## Running The Example
 
-The application has a few requirements, including Flask and, of course, Oso.
-We recommend installing these within a virtual environment:
+The example application has a few requirements, including Flask and, of course, Oso.
+We recommend installing these in a virtual environment:
 
 ```console
 $ git clone https://github.com/osohq/oso-flask-tutorial/
