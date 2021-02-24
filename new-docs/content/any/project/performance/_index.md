@@ -25,7 +25,7 @@ complexity of the *answer*. For example, a simple rule that says anyone can
 “GET” the path “/” will execute in **less than 1 ms**. On the other hand,
 rules that use HTTP path mapping, resource lookups, roles, inheritance, etc.
 can take *approximately* **1-20 ms**. (These numbers are based on queries
-executing against a local sqlite instance to isolate Oso’s performance from
+executing against a local SQLite instance to isolate Oso’s performance from
 the time to perform database queries.)
 
 The time needed to fetch application data is, of course, dependent on your

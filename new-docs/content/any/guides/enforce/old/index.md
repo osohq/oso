@@ -30,7 +30,7 @@ and trying it out. The code can be found here:
 
 ** [osohq/oso-spring-tutorial](https://github.com/osohq/oso-spring-tutorial)
 
-Our expenses application reads from a sqlite database, and has a few simple endpoints for returning
+Our expenses application reads from a SQLite database, and has a few simple endpoints for returning
 results. We encourage you to take a look around before continuing!
 
 ## Running The Example

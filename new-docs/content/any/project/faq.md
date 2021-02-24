@@ -113,7 +113,7 @@ We currently support Python, Ruby, Java, Node.js and Rust, and are actively work
 We have framework integrations for Flask & Django see here.
 
 Vote & track your favorite language and framework integrations at our
-[Github repository](https://github.com/osohq/oso),
+[GitHub repository](https://github.com/osohq/oso),
 and sign up for our newsletter in the footer anywhere on our docs if you’d like
 to stay up to speed on the latest product updates.
 

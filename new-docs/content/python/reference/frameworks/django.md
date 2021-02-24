@@ -22,8 +22,8 @@ $ pip install django-oso
 
 ## Usage
 
-The `django_oso` django plugin contains a reusable django app that makes
-authorization with Oso and django easy.  To use, ensure `django_oso` is in
+The `django_oso` Django plugin contains a reusable Django app that makes
+authorization with Oso and Django easy.  To use, ensure `django_oso` is in
 `INSTALLED_APPS`:
 
 ```python
@@ -52,7 +52,7 @@ directories, call `load_file()` on
 
 ### Registering classes & models
 
-Often, authorization rules will be expressed over django models.  Therefore,
+Often, authorization rules will be expressed over Django models.  Therefore,
 `django_oso` will register every model for each installed app upon startup as
 a class with Oso. The `django.http.HttpRequest` is also registered
 under `HttpRequest`.  Django models are referenced in a Polar file using the
