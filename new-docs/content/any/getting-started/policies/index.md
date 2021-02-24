@@ -30,7 +30,7 @@ In any particular application, such rules may be represented
 and enforced in many different ways; e.g., as `if` statements
 in code, with database access control, filesystem permissions, etc.
 
-Oso is a library that makes it easy to express and enforce
+Oso is a library designed to express and enforce
 authorization policies. Policies are kept separate from both
 application code and the underlying database/filesystem/etc.
 But because Oso is a library that runs in your application
@@ -52,7 +52,7 @@ and types.
 
 If you have some prior exposure to logic programming, the Polar
 language will feel very familiar. If not, don't panic! Polar is
-designed to be simple, often allowing easier and more concise
+designed to be simple, often allowing more concise
 expression of authorization rules than equivalent code in an
 imperative language. If you can express an authorization rule
 as a simple declarative sentence of English (or other natural language),
@@ -142,7 +142,7 @@ immediately after the head.
 Now let's talk about how rule definitions are used during a query.
 When a rule definition is loaded from a policy, it doesn't _do_
 anything; like a function definition, it is code that may be evaluated,
-but only in response to a "call" or query.
+but only in response to a query (you can think of querying a Polar rule as analogous to calling a function in an imperative program).
 
 Many queries in Polar look superficially like function calls:
 `allow(1, 2, 3)` is a possible query. (You can use the Polar REPL to
@@ -361,8 +361,7 @@ e.g., in Python, `String` is actually the built-in `str` class.
 
 ## Method Calls
 
-In addition to accessing fields in a rule, you can also call methods
-on application objects. We'll demonstrate this using the built-in
+In addition to accessing the fields of application objects in a rule, you can also call methods on application objects. We'll demonstrate this using the built-in
 `String` class, but it applies to instances any registered class.
 
 Suppose we decided to change our encoding of actions so that
