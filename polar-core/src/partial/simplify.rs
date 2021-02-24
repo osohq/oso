@@ -5,7 +5,6 @@ use crate::folder::{fold_operation, fold_term, Folder};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 
 use super::partial::{invert_operation, FALSE, TRUE};
-use crate::formatting::to_polar::ToPolarString;
 
 
 struct VariableSubber {
@@ -85,9 +84,7 @@ pub fn simplify_partial(var: &Symbol, term: Term) -> Term {
     let mut simplifier = Simplifier::new(var.clone());
     let mut simplified = term.clone();
     simplifier.simplify_partial(&mut simplified);
-    //eprintln!("after simplier: {}", simplified);
     let simplified = simplify_trivial_constraint(var.clone(), simplified);
-    //eprintln!("after trivial_constrant: {}", simplified);
     if matches!(simplified.value(), Value::Expression(e) if e.operator != Operator::And) {
         op!(And, simplified).into_term()
     } else {
