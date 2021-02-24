@@ -20,7 +20,7 @@ authorize each object individually.
 The Oso Django integration is available on [PyPI](https://pypi.org/project/django-oso/) and can be installed using
 `pip`:
 
-```
+```console
 $ pip install django-oso
 ```
 
@@ -30,7 +30,7 @@ The easiest way to prepare your existing Django models for use in a list
 filtering policy is to have them inherit from
 `django_oso.models.AuthorizedModel()`, a thin wrapper around
 `django.models.Model` that calls `django_oso.auth.authorize_model()`
-under the hood to return Django QuerySets with authorization filters applied.
+under the hood to return Django `QuerySet`s with authorization filters applied.
 
 The policies you write will largely look the same with or without the list
 filtering feature, and the Oso engine will follow similar evaluation paths.
@@ -111,7 +111,7 @@ $ curl --user manager:manager localhost:8000/posts
 
 ## How it works
 
-QuerySets containing authorized models are automatically filtered using
+`QuerySet`s containing authorized models are automatically filtered using
 constraints derived from the policy.
 
 For example, the above policy has the following rule:
@@ -128,7 +128,7 @@ rule into a Django `Q` filter:
 (AND: ('access_level', 'private'), ('creator__pk', 2))
 ```
 
-When composed with filters generated from the other rules, the QuerySet is
+When composed with filters generated from the other rules, the `QuerySet` is
 scoped down to include only authorized objects. The result is the following SQL
 statement, with the highlighted clause corresponding to the above filter:
 

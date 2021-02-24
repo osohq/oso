@@ -84,7 +84,7 @@ return a `403 Forbidden` response to all requests.
 
 ## 2. Add roles
 
-### Create the OrganizationRole class using the role mixin
+### Create the `OrganizationRole` class using the role mixin
 
 The Oso SQLAlchemy library provides the
 `sqlalchemy_oso.roles.resource_role_class()` method to generate a mixin which

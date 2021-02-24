@@ -16,7 +16,7 @@ view decorators and ORM integrations to make it easier to use Oso with Django.
 The Oso Django integration is available on [PyPI](https://pypi.org/project/django-oso/) and can be installed using
 `pip`:
 
-```
+```console
 $ pip install django-oso
 ```
 
@@ -26,7 +26,7 @@ The `django_oso` django plugin contains a reusable django app that makes
 authorization with Oso and django easy.  To use, ensure `django_oso` is in
 `INSTALLED_APPS`:
 
-```
+```python
 INSTALLED_APPS = [
     'django_oso',
     ...
@@ -77,7 +77,7 @@ the data access layer, depending upon how you want to express authorization.
 
 Here’s a basic example in a route:
 
-```
+```python
 def get_expense(request, id):
     try:
         expense = Expense.objects.get(pk=id)
@@ -102,7 +102,7 @@ One common usage of `django_oso.auth.authorize()` is to perform authorization
 based on the request object. The
 `authorize_request()` decorator does this:
 
-```
+```python
 from django_oso.decorators import authorize_request
 
 @authorize_request
@@ -113,7 +113,7 @@ def auth_route(request):
 Rules can then be written using request
 attributes, like the path:
 
-```
+```polar
 # Allow any actor to make a GET request to "/".
 allow(_user: User, "GET", http_request: HttpRequest) if
     http_request.path = "/";

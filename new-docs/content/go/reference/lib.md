@@ -9,13 +9,13 @@ The go version of Oso is available on [go.dev](https://pkg.go.dev/github.com/oso
 
 It can be added as a dependency to a go project:
 
-```
+```console
 go get github.com/osohq/go-oso
 ```
 
 And imported into a go file.
 
-```
+```go
 import "github.com/osohq/go-oso"
 ```
 

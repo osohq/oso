@@ -19,7 +19,7 @@ startRepl: |
     ```
 
     If you installed Oso into a project and are using NPM, you can add a
-    script to [the `scripts` property of your project’s package.json](https://docs.npmjs.com/files/package.json#scripts):
+    script to [the `scripts` property of your project’s `package.json`](https://docs.npmjs.com/files/package.json#scripts):
 
     ```
     {

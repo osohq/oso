@@ -88,7 +88,7 @@ the number of possibilities, or by adding more specializers to your rule heads.
 
 For example, suppose you have 20 different resources, `ResourceA`, `ResourceB`,
 …, and each has 10 or so `allow(actor, action, resource: ResourceA)` rules.
-The performance of evaluating a rule with input of type ResourceA will primarily
+The performance of evaluating a rule with input of type `ResourceA` will primarily
 depend on those 10 specific rules, and not the other 190 rules. In addition,
 you might consider refactoring this rule to `allow(actor, action, resource:
 ResourceA) if allowResourceA(actor, action, resource)`. This would mean there

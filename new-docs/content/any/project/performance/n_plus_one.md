@@ -18,7 +18,7 @@ variants of the
 
 For example, given the following policy:
 
-```
+```polar
 has_grandchild_called(grandparent: Person, name) if
     child in grandparent.children and
     grandchild in child.children and
@@ -45,7 +45,7 @@ Here we will show how these patterns can be leveraged in Oso.
 
 For example:
 
-```
+```python
 class Person:
     @classmethod
     def batch_lookup_children(cls, people: List[Person]):
@@ -58,7 +58,7 @@ class Person:
         return children
 ```
 
-```
+```polar
 has_grandchild_called(grandparent: Person, name) if
     children = grandparent.children # gets the _list_ of children
     and grandchild in Person.batch_lookup_children(children)
@@ -80,7 +80,7 @@ locally stored the child.children attribute.
 
 For example, in a Django application you might write:
 
-```
+```polar
 has_grandchild_called(grandparent: Person, name) if
     child in grandparent.children.prefetch_related("children")
     and grandchild in child.children.all()

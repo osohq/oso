@@ -164,11 +164,11 @@ assert(oso.is_allowed(user, "foo", "bar))
 
 ## Python → Polar Types Summary
 
-| Python type | Polar type |
-| ----------- | ---------- |
-| int         | Integer    |
-| float       | Float      |
-| bool        | Boolean    |
-| list        | List       |
-| dict        | Dictionary |
-| str         | String     |
+| Python type | Polar type   |
+| ----------- | ------------ |
+| `int`       | `Integer`    |
+| `float`     | `Float`      |
+| `bool`      | `Boolean`    |
+| `list`      | `List`       |
+| `dict`      | `Dictionary` |
+| `str`       | `String`     |

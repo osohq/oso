@@ -44,7 +44,7 @@ oso.registerClass(Person.class, "User")
 ```
 
 At instantiation time, Oso will search the list returned by
-[Class.getConstructors()](<https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getConstructors()>)
+[`Class.getConstructors()`](<https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getConstructors()>)
 for a constructor that is applicable to the supplied positional constructor
 arguments. For example, given the Polar expression `new User("alice@example.com")`, Oso will search for a `Constructor` with one
 parameter compatible with `String.class`, e.g.:
@@ -53,8 +53,8 @@ parameter compatible with `String.class`, e.g.:
 public User(String username) { ... }
 ```
 
-Applicability is determined using [Class.isAssignableFrom(Class<?>
-cls)](<https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#isAssignableFrom(java.lang.Class)>),
+Applicability is determined using [`Class.isAssignableFrom(Class<?>
+cls)`](<https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#isAssignableFrom(java.lang.Class)>),
 which allows arguments that are instances of subclasses or implementations of
 interfaces to properly match the constructor’s parameter types.
 
@@ -256,13 +256,13 @@ public class User {
 
 ### Java → Polar Types Summary
 
-| Java type       | Polar type |
-| --------------- | ---------- |
-| int/Integer     | Integer    |
-| float/Float     | Float      |
-| double/Double   | Float      |
-| boolean/Boolean | Boolean    |
-| List            | List       |
-| Array           | List       |
-| Map             | Dictionary |
-| String          | String     |
+| Java type           | Polar type   |
+| ------------------- | ------------ |
+| `int`/`Integer`     | `Integer`    |
+| `float`/`Float`     | `Float`      |
+| `double`/`Double`   | `Float`      |
+| `boolean`/`Boolean` | `Boolean`    |
+| `List`              | `List`       |
+| `Array`             | `List`       |
+| `Map`               | `Dictionary` |
+| `String`            | `String`     |
