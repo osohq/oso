@@ -330,13 +330,12 @@ impl Simplifier {
             Operator::And | Operator::Or if o.args.is_empty() => (),
 
             // Replace one-argument conjunctions & disjunctions with their argument.
-            Operator::And | Operator::Or if o.args.len() == 1 => match o.args[0].value() {
-                Value::Expression(operation) => {
+            Operator::And | Operator::Or if o.args.len() == 1 => {
+                if let Value::Expression(operation) = o.args[0].value() {
                     *o = operation.clone();
                     self.simplify_operation(o);
                 }
-                _ => (),
-            },
+            }
 
             // Non-trivial conjunctions. Choose a unification constraint to
             // make a binding from, maybe throw it away, and fold the rest.
