@@ -1,5 +1,6 @@
 # Acronyms
 ABAC
+AWS
 DFA
 EMR
 EOF
@@ -83,6 +84,7 @@ macOS
 webpack
 
 # Python
+Django
 PyPI
 
 # Ruby
