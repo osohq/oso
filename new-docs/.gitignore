@@ -6,10 +6,3 @@ themes/oso-webpack/static/*
 
 # Generated spelling dictionaries
 *.dic
-
-# Generated language .pyspelling.yml files
-spelling/.pyspelling.*.yml
-
-# But not the template or the catch-all file.
-!spelling/.pyspelling.LANG.yml
-!spelling/.pyspelling.REST.yml
