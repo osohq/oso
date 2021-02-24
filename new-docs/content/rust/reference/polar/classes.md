@@ -197,4 +197,4 @@ assert!(oso.is_allowed(user, "foo", "bar")?);
 | `bool`                          | `Boolean`    |
 | `Vec`                           | `List`       |
 | `HashMap`                       | `Dictionary` |
-| `String`, `&’static str`, `str` | `String`     |
+| `String`, `&'static str`, `str` | `String`     |
