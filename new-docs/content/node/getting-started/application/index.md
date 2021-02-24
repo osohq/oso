@@ -16,8 +16,8 @@ In the meantime, here are some resources that might help you get started.
 ## NestJS library by Bjerk AS
 
 The good folks at [Bjerk AS][bjerk] have made a [NestJS][nestjs] integration
-for Oso freely available via [GitHub][nestjs-oso-github] and
-[npm][nestjs-oso-npm]. Its documentation includes a Quickstart guide.
+for Oso available via [GitHub][nestjs-oso-github] and [npm][nestjs-oso-npm].
+Its documentation includes a Quickstart guide.
 
 ## Sam's blog post
 
