@@ -21,9 +21,16 @@ matrix:
       - pyspelling.filters.context:
           context_visible_first: true
           delimiters:
-            # Paired shortcodes
-            - open: '(?s)^ *(?P<open>{{(<|%)) *(?P<name>\w+).*(?P<close>(>|%)}})'
-              close: '^ *(?P=open) */(?P=name) *(?P=close)'
+            # TODO(gj): If I make this more generic than literal 'code' then it
+            # unfortunately matches from single shortcodes that don't have a
+            # closing dual (e.g., 'literalInclude') to the end of the file. If
+            # I move it down below the single shortcode matches, then they get
+            # processed first and by the time we're looking for dual shortcode
+            # tags they've already been stripped out.
+            #
+            # {{< code >}} shortcodes
+            - open: '(?s)^ *{{< *(?P<name>code).*>}} *$'
+              close: '^ *{{< */(?P=name) *>}} *$'
             # Shortcode (processed)
             - open: '(?s){{%'
               close: '%}}'
