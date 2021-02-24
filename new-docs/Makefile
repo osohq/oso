@@ -1,3 +1,6 @@
+run: api_docs
+	hugo server
+
 export JAVA_DIR := $(abspath ../languages/java/oso)
 export JS_DIR := $(abspath ../languages/js)
 export PYTHON_DIR := $(abspath ../languages/python)
@@ -58,9 +61,6 @@ webpack-deps: .make.webpack-deps.installed
 .make.webpack-deps.installed: themes/oso-webpack/package.json
 	cd themes/oso-webpack && npm install && npm run-script build
 	touch $@
-
-run: api_docs
-	hugo server
 
 build: install clean
 	HUGO_ENV=production hugo -b https://docs-preview.oso.dev/
