@@ -319,13 +319,13 @@ export interface ExternalIsa {
  *
  * @internal
  */
-enum PolarOperator {
-  Eq,
-  Geq,
-  Gt,
-  Leq,
-  Lt,
-  Neq,
+export enum PolarOperator {
+  Eq = 'Eq',
+  Geq = 'Geq',
+  Gt = 'Gt',
+  Leq = 'Leq',
+  Lt = 'Lt',
+  Neq = 'Neq',
 }
 
 /**

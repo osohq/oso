@@ -63,7 +63,7 @@ Execute a Polar query through the FFI event interface.
 | `ExternalCall`             | x      | x    | x    | x       | x    |
 | `ExternalIsa`              | x      | x    | x    | x       | x    |
 | `ExternalIsSubSpecializer` | x      | x    | x    | x       |      |
-| `ExternalOp`               | x      |      |      |         |      |
+| `ExternalOp`               | x      |      |      | X       |      |
 | `ExternalUnify`            | x      | x    |      | x       |      |
 | `MakeExternal`             | x      | x    | x    | x       | x    |
 | `NextExternal`             | x      | x    | x    | x       |      |

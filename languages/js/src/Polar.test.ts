@@ -39,6 +39,7 @@ import {
   UnimplementedOperationError,
   InvalidIteratorError,
 } from './errors';
+import { repr } from './helpers';
 
 test('it works', async () => {
   const p = new Polar();
@@ -750,12 +751,14 @@ describe('±∞ and NaN', () => {
   });
 });
 
-test('fails gracefully on ExternalOp events', () => {
-  const p = new Polar();
+test('ExternalOp events test for equality succeeds', async () => {
+  // js objects are never equal so we override
+  // weirdness in js definition of equality
+    const p = new Polar({ equalityFn: (x, y) => true
+  });
   p.registerClass(X);
-  expect(query(p, 'new X() == new X()')).rejects.toThrow(
-    UnimplementedOperationError
-  );
+  expect(await query(p, 'new X() == new X()')).toStrictEqual([map()]);
+  expect(await query(p, 'new X() != new X()')).toStrictEqual([]);
 });
 
 describe('iterators', () => {

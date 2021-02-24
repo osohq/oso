@@ -39,6 +39,10 @@ parity: build
 test: build
 	yarn test
 
+jsbuildtest:
+	yarn build
+	yarn test
+
 repl: build
 	./bin/repl.js
 

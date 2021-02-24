@@ -8,8 +8,10 @@ import {
   PolarError,
   UnimplementedOperationError,
 } from './errors';
-import { isPolarTerm, QueryEventKind } from './types';
+import { isPolarTerm, QueryEventKind, PolarOperator, ExternalOp, isPolarInstance } from './types';
 import type { obj, QueryEvent } from './types';
+import { result } from 'lodash';
+import { util } from 'prettier';
 
 /**
  * Assemble the prototypal inheritance chain of a class.
@@ -71,7 +73,7 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
       case event['Debug'] !== undefined:
         return parseDebug(event['Debug']);
       case event['ExternalOp'] !== undefined:
-        throw new UnimplementedOperationError('comparison operators');
+        return parseExternalOp(event['ExternalOp']);
       default:
         throw new Error();
     }
@@ -216,6 +218,35 @@ function parseExternalIsa({
     data: { callId, instance, tag },
   };
 }
+
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * an [[`ExternalOp`]].
+ *
+ * @internal
+ */
+function parseExternalOp({
+  call_id: acallid,
+  args,
+  operator
+}: obj): QueryEvent {
+  if (!Number.isSafeInteger(acallid)) {
+    throw new Error();
+  }
+
+  args.forEach ( (arg: unknown, narg: number) => {
+    if(!isPolarTerm(arg)) {
+      throw new Error();
+    }
+  });
+  return {
+    kind: QueryEventKind.ExternalOp,
+    data: {
+      args, callId: acallid, operator
+    },
+  };
+}
+
 
 /**
  * Try to parse a JSON payload received from across the WebAssembly boundary as
