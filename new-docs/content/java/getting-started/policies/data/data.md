@@ -34,8 +34,8 @@ registerClass: |
   [Constructor](https://docs.oracle.com/javase/10/docs/api/java/lang/reflect/Constructor.html),
   but the default behavior is to choose one at instantiation time based on the
   classes of the supplied arguments. For the example above, this would probably
-  be a constructor with a signature like public User(String name, bool
-  isAdmin). See [the Java library
+  be a constructor with a signature like `public User(String name, bool
+  isAdmin)`. See [the Java library
   documentation](reference/polar/classes#class-instances) for more details.
 
 specializedExample: |

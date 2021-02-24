@@ -8,8 +8,9 @@ description: |
 
 {{% coming_soon %}}
 
-TODO. Basically:
+<!-- TODO. Basically:
 
 ```prolog
 allow(user, "read", data) if user = data.owner;
 ```
+-->
