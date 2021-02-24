@@ -40,7 +40,7 @@ Add a method to initialize Oso and make the Oso instance available to your
 application code. This method should initialize Oso and load your policy file,
 which can be an empty `.polar` file. It should also call
 `sqlalchemy_oso.session.set_get_session()` to configure access to the
-SQLALchemy session Oso should use to make queries. Then call
+SQLAlchemy session Oso should use to make queries. Then call
 `sqlalchemy_oso.roles.enable_roles()` to load the base Oso policy for roles:
 
 {{< literalInclude path="examples/roles/sqlalchemy/basic/app/__init__.py"
@@ -101,7 +101,7 @@ To give the roles permissions, write an Oso policy.
 
 Since we already called `sqlalchemy_oso.roles.enable_roles()` in our
 `init_oso()` method, you can write Polar `role_allow` rules over
-`OrganizationRoles`:
+`OrganizationRole`s:
 
 {{< literalInclude path="examples/roles/sqlalchemy/basic/app/authorization.polar"
                    lines="7-14" >}}

@@ -10,7 +10,7 @@ Oso helps you form a mental model for your
 authorization needs by providing a set of frameworks and templates built on
 top of a
 declarative policy language called Polar. The Oso library provides an
-intuitve API for querying Polar policies, which centralize authorization
+intuitive API for querying Polar policies, which centralize authorization
 logic, and middleware to help apply authorization in the right places. Oso
 also provides a debugger and REPL for Polar, to help developers learn the
 language and test their policies.
