@@ -40,6 +40,7 @@ href
 mailto
 
 # Java
+classpath
 Gradle
 
 # Misc terms
@@ -57,7 +58,6 @@ Halbert
 
 # Node.js
 js
-asyncIterator
 
 # Oso
 oso
@@ -103,7 +103,6 @@ arities
 arity
 backend
 boolean
-classpath
 codebase
 constructable
 coroutine
