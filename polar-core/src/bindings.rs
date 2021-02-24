@@ -272,6 +272,7 @@ impl BindingManager {
         impl<'a> Folder for Derefer<'a> {
             fn fold_term(&mut self, t: Term) -> Term {
                 match t.value() {
+                    Value::Expression(_) => t,
                     Value::List(_) => fold_term(self.binding_manager.deref(&t), self),
                     Value::Variable(_) | Value::RestVariable(_) => {
                         let derefed = self.binding_manager.deref(&t);
