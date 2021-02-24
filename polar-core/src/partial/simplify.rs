@@ -175,99 +175,6 @@ pub struct Simplifier {
     this_var: Symbol,
 }
 
-// impl Folder for Simplifier {
-//     fn fold_term(&mut self, t: Term) -> Term {
-//         fold_term(self.deref(&t), self)
-//     }
-//
-//     fn fold_operation(&mut self, mut o: Operation) -> Operation {
-//         if o.operator == Operator::And {
-//             // Preprocess constraints.
-//             let mut seen: HashSet<&Operation> = HashSet::new();
-//             o = o.clone_with_constraints(
-//                 o.constraints()
-//                     .iter()
-//                     .filter(|o| *o != &TRUE) // Drop empty constraints.
-//                     .filter(|o| !seen.contains(&o.mirror()) && seen.insert(o)) // Deduplicate constraints.
-//                     .cloned()
-//                     .collect(),
-//             );
-//         }
-//
-//         if o.operator == Operator::And || o.operator == Operator::Or {
-//             // Toss trivial unifications.
-//             o.args = o
-//                 .constraints()
-//                 .into_iter()
-//                 .filter(|c| match c.operator {
-//                     Operator::Unify | Operator::Eq | Operator::Neq => {
-//                         assert_eq!(c.args.len(), 2);
-//                         let left = &c.args[0];
-//                         let right = &c.args[1];
-//                         left != right
-//                     }
-//                     _ => true,
-//                 })
-//                 .map(|c| c.into_term())
-//                 .collect();
-//         }
-//
-//         match o.operator {
-//             // Zero-argument conjunctions & disjunctions represent constants
-//             // TRUE and FALSE, respectively. We do not simplify them.
-//             Operator::And | Operator::Or if o.args.is_empty() => o,
-//
-//             // Replace one-argument conjunctions & disjunctions with their argument.
-//             Operator::And | Operator::Or if o.args.len() == 1 => fold_operation(
-//                 o.args[0]
-//                     .value()
-//                     .as_expression()
-//                     .expect("expression")
-//                     .clone(),
-//                 self,
-//             ),
-//
-//             // Non-trivial conjunctions. Choose a unification constraint to
-//             // make a binding from, maybe throw it away, and fold the rest.
-//             Operator::And if o.args.len() > 1 => {
-//                 if let Some(i) = o.constraints().iter().position(|constraint| {
-//                     let other_constraints = o.clone_with_constraints(
-//                         o.constraints()
-//                             .into_iter()
-//                             .filter(|r| r != constraint)
-//                             .collect(),
-//                     );
-//                     let variables = other_constraints.variables();
-//                     self.maybe_bind_constraint(constraint, variables)
-//                 }) {
-//                     o.args.remove(i);
-//                 }
-//                 fold_operation(o, self)
-//             }
-//
-//             // Negation. Simplify the negated term, saving & restoring the
-//             // current bindings because bindings may not leak out of a negation.
-//             Operator::Not => {
-//                 assert_eq!(o.args.len(), 1);
-//                 let bindings = self.bindings.clone();
-//                 let mut simplified = o.args[0].clone();
-//                 self.simplify_partial(&mut simplified);
-//                 self.bindings = bindings;
-//                 invert_operation(
-//                     simplified
-//                         .value()
-//                         .as_expression()
-//                         .expect("a simplified expression")
-//                         .clone(),
-//                 )
-//             }
-//
-//             // Default case.
-//             _ => fold_operation(o, self),
-//         }
-//     }
-// }
-
 impl Simplifier {
     pub fn new(this_var: Symbol) -> Self {
         Self {
@@ -522,11 +429,6 @@ impl Simplifier {
 
     /// Simplify a partial until quiescence.
     pub fn simplify_partial(&mut self, term: &mut Term) {
-        // @NOTE(steve): Now the hash thing is very useful, because
-        // we want to avoid the clone of the value that happens when
-        // there are multiple references so we don't want to keep another
-        // ref around here.
-        //eprintln!("SIMPLIFY {} WITH RESPECT TO {}", term, self.this_var);
         let mut last = term.hash_value();
         loop {
             self.simplify_term(term);
@@ -534,7 +436,6 @@ impl Simplifier {
             if last == now {
                 break;
             }
-            //eprintln!("{}", term);
             last = now;
         }
     }
