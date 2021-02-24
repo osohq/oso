@@ -76,7 +76,7 @@ update, or delete.
 An authorization policy for such an application might include
 rules such as:
 * A user may read any `Expense` that they submitted.
-* A user may approve an `expense` instance if they manage the
+* A user may approve an `Expense` instance if they manage the
   user that submitted it and the amount is less than some maximum.
 
 The rest of this tutorial will be concerned with how to turn
