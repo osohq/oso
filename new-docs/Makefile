@@ -80,7 +80,7 @@ spelling:
 	$(MAKE) -C spelling
 
 check-links: check-links-deps
-	lychee './content/**/*.md' --exclude '\w+@\w+\.com' --exclude 'localhost|127.0.0.1' --exclude '^sqlite://' --exclude 'https://crates.io/crates'
+	lychee --verbose './content/**/*.md' --exclude '\w+@\w+\.com' --exclude 'localhost|127.0.0.1' --exclude '^sqlite://' --exclude 'https://crates.io/crates'
 
 check-links-deps: .make.check-links-deps.installed
 
