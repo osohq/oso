@@ -19,7 +19,7 @@ jobs:
       - name: Check docs links
         uses: lycheeverse/lychee-action@v1.0.4
         with:
-          args: '"./new-docs/content/**/*.md" --exclude "\w+@\w+\.com" --exclude "localhost|127.0.0.1" --exclude "^sqlite://" --exclude "https://crates.io/crates"'
+          args: '"./new-docs/content/**/*.md" --exclude "\w+@\w+\.com" --exclude "localhost|127.0.0.1" --exclude "^sqlite://" --exclude "https://crates.io/crates" --exclude "https://medium.com/"'
 
       - uses: actions/cache@v2
         with:
