@@ -88,4 +88,6 @@ check-links-deps: .make.check-links-deps.installed
 	cargo install lychee
 	touch $@
 
-.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling check-links check-links-deps
+lint: build spelling check-links
+
+.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling check-links check-links-deps lint
