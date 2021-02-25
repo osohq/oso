@@ -163,7 +163,7 @@ import('monaco-editor-core').then(monaco => {
     for (let i = 0; i < polarCode.length; i++) {
       let el = polarCode[i];
       monaco.editor
-        .colorize(el.innerHTML, 'polar', { theme: 'polarTheme' })
+        .colorize(el.innerText, 'polar', { theme: 'polarTheme' })
         .then(colored => {
           el.innerHTML = colored;
           el.parentNode.classList.add('polar-code-in-here');
