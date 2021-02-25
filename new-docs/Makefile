@@ -79,7 +79,13 @@ clean:
 spelling:
 	$(MAKE) -C spelling
 
-check-links: build
-	$(MAKE) -C check-links
+check-links: check-links-deps
+	lychee './content/**/*.md' --exclude '\w+@\w+\.com' --exclude 'localhost|127.0.0.1' --exclude '^sqlite://' --exclude 'https://crates.io/crates'
 
-.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling
+check-links-deps: .make.check-links-deps.installed
+
+.make.check-links-deps.installed:
+	cargo install lychee
+	touch $@
+
+.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling check-links check-links-deps
