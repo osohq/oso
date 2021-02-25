@@ -79,4 +79,7 @@ clean:
 spelling:
 	$(MAKE) -C spelling
 
+check-links: build
+	$(MAKE) -C check-links
+
 .PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling
