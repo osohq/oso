@@ -24,11 +24,11 @@ fmtcheck: install
 	yarn fmtcheck
 
 # Run the TS compiler to typecheck the TS lib.
-typecheck: wasm
+typecheck: install wasm
 	yarn tsc
 
 # Build the TS lib documentation.
-docs: install
+docs: install wasm
 	yarn docs-build
 
 # Start a REPL session.
