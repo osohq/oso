@@ -307,7 +307,8 @@ controls to our route handlers.
 
 {{% callout "What's next" "green" %}}
 
-- To explore integrating Oso in your app in more depth continue to [Access Patterns](https://docs.oso.dev/getting-started/application/patterns.html).
+<!-- TODO(gj): page doesn't exist yet in new docs
+- To explore integrating Oso in your app in more depth continue to [Access Patterns](). -->
 - For a deeper introduction to policy syntax, see [Writing Policies](policies).
 - For reference on using the Java Oso library, see [Java Authorization Library](reference).
 - Clone this example on [GitHub](https://github.com/osohq/oso-spring-tutorial)
