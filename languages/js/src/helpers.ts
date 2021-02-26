@@ -2,22 +2,9 @@ import { inspect } from 'util';
 
 const _readFile = require('fs')?.readFile;
 
-import {
-  InvalidQueryEventError,
-  KwargsError,
-  PolarError,
-  UnimplementedOperationError,
-} from './errors';
-import {
-  isPolarTerm,
-  QueryEventKind,
-  PolarOperator,
-  ExternalOp,
-  isPolarInstance,
-} from './types';
+import { InvalidQueryEventError, KwargsError, PolarError } from './errors';
+import { isPolarTerm, isPolarOperator, QueryEventKind } from './types';
 import type { obj, QueryEvent } from './types';
-import { result } from 'lodash';
-import { util } from 'prettier';
 
 /**
  * Assemble the prototypal inheritance chain of a class.
@@ -231,25 +218,26 @@ function parseExternalIsa({
  *
  * @internal
  */
-function parseExternalOp({
-  call_id: acallid,
-  args,
-  operator,
-}: obj): QueryEvent {
-  if (!Number.isSafeInteger(acallid)) {
+function parseExternalOp({ call_id: callId, args, operator }: obj): QueryEvent {
+  if (
+    !Number.isSafeInteger(callId) ||
+    (args !== undefined &&
+      (!Array.isArray(args) ||
+        args.length !== 2 ||
+        args.some((a: unknown) => !isPolarTerm(a))))
+  )
     throw new Error();
-  }
-
-  args.forEach((arg: unknown, narg: number) => {
-    if (!isPolarTerm(arg)) {
-      throw new Error();
-    }
-  });
+  if (!isPolarOperator(operator))
+    throw new PolarError(
+      `Unsupported external operation '${repr(args[0])} ${operator} ${repr(
+        args[1]
+      )}'`
+    );
   return {
     kind: QueryEventKind.ExternalOp,
     data: {
       args,
-      callId: acallid,
+      callId,
       operator,
     },
   };
