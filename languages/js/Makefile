@@ -38,7 +38,6 @@ repl: build
 # Remove existing build and ensure the next `make` rebuilds the WASM lib.
 clean: install
 	yarn clean
-	touch .make.wasm.needs-build
 
 install: .make.deps.installed
 
@@ -49,8 +48,8 @@ install: .make.deps.installed
 
 wasm: .make.wasm.built
 
-# Only rebuild the WASM core when we run `make clean`.
-.make.wasm.built: .make.wasm.needs-build
+# Rebuild the WASM core on changes to the generated WASM files.
+.make.wasm.built: src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.wasm.d.ts
 	mkdir -p dist/bundler
 	mkdir -p dist/src
 	$(MAKE) -C ../../polar-wasm-api nodejs
@@ -59,3 +58,6 @@ wasm: .make.wasm.built
 	$(MAKE) -C ../../polar-wasm-api bundler
 	cp -r ../../polar-wasm-api/pkg/* dist/bundler/
 	touch $@
+
+# Keep Make from blowing up if the WASM files don't exist.
+src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.wasm.d.ts:
