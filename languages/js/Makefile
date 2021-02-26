@@ -5,7 +5,7 @@ build: install wasm
 	yarn build
 
 # Run the TS lib's test suite.
-test: install
+test: install wasm
 	yarn test
 
 # Run the parity tests.
