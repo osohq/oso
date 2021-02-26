@@ -1,7 +1,7 @@
 .PHONY: build test parity lint fmt fmtcheck typecheck docs repl clean install wasm
 
 # Build the WASM lib if it hasn't already been built; then build the TS lib.
-build: wasm
+build: install wasm
 	yarn build
 
 # Run the TS lib's test suite.
@@ -9,7 +9,7 @@ test: install
 	yarn test
 
 # Run the parity tests.
-parity: install
+parity: install wasm
 	yarn ts-node test/parity.ts
 
 # Check formatting and types.
