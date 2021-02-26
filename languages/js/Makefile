@@ -1,10 +1,56 @@
-.PHONY: wasm install clean dev build fmtcheck typecheck lint parity test
+.PHONY: build test parity lint fmt fmtcheck typecheck docs repl clean install wasm
 
+# Build the WASM lib if it hasn't already been built; then build the TS lib.
 build: wasm
 	yarn build
 
+# Run the TS lib's test suite.
+test: install
+	yarn test
 
-wasm: clean
+# Run the parity tests.
+parity: install
+	yarn ts-node test/parity.ts
+
+# Check formatting and types.
+lint: fmtcheck typecheck
+
+# Run the formatter, updating offending files.
+fmt: install
+	yarn fmt
+
+# Run the formatter without updating offending files.
+fmtcheck: install
+	yarn fmtcheck
+
+# Run the TS compiler to typecheck the TS lib.
+typecheck: wasm
+	yarn tsc
+
+# Build the TS lib documentation.
+docs: install
+	yarn docs-build
+
+# Start a REPL session.
+repl: build
+	./bin/repl.js
+
+# Remove existing build and ensure the next `make` rebuilds the WASM lib.
+clean: install
+	yarn clean
+	touch .make.wasm.needs-build
+
+install: .make.deps.installed
+
+# Only reinstall deps when package.json changes.
+.make.deps.installed: package.json
+	yarn install --network-timeout 100000
+	touch $@
+
+wasm: .make.wasm.built
+
+# Only rebuild the WASM core when we run `make clean`.
+.make.wasm.built: .make.wasm.needs-build
 	mkdir -p dist/bundler
 	mkdir -p dist/src
 	$(MAKE) -C ../../polar-wasm-api nodejs
@@ -12,39 +58,4 @@ wasm: clean
 	cp -r ../../polar-wasm-api/pkg/* src/
 	$(MAKE) -C ../../polar-wasm-api bundler
 	cp -r ../../polar-wasm-api/pkg/* dist/bundler/
-
-install:
-	yarn install --network-timeout 100000
-
-clean: install
-	yarn clean
-
-dev: wasm
-	yarn build --watch
-
-fmt: clean
-	yarn fmt
-
-fmtcheck: clean
-	yarn fmtcheck
-
-typecheck: wasm
-	yarn tsc
-
-lint: fmtcheck typecheck
-
-parity: build
-	yarn ts-node test/parity.ts
-
-test: build
-	yarn test
-
-jsbuildtest:
-	yarn build
-	yarn test
-
-repl: build
-	./bin/repl.js
-
-docs: install
-	yarn docs-build
+	touch $@
