@@ -1,6 +1,6 @@
 .PHONY: build test parity lint fmt fmtcheck typecheck docs repl clean install wasm
 
-# Build the WASM lib if it hasn't already been built; then build the TS lib.
+# Build the WASM lib; then build the TS lib.
 build: install wasm
 	yarn build
 
@@ -35,7 +35,7 @@ docs: install wasm
 repl: build
 	./bin/repl.js
 
-# Remove existing build and ensure the next `make` rebuilds the WASM lib.
+# Remove existing build.
 clean: install
 	yarn clean
 
@@ -44,20 +44,11 @@ install: .make.deps.installed
 # Only reinstall deps when package.json changes.
 .make.deps.installed: package.json
 	yarn install --network-timeout 100000
-	touch $@
+	@touch $@
 
-wasm: .make.wasm.built
+wasm: src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.wasm.d.ts
 
-# Rebuild the WASM core on changes to the generated WASM files.
-.make.wasm.built: src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.wasm.d.ts
-	mkdir -p dist/bundler
-	mkdir -p dist/src
-	$(MAKE) -C ../../polar-wasm-api nodejs
-	cp -r ../../polar-wasm-api/pkg/* dist/src
-	cp -r ../../polar-wasm-api/pkg/* src/
-	$(MAKE) -C ../../polar-wasm-api bundler
-	cp -r ../../polar-wasm-api/pkg/* dist/bundler/
-	touch $@
-
-# Keep Make from blowing up if the WASM files don't exist.
+# Rebuild the WASM core.
 src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.wasm.d.ts:
+	$(MAKE) -C ../../polar-wasm-api nodejs
+	$(MAKE) -C ../../polar-wasm-api bundler
