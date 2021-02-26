@@ -15,7 +15,7 @@ impl Iterator for Query {
     }
 }
 
-pub struct Query {
+pub struct Query {  // ANNIE inner query comes from here
     inner: polar_core::polar::Query,
     /// Stores a map from call_id to the iterator the call iterates through
     iterators: HashMap<u64, PolarIterator>,

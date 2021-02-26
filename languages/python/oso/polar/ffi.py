@@ -44,7 +44,7 @@ class Polar:
         query = check_result(new_q_ptr)
         return Query(query)
 
-    def next_inline_query(self):
+    def next_inline_query(self):   # ANNIE
         q = lib.polar_next_inline_query(self.ptr, 0)
         process_messages(self.next_message)
         if is_null(q):

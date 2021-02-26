@@ -14,7 +14,7 @@ use super::warnings::check_singletons;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
-pub struct Query {
+pub struct Query {   // ANNIE
     runnable_stack: Vec<(Box<dyn Runnable>, u64)>, // Tuple of Runnable + call_id.
     vm: PolarVirtualMachine,
     term: Term,

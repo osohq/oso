@@ -67,12 +67,12 @@ impl Oso {
         check_messages!(self.inner);
     }
 
-    fn check_inline_queries(&mut self) -> crate::Result<()> {
+    fn check_inline_queries(&mut self) -> crate::Result<()> {   // ANNIE this drives the inline queries
         while let Some(q) = self.inner.next_inline_query(false) {
             let query = Query::new(q, self.host.clone());
             match query.collect::<crate::Result<Vec<_>>>() {
                 Ok(v) if !v.is_empty() => continue,
-                Ok(_) => return lazy_error!("inline query result was false"),
+                Ok(_) => return lazy_error!("inline query result was false"), // ANNIE change this message is the whole show
                 Err(e) => return lazy_error!("error in inline query: {}", e),
             }
         }

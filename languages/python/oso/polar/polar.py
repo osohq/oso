@@ -116,7 +116,10 @@ class Polar:
                     next(Query(query, host=self.host.copy()).run())
                 except StopIteration:
                     source = query.source()
-                    raise InlineQueryFailedError(source.get())
+                    raise InlineQueryFailedError(source.get()) # ANNIE this is where exception is raised
+                    # The problem is that the source info is on the other side
+                    # the consult process is to collect the directives and run them at the end
+                    ##
 
     def clear_rules(self):
         self.ffi_polar.clear_rules()
