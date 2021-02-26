@@ -136,7 +136,7 @@ With this relatively straightforward policy, it's easy to trace where
 the users' allowed actions come from. But `Oso.get_allowed_actions()`
 can be especially powerful with more complicated policies. For example,
 if we used Oso's [SQLAlchemy Roles library
-features](https://docs.osohq.com/getting-started/roles/sqlalchemy/basic_roles.html),
+features](guides/roles/sqlalchemy_roles),
 we could have a policy that looks like this instead:
 
 ```python
@@ -165,7 +165,7 @@ Now the users' allowed actions depend on their assigned roles for both
 the repository and the parent organization, as well as the hierarchy of
 the repository roles (for more information on implementing RBAC with
 Oso, [check out our
-guide](https://docs.osohq.com/getting-started/roles/index.html)).
+guide](guides/roles)).
 
 Even with this more complicated policy, we'll still get the correct
 allowed actions for Mike and Sully.
