@@ -62,9 +62,9 @@ assert!(oso.is_allowed(user, "foo", "bar")?);
 Polar does not support methods that mutate strings in place.
 {{% /callout %}}
 
-### Vectors
+### `Vec`
 
-[Vec\<T>][rust-vec] maps to a Polar [list](polar-syntax#lists), given that `T: ToPolar`.
+[`Vec<T>`][rust-vec] maps to a Polar [list](polar-syntax#lists), given that `T: ToPolar`.
 
 Currently, no methods on `Vec` are exposed to Polar.
 
@@ -97,11 +97,11 @@ using a method, you may iterate over it with [the `in`
 operator](polar-syntax#in-list-membership) or destructure it with [pattern
 matching](polar-syntax#patterns-and-matching).
 
-### HashMaps
+### `HashMap`
 
-Rust [`HashMap`s][rust-hashmap] are mapped to Polar
-[dictionaries](polar-syntax#dictionaries), but require that the `HashMap` key
-is a `String`:
+A Rust [`HashMap`][rust-hashmap] maps to a Polar
+[dictionary](polar-syntax#dictionaries) but requires that the `HashMap` key is
+a `String`:
 
 ```polar
 allow(actor, action, resource) if actor.roles.project1 = "admin";
@@ -190,11 +190,11 @@ assert!(oso.is_allowed(user, "foo", "bar")?);
 
 ### Rust → Polar Types Summary
 
-| Rust type                 | Polar type |
-| ------------------------- | ---------- |
-| i32, i64, usize           | Integer    |
-| f32, f64                  | Float      |
-| bool                      | Boolean    |
-| Vec                       | List       |
-| HashMap                   | Dictionary |
-| String, &’static str, str | String     |
+| Rust type                       | Polar type   |
+| ------------------------------- | ------------ |
+| `i32`, `i64`, `usize`           | `Integer`    |
+| `f32`, `f64`                    | `Float`      |
+| `bool`                          | `Boolean`    |
+| `Vec`                           | `List`       |
+| `HashMap`                       | `Dictionary` |
+| `String`, `&'static str`, `str` | `String`     |

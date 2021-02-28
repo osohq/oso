@@ -113,17 +113,17 @@ We currently support Python, Ruby, Java, Node.js and Rust, and are actively work
 We have framework integrations for Flask & Django see here.
 
 Vote & track your favorite language and framework integrations at our
-[Github repository](https://github.com/osohq/oso),
+[GitHub repository](https://github.com/osohq/oso),
 and sign up for our newsletter in the footer anywhere on our docs if you’d like
 to stay up to speed on the latest product updates.
 
 ## What operating systems do you support?
 
-We currently support Linux, Mac OS X and Windows.
+We currently support Linux, macOS, and Windows.
 
 ## What license does Oso use?
 
-Oso is licensed under [the *Apache 2.0 license*](https://github.com/osohq/oso/blob/master/LICENSE).
+Oso is licensed under [the *Apache 2.0 license*](https://github.com/osohq/oso/blob/main/LICENSE).
 
 ## How does pricing work?
 
@@ -135,7 +135,7 @@ features, please [contact us](https://osohq.com/company/contact-us).
 
 ## Who builds and maintains Oso?
 
-Oso is built by [Oso](https://www.osohq.com/company/about-us)! We are headquartered in New York City with engineers across 3 time zones, and we are
+Oso is built by [Oso](https://www.osohq.com/company/about-us)! We are headquartered in New York City with engineers across two continents, and we are
 hard at work on new features and improvements. If you have feedback or ideas about
 how we can make the product better, we would be delighted to hear from you.
 Please feel free to reach out to us at <a href="mailto:engineering@osohq.com">engineering@osohq.com</a>.

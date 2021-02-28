@@ -302,7 +302,7 @@ to use roles that specifically apply to one resource or another. For example,
 in a project management app there might be `Project` resources that have the
 following roles: “member”, “developer”, and “manager”.
 
-If these roles are pre-defined, they generally will confer the same permissions
+If these roles are predefined, they generally will confer the same permissions
 across all `Project` resources, but the users assigned to the role will differ
 from project-to-project. In other words, the role-permission mappings are
 specific to the resource type, while the user-role mappings are specific to the

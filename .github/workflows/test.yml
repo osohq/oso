@@ -293,6 +293,15 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Python 3.6
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.6"
+
+      - name: Check spelling
+        run: make -C new-docs spelling
+
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -300,10 +309,6 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-      - name: Install Python 3.6
-        uses: actions/setup-python@v1
-        with:
-          python-version: "3.6"
       - name: Install Ruby + gems
         uses: ruby/setup-ruby@v1
         with:

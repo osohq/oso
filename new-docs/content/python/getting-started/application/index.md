@@ -7,31 +7,37 @@ aliases:
   - /getting-started/application/index.html
 ---
 
-# Add Oso to an Application
+# Add Oso to a Python Application
 
 This guide covers a little more detail about how to add Oso to an
-application.
+application written in Python.
 
 Whereas in the [Quickstart]({{< relref path="getting-started/quickstart"
 lang="python" >}}) we zoomed through an
 example of authorization in a simple web server, in this guide we'll show
 some more practical examples in the context of a more realistic application.
 
-Our sample expenses application is built with Flask, but we are not using
-anything from Oso that is unique to Flask, and the same patterns we cover here
-can be used anywhere.
+Our sample expenses application is built with Flask, but the patterns we cover
+here can be used with almost any framework. Specific tutorials on integrating
+Oso with other common Python frameworks are coming soon, but in the meantime
+you may find some of our blog posts useful, especially
+[Building a Django app with data access control in 30 minutes](https://www.osohq.com/post/django-access-control)
+and [GraphQL Authorization with Graphene, SQLAlchemy and Oso](https://www.osohq.com/post/graphql-authorization-graphene-sqlalchemy-oso).
+Please also see our reference pages on [Framework & ORM Integrations](/reference/frameworks).
+
+## Getting The Example
 
 We highly encourage you to follow along with the code by cloning the example repository
 and trying it out. The code can be found here:
 
-[osohq/oso-flask-tutorial](https://github.com/osohq/oso-flask-tutorial)
+* [osohq/oso-flask-tutorial](https://github.com/osohq/oso-flask-tutorial)
 
-Our expenses application reads from a sqlite database, and has a few simple endpoints for returning results. We encourage you to take a look around before continuing!
+Our expenses application reads from a SQLite database, and has a few simple endpoints for returning results. We encourage you to take a look around before continuing!
 
 ## Running The Example
 
-The application has a few requirements, including Flask and, of course, Oso.
-We recommend installing these within a virtual environment:
+The example application has a few requirements, including Flask and, of course, Oso.
+We recommend installing these in a virtual environment:
 
 ```console
 $ git clone https://github.com/osohq/oso-flask-tutorial/
@@ -235,7 +241,7 @@ want to make sure only authorized expenses are submitted.
 
 {{% callout "Tip" "green" %}}
 The `allow_by_path` rule is a custom rule in our policy that operates
-on an actor, action, first url path fragment, and the remaining path
+on an actor, action, first URL path fragment, and the remaining path
 fragment. A `PUT /expenses/submit` request would try to authorize
 using the `allow_by_path(actor, "PUT", "expenses", ["submit"])` rule.
 See [our policy](https://github.com/osohq/oso-flask-tutorial/blob/ecc39c601057bcfdb952e35da616fe2e1ea00a22/app/authorization.polar#L10) for more detail.
@@ -304,7 +310,8 @@ controls to our route handlers.
 
 {{% callout "What's next" "green" %}}
 
-- To explore integrating Oso in your app in more depth continue to [Access Patterns](https://docs.oso.dev/getting-started/application/patterns.html).
+<!-- TODO(gj): page doesn't exist yet in new docs
+- To explore integrating Oso in your app in more depth continue to [Access Patterns](). -->
 - For a deeper introduction to policy syntax, see [Writing Policies](policies).
 - For reference on using the Python Oso library, see [Python Authorization Library](reference).
 - Clone this example on [GitHub](https://github.com/osohq/oso-flask-tutorial)

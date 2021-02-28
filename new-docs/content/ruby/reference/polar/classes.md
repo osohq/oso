@@ -183,12 +183,12 @@ raise "should be allowed" unless oso.allowed?(User.new, "foo", "bar")
 
 ### Ruby → Polar Types Summary
 
-| Ruby type  | Polar type |
-| ---------- | ---------- |
-| Integer    | Integer    |
-| Float      | Float      |
-| TrueClass  | Boolean    |
-| FalseClass | Boolean    |
-| Array      | List       |
-| Hash       | Dictionary |
-| String     | String     |
+| Ruby type    | Polar type   |
+| ------------ | ------------ |
+| `Integer`    | `Integer`    |
+| `Float`      | `Float`      |
+| `TrueClass`  | `Boolean`    |
+| `FalseClass` | `Boolean`    |
+| `Array`      | `List`       |
+| `Hash`       | `Dictionary` |
+| `String`     | `String`     |
