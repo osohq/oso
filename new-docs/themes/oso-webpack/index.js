@@ -2,7 +2,7 @@
 //   .catch(e => console.error('Error importing `oso`:', e))
 //   .then(m => (window.oso = m));
 
-import('monaco-editor-core').then(monaco => {
+import('monaco-editor-core').then((monaco) => {
   // Monokai colors
   const COLOR = {
     GHOST_WHITE: 'F8F8F0',
@@ -20,11 +20,11 @@ import('monaco-editor-core').then(monaco => {
     ORANGE: 'FD971F',
     LIGHT_ORANGE: 'FFD569',
     GREEN: 'A6E22E',
-    SEA_GREEN: '529B2F'
+    SEA_GREEN: '529B2F',
   };
 
   monaco.languages.register({
-    id: 'polar'
+    id: 'polar',
   });
 
   monaco.languages.setMonarchTokensProvider('polar', {
@@ -39,7 +39,7 @@ import('monaco-editor-core').then(monaco => {
       'new',
       'not',
       'or',
-      'print'
+      'print',
     ],
     operators: [
       '=',
@@ -53,14 +53,14 @@ import('monaco-editor-core').then(monaco => {
       '-',
       '*',
       '/',
-      '?='
+      '?=',
     ],
     ignoreCase: true,
     defaultToken: 'invalid',
     brackets: [
       ['{', '}', 'delimiter.curly'],
       ['[', ']', 'delimiter.square'],
-      ['(', ')', 'delimiter.parenthesis']
+      ['(', ')', 'delimiter.parenthesis'],
     ],
     keywordops: ['::'],
     symbols: /[=><!~?:&|+\-*\/\^%]+/,
@@ -76,12 +76,12 @@ import('monaco-editor-core').then(monaco => {
                 cases: {
                   debug: 'keyword.debug',
                   print: 'keyword.print',
-                  '@default': 'keyword'
-                }
+                  '@default': 'keyword',
+                },
               },
-              '@default': 'predicate'
-            }
-          }
+              '@default': 'predicate',
+            },
+          },
         ],
 
         [
@@ -91,12 +91,12 @@ import('monaco-editor-core').then(monaco => {
               '@keywords': {
                 cases: {
                   debug: 'keyword.debug',
-                  '@default': 'keyword'
-                }
+                  '@default': 'keyword',
+                },
               },
-              '@default': { token: 'identifier' }
-            }
-          }
+              '@default': { token: 'identifier' },
+            },
+          },
         ],
 
         // whitespace
@@ -110,9 +110,9 @@ import('monaco-editor-core').then(monaco => {
             cases: {
               '@keywordops': 'keyword',
               '@operators': 'operator',
-              '@default': ''
-            }
-          }
+              '@default': '',
+            },
+          },
         ],
 
         // numbers
@@ -125,18 +125,21 @@ import('monaco-editor-core').then(monaco => {
 
         // strings
         [/"([^"\\]|\\.)*$/, 'string.invalid'], // non-terminated string
-        [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }]
+        [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
       ],
 
       string: [
         [/[^\\"]+/, 'string'],
         [/@escapes/, 'string.escape'],
         [/\\./, 'string.escape.invalid'],
-        [/"/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
+        [/"/, { token: 'string.quote', bracket: '@close', next: '@pop' }],
       ],
 
-      whitespace: [[/[ \t\r\n]+/, 'white'], [/#.*$/, 'comment']]
-    }
+      whitespace: [
+        [/[ \t\r\n]+/, 'white'],
+        [/#.*$/, 'comment'],
+      ],
+    },
   });
 
   // Define a new theme that constains only rules that match this language
@@ -152,8 +155,8 @@ import('monaco-editor-core').then(monaco => {
       { token: 'comment', foreground: COLOR.BROWN },
       { token: 'delimiter', foreground: COLOR.SEA_GREEN },
       { token: 'predicate', foreground: COLOR.BLUE, fontStyle: 'italic' },
-      { token: '', foreground: COLOR.LIGHT_GHOST_WHITE }
-    ]
+      { token: '', foreground: COLOR.LIGHT_GHOST_WHITE },
+    ],
   });
 
   monaco.editor.setTheme('polarTheme');
@@ -164,7 +167,7 @@ import('monaco-editor-core').then(monaco => {
       let el = polarCode[i];
       monaco.editor
         .colorize(el.innerText, 'polar', { theme: 'polarTheme' })
-        .then(colored => {
+        .then((colored) => {
           el.innerHTML = colored;
           el.parentNode.classList.add('polar-code-in-here');
         });
