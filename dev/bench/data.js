@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1614616676068,
+  "lastUpdate": 1614632345601,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -31461,6 +31461,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 9523,
             "range": "± 736",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "annie66us@yahoo.com",
+            "name": "Anne Ogborn",
+            "username": "Anniepoo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8f6f6ecf93b6336c4967f31693f36c614f6126f0",
+          "message": "External Comparison Operations for JS (#760)\n\n* js - ExternalOp - external comparisons in Polar for JavaScript\r\n\r\n* Add ExternalOp js to the changelog next.md\r\n\r\n* Small x\r\n\r\n* make -C languages/js fmt\r\n\r\n* Update changelog\r\n\r\n* make -C new-docs spelling\r\n\r\n* Update & comment Makefile\r\n\r\n* Makefile Makefile Makefile Makefile\r\n\r\n* Couple missing Makefile prerequisites\r\n\r\n* Probably need to depend on 'wasm' here, too\r\n\r\n* Missed a couple more\r\n\r\n* More fun parallelizing Makefiles\r\n\r\n* Gabes changes for PR\r\n\r\n* Clean up Node.js lib Makefile a bit more\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\nCo-authored-by: David Hatch <david@osohq.com>",
+          "timestamp": "2021-03-01T21:47:54+01:00",
+          "tree_id": "8bf36bbe9eb2f88d94e529d91e8ee5776999434a",
+          "url": "https://github.com/osohq/oso/commit/8f6f6ecf93b6336c4967f31693f36c614f6126f0"
+        },
+        "date": 1614632343474,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 51664,
+            "range": "± 2002",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2296313,
+            "range": "± 30128",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 11157409,
+            "range": "± 94667",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 21928049,
+            "range": "± 329981",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 975,
+            "range": "± 27",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2751,
+            "range": "± 58",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 67776,
+            "range": "± 1898",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 578965,
+            "range": "± 15885",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 22609,
+            "range": "± 854",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 22602,
+            "range": "± 801",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 22519,
+            "range": "± 816",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 22602,
+            "range": "± 743",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 20718,
+            "range": "± 666",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6042,
+            "range": "± 566",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 7072,
+            "range": "± 1317",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 8721,
+            "range": "± 296",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 13651,
+            "range": "± 3146",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 6744,
+            "range": "± 116",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 13640,
+            "range": "± 197",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 9085,
+            "range": "± 184",
             "unit": "ns/iter"
           }
         ]
