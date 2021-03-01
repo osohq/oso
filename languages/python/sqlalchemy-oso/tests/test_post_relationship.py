@@ -725,6 +725,7 @@ def test_deeply_nested_in(session, oso, tag_nested_many_many_test_fixture):
     assert posts.count() == 1
 
 
+@pytest.mark.xfail(reason="Intersection doesn't work in sqlalchemy")
 def test_in_intersection(session, oso, tag_nested_many_many_test_fixture):
     oso.load_str("""
         allow(_, _, post: Post) if
