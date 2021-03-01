@@ -6,6 +6,13 @@ description: Changelog for Release 2021-02-XX (oso 0.1X.X, sqlalchemy-oso 0.5.1)
 draft: true
 ---
 
+## `oso` 0.X.X
+
+### Improved performance for data filtering
+
+Data filtering performance has been improved with some queries
+experiencing a 5x speed up.
+
 ## `sqlalchemy-oso` 0.5.1
 
 ### Bug fixes & improvements
