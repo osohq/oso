@@ -98,7 +98,7 @@ driven directly by your application. There are no background threads, no garbage
 IO to wait on. Each instruction takes about 1-2 us, and typical queries take approximately 1-20 ms.
 
 For a more detailed discussion of the performance characteristics of Oso,
-please the [performance page](performance).
+please see the [performance page](performance).
 
 ## Use cases, i.e., When should I use Oso, and when should I use something else?
 
@@ -110,7 +110,7 @@ topic, please see our [use cases page](use-cases).
 ## What languages and frameworks do you support?
 
 We currently support Python, Node.js, Go, Rust, Ruby, and Java, and are actively working on supporting more languages.
-We have framework integrations for Flask, Django and SQLAlchemy. The easiest place try Oso in your language of choice is the [Quickstart](getting-started/quickstart).
+We have framework integrations for Flask, Django and SQLAlchemy. The easiest place to try Oso in your language of choice is the [Quickstart](getting-started/quickstart).
 
 Vote & track your favorite language and framework integrations at our
 [GitHub repository](https://github.com/osohq/oso),
