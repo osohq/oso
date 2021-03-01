@@ -329,5 +329,14 @@ not be persisted.
   - Leverage the inheritance structure of application types with **specialized
     rules**, supporting more sophisticated access control models.
 
-- You can use **built-in methods** on primitive types & literals like strings
-  and dictionaries, exactly as if they were application types.
+- You can use **built-in methods** on primitive types & literals like
+strings and dictionaries, exactly as if they were application types.
+
+{{% callout "What's next" blue %}}
+
+- Check out our [How-To Guides](guides) for more on using Polar
+  policies for authorization.
+- Check out the [Polar reference](reference/polar) for more on Polar
+  policies.
+
+{{% /callout %}}

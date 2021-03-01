@@ -453,3 +453,18 @@ This can be implemented in Polar by adding conditions to the body of
 user_in_role_for_resource(user: User, "admin", resource: Repository) if
     user = resource.owner;
 ```
+
+
+{{% callout "What's next" blue %}}
+
+{{< ifLang "python" >}}
+- Learn how to use roles with
+[SQLAlchemy](guides/roles/sqlalchemy_roles).
+{{< /ifLang >}}
+
+- Check out our [How-To Guides](guides) for more on using Polar
+  policies for authorization.
+- Check out the [Polar reference](reference/polar) for more on Polar
+  policies.
+
+{{% /callout %}}

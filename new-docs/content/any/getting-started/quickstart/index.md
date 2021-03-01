@@ -175,3 +175,10 @@ as:
 
 For more on leveraging application data in an Oso policy, check out
 [Application Types](policies#application-types).
+
+{{% callout "What's next!" "blue" %}}
+
+- Explore how to [Add oso to an application](application).
+- Dive into [writing policies](policies) in detail.
+
+{{% /callout %}}

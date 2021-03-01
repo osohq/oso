@@ -157,3 +157,13 @@ control](https://en.wikipedia.org/wiki/Attribute-based_access_control) (ABAC)
 hiding amongst our RBAC policy. In the next section, we’ll dive fully into
 attribute-based authorization and show how intuitive it is to write concise,
 flexible, and powerful ABAC rules with Oso.
+
+{{% callout "What's next" blue %}}
+
+{{< ifLang "python" >}}
+- Learn how to use roles with
+[SQLAlchemy](guides/roles/sqlalchemy_roles).
+{{< /ifLang >}}
+- Read more about advanced [Role-Based Access Control](learn/roles) with Oso
+
+{{% /callout %}}

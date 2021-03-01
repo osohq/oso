@@ -31,3 +31,12 @@ authorization patterns and how to express them in that framework.
 [nestjs]: https://nestjs.com/
 [nestjs-oso-github]: https://github.com/bjerkio/nestjs-oso#readme
 [nestjs-oso-npm]: https://www.npmjs.com/package/nestjs-oso
+
+{{% callout "What's next" "blue" %}}
+
+<!-- TODO(gj): page doesn't exist yet in new docs
+- To explore integrating Oso in your app in more depth continue to [Access Patterns](). -->
+- For a deeper introduction to policy syntax, see [Writing Policies](policies).
+- For reference on using the Node Oso library, see [Node Authorization Library](reference).
+
+{{% /callout %}}

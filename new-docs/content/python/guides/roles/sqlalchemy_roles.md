@@ -214,3 +214,9 @@ http://localhost:5000/orgs/1/roles
 
 The fully-implemented GitHub sample app, complete with tests, can be found
 [here](https://github.com/osohq/oso-sqlalchemy-roles-guide/tree/basic_roles_complete).
+
+{{% callout "What's next" blue %}}
+
+- Read more about using [roles](learn/roles) with Oso.
+
+{{% /callout %}}
