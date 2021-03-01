@@ -1,4 +1,5 @@
 ABAC
+Abagail
 ActiveRecord
 alice
 amongst
@@ -132,11 +133,14 @@ transactional
 TypeScript
 UI
 un
+unary
 unifications
+unmanageably
 unsafety
 unspecialized
 untaken
 URI
+URIs
 VM
 VPN
 webpack
