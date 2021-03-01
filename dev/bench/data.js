@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1614318977007,
+  "lastUpdate": 1614616676068,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -31317,6 +31317,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 8428,
             "range": "± 686",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9acc93aa174ef2032f3a95f7f2dbcae64c50ac0f",
+          "message": "Add new template for changelogs (#766)",
+          "timestamp": "2021-03-01T11:26:19-05:00",
+          "tree_id": "e3cdcba1f6f556c7adcfed0145d5b9855b779878",
+          "url": "https://github.com/osohq/oso/commit/9acc93aa174ef2032f3a95f7f2dbcae64c50ac0f"
+        },
+        "date": 1614616670482,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 52758,
+            "range": "± 2727",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2333362,
+            "range": "± 113252",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 11977108,
+            "range": "± 689102",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 23839020,
+            "range": "± 1004787",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 985,
+            "range": "± 71",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2795,
+            "range": "± 132",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 67858,
+            "range": "± 6612",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 588430,
+            "range": "± 21846",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 22879,
+            "range": "± 1215",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 22806,
+            "range": "± 5280",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 22525,
+            "range": "± 1405",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 22421,
+            "range": "± 1651",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 20484,
+            "range": "± 1591",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6330,
+            "range": "± 1796",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 7617,
+            "range": "± 1835",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 9780,
+            "range": "± 1184",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 24076,
+            "range": "± 2356",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 7211,
+            "range": "± 726",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 13916,
+            "range": "± 801",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 9523,
+            "range": "± 736",
             "unit": "ns/iter"
           }
         ]
