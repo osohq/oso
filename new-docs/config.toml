@@ -134,3 +134,11 @@ defaultContentLanguage = "any"
       table = true
     [markup.goldmark.renderer]
       unsafe = true
+
+# Search
+[outputFormats]
+  [outputFormats.SearchIndex]
+    baseName = "search"
+    mediaType = "application/json"
+[outputs]
+  home = ["HTML", "RSS", "SearchIndex"]
