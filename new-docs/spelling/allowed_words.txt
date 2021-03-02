@@ -4,6 +4,7 @@ ActiveRecord
 alice
 amongst
 anonymized
+APIs
 Appleby
 args
 arities
@@ -73,6 +74,7 @@ JWZ
 latencies
 LDAP
 LLDB
+Lodash's
 lookups
 macOS
 mailto

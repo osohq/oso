@@ -545,3 +545,12 @@ In this tutorial, we've seen that:
   true for a query to successfully match the rule.
 * Rules may refer to application classes, instances, fields, and methods.
 * Rules may refer to other rules, including themselves.
+
+{{% callout "What's next" "blue" %}}
+
+- Check out our [How-To Guides](guides) for more on using Polar
+  policies for authorization.
+- Check out the [Polar reference](reference/polar) for more on the Polar
+  language and syntax.
+
+{{% /callout %}}
