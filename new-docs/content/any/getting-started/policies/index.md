@@ -533,16 +533,27 @@ Rules may also be recursive, i.e., may refer to themselves.
 But be sure to define a base case, or queries may loop until
 they time out.
 
+Finally, you can query arbitrary rules directly (i.e., without
+going through `oso.is_allowed`) by using the `oso.query_rule`
+method. This gives you direct access to the knowledge base,
+and lets you receive result bindings and continue searching
+for results past the first one (`oso.is_allowed` stops after
+the first result, since any one valid authorization is as good
+as several). It lets you use Oso as a general purpose rule
+engine — what other kinds of rules does your application need?
+
 ## Summary
 
 In this tutorial, we've seen that:
 
-* A policy in Oso is written as a set of Polar rules.
+* A policy in Oso is written as a set of Polar rule definitions.
 * Authorization decisions are made by evaluating a query of the
   form `allow(actor, action, resource)` with respect to a policy.
 * Rules have names and parameters that may be matched by a query.
 * Rules may have bodies, which are conditions that must also be
   true for a query to successfully match the rule.
+* Variables may be bound to values during matching, or matched by
+  value if they are already bound.
 * Rules may refer to application classes, instances, fields, and methods.
 * Rules may refer to other rules, including themselves.
 
