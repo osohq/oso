@@ -382,10 +382,12 @@ To guard against this, we can add explicit type checks using
 the Polar `matches` operator:
 
 ```polar
+# A user that is an administrator may read any document.
 allow(user, "read", document) if
     actor matches User and
     user.admin = true;
 
+# A user may read any document that they own.
 allow(user, "read", document) if
     user matches User and
     document matches Document and
@@ -411,9 +413,11 @@ Since type checks are common and helpful for rule parameters,
 Polar provides a shortcut syntax:
 
 ```polar
+# A user that is an administrator may read any document.
 allow(user: User, "read", document: Document) if
     user.admin = true;
 
+# A user may read any document that they own.
 allow(user: User, "read", document: Document) if
     user.id = document.owner;
 ```
@@ -426,6 +430,46 @@ those classes.
 
 It's considered good practice to use a specializer on any
 parameter whose fields you access.
+
+#### Specializers with Fields
+
+Specializers can be used for more than simple type checks.
+If the class name is immediately followed by a dictionary
+`{field: value, ...}`, then the specializer will only
+match the argument if it is of the correct type _and_ all
+of the specified fields are present and their values match.
+Field matching is done by unification, so may bind variables
+to field values. For example, we could rewrite our rules
+above as:
+
+```polar
+# A user that is an administrator may read any document.
+allow(user: User{admin: true}, "read", document: Document);
+
+# A user may read any document that they own.
+allow(user: User{id: user_id}, "read", document: Document{owner: document_owner}) if
+    user_id = document_owner;
+```
+
+Notice that we've dropped the body from the first rule, since
+the required condition is now handled entirely by the specializer,
+by matching the value of `user.admin` against the literal `true`.
+
+In the second rule, the first specializer binds the variable
+`user_id` to the value of `user.id`, and the second binds
+`document_owner` to that of `document.owner`. The unification
+in the body checks that those two values are equal. But we can
+drop that, too, by using the same variable in both specializers:
+
+```polar
+# A user may read any document that they own.
+allow(user: User{id: user_id}, "read", document: Document{owner: user_id});
+```
+
+The first specializer binds `user_id` to `user.id`. Then, since
+`user_id` is already bound, the second specializer compares its
+value against that of `document.owner`, making the explicit
+unification unnecessary.
 
 ### Built-in Classes
 
