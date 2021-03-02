@@ -164,6 +164,6 @@ flexible, and powerful ABAC rules with Oso.
 - Learn how to use roles with
 [SQLAlchemy](guides/roles/sqlalchemy_roles).
 {{< /ifLang >}}
-- Read more about advanced [Role-Based Access Control](learn/roles) with Oso
+- Read more about advanced [Role-Based Access Control](learn/roles) with Oso.
 
 {{% /callout %}}
