@@ -336,7 +336,7 @@ strings and dictionaries, exactly as if they were application types.
 
 - Check out our [How-To Guides](guides) for more on using Polar
   policies for authorization.
-- Check out the [Polar reference](reference/polar) for more on Polar
-  policies.
+- Check out the [Polar reference](reference/polar) for more on the Polar
+  language and syntax.
 
 {{% /callout %}}
