@@ -319,15 +319,18 @@ person = new Person() and
 Person.log("created new person")
 ```
 
-#### Numerical Comparison
+#### Comparison
 
-The typical numerical comparison operators can be used to compare values (`> >= < <= == !=`). For example…
+The comparison operators can be used to compare values (`> >= < <= == !=`). For example…
 
 ```polar
 age < 10
 ```
 
 …will check that the value of the variable `age` is less than 10.
+Performing a comparison on application data will use the host language's
+native comparison operation. Not all Oso language libraries support this
+feature.
 
 #### Print
 
