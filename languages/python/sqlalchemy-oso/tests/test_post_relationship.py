@@ -346,7 +346,7 @@ def tag_nested_many_many_test_fixture(session):
         contents="other tagged post",
         access_level="public",
         created_by=user,
-        tags=[other]
+        tags=[other],
     )
 
     # HACK!
@@ -357,8 +357,13 @@ def tag_nested_many_many_test_fixture(session):
 
         objects[name] = local
 
-    user.posts += [user_eng_post, user_user_post, not_tagged_post, all_tagged_post,
-                   other_tagged_post]
+    user.posts += [
+        user_eng_post,
+        user_user_post,
+        not_tagged_post,
+        all_tagged_post,
+        other_tagged_post,
+    ]
     other_user.posts += [random_post]
 
     session.commit()
@@ -583,7 +588,8 @@ def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
     assert tag_nested_many_many_test_fixture["random_post"] not in posts
     assert tag_nested_many_many_test_fixture["not_tagged_post"] in posts
     assert tag_nested_many_many_test_fixture["all_tagged_post"] in posts
-    assert len(posts) == 4
+    assert tag_nested_many_many_test_fixture["other_tagged_post"] in posts
+    assert len(posts) == 5
 
     user = tag_nested_many_many_test_fixture["other_user"]
     posts = (
@@ -727,12 +733,14 @@ def test_deeply_nested_in(session, oso, tag_nested_many_many_test_fixture):
 
 @pytest.mark.xfail(reason="Intersection doesn't work in sqlalchemy")
 def test_in_intersection(session, oso, tag_nested_many_many_test_fixture):
-    oso.load_str("""
+    oso.load_str(
+        """
         allow(_, _, post: Post) if
             u in post.users and
             t in post.tags and
             u in t.users;
-    """)
+    """
+    )
 
     posts = session.query(Post).filter(
         authorize_model(oso, "user", "read", session, Post)

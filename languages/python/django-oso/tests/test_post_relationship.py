@@ -416,7 +416,7 @@ def tag_nested_many_many_fixtures():
         "random_post": random_post,
         "not_tagged_post": not_tagged_post,
         "all_tagged_post": all_tagged_post,
-        "other_tagged_post": other_tagged_post
+        "other_tagged_post": other_tagged_post,
     }
     for post in posts.values():
         post.save()
@@ -427,8 +427,15 @@ def tag_nested_many_many_fixtures():
     other_tagged_post.tags.set([other])
     all_tagged_post.tags.set([eng, user_posts, random])
 
-    user.posts.set([user_eng_post, user_user_post, not_tagged_post, all_tagged_post,
-                    other_tagged_post])
+    user.posts.set(
+        [
+            user_eng_post,
+            user_user_post,
+            not_tagged_post,
+            all_tagged_post,
+            other_tagged_post,
+        ]
+    )
     other_user.posts.set([random_post])
 
     return posts

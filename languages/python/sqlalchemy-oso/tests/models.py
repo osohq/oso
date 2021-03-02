@@ -66,7 +66,7 @@ post_users = Table(
     "post_users",
     ModelBase.metadata,
     Column("post_id", Integer, ForeignKey("posts.id")),
-    Column("user_id", Integer, ForeignKey("users.id"))
+    Column("user_id", Integer, ForeignKey("users.id")),
 )
 
 

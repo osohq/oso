@@ -13,6 +13,7 @@ from test_app2.models import Post, Tag, User
 def reset():
     reset_oso()
 
+
 @pytest.mark.xfail(reason="Not supported yet.")
 @pytest.mark.django_db
 def test_field_comparison():
@@ -24,10 +25,12 @@ def test_field_comparison():
     post1.save()
     post2.save()
 
-    Oso.load_str("""
+    Oso.load_str(
+        """
         allow(_, _, post: test_app2::Post) if
             post.title = post.contents;
-    """)
+    """
+    )
 
     posts = Post.objects.authorize(None, actor="u", action="r").all()
     assert len(posts) == 2
@@ -45,10 +48,12 @@ def test_scalar_in_list():
     post1.save()
     post2.save()
 
-    Oso.load_str("""
+    Oso.load_str(
+        """
         allow(_, _, post: test_app2::Post) if
             post.contents in ["post", "allowed posts"];
-    """)
+    """
+    )
 
     posts = Post.objects.authorize(None, actor="u", action="r").all()
     assert len(posts) == 2
@@ -72,10 +77,12 @@ def test_ground_object_in_collection():
     post2.tags.set([tag])
 
     Oso.register_constant(tag, "allowed_tag")
-    Oso.load_str("""
+    Oso.load_str(
+        """
         allow(_, _, post: test_app2::Post) if
             allowed_tag in post.tags;
-    """)
+    """
+    )
 
     posts = Post.objects.authorize(None, actor="u", action="r").all()
     assert len(posts) == 2
@@ -108,10 +115,12 @@ def test_all_objects_collection_condition(oso, engine):
     post3.tags.set([public_tag])
     post4.tags.set([private_tag])
 
-    oso.load_str("""
+    oso.load_str(
+        """
         allow(_, _, post: test_app2::Post) if
             forall(tag in post.tags, tag.is_public = true);
-    """)
+    """
+    )
 
     posts = Post.objects.authorize(None, actor="u", action="r").all()
     assert len(posts) == 2
@@ -144,10 +153,12 @@ def test_no_objects_collection_condition():
     post3.tags.set([public_tag])
     post4.tags.set([private_tag])
 
-    Oso.load_str("""
+    Oso.load_str(
+        """
         allow(_, _, post: test_app2::Post) if
             not (tag in post.tags and tag.is_public = true);
-    """)
+    """
+    )
 
     posts = Post.objects.authorize(None, actor="u", action="r").all()
     assert len(posts) == 2
