@@ -233,7 +233,7 @@ allow(actor, "read", "document-1") if
 We would read this in English as: "allow an actor to read document-1
 if the actor is Abagail, or it is Carol, or is Johann".
 
-### Binding
+### Bindings
 
 Let's look now in detail at what happens when a query is matched
 against a rule like the one above. Suppose the query is:
@@ -250,11 +250,33 @@ but in two different ways: the string `"Zora"` matches the variable
 two arguments match the corresponding parameters by value (string)
 equality.
 
-Once the variable `actor` is bound, subsequent uses of it
-it are automatically dereferenced to the variable's value.
-So when Polar tries to query for the first body condition,
-`actor = "Abagail"` becomes `"Zora" = "Abagail"`, which of
-course fails.
+This operation of either binding an unbound variable _or_
+comparing two values (of bound variables) is called
+[**unification**](https://en.wikipedia.org/wiki/Unification_(computer_science)).
+It happens implicitly when Polar matches query arguments
+with rule parameters, and you can also use it explicitly
+(e.g., in a rule body) with the [`=`](polar-syntax#unification)
+operator, which we read as "equals".
+
+Sometimes it's useful to distinguish the binding aspect of
+unification from equality checking, so Polar also offers an
+[assignment operator `:=`](polar-syntax#assignment) which
+raises an error if its left-hand side isn't an unbound variable
+(unification can bind either side), and an [equality operator
+`==`](polar-syntax#numerical-comparison) which will never
+bind a variable.
+
+Once a variable is bound, there is no way to reassign or change
+its value. This is because references to a bound variable are
+replaced by the variable's value. For instance, `x = 1 and x = 2`
+fails, because once `x` is bound to `1`, it can't be rebound,
+and its value isn't equal to `2`.
+
+Going back to our example above, once the variable `actor` is
+bound to the supplied argument `"Zora"`, subsequent uses of it
+are automatically dereferenced, i.e., replaced with `"Zora"`.
+So when Polar queries for the first body condition,
+`actor = "Abagail"` becomes `"Zora" = "Abagail"`, which fails.
 
 You should try to work through for yourself what happens with
 the query:
@@ -457,7 +479,7 @@ allow(user, action, resource) if
     role_allow(role, action, resource);
 ```
 
-All three parameters are variables, so they are [bound](#binding)
+All three parameters are variables, so they are [bound](#bindings)
 to any three arguments. Then queries for each condition in the body
 must also succeed, so the rules `resource_role_applies_to`,
 `user_in_role`, and `role_allow` must also be defined and match
