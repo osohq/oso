@@ -4,9 +4,8 @@ https://www.notion.so/osohq/Supported-Query-Types-and-Features-435d7a998dc14db3a
 """
 import pytest
 
-from django_oso.models import authorize_model
 from django_oso.oso import Oso, reset_oso
-from test_app2.models import Post, Tag, User
+from test_app2.models import Post, Tag
 
 
 @pytest.fixture(autouse=True)
