@@ -13,6 +13,6 @@ digraph arch {
   app -> oso [xlabel=<Call: <FONT FACE="monospace">oso.is_allowed(a,b,c)</FONT>    >]
   oso -> app [label=<Return: <FONT FACE="monospace">true</FONT>/<FONT FACE="monospace">false</FONT>>]
   oso -> kb [xlabel=<Query: <FONT FACE="monospace">allow(a,b,c)</FONT>    >]
-  kb -> oso [label=<Results: <FONT FACE="monospace">{a=x,b=y,c=z}, ...</FONT>>]
+  kb -> oso [label=<Results: <FONT FACE="monospace">{a:x,b:y,c:z}, ...</FONT>>]
   kb -> policy [dir=back, label=<     Rules: <FONT FACE="monospace">allow(x,y,z); ...</FONT>>]
 }

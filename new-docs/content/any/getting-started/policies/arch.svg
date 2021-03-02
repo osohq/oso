@@ -61,7 +61,7 @@
 <path fill="none" stroke="#000000" d="M248.1667,-131.317C248.1667,-131.317 248.1667,-179.7393 248.1667,-179.7393"/>
 <polygon fill="#000000" stroke="#000000" points="244.6668,-179.7392 248.1667,-189.7393 251.6668,-179.7393 244.6668,-179.7392"/>
 <text text-anchor="start" x="264.3333" y="-157.8" font-family="Times,serif" font-size="14.00" fill="#000000">Results: </text>
-<text text-anchor="start" x="312.3333" y="-157.8" font-family="monospace" font-size="14.00" fill="#000000">{a=x,b=y,c=z}, ...</text>
+<text text-anchor="start" x="312.3333" y="-157.8" font-family="monospace" font-size="14.00" fill="#000000">{a:x,b:y,c:z}, ...</text>
 </g>
 <!-- policy -->
 <g id="node4" class="node">
