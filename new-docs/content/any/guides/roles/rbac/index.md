@@ -158,7 +158,7 @@ hiding amongst our RBAC policy. In the next section, we’ll dive fully into
 attribute-based authorization and show how intuitive it is to write concise,
 flexible, and powerful ABAC rules with Oso.
 
-{{% callout "What's next" blue %}}
+{{% callout "What's next" "blue" %}}
 
 {{< ifLang "python" >}}
 - Learn how to use roles with

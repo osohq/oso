@@ -455,7 +455,7 @@ user_in_role_for_resource(user: User, "admin", resource: Repository) if
 ```
 
 
-{{% callout "What's next" blue %}}
+{{% callout "What's next" "blue" %}}
 
 {{< ifLang "python" >}}
 - Learn how to use roles with
