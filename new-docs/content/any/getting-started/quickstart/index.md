@@ -178,7 +178,7 @@ For more on leveraging application data in an Oso policy, check out
 
 {{% callout "What's next!" "blue" %}}
 
-- Explore how to [Add oso to an application](application).
+- Explore how to [add Oso to an application](application).
 - Dive into [writing policies](policies) in detail.
 
 {{% /callout %}}
