@@ -308,7 +308,7 @@ control who is allowed to make requests to certain routes. We also used
 a new `authorize` method to make it convenient to add data access
 controls to our route handlers.
 
-{{% callout "What's next" "green" %}}
+{{% callout "What's next" "blue" %}}
 
 <!-- TODO(gj): page doesn't exist yet in new docs
 - To explore integrating Oso in your app in more depth continue to [Access Patterns](). -->
