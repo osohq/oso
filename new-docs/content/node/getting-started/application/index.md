@@ -37,6 +37,6 @@ authorization patterns and how to express them in that framework.
 <!-- TODO(gj): page doesn't exist yet in new docs
 - To explore integrating Oso in your app in more depth continue to [Access Patterns](). -->
 - For a deeper introduction to policy syntax, see [Writing Policies](policies).
-- For reference on using the Node Oso library, see [Node Authorization Library](reference).
+- For reference on using the Node.js Oso library, see [Node Authorization Library](reference).
 
 {{% /callout %}}

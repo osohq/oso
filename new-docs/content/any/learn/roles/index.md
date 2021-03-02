@@ -464,7 +464,7 @@ user_in_role_for_resource(user: User, "admin", resource: Repository) if
 
 - Check out our [How-To Guides](guides) for more on using Polar
   policies for authorization.
-- Check out the [Polar reference](reference/polar) for more on Polar
-  policies.
+- Check out the [Polar reference](reference/polar) for more on the Polar
+  language and syntax.
 
 {{% /callout %}}
