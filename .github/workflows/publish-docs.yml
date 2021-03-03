@@ -60,7 +60,7 @@ jobs:
         run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.oso_version }} | jq -r '.assets[] | select(.name == "oso-js-node-${{ github.event.inputs.oso_version }}.tgz") | .url') --output oso-js-node-${{ github.event.inputs.oso_version }}.tgz
       - name: Copy WASM types file from release archive to JS lib
-        run: tar -xzf oso-js-node-${{ github.event.inputs.oso_version }}.tgz -C languages/js --strip-components=2 package/dist/src/polar_wasm_api.d.ts
+        run: tar -xzf oso-js-node-${{ github.event.inputs.oso_version }}.tgz -C languages/js --strip-components=2 package/dist/src/polar_wasm_api.d.ts package/dist/src/polar_wasm_api.js package/dist/src/polar_wasm_api.d.ts package/dist/src/polar_wasm_api_bg.wasm package/dist/src/polar_wasm_api_bg.wasm.d.ts
       - name: Download oso (Python) from release
         run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.oso_version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.oso_version }}.zip") | .url') --output oso-python-${{ github.event.inputs.oso_version }}.zip
