@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from sqlalchemy_oso.session import AuthorizedSession
 
-from .models import User, Post, Tag
+from .models import Post, Tag
 
 
 @pytest.mark.xfail(reason="Not supported yet.")

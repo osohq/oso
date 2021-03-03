@@ -518,7 +518,8 @@ def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     posts = Post.objects.authorize(None, actor=user, action="read")
     expected = f"""
-       SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
+       SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title",
+              "test_app2_post"."access_level",
               "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
        FROM "test_app2_post"
        WHERE "test_app2_post"."id" IN
@@ -555,7 +556,8 @@ def test_empty_constraints_in(tag_nested_many_many_fixtures):
     posts = Post.objects.filter(authorize_filter).distinct()
     expected = f"""
         SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title",
-                        "test_app2_post"."access_level", "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
+                        "test_app2_post"."access_level", "test_app2_post"."created_by_id",
+                        "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         WHERE "test_app2_post"."id" IN
             (SELECT V0."id"

@@ -612,7 +612,8 @@ def test_empty_constraints_in(session, oso, tag_nested_many_many_test_fixture):
         authorize_model(oso, user, "read", session, Post)
     )
     assert str(posts) == (
-        "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title, posts.access_level AS posts_access_level,"
+        "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS"
+        + " posts_title, posts.access_level AS posts_access_level,"
         + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation"
         + " \nFROM posts"
         + " \nWHERE (EXISTS (SELECT 1"
@@ -639,7 +640,8 @@ def test_in_with_constraints_but_no_matching_objects(
         authorize_model(oso, user, "read", session, Post)
     )
     assert str(posts) == (
-        "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title, posts.access_level AS posts_access_level,"
+        "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title,"
+        + " posts.access_level AS posts_access_level,"
         + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation"
         + " \nFROM posts"
         + " \nWHERE (EXISTS (SELECT 1"
