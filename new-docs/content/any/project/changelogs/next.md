@@ -8,6 +8,17 @@ description: >-
 draft: true
 ---
 
+## `oso` 0.11.2
+
+### `Oso.query` and others no longer require mutable reference
+
+Thank you [Fisher Darling](https://github.com/fisherdarling)
+for [pointing out](https://github.com/osohq/oso/issues/773) that many
+methods on `oso::Oso` do not require a mutable reference.
+
+With this small change, it is no longer necessary to wrap `oso::Oso` in a
+mutex in order to use across threads.
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### Breaking changes
