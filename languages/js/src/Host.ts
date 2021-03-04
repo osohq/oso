@@ -10,6 +10,7 @@ import type { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { Variable } from './Variable';
 import type { Class, EqualityFn, obj, PolarTerm } from './types';
+import { PolarOperator } from './types';
 import {
   isPolarStr,
   isPolarNum,
@@ -186,6 +187,34 @@ export class Host {
     const instance = await this.toJs(polarInstance);
     const cls = this.getClass(name);
     return instance instanceof cls || instance?.constructor === cls;
+  }
+
+  /**
+   * Check if the given instances conform to the operator.
+   *
+   * @internal
+   */
+  async externalOp(
+    op: PolarOperator,
+    left: PolarTerm,
+    right: PolarTerm
+  ): Promise<boolean> {
+    const leftjs = await this.toJs(left);
+    const rightjs = await this.toJs(right);
+    switch (op) {
+      case PolarOperator.Eq:
+        return this.#equalityFn(leftjs, rightjs);
+      case PolarOperator.Geq:
+        return leftjs >= rightjs;
+      case PolarOperator.Gt:
+        return leftjs > rightjs;
+      case PolarOperator.Leq:
+        return leftjs <= rightjs;
+      case PolarOperator.Lt:
+        return leftjs < rightjs;
+      case PolarOperator.Neq:
+        return !this.#equalityFn(leftjs, rightjs);
+    }
   }
 
   /**

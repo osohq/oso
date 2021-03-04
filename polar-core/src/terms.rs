@@ -1,6 +1,7 @@
 use super::sources::SourceInfo;
 pub use super::{error, formatting::ToPolarString};
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -310,6 +311,14 @@ impl Term {
         &self.value
     }
 
+    /// Get a mutable reference to the underlying data.
+    /// This will be a real mut pointer if there is only one
+    /// term with an Arc to the value, otherwise it will be
+    /// a clone.
+    pub fn mut_value(&mut self) -> &mut Value {
+        Arc::make_mut(&mut self.value)
+    }
+
     pub fn is_ground(&self) -> bool {
         self.value().is_ground()
     }
@@ -333,6 +342,12 @@ impl Term {
         }
 
         walk_term(&mut VariableVisitor::new(vars), self);
+    }
+
+    pub fn hash_value(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        hasher.finish()
     }
 
     pub fn get_source_id(&self) -> Option<u64> {

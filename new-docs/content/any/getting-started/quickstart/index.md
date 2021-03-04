@@ -69,7 +69,7 @@ with an email ending in `"@example.com"` to view all expenses:
 {{< literalInclude dynPath="expensesPath1"
                    fallback="expenses1" >}}
 
-Note that the call to **{{< exampleGet "endswith" >}}** is actually calling
+Note that the call to `{{< exampleGet "endswith" >}}` is actually calling
 out to {{< exampleGet "endswithURL" >}}. The actor value passed to Oso is a
 string, and Oso allows us to call methods on it.
 {{% /callout %}}
@@ -175,3 +175,10 @@ as:
 
 For more on leveraging application data in an Oso policy, check out
 [Application Types](policies#application-types).
+
+{{% callout "What's next!" "blue" %}}
+
+- Explore how to [add Oso to an application](application).
+- Dive into [writing policies](policies) in detail.
+
+{{% /callout %}}

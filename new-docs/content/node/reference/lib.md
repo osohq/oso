@@ -1,46 +1,43 @@
 ---
-title: Node Library
+title: Node.js Library
 weight: 2
 any: false
 ---
 
-
 # Node.js Authorization Library
 
-Node.js
+The Node.js version of Oso is available on
+[npm](https://www.npmjs.com/package/oso) and can be installed globally with
+npm:
 
-The Node.js version of Oso is available on [NPM](https://www.npmjs.com/package/oso) and can be installed
-globally with NPM:
-
+```console
+$ npm install -g oso
 ```
-$ npm install -g oso@0.9.0
-```
 
-or added as a dependency to a project’s `package.json` manifest with
-NPM:
+or added as a dependency to a project’s `package.json` manifest with npm:
 
-```
-$ npm install oso@0.9.0
+```console
+$ npm install oso
 ```
 
 or Yarn:
 
-```
-$ yarn add oso@0.9.0
+```console
+$ yarn add oso
 ```
 
-For more information on the Oso Node.js library, see the library
-documentation.
+For more information on the Oso Node.js library, see the library documentation.
 
-**Requirements**
+## Requirements
 
 * Node.js version 10 or greater
 * Supported platforms:
   * Linux
-  * OS X
+  * macOS
   * Windows
 
 ## API Reference
 
-The [JavaScript API reference]({{% apiLink "reference/api/index.html" %}})
-is automatically generated from the Oso JavaScript library source files.
+The [JavaScript / TypeScript API reference]({{% apiLink
+"reference/api/index.html" %}}) is automatically generated from the Oso
+TypeScript library source files.
