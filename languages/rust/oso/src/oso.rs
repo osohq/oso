@@ -43,7 +43,7 @@ impl Oso {
 
     /// High level interface for authorization decisions. Makes an allow query with the given actor, action and resource and returns true or false.
     pub fn is_allowed<Actor, Action, Resource>(
-        &mut self,
+        &self,
         actor: Actor,
         action: Action,
         resource: Resource,
@@ -111,7 +111,7 @@ impl Oso {
     /// ```ignore
     /// oso.query("x = 1 or x = 2");
     /// ```
-    pub fn query(&mut self, s: &str) -> crate::Result<Query> {
+    pub fn query(&self, s: &str) -> crate::Result<Query> {
         let query = self.inner.new_query(s, false)?;
         check_messages!(self.inner);
         let query = Query::new(query, self.host.clone());
@@ -125,7 +125,7 @@ impl Oso {
     /// oso.query_rule("is_admin", vec![User{name: "steve"}]);
     /// ```
     #[must_use = "Query that is not consumed does nothing."]
-    pub fn query_rule(&mut self, name: &str, args: impl ToPolarList) -> crate::Result<Query> {
+    pub fn query_rule(&self, name: &str, args: impl ToPolarList) -> crate::Result<Query> {
         let mut query_host = self.host.clone();
         let args = args
             .to_polar_list()
