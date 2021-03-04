@@ -20,7 +20,7 @@
       </div>
     </main>
   {{ else }}
-    <div class="w-3/5 text-black leading-normal pt-6 mx-auto static">
+    <main id="content-wrapper" class="w-3/5 text-black leading-normal pt-6 mx-auto static">
       <h2 class="text-xl font-semibold text-primary-dark pb-4">
         Choose your language:
       </h2>
@@ -29,4 +29,5 @@
       </div>
     </div>
   {{ end }}
+  {{ partial "search-result.html" }}
 {{ end }}

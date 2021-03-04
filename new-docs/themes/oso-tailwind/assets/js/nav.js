@@ -20,7 +20,7 @@ if (navButton) {
 
 const sideBarContent = document.getElementById('sidebar-content');
 const sideBarButton = document.getElementById('sidebar-toggle');
-const sideBarSearch = document.getElementById('sidebar-search');
+const sideBarSearch = document.getElementById('sidebar-search-form');
 if (sideBarButton) {
   const toggleSideBar = () => sideBarContent.classList.toggle('hidden');
   sideBarButton.addEventListener('click', toggleSideBar);
@@ -36,7 +36,6 @@ if (langButton) {
 
 // Close dropdown sideBars if the user clicks outside of them
 window.onclick = function (event) {
-  console.log(event.target);
   switch (event.target) {
     case navButton:
       break;

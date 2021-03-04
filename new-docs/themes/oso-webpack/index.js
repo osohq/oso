@@ -174,3 +174,227 @@ import('monaco-editor-core').then((monaco) => {
     }
   });
 });
+
+import('lunr').then(({ default: lunr }) => {
+  // Search
+  window.addEventListener(
+    'load',
+    (_event) => {
+      let index = null;
+      let lookup = {};
+      let queuedTerm = null;
+
+      let previousContent = null;
+      let previousX = 0;
+      let previousY = 0;
+      let previousSearch = null;
+
+      var form = document.getElementById('sidebar-search-form');
+      var input = document.getElementById('sidebar-search-input');
+
+      form.addEventListener(
+        'submit',
+        function (event) {
+          event.preventDefault();
+
+          var term = input.value.trim();
+          if (!term) return;
+
+          startSearch(term);
+        },
+        false
+      );
+
+      function startSearch(term) {
+        // Start icon animation.
+        form.setAttribute('data-running', 'true');
+
+        if (index) {
+          // Index already present, search directly.
+          search(term);
+        } else if (queuedTerm) {
+          // Index is being loaded, replace the term we want to search for.
+          queuedTerm = term;
+        } else {
+          // Start loading index, perform the search when done.
+          queuedTerm = term;
+          initIndex();
+        }
+      }
+
+      function searchDone() {
+        // Stop icon animation.
+        form.removeAttribute('data-running');
+
+        queuedTerm = null;
+      }
+
+      async function initIndex() {
+        try {
+          const searchIndex = await fetch('/search.json');
+          const jsonIndex = await searchIndex.json();
+          index = lunr(function () {
+            this.ref('uri');
+
+            // If you added more searchable fields to the search index, list them here.
+            this.field('title');
+            this.field('content');
+
+            this.metadataWhitelist = ['index', 'position'];
+
+            for (const doc of jsonIndex) {
+              this.add(doc);
+              lookup[doc.uri] = doc;
+            }
+          });
+
+          // Search index is ready, perform the search now
+          search(queuedTerm);
+        } catch (e) {
+          // TODO(gj): maybe disable the search bar if this fails?
+          console.error(e);
+        }
+      }
+
+      function search(term) {
+        const results = index.search(term);
+
+        if (previousContent === null) {
+          // The element where search results should be displayed, adjust as needed.
+          previousContent = document.getElementById('content-wrapper');
+          previousX = window.pageXOffset;
+          previousY = window.pageYOffset;
+        }
+
+        const outermost = document.createElement('div');
+        outermost.classList.add(
+          'min-w-0',
+          'w-full',
+          'flex-auto',
+          'lg:static',
+          'lg:max-h-full',
+          'lg:overflow-visible'
+        );
+
+        const outer = document.createElement('div');
+        outer.classList.add('w-full', 'flex');
+
+        const searchContainer = document.createElement('div');
+        searchContainer.classList.add(
+          'prose',
+          'min-w-0',
+          'flex-auto',
+          'px-4',
+          'sm:px-6',
+          'xl:px-8',
+          'pt-6',
+          'pb-24',
+          'lg:pb-16'
+        );
+
+        outermost.appendChild(outer);
+        outer.appendChild(searchContainer);
+
+        // Hide old content.
+        previousContent.setAttribute('hidden', true);
+
+        window.scrollTo(0, 0);
+
+        if (previousSearch !== null) {
+          previousSearch.remove();
+        }
+
+        previousSearch = outermost;
+
+        // Insert new content.
+        previousContent.insertAdjacentElement('afterend', outermost);
+
+        const returnToContent = document.createElement('a');
+        const returnToContentText = document.createElement('h2');
+        returnToContentText.textContent = 'Return to content.';
+        returnToContent.appendChild(returnToContentText);
+        returnToContent.onclick = () => {
+          outermost.remove();
+          previousContent.removeAttribute('hidden');
+          window.scrollTo(previousX, previousY);
+          previousContent = null;
+          previousX = 0;
+          previousY = 0;
+          previousSearch = null;
+        };
+        searchContainer.appendChild(returnToContent);
+
+        const title = document.createElement('h1');
+        title.id = 'search-results-heading';
+        title.className = 'list-title';
+        if (results.length === 0) {
+          title.textContent = `No results found for "${term}".`;
+        } else if (results.length === 1) {
+          title.textContent = `Found one result for "${term}".`;
+        } else {
+          title.textContent = `Found ${results.length} results for "${term}".`;
+        }
+        searchContainer.appendChild(title);
+
+        const template = document.getElementById('search-result');
+        for (const result of results) {
+          const doc = lookup[result.ref];
+
+          // Fill out search result template, adjust as needed.
+          const element = template.content.cloneNode(true);
+          element.querySelector(
+            '.summary-title-link'
+          ).href = element.querySelector('.read-more-link').href = doc.uri;
+          element.querySelector('.summary-title-link').textContent = doc.title;
+
+          const positions = Object.values(result.matchData.metadata)
+            .filter((m) => m.content)
+            .flatMap((m) => m.content.position);
+
+          const firstOccurrence = positions.reduce(
+            (earliest, [challenger, _]) =>
+              challenger <= earliest ? challenger : earliest,
+            doc.content.length - 1
+          );
+
+          let truncated;
+          let leftTrimmed = 1;
+          if (doc.content.length <= 200) {
+            truncated = doc.content;
+          } else if (firstOccurrence <= 100) {
+            truncated = doc.content.slice(0, 200) + '…';
+          } else if (firstOccurrence + 100 >= doc.content.length) {
+            leftTrimmed = doc.content.length - 200;
+            truncated = '…' + doc.content.slice(leftTrimmed);
+          } else {
+            leftTrimmed = firstOccurrence - 100;
+            truncated =
+              '…' + doc.content.slice(leftTrimmed, firstOccurrence + 100) + '…';
+          }
+
+          const highlighted = highlightOccurrences(
+            truncated,
+            positions,
+            leftTrimmed
+          );
+
+          element.querySelector('.summary').innerHTML = highlighted;
+          searchContainer.appendChild(element);
+        }
+
+        searchDone();
+      }
+
+      function highlightOccurrences(text, positions, leftTrimmed) {
+        return positions.reduce((text, [from, len], index) => {
+          const start = from + index * '<mark></mark>'.length - leftTrimmed + 1;
+          const before = text.slice(0, start);
+          const target = text.slice(start, start + len);
+          const after = text.slice(start + len);
+          return `${before}<mark>${target}</mark>${after}`;
+        }, text);
+      }
+    },
+    false
+  );
+});
