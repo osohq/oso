@@ -22,4 +22,5 @@ expenses1: |
 expenses2: |
   allow(actor: String, "GET", expense: Expense) if
       expense.SubmittedBy = actor;
+isAllowed: IsAllowed
 ---
