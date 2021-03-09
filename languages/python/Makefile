@@ -3,8 +3,13 @@ docs: docs-requirements
 
 docs-requirements: .make.docs-requirements.installed
 
-.make.docs-requirements.installed: requirements-docs.txt
+.make.docs-requirements.installed: requirements-docs.txt requirements-local.txt
 	pip install -r requirements-docs.txt
+# Skip installing local version of packages
+# when building published docs
+ifeq ($(origin PUBLISH_DOCS), undefined)
+	pip install -r requirements-local.txt
+endif
 	touch $@
 
 lint: lint-oso lint-django-oso lint-flask-oso lint-sqlalchemy-oso typecheck
