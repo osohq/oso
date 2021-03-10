@@ -86,6 +86,7 @@ mixin
 moduli
 multitenant
 musl
+mutex
 namespace
 namespaces
 NaN
