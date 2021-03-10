@@ -83,7 +83,7 @@ This returns a boolean indicating whether the given `actor`
 is authorized to perform `action` on `resource` according to
 the current policy.
 
-The arguments to `oso.is_allowed` may be arbitrary {{< lang >}}
+The arguments to `oso.is_allowed` may be arbitrary Python
 objects. We'll often use strings for examples, but in your
 application they could be ORM model objects, URIs, numbers, etc.
 
@@ -179,7 +179,7 @@ allow("Johann", "read", "document-1");
 ```
 
 After we load this file into the knowledge base, we can make
-authorization decisions from our {{< lang >}} application by
+authorization decisions from our Python application by
 calling:
 
 ```python
@@ -293,7 +293,7 @@ most applications use more structured representations for their
 actors, actions, and resources.
 
 Suppose then that our actors are represented by instances of a
-{{< lang >}} `User` class, with, say, a user ID and administrator
+Python `User` class, with, say, a user ID and administrator
 flag:
 
 ```python
@@ -503,7 +503,7 @@ allow(actor, action: String, resource) if
     action.startswith("r");
 ```
 
-This calls the {{< lang >}} method `str.startswith`, guarding
+This calls the Python method `str.startswith`, guarding
 against invalid calls with the `String` specializer.
 
 ## Other Rules
