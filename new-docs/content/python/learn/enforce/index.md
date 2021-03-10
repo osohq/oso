@@ -484,3 +484,11 @@ In this guide, we covered the various access control levels
 at various spots. We then covered list endpoints — which are often difficult to
 write complex authorization for — in detail. We discussed several potential
 techniques for structuring a policy that handles these types of requests.
+
+
+{{% callout "What's next" "blue" %}}
+
+- Learn how to authorize [list endpoints with data
+filtering](guides/data_access).
+
+{{% /callout %}}

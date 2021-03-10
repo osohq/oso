@@ -92,7 +92,7 @@ resource is an instance of the `Expense` class.
 
 Okay, so what just happened?
 
-When we ask Oso for a policy decision via `Oso.is_allowed()`, the Oso engine
+When we ask Oso for a policy decision via `Oso.{{% exampleGet "isAllowed" %}}()`, the Oso engine
 searches through its knowledge base to determine whether the provided
 **actor**, **action**, and **resource** satisfy any **allow** rules. In the
 above case, we passed in `"alice@example.com"` as the **actor**, `"GET"` as the
@@ -175,3 +175,10 @@ as:
 
 For more on leveraging application data in an Oso policy, check out
 [Application Types](policies#application-types).
+
+{{% callout "What's next!" "blue" %}}
+
+- Explore how to [add Oso to an application](application).
+- Dive into [writing policies](policies) in detail.
+
+{{% /callout %}}

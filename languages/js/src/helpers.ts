@@ -2,13 +2,8 @@ import { inspect } from 'util';
 
 const _readFile = require('fs')?.readFile;
 
-import {
-  InvalidQueryEventError,
-  KwargsError,
-  PolarError,
-  UnimplementedOperationError,
-} from './errors';
-import { isPolarTerm, QueryEventKind } from './types';
+import { InvalidQueryEventError, KwargsError, PolarError } from './errors';
+import { isPolarTerm, isPolarOperator, QueryEventKind } from './types';
 import type { obj, QueryEvent } from './types';
 
 /**
@@ -71,7 +66,7 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
       case event['Debug'] !== undefined:
         return parseDebug(event['Debug']);
       case event['ExternalOp'] !== undefined:
-        throw new UnimplementedOperationError('comparison operators');
+        return parseExternalOp(event['ExternalOp']);
       default:
         throw new Error();
     }
@@ -214,6 +209,37 @@ function parseExternalIsa({
   return {
     kind: QueryEventKind.ExternalIsa,
     data: { callId, instance, tag },
+  };
+}
+
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * an [[`ExternalOp`]].
+ *
+ * @internal
+ */
+function parseExternalOp({ call_id: callId, args, operator }: obj): QueryEvent {
+  if (
+    !Number.isSafeInteger(callId) ||
+    (args !== undefined &&
+      (!Array.isArray(args) ||
+        args.length !== 2 ||
+        args.some((a: unknown) => !isPolarTerm(a))))
+  )
+    throw new Error();
+  if (!isPolarOperator(operator))
+    throw new PolarError(
+      `Unsupported external operation '${repr(args[0])} ${operator} ${repr(
+        args[1]
+      )}'`
+    );
+  return {
+    kind: QueryEventKind.ExternalOp,
+    data: {
+      args,
+      callId,
+      operator,
+    },
   };
 }
 

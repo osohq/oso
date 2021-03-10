@@ -14,6 +14,7 @@ import type {
   ExternalCall,
   ExternalIsa,
   ExternalIsSubspecializer,
+  ExternalOp,
   ExternalUnify,
   MakeExternal,
   NextExternal,
@@ -213,6 +214,16 @@ export class Query {
               instanceId,
               leftTag,
               rightTag
+            );
+            this.questionResult(answer, callId);
+            break;
+          }
+          case QueryEventKind.ExternalOp: {
+            const { args, callId, operator } = event.data as ExternalOp;
+            const answer = await this.#host.externalOp(
+              operator,
+              args[0],
+              args[1]
             );
             this.questionResult(answer, callId);
             break;

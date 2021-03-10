@@ -18,6 +18,15 @@ export function isPolarStr(v: PolarValue): v is PolarStr {
 }
 
 /**
+ * Type guard to test if a string received from across the WebAssembly
+ * boundary is a PolarOperator.
+ *
+ * @internal
+ */
+export function isPolarOperator(s: string): s is PolarOperator {
+  return s in PolarOperator;
+}
+/**
  * Polar numeric type.
  *
  * @internal
@@ -319,13 +328,13 @@ export interface ExternalIsa {
  *
  * @internal
  */
-enum PolarOperator {
-  Eq,
-  Geq,
-  Gt,
-  Leq,
-  Lt,
-  Neq,
+export enum PolarOperator {
+  Eq = 'Eq',
+  Geq = 'Geq',
+  Gt = 'Gt',
+  Leq = 'Leq',
+  Lt = 'Lt',
+  Neq = 'Neq',
 }
 
 /**

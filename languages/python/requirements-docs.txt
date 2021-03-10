@@ -3,9 +3,5 @@ sphinx-copybutton
 sphinx-material
 sphinxcontrib-contentui
 sphinxcontrib-spelling
-git+https://github.com/samscott89/sphinx-notfound-page@master
 Django
--e ./oso
--e ./django-oso
--e ./flask-oso
--e ./sqlalchemy-oso[flask]
+

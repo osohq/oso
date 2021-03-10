@@ -20,4 +20,5 @@ endswithURL: >
    [the `String#end_with?` method](https://ruby-doc.org/core/String.html#method-i-end_with-3F)
 expensesPath1: examples/quickstart/expenses-01-ruby.polar
 expensesPath2: examples/quickstart/expenses-02-ruby.polar
+isAllowed: allowed?
 ---

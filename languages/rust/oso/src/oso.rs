@@ -43,7 +43,7 @@ impl Oso {
 
     /// High level interface for authorization decisions. Makes an allow query with the given actor, action and resource and returns true or false.
     pub fn is_allowed<Actor, Action, Resource>(
-        &mut self,
+        &self,
         actor: Actor,
         action: Action,
         resource: Resource,
@@ -62,12 +62,12 @@ impl Oso {
     }
 
     /// Clear out all files and rules that have been loaded.
-    pub fn clear_rules(&mut self) {
+    pub fn clear_rules(&self) {
         self.inner.clear_rules();
         check_messages!(self.inner);
     }
 
-    fn check_inline_queries(&mut self) -> crate::Result<()> {
+    fn check_inline_queries(&self) -> crate::Result<()> {
         while let Some(q) = self.inner.next_inline_query(false) {
             let query = Query::new(q, self.host.clone());
             match query.collect::<crate::Result<Vec<_>>>() {
@@ -81,7 +81,7 @@ impl Oso {
     }
 
     /// Load a file containing polar rules. All polar files must end in `.polar`
-    pub fn load_file<P: AsRef<std::path::Path>>(&mut self, file: P) -> crate::Result<()> {
+    pub fn load_file<P: AsRef<std::path::Path>>(&self, file: P) -> crate::Result<()> {
         let file = file.as_ref();
         if !file.extension().map(|ext| ext == "polar").unwrap_or(false) {
             return Err(crate::OsoError::IncorrectFileType {
@@ -101,7 +101,7 @@ impl Oso {
     /// ```ignore
     /// oso.load_str("allow(a, b, c) if true;");
     /// ```
-    pub fn load_str(&mut self, s: &str) -> crate::Result<()> {
+    pub fn load_str(&self, s: &str) -> crate::Result<()> {
         self.inner.load(s, None)?;
         self.check_inline_queries()
     }
@@ -111,7 +111,7 @@ impl Oso {
     /// ```ignore
     /// oso.query("x = 1 or x = 2");
     /// ```
-    pub fn query(&mut self, s: &str) -> crate::Result<Query> {
+    pub fn query(&self, s: &str) -> crate::Result<Query> {
         let query = self.inner.new_query(s, false)?;
         check_messages!(self.inner);
         let query = Query::new(query, self.host.clone());
@@ -125,7 +125,7 @@ impl Oso {
     /// oso.query_rule("is_admin", vec![User{name: "steve"}]);
     /// ```
     #[must_use = "Query that is not consumed does nothing."]
-    pub fn query_rule(&mut self, name: &str, args: impl ToPolarList) -> crate::Result<Query> {
+    pub fn query_rule(&self, name: &str, args: impl ToPolarList) -> crate::Result<Query> {
         let mut query_host = self.host.clone();
         let args = args
             .to_polar_list()

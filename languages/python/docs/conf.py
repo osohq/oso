@@ -66,7 +66,6 @@ extensions = [
     "sphinx.ext.todo",
     "sphinxcontrib.contentui",
     "sphinxcontrib.spelling",
-    "notfound.extension",
 ]
 
 
@@ -115,16 +114,6 @@ copybutton_prompt_is_regexp = True
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "borland"
 
-# For 404 page, all URLs start from root
-notfound_urls_prefix = "/"
-
-notfound_context = {
-    "title": "Page Not Found",
-    "body": """
-<h1>Page Not Found</h1>
-<p>Sorry, we couldn't find that page.</p>
-""",
-}
 
 ### Show/hide TODOs
 

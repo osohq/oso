@@ -567,7 +567,7 @@ fn test_without_registering() {
         x: u32,
     }
 
-    let mut test = OsoTest::new();
+    let test = OsoTest::new();
     test.oso.load_str("f(foo: Foo) if 1 = foo.x;").unwrap();
     test.oso
         .query_rule("f", (Foo { x: 1 },))
