@@ -1,4 +1,5 @@
 ABAC
+Abagail
 ActiveRecord
 alice
 amongst
@@ -28,6 +29,7 @@ cURL
 dataloader
 dataloaders
 declaratively
+dereferenced
 destructure
 destructured
 dev
@@ -135,11 +137,14 @@ transactional
 TypeScript
 UI
 un
+unary
 unifications
+unmanageably
 unsafety
 unspecialized
 untaken
 URI
+URIs
 VM
 VPN
 webpack
