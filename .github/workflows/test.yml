@@ -299,6 +299,8 @@ jobs:
         with:
           python-version: "3.6"
 
+      - name: install aspell
+        run: sudo apt-get install aspell
       - name: Check spelling
         run: make -C new-docs spelling
 
