@@ -202,7 +202,7 @@ impl Polar {
         let mut lines =
             parser::parse_lines(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
         lines.reverse();
-        kb.sources.add_source(source, src_id);
+        kb.sources.add_source(source, src_id);  // ANNIE
         let mut warnings = vec![];
         while let Some(line) = lines.pop() {
             match line {

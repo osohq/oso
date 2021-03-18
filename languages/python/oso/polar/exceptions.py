@@ -96,7 +96,7 @@ class UnregisteredInstanceError(PolarRuntimeError):
     pass
 
 
-class InlineQueryFailedError(PolarRuntimeError):
+class InlineQueryFailedError(PolarRuntimeError):  # ANNIE this is the thrown exception
     def __init__(self, source):
         super().__init__(f"Inline query failed: {source}")
 

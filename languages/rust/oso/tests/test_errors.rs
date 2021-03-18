@@ -89,6 +89,18 @@ fn test_unify_external_not_supported() -> oso::Result<()> {
     Ok(())
 }
 
+/// Test that failing directive sends a sane error message
+#[test]
+fn test_failing_directive() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = OsoTest::new();
+
+    oso.load_str("?= 1 == 1;\n?= 1 == 0;");
+
+    Ok(())  // ANNIE
+}
+
 /// Test that lookup of attribute that doesn't exist raises error.
 #[test]
 fn test_attribute_does_not_exist() -> oso::Result<()> {
