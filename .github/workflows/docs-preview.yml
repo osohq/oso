@@ -13,6 +13,7 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
+      AWS_REGION: "us-east-1"
     steps:
       - uses: actions/checkout@v2
 
