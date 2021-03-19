@@ -191,9 +191,9 @@ pub fn many_rules(c: &mut Criterion) {
     });
 }
 
-fn parser(c: &mut Criterion) {
+fn load_policy(c: &mut Criterion) {
     let policy = include_str!("roles_policy.polar");
-    c.bench_function("parse_policy", |b| {
+    c.bench_function("load_policy", |b| {
         b.iter(|| {
             let polar = Polar::new();
             polar.load_str(policy).unwrap()
@@ -209,7 +209,7 @@ criterion_group!(
     prime,
     indexed_rules,
     not,
-    parser,
+    load_policy,
 );
 criterion_main!(benches);
 
