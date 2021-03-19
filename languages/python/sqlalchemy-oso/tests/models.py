@@ -62,15 +62,26 @@ user_tags = Table(
 )
 
 
+post_users = Table(
+    "post_users",
+    ModelBase.metadata,
+    Column("post_id", Integer, ForeignKey("posts.id")),
+    Column("user_id", Integer, ForeignKey("users.id")),
+)
+
+
 class Post(ModelBase):
     __tablename__ = "posts"
 
     id = Column(Integer, primary_key=True)
     contents = Column(String)
+    title = Column(String)
     access_level = Column(Enum("public", "private"), nullable=False, default="private")
 
     created_by_id = Column(Integer, ForeignKey("users.id"))
     created_by = relationship("User", backref="posts")
+
+    users = relationship("User", secondary=post_users)
 
     needs_moderation = Column(Boolean, nullable=False, default=False)
 
