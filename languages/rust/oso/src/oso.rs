@@ -95,7 +95,7 @@ impl Oso {
                 None => break,
             };
         }
-        
+
         Ok(set.into_iter().collect::<Vec<String>>())
     }
 
