@@ -86,7 +86,7 @@ impl Oso {
                 Some(Ok(result)) => {
                     let action = result
                         .get("action")
-                        .map(|x| String::from_polar(x))
+                        .map(String::from_polar)
                         .unwrap()?;
                     set.insert(action);
                 }
