@@ -84,10 +84,7 @@ impl Oso {
             match query.next() {
                 // XXX: is there a better way to dig out the action string itself? lots of nested wrapping here.
                 Some(Ok(result)) => {
-                    let action = result
-                        .get("action")
-                        .map(String::from_polar)
-                        .unwrap()?;
+                    let action = result.get("action").map(String::from_polar).unwrap()?;
                     set.insert(action);
                 }
                 // XXX: ok to just skip errors here?
