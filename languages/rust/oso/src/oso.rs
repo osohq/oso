@@ -2,13 +2,14 @@
 
 use polar_core::terms::{Call, Symbol, Term, Value};
 
+use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::Read;
 use std::sync::Arc;
 
 use crate::host::Host;
 use crate::query::Query;
-use crate::{ToPolar, ToPolarList};
+use crate::{FromPolar, PolarValue, ToPolar, ToPolarList};
 
 /// Oso is the main struct you interact with. It is an instance of the Oso authorization library
 /// and contains the polar language knowledge base and query engine.
@@ -59,6 +60,43 @@ impl Oso {
             Some(Err(e)) => Err(e),
             None => Ok(false),
         }
+    }
+
+    // Determine the actions actor is allowed to take on resource.
+    pub fn get_allowed_actions<Actor, Resource>(
+        &self,
+        actor: Actor,
+        resource: Resource,
+    ) -> crate::Result<Vec<String>>
+    where
+        Actor: ToPolar,
+        Resource: ToPolar,
+    {
+        let mut query = self
+            .query_rule(
+                "allow",
+                (actor, PolarValue::Variable("action".to_owned()), resource),
+            )
+            .unwrap();
+
+        let mut set: BTreeSet<String> = BTreeSet::new();
+        loop {
+            match query.next() {
+                // XXX: is there a better way to dig out the action string itself? lots of nested wrapping here.
+                Some(Ok(result)) => {
+                    let action = result
+                        .get("action")
+                        .map(|x| String::from_polar(x))
+                        .unwrap()?;
+                    set.insert(action);
+                }
+                // XXX: ok to just skip errors here?
+                Some(Err(_)) => continue,
+                None => break,
+            };
+        }
+        
+        Ok(set.into_iter().collect::<Vec<String>>())
     }
 
     /// Clear out all files and rules that have been loaded.
