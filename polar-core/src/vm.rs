@@ -2561,7 +2561,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    pub fn term_source(&self, term: &Term, include_info: bool) -> String {
+    pub fn term_source(&self, term: &Term, include_info: bool) -> String { // ANNIE  converts term to actual error string
         let source = self.source(term);
         let span = term.span();
 

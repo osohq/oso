@@ -96,7 +96,7 @@ impl Query {
         self.vm.messages.next()
     }
 
-    pub fn source_info(&self) -> String {
+    pub fn source_info(&self) -> String {  //ANNIE this is where to get the source string from inner
         self.vm.term_source(&self.term, true)
     }
 

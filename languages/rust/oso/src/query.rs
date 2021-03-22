@@ -130,6 +130,14 @@ impl Query {
         Ok(self.inner.application_error(error.to_string())?)
     }
 
+    /// Return a description of the source location
+    pub fn source_info(&mut self) -> String {
+        // ANNIE - added this method to get the location - not needed?????????
+        let location = self.inner.source_info();
+        //.vm.term_source(self.term, true);
+        return location;
+    }
+
     fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> crate::Result<()> {
         match constructor.value() {
             Value::Call(Call { name, args, kwargs }) => {
