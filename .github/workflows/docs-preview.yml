@@ -3,8 +3,8 @@ on:
   push:
     branches:
       - main
-    pull_request:
-      types: [opened, synchronize, reopened]
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
   publish-preview:
@@ -13,8 +13,17 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
+      AWS_REGION: "us-east-1"
     steps:
       - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock') }}
 
       ### Setup dependencies
       - uses: actions/setup-python@v2
@@ -61,9 +70,7 @@ jobs:
         with:
           hugo-version: '0.79.1'
       - name: Build Hugo docs
-        run: |
-          make build
-          HUGO_ENV=production hugo -b "https://docs-preview.oso.dev/"
+        run: make build
         working-directory: new-docs
 
 

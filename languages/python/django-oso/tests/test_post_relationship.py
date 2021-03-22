@@ -349,6 +349,8 @@ def tag_nested_many_many_fixtures():
     other_user = User(username="other_user")
     other_user.save()
 
+    other = Tag(name="other tag")
+    other.save()
     eng = Tag(name="eng")
     eng.save()
     eng.users.set([user])
@@ -374,6 +376,11 @@ def tag_nested_many_many_fixtures():
     all_tagged_post = Post(
         contents="not tagged post", access_level="public", created_by=user
     )
+    other_tagged_post = Post(
+        contents="other tagged post",
+        access_level="public",
+        created_by=user,
+    )
 
     posts = {
         "user_eng_post": user_eng_post,
@@ -381,6 +388,7 @@ def tag_nested_many_many_fixtures():
         "random_post": random_post,
         "not_tagged_post": not_tagged_post,
         "all_tagged_post": all_tagged_post,
+        "other_tagged_post": other_tagged_post,
     }
     for post in posts.values():
         post.save()
@@ -388,9 +396,18 @@ def tag_nested_many_many_fixtures():
     user_eng_post.tags.set([eng])
     user_user_post.tags.set([user_posts])
     random_post.tags.set([random])
+    other_tagged_post.tags.set([other])
     all_tagged_post.tags.set([eng, user_posts, random])
 
-    user.posts.set([user_eng_post, user_user_post, not_tagged_post, all_tagged_post])
+    user.posts.set(
+        [
+            user_eng_post,
+            user_user_post,
+            not_tagged_post,
+            all_tagged_post,
+            other_tagged_post,
+        ]
+    )
     other_user.posts.set([random_post])
 
     return posts
@@ -473,7 +490,8 @@ def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
     user = User.objects.get(username="user")
     posts = Post.objects.authorize(None, actor=user, action="read")
     expected = f"""
-       SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
+       SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title",
+              "test_app2_post"."access_level",
               "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
        FROM "test_app2_post"
        WHERE "test_app2_post"."id" IN
@@ -509,8 +527,9 @@ def test_empty_constraints_in(tag_nested_many_many_fixtures):
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter).distinct()
     expected = f"""
-        SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents",
-                        "test_app2_post"."access_level", "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
+        SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title",
+                        "test_app2_post"."access_level", "test_app2_post"."created_by_id",
+                        "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         WHERE "test_app2_post"."id" IN
             (SELECT V0."id"
@@ -521,7 +540,7 @@ def test_empty_constraints_in(tag_nested_many_many_fixtures):
                           WHERE U0."id" = {parenthesize('V1."tag_id"')}){is_true()})
     """
     assert str(posts.query) == " ".join(expected.split())
-    assert len(posts) == 4
+    assert len(posts) == 5
     assert tag_nested_many_many_fixtures["not_tagged_post"] not in posts
 
 
@@ -537,7 +556,7 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
     user = User.objects.get(username="user")
     posts = Post.objects.authorize(None, actor=user, action="read")
     expected = f"""
-        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         WHERE "test_app2_post"."id" IN (SELECT W0."id"
@@ -574,14 +593,14 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
     )
     posts = Post.objects.filter(authorize_filter)
     expected = """
-        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         INNER JOIN "test_app2_user_posts" ON ("test_app2_post"."id" = "test_app2_user_posts"."post_id")
         WHERE "test_app2_user_posts"."user_id" = 1
     """
     assert str(posts.query) == " ".join(expected.split())
-    assert len(posts) == 4
+    assert len(posts) == 5
 
 
 @pytest.mark.xfail(reason="Cannot compare items across subqueries.")
@@ -600,7 +619,7 @@ def test_deeply_nested_in(tag_nested_many_many_fixtures):
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter).distinct()
     expected = """
-        SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents",
+        SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title",
                         "test_app2_post"."access_level", "test_app2_post"."created_by_id",
                         "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
@@ -651,7 +670,7 @@ def test_unify_ins(tag_nested_many_many_fixtures):
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
     expected = """
-        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         LEFT OUTER JOIN "test_app2_user_posts" ON ("test_app2_post"."id" = "test_app2_user_posts"."post_id")
@@ -722,7 +741,7 @@ def test_in_intersection(tag_nested_many_many_fixtures):
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     posts = Post.objects.filter(authorize_filter)
     expected = f"""
-        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         WHERE "test_app2_post"."id"
@@ -764,7 +783,7 @@ def test_redundant_in_on_same_field(tag_nested_many_many_fixtures):
     posts = Post.objects.filter(authorize_filter)
     expected = f"""
 
-        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
                "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
         FROM "test_app2_post"
         WHERE "test_app2_post"."id" IN (SELECT V0."id"

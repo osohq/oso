@@ -62,10 +62,10 @@ webpack-deps: .make.webpack-deps.installed
 	cd themes/oso-webpack && npm install && npm run-script build
 	touch $@
 
-build: install clean
+build: install api_docs clean
 	HUGO_ENV=production hugo -b https://docs-preview.oso.dev/
 
-build-prod: install
+build-prod: install api_docs
 	cd themes/oso-webpack && npm run-script build-prod
 	HUGO_ENV=production hugo -b https://docs.osohq.com/
 
@@ -79,4 +79,15 @@ clean:
 spelling:
 	$(MAKE) -C spelling
 
-.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling
+check-links: check-links-deps
+	lychee --verbose './content/**/*.md' --exclude '\w+@\w+\.com' --exclude 'localhost|127.0.0.1' --exclude '^sqlite://' --exclude 'https://crates.io/crates'
+
+check-links-deps: .make.check-links-deps.installed
+
+.make.check-links-deps.installed:
+	cargo install lychee
+	touch $@
+
+lint: build spelling check-links
+
+.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling check-links check-links-deps lint

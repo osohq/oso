@@ -19,7 +19,7 @@ the HTTP request, and the path supplied – as well as checks on the data access
 e.g. when your application is retrieving data from the database.
 
 For more detailed discussion on where to integrate Oso in your application
-depending on your requirements, please visit our guide, Add To Your Application.
+depending on your requirements, please visit our guide, [Add Oso to an App](getting-started/application).
 
 ## What data does Oso store?
 
@@ -98,19 +98,19 @@ driven directly by your application. There are no background threads, no garbage
 IO to wait on. Each instruction takes about 1-2 us, and typical queries take approximately 1-20 ms.
 
 For a more detailed discussion of the performance characteristics of Oso,
-please the performance page.
+please see the [performance page](performance).
 
 ## Use cases, i.e., When should I use Oso, and when should I use something else?
 
 The foundation of Oso is designed to support a wide variety of use cases, though
 given Oso’s focus on application integration there are some use cases that are
 currently a more natural fit than others. For a more detailed discussion of this
-topic, please see our use cases page.
+topic, please see our [use cases page](use-cases).
 
 ## What languages and frameworks do you support?
 
-We currently support Python, Ruby, Java, Node.js and Rust, and are actively working on supporting more languages.
-We have framework integrations for Flask & Django see here.
+We currently support Python, Node.js, Go, Rust, Ruby, and Java, and are actively working on supporting more languages.
+We have framework integrations for Flask, Django and SQLAlchemy. The easiest place to try Oso in your language of choice is the [Quickstart](getting-started/quickstart).
 
 Vote & track your favorite language and framework integrations at our
 [GitHub repository](https://github.com/osohq/oso),
@@ -123,7 +123,7 @@ We currently support Linux, macOS, and Windows.
 
 ## What license does Oso use?
 
-Oso is licensed under [the *Apache 2.0 license*](https://github.com/osohq/oso/blob/main/LICENSE).
+Oso is licensed under [the Apache 2.0 license](https://github.com/osohq/oso/blob/main/LICENSE).
 
 ## How does pricing work?
 

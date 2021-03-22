@@ -214,10 +214,6 @@ export class Host {
         return leftjs < rightjs;
       case PolarOperator.Neq:
         return !this.#equalityFn(leftjs, rightjs);
-      default:
-        throw new Error(
-          'bad operator in ' + repr(leftjs) + ' ' + op + repr(rightjs)
-        );
     }
   }
 

@@ -1,8 +1,10 @@
 ABAC
+Abagail
 ActiveRecord
 alice
 amongst
 anonymized
+APIs
 Appleby
 args
 arities
@@ -27,6 +29,7 @@ cURL
 dataloader
 dataloaders
 declaratively
+dereferenced
 destructure
 destructured
 dev
@@ -71,6 +74,7 @@ JWZ
 latencies
 LDAP
 LLDB
+Lodash's
 lookups
 macOS
 mailto
@@ -82,6 +86,7 @@ mixin
 moduli
 multitenant
 musl
+mutex
 namespace
 namespaces
 NaN
@@ -132,11 +137,14 @@ transactional
 TypeScript
 UI
 un
+unary
 unifications
+unmanageably
 unsafety
 unspecialized
 untaken
 URI
+URIs
 VM
 VPN
 webpack
