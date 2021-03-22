@@ -14,7 +14,7 @@ use super::warnings::check_singletons;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
-pub struct Query {   // ANNIE
+pub struct Query {
     runnable_stack: Vec<(Box<dyn Runnable>, u64)>, // Tuple of Runnable + call_id.
     vm: PolarVirtualMachine,
     term: Term,
@@ -96,7 +96,7 @@ impl Query {
         self.vm.messages.next()
     }
 
-    pub fn source_info(&self) -> String {  //ANNIE this is where to get the source string from inner
+    pub fn source_info(&self) -> String {
         self.vm.term_source(&self.term, true)
     }
 
@@ -202,7 +202,7 @@ impl Polar {
         let mut lines =
             parser::parse_lines(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
         lines.reverse();
-        kb.sources.add_source(source, src_id);  // ANNIE
+        kb.sources.add_source(source, src_id);
         let mut warnings = vec![];
         while let Some(line) = lines.pop() {
             match line {

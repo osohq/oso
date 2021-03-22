@@ -5,7 +5,7 @@ use common::OsoTest;
 use oso::errors::polar::{
     ErrorKind as PolarErrorKind, PolarError, RuntimeError as PolarRuntimeError,
 };
-use oso::{OsoError, PolarClass, PolarValue};
+use oso::{Oso, OsoError, PolarClass, PolarValue};
 
 // TODO in all tests, check type of error & message
 
@@ -91,15 +91,21 @@ fn test_unify_external_not_supported() -> oso::Result<()> {
 
 /// Test that failing directive sends a sane error message
 #[test]
-fn test_failing_directive() -> oso::Result<()> {
+fn test_failing_directive() {
     common::setup();
 
-    let mut oso = OsoTest::new();
+    let mut oso = Oso::new();
 
-    oso.load_str("?= 1 == 1;\n?= 1 == 0;");
-
-    Ok(())  // ANNIE
+    let result = oso.load_str("?= 1 == 1;\n?= 1 == 0;");
+    match result {
+        Ok(_) => panic!("failed to detect failure of inline query"),
+        Err(e @ OsoError::InlineQueryFailedError{..}) => {
+            assert_eq!(format!("{}", e), "Inline query failed 1 == 0 at line 2, column 3")
+        },
+        Err(_) => panic!("returned unexpected error")
+    }
 }
+
 
 /// Test that lookup of attribute that doesn't exist raises error.
 #[test]

@@ -54,6 +54,9 @@ pub enum OsoError {
     #[error("Tried to find an instance that doesn't exist -- internal error")]
     MissingInstanceError,
 
+    #[error("Inline query failed {location}")]
+    InlineQueryFailedError { location: String },
+
     /// TODO: replace all these with proper variants
     #[error("{message}")]
     Custom { message: String },

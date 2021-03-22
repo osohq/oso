@@ -15,7 +15,7 @@ impl Iterator for Query {
     }
 }
 
-pub struct Query {  // ANNIE inner query comes from here
+pub struct Query {
     inner: polar_core::polar::Query,
     /// Stores a map from call_id to the iterator the call iterates through
     iterators: HashMap<u64, PolarIterator>,
@@ -128,14 +128,6 @@ impl Query {
     /// All other errors must be returned directly from query.
     fn application_error(&mut self, error: crate::OsoError) -> crate::Result<()> {
         Ok(self.inner.application_error(error.to_string())?)
-    }
-
-    /// Return a description of the source location
-    pub fn source_info(&mut self) -> String {
-        // ANNIE - added this method to get the location - not needed?????????
-        let location = self.inner.source_info();
-        //.vm.term_source(self.term, true);
-        return location;
     }
 
     fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> crate::Result<()> {

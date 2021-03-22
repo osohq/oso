@@ -750,7 +750,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    pub fn source(&self, term: &Term) -> Option<Source> {  // ANNIE
+    pub fn source(&self, term: &Term) -> Option<Source> {
         term.get_source_id()
             .and_then(|id| self.kb.read().unwrap().sources.get_source(id))
     }
@@ -2561,7 +2561,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    pub fn term_source(&self, term: &Term, include_info: bool) -> String { // ANNIE  converts term to actual error string
+    pub fn term_source(&self, term: &Term, include_info: bool) -> String {
         let source = self.source(term);
         let span = term.span();
 
