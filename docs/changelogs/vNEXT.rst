@@ -41,6 +41,7 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
+- improved error messages for failing inline queries
 - bulleted list
 - improvements
 - of smaller
