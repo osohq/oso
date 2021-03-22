@@ -28,23 +28,11 @@ def post_fixtures():
     banned.save()
 
     Post(contents="foo public post", access_level="public", created_by=foo).save()
+    Post(contents="foo public post 2", access_level="public", created_by=foo).save()
+    Post(contents="foo private post", created_by=foo).save()
+    Post(contents="foo private post 2", created_by=foo).save()
     Post(
-        contents="foo public post 2",
-        access_level="public",
-        created_by=foo,
-    ).save()
-    Post(
-        contents="foo private post",
-        created_by=foo,
-    ).save()
-    Post(
-        contents="foo private post 2",
-        created_by=foo,
-    ).save()
-    Post(
-        contents="private for moderation",
-        needs_moderation=True,
-        created_by=foo,
+        contents="private for moderation", needs_moderation=True, created_by=foo
     ).save()
     Post(
         contents="public for moderation",
@@ -58,11 +46,7 @@ def post_fixtures():
         needs_moderation=True,
         created_by=admin,
     ).save()
-    Post(
-        contents="private admin post",
-        needs_moderation=True,
-        created_by=admin,
-    ).save()
+    Post(contents="private admin post", needs_moderation=True, created_by=admin).save()
     Post(contents="banned post", access_level="public", created_by=banned).save()
 
 
@@ -295,22 +279,16 @@ def tag_nested_fixtures():
         contents="user eng post", access_level="public", created_by=user
     )
     user_user_post = Post(
-        contents="user eng post",
-        access_level="public",
-        created_by=user,
+        contents="user eng post", access_level="public", created_by=user
     )
     random_post = Post(
-        contents="other random post",
-        access_level="public",
-        created_by=other_user,
+        contents="other random post", access_level="public", created_by=other_user
     )
     not_tagged_post = Post(
         contents="not tagged post", access_level="public", created_by=user
     )
     all_tagged_post = Post(
-        contents="not tagged post",
-        access_level="public",
-        created_by=user,
+        contents="not tagged post", access_level="public", created_by=user
     )
 
     posts = {
@@ -385,22 +363,16 @@ def tag_nested_many_many_fixtures():
         contents="user eng post", access_level="public", created_by=user
     )
     user_user_post = Post(
-        contents="user user post",
-        access_level="public",
-        created_by=user,
+        contents="user user post", access_level="public", created_by=user
     )
     random_post = Post(
-        contents="other random post",
-        access_level="public",
-        created_by=other_user,
+        contents="other random post", access_level="public", created_by=other_user
     )
     not_tagged_post = Post(
         contents="not tagged post", access_level="public", created_by=user
     )
     all_tagged_post = Post(
-        contents="not tagged post",
-        access_level="public",
-        created_by=user,
+        contents="not tagged post", access_level="public", created_by=user
     )
 
     posts = {

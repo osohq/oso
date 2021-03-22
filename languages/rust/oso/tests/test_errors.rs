@@ -99,13 +99,15 @@ fn test_failing_directive() {
     let result = oso.load_str("?= 1 == 1;\n?= 1 == 0;");
     match result {
         Ok(_) => panic!("failed to detect failure of inline query"),
-        Err(e @ OsoError::InlineQueryFailedError{..}) => {
-            assert_eq!(format!("{}", e), "Inline query failed 1 == 0 at line 2, column 3")
-        },
-        Err(_) => panic!("returned unexpected error")
+        Err(e @ OsoError::InlineQueryFailedError { .. }) => {
+            assert_eq!(
+                format!("{}", e),
+                "Inline query failed 1 == 0 at line 2, column 3"
+            )
+        }
+        Err(_) => panic!("returned unexpected error"),
     }
 }
-
 
 /// Test that lookup of attribute that doesn't exist raises error.
 #[test]

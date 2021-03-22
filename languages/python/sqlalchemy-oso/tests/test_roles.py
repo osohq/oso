@@ -79,10 +79,7 @@ class Issue(Base):
 
 
 RepositoryRoleMixin = oso_roles.resource_role_class(
-    Base,
-    User,
-    Repository,
-    ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"],
+    Base, User, Repository, ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"]
 )
 
 
@@ -120,15 +117,7 @@ def load_fixture_data(session):
     sully = User(email="sully@monsters.com")
     ringo = User(email="ringo@beatles.com")
     randall = User(email="randall@monsters.com")
-    users = [
-        john,
-        paul,
-        admin,
-        mike,
-        sully,
-        ringo,
-        randall,
-    ]
+    users = [john, paul, admin, mike, sully, ringo, randall]
     for user in users:
         session.add(user)
     beatles = Organization(name="The Beatles", base_repo_role="READ")
@@ -139,19 +128,12 @@ def load_fixture_data(session):
     vocalists = Team(name="Vocalists", organization=beatles)
     percussion = Team(name="Percussion", organization=beatles)
     scarers = Team(name="Scarers", organization=monsters)
-    teams = [
-        vocalists,
-        percussion,
-        scarers,
-    ]
+    teams = [vocalists, percussion, scarers]
     for team in teams:
         session.add(team)
     abby_road = Repository(name="Abbey Road", organization=beatles)
     paperwork = Repository(name="Paperwork", organization=monsters)
-    repositories = [
-        abby_road,
-        paperwork,
-    ]
+    repositories = [abby_road, paperwork]
     for repo in repositories:
         session.add(repo)
     # TODO: issues
@@ -160,36 +142,12 @@ def load_fixture_data(session):
         RepositoryRole(name="READ", repository=abby_road, user=paul),
         RepositoryRole(name="READ", repository=paperwork, user=mike),
         RepositoryRole(name="READ", repository=paperwork, user=sully),
-        OrganizationRole(
-            name="OWNER",
-            organization=beatles,
-            user=john,
-        ),
-        OrganizationRole(
-            name="MEMBER",
-            organization=beatles,
-            user=paul,
-        ),
-        OrganizationRole(
-            name="MEMBER",
-            organization=beatles,
-            user=ringo,
-        ),
-        OrganizationRole(
-            name="OWNER",
-            organization=monsters,
-            user=mike,
-        ),
-        OrganizationRole(
-            name="MEMBER",
-            organization=monsters,
-            user=sully,
-        ),
-        OrganizationRole(
-            name="MEMBER",
-            organization=monsters,
-            user=randall,
-        ),
+        OrganizationRole(name="OWNER", organization=beatles, user=john),
+        OrganizationRole(name="MEMBER", organization=beatles, user=paul),
+        OrganizationRole(name="MEMBER", organization=beatles, user=ringo),
+        OrganizationRole(name="OWNER", organization=monsters, user=mike),
+        OrganizationRole(name="MEMBER", organization=monsters, user=sully),
+        OrganizationRole(name="MEMBER", organization=monsters, user=randall),
         TeamRole(name="MEMBER", team=vocalists, user=paul),
         TeamRole(name="MAINTAINER", team=vocalists, user=john),
         TeamRole(name="MAINTAINER", team=percussion, user=ringo),
@@ -491,10 +449,7 @@ def test_set_get_session(oso_with_session):
 def test_duplicate_resource_role():
     with pytest.raises(ValueError):
         oso_roles.resource_role_class(
-            Base,
-            User,
-            Repository,
-            ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"],
+            Base, User, Repository, ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"]
         )
 
 

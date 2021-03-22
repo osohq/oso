@@ -197,24 +197,27 @@ export class Host {
   async externalOp(
     op: PolarOperator,
     left: PolarTerm,
-    right: PolarTerm): Promise<boolean> {
+    right: PolarTerm
+  ): Promise<boolean> {
     const leftjs = await this.toJs(left);
     const rightjs = await this.toJs(right);
-    switch(op) {
-      case  PolarOperator.Eq:
+    switch (op) {
+      case PolarOperator.Eq:
         return this.#equalityFn(leftjs, rightjs);
-      case  PolarOperator.Geq:
+      case PolarOperator.Geq:
         return leftjs >= rightjs;
-      case  PolarOperator.Gt:
+      case PolarOperator.Gt:
         return leftjs > rightjs;
-      case  PolarOperator.Leq:
+      case PolarOperator.Leq:
         return leftjs <= rightjs;
-      case  PolarOperator.Lt:
+      case PolarOperator.Lt:
         return leftjs < rightjs;
-      case  PolarOperator.Neq:
+      case PolarOperator.Neq:
         return !this.#equalityFn(leftjs, rightjs);
       default:
-        throw new Error("bad operator in " + repr(leftjs) + " " + op + repr(rightjs));
+        throw new Error(
+          'bad operator in ' + repr(leftjs) + ' ' + op + repr(rightjs)
+        );
     }
   }
 

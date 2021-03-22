@@ -31,12 +31,7 @@ COMPARISONS = {
 # as field > 0 instead
 def reflect_expr(expr: Expression):
     assert expr.operator in COMPARISONS
-    reflections = {
-        "Gt": "Lt",
-        "Geq": "Leq",
-        "Lt": "Gt",
-        "Leq": "Geq",
-    }
+    reflections = {"Gt": "Lt", "Geq": "Leq", "Lt": "Gt", "Leq": "Geq"}
     left, right = expr.args
     op = expr.operator
     return Expression(reflections.get(op, op), [right, left])

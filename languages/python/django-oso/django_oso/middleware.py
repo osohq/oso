@@ -8,13 +8,7 @@ from .auth import request_authorized, authorize
 
 # TODO (dhatch): Make this configurable.
 # HTTP status codes that are permitted without authorization.
-WHITELIST_STATUSES_DEFAULT = {
-    401,
-    403,
-    404,
-    405,
-    500,
-}
+WHITELIST_STATUSES_DEFAULT = {401, 403, 404, 405, 500}
 
 
 def RequireAuthorization(get_response):

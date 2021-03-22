@@ -167,12 +167,7 @@ def test_authorized_session_relationship(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 7;')
     oso.load_str('allow("user", "read", user: User) if user.id = 0;')
 
-    session = AuthorizedSession(
-        oso=oso,
-        user="user",
-        action="read",
-        bind=engine,
-    )
+    session = AuthorizedSession(oso=oso, user="user", action="read", bind=engine)
 
     posts = session.query(Post)
     assert posts.count() == 2

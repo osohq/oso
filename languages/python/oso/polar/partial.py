@@ -12,9 +12,7 @@ class TypeConstraint(Expression):
 
 
 # pylint: disable=E1136 # PyCQA/pylint/issues/3882
-def dot_path(
-    expr,
-) -> Tuple[Variable, ...]:
+def dot_path(expr,) -> Tuple[Variable, ...]:
     """Get the path components of a (potentially nested) dot lookup. The path
     is returned as a tuple. The empty tuple is returned if input is not a dot
     operation.

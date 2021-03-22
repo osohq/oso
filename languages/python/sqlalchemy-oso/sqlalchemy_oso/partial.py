@@ -145,10 +145,7 @@ def translate_in(expression, session, model, get_model):
     # Partial In: LHS is an expression
     if isinstance(left, Expression):
         return translate_dot(
-            path,
-            session,
-            model,
-            functools.partial(emit_subexpression, left, get_model),
+            path, session, model, functools.partial(emit_subexpression, left, get_model)
         )
     elif isinstance(left, Variable):
         # A variable with no additional constraints

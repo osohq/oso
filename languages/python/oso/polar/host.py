@@ -162,12 +162,7 @@ class Host:
                 "Dictionary": {"fields": {k: self.to_polar(v) for k, v in v.items()}}
             }
         elif isinstance(v, Predicate):
-            val = {
-                "Call": {
-                    "name": v.name,
-                    "args": [self.to_polar(v) for v in v.args],
-                }
-            }
+            val = {"Call": {"name": v.name, "args": [self.to_polar(v) for v in v.args]}}
         elif isinstance(v, Variable):
             val = {"Variable": v}
         elif isinstance(v, Expression):
