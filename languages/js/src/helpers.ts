@@ -3,6 +3,7 @@ import { inspect } from 'util';
 const _readFile = require('fs')?.readFile;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 import {
   InvalidQueryEventError,
   KwargsError,
@@ -20,9 +21,11 @@ import {
 import { InvalidQueryEventError, KwargsError, PolarError } from './errors';
 import { isPolarTerm, isPolarOperator, QueryEventKind } from './types';
 >>>>>>> 992b72881dfe528a116630573941eaa816e5900a
+=======
+import { InvalidQueryEventError, KwargsError, PolarError } from './errors';
+import { isPolarTerm, isPolarOperator, QueryEventKind } from './types';
+>>>>>>> 0d4325b02ff88be42cc1011bd2065a4e5660a56f
 import type { obj, QueryEvent } from './types';
-import { result } from 'lodash';
-import { util } from 'prettier';
 
 /**
  * Assemble the prototypal inheritance chain of a class.
@@ -237,6 +240,7 @@ function parseExternalIsa({
  * @internal
  */
 <<<<<<< HEAD
+<<<<<<< HEAD
 function parseExternalOp({
   call_id: acallid,
   args,
@@ -261,22 +265,40 @@ function parseExternalOp({ call_id: callId, args, operator }: obj): QueryEvent {
         args.some((a: unknown) => !isPolarTerm(a))))
   )
     throw new Error();
+=======
+function parseExternalOp({ call_id: callId, args, operator }: obj): QueryEvent {
+  if (
+    !Number.isSafeInteger(callId) ||
+    (args !== undefined &&
+      (!Array.isArray(args) ||
+        args.length !== 2 ||
+        args.some((a: unknown) => !isPolarTerm(a))))
+  )
+    throw new Error();
+>>>>>>> 0d4325b02ff88be42cc1011bd2065a4e5660a56f
   if (!isPolarOperator(operator))
     throw new PolarError(
       `Unsupported external operation '${repr(args[0])} ${operator} ${repr(
         args[1]
       )}'`
     );
+<<<<<<< HEAD
 >>>>>>> 992b72881dfe528a116630573941eaa816e5900a
+=======
+>>>>>>> 0d4325b02ff88be42cc1011bd2065a4e5660a56f
   return {
     kind: QueryEventKind.ExternalOp,
     data: {
       args,
 <<<<<<< HEAD
+<<<<<<< HEAD
       callId: acallid,
 =======
       callId,
 >>>>>>> 992b72881dfe528a116630573941eaa816e5900a
+=======
+      callId,
+>>>>>>> 0d4325b02ff88be42cc1011bd2065a4e5660a56f
       operator,
     },
   };

@@ -39,7 +39,6 @@ import {
   InvalidIteratorError,
   UnexpectedPolarTypeError,
 } from './errors';
-import { repr } from './helpers';
 
 test('it works', async () => {
   const p = new Polar();
