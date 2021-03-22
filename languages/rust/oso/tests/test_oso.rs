@@ -89,7 +89,7 @@ fn test_is_allowed() -> oso::Result<()> {
     let actor = Actor::new(String::from("president"));
     let resource = Company::new(1);
     let action = "create";
-    assert!(oso.oso.is_allowed(actor, action, resource.clone())?);
+    assert!(oso.oso.is_allowed(actor, action, resource)?);
 
     Ok(())
 }
