@@ -96,28 +96,28 @@ fn test_is_allowed() -> oso::Result<()> {
 
 #[test]
 fn test_query_rule() -> oso::Result<()> {
-    let oso = test_oso();
+    let _oso = test_oso();
 
     Ok(())
 }
 
 #[test]
 fn test_fail() -> oso::Result<()> {
-    let oso = test_oso();
+    let _oso = test_oso();
 
     Ok(())
 }
 
 #[test]
 fn test_instance_from_external_call() -> oso::Result<()> {
-    let oso = test_oso();
+    let _oso = test_oso();
 
     Ok(())
 }
 
 #[test]
 fn test_allow_model() -> oso::Result<()> {
-    let oso = test_oso();
+    let _oso = test_oso();
 
     Ok(())
 }
