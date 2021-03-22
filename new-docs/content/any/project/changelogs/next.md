@@ -88,4 +88,4 @@ Link to [relevant documentation section]().
 [lodash-isEqual]: https://lodash.com/docs#isEqual
 [mdn-loose-equality]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Equality_comparisons_and_sameness#loose_equality_using
 [mdn-strict-equality]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Equality_comparisons_and_sameness#strict_equality_using
->>>>>>> 0d4325b02ff88be42cc1011bd2065a4e5660a56f
+
