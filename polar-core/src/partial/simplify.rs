@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::bindings::Bindings;
 use crate::folder::{fold_term, Folder};
-use crate::terms::{Operation, Operator, Symbol, Term, Value};
+use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
 
 use super::partial::{invert_operation, FALSE, TRUE};
 
@@ -289,39 +289,37 @@ impl Simplifier {
     }
 
     pub fn simplify_operation(&mut self, o: &mut Operation) {
-        if o.operator == Operator::And {
-            // Preprocess constraints.
+        fn preprocess_and(args: &mut TermList) {
             let mut seen: HashSet<Term> = HashSet::new();
-            o.args = o
-                .args
-                .clone()
-                .into_iter()
-                .filter(|a| {
-                    let o = a.value().as_expression().unwrap();
-                    o != &TRUE && !seen.contains(&o.mirror().into_term()) && seen.insert(a.clone())
-                })
-                .collect();
+            args.retain(|a| {
+                let o = a.value().as_expression().unwrap();
+                o != &TRUE // trivial
+                    && !seen.contains(&o.mirror().into_term()) // reflection
+                    && seen.insert(a.clone()) // duplicate
+            });
+        }
+
+        fn toss_trivial_unifies(args: &mut TermList) {
+            args.retain(|c| {
+                let o = c.value().as_expression().unwrap();
+                match o.operator {
+                    Operator::Unify | Operator::Eq | Operator::Neq => {
+                        assert_eq!(o.args.len(), 2);
+                        let left = &o.args[0];
+                        let right = &o.args[1];
+                        left != right
+                    }
+                    _ => true,
+                }
+            });
+        }
+
+        if o.operator == Operator::And {
+            preprocess_and(&mut o.args);
         }
 
         if o.operator == Operator::And || o.operator == Operator::Or {
-            // Toss trivial unifications.
-            o.args = o
-                .args
-                .clone()
-                .into_iter()
-                .filter(|c| {
-                    let o = c.value().as_expression().unwrap();
-                    match o.operator {
-                        Operator::Unify | Operator::Eq | Operator::Neq => {
-                            assert_eq!(o.args.len(), 2);
-                            let left = &o.args[0];
-                            let right = &o.args[1];
-                            left != right
-                        }
-                        _ => true,
-                    }
-                })
-                .collect();
+            toss_trivial_unifies(&mut o.args);
         }
 
         match o.operator {
