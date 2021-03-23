@@ -89,9 +89,9 @@ fn test_unify_external_not_supported() -> oso::Result<()> {
     Ok(())
 }
 
-/// Test that failing directive sends a sane error message
+/// Test that failing inline query sends a sane error message
 #[test]
-fn test_failing_directive() {
+fn test_failing_inline_query() {
     common::setup();
 
     let oso = Oso::new();
