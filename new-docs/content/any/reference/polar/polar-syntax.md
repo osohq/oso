@@ -200,7 +200,7 @@ Unification is the basic matching operation in Polar. Two values are said to
 _unify_ if they are equal or if there is a consistent set of variable bindings
 that makes them equal. Unification is defined recursively over compound types
 (e.g., lists and dictionaries): two compound values unify if all of their
-corresponding elements unify.:warn
+corresponding elements unify.
 
 Unification may be performed explicitly with the unification operator (`=`),
 which is true if its two operands unify; e.g., `1 = 1`, `"a" = "a"`, or `x = 1`
