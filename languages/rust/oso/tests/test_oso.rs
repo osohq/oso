@@ -81,6 +81,7 @@ fn test_oso() -> OsoTest {
 
     let path = test_file_path();
     test.oso.load_file(path).unwrap();
+
     test
 }
 
@@ -91,11 +92,13 @@ fn test_is_allowed() -> oso::Result<()> {
     let actor = Actor::new(String::from("guest"));
     let resource = Widget::new(1);
     let action = "get";
+
     assert!(oso.oso.is_allowed(actor, action, resource)?);
 
     let actor = Actor::new(String::from("president"));
     let resource = Company::new(1);
     let action = "create";
+
     assert!(oso.oso.is_allowed(actor, action, resource)?);
 
     Ok(())
@@ -109,6 +112,7 @@ fn test_query_rule() -> oso::Result<()> {
     let resource = Widget::new(1);
     let action = "get";
     let mut query = oso.oso.query_rule("allow", (actor, action, resource))?;
+
     assert!(query.next().is_some());
 
     Ok(())
@@ -121,6 +125,7 @@ fn test_fail() -> oso::Result<()> {
     let actor = Actor::new(String::from("guest"));
     let resource = Widget::new(1);
     let action = "not_allowed";
+
     assert!(!oso.oso.is_allowed(actor, action, resource)?);
 
     Ok(())
@@ -132,6 +137,7 @@ fn test_instance_from_external_call() -> oso::Result<()> {
 
     let actor = Actor::new(String::from("guest"));
     let resource = Company::new(1);
+
     assert!(oso.oso.is_allowed(actor, "frob", resource)?);
 
     Ok(())
@@ -143,10 +149,12 @@ fn test_allow_model() -> oso::Result<()> {
 
     let actor = Actor::new(String::from("auditor"));
     let resource = Company::new(1);
+
     assert!(oso.oso.is_allowed(actor, "list", resource)?);
 
     let actor = Actor::new(String::from("auditor"));
     let resource = Widget::new(1);
+
     assert!(!oso.oso.is_allowed(actor, "list", resource)?);
 
     Ok(())
