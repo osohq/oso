@@ -111,6 +111,44 @@ fn test_load_function() {
 }
 
 #[test]
+fn test_type_mismatch_fails_unification() {
+    common::setup();
+
+    #[derive(Eq, PartialEq, PolarClass, Clone)]
+    struct Foo {}
+    #[derive(Eq, PartialEq, PolarClass, Clone)]
+    struct Bar {}
+
+    impl Foo {}
+    impl Bar {}
+
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .set_constructor(|| Foo {})
+                .with_equality_check()
+                .build(),
+        )
+        .unwrap();
+
+    test.oso
+        .register_class(
+            Bar::get_polar_class_builder()
+                .set_constructor(|| Bar {})
+                .with_equality_check()
+                .build(),
+        )
+        .unwrap();
+
+    test.qnull("new Foo() = new Bar()");
+    test.qnull("new Foo() = nil");
+    let rs = test.query("not new Foo() = nil");
+    assert_eq!(rs.len(), 1, "expected one result");
+    assert!(rs[0].is_empty(), "expected empty result");
+}
+
+#[test]
 fn test_external() {
     common::setup();
 

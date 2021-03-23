@@ -185,10 +185,10 @@ where
         self.class.equality_check = Arc::new(move |host, a, b| {
             tracing::trace!("equality check");
 
-            let a = a.downcast(Some(host)).map_err(|e| e.user())?;
-            let b = b.downcast(Some(host)).map_err(|e| e.user())?;
-
-            Ok((f)(a, b))
+            match (a.downcast(Some(host)), b.downcast(Some(host))) {
+                (Ok(a), Ok(b)) => Ok((f)(a, b)),
+                _ => Ok(false),
+            }
         });
 
         self
