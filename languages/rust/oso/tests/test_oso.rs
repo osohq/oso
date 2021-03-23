@@ -60,17 +60,27 @@ impl Company {
 
 fn test_oso() -> OsoTest {
     let mut test = OsoTest::new();
-    test.oso.register_class(Actor::get_polar_class()).unwrap();
+    test.oso
+        .register_class(
+            Actor::get_polar_class_builder()
+                .set_constructor(Actor::new)
+                .add_method("companies", Actor::companies)
+                .build(),
+        )
+        .unwrap();
     test.oso.register_class(Widget::get_polar_class()).unwrap();
     test.oso
         .register_class(
             Company::get_polar_class_builder()
                 .set_constructor(Company::new)
                 .add_method("role", Company::role)
+                .with_equality_check()
                 .build(),
         )
         .unwrap();
 
+    let path = test_file_path();
+    test.oso.load_file(path).unwrap();
     test
 }
 
@@ -81,9 +91,6 @@ fn test_is_allowed() -> oso::Result<()> {
     let actor = Actor::new(String::from("guest"));
     let resource = Widget::new(1);
     let action = "get";
-
-    let path = test_file_path();
-    oso.oso.load_file(path)?;
     assert!(oso.oso.is_allowed(actor, action, resource)?);
 
     let actor = Actor::new(String::from("president"));
@@ -96,28 +103,51 @@ fn test_is_allowed() -> oso::Result<()> {
 
 #[test]
 fn test_query_rule() -> oso::Result<()> {
-    let _oso = test_oso();
+    let oso = test_oso();
+
+    let actor = Actor::new(String::from("guest"));
+    let resource = Widget::new(1);
+    let action = "get";
+    let mut query = oso.oso.query_rule("allow", (actor, action, resource))?;
+    assert!(query.next().is_some());
 
     Ok(())
 }
 
 #[test]
 fn test_fail() -> oso::Result<()> {
-    let _oso = test_oso();
+    let oso = test_oso();
+
+    let actor = Actor::new(String::from("guest"));
+    let resource = Widget::new(1);
+    let action = "not_allowed";
+    assert!(!oso.oso.is_allowed(actor, action, resource)?);
 
     Ok(())
 }
 
 #[test]
 fn test_instance_from_external_call() -> oso::Result<()> {
-    let _oso = test_oso();
+    let oso = test_oso();
+
+    let actor = Actor::new(String::from("guest"));
+    let resource = Company::new(1);
+    assert!(oso.oso.is_allowed(actor, "frob", resource)?);
 
     Ok(())
 }
 
 #[test]
 fn test_allow_model() -> oso::Result<()> {
-    let _oso = test_oso();
+    let oso = test_oso();
+
+    let actor = Actor::new(String::from("auditor"));
+    let resource = Company::new(1);
+    assert!(oso.oso.is_allowed(actor, "list", resource)?);
+
+    let actor = Actor::new(String::from("auditor"));
+    let resource = Widget::new(1);
+    assert!(!oso.oso.is_allowed(actor, "list", resource)?);
 
     Ok(())
 }
