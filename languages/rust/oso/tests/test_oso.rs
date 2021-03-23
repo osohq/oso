@@ -51,9 +51,9 @@ impl Company {
 
     pub fn role(&self, actor: Actor) -> String {
         if actor.name == "president" {
-            return "admin".to_string();
+            "admin".to_string()
         } else {
-            return "guest".to_string();
+            "guest".to_string()
         }
     }
 }
