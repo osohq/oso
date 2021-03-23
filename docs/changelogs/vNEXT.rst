@@ -41,7 +41,7 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- improved error messages for failing inline queries
+- Error messages for failing inline queries now contain location information indicating which inline query failed.
 - bulleted list
 - improvements
 - of smaller
