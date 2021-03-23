@@ -18,5 +18,5 @@ allow(actor: Actor, "create", resource: Company) if
 allow(actor: Actor, "frob", resource: Company) if
     resource in actor.companies();
 
-allow(actor: Actor, "list", resource: Company) if
+allow(actor: Actor, "list", Company) if
    actor.name = "auditor";
