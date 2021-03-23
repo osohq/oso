@@ -97,7 +97,7 @@ These adapters allow Oso to effectively translate policy logic into SQL `WHERE`
 clauses:
 
 ```sql
-WHERE access_level = "public" AND creator.id = 1
+WHERE access_level = "public" OR creator.id = 1
 ```
 
 In effect, authorization is being enforced by the policy engine and the ORM
