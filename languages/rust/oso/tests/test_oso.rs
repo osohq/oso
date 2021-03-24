@@ -157,3 +157,20 @@ fn test_allow_model() -> oso::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_get_allowed_actions() -> oso::Result<()> {
+    common::setup();
+    let oso = test_oso();
+
+    let actor = Actor::new(String::from("sally"));
+    let resource = Widget::new(1);
+    let actions: Vec<String> = oso.get_allowed_actions(actor, resource)?;
+
+    assert!(actions.len() == 3);
+    assert!(actions.iter().any(|e| e == "CREATE"));
+    assert!(actions.iter().any(|e| e == "READ"));
+    assert!(actions.iter().any(|e| e == "get"));
+
+    Ok(())
+}

@@ -20,3 +20,6 @@ allow(actor: Actor, "frob", resource: Company) if
 
 allow(actor: Actor, "list", Company) if
    actor.name = "auditor";
+
+allow(actor: Actor{name: "sally"}, action, resource: Widget{id: 1}) if
+    action in ["CREATE", "READ"];
