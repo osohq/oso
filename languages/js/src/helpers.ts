@@ -306,12 +306,10 @@ let RESET = '';
 let FG_BLUE = '';
 let FG_RED = '';
 if (
-  typeof WorkerGlobalScope !== 'function' &&
-  typeof window !== 'object' &&
-  typeof process.stdout.getColorDepth === 'function' &&
-  process.stdout.getColorDepth() >= 4 &&
-  typeof process.stderr.getColorDepth === 'function' &&
-  process.stderr.getColorDepth() >= 4
+  typeof process?.stdout?.getColorDepth === 'function' &&
+  process?.stdout?.getColorDepth() >= 4 &&
+  typeof process?.stderr?.getColorDepth === 'function' &&
+  process?.stderr?.getColorDepth() >= 4
 ) {
   RESET = '\x1b[0m';
   FG_BLUE = '\x1b[34m';
