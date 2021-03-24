@@ -10,7 +10,11 @@ draft: true
 
 ## `oso` 0.11.2
 
-### `Oso.query` and others no longer require mutable reference
+### Rust
+
+#### Other bugs & improvements
+
+##### `Oso.query` and others no longer require mutable reference
 
 Thank you [Fisher Darling](https://github.com/fisherdarling)
 for [pointing out](https://github.com/osohq/oso/issues/773) that many
@@ -18,6 +22,17 @@ methods on `oso::Oso` do not require a mutable reference.
 
 With this small change, it is no longer necessary to wrap `oso::Oso` in a
 mutex in order to use across threads.
+
+### Node.js
+
+#### Other bugs & improvements
+
+##### It's now possible to use Oso in Web Workers
+
+Big thanks to [@togmund](https://github.com/togmund) for submitting a patch
+that enables Oso to run in
+[Web Worker](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API)
+contexts like Cloudflare Workers.
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
