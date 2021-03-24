@@ -122,9 +122,12 @@ example uses the Python library):
 
 ```python
 @app.route('/blog_post/<int:id>', methods=["GET"])
-def get_blog_post(request) if
+def get_blog_post(request):
     post = get_blog_post(id)
-    oso.is_allowed(request.user, "read", post)
+    if oso.is_allowed(request.user, "read", post):
+        return post
+    else:
+        raise UnauthorizedRequest()
 ```
 
 ## Roles in a multi-tenant application
@@ -156,7 +159,8 @@ user_in_role(User{username: "steve"}, "admin");
 user_in_role(User{username: "leina"}, "admin");
 
 # Role-permission mappings
-role_allow(role: "admin", _action, resource);
+# Admin can perform any action on any resource.
+role_allow(role: "admin", _action, _resource);
 
 # Allow rule to enable role checking with tenant scoping
 allow(actor: User, action, resource) if
