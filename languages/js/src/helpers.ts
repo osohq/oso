@@ -306,6 +306,7 @@ let RESET = '';
 let FG_BLUE = '';
 let FG_RED = '';
 if (
+  typeof WorkerGlobalScope !== 'function' &&
   typeof window !== 'object' &&
   typeof process.stdout.getColorDepth === 'function' &&
   process.stdout.getColorDepth() >= 4 &&
