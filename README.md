@@ -33,6 +33,8 @@ To get up and running with Oso, check out the [Getting Started
 guides](https://docs.osohq.com/getting-started/quickstart.html) in the [Oso
 documentation][docs].
 
+If you have questions, need help getting started, or want to discuss anything about the product, your use case, or authorization more generally – [join us on Slack](http://join-slack.osohq.com/) or [open an issue](https://github.com/osohq/oso).
+
 ## Development
 
 ### Core
