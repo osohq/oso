@@ -725,7 +725,7 @@ impl PolarVirtualMachine {
         renamer.fold_rule(rule.clone())
     }
 
-    /// Print a message to the output stream.
+    /// Push or print a message to the output stream.
     #[cfg(not(target_arch = "wasm32"))]
     fn print<S: Into<String>>(&self, message: S) {
         let message = message.into();
@@ -736,7 +736,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// Print a message to the output stream.
+    /// Push or print a message to the WASM output stream.
     #[cfg(target_arch = "wasm32")]
     fn print<S: Into<String>>(&self, message: S) {
         let message = message.into();
