@@ -262,12 +262,9 @@ impl Polar {
             let term =
                 parser::parse_query(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
             kb.sources.add_source(source, src_id);
-            rewrite_term(term, &mut kb)
+            term
         };
-        let query = Goal::Query { term: term.clone() };
-        let vm =
-            PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
-        Ok(Query::new(vm, term))
+        Ok(self.new_query_from_term(term, trace))
     }
 
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
