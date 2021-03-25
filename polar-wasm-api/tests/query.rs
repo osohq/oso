@@ -5,7 +5,7 @@ use wasm_bindgen_test::*;
 #[wasm_bindgen_test]
 #[allow(clippy::float_cmp)]
 fn call_result_succeeds() {
-    let mut polar = polar_wasm_api::Polar::wasm_new();
+    let mut polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     polar
         .wasm_register_constant(
             "y",
@@ -42,7 +42,7 @@ fn call_result_succeeds() {
 #[wasm_bindgen_test]
 #[allow(clippy::float_cmp)]
 fn app_error_succeeds() {
-    let mut polar = polar_wasm_api::Polar::wasm_new();
+    let mut polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     polar
         .wasm_register_constant(
             "y",
@@ -69,7 +69,7 @@ fn app_error_succeeds() {
 
 #[wasm_bindgen_test]
 fn debug_command_succeeds() {
-    let polar = polar_wasm_api::Polar::wasm_new();
+    let polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
     query.wasm_debug_command("h").unwrap();
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();

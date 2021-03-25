@@ -334,7 +334,7 @@ mod test {
 
     #[test]
     fn basic_test() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if x = 1;
                f(x) if x = 2;
@@ -351,7 +351,7 @@ mod test {
 
     #[test]
     fn test_partial_and() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("f(x, y, z) if x = y and x = z;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), 1, 1])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
@@ -363,7 +363,7 @@ mod test {
 
     #[test]
     fn test_partial_two_rule() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x, y, z) if x < y and x < z and g(x);
                g(x) if x < 3;
@@ -382,7 +382,7 @@ mod test {
 
     #[test]
     fn test_partial_isa() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x: Post) if x.foo = 1;
                f(x: User) if x.bar = 1;
@@ -470,7 +470,7 @@ mod test {
 
     #[test]
     fn test_partial_field_unification() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("f(x, {x: x});")?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), btreemap! {}])), false);
@@ -498,7 +498,7 @@ mod test {
         assert_eq!(next[&sym!("y")], term!(btreemap! { sym!("x") => term!(1) }));
         assert_query_done!(q);
 
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("g(x, _: {x: x});")?;
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), btreemap! {}])), false);
@@ -519,7 +519,7 @@ mod test {
         assert_partial_expression!(next_binding(&mut q)?, "y", "_this.x = 1");
         assert_query_done!(q);
 
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("h(x: X, _: {x: x});")?;
 
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x"), btreemap! {}])), false);
@@ -556,7 +556,7 @@ mod test {
         assert_partial_expression!(binding(&mut q), "y", "_this.x = 1");
         assert_query_done!(q);
 
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("i(x, _: Y{x: x});")?;
 
         let maybe_binding = |q: &mut Query| loop {
@@ -594,7 +594,7 @@ mod test {
         );
         assert_query_done!(q);
 
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("j(x: X, _: Y{x: x});")?;
 
         let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), btreemap! {}])), false);
@@ -628,7 +628,7 @@ mod test {
 
     #[test]
     fn test_partial_isa_with_fields() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x: Post{id: 1});
                g(x: Post{id: 1}) if x matches {id: 2}; # Will fail.
@@ -753,7 +753,7 @@ mod test {
 
     #[test]
     fn test_partial_isa_two_rule() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x: Post) if x.foo = 0 and g(x);
                f(x: User) if x.bar = 1 and g(x);
@@ -803,7 +803,7 @@ mod test {
 
     #[test]
     fn test_partial_isa_subclass_superclass() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x: PostSubclass) if g(x);
                g(x: Post);"#,
@@ -834,7 +834,7 @@ mod test {
 
     #[test]
     fn test_partial_comparison() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"positive(x) if x > 0;
                positive(x) if x > 0 and x < 0;
@@ -853,7 +853,7 @@ mod test {
 
     #[test]
     fn test_partial_comparison_with_variable_indirection() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if x > 1 and y = z and x = z and y = 1;
                g(x) if x > 1 and y = z and x == z and y = 1;
@@ -891,7 +891,7 @@ mod test {
 
     #[test]
     fn test_partial_comparison_dot() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("a_positive(x) if x.a > 0 and 0 < x.a;")?;
         let mut q = p.new_query_from_term(term!(call!("a_positive", [sym!("x")])), false);
         // TODO(gj): Canonicalize comparisons.
@@ -902,7 +902,7 @@ mod test {
 
     #[test]
     fn test_partial_nested_dot_ops() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if x.y.z > 0;
                g(x) if x.y = 0 and x.y > 1 and x.y.z > 1;"#,
@@ -923,7 +923,7 @@ mod test {
 
     #[test]
     fn test_multiple_partials() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("f(x, y) if x = 1 and y = 2;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
@@ -935,7 +935,7 @@ mod test {
 
     #[test]
     fn test_partial_in_arithmetic_op() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("f(x) if x = x + 0;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "x", "_this + 0 = _this");
@@ -945,7 +945,7 @@ mod test {
 
     #[test]
     fn test_method_call_on_partial() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("g(x) if x.foo();")?;
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         let error = q.next_event().unwrap_err();
@@ -961,7 +961,7 @@ mod test {
 
     #[test]
     fn test_rule_filtering_with_partials() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if g(x.c);
                g(y: B) if y.b > 0;
@@ -1026,7 +1026,7 @@ mod test {
 
     #[test]
     fn test_partial_unification_1() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x, y) if x = y;
                f(x, y) if x = y and 1 = x;
@@ -1072,7 +1072,7 @@ mod test {
 
     #[test]
     fn test_partial_unification_2() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x, y) if x = y;
                f(x, y) if x = y and 1 = x;
@@ -1118,7 +1118,7 @@ mod test {
 
     #[test]
     fn test_comparing_partials() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
 
         p.load_str("f(x, y) if x > y;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
@@ -1151,7 +1151,7 @@ mod test {
 
     #[test]
     fn test_dot_lookup_with_unbound_as_field() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("f(x) if {a: 1, b: 2}.(x) > 0;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!("a"));
@@ -1161,7 +1161,7 @@ mod test {
 
     #[test]
     fn test_dot_lookup_with_partial_as_field() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("f(x, y) if {a: y, b: y}.(x) > 0;")?;
         p.register_constant(sym!("x"), term!(value!(op!(And))));
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
@@ -1176,7 +1176,7 @@ mod test {
 
     #[test]
     fn test_partial_inverter() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if not x = 1;
                g(x) if not x > 1;
@@ -1214,7 +1214,7 @@ mod test {
 
     #[test]
     fn test_negate_conjunctions() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if not (y = 1 and x.foo = y);
                g(x) if not (x.foo = y and 1 = y);
@@ -1243,7 +1243,7 @@ mod test {
 
     #[test]
     fn test_negate_dot() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(r#"f(x) if not (x.y = 1 and x.b = 2);"#)?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
@@ -1255,7 +1255,7 @@ mod test {
 
     #[test]
     fn partially_negated_constraints() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if x = 3 and not (x = 1 and (not x = 2));
                g(x) if x = 3 and not (x = 3 and (not x = 2));
@@ -1363,7 +1363,7 @@ mod test {
 
     #[test]
     fn test_doubly_negated_ground() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if not (x != 1);
                g(x) if not (not (x = 1));"#,
@@ -1382,7 +1382,7 @@ mod test {
 
     #[test]
     fn test_partial_before_negation() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if x > 1 and not (x < 0);
                g(x) if x > 1 and not (x = 2);"#,
@@ -1401,7 +1401,7 @@ mod test {
 
     #[test]
     fn partial_with_unbound_variables() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if not (x.foo = y);
                g(x) if not (x.foo.bar = y);"#,
@@ -1418,7 +1418,7 @@ mod test {
 
     #[test]
     fn test_negate_disjunctions() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if not (x.foo = 1 or 2 = x.foo);
                g(x) if not (1 = x or x = 2);
@@ -1443,7 +1443,7 @@ mod test {
 
     #[test]
     fn test_trivial_partials() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x);
                g(x) if false;"#,
@@ -1459,7 +1459,7 @@ mod test {
 
     #[test]
     fn test_in_partial_lhs() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("lhs(x) if x in [1, 2];")?;
         // Partials on the LHS of `in` accumulate constraints disjunctively.
         let mut q = p.new_query_from_term(term!(call!("lhs", [sym!("x")])), false);
@@ -1471,7 +1471,7 @@ mod test {
 
     #[test]
     fn test_negated_in_partial_lhs() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("not_lhs(x) if not x in [1, 2];")?;
         // Inverting an `in` produces a conjunction of the inverted disjunctive constraints.
         let mut q = p.new_query_from_term(term!(call!("not_lhs", [sym!("x")])), false);
@@ -1482,7 +1482,7 @@ mod test {
 
     #[test]
     fn test_contains_partial() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"contains(x, y) if x in y;
                contains_dot(x, y) if x in y.foo;
@@ -1510,7 +1510,7 @@ mod test {
 
     #[test]
     fn test_in_partial() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if y in x.values;
                g(x, y) if y in x.values;
@@ -1570,7 +1570,7 @@ mod test {
 
     #[test]
     fn test_in_partial_2() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(r#"f(x) if y in x and y = 1;"#)?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
@@ -1582,7 +1582,7 @@ mod test {
 
     #[test]
     fn test_that_cut_with_partial_errors() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("f(x) if cut;")?;
         p.register_constant(sym!("x"), op!(And).into_term());
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
@@ -1599,7 +1599,7 @@ mod test {
 
     #[test]
     fn test_cut_with_partial() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if x = 1;
                f(x) if x = 2 and cut;
@@ -1614,7 +1614,7 @@ mod test {
 
     #[test]
     fn test_conditional_cut_with_partial() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if x > 1 and cut or x = 2 and x = 3;
                g(1) if cut;
@@ -1632,7 +1632,7 @@ mod test {
 
     #[test]
     fn test_method_sorting_with_cut_and_partial() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x, y) if cut and x = 1;
                f(x, y: 2) if x = 2;"#,
@@ -1646,7 +1646,7 @@ mod test {
 
     #[test]
     fn nonlogical_inversions() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("f(x) if not print(x);")?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_query_done!(q);
@@ -1655,7 +1655,7 @@ mod test {
 
     #[test]
     fn test_nested_dot_in() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str("f(x, y) if x in y.a.b.c;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [1, sym!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "1 in _this.a.b.c");
@@ -1665,7 +1665,7 @@ mod test {
 
     #[test]
     fn test_nested_dot_lookup() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x, y) if x = y.a.b.c;
                f(x, y) if x > y.a.b.c and x < y.a.b and y.a.b.c > x;
@@ -1695,7 +1695,7 @@ mod test {
 
     #[test]
     fn test_partial_negated_isa() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(
             r#"f(x) if (not x matches Foo{} or not g(x)) and x = 1;
                g(_: Bar);"#,
@@ -1717,7 +1717,7 @@ mod test {
 
     #[test]
     fn test_multiple_gt_three_variables() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(r#"f(x, y, z) if x > z and y > z;"#)?;
         let mut q =
             p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y"), sym!("z")])), false);
@@ -1733,7 +1733,7 @@ mod test {
 
     #[test]
     fn test_negated_any_value() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(r#"f(x, y) if x = 1 and not (y = 1 and x = 2);"#)?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let bindings = next_binding(&mut q)?;
@@ -1746,7 +1746,7 @@ mod test {
 
     #[test]
     fn test_negation_two_rules() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         // TODO: More complicated version:
         //  f(x) if not g(z) and z = x;
         //  g(y) if y = 1;
@@ -1783,7 +1783,7 @@ mod test {
 
     #[test]
     fn test_constraint_no_input_variables() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         // TODO: More complicated version:
         //  f(x) if not g(z) and z = x;
         //  g(y) if y = 1;
@@ -1799,7 +1799,7 @@ mod test {
 
     #[test]
     fn test_output_variable() -> TestResult {
-        let p = Polar::new();
+        let p = Polar::default();
         p.load_str(r#"f(a, b) if a = b;"#)?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [1, sym!("x")])), false);

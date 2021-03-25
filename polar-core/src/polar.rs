@@ -128,21 +128,28 @@ pub struct Polar {
     loaded_files: Arc<RwLock<HashSet<String>>>,
     /// Map from source code loaded to the filename it was loaded as
     loaded_content: Arc<RwLock<HashMap<String, String>>>,
+    /// Logging
+    log: bool,
+    polar_log: bool,
+    polar_log_stderr: bool,
 }
 
 impl Default for Polar {
     fn default() -> Self {
-        Self::new()
+        Self::new(false, false, false)
     }
 }
 
 impl Polar {
-    pub fn new() -> Self {
+    pub fn new(log: bool, polar_log: bool, polar_log_stderr: bool) -> Self {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
             messages: MessageQueue::new(),
             loaded_content: Arc::new(RwLock::new(HashMap::new())), // file content -> file name
             loaded_files: Arc::new(RwLock::new(HashSet::new())),   // set of file names
+            log,
+            polar_log,
+            polar_log_stderr,
         }
     }
 
@@ -273,8 +280,15 @@ impl Polar {
             term = rewrite_term(term, &mut kb);
         }
         let query = Goal::Query { term: term.clone() };
-        let vm =
-            PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
+        let vm = PolarVirtualMachine::new(
+            self.kb.clone(),
+            trace,
+            vec![query],
+            self.messages.clone(),
+            self.log,
+            self.polar_log,
+            self.polar_log_stderr,
+        );
         Query::new(vm, term)
     }
 
@@ -299,7 +313,7 @@ mod tests {
 
     #[test]
     fn can_load_and_query() {
-        let polar = Polar::new();
+        let polar = Polar::new(false, false, false);
         let _query = polar.new_query("1 = 1", false);
         let _ = polar.load_str("f(_);");
     }

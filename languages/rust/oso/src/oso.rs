@@ -28,7 +28,16 @@ impl Default for Oso {
 impl Oso {
     /// Create a new instance of Oso. Each instance is separate and can have different rules and classes loaded into it.
     pub fn new() -> Self {
-        let inner = Arc::new(polar_core::polar::Polar::new());
+        let log = std::env::var("RUST_LOG").is_ok();
+        let polar_log = std::env::var("POLAR_LOG").is_ok();
+        let polar_log_stderr = std::env::var("POLAR_LOG")
+            .map(|pl| pl == "now")
+            .unwrap_or(false);
+        let inner = Arc::new(polar_core::polar::Polar::new(
+            log,
+            polar_log,
+            polar_log_stderr,
+        ));
         let host = Host::new(inner.clone());
 
         let mut oso = Self { host, inner };

@@ -11,9 +11,9 @@ pub struct Polar(polar::Polar);
 #[wasm_bindgen]
 impl Polar {
     #[wasm_bindgen(constructor)]
-    pub fn wasm_new() -> Self {
+    pub fn wasm_new(log: bool, polar_log: bool, polar_log_stderr: bool) -> Self {
         console_error_panic_hook::set_once();
-        Self(polar::Polar::new())
+        Self(polar::Polar::new(log, polar_log, polar_log_stderr))
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = load)]

@@ -9,14 +9,14 @@ fn is_done_event(event: Object) -> bool {
 
 #[wasm_bindgen_test]
 fn load_file_succeeds() {
-    let polar = polar_wasm_api::Polar::wasm_new();
+    let polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     let res = polar.wasm_load("x() if 1 == 1;\n", Some("foo.polar".to_owned()));
     assert!(matches!(res, Ok(())));
 }
 
 #[wasm_bindgen_test]
 fn load_file_errors() {
-    let polar = polar_wasm_api::Polar::wasm_new();
+    let polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     let err = polar.wasm_load(";", None).unwrap_err();
     let err: Error = err.dyn_into().unwrap();
     assert_eq!(err.name(), "ParseError::UnrecognizedToken");
@@ -28,7 +28,7 @@ fn load_file_errors() {
 
 #[wasm_bindgen_test]
 fn next_inline_query_succeeds() {
-    let polar = polar_wasm_api::Polar::wasm_new();
+    let polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     let res = polar.wasm_load("?= 1 = 1;", None);
     assert!(matches!(res, Ok(())));
 
@@ -48,7 +48,7 @@ fn next_inline_query_succeeds() {
 
 #[wasm_bindgen_test]
 fn next_inline_query_errors() {
-    let polar = polar_wasm_api::Polar::wasm_new();
+    let polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     let res = polar.wasm_load("?= 1 = 2;", None);
     assert!(matches!(res, Ok(())));
     let mut query = polar.wasm_next_inline_query().unwrap();
@@ -61,7 +61,7 @@ fn next_inline_query_errors() {
 
 #[wasm_bindgen_test]
 fn register_constant_succeeds() {
-    let mut polar = polar_wasm_api::Polar::wasm_new();
+    let mut polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     let res = polar.wasm_register_constant(
         "mathematics",
         r#"{"value":{"ExternalInstance":{"instance_id":1,"literal":null,"repr":null}}}"#,
@@ -71,7 +71,7 @@ fn register_constant_succeeds() {
 
 #[wasm_bindgen_test]
 fn register_constant_errors() {
-    let mut polar = polar_wasm_api::Polar::wasm_new();
+    let mut polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     let err = polar.wasm_register_constant("mathematics", "").unwrap_err();
     let err: Error = err.dyn_into().unwrap();
     assert_eq!(err.name(), "RuntimeError::Serialization");
@@ -83,7 +83,7 @@ fn register_constant_errors() {
 
 #[wasm_bindgen_test]
 fn new_query_from_str_succeeds() {
-    let polar = polar_wasm_api::Polar::wasm_new();
+    let polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
 
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
@@ -92,7 +92,7 @@ fn new_query_from_str_succeeds() {
 
 #[wasm_bindgen_test]
 fn new_query_from_str_errors() {
-    let polar = polar_wasm_api::Polar::wasm_new();
+    let polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     let mut query = polar.wasm_new_query_from_str("x").unwrap();
     let err: Error = query.wasm_next_event().unwrap_err().dyn_into().unwrap();
     assert_eq!(err.name(), "RuntimeError::TypeError");
@@ -101,7 +101,7 @@ fn new_query_from_str_errors() {
 
 #[wasm_bindgen_test]
 fn new_query_from_term_succeeds() {
-    let polar = polar_wasm_api::Polar::wasm_new();
+    let polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     let term = r#"{"value":{"Call":{"name":"x","args":[]}}}"#;
     let mut query = polar.wasm_new_query_from_term(term).unwrap();
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
@@ -110,7 +110,7 @@ fn new_query_from_term_succeeds() {
 
 #[wasm_bindgen_test]
 fn new_query_from_term_errors() {
-    let polar = polar_wasm_api::Polar::wasm_new();
+    let polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     let res = polar.wasm_new_query_from_term("");
     if let Err(err) = res {
         let err: Error = err.dyn_into().unwrap();
@@ -127,7 +127,7 @@ fn new_query_from_term_errors() {
 #[wasm_bindgen_test]
 #[allow(clippy::float_cmp)]
 fn get_external_id_succeeds() {
-    let polar = polar_wasm_api::Polar::wasm_new();
+    let polar = polar_wasm_api::Polar::wasm_new(false, false, false);
     assert_eq!(polar.wasm_get_external_id(), 1.0);
     assert_eq!(polar.wasm_get_external_id(), 2.0);
 }
