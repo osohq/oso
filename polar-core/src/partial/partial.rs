@@ -1812,4 +1812,32 @@ mod test {
 
     // TODO(gj): add test where we have a partial prior to an inversion
     // TODO (dhatch): We have few tests involving multiple rules and partials.
+
+
+    #[test]
+    fn test_querying_for_partial() -> TestResult { // ANNIE
+        let p = Polar::new();
+        p.load_str("f(x) if x.foo;
+        g(x) if not x.foo;
+        h(x) if x;
+        a(x) if f(x);
+        b(x) if f(x.bar);")?;
+        
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.foo = true");
+        assert_query_done!(q);
+        let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.foo != true");
+        assert_query_done!(q);
+        let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(true));
+        assert_query_done!(q);
+        let mut q = p.new_query_from_term(term!(call!("a", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.foo = true");
+        assert_query_done!(q);
+        let mut q = p.new_query_from_term(term!(call!("b", [sym!("x")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.bar.foo = true");
+        assert_query_done!(q);
+        Ok(())
+    }
 }

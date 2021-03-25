@@ -1,10 +1,12 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, ops::Deref};
 use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
+
+use error::{PolarError, RuntimeError};
 
 use super::visitor::{walk_term, Visitor};
 use crate::bindings::{BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState};
@@ -1347,7 +1349,7 @@ impl PolarVirtualMachine {
     /// Creates a choice point over each rule, where each alternative
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
-    fn query(&mut self, term: &Term) -> PolarResult<QueryEvent> {
+    fn query(&mut self, term: &Term) -> PolarResult<QueryEvent> { // ANNIE
         // Don't log if it's just a single element AND like lots of rule bodies tend to be.
         match &term.value() {
             Value::Expression(Operation {
@@ -1372,6 +1374,42 @@ impl PolarVirtualMachine {
             }
             Value::Expression(_) => {
                 return self.query_for_operation(&term);
+            }
+            Value::Variable(a_symbol) => { //ANNIE  - the big match
+                let val = self.deref(term);
+
+                if val == term {   // variable was unbound
+                    
+                }
+                let error = error::RuntimeError::UnboundVariable {
+                    sym: a_symbol.clone(),
+                };
+                return Err(self.set_error_context(term, error));
+            }
+            Value::Dictionary(_) => {
+                let error = error::RuntimeError::TypeError {
+                    msg: format!("Expected callable, found Dictionary {}", term.to_polar()),
+                    stack_trace: Some(self.stack_trace()),
+                };
+                return Err(self.set_error_context(term, error));               
+            }
+            Value::Boolean(value    ) => {
+                if !value {
+                    // Backtrack if the boolean is false.
+                    self.push_goal(Goal::Backtrack)?;
+                }
+            }
+            Value::ExternalInstance(value) => {
+                // ANNIE TODO SOMETHING HERE
+             //   self.external_call_result(call_id, term)
+            }
+            Value::List(_) {
+                // the infamous [somemodule] consult
+            }
+            Value::Number(value ) {  // is this turning into javascript?????
+                match value {
+                    
+                }
             }
             _ => {
                 let term = self.deref(term);
@@ -1625,7 +1663,7 @@ impl PolarVirtualMachine {
 
     /// Query for a value.  Succeeds if the value is 'truthy' or backtracks.
     /// Currently only defined for boolean values.
-    fn query_for_value(&mut self, term: &Term) -> PolarResult<()> {
+    fn query_for_value(&mut self, term: &Term) -> PolarResult<()> {  // ANNIE
         if let Value::Boolean(value) = term.value() {
             if !value {
                 // Backtrack if the boolean is false.
