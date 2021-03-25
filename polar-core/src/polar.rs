@@ -31,6 +31,11 @@ impl Query {
         }
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
+        self.vm.set_logging_options(rust_log, polar_log);
+    }
+
     /// Runnable lifecycle
     ///
     /// 1. Get Runnable A from the top of the Runnable stack, defaulting to the VM.

@@ -329,6 +329,17 @@ impl PolarVirtualMachine {
         vm
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
+        self.log = rust_log.is_some();
+        if let Some(pl) = polar_log {
+            if &pl == "now" {
+                self.polar_log_stderr = true;
+            }
+            self.polar_log = true;
+        }
+    }
+
     fn query_contains_partial(&mut self) {
         struct VarVisitor<'vm> {
             has_partial: bool,

@@ -33,7 +33,7 @@ export class Polar {
   #host: Host;
 
   constructor(opts: Options = {}) {
-    this.#ffiPolar = new FfiPolar(opts.log || false, opts.polarLog || false, opts.polarLogStderr || false);
+    this.#ffiPolar = new FfiPolar();
     const equalityFn = opts.equalityFn || ((x, y) => x == y);
     this.#host = new Host(this.#ffiPolar, equalityFn);
 
