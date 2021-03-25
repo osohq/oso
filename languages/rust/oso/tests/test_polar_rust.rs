@@ -114,19 +114,15 @@ fn test_load_function() {
 fn test_type_mismatch_fails_unification() {
     common::setup();
 
-    #[derive(Eq, PartialEq, PolarClass, Clone)]
+    #[derive(Eq, PartialEq, PolarClass, Clone, Default)]
     struct Foo {}
-    #[derive(Eq, PartialEq, PolarClass, Clone)]
+    #[derive(Eq, PartialEq, PolarClass, Clone, Default)]
     struct Bar {}
-
-    impl Foo {}
-    impl Bar {}
 
     let mut test = OsoTest::new();
     test.oso
         .register_class(
-            Foo::get_polar_class_builder()
-                .set_constructor(|| Foo {})
+            ClassBuilder::<Foo>::with_default()
                 .with_equality_check()
                 .build(),
         )
@@ -134,8 +130,7 @@ fn test_type_mismatch_fails_unification() {
 
     test.oso
         .register_class(
-            Bar::get_polar_class_builder()
-                .set_constructor(|| Bar {})
+            ClassBuilder::<Bar>::with_default()
                 .with_equality_check()
                 .build(),
         )
