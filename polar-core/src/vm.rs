@@ -6,6 +6,9 @@ use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
 use super::visitor::{walk_term, Visitor};
 use crate::bindings::{BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState};
 use crate::counter::Counter;
@@ -274,6 +277,13 @@ impl Default for PolarVirtualMachine {
             false,
         )
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console, js_name = error)]
+    fn console_error(a: &str);
 }
 
 // Methods which aren't goals/instructions.
@@ -716,13 +726,25 @@ impl PolarVirtualMachine {
     }
 
     /// Print a message to the output stream.
+    #[cfg(not(target_arch = "wasm32"))]
     fn print<S: Into<String>>(&self, message: S) {
         let message = message.into();
         if self.polar_log_stderr {
             eprintln!("{}", message);
+        } else {
+            self.messages.push(MessageKind::Print, message);
         }
+    }
 
-        self.messages.push(MessageKind::Print, message);
+    /// Print a message to the output stream.
+    #[cfg(target_arch = "wasm32")]
+    fn print<S: Into<String>>(&self, message: S) {
+        let message = message.into();
+        if self.polar_log_stderr {
+            console_error(&message);
+        } else {
+            self.messages.push(MessageKind::Print, message);
+        }
     }
 
     fn log(&self, message: &str, terms: &[&Term]) {

@@ -449,6 +449,9 @@ export type EqualityFn = (x: any, y: any) => boolean;
  */
 export interface Options {
   equalityFn?: EqualityFn;
+  log?: boolean;
+  polarLog?: boolean;
+  polarLogStderr?: boolean;
 }
 
 /**
