@@ -74,14 +74,7 @@ pub extern "C" fn polar_get_error() -> *const c_char {
 
 #[no_mangle]
 pub extern "C" fn polar_new() -> *mut Polar {
-    ffi_try!({
-        let log = std::env::var("RUST_LOG").is_ok();
-        let polar_log = std::env::var("POLAR_LOG").is_ok();
-        let polar_log_stderr = std::env::var("POLAR_LOG")
-            .map(|pl| pl == "now")
-            .unwrap_or(false);
-        box_ptr!(Polar::new(log, polar_log, polar_log_stderr))
-    })
+    ffi_try!({ box_ptr!(Polar::new()) })
 }
 
 #[no_mangle]

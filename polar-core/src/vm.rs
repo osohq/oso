@@ -272,9 +272,6 @@ impl Default for PolarVirtualMachine {
             vec![],
             // Messages will not be exposed, only use default() for testing.
             MessageQueue::new(),
-            false,
-            false,
-            false,
         )
     }
 }
@@ -295,9 +292,6 @@ impl PolarVirtualMachine {
         tracing: bool,
         goals: Goals,
         messages: MessageQueue,
-        log: bool,
-        polar_log: bool,
-        polar_log_stderr: bool,
     ) -> Self {
         let constants = kb
             .read()
@@ -320,9 +314,11 @@ impl PolarVirtualMachine {
             debugger: Debugger::default(),
             kb,
             call_id_symbols: HashMap::new(),
-            log,
-            polar_log,
-            polar_log_stderr,
+            log: std::env::var("RUST_LOG").is_ok(),
+            polar_log: std::env::var("POLAR_LOG").is_ok(),
+            polar_log_stderr: std::env::var("POLAR_LOG")
+                .map(|pl| pl == "now")
+                .unwrap_or(false),
             polar_log_mute: false,
             query_contains_partial: false,
             inverting: false,
@@ -363,20 +359,12 @@ impl PolarVirtualMachine {
 
     #[cfg(test)]
     pub fn new_test(kb: Arc<RwLock<KnowledgeBase>>, tracing: bool, goals: Goals) -> Self {
-        PolarVirtualMachine::new(kb, tracing, goals, MessageQueue::new(), false, false, false)
+        PolarVirtualMachine::new(kb, tracing, goals, MessageQueue::new())
     }
 
     /// Clone self, replacing the goal stack and retaining only the current bindings.
     pub fn clone_with_goals(&self, goals: Goals) -> Self {
-        let mut vm = Self::new(
-            self.kb.clone(),
-            self.tracing,
-            goals,
-            self.messages.clone(),
-            false,
-            false,
-            false,
-        );
+        let mut vm = Self::new(self.kb.clone(), self.tracing, goals, self.messages.clone());
         vm.binding_manager.clone_from(&self.binding_manager);
         vm.query_contains_partial = self.query_contains_partial;
         vm.debugger = self.debugger.clone();

@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_rule_index() {
-        let polar = Polar::default();
+        let polar = Polar::new();
         polar.load_str(r#"f(1, 1, "x");"#).unwrap();
         polar.load_str(r#"f(1, 1, "y");"#).unwrap();
         polar.load_str(r#"f(1, x, "y") if x = 2;"#).unwrap();
