@@ -397,7 +397,7 @@ fn test_match_attribute_does_not_exist() {
     struct Foo {
         #[polar(attribute)]
         x: i64,
-    };
+    }
 
     impl Foo {
         fn new() -> Self {
@@ -428,7 +428,7 @@ fn test_match_non_existent_class() {
     struct Foo {
         #[polar(attribute)]
         x: i64,
-    };
+    }
 
     impl Foo {
         fn new() -> Self {
@@ -500,7 +500,7 @@ fn test_class_does_not_exist() {
     struct Foo {
         #[polar(attribute)]
         x: i64,
-    };
+    }
 
     impl Foo {
         fn new() -> Self {
@@ -532,7 +532,7 @@ fn test_constructor_keyword_arguments_error() {
     struct Foo {
         #[polar(attribute)]
         x: i64,
-    };
+    }
 
     impl Foo {
         fn new(x: i64) -> Self {
@@ -569,7 +569,7 @@ fn test_method_keyword_arguments_error() -> oso::Result<()> {
     struct Foo {
         #[polar(attribute)]
         x: i64,
-    };
+    }
 
     impl Foo {
         fn new() -> Self {
