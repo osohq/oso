@@ -1407,11 +1407,11 @@ mod test {
                g(x) if not (x.foo.bar = y);"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.foo != _y_9");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_y_9 != _this.foo");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.foo.bar != _y_18");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_y_18 != _this.foo.bar");
         assert_query_done!(q);
         Ok(())
     }
