@@ -1,12 +1,10 @@
-use std::{cell::RefCell, ops::Deref};
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
-
-use error::{PolarError, RuntimeError};
 
 use super::visitor::{walk_term, Visitor};
 use crate::bindings::{BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState};
@@ -1349,7 +1347,7 @@ impl PolarVirtualMachine {
     /// Creates a choice point over each rule, where each alternative
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
-    fn query(&mut self, term: &Term) -> PolarResult<QueryEvent> { // ANNIE
+    fn query(&mut self, term: &Term) -> PolarResult<QueryEvent> {
         // Don't log if it's just a single element AND like lots of rule bodies tend to be.
         match &term.value() {
             Value::Expression(Operation {
@@ -1375,45 +1373,34 @@ impl PolarVirtualMachine {
             Value::Expression(_) => {
                 return self.query_for_operation(&term);
             }
-            Value::Variable(a_symbol) => { //ANNIE  - the big match
+            Value::Variable(_a_symbol) => {
                 let val = self.deref(term);
 
-                if val == term {   // variable was unbound
-                    
+                if val == *term {
+                    // variable was unbound
+                    // apply a constraint to variable that it must be truthy
+                    self.push_goal(Goal::Query {
+                        term: term.clone_with_value(value!(op!(Eq, term.clone(), term!(true)))),
+                    })?;
+                } else {
+                    self.push_goal(Goal::Query { term: val.clone() })?;
                 }
-                let error = error::RuntimeError::UnboundVariable {
-                    sym: a_symbol.clone(),
-                };
-                return Err(self.set_error_context(term, error));
             }
-            Value::Dictionary(_) => {
-                let error = error::RuntimeError::TypeError {
-                    msg: format!("Expected callable, found Dictionary {}", term.to_polar()),
-                    stack_trace: Some(self.stack_trace()),
-                };
-                return Err(self.set_error_context(term, error));               
-            }
-            Value::Boolean(value    ) => {
+            Value::Boolean(value) => {
                 if !value {
                     // Backtrack if the boolean is false.
                     self.push_goal(Goal::Backtrack)?;
                 }
-            }
-            Value::ExternalInstance(value) => {
-                // ANNIE TODO SOMETHING HERE
-             //   self.external_call_result(call_id, term)
-            }
-            Value::List(_) {
-                // the infamous [somemodule] consult
-            }
-            Value::Number(value ) {  // is this turning into javascript?????
-                match value {
-                    
-                }
+
+                return Ok(QueryEvent::None);
             }
             _ => {
-                let term = self.deref(term);
-                self.query_for_value(&term)?;
+                // everything else dies horribly and in pain
+                let term = self.deref(term); // shadows
+                return Err(self.type_error(
+                    &term,
+                    format!("can't query for: {}", term.value().to_polar()),
+                ));
             }
         }
         Ok(QueryEvent::None)
@@ -1659,24 +1646,6 @@ impl PolarVirtualMachine {
             }
         }
         Ok(QueryEvent::None)
-    }
-
-    /// Query for a value.  Succeeds if the value is 'truthy' or backtracks.
-    /// Currently only defined for boolean values.
-    fn query_for_value(&mut self, term: &Term) -> PolarResult<()> {  // ANNIE
-        if let Value::Boolean(value) = term.value() {
-            if !value {
-                // Backtrack if the boolean is false.
-                self.push_goal(Goal::Backtrack)?;
-            }
-
-            Ok(())
-        } else {
-            Err(self.type_error(
-                &term,
-                format!("can't query for: {}", term.value().to_polar()),
-            ))
-        }
     }
 
     /// Handle variables & constraints as arguments to various operations.

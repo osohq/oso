@@ -1813,31 +1813,43 @@ mod test {
     // TODO(gj): add test where we have a partial prior to an inversion
     // TODO (dhatch): We have few tests involving multiple rules and partials.
 
-
     #[test]
-    fn test_querying_for_partial() -> TestResult { // ANNIE
+    fn test_querying_for_partial() -> TestResult {
         let p = Polar::new();
-        p.load_str("f(x) if x.foo;
+        p.load_str(
+            "f(x) if x.foo;
         g(x) if not x.foo;
         h(x) if x;
         a(x) if f(x);
-        b(x) if f(x.bar);")?;
-        
+        b(x) if f(x.bar);",
+        )?;
+
+        // does f(x) call with x unbound turn into an equality constraint to true on the field?
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.foo = true");
+        let r = next_binding(&mut q)?;
+        assert_partial_expression!(r, "x", "_this.foo == true");
         assert_query_done!(q);
+
+        // does g(x) call with x unbound turn into an inequality constraint on the field?
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "x", "_this.foo != true");
         assert_query_done!(q);
+
+        // does h(x) call with x unbound turn into an equality constraint to true on x?
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
-        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(true));
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this == true");
         assert_query_done!(q);
+
+        // does a(x) call with x unbound turn into constraining x.foo to true?
         let mut q = p.new_query_from_term(term!(call!("a", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.foo = true");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.foo == true");
         assert_query_done!(q);
+
+        // does b(x) call with x unbound turn into constraining b.bar.foo to true?
         let mut q = p.new_query_from_term(term!(call!("b", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.bar.foo = true");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.bar.foo == true");
         assert_query_done!(q);
+
         Ok(())
     }
 }
