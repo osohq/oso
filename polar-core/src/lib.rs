@@ -1,3 +1,5 @@
+#![allow(clippy::vec_init_then_push)]
+
 #[cfg(test)]
 #[macro_use]
 extern crate maplit;

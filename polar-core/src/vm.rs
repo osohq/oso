@@ -6,6 +6,9 @@ use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
 use super::visitor::{walk_term, Visitor};
 use crate::bindings::{BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState};
 use crate::counter::Counter;
@@ -273,6 +276,13 @@ impl Default for PolarVirtualMachine {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console, js_name = error)]
+    fn console_error(a: &str);
+}
+
 // Methods which aren't goals/instructions.
 impl PolarVirtualMachine {
     /// Make a new virtual machine with an initial list of goals.
@@ -317,6 +327,17 @@ impl PolarVirtualMachine {
         vm.bind_constants(constants);
         vm.query_contains_partial();
         vm
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
+        self.log = rust_log.is_some();
+        if let Some(pl) = polar_log {
+            if &pl == "now" {
+                self.polar_log_stderr = true;
+            }
+            self.polar_log = true;
+        }
     }
 
     fn query_contains_partial(&mut self) {
@@ -703,14 +724,26 @@ impl PolarVirtualMachine {
         renamer.fold_rule(rule.clone())
     }
 
-    /// Print a message to the output stream.
+    /// Push or print a message to the output stream.
+    #[cfg(not(target_arch = "wasm32"))]
     fn print<S: Into<String>>(&self, message: S) {
         let message = message.into();
         if self.polar_log_stderr {
             eprintln!("{}", message);
+        } else {
+            self.messages.push(MessageKind::Print, message);
         }
+    }
 
-        self.messages.push(MessageKind::Print, message);
+    /// Push or print a message to the WASM output stream.
+    #[cfg(target_arch = "wasm32")]
+    fn print<S: Into<String>>(&self, message: S) {
+        let message = message.into();
+        if self.polar_log_stderr {
+            console_error(&message);
+        } else {
+            self.messages.push(MessageKind::Print, message);
+        }
     }
 
     fn log(&self, message: &str, terms: &[&Term]) {

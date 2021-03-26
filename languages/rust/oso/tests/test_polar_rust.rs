@@ -407,7 +407,7 @@ fn test_unify_externals() {
         x: i64,
     }
 
-    impl PolarClass for Foo {};
+    impl PolarClass for Foo {}
     impl Foo {
         fn new(x: i64) -> Self {
             Self { x }
@@ -440,7 +440,7 @@ fn test_unify_externals() {
         x: i64,
     }
 
-    impl PolarClass for Bar {};
+    impl PolarClass for Bar {}
     impl Bar {
         fn new(x: i64) -> Self {
             Self { x }
@@ -459,7 +459,7 @@ fn test_unify_externals() {
         x: i64,
     }
 
-    impl PolarClass for Baz {};
+    impl PolarClass for Baz {}
     impl Baz {
         fn new(x: i64) -> Self {
             Self { x }
