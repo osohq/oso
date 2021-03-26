@@ -39,6 +39,9 @@ pub enum OsoError {
     #[error("{operation} are unimplemented in the oso Rust library")]
     UnimplementedOperation { operation: String },
 
+    #[error("Inline query failed {location}")]
+    InlineQueryFailedError { location: String },
+
     #[error(transparent)]
     InvalidCallError(#[from] InvalidCallError),
 

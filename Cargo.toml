@@ -13,7 +13,8 @@ exclude = [
 ]
 
 [profile.release]
-debug = true
+# Set this to true if you need to debug release builds
+debug = false
 
 [profile.bench]
 debug = true

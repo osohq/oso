@@ -146,6 +146,7 @@ pub enum ParseError {
     InvalidToken {
         loc: usize,
     },
+    #[allow(clippy::upper_case_acronyms)]
     UnrecognizedEOF {
         loc: usize,
     },

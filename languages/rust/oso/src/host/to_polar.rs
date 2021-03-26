@@ -100,6 +100,7 @@ impl ToPolarList for () {
 
 #[impl_for_tuples(1, 16)]
 #[tuple_types_custom_trait_bound(ToPolar)]
+#[allow(clippy::vec_init_then_push)]
 impl ToPolarList for Tuple {
     fn to_polar_list(self) -> Vec<PolarValue> {
         let mut result = Vec::new();
