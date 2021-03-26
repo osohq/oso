@@ -1416,7 +1416,7 @@ impl PolarVirtualMachine {
                         term: term.clone_with_value(value!(op!(Eq, term.clone(), term!(true)))),
                     })?;
                 } else {
-                    self.push_goal(Goal::Query { term: val.clone() })?;
+                    self.push_goal(Goal::Query { term: val })?;
                 }
             }
             Value::Boolean(value) => {
