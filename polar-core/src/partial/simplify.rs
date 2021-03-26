@@ -165,9 +165,13 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     }
 }
 
+type Aliases = HashMap<Symbol, Symbol>;
+
 pub struct Simplifier {
-    bindings: Bindings,
     this_var: Symbol,
+    bindings: Bindings,
+    aliases: Aliases,
+    alias_scanning: bool,
 }
 
 impl Simplifier {
@@ -175,6 +179,31 @@ impl Simplifier {
         Self {
             this_var,
             bindings: Bindings::new(),
+            aliases: Aliases::new(),
+            alias_scanning: false,
+        }
+    }
+
+    fn alias(&mut self, alias: Symbol, mut var: Symbol) -> bool {
+        loop {
+            if alias == var {
+                return true;
+            }
+            if alias == self.this_var {
+                return false;
+            }
+            match self.aliases.get(&var) {
+                Some(other) => {
+                    if *other == self.this_var {
+                        return false;
+                    }
+                    var = other.clone();
+                }
+                None => {
+                    self.aliases.insert(alias, var);
+                    return true;
+                }
+            }
         }
     }
 
@@ -193,7 +222,11 @@ impl Simplifier {
     pub fn deref(&self, term: &Term) -> Term {
         match term.value() {
             Value::Variable(var) | Value::RestVariable(var) => {
-                self.bindings.get(var).unwrap_or(term).clone()
+                if let Some(var) = self.aliases.get(var) {
+                    term!(var.clone())
+                } else {
+                    self.bindings.get(var).unwrap_or(term).clone()
+                }
             }
             _ => term.clone(),
         }
@@ -242,6 +275,17 @@ impl Simplifier {
                 left == right
                     // Or...
                     || match (left.value(), right.value()) {
+                        // Alias scanning.
+                        (Value::Variable(l), Value::Variable(r))
+                        | (Value::Variable(l), Value::RestVariable(r))
+                        | (Value::RestVariable(l), Value::Variable(r))
+                        | (Value::RestVariable(l), Value::RestVariable(r))
+                            if self.alias_scanning =>
+                        {
+                            self.alias(l.clone(), r.clone())
+                        }
+                        _ if self.alias_scanning => false,
+
                         // Bind l to _this or _this.? if:
                         // Variable(l) = _this.? AND l is referenced in another term
                         // Variable(l) = _this
@@ -423,8 +467,17 @@ impl Simplifier {
         }
     }
 
+    fn alias_scan(&mut self, term: &mut Term) {
+        self.alias_scanning = true;
+        self.simplify_term(term);
+        self.alias_scanning = false;
+    }
+
     /// Simplify a partial until quiescence.
     pub fn simplify_partial(&mut self, term: &mut Term) {
+        self.alias_scan(term);
+
+        // TODO(ap): This does not handle hash collisions.
         let mut last = term.hash_value();
         loop {
             self.simplify_term(term);
