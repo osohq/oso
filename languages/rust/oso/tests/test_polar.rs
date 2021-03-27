@@ -401,7 +401,7 @@ fn test_duplicate_register_class() -> oso::Result<()> {
     let mut oso = test_oso();
 
     #[derive(PolarClass, Default, Debug, Clone)]
-    struct Foo {};
+    struct Foo {}
 
     let foo_class = Foo::get_polar_class_builder().name("Foo").build();
 

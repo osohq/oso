@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use super::error::ParseError;
 use super::terms::Symbol;
 use std::iter::Peekable;

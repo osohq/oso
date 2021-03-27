@@ -21,6 +21,7 @@ Bundler
 bundlers
 cgo
 classpath
+Cloudflare
 codebase
 constructable
 coroutine
@@ -131,6 +132,7 @@ structs
 subclasses
 submittedBy
 superclasses
+togmund
 toolchain
 traceback
 transactional
