@@ -21,22 +21,14 @@ def authorize(action, resource):
     else:
         raise Forbidden("Not Authorized!")
 
-
 # start-init
 def init_oso(app):
+    from .user import User
     from .expense import Expense
-    from .organization import Organization
-    from .user import Actor, Guest, User
 
     oso = Oso()
-    oso.register_class(Actor)
-    oso.register_class(Guest)
+
     oso.register_class(User)
     oso.register_class(Expense)
-    oso.register_class(Organization)
-    oso.register_class(Request)
-
-    for policy in app.config.get("OSO_POLICIES", []):
-        oso.load_file(policy)
-
+    oso.load_file("app/authorization.polar")
     app.oso = oso
