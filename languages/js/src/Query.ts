@@ -26,6 +26,11 @@ import type {
 import { processMessage } from './messages';
 import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
 
+function getLogLevelsFromEnv() {
+  if (typeof process?.env === 'undefined') return [undefined, undefined];
+  return [process.env.RUST_LOG, process.env.POLAR_LOG];
+}
+
 /**
  * A single Polar query.
  *
@@ -38,6 +43,7 @@ export class Query {
   results: QueryResult;
 
   constructor(ffiQuery: FfiQuery, host: Host) {
+    ffiQuery.setLoggingOptions(...getLogLevelsFromEnv());
     this.#ffiQuery = ffiQuery;
     this.#calls = new Map();
     this.#host = host;

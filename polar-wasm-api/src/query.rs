@@ -77,4 +77,14 @@ impl Query {
         let source = self.0.source_info();
         serde_wasm_bindgen::to_value(&source).map_err(|e| serialization_error(e.to_string()))
     }
+
+    #[cfg(target_arch = "wasm32")]
+    #[wasm_bindgen(js_class = Query, js_name = setLoggingOptions)]
+    pub fn wasm_set_logging_options(
+        &mut self,
+        rust_log: Option<String>,
+        polar_log: Option<String>,
+    ) {
+        self.0.set_logging_options(rust_log, polar_log);
+    }
 }

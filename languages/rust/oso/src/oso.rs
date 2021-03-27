@@ -10,6 +10,7 @@ use std::sync::Arc;
 use crate::host::Host;
 use crate::query::Query;
 use crate::{FromPolar, PolarValue, ToPolar, ToPolarList};
+use crate::OsoError;
 
 /// Oso is the main struct you interact with. It is an instance of the Oso authorization library
 /// and contains the polar language knowledge base and query engine.
@@ -104,10 +105,11 @@ impl Oso {
 
     fn check_inline_queries(&self) -> crate::Result<()> {
         while let Some(q) = self.inner.next_inline_query(false) {
+            let location = q.source_info();
             let query = Query::new(q, self.host.clone());
             match query.collect::<crate::Result<Vec<_>>>() {
                 Ok(v) if !v.is_empty() => continue,
-                Ok(_) => return lazy_error!("inline query result was false"),
+                Ok(_) => return Err(OsoError::InlineQueryFailedError { location }),
                 Err(e) => return lazy_error!("error in inline query: {}", e),
             }
         }
