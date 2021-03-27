@@ -192,6 +192,7 @@ impl Simplifier {
             if alias == self.this_var {
                 return false;
             }
+            assert!(!self.aliases.contains_key(&alias));
             match self.aliases.get(&var) {
                 Some(other) => {
                     if *other == self.this_var {
@@ -257,11 +258,7 @@ impl Simplifier {
     /// Params:
     ///     constraint: The constraint to consider removing from its parent.
     ///     other_variables: Variables referenced in the parent constraint by terms other than `constraint`.
-    fn maybe_bind_constraint(
-        &mut self,
-        constraint: &Operation,
-        other_variables: Vec<Symbol>,
-    ) -> bool {
+    fn maybe_bind_constraint(&mut self, constraint: &Operation) -> bool {
         match constraint.operator {
             // A conjunction of TRUE with X is X, so drop TRUE.
             Operator::And if constraint.args.is_empty() => true,
@@ -290,20 +287,19 @@ impl Simplifier {
                         // Variable(l) = _this.? AND l is referenced in another term
                         // Variable(l) = _this
                         (Value::Variable(l), _) | (Value::RestVariable(l), _)
-                            if self.is_dot_this(right)
-                                && (self.is_this(right) || other_variables.contains(l)) =>
+                            if self.is_dot_this(right) =>
                         {
                             self.bind(l.clone(), right.clone());
-                            true
+                            false
                         }
                         // _this = Variable(r)
                         (_, Value::Variable(r)) | (_, Value::RestVariable(r))
-                            if self.is_dot_this(left)
-                                && (self.is_this(left) || other_variables.contains(r)) =>
+                            if self.is_dot_this(left) =>
                         {
                             self.bind(r.clone(), left.clone());
-                            true
+                            false
                         }
+
                         // If either side is _this or _this.? don't drop the constraint.
                         _ if self.is_dot_this(left) || self.is_dot_this(right) => false,
 
@@ -382,20 +378,11 @@ impl Simplifier {
             // Non-trivial conjunctions. Choose a unification constraint to
             // make a binding from, maybe throw it away, and fold the rest.
             Operator::And if o.args.len() > 1 => {
-                if let Some(i) = o.args.iter().position(|c| {
-                    let op = c.value().as_expression().unwrap();
-                    let variables = o
-                        .args
-                        .iter()
-                        .map(|d| d.value().as_expression().unwrap())
-                        .filter(|inner_op| *inner_op != op)
-                        .map(|t| t.variables())
-                        .fold(vec![], |mut vars, mut op_vars| {
-                            vars.append(&mut op_vars);
-                            vars
-                        });
-                    self.maybe_bind_constraint(op, variables)
-                }) {
+                if let Some(i) = o
+                    .args
+                    .iter()
+                    .position(|c| self.maybe_bind_constraint(c.value().as_expression().unwrap()))
+                {
                     o.args.remove(i);
                 }
                 // fold operation
