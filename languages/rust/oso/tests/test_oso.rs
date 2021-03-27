@@ -1,4 +1,4 @@
-use oso::{Oso, PolarClass};
+use oso::{Action, Oso, PolarClass};
 use std::path::{Path, PathBuf};
 
 mod common;
