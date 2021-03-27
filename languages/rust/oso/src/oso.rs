@@ -25,6 +25,22 @@ impl Default for Oso {
     }
 }
 
+#[derive(Clone, Debug)]
+pub enum Action<T = String> {
+    Any,
+    Typed(T),
+}
+
+impl<T: FromPolar> FromPolar for Action<T> {
+    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+        if matches!(val, PolarValue::Variable(_)) {
+            Ok(Action::Any)
+        } else {
+            T::from_polar(val).map(Action::Typed)
+        }
+    }
+}
+
 impl Oso {
     /// Create a new instance of Oso. Each instance is separate and can have different rules and classes loaded into it.
     pub fn new() -> Self {
@@ -63,14 +79,15 @@ impl Oso {
     }
 
     // Determine the actions actor is allowed to take on resource.
-    pub fn get_allowed_actions<Actor, Resource>(
+    pub fn get_allowed_actions<Actor, Resource, T>(
         &self,
         actor: Actor,
         resource: Resource,
-    ) -> crate::Result<Vec<String>>
+    ) -> crate::Result<Vec<T>>
     where
         Actor: ToPolar,
         Resource: ToPolar,
+        T: FromPolar + Ord,
     {
         let mut query = self
             .query_rule(
@@ -79,21 +96,20 @@ impl Oso {
             )
             .unwrap();
 
-        let mut set: BTreeSet<String> = BTreeSet::new();
+        let mut set: BTreeSet<T> = BTreeSet::new();
         loop {
             match query.next() {
-                // XXX: is there a better way to dig out the action string itself? lots of nested wrapping here.
                 Some(Ok(result)) => {
-                    let action = result.get("action").map(String::from_polar).unwrap()?;
-                    set.insert(action);
+                    if let Some(action) = result.get("action") {
+                        set.insert(T::from_polar(action).unwrap());
+                    }
                 }
-                // XXX: ok to just skip errors here?
                 Some(Err(_)) => continue,
                 None => break,
             };
         }
 
-        Ok(set.into_iter().collect::<Vec<String>>())
+        Ok(set.into_iter().collect::<Vec<T>>())
     }
 
     /// Clear out all files and rules that have been loaded.
