@@ -191,6 +191,16 @@ pub fn many_rules(c: &mut Criterion) {
     });
 }
 
+fn parser(c: &mut Criterion) {
+    let policy = include_str!("roles_policy.polar");
+    c.bench_function("parse_policy", |b| {
+        b.iter(|| {
+            let polar = Polar::new();
+            polar.load_str(policy).unwrap()
+        })
+    });
+}
+
 criterion_group!(
     benches,
     simple_queries,
@@ -199,6 +209,7 @@ criterion_group!(
     prime,
     indexed_rules,
     not,
+    parser,
 );
 criterion_main!(benches);
 
