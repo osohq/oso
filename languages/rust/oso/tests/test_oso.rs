@@ -178,9 +178,9 @@ fn test_get_allowed_actions() -> oso::Result<()> {
     let actions: HashSet<String> = oso.get_allowed_actions(actor, resource)?;
 
     assert!(actions.len() == 3);
-    assert!(actions.contains(&"CREATE".to_string()));
-    assert!(actions.contains(&"READ".to_string()));
-    assert!(actions.contains(&"get".to_string()));
+    assert!(actions.contains("CREATE"));
+    assert!(actions.contains("READ"));
+    assert!(actions.contains("get"));
 
     let actor = Actor::new(String::from("fred"));
     let resource = Widget::new(2);
