@@ -85,7 +85,7 @@ impl Oso {
         &self,
         actor: Actor,
         resource: Resource,
-    ) -> crate::Result<Vec<T>>
+    ) -> crate::Result<HashSet<T>>
     where
         Actor: ToPolar,
         Resource: ToPolar,
@@ -111,7 +111,8 @@ impl Oso {
             };
         }
 
-        Ok(set.into_iter().collect::<Vec<T>>())
+        // Ok(set.into_iter().collect::<Vec<T>>())
+        Ok(set)
     }
 
     /// Clear out all files and rules that have been loaded.

@@ -1,4 +1,5 @@
 use oso::{Action, Oso, PolarClass};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 mod common;
@@ -165,12 +166,21 @@ fn test_get_allowed_actions() -> oso::Result<()> {
 
     let actor = Actor::new(String::from("sally"));
     let resource = Widget::new(1);
-    let actions: Vec<String> = oso.get_allowed_actions(actor, resource)?;
+    let actions: HashSet<Action> = oso.get_allowed_actions(actor, resource)?;
 
     assert!(actions.len() == 3);
-    assert!(actions.iter().any(|e| e == "CREATE"));
-    assert!(actions.iter().any(|e| e == "READ"));
-    assert!(actions.iter().any(|e| e == "get"));
+    assert!(actions.contains(&Action::Typed("CREATE".to_string())));
+    assert!(actions.contains(&Action::Typed("READ".to_string())));
+    assert!(actions.contains(&Action::Typed("get".to_string())));
+
+    let actor = Actor::new(String::from("sally"));
+    let resource = Widget::new(1);
+    let actions: HashSet<String> = oso.get_allowed_actions(actor, resource)?;
+
+    assert!(actions.len() == 3);
+    assert!(actions.contains(&"CREATE".to_string()));
+    assert!(actions.contains(&"READ".to_string()));
+    assert!(actions.contains(&"get".to_string()));
 
     Ok(())
 }
