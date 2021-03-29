@@ -182,5 +182,15 @@ fn test_get_allowed_actions() -> oso::Result<()> {
     assert!(actions.contains(&"READ".to_string()));
     assert!(actions.contains(&"get".to_string()));
 
+    let actor = Actor::new(String::from("fred"));
+    let resource = Widget::new(2);
+    let actions: HashSet<i32> = oso.get_allowed_actions(actor, resource)?;
+
+    assert!(actions.len() == 4);
+    assert!(actions.contains(&1));
+    assert!(actions.contains(&2));
+    assert!(actions.contains(&3));
+    assert!(actions.contains(&4));
+
     Ok(())
 }
