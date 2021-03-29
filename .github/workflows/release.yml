@@ -175,7 +175,7 @@ jobs:
           mkdir -p languages/go/native
           cp -r oso_static_library/polar.h languages/go/internal/ffi/native/polar.h
           mkdir -p languages/go/native/linux
-          cp -r oso_static_library/libpolar-Linux.a languages/go/internal/ffi/native/linux/libpolar.a
+          cp -r oso_static_library/libpolar-musl.a languages/go/internal/ffi/native/linux/libpolar.a
           mkdir -p languages/go/native/macos
           cp -r oso_static_library/libpolar-macOS.a languages/go/internal/ffi/native/macos/libpolar.a
           mkdir -p languages/go/native/windows
@@ -480,6 +480,10 @@ jobs:
         run: |
           go build
           go test -v ./tests/
+        working-directory: go
+      - name: "test musl"
+        if: runner.os == 'Linux'
+        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:1.15-alpine /bin/sh -c 'cd /oso && go build && go test -v ./tests/'
         working-directory: go
 
   validate_python_linux:
