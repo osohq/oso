@@ -189,10 +189,9 @@ impl Simplifier {
             if alias == var {
                 return true;
             }
-            if alias == self.this_var {
+            if alias == self.this_var || self.aliases.contains_key(&alias) {
                 return false;
             }
-            assert!(!self.aliases.contains_key(&alias));
             match self.aliases.get(&var) {
                 Some(other) => {
                     if *other == self.this_var {
@@ -378,13 +377,20 @@ impl Simplifier {
             // Non-trivial conjunctions. Choose a unification constraint to
             // make a binding from, maybe throw it away, and fold the rest.
             Operator::And if o.args.len() > 1 => {
-                if let Some(i) = o
+                if self.alias_scanning {
+                    o.args.retain(|c| {
+                        !self.maybe_bind_constraint(c.value().as_expression().unwrap())
+                    });
+                } else if let Some(i) = o
                     .args
                     .iter()
-                    .position(|c| self.maybe_bind_constraint(c.value().as_expression().unwrap()))
+                    .position(|c| {
+                        self.maybe_bind_constraint(c.value().as_expression().unwrap())
+                    })
                 {
                     o.args.remove(i);
                 }
+
                 // fold operation
                 for arg in &mut o.args {
                     self.simplify_term(arg);
