@@ -2,8 +2,9 @@
 
 use polar_core::terms::{Call, Symbol, Term, Value};
 
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 use std::fs::File;
+use std::hash::Hash;
 use std::io::Read;
 use std::sync::Arc;
 
@@ -26,7 +27,7 @@ impl Default for Oso {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Action<T = String> {
     Any,
     Typed(T),
@@ -88,7 +89,7 @@ impl Oso {
     where
         Actor: ToPolar,
         Resource: ToPolar,
-        T: FromPolar + Ord,
+        T: FromPolar + Eq + Hash,
     {
         let mut query = self
             .query_rule(
@@ -97,7 +98,7 @@ impl Oso {
             )
             .unwrap();
 
-        let mut set: BTreeSet<T> = BTreeSet::new();
+        let mut set = HashSet::new();
         loop {
             match query.next() {
                 Some(Ok(result)) => {
