@@ -236,33 +236,9 @@ func (q Query) handleExternalOp(event types.QueryEventExternalOp) error {
 	if len(event.Args) != 2 {
 		return fmt.Errorf("Unexpected number of arguments for operation: %v", len(event.Args))
 	}
-	left, err := q.host.ToGo(event.Args[0])
+	answer, err := q.host.Compare(event.Args[0], event.Args[1], event.Operator.OperatorVariant)
 	if err != nil {
 		return err
-	}
-	right, err := q.host.ToGo(event.Args[1])
-	if err != nil {
-		return err
-	}
-	var answer bool
-	leftCmp := left.(interfaces.Comparer)
-	rightCmp := right.(interfaces.Comparer)
-	// @TODO: Where are the implementations for these for builtin stuff (numbers mainly)
-	switch event.Operator.OperatorVariant.(type) {
-	case OperatorLt:
-		answer = leftCmp.Lt(rightCmp)
-	case OperatorLeq:
-		answer = leftCmp.Lt(rightCmp) || leftCmp.Equal(rightCmp)
-	case OperatorGt:
-		answer = rightCmp.Lt(leftCmp)
-	case OperatorGeq:
-		answer = !leftCmp.Lt(rightCmp)
-	case OperatorEq:
-		answer = leftCmp.Equal(rightCmp)
-	case OperatorNeq:
-		answer = !leftCmp.Equal(rightCmp)
-	default:
-		return fmt.Errorf("Unsupported operation: %v", event.Operator.OperatorVariant)
 	}
 	return q.ffiQuery.QuestionResult(event.CallId, answer)
 }

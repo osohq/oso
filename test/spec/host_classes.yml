@@ -47,10 +47,10 @@ cases:
 
   # methods returning iterators and generators
   - description: can call methods with (empty) iterators
-    query: x in MethodVariants.New().GetEmptyIter()
+    query: x in new MethodVariants().GetEmptyIter()
     result: []
   - description: can call methods with iterators
-    query: x in MethodVariants.New().GetIter()
+    query: x in new MethodVariants().GetIter()
     result: [{x: 1},{x: 2},{x: 3}]
   # - description: can call methods with generators
   #   query: x in new MethodVariants().GetGenerator()

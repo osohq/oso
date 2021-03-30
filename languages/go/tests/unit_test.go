@@ -227,3 +227,54 @@ func TestExpressionError(t *testing.T) {
 		t.Error("Does not contain unbound in error message.")
 	}
 }
+
+type PermissionLib struct {
+	Visibility Visibility
+}
+
+type Visibility string
+
+func (left Visibility) Equal(right interface{}) bool {
+	if other, ok := right.(Visibility); ok {
+		return left == other
+	} else {
+		return false
+	}
+}
+
+func NewVisiblity(name string) Visibility {
+	return VisibilityGlobal
+}
+
+const (
+	VisibilityTeam    Visibility = "TEAM"
+	VisibilityCompany Visibility = "COMPANY"
+	VisibilityGlobal  Visibility = "GLOBAL"
+)
+
+func TestComparisons(t *testing.T) {
+	var o oso.Oso
+	var err error
+
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	o.RegisterClass(reflect.TypeOf(VisibilityGlobal), NewVisiblity)
+	o.RegisterClass(reflect.TypeOf(PermissionLib{}), nil)
+	o.RegisterConstant(VisibilityTeam, "VisibilityTeam")
+	o.RegisterConstant(VisibilityCompany, "VisibilityCompany")
+	o.RegisterConstant(VisibilityGlobal, "VisibilityGlobal")
+
+	if o.LoadString(`
+		allow(user, "read", permission: PermissionLib { Visibility: VisibiltiyGlobal});
+	`) != nil {
+		t.Fatalf("Load string failed: %v", err)
+	}
+
+	if a, e := o.IsAllowed("user", "read", PermissionLib{Visibility("GLOBAL")}); e != nil {
+		t.Error(e.Error())
+	} else if !a {
+		t.Error("IsAllowed returned false, expected true")
+	}
+}

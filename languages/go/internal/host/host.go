@@ -189,12 +189,80 @@ func (h Host) Unify(leftID uint64, rightID uint64) (bool, error) {
 	if err2 != nil {
 		return false, err2
 	}
-	if leftEq, ok := left.Interface().(interfaces.Comparer); ok {
-		if rightEq, ok := right.Interface().(interfaces.Comparer); ok {
-			return leftEq.Equal(rightEq), nil
+	if leftEq, ok := left.Interface().(interfaces.Eq); ok {
+		return leftEq.Equal(right.Interface()), nil
+	} else {
+		if rightEq, ok := right.Interface().(interfaces.Eq); ok {
+			return rightEq.Equal(left.Interface()), nil
+		} else {
+			return reflect.DeepEqual(left, right), nil
 		}
 	}
-	return reflect.DeepEqual(left, right), nil
+}
+
+func (h Host) Compare(leftTerm types.Term, rightTerm types.Term, operator types.OperatorVariant) (bool, error) {
+	left, err := h.ToGo(leftTerm)
+	if err != nil {
+		return false, err
+	}
+	right, err := h.ToGo(rightTerm)
+	if err != nil {
+		return false, err
+	}
+
+	if leftEq, ok := left.(interfaces.Eq); ok {
+		switch operator.(type) {
+		case OperatorEq:
+			return leftEq.Equal(right), nil
+		case OperatorNeq:
+			return !leftEq.Equal(right), nil
+		default:
+		}
+	}
+
+	if rightEq, ok := right.(interfaces.Eq); ok {
+		switch operator.(type) {
+		case OperatorEq:
+			return rightEq.Equal(left), nil
+		case OperatorNeq:
+			return !rightEq.Equal(left), nil
+		default:
+		}
+	}
+	var answer interfaces.Ordering
+	if leftOrd, ok1 := left.(interfaces.Ord); ok1 {
+		answer = leftOrd.Compare(right)
+	} else {
+		if rightOrd, ok2 := right.(interfaces.Ord); ok2 {
+			answer = rightOrd.Compare(left).Reverse()
+		} else {
+			switch operator.(type) {
+			case OperatorEq:
+				return reflect.DeepEqual(left, right), nil
+			case OperatorNeq:
+				return !reflect.DeepEqual(left, right), nil
+			default:
+				return false, fmt.Errorf("unsupported operation: %v", operator)
+			}
+		}
+	}
+
+	switch operator.(type) {
+	case OperatorLt:
+		return answer == interfaces.Less, nil
+	case OperatorLeq:
+		return answer != interfaces.Greater, nil
+	case OperatorGt:
+		return answer == interfaces.Greater, nil
+	case OperatorGeq:
+		return answer != interfaces.Less, nil
+	case OperatorEq:
+		return answer == interfaces.Equal, nil
+	case OperatorNeq:
+		return answer != interfaces.Equal, nil
+	default:
+		return false, fmt.Errorf("unsupported operation: %v", operator)
+	}
 }
 
 func (h Host) Isa(value types.Term, classTag string) (bool, error) {

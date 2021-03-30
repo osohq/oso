@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/osohq/go-oso/interfaces"
+	interfaces "github.com/osohq/go-oso/interfaces"
 	"github.com/osohq/go-oso/internal/host"
 	. "github.com/osohq/go-oso/types"
 
@@ -29,15 +29,11 @@ func (u UnitClass) String() string {
 	return "UnitClass"
 }
 
-func (u UnitClass) New() UnitClass {
-	return UnitClass{}
-}
-
 type IterableClass struct {
 	Elems []int
 }
 
-func (ic IterableClass) New(elems []int) IterableClass {
+func NewIterableClass(elems []int) IterableClass {
 	return IterableClass{Elems: elems}
 }
 
@@ -117,7 +113,7 @@ func (c Constructor) NumKwargs() int {
 type MethodVariants struct {
 }
 
-func (u MethodVariants) New() MethodVariants {
+func NewMethodVariants() MethodVariants {
 	return MethodVariants{}
 }
 
@@ -166,7 +162,7 @@ type ImplementsEq struct {
 	Val int
 }
 
-func (u ImplementsEq) New(val int) ImplementsEq {
+func NewImplementsEq(val int) ImplementsEq {
 	return ImplementsEq{Val: val}
 }
 
@@ -174,18 +170,20 @@ func (u ImplementsEq) String() string {
 	return fmt.Sprintf("ImplementsEq { %v }", u.Val)
 }
 
-func (left ImplementsEq) Equal(right interfaces.Comparer) bool {
-	return left.Val == right.(ImplementsEq).Val
-}
-func (left ImplementsEq) Lt(right interfaces.Comparer) bool {
-	panic("unsupported")
+func (left ImplementsEq) Equal(right interface{}) bool {
+	if right, ok := right.(ImplementsEq); ok {
+		return left.Val == right.Val
+	} else {
+		fmt.Printf("Incomparable: %v vs %v", left, right)
+		return false
+	}
 }
 
 type Comparable struct {
 	Val int
 }
 
-func (u Comparable) New(val int) Comparable {
+func NewComparable(val int) Comparable {
 	return Comparable{Val: val}
 }
 
@@ -193,16 +191,22 @@ func (u Comparable) String() string {
 	return fmt.Sprintf("Comparable { %v }", u.Val)
 }
 
-func (a Comparable) Equal(b interfaces.Comparer) bool {
+func (a Comparable) Equal(b interface{}) bool {
 	if other, ok := b.(Comparable); ok {
 		return a.Val == other.Val
 	}
 	panic(fmt.Sprintf("cannot compare Comparable with %v", b))
 }
 
-func (a Comparable) Lt(b interfaces.Comparer) bool {
+func (a Comparable) Compare(b interface{}) interfaces.Ordering {
 	if other, ok := b.(Comparable); ok {
-		return a.Val < other.Val
+		if a.Val < other.Val {
+			return interfaces.Less
+		}
+		if a.Val > other.Val {
+			return interfaces.Greater
+		}
+		return interfaces.Equal
 	}
 	panic(fmt.Sprintf("cannot compare Comparable with %v", b))
 }
@@ -393,8 +397,12 @@ func String(s string) *string {
 
 func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
 	var CONSTRUCTORS = map[string]interface{}{
-		"UnitClass":    NewUnitClass,
-		"ValueFactory": NewValueFactory,
+		"UnitClass":      NewUnitClass,
+		"ValueFactory":   NewValueFactory,
+		"ImplementsEq":   NewImplementsEq,
+		"Comparable":     NewComparable,
+		"IterableClass":  NewIterableClass,
+		"MethodVariants": NewMethodVariants,
 	}
 	for k, v := range CLASSES {
 		c := CONSTRUCTORS[k]
