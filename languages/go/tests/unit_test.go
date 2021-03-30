@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	uuid "github.com/google/uuid"
 	oso "github.com/osohq/go-oso"
 	. "github.com/osohq/go-oso/types"
 )
@@ -252,6 +253,8 @@ const (
 	VisibilityGlobal  Visibility = "GLOBAL"
 )
 
+type MyUUID uuid.UUID
+
 func TestComparisons(t *testing.T) {
 	var o oso.Oso
 	var err error
@@ -265,14 +268,24 @@ func TestComparisons(t *testing.T) {
 	o.RegisterConstant(VisibilityTeam, "VisibilityTeam")
 	o.RegisterConstant(VisibilityCompany, "VisibilityCompany")
 	o.RegisterConstant(VisibilityGlobal, "VisibilityGlobal")
+	o.RegisterClass(reflect.TypeOf(MyUUID{}), nil)
+	o.RegisterConstant(MyUUID(uuid.Nil), "NilUUID")
 
 	if o.LoadString(`
-		allow(user, "read", permission: PermissionLib { Visibility: VisibiltiyGlobal});
+		allow(_user, "read", permission: PermissionLib) if
+			permission.Visibility = VisibilityGlobal;
+		allow(_user, "delete", s) if not s = NilUUID;
 	`) != nil {
 		t.Fatalf("Load string failed: %v", err)
 	}
 
 	if a, e := o.IsAllowed("user", "read", PermissionLib{Visibility("GLOBAL")}); e != nil {
+		t.Error(e.Error())
+	} else if !a {
+		t.Error("IsAllowed returned false, expected true")
+	}
+
+	if a, e := o.IsAllowed("user", "delete", MyUUID(uuid.New())); e != nil {
 		t.Error(e.Error())
 	} else if !a {
 		t.Error("IsAllowed returned false, expected true")

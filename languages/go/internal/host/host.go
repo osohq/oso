@@ -365,6 +365,21 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		}
 		return h.ToPolar(rtDeref.Interface())
 	}
+	for name, cls := range h.classes {
+		if reflect.TypeOf(v) == cls {
+			instanceID, err := h.cacheInstance(v, nil)
+			if err != nil {
+				return nil, err
+			}
+			repr := fmt.Sprintf("%s{%v}", name, v)
+			inner := ValueExternalInstance{
+				InstanceId:  *instanceID,
+				Constructor: nil,
+				Repr:        &repr,
+			}
+			return &Value{inner}, nil
+		}
+	}
 
 	switch rt.Kind() {
 	case reflect.Slice, reflect.Array:
@@ -399,7 +414,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		repr := fmt.Sprintf("%v", v)
+		repr := fmt.Sprintf("%s{%v}", reflect.TypeOf(v).Name(), v)
 		inner := ValueExternalInstance{
 			InstanceId:  *instanceID,
 			Constructor: nil,
