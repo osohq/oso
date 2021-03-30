@@ -117,9 +117,10 @@ func (p Polar) queryStr(query string) (*Query, error) {
 }
 
 func (p Polar) queryRule(name string, args ...interface{}) (*Query, error) {
+	host := p.host.Copy()
 	polarArgs := make([]Term, len(args))
 	for idx, arg := range args {
-		converted, err := p.host.ToPolar(arg)
+		converted, err := host.ToPolar(arg)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +135,7 @@ func (p Polar) queryRule(name string, args ...interface{}) (*Query, error) {
 	if err != nil {
 		return nil, err
 	}
-	newQuery := newQuery(*ffiQuery, p.host.Copy())
+	newQuery := newQuery(*ffiQuery, host)
 	return &newQuery, nil
 }
 
