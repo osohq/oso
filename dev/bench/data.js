@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1617050501894,
+  "lastUpdate": 1617198395146,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -35205,6 +35205,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 8994,
             "range": "± 155",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dfb2222bad002ea95ac18465f42460345b9774a4",
+          "message": "Copy host _before_ constructing Polar terms. (#812)\n\nThis was preventing the main Oso instance from being threadsafe,\r\nand causing runtime panics due to concurrent map reads.\r\n\r\nThis was also probably leaking memory, since every query to IsAllowed\r\nwould be creating new entries in the shared instance of Oso.\r\n\r\nI don't know how to write a test to catch this behaviour in\r\na non-flaky way.\r\n\r\nI had something like this:\r\n\r\n```go\r\ntype Sleeper struct{}\r\n\r\nfunc (s *Sleeper) sleep() bool {\r\n\ttime.Sleep(20 * time.Millisecond)\r\n\treturn true\r\n}\r\n\r\nfunc TestParallelism(t *testing.T) {\r\n\to, _ := oso.NewOso()\r\n\to.RegisterClass(reflect.TypeOf(Sleeper{}), nil)\r\n\to.LoadString(`\r\n\t\tallow(_, _, _) if Sleeper.sleep();\r\n\t`)\r\n\tchecks := make([]bool, 100)\r\n\tfor idx := range checks {\r\n\t\tgo func() {\r\n\t\t\tchecks[idx], _ = o.IsAllowed(nil, nil, nil)\r\n\t\t}()\r\n\t}\r\n}\r\n```\r\n\r\n* Add changelog entry.\r\n\r\nCo-authored-by: Stephen Olsen <dev@steve.computer>",
+          "timestamp": "2021-03-31T09:37:22-04:00",
+          "tree_id": "81dff7dbcf5a5c56c55c18e6575145c1aa5d4ed7",
+          "url": "https://github.com/osohq/oso/commit/dfb2222bad002ea95ac18465f42460345b9774a4"
+        },
+        "date": 1617198392324,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 44372,
+            "range": "± 1601",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 1698177,
+            "range": "± 14599",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 8243314,
+            "range": "± 89223",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 16379745,
+            "range": "± 36206",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 728,
+            "range": "± 19",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2367,
+            "range": "± 41",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 57787,
+            "range": "± 1188",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 436408,
+            "range": "± 12706",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 17037,
+            "range": "± 488",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17017,
+            "range": "± 492",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 19280,
+            "range": "± 607",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 19242,
+            "range": "± 615",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 17486,
+            "range": "± 518",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 4670,
+            "range": "± 443",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 5572,
+            "range": "± 1754",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 6932,
+            "range": "± 133",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 16500,
+            "range": "± 2665",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 5075,
+            "range": "± 74",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 11363,
+            "range": "± 154",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 6769,
+            "range": "± 145",
             "unit": "ns/iter"
           }
         ]
