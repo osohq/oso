@@ -122,7 +122,7 @@ impl Oso {
                         set.insert(T::from_polar(action)?);
                     }
                 }
-                Some(Err(_)) => continue,
+                Some(Err(e)) => return Err(e),
                 None => break,
             };
         }
