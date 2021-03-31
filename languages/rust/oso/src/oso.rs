@@ -119,7 +119,7 @@ impl Oso {
             match query.next() {
                 Some(Ok(result)) => {
                     if let Some(action) = result.get("action") {
-                        set.insert(T::from_polar(action).unwrap());
+                        set.insert(T::from_polar(action)?);
                     }
                 }
                 Some(Err(_)) => continue,
