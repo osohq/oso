@@ -4,48 +4,160 @@ from oso import Oso, polar_class, Roles
 from polar import exceptions
 
 
-class Actor:
+class User:
     name: str = ""
 
     def __init__(self, name=""):
         self.name = name
 
+class Organization:
+    id: str = ""
 
-class Widget:
+    def __init__(self, id):
+        self.id = id
+
+class Repository:
     id: str = ""
     public: bool
+    org: Organization
 
-    def __init__(self, id, public=False):
+    def __init__(self, id, org, public=False):
         self.id = id
         self.public = public
+        self.org = org
 
+class Issue:
+    id: str = ""
+    public: bool
+    repo: Repository
+
+    def __init__(self, id, repo, public=False):
+        self.id = id
+        self.public = public
+        self.repo = repo
 
 @pytest.fixture
 def test_roles():
     oso = Oso()
-    oso.register_class(Actor, name="Actor")
-    oso.register_class(Widget, name="Widget")
+    oso.register_class(User)
+    oso.register_class(Repository)
+    oso.register_class(Organization)
 
     ## ROLE DEFINITION
 
     # does the user need to be a Python class?
     # probably want to support dicts and strings/ints for users and resources
     # if we do that need to figure out how to make the "id" fields default to the object itself
-    oso.create_roles(
-        user=Actor,
-        user_id="name",
-        roles=["ADMIN", "USER"],
-        # exclusive=True,
-        # inherits=[("Admin", "User")],
-    )
-    oso.create_roles(user=Actor, resource=Widget, resource_id="id", roles=["OWNER"])
+    # oso.create_roles(
+    #     user=Actor,
+    #     user_id="name",
+    #     roles=["ADMIN", "USER"],
+    #     # exclusive=True,
+    #     # inherits=[("Admin", "User")],
+    # )
+    # oso.create_roles(user=Actor, resource=Widget, resource_id="id", roles=["OWNER"])
     # role constraints?
 
-    # Permissions
+
+
+    # REPOSITORY PERMISSION
+    # permission: (action, resource)
+    # where top-level resource is always a tenant
+
+    # Repo permission definitions
+    oso.create_permission_set(resource_type=Repository, actions=["read", "write", "list_issues"])
+
+    # Issue permissions
+    oso.create_permission_set(resource_type=Issue, actions=["read", "write"])
+
+    # Issue relationship
+    oso.add_parent_relationship(name="issue_repo", child=Issue, parent=Repository, get=lambda child: child.repo)
+
+    # Repo roles
+    ## role definition
+    oso.create_role(resource_type=Repository, name="READ")
+    oso.create_role(resource_type=Repository, name="WRITE")
+
+    ## permission assignment
+    oso.add_role_permission(resource_type=Repository, name="READ", permission={"action": "read", "resource": Repository})
+    oso.add_role_permission(resource_type=Repository, name="READ", permission={"action": "list_issues", "resource": Repository})
+    oso.add_role_permission(resource_type=Repository, name="READ", permission={"action": "read", "resource": Issue}, relationship="issue_repo")
+
+    oso.add_role_permission(resource_type=Repository, name="WRITE", permission={"action": "write", "resource": Repository})
+
+    ## role inheritance
+    oso.role_implies(role={"role": "WRITE", "resource_type": Repository}, implies={"role": "READ", "resource_type": Repository})
+
+    # Organization permission definitions
+    oso.create_permission_set(resource_type=Organization, actions=["read", "create_repo", "list_roles", "list_repos"])
+
+    ## role definition
+    oso.create_role(resource_type=Organization, name="OWNER")
+    oso.create_role(resource_type=Organization, name="MEMBER")
+
+    ## permission assignment
+    oso.add_role_permission(resource_type=Organization, name="MEMBER", permission={"action": "read", "resource": Organization})
+    oso.add_role_permission(resource_type=Organization, name="MEMBER", permission={"action": "list_repos", "resource": Organization})
+    oso.add_role_permission(resource_type=Organization, name="MEMBER", permission={"action": "create_repo", "resource": Organization})
+
+    oso.add_role_permission(resource_type=Organization, name="OWNER", permission={"action": "list_roles", "resource": Organization})
+
+    ## implied roles within a single resource type
+    oso.role_implies(role={"role": "OWNER", "resource_type": Organization}, implies={"role": "MEMBER", "resource_type": Organization})
+
+
+    # Resource relationships
+
+    # This still only works in Python (not super clear how to abstract across API)
+    oso.add_parent_relationship(name="repo_org", child=Repository, parent=Organization, get=lambda child: child.org)
+
+    # implied roles across resource types
+    ## if you are an org owner, you are an admin in every repo of the org
+    ## need a relationship if the resource types don't match
+    oso.role_implies(role={"role": "OWNER", "resource_type": Organization}, implies={"role": "ADMIN", "resource_type": Repository}, relationship="repo_org")
+
+
+    # Evaluating permissions
+
+    polar="""
+    allow(user, action, resource) if
+        Roles.role_allows(user, action, resource);
+
+    allow(user, action, repo: Repository) if
+        repo.public and
+        Roles.role_allows(user, action, resource) and cut;
+
+    """
+
+
+    # NOTES
+    ########
+    # problems with above
+    # - hard to understand the relationships between everything because it's flat
+    # - very redundant
+    # - easy to make a typo/mistake because everything is a string
+
+    # open questions
+    # - how do we handle public/private? For simple stuff like that it would be really useful to add conditions on role-permission assignments
+    #       - could also use deny logic in the policy or check role permissions in the policy so you can add a condition
+    # - role constraints? mutually exclusive? How do we deal with this?
+    #       - roles that are hierarchical are probably also mutually exclusive
+    #       - use cases that only have global roles might not want mutually exclusive roles
+
+
+
+
+
+
+
+
+
     # TODO:
-    # - define API for creating, adding/removing permissions to roles
-    # - think through UX for devs and what features this supports in the frontend
-    # - how do dynamic permissions get evaluated with `is_allowed?`
+    # -[x] define API for creating roles
+    # -[x] define API for creating, adding/removing permissions to roles
+    # -[x] define API for defing resource relationships
+    # -[] think through UX for devs and what features this supports in the frontend
+    # -[] how do dynamic permissions get evaluated with `is_allowed?`
 
     ### BRAINSTORMING
 
