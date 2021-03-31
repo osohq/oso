@@ -80,7 +80,19 @@ impl Oso {
         }
     }
 
-    // Determine the actions actor is allowed to take on resource.
+    /// Get the actions actor is allowed to take on resource.
+    /// Returns a [std::collections::HashSet] of actions, typed according the return value.
+    /// # Examples
+    /// ```ignore
+    /// oso.load_str(r#"allow(actor: Actor{name: "sally"}, action, resource: Widget{id: 1}) if
+    ///               action in ["CREATE", "READ"];"#);
+    ///
+    /// // get a HashSet of oso::Actions
+    /// let actions: HashSet<Action> = oso.get_allowed_actions(actor, resource)?;
+    ///
+    /// // or Strings
+    /// let actions: HashSet<String> = oso.get_allowed_actions(actor, resource)?;
+    /// ```
     pub fn get_allowed_actions<Actor, Resource, T>(
         &self,
         actor: Actor,
