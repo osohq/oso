@@ -20,9 +20,3 @@ allow(actor: Actor, "frob", resource: Company) if
 
 allow(actor: Actor, "list", Company) if
    actor.name = "auditor";
-
-allow(actor: Actor{name: "sally"}, action, resource: Widget{id: 1}) if
-    action in ["CREATE", "READ"];
-
-allow(actor: Actor{name: "fred"}, action, resource: Widget{id: 2}) if
-    action in [1, 2, 3, 4];
