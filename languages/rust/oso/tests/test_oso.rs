@@ -162,25 +162,36 @@ fn test_allow_model() -> oso::Result<()> {
 #[test]
 fn test_get_allowed_actions() -> oso::Result<()> {
     common::setup();
-    let oso = test_oso();
+    let mut oso = Oso::new();
+
+    oso.register_class(Actor::get_polar_class()).unwrap();
+    oso.register_class(Widget::get_polar_class()).unwrap();
+
+    oso.load_str(
+        r#"allow(actor: Actor{name: "sally"}, action, resource: Widget{id: 1}) if
+           action in ["CREATE", "READ"];"#,
+    )?;
 
     let actor = Actor::new(String::from("sally"));
     let resource = Widget::new(1);
     let actions: HashSet<Action> = oso.get_allowed_actions(actor, resource)?;
 
-    assert!(actions.len() == 3);
+    assert!(actions.len() == 2);
     assert!(actions.contains(&Action::Typed("CREATE".to_string())));
     assert!(actions.contains(&Action::Typed("READ".to_string())));
-    assert!(actions.contains(&Action::Typed("get".to_string())));
 
     let actor = Actor::new(String::from("sally"));
     let resource = Widget::new(1);
     let actions: HashSet<String> = oso.get_allowed_actions(actor, resource)?;
 
-    assert!(actions.len() == 3);
+    assert!(actions.len() == 2);
     assert!(actions.contains("CREATE"));
     assert!(actions.contains("READ"));
-    assert!(actions.contains("get"));
+
+    oso.load_str(
+        r#"allow(actor: Actor{name: "fred"}, action, resource: Widget{id: 2}) if
+           action in [1, 2, 3, 4];"#,
+    )?;
 
     let actor = Actor::new(String::from("fred"));
     let resource = Widget::new(2);
