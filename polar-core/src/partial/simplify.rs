@@ -2,9 +2,16 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::bindings::Bindings;
 use crate::folder::{fold_term, Folder};
+use crate::formatting::ToPolarString;
 use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
 
 use super::partial::{invert_operation, FALSE, TRUE};
+
+enum MaybeDrop {
+    Keep,
+    Drop,
+    Check(Symbol, Term),
+}
 
 struct VariableSubber {
     this_var: Symbol,
@@ -165,13 +172,9 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     }
 }
 
-type Aliases = HashMap<Symbol, Symbol>;
-
 pub struct Simplifier {
     this_var: Symbol,
     bindings: Bindings,
-    aliases: Aliases,
-    alias_scanning: bool,
 }
 
 impl Simplifier {
@@ -179,54 +182,27 @@ impl Simplifier {
         Self {
             this_var,
             bindings: Bindings::new(),
-            aliases: Aliases::new(),
-            alias_scanning: false,
-        }
-    }
-
-    fn alias(&mut self, alias: Symbol, mut var: Symbol) -> bool {
-        loop {
-            if alias == var {
-                return true;
-            }
-            if alias == self.this_var || self.aliases.contains_key(&alias) {
-                return false;
-            }
-            match self.aliases.get(&var) {
-                Some(other) => {
-                    if *other == self.this_var {
-                        return false;
-                    }
-                    var = other.clone();
-                }
-                None => {
-                    self.aliases.insert(alias, var);
-                    return true;
-                }
-            }
         }
     }
 
     pub fn bind(&mut self, var: Symbol, value: Term) {
         let new_value = self.deref(&value);
         if self.is_bound(&var) {
-            let current_value = self.deref(&term!(var.clone()));
+            let current_value = self.deref(&term!(var));
             if current_value.is_ground() && new_value.is_ground() {
                 assert_eq!(&current_value, &new_value);
+            } else if let Ok(var) = current_value.value().as_symbol() {
+                self.bind(var.clone(), new_value);
             }
+        } else {
+            self.bindings.insert(var, new_value);
         }
-
-        self.bindings.insert(var, new_value);
     }
 
     pub fn deref(&self, term: &Term) -> Term {
         match term.value() {
             Value::Variable(var) | Value::RestVariable(var) => {
-                if let Some(var) = self.aliases.get(var) {
-                    term!(var.clone())
-                } else {
-                    self.bindings.get(var).unwrap_or(term).clone()
-                }
+                self.bindings.get(var).unwrap_or(term).clone()
             }
             _ => term.clone(),
         }
@@ -256,74 +232,33 @@ impl Simplifier {
     ///
     /// Params:
     ///     constraint: The constraint to consider removing from its parent.
-    ///     other_variables: Variables referenced in the parent constraint by terms other than `constraint`.
-    fn maybe_bind_constraint(&mut self, constraint: &Operation) -> bool {
+    fn maybe_bind_constraint(&mut self, constraint: &Operation) -> MaybeDrop {
         match constraint.operator {
-            // A conjunction of TRUE with X is X, so drop TRUE.
-            Operator::And if constraint.args.is_empty() => true,
+            // X and X is always true, so drop.
+            Operator::And if constraint.args.is_empty() => MaybeDrop::Drop,
 
             // Choose a unification to maybe drop.
             Operator::Unify | Operator::Eq => {
                 let left = &constraint.args[0];
                 let right = &constraint.args[1];
 
-                // Drop if the sides are exactly equal.
-                left == right
-                    // Or...
-                    || match (left.value(), right.value()) {
-                        // Alias scanning.
-                        (Value::Variable(l), Value::Variable(r))
-                        | (Value::Variable(l), Value::RestVariable(r))
-                        | (Value::RestVariable(l), Value::Variable(r))
-                        | (Value::RestVariable(l), Value::RestVariable(r))
-                            if self.alias_scanning =>
-                        {
-                            self.alias(l.clone(), r.clone())
+                if left == right {
+                    // The sides are exactly equal, so drop.
+                    MaybeDrop::Drop
+                } else {
+                    // Maybe bind one side to the other.
+                    match (left.value(), right.value()) {
+                        (Value::Variable(l), _) | (Value::RestVariable(l), _) if !self.is_bound(l) => {
+                            MaybeDrop::Check(l.clone(), right.clone())
                         }
-                        _ if self.alias_scanning => false,
-
-                        // Bind l to _this or _this.? if:
-                        // Variable(l) = _this.? AND l is referenced in another term
-                        // Variable(l) = _this
-                        (Value::Variable(l), _) | (Value::RestVariable(l), _)
-                            if self.is_dot_this(right) =>
-                        {
-                            self.bind(l.clone(), right.clone());
-                            false
+                        (_, Value::Variable(r)) | (_, Value::RestVariable(r)) if !self.is_bound(r) => {
+                            MaybeDrop::Check(r.clone(), left.clone())
                         }
-                        // _this = Variable(r)
-                        (_, Value::Variable(r)) | (_, Value::RestVariable(r))
-                            if self.is_dot_this(left) =>
-                        {
-                            self.bind(r.clone(), left.clone());
-                            false
-                        }
-
-                        // If either side is _this or _this.? don't drop the constraint.
-                        _ if self.is_dot_this(left) || self.is_dot_this(right) => false,
-
-                        // Both sides are variables, but neither is _this. Bind together.
-                        (Value::Variable(l), Value::Variable(r))
-                        | (Value::Variable(l), Value::RestVariable(r))
-                        | (Value::RestVariable(l), Value::Variable(r))
-                        | (Value::RestVariable(l), Value::RestVariable(r)) => {
-                            self.bind(l.clone(), right.clone());
-                            self.bind(r.clone(), left.clone());
-                            true
-                        }
-                        // One side is a variable, the other is a ground value. Bind it.
-                        (Value::Variable(l), _) | (Value::RestVariable(l), _) => {
-                            self.bind(l.clone(), right.clone());
-                            true
-                        }
-                        (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => {
-                            self.bind(r.clone(), left.clone());
-                            true
-                        }
-                        _ => false,
+                        _ => MaybeDrop::Keep,
                     }
+                }
             }
-            _ => false,
+            _ => MaybeDrop::Keep,
         }
     }
 
@@ -374,24 +309,32 @@ impl Simplifier {
                 }
             }
 
-            // Non-trivial conjunctions. Choose a unification constraint to
-            // make a binding from, maybe throw it away, and fold the rest.
+            // Non-trivial conjunctions. Choose unification constraints
+            // to make bindings from and throw away; fold the rest.
             Operator::And if o.args.len() > 1 => {
-                if self.alias_scanning {
-                    o.args.retain(|c| {
-                        !self.maybe_bind_constraint(c.value().as_expression().unwrap())
-                    });
-                } else if let Some(i) = o
-                    .args
-                    .iter()
-                    .position(|c| {
-                        self.maybe_bind_constraint(c.value().as_expression().unwrap())
-                    })
-                {
-                    o.args.remove(i);
+                // Compute which constraints to keep.
+                let mut keep = o.args.iter().map(|_| true).collect::<Vec<bool>>();
+                for (i, arg) in o.args.iter().enumerate() {
+                    match self.maybe_bind_constraint(arg.value().as_expression().unwrap()) {
+                        MaybeDrop::Keep => (),
+                        MaybeDrop::Drop => keep[i] = false,
+                        MaybeDrop::Check(var, value) => {
+                            for (j, arg) in o.args.iter().enumerate() {
+                                if j != i && (j > i || keep[j]) && arg.contains_variable(&var) {
+                                    self.bind(var, value);
+                                    keep[i] = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
 
-                // fold operation
+                // Drop the rest.
+                let mut i = 0;
+                o.args.retain(|_| { i += 1; keep[i - 1] });
+
+                // Simplify the survivors.
                 for arg in &mut o.args {
                     self.simplify_term(arg);
                 }
@@ -460,16 +403,8 @@ impl Simplifier {
         }
     }
 
-    fn alias_scan(&mut self, term: &mut Term) {
-        self.alias_scanning = true;
-        self.simplify_term(term);
-        self.alias_scanning = false;
-    }
-
     /// Simplify a partial until quiescence.
     pub fn simplify_partial(&mut self, term: &mut Term) {
-        self.alias_scan(term);
-
         // TODO(ap): This does not handle hash collisions.
         let mut last = term.hash_value();
         loop {
