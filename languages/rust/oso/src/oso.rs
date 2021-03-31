@@ -27,6 +27,10 @@ impl Default for Oso {
     }
 }
 
+/// Represents an `action` used in an `allow` rule.
+/// When the action is bound to a concrete value (e.g. a string)
+/// this returns an `Action::Typed(action)`.
+/// If _any_ actions are allowed, then the `Action::Any` variant is returned.
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Action<T = String> {
     Any,
