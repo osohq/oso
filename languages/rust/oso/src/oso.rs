@@ -127,7 +127,6 @@ impl Oso {
             };
         }
 
-        // Ok(set.into_iter().collect::<Vec<T>>())
         Ok(set)
     }
 
