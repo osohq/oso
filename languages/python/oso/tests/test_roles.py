@@ -12,6 +12,8 @@ class User:
 
 class Organization:
     id: str = ""
+    member_repo_role: str
+    admin_repo_role: str
 
     def __init__(self, id):
         self.id = id
@@ -77,6 +79,7 @@ def test_roles():
     ## role definition
     oso.create_role(resource_type=Repository, name="READ")
     oso.create_role(resource_type=Repository, name="WRITE")
+    oso.create_role(resource_type=Repository, name="ADMIN")
 
     ## permission assignment
     oso.add_role_permission(resource_type=Repository, name="READ", permission={"action": "read", "resource": Repository})
@@ -114,18 +117,62 @@ def test_roles():
     # implied roles across resource types
     ## if you are an org owner, you are an admin in every repo of the org
     ## need a relationship if the resource types don't match
+    ## this specific example is defining a base role for the org
     oso.role_implies(role={"role": "OWNER", "resource_type": Organization}, implies={"role": "ADMIN", "resource_type": Repository}, relationship="repo_org")
 
 
+    # DYNAMIC PERMISSIONS/IMPLIED ROLES
+    ## why? for customizing base roles in GitHub (e.g. custom org member repository permissions)
+    ## the difference between these calls and the ones above is the `scope` argument, which adds the permission to the role only within the given scope
+
+    # customize the ADMIN repository roles within Organization 1 based on the Org settings
+    oso.add_role_permission(scope=org_1, role={"name": "ADMIN", "resource_type": "Repository"}, permission={"action": "delete", "resource": Issue})
+
+    # customize the MEMBER organization role within Organization 1 based on the Org settings
+    oso.add_implied_role(scope=org_1, role={"name": "MEMBER", "resource_type": "Organization"}, implies={"name": "WRITE", "resource_type": Repository})
+    oso.add_role_permission(scope=org_1, role={"name": "MEMBER", "resource_type": "Organization"}, permission={"action": "create_private_repo", "resource": Repository})
+
+
+
+
     # Evaluating permissions
+
+    ## options for evaluation:
+    # OPTION 1: 2 separate evaluation steps:
+    #   1) evaluate role permissions in the library
+    #   2) check the policy for additional rules
+    # OPTION 2: Go straight to the VM and hook into the role permission evaluation from Polar
+
+
+    # in Notion, I can have admin on a page, but be denied access to a page inside that page if it's private
 
     polar="""
     allow(user, action, resource) if
         Roles.role_allows(user, action, resource);
 
-    allow(user, action, repo: Repository) if
-        repo.public and
-        Roles.role_allows(user, action, resource) and cut;
+    deny(user, action, resource: Repository) if
+        resource.secret and
+        not user = resource.created_by;
+
+    allow(user, action, resource: Repository) if
+        resource.restricted and
+        cut and
+        Roles.direct_role_allows(user, action, resource);
+
+
+    # allow someone to see a repo only if they have a repo role assigned, NOT if they have an organization role that would normally give them access to the repo.
+
+    """
+
+    polar="""
+    allow(user, action, resource) if
+        Roles.role_allows(user, action, resource);
+
+    # for public repos, anyone has the "READ" role permissions (implied role based on conditions)
+    allow(user, action, resource: Repository) if
+        resource.public and
+        action in Roles.get_actions({resource_type: Repository, role: "READ"});
+
 
     """
 
@@ -136,6 +183,9 @@ def test_roles():
     # - hard to understand the relationships between everything because it's flat
     # - very redundant
     # - easy to make a typo/mistake because everything is a string
+    # - actions are now used in 3 places: calls to `is_allowed`, the Polar policy, and the role permission assignments.
+    #   So, if the name of an action is changed, it potentially has to change in 3 places (vs. 2 before)
+    #       - potential way to improve this is to make it possible to imply roles based on conditions, rather than on a role
 
     # open questions
     # - how do we handle public/private? For simple stuff like that it would be really useful to add conditions on role-permission assignments
@@ -143,7 +193,8 @@ def test_roles():
     # - role constraints? mutually exclusive? How do we deal with this?
     #       - roles that are hierarchical are probably also mutually exclusive
     #       - use cases that only have global roles might not want mutually exclusive roles
-
+    # - do we need to deal with implied roles not being static? This is like Notion's "restricted page" feature. Basically would require us to keep track of
+    #   a separate organization base/implied role for each repo. This is just a dynamic base role basically.
 
 
 
