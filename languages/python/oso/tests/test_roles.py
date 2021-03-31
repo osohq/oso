@@ -31,14 +31,14 @@ def test_roles():
     # does the user need to be a Python class?
     # probably want to support dicts and strings/ints for users and resources
     # if we do that need to figure out how to make the "id" fields default to the object itself
-    oso.register_roles(
+    oso.create_roles(
         user=Actor,
         user_id="name",
         roles=["ADMIN", "USER"],
         # exclusive=True,
         # inherits=[("Admin", "User")],
     )
-    oso.register_roles(user=Actor, resource=Widget, resource_id="id", roles=["OWNER"])
+    oso.create_roles(user=Actor, resource=Widget, resource_id="id", roles=["OWNER"])
     # role constraints?
 
     # Permissions
@@ -49,7 +49,7 @@ def test_roles():
 
     ### BRAINSTORMING
 
-    {user: the_actor, role: "ADMIN", resource: the_widget, kind: "Widget"}
+    # {user: the_actor, role: "ADMIN", resource: the_widget, kind: "Widget"}
 
     role_config = """
     GlobalRole = {
@@ -64,6 +64,21 @@ def test_roles():
         resource: Widget,
         resource_id: "id"
         roles: ["OWNER"]
+    }
+
+
+    scope resource: Widget {
+        allow(user, action, resource) if
+            has_role(user, "ADMIN", resource) and
+
+
+        allow_role("ADMIN", _action, resource: Widget);
+        allow_role("MEMBER", action, resource: Widget) if
+            action in ["read", "write"];
+
+        allow(user: Actor, action, resource: Widget) if
+            allow_role()
+
     }
     """
 
