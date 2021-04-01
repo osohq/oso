@@ -1838,11 +1838,11 @@ mod test {
         // does h(x) call with x unbound turn into an equality constraint to true on x?
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
         let left = next_binding(&mut q)?;
-        let right = hashmap!{
+        let right = hashmap! {
             sym!("x") => term!(true)
         };
         assert_eq!(left, right);
-     //   assert_partial_expression!(next_binding(&mut q)?, "x", "true");
+        //   assert_partial_expression!(next_binding(&mut q)?, "x", "true");
         assert_query_done!(q);
 
         // does a(x) call with x unbound turn into constraining x.foo to true?
