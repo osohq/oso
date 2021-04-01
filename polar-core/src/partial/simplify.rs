@@ -10,6 +10,7 @@ use super::partial::{invert_operation, FALSE, TRUE};
 enum MaybeDrop {
     Keep,
     Drop,
+    Bind(Symbol, Term),
     Check(Symbol, Term),
 }
 
@@ -88,11 +89,14 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
 
 pub fn simplify_partial(var: &Symbol, mut term: Term) -> Term {
     let mut simplifier = Simplifier::new(var.clone());
+    eprintln!("simplify partial {:?}", var);
     simplifier.simplify_partial(&mut term);
     term = simplify_trivial_constraint(var.clone(), term);
     if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
+        eprintln!("simplify partial done {:?}, {:?}", var, term.to_polar());
         op!(And, term).into_term()
     } else {
+        eprintln!("simplify partial done {:?}, {:?}", var, term.to_polar());
         term
     }
 }
@@ -102,6 +106,11 @@ pub fn simplify_partial(var: &Symbol, mut term: Term) -> Term {
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
 pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
+    eprintln!("before simplified");
+    for (k, v) in bindings.iter() {
+        eprintln!("{:?} {:?}", k, v.to_polar());
+    }
+
     let mut unsatisfiable = false;
     let mut simplify_var = |bindings: &Bindings, var: &Symbol, value: &Term| match value.value() {
         Value::Expression(o) => {
@@ -168,6 +177,10 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     if unsatisfiable {
         None
     } else {
+        eprintln!("after simplified");
+        for (k, v) in simplified_bindings.iter() {
+            eprintln!("{:?} {:?}", k, v.to_polar());
+        }
         Some(simplified_bindings)
     }
 }
@@ -248,10 +261,17 @@ impl Simplifier {
                 } else {
                     // Maybe bind one side to the other.
                     match (left.value(), right.value()) {
-                        (Value::Variable(l), _) | (Value::RestVariable(l), _) if !self.is_bound(l) => {
+                        (Value::Variable(l), Value::Variable(r)) if self.is_this(left) => {
+                            MaybeDrop::Bind(r.clone(), left.clone())
+                        },
+                        (Value::Variable(l), Value::Variable(r)) if self.is_this(right) => {
+                            MaybeDrop::Bind(l.clone(), right.clone())
+                        },
+                        (Value::Variable(l), _) | (Value::RestVariable(l), _) if !self.is_bound(l) && !self.is_this(left) => {
+                            // This seems to work with just Bind, but some core tests don't.
                             MaybeDrop::Check(l.clone(), right.clone())
                         }
-                        (_, Value::Variable(r)) | (_, Value::RestVariable(r)) if !self.is_bound(r) => {
+                        (_, Value::Variable(r)) | (_, Value::RestVariable(r)) if !self.is_bound(r) && !self.is_this(right) => {
                             MaybeDrop::Check(r.clone(), left.clone())
                         }
                         _ => MaybeDrop::Keep,
@@ -318,9 +338,14 @@ impl Simplifier {
                     match self.maybe_bind_constraint(arg.value().as_expression().unwrap()) {
                         MaybeDrop::Keep => (),
                         MaybeDrop::Drop => keep[i] = false,
+                        MaybeDrop::Bind(var, value) => {
+                            keep[i] = false;
+                            eprintln!("bind {:?}, {:?}", var, value.to_polar());
+                            self.bind(var, value);
+                        },
                         MaybeDrop::Check(var, value) => {
                             for (j, arg) in o.args.iter().enumerate() {
-                                if j != i && (j > i || keep[j]) && arg.contains_variable(&var) {
+                                if j != i && arg.contains_variable(&var) {
                                     self.bind(var, value);
                                     keep[i] = false;
                                     break;
@@ -407,13 +432,16 @@ impl Simplifier {
     pub fn simplify_partial(&mut self, term: &mut Term) {
         // TODO(ap): This does not handle hash collisions.
         let mut last = term.hash_value();
+        let mut nbindings = self.bindings.len();
         loop {
+            eprintln!("simplify loop {:?}", term.to_polar());
             self.simplify_term(term);
             let now = term.hash_value();
-            if last == now {
+            if last == now && self.bindings.len() == nbindings {
                 break;
             }
             last = now;
+            nbindings = self.bindings.len();
         }
     }
 }

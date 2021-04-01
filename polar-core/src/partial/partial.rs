@@ -429,7 +429,7 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("i", [sym!("x"), sym!("y")])), false);
         assert_partial_expressions!(next_binding(&mut q)?,
             "x" => "_this matches _y_39 and y = _y_39 and _y_39 matches _z_40",
-            "y" => "x matches _y_39 and _this = _y_39 and _y_39 matches _z_40");
+            "y" => "x matches _this and _this matches _z_40");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), sym!("y")])), false);
