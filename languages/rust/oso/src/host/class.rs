@@ -110,7 +110,11 @@ impl Class {
     }
 
     fn equals(&self, host: &Host, lhs: &Instance, rhs: &Instance) -> crate::Result<bool> {
-        (self.equality_check)(host, lhs, rhs)
+        if lhs.type_id() != rhs.type_id() {
+            Ok(false)
+        } else {
+            (self.equality_check)(host, lhs, rhs)
+        }
     }
 }
 
@@ -185,10 +189,10 @@ where
         self.class.equality_check = Arc::new(move |host, a, b| {
             tracing::trace!("equality check");
 
-            match (a.downcast(Some(host)), b.downcast(Some(host))) {
-                (Ok(a), Ok(b)) => Ok((f)(a, b)),
-                _ => Ok(false),
-            }
+            let a = a.downcast(Some(host)).map_err(|e| e.user())?;
+            let b = b.downcast(Some(host)).map_err(|e| e.user())?;
+
+            Ok((f)(a, b))
         });
 
         self
