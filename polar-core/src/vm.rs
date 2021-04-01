@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell};
 use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
@@ -1412,8 +1412,9 @@ impl PolarVirtualMachine {
                 if val == *term {
                     // variable was unbound
                     // apply a constraint to variable that it must be truthy
-                    self.push_goal(Goal::Query {
-                        term: term.clone_with_value(value!(op!(Eq, term.clone(), term!(true)))),
+                    self.push_goal(Goal::Unify{
+                        left: term.clone(),
+                        right: term!(true)
                     })?;
                 } else {
                     self.push_goal(Goal::Query { term: val })?;
@@ -1429,10 +1430,9 @@ impl PolarVirtualMachine {
             }
             _ => {
                 // everything else dies horribly and in pain
-                let term = self.deref(term); // shadows
                 return Err(self.type_error(
                     &term,
-                    format!("can't query for: {}", term.value().to_polar()),
+                    format!("{} isn't something that is true or false, so can't be a condition", term.value().to_polar()),
                 ));
             }
         }

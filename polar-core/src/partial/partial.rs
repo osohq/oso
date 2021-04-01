@@ -1827,27 +1827,32 @@ mod test {
         // does f(x) call with x unbound turn into an equality constraint to true on the field?
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let r = next_binding(&mut q)?;
-        assert_partial_expression!(r, "x", "_this.foo == true");
+        assert_partial_expression!(r, "x", "true = _this.foo");
         assert_query_done!(q);
 
         // does g(x) call with x unbound turn into an inequality constraint on the field?
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.foo != true");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "true != _this.foo");
         assert_query_done!(q);
 
         // does h(x) call with x unbound turn into an equality constraint to true on x?
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this == true");
+        let left = next_binding(&mut q)?;
+        let right = hashmap!{
+            sym!("x") => term!(true)
+        };
+        assert_eq!(left, right);
+     //   assert_partial_expression!(next_binding(&mut q)?, "x", "true");
         assert_query_done!(q);
 
         // does a(x) call with x unbound turn into constraining x.foo to true?
         let mut q = p.new_query_from_term(term!(call!("a", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.foo == true");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "true = _this.foo");
         assert_query_done!(q);
 
         // does b(x) call with x unbound turn into constraining b.bar.foo to true?
         let mut q = p.new_query_from_term(term!(call!("b", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.bar.foo == true");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "true = _this.bar.foo");
         assert_query_done!(q);
 
         Ok(())
