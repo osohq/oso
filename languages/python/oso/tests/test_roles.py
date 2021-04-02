@@ -198,6 +198,18 @@ def test_roles():
 
 
 
+    # Role Model
+    # Permissions are tied to a resource type.
+    # Roles are tied to a resource type.
+    # Roles can have permissions that match their resource type.
+    # - eg Repository roles can have Repository permissions
+    # Roles can have permissions that match a child resource type, as long
+    # as that child resource type doesn't have roles of it's own.
+    # - eg Repository roles can have Issue permissions as long as
+    #      there are no Issue roles.
+    #
+    # Two mutually exclusive roles can not be implied by the same role.
+
 
 
 
@@ -209,6 +221,15 @@ def test_roles():
     # -[x] define API for defing resource relationships
     # -[] think through UX for devs and what features this supports in the frontend
     # -[] how do dynamic permissions get evaluated with `is_allowed?`
+
+    # Monday TODO:
+    # - [ ] Put rest of the data into the data model.
+    # - [ ] Start evaluating things, see how it goes. (make sure model supports all the stuff we need)
+    # - management api calls
+    # - is_allowed
+    # - [ ] Improve configuration UX
+    # - opt in to more complexity but be easy to use for simple stuff (non dynamic) too.
+    # - figure out evaluation in sqlalchemy + list filtering
 
     ### BRAINSTORMING
 
