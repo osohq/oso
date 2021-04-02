@@ -261,18 +261,18 @@ impl Simplifier {
                 } else {
                     // Maybe bind one side to the other.
                     match (left.value(), right.value()) {
-                        (Value::Variable(l), Value::Variable(r)) if self.is_this(left) => {
-                            MaybeDrop::Bind(r.clone(), left.clone())
-                        },
-                        (Value::Variable(l), Value::Variable(r)) if self.is_this(right) => {
-                            MaybeDrop::Bind(l.clone(), right.clone())
-                        },
+                        //(Value::Variable(l), Value::Variable(r)) if self.is_this(left) => {
+                            //MaybeDrop::Bind(r.clone(), left.clone())
+                        //},
+                        //(Value::Variable(l), Value::Variable(r)) if self.is_this(right) => {
+                            //MaybeDrop::Bind(l.clone(), right.clone())
+                        //},
                         (Value::Variable(l), _) | (Value::RestVariable(l), _) if !self.is_bound(l) && !self.is_this(left) => {
                             // This seems to work with just Bind, but some core tests don't.
-                            MaybeDrop::Check(l.clone(), right.clone())
+                            MaybeDrop::Bind(l.clone(), right.clone())
                         }
                         (_, Value::Variable(r)) | (_, Value::RestVariable(r)) if !self.is_bound(r) && !self.is_this(right) => {
-                            MaybeDrop::Check(r.clone(), left.clone())
+                            MaybeDrop::Bind(r.clone(), left.clone())
                         }
                         _ => MaybeDrop::Keep,
                     }
