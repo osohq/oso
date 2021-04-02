@@ -211,7 +211,7 @@ impl Value {
 }
 
 /// Represents a concrete instance of a Polar value
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Term {
     /// Information about where the term was created from
     #[serde(skip, default = "SourceInfo::ffi")]

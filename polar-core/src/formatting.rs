@@ -167,6 +167,19 @@ pub fn to_polar_parens(op: Operator, t: &Term) -> String {
     }
 }
 
+pub mod debug {
+    use std::fmt;
+
+    use crate::terms::Term;
+
+    // TODO are there other types we should do this for?
+    impl fmt::Debug for Term {
+        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            fmt::Display::fmt(self, fmt)
+        }
+    }
+}
+
 pub mod display {
     use crate::formatting::{format_args, format_params};
     use std::fmt;
