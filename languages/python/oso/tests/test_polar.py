@@ -900,3 +900,14 @@ def test_unexpected_expression(polar):
 
     with pytest.raises(UnexpectedPolarTypeError):
         next(polar.query_rule("f", Variable("x")))
+
+
+def test_rule_call_unbound_variable(polar, qeval, qvar):
+    polar.load_str("""
+        f(x: String) if x in ["foo", "bar", 1];
+    """)
+
+    assert qeval('f("foo")')
+    assert qeval('f("bar")')
+    assert not qeval('f(1)')
+    assert qvar('f(x)', 'x', ['foo', 'bar'])

@@ -96,6 +96,50 @@ impl Operation {
         visitor.vars
     }
 
+    /// x: x matches String
+    /// ground("x", 1)
+    ///
+    /// -> ExternalIsa(1, String)
+    /// * bind x -> 1
+    ///
+    /// x: x matches String and x.bar = 3
+    /// ground("x", 1)
+    ///
+    /// -> ExternalIsa(1, String)
+    /// -> ExternalLookup(1, "bar") -> fail
+    /// * backtrack
+    ///
+    /// x: x matches String and x.bar = 3
+    /// ground("x", ExternalInstance(id: 1))
+    /// -> ExternalIsa(id: 1, String)
+    /// -> ExternalLookup(id: 1, "bar") -> true
+    /// * bind x -> 1
+    ///
+    /// x: x in y or x > 0
+    /// ground("x", 1)
+    ///
+    /// * bind x -> 1
+    /// * fail
+    /// * fail
+    /// * bind x -> 1
+    ///
+    /// In the case of multiple successful results, we only care about the first
+    /// success.
+    ///
+    /// Goal::Query{expr}
+    /// Goal::GroundSuccess{var, value}
+    ///
+    ///
+    ///
+    ///
+    /// x: x in y or x > 0
+    /// ground("y", [1, 2, 3])
+    /// ground("x", 1)
+    ///
+    /// x: x > y and x = 1
+    /// x: 1
+    /// y: 1 > y
+
     /// Replace `var` with a ground (non-variable) value. Checks for
     /// consistent unifications along the way: if everything's fine,
     /// returns `Some(grounded_term)`, but if an inconsistent ground
@@ -1808,6 +1852,55 @@ mod test {
         assert_query_done!(q);
 
         Ok(())
+    }
+
+    // Grounding tests
+    fn test_grounding<T>(rules: &str, query: Term, assert_fns: T) -> TestResult
+    where
+        T: IntoIterator,
+        T::Item: Fn(Bindings) -> TestResult,
+    {
+        let p = Polar::new();
+        p.load_str(rules)?;
+
+        let mut q = p.new_query_from_term(query, false);
+        for assert_fn in assert_fns.into_iter() {
+            let r = next_binding(&mut q)?;
+            assert_fn(r)?;
+        }
+
+        assert_query_done!(q);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_grounding_1() -> TestResult {
+        test_grounding(
+            r#"
+            f(x) if x in y and x > 0 and y = [1, 2, 3] and x = 1;
+        "#,
+            term!(call!("f", [sym!("x")])),
+            &[|r: Bindings| {
+                assert_eq!(r.get(&sym!("x")).unwrap(), &term!(1));
+                Ok(())
+            }],
+        )
+    }
+
+    #[test]
+    fn test_grounding_2() -> TestResult {
+        test_grounding(
+            r#"
+            f(x, y) if x > y and x = 1;
+        "#,
+            term!(call!("f", [sym!("x"), sym!("y")])),
+            &[|r: Bindings| {
+                assert_eq!(r.get(&sym!("x")).unwrap(), &term!(1));
+                assert_partial_expression!(r, "y", "1 > _this");
+                Ok(())
+            }],
+        )
     }
 
     // TODO(gj): add test where we have a partial prior to an inversion
