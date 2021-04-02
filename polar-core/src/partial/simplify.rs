@@ -3,7 +3,9 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use crate::bindings::Bindings;
 use crate::folder::{fold_term, Folder};
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
+use crate::visitor::{walk_operation, Visitor};
 
+use super::alias::AliasSet;
 use super::partial::{invert_operation, FALSE, TRUE};
 
 struct VariableSubber {
@@ -79,8 +81,8 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
     }
 }
 
-pub fn simplify_partial(var: &Symbol, mut term: Term) -> Term {
-    let mut simplifier = Simplifier::new(var.clone());
+pub fn simplify_partial(var: &Symbol, mut term: Term, output_variables: HashSet<Symbol>) -> Term {
+    let mut simplifier = Simplifier::new(var.clone(), output_variables);
     simplifier.simplify_partial(&mut term);
     term = simplify_trivial_constraint(var.clone(), term);
     if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
@@ -95,11 +97,17 @@ pub fn simplify_partial(var: &Symbol, mut term: Term) -> Term {
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
 pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
+    let output_variables = if all {
+        bindings.keys().cloned().collect::<HashSet<_>>()
+    } else {
+        bindings.keys().filter(|s| !s.is_temporary_var()).cloned().collect::<HashSet<_>>()
+    };
+
     let mut unsatisfiable = false;
     let mut simplify_var = |bindings: &Bindings, var: &Symbol, value: &Term| match value.value() {
         Value::Expression(o) => {
             assert_eq!(o.operator, Operator::And);
-            let simplified = simplify_partial(var, value.clone());
+            let simplified = simplify_partial(var, value.clone(), output_variables.clone());
             match simplified.value().as_expression() {
                 Ok(o) if o == &FALSE => unsatisfiable = true,
                 _ => (),
@@ -168,13 +176,15 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
 pub struct Simplifier {
     bindings: Bindings,
     this_var: Symbol,
+    output_variables: HashSet<Symbol>
 }
 
 impl Simplifier {
-    pub fn new(this_var: Symbol) -> Self {
+    pub fn new(this_var: Symbol, output_variables: HashSet<Symbol>) -> Self {
         Self {
             this_var,
             bindings: Bindings::new(),
+            output_variables
         }
     }
 
@@ -427,6 +437,17 @@ impl Simplifier {
 
     /// Simplify a partial until quiescence.
     pub fn simplify_partial(&mut self, term: &mut Term) {
+        let alias_set = AliasSetBuilder::default().build(term);
+        if let Some(this_aliases) = alias_set.iter_aliases(self.this_var.clone()) {
+            for alias in this_aliases {
+                if self.output_variables.contains(alias) {
+                    continue
+                }
+
+                self.bind(alias.clone(), term!(self.this_var.clone()))
+            }
+        }
+
         let mut last = term.hash_value();
         loop {
             self.simplify_term(term);
@@ -436,5 +457,36 @@ impl Simplifier {
             }
             last = now;
         }
+    }
+}
+
+#[derive(Default)]
+struct AliasSetBuilder {
+    alias_set: AliasSet,
+}
+
+impl AliasSetBuilder {
+    fn build(mut self, term: &Term) -> AliasSet {
+        self.visit_term(term);
+        self.alias_set
+    }
+}
+
+impl Visitor for AliasSetBuilder {
+    fn visit_operation(&mut self, op: &Operation) {
+        // TODO do we distinguish between Eq & Unify
+        if op.operator == Operator::Unify || op.operator == Operator::Eq {
+            let left = &op.args[0];
+            let right = &op.args[1];
+
+            match (left.value(), right.value()) {
+                (Value::Variable(lv), Value::Variable(rv)) => {
+                    self.alias_set.add(lv.clone(), rv.clone())
+                }
+                _ => (),
+            }
+        }
+
+        walk_operation(self, op);
     }
 }

@@ -1121,7 +1121,10 @@ impl PolarVirtualMachine {
                 // Get the existing partial on the LHS variable.
                 let partial = self.binding_manager.get_constraints(var);
 
-                let simplified = simplify_partial(var, partial.into_term());
+                let mut var_set = HashSet::default();
+                var_set.insert(var.clone());
+
+                let simplified = simplify_partial(var, partial.into_term(), var_set);
                 let simplified = simplified.value().as_expression()?;
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?

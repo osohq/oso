@@ -1,3 +1,4 @@
+mod alias;
 mod isa_constraint_check;
 #[allow(clippy::module_inception)]
 mod partial;
