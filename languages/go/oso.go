@@ -1,9 +1,5 @@
 package oso
 
-import (
-	"reflect"
-)
-
 /*
 The central object to manage policy state and verify requests.
 */
@@ -52,7 +48,7 @@ func (o Oso) ClearRules() error {
 Register a Go type so that it can be referenced within Polar files.
 Accepts a constructor function, or nil if no constructor is required.
 */
-func (o Oso) RegisterClass(cls reflect.Type, cptr interface{}) error {
+func (o Oso) RegisterClass(cls interface{}, cptr interface{}) error {
 	return (*o.p).registerClass(cls, cptr, nil)
 }
 
@@ -61,7 +57,7 @@ Register a Go type under a certain name/alias, so that it can be referenced
 within Polar files by that name.
 Accepts a constructor function, or nil if no constructor is required.
 */
-func (o Oso) RegisterClassWithName(cls reflect.Type, cptr interface{}, name string) error {
+func (o Oso) RegisterClassWithName(cls interface{}, cptr interface{}, name string) error {
 	return (*o.p).registerClass(cls, cptr, &name)
 }
 
