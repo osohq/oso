@@ -110,6 +110,8 @@ impl Class {
     }
 
     fn equals(&self, host: &Host, lhs: &Instance, rhs: &Instance) -> crate::Result<bool> {
+        // equality checking is currently only supported for exactly matching types
+        // TODO: support multiple dispatch for equality
         if lhs.type_id() != rhs.type_id() {
             Ok(false)
         } else {
