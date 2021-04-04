@@ -7,12 +7,6 @@ use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
 
 use super::partial::{invert_operation, FALSE, TRUE};
 
-enum MaybeDrop {
-    Keep,
-    Drop,
-    Check(Symbol, Term),
-}
-
 struct VariableSubber {
     this_var: Symbol,
 }
@@ -228,40 +222,6 @@ impl Simplifier {
         }
     }
 
-    /// Returns true when the constraint can be replaced with a binding, and makes the binding.
-    ///
-    /// Params:
-    ///     constraint: The constraint to consider removing from its parent.
-    fn maybe_bind_constraint(&mut self, constraint: &Operation) -> MaybeDrop {
-        match constraint.operator {
-            // X and X is always true, so drop.
-            Operator::And if constraint.args.is_empty() => MaybeDrop::Drop,
-
-            // Choose a unification to maybe drop.
-            Operator::Unify | Operator::Eq => {
-                let left = &constraint.args[0];
-                let right = &constraint.args[1];
-
-                if left == right {
-                    // The sides are exactly equal, so drop.
-                    MaybeDrop::Drop
-                } else {
-                    // Maybe bind one side to the other.
-                    match (left.value(), right.value()) {
-                        (Value::Variable(l), _) | (Value::RestVariable(l), _) if !self.is_bound(l) => {
-                            MaybeDrop::Check(l.clone(), right.clone())
-                        }
-                        (_, Value::Variable(r)) | (_, Value::RestVariable(r)) if !self.is_bound(r) => {
-                            MaybeDrop::Check(r.clone(), left.clone())
-                        }
-                        _ => MaybeDrop::Keep,
-                    }
-                }
-            }
-            _ => MaybeDrop::Keep,
-        }
-    }
-
     pub fn simplify_operation(&mut self, o: &mut Operation) {
         fn preprocess_and(args: &mut TermList) {
             let mut seen: HashSet<Term> = HashSet::new();
@@ -277,7 +237,7 @@ impl Simplifier {
             args.retain(|c| {
                 let o = c.value().as_expression().unwrap();
                 match o.operator {
-                    Operator::Unify | Operator::Eq | Operator::Neq => {
+                    Operator::Unify | Operator::Eq => {
                         assert_eq!(o.args.len(), 2);
                         let left = &o.args[0];
                         let right = &o.args[1];
@@ -313,26 +273,67 @@ impl Simplifier {
             // to make bindings from and throw away; fold the rest.
             Operator::And if o.args.len() > 1 => {
                 // Compute which constraints to keep.
-                let mut keep = o.args.iter().map(|_| true).collect::<Vec<bool>>();
+                let mut keep = vec![true; o.args.len()];
+
                 for (i, arg) in o.args.iter().enumerate() {
-                    match self.maybe_bind_constraint(arg.value().as_expression().unwrap()) {
-                        MaybeDrop::Keep => (),
-                        MaybeDrop::Drop => keep[i] = false,
-                        MaybeDrop::Check(var, value) => {
+                    let mut check = |var: &Symbol| -> bool {
+                        if !self.is_bound(var) && *var != self.this_var {
                             for (j, arg) in o.args.iter().enumerate() {
-                                if j != i && (j > i || keep[j]) && arg.contains_variable(&var) {
-                                    self.bind(var, value);
+                                if j != i && arg.contains_variable(var) {
                                     keep[i] = false;
-                                    break;
+                                    return true;
                                 }
                             }
                         }
+                        false
+                    };
+
+                    let constraint = arg.value().as_expression().expect("constraint expression");
+                    match constraint.operator {
+                        // Maybe turn a unification into a binding and drop.
+                        Operator::Unify | Operator::Eq => {
+                            let left = &constraint.args[0];
+                            let right = &constraint.args[1];
+                            if left == right {
+                                // The sides are exactly equal, so drop.
+                                keep[i] = false;
+                            } else {
+                                // Maybe bind one side to the other.
+                                match (left.value(), right.value()) {
+                                    (Value::Variable(l), Value::Variable(r))
+                                    | (Value::Variable(l), Value::RestVariable(r))
+                                    | (Value::RestVariable(l), Value::Variable(r))
+                                    | (Value::RestVariable(l), Value::RestVariable(r)) => {
+                                        if check(l) {
+                                            self.bind(l.clone(), right.clone());
+                                        } else if check(r) {
+                                            self.bind(r.clone(), left.clone());
+                                        }
+                                    }
+                                    (Value::Variable(l), _) | (Value::RestVariable(l), _)
+                                        if check(l) =>
+                                    {
+                                        self.bind(l.clone(), right.clone());
+                                    }
+                                    (_, Value::Variable(r)) | (_, Value::RestVariable(r))
+                                        if check(r) =>
+                                    {
+                                        self.bind(r.clone(), left.clone());
+                                    }
+                                    _ => (),
+                                }
+                            }
+                        }
+                        _ => (),
                     }
                 }
 
                 // Drop the rest.
                 let mut i = 0;
-                o.args.retain(|_| { i += 1; keep[i - 1] });
+                o.args.retain(|_| {
+                    i += 1;
+                    keep[i - 1]
+                });
 
                 // Simplify the survivors.
                 for arg in &mut o.args {
