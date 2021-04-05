@@ -191,3 +191,4 @@ languages/python/oso/native/polar.lib
 languages/python/oso/native/polar.h
 
 polar-wasm-api/pkg/*
+docs/searcher
