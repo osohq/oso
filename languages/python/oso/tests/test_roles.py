@@ -12,9 +12,6 @@ class User:
 
 class Organization:
     id: str = ""
-    member_repo_role: str
-    admin_repo_role: str
-
     def __init__(self, id):
         self.id = id
 
@@ -38,13 +35,77 @@ class Issue:
         self.public = public
         self.repo = repo
 
-@pytest.fixture
 def test_roles():
     oso = Oso()
     oso.register_class(User)
     oso.register_class(Repository)
     oso.register_class(Organization)
     oso.register_class(Issue)
+
+    roles = OsoRoles()
+
+    # Repo permissions
+    permission_repository_read = roles.new_permission(resource=Repository, action="read")
+    permission_repository_write = roles.new_permission(resource=Repository, action="write")
+    permission_repository_list_issues = roles.new_permission(resource=Repository, action="list_issues")
+
+    # Repository roles
+    role_repository_read = roles.new_role(resource=Repository, name="READ")
+    role_repository_write = roles.new_role(resource=Repository, name="WRITE")
+    role_repository_admin = roles.new_role(resource=Repository, name="ADMIN")
+
+    # Issue permissions
+    permission_issue_read = roles.new_permission(resource=Issue, action="read")
+    permission_issue_write = roles.new_permission(resource=Issue, action="write")
+
+    # Issue-repo relationship
+    roles.new_relationship(name="issue_repo", child=Issue, parent=Repository, get=lambda child: child.repo)
+
+    # Organization roles
+    role_organization_owner = roles.new_role(resource=Organization, name="OWNER")
+
+    # Repo-org relationship
+    roles.new_relationship(name="repo_org", child=Repository, parent=Organization, get=lambda child: child.org)
+
+    # Permission assignment
+    roles.new_role_permission(role=role_repository_read, permission=permission_repository_read)
+    roles.new_role_permission(role=role_repository_read, permission=permission_repository_list_issues)
+    roles.new_role_permission(role=role_repository_read, permission=permission_issue_read)
+
+    roles.new_role_permission(role=role_repository_write, permission=permission_repository_write)
+
+    # Implied roles
+    roles.new_role_implies(from_role=role_repository_write, to_role=role_repository_read)
+    roles.new_role_implies(from_role=role_organization_owner, to_role=role_repository_admin)
+
+    # @TODO: things scoped to resources
+
+    roles.enable(oso)
+    policy = """
+    allow(actor, action, resource) if
+      Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+
+    # Some users
+    leina = User(name="Leina")
+    steve = User(name="Steve")
+
+    osohq = Organization(id="osohq")
+    oso_repo = Repository(id="oso", public=False, org=osohq)
+    some_issue = Issue(id="fix_all_the_bugs", public=False, repo=oso_repo)
+
+    roles.assign_role(leina, oso_repo, role_repository_read)
+    # direct assignment to a role on the resource with the permission
+    assert(oso.is_allowed(leina, "read", oso_repo))
+    # direct assignment to a role on the parent with the permission
+    assert(oso.is_allowed(leina, "read", some_issue))
+
+    roles.assign_role(steve, oso_repo, role_repository_write)
+    # Implied role on same resource.
+    assert(oso.is_allowed(steve, "read", oso_repo))
+
+    ###################### NOTES #######################
 
     ## ROLE DEFINITION
 
