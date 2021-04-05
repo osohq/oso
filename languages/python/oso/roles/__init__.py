@@ -49,8 +49,8 @@ class ParentRelationship:
 @dataclass
 class ImpliedRole:
     id: int
-    from_role: Any
-    to_role: Any
+    from_role_id: int
+    to_role_id: int
 
 # scoped the second most specifically, scoped for all children of the parent
 class ParentImpliedRole:
@@ -151,7 +151,7 @@ class OsoRoles:
         assert(to_role.id in self.roles.elements)
 
         id = self.implied_roles.get_id()
-        implied_role = ImpliedRole(id=id, from_role=from_role, to_role=to_role)
+        implied_role = ImpliedRole(id=id, from_role_id=from_role.id, to_role_id=to_role.id)
         self.implied_roles.elements[id] = implied_role
 
         return implied_role
@@ -183,7 +183,6 @@ class OsoRoles:
         # That role comes from a direct assignment to a role with the permission
         # or assignment to a role that implies a role with the permission.
 
-        #@TODO Handle implied roles.
         #@TODO Handle scoping.
 
         # Find the permission.
@@ -202,6 +201,23 @@ class OsoRoles:
                 role_ids.add(role_perm.role_id)
         if len(role_ids) == 0:
             return False
+
+        # Recursively find all roles that imply those roles.
+        # @TODO: Handle scoped implied rules.
+        while True:
+            size = len(role_ids)
+
+            for _, implied_role in self.implied_roles.elements.items():
+
+                new_role_ids = set()
+                for role_id in role_ids:
+                    if implied_role.to_role_id == role_id:
+                        new_role_ids.add(implied_role.from_role_id)
+
+                role_ids = role_ids.union(new_role_ids)
+
+            if len(role_ids) == size:
+                break
 
         # Get the actual roles.
         roles = []
@@ -241,9 +257,6 @@ class OsoRoles:
             for (role,_,resource) in role_type_resources:
                 if user_role.role_id == role.id and user_role.user == user and user_role.resource == resource:
                     return True
-
-        # Find any other roles that imply these roles.
-
 
         return False
 
