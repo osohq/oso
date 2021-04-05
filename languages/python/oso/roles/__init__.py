@@ -175,6 +175,9 @@ class OsoRoles:
 
         return user_role
 
+    #TODO: Update role
+    #TODO: Remove role
+
     # Internal api for evaluation of stuff
     def _role_allows(self, user, action, resource):
         # a user is aloud to take an action on a resource if they have
@@ -259,9 +262,6 @@ class OsoRoles:
                     return True
 
         return False
-
-    #TODO: Update role
-    #TODO: Remove role
 
     def enable(self, oso):
         # The "Polar api"
