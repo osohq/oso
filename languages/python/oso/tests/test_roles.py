@@ -52,7 +52,6 @@ def test_roles():
     # Repository roles
     role_repository_read = roles.new_role(resource=Repository, name="READ")
     role_repository_write = roles.new_role(resource=Repository, name="WRITE")
-    role_repository_admin = roles.new_role(resource=Repository, name="ADMIN")
 
     # Issue permissions
     permission_issue_read = roles.new_permission(resource=Issue, action="read")
@@ -76,7 +75,7 @@ def test_roles():
 
     # Implied roles
     roles.new_role_implies(from_role=role_repository_write, to_role=role_repository_read)
-    roles.new_role_implies(from_role=role_organization_owner, to_role=role_repository_admin)
+    roles.new_role_implies(from_role=role_organization_owner, to_role=role_repository_write)
 
     # @TODO: things scoped to resources
 
@@ -90,6 +89,7 @@ def test_roles():
     # Some users
     leina = User(name="Leina")
     steve = User(name="Steve")
+    sam = User(name="Sam")
 
     osohq = Organization(id="osohq")
     oso_repo = Repository(id="oso", public=False, org=osohq)
@@ -97,13 +97,21 @@ def test_roles():
 
     roles.assign_role(leina, oso_repo, role_repository_read)
     # direct assignment to a role on the resource with the permission
-    #assert(oso.is_allowed(leina, "read", oso_repo))
+    assert(oso.is_allowed(leina, "read", oso_repo))
     # direct assignment to a role on the parent with the permission
-    #assert(oso.is_allowed(leina, "read", some_issue))
+    assert(oso.is_allowed(leina, "read", some_issue))
 
     roles.assign_role(steve, oso_repo, role_repository_write)
     # Implied role on same resource.
     assert(oso.is_allowed(steve, "read", oso_repo))
+    # Implied role on parent resource.
+    assert(oso.is_allowed(steve, "read", oso_repo))
+
+    roles.assign_role(sam, osohq, role_organization_owner)
+    # Implied via parent role.
+    assert(oso.is_allowed(sam, "write", oso_repo))
+    # Implied via parent role and then same resource role. 2 jumps
+    assert(oso.is_allowed(sam, "read", oso_repo))
 
     ###################### NOTES #######################
 
