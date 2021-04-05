@@ -77,9 +77,10 @@ test: install
 clean:
 	ls -A public | grep -v 'favicon.ico' | xargs -I {} echo 'public/'{} | xargs rm -rf
 
-search:
+build-search:
 	cd search && go build -o ../searcher
-	./searcher
+
+search: clean build-prod build-search
 
 spelling:
 	$(MAKE) -C spelling
@@ -98,4 +99,4 @@ lint: build spelling check-links
 test-quickstarts:
 	$(MAKE) -C examples test-quickstarts
 
-.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling search check-links check-links-deps lint test-quickstarts
+.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling build-search search check-links check-links-deps lint test-quickstarts
