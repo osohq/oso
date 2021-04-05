@@ -87,8 +87,8 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
     }
 }
 
-pub fn simplify_partial(var: &Symbol, mut term: Term) -> Term {
-    let mut simplifier = Simplifier::new(var.clone());
+pub fn simplify_partial(var: &Symbol, mut term: Term, output_vars: HashSet<Symbol>) -> Term {
+    let mut simplifier = Simplifier::new(var.clone(), output_vars);
     eprintln!("simplify partial {:?}", var);
     simplifier.simplify_partial(&mut term);
     term = simplify_trivial_constraint(var.clone(), term);
@@ -115,7 +115,15 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     let mut simplify_var = |bindings: &Bindings, var: &Symbol, value: &Term| match value.value() {
         Value::Expression(o) => {
             assert_eq!(o.operator, Operator::And);
-            let simplified = simplify_partial(var, value.clone());
+            let output_vars = if all {
+                let mut hs = HashSet::new();
+                hs.insert(var.clone());
+                hs
+            } else {
+                bindings.keys().filter(|v| !v.is_temporary_var()).cloned().collect::<HashSet<_>>()
+            };
+
+            let simplified = simplify_partial(var, value.clone(), output_vars);
             match simplified.value().as_expression() {
                 Ok(o) if o == &FALSE => unsatisfiable = true,
                 _ => (),
@@ -188,13 +196,15 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
 pub struct Simplifier {
     this_var: Symbol,
     bindings: Bindings,
+    output_vars: HashSet<Symbol>
 }
 
 impl Simplifier {
-    pub fn new(this_var: Symbol) -> Self {
+    pub fn new(this_var: Symbol, output_vars: HashSet<Symbol>) -> Self {
         Self {
             this_var,
             bindings: Bindings::new(),
+            output_vars
         }
     }
 
@@ -225,6 +235,13 @@ impl Simplifier {
         self.bindings.contains_key(var)
     }
 
+    fn is_output(&self, t: &Term) -> bool {
+        match t.value() {
+            Value::Variable(v) | Value::RestVariable(v) => self.output_vars.contains(v),
+            _ => false,
+        }
+    }
+
     /// Term is a variable and the name = self.this_var
     fn is_this(&self, t: &Term) -> bool {
         match t.value() {
@@ -238,6 +255,14 @@ impl Simplifier {
         match t.value() {
             Value::Expression(e) => e.operator == Operator::Dot && self.is_dot_this(&e.args[0]),
             _ => self.is_this(t),
+        }
+    }
+
+    /// output_var.?
+    fn is_dot_output(&self, t: &Term) -> bool {
+        match t.value() {
+            Value::Expression(e) => e.operator == Operator::Dot && (self.is_dot_output(&e.args[0]) || self.is_output(&e.args[0])),
+            _ => false,
         }
     }
 
@@ -261,19 +286,32 @@ impl Simplifier {
                 } else {
                     // Maybe bind one side to the other.
                     match (left.value(), right.value()) {
-                        //(Value::Variable(l), Value::Variable(r)) if self.is_this(left) => {
-                            //MaybeDrop::Bind(r.clone(), left.clone())
-                        //},
-                        //(Value::Variable(l), Value::Variable(r)) if self.is_this(right) => {
-                            //MaybeDrop::Bind(l.clone(), right.clone())
-                        //},
-                        (Value::Variable(l), _) | (Value::RestVariable(l), _) if !self.is_bound(l) && !self.is_this(left) => {
+                        (Value::Variable(l), Value::Variable(r)) if self.is_output(left) && self.is_output(right) => MaybeDrop::Keep,
+                        (Value::Variable(l), Value::Variable(r)) if self.is_output(left) && !self.is_bound(r) => {
+                            eprintln!("*** 1");
+                            MaybeDrop::Bind(r.clone(), left.clone())
+                        },
+                        (Value::Variable(l), Value::Variable(r)) if self.is_output(right) && !self.is_bound(l) => {
+                            eprintln!("*** 2");
+                            MaybeDrop::Bind(l.clone(), right.clone())
+                        },
+                        (Value::Variable(l), _) | (Value::RestVariable(l), _) if !self.is_bound(l) && !self.is_output(left) => {
                             // This seems to work with just Bind, but some core tests don't.
+                            eprintln!("*** 3");
                             MaybeDrop::Bind(l.clone(), right.clone())
                         }
-                        (_, Value::Variable(r)) | (_, Value::RestVariable(r)) if !self.is_bound(r) && !self.is_this(right) => {
+                        (_, Value::Variable(r)) | (_, Value::RestVariable(r)) if !self.is_bound(r) && !self.is_output(right) => {
+                            eprintln!("*** 4");
                             MaybeDrop::Bind(r.clone(), left.clone())
                         }
+                        (Value::Variable(var), val) if (val.is_ground() || self.is_dot_output(right)) && !self.is_bound(var) => {
+                            eprintln!("*** 5");
+                            MaybeDrop::Check(var.clone(), right.clone())
+                        },
+                        (val, Value::Variable(var)) if (val.is_ground() || self.is_dot_output(left)) && !self.is_bound(var) => {
+                            eprintln!("*** 6");
+                            MaybeDrop::Check(var.clone(), left.clone())
+                        },
                         _ => MaybeDrop::Keep,
                     }
                 }
