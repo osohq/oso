@@ -90,7 +90,7 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
 
 pub fn simplify_partial(var: &Symbol, mut term: Term, output_vars: HashSet<Symbol>) -> (Term, PerfCounters) {
     let mut simplifier = Simplifier::new(var.clone(), output_vars);
-    eprintln!("*** simplify partial {:?}", var);
+    //eprintln!("*** simplify partial {:?}", var);
     simplifier.simplify_partial(&mut term);
     term = simplify_trivial_constraint(var.clone(), term);
     if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
@@ -108,7 +108,7 @@ pub fn simplify_partial(var: &Symbol, mut term: Term, output_vars: HashSet<Symbo
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
 pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     let mut perf = PerfCounters::default();
-    eprintln!("simplify bindings");
+    //eprintln!("simplify bindings");
 
     //eprintln!("before simplified");
     //for (k, v) in bindings.iter() {
@@ -153,14 +153,14 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
 
     let mut simplified_bindings = HashMap::new();
     if all {
-        eprintln!("simplify bindings all");
+        //eprintln!("simplify bindings all");
         // Simplify everything in bindings.
         for (var, value) in &bindings {
             let simplified = simplify_var(&bindings, var, value);
             simplified_bindings.insert(var.clone(), simplified);
         }
     } else {
-        eprintln!("simplify bindings ref");
+        //eprintln!("simplify bindings ref");
         // We only simplify non temporary variables, because temporaries are not
         // output.
         //
@@ -240,6 +240,7 @@ impl PerfCounters {
 pub struct Simplifier {
     this_var: Symbol,
     bindings: Bindings,
+    make_bindings: bool,
     output_vars: HashSet<Symbol>,
 
     counters: PerfCounters
@@ -251,6 +252,7 @@ impl Simplifier {
             this_var,
             bindings: Bindings::new(),
             output_vars,
+            make_bindings: true,
             counters: PerfCounters::default()
         }
     }
@@ -401,9 +403,32 @@ impl Simplifier {
             });
         }
 
-        if o.operator == Operator::And {
-            self.counters.preprocess_and();
-            preprocess_and(&mut o.args);
+        if !self.make_bindings {
+            if o.operator == Operator::And {
+                self.counters.preprocess_and();
+                preprocess_and(&mut o.args);
+            }
+
+            match o.operator {
+                Operator::And | Operator::Or if o.args.is_empty() => (),
+
+                // Replace one-argument conjunctions & disjunctions with their argument.
+                Operator::And | Operator::Or if o.args.len() == 1 => {
+                    if let Value::Expression(operation) = o.args[0].value() {
+                        *o = operation.clone();
+                        self.simplify_operation(o);
+                    }
+                }
+
+                // Default case.
+                _ => {
+                    for arg in &mut o.args {
+                        self.simplify_term(arg);
+                    }
+                }
+            }
+
+            return
         }
 
         if o.operator == Operator::And || o.operator == Operator::Or {
@@ -438,8 +463,10 @@ impl Simplifier {
                             self.bind(var, value);
                         },
                         MaybeDrop::Check(var, value) => {
+                            //eprintln!("check {:?}, {:?}", var, value.to_polar());
                             for (j, arg) in o.args.iter().enumerate() {
                                 if j != i && arg.contains_variable(&var) {
+                                    //eprintln!("check bind {:?}, {:?}", var, value.to_polar());
                                     self.bind(var, value);
                                     keep[i] = false;
                                     break;
@@ -528,7 +555,7 @@ impl Simplifier {
         let mut last = term.hash_value();
         let mut nbindings = self.bindings.len();
         loop {
-            eprintln!("simplify loop {:?}", term.to_polar());
+            //eprintln!("simplify loop {:?}", term.to_polar());
             self.counters.simplify_term();
 
             self.simplify_term(term);
@@ -539,6 +566,9 @@ impl Simplifier {
             last = now;
             nbindings = self.bindings.len();
         }
+
+        self.make_bindings = false;
+        self.simplify_term(term);
 
         self.counters.finish_acc(term.clone());
     }
