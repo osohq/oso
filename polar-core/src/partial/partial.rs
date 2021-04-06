@@ -1903,6 +1903,24 @@ mod test {
         )
     }
 
+    #[test]
+    fn test_grounding_not_1() -> TestResult {
+        test_grounding(
+            r#"
+            f(x, y, z) if x > y and not (z < y and z = 1);
+            "#,
+            term!(call!("f", [sym!("x"), sym!("y"), sym!("z")])),
+            &[|r: Bindings| {
+                assert_partial_expression!(r, "x", "_this > y and 1 >= y");
+                // Expected: x > _this and (z >= _this or z != 1)
+                assert_partial_expression!(r, "y", "x > _this and z >= _this"); // 1 has been subsituted for z which is incorrect.
+                // Expected: z >= _this or z != 1
+                assert_partial_expression!(r, "z", "_this != 1"); // MISSING or z >= y
+                Ok(())
+            }],
+        )
+    }
+
     // TODO(gj): add test where we have a partial prior to an inversion
     // TODO (dhatch): We have few tests involving multiple rules and partials.
 
