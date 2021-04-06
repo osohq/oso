@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1617670005187,
+  "lastUpdate": 1617728369830,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -36243,6 +36243,156 @@ window.BENCHMARK_DATA = {
             "name": "load_policy",
             "value": 957542,
             "range": "± 978",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "fpmurphy@mtu.edu",
+            "name": "Frank Murphy",
+            "username": "AnIrishDuck"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1b51b9ffa5a006843c0c9bd8fa986c7f8295c498",
+          "message": "[Rust] Fail unification instead of returning an error when type casts fail (#796)\n\n\r\nCo-authored-by: Sam Scott <sam@osohq.com>",
+          "timestamp": "2021-04-06T12:48:32-04:00",
+          "tree_id": "6ae65b6955856f6e0294900f5a75f9f0d2bccfa3",
+          "url": "https://github.com/osohq/oso/commit/1b51b9ffa5a006843c0c9bd8fa986c7f8295c498"
+        },
+        "date": 1617728367709,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 52928,
+            "range": "± 2511",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2178968,
+            "range": "± 54054",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 10672841,
+            "range": "± 303472",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 21660757,
+            "range": "± 966439",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 927,
+            "range": "± 109",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2731,
+            "range": "± 680",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 72015,
+            "range": "± 6845",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 570204,
+            "range": "± 28863",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 23268,
+            "range": "± 2047",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 23438,
+            "range": "± 1789",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 24247,
+            "range": "± 2471",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 24863,
+            "range": "± 3654",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 22556,
+            "range": "± 2053",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6283,
+            "range": "± 1171",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 7545,
+            "range": "± 2794",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 9580,
+            "range": "± 1069",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 25476,
+            "range": "± 6954",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 7249,
+            "range": "± 495",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 14259,
+            "range": "± 1046",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 9427,
+            "range": "± 567",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "load_policy",
+            "value": 977381,
+            "range": "± 33981",
             "unit": "ns/iter"
           }
         ]
