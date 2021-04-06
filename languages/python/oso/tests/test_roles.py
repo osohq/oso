@@ -10,10 +10,13 @@ class User:
     def __init__(self, name=""):
         self.name = name
 
+
 class Organization:
     id: str = ""
+
     def __init__(self, id):
         self.id = id
+
 
 class Repository:
     id: str = ""
@@ -25,6 +28,7 @@ class Repository:
         self.public = public
         self.org = org
 
+
 class Issue:
     id: str = ""
     public: bool
@@ -34,6 +38,7 @@ class Issue:
         self.id = id
         self.public = public
         self.repo = repo
+
 
 def test_roles():
     oso = Oso()
@@ -45,9 +50,15 @@ def test_roles():
     roles = OsoRoles()
 
     # Repo permissions
-    permission_repository_read = roles.new_permission(resource=Repository, action="read")
-    permission_repository_write = roles.new_permission(resource=Repository, action="write")
-    permission_repository_list_issues = roles.new_permission(resource=Repository, action="list_issues")
+    permission_repository_read = roles.new_permission(
+        resource=Repository, action="read"
+    )
+    permission_repository_write = roles.new_permission(
+        resource=Repository, action="write"
+    )
+    permission_repository_list_issues = roles.new_permission(
+        resource=Repository, action="list_issues"
+    )
 
     # Repository roles
     role_repository_read = roles.new_role(resource=Repository, name="READ")
@@ -58,24 +69,52 @@ def test_roles():
     permission_issue_write = roles.new_permission(resource=Issue, action="write")
 
     # Issue-repo relationship
-    roles.new_relationship(name="issue_repo", child=Issue, parent=Repository, get=lambda child: child.repo)
+    roles.new_relationship(
+        name="issue_repo",
+        child=Issue,
+        parent=Repository,
+        parent_selector=lambda child: child.repo,
+    )
 
     # Organization roles
     role_organization_owner = roles.new_role(resource=Organization, name="OWNER")
+    role_organization_member = roles.new_role(resource=Organization, name="MEMBER")
+
+    # Org permissions
+    permission_org_create_private_repo = roles.new_permission(
+        resource=Organization, action="create_private_repo"
+    )
 
     # Repo-org relationship
-    roles.new_relationship(name="repo_org", child=Repository, parent=Organization, get=lambda child: child.org)
+    roles.new_relationship(
+        name="repo_org",
+        child=Repository,
+        parent=Organization,
+        parent_selector=lambda child: child.org,
+    )
 
     # Permission assignment
-    roles.new_role_permission(role=role_repository_read, permission=permission_repository_read)
-    roles.new_role_permission(role=role_repository_read, permission=permission_repository_list_issues)
-    roles.new_role_permission(role=role_repository_read, permission=permission_issue_read)
+    roles.new_role_permission(
+        role=role_repository_read, permission=permission_repository_read
+    )
+    roles.new_role_permission(
+        role=role_repository_read, permission=permission_repository_list_issues
+    )
+    roles.new_role_permission(
+        role=role_repository_read, permission=permission_issue_read
+    )
 
-    roles.new_role_permission(role=role_repository_write, permission=permission_repository_write)
+    roles.new_role_permission(
+        role=role_repository_write, permission=permission_repository_write
+    )
 
     # Implied roles
-    roles.new_role_implies(from_role=role_repository_write, to_role=role_repository_read)
-    roles.new_role_implies(from_role=role_organization_owner, to_role=role_repository_write)
+    roles.new_role_implies(
+        from_role=role_repository_write, to_role=role_repository_read
+    )
+    roles.new_role_implies(
+        from_role=role_organization_owner, to_role=role_repository_write
+    )
 
     # @TODO: things scoped to resources
 
@@ -92,26 +131,37 @@ def test_roles():
     sam = User(name="Sam")
 
     osohq = Organization(id="osohq")
+    org2 = Organization(id="org2")
     oso_repo = Repository(id="oso", public=False, org=osohq)
     some_issue = Issue(id="fix_all_the_bugs", public=False, repo=oso_repo)
 
+    roles.new_scoped_role_permission(
+        scope=org2,
+        role=role_organization_member,
+        permission=permission_org_create_private_repo,
+    )
+    roles.assign_role(leina, osohq, role_organization_member)
+    roles.assign_role(leina, org2, role_organization_member)
+    assert not oso.is_allowed(leina, "create_private_repo", osohq)
+    assert oso.is_allowed(leina, "create_private_repo", org2)
+
     roles.assign_role(leina, oso_repo, role_repository_read)
     # direct assignment to a role on the resource with the permission
-    assert(oso.is_allowed(leina, "read", oso_repo))
+    assert oso.is_allowed(leina, "read", oso_repo)
     # direct assignment to a role on the parent with the permission
-    assert(oso.is_allowed(leina, "read", some_issue))
+    assert oso.is_allowed(leina, "read", some_issue)
 
     roles.assign_role(steve, oso_repo, role_repository_write)
     # Implied role on same resource.
-    assert(oso.is_allowed(steve, "read", oso_repo))
+    assert oso.is_allowed(steve, "read", oso_repo)
     # Implied role on parent resource.
-    assert(oso.is_allowed(steve, "read", oso_repo))
+    assert oso.is_allowed(steve, "read", oso_repo)
 
     roles.assign_role(sam, osohq, role_organization_owner)
     # Implied via parent role.
-    assert(oso.is_allowed(sam, "write", oso_repo))
+    assert oso.is_allowed(sam, "write", oso_repo)
     # Implied via parent role and then same resource role. 2 jumps
-    assert(oso.is_allowed(sam, "read", oso_repo))
+    assert oso.is_allowed(sam, "read", oso_repo)
 
     ###################### NOTES #######################
 
@@ -130,13 +180,13 @@ def test_roles():
     # oso.create_roles(user=Actor, resource=Widget, resource_id="id", roles=["OWNER"])
     # role constraints?
 
-
-
     # REPOSITORY PERMISSION
     # permission: (action, resource)
     # where top-level resource is always a tenant
 
     # Repo permission definitions
+
+
 #     oso.create_permission_set(resource_type=Repository, actions=["read", "write", "list_issues"])
 #
 #     # Issue permissions
