@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::fmt;
 
 use crate::bindings::Bindings;
 use crate::folder::{fold_term, Folder};
@@ -87,17 +88,17 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
     }
 }
 
-pub fn simplify_partial(var: &Symbol, mut term: Term, output_vars: HashSet<Symbol>) -> Term {
+pub fn simplify_partial(var: &Symbol, mut term: Term, output_vars: HashSet<Symbol>) -> (Term, PerfCounters) {
     let mut simplifier = Simplifier::new(var.clone(), output_vars);
-    eprintln!("simplify partial {:?}", var);
+    //eprintln!("simplify partial {:?}", var);
     simplifier.simplify_partial(&mut term);
     term = simplify_trivial_constraint(var.clone(), term);
     if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
-        eprintln!("simplify partial done {:?}, {:?}", var, term.to_polar());
-        op!(And, term).into_term()
+        //eprintln!("simplify partial done {:?}, {:?}", var, term.to_polar());
+        (op!(And, term).into_term(), simplifier.perf_counters())
     } else {
-        eprintln!("simplify partial done {:?}, {:?}", var, term.to_polar());
-        term
+        //eprintln!("simplify partial done {:?}, {:?}", var, term.to_polar());
+        (term, simplifier.perf_counters())
     }
 }
 
@@ -106,10 +107,12 @@ pub fn simplify_partial(var: &Symbol, mut term: Term, output_vars: HashSet<Symbo
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
 pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
-    eprintln!("before simplified");
-    for (k, v) in bindings.iter() {
-        eprintln!("{:?} {:?}", k, v.to_polar());
-    }
+    let mut perf = PerfCounters::default();
+
+    //eprintln!("before simplified");
+    //for (k, v) in bindings.iter() {
+        //eprintln!("{:?} {:?}", k, v.to_polar());
+    //}
 
     let mut unsatisfiable = false;
     let mut simplify_var = |bindings: &Bindings, var: &Symbol, value: &Term| match value.value() {
@@ -123,7 +126,9 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
                 bindings.keys().filter(|v| !v.is_temporary_var()).cloned().collect::<HashSet<_>>()
             };
 
-            let simplified = simplify_partial(var, value.clone(), output_vars);
+            let (simplified, p) = simplify_partial(var, value.clone(), output_vars);
+            perf.merge(p);
+
             match simplified.value().as_expression() {
                 Ok(o) if o == &FALSE => unsatisfiable = true,
                 _ => (),
@@ -185,18 +190,73 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     if unsatisfiable {
         None
     } else {
-        eprintln!("after simplified");
-        for (k, v) in simplified_bindings.iter() {
-            eprintln!("{:?} {:?}", k, v.to_polar());
-        }
+        //eprintln!("after simplified");
+        //for (k, v) in simplified_bindings.iter() {
+            //eprintln!("{:?} {:?}", k, v.to_polar());
+        //}
+
+        //eprintln!("*** performance counters \n {}***", perf);
+
         Some(simplified_bindings)
+    }
+}
+
+#[derive(Default)]
+pub struct PerfCounters {
+    // Map of number simplifier loops by term to simplify.
+    simplify_term: HashMap<Term, u64>,
+    preprocess_and: HashMap<Term, u64>,
+
+    acc_simplify_term: u64,
+    acc_preprocess_and: u64
+}
+
+impl fmt::Display for PerfCounters {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "perf {{\n")?;
+        write!(f, "simplify term\n")?;
+        for (term, ncalls) in self.simplify_term.iter() {
+            write!(f, "\t{}: {}\n", term.to_polar(), ncalls)?;
+        }
+
+        write!(f, "preprocess and\n")?;
+
+        for (term, ncalls) in self.preprocess_and.iter() {
+            write!(f, "\t{}: {}\n", term.to_polar(), ncalls)?;
+        }
+
+        write!(f, "}}")
+    }
+}
+
+impl PerfCounters {
+    fn preprocess_and(&mut self) {
+        self.acc_preprocess_and += 1;
+    }
+
+    fn simplify_term(&mut self) {
+        self.acc_simplify_term += 1;
+    }
+
+    fn finish_acc(&mut self, term: Term) {
+        self.simplify_term.insert(term.clone(), self.acc_simplify_term);
+        self.preprocess_and.insert(term, self.acc_preprocess_and);
+        self.acc_preprocess_and = 0;
+        self.acc_simplify_term = 0;
+    }
+
+    fn merge(&mut self, other: PerfCounters) {
+        self.simplify_term.extend(other.simplify_term.into_iter());
+        self.preprocess_and.extend(other.preprocess_and.into_iter());
     }
 }
 
 pub struct Simplifier {
     this_var: Symbol,
     bindings: Bindings,
-    output_vars: HashSet<Symbol>
+    output_vars: HashSet<Symbol>,
+
+    counters: PerfCounters
 }
 
 impl Simplifier {
@@ -204,8 +264,15 @@ impl Simplifier {
         Self {
             this_var,
             bindings: Bindings::new(),
-            output_vars
+            output_vars,
+            counters: PerfCounters::default()
         }
+    }
+
+    fn perf_counters(&mut self) -> PerfCounters {
+        let mut counter = PerfCounters::default();
+        std::mem::swap(&mut self.counters, &mut counter);
+        counter
     }
 
     pub fn bind(&mut self, var: Symbol, value: Term) {
@@ -288,28 +355,28 @@ impl Simplifier {
                     match (left.value(), right.value()) {
                         (Value::Variable(l), Value::Variable(r)) if self.is_output(left) && self.is_output(right) => MaybeDrop::Keep,
                         (Value::Variable(l), Value::Variable(r)) if self.is_output(left) && !self.is_bound(r) => {
-                            eprintln!("*** 1");
+                            //eprintln!("*** 1");
                             MaybeDrop::Bind(r.clone(), left.clone())
                         },
                         (Value::Variable(l), Value::Variable(r)) if self.is_output(right) && !self.is_bound(l) => {
-                            eprintln!("*** 2");
+                            //eprintln!("*** 2");
                             MaybeDrop::Bind(l.clone(), right.clone())
                         },
                         (Value::Variable(l), _) | (Value::RestVariable(l), _) if !self.is_bound(l) && !self.is_output(left) => {
                             // This seems to work with just Bind, but some core tests don't.
-                            eprintln!("*** 3");
+                            //eprintln!("*** 3");
                             MaybeDrop::Bind(l.clone(), right.clone())
                         }
                         (_, Value::Variable(r)) | (_, Value::RestVariable(r)) if !self.is_bound(r) && !self.is_output(right) => {
-                            eprintln!("*** 4");
+                            //eprintln!("*** 4");
                             MaybeDrop::Bind(r.clone(), left.clone())
                         }
                         (Value::Variable(var), val) if (val.is_ground() || self.is_dot_output(right)) && !self.is_bound(var) => {
-                            eprintln!("*** 5");
+                            //eprintln!("*** 5");
                             MaybeDrop::Check(var.clone(), right.clone())
                         },
                         (val, Value::Variable(var)) if (val.is_ground() || self.is_dot_output(left)) && !self.is_bound(var) => {
-                            eprintln!("*** 6");
+                            //eprintln!("*** 6");
                             MaybeDrop::Check(var.clone(), left.clone())
                         },
                         _ => MaybeDrop::Keep,
@@ -322,12 +389,14 @@ impl Simplifier {
 
     pub fn simplify_operation(&mut self, o: &mut Operation) {
         fn preprocess_and(args: &mut TermList) {
-            let mut seen: HashSet<Term> = HashSet::new();
+            // HashSet of term hash values used to deduplicate. We use hash values
+            // to avoid cloning to insert terms.
+            let mut seen: HashSet<u64> = HashSet::with_capacity(args.len());
             args.retain(|a| {
                 let o = a.value().as_expression().unwrap();
                 o != &TRUE // trivial
-                    && !seen.contains(&o.mirror().into_term()) // reflection
-                    && seen.insert(a.clone()) // duplicate
+                    && !seen.contains(&o.mirror().into_term().hash_value()) // reflection
+                    && seen.insert(a.hash_value()) // duplicate
             });
         }
 
@@ -347,6 +416,7 @@ impl Simplifier {
         }
 
         if o.operator == Operator::And {
+            self.counters.preprocess_and();
             preprocess_and(&mut o.args);
         }
 
@@ -378,7 +448,7 @@ impl Simplifier {
                         MaybeDrop::Drop => keep[i] = false,
                         MaybeDrop::Bind(var, value) => {
                             keep[i] = false;
-                            eprintln!("bind {:?}, {:?}", var, value.to_polar());
+                            //eprintln!("bind {:?}, {:?}", var, value.to_polar());
                             self.bind(var, value);
                         },
                         MaybeDrop::Check(var, value) => {
@@ -472,7 +542,9 @@ impl Simplifier {
         let mut last = term.hash_value();
         let mut nbindings = self.bindings.len();
         loop {
-            eprintln!("simplify loop {:?}", term.to_polar());
+            //eprintln!("simplify loop {:?}", term.to_polar());
+            self.counters.simplify_term();
+
             self.simplify_term(term);
             let now = term.hash_value();
             if last == now && self.bindings.len() == nbindings {
@@ -481,5 +553,7 @@ impl Simplifier {
             last = now;
             nbindings = self.bindings.len();
         }
+
+        self.counters.finish_acc(term.clone());
     }
 }
