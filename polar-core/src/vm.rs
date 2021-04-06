@@ -1123,6 +1123,8 @@ impl PolarVirtualMachine {
 
                 let mut hs = HashSet::new();
                 hs.insert(var.clone());
+
+                eprintln!("simplify partial isa");
                 let (simplified, _) = simplify_partial(var, partial.into_term(), hs);
                 let simplified = simplified.value().as_expression()?;
 

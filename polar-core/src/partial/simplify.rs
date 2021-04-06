@@ -90,7 +90,7 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
 
 pub fn simplify_partial(var: &Symbol, mut term: Term, output_vars: HashSet<Symbol>) -> (Term, PerfCounters) {
     let mut simplifier = Simplifier::new(var.clone(), output_vars);
-    //eprintln!("simplify partial {:?}", var);
+    eprintln!("*** simplify partial {:?}", var);
     simplifier.simplify_partial(&mut term);
     term = simplify_trivial_constraint(var.clone(), term);
     if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
@@ -108,6 +108,7 @@ pub fn simplify_partial(var: &Symbol, mut term: Term, output_vars: HashSet<Symbo
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
 pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     let mut perf = PerfCounters::default();
+    eprintln!("simplify bindings");
 
     //eprintln!("before simplified");
     //for (k, v) in bindings.iter() {
@@ -119,7 +120,7 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
         Value::Expression(o) => {
             assert_eq!(o.operator, Operator::And);
             let output_vars = if all {
-                let mut hs = HashSet::new();
+                let mut hs = HashSet::with_capacity(1);
                 hs.insert(var.clone());
                 hs
             } else {
@@ -133,9 +134,7 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
                 Ok(o) if o == &FALSE => unsatisfiable = true,
                 _ => (),
             }
-            let mut symbols = HashSet::new();
-            simplified.variables(&mut symbols);
-            (simplified, symbols)
+            simplified
         }
         Value::Variable(v) | Value::RestVariable(v)
             if v.is_temporary_var()
@@ -145,44 +144,31 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
                     Value::Variable(_) | Value::RestVariable(_)
                 ) =>
         {
-            let mut symbols = HashSet::new();
-            let simplified = bindings[v].clone();
-            simplified.variables(&mut symbols);
-            (simplified, symbols)
+            bindings[v].clone()
         }
         _ => {
-            let mut symbols = HashSet::new();
-            let simplified = value.clone();
-            simplified.variables(&mut symbols);
-            (simplified, symbols)
+            value.clone()
         }
     };
 
     let mut simplified_bindings = HashMap::new();
     if all {
+        eprintln!("simplify bindings all");
         // Simplify everything in bindings.
         for (var, value) in &bindings {
-            let (simplified, _) = simplify_var(&bindings, var, value);
+            let simplified = simplify_var(&bindings, var, value);
             simplified_bindings.insert(var.clone(), simplified);
         }
     } else {
-        // Simplify non temp vars in bindings and keep track of other variables they reference.
-        let mut referenced_vars: VecDeque<Symbol> = VecDeque::new();
+        eprintln!("simplify bindings ref");
+        // We only simplify non temporary variables, because temporaries are not
+        // output.
+        //
+        // Any constraints on temporaries will be included in the non-temporary variable.
         for (var, value) in &bindings {
             if !var.is_temporary_var() {
-                let (simplified, mut symbols) = simplify_var(&bindings, var, value);
+                let simplified = simplify_var(&bindings, var, value);
                 simplified_bindings.insert(var.clone(), simplified);
-                referenced_vars.extend(symbols.drain());
-            }
-        }
-        // Simplify all referenced variables
-        while let Some(var) = referenced_vars.pop_front() {
-            if !simplified_bindings.contains_key(&var) {
-                if let Some(value) = bindings.get(&var) {
-                    let (simplified, mut symbols) = simplify_var(&bindings, &var, value);
-                    simplified_bindings.insert(var.clone(), simplified);
-                    referenced_vars.extend(symbols.drain());
-                }
             }
         }
     };
@@ -542,7 +528,7 @@ impl Simplifier {
         let mut last = term.hash_value();
         let mut nbindings = self.bindings.len();
         loop {
-            //eprintln!("simplify loop {:?}", term.to_polar());
+            eprintln!("simplify loop {:?}", term.to_polar());
             self.counters.simplify_term();
 
             self.simplify_term(term);
