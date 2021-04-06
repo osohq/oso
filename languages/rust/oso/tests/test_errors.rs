@@ -39,37 +39,42 @@ fn test_unify_external_not_supported() -> oso::Result<()> {
         error
     );
 
+    // TODO Any meaningful support of PartialEq implementations with a different
+    // Rhs would require the ability to configure multiple equality_checks for
+    // a given class, which is not currently supported.
+    // See https://github.com/osohq/oso/pull/796 for more context.
+
     // Type that does support unification with a type that doesn't.
-    #[derive(PolarClass, PartialEq)]
-    struct EqFoo(i64);
+    // #[derive(PolarClass, PartialEq)]
+    // struct EqFoo(i64);
 
-    impl PartialEq<Foo> for EqFoo {
-        fn eq(&self, other: &Foo) -> bool {
-            self.0 == other.0
-        }
-    }
+    // impl PartialEq<Foo> for EqFoo {
+    //     fn eq(&self, other: &Foo) -> bool {
+    //         self.0 == other.0
+    //     }
+    // }
 
-    let eq_foo_class = EqFoo::get_polar_class_builder()
-        .with_equality_check()
-        .build();
+    // let eq_foo_class = EqFoo::get_polar_class_builder()
+    //     .with_equality_check()
+    //     .build();
 
-    oso.oso.register_class(eq_foo_class)?;
+    // oso.oso.register_class(eq_foo_class)?;
 
-    let mut query = oso.oso.query_rule("unify", (EqFoo(1), Foo(1)))?;
-    let error = query.next().unwrap().unwrap_err();
+    // let mut query = oso.oso.query_rule("unify", (EqFoo(1), Foo(1)))?;
+    // let error = query.next().unwrap().unwrap_err();
 
     // TODO definitely need stack traces, these would be hard to diagnose
     // otherwise.
-    assert!(
-        matches!(
-            &error,
-            OsoError::TypeError(oso::errors::TypeError {
-                expected,
-                got
-            }) if expected == "EqFoo" && got.as_deref() == Some("Foo")),
-        "{} doesn't match expected error",
-        error
-    );
+    // assert!(
+    //     matches!(
+    //         &error,
+    //         OsoError::TypeError(oso::errors::TypeError {
+    //             expected,
+    //             got
+    //         }) if expected == "EqFoo" && got.as_deref() == Some("Foo")),
+    //     "{} doesn't match expected error",
+    //     error
+    // );
 
     // TODO (dhatch): Right now, this doesn't work because unify only occurs on
     // built-in types.  See https://www.notion.so/osohq/Unify-of-external-instance-with-internal-type-should-use-ExternalUnify-175bac1414324b25b902c1b1f51fafe9
