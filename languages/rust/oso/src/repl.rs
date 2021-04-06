@@ -125,7 +125,7 @@ pub fn main() -> anyhow::Result<()> {
     if matches.is_present("FILES") {
         load_files(
             &mut oso,
-            &mut matches.values_of("FILES").unwrap().into_iter(),
+            &mut matches.values_of("FILES").unwrap(),
         )?;
     }
 
