@@ -123,10 +123,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let matches = build_app().get_matches();
     if matches.is_present("FILES") {
-        load_files(
-            &mut oso,
-            &mut matches.values_of("FILES").unwrap(),
-        )?;
+        load_files(&mut oso, &mut matches.values_of("FILES").unwrap())?;
     }
 
     loop {
