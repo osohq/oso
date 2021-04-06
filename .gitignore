@@ -191,4 +191,7 @@ languages/python/oso/native/polar.lib
 languages/python/oso/native/polar.h
 
 polar-wasm-api/pkg/*
+
+# Algolia tool
 docs/searcher
+docs/search/vendor/*

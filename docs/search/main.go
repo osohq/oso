@@ -4,6 +4,7 @@ import (
 	"flag"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	"github.com/algolia/algoliasearch-client-go/v3/algolia/opt"
@@ -52,7 +53,12 @@ func main() {
 		return
 	}
 
-	args := flag.Args()
+	args, err := loadSearchFiles()
+	if err != nil {
+		logger.Error("There was an error loading search files", "error", err)
+		return
+	}
+
 	uniqueRecords, err := processFiles(args)
 	if err != nil {
 		logger.Error("There was an error processing files", "error", err)
@@ -64,6 +70,7 @@ func main() {
 		records = append(records, value)
 	}
 
+	logger.Info("Sending data to Algolia")
 	// create algolia client
 	searchClient = search.NewClient(*algoliaApplicationID, *algoliaAdminAPIKey)
 	index := searchClient.InitIndex(*algoliaIndex)
@@ -76,6 +83,24 @@ func main() {
 	if err := result.Wait(); err != nil {
 		logger.Error("There was an error ingesting data", "error", err)
 	}
+}
+
+func loadSearchFiles() ([]string, error) {
+	fileList := make([]string, 0)
+
+	if err := filepath.Walk("./public", func(path string, f os.FileInfo, err error) error {
+		if f.IsDir() {
+			return nil
+		}
+		if f.Name() == "search.json" {
+			fileList = append(fileList, path)
+		}
+		return nil
+	}); err != nil {
+		logger.Error("There was an error walking the public directory", "error", err)
+		return nil, err
+	}
+	return fileList, nil
 }
 
 func loadConfiguration() bool {

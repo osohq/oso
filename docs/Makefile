@@ -15,6 +15,9 @@ PYTHON_RST_FILES := $(call rwildcard,../languages/python,*.rst)
 
 RUBY_FILES := $(call rwildcard,../languages/ruby/lib,*.rb)
 
+require-%:
+	$(if ${${*}},,$(error You must pass the $* environment variable))
+
 content/java/reference/api: $(JAVA_FILES)
 	cd "$(JAVA_DIR)" && mvn -q javadoc:javadoc
 	rm -rf $@
@@ -78,9 +81,12 @@ clean:
 	ls -A public | grep -v 'favicon.ico' | xargs -I {} echo 'public/'{} | xargs rm -rf
 
 build-search:
-	cd search && go build -o ../searcher
+	cd search && go mod vendor && go build -o ../searcher
 
-search: clean build-prod build-search
+require-algolia-vars: require-ALGOLIA_APPLICATION_ID require-ALGOLIA_ADMIN_API_KEY require-ALGOLIA_INDEX
+
+search: require-algolia-vars clean build-prod build-search
+	./searcher
 
 spelling:
 	$(MAKE) -C spelling
@@ -99,4 +105,4 @@ lint: build spelling check-links
 test-quickstarts:
 	$(MAKE) -C examples test-quickstarts
 
-.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling build-search search check-links check-links-deps lint test-quickstarts
+.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling build-search search require-algolia-vars check-links check-links-deps lint test-quickstarts
