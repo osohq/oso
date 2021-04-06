@@ -1,5 +1,6 @@
 //! Code for making interactive oso queries from a REPL
 
+use clap::{App, Arg};
 use rustyline::error::ReadlineError;
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::Editor;
@@ -11,7 +12,20 @@ use polar_core::formatting::to_polar::ToPolarString;
 use std::env;
 use std::fs::OpenOptions;
 
-pub fn load_files(oso: &mut Oso, files: &mut dyn Iterator<Item = String>) -> anyhow::Result<()> {
+/// Build the App for handling command line parameters
+fn build_app() -> App<'static, 'static> {
+    App::new(env!("CARGO_PKG_NAME"))
+        .version(env!("CARGO_PKG_VERSION"))
+        .author(env!("CARGO_PKG_AUTHORS"))
+        .about("Oso REPL. See https://docs.osohq.com/rust/reference/tooling/repl.html")
+        .arg(
+            Arg::with_name("FILES")
+                .multiple(true)
+                .help("Specify one or more .polar files to load"),
+        )
+}
+
+pub fn load_files(oso: &mut Oso, files: &mut dyn Iterator<Item = &str>) -> anyhow::Result<()> {
     for file in files {
         oso.load_file(&file)?;
     }
@@ -107,9 +121,14 @@ pub fn main() -> anyhow::Result<()> {
     let mut repl = Repl::new();
     let mut oso = Oso::new();
 
-    let mut args = env::args();
-    let _ = args.next(); // skip the binary filename
-    load_files(&mut oso, &mut args)?;
+    let matches = build_app().get_matches();
+    if matches.is_present("FILES") {
+        load_files(
+            &mut oso,
+            &mut matches.values_of("FILES").unwrap().into_iter(),
+        )?;
+    }
+
     loop {
         // get input
         let input: String = match repl.oso_input("query> ") {
