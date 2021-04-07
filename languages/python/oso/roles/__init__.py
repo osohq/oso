@@ -140,16 +140,38 @@ class OsoRoles:
 
     # TODO: scoped roles
 
-    def new_role_permission(self, role, permission):
-        # @TODO:
-        # If resources don't match, ensure there's a relationship.
-        # If permission is on a child type, ensure there's no roles for that child type.
+    def _are_types_related(self, child_type, parent_type):
+        # Check if child type is related to parent_type
+        current_resource_type = child_type
+        stepped = True
+        while stepped:
+            stepped = False
+            for _, relationship in self.parent_relationships.elements.items():
+                if relationship.child_type == current_resource_type:
+                    current_resource_type = relationship.parent_type
+                    stepped = True
+                    break
+            if current_resource_type == parent_type:
+                return True
+        return False
 
+    def add_role_permission(self, role, permission):
         assert isinstance(role, Role)
         assert isinstance(permission, Permission)
 
         assert role.id in self.roles.elements
         assert permission.id in self.permissions.elements
+
+        # If resources don't match, ensure there's a relationship.
+        if permission.resource_type != role.resource_type:
+            assert self._are_types_related(permission.resource_type, role.resource_type)
+
+            # If permission is on a child type, ensure there's no roles for that child type.
+            for _, role in self.roles.elements.items():
+                if role.resource_type == permission.resource_type:
+                    # TODO: Error, can't assign a permission to a parent role if the type the permission is on has
+                    # roles.
+                    assert False
 
         id = self.role_permissions.get_id()
         role_permission = RolePermission(
@@ -159,17 +181,28 @@ class OsoRoles:
 
         return role_permission
 
-    def new_scoped_role_permission(self, scope, role, permission):
-        # @TODO:
-        # If resources don't match, ensure there's a relationship.
-        # If permission is on a child type, ensure there's no roles for that child type.
-        # If there isn't yet a scoped role record for this, create one.
+    def remove_role_permission(self, role, permission):
+        pass
+
+    def add_scoped_role_permission(self, scope, role, permission):
         assert isinstance(role, Role)
         assert isinstance(permission, Permission)
 
         assert role.id in self.roles.elements
         assert permission.id in self.permissions.elements
 
+        # If resources don't match, ensure there's a relationship.
+        if permission.resource_type != role.resource_type:
+            assert self._are_types_related(permission.resource_type, role.resource_type)
+
+            # If permission is on a child type, ensure there's no roles for that child type.
+            for _, role in self.roles.elements.items():
+                if role.resource_type == permission.resource_type:
+                    # TODO: Error, can't assign a permission to a parent role if the type the permission is on has
+                    # roles.
+                    assert False
+
+        # If there is not yet a scoped role, create one.
         scoped_role = None
         for _, sr in self.scoped_roles.elements.items():
             if sr.resource == scope and sr.role_id == role.id:
@@ -197,12 +230,13 @@ class OsoRoles:
             id=id, scoped_role_id=scoped_role.id, permission_id=permission.id
         )
         self.scoped_role_permissions.elements[id] = role_permission
-
         return role_permission
 
     # TODO: delete scoped role permissions
+    def remove_scoped_role_permission(self, scope, role, permission):
+        pass
 
-    def new_role_implies(self, from_role, to_role):
+    def add_role_implies(self, from_role, to_role):
         # @TODO:
         # If resources don't match, ensure there's a relationship.
         # Two mutually exclusive roles can not be implied by the same role.
@@ -212,6 +246,12 @@ class OsoRoles:
 
         assert from_role.id in self.roles.elements
         assert to_role.id in self.roles.elements
+
+        # If resources don't match, ensure there's a relationship.
+        if from_role.resource_type != to_role.resource_type:
+            assert self._are_types_related(
+                to_role.resource_type, from_role.resource_type
+            )
 
         id = self.implied_roles.get_id()
         implied_role = ImpliedRole(
@@ -223,6 +263,8 @@ class OsoRoles:
 
     # TODO: Scoped implied roles (by parent)
     # TODO: Scoped implied roles (by parent and child)
+
+    # TODO: Remove implied roles
 
     # Start of the "dynamic api"
 

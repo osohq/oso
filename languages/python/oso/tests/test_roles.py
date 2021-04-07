@@ -94,25 +94,25 @@ def test_roles():
     )
 
     # Permission assignment
-    roles.new_role_permission(
+    roles.add_role_permission(
         role=role_repository_read, permission=permission_repository_read
     )
-    roles.new_role_permission(
+    roles.add_role_permission(
         role=role_repository_read, permission=permission_repository_list_issues
     )
-    roles.new_role_permission(
+    roles.add_role_permission(
         role=role_repository_read, permission=permission_issue_read
     )
 
-    roles.new_role_permission(
+    roles.add_role_permission(
         role=role_repository_write, permission=permission_repository_write
     )
 
     # Implied roles
-    roles.new_role_implies(
+    roles.add_role_implies(
         from_role=role_repository_write, to_role=role_repository_read
     )
-    roles.new_role_implies(
+    roles.add_role_implies(
         from_role=role_organization_owner, to_role=role_repository_write
     )
 
@@ -135,7 +135,7 @@ def test_roles():
     oso_repo = Repository(id="oso", public=False, org=osohq)
     some_issue = Issue(id="fix_all_the_bugs", public=False, repo=oso_repo)
 
-    roles.new_scoped_role_permission(
+    roles.add_scoped_role_permission(
         scope=org2,
         role=role_organization_member,
         permission=permission_org_create_private_repo,
@@ -460,3 +460,59 @@ def test_roles():
 # # Role levels
 # # role scopes/types
 # # permissions that exist
+
+
+# Demo on tuesday.
+
+# Show use case
+# - configure up a github example
+# - assign some people roles
+# - show some allow queries
+# - show some management api stuff
+#  - show user roles
+#  - show permissions
+#  - show what the UI could do
+# - *** visualizer of why they are aloud ***
+
+# - Show how to set up super basic roles in your app.
+# - Oh now you want implied roles, show that.
+# - Oh now you want scoped roles, show how to do that.
+
+
+## Demo format
+
+# one python file
+
+# multiple levels of functionality
+# 1. Built-in org roles (no customization)--basically equivalent to "global roles" in a multi-tenant app
+#       - Owner, member, billing
+#       - give some permissions
+#       - show allow queries
+# 2. Relationships + child permissions
+#       - Add org-repo relationships
+#       - Create repo permissions
+#       - Add repo permissions to org
+# 3. Implied roles
+#       - show having "Owner" implies "Member" and "Billing"
+# 4. Add repo roles (different resources can have their own roles)
+#       - Admin, Write, Read
+#       - set these up as implied roles
+#       - give some permissions
+#       - show allow queries
+#       - **we'll have to show how you take permissions off the org and switch over to implied roles**
+# 5. Base repo permissions within an org (Implied roles across resource types based on relationships)
+#       - Set up Org member base permissions for repos in org
+#       - Org admin base permissions for repos in org
+# 6. Customize the Org member role per organization
+#       - Toggle for whether members can create private repos
+#       - Create new permission
+#       - Add scoped permission to member role for an org
+
+## HAVEN'T IMPLEMENTED:
+
+# 7. Customize base repo role for org members per organization
+#       - Add scoped implication to the member role for an org
+#       - scoped implication is only scoped to the parent (org) not the child (repo)
+# 8. Customize base repo role for org members per repo
+#       - Add scoped implication to the member role for a repo
+#       - scoped implication is scoped to the child (repo)
