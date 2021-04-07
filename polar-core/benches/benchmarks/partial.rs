@@ -19,10 +19,11 @@ pub fn partial_and(c: &mut Criterion) {
             b.iter_batched_ref(
                 || {
                     let runner = runner_from_query("partial_and(r)");
-                    let lookups = (0..*n).into_iter().map(|n| {
-                        format!("r.foo_{n} = {n}", n = n)
-                    }).collect::<Vec<String>>()
-                    .join(" and ");
+                    let lookups = (0..*n)
+                        .into_iter()
+                        .map(|n| format!("r.foo_{n} = {n}", n = n))
+                        .collect::<Vec<String>>()
+                        .join(" and ");
 
                     let policy = format!(r#"partial_and(r) if {lookups};"#, lookups = lookups);
 
@@ -65,22 +66,33 @@ pub fn partial_rule_depth(c: &mut Criterion) {
             b.iter_batched_ref(
                 || {
                     let runner = runner_from_query("partial_rule_depth(r)");
-                    let rules = (1..(n + 1)).into_iter().map(|n| {
-                        format!(r#"
+                    let rules = (1..(n + 1))
+                        .into_iter()
+                        .map(|n| {
+                            format!(
+                                r#"
                             a(r, {n}) if
                                 r.foo_{n} = {n} and
                                 a(r, {n1});
-                        "#, n = n, n1 = n - 1)
-                    }).collect::<Vec<String>>()
-                    .join("\n");
+                        "#,
+                                n = n,
+                                n1 = n - 1
+                            )
+                        })
+                        .collect::<Vec<String>>()
+                        .join("\n");
 
-                    let policy = format!(r#"
+                    let policy = format!(
+                        r#"
                         partial_rule_depth(r) if a(r, {n});
 
                         {rules}
 
                         a(r, 0) if r.foo_0 = 0;
-                        "#, rules = rules, n = n);
+                        "#,
+                        rules = rules,
+                        n = n
+                    );
 
                     runner.load_str(&policy).unwrap();
                     runner
@@ -94,7 +106,6 @@ pub fn partial_rule_depth(c: &mut Criterion) {
     }
 
     group.finish();
-
 }
 
 criterion_group!(benches, partial_and, partial_rule_depth);
