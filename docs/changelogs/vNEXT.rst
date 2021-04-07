@@ -19,10 +19,13 @@ Breaking changes
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
 
+
 Breaking change 1
 -----------------
 
-- summary of breaking change
+1 Behavior of `a(x) if x` has changed
+   * Now equivalant to `a(x) if x == true`
+   * Now works if x is unbound
 
 Link to migration guide
 
