@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 use crate::bindings::Bindings;
@@ -7,6 +7,10 @@ use crate::formatting::ToPolarString;
 use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
 
 use super::partial::{invert_operation, FALSE, TRUE};
+
+/// Set to `true` to debug performance in simplifier by turning on
+/// performance counters.
+const TRACK_PERF: bool = false;
 
 enum MaybeDrop {
     Keep,
@@ -88,8 +92,13 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
     }
 }
 
-pub fn simplify_partial(var: &Symbol, mut term: Term, output_vars: HashSet<Symbol>) -> (Term, PerfCounters) {
-    let mut simplifier = Simplifier::new(var.clone(), output_vars);
+pub fn simplify_partial(
+    var: &Symbol,
+    mut term: Term,
+    output_vars: HashSet<Symbol>,
+    track_performance: bool,
+) -> (Term, Option<PerfCounters>) {
+    let mut simplifier = Simplifier::new(output_vars, track_performance);
     //eprintln!("*** simplify partial {:?}", var);
     simplifier.simplify_partial(&mut term);
     term = simplify_trivial_constraint(var.clone(), term);
@@ -107,7 +116,7 @@ pub fn simplify_partial(var: &Symbol, mut term: Term, output_vars: HashSet<Symbo
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
 pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
-    let mut perf = PerfCounters::default();
+    let mut perf = PerfCounters::new(TRACK_PERF);
     //eprintln!("simplify bindings");
 
     //eprintln!("before simplified");
@@ -127,8 +136,10 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
                 bindings.keys().filter(|v| !v.is_temporary_var()).cloned().collect::<HashSet<_>>()
             };
 
-            let (simplified, p) = simplify_partial(var, value.clone(), output_vars);
-            perf.merge(p);
+            let (simplified, p) = simplify_partial(var, value.clone(), output_vars, TRACK_PERF);
+            if let Some(p) = p {
+                perf.merge(p);
+            }
 
             match simplified.value().as_expression() {
                 Ok(o) if o == &FALSE => unsatisfiable = true,
@@ -176,25 +187,20 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     if unsatisfiable {
         None
     } else {
-        //eprintln!("after simplified");
-        //for (k, v) in simplified_bindings.iter() {
-            //eprintln!("{:?} {:?}", k, v.to_polar());
-        //}
-
-        //eprintln!("*** performance counters \n {}***", perf);
-
         Some(simplified_bindings)
     }
 }
 
 #[derive(Default)]
 pub struct PerfCounters {
+    enabled: bool,
+
     // Map of number simplifier loops by term to simplify.
     simplify_term: HashMap<Term, u64>,
     preprocess_and: HashMap<Term, u64>,
 
     acc_simplify_term: u64,
-    acc_preprocess_and: u64
+    acc_preprocess_and: u64,
 }
 
 impl fmt::Display for PerfCounters {
@@ -216,65 +222,91 @@ impl fmt::Display for PerfCounters {
 }
 
 impl PerfCounters {
+    fn new(enabled: bool) -> Self {
+        Self {
+            enabled,
+            ..Default::default()
+        }
+    }
+
     fn preprocess_and(&mut self) {
+        if !self.enabled {
+            return;
+        }
+
         self.acc_preprocess_and += 1;
     }
 
     fn simplify_term(&mut self) {
+        if !self.enabled {
+            return;
+        }
+
         self.acc_simplify_term += 1;
     }
 
     fn finish_acc(&mut self, term: Term) {
-        self.simplify_term.insert(term.clone(), self.acc_simplify_term);
+        if !self.enabled {
+            return;
+        }
+
+        self.simplify_term
+            .insert(term.clone(), self.acc_simplify_term);
         self.preprocess_and.insert(term, self.acc_preprocess_and);
         self.acc_preprocess_and = 0;
         self.acc_simplify_term = 0;
     }
 
     fn merge(&mut self, other: PerfCounters) {
+        if !self.enabled {
+            return;
+        }
+
         self.simplify_term.extend(other.simplify_term.into_iter());
         self.preprocess_and.extend(other.preprocess_and.into_iter());
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        self.enabled
     }
 }
 
 pub struct Simplifier {
-    this_var: Symbol,
     bindings: Bindings,
     make_bindings: bool,
     output_vars: HashSet<Symbol>,
 
-    counters: PerfCounters
+    counters: PerfCounters,
 }
 
 impl Simplifier {
-    pub fn new(this_var: Symbol, output_vars: HashSet<Symbol>) -> Self {
+    pub fn new(output_vars: HashSet<Symbol>, track_performance: bool) -> Self {
         Self {
-            this_var,
             bindings: Bindings::new(),
             output_vars,
             make_bindings: true,
-            counters: PerfCounters::default()
+            counters: PerfCounters::new(track_performance),
         }
     }
 
-    fn perf_counters(&mut self) -> PerfCounters {
+    fn perf_counters(&mut self) -> Option<PerfCounters> {
+        if !self.counters.is_enabled() {
+            return None;
+        }
+
         let mut counter = PerfCounters::default();
         std::mem::swap(&mut self.counters, &mut counter);
-        counter
+        Some(counter)
     }
 
     pub fn bind(&mut self, var: Symbol, value: Term) {
         let new_value = self.deref(&value);
         if self.is_bound(&var) {
-            let current_value = self.deref(&term!(var));
-            if current_value.is_ground() && new_value.is_ground() {
-                assert_eq!(&current_value, &new_value);
-            } else if let Ok(var) = current_value.value().as_symbol() {
-                self.bind(var.clone(), new_value);
-            }
-        } else {
-            self.bindings.insert(var, new_value);
+            // We do not allow rebindings.
+            return
         }
+
+        self.bindings.insert(var, new_value);
     }
 
     pub fn deref(&self, term: &Term) -> Term {
@@ -294,22 +326,6 @@ impl Simplifier {
         match t.value() {
             Value::Variable(v) | Value::RestVariable(v) => self.output_vars.contains(v),
             _ => false,
-        }
-    }
-
-    /// Term is a variable and the name = self.this_var
-    fn is_this(&self, t: &Term) -> bool {
-        match t.value() {
-            Value::Variable(v) | Value::RestVariable(v) => v == &self.this_var,
-            _ => false,
-        }
-    }
-
-    /// Either _this or _this.?
-    fn is_dot_this(&self, t: &Term) -> bool {
-        match t.value() {
-            Value::Expression(e) => e.operator == Operator::Dot && self.is_dot_this(&e.args[0]),
-            _ => self.is_this(t),
         }
     }
 

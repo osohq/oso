@@ -1124,8 +1124,7 @@ impl PolarVirtualMachine {
                 let mut hs = HashSet::new();
                 hs.insert(var.clone());
 
-                //eprintln!("simplify partial isa");
-                let (simplified, _) = simplify_partial(var, partial.into_term(), hs);
+                let (simplified, _) = simplify_partial(var, partial.into_term(), hs, false);
                 let simplified = simplified.value().as_expression()?;
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
