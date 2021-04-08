@@ -218,7 +218,7 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PerfCounters {
     enabled: bool,
 
@@ -322,7 +322,7 @@ impl Simplifier {
             return None;
         }
 
-        let mut counter = PerfCounters::default();
+        let mut counter = PerfCounters::new(true);
         std::mem::swap(&mut self.counters, &mut counter);
         Some(counter)
     }
@@ -536,7 +536,8 @@ impl Simplifier {
                 assert_eq!(o.args.len(), 1);
                 let bindings = self.bindings.clone();
                 let mut simplified = o.args[0].clone();
-                self.simplify_partial(&mut simplified);
+                let mut simplifier = self.clone();
+                simplifier.simplify_partial(&mut simplified);
                 self.bindings = bindings;
                 *o = invert_operation(
                     simplified
