@@ -387,50 +387,47 @@ impl Simplifier {
                 } else {
                     // Maybe bind one side to the other.
                     match (left.value(), right.value()) {
+                        // Always keep unifications of two output variables (x = y).
                         (Value::Variable(_), Value::Variable(_))
                             if self.is_output(left) && self.is_output(right) =>
                         {
                             MaybeDrop::Keep
                         }
-                        (Value::Variable(_), Value::Variable(r))
-                            if self.is_output(left) && !self.is_bound(r) =>
-                        {
-                            simplify_debug!("*** 1");
-                            MaybeDrop::Bind(r.clone(), left.clone())
-                        }
-                        (Value::Variable(l), Value::Variable(_))
-                            if self.is_output(right) && !self.is_bound(l) =>
-                        {
-                            simplify_debug!("*** 2");
-                            MaybeDrop::Bind(l.clone(), right.clone())
-                        }
-                        (Value::Variable(l), _) | (Value::RestVariable(l), _)
+                        // Replace non-output variable l with right.
+                        (Value::Variable(l), _)
                             if !self.is_bound(l) && !self.is_output(left) =>
                         {
-                            // This seems to work with just Bind, but some core tests don't.
-                            simplify_debug!("*** 3");
+                            simplify_debug!("*** 1");
                             MaybeDrop::Bind(l.clone(), right.clone())
                         }
-                        (_, Value::Variable(r)) | (_, Value::RestVariable(r))
+                        // Replace non-output variable r with left.
+                        (_, Value::Variable(r))
                             if !self.is_bound(r) && !self.is_output(right) =>
                         {
-                            simplify_debug!("*** 4");
+                            simplify_debug!("*** 2");
                             MaybeDrop::Bind(r.clone(), left.clone())
                         }
+                        // Replace variable with value if the value is ground
+                        // or a dot output (x.foo) and variable is mentioned elsewhere
+                        // in the expression.
                         (Value::Variable(var), val)
                             if (val.is_ground() || self.is_dot_output(right))
                                 && !self.is_bound(var) =>
                         {
-                            simplify_debug!("*** 5");
+                            simplify_debug!("*** 3");
                             MaybeDrop::Check(var.clone(), right.clone())
                         }
+                        // Replace variable with value if the value is ground
+                        // or a dot output (x.foo) and variable is mentioned elsewhere
+                        // in the expression.
                         (val, Value::Variable(var))
                             if (val.is_ground() || self.is_dot_output(left))
                                 && !self.is_bound(var) =>
                         {
-                            simplify_debug!("*** 6");
+                            simplify_debug!("*** 4");
                             MaybeDrop::Check(var.clone(), left.clone())
                         }
+                        // Keep everything else.
                         _ => MaybeDrop::Keep,
                     }
                 }
