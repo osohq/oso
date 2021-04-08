@@ -290,7 +290,6 @@ impl PerfCounters {
 #[derive(Clone)]
 pub struct Simplifier {
     bindings: Bindings,
-    make_bindings: bool,
     output_vars: HashSet<Symbol>,
 
     counters: PerfCounters,
@@ -303,7 +302,6 @@ impl Simplifier {
         Self {
             bindings: Bindings::new(),
             output_vars,
-            make_bindings: true,
             counters: PerfCounters::new(track_performance),
         }
     }
@@ -658,7 +656,6 @@ impl Simplifier {
             nbindings = self.bindings.len();
         }
 
-        self.make_bindings = false;
         self.simplify_term(term, Simplifier::deduplicate_operation);
 
         self.counters.finish_acc(term.clone());
