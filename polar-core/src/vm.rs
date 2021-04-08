@@ -1121,7 +1121,7 @@ impl PolarVirtualMachine {
                 // Get the existing partial on the LHS variable.
                 let partial = self.binding_manager.get_constraints(var);
 
-                let mut hs = HashSet::new();
+                let mut hs = HashSet::with_capacity(1);
                 hs.insert(var.clone());
 
                 let (simplified, _) = simplify_partial(var, partial.into_term(), hs, false);
