@@ -221,19 +221,19 @@ pub struct PerfCounters {
 
 impl fmt::Display for PerfCounters {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "perf {{\n")?;
-        write!(f, "simplify term\n")?;
+        writeln!(f, "perf {{")?;
+        writeln!(f, "simplify term")?;
         for (term, ncalls) in self.simplify_term.iter() {
-            write!(f, "\t{}: {}\n", term.to_polar(), ncalls)?;
+            writeln!(f, "\t{}: {}", term.to_polar(), ncalls)?;
         }
 
-        write!(f, "preprocess and\n")?;
+        writeln!(f, "preprocess and")?;
 
         for (term, ncalls) in self.preprocess_and.iter() {
-            write!(f, "\t{}: {}\n", term.to_polar(), ncalls)?;
+            writeln!(f, "\t{}: {}", term.to_polar(), ncalls)?;
         }
 
-        write!(f, "}}")
+        writeln!(f, "}}")
     }
 }
 

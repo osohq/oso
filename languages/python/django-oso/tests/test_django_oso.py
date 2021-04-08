@@ -336,10 +336,22 @@ def test_partial_unification():
     results = Oso.query_rule("g", Variable("x"), Variable("y"), accept_expression=True)
     first = next(results)["bindings"]
 
-    # not ideal that these are swapped in order (y = x) not (x = y).
+    # TODO not ideal that these are swapped in order (y = x) not (x = y).
     # this is a hard case, we want the (y > 1) to be this in both cases AND keep the x = y.
-    assert first["x"] == Expression("And", [Expression("Unify", [Variable("y"), Variable("_this")]), Expression("Gt", [Variable("_this"), 1])])
-    assert first["y"] == Expression("And", [Expression("Unify", [Variable("_this"), Variable("x")]), Expression("Gt", [Variable("_this"), 1])])
+    assert first["x"] == Expression(
+        "And",
+        [
+            Expression("Unify", [Variable("y"), Variable("_this")]),
+            Expression("Gt", [Variable("y"), 1]),
+        ],
+    )
+    assert first["y"] == Expression(
+        "And",
+        [
+            Expression("Unify", [Variable("_this"), Variable("x")]),
+            Expression("Gt", [Variable("_this"), 1]),
+        ],
+    )
 
 
 def test_rewrite_parameters():
