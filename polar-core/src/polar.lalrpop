@@ -248,7 +248,13 @@ LogExp: Term = {
     <ExpectLogical<Exp1<"Term">>>
 }
 
-IsValue<T>: ValueOrLogical = {
+// Values - things that can be operated on, eg. numbers, lists, variables, dictionaries, strings
+// logicals are prolog callables - things that can be called and fail or succeed 
+// logicals and values are terms  - ANNIE
+
+IsValue<T>: ValueOrLogical = {  // ANNIE  - IsLogical represents a goal
+// IsValue represents terms that aren't goals?
+// Values 
     <Spanned<T>> => ValueOrLogical::Value(<>)
 }
 
@@ -261,7 +267,7 @@ IsAny<T>: ValueOrLogical = {
 }
 
 
-ExpectValue<T>: Term = {
+ExpectValue<T>: Term = {  // how these used at parse time ANNIE
     <loc:@L> <term:T> =>? {
         match term {
             ValueOrLogical::Logical(term) => {
@@ -519,12 +525,11 @@ pub Pattern: Value = {
     <List<"Pattern">>,
 };
 
-
 pub Value: ValueOrLogical = {
     <IsLogical<BuiltinOperation>>,
     <IsAny<Boolean>>,
     <IsAny<Variable>>,
-    <IsAny<Call>>,
+    <IsAny<Call>>,   // this wants to be IsLogical (Sam thinks this is the only change ANNIE)
     <IsValue<New>>,
     <IsValue<List<"Term">>>,
     <IsValue<Number>>,
