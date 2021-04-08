@@ -12,6 +12,23 @@ use super::partial::{invert_operation, FALSE, TRUE};
 /// performance counters.
 const TRACK_PERF: bool = false;
 
+/// Set to `true` to turn on simplify debug logging.
+const SIMPLIFY_DEBUG: bool = true;
+
+macro_rules! if_debug {
+    ($($e:tt)*) => {
+        if SIMPLIFY_DEBUG {
+            $($e)*
+        }
+    }
+}
+
+macro_rules! simplify_debug {
+    ($($e:tt)*) => {
+        if_debug!(eprintln!($($e)*))
+    }
+}
+
 enum MaybeDrop {
     Keep,
     Drop,
@@ -99,14 +116,14 @@ pub fn simplify_partial(
     track_performance: bool,
 ) -> (Term, Option<PerfCounters>) {
     let mut simplifier = Simplifier::new(output_vars, track_performance);
-    //eprintln!("*** simplify partial {:?}", var);
+    simplify_debug!("*** simplify partial {:?}", var);
     simplifier.simplify_partial(&mut term);
     term = simplify_trivial_constraint(var.clone(), term);
     if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
-        //eprintln!("simplify partial done {:?}, {:?}", var, term.to_polar());
+        simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
         (op!(And, term).into_term(), simplifier.perf_counters())
     } else {
-        //eprintln!("simplify partial done {:?}, {:?}", var, term.to_polar());
+        simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
         (term, simplifier.perf_counters())
     }
 }
@@ -117,12 +134,14 @@ pub fn simplify_partial(
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
 pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     let mut perf = PerfCounters::new(TRACK_PERF);
-    //eprintln!("simplify bindings");
+    simplify_debug!("simplify bindings");
 
-    //eprintln!("before simplified");
-    //for (k, v) in bindings.iter() {
-        //eprintln!("{:?} {:?}", k, v.to_polar());
-    //}
+    if_debug! {
+        eprintln!("before simplified");
+        for (k, v) in bindings.iter() {
+            eprintln!("{:?} {:?}", k, v.to_polar());
+        }
+    }
 
     let mut unsatisfiable = false;
     let mut simplify_var = |bindings: &Bindings, var: &Symbol, value: &Term| match value.value() {
@@ -164,14 +183,15 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
 
     let mut simplified_bindings = HashMap::new();
     if all {
-        //eprintln!("simplify bindings all");
+        simplify_debug!("simplify bindings all");
         // Simplify everything in bindings.
         for (var, value) in &bindings {
             let simplified = simplify_var(&bindings, var, value);
             simplified_bindings.insert(var.clone(), simplified);
         }
     } else {
-        //eprintln!("simplify bindings ref");
+        simplify_debug!("simplify bindings ref");
+
         // We only simplify non temporary variables, because temporaries are not
         // output.
         //
@@ -187,6 +207,13 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     if unsatisfiable {
         None
     } else {
+        if_debug! {
+            eprintln!("after simplified");
+            for (k, v) in simplified_bindings.iter() {
+                eprintln!("{:?} {:?}", k, v.to_polar());
+            }
+        }
+
         Some(simplified_bindings)
     }
 }
@@ -271,6 +298,7 @@ impl PerfCounters {
     }
 }
 
+#[derive(Clone)]
 pub struct Simplifier {
     bindings: Bindings,
     make_bindings: bool,
@@ -359,28 +387,28 @@ impl Simplifier {
                     match (left.value(), right.value()) {
                         (Value::Variable(l), Value::Variable(r)) if self.is_output(left) && self.is_output(right) => MaybeDrop::Keep,
                         (Value::Variable(l), Value::Variable(r)) if self.is_output(left) && !self.is_bound(r) => {
-                            //eprintln!("*** 1");
+                            simplify_debug!("*** 1");
                             MaybeDrop::Bind(r.clone(), left.clone())
                         },
                         (Value::Variable(l), Value::Variable(r)) if self.is_output(right) && !self.is_bound(l) => {
-                            //eprintln!("*** 2");
+                            simplify_debug!("*** 2");
                             MaybeDrop::Bind(l.clone(), right.clone())
                         },
                         (Value::Variable(l), _) | (Value::RestVariable(l), _) if !self.is_bound(l) && !self.is_output(left) => {
                             // This seems to work with just Bind, but some core tests don't.
-                            //eprintln!("*** 3");
+                            simplify_debug!("*** 3");
                             MaybeDrop::Bind(l.clone(), right.clone())
                         }
                         (_, Value::Variable(r)) | (_, Value::RestVariable(r)) if !self.is_bound(r) && !self.is_output(right) => {
-                            //eprintln!("*** 4");
+                            simplify_debug!("*** 4");
                             MaybeDrop::Bind(r.clone(), left.clone())
                         }
                         (Value::Variable(var), val) if (val.is_ground() || self.is_dot_output(right)) && !self.is_bound(var) => {
-                            //eprintln!("*** 5");
+                            simplify_debug!("*** 5");
                             MaybeDrop::Check(var.clone(), right.clone())
                         },
                         (val, Value::Variable(var)) if (val.is_ground() || self.is_dot_output(left)) && !self.is_bound(var) => {
-                            //eprintln!("*** 6");
+                            simplify_debug!("*** 6");
                             MaybeDrop::Check(var.clone(), left.clone())
                         },
                         _ => MaybeDrop::Keep,
@@ -475,14 +503,14 @@ impl Simplifier {
                         MaybeDrop::Drop => keep[i] = false,
                         MaybeDrop::Bind(var, value) => {
                             keep[i] = false;
-                            //eprintln!("bind {:?}, {:?}", var, value.to_polar());
+                            simplify_debug!("bind {:?}, {:?}", var, value.to_polar());
                             self.bind(var, value);
                         },
                         MaybeDrop::Check(var, value) => {
-                            //eprintln!("check {:?}, {:?}", var, value.to_polar());
+                            simplify_debug!("check {:?}, {:?}", var, value.to_polar());
                             for (j, arg) in o.args.iter().enumerate() {
                                 if j != i && arg.contains_variable(&var) {
-                                    //eprintln!("check bind {:?}, {:?}", var, value.to_polar());
+                                    simplify_debug!("check bind {:?}, {:?}", var, value.to_polar());
                                     self.bind(var, value);
                                     keep[i] = false;
                                     break;
@@ -571,7 +599,7 @@ impl Simplifier {
         let mut last = term.hash_value();
         let mut nbindings = self.bindings.len();
         loop {
-            //eprintln!("simplify loop {:?}", term.to_polar());
+            simplify_debug!("simplify loop {:?}", term.to_polar());
             self.counters.simplify_term();
 
             self.simplify_term(term);
