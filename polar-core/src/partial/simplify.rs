@@ -394,16 +394,12 @@ impl Simplifier {
                             MaybeDrop::Keep
                         }
                         // Replace non-output variable l with right.
-                        (Value::Variable(l), _)
-                            if !self.is_bound(l) && !self.is_output(left) =>
-                        {
+                        (Value::Variable(l), _) if !self.is_bound(l) && !self.is_output(left) => {
                             simplify_debug!("*** 1");
                             MaybeDrop::Bind(l.clone(), right.clone())
                         }
                         // Replace non-output variable r with left.
-                        (_, Value::Variable(r))
-                            if !self.is_bound(r) && !self.is_output(right) =>
-                        {
+                        (_, Value::Variable(r)) if !self.is_bound(r) && !self.is_output(right) => {
                             simplify_debug!("*** 2");
                             MaybeDrop::Bind(r.clone(), left.clone())
                         }
@@ -442,8 +438,11 @@ impl Simplifier {
     /// Also inverts negation operations.
     ///
     /// May require multiple calls to perform all eliminiations.
-    pub fn simplify_operation_variables(&mut self, o: &mut Operation, simplify_term: &TermSimplifier)
-    {
+    pub fn simplify_operation_variables(
+        &mut self,
+        o: &mut Operation,
+        simplify_term: &TermSimplifier,
+    ) {
         fn toss_trivial_unifies(args: &mut TermList) {
             args.retain(|c| {
                 let o = c.value().as_expression().unwrap();
@@ -495,7 +494,12 @@ impl Simplifier {
                             simplify_debug!("check {:?}, {:?}", var, value.to_polar());
                             for (j, arg) in o.args.iter().enumerate() {
                                 if j != i && arg.contains_variable(&var) {
-                                    simplify_debug!("check bind {:?}, {:?} ref: {}", var, value.to_polar(), j);
+                                    simplify_debug!(
+                                        "check bind {:?}, {:?} ref: {}",
+                                        var,
+                                        value.to_polar(),
+                                        j
+                                    );
                                     self.bind(var, value);
                                     keep[i] = false;
 
@@ -548,8 +552,7 @@ impl Simplifier {
 
     /// Deduplicate an operation by removing terms that are mirrors or duplicates
     /// of other terms.
-    pub fn deduplicate_operation(&mut self, o: &mut Operation, simplify_term: &TermSimplifier)
-    {
+    pub fn deduplicate_operation(&mut self, o: &mut Operation, simplify_term: &TermSimplifier) {
         fn preprocess_and(args: &mut TermList) {
             // HashSet of term hash values used to deduplicate. We use hash values
             // to avoid cloning to insert terms.
@@ -594,7 +597,8 @@ impl Simplifier {
     /// on the operation argument. To recursively simplify sub-terms in that operation,
     /// it must call the passed TermSimplifier.
     pub fn simplify_term<F>(&mut self, term: &mut Term, simplify_operation: F)
-    where F: Fn(&mut Self, &mut Operation, &TermSimplifier) + 'static + Clone,
+    where
+        F: Fn(&mut Self, &mut Operation, &TermSimplifier) + 'static + Clone,
     {
         *term = self.deref(term);
         if matches!(
@@ -625,7 +629,9 @@ impl Simplifier {
                 }
                 Value::Expression(operation) => {
                     let so = simplify_operation.clone();
-                    let cont = move |s: &mut Self, term: &mut Term| s.simplify_term(term, simplify_operation.clone());
+                    let cont = move |s: &mut Self, term: &mut Term| {
+                        s.simplify_term(term, simplify_operation.clone())
+                    };
                     so(self, operation, &cont);
                 }
                 // If it's not in the matches above, it's not in here
