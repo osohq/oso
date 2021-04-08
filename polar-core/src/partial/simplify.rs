@@ -183,28 +183,15 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
         _ => value.clone(),
     };
 
+    simplify_debug!("simplify bindings {}", if all { "all" } else { "not all" });
+
     let mut simplified_bindings = HashMap::new();
-    if all {
-        simplify_debug!("simplify bindings all");
-        // Simplify everything in bindings.
-        for (var, value) in &bindings {
+    for (var, value) in &bindings {
+        if !var.is_temporary_var() || all {
             let simplified = simplify_var(&bindings, var, value);
             simplified_bindings.insert(var.clone(), simplified);
         }
-    } else {
-        simplify_debug!("simplify bindings ref");
-
-        // We only simplify non temporary variables, because temporaries are not
-        // output.
-        //
-        // Any constraints on temporaries will be included in the non-temporary variable.
-        for (var, value) in &bindings {
-            if !var.is_temporary_var() {
-                let simplified = simplify_var(&bindings, var, value);
-                simplified_bindings.insert(var.clone(), simplified);
-            }
-        }
-    };
+    }
 
     if unsatisfiable {
         None
@@ -309,6 +296,8 @@ pub struct Simplifier {
     counters: PerfCounters,
 }
 
+type TermSimplifier = dyn Fn(&mut Simplifier, &mut Term);
+
 impl Simplifier {
     pub fn new(output_vars: HashSet<Symbol>, track_performance: bool) -> Self {
         Self {
@@ -370,7 +359,15 @@ impl Simplifier {
         }
     }
 
-    /// Returns true when the constraint can be replaced with a binding, and makes the binding.
+    /// Determine whether to keep, drop, bind or conditionally bind a unification operation.
+    ///
+    /// Returns:
+    /// - Keep: to indicate that the operation should not be removed
+    /// - Drop: to indicate the operation should be removed with no new bindings
+    /// - Bind(var, val) to indicate that the operation should be removed, and var should be
+    ///                  bound to val.
+    /// - Check(var, val) To indicate that the operation should be removed and var should
+    ///                   be bound to val *if* var is referenced elsewhere in the expression.
     ///
     /// Params:
     ///     constraint: The constraint to consider removing from its parent.
@@ -442,19 +439,14 @@ impl Simplifier {
         }
     }
 
-    pub fn simplify_operation(&mut self, o: &mut Operation) {
-        fn preprocess_and(args: &mut TermList) {
-            // HashSet of term hash values used to deduplicate. We use hash values
-            // to avoid cloning to insert terms.
-            let mut seen: HashSet<u64> = HashSet::with_capacity(args.len());
-            args.retain(|a| {
-                let o = a.value().as_expression().unwrap();
-                o != &TRUE // trivial
-                    && !seen.contains(&o.mirror().into_term().hash_value()) // reflection
-                    && seen.insert(a.hash_value()) // duplicate
-            });
-        }
-
+    /// Perform simplification of variable names in an operation by eliminating unification
+    /// operations to express an operation in terms of output variables only.
+    ///
+    /// Also inverts negation operations.
+    ///
+    /// May require multiple calls to perform all eliminiations.
+    pub fn simplify_operation_variables(&mut self, o: &mut Operation, simplify_term: &TermSimplifier)
+    {
         fn toss_trivial_unifies(args: &mut TermList) {
             args.retain(|c| {
                 let o = c.value().as_expression().unwrap();
@@ -470,34 +462,6 @@ impl Simplifier {
             });
         }
 
-        if !self.make_bindings {
-            if o.operator == Operator::And {
-                self.counters.preprocess_and();
-                preprocess_and(&mut o.args);
-            }
-
-            match o.operator {
-                Operator::And | Operator::Or if o.args.is_empty() => (),
-
-                // Replace one-argument conjunctions & disjunctions with their argument.
-                Operator::And | Operator::Or if o.args.len() == 1 => {
-                    if let Value::Expression(operation) = o.args[0].value() {
-                        *o = operation.clone();
-                        self.simplify_operation(o);
-                    }
-                }
-
-                // Default case.
-                _ => {
-                    for arg in &mut o.args {
-                        self.simplify_term(arg);
-                    }
-                }
-            }
-
-            return;
-        }
-
         if o.operator == Operator::And || o.operator == Operator::Or {
             toss_trivial_unifies(&mut o.args);
         }
@@ -511,7 +475,7 @@ impl Simplifier {
             Operator::And | Operator::Or if o.args.len() == 1 => {
                 if let Value::Expression(operation) = o.args[0].value() {
                     *o = operation.clone();
-                    self.simplify_operation(o);
+                    self.simplify_operation_variables(o, simplify_term);
                 }
             }
 
@@ -520,6 +484,7 @@ impl Simplifier {
             Operator::And if o.args.len() > 1 => {
                 // Compute which constraints to keep.
                 let mut keep = o.args.iter().map(|_| true).collect::<Vec<bool>>();
+                //let mut references = o.args.iter().map(|_| false).collect::<Vec<bool>>();
                 for (i, arg) in o.args.iter().enumerate() {
                     match self.maybe_bind_constraint(arg.value().as_expression().unwrap()) {
                         MaybeDrop::Keep => (),
@@ -536,6 +501,9 @@ impl Simplifier {
                                     simplify_debug!("check bind {:?}, {:?}", var, value.to_polar());
                                     self.bind(var, value);
                                     keep[i] = false;
+
+                                    // record that this term references var and must be kept.
+                                    //references[j] = true;
                                     break;
                                 }
                             }
@@ -547,12 +515,12 @@ impl Simplifier {
                 let mut i = 0;
                 o.args.retain(|_| {
                     i += 1;
-                    keep[i - 1]
+                    keep[i - 1] || references[i - 1]
                 });
 
                 // Simplify the survivors.
                 for arg in &mut o.args {
-                    self.simplify_term(arg);
+                    simplify_term(self, arg);
                 }
             }
 
@@ -560,11 +528,9 @@ impl Simplifier {
             // current bindings because bindings may not leak out of a negation.
             Operator::Not => {
                 assert_eq!(o.args.len(), 1);
-                let bindings = self.bindings.clone();
                 let mut simplified = o.args[0].clone();
                 let mut simplifier = self.clone();
                 simplifier.simplify_partial(&mut simplified);
-                self.bindings = bindings;
                 *o = invert_operation(
                     simplified
                         .value()
@@ -577,13 +543,62 @@ impl Simplifier {
             // Default case.
             _ => {
                 for arg in &mut o.args {
-                    self.simplify_term(arg);
+                    simplify_term(self, arg);
                 }
             }
         }
     }
 
-    pub fn simplify_term(&mut self, term: &mut Term) {
+    /// Deduplicate an operation by removing terms that are mirrors or duplicates
+    /// of other terms.
+    pub fn deduplicate_operation(&mut self, o: &mut Operation, simplify_term: &TermSimplifier)
+    {
+        fn preprocess_and(args: &mut TermList) {
+            // HashSet of term hash values used to deduplicate. We use hash values
+            // to avoid cloning to insert terms.
+            let mut seen: HashSet<u64> = HashSet::with_capacity(args.len());
+            args.retain(|a| {
+                let o = a.value().as_expression().unwrap();
+                o != &TRUE // trivial
+                    && !seen.contains(&o.mirror().into_term().hash_value()) // reflection
+                    && seen.insert(a.hash_value()) // duplicate
+            });
+        }
+
+        if o.operator == Operator::And {
+            self.counters.preprocess_and();
+            preprocess_and(&mut o.args);
+        }
+
+        match o.operator {
+            Operator::And | Operator::Or if o.args.is_empty() => (),
+
+            // Replace one-argument conjunctions & disjunctions with their argument.
+            Operator::And | Operator::Or if o.args.len() == 1 => {
+                if let Value::Expression(operation) = o.args[0].value() {
+                    *o = operation.clone();
+                    self.deduplicate_operation(o, simplify_term);
+                }
+            }
+
+            // Default case.
+            _ => {
+                for arg in &mut o.args {
+                    simplify_term(self, arg);
+                }
+            }
+        }
+    }
+
+    /// Simplify a term `term` in place by calling the simplification
+    /// function `simplify_operation` on any Expression in that term.
+    ///
+    /// `simplify_operation` should perform simplification operations in-place
+    /// on the operation argument. To recursively simplify sub-terms in that operation,
+    /// it must call the passed TermSimplifier.
+    pub fn simplify_term<F>(&mut self, term: &mut Term, simplify_operation: F)
+    where F: Fn(&mut Self, &mut Operation, &TermSimplifier) + 'static + Clone,
+    {
         *term = self.deref(term);
         if matches!(
             term.value(),
@@ -593,26 +608,28 @@ impl Simplifier {
             match value {
                 Value::Dictionary(dict) => {
                     for (_, v) in dict.fields.iter_mut() {
-                        self.simplify_term(v);
+                        self.simplify_term(v, simplify_operation.clone());
                     }
                 }
                 Value::Call(call) => {
                     for arg in call.args.iter_mut() {
-                        self.simplify_term(arg);
+                        self.simplify_term(arg, simplify_operation.clone());
                     }
                     if let Some(kwargs) = &mut call.kwargs {
                         for (_, v) in kwargs.iter_mut() {
-                            self.simplify_term(v);
+                            self.simplify_term(v, simplify_operation.clone());
                         }
                     }
                 }
                 Value::List(list) => {
                     for elem in list.iter_mut() {
-                        self.simplify_term(elem);
+                        self.simplify_term(elem, simplify_operation.clone());
                     }
                 }
                 Value::Expression(operation) => {
-                    self.simplify_operation(operation);
+                    let so = simplify_operation.clone();
+                    let cont = move |s: &mut Self, term: &mut Term| s.simplify_term(term, simplify_operation.clone());
+                    so(self, operation, &cont);
                 }
                 // If it's not in the matches above, it's not in here
                 _ => unreachable!(),
@@ -629,7 +646,7 @@ impl Simplifier {
             simplify_debug!("simplify loop {:?}", term.to_polar());
             self.counters.simplify_term();
 
-            self.simplify_term(term);
+            self.simplify_term(term, Simplifier::simplify_operation_variables);
             let now = term.hash_value();
             if last == now && self.bindings.len() == nbindings {
                 break;
@@ -639,7 +656,7 @@ impl Simplifier {
         }
 
         self.make_bindings = false;
-        self.simplify_term(term);
+        self.simplify_term(term, Simplifier::deduplicate_operation);
 
         self.counters.finish_acc(term.clone());
     }
