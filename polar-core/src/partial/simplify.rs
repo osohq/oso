@@ -390,18 +390,18 @@ impl Simplifier {
                 } else {
                     // Maybe bind one side to the other.
                     match (left.value(), right.value()) {
-                        (Value::Variable(l), Value::Variable(r))
+                        (Value::Variable(_), Value::Variable(_))
                             if self.is_output(left) && self.is_output(right) =>
                         {
                             MaybeDrop::Keep
                         }
-                        (Value::Variable(l), Value::Variable(r))
+                        (Value::Variable(_), Value::Variable(r))
                             if self.is_output(left) && !self.is_bound(r) =>
                         {
                             simplify_debug!("*** 1");
                             MaybeDrop::Bind(r.clone(), left.clone())
                         }
-                        (Value::Variable(l), Value::Variable(r))
+                        (Value::Variable(l), Value::Variable(_))
                             if self.is_output(right) && !self.is_bound(l) =>
                         {
                             simplify_debug!("*** 2");
