@@ -529,11 +529,7 @@ mod test {
             term!(call!("h", [sym!("x"), btreemap! {sym!("x") => term!(1)}])),
             false,
         );
-        assert_partial_expression!(
-            next_binding(&mut q)?,
-            "x",
-            "1 matches X{}"
-        );
+        assert_partial_expression!(next_binding(&mut q)?, "x", "1 matches X{}");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x"), sym!("y")])), false);
@@ -605,11 +601,7 @@ mod test {
             term!(call!("j", [sym!("x"), btreemap! {sym!("x") => term!(1)}])),
             false,
         );
-        assert_partial_expression!(
-            maybe_binding(&mut q).unwrap(),
-            "x",
-            "1 matches X{}"
-        );
+        assert_partial_expression!(maybe_binding(&mut q).unwrap(), "x", "1 matches X{}");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), sym!("y")])), false);
@@ -1408,12 +1400,18 @@ mod test {
                g(x) if not (x.foo.bar = y);"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        assert_eq!(next_binding(&mut q)?.get(&sym!("x")).unwrap(), &term!(sym!("x")));
+        assert_eq!(
+            next_binding(&mut q)?.get(&sym!("x")).unwrap(),
+            &term!(sym!("x"))
+        );
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
         // This is unbound because 'y' is unbound.
-        assert_eq!(next_binding(&mut q)?.get(&sym!("x")).unwrap(), &term!(sym!("x")));
+        assert_eq!(
+            next_binding(&mut q)?.get(&sym!("x")).unwrap(),
+            &term!(sym!("x"))
+        );
         assert_query_done!(q);
         Ok(())
     }

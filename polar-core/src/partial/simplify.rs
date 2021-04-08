@@ -152,7 +152,11 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
                 hs.insert(var.clone());
                 hs
             } else {
-                bindings.keys().filter(|v| !v.is_temporary_var()).cloned().collect::<HashSet<_>>()
+                bindings
+                    .keys()
+                    .filter(|v| !v.is_temporary_var())
+                    .cloned()
+                    .collect::<HashSet<_>>()
             };
 
             let (simplified, p) = simplify_partial(var, value.clone(), output_vars, TRACK_PERF);
@@ -176,9 +180,7 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
         {
             bindings[v].clone()
         }
-        _ => {
-            value.clone()
-        }
+        _ => value.clone(),
     };
 
     let mut simplified_bindings = HashMap::new();
@@ -331,7 +333,7 @@ impl Simplifier {
         let new_value = self.deref(&value);
         if self.is_bound(&var) {
             // We do not allow rebindings.
-            return
+            return;
         }
 
         self.bindings.insert(var, new_value);
@@ -360,7 +362,10 @@ impl Simplifier {
     /// output_var.?
     fn is_dot_output(&self, t: &Term) -> bool {
         match t.value() {
-            Value::Expression(e) => e.operator == Operator::Dot && (self.is_dot_output(&e.args[0]) || self.is_output(&e.args[0])),
+            Value::Expression(e) => {
+                e.operator == Operator::Dot
+                    && (self.is_dot_output(&e.args[0]) || self.is_output(&e.args[0]))
+            }
             _ => false,
         }
     }
@@ -385,32 +390,50 @@ impl Simplifier {
                 } else {
                     // Maybe bind one side to the other.
                     match (left.value(), right.value()) {
-                        (Value::Variable(l), Value::Variable(r)) if self.is_output(left) && self.is_output(right) => MaybeDrop::Keep,
-                        (Value::Variable(l), Value::Variable(r)) if self.is_output(left) && !self.is_bound(r) => {
+                        (Value::Variable(l), Value::Variable(r))
+                            if self.is_output(left) && self.is_output(right) =>
+                        {
+                            MaybeDrop::Keep
+                        }
+                        (Value::Variable(l), Value::Variable(r))
+                            if self.is_output(left) && !self.is_bound(r) =>
+                        {
                             simplify_debug!("*** 1");
                             MaybeDrop::Bind(r.clone(), left.clone())
-                        },
-                        (Value::Variable(l), Value::Variable(r)) if self.is_output(right) && !self.is_bound(l) => {
+                        }
+                        (Value::Variable(l), Value::Variable(r))
+                            if self.is_output(right) && !self.is_bound(l) =>
+                        {
                             simplify_debug!("*** 2");
                             MaybeDrop::Bind(l.clone(), right.clone())
-                        },
-                        (Value::Variable(l), _) | (Value::RestVariable(l), _) if !self.is_bound(l) && !self.is_output(left) => {
+                        }
+                        (Value::Variable(l), _) | (Value::RestVariable(l), _)
+                            if !self.is_bound(l) && !self.is_output(left) =>
+                        {
                             // This seems to work with just Bind, but some core tests don't.
                             simplify_debug!("*** 3");
                             MaybeDrop::Bind(l.clone(), right.clone())
                         }
-                        (_, Value::Variable(r)) | (_, Value::RestVariable(r)) if !self.is_bound(r) && !self.is_output(right) => {
+                        (_, Value::Variable(r)) | (_, Value::RestVariable(r))
+                            if !self.is_bound(r) && !self.is_output(right) =>
+                        {
                             simplify_debug!("*** 4");
                             MaybeDrop::Bind(r.clone(), left.clone())
                         }
-                        (Value::Variable(var), val) if (val.is_ground() || self.is_dot_output(right)) && !self.is_bound(var) => {
+                        (Value::Variable(var), val)
+                            if (val.is_ground() || self.is_dot_output(right))
+                                && !self.is_bound(var) =>
+                        {
                             simplify_debug!("*** 5");
                             MaybeDrop::Check(var.clone(), right.clone())
-                        },
-                        (val, Value::Variable(var)) if (val.is_ground() || self.is_dot_output(left)) && !self.is_bound(var) => {
+                        }
+                        (val, Value::Variable(var))
+                            if (val.is_ground() || self.is_dot_output(left))
+                                && !self.is_bound(var) =>
+                        {
                             simplify_debug!("*** 6");
                             MaybeDrop::Check(var.clone(), left.clone())
-                        },
+                        }
                         _ => MaybeDrop::Keep,
                     }
                 }
@@ -472,7 +495,7 @@ impl Simplifier {
                 }
             }
 
-            return
+            return;
         }
 
         if o.operator == Operator::And || o.operator == Operator::Or {
@@ -505,7 +528,7 @@ impl Simplifier {
                             keep[i] = false;
                             simplify_debug!("bind {:?}, {:?}", var, value.to_polar());
                             self.bind(var, value);
-                        },
+                        }
                         MaybeDrop::Check(var, value) => {
                             simplify_debug!("check {:?}, {:?}", var, value.to_polar());
                             for (j, arg) in o.args.iter().enumerate() {
@@ -522,7 +545,10 @@ impl Simplifier {
 
                 // Drop the rest.
                 let mut i = 0;
-                o.args.retain(|_| { i += 1; keep[i - 1] });
+                o.args.retain(|_| {
+                    i += 1;
+                    keep[i - 1]
+                });
 
                 // Simplify the survivors.
                 for arg in &mut o.args {
