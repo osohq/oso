@@ -484,7 +484,7 @@ impl Simplifier {
             Operator::And if o.args.len() > 1 => {
                 // Compute which constraints to keep.
                 let mut keep = o.args.iter().map(|_| true).collect::<Vec<bool>>();
-                //let mut references = o.args.iter().map(|_| false).collect::<Vec<bool>>();
+                let mut references = o.args.iter().map(|_| false).collect::<Vec<bool>>();
                 for (i, arg) in o.args.iter().enumerate() {
                     match self.maybe_bind_constraint(arg.value().as_expression().unwrap()) {
                         MaybeDrop::Keep => (),
@@ -498,12 +498,12 @@ impl Simplifier {
                             simplify_debug!("check {:?}, {:?}", var, value.to_polar());
                             for (j, arg) in o.args.iter().enumerate() {
                                 if j != i && arg.contains_variable(&var) {
-                                    simplify_debug!("check bind {:?}, {:?}", var, value.to_polar());
+                                    simplify_debug!("check bind {:?}, {:?} ref: {}", var, value.to_polar(), j);
                                     self.bind(var, value);
                                     keep[i] = false;
 
                                     // record that this term references var and must be kept.
-                                    //references[j] = true;
+                                    references[j] = true;
                                     break;
                                 }
                             }

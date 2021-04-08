@@ -873,7 +873,7 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("j", [sym!("y")])), false);
         // This seems wrong, right? we have `x = 1` so we should just get `1`.
         // Probably related to grounding bug.
-        assert_partial_expression!(next_binding(&mut q)?, "y", "1 == 1");
+        assert_partial_expression!(next_binding(&mut q)?, "y", "(true)");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("k", [sym!("y")])), false);
