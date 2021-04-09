@@ -44,7 +44,4 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- Go lib no longer tries to print the zero values it uses for bookkeeping. This would crash when running on macOS under delve.
