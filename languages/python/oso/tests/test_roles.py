@@ -315,7 +315,11 @@ def test_roles():
 #     #       - use cases that only have global roles might not want mutually exclusive roles
 #     # - do we need to deal with implied roles not being static? This is like Notion's "restricted page" feature. Basically would require us to keep track of
 #     #   a separate organization base/implied role for each repo. This is just a dynamic base role basically.
-#
+#     # - do we need to deal with implied roles not being static? This is like Notion's "restricted page" feature. Basically would require us to keep track of
+#     #   a separate organization base/implied role for each repo. This is just a dynamic base role basically.
+#     # - rules for assigning roles themselves:
+#     #     - do you have to be in an org to be assigned to a repo role? what about external collabs? we should eventually have a flow for this
+#     #     - also who is allowed to do the assigning? This is more straight forward
 #
 #
 #     # Role Model
@@ -440,16 +444,15 @@ def test_roles():
 # ## Static vs dynamic
 #
 # ### STATIC (Polar?)
-# #### What Role types exist
-# #### Role inheritance
+# #### What Roles exist
 # #### What permissions exist
+# #### Role-permission assignments
+# #### Role inheritance
 # #### Custom logic
 #
 # ### DYNAMIC (DB)
 # #### Role instances
-# #### User-role assignments
-# #### Role-permission assignments
-# #### Role-resource relationships
+# #### User-role-resource assignments
 #
 # ## What changes a lot?
 # # custom role creation

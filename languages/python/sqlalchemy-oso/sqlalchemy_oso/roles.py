@@ -69,10 +69,7 @@ def resource_role_class(
         )
 
     ROLE_CLASSES.append(
-        {
-            "user_model": user_model,
-            "resource_model": resource_model,
-        }
+        {"user_model": user_model, "resource_model": resource_model,}
     )
 
     resource_name = _get_resource_name_lower(resource_model)

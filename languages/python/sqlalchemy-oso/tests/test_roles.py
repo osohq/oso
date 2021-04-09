@@ -79,10 +79,7 @@ class Issue(Base):
 
 
 RepositoryRoleMixin = oso_roles.resource_role_class(
-    Base,
-    User,
-    Repository,
-    ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"],
+    Base, User, Repository, ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"],
 )
 
 
@@ -160,36 +157,12 @@ def load_fixture_data(session):
         RepositoryRole(name="READ", repository=abby_road, user=paul),
         RepositoryRole(name="READ", repository=paperwork, user=mike),
         RepositoryRole(name="READ", repository=paperwork, user=sully),
-        OrganizationRole(
-            name="OWNER",
-            organization=beatles,
-            user=john,
-        ),
-        OrganizationRole(
-            name="MEMBER",
-            organization=beatles,
-            user=paul,
-        ),
-        OrganizationRole(
-            name="MEMBER",
-            organization=beatles,
-            user=ringo,
-        ),
-        OrganizationRole(
-            name="OWNER",
-            organization=monsters,
-            user=mike,
-        ),
-        OrganizationRole(
-            name="MEMBER",
-            organization=monsters,
-            user=sully,
-        ),
-        OrganizationRole(
-            name="MEMBER",
-            organization=monsters,
-            user=randall,
-        ),
+        OrganizationRole(name="OWNER", organization=beatles, user=john,),
+        OrganizationRole(name="MEMBER", organization=beatles, user=paul,),
+        OrganizationRole(name="MEMBER", organization=beatles, user=ringo,),
+        OrganizationRole(name="OWNER", organization=monsters, user=mike,),
+        OrganizationRole(name="MEMBER", organization=monsters, user=sully,),
+        OrganizationRole(name="MEMBER", organization=monsters, user=randall,),
         TeamRole(name="MEMBER", team=vocalists, user=paul),
         TeamRole(name="MAINTAINER", team=vocalists, user=john),
         TeamRole(name="MAINTAINER", team=percussion, user=ringo),
@@ -491,10 +464,7 @@ def test_set_get_session(oso_with_session):
 def test_duplicate_resource_role():
     with pytest.raises(ValueError):
         oso_roles.resource_role_class(
-            Base,
-            User,
-            Repository,
-            ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"],
+            Base, User, Repository, ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"],
         )
 
 
