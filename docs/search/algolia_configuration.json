@@ -5,6 +5,7 @@
     "hitsPerPage": 20,
     "maxValuesPerFacet": 100,
     "searchableAttributes": [
+      "unordered(content)",
       "unordered(summary)",
       "unordered(language)",
       "unordered(description)"
