@@ -379,6 +379,8 @@ class OsoRoles:
 
         return False
 
+        # TODO: Have a way to get out the role that matched.
+
         # is the user assigned to ANY of these roles.
 
         # roles with this permission
