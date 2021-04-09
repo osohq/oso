@@ -333,11 +333,9 @@ func (left Result) Equal(right interface{}) bool {
 	switch val := left.inner.(type) {
 	case map[string]Result:
 		if repr, ok := val["repr"]; ok {
-			// fmt.Printf("%v", right)
 			return repr.inner.(string) == fmt.Sprintf("%v", right)
 		}
 	}
-	fmt.Printf("%v == %v: %v", left.inner, right, cmp.Equal(left.inner, right))
 	return cmp.Equal(left.inner, right)
 }
 

@@ -45,3 +45,4 @@ Other bugs & improvements
 =========================
 
 - Variable is now exposed in the node library which lets you pass an unbound to query_rule.
+- Go lib no longer tries to print the zero values it uses for bookkeeping. This would crash when running on macOS under delve.
