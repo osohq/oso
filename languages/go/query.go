@@ -292,8 +292,6 @@ func (q Query) handleNextExternal(event types.QueryEventNextExternal) error {
 }
 
 func (q Query) handleDebug(event types.QueryEventDebug) error {
-	fmt.Printf("%v\n", event.Message)
-
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("debug> ")
 	text, _ := reader.ReadString('\n')
