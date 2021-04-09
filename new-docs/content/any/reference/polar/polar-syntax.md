@@ -3,7 +3,7 @@ title: Polar Syntax
 any: true
 weight: 1
 aliases:
-  - ../using/polar-syntax.html
+  - ../../using/polar-syntax.html
 description: |
   A brief description of the core syntax elements of Polar.
 ---
