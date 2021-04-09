@@ -44,7 +44,4 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- Variable is now exposed in the node library which lets you pass an unbound to query_rule.
