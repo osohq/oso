@@ -446,15 +446,6 @@ def test_lookup_errors(polar, query):
         query('new Foo().bar = "bar"') == []
     assert "Application error: 'Foo' object has no attribute 'bar'" in str(e.value)
 
-
-def test_predicate(polar, qvar, query):
-    """Test that predicates can be converted to and from python."""
-    polar.load_str("f(x) if x = pred(1, 2);")
-    assert qvar("f(x)", "x") == [Predicate("pred", [1, 2])]
-
-    assert query(Predicate(name="f", args=[Predicate("pred", [1, 2])])) == [{}]
-
-
 def test_return_list(polar, query):
     class User:
         def groups(self):
