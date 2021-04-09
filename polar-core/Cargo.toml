@@ -14,7 +14,7 @@ edition = "2018"
 bench = false
 
 [[bench]]
-name = "bench"
+name = "bench_main"
 harness = false
 
 [dependencies]
