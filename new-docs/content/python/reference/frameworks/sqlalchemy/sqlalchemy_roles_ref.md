@@ -9,11 +9,11 @@ weight: 3
 
 # Built-in Roles with SQLAlchemy
 
-oso includes support for adding roles directly to your application via our ORM
+Oso includes support for adding roles directly to your application via our ORM
 integrations. These features let you declaratively create models to represent
 roles in your application, relate these role models to your user and resource
 models, and manage them through helper methods. We also generate Polar rules
-that you can use in your oso policies to write rules based on the roles you
+that you can use in your Oso policies to write rules based on the roles you
 defined, instead of writing rules over users directly.
 
 This feature is currently supported in [the SQLAlchemy library]({{< relref
@@ -30,8 +30,8 @@ users a role for a widget like “OWNER” or “USER”. Using the roles librar
 can generate a `WidgetRole` model which allows you to assign a user a role for
 a `Widget`. The schema for this new model’s table looks like this:
 
-![Schema diagram showing a WidgetRole relating a User and a
-Widget](img/roles.svg)
+![Schema diagram showing a `WidgetRole` relating a `User` and a
+`Widget`](img/roles.svg)
 
 The `WidgetRole` table is a join table between `User` and `Widget` that
 contains additional `id` (Integer) and `name` (String) attributes.
@@ -51,8 +51,7 @@ following conventions:
 - `User.widget_roles`: `Widget.__name__.lower() + "_roles"`
   {{% /callout %}}
 
-The library also provides [`helper methods`]({{< relref
-path="reference/frameworks/sqlalchemy#sqlalchemy_osoroles" lang="python" >}}) for
+The library also provides [`helper methods`](https://docs.osohq.com/python/reference/api/sqlalchemy.html#sqlalchemy-oso-roles) for
 inspecting and managing roles.
 
 ## Base policy

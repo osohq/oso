@@ -122,9 +122,12 @@ example uses the Python library):
 
 ```python
 @app.route('/blog_post/<int:id>', methods=["GET"])
-def get_blog_post(request) if
+def get_blog_post(request):
     post = get_blog_post(id)
-    oso.is_allowed(request.user, "read", post)
+    if oso.is_allowed(request.user, "read", post):
+        return post
+    else:
+        raise UnauthorizedRequest()
 ```
 
 ## Roles in a multi-tenant application
@@ -156,7 +159,8 @@ user_in_role(User{username: "steve"}, "admin");
 user_in_role(User{username: "leina"}, "admin");
 
 # Role-permission mappings
-role_allow(role: "admin", _action, resource);
+# Admin can perform any action on any resource.
+role_allow(role: "admin", _action, _resource);
 
 # Allow rule to enable role checking with tenant scoping
 allow(actor: User, action, resource) if
@@ -302,7 +306,7 @@ to use roles that specifically apply to one resource or another. For example,
 in a project management app there might be `Project` resources that have the
 following roles: “member”, “developer”, and “manager”.
 
-If these roles are pre-defined, they generally will confer the same permissions
+If these roles are predefined, they generally will confer the same permissions
 across all `Project` resources, but the users assigned to the role will differ
 from project-to-project. In other words, the role-permission mappings are
 specific to the resource type, while the user-role mappings are specific to the
@@ -453,3 +457,18 @@ This can be implemented in Polar by adding conditions to the body of
 user_in_role_for_resource(user: User, "admin", resource: Repository) if
     user = resource.owner;
 ```
+
+
+{{% callout "What's next" "blue" %}}
+
+{{< ifLang "python" >}}
+- Learn how to use roles with
+[SQLAlchemy](guides/roles/sqlalchemy_roles).
+{{< /ifLang >}}
+
+- Check out our [How-To Guides](guides) for more on using Polar
+  policies for authorization.
+- Check out the [Polar reference](reference/polar) for more on the Polar
+  language and syntax.
+
+{{% /callout %}}

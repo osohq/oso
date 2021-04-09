@@ -163,10 +163,10 @@ class User {
 
 ### JavaScript → Polar Types Summary
 
-| JavaScript type  | Polar type |
-| ---------------- | ---------- |
-| number (Integer) | Integer    |
-| number (Float)   | Float      |
-| boolean          | Boolean    |
-| Array            | List       |
-| string           | String     |
+| JavaScript type    | Polar type |
+| ------------------ | ---------- |
+| `number` (integer) | `Integer`  |
+| `number` (float)   | `Float`    |
+| `boolean`          | `Boolean`  |
+| `Array`            | `List`     |
+| `string`           | `String`   |

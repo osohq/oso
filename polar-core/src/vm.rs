@@ -6,6 +6,9 @@ use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
 use super::visitor::{walk_term, Visitor};
 use crate::bindings::{BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState};
 use crate::counter::Counter;
@@ -273,6 +276,13 @@ impl Default for PolarVirtualMachine {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console, js_name = error)]
+    fn console_error(a: &str);
+}
+
 // Methods which aren't goals/instructions.
 impl PolarVirtualMachine {
     /// Make a new virtual machine with an initial list of goals.
@@ -319,6 +329,17 @@ impl PolarVirtualMachine {
         vm
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
+        self.log = rust_log.is_some();
+        if let Some(pl) = polar_log {
+            if &pl == "now" {
+                self.polar_log_stderr = true;
+            }
+            self.polar_log = true;
+        }
+    }
+
     fn query_contains_partial(&mut self) {
         struct VarVisitor<'vm> {
             has_partial: bool,
@@ -327,7 +348,7 @@ impl PolarVirtualMachine {
 
         impl<'vm> Visitor for VarVisitor<'vm> {
             fn visit_variable(&mut self, v: &Symbol) {
-                if matches!(self.vm.variable_state(v), VariableState::Partial(_)) {
+                if matches!(self.vm.variable_state(v), VariableState::Partial()) {
                     self.has_partial = true;
                 }
             }
@@ -703,14 +724,26 @@ impl PolarVirtualMachine {
         renamer.fold_rule(rule.clone())
     }
 
-    /// Print a message to the output stream.
+    /// Push or print a message to the output stream.
+    #[cfg(not(target_arch = "wasm32"))]
     fn print<S: Into<String>>(&self, message: S) {
         let message = message.into();
         if self.polar_log_stderr {
             eprintln!("{}", message);
+        } else {
+            self.messages.push(MessageKind::Print, message);
         }
+    }
 
-        self.messages.push(MessageKind::Print, message);
+    /// Push or print a message to the WASM output stream.
+    #[cfg(target_arch = "wasm32")]
+    fn print<S: Into<String>>(&self, message: S) {
+        let message = message.into();
+        if self.polar_log_stderr {
+            console_error(&message);
+        } else {
+            self.messages.push(MessageKind::Print, message);
+        }
     }
 
     fn log(&self, message: &str, terms: &[&Term]) {
@@ -1084,13 +1117,9 @@ impl PolarVirtualMachine {
                 // involving a particular variable.
                 // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.
                 let var = left.value().as_symbol()?;
+
                 // Get the existing partial on the LHS variable.
-                let partial = match self.variable_state(var) {
-                    VariableState::Partial(expr) => expr,
-                    // This branch is unneeded. A cycle variable has no constraints,
-                    // so lhs of matches below will return None.
-                    _ => panic!("Invariant violated. left must be a variable"),
-                };
+                let partial = self.binding_manager.get_constraints(var);
 
                 let simplified = simplify_partial(var, partial.into_term());
                 let simplified = simplified.value().as_expression()?;
@@ -1377,9 +1406,37 @@ impl PolarVirtualMachine {
             Value::Expression(_) => {
                 return self.query_for_operation(&term);
             }
+            Value::Variable(_a_symbol) => {
+                let val = self.deref(term);
+
+                if val == *term {
+                    // variable was unbound
+                    // apply a constraint to variable that it must be truthy
+                    self.push_goal(Goal::Unify {
+                        left: term.clone(),
+                        right: term!(true),
+                    })?;
+                } else {
+                    self.push_goal(Goal::Query { term: val })?;
+                }
+            }
+            Value::Boolean(value) => {
+                if !value {
+                    // Backtrack if the boolean is false.
+                    self.push_goal(Goal::Backtrack)?;
+                }
+
+                return Ok(QueryEvent::None);
+            }
             _ => {
-                let term = self.deref(term);
-                self.query_for_value(&term)?;
+                // everything else dies horribly and in pain
+                return Err(self.type_error(
+                    &term,
+                    format!(
+                        "{} isn't something that is true or false, so can't be a condition",
+                        term.value().to_polar()
+                    ),
+                ));
             }
         }
         Ok(QueryEvent::None)
@@ -1612,24 +1669,6 @@ impl PolarVirtualMachine {
             }
         }
         Ok(QueryEvent::None)
-    }
-
-    /// Query for a value.  Succeeds if the value is 'truthy' or backtracks.
-    /// Currently only defined for boolean values.
-    fn query_for_value(&mut self, term: &Term) -> PolarResult<()> {
-        if let Value::Boolean(value) = term.value() {
-            if !value {
-                // Backtrack if the boolean is false.
-                self.push_goal(Goal::Backtrack)?;
-            }
-
-            Ok(())
-        } else {
-            Err(self.type_error(
-                &term,
-                format!("can't query for: {}", term.value().to_polar()),
-            ))
-        }
     }
 
     /// Handle variables & constraints as arguments to various operations.
@@ -2692,7 +2731,7 @@ impl Runnable for PolarVirtualMachine {
 
         let mut bindings = self.bindings(true);
         if !self.inverting {
-            if let Some(bs) = simplify_bindings(bindings) {
+            if let Some(bs) = simplify_bindings(bindings, false) {
                 bindings = bs;
             } else {
                 return Ok(QueryEvent::None);

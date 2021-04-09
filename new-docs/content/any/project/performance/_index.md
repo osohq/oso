@@ -10,7 +10,7 @@ This page explores the performance of Oso across three main axes:
 
 **1. In practice**. How does Oso perform under typical workloads?
 
-**2. Internals and Microbenchmarks**. How is Oso built? What are the micro-benchmarks?
+**2. Internals and Micro-benchmarks**. How is Oso built? What are the micro-benchmarks?
 
 **3. Scaling**. What is the theoretical complexity of a query?
 
@@ -25,7 +25,7 @@ complexity of the *answer*. For example, a simple rule that says anyone can
 “GET” the path “/” will execute in **less than 1 ms**. On the other hand,
 rules that use HTTP path mapping, resource lookups, roles, inheritance, etc.
 can take *approximately* **1-20 ms**. (These numbers are based on queries
-executing against a local sqlite instance to isolate Oso’s performance from
+executing against a local SQLite instance to isolate Oso’s performance from
 the time to perform database queries.)
 
 The time needed to fetch application data is, of course, dependent on your
@@ -88,7 +88,7 @@ the number of possibilities, or by adding more specializers to your rule heads.
 
 For example, suppose you have 20 different resources, `ResourceA`, `ResourceB`,
 …, and each has 10 or so `allow(actor, action, resource: ResourceA)` rules.
-The performance of evaluating a rule with input of type ResourceA will primarily
+The performance of evaluating a rule with input of type `ResourceA` will primarily
 depend on those 10 specific rules, and not the other 190 rules. In addition,
 you might consider refactoring this rule to `allow(actor, action, resource:
 ResourceA) if allowResourceA(actor, action, resource)`. This would mean there

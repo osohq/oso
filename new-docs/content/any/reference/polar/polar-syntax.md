@@ -3,7 +3,7 @@ title: Polar Syntax
 any: true
 weight: 1
 aliases:
-  - ../using/polar-syntax.html
+  - ../../using/polar-syntax.html
 description: |
   A brief description of the core syntax elements of Polar.
 ---
@@ -200,7 +200,7 @@ Unification is the basic matching operation in Polar. Two values are said to
 _unify_ if they are equal or if there is a consistent set of variable bindings
 that makes them equal. Unification is defined recursively over compound types
 (e.g., lists and dictionaries): two compound values unify if all of their
-corresponding elements unify.:warn
+corresponding elements unify.
 
 Unification may be performed explicitly with the unification operator (`=`),
 which is true if its two operands unify; e.g., `1 = 1`, `"a" = "a"`, or `x = 1`
@@ -240,6 +240,35 @@ The `or` operator will be true if either its left **or** its right operand is
 true. Disjunctions can always be replaced by multiple rules with identical
 heads but different bodies (the operands), but may help simplify writing rules
 with alternatives.
+
+#### Negation (not)
+
+The `not` operator will succeed when its argument fails.
+
+For example, the following rule will succeed when `x != 0` (and could be written as such).
+
+```polar
+non_zero(x) if not x == 0;
+```
+
+`not` is helpful when negating the results of another rule call. For example,
+
+```polar
+positive(x) if
+    non_zero(x) and
+    not negative(x);
+
+negative(x) if x < 0;
+```
+
+Above, `positive` will succeed if `negative(x)` returns no results.
+
+To negate multiple expressions, use parentheses to group them:
+
+```polar
+positive(x) if
+    not (x == 0 or negative(x));
+```
 
 #### Dictionary Key Access
 
@@ -290,15 +319,18 @@ person = new Person() and
 Person.log("created new person")
 ```
 
-#### Numerical Comparison
+#### Comparison
 
-The typical numerical comparison operators can be used to compare values (`> >= < <= == !=`). For example…
+The comparison operators can be used to compare values (`> >= < <= == !=`). For example…
 
 ```polar
 age < 10
 ```
 
 …will check that the value of the variable `age` is less than 10.
+Performing a comparison on application data will use the host language's
+native comparison operation. Not all Oso language libraries support this
+feature.
 
 #### Print
 

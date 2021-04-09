@@ -1,0 +1,7 @@
+Sphinx
+sphinx-copybutton
+sphinx-material
+sphinxcontrib-contentui
+sphinxcontrib-spelling
+Django
+

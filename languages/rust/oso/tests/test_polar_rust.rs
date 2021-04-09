@@ -111,6 +111,39 @@ fn test_load_function() {
 }
 
 #[test]
+fn test_type_mismatch_fails_unification() {
+    common::setup();
+
+    #[derive(Eq, PartialEq, PolarClass, Clone, Default)]
+    struct Foo {}
+    #[derive(Eq, PartialEq, PolarClass, Clone, Default)]
+    struct Bar {}
+
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            ClassBuilder::<Foo>::with_default()
+                .with_equality_check()
+                .build(),
+        )
+        .unwrap();
+
+    test.oso
+        .register_class(
+            ClassBuilder::<Bar>::with_default()
+                .with_equality_check()
+                .build(),
+        )
+        .unwrap();
+
+    test.qnull("new Foo() = new Bar()");
+    test.qnull("new Foo() = nil");
+    let rs = test.query("not new Foo() = nil");
+    assert_eq!(rs.len(), 1, "expected one result");
+    assert!(rs[0].is_empty(), "expected empty result");
+}
+
+#[test]
 fn test_external() {
     common::setup();
 
@@ -407,7 +440,7 @@ fn test_unify_externals() {
         x: i64,
     }
 
-    impl PolarClass for Foo {};
+    impl PolarClass for Foo {}
     impl Foo {
         fn new(x: i64) -> Self {
             Self { x }
@@ -440,7 +473,7 @@ fn test_unify_externals() {
         x: i64,
     }
 
-    impl PolarClass for Bar {};
+    impl PolarClass for Bar {}
     impl Bar {
         fn new(x: i64) -> Self {
             Self { x }
@@ -459,7 +492,7 @@ fn test_unify_externals() {
         x: i64,
     }
 
-    impl PolarClass for Baz {};
+    impl PolarClass for Baz {}
     impl Baz {
         fn new(x: i64) -> Self {
             Self { x }
@@ -567,7 +600,7 @@ fn test_without_registering() {
         x: u32,
     }
 
-    let mut test = OsoTest::new();
+    let test = OsoTest::new();
     test.oso.load_str("f(foo: Foo) if 1 = foo.x;").unwrap();
     test.oso
         .query_rule("f", (Foo { x: 1 },))

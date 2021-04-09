@@ -5,7 +5,7 @@ use common::OsoTest;
 use oso::errors::polar::{
     ErrorKind as PolarErrorKind, PolarError, RuntimeError as PolarRuntimeError,
 };
-use oso::{OsoError, PolarClass, PolarValue};
+use oso::{Oso, OsoError, PolarClass, PolarValue};
 
 // TODO in all tests, check type of error & message
 
@@ -39,37 +39,42 @@ fn test_unify_external_not_supported() -> oso::Result<()> {
         error
     );
 
+    // TODO Any meaningful support of PartialEq implementations with a different
+    // Rhs would require the ability to configure multiple equality_checks for
+    // a given class, which is not currently supported.
+    // See https://github.com/osohq/oso/pull/796 for more context.
+
     // Type that does support unification with a type that doesn't.
-    #[derive(PolarClass, PartialEq)]
-    struct EqFoo(i64);
+    // #[derive(PolarClass, PartialEq)]
+    // struct EqFoo(i64);
 
-    impl PartialEq<Foo> for EqFoo {
-        fn eq(&self, other: &Foo) -> bool {
-            self.0 == other.0
-        }
-    }
+    // impl PartialEq<Foo> for EqFoo {
+    //     fn eq(&self, other: &Foo) -> bool {
+    //         self.0 == other.0
+    //     }
+    // }
 
-    let eq_foo_class = EqFoo::get_polar_class_builder()
-        .with_equality_check()
-        .build();
+    // let eq_foo_class = EqFoo::get_polar_class_builder()
+    //     .with_equality_check()
+    //     .build();
 
-    oso.oso.register_class(eq_foo_class)?;
+    // oso.oso.register_class(eq_foo_class)?;
 
-    let mut query = oso.oso.query_rule("unify", (EqFoo(1), Foo(1)))?;
-    let error = query.next().unwrap().unwrap_err();
+    // let mut query = oso.oso.query_rule("unify", (EqFoo(1), Foo(1)))?;
+    // let error = query.next().unwrap().unwrap_err();
 
     // TODO definitely need stack traces, these would be hard to diagnose
     // otherwise.
-    assert!(
-        matches!(
-            &error,
-            OsoError::TypeError(oso::errors::TypeError {
-                expected,
-                got
-            }) if expected == "EqFoo" && got.as_deref() == Some("Foo")),
-        "{} doesn't match expected error",
-        error
-    );
+    // assert!(
+    //     matches!(
+    //         &error,
+    //         OsoError::TypeError(oso::errors::TypeError {
+    //             expected,
+    //             got
+    //         }) if expected == "EqFoo" && got.as_deref() == Some("Foo")),
+    //     "{} doesn't match expected error",
+    //     error
+    // );
 
     // TODO (dhatch): Right now, this doesn't work because unify only occurs on
     // built-in types.  See https://www.notion.so/osohq/Unify-of-external-instance-with-internal-type-should-use-ExternalUnify-175bac1414324b25b902c1b1f51fafe9
@@ -87,6 +92,26 @@ fn test_unify_external_not_supported() -> oso::Result<()> {
     //);
 
     Ok(())
+}
+
+/// Test that failing inline query sends a sane error message
+#[test]
+fn test_failing_inline_query() {
+    common::setup();
+
+    let oso = Oso::new();
+
+    let result = oso.load_str("?= 1 == 1;\n?= 1 == 0;");
+    match result {
+        Ok(_) => panic!("failed to detect failure of inline query"),
+        Err(e @ OsoError::InlineQueryFailedError { .. }) => {
+            assert_eq!(
+                format!("{}", e),
+                "Inline query failed 1 == 0 at line 2, column 3"
+            )
+        }
+        Err(_) => panic!("returned unexpected error"),
+    }
 }
 
 /// Test that lookup of attribute that doesn't exist raises error.
@@ -377,7 +402,7 @@ fn test_match_attribute_does_not_exist() {
     struct Foo {
         #[polar(attribute)]
         x: i64,
-    };
+    }
 
     impl Foo {
         fn new() -> Self {
@@ -408,7 +433,7 @@ fn test_match_non_existent_class() {
     struct Foo {
         #[polar(attribute)]
         x: i64,
-    };
+    }
 
     impl Foo {
         fn new() -> Self {
@@ -480,7 +505,7 @@ fn test_class_does_not_exist() {
     struct Foo {
         #[polar(attribute)]
         x: i64,
-    };
+    }
 
     impl Foo {
         fn new() -> Self {
@@ -512,7 +537,7 @@ fn test_constructor_keyword_arguments_error() {
     struct Foo {
         #[polar(attribute)]
         x: i64,
-    };
+    }
 
     impl Foo {
         fn new(x: i64) -> Self {
@@ -549,7 +574,7 @@ fn test_method_keyword_arguments_error() -> oso::Result<()> {
     struct Foo {
         #[polar(attribute)]
         x: i64,
-    };
+    }
 
     impl Foo {
         fn new() -> Self {

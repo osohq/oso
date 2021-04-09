@@ -21,6 +21,6 @@ Django & SQLAlchemy integrations.
 For more information on how data filtering works, head over to our explanation of Oso's
 [internals](project/internals#data-filtering).
 
-To get started with data fitlering in Django or SQLAlchemy, follow one of the guides below.
+To get started with data filtering in Django or SQLAlchemy, follow one of the guides below.
 
 
