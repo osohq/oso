@@ -6,9 +6,9 @@
     "maxValuesPerFacet": 100,
     "searchableAttributes": [
       "unordered(content)",
+      "unordered(description)",
       "unordered(summary)",
-      "unordered(language)",
-      "unordered(description)"
+      "unordered(language)"
     ],
     "numericAttributesToIndex": null,
     "attributesToRetrieve": null,
@@ -24,6 +24,7 @@
     "attributeForDistinct": null,
     "exactOnSingleWordQuery": "attribute",
     "ranking": [
+      "desc(record_weight)",
       "typo",
       "geo",
       "words",
@@ -34,9 +35,7 @@
       "custom"
     ],
     "customRanking": [
-      "desc(record_weight)",
-      "desc(language)",
-      "desc(summary)"
+      "desc(content)"
     ],
     "separatorsToIndex": "",
     "removeWordsIfNoResults": "none",
