@@ -10,7 +10,7 @@ use super::runner::runner_from_query;
 /// - add constraints
 /// - simplify conjunctions of many constraints
 ///
-/// A run of this benchmark "partial_and/5" a effectively times how long it takes to
+/// A run of this benchmark "partial_and/5" effectively times how long it takes to
 /// add 5 field comparisons to a partial.
 pub fn partial_and(c: &mut Criterion) {
     let mut group = c.benchmark_group("partial_and");

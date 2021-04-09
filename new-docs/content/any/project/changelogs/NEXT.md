@@ -8,9 +8,20 @@ description: >-
 draft: true
 ---
 
-## `RELEASED_PACKAGE_1` NEW_VERSION
+## `oso` NEW_VERSION
 
-### Breaking changes
+### Rust
+
+#### Other bugs & improvements
+
+- The Rust CLI now uses [`clap`](https://crates.io/crates/clap) to expose a
+  prettier interface thanks to
+  [@joshrotenberg](https://github.com/joshrotenberg) via [PR
+  #828](https://github.com/osohq/oso/pull/828).
+
+### OTHER_LANGUAGE
+
+#### Breaking changes
 
 <!-- TODO: remove warning and replace with "None" if no breaking changes. -->
 
@@ -19,21 +30,21 @@ draft: true
   before upgrading.
 {{% /callout %}}
 
-#### Breaking change 1
+##### Breaking change 1
 
 Summary of breaking change.
 
 Link to [migration guide]().
 
-### New features
+#### New features
 
-#### Feature 1
+##### Feature 1
 
 Summary of user-facing changes.
 
 Link to [relevant documentation section]().
 
-### Other bugs & improvements
+#### Other bugs & improvements
 
 - Bulleted list
 - Of smaller improvements
