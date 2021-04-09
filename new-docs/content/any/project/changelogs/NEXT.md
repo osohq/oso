@@ -8,9 +8,21 @@ description: >-
 draft: true
 ---
 
-## `RELEASED_PACKAGE_1` NEW_VERSION
+## `oso` NEW_VERSION
 
-### Breaking changes
+### Node.js
+
+#### Other bugs & improvements
+
+- Added `free()` method to enable manually freeing the underlying Polar WASM
+  instance. This should *not* be something you need to do during the course of
+  regular usage. It's generally only useful for scenarios where large numbers
+  of instances are spun up and not cleanly reaped by the GC, such as during a
+  long-running test process in 'watch' mode.
+
+### OTHER_LANGUAGE
+
+#### Breaking changes
 
 <!-- TODO: remove warning and replace with "None" if no breaking changes. -->
 
@@ -19,21 +31,21 @@ draft: true
   before upgrading.
 {{% /callout %}}
 
-#### Breaking change 1
+##### Breaking change 1
 
 Summary of breaking change.
 
 Link to [migration guide]().
 
-### New features
+#### New features
 
-#### Feature 1
+##### Feature 1
 
 Summary of user-facing changes.
 
 Link to [relevant documentation section]().
 
-### Other bugs & improvements
+#### Other bugs & improvements
 
 - Bulleted list
 - Of smaller improvements
