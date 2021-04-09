@@ -85,7 +85,7 @@ build-search:
 
 require-algolia-vars: require-ALGOLIA_APPLICATION_ID require-ALGOLIA_ADMIN_API_KEY require-ALGOLIA_INDEX
 
-search: require-algolia-vars clean build-prod build-search
+search: require-algolia-vars build-prod build-search
 	./searcher
 
 spelling:

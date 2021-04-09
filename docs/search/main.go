@@ -27,6 +27,7 @@ var (
 )
 
 type Record struct {
+	Content      string `json:"content"`
 	Description  string `json:"description"`
 	Kind         string `json:"kind"`
 	Language     string `json:"language"`
@@ -151,6 +152,7 @@ func processFiles(args []string) (urls []Record, err error) {
 
 			if uniqueRecords[permalink] == nil {
 				record := &Record{
+					Content:      vals["content"].(string),
 					Description:  vals["description"].(string),
 					Kind:         vals["kind"].(string),
 					Language:     vals["lang"].(string),
