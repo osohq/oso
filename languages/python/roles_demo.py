@@ -124,8 +124,6 @@ def six():
     roles = OsoRoles()
     roles.enable(oso)
 
-    oso.register_constant(roles, "roles")
-
     oso.load_file("roles.polar")
     oso.load_file("roles_demo.polar")
 
@@ -146,13 +144,9 @@ def six():
     gabe = User(name="Gabe")
 
     # Things that happen in the app via the management api.
-    roles.assign_role(
-        leina, osohq, "owner")
-    roles.assign_role(
-        steve, osohq, "member")
-
-    roles.assign_role(
-        gabe, oso_repo, "write")
+    roles.assign_role(leina, osohq, "owner")
+    roles.assign_role(steve, osohq, "member")
+    roles.assign_role(gabe, oso_repo, "write")
 
     # Test
 

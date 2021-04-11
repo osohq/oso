@@ -113,6 +113,9 @@ class OsoRoles:
         self.parent_child_implied_roles = Collection()
         self.user_roles = Collection()
 
+    def get_actor_roles(self, actor):
+        return [r for r in self.user_roles.elements.values() if r.user == actor]
+
     # def add_scoped_role_permission(self, scope, role, permission):
     #     assert isinstance(role, Role)
     #     assert isinstance(permission, Permission)
@@ -387,6 +390,7 @@ class OsoRoles:
     #     # return False
 
     def enable(self, oso):
+        oso.register_constant(self, "OsoRoles")
         pass
         # # The "Polar api"
         # class Roles:

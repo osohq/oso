@@ -23,8 +23,12 @@ role(Repository, definitions, implies) if
     };
 
 # relationship(parent, child, role_map) if <condition>
-relationship(o: Organization, r: Repository, role_map) if
-    o = r.org and
+relationship(o: Organization, r, role_map) if
+    #### TODO: This should be o = r.organization
+    #### But this constraint isn't being grounded/evaluated appropriately
+    #### If I do this differently
+    r in o.repositories and
+    r matches Repository and
     # map from org to repo roles
     role_map = {
         owner: "write",

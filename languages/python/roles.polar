@@ -7,8 +7,16 @@ role_allow(actor, action, resource) if
 
 # get all possible roles
 assume_role(actor, role) if
-    [_id, user_role] in roles.user_roles.elements and
-    user_role.user = actor and
+    # python version
+    # user_role in OsoRoles.get_actor_roles(actor) and
+    # user_role.user = actor and
+
+    # sqlalchemy version
+    (
+        user_role in actor.repository_roles or
+        user_role in actor.organization_roles
+    ) and
+
     role_implies(user_role, role);
 
 # role implies itself
