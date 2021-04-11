@@ -2,16 +2,308 @@
 from typing import Any, List, Set, Dict
 from dataclasses import dataclass
 
-from oso import OsoError, Variable
+from oso import Oso, OsoError, Variable
 
 import sqlalchemy
-from sqlalchemy.types import Integer, String
+from sqlalchemy import inspect, sql, UniqueConstraint
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import class_mapper, relationship, validates, synonym
+from sqlalchemy.orm.exc import UnmappedClassError, UnmappedInstanceError
+from sqlalchemy.orm.util import object_mapper
 from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy import inspect
-from sqlalchemy.orm import class_mapper
-from sqlalchemy.orm.exc import UnmappedClassError
-from sqlalchemy import sql
+from sqlalchemy.types import Integer, String
+
 from .compat import iterate_model_classes
+
+# Global list to keep track of role classes as they are created, used to
+# generate RBAC base policy in Polar
+ROLE_CLASSES: List[Any] = []
+
+
+class PolarRoles:
+    def __init__(self, oso: Oso, user_model, sqlalchemy_base, session_maker):
+        self.oso = oso
+        self.user_model = user_model
+        self.sqlalchemy_base = sqlalchemy_base
+        self.session_maker = session_maker
+        self.roles = {}
+
+        oso.load_file("sqlalchemy_oso/roles.polar")
+
+    def synchronize_data(self):
+        print("Enabling Oso roles...")
+        for cls in iterate_model_classes(self.sqlalchemy_base):
+            for res in self.oso.query_rule(
+                "resource",
+                cls,
+                Variable("namespace"),
+                Variable("_"),
+                Variable("roles"),
+                accept_expression=True,
+            ):
+                namespace = res["bindings"]["namespace"]
+                self.oso.load_str(f'class_namespace({cls.__name__}, "{namespace}");')
+
+                roles = list(res["bindings"]["roles"].keys())
+                role_mixin = resource_role_class(self.user_model, cls, roles)
+
+                role_class = type(
+                    f"{cls.__name__}Role",
+                    (self.sqlalchemy_base, role_mixin),
+                    {},
+                )
+                print(f"Adding roles {role_class.__name__} to {cls.__name__}")
+                self.roles[cls] = role_class
+                setattr(cls, "role_definitions", roles)
+
+        # Temp hack to ensure all tables are created regardless of ordering of
+        # synchronize_data() and Base.metadata.create_all(engine).
+        engine = self.session_maker.kw["bind"]
+        self.sqlalchemy_base.metadata.create_all(engine)
+
+    def assign_role(self, user, resource, role, session=None):
+        local_session = session is None
+        if local_session:
+            session = self.session_maker()
+        try:
+            return add_user_role(session, user, resource, role, commit=True)
+        finally:
+            if local_session:
+                session.close()
+
+    def get_actor_roles(self, user):
+        session = self.session_maker()
+        try:
+            for resource_model in self.roles.keys():
+                yield from get_user_roles(session, user, resource_model)
+        finally:
+            session.close()
+
+
+def resource_role_class(
+    user_model, resource_model, role_choices, mutually_exclusive=True
+):
+    """Create a resource-specific role Mixin
+    for SQLAlchemy models. The role mixin is an
+    `Association Object <https://docs.sqlalchemy.org/en/13/orm/basic_relationships.html#association-object>`_
+    between the ``user_model`` and the ``resource_model``.
+
+    :param user_model: The SQLAlchemy model representing users that the \
+    resource-specific roles can be assigned to. The generated Role mixin will \
+    have a many-to-one (Foreign Key) relationship with this user model. \
+    A many-to-many relationship to ``resource_model`` is added to ``user_model``; \
+    the relationship is named following the convention: ``resource_model.__name__.lower() + "s"``.
+
+    :param resource_model: The SQLAlchemy model representing resources that \
+    the generated Role mixin will be scoped to. The Role mixin will \
+    have a many-to-one (ForeignKey) relationship with this resource model. \
+    A many-to-many relationship to ``user_model`` is added to ``resource_model``; \
+    the relationship is named ``users``. \
+    NOTE: only one role model can be created per resource model. Attempting to call \
+    ``resource_role_class()`` more than once for the same resource model will result in \
+    a ``ValueError``.
+
+    :param roles: An order-independent list of the built-in roles for this resource-specific role type.
+    :type roles: List[str]
+
+    :param mutually_exclusive: Boolean flag that sets whether or not users \
+    can have more than one role for a given resource. Defaults to ``True``.
+    :type roles: bool
+
+    :return: the ResourceRole mixin, which must then be mixed into a SQLAlchemy model for the role. E.g.,
+
+        .. code-block:: python
+
+            OrganizationRoleMixin = oso_roles.resource_role_class(
+                User, Organization, ["OWNER", "MEMBER", "BILLING"]
+            )
+
+            class OrganizationRole(Base, OrganizationRoleMixin):
+                pass
+
+
+    """
+
+    global ROLE_CLASSES
+    if resource_model in [role.get("resource_model") for role in ROLE_CLASSES]:
+        raise ValueError(
+            f"Cannot create two Role classes for the same `resource_model`: {resource_model.__name__}"
+        )
+
+    ROLE_CLASSES.append(
+        {
+            "user_model": user_model,
+            "resource_model": resource_model,
+        }
+    )
+
+    resource_name = _get_resource_name_lower(resource_model)
+    tablename = f"{resource_name}_roles"
+    if mutually_exclusive:
+        unique_constraint = UniqueConstraint(f"{resource_name}_id", "user_id")
+    else:
+        unique_constraint = UniqueConstraint(f"{resource_name}_id", "name", "user_id")
+
+    class ResourceRoleMixin:
+        choices = role_choices
+
+        __tablename__ = tablename
+        id = Column(Integer, primary_key=True)
+        name = Column(String())
+        __table_args__ = (unique_constraint,)
+
+        @validates("name")
+        def validate_name(self, key, name):
+            if name not in self.choices:
+                raise ValueError(
+                    f"{name} Is not a valid choice for {self.__class__.__name__}"
+                )
+            return name
+
+        @declared_attr
+        def user_id(cls):
+            type = inspect(user_model).primary_key[0].type
+            name = inspect(user_model).primary_key[0].name
+            table_name = user_model.__tablename__
+            return Column(type, ForeignKey(f"{table_name}.{name}"))
+
+        @declared_attr
+        def user(cls):
+            return relationship(user_model.__name__, backref=tablename)
+
+        def __repr__(self):
+            return f"Role({self.name} for {self.user} on {self.resource})"
+
+        def asdict(self):
+            return {
+                "name": self.name,
+                "user": self.user.repr(),
+                "resource": self.resource.repr(),
+            }
+
+    @declared_attr
+    def named_resource_id(cls):
+        type = inspect(resource_model).primary_key[0].type
+        name = inspect(resource_model).primary_key[0].name
+        table_name = resource_model.__tablename__
+        return Column(type, ForeignKey(f"{table_name}.{name}"))
+
+    @declared_attr
+    def named_resource(cls):
+        return relationship(resource_model.__name__, backref="roles")
+
+    @declared_attr
+    def resource(cls):
+        return synonym(resource_name)
+
+    setattr(ResourceRoleMixin, f"{resource_name}_id", named_resource_id)
+    setattr(ResourceRoleMixin, resource_name, named_resource)
+    setattr(ResourceRoleMixin, "resource", resource)
+
+    # Add the relationship between the user_model and the resource_model
+    resources = relationship(
+        resource_model.__name__,
+        secondary=tablename,
+        viewonly=True,
+        backref="users",
+        sync_backref=False,
+    )
+    # @Q: Do we try to pluralize this name correctly?
+    setattr(user_model, resource_name + "s", resources)
+
+    return ResourceRoleMixin
+
+# ROLE HELPERS
+
+
+def _get_resource_name_lower(resource_model):
+    return resource_model.__name__.lower()
+
+
+def _check_valid_instance(*args, raise_error=True):
+    for instance in args:
+        valid = True
+        try:
+            object_mapper(instance)
+        except UnmappedInstanceError:
+            valid = False
+
+        if raise_error and not valid:
+            raise TypeError(f"Expected a mapped object instance; received: {instance}")
+
+
+def get_role_model_for_resource_model(resource_model):
+    _check_valid_model(resource_model)
+    return (
+        inspect(resource_model, raiseerr=True)
+        .relationships.get("roles")
+        .argument.class_
+    )
+
+
+def get_user_roles(session, user, resource_model, resource_id=None):
+    """Get a user's roles for all resources of a single resource type.
+    E.g., get all of a user's repositories and their role for each
+    repository.
+    Or optionally, all roles scoped to a specific resource_id.
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
+    :param user: user record (python object) of the SQLAlchemy user model \
+    associated with roles scoped to the supplied ``resource_model``
+    :param resource_id: (optional) the resource id for which to get the user's roles.
+    :return: list of the user's roles
+    """
+    _check_valid_instance(user)
+    _check_valid_model(resource_model)
+    role_model = get_role_model_for_resource_model(resource_model)
+    resource_pk = inspect(resource_model).primary_key[0].name
+
+    roles = (
+        session.query(role_model)
+        .join(resource_model)
+        .filter(role_model.user == user)
+        .order_by(getattr(resource_model, resource_pk))
+        .order_by(role_model.name)
+    )
+
+    if resource_id:
+        roles = roles.filter(getattr(resource_model, resource_pk) == resource_id)
+    return roles.all()
+
+
+# - Assign a user to an organization with a role
+def add_user_role(session, user, resource, role_name, commit=False):
+    """Add a user to a role for a specific resource.
+    :param session: SQLAlchemy session
+    :type session: sqlalchemy.orm.session.Session
+    :param user: user record (python object) to assign the role to
+    :param role_name: the name of the role to assign to the user
+    :type role_name: str
+    :param commit: flag to specify whether or not session should be committed after adding role; defaults to ``False``
+    :type commit: boolean
+    """
+    _check_valid_instance(user, resource)
+    # get models
+    resource_model = type(resource)
+    role_model = get_role_model_for_resource_model(resource_model)
+
+    # create and save role
+    resource_name = _get_resource_name_lower(resource_model)
+    kwargs = {"name": role_name, resource_name: resource, "user": user}
+    new_role = role_model(**kwargs)
+    session.add(new_role)
+    if commit:
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            raise Exception(
+                f"""Cannot assign user {user} to role {role_name} for
+                {resource_name} either because the assignment already exists, or
+                because the role is mutually exclusive and the user already has
+                another role for this resource."""
+            )
 
 
 def isa_type(arg):

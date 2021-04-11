@@ -1,6 +1,6 @@
 from oso import Oso, OsoError
 from .auth import register_models
-from .roles import OsoRoles
+from .roles import PolarRoles
 
 
 class SQLAlchemyOso(Oso):
@@ -37,9 +37,10 @@ class SQLAlchemyOso(Oso):
         """
         if self._roles_enabled:
             raise OsoError("Roles feature already enabled.")
-        self._roles = OsoRoles(
+        self._roles = PolarRoles(
             oso=self,
             user_model=user_model,
+            sqlalchemy_base=self.base,
             session_maker=session_maker,
         )
         self._roles_enabled = True
