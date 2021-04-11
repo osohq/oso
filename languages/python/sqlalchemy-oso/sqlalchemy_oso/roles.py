@@ -3,7 +3,7 @@ from typing import Any, List
 from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import relationship, validates, class_mapper
+from sqlalchemy.orm import relationship, validates, class_mapper, synonym
 from sqlalchemy.orm.util import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError, UnmappedClassError
 from sqlalchemy import inspect, UniqueConstraint
@@ -13,6 +13,36 @@ from .session import _OsoSession
 # Global list to keep track of role classes as they are created, used to
 # generate RBAC base policy in Polar
 ROLE_CLASSES: List[Any] = []
+
+
+class OsoRoles:
+    def __init__(self, sqlalchemy_base):
+        self.base = sqlalchemy_base
+        self.roles = {}
+
+    def enable(self, oso, sqlalchemy_base, user_model):
+        oso.register_constant(self, "OsoRoles")
+        for res in oso.query("role(resource_class, definitions, _)"):
+            resource_class = res["bindings"]["resource_class"]
+            roles = list(res["bindings"]["definitions"].keys())
+            role_mixin = resource_role_class(
+                sqlalchemy_base,
+                user_model,
+                resource_class,
+                roles
+            )
+
+            role_class = type(f"{resource_class.__name__}Role", (sqlalchemy_base, role_mixin), {})
+            self.roles[resource_class] = role_class
+
+    def set_session(self, session):
+        self.session = session
+
+    def assign_role(self, user, resource, role):
+        return add_user_role(self.session, user, resource, role, commit=True)
+
+    # def get_actor_roles(self, user):
+    #     for
 
 
 def resource_role_class(
@@ -69,7 +99,7 @@ def resource_role_class(
         )
 
     ROLE_CLASSES.append(
-        {"user_model": user_model, "resource_model": resource_model,}
+        {"user_model": user_model, "resource_model": resource_model, }
     )
 
     resource_name = _get_resource_name_lower(resource_model)
@@ -107,18 +137,23 @@ def resource_role_class(
             return relationship(user_model.__name__, backref=tablename)
 
     @declared_attr
-    def resource_id(cls):
+    def named_resource_id(cls):
         type = inspect(resource_model).primary_key[0].type
         name = inspect(resource_model).primary_key[0].name
         table_name = resource_model.__tablename__
         return Column(type, ForeignKey(f"{table_name}.{name}"))
 
     @declared_attr
-    def resource(cls):
+    def named_resource(cls):
         return relationship(resource_model.__name__, backref="roles")
 
-    setattr(ResourceRoleMixin, f"{resource_name}_id", resource_id)
-    setattr(ResourceRoleMixin, resource_name, resource)
+    @declared_attr
+    def resource(cls):
+        return synonym(resource_name)
+
+    setattr(ResourceRoleMixin, f"{resource_name}_id", named_resource_id)
+    setattr(ResourceRoleMixin, resource_name, named_resource)
+    setattr(ResourceRoleMixin, "resource", resource)
 
     # Add the relationship between the user_model and the resource_model
     resources = relationship(

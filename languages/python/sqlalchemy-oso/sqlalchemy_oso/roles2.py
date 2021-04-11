@@ -73,4 +73,3 @@ class OsoRoles:
             # self.resource_types = resource_types
             # for name, field in relationships:
             #     new
-

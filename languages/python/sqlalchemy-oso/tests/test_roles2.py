@@ -86,7 +86,7 @@ def test_roles2():
 
     ### Basic resource role configuration ###
 
-    ## Organizations
+    # Organizations
 
     # Define organization permissions
     permission_org_invite = roles.new_permission(resource=Organization, action="invite")
@@ -107,7 +107,7 @@ def test_roles2():
     # Implied roles for organizations
     roles.add_role_implies(role_org_owner, role_org_member)
 
-    ## Repositories
+    # Repositories
 
     # Define repo permissions
     permission_repo_push = roles.new_permission(resource=Repository, action="push")
