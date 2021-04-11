@@ -1,6 +1,6 @@
 # Demo
 
-## Demo format
+# Demo format
 
 # one python file
 
@@ -29,7 +29,7 @@
 #       - Create new permission
 #       - Add scoped permission to member role for an org
 
-## HAVEN'T IMPLEMENTED:
+# HAVEN'T IMPLEMENTED:
 
 # 7. Customize base repo role for org members per organization
 #       - Add scoped implication to the member role for an org
@@ -68,33 +68,16 @@ def one():
     oso = Oso()
     oso.register_class(User)
     oso.register_class(Organization)
+    oso.register_class(Repository)
 
     # Set up roles
     roles = OsoRoles()
     roles.enable(oso)
+    oso.register_constant(roles, "roles")
 
-    # Simple policy that just uses roles
-    policy = """
-    allow(actor, action, resource) if
-      Roles.role_allows(actor, action, resource);
-    """
-    oso.load_str(policy)
+    oso.load_file("roles.polar")
+    oso.load_file("roles_demo.polar")
 
-    # Define permissions
-    permission_org_invite = roles.new_permission(resource=Organization, action="invite")
-    permission_org_create_repo = roles.new_permission(
-        resource=Organization, action="create_repo"
-    )
-
-    # Define roles
-    role_org_owner = roles.new_role(resource=Organization, name="OWNER")
-    role_org_member = roles.new_role(resource=Organization, name="MEMBER")
-
-    # Add permissions to roles
-    roles.add_role_permission(role=role_org_owner, permission=permission_org_invite)
-    roles.add_role_permission(
-        role=role_org_member, permission=permission_org_create_repo
-    )
     ###########################################################################
 
     # Demo data
@@ -104,10 +87,10 @@ def one():
     steve = User(name="Steve")
 
     # Things that happen in the app via the management api.
-    roles.assign_role(leina, osohq, role_org_owner)
-    roles.assign_role(steve, osohq, role_org_member)
+    roles.assign_role(leina, osohq, "owner")
+    roles.assign_role(steve, osohq, "member")
 
-    #### Test
+    # Test
 
     # Leina can invite people to osohq because she is an OWNER
     assert oso.is_allowed(leina, "invite", osohq)
@@ -141,69 +124,16 @@ def six():
     roles = OsoRoles()
     roles.enable(oso)
 
-    # Simple policy that just uses roles
-    policy = """
-    allow(actor, action, resource) if
-      not resource = private and
-      Roles.role_allows(actor, action, resource);
-    """
-    oso.load_str(policy)
+    oso.register_constant(roles, "roles")
+
+    oso.load_file("roles.polar")
+    oso.load_file("roles_demo.polar")
 
     ### Basic resource role configuration ###
 
-    ## Organizations
+    # Organizations
 
     # Define organization permissions
-    permission_org_invite = roles.new_permission(resource=Organization, action="invite")
-    permission_org_create_repo = roles.new_permission(
-        resource=Organization, action="create_repo"
-    )
-
-    # Define organization roles
-    role_org_owner = roles.new_role(resource=Organization, name="OWNER")
-    role_org_member = roles.new_role(resource=Organization, name="MEMBER")
-
-    # Add permissions to organization roles
-    roles.add_role_permission(role=role_org_owner, permission=permission_org_invite)
-    roles.add_role_permission(
-        role=role_org_member, permission=permission_org_create_repo
-    )
-
-    # Implied roles for organizations
-    roles.add_role_implies(role_org_owner, role_org_member)
-
-    ## Repositories
-
-    # Define repo permissions
-    permission_repo_push = roles.new_permission(resource=Repository, action="push")
-    permission_repo_pull = roles.new_permission(resource=Repository, action="pull")
-
-    # Define repo roles
-    role_repo_write = roles.new_role(resource=Repository, name="WRITE")
-    role_repo_read = roles.new_role(resource=Repository, name="READ")
-
-    # Add permissions to repo roles
-    roles.add_role_permission(role=role_repo_write, permission=permission_repo_push)
-    roles.add_role_permission(role=role_repo_read, permission=permission_repo_pull)
-
-    # Implied roles for repositories
-    roles.add_role_implies(role_repo_write, role_repo_read)
-
-    ### Relationships + cross-resource implications ###
-
-    # organizations are the parent of repos
-    roles.new_relationship(
-        name="repo_org",
-        child=Repository,
-        parent=Organization,
-        parent_selector=lambda child: child.org,
-    )
-
-    # Org "OWNER" role implies repo "WRITE" role for every repo in the org
-    roles.add_role_implies(role_org_owner, role_repo_write)
-    # Org "MEMBER" role implies repo "READ" role for every repo in the org
-    roles.add_role_implies(role_org_member, role_repo_read)
-
     ###########################################################################
 
     # Demo data
@@ -216,14 +146,17 @@ def six():
     gabe = User(name="Gabe")
 
     # Things that happen in the app via the management api.
-    roles.assign_role(leina, osohq, role_org_owner)
-    roles.assign_role(steve, osohq, role_org_member)
+    roles.assign_role(
+        leina, osohq, "owner")
+    roles.assign_role(
+        steve, osohq, "member")
 
-    roles.assign_role(gabe, oso_repo, role_repo_write)
+    roles.assign_role(
+        gabe, oso_repo, "write")
 
-    #### Test
+    # Test
 
-    ## Test Org roles
+    # Test Org roles
 
     # Leina can invite people to osohq because she is an OWNER
     assert oso.is_allowed(leina, "invite", osohq)
@@ -239,6 +172,10 @@ def six():
 
     # Steve can pull from oso_repo because he is a MEMBER of osohq
     # which implies READ on oso_repo
+    # oso.register_constant(steve, "steve")
+    # oso.register_constant(osohq, "osohq")
+    # oso.register_constant(oso_repo, "oso_repo")
+    # oso.repl()
     assert oso.is_allowed(steve, "pull", oso_repo)
     # Leina can pull from oso_repo because she's an OWNER of osohq
     # which implies WRITE on oso_repo
@@ -259,6 +196,6 @@ def six():
 
 
 if __name__ == "__main__":
-    one()
+    # one()
     six()
     print("it works")
