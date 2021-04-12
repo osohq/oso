@@ -493,12 +493,13 @@ class OsoRoles:
         for resource in resources:
             type = resource["type"]
             for role_name, role_data in resource["roles"].items():
-                for implies in role_data["implies"]:
-                    self._add_role_implies(roles[role_name], roles[implies])
+                if "implies" in role_data:
+                    for implies in role_data["implies"]:
+                        self._add_role_implies(roles[role_name], roles[implies])
 
         self.configured = True
 
-    def enable(self, oso):
+    def enable(self):
         # The "Polar api"
         class Roles:
             @staticmethod
@@ -507,4 +508,4 @@ class OsoRoles:
                     self._configure(self)
                 return self._role_allows(user, action, resource)
 
-        oso.register_class(Roles)
+        self.oso.register_class(Roles)
