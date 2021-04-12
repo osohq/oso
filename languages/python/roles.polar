@@ -33,7 +33,8 @@ role_implies(role, implied) if
 
 
 # role directly has permission
-has_permission(role, action, role.resource) if
+has_permission(role, action, resource) if
+    role.resource = resource and
     hack_type_check(role.resource, resource_class) and
     role_has_permission(role.name, action, resource_class);
 
