@@ -10,6 +10,16 @@ draft: true
 
 ## `oso` NEW_VERSION
 
+### Node.js
+
+#### Other bugs & improvements
+
+- Added `free()` method to enable manually freeing the underlying Polar WASM
+  instance. This should *not* be something you need to do during the course of
+  regular usage. It's generally only useful for scenarios where large numbers
+  of instances are spun up and not cleanly reaped by the GC, such as during a
+  long-running test process in 'watch' mode.
+
 ### Rust
 
 #### Other bugs & improvements
@@ -18,6 +28,8 @@ draft: true
   prettier interface thanks to
   [@joshrotenberg](https://github.com/joshrotenberg) via [PR
   #828](https://github.com/osohq/oso/pull/828).
+- Added `FromPolar` and `ToPolar` implementations for more `std::collections` types.
+  Thanks to [`@gjvnq`](https://github.com/gjvnq) for [PR #822](https://github.com/osohq/oso/pull/822)!
 
 ### OTHER_LANGUAGE
 
