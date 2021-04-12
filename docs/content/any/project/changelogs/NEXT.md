@@ -30,8 +30,8 @@ draft: true
   We continue to work on performance of data filtering queries
   and Polar. We've added more benchmarks to our test suite to cover data
   filtering queries. However, it's helpful to have real world examples
-  to base our performance work on. [Join our slack](http://join-slack.osohq.com)
-  to share your slow policies with us!
+  to base our performance work on. [Join our slack](https://join-slack.osohq.com)
+  to share your policies with us!
 
 ### Rust
 
