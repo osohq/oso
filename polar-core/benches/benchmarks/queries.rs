@@ -1,16 +1,9 @@
-//! Polar benchmarking suite
-
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, BenchmarkId, Criterion};
 
 use polar_core::*;
-use polar_core::{events::*, kb::Bindings, polar::Polar, polar::Query, terms::*};
+use polar_core::{kb::Bindings, polar::Polar, terms::*};
 
-fn runner_from_query(q: &str) -> Runner {
-    let polar = Polar::new();
-    let query_term = parser::parse_query(0, q).unwrap();
-    let query = polar.new_query_from_term(query_term, false);
-    Runner::new(polar, query)
-}
+use super::runner::{runner_from_query, Runner};
 
 pub fn simple_queries(c: &mut Criterion) {
     c.bench_function("unify_once", |b| {
@@ -211,60 +204,3 @@ criterion_group!(
     not,
     load_policy,
 );
-criterion_main!(benches);
-
-/// Used to run benchmarks by providing helper methods
-struct Runner {
-    polar: Polar,
-    expected_result: Option<Bindings>,
-    query: Query,
-}
-
-impl Runner {
-    fn new(polar: Polar, query: Query) -> Self {
-        Self {
-            polar,
-            expected_result: None,
-            query,
-        }
-    }
-
-    fn expected_result(&mut self, bindings: Bindings) {
-        self.expected_result = Some(bindings);
-    }
-
-    fn next(&mut self) -> QueryEvent {
-        self.query.next_event().expect("query errored")
-    }
-
-    fn run(&mut self) {
-        loop {
-            let event = self.next();
-            match event {
-                QueryEvent::Result { bindings, .. } => return self.handle_result(bindings),
-                QueryEvent::Done { .. } if self.expected_result.is_some() => {
-                    panic!("Result expected")
-                }
-                QueryEvent::Done { .. } => break,
-                QueryEvent::Debug { message } => self.handle_debug(message),
-                event => todo!("{:?}", event),
-            }
-        }
-    }
-
-    fn handle_result(&mut self, bindings: Bindings) {
-        if let Some(ref expected_bindings) = self.expected_result {
-            assert_eq!(expected_bindings, &bindings);
-        }
-    }
-
-    fn handle_debug(&mut self, _: String) {}
-}
-
-impl std::ops::Deref for Runner {
-    type Target = Polar;
-
-    fn deref(&self) -> &Self::Target {
-        &self.polar
-    }
-}
