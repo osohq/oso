@@ -46,11 +46,11 @@ python-test:
 	$(MAKE) -C data_access/sqlalchemy test
 
 ruby-test:
-	cd abac/ruby && bundle exec rspec test_spec.rb
-	cd rbac/ruby && bundle exec rspec test_spec.rb
-	cd context/ruby && bundle exec rspec test_spec.rb
-	cd inheritance/ruby && bundle exec rspec test_spec.rb
-	cd user_types/ruby && bundle exec rspec test_spec.rb
+	cd abac/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
+	cd rbac/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
+	cd context/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
+	cd inheritance/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
+	cd user_types/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
 
 nodejs-test:
 	$(MAKE) -C $(JS_DIR) build
