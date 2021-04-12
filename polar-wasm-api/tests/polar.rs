@@ -91,6 +91,15 @@ fn new_query_from_str_succeeds() {
 }
 
 #[wasm_bindgen_test]
+fn new_query_from_str_errors() {
+    let polar = polar_wasm_api::Polar::wasm_new();
+    let mut query = polar.wasm_new_query_from_str("x").unwrap();
+    let err: Error = query.wasm_next_event().unwrap_err().dyn_into().unwrap();
+    assert_eq!(err.name(), "RuntimeError::TypeError");
+    assert_eq!(err.message(), "trace (most recent evaluation last):\n  in query at line 1, column 1\n    x\nType error: can't query for: x at line 1, column 1");
+}
+
+#[wasm_bindgen_test]
 fn new_query_from_term_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
     let term = r#"{"value":{"Call":{"name":"x","args":[]}}}"#;
