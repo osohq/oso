@@ -23,8 +23,8 @@ class Organization(Base):
 
     name = Column(String(), primary_key=True)
 
-    def repr(self):
-        return {"name": self.name}
+    def __repr__(self):
+        return self.name
 
 
 class User(Base):
@@ -33,8 +33,8 @@ class User(Base):
     user_id = Column(Integer, primary_key=True)
     name = Column(String())
 
-    def repr(self):
-        return {"id": self.user_id, "name": self.name}
+    def __repr__(self):
+        return self.name
 
 
 class Repository(Base):
@@ -51,8 +51,8 @@ class Repository(Base):
     created_date = Column(DateTime, default=datetime.datetime.utcnow)
     updated_date = Column(DateTime, default=datetime.datetime.utcnow)
 
-    def repr(self):
-        return {"id": self.repo_id, "name": self.name}
+    def __repr__(self):
+        return self.name
 
 
 class Issue(Base):
@@ -74,7 +74,7 @@ def test_roles3():
     oso.load_file("../roles_demo.polar")
     roles.enable(oso, Base, User)  # role_allows rule gets added here probably
 
-    engine = create_engine("sqlite://", echo=True)
+    engine = create_engine("sqlite://", echo=False)
     Base.metadata.create_all(engine)
     # Runtime
     Session = sessionmaker(bind=engine)

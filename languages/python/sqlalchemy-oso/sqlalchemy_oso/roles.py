@@ -135,6 +135,9 @@ def resource_role_class(
         def user(cls):
             return relationship(user_model.__name__, backref=tablename)
 
+        def __repr__(self):
+            return f"Role({self.name} for {self.user} on {self.resource})"
+
     @declared_attr
     def named_resource_id(cls):
         type = inspect(resource_model).primary_key[0].type
