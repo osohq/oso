@@ -10,11 +10,18 @@ draft: true
 
 ## `oso` NEW_VERSION
 
-### Breaking Changes
+### Core
 
-- Behavior of a(x) if x has changed
-    Now equivalent to a(x) if x == true
-    Now works if x is unbound
+#### Breaking Changes
+
+{{% callout "Warning" "orange" %}}
+  This release contains breaking changes. Be sure to follow migration steps
+  before upgrading.
+{{% /callout %}}
+
+- Behavior of `a(x) if x;` has changed:
+  - It's now equivalent to `a(x) if x == true;`.
+  - It now works if `x` is unbound.
 
 ### Rust
 
@@ -36,15 +43,17 @@ draft: true
   long-running test process in 'watch' mode.
 
 - The Polar `Variable` type is now exposed in the Node.js library, allowing users to pass unbound variables to `queryRule()` and `isAllowed()`.
-```
-  const oso = new Oso()
-  await oso.loadStr('hello("world"); hello("something else");');
-  for await (const val of oso.queryRule("hello", new Variable("var"))) {
-      console.log(val);
-  }
-  => 
-  Map(1) { 'var' => 'world' }
-  Map(1) { 'var' => 'something else' }
+
+```js
+const oso = new Oso();
+await oso.loadStr('hello("world"); hello("something else");');
+const query = oso.queryRule("hello", new Variable("var"));
+for await (const result of query) {
+  console.log(result);
+}
+
+=> Map(1) { 'var' => 'world' }
+=> Map(1) { 'var' => 'something else' }
 ```
 
 ### Go
