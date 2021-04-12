@@ -119,11 +119,6 @@ defaultContentLanguage = "any"
     target = "content"
     lang = "go"
 
-  # Mount the old docs as a subdirectory for now
-  [[module.mounts]]
-  source = "../docs/_build/html"
-  target = "static/v1/"
-
 [build]
   writeStats = true
 

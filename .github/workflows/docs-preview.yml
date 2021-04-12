@@ -60,18 +60,14 @@ jobs:
       - name: Build Python
         run: make python-build
 
-      ### Build old docs
-      - name: Build docs
-        run: SPHINXOPTS="-W" make -C docs deps-test build
-
-      ### Build new docs
+      ### Build docs
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
           hugo-version: '0.79.1'
       - name: Build Hugo docs
         run: make build
-        working-directory: new-docs
+        working-directory: docs
 
 
       ### Push to S3 + invalidate cache
