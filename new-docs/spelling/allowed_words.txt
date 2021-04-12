@@ -50,6 +50,7 @@ EOF
 FFI
 filesystem
 frontend
+GC
 GDB
 glibc
 Gradle
@@ -151,4 +152,5 @@ URI
 URIs
 VM
 VPN
+WASM
 webpack
