@@ -50,6 +50,21 @@ export class Polar {
   }
 
   /**
+   * Free the underlying WASM instance.
+   *
+   * Invariant: ensure that you do *not* do anything else with an instance
+   * after calling `free()` on it.
+   *
+   * This should *not* be something you need to do during the course of regular
+   * usage. It's generally only useful for scenarios where large numbers of
+   * instances are spun up and not cleanly reaped by the GC, such as during a
+   * long-running test process in 'watch' mode.
+   */
+  free() {
+    this.#ffiPolar.free();
+  }
+
+  /**
    * For tests only.
    *
    * @hidden
