@@ -446,6 +446,7 @@ def test_lookup_errors(polar, query):
         query('new Foo().bar = "bar"') == []
     assert "Application error: 'Foo' object has no attribute 'bar'" in str(e.value)
 
+
 def test_return_list(polar, query):
     class User:
         def groups(self):
