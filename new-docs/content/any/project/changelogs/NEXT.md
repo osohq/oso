@@ -72,7 +72,18 @@ for await (const result of query) {
 
 #### Other bugs & improvements
 
-- Go lib no longer tries to print the zero values it uses for bookkeeping. This would crash when running on macOS under delve.
+- Go lib no longer tries to print the zero values it uses for bookkeeping. This
+  would crash when running on macOS under delve.
+- `RegisterClass()` and `RegisterClassWithName()` now accept an instance of the
+  to-be-registered Go type instead of a `reflect.Type` instance:
+
+  ```go
+  // Previously supported & still works:
+  oso.RegisterClass(reflect.TypeOf(Expense{}), nil)
+
+  // Now supported:
+  oso.RegisterClass(Expense{}, nil)
+  ```
 
 ### OTHER_LANGUAGE
 
