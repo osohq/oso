@@ -66,6 +66,10 @@ Polar does not support methods that mutate strings in place.
 
 [`Vec<T>`][rust-vec] maps to a Polar [list](polar-syntax#lists), given that `T: ToPolar`.
 
+Implementations also exist to convert `LinkedList`, `VecDeque`,
+`BinaryHeap`, `HashSet`, and `BTreeSet`to and from Polar lists,
+but lists areq treated as `Vec<T>` when calling methods.
+
 Currently, no methods on `Vec` are exposed to Polar.
 
 ```polar
@@ -101,7 +105,11 @@ matching](polar-syntax#patterns-and-matching).
 
 A Rust [`HashMap`][rust-hashmap] maps to a Polar
 [dictionary](polar-syntax#dictionaries) but requires that the `HashMap` key is
-a `String`:
+a `String`.
+
+Implementations also exist to convert `BTreeMap`s to and
+from Polar dictionaries, but dictionaries are treated as `HashMap` when calling methods.
+
 
 ```polar
 allow(actor, action, resource) if actor.roles.project1 = "admin";
@@ -190,11 +198,11 @@ assert!(oso.is_allowed(user, "foo", "bar")?);
 
 ### Rust → Polar Types Summary
 
-| Rust type                       | Polar type   |
-| ------------------------------- | ------------ |
-| `i32`, `i64`, `usize`           | `Integer`    |
-| `f32`, `f64`                    | `Float`      |
-| `bool`                          | `Boolean`    |
-| `Vec`                           | `List`       |
-| `HashMap`                       | `Dictionary` |
-| `String`, `&'static str`, `str` | `String`     |
+| Rust type                                                             | Polar type   |
+| --------------------------------------------------------------------- | ------------ |
+| `i32`, `i64`, `usize`                                                 | `Integer`    |
+| `f32`, `f64`                                                          | `Float`      |
+| `bool`                                                                | `Boolean`    |
+| `String`, `&'static str`, `str`                                       | `String`     |
+| `HashMap`, `BTreeMap`                                                 | `Dictionary` |
+| `Vec`, `LinkedList`, `VecDeque` `BinaryHeap`, `HashSet`, `BTreeSet`   | `List`       |

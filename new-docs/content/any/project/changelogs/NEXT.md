@@ -28,6 +28,8 @@ draft: true
   prettier interface thanks to
   [@joshrotenberg](https://github.com/joshrotenberg) via [PR
   #828](https://github.com/osohq/oso/pull/828).
+- Added `FromPolar` and `ToPolar` implementations for more `std::collections` types.
+  Thanks to [@gjvnq](https://github.com/gjvnq) for [PR #822](https://github.com/osohq/oso/pull/822)!
 
 ### OTHER_LANGUAGE
 
