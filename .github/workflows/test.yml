@@ -337,4 +337,4 @@ jobs:
       - name: Install yard (for doc build)
         run: gem install yard
       - name: Doc test
-        run: make -C new-docs test
+        run: make -C docs test
