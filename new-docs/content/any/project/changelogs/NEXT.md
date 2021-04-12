@@ -10,6 +10,16 @@ draft: true
 
 ## `oso` NEW_VERSION
 
+### Node.js
+
+#### Other bugs & improvements
+
+- Added `free()` method to enable manually freeing the underlying Polar WASM
+  instance. This should *not* be something you need to do during the course of
+  regular usage. It's generally only useful for scenarios where large numbers
+  of instances are spun up and not cleanly reaped by the GC, such as during a
+  long-running test process in 'watch' mode.
+
 ### Rust
 
 #### Other bugs & improvements
