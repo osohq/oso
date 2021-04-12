@@ -16,7 +16,7 @@ submitted_by: submitted_by
 endswith: endswith
 endswithURL: >
    [the `str.endswith` method](https://docs.python.org/3/library/stdtypes.html#str.endswith)
-expensesPath1: examples/quickstart/expenses-01-python.polar
-expensesPath2: examples/quickstart/expenses-02-python.polar
+expensesPath1: examples/quickstart/polar/expenses-01-python.polar
+expensesPath2: examples/quickstart/polar/expenses-02-python.polar
 isAllowed: is_allowed
 ---

@@ -172,7 +172,7 @@ that in the next section.
 In the [Quickstart](quickstart), our main objective was to
 determine who could "GET" expenses. Our final policy looked like:
 
-{{< literalInclude path="examples/quickstart/expenses-02-python.polar" >}}
+{{< literalInclude path="examples/quickstart/polar/expenses-02-python.polar" >}}
 
 In our expenses sample application, we have something similar,
 but we've rewritten the policy to use a new `submitted` predicate in case we want

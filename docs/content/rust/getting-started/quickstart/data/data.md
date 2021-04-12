@@ -14,7 +14,7 @@ manager: manager
 endswith: ends_with
 endswithURL: >
    [the `String::ends_with` method](https://doc.rust-lang.org/std/string/struct.String.html#method.ends_with)
-expensesPath1: examples/quickstart/expenses-01-rust.polar
-expensesPath2: examples/quickstart/expenses-02-rust.polar
+expensesPath1: examples/quickstart/polar/expenses-01-rust.polar
+expensesPath2: examples/quickstart/polar/expenses-02-rust.polar
 isAllowed: is_allowed
 ---
