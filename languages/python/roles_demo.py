@@ -177,8 +177,7 @@ def six():
                 implies: ["repo_read"]
             },
             repo_read: {
-                perms: ["repo_pull"],
-                implies: []
+                perms: ["repo_pull"]
             }
         };
 
