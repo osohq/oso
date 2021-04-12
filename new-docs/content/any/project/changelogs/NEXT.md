@@ -23,6 +23,16 @@ draft: true
   - It's now equivalent to `a(x) if x == true;`.
   - It now works if `x` is unbound.
 
+#### Other bugs & improvements
+
+- The performance of data filtering queries has been improved up to 3x
+  with queries involving larger policies seeing the greatest speed ups.
+  We continue to work on performance of data filtering queries
+  and Polar. We've added more benchmarks to our test suite to cover data
+  filtering queries. However, it's helpful to have real world examples
+  to base our performance work on. [Join our slack](http://join-slack.osohq.com)
+  to share your slow policies with us!
+
 ### Rust
 
 #### Other bugs & improvements
