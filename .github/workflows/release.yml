@@ -687,7 +687,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Initialize submodules
         working-directory: docs/examples/quickstart
-        run: git submodule update --init -- oso-java-quickstart oso-nodejs-quickstart oso-python-quickstart oso-ruby-quickstart oso-rust-quickstart
+        run: git submodule update --init -- java nodejs python ruby rust
       - name: Check that submodules are all up-to-date
         run: |
           git submodule foreach git remote update
