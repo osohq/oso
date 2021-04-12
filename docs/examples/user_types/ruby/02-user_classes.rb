@@ -13,19 +13,15 @@ OSO.register_class(Customer)
 
 # internal-start
 class InternalUser
-  attr_reader :id
-
-  def initialize(id)
-    @id = id
-  end
+  # ...
 
   def role
     db.query('SELECT role FROM internal_roles WHERE id = ?', id)
   end
 end
+# internal-end
 
 OSO.register_class(InternalUser)
-# internal-end
 
 # account-start
 class AccountManager < InternalUser
@@ -35,6 +31,7 @@ class AccountManager < InternalUser
 end
 # account-end
 
+# generate-start
 def user_from_id(id)
   case db.query('SELECT type FROM users WHERE id = ?', id)
   when 'internal'
@@ -48,3 +45,4 @@ def user_from_id(id)
     Customer.new(id: id)
   end
 end
+# generate-end

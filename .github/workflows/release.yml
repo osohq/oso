@@ -708,7 +708,7 @@ jobs:
         with:
           bundler-cache: true
           ruby-version: "2.4.0"
-          working-directory: "docs/examples/quickstart/oso-ruby-quickstart"
+          working-directory: "docs/examples/quickstart/ruby"
       - name: Use Node.js 10.0.0
         uses: actions/setup-node@v1
         with:
