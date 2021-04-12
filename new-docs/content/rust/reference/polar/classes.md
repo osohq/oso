@@ -68,7 +68,7 @@ Polar does not support methods that mutate strings in place.
 
 Implementations also exist to convert `LinkedList`, `VecDeque`,
 `BinaryHeap`, `HashSet`, and `BTreeSet`to and from Polar lists,
-but lists areq treated as `Vec<T>` when calling methods.
+but lists are treated as `Vec<T>` when calling methods.
 
 Currently, no methods on `Vec` are exposed to Polar.
 
