@@ -10,6 +10,12 @@ draft: true
 
 ## `oso` NEW_VERSION
 
+### Breaking Changes
+
+- Behavior of a(x) if x has changed
+    Now equivalant to a(x) if x == true
+    Now works if x is unbound
+
 ### Rust
 
 #### Other bugs & improvements
@@ -19,7 +25,34 @@ draft: true
   [@joshrotenberg](https://github.com/joshrotenberg) via [PR
   #828](https://github.com/osohq/oso/pull/828).
 
-### OTHER_LANGUAGE
+### Node.js
+
+#### Other bugs & improvements
+
+- Added `free()` method to enable manually freeing the underlying Polar WASM
+  instance. This should *not* be something you need to do during the course of
+  regular usage. It's generally only useful for scenarios where large numbers
+  of instances are spun up and not cleanly reaped by the GC, such as during a
+  long-running test process in 'watch' mode.
+
+- The Polar `Variable` type is now exposed in the Node.js library, allowing users to pass unbound variables to `queryRule()` and `isAllowed()`.
+```
+  const oso = new Oso()
+  await oso.loadStr('hello("world"); hello("something else");');
+  for await (const val of oso.queryRule("hello", new Variable("var"))) {
+      console.log(val);
+  }
+  => 
+  Map(1) { 'var' => 'world' }
+  Map(1) { 'var' => 'something else' }
+```
+
+### Go
+
+#### Other bugs & improvements
+
+- Go lib no longer tries to print the zero values it uses for bookkeeping. This would crash when running on macOS under delve.
+
 
 #### Breaking changes
 
