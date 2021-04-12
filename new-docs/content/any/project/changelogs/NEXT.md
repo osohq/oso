@@ -20,6 +20,15 @@ draft: true
   of instances are spun up and not cleanly reaped by the GC, such as during a
   long-running test process in 'watch' mode.
 
+### Rust
+
+#### Other bugs & improvements
+
+- The Rust CLI now uses [`clap`](https://crates.io/crates/clap) to expose a
+  prettier interface thanks to
+  [@joshrotenberg](https://github.com/joshrotenberg) via [PR
+  #828](https://github.com/osohq/oso/pull/828).
+
 ### OTHER_LANGUAGE
 
 #### Breaking changes

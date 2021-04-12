@@ -677,6 +677,7 @@ name = "oso"
 version = "0.11.3"
 dependencies = [
  "anyhow",
+ "clap",
  "criterion",
  "impl-trait-for-tuples",
  "lazy_static",

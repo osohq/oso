@@ -21,6 +21,7 @@ Bundler
 bundlers
 cgo
 classpath
+CLI
 Cloudflare
 codebase
 constructable
@@ -69,6 +70,7 @@ iterable
 iterables
 JARs
 JDB
+joshrotenberg
 js
 Jullmann
 JWT
