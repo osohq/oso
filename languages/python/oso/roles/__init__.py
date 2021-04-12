@@ -1,3 +1,4 @@
+from oso import Variable
 from dataclasses import dataclass
 from typing import Any
 
@@ -101,8 +102,17 @@ class Collection:
         return id
 
 
+def ensure_configured(func):
+    def wrapper(self, *args, **kwargs):
+        if not self.configured:
+            self._configure()
+        func(self, *args, **kwargs)
+
+    return wrapper
+
+
 class OsoRoles:
-    def __init__(self):
+    def __init__(self, oso):
         self.parent_relationships = Collection()
         self.permissions = Collection()
         self.roles = Collection()
@@ -113,8 +123,16 @@ class OsoRoles:
         self.parent_implied_roles = Collection()
         self.parent_child_implied_roles = Collection()
         self.user_roles = Collection()
+        self.types = {}
+        self.role_names = {}
 
-    def new_relationship(self, name, child, parent, parent_selector):
+        self.oso = oso
+        self.configured = False
+
+    def register_class(self, type):
+        self.types[type.__name__] = type
+
+    def _new_relationship(self, name, child, parent, parent_selector):
         id = self.parent_relationships.get_id()
         relationship = ParentRelationship(
             id=id,
@@ -126,13 +144,13 @@ class OsoRoles:
         self.parent_relationships.elements[id] = relationship
         return relationship
 
-    def new_permission(self, resource, action):
+    def _new_permission(self, resource, action):
         id = self.permissions.get_id()
         permission = Permission(id=id, resource_type=resource, action=action)
         self.permissions.elements[id] = permission
         return permission
 
-    def new_role(self, resource, name):
+    def _new_role(self, resource, name):
         id = self.roles.get_id()
         role = Role(id=id, resource_type=resource, name=name)
         self.roles.elements[id] = role
@@ -155,7 +173,7 @@ class OsoRoles:
                 return True
         return False
 
-    def add_role_permission(self, role, permission):
+    def _add_role_permission(self, role, permission):
         assert isinstance(role, Role)
         assert isinstance(permission, Permission)
 
@@ -181,9 +199,7 @@ class OsoRoles:
 
         return role_permission
 
-    def remove_role_permission(self, role, permission):
-        pass
-
+    @ensure_configured
     def add_scoped_role_permission(self, scope, role, permission):
         assert isinstance(role, Role)
         assert isinstance(permission, Permission)
@@ -233,10 +249,11 @@ class OsoRoles:
         return role_permission
 
     # TODO: delete scoped role permissions
+    @ensure_configured
     def remove_scoped_role_permission(self, scope, role, permission):
         pass
 
-    def add_role_implies(self, from_role, to_role):
+    def _add_role_implies(self, from_role, to_role):
         # @TODO:
         # If resources don't match, ensure there's a relationship.
         # Two mutually exclusive roles can not be implied by the same role.
@@ -268,10 +285,12 @@ class OsoRoles:
 
     # Start of the "dynamic api"
 
-    def assign_role(self, user, resource, role):
+    @ensure_configured
+    def assign_role(self, user, resource, role_name):
         # @TODO:
         # Can't be assigned to two different mutually exclusive roles.
         # Role has to be on the resource.
+        role = self.role_names[role_name]
 
         assert isinstance(role, Role)
         assert role.id in self.roles.elements
@@ -379,114 +398,113 @@ class OsoRoles:
 
         return False
 
-        # TODO: Have a way to get out the role that matched.
+    def _configure(self):
+        # Note(steve)
+        # This is all just hacked to get the policy to work.
 
-        # is the user assigned to ANY of these roles.
+        # Register relationships
+        role_relationships = self.oso.query_rule(
+            "role_parent_resource",
+            Variable("resource"),
+            Variable("parent_resource"),
+            accept_expression=True,
+        )
+        relationships = []
+        for result in role_relationships:
+            # OMG WOW HACK, OMFG WOW HACK
+            # will not work in general lol but looks like
+            # it works for the demo.
+            constraints = result["bindings"]["resource"]
+            assert len(constraints.args) == 2
+            type_check = constraints.args[0]
+            assert type_check.operator == "Isa"
+            assert len(type_check.args) == 2
+            assert type_check.args[0] == Variable("_this")
+            pattern = type_check.args[1]
+            child_t = pattern.tag
+            get_parent = constraints.args[1]
+            assert get_parent.operator == "Isa"
+            assert len(get_parent.args) == 2
+            getter = get_parent.args[0]
+            assert getter.operator == "Dot"
+            assert len(getter.args) == 2
+            assert getter.args[0] == Variable("_this")
+            parent_field = getter.args[1]
+            pattern = get_parent.args[1]
+            parent_t = pattern.tag
+            self._new_relationship(
+                name=f"{child_t}_{parent_t}",
+                child=self.types[child_t],
+                parent=self.types[parent_t],
+                parent_selector=lambda child: getattr(child, parent_field),
+            )
 
-        # roles with this permission
-        # (role_id, scoped?)
+        # Register resources / permissions / roles and implications
+        # Based on the role_resource definitions
+        role_resources = self.oso.query_rule(
+            "role_resource",
+            Variable("resource"),
+            Variable("permissions"),
+            Variable("roles"),
+            accept_expression=True,
+        )
+        resources = []
+        for result in role_resources:
+            resource = result["bindings"]["resource"]
+            assert resource.operator == "And"
+            assert len(resource.args) == 1
+            arg = resource.args[0]
+            assert arg.operator == "Isa"
+            assert len(arg.args) == 2
+            assert arg.args[0] == Variable("_this")
+            pattern = arg.args[1]
+            t = pattern.tag
+            permissions = result["bindings"]["permissions"]
+            roles = result["bindings"]["roles"]
 
-        # Role{admin, perm1}
-        # ScopedRole{admin, org1}
-        # assigned to user
-        # assigned for a relevant resource ()
-        #
-        # Get any scoped role for these resources with this permission on it.
-        # Get any roles (that don't have a scoped role for these resources) with this permission on it.
+            resources.append({"type": t, "permissions": permissions, "roles": roles})
 
-        # Get all the roles the user is assigned to.
-        # assigned_role_ids = set()
-        # for _, user_role in self.user_roles.elements.items():
-        #     if user_role.user == user:
-        #         for _, res in resources.items():
-        #             if user_role.resource == res:
-        #                 assigned_role_ids.add(user_role.role_id)
+        permissions = {}
+        # Register permissions
+        for resource in resources:
+            type = resource["type"]
+            for perm in resource["permissions"]:
+                # WOW HACK, not ideal...
+                action = perm.split("_", 1)[1]
+                permissions[perm] = self._new_permission(
+                    resource=self.types[type], action=action
+                )
 
-        # Get all the roles that those roles imply (continued as far as the chains go)
-        # Get the scoped versions of all those roles if there is one.
-        # If any of those roles has this action as a permission, True
-        # Else False
-        # For any role that isn't scoped:
-        # If any of those roles has this action as a permission, True
-        # Else False
+        # Register roles
+        roles = {}
+        for resource in resources:
+            type = resource["type"]
+            for role_name, role_data in resource["roles"].items():
+                # WOW HACK, not ideal...
+                name = role_name.split("_", 1)[1]
+                role = self._new_role(resource=self.types[type], name=name)
+                roles[role_name] = role
+                for perm in role_data["perms"]:
+                    self._add_role_permission(role=role, permission=permissions[perm])
+        self.role_names = roles
 
-        # Find all role ids with that permission.
-        # role_ids = set()
-        # for _, role_perm in self.role_permissions.elements.items():
-        #     if role_perm.permission_id == permission.id:
-        #         role_ids.add(role_perm.role_id)
-        # if len(role_ids) == 0:
-        #     return False
+        implications = {}
+        # Register implications
+        for resource in resources:
+            type = resource["type"]
+            for role_name, role_data in resource["roles"].items():
+                for implies in role_data["implies"]:
+                    self._add_role_implies(roles[role_name], roles[implies])
 
-        # Recursively find all roles that imply those roles.
-        # @TODO: Handle scoped implied rules.
-        # while True:
-        #     size = len(role_ids)
-
-        #     for _, implied_role in self.implied_roles.elements.items():
-
-        #         new_role_ids = set()
-        #         for role_id in role_ids:
-        #             if implied_role.to_role_id == role_id:
-        #                 new_role_ids.add(implied_role.from_role_id)
-
-        #         role_ids = role_ids.union(new_role_ids)
-
-        #     if len(role_ids) == size:
-        #         break
-
-        # Get the actual roles.
-        # roles = []
-        # for _, role in self.roles.elements.items():
-        #     if role.id in role_ids:
-        #         roles.append(role)
-        #
-        # # For each role, if it's not on the same type as this resource, get
-        # # the resource that it is on and it's id.
-        # role_type_resources = []
-        # for role in roles:
-        #     if role.resource_type == resource.__class__:
-        #         # Role is defined on the same type as resource.
-        #         role_type_resources.append((role, resource.__class__, resource))
-        #     else:
-        #         # Role is defined on a different type than resource.
-        #         # Walk up the parent relationships to get the resource the role is on.
-        #         role_resource = resource
-        #         role_resource_type = resource.__class__
-        #         while role_resource_type != role.resource_type:
-        #             # @NOTE: This code assumes there's only one parent for a type.
-        #             found = False
-        #             for _, relationship in self.parent_relationships.elements.items():
-        #                 if relationship.child_type == role_resource_type:
-        #                     role_resource = relationship.parent_selector(role_resource)
-        #                     role_resource_type = role_resource.__class__
-        #                     found = True
-        #                     break
-        #             if not found:
-        #                 print(
-        #                     "Error: No path to resource type that a permission is defined on"
-        #                 )
-        #                 print("This should be forbidden to construct!")
-        #                 return False
-        #         role_type_resources.append((role, role_resource_type, role_resource))
-        #
-        # # See if the user is assigned to any of those roles
-        # for _, user_role in self.user_roles.elements.items():
-        #     for (role, _, resource) in role_type_resources:
-        #         if (
-        #             user_role.role_id == role.id
-        #             and user_role.user == user
-        #             and user_role.resource == resource
-        #         ):
-        #             return True
-        #
-        # return False
+        self.configured = True
 
     def enable(self, oso):
         # The "Polar api"
         class Roles:
             @staticmethod
             def role_allows(user, action, resource):
+                if not self.configured:
+                    self._configure(self)
                 return self._role_allows(user, action, resource)
 
         oso.register_class(Roles)

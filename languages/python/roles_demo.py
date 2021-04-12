@@ -76,7 +76,7 @@ def one():
     # Simple policy that just uses roles
     policy = """
     allow(actor, action, resource) if
-      Roles.role_allows(actor, action, resource);
+        Roles.role_allows(actor, acction, resource);
     """
     oso.load_str(policy)
 
@@ -138,71 +138,113 @@ def six():
     oso.register_class(Repository)
 
     # Set up roles
-    roles = OsoRoles()
+    roles = OsoRoles(oso)
+
+    # These will probably not be needed later but I need them for now.
+    roles.register_class(User)
+    roles.register_class(Organization)
+    roles.register_class(Repository)
+
     roles.enable(oso)
 
-    # Simple policy that just uses roles
+    # Policy
     policy = """
+    role_resource(_resource: Organization, permissions, roles) if
+        permissions = [
+            "org_invite",
+            "org_create_repo"
+        ] and
+        roles = {
+            org_owner: {
+                perms: ["org_invite"],
+                implies: ["org_member", "repo_write"]
+            },
+            org_member: {
+                perms: ["org_create_repo"],
+                implies: ["repo_read"]
+            }
+        };
+
+    role_resource(_resource: Repository, permissions, roles) if
+        permissions = [
+            "repo_push",
+            "repo_pull"
+        ] and
+        roles = {
+            repo_write: {
+                perms: ["repo_push"],
+                implies: ["repo_read"]
+            },
+            repo_read: {
+                perms: ["repo_pull"],
+                implies: []
+            }
+        };
+
+    role_parent_resource(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
     allow(actor, action, resource) if
-      not resource = private and
-      Roles.role_allows(actor, action, resource);
+        Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
 
-    ### Basic resource role configuration ###
+    # ### Basic resource role configuration ###
 
-    ## Organizations
+    # ## Organizations
 
-    # Define organization permissions
-    permission_org_invite = roles.new_permission(resource=Organization, action="invite")
-    permission_org_create_repo = roles.new_permission(
-        resource=Organization, action="create_repo"
-    )
+    # # Define organization permissions
+    # permission_org_invite = roles._new_permission(
+    #     resource=Organization, action="invite"
+    # )
+    # permission_org_create_repo = roles._new_permission(
+    #     resource=Organization, action="create_repo"
+    # )
 
-    # Define organization roles
-    role_org_owner = roles.new_role(resource=Organization, name="OWNER")
-    role_org_member = roles.new_role(resource=Organization, name="MEMBER")
+    # # Define organization roles
+    # role_org_owner = roles._new_role(resource=Organization, name="OWNER")
+    # role_org_member = roles._new_role(resource=Organization, name="MEMBER")
 
-    # Add permissions to organization roles
-    roles.add_role_permission(role=role_org_owner, permission=permission_org_invite)
-    roles.add_role_permission(
-        role=role_org_member, permission=permission_org_create_repo
-    )
+    # # Add permissions to organization roles
+    # roles._add_role_permission(role=role_org_owner, permission=permission_org_invite)
+    # roles._add_role_permission(
+    #     role=role_org_member, permission=permission_org_create_repo
+    # )
 
-    # Implied roles for organizations
-    roles.add_role_implies(role_org_owner, role_org_member)
+    # # Implied roles for organizations
+    # roles._add_role_implies(role_org_owner, role_org_member)
 
-    ## Repositories
+    # ## Repositories
 
-    # Define repo permissions
-    permission_repo_push = roles.new_permission(resource=Repository, action="push")
-    permission_repo_pull = roles.new_permission(resource=Repository, action="pull")
+    # # Define repo permissions
+    # permission_repo_push = roles._new_permission(resource=Repository, action="push")
+    # permission_repo_pull = roles._new_permission(resource=Repository, action="pull")
 
-    # Define repo roles
-    role_repo_write = roles.new_role(resource=Repository, name="WRITE")
-    role_repo_read = roles.new_role(resource=Repository, name="READ")
+    # # Define repo roles
+    # role_repo_write = roles._new_role(resource=Repository, name="WRITE")
+    # role_repo_read = roles._new_role(resource=Repository, name="READ")
 
-    # Add permissions to repo roles
-    roles.add_role_permission(role=role_repo_write, permission=permission_repo_push)
-    roles.add_role_permission(role=role_repo_read, permission=permission_repo_pull)
+    # # Add permissions to repo roles
+    # roles._add_role_permission(role=role_repo_write, permission=permission_repo_push)
+    # roles._add_role_permission(role=role_repo_read, permission=permission_repo_pull)
 
-    # Implied roles for repositories
-    roles.add_role_implies(role_repo_write, role_repo_read)
+    # # Implied roles for repositories
+    # roles._add_role_implies(role_repo_write, role_repo_read)
 
-    ### Relationships + cross-resource implications ###
+    # ### Relationships + cross-resource implications ###
 
-    # organizations are the parent of repos
-    roles.new_relationship(
-        name="repo_org",
-        child=Repository,
-        parent=Organization,
-        parent_selector=lambda child: child.org,
-    )
+    # # organizations are the parent of repos
+    # roles._new_relationship(
+    #     name="repo_org",
+    #     child=Repository,
+    #     parent=Organization,
+    #     parent_selector=lambda child: child.org,
+    # )
 
-    # Org "OWNER" role implies repo "WRITE" role for every repo in the org
-    roles.add_role_implies(role_org_owner, role_repo_write)
-    # Org "MEMBER" role implies repo "READ" role for every repo in the org
-    roles.add_role_implies(role_org_member, role_repo_read)
+    # # Org "OWNER" role implies repo "WRITE" role for every repo in the org
+    # roles._add_role_implies(role_org_owner, role_repo_write)
+    # # Org "MEMBER" role implies repo "READ" role for every repo in the org
+    # roles._add_role_implies(role_org_member, role_repo_read)
 
     ###########################################################################
 
@@ -216,10 +258,10 @@ def six():
     gabe = User(name="Gabe")
 
     # Things that happen in the app via the management api.
-    roles.assign_role(leina, osohq, role_org_owner)
-    roles.assign_role(steve, osohq, role_org_member)
+    roles.assign_role(leina, osohq, "org_owner")
+    roles.assign_role(steve, osohq, "org_member")
 
-    roles.assign_role(gabe, oso_repo, role_repo_write)
+    roles.assign_role(gabe, oso_repo, "repo_write")
 
     #### Test
 
@@ -259,6 +301,6 @@ def six():
 
 
 if __name__ == "__main__":
-    one()
+    # one()
     six()
     print("it works")
