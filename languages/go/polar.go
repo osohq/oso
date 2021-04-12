@@ -183,9 +183,11 @@ func (p Polar) repl(files ...string) error {
 }
 
 /*
-Register a class with Polar. Accepts the class, a constructor function (or nil), and a name (or nil)
+Register a Go type with Polar so that it can be referenced within Polar files.
+Accepts a concrete value of the Go type, a constructor function (or nil), and a
+name (or nil).
 */
-func (p Polar) registerClass(cls reflect.Type, ctor interface{}, name *string) error {
+func (p Polar) registerClass(cls interface{}, ctor interface{}, name *string) error {
 	// Get constructor
 	constructor := reflect.ValueOf(nil)
 	if ctor != nil {
@@ -195,19 +197,28 @@ func (p Polar) registerClass(cls reflect.Type, ctor interface{}, name *string) e
 		}
 	}
 
+	// get real type
+	var realType reflect.Type
+	switch c := cls.(type) {
+	case reflect.Type:
+		realType = c
+	default:
+		realType = reflect.TypeOf(cls)
+	}
+
 	// Get class name
 	var className string
 	if name == nil {
-		className = cls.Name()
+		className = realType.Name()
 	} else {
 		className = *name
 	}
 
-	err := p.host.CacheClass(cls, className, constructor)
+	err := p.host.CacheClass(realType, className, constructor)
 	if err != nil {
 		return err
 	}
-	newVal := reflect.New(cls)
+	newVal := reflect.New(realType)
 	return p.registerConstant(newVal.Interface(), className)
 }
 
