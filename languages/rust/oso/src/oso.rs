@@ -2,14 +2,16 @@
 
 use polar_core::terms::{Call, Symbol, Term, Value};
 
+use std::collections::HashSet;
 use std::fs::File;
+use std::hash::Hash;
 use std::io::Read;
 use std::sync::Arc;
 
 use crate::host::Host;
 use crate::query::Query;
 use crate::OsoError;
-use crate::{ToPolar, ToPolarList};
+use crate::{FromPolar, PolarValue, ToPolar, ToPolarList};
 
 /// Oso is the main struct you interact with. It is an instance of the Oso authorization library
 /// and contains the polar language knowledge base and query engine.
@@ -22,6 +24,26 @@ pub struct Oso {
 impl Default for Oso {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Represents an `action` used in an `allow` rule.
+/// When the action is bound to a concrete value (e.g. a string)
+/// this returns an `Action::Typed(action)`.
+/// If _any_ actions are allowed, then the `Action::Any` variant is returned.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub enum Action<T = String> {
+    Any,
+    Typed(T),
+}
+
+impl<T: FromPolar> FromPolar for Action<T> {
+    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+        if matches!(val, PolarValue::Variable(_)) {
+            Ok(Action::Any)
+        } else {
+            T::from_polar(val).map(Action::Typed)
+        }
     }
 }
 
@@ -60,6 +82,52 @@ impl Oso {
             Some(Err(e)) => Err(e),
             None => Ok(false),
         }
+    }
+
+    /// Get the actions actor is allowed to take on resource.
+    /// Returns a [std::collections::HashSet] of actions, typed according the return value.
+    /// # Examples
+    /// ```ignore
+    /// oso.load_str(r#"allow(actor: Actor{name: "sally"}, action, resource: Widget{id: 1}) if
+    ///               action in ["CREATE", "READ"];"#);
+    ///
+    /// // get a HashSet of oso::Actions
+    /// let actions: HashSet<Action> = oso.get_allowed_actions(actor, resource)?;
+    ///
+    /// // or Strings
+    /// let actions: HashSet<String> = oso.get_allowed_actions(actor, resource)?;
+    /// ```
+    pub fn get_allowed_actions<Actor, Resource, T>(
+        &self,
+        actor: Actor,
+        resource: Resource,
+    ) -> crate::Result<HashSet<T>>
+    where
+        Actor: ToPolar,
+        Resource: ToPolar,
+        T: FromPolar + Eq + Hash,
+    {
+        let mut query = self
+            .query_rule(
+                "allow",
+                (actor, PolarValue::Variable("action".to_owned()), resource),
+            )
+            .unwrap();
+
+        let mut set = HashSet::new();
+        loop {
+            match query.next() {
+                Some(Ok(result)) => {
+                    if let Some(action) = result.get("action") {
+                        set.insert(T::from_polar(action)?);
+                    }
+                }
+                Some(Err(e)) => return Err(e),
+                None => break,
+            };
+        }
+
+        Ok(set)
     }
 
     /// Clear out all files and rules that have been loaded.
