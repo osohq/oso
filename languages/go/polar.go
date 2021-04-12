@@ -183,7 +183,9 @@ func (p Polar) repl(files ...string) error {
 }
 
 /*
-Register a class with Polar. Accepts the class, a constructor function (or nil), and a name (or nil)
+Register a Go type with Polar so that it can be referenced within Polar files.
+Accepts a concrete value of the Go type, a constructor function (or nil), and a
+name (or nil).
 */
 func (p Polar) registerClass(cls interface{}, ctor interface{}, name *string) error {
 	// Get constructor
