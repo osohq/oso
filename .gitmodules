@@ -2,3 +2,21 @@
 	path = docs/examples/roles/sqlalchemy/basic
 	url = https://github.com/osohq/oso-sqlalchemy-roles-guide.git
 	branch = basic_roles_complete
+[submodule "docs/examples/quickstart/go"]
+	path = docs/examples/quickstart/go
+	url = https://github.com/osohq/oso-go-quickstart.git
+[submodule "docs/examples/quickstart/java"]
+	path = docs/examples/quickstart/java
+	url = https://github.com/osohq/oso-java-quickstart.git
+[submodule "docs/examples/quickstart/nodejs"]
+	path = docs/examples/quickstart/nodejs
+	url = https://github.com/osohq/oso-nodejs-quickstart.git
+[submodule "docs/examples/quickstart/python"]
+	path = docs/examples/quickstart/python
+	url = https://github.com/osohq/oso-python-quickstart.git
+[submodule "docs/examples/quickstart/ruby"]
+	path = docs/examples/quickstart/ruby
+	url = https://github.com/osohq/oso-ruby-quickstart.git
+[submodule "docs/examples/quickstart/rust"]
+	path = docs/examples/quickstart/rust
+	url = https://github.com/osohq/oso-rust-quickstart.git
