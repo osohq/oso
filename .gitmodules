@@ -22,7 +22,7 @@
 	path = docs/examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide
 	url = https://github.com/osohq/oso-sqlalchemy-roles-guide
   branch = main
-[submodule "new-docs/examples/roles/sqlalchemy/basic"]
-	path = new-docs/examples/roles/sqlalchemy/basic
+[submodule "docs/examples/roles/sqlalchemy/basic"]
+	path = docs/examples/roles/sqlalchemy/basic
 	url = https://github.com/osohq/oso-sqlalchemy-roles-guide.git
 	branch = basic_roles_complete
