@@ -63,7 +63,7 @@ pub fn parse_lines(src_id: u64, src: &str) -> PolarResult<Vec<Line>> {
 }
 
 pub fn parse_query(src_id: u64, src: &str) -> PolarResult<Term> {
-    polar::TermExpParser::new()
+    polar::TermParser::new()
         .parse(src_id, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
 }
