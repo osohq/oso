@@ -13,7 +13,7 @@ draft: true
 ### Breaking Changes
 
 - Behavior of a(x) if x has changed
-    Now equivalant to a(x) if x == true
+    Now equivalent to a(x) if x == true
     Now works if x is unbound
 
 ### Rust

@@ -47,9 +47,11 @@ entrypoint
 enumerables
 enums
 EOF
+equivalent
 FFI
 filesystem
 frontend
+GC
 GDB
 glibc
 Gradle
@@ -112,6 +114,7 @@ pseudocode
 PyPI
 quickstart
 RBAC
+RC
 registerClass
 REPL
 RESTful
@@ -151,4 +154,5 @@ URI
 URIs
 VM
 VPN
+WASM
 webpack
