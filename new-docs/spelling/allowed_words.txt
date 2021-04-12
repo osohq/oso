@@ -47,7 +47,6 @@ entrypoint
 enumerables
 enums
 EOF
-equivalent
 FFI
 filesystem
 frontend
@@ -114,7 +113,6 @@ pseudocode
 PyPI
 quickstart
 RBAC
-RC
 registerClass
 REPL
 RESTful
