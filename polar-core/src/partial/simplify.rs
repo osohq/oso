@@ -445,7 +445,7 @@ impl Simplifier {
             args.retain(|c| {
                 let o = c.value().as_expression().unwrap();
                 match o.operator {
-                    Operator::Unify | Operator::Eq | Operator::Neq => {
+                    Operator::Unify | Operator::Eq => {
                         assert_eq!(o.args.len(), 2);
                         let left = &o.args[0];
                         let right = &o.args[1];
