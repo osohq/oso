@@ -31,6 +31,8 @@ draft: true
   prettier interface thanks to
   [@joshrotenberg](https://github.com/joshrotenberg) via [PR
   #828](https://github.com/osohq/oso/pull/828).
+ - Added `FromPolar` and `ToPolar` implementations for more `std::collections` types.
+  Thanks to [`@gjvnq`](https://github.com/gjvnq) for [PR #822](https://github.com/osohq/oso/pull/822)!
 
 ### Node.js
 
@@ -61,7 +63,6 @@ for await (const result of query) {
 #### Other bugs & improvements
 
 - Go lib no longer tries to print the zero values it uses for bookkeeping. This would crash when running on macOS under delve.
-
 
 #### Breaking changes
 
