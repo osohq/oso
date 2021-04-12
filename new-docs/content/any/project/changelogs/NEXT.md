@@ -64,6 +64,8 @@ for await (const result of query) {
 
 - Go lib no longer tries to print the zero values it uses for bookkeeping. This would crash when running on macOS under delve.
 
+### OTHER_LANGUAGE
+
 #### Breaking changes
 
 <!-- TODO: remove warning and replace with "None" if no breaking changes. -->
