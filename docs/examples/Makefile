@@ -60,7 +60,7 @@ nodejs-test:
 	cd inheritance/nodejs && yarn && yarn jest
 	cd user_types/nodejs && yarn && yarn jest
 
-test-quickstarts:
+test-quickstarts: submodules
 	$(MAKE) -C quickstart test
 
 test:
