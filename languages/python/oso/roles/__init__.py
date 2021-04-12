@@ -404,7 +404,7 @@ class OsoRoles:
 
         # Register relationships
         role_relationships = self.oso.query_rule(
-            "role_parent_resource",
+            "parent",
             Variable("resource"),
             Variable("parent_resource"),
             accept_expression=True,
@@ -442,8 +442,9 @@ class OsoRoles:
         # Register resources / permissions / roles and implications
         # Based on the role_resource definitions
         role_resources = self.oso.query_rule(
-            "role_resource",
+            "resource",
             Variable("resource"),
+            Variable("name"),
             Variable("permissions"),
             Variable("roles"),
             accept_expression=True,
@@ -459,32 +460,38 @@ class OsoRoles:
             assert arg.args[0] == Variable("_this")
             pattern = arg.args[1]
             t = pattern.tag
+            name = result["bindings"]["name"]
             permissions = result["bindings"]["permissions"]
             roles = result["bindings"]["roles"]
 
-            resources.append({"type": t, "permissions": permissions, "roles": roles})
+            resources.append(
+                {"type": t, "permissions": permissions, "roles": roles, "name": name}
+            )
 
         permissions = {}
         # Register permissions
         for resource in resources:
             type = resource["type"]
+            name = resource["name"]
             for perm in resource["permissions"]:
-                # WOW HACK, not ideal...
-                action = perm.split("_", 1)[1]
-                permissions[perm] = self._new_permission(
-                    resource=self.types[type], action=action
+                permissions[f"{name}:{perm}"] = self._new_permission(
+                    resource=self.types[type], action=perm
                 )
 
         # Register roles
         roles = {}
         for resource in resources:
             type = resource["type"]
+            resource_name = resource["name"]
             for role_name, role_data in resource["roles"].items():
                 # WOW HACK, not ideal...
                 name = role_name.split("_", 1)[1]
                 role = self._new_role(resource=self.types[type], name=name)
                 roles[role_name] = role
                 for perm in role_data["perms"]:
+                    # either colon namespaces or on this resource
+                    if not ":" in perm:
+                        perm = f"{resource_name}:{perm}"
                     self._add_role_permission(role=role, permission=permissions[perm])
         self.role_names = roles
 

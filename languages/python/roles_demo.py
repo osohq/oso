@@ -78,17 +78,17 @@ def one():
 
     # Simple policy that just uses roles
     policy = """
-    role_resource(_resource: Organization, permissions, roles) if
-        permissions = [
-            "org_invite",
-            "org_create_repo"
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite",
+            "create_repo"
         ] and
         roles = {
             org_owner: {
-                perms: ["org_invite"]
+                perms: ["invite"]
             },
             org_member: {
-                perms: ["org_create_repo"]
+                perms: ["create_repo"]
             }
         };
 
@@ -150,38 +150,38 @@ def six():
 
     # Policy
     policy = """
-    role_resource(_resource: Organization, permissions, roles) if
-        permissions = [
-            "org_invite",
-            "org_create_repo"
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite",
+            "create_repo"
         ] and
         roles = {
             org_owner: {
-                perms: ["org_invite"],
+                perms: ["invite"],
                 implies: ["org_member", "repo_write"]
             },
             org_member: {
-                perms: ["org_create_repo"],
+                perms: ["create_repo"],
                 implies: ["repo_read"]
             }
         };
 
-    role_resource(_resource: Repository, permissions, roles) if
-        permissions = [
-            "repo_push",
-            "repo_pull"
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
         ] and
         roles = {
             repo_write: {
-                perms: ["repo_push"],
+                perms: ["push"],
                 implies: ["repo_read"]
             },
             repo_read: {
-                perms: ["repo_pull"]
+                perms: ["pull"]
             }
         };
 
-    role_parent_resource(repository: Repository, parent_org: Organization) if
+    parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
     allow(actor, action, resource) if
