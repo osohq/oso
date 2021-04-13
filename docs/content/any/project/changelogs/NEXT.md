@@ -19,7 +19,7 @@ draft: true
   before upgrading.
 {{% /callout %}}
 
-#### Breaking change 1
+#### Unifying with a predicate now fails at parse time
 
 Previously it was possible to bind predicates to variables, e.g. `p = f(x)`.
 This supported an undocumented feature for unifying predicates,
@@ -28,7 +28,7 @@ e.g. `f(x) = f(1)` would unify `x = 1`.
 To avoid confusion with querying rules, binding predicates
 to variables is no longer legal in this release. For example:
 
-```
+```polar
 f(x,y) if x < 3 and y = g(x);
 ```
 

@@ -246,10 +246,10 @@ LogExp: Term = {
 
 // `ValueOrLogic` is used to do some simple parse-time 
 // checks for correctly formed expressions. For example,
-// For example, `x in y` is a logical expression, so it does
-// not make sense to compare the result with a value,
+// `x in y` is a logical expression, so it does
+// not make sense to compare the result with a value.
 // `x in y > 0` fails to parse because `A > B` expects
-// A and B to be values, but `x in y` is a logical term
+// A and B to be values, but `x in y` is a logical term.
 
 // In Prolog, logicals would be a callable - things that can be called and fail or success
 // Values are not callable. Togoether, values and logicals are terms.
