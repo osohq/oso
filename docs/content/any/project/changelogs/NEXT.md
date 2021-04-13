@@ -42,7 +42,7 @@ Instead of `f(x) = f(1)`, you can write `["f", x] = ["f", 1]` if necessary.
 Querying for an unbound variable `x` is inferred to mean `x = true`.
 
 Before: `f(x) if x;` would error if `x` was unbound.  
-Now: this is interpreted as `f(x) if x = true`;`
+Now: this is interpreted as `f(x) if x = true`;
 
 #### Other bugs & improvements
 
