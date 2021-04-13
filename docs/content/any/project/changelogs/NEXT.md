@@ -37,11 +37,12 @@ will now fail at parse time.
 A similar thing can be achieved by using lists.
 Instead of `f(x) = f(1)`, you can write `["f", x] = ["f", 1]` if necessary.
 
-#### Breaking change 2
+#### Query for unbound variables
 
-- Behavior of `a(x) if x;` has changed:
-  - It's now equivalent to `a(x) if x == true;`.
-  - It now works if `x` is unbound.
+Querying for an unbound variable `x` is inferred to mean `x = true`.
+
+Before: `f(x) if x;` would error if `x` was unbound.  
+Now: this is interpreted as `f(x) if x = true`;`
 
 #### Other bugs & improvements
 
