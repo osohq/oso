@@ -81,7 +81,6 @@ fmt-js:
 
 fmt-python:
 	$(MAKE) -C languages/python fmt
-	black languages/python
 
 clippy:
 	cargo clippy --all-features --all-targets -- -D warnings
