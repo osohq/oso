@@ -71,9 +71,6 @@ def one():
 
     # Set up roles
     roles = OsoRoles(oso)
-    roles.register_class(User)
-    roles.register_class(Organization)
-    roles.register_class(Repository)
     roles.enable()
 
     # Simple policy that just uses roles
@@ -137,9 +134,6 @@ def two():
 
     # Set up roles
     roles = OsoRoles(oso)
-    roles.register_class(User)
-    roles.register_class(Organization)
-    roles.register_class(Repository)
     roles.enable()
 
     # Same policy as before, but now the "org_owner" role implies the "org_member" role
@@ -204,9 +198,6 @@ def three():
 
     # Set up roles
     roles = OsoRoles(oso)
-    roles.register_class(User)
-    roles.register_class(Organization)
-    roles.register_class(Repository)
     roles.enable()
 
     # What if we want to control access to repositories inside the organization?
@@ -297,9 +288,6 @@ def four():
 
     # Set up roles
     roles = OsoRoles(oso)
-    roles.register_class(User)
-    roles.register_class(Organization)
-    roles.register_class(Repository)
     roles.enable()
 
     # Add repo roles
@@ -395,12 +383,6 @@ def five():
 
     # Set up roles
     roles = OsoRoles(oso)
-
-    # These will probably not be needed later but I need them for now.
-    roles.register_class(User)
-    roles.register_class(Organization)
-    roles.register_class(Repository)
-
     roles.enable()
 
     # Policy
@@ -510,12 +492,6 @@ def six():
 
     # Set up roles
     roles = OsoRoles(oso)
-
-    # These will probably not be needed later but I need them for now.
-    roles.register_class(User)
-    roles.register_class(Organization)
-    roles.register_class(Repository)
-
     roles.enable()
 
     # Add "create_private_repo action"

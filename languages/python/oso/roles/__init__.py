@@ -123,15 +123,11 @@ class OsoRoles:
         self.parent_implied_roles = Collection()
         self.parent_child_implied_roles = Collection()
         self.user_roles = Collection()
-        self.types = {}
         self.role_names = {}
         # self.permission_names = {}
 
         self.oso = oso
         self.configured = False
-
-    def register_class(self, type):
-        self.types[type.__name__] = type
 
     def _new_relationship(self, name, child, parent, parent_selector):
         id = self.parent_relationships.get_id()
@@ -438,8 +434,8 @@ class OsoRoles:
             parent_t = pattern.tag
             self._new_relationship(
                 name=f"{child_t}_{parent_t}",
-                child=self.types[child_t],
-                parent=self.types[parent_t],
+                child=self.oso.host.classes[child_t],
+                parent=self.oso.host.classes[parent_t],
                 parent_selector=lambda child: getattr(child, parent_field),
             )
 
@@ -479,7 +475,7 @@ class OsoRoles:
             name = resource["name"]
             for perm in resource["permissions"]:
                 permissions[f"{name}:{perm}"] = self._new_permission(
-                    resource=self.types[type], action=perm
+                    resource=self.oso.host.classes[type], action=perm
                 )
         self.permission_names = permissions
 
@@ -493,7 +489,9 @@ class OsoRoles:
                 for role_name, role_data in role_list.items():
                     # WOW HACK, not ideal...
                     name = role_name.split("_", 1)[1]
-                    role = self._new_role(resource=self.types[type], name=name)
+                    role = self._new_role(
+                        resource=self.oso.host.classes[type], name=name
+                    )
                     roles[role_name] = role
                     for perm in role_data["perms"]:
                         # either colon namespaces or on this resource
