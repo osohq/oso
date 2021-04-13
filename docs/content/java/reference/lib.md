@@ -17,7 +17,7 @@ It can be added as a dependency to a **Maven** project:
 <dependency>
     <groupId>com.osohq</groupId>
     <artifactId>oso</artifactId>
-    <version>0.9.0</version>
+    <version>{{< version >}}</version>
 </dependency>
 ```
 
@@ -31,9 +31,9 @@ compile group: 'com.osohq', name: 'oso', version: '{relase}'
 or downloaded as a **JAR** and added to the classpath of any Java project:
 
 ```console
-$ javac -classpath "oso-0.9.0.jar:." MyProject.java
+$ javac -classpath "oso-{{< version >}}.jar:." MyProject.java
 
-$ java -classpath "oso-0.9.0.jar:." MyProject
+$ java -classpath "oso-{{< version >}}.jar:." MyProject
 ```
 
 For more information on the Oso Java library, see the library documentation.

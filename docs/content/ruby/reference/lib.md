@@ -11,13 +11,13 @@ The Ruby version of Oso is available on
 local Ruby:
 
 ```console
-$ gem install oso-oso -v 0.9.0
+$ gem install oso-oso -v {{< version >}}
 ```
 
 or added to a project’s `Gemfile`:
 
 ```ruby
-gem 'oso-oso', '~> 0.9.0'
+gem 'oso-oso', '~> {{< version >}}'
 ```
 
 ## Requirements
