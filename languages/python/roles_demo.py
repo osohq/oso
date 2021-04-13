@@ -556,9 +556,7 @@ def six():
     # Add a scoped role permission
     # Slack organization members are also allowed to create private repos
     roles.add_scoped_role_permission(
-        scope=slack,
-        role_name="org_member",
-        perm_name="org:create_private_repo",
+        scope=slack, role_name="org_member", perm_name="org:create_private_repo",
     )
 
     # role_allow(resource: Organization, "member", "create_private_repo") if
