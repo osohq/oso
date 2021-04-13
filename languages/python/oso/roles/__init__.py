@@ -483,26 +483,32 @@ class OsoRoles:
         for resource in resources:
             type = resource["type"]
             resource_name = resource["name"]
-            for role_name, role_data in resource["roles"].items():
-                # WOW HACK, not ideal...
-                name = role_name.split("_", 1)[1]
-                role = self._new_role(resource=self.types[type], name=name)
-                roles[role_name] = role
-                for perm in role_data["perms"]:
-                    # either colon namespaces or on this resource
-                    if not ":" in perm:
-                        perm = f"{resource_name}:{perm}"
-                    self._add_role_permission(role=role, permission=permissions[perm])
+            role_list = resource["roles"]
+            if isinstance(role_list, dict):
+                for role_name, role_data in role_list.items():
+                    # WOW HACK, not ideal...
+                    name = role_name.split("_", 1)[1]
+                    role = self._new_role(resource=self.types[type], name=name)
+                    roles[role_name] = role
+                    for perm in role_data["perms"]:
+                        # either colon namespaces or on this resource
+                        if not ":" in perm:
+                            perm = f"{resource_name}:{perm}"
+                        self._add_role_permission(
+                            role=role, permission=permissions[perm]
+                        )
         self.role_names = roles
 
         implications = {}
         # Register implications
         for resource in resources:
             type = resource["type"]
-            for role_name, role_data in resource["roles"].items():
-                if "implies" in role_data:
-                    for implies in role_data["implies"]:
-                        self._add_role_implies(roles[role_name], roles[implies])
+            role_list = resource["roles"]
+            if isinstance(role_list, dict):
+                for role_name, role_data in role_list.items():
+                    if "implies" in role_data:
+                        for implies in role_data["implies"]:
+                            self._add_role_implies(roles[role_name], roles[implies])
 
         self.configured = True
 

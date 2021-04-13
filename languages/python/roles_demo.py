@@ -84,11 +84,11 @@ def one():
             "create_repo"
         ] and
         roles = {
-            org_owner: {
-                perms: ["invite"]
-            },
             org_member: {
                 perms: ["create_repo"]
+            },
+            org_owner: {
+                perms: ["invite"]
             }
         };
 
@@ -126,11 +126,266 @@ def one():
     # that owners can do everything members can do. So the owner role implies the member role.
 
 
-# 6. Customize the Org member role per organization
-#       - Toggle for whether members can create private repos
-#       - Create new permission
-#       - Add scoped permission to member role for an org
-def six():
+# 2. Same-level implied roles
+#       - show having "Owner" implies "Member" and "Billing"
+def two():
+    ###################### Configuration ######################################
+    # Set up oso
+    oso = Oso()
+    oso.register_class(User)
+    oso.register_class(Organization)
+
+    # Set up roles
+    roles = OsoRoles(oso)
+    roles.register_class(User)
+    roles.register_class(Organization)
+    roles.register_class(Repository)
+    roles.enable()
+
+    # Same policy as before, but now the "org_owner" role implies the "org_member" role
+    policy = """
+    resource(_resource: Organization, "org", actions, roles) if
+        actions = [
+            "invite",
+            "create_repo"
+        ] and
+        roles = {
+            org_owner: {
+                perms: ["invite"],
+                implies: ["org_member"]
+            },
+            org_member: {
+                perms: ["create_repo"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+
+    oso.load_str(policy)
+
+    # Demo data
+    osohq = Organization(id="osohq")
+
+    leina = User(name="Leina")
+    steve = User(name="Steve")
+
+    # Things that happen in the app via the management api.
+    roles.assign_role(leina, osohq, "org_owner")
+    roles.assign_role(steve, osohq, "org_member")
+
+    #### Test
+
+    # Leina can invite people to osohq because she is an OWNER
+    assert oso.is_allowed(leina, "invite", osohq)
+
+    # Steve can create repos in osohq because he is a MEMBER
+    assert oso.is_allowed(steve, "create_repo", osohq)
+
+    # Steve can't invite people to osohq because only OWNERs can invite, and he's not an OWNER
+    assert not oso.is_allowed(steve, "invite", osohq)
+
+    # Now, Leina can create a repo becuase she's an owner, and inherits the privileges of members
+    assert oso.is_allowed(leina, "create_repo", osohq)
+
+
+# 3. Relationships + child permissions
+#       - Add org-repo relationships
+#       - Create repo permissions
+#       - Add repo permissions to org
+def three():
+    ###################### Configuration ######################################
+    # Set up oso
+    oso = Oso()
+    oso.register_class(User)
+    oso.register_class(Organization)
+    oso.register_class(Repository)
+
+    # Set up roles
+    roles = OsoRoles(oso)
+    roles.register_class(User)
+    roles.register_class(Organization)
+    roles.register_class(Repository)
+    roles.enable()
+
+    # What if we want to control access to repositories inside the organization?
+    # Let's define some repository permissions that we'd like to control access to
+    policy = """
+    resource(_resource: Repository, "repo", actions, _) if
+        actions = [
+            "push",
+            "pull"
+        ];
+    """
+    # We'd like to let org_members pull from and push to all repos in the org
+    # In order to assign repo permissions to organization roles, we need to tell Oso
+    # how repos and orgs are related
+    policy += """
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    resource(_resource: Organization, "org", actions, roles) if
+        actions = [
+            "invite",
+            "create_repo"
+        ] and
+        roles = {
+            org_owner: {
+                perms: ["invite"],
+                implies: ["org_member"]
+            },
+            org_member: {
+                perms: ["create_repo", "repo:pull", "repo:push"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+
+    oso.load_str(policy)
+
+    # Demo data
+    osohq = Organization(id="osohq")
+    oso_repo = Repository(id="oso_repo", org=osohq)
+
+    leina = User(name="Leina")
+    steve = User(name="Steve")
+
+    # Things that happen in the app via the management api.
+    roles.assign_role(leina, osohq, "org_owner")
+    roles.assign_role(steve, osohq, "org_member")
+
+    #### Test
+
+    # Leina can invite people to osohq because she is an OWNER
+    assert oso.is_allowed(leina, "invite", osohq)
+
+    # Steve can create repos in osohq because he is a MEMBER
+    assert oso.is_allowed(steve, "create_repo", osohq)
+
+    # Steve can't invite people to osohq because only OWNERs can invite, and he's not an OWNER
+    assert not oso.is_allowed(steve, "invite", osohq)
+
+    # Leina can create a repo becuase she's an owner, and inherits the privileges of members
+    assert oso.is_allowed(leina, "create_repo", osohq)
+
+    # Steve can push and pull from repos in the osohq org because he is a member of the org
+    assert oso.is_allowed(steve, "pull", oso_repo)
+    assert oso.is_allowed(steve, "push", oso_repo)
+
+    # Leina can push and pull from repos in the osohq org because she is an owner of the org, and therefore has
+    # the same privileges as members of the org
+    assert oso.is_allowed(leina, "pull", oso_repo)
+    assert oso.is_allowed(leina, "push", oso_repo)
+
+
+# 4. Add repo roles (different resources can have their own roles)
+#       - Admin, Write, Read
+#       - set these up as implied roles
+#       - give some permissions
+#       - show allow queries
+#       - **we'll have to show how you take permissions off the org and switch over to implied roles**
+def four():
+    ###################### Configuration ######################################
+    # Set up oso
+    oso = Oso()
+    oso.register_class(User)
+    oso.register_class(Organization)
+    oso.register_class(Repository)
+
+    # Set up roles
+    roles = OsoRoles(oso)
+    roles.register_class(User)
+    roles.register_class(Organization)
+    roles.register_class(Repository)
+    roles.enable()
+
+    # Add repo roles
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite",
+            "create_repo"
+        ] and
+        roles = {
+            org_member: {
+                perms: ["create_repo"]
+            },
+            org_owner: {
+                perms: ["invite"],
+                implies: ["org_member"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            repo_write: {
+                perms: ["push"],
+                implies: ["repo_read"]
+            },
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+
+    oso.load_str(policy)
+
+    # Demo data
+    osohq = Organization(id="osohq")
+    oso_repo = Repository(id="oso_repo", org=osohq)
+
+    leina = User(name="Leina")
+    steve = User(name="Steve")
+
+    # Things that happen in the app via the management api.
+    roles.assign_role(leina, osohq, "org_owner")
+    roles.assign_role(steve, osohq, "org_member")
+
+    # Now we can assign Leina and Steve to roles on the repo directly
+    roles.assign_role(leina, oso_repo, "repo_write")
+    roles.assign_role(steve, oso_repo, "repo_read")
+
+    #### Test
+
+    # Leina can invite people to osohq because she is an OWNER
+    assert oso.is_allowed(leina, "invite", osohq)
+
+    # Steve can create repos in osohq because he is a MEMBER
+    assert oso.is_allowed(steve, "create_repo", osohq)
+
+    # Steve can't invite people to osohq because only OWNERs can invite, and he's not an OWNER
+    assert not oso.is_allowed(steve, "invite", osohq)
+
+    # Leina can create a repo becuase she's an owner, and inherits the privileges of members
+    assert oso.is_allowed(leina, "create_repo", osohq)
+
+    # Steve can push and pull from repos in the osohq org because he is a member of the org
+    assert oso.is_allowed(steve, "pull", oso_repo)
+    assert not oso.is_allowed(steve, "push", oso_repo)
+
+    # Leina can push and pull from repos in the osohq org because she is an owner of the org, and therefore has
+    # the same privileges as members of the org
+    assert oso.is_allowed(leina, "pull", oso_repo)
+    assert oso.is_allowed(leina, "push", oso_repo)
+
+
+# 5. Base repo permissions within an org (Implied roles across resource types based on relationships)
+#       - Set up Org member base permissions for repos in org
+#       - Org admin base permissions for repos in org
+def five():
     ###################### Configuration ######################################
     # Set up oso
     oso = Oso()
@@ -156,13 +411,13 @@ def six():
             "create_repo"
         ] and
         roles = {
-            org_owner: {
-                perms: ["invite"],
-                implies: ["org_member", "repo_write"]
-            },
             org_member: {
                 perms: ["create_repo"],
                 implies: ["repo_read"]
+            },
+            org_owner: {
+                perms: ["invite"],
+                implies: ["org_member", "repo_write"]
             }
         };
 
@@ -243,5 +498,28 @@ def six():
 
 if __name__ == "__main__":
     one()
-    six()
+    two()
+    three()
+    four()
+    five()
     print("it works")
+
+# 6. Customize the Org member role per organization
+#       - Toggle for whether members can create private repos
+#       - Create new permission
+#       - Add scoped permission to member role for an org
+def six():
+    pass
+
+
+# Notes from Leina:
+# - is it confusing to automatically remove the prefix from permissions?
+# - naming of predicates isn't ideal (`role_resource` is weird, cause you could have a resource with just permissions)
+# - how would someone ever debug this if they're not getting the result they expect? it's completely opaque
+#       - debugging python code is a bit more chill
+# - what about string/int representations of tenants (thinking of JWTs)
+# - error handling:
+#       - no same-named predicates with different number of args
+#       - tell user if action doesn't exist for resource
+#       - can't assign perms if roles exist for that resource
+#       - easy to get permissions and roles confused
