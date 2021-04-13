@@ -686,8 +686,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Initialize submodules
-        working-directory: docs/examples/quickstart
-        run: git submodule update --init -- java nodejs python ruby rust
+        run: make -C docs/examples update-submodules
       - name: Check that submodules are all up-to-date
         run: |
           git submodule foreach git remote update
