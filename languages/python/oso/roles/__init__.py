@@ -125,6 +125,7 @@ class OsoRoles:
         self.user_roles = Collection()
         self.types = {}
         self.role_names = {}
+        # self.permission_names = {}
 
         self.oso = oso
         self.configured = False
@@ -200,11 +201,14 @@ class OsoRoles:
         return role_permission
 
     @ensure_configured
-    def add_scoped_role_permission(self, scope, role, permission):
+    def add_scoped_role_permission(self, scope, role_name, perm_name):
+        role = self.role_names[role_name]
         assert isinstance(role, Role)
-        assert isinstance(permission, Permission)
-
         assert role.id in self.roles.elements
+
+        assert ":" in perm_name
+        permission = self.permission_names[perm_name]
+        assert isinstance(permission, Permission)
         assert permission.id in self.permissions.elements
 
         # If resources don't match, ensure there's a relationship.
@@ -477,6 +481,7 @@ class OsoRoles:
                 permissions[f"{name}:{perm}"] = self._new_permission(
                     resource=self.types[type], action=perm
                 )
+        self.permission_names = permissions
 
         # Register roles
         roles = {}

@@ -496,20 +496,149 @@ def five():
     assert oso.is_allowed(gabe, "push", oso_repo)
 
 
+# 6. Customize the Org member role per organization
+#       - Toggle for whether members can create private repos
+#       - Create new permission
+#       - Add scoped permission to member role for an org
+def six():
+    ###################### Configuration ######################################
+    # Set up oso
+    oso = Oso()
+    oso.register_class(User)
+    oso.register_class(Organization)
+    oso.register_class(Repository)
+
+    # Set up roles
+    roles = OsoRoles(oso)
+
+    # These will probably not be needed later but I need them for now.
+    roles.register_class(User)
+    roles.register_class(Organization)
+    roles.register_class(Repository)
+
+    roles.enable()
+
+    # Add "create_private_repo action"
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite",
+            "create_repo",
+            "create_private_repo"
+        ] and
+        roles = {
+            org_member: {
+                perms: ["create_repo"],
+                implies: ["repo_read"]
+            },
+            org_owner: {
+                perms: ["invite"],
+                implies: ["org_member", "repo_write"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            repo_write: {
+                perms: ["push"],
+                implies: ["repo_read"]
+            },
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+
+    # Demo data
+    osohq = Organization(id="osohq")
+    slack = Organization(id="slack")
+
+    oso_repo = Repository(id="oso", org=osohq)
+
+    leina = User(name="Leina")
+    steve = User(name="Steve")
+    gabe = User(name="Gabe")
+
+    # Things that happen in the app via the management api.
+    roles.assign_role(leina, osohq, "org_owner")
+    roles.assign_role(steve, osohq, "org_member")
+
+    roles.assign_role(gabe, oso_repo, "repo_write")
+    roles.assign_role(gabe, slack, "org_member")
+
+    # Add a scoped role permission
+    # Slack organization members are also allowed to create private repos
+    roles.add_scoped_role_permission(
+        scope=slack,
+        role_name="org_member",
+        perm_name="org:create_private_repo",
+    )
+
+    # role_allow(resource: Organization, "member", "create_private_repo") if
+    #     role.has_perm("org:create_private_repo");
+
+    #### Test
+
+    ## Test Org roles
+
+    # Leina can invite people to osohq because she is an OWNER
+    assert oso.is_allowed(leina, "invite", osohq)
+
+    # Steve can create repos in osohq because he is a MEMBER
+    assert oso.is_allowed(steve, "create_repo", osohq)
+
+    # Steve can't invite people to osohq because only OWNERs can invite, and he's not an OWNER
+    assert not oso.is_allowed(steve, "invite", osohq)
+
+    # Leina can create a repo because she's the OWNER and OWNER implies MEMBER
+    assert oso.is_allowed(leina, "create_repo", osohq)
+
+    # Steve can pull from oso_repo because he is a MEMBER of osohq
+    # which implies READ on oso_repo
+    assert oso.is_allowed(steve, "pull", oso_repo)
+    # Leina can pull from oso_repo because she's an OWNER of osohq
+    # which implies WRITE on oso_repo
+    # which implies READ on oso_repo
+    assert oso.is_allowed(leina, "pull", oso_repo)
+    # Gabe can pull from oso_repo because he has WRTIE on oso_repo
+    # which implies READ on oso_repo
+    assert oso.is_allowed(gabe, "pull", oso_repo)
+
+    # Steve can NOT push to oso_repo because he is a MEMBER of osohq
+    # which implies READ on oso_repo but not WRITE
+    assert not oso.is_allowed(steve, "push", oso_repo)
+    # Leina can push to oso_repo because she's an OWNER of osohq
+    # which implies WRITE on oso_repo
+    assert oso.is_allowed(leina, "push", oso_repo)
+    # Gabe can push to oso_repo because he has WRTIE on oso_repo
+    assert oso.is_allowed(gabe, "push", oso_repo)
+
+    # Gabe can create private repos in Slack because he is a MEMBER
+    assert oso.is_allowed(gabe, "create_private_repo", slack)
+
+    # Leina can't create private repos in osohq because it doesn't have that permission
+    assert not oso.is_allowed(leina, "create_private_repo", osohq)
+
+
 if __name__ == "__main__":
     one()
     two()
     three()
     four()
     five()
+    six()
     print("it works")
-
-# 6. Customize the Org member role per organization
-#       - Toggle for whether members can create private repos
-#       - Create new permission
-#       - Add scoped permission to member role for an org
-def six():
-    pass
 
 
 # Notes from Leina:
@@ -518,6 +647,8 @@ def six():
 # - how would someone ever debug this if they're not getting the result they expect? it's completely opaque
 #       - debugging python code is a bit more chill
 # - what about string/int representations of tenants (thinking of JWTs)
+# - feels like there should be some way of letting users know about the existence of dynamic permissions
+#       - maybe we really do just need a central view/good introspection?
 # - error handling:
 #       - no same-named predicates with different number of args
 #       - tell user if action doesn't exist for resource
