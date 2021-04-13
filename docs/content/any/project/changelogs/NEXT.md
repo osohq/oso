@@ -37,9 +37,9 @@ draft: true
 
 #### New features
 
-##### `get_allowed_actions` in Rust
+##### `get_allowed_actions()` in Rust
 
-Added support for `get_allowed_actions`. You can use this method to
+Added support for `get_allowed_actions()`. You can use this method to
 get all actions that an actor is allowed to perform on a resource.
 
 ```rust
