@@ -133,32 +133,6 @@ mod tests {
             "{}",
             exp2.to_polar()
         );
-        /*
-        let exp3 = parse_term(r#"foo.bar(a, b(c.d(e,[f,g])))"#);
-        assert_eq!(
-            exp3,
-            term!(op!(
-                Dot,
-                term!(sym!("foo")),
-                term!(call!(
-                    "bar",
-                    [
-                        sym!("a"),
-                        call!(
-                            "b",
-                            [op!(
-                                Dot,
-                                term!(sym!("c")),
-                                term!(call!("d", [sym!("e"), value!([sym!("f"), sym!("g")])]))
-                            )]
-                        )
-                    ]
-                ))
-            )),
-            "{}",
-            exp3.to_polar()
-        );
-        */
         let rule = parse_rule(r#"f(x) if g(x);"#);
         assert_eq!(rule, rule!("f", [sym!("x")] => call!("g", [sym!("x")])));
         let rule = parse_rule(r#"f(x);"#);
