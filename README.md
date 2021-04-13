@@ -33,7 +33,7 @@ To get up and running with Oso, check out the [Getting Started
 guides](https://docs.osohq.com/getting-started/quickstart.html) in the [Oso
 documentation][docs].
 
-If you have questions, need help getting started, or want to discuss anything about the product, your use case, or authorization more generally, [join us on Slack][badge-slack-link] or [open an issue](https://github.com/osohq/oso/issues).
+If you have questions, need help getting started, or want to discuss anything about the product, your use case, or authorization more generally, [join us on Slack][badge-slack-link].
 
 ## Development
 
@@ -102,3 +102,7 @@ See: [LICENSE][license].
 [rust]: https://www.rust-lang.org/tools/install
 [use-cases]: https://docs.osohq.com/more/use-cases.html
 [wasm-pack]: https://rustwasm.github.io/wasm-pack/installer/
+
+## Share your story
+
+We'd love to hear about your use case and experience with Oso. Share your story on [Twitter](https://twitter.com/osoHQ) or fill out [this form](https://stephie660149.typeform.com/to/mIFfkN05) for some Oso swag.
