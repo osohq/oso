@@ -35,6 +35,22 @@ draft: true
 
 ### Rust
 
+#### New features
+
+##### `get_allowed_actions()` in Rust
+
+Added support for `get_allowed_actions()`. You can use this method to
+get all actions that an actor is allowed to perform on a resource.
+
+```rust
+// get a HashSet of actions as strings
+let actions: HashSet<String> = oso.get_allowed_actions(actor, resource)?;
+
+assert!(actions.contains("CREATE"));
+```
+
+Thanks to [@joshrotenberg](https://github.com/joshrotenberg) for adding this in [PR #789](https://github.com/osohq/oso/pull/789).
+
 #### Other bugs & improvements
 
 - The Rust CLI now uses [`clap`](https://crates.io/crates/clap) to expose a
