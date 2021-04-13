@@ -12,8 +12,8 @@ The Rust version of Oso is available on
 Add `oso` and `oso-derive` as dependencies in your `Cargo.toml`:
 
 ```toml
-oso = "0.9.0"
-oso-derive = "0.9.0"
+oso = "{{< version >}}"
+oso-derive = "{{< version >}}"
 ```
 
 For more information on the Oso Rust library, see the library documentation.
