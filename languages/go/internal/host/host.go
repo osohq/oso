@@ -289,7 +289,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 	// check composite types
 	rt := reflect.ValueOf(v)
 	// deref pointer
-	if rt.Kind() == reflect.Ptr || rt.Kind() == reflect.Interface{
+	if rt.Kind() == reflect.Ptr || rt.Kind() == reflect.Interface {
 		rtDeref := rt.Elem()
 		if rt.IsNil() {
 			// TODO: Is `nil` a reflect.Ptr?

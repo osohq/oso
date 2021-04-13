@@ -10,7 +10,7 @@ draft: true
 
 ## `oso` NEW_VERSION
 
-### Core
+### Core (All libraries)
 
 #### Breaking Changes
 
@@ -19,9 +19,30 @@ draft: true
   before upgrading.
 {{% /callout %}}
 
-- Behavior of `a(x) if x;` has changed:
-  - It's now equivalent to `a(x) if x == true;`.
-  - It now works if `x` is unbound.
+#### Unifying with a predicate now fails at parse time
+
+Previously it was possible to bind predicates to variables, e.g. `p = f(x)`.
+This supported an undocumented feature for unifying predicates,
+e.g. `f(x) = f(1)` would unify `x = 1`.
+
+To avoid confusion with querying rules, binding predicates
+to variables is no longer legal in this release. For example:
+
+```polar
+f(x,y) if x < 3 and y = g(x);
+```
+
+will now fail at parse time.
+
+A similar thing can be achieved by using lists.
+Instead of `f(x) = f(1)`, you can write `["f", x] = ["f", 1]` if necessary.
+
+#### Query for unbound variables
+
+Querying for an unbound variable `x` is inferred to mean `x = true`.
+
+Before: `f(x) if x;` would error if `x` was unbound.  
+Now: this is interpreted as `f(x) if x = true;`.
 
 #### Other bugs & improvements
 

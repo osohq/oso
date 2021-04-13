@@ -1436,7 +1436,7 @@ impl PolarVirtualMachine {
                 return Err(self.type_error(
                     &term,
                     format!(
-                        "{} isn't something that is true or false, so can't be a condition",
+                        "{} isn't something that is true or false so can't be a condition",
                         term.value().to_polar()
                     ),
                 ));
