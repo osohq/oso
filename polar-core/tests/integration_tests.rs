@@ -906,20 +906,6 @@ fn test_lookup_derefs() -> TestResult {
     Ok(())
 }
 
-#[test]
-fn unify_predicates() -> TestResult {
-    let mut p = Polar::new();
-    p.load_str(
-        r#"f(g(_x));
-           k(x) if h(g(x), g(x));
-           h(g(1), g(1));"#,
-    )?;
-    qeval(&mut p, "f(g(1))");
-    qnull(&mut p, "f(1)");
-    qeval(&mut p, "k(1)");
-    Ok(())
-}
-
 /// Test that rules are executed in the correct order.
 #[test]
 fn test_rule_order() -> TestResult {

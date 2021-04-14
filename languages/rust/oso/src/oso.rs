@@ -2,13 +2,16 @@
 
 use polar_core::terms::{Call, Symbol, Term, Value};
 
+use std::collections::HashSet;
 use std::fs::File;
+use std::hash::Hash;
 use std::io::Read;
 use std::sync::Arc;
 
 use crate::host::Host;
 use crate::query::Query;
-use crate::{ToPolar, ToPolarList};
+use crate::OsoError;
+use crate::{FromPolar, PolarValue, ToPolar, ToPolarList};
 
 /// Oso is the main struct you interact with. It is an instance of the Oso authorization library
 /// and contains the polar language knowledge base and query engine.
@@ -21,6 +24,26 @@ pub struct Oso {
 impl Default for Oso {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Represents an `action` used in an `allow` rule.
+/// When the action is bound to a concrete value (e.g. a string)
+/// this returns an `Action::Typed(action)`.
+/// If _any_ actions are allowed, then the `Action::Any` variant is returned.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub enum Action<T = String> {
+    Any,
+    Typed(T),
+}
+
+impl<T: FromPolar> FromPolar for Action<T> {
+    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+        if matches!(val, PolarValue::Variable(_)) {
+            Ok(Action::Any)
+        } else {
+            T::from_polar(val).map(Action::Typed)
+        }
     }
 }
 
@@ -43,7 +66,7 @@ impl Oso {
 
     /// High level interface for authorization decisions. Makes an allow query with the given actor, action and resource and returns true or false.
     pub fn is_allowed<Actor, Action, Resource>(
-        &mut self,
+        &self,
         actor: Actor,
         action: Action,
         resource: Resource,
@@ -61,18 +84,65 @@ impl Oso {
         }
     }
 
+    /// Get the actions actor is allowed to take on resource.
+    /// Returns a [std::collections::HashSet] of actions, typed according the return value.
+    /// # Examples
+    /// ```ignore
+    /// oso.load_str(r#"allow(actor: Actor{name: "sally"}, action, resource: Widget{id: 1}) if
+    ///               action in ["CREATE", "READ"];"#);
+    ///
+    /// // get a HashSet of oso::Actions
+    /// let actions: HashSet<Action> = oso.get_allowed_actions(actor, resource)?;
+    ///
+    /// // or Strings
+    /// let actions: HashSet<String> = oso.get_allowed_actions(actor, resource)?;
+    /// ```
+    pub fn get_allowed_actions<Actor, Resource, T>(
+        &self,
+        actor: Actor,
+        resource: Resource,
+    ) -> crate::Result<HashSet<T>>
+    where
+        Actor: ToPolar,
+        Resource: ToPolar,
+        T: FromPolar + Eq + Hash,
+    {
+        let mut query = self
+            .query_rule(
+                "allow",
+                (actor, PolarValue::Variable("action".to_owned()), resource),
+            )
+            .unwrap();
+
+        let mut set = HashSet::new();
+        loop {
+            match query.next() {
+                Some(Ok(result)) => {
+                    if let Some(action) = result.get("action") {
+                        set.insert(T::from_polar(action)?);
+                    }
+                }
+                Some(Err(e)) => return Err(e),
+                None => break,
+            };
+        }
+
+        Ok(set)
+    }
+
     /// Clear out all files and rules that have been loaded.
-    pub fn clear_rules(&mut self) {
+    pub fn clear_rules(&self) {
         self.inner.clear_rules();
         check_messages!(self.inner);
     }
 
-    fn check_inline_queries(&mut self) -> crate::Result<()> {
+    fn check_inline_queries(&self) -> crate::Result<()> {
         while let Some(q) = self.inner.next_inline_query(false) {
+            let location = q.source_info();
             let query = Query::new(q, self.host.clone());
             match query.collect::<crate::Result<Vec<_>>>() {
                 Ok(v) if !v.is_empty() => continue,
-                Ok(_) => return lazy_error!("inline query result was false"),
+                Ok(_) => return Err(OsoError::InlineQueryFailedError { location }),
                 Err(e) => return lazy_error!("error in inline query: {}", e),
             }
         }
@@ -81,7 +151,7 @@ impl Oso {
     }
 
     /// Load a file containing polar rules. All polar files must end in `.polar`
-    pub fn load_file<P: AsRef<std::path::Path>>(&mut self, file: P) -> crate::Result<()> {
+    pub fn load_file<P: AsRef<std::path::Path>>(&self, file: P) -> crate::Result<()> {
         let file = file.as_ref();
         if !file.extension().map(|ext| ext == "polar").unwrap_or(false) {
             return Err(crate::OsoError::IncorrectFileType {
@@ -101,7 +171,7 @@ impl Oso {
     /// ```ignore
     /// oso.load_str("allow(a, b, c) if true;");
     /// ```
-    pub fn load_str(&mut self, s: &str) -> crate::Result<()> {
+    pub fn load_str(&self, s: &str) -> crate::Result<()> {
         self.inner.load(s, None)?;
         self.check_inline_queries()
     }
@@ -111,7 +181,7 @@ impl Oso {
     /// ```ignore
     /// oso.query("x = 1 or x = 2");
     /// ```
-    pub fn query(&mut self, s: &str) -> crate::Result<Query> {
+    pub fn query(&self, s: &str) -> crate::Result<Query> {
         let query = self.inner.new_query(s, false)?;
         check_messages!(self.inner);
         let query = Query::new(query, self.host.clone());
@@ -125,7 +195,7 @@ impl Oso {
     /// oso.query_rule("is_admin", vec![User{name: "steve"}]);
     /// ```
     #[must_use = "Query that is not consumed does nothing."]
-    pub fn query_rule(&mut self, name: &str, args: impl ToPolarList) -> crate::Result<Query> {
+    pub fn query_rule(&self, name: &str, args: impl ToPolarList) -> crate::Result<Query> {
         let mut query_host = self.host.clone();
         let args = args
             .to_polar_list()

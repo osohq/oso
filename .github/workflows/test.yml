@@ -299,8 +299,10 @@ jobs:
         with:
           python-version: "3.6"
 
+      - name: install aspell
+        run: sudo apt-get install aspell
       - name: Check spelling
-        run: make -C new-docs spelling
+        run: make -C docs spelling
 
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
@@ -335,4 +337,4 @@ jobs:
       - name: Install yard (for doc build)
         run: gem install yard
       - name: Doc test
-        run: make -C new-docs test
+        run: make -C docs test

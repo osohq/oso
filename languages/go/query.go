@@ -135,7 +135,6 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 }
 
 func (q Query) handleMakeExternal(event types.QueryEventMakeExternal) error {
-	fmt.Printf("%v", event)
 	id := uint64(event.InstanceId)
 	call, _ := event.Constructor.Value.ValueVariant.(ValueCall)
 	if call.Kwargs != nil {
@@ -293,8 +292,6 @@ func (q Query) handleNextExternal(event types.QueryEventNextExternal) error {
 }
 
 func (q Query) handleDebug(event types.QueryEventDebug) error {
-	fmt.Printf("%v\n", event.Message)
-
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("debug> ")
 	text, _ := reader.ReadString('\n')

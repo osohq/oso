@@ -13,6 +13,7 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
+      AWS_REGION: "us-east-1"
     steps:
       - uses: actions/checkout@v2
 
@@ -59,25 +60,21 @@ jobs:
       - name: Build Python
         run: make python-build
 
-      ### Build old docs
-      - name: Build docs
-        run: SPHINXOPTS="-W" make -C docs deps-test build
-
-      ### Build new docs
+      ### Build docs
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
           hugo-version: '0.79.1'
       - name: Build Hugo docs
         run: make build
-        working-directory: new-docs
+        working-directory: docs
 
 
       ### Push to S3 + invalidate cache
       - name: s3 preview publish
         if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
         run: |
-          aws s3 sync --delete new-docs/public/ s3://docs-preview.oso.dev/
+          aws s3 sync --delete docs/public/ s3://docs-preview.oso.dev/
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}

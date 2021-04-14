@@ -31,6 +31,11 @@ impl Query {
         }
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
+        self.vm.set_logging_options(rust_log, polar_log);
+    }
+
     /// Runnable lifecycle
     ///
     /// 1. Get Runnable A from the top of the Runnable stack, defaulting to the VM.
@@ -262,12 +267,9 @@ impl Polar {
             let term =
                 parser::parse_query(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
             kb.sources.add_source(source, src_id);
-            rewrite_term(term, &mut kb)
+            term
         };
-        let query = Goal::Query { term: term.clone() };
-        let vm =
-            PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
-        Ok(Query::new(vm, term))
+        Ok(self.new_query_from_term(term, trace))
     }
 
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {

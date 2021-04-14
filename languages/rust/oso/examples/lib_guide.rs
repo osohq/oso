@@ -168,7 +168,7 @@ fn iters() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    oso.load_str(r#"allow(actor, action, resource) if actor.get_group() = "payroll";"#)?;
+    oso.load_str(r#"allow(actor, action, resource) if "payroll" in actor.get_group();"#)?;
 
     let user = User {
         groups: vec!["HR".to_string(), "payroll".to_string()],

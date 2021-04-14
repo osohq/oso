@@ -7,7 +7,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 pub use super::numerics::Numeric;
-use super::visitor::{walk_term, Visitor};
+use super::visitor::{walk_operation, walk_term, Visitor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -342,6 +342,40 @@ impl Term {
         }
 
         walk_term(&mut VariableVisitor::new(vars), self);
+    }
+
+    /// Does the given variable occur in this term?
+    /// Should be much faster than accumulating the set and checking.
+    pub fn contains_variable(&self, var: &Symbol) -> bool {
+        struct VariableChecker<'var> {
+            var: &'var Symbol,
+            occurs: bool,
+        }
+
+        impl<'var> VariableChecker<'var> {
+            fn new(var: &'var Symbol) -> Self {
+                Self { var, occurs: false }
+            }
+        }
+
+        impl<'var> Visitor for VariableChecker<'var> {
+            fn visit_variable(&mut self, v: &Symbol) {
+                if !self.occurs && *v == *self.var {
+                    self.occurs = true;
+                }
+            }
+
+            fn visit_operation(&mut self, o: &Operation) {
+                // Don't bother checking sub-operations once we've found an occurrence.
+                if !self.occurs {
+                    walk_operation(self, o);
+                }
+            }
+        }
+
+        let mut visitor = VariableChecker::new(var);
+        walk_term(&mut visitor, self);
+        visitor.occurs
     }
 
     pub fn hash_value(&self) -> u64 {
