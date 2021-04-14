@@ -93,6 +93,11 @@ jobs:
           skipCommit: true
           args: "--dry-run --set-exit-if-changed"
 
+      ## Check Go
+      - name: Check formatting of Java library
+        working-directory: "languages/go"
+        run: make lint
+
   build:
     runs-on: ubuntu-latest
     steps:
