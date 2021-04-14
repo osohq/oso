@@ -94,7 +94,7 @@ jobs:
           args: "--dry-run --set-exit-if-changed"
 
       ## Check Go
-      - name: Check formatting of Java library
+      - name: Check formatting of Go library
         working-directory: "languages/go"
         run: make lint
 
