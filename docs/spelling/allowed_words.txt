@@ -70,7 +70,6 @@ iterable
 iterables
 JARs
 JDB
-joshrotenberg
 js
 Jullmann
 JWT
@@ -135,7 +134,6 @@ structs
 subclasses
 submittedBy
 superclasses
-togmund
 toolchain
 traceback
 transactional
