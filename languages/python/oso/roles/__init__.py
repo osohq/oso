@@ -521,7 +521,7 @@ class OsoRoles:
             @staticmethod
             def role_allows(user, action, resource):
                 if not self.configured:
-                    self._configure(self)
+                    self._configure()
                 return self._role_allows(user, action, resource)
 
         self.oso.register_class(Roles)
