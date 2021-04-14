@@ -13,7 +13,7 @@ use super::partial::{invert_operation, FALSE, TRUE};
 const TRACK_PERF: bool = false;
 
 /// Set to `true` to turn on simplify debug logging.
-const SIMPLIFY_DEBUG: bool = false;
+const SIMPLIFY_DEBUG: bool = true;
 
 macro_rules! if_debug {
     ($($e:tt)*) => {

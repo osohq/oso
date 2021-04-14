@@ -1900,6 +1900,7 @@ impl PolarVirtualMachine {
             }
             Value::Variable(v) => {
                 if matches!(field.value(), Value::Call(_)) {
+                    // TODO: hack for role_allows()
                     return Err(self.set_error_context(
                         object,
                         error::RuntimeError::Unsupported {
