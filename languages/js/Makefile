@@ -1,5 +1,7 @@
 .PHONY: build test parity lint fmt fmtcheck typecheck docs repl clean install wasm
 
+WASM_FILES = src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.wasm.d.ts
+
 # Build the WASM lib; then build the TS lib.
 build: install wasm
 	yarn build
@@ -38,6 +40,7 @@ repl: build
 # Remove existing build.
 clean: install
 	yarn clean
+	rm $(WASM_FILES)
 
 install: .make.deps.installed
 
@@ -46,9 +49,9 @@ install: .make.deps.installed
 	yarn install --network-timeout 100000
 	@touch $@
 
-wasm: src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.wasm.d.ts
+wasm: $(WASM_FILES)
 
 # Rebuild the WASM core.
-src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.wasm.d.ts:
+$(WASM_FILES):
 	$(MAKE) -C ../../polar-wasm-api nodejs
 	$(MAKE) -C ../../polar-wasm-api bundler
