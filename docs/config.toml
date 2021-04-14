@@ -129,3 +129,16 @@ defaultContentLanguage = "any"
       table = true
     [markup.goldmark.renderer]
       unsafe = true
+
+[outputFormats]
+   [outputFormats.SearchIndex]
+     baseName = "search"
+     mediaType = "application/json"
+     isPlainText = true
+     notAlternative = true
+ [outputs]
+   home = ["HTML", "RSS", "SearchIndex"]
+
+[params.algolia]
+vars = ["title", "summary", "date", "publishdate", "expirydate", "permalink"]
+params = ["categories", "tags"]
