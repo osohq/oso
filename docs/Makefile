@@ -12,6 +12,7 @@ JAVA_FILES := $(call rwildcard ../languages/java/oso/src,*.java)
 JS_FILES := $(call rwildcard ../languages/js/src,*.ts)
 PYTHON_FILES := $(call rwildcard,../languages/python,*.py)
 PYTHON_RST_FILES := $(call rwildcard,../languages/python,*.rst)
+
 RUBY_FILES := $(call rwildcard,../languages/ruby/lib,*.rb)
 
 content/java/reference/api: $(JAVA_FILES)
