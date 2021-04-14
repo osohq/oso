@@ -22,7 +22,3 @@
 	path = docs/examples/quickstart/ruby
 	url = https://github.com/osohq/oso-ruby-quickstart.git
 	branch = main
-[submodule "docs/examples/quickstart/rust"]
-	path = docs/examples/quickstart/rust
-	url = https://github.com/osohq/oso-rust-quickstart.git
-	branch = main
