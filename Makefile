@@ -1,7 +1,8 @@
 .PHONY: test go-test rust-test rust-build python-build python-test python-flask-build \
 	python-flask-test python-django-test python-sqlalchemy-test ruby-test \
 	java-test docs-test fmt clippy lint wasm-build wasm-test js-test \
-	lint-ruby lint-js lint-go lint-java lint-rust fmt-java fmt-rust fmt-go fmt-js fmt-python
+	lint-ruby lint-js lint-go lint-java lint-rust fmt-java fmt-rust fmt-go fmt-js fmt-python \
+	clean clean-rust clean-go clean-js clean-new-docs clean-polar-wasm-api
 
 #! If you add another dependency to this you must also add it to the Test
 #! github action or it won't run in CI. All jobs run in parallel on CI and
@@ -115,3 +116,23 @@ wasm-test:
 js-test:
 	$(MAKE) -C languages/js parity
 	$(MAKE) -C languages/js test
+
+clean: clean-rust clean-go clean-java clean-js clean-new-docs clean-polar-wasm-api
+
+clean-rust:
+	cargo clean
+
+clean-go:
+	$(MAKE) -C languages/go clean
+
+clean-java:
+	$(MAKE) -C languages/java clean
+
+clean-js:
+	$(MAKE) -C languages/js clean
+
+clean-new-docs:
+	$(MAKE) -C new-docs clean
+
+clean-polar-wasm-api:
+	$(MAKE) -C polar-wasm-api clean
