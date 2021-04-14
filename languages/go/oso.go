@@ -7,6 +7,10 @@ type Oso struct {
 	p *Polar
 }
 
+
+
+
+
 /*
 Construct a new Oso instance.
 
