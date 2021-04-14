@@ -31,6 +31,7 @@ cURL
 dataloader
 dataloaders
 declaratively
+delicb
 dereferenced
 destructure
 destructured
