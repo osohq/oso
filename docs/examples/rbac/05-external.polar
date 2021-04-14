@@ -11,6 +11,7 @@
 #   def role(self):
 #       return lookup_role(self.id)
 
+# roles-start
 role(actor: User, "employee") if
     actor.name = "alice" or
     actor.name = "bhavik" or
@@ -27,6 +28,7 @@ role(actor: User, "admin") if
     actor.name = "greta" or
     actor.name = "han" or
     actor.name = "iqbal";
+# roles-end
 
 
 

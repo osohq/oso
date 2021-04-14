@@ -1,3 +1,0 @@
-[submodule "oso-sqlalchemy-roles-guide"]
-	branch = basic_roles_complete
-	update = rebase

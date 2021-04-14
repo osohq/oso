@@ -41,7 +41,7 @@ fn cycle_constraints(cycle: Vec<Symbol>) -> Operation {
     constraints
 }
 
-impl From<BindingManagerVariableState> for VariableState {
+impl From<BindingManagerVariableState<'_>> for VariableState {
     fn from(other: BindingManagerVariableState) -> Self {
         // We represent Cycles as a Partial VariableState. This information is not
         // needed in the VM, so unbound could be an acceptable representation as well.
@@ -61,11 +61,11 @@ impl From<BindingManagerVariableState> for VariableState {
 ///
 /// Includes the Cycle representation in addition to VariableState.
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum BindingManagerVariableState {
+enum BindingManagerVariableState<'a> {
     Unbound,
     Bound(Term),
     Cycle(Vec<Symbol>),
-    Partial(Operation),
+    Partial(&'a Operation),
 }
 
 /// The `BindingManager` maintains associations between variables and values,
@@ -191,7 +191,8 @@ impl BindingManager {
                     cycle.merge_constraints(op.clone());
                     op = cycle;
                 }
-                BindingManagerVariableState::Partial(mut e) => {
+                BindingManagerVariableState::Partial(e) => {
+                    let mut e = e.clone();
                     e.merge_constraints(op);
                     op = e;
                 }
@@ -294,7 +295,7 @@ impl BindingManager {
             BindingManagerVariableState::Bound(val) => {
                 op!(And, term!(op!(Unify, term!(variable.clone()), val)))
             }
-            BindingManagerVariableState::Partial(expr) => expr,
+            BindingManagerVariableState::Partial(expr) => expr.clone(),
             BindingManagerVariableState::Cycle(c) => cycle_constraints(c),
         }
     }
@@ -512,7 +513,7 @@ impl BindingManager {
         let mut path = vec![variable];
         while let Some(value) = self.value(path.last().unwrap(), bsp) {
             match value.value() {
-                Value::Expression(e) => return BindingManagerVariableState::Partial(e.clone()),
+                Value::Expression(e) => return BindingManagerVariableState::Partial(e),
                 Value::Variable(v) | Value::RestVariable(v) => {
                     if v == variable {
                         return BindingManagerVariableState::Cycle(
@@ -620,7 +621,7 @@ mod test {
         bindings.add_binding(&x, term!(op!(And)));
         assert_eq!(
             bindings._variable_state(&x),
-            BindingManagerVariableState::Partial(op!(And))
+            BindingManagerVariableState::Partial(&op!(And))
         );
     }
 

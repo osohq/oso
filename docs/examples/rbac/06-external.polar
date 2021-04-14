@@ -1,3 +1,4 @@
+# roles-start
 role(actor: User, "employee") if
     actor.role = "employee" or
     role(actor, "accountant");
@@ -8,6 +9,7 @@ role(actor: User, "accountant") if
 
 role(actor: User, "admin") if
     actor.role = "admin";
+# roles-end
 
 # Employees can submit expenses
 allow(actor: User, "submit", "expense") if

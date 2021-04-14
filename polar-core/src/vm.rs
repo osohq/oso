@@ -1121,7 +1121,10 @@ impl PolarVirtualMachine {
                 // Get the existing partial on the LHS variable.
                 let partial = self.binding_manager.get_constraints(var);
 
-                let simplified = simplify_partial(var, partial.into_term());
+                let mut hs = HashSet::with_capacity(1);
+                hs.insert(var.clone());
+
+                let (simplified, _) = simplify_partial(var, partial.into_term(), hs, false);
                 let simplified = simplified.value().as_expression()?;
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
@@ -1406,9 +1409,37 @@ impl PolarVirtualMachine {
             Value::Expression(_) => {
                 return self.query_for_operation(&term);
             }
+            Value::Variable(_a_symbol) => {
+                let val = self.deref(term);
+
+                if val == *term {
+                    // variable was unbound
+                    // apply a constraint to variable that it must be truthy
+                    self.push_goal(Goal::Unify {
+                        left: term.clone(),
+                        right: term!(true),
+                    })?;
+                } else {
+                    self.push_goal(Goal::Query { term: val })?;
+                }
+            }
+            Value::Boolean(value) => {
+                if !value {
+                    // Backtrack if the boolean is false.
+                    self.push_goal(Goal::Backtrack)?;
+                }
+
+                return Ok(QueryEvent::None);
+            }
             _ => {
-                let term = self.deref(term);
-                self.query_for_value(&term)?;
+                // everything else dies horribly and in pain
+                return Err(self.type_error(
+                    &term,
+                    format!(
+                        "{} isn't something that is true or false so can't be a condition",
+                        term.value().to_polar()
+                    ),
+                ));
             }
         }
         Ok(QueryEvent::None)
@@ -1654,24 +1685,6 @@ impl PolarVirtualMachine {
             }
         }
         Ok(QueryEvent::None)
-    }
-
-    /// Query for a value.  Succeeds if the value is 'truthy' or backtracks.
-    /// Currently only defined for boolean values.
-    fn query_for_value(&mut self, term: &Term) -> PolarResult<()> {
-        if let Value::Boolean(value) = term.value() {
-            if !value {
-                // Backtrack if the boolean is false.
-                self.push_goal(Goal::Backtrack)?;
-            }
-
-            Ok(())
-        } else {
-            Err(self.type_error(
-                &term,
-                format!("can't query for: {}", term.value().to_polar()),
-            ))
-        }
     }
 
     /// Handle variables & constraints as arguments to various operations.
