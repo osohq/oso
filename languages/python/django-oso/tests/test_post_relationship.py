@@ -83,7 +83,7 @@ def test_authorize_model_basic(post_fixtures):
     authorize_filter = authorize_model(None, Post, actor="user", action="read")
     assert (
         str(authorize_filter)
-        == f"(AND: {str(TRUE_FILTER)}, ('access_level', 'public'))"
+        == f"(AND: ('access_level', 'public'))"
     )
     posts = Post.objects.filter(authorize_filter)
     assert posts.count() == 5
@@ -92,7 +92,7 @@ def test_authorize_model_basic(post_fixtures):
     authorize_filter = authorize_model(None, Post, actor="user", action="write")
     assert (
         str(authorize_filter)
-        == f"(AND: {str(TRUE_FILTER)}, ('access_level', 'private'))"
+        == f"(AND: ('access_level', 'private'))"
     )
     posts = Post.objects.filter(authorize_filter)
     assert posts.count() == 4
@@ -108,11 +108,9 @@ def test_authorize_model_basic(post_fixtures):
     expected = f"""
          (OR:
             (AND:
-                {str(TRUE_FILTER)},
                 ('access_level', 'private'),
                 ('needs_moderation', True)),
             (AND:
-                {str(TRUE_FILTER)},
                 ('access_level', 'public'),
                 ('needs_moderation', True)))
     """
@@ -617,7 +615,7 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
     assert (
         str(authorize_filter)
-        == f"(AND: {str(TRUE_FILTER)}, ('users', <User: User object (1)>))"
+        == f"(AND: ('users', <User: User object (1)>))"
     )
     posts = Post.objects.filter(authorize_filter)
     expected = """
