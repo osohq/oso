@@ -58,6 +58,7 @@ GSuite
 Halbert
 hardcoded
 hardcoding
+hoc
 href
 IAM
 IDEs
