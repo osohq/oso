@@ -849,7 +849,6 @@ mod test {
         assert_eq!(bm.variable_state(&y), VariableState::Unbound);
     }
 
-    // TODO (dhatch): Test backtrack with followers.
     #[test]
     fn test_backtrack_followers() {
         // Regular bindings
