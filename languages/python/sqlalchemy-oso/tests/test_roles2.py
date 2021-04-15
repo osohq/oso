@@ -116,9 +116,7 @@ def test_roles():
     leina = User(name="leina")
     steve = User(name="steve")
 
-    objs = [
-        leina, steve, osohq, oso_repo, bug
-    ]
+    objs = [leina, steve, osohq, oso_repo, bug]
     for obj in objs:
         session.add(obj)
     session.commit()
