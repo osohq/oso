@@ -1977,6 +1977,28 @@ mod test {
         )
     }
 
+    #[test]
+    fn test_grounding_not_4_eq() -> TestResult {
+        test_grounding(
+            r#"
+            f(x, y) if x > 0 and not (x >= 1 and x == 1 and y > x);
+        "#,
+            term!(call!("f", [sym!("x"), sym!("y")])),
+            &[|r: Bindings| {
+                assert_partial_expressions!(r,
+                    "x" => "_this > 0",
+                    // Right now we output "y" => "1 < 1 or _this <= 1".
+                    // This constraint is incorrect. If x = 1, then y <= 1
+                    // (we reach the y > x constraint in the
+                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // and y > x is never reached.
+                    "y" => "x != 1 or _this <= 1"
+                );
+                Ok(())
+            }],
+        )
+    }
+
     // THIS IS the manually rewritten version of test_grounding_not_4.
     // Considering whether we can just do this rewrite to execute inversion.
     #[test]
@@ -2012,7 +2034,7 @@ mod test {
     fn test_grounding_not_5() -> TestResult {
         test_grounding(
             r#"
-            f(x, y) if x > 0 and not (x >= 1 and x == 1 and y > x and debug() and g(x, y));
+            f(x, y) if x > 0 and not (x >= 1 and x = 1 and y > x and debug() and g(x, y));
             g(x, _) if x >= 3;
             g(1, y) if y >= 3 and y > 5;
         "#,
@@ -2026,6 +2048,30 @@ mod test {
                     // negation). Otherwise, the query suceeds because x = 1 fails
                     // and y > x is never reached.
                     "y" => "_this <= 1 or _this < 3 or _this <= 5"
+                );
+                Ok(())
+            }],
+        )
+    }
+
+    #[test]
+    fn test_grounding_not_5_eq() -> TestResult {
+        test_grounding(
+            r#"
+            f(x, y) if x > 0 and not (x >= 1 and x == 1 and y > x and debug() and g(x, y));
+            g(x, _) if x >= 3;
+            g(1, y) if y >= 3 and y > 5;
+        "#,
+            term!(call!("f", [sym!("x"), sym!("y")])),
+            &[|r: Bindings| {
+                assert_partial_expressions!(r,
+                    "x" => "_this > 0 and 1 < 1 or _1_11 <= 1 or 1 < 3 and _this != 1",
+                    // Right now we output "y" => "_this <= 1".
+                    // This constraint is incorrect. If x = 1, then y <= 1
+                    // (we reach the y > x constraint in the
+                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // and y > x is never reached.
+                    "y" => "1 < 1 or _this <= 1 or 1 < 3 and _this < 3 or _this <= 5"
                 );
                 Ok(())
             }],
