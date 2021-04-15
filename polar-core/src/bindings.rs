@@ -823,5 +823,27 @@ mod test {
         assert_eq!(bm.variable_state(&y), VariableState::Unbound);
     }
 
+
     // TODO (dhatch): Test backtrack with followers.
+    #[test]
+    fn test_backtrack_followers() {
+        // Regular bindings
+        let mut b1 = BindingManager::new();
+        b1.bind(&sym!("x"), term!(sym!("y"))).unwrap();
+        b1.bind(&sym!("z"), term!(sym!("x"))).unwrap();
+
+        let b2 = BindingManager::new();
+        let b2_id = b1.add_follower(b2);
+
+
+        b1.add_constraint(&term!(op!(Gt, term!(sym!("x")), term!(1)))).unwrap();
+
+        let bsp = b1.bsp();
+
+        b1.bind(&sym!("a"), term!(sym!("x"))).unwrap();
+
+        b1.backtrack(bsp);
+        let b2 = b1.remove_follower(&b2_id).unwrap();
+        assert!(matches!(b2.variable_state(&sym!("a")), VariableState::Unbound));
+    }
 }
