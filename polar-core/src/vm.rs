@@ -1244,10 +1244,26 @@ impl PolarVirtualMachine {
             Option<Vec<Term>>,
             Option<BTreeMap<Symbol, Term>>,
         ) = match self.deref(field).value() {
-            Value::Call(Call { name, args, kwargs }) => (
-                name.clone(),
-                Some(args.iter().map(|arg| self.deep_deref(arg)).collect()),
-                match kwargs {
+            Value::Call(Call { name, args, kwargs }) => {
+                let mut new_args = args.iter().map(|arg| self.deep_deref(arg));
+                let res = new_args.try_for_each(|arg| {
+                    if let Value::Variable(v) = arg.value() {
+                        return Err(self.set_error_context(
+                            &arg,
+                            error::RuntimeError::Unsupported {
+                                msg: format!(
+                                    "cannot call method with unbound variable argument {}",
+                                    v
+                                ),
+                            },
+                        ));
+                    };
+                    Ok(())
+                });
+                if res.is_err() {
+                    return Err(res.unwrap_err());
+                }
+                let kwargs = match kwargs {
                     Some(unwrapped) => Some(
                         unwrapped
                             .iter()
@@ -1255,8 +1271,9 @@ impl PolarVirtualMachine {
                             .collect(),
                     ),
                     None => None,
-                },
-            ),
+                };
+                (name.clone(), Some(new_args.collect()), kwargs)
+            }
             Value::String(field) => (Symbol(field.clone()), None, None),
             v => {
                 return Err(self.type_error(
@@ -1900,7 +1917,6 @@ impl PolarVirtualMachine {
             }
             Value::Variable(v) => {
                 if matches!(field.value(), Value::Call(_)) {
-                    // TODO: hack for role_allows()
                     return Err(self.set_error_context(
                         object,
                         error::RuntimeError::Unsupported {
