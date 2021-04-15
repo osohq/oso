@@ -16,8 +16,14 @@ pub struct Binding(pub Symbol, pub Term);
 pub type BindingStack = Vec<Binding>;
 pub type Bindings = HashMap<Symbol, Term>;
 
-pub type Bsp = usize;
+pub type Bsp = Bsps;
 pub type FollowerId = usize;
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Bsps {
+    bsp: usize,
+    followers: HashMap<FollowerId, Bsps>,
+}
 
 /// Variable binding state.
 ///
@@ -85,7 +91,7 @@ enum BindingManagerVariableState<'a> {
 #[derive(Clone, Debug, Default)]
 pub struct BindingManager {
     bindings: BindingStack,
-    followers: HashMap<FollowerId, (BindingManager, Bsp)>,
+    followers: HashMap<FollowerId, BindingManager>,
     next_follower_id: FollowerId,
 }
 
@@ -196,8 +202,12 @@ impl BindingManager {
                     e.merge_constraints(op);
                     op = e;
                 }
-                BindingManagerVariableState::Bound(_) => {
-                    panic!("Unexpected bound variable {} in constraint.", var);
+                BindingManagerVariableState::Bound(v) => {
+                    panic!(
+                        "Unexpected bound variable {} in constraint. {var} = {val}",
+                        var = var,
+                        val = v
+                    );
                 }
             }
         }
@@ -206,15 +216,14 @@ impl BindingManager {
     }
 
     /// Reset the state of `BindingManager` to what it was at `to`.
-    pub fn backtrack(&mut self, to: Bsp) {
-        self.do_followers(|follower_bsp, follower| {
-            let follower_backtrack_to = to.saturating_sub(follower_bsp);
-            follower.backtrack(follower_backtrack_to);
+    pub fn backtrack(&mut self, mut to: Bsp) {
+        self.do_followers(|follower_id, follower| {
+            follower.backtrack(to.followers.remove(&follower_id).unwrap_or_default());
             Ok(())
         })
         .unwrap();
 
-        self.bindings.truncate(to)
+        self.bindings.truncate(to.bsp)
     }
 
     // *** Binding Inspection ***
@@ -305,6 +314,7 @@ impl BindingManager {
     }
 
     pub fn variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> VariableState {
+        let bsp = bsp.bsp;
         let mut next = variable;
         while let Some(value) = self.value(next, bsp) {
             match value.value() {
@@ -333,16 +343,31 @@ impl BindingManager {
     /// Retrieve an opaque value representing the current state of `BindingManager`.
     /// Can be used to reset state with `backtrack`.
     pub fn bsp(&self) -> Bsp {
-        self.bindings.len()
+        let follower_bsps = self
+            .followers
+            .iter()
+            .map(|(id, f)| (*id, f.bsp()))
+            .collect::<HashMap<_, _>>();
+
+        Bsps {
+            bsp: self.bindings.len(),
+            followers: follower_bsps,
+        }
     }
 
     pub fn bindings(&self, include_temps: bool) -> Bindings {
-        self.bindings_after(include_temps, 0)
+        self.bindings_after(
+            include_temps,
+            Bsps {
+                bsp: 0,
+                followers: HashMap::default(),
+            },
+        )
     }
 
     pub fn bindings_after(&self, include_temps: bool, after: Bsp) -> Bindings {
         let mut bindings = HashMap::new();
-        for Binding(var, value) in &self.bindings[after..] {
+        for Binding(var, value) in &self.bindings[after.bsp..] {
             if !include_temps && var.is_temporary_var() {
                 continue;
             }
@@ -354,7 +379,7 @@ impl BindingManager {
     pub fn variable_bindings(&self, variables: &HashSet<Symbol>) -> Bindings {
         let mut bindings = HashMap::new();
         for var in variables.iter() {
-            let value = self.value(var, self.bsp());
+            let value = self.value(var, self.bsp().bsp);
             if let Some(value) = value {
                 bindings.insert(var.clone(), self.deep_deref(value));
             }
@@ -371,16 +396,14 @@ impl BindingManager {
 
     pub fn add_follower(&mut self, follower: BindingManager) -> FollowerId {
         let follower_id = self.next_follower_id;
-        self.followers.insert(follower_id, (follower, self.bsp()));
+        self.followers.insert(follower_id, follower);
         self.next_follower_id += 1;
 
         follower_id
     }
 
     pub fn remove_follower(&mut self, follower_id: &FollowerId) -> Option<BindingManager> {
-        self.followers
-            .remove(follower_id)
-            .map(|(follower, _bsp)| follower)
+        self.followers.remove(follower_id).map(|follower| follower)
     }
 }
 
@@ -496,7 +519,7 @@ impl BindingManager {
 
     /// Look up a variable in the bindings stack and return
     /// a reference to its value if it's bound.
-    fn value(&self, variable: &Symbol, bsp: Bsp) -> Option<&Term> {
+    fn value(&self, variable: &Symbol, bsp: usize) -> Option<&Term> {
         self.bindings[..bsp]
             .iter()
             .rev()
@@ -510,6 +533,7 @@ impl BindingManager {
 
     /// Check the state of `variable` at `bsp`.
     fn _variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> BindingManagerVariableState {
+        let bsp = bsp.bsp;
         let mut path = vec![variable];
         while let Some(value) = self.value(path.last().unwrap(), bsp) {
             match value.value() {
@@ -545,12 +569,12 @@ impl BindingManager {
         Ok(())
     }
 
-    fn do_followers<F>(&mut self, func: F) -> PolarResult<()>
+    fn do_followers<F>(&mut self, mut func: F) -> PolarResult<()>
     where
-        F: Fn(Bsp, &mut BindingManager) -> PolarResult<()>,
+        F: FnMut(FollowerId, &mut BindingManager) -> PolarResult<()>,
     {
-        for (_id, (follower, bsp)) in self.followers.iter_mut() {
-            func(*bsp, follower)?
+        for (id, follower) in self.followers.iter_mut() {
+            func(*id, follower)?
         }
 
         Ok(())
@@ -823,7 +847,6 @@ mod test {
         assert_eq!(bm.variable_state(&y), VariableState::Unbound);
     }
 
-
     // TODO (dhatch): Test backtrack with followers.
     #[test]
     fn test_backtrack_followers() {
@@ -835,8 +858,8 @@ mod test {
         let b2 = BindingManager::new();
         let b2_id = b1.add_follower(b2);
 
-
-        b1.add_constraint(&term!(op!(Gt, term!(sym!("x")), term!(1)))).unwrap();
+        b1.add_constraint(&term!(op!(Gt, term!(sym!("x")), term!(1))))
+            .unwrap();
 
         let bsp = b1.bsp();
 
@@ -844,6 +867,9 @@ mod test {
 
         b1.backtrack(bsp);
         let b2 = b1.remove_follower(&b2_id).unwrap();
-        assert!(matches!(b2.variable_state(&sym!("a")), VariableState::Unbound));
+        assert!(matches!(
+            b2.variable_state(&sym!("a")),
+            VariableState::Unbound
+        ));
     }
 }

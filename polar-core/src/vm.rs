@@ -239,7 +239,7 @@ pub struct PolarVirtualMachine {
     stack_limit: usize,
 
     /// Binding stack constant below here.
-    csp: usize,
+    csp: Bsp,
 
     /// Interactive debugger.
     pub debugger: Debugger,
@@ -304,7 +304,7 @@ impl PolarVirtualMachine {
             query_start_time: None,
             query_timeout: QUERY_TIMEOUT_S,
             stack_limit: MAX_STACK_SIZE,
-            csp: 0,
+            csp: Bsp::default(),
             choices: vec![],
             queries: vec![],
             tracing,
@@ -673,7 +673,8 @@ impl PolarVirtualMachine {
 
     /// Retrieve the current non-constant bindings as a hash map.
     pub fn bindings(&self, include_temps: bool) -> Bindings {
-        self.binding_manager.bindings_after(include_temps, self.csp)
+        self.binding_manager
+            .bindings_after(include_temps, self.csp.clone())
     }
 
     /// Retrive internal binding stack for debugger.
@@ -908,7 +909,7 @@ impl PolarVirtualMachine {
                     trace,
                     trace_stack,
                 }) => {
-                    self.binding_manager.backtrack(bsp);
+                    self.binding_manager.backtrack(bsp.clone());
                     if let Some(mut alternative) = alternatives.pop() {
                         if alternatives.is_empty() {
                             self.goals = goals;
