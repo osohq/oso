@@ -9,7 +9,7 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-from sqlalchemy_oso import roles as oso_roles, register_models
+from sqlalchemy_oso import roles as oso_roles, register_models, authorized_sessionmaker
 from sqlalchemy_oso.roles import enable_roles
 from sqlalchemy_oso.session import set_get_session
 from oso import Oso, Variable
@@ -206,11 +206,19 @@ def load_fixture_data(session):
 
 
 @pytest.fixture
-def test_db_session():
+def test_db_engine():
     engine = create_engine("sqlite://")
     Base.metadata.create_all(engine)
 
-    Session = sessionmaker(bind=engine)
+    return engine
+
+
+@pytest.fixture
+def test_db_session(test_db_engine):
+    # engine = create_engine("sqlite://")
+    # Base.metadata.create_all(engine)
+
+    Session = sessionmaker(bind=test_db_engine)
     session = Session()
 
     load_fixture_data(session)
@@ -597,3 +605,35 @@ def test_enable_roles(
 
     results = list(oso.query_rule("allow", ringo, "READ", abbey_road))
     assert len(results) == 1
+
+
+def test_data_filtering(
+    test_db_engine, test_db_session, oso_with_session, john, ringo, abbey_road, beatles
+):
+    oso_with_session.actor = None
+    oso_with_session.action = None
+
+    enable_roles(oso_with_session)
+
+    policy = """
+        role_allow(role: RepositoryRole{name: "READ"}, "READ", repo: Repository);
+    """
+
+    oso_with_session.load_str(policy)
+
+    AuthSessionmaker = authorized_sessionmaker(
+        bind=test_db_engine,
+        get_oso=lambda: oso_with_session,
+        get_user=lambda: oso_with_session.actor,
+        get_action=lambda: oso_with_session.action,
+    )
+    oso_with_session.actor = john
+    oso_with_session.action = "READ"
+    auth_session = AuthSessionmaker()
+
+    # oso_with_session.actor = john
+    # oso_with_session.action = "READ"
+    results = test_db_session.query(Organization).all()
+    results = auth_session.query(Organization).all()
+
+    assert len(results) == 2
