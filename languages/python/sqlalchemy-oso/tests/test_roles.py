@@ -608,7 +608,14 @@ def test_enable_roles(
 
 
 def test_data_filtering(
-    test_db_engine, test_db_session, oso_with_session, john, ringo, abbey_road, beatles
+    test_db_engine,
+    test_db_session,
+    oso_with_session,
+    john,
+    paul,
+    ringo,
+    abbey_road,
+    beatles,
 ):
     oso_with_session.actor = None
     oso_with_session.action = None
@@ -616,7 +623,13 @@ def test_data_filtering(
     enable_roles(oso_with_session)
 
     policy = """
-        role_allow(role: RepositoryRole{name: "READ"}, "READ", repo: Repository);
+        resource_role_applies_to(repo: Repository, parent_org) if
+            parent_org = repo.organization and
+            parent_org matches Organization;
+
+        # role_allow(role: RepositoryRole{name: "READ"}, "READ", repo: Repository);
+        role_allow(role: OrganizationRole{name: "MEMBER"}, action, repo: Repository) if
+            role_allow(new RepositoryRole(name: "READ", repository_id: repo.id), action, repo);
     """
 
     oso_with_session.load_str(policy)
@@ -633,7 +646,71 @@ def test_data_filtering(
 
     # oso_with_session.actor = john
     # oso_with_session.action = "READ"
-    results = test_db_session.query(Organization).all()
-    results = auth_session.query(Organization).all()
+    results = auth_session.query(Repository).all()
 
-    assert len(results) == 2
+    # assert len(results) == 1
+    # assert results[0].name == "Abbey Road"
+
+    oso_with_session.actor = paul
+    oso_with_session.action = "READ"
+    auth_session = AuthSessionmaker()
+
+    # oso_with_session.actor = john
+    # oso_with_session.action = "READ"
+    results = auth_session.query(Repository).all()
+
+    assert len(results) == 1
+    assert results[0].name == "Abbey Road"
+
+
+class Roles:
+    def __init__(self, oso):
+        self.oso = oso
+
+    def role_allows(self, actor, action, resource):
+        print("actor: ", actor)
+        print("action: ", action)
+        print("resource: ", resource)
+        return True
+
+
+def test_new_roles_data_filtering(
+    oso_with_session,
+    john,
+    paul,
+    ringo,
+    abbey_road,
+    beatles,
+):
+    roles = Roles(oso_with_session)
+    oso_with_session.register_constant(roles, "Roles")
+
+    p = """
+        resource(_r: Repository);
+        resource(_r: Organization);
+
+        allow(actor, action, resource) if
+            resource(resource) and
+            Roles.role_allows(actor, action, resource);
+    """
+
+    oso_with_session.load_str(p)
+
+    # NO DATA FILTERING
+    assert oso_with_session.is_allowed(john, "READ", abbey_road)
+
+    # DATA FILTERING
+    oso_with_session.actor = None
+    oso_with_session.action = None
+
+    AuthSessionmaker = authorized_sessionmaker(
+        bind=test_db_engine,
+        get_oso=lambda: oso_with_session,
+        get_user=lambda: oso_with_session.actor,
+        get_action=lambda: oso_with_session.action,
+    )
+    oso_with_session.actor = john
+    oso_with_session.action = "READ"
+    auth_session = AuthSessionmaker()
+
+    results = auth_session.query(Repository).all()
