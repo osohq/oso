@@ -370,11 +370,9 @@ mod test {
         loop {
             let event = query.next_event()?;
             match event {
-                QueryEvent::Result { bindings, .. } => {
-                    return Ok(bindings)
-                },
+                QueryEvent::Result { bindings, .. } => return Ok(bindings),
                 QueryEvent::Debug { .. } => continue,
-                _ => panic!("not bindings, {:?}", &event)
+                _ => panic!("not bindings, {:?}", &event),
             }
         }
     }
@@ -1919,7 +1917,7 @@ mod test {
                 assert_partial_expression!(r, "x", "_this > y and 1 >= y");
                 // Expected: x > _this and (z >= _this or z != 1)
                 assert_partial_expression!(r, "y", "x > _this and z >= _this"); // 1 has been subsituted for z which is incorrect.
-                // Expected: z >= _this or z != 1
+                                                                                // Expected: z >= _this or z != 1
                 assert_partial_expression!(r, "z", "_this != 1"); // MISSING or z >= y
                 Ok(())
             }],
@@ -1928,114 +1926,132 @@ mod test {
 
     #[test]
     fn test_grounding_not_2() -> TestResult {
-        test_grounding(r#"
+        test_grounding(
+            r#"
             f(x) if x > 0 and not (x > 5 and x = 3);
         "#,
-        term!(call!("f", [sym!("x")])),
-        &[|r: Bindings| {
-            // x > 5 and x = 3 is always false so negation always succeeds.
-            assert_partial_expression!(r, "x", "_this > 0");
+            term!(call!("f", [sym!("x")])),
+            &[|r: Bindings| {
+                // x > 5 and x = 3 is always false so negation always succeeds.
+                assert_partial_expression!(r, "x", "_this > 0");
                 Ok(())
-        }])
+            }],
+        )
     }
 
     #[test]
     fn test_grounding_not_3() -> TestResult {
-        test_grounding(r#"
+        test_grounding(
+            r#"
             f(x) if x > 0 and not (x >= 1 and x = 1);
         "#,
-        term!(call!("f", [sym!("x")])),
-        &[|r: Bindings| {
-            // x >= 1 and x = 1 are compatible, so the negation binds x to 1
-            // if x is 1 the negated query succeeds, failing overall query
-            assert_partial_expression!(r, "x", "_this > 0 and _this != 1");
+            term!(call!("f", [sym!("x")])),
+            &[|r: Bindings| {
+                // x >= 1 and x = 1 are compatible, so the negation binds x to 1
+                // if x is 1 the negated query succeeds, failing overall query
+                assert_partial_expression!(r, "x", "_this > 0 and _this != 1");
                 Ok(())
-        }])
+            }],
+        )
     }
 
     #[test]
     fn test_grounding_not_4() -> TestResult {
-        test_grounding(r#"
+        test_grounding(
+            r#"
             f(x, y) if x > 0 and not (x >= 1 and x = 1 and y > x);
         "#,
-        term!(call!("f", [sym!("x"), sym!("y")])),
-        &[|r: Bindings| {
-            assert_partial_expressions!(r,
-                "x" => "_this > 0 and _this != 1",
-                // Right now we output "y" => "_this <= 1".
-                // This constraint is incorrect. If x = 1, then y <= 1
-                // (we reach the y > x constraint in the
-                // negation). Otherwise, the query suceeds because x = 1 fails
-                // and y > x is never reached.
-                "y" => "x != 1 or _this <= 1"
-            );
-            Ok(())
-        }])
+            term!(call!("f", [sym!("x"), sym!("y")])),
+            &[|r: Bindings| {
+                assert_partial_expressions!(r,
+                    "x" => "_this > 0 and _this != 1",
+                    // Right now we output "y" => "_this <= 1".
+                    // This constraint is incorrect. If x = 1, then y <= 1
+                    // (we reach the y > x constraint in the
+                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // and y > x is never reached.
+                    "y" => "x != 1 or _this <= 1"
+                );
+                Ok(())
+            }],
+        )
     }
 
     // THIS IS the manually rewritten version of test_grounding_not_4.
     // Considering whether we can just do this rewrite to execute inversion.
     #[test]
     fn test_grounding_not_rewrite_4() -> TestResult {
-        test_grounding(r#"
+        test_grounding(
+            r#"
             f(x, y) if x > 0 and (x < 1 or x != 1 or y <= x);
         "#,
-        term!(call!("f", [sym!("x"), sym!("y")])),
-        &[|r: Bindings| {
-            assert_partial_expression!(r, "x", "_this > 0 and _this < 1");
-            assert_eq!(r.get(&sym!("y")).unwrap(), &term!(sym!("y")));
-            Ok(())
-        }, |r: Bindings| {
-            assert_partial_expression!(r, "x", "_this > 0 and _this != 1");
-            assert_eq!(r.get(&sym!("y")).unwrap(), &term!(sym!("y")));
-            Ok(())
-        }, |r: Bindings| {
-            assert_partial_expressions!(r,
-                "x" => "_this > 0 and y <= _this",
-                "y" => "x > 0 and _this <= x"
-            );
-            Ok(())
-        }])
+            term!(call!("f", [sym!("x"), sym!("y")])),
+            &[
+                |r: Bindings| {
+                    assert_partial_expression!(r, "x", "_this > 0 and _this < 1");
+                    assert_eq!(r.get(&sym!("y")).unwrap(), &term!(sym!("y")));
+                    Ok(())
+                },
+                |r: Bindings| {
+                    assert_partial_expression!(r, "x", "_this > 0 and _this != 1");
+                    assert_eq!(r.get(&sym!("y")).unwrap(), &term!(sym!("y")));
+                    Ok(())
+                },
+                |r: Bindings| {
+                    assert_partial_expressions!(r,
+                        "x" => "_this > 0 and y <= _this",
+                        "y" => "x > 0 and _this <= x"
+                    );
+                    Ok(())
+                },
+            ],
+        )
     }
 
     #[test]
     fn test_grounding_not_5() -> TestResult {
-        test_grounding(r#"
+        test_grounding(
+            r#"
             f(x, y) if x > 0 and not (x >= 1 and x == 1 and y > x and debug() and g(x, y));
             g(x, _) if x >= 3;
             g(1, y) if y >= 3 and y > 5;
         "#,
-        term!(call!("f", [sym!("x"), sym!("y")])),
-        &[|r: Bindings| {
-            assert_partial_expressions!(r,
-                "x" => "_this > 0 and _this != 1",
-                // Right now we output "y" => "_this <= 1".
-                // This constraint is incorrect. If x = 1, then y <= 1
-                // (we reach the y > x constraint in the
-                // negation). Otherwise, the query suceeds because x = 1 fails
-                // and y > x is never reached.
-                "y" => "_this <= 1 or _this < 3 or _this <= 5"
-            );
-            Ok(())
-        }])
+            term!(call!("f", [sym!("x"), sym!("y")])),
+            &[|r: Bindings| {
+                assert_partial_expressions!(r,
+                    "x" => "_this > 0 and _this != 1",
+                    // Right now we output "y" => "_this <= 1".
+                    // This constraint is incorrect. If x = 1, then y <= 1
+                    // (we reach the y > x constraint in the
+                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // and y > x is never reached.
+                    "y" => "_this <= 1 or _this < 3 or _this <= 5"
+                );
+                Ok(())
+            }],
+        )
     }
 
     #[test]
     fn test_grounding_not_5_rewrite() -> TestResult {
         let p = Polar::new();
-        p.load_str(r#"
+        p.load_str(
+            r#"
             f(x, y) if x > 0 and not (x >= 1 and x = 1 and y > x and g(x, y));
             g(x, _) if x >= 3;
             g(1, y) if y >= 3 and y > 5;
-        "#)?;
+        "#,
+        )?;
 
         let p_rewrite = Polar::new();
-        p_rewrite.load_str(r#"
+        p_rewrite.load_str(
+            r#"
             # f(x, y) if x > 0 and (x < 1 or x != 1 or y <= x or not g(x, y));
             f(x, y) if x > 0 and (x < 1 or x != 1 or y <= x or (g_1_not(x, y) and g_2_not(x, y)));
             g_1_not(x, _) if x < 3;
             g_2_not(1, y) if y < 3 or y <= 5;
-        "#)?;
+        "#,
+        )?;
 
         let xs = (-10..10).collect::<Vec<_>>();
         let ys = (-10..10).collect::<Vec<_>>();
@@ -2043,10 +2059,12 @@ mod test {
         for x in xs.iter() {
             for y in ys.iter() {
                 let mut p_query = p.new_query_from_term(term!(call!("f", [*x, *y])), false);
-                let mut p_rewrite_query = p_rewrite.new_query_from_term(term!(call!("f", [*x, *y])), false);
+                let mut p_rewrite_query =
+                    p_rewrite.new_query_from_term(term!(call!("f", [*x, *y])), false);
 
                 let p_has_next = matches!(p_query.next_event()?, QueryEvent::Result { .. });
-                let p_rewrite_has_next = matches!(p_rewrite_query.next_event()?, QueryEvent::Result { .. });
+                let p_rewrite_has_next =
+                    matches!(p_rewrite_query.next_event()?, QueryEvent::Result { .. });
                 assert_eq!(p_has_next, p_rewrite_has_next)
             }
         }
