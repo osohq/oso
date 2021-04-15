@@ -80,7 +80,6 @@ See: [LICENSE][license].
 [badge-release-link]: https://github.com/osohq/oso/releases
 [badge-slack]: https://img.shields.io/badge/slack-oso--oss-orange
 [badge-slack-link]: https://join-slack.osohq.com/
-
 [badge-go]: https://img.shields.io/github/v/tag/osohq/go-oso?color=7fd5ea&label=go.dev
 [badge-go-link]: https://pkg.go.dev/github.com/osohq/go-oso
 [badge-java]: https://img.shields.io/maven-central/v/com.osohq/oso
@@ -94,7 +93,6 @@ See: [LICENSE][license].
 [badge-rust]: https://img.shields.io/crates/v/oso
 [badge-rust-link]: https://crates.io/crates/oso
 [go-link]: https://pkg.go.dev/github.com/osohq/go-oso
-
 [contributing]: https://github.com/osohq/oso/blob/main/CONTRIBUTING.md
 [core]: https://github.com/osohq/oso/tree/main/polar-core
 [docs]: https://docs.osohq.com
@@ -105,4 +103,4 @@ See: [LICENSE][license].
 
 ## Share your story
 
-We'd love to hear about your use case and experience with Oso. Share your story on [Twitter](https://twitter.com/osoHQ) or fill out [this form](https://stephie660149.typeform.com/to/mIFfkN05) for some Oso swag.
+We'd love to hear about your use case and experience with Oso. Share your story on [Twitter](https://twitter.com/osoHQ) or fill out [this form](https://osohq.typeform.com/to/mIFfkN05) for some Oso swag.
