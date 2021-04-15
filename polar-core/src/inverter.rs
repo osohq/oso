@@ -173,9 +173,9 @@ fn filter_inverted_constraints(
 ) -> Bindings {
     constraints
         .into_iter()
-        .filter(move |(k, _)| {
+        .filter(|(k, _)| {
             !(matches!(
-                vm.variable_state_at_point(k, bsp.clone()),
+                vm.variable_state_at_point(k, &bsp),
                 VariableState::Unbound | VariableState::Bound(_)
             ))
         })

@@ -216,9 +216,13 @@ impl BindingManager {
     }
 
     /// Reset the state of `BindingManager` to what it was at `to`.
-    pub fn backtrack(&mut self, mut to: Bsp) {
+    pub fn backtrack(&mut self, to: &Bsp) {
         self.do_followers(|follower_id, follower| {
-            follower.backtrack(to.followers.remove(&follower_id).unwrap_or_default());
+            if let Some(follower_to) = to.followers.get(&follower_id) {
+                follower.backtrack(follower_to);
+            } else {
+                follower.backtrack(&Bsp::default());
+            }
             Ok(())
         })
         .unwrap();
@@ -310,10 +314,10 @@ impl BindingManager {
     }
 
     pub fn variable_state(&self, variable: &Symbol) -> VariableState {
-        self.variable_state_at_point(variable, self.bsp())
+        self.variable_state_at_point(variable, &self.bsp())
     }
 
-    pub fn variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> VariableState {
+    pub fn variable_state_at_point(&self, variable: &Symbol, bsp: &Bsp) -> VariableState {
         let bsp = bsp.bsp;
         let mut next = variable;
         while let Some(value) = self.value(next, bsp) {
@@ -356,16 +360,10 @@ impl BindingManager {
     }
 
     pub fn bindings(&self, include_temps: bool) -> Bindings {
-        self.bindings_after(
-            include_temps,
-            Bsps {
-                bsp: 0,
-                followers: HashMap::default(),
-            },
-        )
+        self.bindings_after(include_temps, &Bsp::default())
     }
 
-    pub fn bindings_after(&self, include_temps: bool, after: Bsp) -> Bindings {
+    pub fn bindings_after(&self, include_temps: bool, after: &Bsp) -> Bindings {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings[after.bsp..] {
             if !include_temps && var.is_temporary_var() {
@@ -528,11 +526,15 @@ impl BindingManager {
     }
 
     fn _variable_state(&self, variable: &Symbol) -> BindingManagerVariableState {
-        self._variable_state_at_point(variable, self.bsp())
+        self._variable_state_at_point(variable, &self.bsp())
     }
 
     /// Check the state of `variable` at `bsp`.
-    fn _variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> BindingManagerVariableState {
+    fn _variable_state_at_point(
+        &self,
+        variable: &Symbol,
+        bsp: &Bsp,
+    ) -> BindingManagerVariableState {
         let bsp = bsp.bsp;
         let mut path = vec![variable];
         while let Some(value) = self.value(path.last().unwrap(), bsp) {
@@ -865,7 +867,7 @@ mod test {
 
         b1.bind(&sym!("a"), term!(sym!("x"))).unwrap();
 
-        b1.backtrack(bsp);
+        b1.backtrack(&bsp);
         let b2 = b1.remove_follower(&b2_id).unwrap();
         assert!(matches!(
             b2.variable_state(&sym!("a")),
