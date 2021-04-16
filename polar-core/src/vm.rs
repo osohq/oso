@@ -1239,6 +1239,7 @@ impl PolarVirtualMachine {
         instance: &Term,
         field: &Term,
     ) -> PolarResult<QueryEvent> {
+        // let deref_instance = self.deep_deref(instance);
         let (field_name, args, kwargs): (
             Symbol,
             Option<Vec<Term>>,
@@ -1247,7 +1248,17 @@ impl PolarVirtualMachine {
             Value::Call(Call { name, args, kwargs }) => {
                 let new_args = args.iter().map(|arg| self.deep_deref(arg));
                 for arg in new_args.clone() {
+                    // Variables cannot be passed to external methods from Polar
                     if let Value::Variable(v) = arg.value() {
+                        // if let BindingManagerVariableState::Partial(p) =
+                        //     self.binding_manager.variable_state(v)
+                        // {
+                        //     if let Value::ExternalInstance(external) = deref_instance.value() {
+                        //         match external.repr {
+
+                        //         }
+                        //     }
+                        // }
                         return Err(self.set_error_context(
                             &arg,
                             error::RuntimeError::Unsupported {
