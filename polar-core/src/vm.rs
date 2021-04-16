@@ -1246,7 +1246,7 @@ impl PolarVirtualMachine {
         ) = match self.deref(field).value() {
             Value::Call(Call { name, args, kwargs }) => {
                 let new_args = args.iter().map(|arg| self.deep_deref(arg));
-                let res = new_args.clone().try_for_each(|arg| {
+                for arg in new_args.clone() {
                     if let Value::Variable(v) = arg.value() {
                         return Err(self.set_error_context(
                             &arg,
@@ -1257,11 +1257,7 @@ impl PolarVirtualMachine {
                                 ),
                             },
                         ));
-                    };
-                    Ok(())
-                });
-                if res.is_err() {
-                    return Err(res.unwrap_err());
+                    }
                 }
                 let kwargs = match kwargs {
                     Some(unwrapped) => Some(
