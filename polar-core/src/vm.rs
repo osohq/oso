@@ -1245,8 +1245,8 @@ impl PolarVirtualMachine {
             Option<BTreeMap<Symbol, Term>>,
         ) = match self.deref(field).value() {
             Value::Call(Call { name, args, kwargs }) => {
-                let mut new_args = args.iter().map(|arg| self.deep_deref(arg));
-                let res = new_args.try_for_each(|arg| {
+                let new_args = args.iter().map(|arg| self.deep_deref(arg));
+                let res = new_args.clone().try_for_each(|arg| {
                     if let Value::Variable(v) = arg.value() {
                         return Err(self.set_error_context(
                             &arg,
