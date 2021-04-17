@@ -18,6 +18,14 @@ These guides will help you add roles to your application and use them to perform
 To learn more about roles and the different ways they can be used for authorization, head over to [Role-Based Access
 Control](learn/roles).
 
+{{% callout "Implementing roles?" "yellow" %}}
+We're working on a set of new features to better support adding roles to B2B applications.
+These features include defining roles, adding role checks/enforcement to your application, and exposing a
+role management API and frontend to your end users.
+
+If you're interested, we encourage you to sign up for early access [here](https://osohq.typeform.com/to/w8xgMHbw)!
+{{% /callout %}}
+
 <!-- A well-designed role system has roles that map to an intuitive concept of what
 a user should be able to do in the application. -->
 
