@@ -676,6 +676,7 @@ class Roles:
 
 def test_new_roles_data_filtering(
     oso_with_session,
+    test_db_engine,
     john,
     paul,
     ringo,
