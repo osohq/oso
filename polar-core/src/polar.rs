@@ -16,7 +16,7 @@ use std::sync::{Arc, RwLock};
 
 pub struct Query {
     runnable_stack: Vec<(Box<dyn Runnable>, u64)>, // Tuple of Runnable + call_id.
-    vm: PolarVirtualMachine,
+    pub vm: PolarVirtualMachine,
     term: Term,
     done: bool,
 }
@@ -65,7 +65,7 @@ impl Query {
         }
     }
 
-    fn top_runnable(&mut self) -> &mut (dyn Runnable) {
+    pub fn top_runnable(&mut self) -> &mut (dyn Runnable) {
         self.runnable_stack
             .last_mut()
             .map(|b| b.0.as_mut())
@@ -126,6 +126,7 @@ impl Iterator for Query {
     }
 }
 
+#[derive(Clone)]
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
     messages: MessageQueue,
@@ -295,6 +296,11 @@ impl Polar {
 
     pub fn next_message(&self) -> Option<Message> {
         self.messages.next()
+    }
+
+    pub fn into_tui(&self) {
+        let app = crate::cli::tui::App::new(self.clone());
+        crate::cli::tui::run(app).expect("error in CLI")
     }
 }
 

@@ -30,6 +30,10 @@ pub trait Runnable {
     /// Create a new runnable that when run will perform the same operation as
     /// this one.
     fn clone_runnable(&self) -> Box<dyn Runnable>;
+
+    fn get_vm(&self) -> Option<&crate::vm::PolarVirtualMachine> {
+        None
+    }
 }
 
 impl Clone for Box<dyn Runnable> {

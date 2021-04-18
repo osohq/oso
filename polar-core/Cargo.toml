@@ -23,6 +23,13 @@ regex = "1.4.3"
 serde = { version = "1.0.119", features = ["derive", "rc"] }
 serde_json = "1.0.61"
 
+# TUI dependencies
+anyhow = "*"
+crossterm = {version = "0.17"}
+rustyline = {version = "6.1.2"}
+rustyline-derive = {version = "0.3.1"}
+tui = { version = "0.9", default-features = false, features = ['crossterm'] }
+
 [build_dependencies]
 serde_derive = "1.0"
 lalrpop = "0.19.1"

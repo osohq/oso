@@ -174,10 +174,11 @@ fn filter_inverted_constraints(
     constraints
         .into_iter()
         .filter(|(k, _)| {
-            !(matches!(
-                vm.variable_state_at_point(k, bsp),
-                VariableState::Unbound | VariableState::Bound(_)
-            ))
+            true
+            // !(matches!(
+            //     vm.variable_state_at_point(k, bsp),
+            //     VariableState::Unbound | VariableState::Bound(_)
+            // ))
         })
         .collect::<Bindings>()
 }
@@ -190,6 +191,10 @@ fn filter_inverted_constraints(
 ///    true.
 /// 3. In all other cases, return false.
 impl Runnable for Inverter {
+    fn get_vm(&self) -> Option<&crate::vm::PolarVirtualMachine> {
+        Some(&self.vm)
+    }
+
     fn run(&mut self, _: Option<&mut Counter>) -> PolarResult<QueryEvent> {
         if self.follower.is_none() {
             // Binding followers are used to collect new bindings made during
@@ -206,11 +211,16 @@ impl Runnable for Inverter {
                         // If there are results, the inversion should usually fail. However,
                         // if those results have constraints we collect them and pass them
                         // out to the parent VM.
+
+                        eprintln!("Results: {}", self.results.len());
+
+                        eprintln!("Results: {:#?}", self.results);
                         let constraints =
                             results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
+                        eprintln!("Constaints: {:#?}", constraints);
                         let constraints =
                             filter_inverted_constraints(constraints, &self.vm, self.bsp);
-
+                        eprintln!("Constaints: {:#?}", constraints);
                         if !constraints.is_empty() {
                             // Return inverted constraints to parent VM.
                             // TODO (dhatch): Would be nice to come up with a better way of doing this.

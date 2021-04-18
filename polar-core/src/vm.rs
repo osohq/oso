@@ -151,7 +151,7 @@ pub type Goals = Vec<Goal>;
 pub type TraceStack = Vec<Rc<Vec<Rc<Trace>>>>;
 
 #[derive(Clone, Debug, Default)]
-pub struct GoalStack(Vec<Rc<Goal>>);
+pub struct GoalStack(pub Vec<Rc<Goal>>);
 
 impl GoalStack {
     fn new_reversed(goals: Goals) -> Self {
@@ -216,7 +216,7 @@ pub struct PolarVirtualMachine {
     /// Stacks.
     pub goals: GoalStack,
     binding_manager: BindingManager,
-    choices: Choices,
+    pub choices: Choices,
     pub queries: Queries,
 
     pub tracing: bool,
@@ -348,7 +348,7 @@ impl PolarVirtualMachine {
 
         impl<'vm> Visitor for VarVisitor<'vm> {
             fn visit_variable(&mut self, v: &Symbol) {
-                if matches!(self.vm.variable_state(v), VariableState::Partial()) {
+                if matches!(self.vm.variable_state(v), VariableState::Partial) {
                     self.has_partial = true;
                 }
             }
@@ -639,7 +639,10 @@ impl PolarVirtualMachine {
             self.print(&format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()));
         }
 
-        self.binding_manager.bind(var, val)
+        if let Some(g) = self.binding_manager.bind(var, val)? {
+            self.push_goal(g);
+        }
+        Ok(())
     }
 
     pub fn add_binding_follower(&mut self) -> FollowerId {
@@ -1384,6 +1387,8 @@ impl PolarVirtualMachine {
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
     fn query(&mut self, term: &Term) -> PolarResult<QueryEvent> {
+        let term = self.deep_deref(&term);
+
         // Don't log if it's just a single element AND like lots of rule bodies tend to be.
         match &term.value() {
             Value::Expression(Operation {
@@ -1391,7 +1396,7 @@ impl PolarVirtualMachine {
                 args,
             }) if args.len() < 2 => (),
             _ => {
-                self.log_with(|| format!("QUERY: {}", term.to_polar()), &[term]);
+                self.log_with(|| format!("QUERY: {}", term.to_polar()), &[&term]);
             }
         };
 
@@ -1410,18 +1415,12 @@ impl PolarVirtualMachine {
                 return self.query_for_operation(&term);
             }
             Value::Variable(_a_symbol) => {
-                let val = self.deref(term);
-
-                if val == *term {
-                    // variable was unbound
-                    // apply a constraint to variable that it must be truthy
-                    self.push_goal(Goal::Unify {
-                        left: term.clone(),
-                        right: term!(true),
-                    })?;
-                } else {
-                    self.push_goal(Goal::Query { term: val })?;
-                }
+                // variable was unbound
+                // apply a constraint to variable that it must be truthy
+                self.push_goal(Goal::Unify {
+                    left: term.clone(),
+                    right: term!(true),
+                })?;
             }
             Value::Boolean(value) => {
                 if !value {
@@ -1908,9 +1907,9 @@ impl PolarVirtualMachine {
                     ));
                 }
 
-                // Translate `.(object, field, value)` → `value = .(object, field)`.
+                // Translate `.(object, field, value)` → `.(object, field) = value`.
                 let dot2 = op!(Dot, object.clone(), field.clone());
-                self.add_constraint(&op!(Unify, value.clone(), dot2.into_term()).into_term())?;
+                self.add_constraint(&op!(Unify, dot2.into_term(), value.clone()).into_term())?;
             }
             _ => {
                 return Err(self.type_error(
@@ -2078,7 +2077,7 @@ impl PolarVirtualMachine {
                     }
                     (_, _) => {
                         // At least one variable is unbound. Bind it.
-                        if self.bind(l, right.clone()).is_err() {
+                        if let Err(e) = self.bind(l, right.clone()) {
                             self.push_goal(Goal::Backtrack)?;
                         }
                     }
@@ -2723,7 +2722,9 @@ impl Runnable for PolarVirtualMachine {
                     return Ok(event);
                 }
             }
-            self.maybe_break(DebugEvent::Goal(goal.clone()))?;
+            if !self.goals.is_empty() {
+                self.maybe_break(DebugEvent::Goal(goal.clone()))?;
+            }
         }
 
         if self.log {
@@ -2830,6 +2831,10 @@ impl Runnable for PolarVirtualMachine {
 
     fn clone_runnable(&self) -> Box<dyn Runnable> {
         Box::new(self.clone())
+    }
+
+    fn get_vm(&self) -> Option<&crate::vm::PolarVirtualMachine> {
+        Some(self)
     }
 }
 

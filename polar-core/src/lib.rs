@@ -8,6 +8,7 @@ extern crate maplit;
 pub mod macros;
 
 mod bindings;
+pub(crate) mod cli;
 mod counter;
 mod debugger;
 pub mod error;
