@@ -259,8 +259,8 @@ where
         self
     }
 
-    /// Add a constant to the polar class.
-    pub fn add_constant<V: crate::ToPolar + Clone + Send + Sync + 'static>(
+    /// Store a constant on the class that will be registered once the class is registered.
+    pub fn add_constant<V: crate::ToPolar + Send + Sync + 'static>(
         mut self, 
         value: V, 
         name: &'static str
