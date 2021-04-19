@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Attribute, Fields, Lit, Meta, MetaNameValue, NestedMeta, Path};
+use syn::{Attribute, Data, DataEnum, DataStruct, Fields, Lit, Meta, MetaNameValue, NestedMeta, Path};
 
 #[derive(Debug, PartialEq)]
 enum OsoAttribute {
@@ -73,7 +73,7 @@ fn get_oso_attrs(attr: Attribute, oso_attrs: &mut Vec<OsoAttribute>) {
 
 #[proc_macro_derive(PolarClass, attributes(polar))]
 pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
-    let input = syn::parse_macro_input!(ts as syn::ItemStruct);
+    let input = syn::parse_macro_input!(ts as syn::DeriveInput);
 
     let type_name = input.ident;
     let mut class_name = type_name.to_string();
@@ -90,21 +90,33 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
     }
 
     let mut getters = vec![];
+    let mut constants = vec![];
 
-    if let Fields::Named(fields) = input.fields {
-        for field in fields.named {
-            let mut oso_attrs = vec![];
-            for attr in field.attrs {
-                get_oso_attrs(attr, &mut oso_attrs);
-            }
-            if oso_attrs.contains(&OsoAttribute::Attribute) {
-                let attr = field.ident.unwrap();
-                let name = attr.to_string();
-                getters.push(quote! {
-                    .add_attribute_getter(#name, |recv: &#type_name| recv.#attr.clone())
-                })
+    match input.data {
+        Data::Struct(DataStruct { fields: Fields::Named(fields), .. }) => {
+            for field in fields.named {
+                let mut oso_attrs = vec![];
+                for attr in field.attrs {
+                    get_oso_attrs(attr, &mut oso_attrs);
+                }
+                if oso_attrs.contains(&OsoAttribute::Attribute) {
+                    let attr = field.ident.unwrap();
+                    let name = attr.to_string();
+                    getters.push(quote! {
+                        .add_attribute_getter(#name, |recv: &#type_name| recv.#attr.clone())
+                    })
+                }
+            }    
+        }
+        Data::Enum(DataEnum { variants, .. }) => {
+            for variant in variants {
+                let constant_str = format!("{}::{}", class_name, variant.ident);
+                constants.push(quote! {
+                    // .constants()  
+                });
             }
         }
+        _ => unimplemented!(),
     }
 
     let result = quote! {
