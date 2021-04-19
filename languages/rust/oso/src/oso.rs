@@ -219,7 +219,13 @@ impl Oso {
     pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
         let name = class.name.clone();
         let class_name = self.host.cache_class(class.clone(), name)?;
-        self.register_constant(class, &class_name)
+        self.register_constant(class, &class_name)?;
+
+        for (name, value) in class.constants.iter() {
+            self.register_constant(*value, name)?;
+        } 
+
+        Ok(())
     }
 
     /// Register a rust type as a Polar constant.

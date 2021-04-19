@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::errors::{InvalidCallError, OsoError};
 
-use super::class_method::{AttributeGetter, ClassMethod, Constructor, InstanceMethod};
+use super::class_method::{AttributeGetter, ClassMethod, Constant, Constructor, InstanceMethod};
 use super::from_polar::FromPolarList;
 use super::method::{Function, Method};
 use super::to_polar::ToPolarResult;
@@ -15,6 +15,7 @@ use super::Host;
 use super::PolarValue;
 
 type Attributes = HashMap<&'static str, AttributeGetter>;
+type Constants = HashMap<&'static str, Constant>;
 type ClassMethods = HashMap<&'static str, ClassMethod>;
 type InstanceMethods = HashMap<&'static str, InstanceMethod>;
 
@@ -67,6 +68,10 @@ pub struct Class {
 
     into_iter:
         Arc<dyn Fn(&Host, &Instance) -> crate::Result<crate::host::PolarIterator> + Send + Sync>,
+    
+    // Constants to be added to the class once it's been registered with host.
+    // Could introduce a new PolarValue::Constant variant for this
+    pub constants: Constants,
 }
 
 impl Class {
@@ -146,6 +151,7 @@ where
                 equality_check: Arc::from(equality_not_supported()),
                 into_iter: Arc::from(iterator_not_supported()),
                 type_id: TypeId::of::<T>(),
+                constants: Constants::new(),
             },
             ty: std::marker::PhantomData,
         }
@@ -255,7 +261,14 @@ where
     }
 
     /// Add a constant to the polar class.
-    pub fn add_constant<V: crate::ToPolar>(mut self, value: V, name: &str) -> Self {
+    pub fn add_constant<V: crate::ToPolar + Send + Sync + 'static>(
+        mut self, 
+        value: V, 
+        name: &'static str
+    ) -> Self {
+        self.class
+            .constants
+            .insert(name, Constant::new(value));
         self 
     }
 
