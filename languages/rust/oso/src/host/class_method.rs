@@ -17,14 +17,16 @@ type TypeErasedMethod<R> =
     Arc<dyn Fn(&Instance, Vec<PolarValue>, &mut Host) -> crate::Result<R> + Send + Sync>;
 
 #[derive(Clone)]
-pub struct Constant(Arc<dyn ToPolar + Send + Sync + 'static>);
+pub struct Constant {
+    pub inner: Arc<dyn ToPolar + Send + Sync + 'static>
+}
 
 impl Constant {
     pub fn new<V>(value: V) -> Self
     where
         V: ToPolar + Send + Sync + 'static
     {
-        Constant(Arc::new(value))
+        Constant { inner: Arc::new(value) }
     }
 }
 

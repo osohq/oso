@@ -70,7 +70,6 @@ pub struct Class {
         Arc<dyn Fn(&Host, &Instance) -> crate::Result<crate::host::PolarIterator> + Send + Sync>,
     
     // Constants to be added to the class once it's been registered with host.
-    // Could introduce a new PolarValue::Constant variant for this
     pub constants: Constants,
 }
 
@@ -261,7 +260,7 @@ where
     }
 
     /// Add a constant to the polar class.
-    pub fn add_constant<V: crate::ToPolar + Send + Sync + 'static>(
+    pub fn add_constant<V: crate::ToPolar + Clone + Send + Sync + 'static>(
         mut self, 
         value: V, 
         name: &'static str

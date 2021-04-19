@@ -222,7 +222,8 @@ impl Oso {
         self.register_constant(class, &class_name)?;
 
         for (name, value) in class.constants.iter() {
-            self.register_constant(*value, name)?;
+            // This doesn't work since we don't know the size of the inner trait object
+            self.register_constant(*value.inner, name)?;
         } 
 
         Ok(())
