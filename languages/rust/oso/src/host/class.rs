@@ -254,6 +254,11 @@ where
         self
     }
 
+    /// Add a constant to the polar class.
+    pub fn add_constant<V: crate::ToPolar>(mut self, value: V, name: &str) -> Self {
+        self 
+    }
+
     /// Add a method for polar method calls like `foo.plus(1)
     /// `class.add_attribute_getter("bar", |instance, n| instance.foo + n)
     pub fn add_method<F, Args, R>(mut self, name: &'static str, f: F) -> Self
