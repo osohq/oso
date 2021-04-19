@@ -14,14 +14,17 @@ module.exports = {
     modules: [path.resolve(__dirname, 'node_modules')]
   },
   module: {
-    rules: [
-      {
+    rules: [{
         test: /\.css$/i,
         use: ['style-loader', 'css-loader']
       },
       {
         test: /\.ttf$/,
         use: ['file-loader']
+      },
+      {
+        test: /\.handlebars$/,
+        loader: "handlebars-loader"
       }
     ]
   },

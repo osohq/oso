@@ -1,7 +1,3 @@
-// import('oso')
-//   .catch(e => console.error('Error importing `oso`:', e))
-//   .then(m => (window.oso = m));
-
 import('monaco-editor-core').then(monaco => {
   // Monokai colors
   const COLOR = {
@@ -170,4 +166,133 @@ import('monaco-editor-core').then(monaco => {
         });
     }
   });
+});
+const searchResultsContainer = document.getElementById('search-results-container');
+// hide the search box
+window.hideSearch = function(e) {
+  if (searchModal.style.display == '') {
+    searchModal.style.display = 'none';
+  }
+}
+
+// load up a reference to the search input and add an event listener
+const searchInput = document.getElementById('search-input');
+if (searchInput) {
+  searchInput.addEventListener('input', (e) =>
+    window.searchInputKeyUp(e)
+  );
+}
+
+// this handles when the button on the left nav is clicked and it toggles the search box
+window.searchButtonClick = function(e) {
+  if (searchModal.style.display == 'none') {
+    searchInput.value = '';
+    searchModal.style.display = '';
+    searchResultsContainer.innerHTML = '';
+  }
+  searchInput.focus();
+}
+
+
+import('tinykeys').then(tinykeys => {
+  window.tinykeys(window, {
+    "$mod+KeyK": (e) => {
+      e.preventDefault();
+      window.searchButtonClick(e);
+    },
+    "Escape": (e) => {
+      window.hideSearch(e);
+    }
+  });
+});
+
+import('algoliasearch').then(_ => {
+  const searchResult = require("./search-result.handlebars");
+  const algoliasearch = require("algoliasearch");
+
+  // account from algolia
+  const algoliaAccount = "KROZ8F05YT";
+  // read only search key
+  const algoliaReadOnlySearchKey = "13594a3b7da482e011ce0ab08fdb4c4d";
+  // index name
+  const algoliaIndex = "prod_OSODOCS";
+
+  const client = algoliasearch(algoliaAccount, algoliaReadOnlySearchKey);
+  const index = client.initIndex(algoliaIndex);
+
+  const facetLanguageMeta = document.getElementById('facet-language');
+  var facetLanguage = "any";
+
+  if (facetLanguageMeta) {
+    facetLanguage = facetLanguageMeta.content;
+  }
+
+  window.processHits = function(hits) {
+    var results = "";
+    var count = 0;
+
+    hits.forEach(element => {
+      results += searchResult({
+        count: count,
+        category: element.section + " -> " + element.language,
+        title: element.title,
+        link: element.permalink,
+      })
+      count += 1;
+    });
+    searchResultsContainer.innerHTML = results;
+  }
+
+  window.searchInputKeyUp = function(event) {
+    event.preventDefault();
+    var term = searchInput.value;
+
+    if (term != '') {
+      if (facetLanguage == 'any') {
+        searchTerm(term);
+      } else {
+        searchTermWithFacet(searchInput.value, facetLanguage);
+      }
+    }
+  }
+
+  // this searches for a term without a facet
+  window.searchTerm = function(term) {
+    index.search(term, {
+      "analytics": true,
+      "hitsPerPage": 5,
+      "attributesToSnippet": "*:20",
+      "snippetEllipsisText": "..."
+    }).then(({
+      hits
+    }) => {
+      window.processHits(hits);
+    });
+  }
+
+  // this search for a term WITH a facet
+  window.searchTermWithFacet = function(term, language) {
+    index.search(term, {
+      "analytics": true,
+      "hitsPerPage": 5,
+      "attributesToSnippet": "*:20",
+      "snippetEllipsisText": "...",
+      "maxValuesPerFacet": 5,
+      "page": 0,
+      "facets": [
+        "*",
+        "language"
+      ],
+      "facetFilters": [
+        [
+          "language:" + language
+        ]
+      ]
+    }).then(({
+      hits
+    }) => {
+      window.processHits(hits);
+    });
+  }
+
 });
