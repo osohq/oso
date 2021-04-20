@@ -101,7 +101,7 @@ def test_roles():
     """
     oso.load_str(policy)
 
-    #engine = create_engine("sqlite:///roles.db")
+    # engine = create_engine("sqlite:///roles.db")
     engine = create_engine("sqlite://")
     # @NOTE: Right now this has to happen after enabling oso roles to get the
     #        tables.

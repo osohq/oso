@@ -101,7 +101,6 @@ class OsoRoles:
             from_role = Column(String, ForeignKey("roles.name"))
             to_role = Column(String, ForeignKey("roles.name"))
 
-
         self.oso = oso
         self.UserRole = UserRole
         self.Permission = Permission
@@ -178,7 +177,7 @@ class OsoRoles:
                 parent_type=parent_t,
                 parent_table=parent_table,
                 parent_selector=make_getter(parent_field),
-                parent_field=parent_field
+                parent_field=parent_field,
             )
 
             self.relationships.append(relationship)
@@ -291,16 +290,22 @@ class OsoRoles:
         role_permissions = []
         role_implications = []
         for _, role in self.roles.items():
-            roles.append(self.Role(name=role.name, resource_type=role.python_class[0].__name__))
+            roles.append(
+                self.Role(name=role.name, resource_type=role.python_class[0].__name__)
+            )
             for permission in role.permissions:
                 perm_name = permission.name
                 perm_type = str(permission.python_class[0].__name__)
                 perm_key = (perm_name, perm_type)
                 assert perm_key in permissions
                 perm = permissions[perm_key]
-                role_permissions.append(self.RolePermission(role=role.name, permission_id=perm.id))
+                role_permissions.append(
+                    self.RolePermission(role=role.name, permission_id=perm.id)
+                )
             for implies in role.implied_roles:
-                role_implications.append(self.RoleImplication(from_role=role.name, to_role=implies))
+                role_implications.append(
+                    self.RoleImplication(from_role=role.name, to_role=implies)
+                )
 
         for role in roles:
             self.session.add(role)
@@ -319,8 +324,12 @@ class OsoRoles:
 
         # @NOTE: WOW HACK
         for relationship in self.relationships:
-            parent_id_field = inspect(relationship.parent_python_class).primary_key[0].name
-            child_id_field = inspect(relationship.child_python_class).primary_key[0].name
+            parent_id_field = (
+                inspect(relationship.parent_python_class).primary_key[0].name
+            )
+            child_id_field = (
+                inspect(relationship.child_python_class).primary_key[0].name
+            )
 
             parent_id = parent_id_field
             parent_table = relationship.parent_table
@@ -329,7 +338,9 @@ class OsoRoles:
             child_table = relationship.child_table
             child_type = relationship.child_type
             sqlalchemy_field = relationship.parent_field
-            relationship = inspect(relationship.child_python_class).relationships[sqlalchemy_field]
+            relationship = inspect(relationship.child_python_class).relationships[
+                sqlalchemy_field
+            ]
             parent_join_field = list(relationship.remote_side)[0].name
             child_join_field = list(relationship.local_columns)[0].name
             select = f"select p.{parent_id} from {child_table} c join {parent_table} p on c.{child_join_field} = p.{parent_join_field} where c.{child_id} = resources.id"
@@ -418,7 +429,15 @@ class OsoRoles:
         resource_pk_name = inspect(resource.__class__).primary_key[0].name
         resource_id = getattr(resource, resource_pk_name)
 
-        results = self.session.execute(self.sql_query, {"user_id": user.id, "action": action, "resource_id": resource_id, "resource_type": resource.__class__.__name__})
+        results = self.session.execute(
+            self.sql_query,
+            {
+                "user_id": user.id,
+                "action": action,
+                "resource_id": resource_id,
+                "resource_type": resource.__class__.__name__,
+            },
+        )
         role = results.first()
         if role:
             return True
