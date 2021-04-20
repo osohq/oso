@@ -15,8 +15,13 @@ from sqlalchemy import inspect
 @dataclass
 class Relationship:
     child_python_class: Any
+    child_type: str
+    child_table: str
     parent_python_class: Any
+    parent_type: str
+    parent_table: str
     parent_selector: Any
+    parent_field: str
 
 
 @dataclass
@@ -62,6 +67,7 @@ class OsoRoles:
         user_pk_name = inspect(user_model).primary_key[0].name
         user_table_name = user_model.__tablename__
 
+        # Tables for the management api to save data.
         class UserRole(sqlalchemy_base):
             __tablename__ = "user_roles"
             id = Column(Integer, primary_key=True)
@@ -72,8 +78,47 @@ class OsoRoles:
             resource_id = Column(String)  # Most things can turn into a string lol.
             role = Column(String)
 
+        # Tables to sync static data to so we can join to it.
+        class Relationship(sqlalchemy_base):
+            __tablename__ = "relationships"
+            id = Column(Integer, primary_key=True)
+            child_type = Column(String)
+            child_table = Column(String)
+            parent_type = Column(String)
+            parent_table = Column(String)
+            parent_field = Column(String)
+
+        class Permission(sqlalchemy_base):
+            __tablename__ = "permissions"
+            id = Column(Integer, primary_key=True)
+            resource_type = Column(String)
+            name = Column(String)
+
+        class Role(sqlalchemy_base):
+            __tablename__ = "roles"
+            name = Column(String, primary_key=True)
+            resource_type = Column(String)
+
+        class RolePermission(sqlalchemy_base):
+            __tablename__ = "role_permissions"
+            id = Column(Integer, primary_key=True)
+            role = Column(String, ForeignKey("roles.name"))
+            permission_id = Column(Integer, ForeignKey("permissions.id"))
+
+        class RoleImplication(sqlalchemy_base):
+            __tablename__ = "role_implications"
+            id = Column(Integer, primary_key=True)
+            from_role = Column(String, ForeignKey("roles.name"))
+            to_role = Column(String, ForeignKey("roles.name"))
+
+
         self.oso = oso
+        self.Relationship = Relationship
         self.UserRole = UserRole
+        self.Permission = Permission
+        self.Role = Role
+        self.RolePermission = RolePermission
+        self.RoleImplication = RoleImplication
 
         self.resources = {}
         self.permissions = []
@@ -84,6 +129,9 @@ class OsoRoles:
 
     def _configure(self):
         # @TODO: ALLLLL of the validation needed for the role model.
+
+        # @TODO: Figure out where this session should really come from.
+        assert self.session
 
         self.resources = {}
         self.permissions = []
@@ -128,10 +176,20 @@ class OsoRoles:
 
                 return get_parent
 
+            child_python_class = self.oso.host.classes[child_t]
+            child_table = child_python_class.__tablename__
+            parent_python_class = self.oso.host.classes[parent_t]
+            parent_table = parent_python_class.__tablename__
+
             relationship = Relationship(
-                child_python_class=self.oso.host.classes[child_t],
-                parent_python_class=self.oso.host.classes[parent_t],
+                child_python_class=child_python_class,
+                child_type=child_t,
+                child_table=child_table,
+                parent_python_class=parent_python_class,
+                parent_type=parent_t,
+                parent_table=parent_table,
                 parent_selector=make_getter(parent_field),
+                parent_field=parent_field
             )
 
             self.relationships.append(relationship)
@@ -222,6 +280,54 @@ class OsoRoles:
                         implied_roles=implied_roles,
                     )
                     self.roles[role.name] = role
+
+        # Sync static data to the database.
+        self.session.execute("delete from relationships")
+        self.session.execute("delete from role_permissions")
+        self.session.execute("delete from role_implications")
+        self.session.execute("delete from roles")
+        self.session.execute("delete from permissions")
+
+        relationships = [self.Relationship(child_type=r.child_type, child_table=r.child_table, parent_type=r.parent_type, parent_table=r.parent_table, parent_field=r.parent_field) for r in self.relationships]
+        for r in relationships:
+            self.session.add(r)
+
+        permissions = {}
+        for p in self.permissions:
+            name = p.name
+            t = str(p.python_class[0].__name__)
+            permissions[(name, t)] = self.Permission(resource_type=t, name=name)
+
+        for _, p in permissions.items():
+            self.session.add(p)
+
+        self.session.commit()
+
+        roles = []
+        role_permissions = []
+        role_implications = []
+        for _, role in self.roles.items():
+            roles.append(self.Role(name=role.name, resource_type=role.python_class[0].__name__))
+            for permission in role.permissions:
+                perm_name = permission.name
+                perm_type = str(permission.python_class[0].__name__)
+                perm_key = (perm_name, perm_type)
+                assert perm_key in permissions
+                perm = permissions[perm_key]
+                role_permissions.append(self.RolePermission(role=role.name, permission_id=perm.id))
+            for implies in role.implied_roles:
+                role_implications.append(self.RoleImplication(from_role=role.name, to_role=implies))
+
+        for role in roles:
+            self.session.add(role)
+
+        for rp in role_permissions:
+            self.session.add(rp)
+
+        for ri in role_implications:
+            self.session.add(ri)
+
+        self.session.commit()
 
         self.configured = True
 

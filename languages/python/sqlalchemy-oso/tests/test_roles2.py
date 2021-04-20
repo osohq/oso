@@ -101,6 +101,7 @@ def test_roles():
     """
     oso.load_str(policy)
 
+    #engine = create_engine("sqlite:///roles.db")
     engine = create_engine("sqlite://")
     # @NOTE: Right now this has to happen after enabling oso roles to get the
     #        tables.
@@ -121,16 +122,16 @@ def test_roles():
         session.add(obj)
     session.commit()
 
+    # @TODO: How the heck should this work?
+    # not like this...
+    roles.session = session
+
     # @NOTE: Need the users and resources in the db before assigning roles
     # so you have to call session.commit() first.
     roles.assign_role(session, leina, osohq, "org_owner")
     roles.assign_role(session, steve, osohq, "org_member")
     # @NOTE: Need to call it after too...
     session.commit()
-
-    # @TODO: How the heck should this work?
-    # not like this...
-    roles.session = session
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "create_repo", osohq)
