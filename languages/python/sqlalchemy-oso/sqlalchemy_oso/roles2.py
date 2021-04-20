@@ -78,16 +78,6 @@ class OsoRoles:
             resource_id = Column(String)  # Most things can turn into a string lol.
             role = Column(String)
 
-        # Tables to sync static data to so we can join to it.
-        class Relationship(sqlalchemy_base):
-            __tablename__ = "relationships"
-            id = Column(Integer, primary_key=True)
-            child_type = Column(String)
-            child_table = Column(String)
-            parent_type = Column(String)
-            parent_table = Column(String)
-            parent_field = Column(String)
-
         class Permission(sqlalchemy_base):
             __tablename__ = "permissions"
             id = Column(Integer, primary_key=True)
@@ -113,7 +103,6 @@ class OsoRoles:
 
 
         self.oso = oso
-        self.Relationship = Relationship
         self.UserRole = UserRole
         self.Permission = Permission
         self.Role = Role
@@ -282,15 +271,10 @@ class OsoRoles:
                     self.roles[role.name] = role
 
         # Sync static data to the database.
-        self.session.execute("delete from relationships")
         self.session.execute("delete from role_permissions")
         self.session.execute("delete from role_implications")
         self.session.execute("delete from roles")
         self.session.execute("delete from permissions")
-
-        relationships = [self.Relationship(child_type=r.child_type, child_table=r.child_table, parent_type=r.parent_type, parent_table=r.parent_table, parent_field=r.parent_field) for r in self.relationships]
-        for r in relationships:
-            self.session.add(r)
 
         permissions = {}
         for p in self.permissions:
@@ -329,105 +313,117 @@ class OsoRoles:
 
         self.session.commit()
 
+        id_query = "case resources.type\n"
+        type_query = "case resources.type\n"
+        child_types = []
+
+        # @NOTE: WOW HACK
+        for relationship in self.relationships:
+            parent_id_field = inspect(relationship.parent_python_class).primary_key[0].name
+            child_id_field = inspect(relationship.child_python_class).primary_key[0].name
+
+            parent_id = parent_id_field
+            parent_table = relationship.parent_table
+            parent_type = relationship.parent_type
+            child_id = child_id_field
+            child_table = relationship.child_table
+            child_type = relationship.child_type
+            sqlalchemy_field = relationship.parent_field
+            relationship = inspect(relationship.child_python_class).relationships[sqlalchemy_field]
+            parent_join_field = list(relationship.remote_side)[0].name
+            child_join_field = list(relationship.local_columns)[0].name
+            select = f"select p.{parent_id} from {child_table} c join {parent_table} p on c.{child_join_field} = p.{parent_join_field} where c.{child_id} = resources.id"
+
+            id_query += f""
+
+            id_query += f"when '{child_type}' then (\n"
+            id_query += select
+            id_query += "\n)\n"
+
+            type_query += f"when '{child_type}' then '{parent_type}'\n"
+
+            child_types.append(child_type)
+
+        id_query += "end as id,"
+        type_query += "end as type"
+
+        self.sql_query = f"""
+        -- get all the relevant resources by walking the parent tree
+        with resources as (
+            with recursive resources (id, type) as (
+                select
+                    :resource_id as id,
+                    :resource_type as type
+                union
+                -- this would have to be generated based on all the relationships
+                -- I hope there's a way to do this in sqlalchemy but if not it wouldn't
+                -- really be too hard to generate the sql
+                select
+                    {id_query}
+                    {type_query}
+                from resources
+                where type in {str(tuple(child_types))}
+            ) select * from resources
+        ), allow_permission as (
+            -- Find the permission
+            select
+                p.id
+            from permissions p
+            where p.resource_type = :resource_type and p.name = :action
+        ), permission_roles as (
+            -- find roles with the permission
+            select
+                rp.role
+            from role_permissions rp
+            join allow_permission ap
+            where rp.permission_id = ap.id
+        ), relevant_roles as (
+            -- recursively find all roles that have the permission or
+            -- imply a role that has the permission
+            with recursive relevant_roles (role) as (
+                select
+                    role
+                from permission_roles
+                union
+                select
+                    ri.from_role
+                from role_implications ri
+                join relevant_roles rr
+                on ri.to_role = rr.role
+            ) select * from relevant_roles
+        ), user_in_role as (
+            -- check if the user has any of those roles on any of the relevant resources
+            select
+                ur.resource_type,
+                ur.resource_id,
+                ur.role
+            from user_roles ur
+            join relevant_roles rr
+            on rr.role = ur.role
+            join resources r
+            on r.type = ur.resource_type and r.id = ur.resource_id
+            where ur.user_id = :user_id
+        ) select * from user_in_role;
+        """
+
         self.configured = True
 
     def _role_allows(self, user, action, resource):
         # @TODO: Figure out where this session should really come from.
         assert self.session
 
-        # @NOTE: First pass at this does things in a slow way that won't really scale to having to do
-        # it all in a single sql query which is necessary for the list processing cases.
-        # This first pass is important as a baseline for the evaluation.
-
-        # A user is aloud to take an action on a resource if they have permission to.
-        # That permission comes from a role.
-        # That role comes from one of
-        # - a direct assignment of the user to the role with the permission, or
-        # - assignment of the user to a role that implies the role with the permission
-
-        # The permission can be on a role for the passed in resource or a role
-        # for any resource that's an ancestor of the passed in resource.
-        # We can use the defined relationships to "walk up" the tree of resources
-        # to get all the ancestor resources.
-        # We'll need to know those so we can check if the user is assigned to roles
-        # on them so we'll start by fetching them all.
-        relevent_resources = {resource.__class__: resource}
-        current_resource = resource
-        current_resource_class = resource.__class__
-        stepped = True
-        while stepped:
-            stepped = False
-            for relationship in self.relationships:
-                if relationship.child_python_class == current_resource_class:
-                    current_resource = relationship.parent_selector(current_resource)
-                    current_resource_class = current_resource.__class__
-                    assert current_resource_class == relationship.parent_python_class
-                    relevent_resources[current_resource_class] = current_resource
-                    stepped = True
-                    break
-
-        # Now we can try to resolve the allow call.
-        #
-        # Start by finding the permission for this action on this resource type.
-        permission = None
-        for perm in self.permissions:
-            if resource.__class__ in perm.python_class and action == perm.name:
-                permission = perm
-                break
-        if not permission:
-            return False
-
-        # @TODO: Check scoped role permissions for any scoped roles with this
-        # permission.
-
-        # Go through all static roles to see if they contain this permission.
-        relevant_roles = {}
-        for role_name, role in self.roles.items():
-            for role_perm in role.permissions:
-                if (
-                    role_perm.python_class == permission.python_class
-                    and role_perm.name == permission.name
-                ):
-                    # TODO: Check if the role is scoped to any relevant resources.
-                    relevant_roles[role_name] = role
-
-        # Recursively add any roles that imply a relevant role to relevant_roles
-        # @TODO: Check scoped implications.
-        while True:
-            size = len(relevant_roles)
-            for role_name, role in self.roles.items():
-                for implied_role in role.implied_roles:
-                    if implied_role in relevant_roles:
-                        relevant_roles[role_name] = role
-                        break
-            if len(relevant_roles) == size:
-                break
-
-        # Now we have all the roles the user could be assigned to that would give them
-        # this permission.
-        # Check if the user is in any of these roles.
-
-        # First pass just get all the roles the user is assigned to and then compare.
         user_pk_name = inspect(user.__class__).primary_key[0].name
         user_id = getattr(user, user_pk_name)
 
-        user_roles = self.session.query(self.UserRole).filter_by(user_id=user_id).all()
+        resource_pk_name = inspect(resource.__class__).primary_key[0].name
+        resource_id = getattr(resource, resource_pk_name)
 
-        for _, relevent_resource in relevent_resources.items():
-            resource_type = relevent_resource.__class__.__name__
-            resource_pk_name = inspect(relevent_resource.__class__).primary_key[0].name
-            resource_id = str(getattr(relevent_resource, resource_pk_name))
-
-            for user_role in user_roles:
-                for role_name, role in relevant_roles.items():
-                    if (
-                        user_role.resource_type == resource_type
-                        and user_role.resource_id == resource_id
-                        and user_role.role == role_name
-                    ):
-                        return True
-
-        return False
+        results = self.session.execute(self.sql_query, {"user_id": user.id, "action": action, "resource_id": resource_id, "resource_type": resource.__class__.__name__})
+        role = results.first()
+        if role:
+            return True
+        else:
+            return False
 
     def enable(self):
         class Roles:
