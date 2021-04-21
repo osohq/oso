@@ -1881,7 +1881,10 @@ impl PolarVirtualMachine {
             | Value::Number(_)
             | Value::String(_) => {
                 // check for partial arguments to an external call
-                self.check_partial_args(term, field, object)?;
+                if self.check_partial_args(object, field, value)? {
+                    // if there is a valid partial argument, it means we have a special case handler, so don't call out to the method
+                    return Ok(QueryEvent::None);
+                }
                 let value = value
                     .value()
                     .as_symbol()
@@ -1932,11 +1935,12 @@ impl PolarVirtualMachine {
     /// The only exception is the method `OsoRoles.role_allows()`, which expects a partially bound resource argument
     fn check_partial_args(
         &mut self,
-        og_term: &Term,
-        field: &Term,
         object: &Term,
-    ) -> PolarResult<()> {
+        field: &Term,
+        value: &Term,
+    ) -> PolarResult<bool> {
         // If the lookup is a `Value::Call`, then we need to check for partial args
+        let mut has_partial_arg = false;
         if let Value::Call(Call { name, args, kwargs }) = field.value() {
             // get all arg values (args + kwargs)
             let mut arg_values = args.clone();
@@ -1964,8 +1968,21 @@ impl PolarVirtualMachine {
                                         && name.0 == "role_allows"
                                         && i == 2
                                     {
-                                        // add constraint for roles call
-                                        self.add_constraint(og_term)?;
+                                        // add constraint for role_allows call
+                                        let dot = op!(
+                                            Dot,
+                                            object.clone(),
+                                            field.clone_with_value(Value::Call(Call {
+                                                name: name.clone(),
+                                                args: vec![arg.clone()],
+                                                kwargs: None
+                                            }))
+                                        );
+                                        let term =
+                                            &op!(Unify, value.clone(), dot.into_term()).into_term();
+                                        eprintln!("term to constrain: {:?}", term.to_polar());
+                                        self.add_constraint(term)?;
+                                        has_partial_arg = true;
                                         continue;
                                     }
                                 }
@@ -1982,7 +1999,7 @@ impl PolarVirtualMachine {
                 }
             }
         }
-        Ok(())
+        Ok(has_partial_arg)
     }
 
     fn in_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {

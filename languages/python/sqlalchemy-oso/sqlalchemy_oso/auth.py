@@ -79,13 +79,16 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
 
     combined_filter = None
     has_result = False
+    has_role_allows = False
     for result in results:
         has_result = True
 
         resource_partial = result["bindings"]["resource"]
-        filter = partial_to_filter(
+        filter, role_allows = partial_to_filter(
             resource_partial, session, model, get_model=oso.get_class
         )
+        has_role_allows |= role_allows
+
         if combined_filter is None:
             combined_filter = filter
         else:
@@ -93,5 +96,11 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
 
     if not has_result:
         return sql.false()
+
+    if has_role_allows:
+        # TODO: is this the right place to do this? Should it be inside of `_authorize_query()` instead?
+        print(
+            f"call special roles function with actor: {actor}, action: {action}, resource_filter: {combined_filter}"
+        )
 
     return combined_filter

@@ -10,6 +10,7 @@ from polar.partial import dot_path
 from polar.expression import Expression
 from polar.variable import Variable
 from polar.exceptions import UnsupportedError
+from polar.predicate import Predicate
 
 from sqlalchemy_oso.preprocess import preprocess
 
@@ -44,7 +45,32 @@ def flip_op(operator):
 def partial_to_filter(expression: Expression, session: Session, model, get_model):
     """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
     expression = preprocess(expression)
-    return translate_expr(expression, session, model, get_model)
+
+    role_allows = False
+    if contains_role_allows(expression):
+        role_allows = True
+
+    return (translate_expr(expression, session, model, get_model), role_allows)
+
+
+def contains_role_allows(expression: Expression):
+    assert expression.operator == "And"
+    for expr in expression.args:
+        op = expr.operator
+        left = expr.args[0]
+        right = expr.args[1]
+        if (
+            op == "Unify"
+            and left == True
+            and right.operator == "Dot"
+            # TODO: check type of right.args[0] (should match whatever the roles object is)
+            # and type(right.args[0]) == OsoRoles
+            and type(right.args[1]) == Predicate
+            and right.args[1].name == "role_allows"
+        ):
+            expression.args.remove(expr)
+            return True
+    return False
 
 
 def translate_expr(expression: Expression, session: Session, model, get_model):
