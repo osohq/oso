@@ -290,3 +290,16 @@ def test_regular_session(engine, oso, fixture_data):
 
     # No posts would be returned if authorization was applied.
     assert posts.count() == 9
+
+
+def test_unconditional_policy_has_no_filter(engine, oso, fixture_data):
+    oso.load_str('allow("user", "read", post: Post) if post.id = 1; allow(_, _, _);')
+    session = AuthorizedSession(oso, user="user", action="read", bind=engine)
+
+    query = session.query(Post)
+
+    assert str(query) == (
+        "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title, "
+        + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
+        + "posts.needs_moderation AS posts_needs_moderation \nFROM posts \nWHERE 1 = 1"
+    )
