@@ -1,6 +1,8 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Attribute, Data, DataEnum, DataStruct, Fields, Lit, Meta, MetaNameValue, NestedMeta, Path};
+use syn::{
+    Attribute, Data, DataEnum, DataStruct, Fields, Lit, Meta, MetaNameValue, NestedMeta, Path,
+};
 
 #[derive(Debug, PartialEq)]
 enum OsoAttribute {
@@ -93,7 +95,10 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
     let mut constants = vec![];
 
     match input.data {
-        Data::Struct(DataStruct { fields: Fields::Named(fields), .. }) => {
+        Data::Struct(DataStruct {
+            fields: Fields::Named(fields),
+            ..
+        }) => {
             for field in fields.named {
                 let mut oso_attrs = vec![];
                 for attr in field.attrs {
@@ -106,7 +111,7 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
                         .add_attribute_getter(#name, |recv: &#type_name| recv.#attr.clone())
                     })
                 }
-            }    
+            }
         }
         Data::Enum(DataEnum { variants, .. }) => {
             for variant in variants {

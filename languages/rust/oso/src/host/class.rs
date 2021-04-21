@@ -7,7 +7,9 @@ use std::sync::Arc;
 
 use crate::errors::{InvalidCallError, OsoError};
 
-use super::class_method::{AttributeGetter, ClassMethod, Constructor, InstanceMethod, RegisterHook};
+use super::class_method::{
+    AttributeGetter, ClassMethod, Constructor, InstanceMethod, RegisterHook,
+};
 use super::from_polar::FromPolarList;
 use super::method::{Function, Method};
 use super::to_polar::ToPolarResult;
@@ -68,7 +70,7 @@ pub struct Class {
 
     into_iter:
         Arc<dyn Fn(&Host, &Instance) -> crate::Result<crate::host::PolarIterator> + Send + Sync>,
-    
+
     // Hooks to be called on the class once it's been registered with host.
     pub register_hooks: RegisterHooks,
 }
@@ -261,17 +263,15 @@ where
 
     /// Add a RegisterHook on the class that will register the given constant once the class is registered.
     pub fn add_constant<V: crate::ToPolar + Clone + Send + Sync + 'static>(
-        mut self, 
-        value: V, 
-        name: &'static str
+        mut self,
+        value: V,
+        name: &'static str,
     ) -> Self {
-        let register_hook = move |oso: &mut crate::Oso| {
-            oso.register_constant(value.clone(), name)  
-        };
+        let register_hook = move |oso: &mut crate::Oso| oso.register_constant(value.clone(), name);
         self.class
             .register_hooks
             .push(RegisterHook::new(register_hook));
-        self 
+        self
     }
 
     /// Add a method for polar method calls like `foo.plus(1)
