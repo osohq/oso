@@ -19,9 +19,12 @@ pub type Bindings = HashMap<Symbol, Term>;
 pub type Bsp = Bsps;
 pub type FollowerId = usize;
 
+/// Bsps represents bsps of a binding manager and its followers as a tree.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Bsps {
-    bsp: usize,
+    /// Index into `bindings` array
+    bindings_index: usize,
+    /// Store bsps of followers (and their followers) by follower id.
     followers: HashMap<FollowerId, Bsps>,
 }
 
@@ -34,7 +37,7 @@ pub struct Bsps {
 pub enum VariableState {
     Unbound,
     Bound(Term),
-    Partial(),
+    Partial,
 }
 
 /// Represent each binding in a cycle as a unification constraint.
@@ -57,8 +60,8 @@ impl From<BindingManagerVariableState<'_>> for VariableState {
         match other {
             BindingManagerVariableState::Unbound => VariableState::Unbound,
             BindingManagerVariableState::Bound(b) => VariableState::Bound(b),
-            BindingManagerVariableState::Cycle(_) => VariableState::Partial(),
-            BindingManagerVariableState::Partial(_) => VariableState::Partial(),
+            BindingManagerVariableState::Cycle(_) => VariableState::Partial,
+            BindingManagerVariableState::Partial(_) => VariableState::Partial,
         }
     }
 }
@@ -204,7 +207,7 @@ impl BindingManager {
                 }
                 BindingManagerVariableState::Bound(v) => {
                     panic!(
-                        "Unexpected bound variable {} in constraint. {var} = {val}",
+                        "Unexpected bound variable {var} in constraint. {var} = {val}",
                         var = var,
                         val = v
                     );
@@ -227,7 +230,7 @@ impl BindingManager {
         })
         .unwrap();
 
-        self.bindings.truncate(to.bsp)
+        self.bindings.truncate(to.bindings_index)
     }
 
     // *** Binding Inspection ***
@@ -318,14 +321,14 @@ impl BindingManager {
     }
 
     pub fn variable_state_at_point(&self, variable: &Symbol, bsp: &Bsp) -> VariableState {
-        let bsp = bsp.bsp;
+        let bsp = bsp.bindings_index;
         let mut next = variable;
         while let Some(value) = self.value(next, bsp) {
             match value.value() {
-                Value::Expression(_) => return VariableState::Partial(),
+                Value::Expression(_) => return VariableState::Partial,
                 Value::Variable(v) | Value::RestVariable(v) => {
                     if v == variable {
-                        return VariableState::Partial();
+                        return VariableState::Partial;
                     } else {
                         next = v;
                     }
@@ -354,7 +357,7 @@ impl BindingManager {
             .collect::<HashMap<_, _>>();
 
         Bsps {
-            bsp: self.bindings.len(),
+            bindings_index: self.bindings.len(),
             followers: follower_bsps,
         }
     }
@@ -365,7 +368,7 @@ impl BindingManager {
 
     pub fn bindings_after(&self, include_temps: bool, after: &Bsp) -> Bindings {
         let mut bindings = HashMap::new();
-        for Binding(var, value) in &self.bindings[after.bsp..] {
+        for Binding(var, value) in &self.bindings[after.bindings_index..] {
             if !include_temps && var.is_temporary_var() {
                 continue;
             }
@@ -377,7 +380,7 @@ impl BindingManager {
     pub fn variable_bindings(&self, variables: &HashSet<Symbol>) -> Bindings {
         let mut bindings = HashMap::new();
         for var in variables.iter() {
-            let value = self.value(var, self.bsp().bsp);
+            let value = self.value(var, self.bsp().bindings_index);
             if let Some(value) = value {
                 bindings.insert(var.clone(), self.deep_deref(value));
             }
@@ -535,7 +538,7 @@ impl BindingManager {
         variable: &Symbol,
         bsp: &Bsp,
     ) -> BindingManagerVariableState {
-        let bsp = bsp.bsp;
+        let bsp = bsp.bindings_index;
         let mut path = vec![variable];
         while let Some(value) = self.value(path.last().unwrap(), bsp) {
             match value.value() {
@@ -865,6 +868,10 @@ mod test {
         let bsp = b1.bsp();
 
         b1.bind(&sym!("a"), term!(sym!("x"))).unwrap();
+        assert!(matches!(
+            b1.variable_state(&sym!("a")),
+            VariableState::Partial
+        ));
 
         b1.backtrack(&bsp);
         let b2 = b1.remove_follower(&b2_id).unwrap();

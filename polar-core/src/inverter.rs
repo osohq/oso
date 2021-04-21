@@ -209,6 +209,7 @@ impl Runnable for Inverter {
                         let constraints =
                             results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
                         let mut bsp = Bsp::default();
+                        // Use mem swap to avoid cloning bsps.
                         std::mem::swap(&mut self.bsp, &mut bsp);
                         let constraints = filter_inverted_constraints(constraints, &self.vm, bsp);
 

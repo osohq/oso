@@ -348,7 +348,7 @@ impl PolarVirtualMachine {
 
         impl<'vm> Visitor for VarVisitor<'vm> {
             fn visit_variable(&mut self, v: &Symbol) {
-                if matches!(self.vm.variable_state(v), VariableState::Partial()) {
+                if matches!(self.vm.variable_state(v), VariableState::Partial) {
                     self.has_partial = true;
                 }
             }
