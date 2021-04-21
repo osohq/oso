@@ -17,9 +17,7 @@ type TypeErasedMethod<R> =
     Arc<dyn Fn(&Instance, Vec<PolarValue>, &mut Host) -> crate::Result<R> + Send + Sync>;
 
 #[derive(Clone)]
-pub struct RegisterHook(
-    Arc<dyn Fn(&mut crate::Oso) -> crate::Result<()> + Send + Sync + 'static>
-);
+pub struct RegisterHook(Arc<dyn Fn(&mut crate::Oso) -> crate::Result<()> + Send + Sync + 'static>);
 
 impl RegisterHook {
     pub fn new<F>(f: F) -> Self
