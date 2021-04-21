@@ -175,7 +175,7 @@ fn filter_inverted_constraints(
         .into_iter()
         .filter(|(k, _)| {
             !(matches!(
-                vm.variable_state_at_point(k, bsp),
+                vm.variable_state_at_point(k, &bsp),
                 VariableState::Unbound | VariableState::Bound(_)
             ))
         })
@@ -208,8 +208,10 @@ impl Runnable for Inverter {
                         // out to the parent VM.
                         let constraints =
                             results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
-                        let constraints =
-                            filter_inverted_constraints(constraints, &self.vm, self.bsp);
+                        let mut bsp = Bsp::default();
+                        // Use mem swap to avoid cloning bsps.
+                        std::mem::swap(&mut self.bsp, &mut bsp);
+                        let constraints = filter_inverted_constraints(constraints, &self.vm, bsp);
 
                         if !constraints.is_empty() {
                             // Return inverted constraints to parent VM.
