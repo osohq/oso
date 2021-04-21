@@ -10,6 +10,7 @@ CURL_ERROR = "curl: (7) Failed to connect to localhost port 5050: Connection ref
 CURL_EMPTY = "curl: (52) Empty reply from server\n"
 
 quickstarts = [
+  { lang: 'go', setup: 'go build', server: './oso-go-quickstart' },
   { lang: 'java', setup: 'make build', server: 'make run' },
   { lang: 'nodejs', setup: 'npm i', server: 'npm start' },
   { lang: 'python', setup: 'pip install --upgrade -r requirements.txt', server: 'python server.py' },
@@ -47,7 +48,7 @@ end
 
 quickstarts.each do |qs|
   lang = qs[:lang]
-  qs_dir = File.join(File.expand_path(__dir__), "oso-#{lang}-quickstart")
+  qs_dir = File.join(File.expand_path(__dir__), lang)
   Bundler.with_unbundled_env do
     Dir.chdir(qs_dir) do
       prefix = "#{Time.now.to_i} [#{lang}]"
@@ -63,8 +64,8 @@ quickstarts.each do |qs|
           server, received = start_server qs[:server], 'alice@example.com', 1
           puts "#{prefix} Testing with no rules..."
           puts "#{prefix} Checking that Alice cannot see their own expense..."
-          expected = "Not Authorized!\n"
-          if received != expected
+          expected = 'Not Authorized!'
+          if received.strip != expected
             raise "#{lang.upcase} failure\n\texpected: #{expected.inspect}\n\treceived: #{received.inspect}\n"
           end
 
@@ -85,8 +86,8 @@ quickstarts.each do |qs|
           end
           puts "#{prefix} Checking that alice@foo.bar cannot see any expense..."
           received = `curl -sSH "user: alice@foo.bar" localhost:5050/expenses/1 2>&1`
-          expected = "Not Authorized!\n"
-          if received != expected
+          expected = 'Not Authorized!'
+          if received.strip != expected
             raise "#{lang.upcase} failure\n\texpected: #{expected.inspect}\n\treceived: #{received.inspect}\n"
           end
 
@@ -115,15 +116,15 @@ quickstarts.each do |qs|
 
           puts "#{prefix} Checking that Alice cannot see Bhavik's expense..."
           received = `curl -sSH "user: alice@example.com" localhost:5050/expenses/3 2>&1`
-          expected = "Not Authorized!\n"
-          if received != expected
+          expected = 'Not Authorized!'
+          if received.strip != expected
             raise "#{lang.upcase} failure\n\texpected: #{expected.inspect}\n\treceived: #{received.inspect}\n"
           end
 
           puts "#{prefix} Checking that Bhavik cannot see Alice's expense..."
           received = `curl -sSH "user: bhavik@example.com" localhost:5050/expenses/1 2>&1`
-          expected = "Not Authorized!\n"
-          if received != expected
+          expected = 'Not Authorized!'
+          if received.strip != expected
             raise "#{lang.upcase} failure\n\texpected: #{expected.inspect}\n\treceived: #{received.inspect}\n"
           end
 

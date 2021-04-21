@@ -27,4 +27,7 @@ lint:
 		exit 1; \
 	fi
 
-.PHONY: copy_lib test fmt lint
+clean:
+	go clean
+
+.PHONY: copy_lib test fmt lint clean

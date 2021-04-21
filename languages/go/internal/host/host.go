@@ -289,7 +289,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 	// check composite types
 	rt := reflect.ValueOf(v)
 	// deref pointer
-	if rt.Kind() == reflect.Ptr {
+	if rt.Kind() == reflect.Ptr || rt.Kind() == reflect.Interface {
 		rtDeref := rt.Elem()
 		if rt.IsNil() {
 			// TODO: Is `nil` a reflect.Ptr?
@@ -331,7 +331,13 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		repr := fmt.Sprintf("%v", v)
+		var repr string
+		value := reflect.ValueOf(v)
+		if value.IsZero() {
+			repr = fmt.Sprintf("%v{}", value.Type())
+		} else {
+			repr = fmt.Sprintf("%v{%v}", value.Type(), v)
+		}
 		inner := ValueExternalInstance{
 			InstanceId:  *instanceID,
 			Constructor: nil,

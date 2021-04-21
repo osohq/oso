@@ -81,19 +81,13 @@ def test_authorize_model_basic(post_fixtures):
     )
 
     authorize_filter = authorize_model(None, Post, actor="user", action="read")
-    assert (
-        str(authorize_filter)
-        == f"(AND: {str(TRUE_FILTER)}, ('access_level', 'public'))"
-    )
+    assert str(authorize_filter) == "(AND: ('access_level', 'public'))"
     posts = Post.objects.filter(authorize_filter)
     assert posts.count() == 5
     assert posts.all()[0].contents == "foo public post"
 
     authorize_filter = authorize_model(None, Post, actor="user", action="write")
-    assert (
-        str(authorize_filter)
-        == f"(AND: {str(TRUE_FILTER)}, ('access_level', 'private'))"
-    )
+    assert str(authorize_filter) == "(AND: ('access_level', 'private'))"
     posts = Post.objects.filter(authorize_filter)
     assert posts.count() == 4
     assert posts.all()[0].contents == "foo private post"
@@ -105,14 +99,12 @@ def test_authorize_model_basic(post_fixtures):
     assert posts.count() == 9
 
     authorize_filter = authorize_model(None, Post, actor="moderator", action="read")
-    expected = f"""
+    expected = """
          (OR:
             (AND:
-                {str(TRUE_FILTER)},
                 ('access_level', 'private'),
                 ('needs_moderation', True)),
             (AND:
-                {str(TRUE_FILTER)},
                 ('access_level', 'public'),
                 ('needs_moderation', True)))
     """
@@ -615,10 +607,7 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
 
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
-    assert (
-        str(authorize_filter)
-        == f"(AND: {str(TRUE_FILTER)}, ('users', <User: User object (1)>))"
-    )
+    assert str(authorize_filter) == "(AND: ('users', <User: User object (1)>))"
     posts = Post.objects.filter(authorize_filter)
     expected = """
         SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",

@@ -12,9 +12,8 @@ class Customer:
 class InternalUser:
     def __init__(self, id):
         self.id = id
+        # classes-end
 
-
-# classes-end
 
 # app-start
 def customer_dashboard_handler(request):
@@ -29,6 +28,4 @@ def user_from_id(id):
         return InternalUser(id)
     elif user_type == "customer":
         return Customer(id)
-
-
-# app-end
+        # app-end

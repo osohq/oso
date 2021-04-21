@@ -1,7 +1,3 @@
-// @NOTE(steve): This was pretty easy to get running but the error messages you get when things don't parse aren't as
-// good as what we want to expose to polar users. Either we do a lot of mapping or we replace this with a hand rolled
-// parser later.
-
 use std::str::FromStr;
 use std::collections::{HashMap, BTreeMap};
 
@@ -230,7 +226,7 @@ RewrittenOperation: Value = {
 // other than a string.
 
 // Any term expression
-pub TermExp: Term = {
+TermExp: Term = {
     <t:Exp1<"Term">> => match t {
         ValueOrLogical::Value(t) | ValueOrLogical::Logical(t) | ValueOrLogical::Either(t) => {
             t
@@ -247,6 +243,17 @@ ValExp: Term = {
 LogExp: Term = {
     <ExpectLogical<Exp1<"Term">>>
 }
+
+// `ValueOrLogic` is used to do some simple parse-time 
+// checks for correctly formed expressions. For example,
+// `x in y` is a logical expression, so it does
+// not make sense to compare the result with a value.
+// `x in y > 0` fails to parse because `A > B` expects
+// A and B to be values, but `x in y` is a logical term.
+
+// In Prolog, logicals would be a callable - things that can be called and fail or success
+// Values are not callable. Togoether, values and logicals are terms.
+
 
 IsValue<T>: ValueOrLogical = {
     <Spanned<T>> => ValueOrLogical::Value(<>)
@@ -509,7 +516,7 @@ List<T>: Value = {
 }
 
 
-pub Pattern: Value = {
+Pattern: Value = {
     <Number>,
     <PolarString>,
     <Boolean>,
@@ -519,12 +526,11 @@ pub Pattern: Value = {
     <List<"Pattern">>,
 };
 
-
-pub Value: ValueOrLogical = {
+Value: ValueOrLogical = {
     <IsLogical<BuiltinOperation>>,
     <IsAny<Boolean>>,
     <IsAny<Variable>>,
-    <IsAny<Call>>,
+    <IsLogical<Call>>,
     <IsValue<New>>,
     <IsValue<List<"Term">>>,
     <IsValue<Number>>,
@@ -592,7 +598,7 @@ RuleHead: (Symbol, Vec<Parameter>) = {
 
 Define = {"if"};
 
-pub Rule: Rule = {
+Rule: Rule = {
     <head:RuleHead> <start:@L> <end:@R> ";" => {
         let (name, params) = head;
         let op = Operation{operator: Operator::And, args: vec![]};
@@ -614,8 +620,7 @@ pub Rule: Rule = {
     }
 }
 
-
-pub Rules: Vec<Rule> = <Rule*>;
+pub(crate) Rules: Vec<Rule> = <Rule*>;
 
 Line: Line = {
     <Rule> => Line::Rule(<>),

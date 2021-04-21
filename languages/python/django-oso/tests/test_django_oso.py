@@ -147,7 +147,7 @@ def test_partial(rf, partial_policy):
     authorize_filter = authorize_model(request, action="get", model=Post)
     assert (
         str(authorize_filter)
-        == f"(AND: {str(TRUE_FILTER)}, ('is_private', False), ('timestamp__gt', 0), ('option', None))"
+        == "(AND: ('is_private', False), ('timestamp__gt', 0), ('option', None))"
     )
 
     q = Post.objects.filter(authorize_filter)
@@ -204,10 +204,7 @@ def test_partial_isa_with_path():
     )
 
     authorize_filter = authorize_model(None, Post, actor="foo", action="bar")
-    assert (
-        str(authorize_filter)
-        == f"(AND: {str(TRUE_FILTER)}, ('created_by__name', 'alice'))"
-    )
+    assert str(authorize_filter) == "(AND: ('created_by__name', 'alice'))"
     authorized_posts = Post.objects.filter(authorize_filter)
     expected = """
         SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
@@ -248,7 +245,7 @@ def test_null_with_partial(rf):
     request.user = "test_user"
 
     authorize_filter = authorize_model(request, Post)
-    assert str(authorize_filter) == f"(AND: {str(TRUE_FILTER)}, ('option', None))"
+    assert str(authorize_filter) == "(AND: ('option', None))"
     authorized_posts = Post.objects.filter(authorize_filter)
     expected = """
         SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
@@ -277,9 +274,7 @@ def test_negated_matches_with_partial(rf):
 
     request.user = 1
     authorize_filter = authorize_model(request, Post)
-    assert str(authorize_filter) == (
-        f"(AND: {str(TRUE_FILTER)}, (NOT (AND: {str(TRUE_FILTER)})))"
-    )
+    assert str(authorize_filter) == (f"(NOT (AND: {str(TRUE_FILTER)}))")
     authorized_posts = Post.objects.filter(authorize_filter)
     # For some reason, this only seems to be raised when stringifying.
     with pytest.raises(EmptyResultSet):
@@ -300,9 +295,7 @@ def test_negated_matches_with_partial(rf):
 
     request.user = 3
     authorize_filter = authorize_model(request, Post)
-    assert str(authorize_filter) == (
-        f"(AND: {str(TRUE_FILTER)}, (NOT (AND: {str(TRUE_FILTER)})))"
-    )
+    assert str(authorize_filter) == (f"(NOT (AND: {str(TRUE_FILTER)}))")
     authorized_posts = Post.objects.filter(authorize_filter)
     # For some reason, this only seems to be raised when stringifying.
     with pytest.raises(EmptyResultSet):
@@ -335,8 +328,23 @@ def test_partial_unification():
     Oso.load_str("g(x, y) if x = y and y > 1;")
     results = Oso.query_rule("g", Variable("x"), Variable("y"), accept_expression=True)
     first = next(results)["bindings"]
-    assert first["x"] == Expression("And", [Expression("Gt", [Variable("_this"), 1])])
-    assert first["y"] == Expression("And", [Expression("Gt", [Variable("_this"), 1])])
+
+    # TODO not ideal that these are swapped in order (y = x) not (x = y).
+    # this is a hard case, we want the (y > 1) to be this in both cases AND keep the x = y.
+    assert first["x"] == Expression(
+        "And",
+        [
+            Expression("Unify", [Variable("y"), Variable("_this")]),
+            Expression("Gt", [Variable("y"), 1]),
+        ],
+    )
+    assert first["y"] == Expression(
+        "And",
+        [
+            Expression("Unify", [Variable("_this"), Variable("x")]),
+            Expression("Gt", [Variable("_this"), 1]),
+        ],
+    )
 
 
 def test_rewrite_parameters():
