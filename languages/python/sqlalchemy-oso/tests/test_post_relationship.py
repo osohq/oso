@@ -616,9 +616,9 @@ def test_empty_constraints_in(session, oso, tag_nested_many_many_test_fixture):
         + " posts_title, posts.access_level AS posts_access_level,"
         + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation"
         + " \nFROM posts"
-        + " \nWHERE (EXISTS (SELECT 1"
+        + " \nWHERE EXISTS (SELECT 1"
         + " \nFROM post_tags, tags"
-        + " \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_id))"
+        + " \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_id)"
     )
     posts = posts.all()
     assert len(posts) == 5
@@ -644,9 +644,9 @@ def test_in_with_constraints_but_no_matching_objects(
         + " posts.access_level AS posts_access_level,"
         + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation"
         + " \nFROM posts"
-        + " \nWHERE (EXISTS (SELECT 1"
+        + " \nWHERE EXISTS (SELECT 1"
         + " \nFROM post_tags, tags"
-        + " \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_id AND tags.name = ?))"
+        + " \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_id AND tags.name = ?)"
     )
     posts = posts.all()
     assert len(posts) == 0
