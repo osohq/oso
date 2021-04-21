@@ -219,12 +219,12 @@ impl Oso {
     pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
         let name = class.name.clone();
         let class_name = self.host.cache_class(class.clone(), name)?;
+        let constants = class.constants.clone();
         self.register_constant(class, &class_name)?;
 
-        for (name, value) in class.constants.iter() {
-            // This doesn't work since we don't know the size of the inner trait object
-            self.register_constant(*value.inner, name)?;
-        } 
+        for hook in constants.into_iter() {
+            hook.call(self)?;
+        }
 
         Ok(())
     }

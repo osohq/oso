@@ -112,7 +112,7 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
             for variant in variants {
                 let constant_str = format!("{}::{}", class_name, variant.ident);
                 constant_calls.push(quote! {
-                    .add_constant(Self::#variant, #constant_str)
+                    .add_constant(|| (#constant_str, #type_name::#variant))
                 });
             }
         }

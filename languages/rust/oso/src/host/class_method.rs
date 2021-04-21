@@ -16,17 +16,23 @@ type TypeErasedFunction<R> = Arc<dyn Fn(Vec<PolarValue>) -> crate::Result<R> + S
 type TypeErasedMethod<R> =
     Arc<dyn Fn(&Instance, Vec<PolarValue>, &mut Host) -> crate::Result<R> + Send + Sync>;
 
+type RegisterHook = dyn Fn(&mut crate::Oso) -> crate::Result<()> + Send + Sync + 'static;
+
 #[derive(Clone)]
 pub struct Constant {
-    pub inner: Arc<dyn ToPolar + Send + Sync + 'static>
+    pub register_hook: Arc<RegisterHook>,
 }
 
 impl Constant {
-    pub fn new<V>(value: V) -> Self
+    pub fn new<F>(f: F) -> Self
     where
-        V: ToPolar + Send + Sync + 'static
+        F: Fn(&mut crate::Oso) -> crate::Result<()> + Send + Sync + 'static,
     {
-        Constant { inner: Arc::new(value) }
+        Constant { register_hook: Arc::new(f) }
+    }
+
+    pub fn call(self, oso: &mut crate::Oso) -> crate::Result<()> {
+        (&*self.register_hook)(oso)
     }
 }
 

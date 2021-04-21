@@ -15,7 +15,7 @@ use super::Host;
 use super::PolarValue;
 
 type Attributes = HashMap<&'static str, AttributeGetter>;
-type Constants = HashMap<&'static str, Constant>;
+type Constants = Vec<Constant>;
 type ClassMethods = HashMap<&'static str, ClassMethod>;
 type InstanceMethods = HashMap<&'static str, InstanceMethod>;
 
@@ -260,14 +260,17 @@ where
     }
 
     /// Store a constant on the class that will be registered once the class is registered.
-    pub fn add_constant<V: crate::ToPolar + Send + Sync + 'static>(
+    pub fn add_constant<V: crate::ToPolar + Clone + Send + Sync + 'static>(
         mut self, 
         value: V, 
         name: &'static str
     ) -> Self {
+        let register_hook = move |oso: &mut crate::Oso| {
+            oso.register_constant(value.clone(), name)  
+        };
         self.class
             .constants
-            .insert(name, Constant::new(value));
+            .insert(name, Constant::new(register_hook));
         self 
     }
 
