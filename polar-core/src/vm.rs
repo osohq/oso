@@ -1239,41 +1239,15 @@ impl PolarVirtualMachine {
         instance: &Term,
         field: &Term,
     ) -> PolarResult<QueryEvent> {
-        let deref_instance = self.deep_deref(instance);
         let (field_name, args, kwargs): (
             Symbol,
             Option<Vec<Term>>,
             Option<BTreeMap<Symbol, Term>>,
         ) = match self.deref(field).value() {
-            Value::Call(Call { name, args, kwargs }) => {
-                let new_args = args.iter().map(|arg| self.deep_deref(arg));
-                for arg in new_args.clone() {
-                    // Variables cannot be passed to external methods from Polar
-                    if let Value::Variable(v) = arg.value() {
-                        if let VariableState::Partial() = self.binding_manager.variable_state(v) {
-                            if let Value::ExternalInstance(external) = deref_instance.value() {
-                                if let Some(repr) = external.repr.clone() {
-                                    if repr.contains("test_roles.Roles") && name.0 == "role_allows"
-                                    {
-                                        // add special constraint
-                                        println!("Roles.role_allows() was called");
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        return Err(self.set_error_context(
-                            &arg,
-                            error::RuntimeError::Unsupported {
-                                msg: format!(
-                                    "cannot call method with unbound variable argument {}",
-                                    v
-                                ),
-                            },
-                        ));
-                    }
-                }
-                let kwargs = match kwargs {
+            Value::Call(Call { name, args, kwargs }) => (
+                name.clone(),
+                Some(args.iter().map(|arg| self.deep_deref(arg)).collect()),
+                match kwargs {
                     Some(unwrapped) => Some(
                         unwrapped
                             .iter()
@@ -1281,9 +1255,8 @@ impl PolarVirtualMachine {
                             .collect(),
                     ),
                     None => None,
-                };
-                (name.clone(), Some(new_args.collect()), kwargs)
-            }
+                },
+            ),
             Value::String(field) => (Symbol(field.clone()), None, None),
             v => {
                 return Err(self.type_error(
@@ -1907,6 +1880,8 @@ impl PolarVirtualMachine {
             | Value::List(_)
             | Value::Number(_)
             | Value::String(_) => {
+                // check for partial arguments to an external call
+                self.check_partial_args(term, field, object)?;
                 let value = value
                     .value()
                     .as_symbol()
@@ -1950,6 +1925,64 @@ impl PolarVirtualMachine {
             }
         }
         Ok(QueryEvent::None)
+    }
+
+    /// Check for partially bound or unbound variable arguments to an external call.
+    /// If any arguments are partially bound or unbound, return an error.
+    /// The only exception is the method `OsoRoles.role_allows()`, which expects a partially bound resource argument
+    fn check_partial_args(
+        &mut self,
+        og_term: &Term,
+        field: &Term,
+        object: &Term,
+    ) -> PolarResult<()> {
+        // If the lookup is a `Value::Call`, then we need to check for partial args
+        if let Value::Call(Call { name, args, kwargs }) = field.value() {
+            // get all arg values (args + kwargs)
+            let mut arg_values = args.clone();
+            match kwargs.clone() {
+                Some(kwarg_map) => {
+                    let mut v: Vec<Term> = kwarg_map.values().cloned().collect();
+                    arg_values.append(&mut v)
+                }
+                _ => (),
+            }
+            for (i, arg) in arg_values.iter().enumerate() {
+                // Partial/unbound variables cannot be passed to external methods from Polar
+                if let Value::Variable(v) = arg.value() {
+                    match self.binding_manager.variable_state(v) {
+                        // bound variables are fine, continue
+                        VariableState::Bound(_) => continue,
+                        // partial variables are only fine if being passed into "role_allows"
+                        VariableState::Partial() => {
+                            if let Value::ExternalInstance(external) =
+                                self.deep_deref(&object).value()
+                            {
+                                if let Some(repr) = external.repr.clone() {
+                                    // only allow the third argument (resource) to be partially bound
+                                    if repr.contains("test_roles.Roles")
+                                        && name.0 == "role_allows"
+                                        && i == 2
+                                    {
+                                        // add constraint for roles call
+                                        self.add_constraint(og_term)?;
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        VariableState::Unbound => (),
+                    }
+                    return Err(self.set_error_context(
+                        &arg,
+                        error::RuntimeError::Unsupported {
+                            msg: format!("cannot call method with unbound variable argument {}", v),
+                        },
+                    ));
+                }
+            }
+        }
+        Ok(())
     }
 
     fn in_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
