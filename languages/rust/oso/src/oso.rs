@@ -219,10 +219,10 @@ impl Oso {
     pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
         let name = class.name.clone();
         let class_name = self.host.cache_class(class.clone(), name)?;
-        let constants = class.constants.clone();
+        let hooks = class.register_hooks.clone();
         self.register_constant(class, &class_name)?;
 
-        for hook in constants.into_iter() {
+        for hook in hooks.into_iter() {
             hook.call(self)?;
         }
 
