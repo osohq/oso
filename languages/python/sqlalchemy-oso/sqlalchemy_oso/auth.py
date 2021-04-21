@@ -9,6 +9,7 @@ from sqlalchemy import inspect
 from sqlalchemy.sql import expression as sql
 
 from sqlalchemy_oso.partial import partial_to_filter
+from sqlalchemy_oso import roles2
 
 
 def polar_model_name(model) -> str:
@@ -98,9 +99,9 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
         return sql.false()
 
     if has_role_allows:
+        roles_filter = roles2._add_query_filter(actor, action, model)
         # TODO: is this the right place to do this? Should it be inside of `_authorize_query()` instead?
-        print(
-            f"call special roles function with actor: {actor}, action: {action}, resource_filter: {combined_filter}"
-        )
+        if roles_filter:
+            combined_filter |= roles_filter
 
     return combined_filter
