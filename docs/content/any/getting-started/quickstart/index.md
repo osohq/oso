@@ -178,7 +178,10 @@ For more on leveraging application data in an Oso policy, check out
 
 ## Want to talk it through?
 
-If you have any questions, you're getting stuck or just want to talk something through, jump into the Oso [Slack](https://join-slack.osohq.com/) and an engineer from the core team or any of the hundreds of other developers in the Slack can help you out.
+If you have any questions, are getting stuck, or just want to talk something
+through, jump into [Slack](https://join-slack.osohq.com/) and an engineer from
+the core team (or one of the hundreds of developers in the growing community)
+will help you out.
 
 {{% callout "What's next" "blue" %}}
 
