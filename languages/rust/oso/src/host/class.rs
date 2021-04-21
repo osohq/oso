@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::errors::{InvalidCallError, OsoError};
 
-use super::class_method::{AttributeGetter, ClassMethod, Constant, Constructor, InstanceMethod};
+use super::class_method::{AttributeGetter, ClassMethod, Constructor, InstanceMethod, RegisterHook};
 use super::from_polar::FromPolarList;
 use super::method::{Function, Method};
 use super::to_polar::ToPolarResult;
@@ -15,7 +15,7 @@ use super::Host;
 use super::PolarValue;
 
 type Attributes = HashMap<&'static str, AttributeGetter>;
-type Constants = Vec<Constant>;
+type RegisterHooks = Vec<RegisterHook>;
 type ClassMethods = HashMap<&'static str, ClassMethod>;
 type InstanceMethods = HashMap<&'static str, InstanceMethod>;
 
@@ -70,7 +70,7 @@ pub struct Class {
         Arc<dyn Fn(&Host, &Instance) -> crate::Result<crate::host::PolarIterator> + Send + Sync>,
     
     // Constants to be added to the class once it's been registered with host.
-    pub constants: Constants,
+    pub register_hooks: RegisterHooks,
 }
 
 impl Class {
@@ -150,7 +150,7 @@ where
                 equality_check: Arc::from(equality_not_supported()),
                 into_iter: Arc::from(iterator_not_supported()),
                 type_id: TypeId::of::<T>(),
-                constants: Constants::new(),
+                register_hooks: RegisterHooks::new(),
             },
             ty: std::marker::PhantomData,
         }
@@ -269,8 +269,8 @@ where
             oso.register_constant(value.clone(), name)  
         };
         self.class
-            .constants
-            .insert(name, Constant::new(register_hook));
+            .register_hooks
+            .push(RegisterHook::new(register_hook));
         self 
     }
 

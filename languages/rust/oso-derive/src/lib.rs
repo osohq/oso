@@ -110,9 +110,9 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
         }
         Data::Enum(DataEnum { variants, .. }) => {
             for variant in variants {
-                let constant_str = format!("{}::{}", class_name, variant.ident);
+                let name = format!("{}::{}", class_name, variant.ident);
                 constant_calls.push(quote! {
-                    .add_constant(|| (#constant_str, #type_name::#variant))
+                    .add_constant(#type_name::#variant, #name)
                 });
             }
         }
