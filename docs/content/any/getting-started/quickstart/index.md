@@ -176,7 +176,11 @@ as:
 For more on leveraging application data in an Oso policy, check out
 [Application Types](policies#application-types).
 
-{{% callout "What's next!" "blue" %}}
+## Want to talk it through?
+
+If you have any questions, you're getting stuck or just want to talk something through, jump into the Oso [Slack](https://join-slack.osohq.com/) and an engineer from the core team or any of the hundreds of other developers in the Slack can help you out.
+
+{{% callout "What's next" "blue" %}}
 
 - Explore how to [add Oso to an application](application).
 - Dive into [writing policies](policies) in detail.
