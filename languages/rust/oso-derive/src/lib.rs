@@ -90,7 +90,7 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
     }
 
     let mut getters = vec![];
-    let mut constant_calls = vec![];
+    let mut constants = vec![];
 
     match input.data {
         Data::Struct(DataStruct { fields: Fields::Named(fields), .. }) => {
@@ -111,7 +111,7 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
         Data::Enum(DataEnum { variants, .. }) => {
             for variant in variants {
                 let name = format!("{}::{}", class_name, variant.ident);
-                constant_calls.push(quote! {
+                constants.push(quote! {
                     .add_constant(#type_name::#variant, #name)
                 });
             }
@@ -125,7 +125,7 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
                 oso::Class::builder()
                     .name(#class_name)
                     #(#getters)*
-                    #(#constant_calls)*
+                    #(#constants)*
             }
 
             fn get_polar_class() -> oso::Class {
