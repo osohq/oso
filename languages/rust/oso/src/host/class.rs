@@ -69,7 +69,7 @@ pub struct Class {
     into_iter:
         Arc<dyn Fn(&Host, &Instance) -> crate::Result<crate::host::PolarIterator> + Send + Sync>,
     
-    // Constants to be added to the class once it's been registered with host.
+    // Hooks to be called on the class once it's been registered with host.
     pub register_hooks: RegisterHooks,
 }
 
@@ -259,7 +259,7 @@ where
         self
     }
 
-    /// Store a constant on the class that will be registered once the class is registered.
+    /// Add a RegisterHook on the class that will register the given constant once the class is registered.
     pub fn add_constant<V: crate::ToPolar + Clone + Send + Sync + 'static>(
         mut self, 
         value: V, 
