@@ -321,9 +321,9 @@ impl BindingManager {
     }
 
     pub fn variable_state_at_point(&self, variable: &Symbol, bsp: &Bsp) -> VariableState {
-        let bsp = bsp.bindings_index;
+        let index = bsp.bindings_index;
         let mut next = variable;
-        while let Some(value) = self.value(next, bsp) {
+        while let Some(value) = self.value(next, index) {
             match value.value() {
                 Value::Expression(_) => return VariableState::Partial,
                 Value::Variable(v) | Value::RestVariable(v) => {
@@ -538,9 +538,9 @@ impl BindingManager {
         variable: &Symbol,
         bsp: &Bsp,
     ) -> BindingManagerVariableState {
-        let bsp = bsp.bindings_index;
+        let index = bsp.bindings_index;
         let mut path = vec![variable];
-        while let Some(value) = self.value(path.last().unwrap(), bsp) {
+        while let Some(value) = self.value(path.last().unwrap(), index) {
             match value.value() {
                 Value::Expression(e) => return BindingManagerVariableState::Partial(e),
                 Value::Variable(v) | Value::RestVariable(v) => {
