@@ -1959,7 +1959,7 @@ impl PolarVirtualMachine {
                         // bound variables are fine, continue
                         VariableState::Bound(_) => continue,
                         // partial variables are only fine if being passed into "role_allows"
-                        VariableState::Partial() => {
+                        VariableState::Partial => {
                             if let Value::ExternalInstance(external) =
                                 self.deep_deref(&object).value()
                             {
