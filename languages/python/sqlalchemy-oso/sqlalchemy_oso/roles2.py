@@ -536,11 +536,17 @@ def _add_query_filter(user, action, resource_model):
     resource_ids = [id[0] for id in results.fetchall()]
 
     # @OPT: It should be possible to pass the select sql as the in
-    # parameter but I'm not sure how you bind the variables yet.
+    # parameter (instead of doing two queries)
+    # but I'm not sure how you bind the variables yet.
+    # I think we need access to the query here instead of a filter or
+    # to pass on the bindings so they're bound before the execute later.
 
-    # @Q: Why doesn't this work?
+    # @Q: Why doesn't this work? Complains that in_ isn't a boolean
+    # expression.
     #filter = getattr(resource_model, resource_pk_name).in_(resource_ids)
 
+    # @NOTE: The dumbest way possible is working.
+    # id = 1 or id = 2 or id = 3 ...
     filter = None
     for id in resource_ids:
         id_check = getattr(resource_model, resource_pk_name) == id
