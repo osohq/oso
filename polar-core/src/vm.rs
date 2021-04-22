@@ -1945,12 +1945,9 @@ impl PolarVirtualMachine {
         if let Value::Call(Call { name, args, kwargs }) = field.value() {
             // get all arg values (args + kwargs)
             let mut arg_values = args.clone();
-            match kwargs.clone() {
-                Some(kwarg_map) => {
-                    let mut v: Vec<Term> = kwarg_map.values().cloned().collect();
-                    arg_values.append(&mut v)
-                }
-                _ => (),
+            if let Some(kwarg_map) = kwargs.clone() {
+                let mut v: Vec<Term> = kwarg_map.values().cloned().collect();
+                arg_values.append(&mut v)
             }
             for (i, arg) in arg_values.iter().enumerate() {
                 // Partial/unbound variables cannot be passed to external methods from Polar

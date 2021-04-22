@@ -111,6 +111,10 @@ def test_roles():
     #        tables.
     Base.metadata.create_all(engine)
 
+    # tbd on the name for this, but this is what used to happy lazily.
+    # it reads the config from the policy and sets everything up.
+    roles.configure()
+
     apple = Organization(id="apple")
     osohq = Organization(id="osohq")
 
