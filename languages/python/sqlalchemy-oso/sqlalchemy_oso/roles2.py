@@ -110,7 +110,7 @@ class Resource:
 def ensure_configured(func):
     def wrapper(self, *args, **kwargs):
         if not self.configured:
-            self._configure()
+            raise Exception("Must call configure() before calling this.")
         func(self, *args, **kwargs)
 
     return wrapper
@@ -180,7 +180,7 @@ class OsoRoles:
     def _get_session(self):
         return self.session_maker()
 
-    def _configure(self):
+    def configure(self):
         # @TODO: ALLLLL of the validation needed for the role model.
 
         # @TODO: Figure out where this session should really come from.
