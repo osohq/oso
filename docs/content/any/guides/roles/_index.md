@@ -23,7 +23,7 @@ We're working on the next major feature of Oso, a new set of tools to better sup
 These features include defining roles, adding role checks/enforcement to your application, and exposing a
 role management API and frontend to your end users.
 
-If you're interested, we encourage you to sign up for early access [here](https://osohq.typeform.com/to/w8xgMHbw)!
+Sign up for early access [here](https://osohq.typeform.com/to/w8xgMHbw)!
 {{% /callout %}}
 
 <!-- A well-designed role system has roles that map to an intuitive concept of what
