@@ -95,29 +95,31 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
     let mut constants = vec![];
 
     match input.data {
-        Data::Struct(DataStruct {
-            fields: Fields::Named(fields),
-            ..
-        }) => {
-            for field in fields.named {
-                let mut oso_attrs = vec![];
-                for attr in field.attrs {
-                    get_oso_attrs(attr, &mut oso_attrs);
-                }
-                if oso_attrs.contains(&OsoAttribute::Attribute) {
-                    let attr = field.ident.unwrap();
-                    let name = attr.to_string();
-                    getters.push(quote! {
-                        .add_attribute_getter(#name, |recv: &#type_name| recv.#attr.clone())
-                    })
+        Data::Struct(DataStruct { fields, .. }) => match fields {
+            Fields::Named(nf) => {
+                for field in nf.named {
+                    let mut oso_attrs = vec![];
+                    for attr in field.attrs {
+                        get_oso_attrs(attr, &mut oso_attrs);
+                    }
+                    if oso_attrs.contains(&OsoAttribute::Attribute) {
+                        let attr = field.ident.unwrap();
+                        let name = attr.to_string();
+                        getters.push(quote! {
+                            .add_attribute_getter(#name, |recv: &#type_name| recv.#attr.clone())
+                        });
+                    }
                 }
             }
-        }
+            Fields::Unnamed(_uf) => {}
+            Fields::Unit => {}
+        },
         Data::Enum(DataEnum { variants, .. }) => {
             for variant in variants {
-                let name = format!("{}::{}", class_name, variant.ident);
+                let vident = variant.ident;
+                let vname = format!("{}::{}", class_name, vident);
                 constants.push(quote! {
-                    .add_constant(#type_name::#variant, #name)
+                    .add_constant(#type_name::#vident, #vname)
                 });
             }
         }
