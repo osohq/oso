@@ -21,19 +21,21 @@ class OsoRoles:
         self.roles = {}
 
     def enable(self, oso, sqlalchemy_base, user_model):
+        print("Enabling Oso roles...")
         oso.register_constant(self, "OsoRoles")
         for res in oso.query("role(resource_class, definitions, _)"):
             resource_class = res["bindings"]["resource_class"]
             roles = list(res["bindings"]["definitions"].keys())
             role_mixin = resource_role_class(
-                sqlalchemy_base,
-                user_model,
-                resource_class,
-                roles
+                sqlalchemy_base, user_model, resource_class, roles
             )
 
-            role_class = type(f"{resource_class.__name__}Role", (sqlalchemy_base, role_mixin), {})
+            role_class = type(
+                f"{resource_class.__name__}Role", (sqlalchemy_base, role_mixin), {}
+            )
+            print(f"Adding roles {role_class.__name__} to {resource_class.__name__}")
             self.roles[resource_class] = role_class
+            setattr(resource_class, "role_definitions", roles)
 
     def set_session(self, session):
         self.session = session
@@ -41,8 +43,9 @@ class OsoRoles:
     def assign_role(self, user, resource, role):
         return add_user_role(self.session, user, resource, role, commit=True)
 
-    # def get_actor_roles(self, user):
-    #     for
+    def get_actor_roles(self, user):
+        for resource_model in self.roles.keys():
+            yield from get_user_roles(self.session, user, resource_model)
 
 
 def resource_role_class(
@@ -99,7 +102,10 @@ def resource_role_class(
         )
 
     ROLE_CLASSES.append(
-        {"user_model": user_model, "resource_model": resource_model, }
+        {
+            "user_model": user_model,
+            "resource_model": resource_model,
+        }
     )
 
     resource_name = _get_resource_name_lower(resource_model)
@@ -138,6 +144,13 @@ def resource_role_class(
 
         def __repr__(self):
             return f"Role({self.name} for {self.user} on {self.resource})"
+
+        def asdict(self):
+            return {
+                "name": self.name,
+                "user": self.user.repr(),
+                "resource": self.resource.repr(),
+            }
 
     @declared_attr
     def named_resource_id(cls):
