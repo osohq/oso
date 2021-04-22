@@ -1964,7 +1964,7 @@ impl PolarVirtualMachine {
                             {
                                 if let Some(repr) = external.repr.clone() {
                                     // only allow the third argument (resource) to be partially bound
-                                    if repr.contains("test_roles.Roles")
+                                    if repr.contains("sqlalchemy_oso.roles2.OsoRoles")
                                         && name.0 == "role_allows"
                                         && i == 2
                                     {
@@ -1980,7 +1980,6 @@ impl PolarVirtualMachine {
                                         );
                                         let term =
                                             &op!(Unify, value.clone(), dot.into_term()).into_term();
-                                        eprintln!("term to constrain: {:?}", term.to_polar());
                                         self.add_constraint(term)?;
                                         has_partial_arg = true;
                                         continue;
