@@ -4,12 +4,9 @@ from dataclasses import dataclass
 
 from oso import Variable
 
-from sqlalchemy.sql import and_
 from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy import inspect
-
-global role_instance
 
 def user_in_role_query(id_query, type_query, child_types, resource_id_field):
 
@@ -180,10 +177,9 @@ class OsoRoles:
         self.relationships = []
 
         self.configured = False
+        oso.roles = self
 
     def _configure(self):
-        global role_instance
-        role_instance = self
         # @TODO: ALLLLL of the validation needed for the role model.
 
         # @TODO: Figure out where this session should really come from.
@@ -506,26 +502,24 @@ class OsoRoles:
         session.add(user_role)
 
 
-def _add_query_filter(user, action, resource_model):
-    global role_instance
-
+def _add_query_filter(oso, user, action, resource_model):
     # Ok, we're really going for it now. This is probably the biggest wow hack yet.
     # We fetch all the resources that the user can view based on roles.
     # Then we add a single filter, where resource_id in [list they can see]
     # It's very slow and wasteful but actually evaluates correctly so it's a good first version.
-    assert role_instance.session
+    assert oso.roles.session
 
     user_pk_name = inspect(user.__class__).primary_key[0].name
     user_id = getattr(user, user_pk_name)
 
     resource_type = resource_model.__name__
     resource_pk_name = inspect(resource_model).primary_key[0].name
-    sql = role_instance.list_filter_queries[resource_type]
+    sql = oso.roles.list_filter_queries[resource_type]
 
     # @OPT: It should be possible to pass the select sql as the in
     # parameter instead of doing two queries
     # but I'm not sure how you bind the variables.
-    results = role_instance.session.execute(
+    results = oso.roles.session.execute(
         sql,
         {
             "user_id": user_id,
