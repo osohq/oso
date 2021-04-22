@@ -22,7 +22,7 @@ def user_in_role_query(id_query, type_query, child_types, resource_id_field):
                 -- I hope there's a way to do this in sqlalchemy but if not it wouldn't
                 -- really be too hard to generate the sql
                 select
-                    {id_query}
+                    {id_query},
                     {type_query}
                 from resources
                 where type in {str(tuple(child_types))}
@@ -69,7 +69,6 @@ def user_in_role_query(id_query, type_query, child_types, resource_id_field):
         ) select * from user_in_role
     """
     return query
-
 
 
 # Starting with something like this, tbd
@@ -119,12 +118,12 @@ def ensure_configured(func):
 
 
 class OsoRoles:
-    def __init__(self, oso, sqlalchemy_base, user_model):
+    def __init__(self, oso, sqlalchemy_base, user_model, session_maker):
         # @Q: Is this where I should create the models?
         # Would this even work? Do these have to happen at a
         # certain time or something to get created in the database?
 
-        self.session = None
+        self.session_maker = session_maker
 
         user_pk_type = inspect(user_model).primary_key[0].type
         user_pk_name = inspect(user_model).primary_key[0].name
@@ -179,12 +178,13 @@ class OsoRoles:
         self.configured = False
         oso.roles = self
 
+    def _get_session(self):
+        return self.session_maker()
+
     def _configure(self):
         # @TODO: ALLLLL of the validation needed for the role model.
 
         # @TODO: Figure out where this session should really come from.
-        assert self.session
-
         self.resources = {}
         self.permissions = []
         self.roles = {}
@@ -334,10 +334,11 @@ class OsoRoles:
                     self.roles[role.name] = role
 
         # Sync static data to the database.
-        self.session.execute("delete from role_permissions")
-        self.session.execute("delete from role_implications")
-        self.session.execute("delete from roles")
-        self.session.execute("delete from permissions")
+        session = self._get_session()
+        session.execute("delete from role_permissions")
+        session.execute("delete from role_implications")
+        session.execute("delete from roles")
+        session.execute("delete from permissions")
 
         permissions = {}
         for p in self.permissions:
@@ -346,9 +347,9 @@ class OsoRoles:
             permissions[(name, t)] = self.Permission(resource_type=t, name=name)
 
         for _, p in permissions.items():
-            self.session.add(p)
+            session.add(p)
 
-        self.session.commit()
+        session.commit()
 
         roles = []
         role_permissions = []
@@ -372,15 +373,15 @@ class OsoRoles:
                 )
 
         for role in roles:
-            self.session.add(role)
+            session.add(role)
 
         for rp in role_permissions:
-            self.session.add(rp)
+            session.add(rp)
 
         for ri in role_implications:
-            self.session.add(ri)
+            session.add(ri)
 
-        self.session.commit()
+        session.commit()
 
         id_query = "case resources.type\n"
         type_query = "case resources.type\n"
@@ -421,7 +422,7 @@ class OsoRoles:
 
             child_types.append(child_type)
 
-        id_query += "end as id,"
+        id_query += "end as id"
         type_query += "end as type"
 
         resource_id_field = ":resource_id"
@@ -445,8 +446,7 @@ class OsoRoles:
         self.configured = True
 
     def _role_allows(self, user, action, resource):
-        # @TODO: Figure out where this session should really come from.
-        assert self.session
+        session = self._get_session()
 
         user_pk_name = inspect(user.__class__).primary_key[0].name
         user_id = getattr(user, user_pk_name)
@@ -454,10 +454,10 @@ class OsoRoles:
         resource_pk_name = inspect(resource.__class__).primary_key[0].name
         resource_id = getattr(resource, resource_pk_name)
 
-        results = self.session.execute(
+        results = session.execute(
             self.sql_query,
             {
-                "user_id": user.id,
+                "user_id": user_id,
                 "action": action,
                 "resource_id": resource_id,
                 "resource_type": resource.__class__.__name__,
@@ -480,7 +480,10 @@ class OsoRoles:
         self.oso.register_class(Roles)
 
     @ensure_configured
-    def assign_role(self, session, user, resource, role_name):
+    def assign_role(self, user, resource, role_name, session=None):
+        if not session:
+            session = self._get_session()
+
         # @TODO: Verify all the rules of what roles you can be assigned to.
         assert role_name in self.roles
         role = self.roles[role_name]
@@ -500,6 +503,7 @@ class OsoRoles:
             role=role_name,
         )
         session.add(user_role)
+        session.commit()
 
 
 def _add_query_filter(oso, user, action, resource_model):
@@ -507,7 +511,7 @@ def _add_query_filter(oso, user, action, resource_model):
     # We fetch all the resources that the user can view based on roles.
     # Then we add a single filter, where resource_id in [list they can see]
     # It's very slow and wasteful but actually evaluates correctly so it's a good first version.
-    assert oso.roles.session
+    session = oso.roles._get_session()
 
     user_pk_name = inspect(user.__class__).primary_key[0].name
     user_id = getattr(user, user_pk_name)
@@ -519,7 +523,7 @@ def _add_query_filter(oso, user, action, resource_model):
     # @OPT: It should be possible to pass the select sql as the in
     # parameter instead of doing two queries
     # but I'm not sure how you bind the variables.
-    results = oso.roles.session.execute(
+    results = session.execute(
         sql,
         {
             "user_id": user_id,

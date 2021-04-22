@@ -49,10 +49,6 @@ class Issue(Base):
 def test_roles():
     oso = Oso()
     register_models(oso, Base)
-
-    roles = OsoRoles(oso, Base, User)
-    roles.enable()
-
     policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = [
@@ -103,12 +99,16 @@ def test_roles():
 
     #engine = create_engine("sqlite:///roles.db")
     engine = create_engine("sqlite://")
-    # @NOTE: Right now this has to happen after enabling oso roles to get the
-    #        tables.
-    Base.metadata.create_all(engine)
 
     Session = sessionmaker(bind=engine)
     session = Session()
+
+    roles = OsoRoles(oso, Base, User, Session)
+    roles.enable()
+
+    # @NOTE: Right now this has to happen after enabling oso roles to get the
+    #        tables.
+    Base.metadata.create_all(engine)
 
     apple = Organization(id="apple")
     osohq = Organization(id="osohq")
@@ -128,16 +128,10 @@ def test_roles():
         session.add(obj)
     session.commit()
 
-    # @TODO: How the heck should this work?
-    # not like this...
-    roles.session = session
-
     # @NOTE: Need the users and resources in the db before assigning roles
     # so you have to call session.commit() first.
-    roles.assign_role(session, leina, osohq, "org_owner")
-    roles.assign_role(session, steve, osohq, "org_member")
-    # @NOTE: Need to call it after too...
-    session.commit()
+    roles.assign_role(leina, osohq, "org_owner", session=session)
+    roles.assign_role(steve, osohq, "org_member", session=session)
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "create_repo", osohq)
