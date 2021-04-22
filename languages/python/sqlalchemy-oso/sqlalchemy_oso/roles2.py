@@ -509,7 +509,7 @@ def _add_query_filter(oso, user, action, resource_model):
     resource_pk_name = inspect(resource_model).primary_key[0].name
     sql = oso.roles.list_filter_queries[resource_type]
 
-    # @OPT: It should be possible to pass the select sql as the in
+    # @OPT: It should be possible to pass the select sql as an in filter
     # parameter (instead of doing two queries)
     # but I'm not sure how you bind the variables yet.
     # I think we need access to the query here instead of a filter or
