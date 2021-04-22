@@ -10,39 +10,38 @@ from sqlalchemy_oso.roles2 import OsoRoles
 
 from oso import Oso
 
-Base = declarative_base(name="RoleBase")
 
+@pytest.fixture
+def init_oso():
 
-class User(Base):
-    __tablename__ = "users"
+    Base = declarative_base(name="RoleBase")
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String())
+    class User(Base):
+        __tablename__ = "users"
 
+        id = Column(Integer, primary_key=True)
+        name = Column(String())
 
-class Organization(Base):
-    __tablename__ = "organizations"
+    class Organization(Base):
+        __tablename__ = "organizations"
 
-    id = Column(String(), primary_key=True)
+        id = Column(String(), primary_key=True)
 
+    class Repository(Base):
+        __tablename__ = "repositories"
 
-class Repository(Base):
-    __tablename__ = "repositories"
+        id = Column(String(), primary_key=True)
+        org_id = Column(String(), ForeignKey("organizations.id"))
+        org = relationship("Organization")
 
-    id = Column(String(), primary_key=True)
-    org_id = Column(String(), ForeignKey("organizations.id"))
-    org = relationship("Organization")
+    class Issue(Base):
+        __tablename__ = "issues"
 
+        id = Column(String(), primary_key=True)
+        repo_id = Column(String(), ForeignKey("repositories.id"))
+        repo = relationship("Repository")
 
-class Issue(Base):
-    __tablename__ = "issues"
-
-    id = Column(String(), primary_key=True)
-    repo_id = Column(String(), ForeignKey("repositories.id"))
-    repo = relationship("Repository")
-
-
-def test_roles():
+    # Initialize Oso and OsoRoles
     engine = create_engine("sqlite://")
 
     Session = sessionmaker(bind=engine)
@@ -52,6 +51,191 @@ def test_roles():
 
     roles = OsoRoles(oso, Base, User, Session)
     roles.enable()
+    return (oso, roles)
+
+
+## TEST RESOURCE CONFIGURATION
+# test cases
+# - duplicate permission
+# - assign permission that wasn't declared
+# - imply role that wasn't declared
+# - imply role without valid relationship
+# - assign permission without valid relationship
+# - use resource predicate with incorrect arity
+# - use resource predicate without defining actions/roles
+# - use resource predicate with field types
+
+
+def test_resource_actions(init_oso):
+
+    # init
+    oso, oso_roles = init_oso
+    # - test with only actions
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite"
+        ];
+    """
+    oso.load_str(policy)
+    oso_roles._configure()
+
+
+def test_duplicate_action(init_oso):
+    # - duplicate action
+    oso, oso_roles = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite",
+            "invite"
+        ];
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(Exception):
+        oso_roles._configure()
+
+
+def test_undeclared_permission(init_oso):
+    # - assign permission that wasn't declared
+    oso, oso_roles = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite"
+        ] and
+        roles = {
+            org_member: {
+                perms: ["create_repo"]
+            }
+        };
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(Exception):
+        oso_roles._configure()
+
+
+def test_undeclared_role(init_oso):
+    # - imply role that wasn't declared
+    oso, oso_roles = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite"
+        ] and
+        roles = {
+            org_member: {
+                implies: ["fake_role"]
+            }
+        };
+    """
+    oso.load_str(policy)
+    with pytest.raises(Exception):
+        oso_roles._configure()
+
+
+def test_invalid_role_implication(init_oso):
+    # - imply role without valid relationship
+    oso, oso_roles = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite"
+        ] and
+        roles = {
+            org_member: {
+                implies: ["repo_read"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+    """
+    oso.load_str(policy)
+    with pytest.raises(Exception):
+        oso_roles._configure()
+
+
+def test_invalid_role_permission(init_oso):
+    # - assign permission without valid relationship
+    oso, oso_roles = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite"
+        ] and
+        roles = {
+            org_member: {
+                perms: ["repo:push"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ];
+    """
+    oso.load_str(policy)
+    with pytest.raises(Exception):
+        oso_roles._configure()
+
+
+def test_incorrect_arity_resource(init_oso):
+    # - use resource predicate with incorrect arity
+    oso, oso_roles = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions) if
+        actions = [
+            "invite"
+        ];
+    """
+    oso.load_str(policy)
+    with pytest.raises(Exception):
+        oso_roles._configure()
+
+
+def test_undefined_resource_arguments(init_oso):
+    # - use resource predicate without defining actions/roles
+    oso, oso_roles = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles);
+    """
+    oso.load_str(policy)
+    with pytest.raises(Exception):
+        oso_roles._configure()
+
+
+def test_wrong_type_resource_arguments(init_oso):
+    # - use resource predicate with field types
+    oso, oso_roles = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                # incorrect key name
+                actions: ["invite"]
+            }
+        };
+    """
+    oso.load_str(policy)
+    with pytest.raises(Exception) as e:
+        oso_roles._configure()
+
+
+def test_roles(init_oso):
+    oso, oso_roles = init_oso
 
     register_models(oso, Base)
 
@@ -102,6 +286,7 @@ def test_roles():
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
+    oso_roles._configure()
 
     # @NOTE: Right now this has to happen after enabling oso roles to get the
     #        tables.
