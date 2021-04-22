@@ -400,7 +400,12 @@ class OsoRoles:
             ]
             parent_join_field = list(rel.remote_side)[0].name
             child_join_field = list(rel.local_columns)[0].name
-            select = f"select p.{parent_id} from {child_table} c join {parent_table} p on c.{child_join_field} = p.{parent_join_field} where c.{child_id} = resources.id"
+            select = f"""
+                select p.{parent_id}
+                from {child_table} c
+                join {parent_table} p
+                on c.{child_join_field} = p.{parent_join_field}
+                where c.{child_id} = resources.id"""
 
             id_query += ""
 

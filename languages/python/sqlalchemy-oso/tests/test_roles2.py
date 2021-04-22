@@ -86,7 +86,7 @@ def test_roles():
                 perms: ["pull"]
             }
         };
-        
+
     resource(_type: Issue, "issue", actions, _) if
         actions = [
             "edit"
