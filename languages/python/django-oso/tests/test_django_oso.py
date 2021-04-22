@@ -147,7 +147,7 @@ def test_partial(rf, partial_policy):
     authorize_filter = authorize_model(request, action="get", model=Post)
     assert (
         str(authorize_filter)
-        == f"(AND: {str(TRUE_FILTER)}, ('is_private', False), ('timestamp__gt', 0), ('option', None))"
+        == "(AND: ('is_private', False), ('timestamp__gt', 0), ('option', None))"
     )
 
     q = Post.objects.filter(authorize_filter)
@@ -204,10 +204,7 @@ def test_partial_isa_with_path():
     )
 
     authorize_filter = authorize_model(None, Post, actor="foo", action="bar")
-    assert (
-        str(authorize_filter)
-        == f"(AND: {str(TRUE_FILTER)}, ('created_by__name', 'alice'))"
-    )
+    assert str(authorize_filter) == "(AND: ('created_by__name', 'alice'))"
     authorized_posts = Post.objects.filter(authorize_filter)
     expected = """
         SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
@@ -248,7 +245,7 @@ def test_null_with_partial(rf):
     request.user = "test_user"
 
     authorize_filter = authorize_model(request, Post)
-    assert str(authorize_filter) == f"(AND: {str(TRUE_FILTER)}, ('option', None))"
+    assert str(authorize_filter) == "(AND: ('option', None))"
     authorized_posts = Post.objects.filter(authorize_filter)
     expected = """
         SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
@@ -277,9 +274,7 @@ def test_negated_matches_with_partial(rf):
 
     request.user = 1
     authorize_filter = authorize_model(request, Post)
-    assert str(authorize_filter) == (
-        f"(AND: {str(TRUE_FILTER)}, (NOT (AND: {str(TRUE_FILTER)})))"
-    )
+    assert str(authorize_filter) == (f"(NOT (AND: {str(TRUE_FILTER)}))")
     authorized_posts = Post.objects.filter(authorize_filter)
     # For some reason, this only seems to be raised when stringifying.
     with pytest.raises(EmptyResultSet):
@@ -300,9 +295,7 @@ def test_negated_matches_with_partial(rf):
 
     request.user = 3
     authorize_filter = authorize_model(request, Post)
-    assert str(authorize_filter) == (
-        f"(AND: {str(TRUE_FILTER)}, (NOT (AND: {str(TRUE_FILTER)})))"
-    )
+    assert str(authorize_filter) == (f"(NOT (AND: {str(TRUE_FILTER)}))")
     authorized_posts = Post.objects.filter(authorize_filter)
     # For some reason, this only seems to be raised when stringifying.
     with pytest.raises(EmptyResultSet):
