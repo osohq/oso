@@ -61,7 +61,7 @@ def contains_role_allows(expression: Expression):
         right = expr.args[1]
         if (
             op == "Unify"
-            and left == True
+            and left is True
             and right.operator == "Dot"
             # TODO: check type of right.args[0] (should match whatever the roles object is)
             # and type(right.args[0]) == OsoRoles

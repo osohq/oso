@@ -1,8 +1,4 @@
 # Roles 2 tests
-
-import pytest
-import datetime
-
 from sqlalchemy import create_engine
 from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
