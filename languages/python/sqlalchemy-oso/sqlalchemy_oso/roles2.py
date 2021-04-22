@@ -4,9 +4,75 @@ from dataclasses import dataclass
 
 from oso import Variable
 
+from sqlalchemy.sql import and_
 from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy import inspect
+
+global role_instance
+
+def user_in_role_query(id_query, type_query, child_types, resource_id_field):
+
+    query = f"""
+        -- get all the relevant resources by walking the parent tree
+        with resources as (
+            with recursive resources (id, type) as (
+                select
+                    {resource_id_field} as id,
+                    :resource_type as type
+                union
+                -- this would have to be generated based on all the relationships
+                -- I hope there's a way to do this in sqlalchemy but if not it wouldn't
+                -- really be too hard to generate the sql
+                select
+                    {id_query}
+                    {type_query}
+                from resources
+                where type in {str(tuple(child_types))}
+            ) select * from resources
+        ), allow_permission as (
+            -- Find the permission
+            select
+                p.id
+            from permissions p
+            where p.resource_type = :resource_type and p.name = :action
+        ), permission_roles as (
+            -- find roles with the permission
+            select
+                rp.role
+            from role_permissions rp
+            join allow_permission ap
+            where rp.permission_id = ap.id
+        ), relevant_roles as (
+            -- recursively find all roles that have the permission or
+            -- imply a role that has the permission
+            with recursive relevant_roles (role) as (
+                select
+                    role
+                from permission_roles
+                union
+                select
+                    ri.from_role
+                from role_implications ri
+                join relevant_roles rr
+                on ri.to_role = rr.role
+            ) select * from relevant_roles
+        ), user_in_role as (
+            -- check if the user has any of those roles on any of the relevant resources
+            select
+                ur.resource_type,
+                ur.resource_id,
+                ur.role
+            from user_roles ur
+            join relevant_roles rr
+            on rr.role = ur.role
+            join resources r
+            on r.type = ur.resource_type and r.id = ur.resource_id
+            where ur.user_id = :user_id
+        ) select * from user_in_role
+    """
+    return query
+
 
 
 # Starting with something like this, tbd
@@ -116,6 +182,8 @@ class OsoRoles:
         self.configured = False
 
     def _configure(self):
+        global role_instance
+        role_instance = self
         # @TODO: ALLLLL of the validation needed for the role model.
 
         # @TODO: Figure out where this session should really come from.
@@ -322,6 +390,8 @@ class OsoRoles:
         type_query = "case resources.type\n"
         child_types = []
 
+        self.list_filter_queries = {}
+
         # @NOTE: WOW HACK
         for relationship in self.relationships:
             parent_id_field = (
@@ -358,64 +428,23 @@ class OsoRoles:
         id_query += "end as id,"
         type_query += "end as type"
 
-        self.sql_query = f"""
-        -- get all the relevant resources by walking the parent tree
-        with resources as (
-            with recursive resources (id, type) as (
+        resource_id_field = ":resource_id"
+        self.sql_query = user_in_role_query(id_query, type_query, child_types, resource_id_field)
+
+        for _, resource in self.resources.items():
+            python_class = resource.python_class[0]
+            id_field = (
+                inspect(python_class).primary_key[0].name
+            )
+            table = python_class.__tablename__
+            self.list_filter_queries[python_class.__name__] = f"""
                 select
-                    :resource_id as id,
-                    :resource_type as type
-                union
-                -- this would have to be generated based on all the relationships
-                -- I hope there's a way to do this in sqlalchemy but if not it wouldn't
-                -- really be too hard to generate the sql
-                select
-                    {id_query}
-                    {type_query}
-                from resources
-                where type in {str(tuple(child_types))}
-            ) select * from resources
-        ), allow_permission as (
-            -- Find the permission
-            select
-                p.id
-            from permissions p
-            where p.resource_type = :resource_type and p.name = :action
-        ), permission_roles as (
-            -- find roles with the permission
-            select
-                rp.role
-            from role_permissions rp
-            join allow_permission ap
-            where rp.permission_id = ap.id
-        ), relevant_roles as (
-            -- recursively find all roles that have the permission or
-            -- imply a role that has the permission
-            with recursive relevant_roles (role) as (
-                select
-                    role
-                from permission_roles
-                union
-                select
-                    ri.from_role
-                from role_implications ri
-                join relevant_roles rr
-                on ri.to_role = rr.role
-            ) select * from relevant_roles
-        ), user_in_role as (
-            -- check if the user has any of those roles on any of the relevant resources
-            select
-                ur.resource_type,
-                ur.resource_id,
-                ur.role
-            from user_roles ur
-            join relevant_roles rr
-            on rr.role = ur.role
-            join resources r
-            on r.type = ur.resource_type and r.id = ur.resource_id
-            where ur.user_id = :user_id
-        ) select * from user_in_role;
-        """
+                  {id_field}
+                from {table} R
+                where exists (
+                  {user_in_role_query(id_query, type_query, child_types, "R."+id_field)}
+                )
+            """
 
         self.configured = True
 
@@ -475,10 +504,48 @@ class OsoRoles:
             role=role_name,
         )
         session.add(user_role)
-# EXPERIMENTAL: try adding arbitrary filter to an existing query
-def _add_query_filter(actor, action, resource_model):
-    print(
-        f"called special roles function with actor: {actor}, action: {action}, resource_model: {resource_model}"
+
+
+def _add_query_filter(user, action, resource_model):
+    global role_instance
+
+    # Ok, we're really going for it now. This is probably the biggest wow hack yet.
+    # We fetch all the resources that the user can view based on roles.
+    # Then we add a single filter, where resource_id in [list they can see]
+    # It's very slow and wasteful but actually evaluates correctly so it's a good first version.
+    assert role_instance.session
+
+    user_pk_name = inspect(user.__class__).primary_key[0].name
+    user_id = getattr(user, user_pk_name)
+
+    resource_type = resource_model.__name__
+    resource_pk_name = inspect(resource_model).primary_key[0].name
+    sql = role_instance.list_filter_queries[resource_type]
+
+    # @OPT: It should be possible to pass the select sql as the in
+    # parameter instead of doing two queries
+    # but I'm not sure how you bind the variables.
+    results = role_instance.session.execute(
+        sql,
+        {
+            "user_id": user_id,
+            "action": action,
+            "resource_type": resource_type,
+        },
     )
-    return None
-    return None
+    resource_ids = [id[0] for id in results.fetchall()]
+
+    # @OPT: It should be possible to pass the select sql as the in
+    # parameter but I'm not sure how you bind the variables yet.
+
+    # @Q: Why doesn't this work?
+    #filter = getattr(resource_model, resource_pk_name).in_(resource_ids)
+
+    filter = None
+    for id in resource_ids:
+        id_check = getattr(resource_model, resource_pk_name) == id
+        if filter is not None:
+            filter |= id_check
+        else:
+            filter = id_check
+    return filter

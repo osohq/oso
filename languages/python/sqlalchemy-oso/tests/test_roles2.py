@@ -9,7 +9,7 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-from sqlalchemy_oso import register_models
+from sqlalchemy_oso import register_models, authorized_sessionmaker
 from sqlalchemy_oso.roles2 import OsoRoles
 
 from oso import Oso, Variable
@@ -101,7 +101,7 @@ def test_roles():
     """
     oso.load_str(policy)
 
-    # engine = create_engine("sqlite:///roles.db")
+    #engine = create_engine("sqlite:///roles.db")
     engine = create_engine("sqlite://")
     # @NOTE: Right now this has to happen after enabling oso roles to get the
     #        tables.
@@ -110,14 +110,20 @@ def test_roles():
     Session = sessionmaker(bind=engine)
     session = Session()
 
+    apple = Organization(id="apple")
     osohq = Organization(id="osohq")
+
+    ios = Repository(id="ios", org=apple)
     oso_repo = Repository(id="oso", org=osohq)
+    demo_repo = Repository(id="demo", org=osohq)
+
+    laggy = Issue(id="laggy", repo=ios)
     bug = Issue(id="bug", repo=oso_repo)
 
     leina = User(name="leina")
     steve = User(name="steve")
 
-    objs = [leina, steve, osohq, oso_repo, bug]
+    objs = [leina, steve, apple, osohq, ios, oso_repo, demo_repo, laggy, bug]
     for obj in objs:
         session.add(obj)
     session.commit()
@@ -144,3 +150,27 @@ def test_roles():
     assert not oso.is_allowed(steve, "push", oso_repo)
     assert oso.is_allowed(steve, "pull", oso_repo)
     assert not oso.is_allowed(steve, "edit", bug)
+
+    assert not oso.is_allowed(leina, "edit", laggy)
+    assert not oso.is_allowed(steve, "edit", laggy)
+
+    oso.actor = None
+    oso.action = None
+
+    AuthSessionmaker = authorized_sessionmaker(
+        bind=engine,
+        get_oso=lambda: oso,
+        get_user=lambda: oso.actor,
+        get_action=lambda: oso.action,
+    )
+
+    oso.actor = leina
+    oso.action = "pull"
+    auth_session = AuthSessionmaker()
+
+    results = auth_session.query(Repository).all()
+    assert len(results) == 2
+    result_ids = [repo.id for repo in results]
+    assert oso_repo.id in result_ids
+    assert demo_repo.id in result_ids
+    assert ios.id not in result_ids

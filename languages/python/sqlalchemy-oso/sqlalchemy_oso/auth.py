@@ -7,6 +7,7 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
 from sqlalchemy import inspect
 from sqlalchemy.sql import expression as sql
+from sqlalchemy.sql import or_
 
 from sqlalchemy_oso.partial import partial_to_filter
 from sqlalchemy_oso import roles2
@@ -101,7 +102,6 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
     if has_role_allows:
         roles_filter = roles2._add_query_filter(actor, action, model)
         # TODO: is this the right place to do this? Should it be inside of `_authorize_query()` instead?
-        if roles_filter:
-            combined_filter |= roles_filter
+        combined_filter &= roles_filter
 
     return combined_filter
