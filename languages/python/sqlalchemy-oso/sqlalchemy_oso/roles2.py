@@ -81,7 +81,6 @@ class Relationship:
     parent_python_class: Any
     parent_type: str
     parent_table: str
-    parent_selector: Any
     parent_field: str
 
 
@@ -219,14 +218,6 @@ class OsoRoles:
             pattern = get_parent.args[1]
             parent_t = pattern.tag
 
-            # @NOTE: Works around a problem with lambda referencing local
-            # vars.
-            def make_getter(field):
-                def get_parent(child):
-                    return getattr(child, field)
-
-                return get_parent
-
             child_python_class = self.oso.host.classes[child_t]
             child_table = child_python_class.__tablename__
             parent_python_class = self.oso.host.classes[parent_t]
@@ -239,7 +230,6 @@ class OsoRoles:
                 parent_python_class=parent_python_class,
                 parent_type=parent_t,
                 parent_table=parent_table,
-                parent_selector=make_getter(parent_field),
                 parent_field=parent_field,
             )
 
@@ -404,11 +394,11 @@ class OsoRoles:
             child_table = relationship.child_table
             child_type = relationship.child_type
             sqlalchemy_field = relationship.parent_field
-            relationship = inspect(relationship.child_python_class).relationships[
+            rel = inspect(relationship.child_python_class).relationships[
                 sqlalchemy_field
             ]
-            parent_join_field = list(relationship.remote_side)[0].name
-            child_join_field = list(relationship.local_columns)[0].name
+            parent_join_field = list(rel.remote_side)[0].name
+            child_join_field = list(rel.local_columns)[0].name
             select = f"select p.{parent_id} from {child_table} c join {parent_table} p on c.{child_join_field} = p.{parent_join_field} where c.{child_id} = resources.id"
 
             id_query += f""
@@ -520,8 +510,10 @@ def _add_query_filter(oso, user, action, resource_model):
     sql = oso.roles.list_filter_queries[resource_type]
 
     # @OPT: It should be possible to pass the select sql as the in
-    # parameter instead of doing two queries
-    # but I'm not sure how you bind the variables.
+    # parameter (instead of doing two queries)
+    # but I'm not sure how you bind the variables yet.
+    # I think we need access to the query here instead of a filter or
+    # to pass on the bindings so they're bound before the execute later.
     results = session.execute(
         sql,
         {
@@ -531,12 +523,6 @@ def _add_query_filter(oso, user, action, resource_model):
         },
     )
     resource_ids = [id[0] for id in results.fetchall()]
-
-    # @OPT: It should be possible to pass the select sql as the in
-    # parameter (instead of doing two queries)
-    # but I'm not sure how you bind the variables yet.
-    # I think we need access to the query here instead of a filter or
-    # to pass on the bindings so they're bound before the execute later.
 
     # @Q: Why doesn't this work? Complains that in_ isn't a boolean
     # expression.
