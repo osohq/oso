@@ -8,6 +8,7 @@ from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy import inspect
 
+
 def user_in_role_query(id_query, type_query, child_types, resource_id_field):
     query = f"""
         -- get all the relevant resources by walking the parent tree
@@ -415,15 +416,17 @@ class OsoRoles:
         type_query += "end as type"
 
         resource_id_field = ":resource_id"
-        self.sql_query = user_in_role_query(id_query, type_query, child_types, resource_id_field)
+        self.sql_query = user_in_role_query(
+            id_query, type_query, child_types, resource_id_field
+        )
 
         for _, resource in self.resources.items():
             python_class = resource.python_class[0]
-            id_field = (
-                inspect(python_class).primary_key[0].name
-            )
+            id_field = inspect(python_class).primary_key[0].name
             table = python_class.__tablename__
-            self.list_filter_queries[python_class.__name__] = f"""
+            self.list_filter_queries[
+                python_class.__name__
+            ] = f"""
                 select
                   {id_field}
                 from {table} R
@@ -526,7 +529,7 @@ def _add_query_filter(oso, user, action, resource_model):
 
     # @Q: Why doesn't this work? Complains that in_ isn't a boolean
     # expression.
-    #filter = getattr(resource_model, resource_pk_name).in_(resource_ids)
+    # filter = getattr(resource_model, resource_pk_name).in_(resource_ids)
 
     # @NOTE: The dumbest way possible is working.
     # id = 1 or id = 2 or id = 3 ...
