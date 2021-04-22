@@ -19,7 +19,7 @@ To learn more about roles and the different ways they can be used for authorizat
 Control](learn/roles).
 
 {{% callout "Implementing roles?" "yellow" %}}
-We're working on a set of new features to better support adding roles to B2B applications.
+We're working on the next major feature of Oso, a new set of tools to better support adding roles to B2B applications.
 These features include defining roles, adding role checks/enforcement to your application, and exposing a
 role management API and frontend to your end users.
 
