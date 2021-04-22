@@ -9,7 +9,6 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy import inspect
 
 def user_in_role_query(id_query, type_query, child_types, resource_id_field):
-
     query = f"""
         -- get all the relevant resources by walking the parent tree
         with resources as (
@@ -154,7 +153,7 @@ class OsoRoles:
         class RolePermission(sqlalchemy_base):
             __tablename__ = "role_permissions"
             id = Column(Integer, primary_key=True)
-            role = Column(String, ForeignKey("roles.name"))
+            role = Column(String)
             permission_id = Column(Integer, ForeignKey("permissions.id"))
 
         class RoleImplication(sqlalchemy_base):

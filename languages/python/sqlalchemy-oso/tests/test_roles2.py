@@ -12,7 +12,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy_oso import register_models, authorized_sessionmaker
 from sqlalchemy_oso.roles2 import OsoRoles
 
-from oso import Oso, Variable
+from oso import Oso
 
 Base = declarative_base(name="RoleBase")
 
@@ -47,8 +47,18 @@ class Issue(Base):
 
 
 def test_roles():
+    engine = create_engine("sqlite://")
+
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
     oso = Oso()
+
+    roles = OsoRoles(oso, Base, User, Session)
+    roles.enable()
+
     register_models(oso, Base)
+
     policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = [
@@ -96,15 +106,6 @@ def test_roles():
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-
-    #engine = create_engine("sqlite:///roles.db")
-    engine = create_engine("sqlite://")
-
-    Session = sessionmaker(bind=engine)
-    session = Session()
-
-    roles = OsoRoles(oso, Base, User, Session)
-    roles.enable()
 
     # @NOTE: Right now this has to happen after enabling oso roles to get the
     #        tables.
