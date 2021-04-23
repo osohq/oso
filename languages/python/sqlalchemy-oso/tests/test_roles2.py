@@ -101,7 +101,7 @@ def test_oso_roles_init(auth_sessionmaker):
 
     # - Passing an auth session to OsoRoles raises an exception
     with pytest.raises(Exception):
-        roles = OsoRoles(oso, Base, User, auth_sessionmaker)
+        OsoRoles(oso, Base, User, auth_sessionmaker)
 
     Session = sessionmaker(bind=engine)
     session = Session()
