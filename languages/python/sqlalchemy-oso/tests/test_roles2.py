@@ -1,4 +1,6 @@
 # Roles 2 tests
+import pytest
+
 from sqlalchemy import create_engine
 from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
@@ -11,47 +13,79 @@ from sqlalchemy_oso.roles2 import OsoRoles
 from oso import Oso
 
 
+Base = declarative_base(name="RoleBase")
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String())
+
+
+class Organization(Base):
+    __tablename__ = "organizations"
+
+    id = Column(String(), primary_key=True)
+
+
+class Repository(Base):
+    __tablename__ = "repositories"
+
+    id = Column(String(), primary_key=True)
+    org_id = Column(String(), ForeignKey("organizations.id"))
+    org = relationship("Organization")
+
+
+class Issue(Base):
+    __tablename__ = "issues"
+
+    id = Column(String(), primary_key=True)
+    repo_id = Column(String(), ForeignKey("repositories.id"))
+    repo = relationship("Repository")
+
+
 @pytest.fixture
-def init_oso():
+def engine():
+    engine = create_engine("sqlite:///:memory:")
+    return engine
 
-    Base = declarative_base(name="RoleBase")
 
-    class User(Base):
-        __tablename__ = "users"
-
-        id = Column(Integer, primary_key=True)
-        name = Column(String())
-
-    class Organization(Base):
-        __tablename__ = "organizations"
-
-        id = Column(String(), primary_key=True)
-
-    class Repository(Base):
-        __tablename__ = "repositories"
-
-        id = Column(String(), primary_key=True)
-        org_id = Column(String(), ForeignKey("organizations.id"))
-        org = relationship("Organization")
-
-    class Issue(Base):
-        __tablename__ = "issues"
-
-        id = Column(String(), primary_key=True)
-        repo_id = Column(String(), ForeignKey("repositories.id"))
-        repo = relationship("Repository")
+@pytest.fixture
+def init_oso(engine):
 
     # Initialize Oso and OsoRoles
-    engine = create_engine("sqlite://")
-
+    # ---------------------------
     Session = sessionmaker(bind=engine)
     session = Session()
 
     oso = Oso()
+    register_models(oso, Base)
 
     roles = OsoRoles(oso, Base, User, Session)
     roles.enable()
-    return (oso, roles)
+
+    # @NOTE: Right now this has to happen after enabling oso roles to get the
+    #        tables.
+    Base.metadata.create_all(engine)
+
+    return (oso, roles, session)
+
+
+@pytest.fixture
+def authorized_sessionmaker(init_oso, engine):
+    oso, oso_roles, _ = init_oso
+    oso.actor = None
+    oso.action = None
+
+    AuthSessionmaker = authorized_sessionmaker(
+        bind=engine,
+        get_oso=lambda: oso,
+        get_user=lambda: oso.actor,
+        get_action=lambda: oso.action,
+    )
+
+    return AuthSessionmaker
 
 
 ## TEST RESOURCE CONFIGURATION
@@ -69,7 +103,7 @@ def init_oso():
 def test_resource_actions(init_oso):
 
     # init
-    oso, oso_roles = init_oso
+    oso, oso_roles, session = init_oso
     # - test with only actions
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -78,12 +112,12 @@ def test_resource_actions(init_oso):
         ];
     """
     oso.load_str(policy)
-    oso_roles._configure()
+    oso_roles.configure()
 
 
 def test_duplicate_action(init_oso):
     # - duplicate action
-    oso, oso_roles = init_oso
+    oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = [
@@ -94,12 +128,12 @@ def test_duplicate_action(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(Exception):
-        oso_roles._configure()
+        oso_roles.configure()
 
 
 def test_undeclared_permission(init_oso):
     # - assign permission that wasn't declared
-    oso, oso_roles = init_oso
+    oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = [
@@ -113,13 +147,16 @@ def test_undeclared_permission(init_oso):
     """
     oso.load_str(policy)
 
-    with pytest.raises(Exception):
-        oso_roles._configure()
+    with pytest.raises(Exception) as e:
+        oso_roles.configure()
+
+    # TODO: Make this an actual error, not an assert
+    assert e.typename != "AssertionError"
 
 
 def test_undeclared_role(init_oso):
     # - imply role that wasn't declared
-    oso, oso_roles = init_oso
+    oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = [
@@ -133,12 +170,12 @@ def test_undeclared_role(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(Exception):
-        oso_roles._configure()
+        oso_roles.configure()
 
 
 def test_invalid_role_implication(init_oso):
     # - imply role without valid relationship
-    oso, oso_roles = init_oso
+    oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = [
@@ -163,12 +200,12 @@ def test_invalid_role_implication(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(Exception):
-        oso_roles._configure()
+        oso_roles.configure()
 
 
 def test_invalid_role_permission(init_oso):
     # - assign permission without valid relationship
-    oso, oso_roles = init_oso
+    oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = [
@@ -188,12 +225,12 @@ def test_invalid_role_permission(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(Exception):
-        oso_roles._configure()
+        oso_roles.configure()
 
 
 def test_incorrect_arity_resource(init_oso):
     # - use resource predicate with incorrect arity
-    oso, oso_roles = init_oso
+    oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions) if
         actions = [
@@ -202,23 +239,23 @@ def test_incorrect_arity_resource(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(Exception):
-        oso_roles._configure()
+        oso_roles.configure()
 
 
 def test_undefined_resource_arguments(init_oso):
     # - use resource predicate without defining actions/roles
-    oso, oso_roles = init_oso
+    oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles);
     """
     oso.load_str(policy)
     with pytest.raises(Exception):
-        oso_roles._configure()
+        oso_roles.configure()
 
 
 def test_wrong_type_resource_arguments(init_oso):
     # - use resource predicate with field types
-    oso, oso_roles = init_oso
+    oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
@@ -231,13 +268,11 @@ def test_wrong_type_resource_arguments(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(Exception) as e:
-        oso_roles._configure()
+        oso_roles.configure()
 
 
-def test_roles(init_oso):
-    oso, oso_roles = init_oso
-
-    register_models(oso, Base)
+def test_roles(init_oso, authorized_sessionmaker):
+    oso, oso_roles, session = init_oso
 
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -286,16 +321,13 @@ def test_roles(init_oso):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles._configure()
-
-    # @NOTE: Right now this has to happen after enabling oso roles to get the
-    #        tables.
-    Base.metadata.create_all(engine)
 
     # tbd on the name for this, but this is what used to happy lazily.
     # it reads the config from the policy and sets everything up.
-    roles.configure()
+    oso_roles.configure()
 
+    # Create sample data
+    # -------------------
     apple = Organization(id="apple")
     osohq = Organization(id="osohq")
 
@@ -316,8 +348,8 @@ def test_roles(init_oso):
 
     # @NOTE: Need the users and resources in the db before assigning roles
     # so you have to call session.commit() first.
-    roles.assign_role(leina, osohq, "org_owner", session=session)
-    roles.assign_role(steve, osohq, "org_member", session=session)
+    oso_roles.assign_role(leina, osohq, "org_owner", session=session)
+    oso_roles.assign_role(steve, osohq, "org_member", session=session)
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "create_repo", osohq)
@@ -334,19 +366,9 @@ def test_roles(init_oso):
     assert not oso.is_allowed(leina, "edit", laggy)
     assert not oso.is_allowed(steve, "edit", laggy)
 
-    oso.actor = None
-    oso.action = None
-
-    AuthSessionmaker = authorized_sessionmaker(
-        bind=engine,
-        get_oso=lambda: oso,
-        get_user=lambda: oso.actor,
-        get_action=lambda: oso.action,
-    )
-
     oso.actor = leina
     oso.action = "pull"
-    auth_session = AuthSessionmaker()
+    auth_session = authorized_sessionmaker()
 
     results = auth_session.query(Repository).all()
     assert len(results) == 2
