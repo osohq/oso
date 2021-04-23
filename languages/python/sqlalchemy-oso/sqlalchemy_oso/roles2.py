@@ -149,7 +149,7 @@ class OsoRoles:
 
         models = sqlalchemy_base._decl_class_registry
 
-        # This is pretty hacky, also will break if the user defines their own classes with these names, so we should
+        # @NOTE: This is pretty hacky, also will break if the user defines their own classes with these names, so we should
         # make them more unique
         if models.get("UserRole"):
             UserRole = models["UserRole"]

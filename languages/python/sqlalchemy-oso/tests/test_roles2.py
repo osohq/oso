@@ -100,8 +100,8 @@ def sample_data(init_oso):
     oso_repo = Repository(id="oso", org=osohq)
     demo_repo = Repository(id="demo", org=osohq)
 
-    laggy = Issue(id="laggy", repo=ios)
-    bug = Issue(id="bug", repo=oso_repo)
+    ios_laggy = Issue(id="laggy", repo=ios)
+    oso_bug = Issue(id="bug", repo=oso_repo)
 
     leina = User(name="leina")
     steve = User(name="steve")
@@ -114,8 +114,8 @@ def sample_data(init_oso):
         "ios": ios,
         "oso_repo": oso_repo,
         "demo_repo": demo_repo,
-        "laggy": laggy,
-        "bug": bug,
+        "ios_laggy": ios_laggy,
+        "oso_bug": oso_bug,
     }
     for obj in objs.values():
         session.add(obj)
@@ -184,7 +184,7 @@ def test_oso_roles_init(auth_sessionmaker):
 # - [ ] using resource predicate with field types throws an error
 
 # Role allows:
-# - [ ] calling `roles.configure()` without calling `Roles.role_allows()` issues warning
+# - [ ] calling `roles.configure()` without calling `Roles.role_allows()` from policy issues warning
 #   TODO write test
 
 
@@ -267,9 +267,6 @@ def test_undeclared_permission(init_oso):
 
     with pytest.raises(OsoError) as e:
         oso_roles.configure()
-
-    # TODO: Make this an actual error, not an assert
-    assert e.typename != "AssertionError"
 
 
 def test_undeclared_role(init_oso):
@@ -378,7 +375,6 @@ def test_invalid_role_permission(init_oso):
     """
 
     oso.load_str(policy)
-    # TODO: make this not an AssertionError
     with pytest.raises(OsoError):
         oso_roles.configure()
 
@@ -453,13 +449,13 @@ def test_wrong_type_resource_arguments(init_oso):
 
 # TEST CHECK API @TODO all of these
 # Homogeneous role-permission assignment:
-# - Adding a permission of same resource type to a role grants assignee access
-# - Modifying a permission of same resource type on a role modifies assignee access
-# - Removing a permission of same resource type from a role revokes assignee access
+# - [x] Adding a permission of same resource type to a role grants assignee access
+# - [x] Modifying a permission of same resource type on a role modifies assignee access
+# - [x] Removing a permission of same resource type from a role revokes assignee access
 
 # Parent->child role-permission assignment:
-# - Adding a permission of child resource type to a role grants assignee access
-# - Removing a permission of child resource type from a role revokes assignee access
+# - [ ] Adding a permission of child resource type to a role grants assignee access
+# - [ ] Removing a permission of child resource type from a role revokes assignee access
 
 # Grandparent->child role-permission assignment:
 # - Adding a permission of grandchild resource type to a role grants assignee access
@@ -478,6 +474,7 @@ def test_wrong_type_resource_arguments(init_oso):
 # Grandparent->child role implications:
 # - Adding a role implication of grandchild resource type to a role grants assignee access to grandchild
 #   without intermediate parent resource
+#       TODO: is this actually desired behavior? could just make it a parent-child
 # - Adding a role implication from grandparent->parent->child resource role types grants assignee of grandparent role
 #   access to grandchild resource
 
@@ -535,7 +532,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
 
 
 # Parent->child role-permission assignment:
-def test_parent_child_role_permission(init_oso, sample_data):
+def test_parent_child_role_perm(init_oso, sample_data):
     # - Adding a permission of child resource type to a role grants assignee access
     oso, oso_roles, session = init_oso
     policy = """
@@ -605,6 +602,95 @@ def test_parent_child_role_permission(init_oso, sample_data):
     assert oso.is_allowed(leina, "invite", osohq)
 
 
+# Grandparent->child role-permission assignment:
+def test_grandparent_child_role_perm(init_oso, sample_data):
+    # - Adding a permission of grandchild resource type to a role grants assignee access
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite", "repo:pull", "issue:edit"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, _) if
+        actions = [
+            "push",
+            "pull"
+        ];
+
+    resource(_type: Issue, "issue", actions, _) if
+        actions = [
+            "edit"
+        ];
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    parent(repository: Issue, parent_repo: Repository) if
+        issue.repo = parent_repo;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.configure()
+
+    osohq = sample_data["osohq"]
+    oso_repo = sample_data["oso_repo"]
+    oso_bug = sample_data["oso_bug"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(leina, "pull", oso_repo)
+    assert oso.is_allowed(leina, "edit", oso_bug)
+    assert not oso.is_allowed(steve, "edit", oso_bug)
+
+    # - Removing a permission of grandchild resource type from a role revokes assignee access
+    new_policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite", "repo:pull"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, _) if
+        actions = [
+            "push",
+            "pull"
+        ];
+
+    resource(_type: Issue, "issue", actions, _) if
+        actions = [
+            "edit"
+        ];
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    parent(repository: Issue, parent_repo: Repository) if
+        issue.repo = parent_repo;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+
+    oso.clear_rules()
+    oso.load_str(new_policy)
+    oso_roles.configure()
+
+    assert not oso.is_allowed(leina, "edit", oso_bug)
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(leina, "pull", oso_repo)
+
+
 # TODO: all of these
 ## TEST WRITE API
 # User-role assignment:
@@ -620,9 +706,13 @@ def test_implied_roles_are_mutually_exclusive():
     pass
 
 
+# TODO: all of these
 ## TEST DATA FILTERING
-# - [ ] `role_allows` inside of an `OR`
-# - [ ] `role_allows` AND another condition
+# - [ ] `role_allows` inside of an `OR` with another expression
+# - [ ] `role_allows` inside of an `AND` with another expression
+
+# TODO: come up with these
+## TEST READ API
 
 #### LEGACY TEST
 
