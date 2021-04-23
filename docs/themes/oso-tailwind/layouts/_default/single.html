@@ -6,7 +6,14 @@
         <div class="min-w-0 flex-auto px-4 sm:px-6 xl:px-8 pt-6 pb-24 lg:pb-16">
           <article class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:px-8 pb-24 lg:pb-16">
             {{ .Content }}
-          </article>
+        </article>
+          {{with .PrevInSection }}
+          <a href="{{.RelPermalink}}">
+          <button class="btn btn-blue float-right">
+          Read next: {{.Title}}
+          </button>
+          </a>
+          {{end}}
           <!--/ Post Content-->
           <!-- {{- partial "useful.html" . -}} -->
         </div>

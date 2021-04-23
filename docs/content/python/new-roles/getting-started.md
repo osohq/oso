@@ -9,8 +9,6 @@ description: >
 
 **TODO** i want every API link to go to reference
 
-**TODO** i want every page to have a next / previous button
-
 **TODO** i want there to be less distractions from reading (no huge
 floating footer, TOC on sidebar, floating header & banners)
 

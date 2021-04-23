@@ -3,6 +3,7 @@ title: Add Roles (NEW)
 weight: 1
 description: >
   New Oso roles demo!
+draft: true
 ---
 
 # Add roles to your app with Oso (NEW)
