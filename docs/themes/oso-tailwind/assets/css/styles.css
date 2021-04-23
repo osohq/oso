@@ -119,3 +119,11 @@ button > * {
 .btn-blue:hover {
     @apply bg-blue-700;
 }
+
+.btn-outline {
+    @apply rounded border border-solid border-gray-700 text-gray-700 px-2;
+}
+
+.btn-outline:hover {
+    @apply border-gray-500 bg-gray-800 bg-opacity-10;
+}

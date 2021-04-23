@@ -36,6 +36,12 @@ application.
 
 **CODE SAMPLE**
 
+{{< literalInclude
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
+    lines="108-117"
+    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+>}}
+
 ## Loading our policy
 
 `Oso` uses the Polar language to define authorization policies. An
