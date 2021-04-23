@@ -457,10 +457,13 @@ def test_wrong_type_resource_arguments(init_oso):
 # - Modifying a permission of same resource type on a role modifies assignee access
 # - Removing a permission of same resource type from a role revokes assignee access
 
-# Heterogeneous role-permission assignment:
-# - Adding a permission of related resource type to a role grants assignee access
-# - Modifying a permission of related resource type on a role modifies assignee access
-# - Removing a permission of related resource type from a role revokes assignee access
+# Parent->child role-permission assignment:
+# - Adding a permission of child resource type to a role grants assignee access
+# - Removing a permission of child resource type from a role revokes assignee access
+
+# Grandparent->child role-permission assignment:
+# - Adding a permission of grandchild resource type to a role grants assignee access
+# - Removing a permission of grandchild resource type from a role revokes assignee access
 
 # Homogeneous role implications:
 # - Adding a role implication of same resource type to a role grants assignee access
@@ -480,7 +483,7 @@ def test_wrong_type_resource_arguments(init_oso):
 
 
 # Homogeneous role-permission assignment:
-def test_add_homogeneous_role_perm(init_oso, sample_data):
+def test_homogeneous_role_perm(init_oso, sample_data):
     # - Adding a permission of same resource type to a role grants assignee access
     oso, oso_roles, session = init_oso
     policy = """
@@ -500,26 +503,112 @@ def test_add_homogeneous_role_perm(init_oso, sample_data):
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
+    steve = sample_data["steve"]
 
     oso_roles.assign_role(leina, osohq, "org_member", session=session)
 
-    # TODO: this fails because there aren't any relationships
     assert oso.is_allowed(leina, "invite", osohq)
+    assert not oso.is_allowed(steve, "invite", osohq)
 
-
-def test_remove_homogenous_role_perm():
     # - Removing a permission of same resource type from a role revokes assignee access
-    pass
+    new_policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite", "list_repos"] and
+        roles = {
+            org_member: {
+                # REMOVE INVITE AND ADD LIST_REPOS
+                perms: ["list_repos"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+
+    oso.clear_rules()
+    oso.load_str(new_policy)
+    oso_roles.configure()
+
+    assert not oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(leina, "list_repos", osohq)
+    assert not oso.is_allowed(steve, "list_repos", osohq)
 
 
-def test_modify_homogenous_role_perm():
-    # - Modifying a permission of same resource type on a role modifies assignee access
-    pass
+# Parent->child role-permission assignment:
+def test_parent_child_role_permission(init_oso, sample_data):
+    # - Adding a permission of child resource type to a role grants assignee access
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite", "repo:pull"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ];
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+
+    """
+    oso.load_str(policy)
+    oso_roles.configure()
+
+    osohq = sample_data["osohq"]
+    oso_repo = sample_data["oso_repo"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+
+    assert oso.is_allowed(leina, "pull", oso_repo)
+    assert not oso.is_allowed(steve, "pull", oso_repo)
+
+    # - Removing a permission of child resource type from a role revokes assignee access
+    new_policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ];
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+
+    oso.clear_rules()
+    oso.load_str(new_policy)
+    oso_roles.configure()
+
+    assert not oso.is_allowed(leina, "pull", oso_repo)
+    assert oso.is_allowed(leina, "invite", osohq)
 
 
 # TODO: all of these
 ## TEST WRITE API
 # User-role assignment:
+# - Adding user-role assignment grants access
+# - Removing user-role assignment revokes access
 # - Assigning to non-existent role throws an error
 # - Assigning to role with wrong resource type throws an error
 # - Implied roles are mutually exclusive on user-role assignment
