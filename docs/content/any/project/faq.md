@@ -129,9 +129,8 @@ Oso is licensed under [the Apache 2.0 license](https://github.com/osohq/oso/blob
 
 Oso is freely available as an open source product and will always be free and open source.
 
-We are also working on an enterprise product that extends the open source core with
-additional features. If you are interested in support for Oso or enterprise
-features, please [contact us](https://osohq.com/company/contact-us).
+We are also working on a commercial product that will be built around the core open source product. If you are interested in support for Oso or the commercial
+product, please [contact us](https://osohq.com/company/contact-us).
 
 ## Who builds and maintains Oso?
 
