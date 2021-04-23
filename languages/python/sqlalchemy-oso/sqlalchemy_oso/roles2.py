@@ -16,6 +16,8 @@ from oso import OsoError
 def user_in_role_query(
     id_query, type_query, child_types, resource_id_field, has_relationships
 ):
+    child_types = ",".join([f"'{ct}'" for ct in child_types])
+
     if not has_relationships:
         recur = ""
     else:
@@ -28,7 +30,7 @@ def user_in_role_query(
             {id_query},
             {type_query}
         from resources
-        where type in {str(tuple(child_types))}"""
+        where type in ({child_types})"""
     query = f"""
         -- get all the relevant resources by walking the parent tree
         with resources as (
