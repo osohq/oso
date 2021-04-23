@@ -10,7 +10,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy_oso import register_models, authorized_sessionmaker
 from sqlalchemy_oso.roles2 import OsoRoles
 
-from oso import Oso
+from oso import Oso, OsoError
 
 
 Base = declarative_base(name="RoleBase")
@@ -136,25 +136,25 @@ def test_oso_roles_init(auth_sessionmaker):
     register_models(oso, Base)
 
     # - Passing an auth session to OsoRoles raises an exception
-    with pytest.raises(Exception):
+    with pytest.raises(OsoError):
         OsoRoles(oso, Base, User, auth_sessionmaker)
 
     Session = sessionmaker(bind=engine)
     session = Session()
 
     # - Passing a session instead of Session factory to OsoRoles raises an exception
-    with pytest.raises(Exception):
+    with pytest.raises(AttributeError):
         OsoRoles(oso, Base, User, session)
 
     class FakeClass:
         pass
 
     # - Passing a non-SQLAlchemy user model to OsoRoles raises an exception
-    with pytest.raises(Exception):
+    with pytest.raises(TypeError):
         OsoRoles(oso, Base, FakeClass, Session)
 
     # - Passing a bad declarative_base to OsoRoles raises an exception
-    with pytest.raises(Exception):
+    with pytest.raises(AttributeError):
         OsoRoles(oso, FakeClass, User, Session)
 
 
@@ -213,7 +213,7 @@ def test_duplicate_role_name(init_oso):
     """
     oso.load_str(policy)
 
-    with pytest.raises(Exception):
+    with pytest.raises(OsoError):
         oso_roles.configure()
 
 
@@ -242,7 +242,7 @@ def test_duplicate_action(init_oso):
     """
     oso.load_str(policy)
 
-    with pytest.raises(Exception):
+    with pytest.raises(OsoError):
         oso_roles.configure()
 
 
@@ -262,7 +262,7 @@ def test_undeclared_permission(init_oso):
     """
     oso.load_str(policy)
 
-    with pytest.raises(Exception) as e:
+    with pytest.raises(OsoError) as e:
         oso_roles.configure()
 
     # TODO: Make this an actual error, not an assert
@@ -284,7 +284,7 @@ def test_undeclared_role(init_oso):
         };
     """
     oso.load_str(policy)
-    with pytest.raises(Exception):
+    with pytest.raises(OsoError):
         oso_roles.configure()
 
 
@@ -314,7 +314,7 @@ def test_role_implication_without_relationship(init_oso):
         };
     """
     oso.load_str(policy)
-    with pytest.raises(Exception):
+    with pytest.raises(OsoError):
         oso_roles.configure()
 
 
@@ -339,7 +339,7 @@ def test_role_permission_without_relationship(init_oso):
         ];
     """
     oso.load_str(policy)
-    with pytest.raises(Exception):
+    with pytest.raises(OsoError):
         oso_roles.configure()
 
 
@@ -376,7 +376,7 @@ def test_invalid_role_permission(init_oso):
 
     oso.load_str(policy)
     # TODO: make this not an AssertionError
-    with pytest.raises(Exception):
+    with pytest.raises(OsoError):
         oso_roles.configure()
 
 
@@ -401,7 +401,7 @@ def test_permission_assignment_to_implied_role(init_oso):
     """
 
     oso.load_str(policy)
-    with pytest.raises(Exception):
+    with pytest.raises(OsoError):
         oso_roles.configure()
 
 
@@ -415,7 +415,7 @@ def test_incorrect_arity_resource(init_oso):
         ];
     """
     oso.load_str(policy)
-    with pytest.raises(Exception):
+    with pytest.raises(OsoError):
         oso_roles.configure()
 
 
@@ -426,7 +426,7 @@ def test_undefined_resource_arguments(init_oso):
     resource(_type: Organization, "org", actions, roles);
     """
     oso.load_str(policy)
-    with pytest.raises(Exception):
+    with pytest.raises(OsoError):
         oso_roles.configure()
 
 
@@ -444,7 +444,7 @@ def test_wrong_type_resource_arguments(init_oso):
         };
     """
     oso.load_str(policy)
-    with pytest.raises(Exception):
+    with pytest.raises(OsoError):
         oso_roles.configure()
 
 

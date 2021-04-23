@@ -7,6 +7,8 @@ from oso import Variable
 from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy import inspect
+from sqlalchemy.orm import class_mapper
+from sqlalchemy.orm.exc import UnmappedClassError
 
 from oso import OsoError
 
@@ -131,7 +133,7 @@ class OsoRoles:
                 raise OsoError(
                     "Must pass a normal session maker not an authorized session maker."
                 )
-
+        _check_valid_model(user_model)
         user_pk_type = inspect(user_model).primary_key[0].type
         user_pk_name = inspect(user_model).primary_key[0].name
         user_table_name = user_model.__tablename__
@@ -300,7 +302,7 @@ class OsoRoles:
             for perm in permissions:
                 if permissions.count(perm) > 1:
                     raise OsoError(
-                        f"Duplicate action {perm.name} for resource {python_class.__name__}"
+                        f"Duplicate action {perm} for resource {python_class.__name__}"
                     )
 
             if isinstance(role_defs, Variable):
@@ -437,7 +439,7 @@ class OsoRoles:
                         )
 
         if len(self.resources) == 0:
-            raise Exception("Need to define resources to use oso roles.")
+            raise OsoError("Need to define resources to use oso roles.")
 
         # Sync static data to the database.
         session = self._get_session()
@@ -664,3 +666,15 @@ def _add_query_filter(oso, user, action, resource_model):
         else:
             filter = id_check
     return filter
+
+
+def _check_valid_model(*args, raise_error=True):
+    for model in args:
+        valid = True
+        try:
+            class_mapper(model)
+        except UnmappedClassError:
+            valid = False
+
+        if raise_error and not valid:
+            raise TypeError(f"Expected a model (mapped class); received: {model}")
