@@ -8,6 +8,7 @@ from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy import inspect
 
+from oso import OsoError
 
 def user_in_role_query(id_query, type_query, child_types, resource_id_field):
     query = f"""
@@ -203,9 +204,6 @@ class OsoRoles:
         return self.session_maker()
 
     def configure(self):
-        # @TODO: ALLLLL of the validation needed for the role model.
-
-        # @TODO: Figure out where this session should really come from.
         self.resources = {}
         self.permissions = []
         self.roles = {}
@@ -283,17 +281,21 @@ class OsoRoles:
             permissions = result["bindings"]["permissions"]
             role_defs = result["bindings"]["roles"]
 
-            python_class = (self.oso.host.classes[t],)
+            python_class = self.oso.host.classes[t]
 
             if isinstance(permissions, Variable):
-                permissions = set()
+                permissions = []
             else:
-                permissions = set(permissions)
+                permissions = permissions
+
+            for perm in permissions:
+                if permissions.count(perm) > 1:
+                    raise OsoError(f"Duplicate action {perm.name} for resource {python_class.__name__}")
 
             if isinstance(role_defs, Variable):
-                role_names = set()
+                role_names = []
             else:
-                role_names = set(role_defs.keys())
+                role_names = role_defs.keys()
 
             resource = Resource(
                 python_class=python_class,
@@ -327,6 +329,13 @@ class OsoRoles:
                             else:
                                 action = permission
                                 permission_python_class = python_class
+
+                            perm = Permission(
+                                name=action, python_class=permission_python_class
+                            )
+                            if perm not in self.permissions:
+                                raise OsoError(f"Permission {perm.name} doesn't exist for resource {perm.python_class.__name__}.")
+
                             role_permissions.append(
                                 Permission(
                                     name=action, python_class=permission_python_class
@@ -355,7 +364,7 @@ class OsoRoles:
         permissions = {}
         for p in self.permissions:
             name = p.name
-            t = str(p.python_class[0].__name__)
+            t = str(p.python_class.__name__)
             permissions[(name, t)] = self.Permission(resource_type=t, name=name)
 
         for _, p in permissions.items():
@@ -368,11 +377,11 @@ class OsoRoles:
         role_implications = []
         for _, role in self.roles.items():
             roles.append(
-                self.Role(name=role.name, resource_type=role.python_class[0].__name__)
+                self.Role(name=role.name, resource_type=role.python_class.__name__)
             )
             for permission in role.permissions:
                 perm_name = permission.name
-                perm_type = str(permission.python_class[0].__name__)
+                perm_type = str(permission.python_class.__name__)
                 perm_key = (perm_name, perm_type)
                 assert perm_key in permissions
                 perm = permissions[perm_key]
@@ -448,7 +457,7 @@ class OsoRoles:
         )
 
         for _, resource in self.resources.items():
-            python_class = resource.python_class[0]
+            python_class = resource.python_class
             id_field = inspect(python_class).primary_key[0].name
             table = python_class.__tablename__
             self.list_filter_queries[
@@ -507,7 +516,7 @@ class OsoRoles:
         assert role_name in self.roles
         role = self.roles[role_name]
 
-        assert resource.__class__ in role.python_class
+        resource.__class__ == role.python_class
 
         user_pk_name = inspect(user.__class__).primary_key[0].name
         user_id = getattr(user, user_pk_name)
