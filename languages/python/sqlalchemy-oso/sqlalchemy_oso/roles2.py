@@ -64,7 +64,7 @@ def user_in_role_query(id_query, type_query, child_types, resource_id_field):
             join relevant_roles rr
             on rr.role = ur.role
             join resources r
-            on r.type = ur.resource_type and r.id = ur.resource_id
+            on r.type = ur.resource_type and cast(r.id as varchar) = ur.resource_id
             where ur.user_id = :user_id
         ) select * from user_in_role
     """
