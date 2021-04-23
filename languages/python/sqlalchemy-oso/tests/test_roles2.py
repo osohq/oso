@@ -488,11 +488,12 @@ def test_add_homogeneous_role_perm(init_oso, sample_data):
                 perms: ["invite"]
             }
         };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
     oso_roles.configure()
-
-    data = sample_data
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -500,6 +501,7 @@ def test_add_homogeneous_role_perm(init_oso, sample_data):
 
     oso_roles.assign_role(leina, osohq, "org_member", session=session)
 
+    # TODO: this fails because there aren't any relationships
     assert oso.is_allowed(leina, "invite", osohq)
 
 

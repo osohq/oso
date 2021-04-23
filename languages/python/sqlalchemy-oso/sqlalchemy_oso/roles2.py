@@ -212,6 +212,7 @@ class OsoRoles:
         return self.session_maker()
 
     def configure(self):
+        # TODO: should we think about calling this by default when the policy is loaded?
         self.resources = {}
         self.permissions = []
         self.roles = {}
