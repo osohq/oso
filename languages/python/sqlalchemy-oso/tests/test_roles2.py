@@ -88,7 +88,7 @@ def auth_sessionmaker(init_oso, engine):
     return AuthSessionmaker
 
 
-## TEST OsoRoles Initialization
+# TEST OsoRoles Initialization
 # - Passing an auth session to OsoRoles raises an exception
 # - Passing a session instead of Session factory to OsoRoles raises an exception
 # - Passing a non-SQLAlchemy user model to OsoRoles raises an exception
@@ -108,7 +108,7 @@ def test_oso_roles_init(auth_sessionmaker):
 
     # - Passing a session instead of Session factory to OsoRoles raises an exception
     with pytest.raises(Exception):
-        roles = OsoRoles(oso, Base, User, session)
+        OsoRoles(oso, Base, User, session)
 
     class FakeClass:
         pass
@@ -122,7 +122,7 @@ def test_oso_roles_init(auth_sessionmaker):
         roles = OsoRoles(oso, FakeClass, User, Session)
 
 
-## TEST RESOURCE CONFIGURATION
+# TEST RESOURCE CONFIGURATION
 # Role declaration:
 # - [ ] duplicate role name throws an error
 
@@ -404,11 +404,11 @@ def test_wrong_type_resource_arguments(init_oso):
         };
     """
     oso.load_str(policy)
-    with pytest.raises(Exception) as e:
+    with pytest.raises(Exception):
         oso_roles.configure()
 
 
-## TEST CHECK API
+# TEST CHECK API
 # Homogeneous role-permission assignment:
 # - Adding a permission of same resource type to a role grants assignee access
 # - Modifying a permission of same resource type on a role modifies assignee access
@@ -429,7 +429,7 @@ def test_wrong_type_resource_arguments(init_oso):
 # - Modifying a role implication of related resource type to a role modifies assignee access
 # - Removing a role implication of related resource type from a role revokes assignee access
 
-## TEST WRITE API
+# TEST WRITE API
 # User-role assignment:
 # - Implied roles are mutually exclusive on user-role assignment
 
