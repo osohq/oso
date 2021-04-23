@@ -570,6 +570,7 @@ def test_parent_child_role_permission(init_oso, sample_data):
 
     oso_roles.assign_role(leina, osohq, "org_member", session=session)
 
+    assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "pull", oso_repo)
     assert not oso.is_allowed(steve, "pull", oso_repo)
 
