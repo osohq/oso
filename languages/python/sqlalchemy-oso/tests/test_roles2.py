@@ -132,6 +132,7 @@ def test_oso_roles_init(auth_sessionmaker):
 # - [ ] assigning permission that wasn't declared throws an error
 # - [ ] assigning permission without valid relationship throws an error
 # - [ ] assigning permission on related role type errors if role exists for permission resource
+# - [ ] assigning the same permission to two roles where one implies the other throws an error
 
 # Role implications:
 # - [ ] implying role that wasn't declared throws an error
@@ -339,6 +340,31 @@ def test_invalid_role_permission(init_oso):
         oso_roles.configure()
 
 
+def test_permission_assignment_to_implied_role(init_oso):
+    # assigning the same permission to two roles where one implies the other throws an error
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite"
+        ] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            },
+            org_owner: {
+                perms: ["invite"],
+                implies: ["org_member"]
+            }
+
+        };
+    """
+
+    oso.load_str(policy)
+    with pytest.raises(Exception):
+        oso_roles.configure()
+
+
 def test_incorrect_arity_resource(init_oso):
     # - use resource predicate with incorrect arity
     oso, oso_roles, session = init_oso
@@ -402,6 +428,10 @@ def test_wrong_type_resource_arguments(init_oso):
 # - Adding a role implication of related resource type to a role grants assignee access
 # - Modifying a role implication of related resource type to a role modifies assignee access
 # - Removing a role implication of related resource type from a role revokes assignee access
+
+## TEST WRITE API
+# User-role assignment:
+# - Implied roles are mutually exclusive on user-role assignment
 
 
 # Homogeneous role-permission assignment:
