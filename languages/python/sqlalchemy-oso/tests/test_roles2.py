@@ -88,7 +88,43 @@ def auth_sessionmaker(init_oso, engine):
     return AuthSessionmaker
 
 
-# TEST OsoRoles Initialization
+@pytest.fixture
+def sample_data(init_oso):
+    _, _, session = init_oso
+    # Create sample data
+    # -------------------
+    apple = Organization(id="apple")
+    osohq = Organization(id="osohq")
+
+    ios = Repository(id="ios", org=apple)
+    oso_repo = Repository(id="oso", org=osohq)
+    demo_repo = Repository(id="demo", org=osohq)
+
+    laggy = Issue(id="laggy", repo=ios)
+    bug = Issue(id="bug", repo=oso_repo)
+
+    leina = User(name="leina")
+    steve = User(name="steve")
+
+    objs = {
+        "leina": leina,
+        "steve": steve,
+        "apple": apple,
+        "osohq": osohq,
+        "ios": ios,
+        "oso_repo": oso_repo,
+        "demo_repo": demo_repo,
+        "laggy": laggy,
+        "bug": bug,
+    }
+    for obj in objs.values():
+        session.add(obj)
+    session.commit()
+
+    return objs
+
+
+## TEST OsoRoles Initialization
 # - Passing an auth session to OsoRoles raises an exception
 # - Passing a session instead of Session factory to OsoRoles raises an exception
 # - Passing a non-SQLAlchemy user model to OsoRoles raises an exception
@@ -125,7 +161,7 @@ def test_oso_roles_init(auth_sessionmaker):
 # TEST RESOURCE CONFIGURATION
 # Role declaration:
 # - [ ] duplicate role name throws an error
-
+# - [ ] defining role with no permissions/implications throws an error @TODO write test
 
 # Role-permission assignment:
 # - [ ] duplicate permission throws an error
@@ -139,10 +175,14 @@ def test_oso_roles_init(auth_sessionmaker):
 # - [ ] implying role without valid relationship throws an error
 
 # Resource predicate:
+# - [ ] only define roles, no actions (role has actions/implications from different resource) @TODO write test
 # - [x] only define actions, not roles
 # - [ ] using resource predicate with incorrect arity throws an error
 # - [ ] using resource predicate without defining actions/roles throws an error
 # - [ ] using resource predicate with field types throws an error
+
+# Role allows:
+# - [ ] calling `roles.configure()` without calling `Roles.role_allows()` issues warning @TODO write test
 
 
 def test_duplicate_role_name(init_oso):
@@ -408,7 +448,7 @@ def test_wrong_type_resource_arguments(init_oso):
         oso_roles.configure()
 
 
-# TEST CHECK API
+## TEST CHECK API @TODO all of these
 # Homogeneous role-permission assignment:
 # - Adding a permission of same resource type to a role grants assignee access
 # - Modifying a permission of same resource type on a role modifies assignee access
@@ -424,20 +464,43 @@ def test_wrong_type_resource_arguments(init_oso):
 # - Modifying a role implication of same resource type to a role modifies assignee access
 # - Removing a role implication of same resource type from a role revokes assignee access
 
-# Heterogeneous role implications:
-# - Adding a role implication of related resource type to a role grants assignee access
-# - Modifying a role implication of related resource type to a role modifies assignee access
-# - Removing a role implication of related resource type from a role revokes assignee access
+# Parent->child role implications:
+# - Adding a role implication of child resource type to a role grants assignee access to child
+# - Modifying a role implication of child resource type to a role modifies assignee access to child
+# - Removing a role implication of child resource type from a role revokes assignee access to child
 
-# TEST WRITE API
-# User-role assignment:
-# - Implied roles are mutually exclusive on user-role assignment
+# Grandparent->child role implications:
+# - Adding a role implication of grandchild resource type to a role grants assignee access to grandchild
+#   without intermediate parent resource
+# - Adding a role implication from grandparent->parent->child resource role types grants assignee of grandparent role
+#   access to grandchild resource
 
 
 # Homogeneous role-permission assignment:
-def test_add_homogenous_role_perm():
+def test_add_homogeneous_role_perm(init_oso, sample_data):
     # - Adding a permission of same resource type to a role grants assignee access
-    pass
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+    """
+    oso.load_str(policy)
+    oso_roles.configure()
+
+    data = sample_data
+
+    osohq = sample_data["osohq"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+
+    assert oso.is_allowed(leina, "invite", osohq)
 
 
 def test_remove_homogenous_role_perm():
@@ -448,6 +511,25 @@ def test_remove_homogenous_role_perm():
 def test_modify_homogenous_role_perm():
     # - Modifying a permission of same resource type on a role modifies assignee access
     pass
+
+
+## TEST WRITE API @TODO all of these
+# User-role assignment:
+# - Assigning to non-existent role throws an error
+# - Assigning to role with wrong resource type throws an error
+# - Implied roles are mutually exclusive on user-role assignment
+
+
+def test_implied_roles_are_mutually_exclusive():
+    # - Implied roles are mutually exclusive on user-role assignment
+    pass
+
+
+## TEST DATA FILTERING
+# - [ ] `role_allows` inside of an `OR`
+# - [ ] `role_allows` AND another condition
+
+#### LEGACY TEST
 
 
 def test_roles(init_oso, auth_sessionmaker):
