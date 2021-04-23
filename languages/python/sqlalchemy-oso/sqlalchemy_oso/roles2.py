@@ -471,7 +471,7 @@ class OsoRoles:
         user_id = getattr(user, user_pk_name)
 
         resource_pk_name = inspect(resource.__class__).primary_key[0].name
-        resource_id = getattr(resource, resource_pk_name)
+        resource_id = str(getattr(resource, resource_pk_name))
 
         results = session.execute(
             self.sql_query,
