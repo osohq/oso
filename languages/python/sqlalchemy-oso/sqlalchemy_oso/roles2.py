@@ -13,7 +13,9 @@ from sqlalchemy.orm.exc import UnmappedClassError
 from oso import OsoError
 
 
-def user_in_role_query(id_query, type_query, child_types, resource_id_field, has_relationships):
+def user_in_role_query(
+    id_query, type_query, child_types, resource_id_field, has_relationships
+):
     if not has_relationships:
         recur = ""
     else:
