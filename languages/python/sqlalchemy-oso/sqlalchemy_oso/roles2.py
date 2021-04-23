@@ -354,6 +354,46 @@ class OsoRoles:
                     )
                     self.roles[role.name] = role
 
+        for name, role in self.roles.items():
+            for permission in role.permissions:
+                if permission.python_class != role.python_class:
+                    for _, other_role in self.roles.items():
+                        if other_role.python_class == permission.python_class:
+                            raise OsoError(
+                                f"Permission {permission.name} on {permission.python_class.__name__} can not go on role {name} on {role.python_class.__name__} because {permission.python_class.__name__} has it's own roles. Use an implication."
+                            )
+
+                    cls = permission.python_class
+                    while cls != role.python_class:
+                        stepped = False
+                        for rel in self.relationships:
+                            if cls == rel.child_python_class:
+                                cls = rel.parent_python_class
+                                stepped = True
+                                break
+                        if not stepped:
+                            raise OsoError(
+                                f"Permission {permission.name} on {permission.python_class.__name__} can not go on role {name} on {role.python_class.__name__} because no relationship exists."
+                            )
+
+
+            for implied in role.implied_roles:
+                if implied not in self.roles:
+                    raise OsoError(f"Role '{implied}' implied by '{name}' does not exist.")
+                implied_role = self.roles[implied]
+                cls = implied_role.python_class
+                while cls != role.python_class:
+                    stepped = False
+                    for rel in self.relationships:
+                        if cls == rel.child_python_class:
+                            cls = rel.parent_python_class
+                            stepped = True
+                            break
+                    if not stepped:
+                        raise OsoError(
+                            f"Role {name} on {role.python_class.__name__} can not imply role {implied} on {implied_role.python_class.__name__} because no relationship exists."
+                        )
+
         # Sync static data to the database.
         session = self._get_session()
         session.execute("delete from role_permissions")
