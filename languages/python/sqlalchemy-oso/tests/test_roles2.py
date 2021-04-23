@@ -123,22 +123,62 @@ def test_oso_roles_init(auth_sessionmaker):
 
 
 ## TEST RESOURCE CONFIGURATION
-# test cases
-# - duplicate permission
-# - assign permission that wasn't declared
-# - imply role that wasn't declared
-# - imply role without valid relationship
-# - assign permission without valid relationship
-# - use resource predicate with incorrect arity
-# - use resource predicate without defining actions/roles
-# - use resource predicate with field types
+# Role declaration:
+# - [ ] duplicate role name throws an error
+
+
+# Role-permission assignment:
+# - [ ] duplicate permission throws an error
+# - [ ] assigning permission that wasn't declared throws an error
+# - [ ] assigning permission without valid relationship throws an error
+# - [ ] assigning permission on related role type errors if role exists for permission resource
+
+# Role implications:
+# - [ ] implying role that wasn't declared throws an error
+# - [ ] implying role without valid relationship throws an error
+
+# Resource predicate:
+# - [x] only define actions, not roles
+# - [ ] using resource predicate with incorrect arity throws an error
+# - [ ] using resource predicate without defining actions/roles throws an error
+# - [ ] using resource predicate with field types throws an error
+
+
+def test_duplicate_role_name(init_oso):
+    # duplicate role name throws an error
+    # Organization and Repository resources both have role named "member"
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite"
+        ] and
+        roles = {
+            member: {
+                perms: ["invite"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            member: {
+                perms: ["pull"]
+            }
+        };
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(Exception):
+        oso_roles.configure()
 
 
 def test_resource_actions(init_oso):
-
-    # init
+    # only define actions, not roles
     oso, oso_roles, session = init_oso
-    # - test with only actions
     policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = [
@@ -207,7 +247,7 @@ def test_undeclared_role(init_oso):
         oso_roles.configure()
 
 
-def test_invalid_role_implication(init_oso):
+def test_role_implication_without_relationship(init_oso):
     # - imply role without valid relationship
     oso, oso_roles, session = init_oso
     policy = """
@@ -237,7 +277,7 @@ def test_invalid_role_implication(init_oso):
         oso_roles.configure()
 
 
-def test_invalid_role_permission(init_oso):
+def test_role_permission_without_relationship(init_oso):
     # - assign permission without valid relationship
     oso, oso_roles, session = init_oso
     policy = """
@@ -258,6 +298,43 @@ def test_invalid_role_permission(init_oso):
         ];
     """
     oso.load_str(policy)
+    with pytest.raises(Exception):
+        oso_roles.configure()
+
+
+def test_invalid_role_permission(init_oso):
+    # assigning permission on related role type errors if role exists for permission resource
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite"
+        ] and
+        roles = {
+            org_member: {
+                # THIS IS NOT ALLOWED
+                perms: ["repo:push"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            repo_read: {
+                perms: ["push"]
+            }
+
+        };
+
+    parent(repo: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+    """
+
+    oso.load_str(policy)
+    # TODO: make this not an AssertionError
     with pytest.raises(Exception):
         oso_roles.configure()
 
@@ -303,6 +380,44 @@ def test_wrong_type_resource_arguments(init_oso):
     oso.load_str(policy)
     with pytest.raises(Exception) as e:
         oso_roles.configure()
+
+
+## TEST CHECK API
+# Homogeneous role-permission assignment:
+# - Adding a permission of same resource type to a role grants assignee access
+# - Modifying a permission of same resource type on a role modifies assignee access
+# - Removing a permission of same resource type from a role revokes assignee access
+
+# Heterogeneous role-permission assignment:
+# - Adding a permission of related resource type to a role grants assignee access
+# - Modifying a permission of related resource type on a role modifies assignee access
+# - Removing a permission of related resource type from a role revokes assignee access
+
+# Homogeneous role implications:
+# - Adding a role implication of same resource type to a role grants assignee access
+# - Modifying a role implication of same resource type to a role modifies assignee access
+# - Removing a role implication of same resource type from a role revokes assignee access
+
+# Heterogeneous role implications:
+# - Adding a role implication of related resource type to a role grants assignee access
+# - Modifying a role implication of related resource type to a role modifies assignee access
+# - Removing a role implication of related resource type from a role revokes assignee access
+
+
+# Homogeneous role-permission assignment:
+def test_add_homogenous_role_perm():
+    # - Adding a permission of same resource type to a role grants assignee access
+    pass
+
+
+def test_remove_homogenous_role_perm():
+    # - Removing a permission of same resource type from a role revokes assignee access
+    pass
+
+
+def test_modify_homogenous_role_perm():
+    # - Modifying a permission of same resource type on a role modifies assignee access
+    pass
 
 
 def test_roles(init_oso, auth_sessionmaker):
