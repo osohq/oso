@@ -426,7 +426,7 @@ class OsoRoles:
                 select p.{parent_id}
                 from {child_table} c
                 join {parent_table} p
-                on c.{child_join_field} = p.{parent_join_field}
+                on cast(c.{child_join_field} as text) = cast(p.{parent_join_field} as text)
                 where c.{child_id} = resources.id"""
 
             id_query += ""
