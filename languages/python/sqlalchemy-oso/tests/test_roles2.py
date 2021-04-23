@@ -115,11 +115,11 @@ def test_oso_roles_init(auth_sessionmaker):
 
     # - Passing a non-SQLAlchemy user model to OsoRoles raises an exception
     with pytest.raises(Exception):
-        roles = OsoRoles(oso, Base, FakeClass, Session)
+        OsoRoles(oso, Base, FakeClass, Session)
 
     # - Passing a bad declarative_base to OsoRoles raises an exception
     with pytest.raises(Exception):
-        roles = OsoRoles(oso, FakeClass, User, Session)
+        OsoRoles(oso, FakeClass, User, Session)
 
 
 # TEST RESOURCE CONFIGURATION
