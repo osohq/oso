@@ -306,6 +306,9 @@ class OsoRoles:
             else:
                 role_names = role_defs.keys()
 
+            if len(permissions) == 0 and len(role_names) == 0:
+                raise OsoError("Must define actions or roles for resource.")
+
             resource = Resource(
                 python_class=python_class,
                 name=name,
@@ -328,6 +331,11 @@ class OsoRoles:
                 for name, role_def in role_defs.items():
                     if name in self.roles:
                         raise OsoError(f"Duplicate role name {name}")
+
+                    for key in role_def.keys():
+                        if key != "perms" and key != "implies":
+                            raise OsoError(f"Invalid key in role definition :'{key}'")
+
                     role_permissions = []
                     if "perms" in role_def:
                         for permission in role_def["perms"]:
@@ -417,6 +425,9 @@ class OsoRoles:
                         raise OsoError(
                             f"Invalid implication. Role {role} has permission {implied_perm.name} on {implied_perm.python_class.__name__} but implies role {implied} which also has permission {implied_perm.name} on {implied_perm.python_class.__name__}"
                         )
+
+        if len(self.resources) == 0:
+            raise Exception("Need to define resources to use oso roles.")
 
         # Sync static data to the database.
         session = self._get_session()
