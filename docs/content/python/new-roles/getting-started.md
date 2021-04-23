@@ -5,12 +5,12 @@ description: >
     Getting started with SQLAlchemy roles
 ---
 
-**TODO** i want every code snippet in here to link to the sample app
-
 **TODO** i want every API link to go to reference
 
-**TODO** i want there to be less distractions from reading (no huge
-floating footer, TOC on sidebar, floating header & banners)
+**TODO** i want code snippets to be full paths
+
+**TODO** i want to configure literal include in the front matter so i
+don't need params each time
 
 # Getting started
 
@@ -50,11 +50,14 @@ to a policy is the `allow` rule, which specifies when a request for a
 given `actor`, `action` and `resource` is allowed. For more on
 policy basics see our **TODO** [super great policy guide]().
 
-For now, we'll just write one rule in our policy:
+We can write simple rules in our policy, like this one which allows all
+users to create new organizations:
 
-```polar
-allow(_, _, _);
-```
+{{< literalInclude
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
+    lines="10"
+    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+>}}
 
 **TODO** link to API documentation
 
