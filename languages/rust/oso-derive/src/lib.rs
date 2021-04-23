@@ -123,7 +123,7 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
                 });
             }
         }
-        _ => unimplemented!(),
+        _ => unimplemented!("#[derive(PolarClass)] is only supported on structs and enums."),
     }
 
     let result = quote! {
