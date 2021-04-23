@@ -629,7 +629,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
-    parent(repository: Issue, parent_repo: Repository) if
+    parent(issue: Issue, parent_repo: Repository) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -675,7 +675,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
-    parent(repository: Issue, parent_repo: Repository) if
+    parent(issue: Issue, parent_repo: Repository) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
