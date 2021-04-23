@@ -161,7 +161,8 @@ def test_oso_roles_init(auth_sessionmaker):
 # TEST RESOURCE CONFIGURATION
 # Role declaration:
 # - [ ] duplicate role name throws an error
-# - [ ] defining role with no permissions/implications throws an error @TODO write test
+# - [ ] defining role with no permissions/implications throws an error
+#   TODO write test
 
 # Role-permission assignment:
 # - [ ] duplicate permission throws an error
@@ -175,14 +176,16 @@ def test_oso_roles_init(auth_sessionmaker):
 # - [ ] implying role without valid relationship throws an error
 
 # Resource predicate:
-# - [ ] only define roles, no actions (role has actions/implications from different resource) @TODO write test
+# - [ ] only define roles, no actions (role has actions/implications from different resource)
+#    TODO write test
 # - [x] only define actions, not roles
 # - [ ] using resource predicate with incorrect arity throws an error
 # - [ ] using resource predicate without defining actions/roles throws an error
 # - [ ] using resource predicate with field types throws an error
 
 # Role allows:
-# - [ ] calling `roles.configure()` without calling `Roles.role_allows()` issues warning @TODO write test
+# - [ ] calling `roles.configure()` without calling `Roles.role_allows()` issues warning
+#   TODO write test
 
 
 def test_duplicate_role_name(init_oso):
@@ -514,7 +517,8 @@ def test_modify_homogenous_role_perm():
     pass
 
 
-## TEST WRITE API @TODO all of these
+# TODO: all of these
+## TEST WRITE API
 # User-role assignment:
 # - Assigning to non-existent role throws an error
 # - Assigning to role with wrong resource type throws an error
