@@ -125,6 +125,10 @@ class OsoRoles:
 
         self.session_maker = session_maker
 
+        for cls in session_maker.class_.__mro__:
+            if cls.__name__ == 'AuthorizedSessionBase':
+                raise OsoError("Must pass a normal session maker not an authorized session maker.")
+
         user_pk_type = inspect(user_model).primary_key[0].type
         user_pk_name = inspect(user_model).primary_key[0].name
         user_table_name = user_model.__tablename__
