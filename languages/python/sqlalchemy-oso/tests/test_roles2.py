@@ -88,6 +88,40 @@ def auth_sessionmaker(init_oso, engine):
     return AuthSessionmaker
 
 
+## TEST OsoRoles Initialization
+# - Passing an auth session to OsoRoles raises an exception
+# - Passing a session instead of Session factory to OsoRoles raises an exception
+# - Passing a non-SQLAlchemy user model to OsoRoles raises an exception
+# - Passing a bad declarative_base to OsoRoles raises an exception
+
+
+def test_oso_roles_init(auth_sessionmaker):
+    oso = Oso()
+    register_models(oso, Base)
+
+    # - Passing an auth session to OsoRoles raises an exception
+    with pytest.raises(Exception):
+        roles = OsoRoles(oso, Base, User, auth_sessionmaker)
+
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    # - Passing a session instead of Session factory to OsoRoles raises an exception
+    with pytest.raises(Exception):
+        roles = OsoRoles(oso, Base, User, session)
+
+    class FakeClass:
+        pass
+
+    # - Passing a non-SQLAlchemy user model to OsoRoles raises an exception
+    with pytest.raises(Exception):
+        roles = OsoRoles(oso, Base, FakeClass, Session)
+
+    # - Passing a bad declarative_base to OsoRoles raises an exception
+    with pytest.raises(Exception):
+        roles = OsoRoles(oso, FakeClass, User, Session)
+
+
 ## TEST RESOURCE CONFIGURATION
 # test cases
 # - duplicate permission

@@ -537,6 +537,7 @@ class OsoRoles:
         else:
             return False
 
+    # TODO: can we just roll this into the OsoRoles __init__() above?
     def enable(self):
         class Roles:
             @staticmethod
