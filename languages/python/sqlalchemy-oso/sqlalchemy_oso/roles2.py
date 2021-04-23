@@ -128,39 +128,61 @@ class OsoRoles:
         user_pk_name = inspect(user_model).primary_key[0].name
         user_table_name = user_model.__tablename__
 
-        # Tables for the management api to save data.
-        class UserRole(sqlalchemy_base):
-            __tablename__ = "user_roles"
-            id = Column(Integer, primary_key=True)
-            user_id = Column(
-                user_pk_type, ForeignKey(f"{user_table_name}.{user_pk_name}")
-            )
-            resource_type = Column(String)
-            resource_id = Column(String)  # Most things can turn into a string lol.
-            role = Column(String)
+        models = sqlalchemy_base._decl_class_registry
 
-        class Permission(sqlalchemy_base):
-            __tablename__ = "permissions"
-            id = Column(Integer, primary_key=True)
-            resource_type = Column(String)
-            name = Column(String)
+        # This is pretty hacky, also will break if the user defines their own classes with these names, so we should make them more unique
+        if models.get("UserRole"):
+            UserRole = models["UserRole"]
+        else:
+            # Tables for the management api to save data.
+            class UserRole(sqlalchemy_base):
+                __tablename__ = "user_roles"
+                id = Column(Integer, primary_key=True)
+                user_id = Column(
+                    user_pk_type, ForeignKey(f"{user_table_name}.{user_pk_name}")
+                )
+                resource_type = Column(String)
+                resource_id = Column(String)  # Most things can turn into a string lol.
+                role = Column(String)
 
-        class Role(sqlalchemy_base):
-            __tablename__ = "roles"
-            name = Column(String, primary_key=True)
-            resource_type = Column(String)
+        if models.get("Permission"):
+            Permission = models["Permission"]
+        else:
 
-        class RolePermission(sqlalchemy_base):
-            __tablename__ = "role_permissions"
-            id = Column(Integer, primary_key=True)
-            role = Column(String)
-            permission_id = Column(Integer, ForeignKey("permissions.id"))
+            class Permission(sqlalchemy_base):
+                __tablename__ = "permissions"
+                id = Column(Integer, primary_key=True)
+                resource_type = Column(String)
+                name = Column(String)
 
-        class RoleImplication(sqlalchemy_base):
-            __tablename__ = "role_implications"
-            id = Column(Integer, primary_key=True)
-            from_role = Column(String, ForeignKey("roles.name"))
-            to_role = Column(String, ForeignKey("roles.name"))
+        if models.get("Role"):
+            Role = models["Role"]
+        else:
+
+            class Role(sqlalchemy_base):
+                __tablename__ = "roles"
+                name = Column(String, primary_key=True)
+                resource_type = Column(String)
+
+        if models.get("RolePermission"):
+            RolePermission = models["RolePermission"]
+        else:
+
+            class RolePermission(sqlalchemy_base):
+                __tablename__ = "role_permissions"
+                id = Column(Integer, primary_key=True)
+                role = Column(String)
+                permission_id = Column(Integer, ForeignKey("permissions.id"))
+
+        if models.get("RoleImplication"):
+            RoleImplication = models["RoleImplication"]
+        else:
+
+            class RoleImplication(sqlalchemy_base):
+                __tablename__ = "role_implications"
+                id = Column(Integer, primary_key=True)
+                from_role = Column(String, ForeignKey("roles.name"))
+                to_role = Column(String, ForeignKey("roles.name"))
 
         self.oso = oso
         self.UserRole = UserRole

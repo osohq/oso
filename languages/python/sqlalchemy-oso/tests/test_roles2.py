@@ -73,7 +73,7 @@ def init_oso(engine):
 
 
 @pytest.fixture
-def authorized_sessionmaker(init_oso, engine):
+def auth_sessionmaker(init_oso, engine):
     oso, oso_roles, _ = init_oso
     oso.actor = None
     oso.action = None
@@ -271,7 +271,7 @@ def test_wrong_type_resource_arguments(init_oso):
         oso_roles.configure()
 
 
-def test_roles(init_oso, authorized_sessionmaker):
+def test_roles(init_oso, auth_sessionmaker):
     oso, oso_roles, session = init_oso
 
     policy = """
@@ -368,7 +368,7 @@ def test_roles(init_oso, authorized_sessionmaker):
 
     oso.actor = leina
     oso.action = "pull"
-    auth_session = authorized_sessionmaker()
+    auth_session = auth_sessionmaker()
 
     results = auth_session.query(Repository).all()
     assert len(results) == 2
