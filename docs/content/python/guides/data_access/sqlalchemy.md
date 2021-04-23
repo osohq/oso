@@ -212,7 +212,7 @@ above).
 ```
 
 This full example is available on
-[GitHub](https://github.com/osohq/oso/tree/main/docs/examples/list-filtering/sqlalchemy).
+[GitHub](https://github.com/osohq/oso/tree/main/docs/examples/data_access/sqlalchemy).
 
 ## How Oso authorizes SQLAlchemy Data
 
