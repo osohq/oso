@@ -317,6 +317,8 @@ class OsoRoles:
         for python_class, role_defs in role_definitions:
             if not isinstance(role_defs, Variable):
                 for name, role_def in role_defs.items():
+                    if name in self.roles:
+                        raise OsoError(f"Duplicate role name {name}")
                     role_permissions = []
                     if "perms" in role_def:
                         for permission in role_def["perms"]:
@@ -378,9 +380,11 @@ class OsoRoles:
 
 
             for implied in role.implied_roles:
+                # Make sure implied role exists
                 if implied not in self.roles:
                     raise OsoError(f"Role '{implied}' implied by '{name}' does not exist.")
                 implied_role = self.roles[implied]
+                # Make sure implied role is on a valid class
                 cls = implied_role.python_class
                 while cls != role.python_class:
                     stepped = False
@@ -393,6 +397,17 @@ class OsoRoles:
                         raise OsoError(
                             f"Role {name} on {role.python_class.__name__} can not imply role {implied} on {implied_role.python_class.__name__} because no relationship exists."
                         )
+                # Make sure implied roles dont have overlapping permissions.
+                # @TODO: Follow implication chair further than just one.
+                permissions = role.permissions
+                for implied_perm in implied_role.permissions:
+                    if implied_perm in permissions:
+                        raise OsoError(
+                            f"Invalid implication. Role {role} has permission {implied_perm.name} on {implied_perm.python_class.__name__} but implies role {implied} which also has permission {implied_perm.name} on {implied_perm.python_class.__name__}"
+                        )
+
+
+
 
         # Sync static data to the database.
         session = self._get_session()
