@@ -448,7 +448,7 @@ def test_wrong_type_resource_arguments(init_oso):
         oso_roles.configure()
 
 
-## TEST CHECK API @TODO all of these
+# TEST CHECK API @TODO all of these
 # Homogeneous role-permission assignment:
 # - Adding a permission of same resource type to a role grants assignee access
 # - Modifying a permission of same resource type on a role modifies assignee access
@@ -497,7 +497,6 @@ def test_add_homogeneous_role_perm(init_oso, sample_data):
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
-    steve = sample_data["steve"]
 
     oso_roles.assign_role(leina, osohq, "org_member", session=session)
 

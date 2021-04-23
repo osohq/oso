@@ -13,7 +13,20 @@ from sqlalchemy.orm.exc import UnmappedClassError
 from oso import OsoError
 
 
-def user_in_role_query(id_query, type_query, child_types, resource_id_field):
+def user_in_role_query(id_query, type_query, child_types, resource_id_field, has_relationships):
+    if not has_relationships:
+        recur = ""
+    else:
+        recur = f"""
+        union
+        -- this would have to be generated based on all the relationships
+        -- I hope there's a way to do this in sqlalchemy but if not it wouldn't
+        -- really be too hard to generate the sql
+        select
+            {id_query},
+            {type_query}
+        from resources
+        where type in {str(tuple(child_types))}"""
     query = f"""
         -- get all the relevant resources by walking the parent tree
         with resources as (
@@ -21,15 +34,7 @@ def user_in_role_query(id_query, type_query, child_types, resource_id_field):
                 select
                     {resource_id_field} as id,
                     :resource_type as type
-                union
-                -- this would have to be generated based on all the relationships
-                -- I hope there's a way to do this in sqlalchemy but if not it wouldn't
-                -- really be too hard to generate the sql
-                select
-                    {id_query},
-                    {type_query}
-                from resources
-                where type in {str(tuple(child_types))}
+                {recur}
             ) select * from resources
         ), allow_permission as (
             -- Find the permission
@@ -539,8 +544,10 @@ class OsoRoles:
         type_query += "end as type"
 
         resource_id_field = ":resource_id"
+
+        has_relationships = len(self.relationships) > 0
         self.sql_query = user_in_role_query(
-            id_query, type_query, child_types, resource_id_field
+            id_query, type_query, child_types, resource_id_field, has_relationships
         )
 
         for _, resource in self.resources.items():
@@ -554,7 +561,7 @@ class OsoRoles:
                   {id_field}
                 from {table} R
                 where exists (
-                  {user_in_role_query(id_query, type_query, child_types, "cast(R."+id_field+" as text)")}
+                  {user_in_role_query(id_query, type_query, child_types, "cast(R."+id_field+" as text)", has_relationships)}
                 )
             """
 
