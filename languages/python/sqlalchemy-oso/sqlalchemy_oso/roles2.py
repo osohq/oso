@@ -10,6 +10,7 @@ from sqlalchemy import inspect
 
 from oso import OsoError
 
+
 def user_in_role_query(id_query, type_query, child_types, resource_id_field):
     query = f"""
         -- get all the relevant resources by walking the parent tree
@@ -126,8 +127,10 @@ class OsoRoles:
         self.session_maker = session_maker
 
         for cls in session_maker.class_.__mro__:
-            if cls.__name__ == 'AuthorizedSessionBase':
-                raise OsoError("Must pass a normal session maker not an authorized session maker.")
+            if cls.__name__ == "AuthorizedSessionBase":
+                raise OsoError(
+                    "Must pass a normal session maker not an authorized session maker."
+                )
 
         user_pk_type = inspect(user_model).primary_key[0].type
         user_pk_name = inspect(user_model).primary_key[0].name
@@ -294,7 +297,9 @@ class OsoRoles:
 
             for perm in permissions:
                 if permissions.count(perm) > 1:
-                    raise OsoError(f"Duplicate action {perm.name} for resource {python_class.__name__}")
+                    raise OsoError(
+                        f"Duplicate action {perm.name} for resource {python_class.__name__}"
+                    )
 
             if isinstance(role_defs, Variable):
                 role_names = []
@@ -340,7 +345,9 @@ class OsoRoles:
                                 name=action, python_class=permission_python_class
                             )
                             if perm not in self.permissions:
-                                raise OsoError(f"Permission {perm.name} doesn't exist for resource {perm.python_class.__name__}.")
+                                raise OsoError(
+                                    f"Permission {perm.name} doesn't exist for resource {perm.python_class.__name__}."
+                                )
 
                             role_permissions.append(
                                 Permission(
@@ -382,11 +389,12 @@ class OsoRoles:
                                 f"Permission {permission.name} on {permission.python_class.__name__} can not go on role {name} on {role.python_class.__name__} because no relationship exists."
                             )
 
-
             for implied in role.implied_roles:
                 # Make sure implied role exists
                 if implied not in self.roles:
-                    raise OsoError(f"Role '{implied}' implied by '{name}' does not exist.")
+                    raise OsoError(
+                        f"Role '{implied}' implied by '{name}' does not exist."
+                    )
                 implied_role = self.roles[implied]
                 # Make sure implied role is on a valid class
                 cls = implied_role.python_class
@@ -409,9 +417,6 @@ class OsoRoles:
                         raise OsoError(
                             f"Invalid implication. Role {role} has permission {implied_perm.name} on {implied_perm.python_class.__name__} but implies role {implied} which also has permission {implied_perm.name} on {implied_perm.python_class.__name__}"
                         )
-
-
-
 
         # Sync static data to the database.
         session = self._get_session()
