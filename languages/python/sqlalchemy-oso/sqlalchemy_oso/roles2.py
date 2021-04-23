@@ -458,7 +458,7 @@ class OsoRoles:
                   {id_field}
                 from {table} R
                 where exists (
-                  {user_in_role_query(id_query, type_query, child_types, "R."+id_field)}
+                  {user_in_role_query(id_query, type_query, child_types, "cast(R."+id_field+" as text)")}
                 )
             """
 
