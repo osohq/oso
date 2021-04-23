@@ -371,7 +371,7 @@ def test_invalid_role_permission(init_oso):
         };
 
     parent(repo: Repository, parent_org: Organization) if
-        repository.org = parent_org;
+        repo.org = parent_org;
     """
 
     oso.load_str(policy)
