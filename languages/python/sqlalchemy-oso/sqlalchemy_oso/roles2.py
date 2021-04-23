@@ -382,9 +382,9 @@ class OsoRoles:
                     for _, other_role in self.roles.items():
                         if other_role.python_class == permission.python_class:
                             raise OsoError(
-                                f"Permission {permission.name} on {permission.python_class.__name__} " +
-                                f"can not go on role {name} on {role.python_class.__name__} " +
-                                f"because {permission.python_class.__name__} has it's own roles. Use an implication."
+                                f"Permission {permission.name} on {permission.python_class.__name__} "
+                                + f"can not go on role {name} on {role.python_class.__name__} "
+                                + f"because {permission.python_class.__name__} has it's own roles. Use an implication."
                             )
 
                     cls = permission.python_class
@@ -397,9 +397,9 @@ class OsoRoles:
                                 break
                         if not stepped:
                             raise OsoError(
-                                f"Permission {permission.name} on {permission.python_class.__name__} " +
-                                f"can not go on role {name} on {role.python_class.__name__} " +
-                                "because no relationship exists."
+                                f"Permission {permission.name} on {permission.python_class.__name__} "
+                                + f"can not go on role {name} on {role.python_class.__name__} "
+                                + "because no relationship exists."
                             )
 
             for implied in role.implied_roles:
@@ -420,9 +420,9 @@ class OsoRoles:
                             break
                     if not stepped:
                         raise OsoError(
-                            f"Role {name} on {role.python_class.__name__} " +
-                            f"can not imply role {implied} on {implied_role.python_class.__name__} " +
-                            "because no relationship exists."
+                            f"Role {name} on {role.python_class.__name__} "
+                            + f"can not imply role {implied} on {implied_role.python_class.__name__} "
+                            + "because no relationship exists."
                         )
                 # Make sure implied roles dont have overlapping permissions.
                 # @TODO: Follow implication chair further than just one.
@@ -430,9 +430,9 @@ class OsoRoles:
                 for implied_perm in implied_role.permissions:
                     if implied_perm in permissions:
                         raise OsoError(
-                            f"Invalid implication. Role {role} has permission {implied_perm.name} " +
-                            f"on {implied_perm.python_class.__name__} but implies role {implied} " +
-                            f"which also has permission {implied_perm.name} on {implied_perm.python_class.__name__}"
+                            f"Invalid implication. Role {role} has permission {implied_perm.name} "
+                            + f"on {implied_perm.python_class.__name__} but implies role {implied} "
+                            + f"which also has permission {implied_perm.name} on {implied_perm.python_class.__name__}"
                         )
 
         if len(self.resources) == 0:
