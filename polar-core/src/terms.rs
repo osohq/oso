@@ -211,7 +211,7 @@ impl Value {
 }
 
 /// Represents a concrete instance of a Polar value
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Term {
     /// Information about where the term was created from
     #[serde(skip, default = "SourceInfo::ffi")]
@@ -219,6 +219,12 @@ pub struct Term {
 
     /// The actual underlying value
     value: Arc<Value>,
+}
+
+impl std::fmt::Debug for Term {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.value)
+    }
 }
 
 impl PartialEq for Term {
