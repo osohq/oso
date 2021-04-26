@@ -375,15 +375,13 @@ fn test_enums() {
     common::setup();
 
     let mut test = OsoTest::new();
-    
+
     // test an enum with no variants
     // this should simply not panic
     #[derive(Clone, PolarClass)]
     enum Foo {}
 
-    test.oso
-        .register_class(Foo::get_polar_class())
-        .unwrap();
+    test.oso.register_class(Foo::get_polar_class()).unwrap();
 
     // test an enum with variants
     #[derive(Clone, Debug, PartialEq, PolarClass)]
@@ -395,14 +393,14 @@ fn test_enums() {
     test.load_str(
         r#"
         is_admin(Role::Admin); 
-        is_member(Role::Member);"#
+        is_member(Role::Member);"#,
     );
 
     test.oso
         .register_class(
             Role::get_polar_class_builder()
                 .with_equality_check()
-                .build()
+                .build(),
         )
         .unwrap();
 
@@ -430,15 +428,13 @@ fn test_enums_and_structs() {
         Member,
     }
 
-    test.oso
-        .register_class(User::get_polar_class())
-        .unwrap();
+    test.oso.register_class(User::get_polar_class()).unwrap();
 
     test.oso
         .register_class(
             Role::get_polar_class_builder()
                 .with_equality_check()
-                .build()
+                .build(),
         )
         .unwrap();
 

@@ -27,8 +27,8 @@ impl RegisterHook {
         RegisterHook(Arc::new(f))
     }
 
-    pub fn call(self, oso: &mut crate::Oso) -> crate::Result<()> {
-        (&*self.0)(oso)
+    pub fn call(&self, oso: &mut crate::Oso) -> crate::Result<()> {
+        (self.0)(oso)
     }
 }
 
