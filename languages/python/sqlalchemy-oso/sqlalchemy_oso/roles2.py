@@ -638,7 +638,9 @@ class OsoRoles:
         role = self.roles[role_name]
 
         if not resource.__class__ == role.python_class:
-            raise OsoError("Role class does not match python class")
+            raise OsoError(
+                f'Cannot assign role "{role_name}" for resource {resource} (expected resource to be of type {role.python_class.__name__}).'
+            )
 
         user_pk_name = inspect(user.__class__).primary_key[0].name
         user_id = getattr(user, user_pk_name)

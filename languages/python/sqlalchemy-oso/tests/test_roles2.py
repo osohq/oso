@@ -449,7 +449,7 @@ def test_wrong_type_resource_arguments(init_oso):
         oso_roles.synchronize_data()
 
 
-# TEST CHECK API @TODO all of these
+# TEST CHECK API
 # Homogeneous role-permission assignment:
 # - [x] Adding a permission of same resource type to a role grants assignee access
 # - [x] Modifying a permission of same resource type on a role modifies assignee access
@@ -474,7 +474,9 @@ def test_wrong_type_resource_arguments(init_oso):
 # Grandparent->child role implications:
 # - [x] Adding a role implication of grandchild resource type to a role grants assignee access to grandchild
 #       without intermediate parent resource
-# - Adding a role implication from grandparent->parent->child resource role types grants assignee of grandparent role
+
+# Chained role implications:
+# - [x] Adding a role implication from grandparent->parent->child resource role types grants assignee of grandparent role
 #   access to grandchild resource
 
 
@@ -915,14 +917,33 @@ def test_chained_role_implication(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite", "issue:edit"]
+                perms: ["invite"],
+                implies: ["repo_read"]
+
             }
         };
 
-    resource(_type: Issue, "issue", actions, _) if
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            repo_read: {
+                perms: ["pull"],
+                implies: ["issue_editor"]
+            }
+        };
+
+    resource(_type: Issue, "issue", actions, roles) if
         actions = [
             "edit"
-        ];
+        ] and
+        roles = {
+            issue_editor: {
+                perms: ["edit"]
+            }
+        };
 
     parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
@@ -937,17 +958,26 @@ def test_chained_role_implication(init_oso, sample_data):
     oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
+    oso_repo = sample_data["oso_repo"]
     oso_bug = sample_data["oso_bug"]
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
     oso_roles.assign_role(leina, osohq, "org_member", session=session)
+    oso_roles.assign_role(steve, oso_repo, "repo_read", session=session)
 
+    # leina can invite to the org, pull from the repo, and edit the issue
     assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(steve, "pull", oso_repo)
     assert oso.is_allowed(leina, "edit", oso_bug)
-    assert not oso.is_allowed(steve, "edit", oso_bug)
 
-    # - Removing a permission of grandchild resource type from a role revokes assignee access
+    # steve can pull from the repo and edit the issue, but can NOT invite to the org
+    assert oso.is_allowed(steve, "pull", oso_repo)
+    assert oso.is_allowed(steve, "edit", oso_bug)
+    assert not oso.is_allowed(steve, "invite", osohq)
+
+    # - Removing a role implication from grandparent->parent->child resource role types revokes assignee of grandparent role
+    #   access to grandchild resource
     new_policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
@@ -957,10 +987,27 @@ def test_chained_role_implication(init_oso, sample_data):
             }
         };
 
-    resource(_type: Issue, "issue", actions, _) if
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            repo_read: {
+                perms: ["pull"],
+                implies: ["issue_editor"]
+            }
+        };
+
+    resource(_type: Issue, "issue", actions, roles) if
         actions = [
             "edit"
-        ];
+        ] and
+        roles = {
+            issue_editor: {
+                perms: ["edit"]
+            }
+        };
 
     parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
@@ -976,18 +1023,111 @@ def test_chained_role_implication(init_oso, sample_data):
     oso.load_str(new_policy)
     oso_roles.configure()
 
+    # leina can't edit the issue anymore
     assert not oso.is_allowed(leina, "edit", oso_bug)
     assert oso.is_allowed(leina, "invite", osohq)
+
+    # steve can still edit the issue
+    assert oso.is_allowed(steve, "edit", oso_bug)
 
 
 # TODO: all of these
 # TEST WRITE API
 # User-role assignment:
-# - Adding user-role assignment grants access
-# - Removing user-role assignment revokes access
-# - Assigning to non-existent role throws an error
-# - Assigning to role with wrong resource type throws an error
+# - [x] Adding user-role assignment grants access
+# - [x] Removing user-role assignment revokes access
+# - [x] Assigning to non-existent role throws an error
+# - [x] Removing user from a role they aren't assigned throws an error
+# - [x] Assigning to role with wrong resource type throws an error
 # - Implied roles are mutually exclusive on user-role assignment
+
+
+def test_assign_role_wrong_resource_type(init_oso, sample_data):
+    # - Assigning to role with wrong resource type throws an error
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.configure()
+
+    osohq = sample_data["osohq"]
+    oso_repo = sample_data["oso_repo"]
+    leina = sample_data["leina"]
+
+    with pytest.raises(OsoError) as e:
+        oso_roles.assign_role(leina, oso_repo, "org_member", session=session)
+
+
+def test_assign_nonexistent_role(init_oso, sample_data):
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.configure()
+
+    osohq = sample_data["osohq"]
+    leina = sample_data["leina"]
+
+    with pytest.raises(OsoError) as e:
+        oso_roles.assign_role(leina, osohq, "org_owner", session=session)
+
+    # - Removing role that user doesn't have throws error
+    # TODO: should this throw an error?
+    with pytest.raises(OsoError) as e:
+        oso_roles.remove_role(leina, osohq, "org_member", session=session)
+
+
+def test_add_user_role(init_oso, sample_data):
+    # - Adding user-role assignment grants access
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.configure()
+
+    osohq = sample_data["osohq"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert not oso.is_allowed(steve, "invite", osohq)
+
+    # - Removing user-role assignment revokes access
+    oso_roles.remove_role(leina, osohq, "org_member", session=session)
+
+    assert not oso.is_allowed(leina, "invite", osohq)
 
 
 def test_implied_roles_are_mutually_exclusive():
