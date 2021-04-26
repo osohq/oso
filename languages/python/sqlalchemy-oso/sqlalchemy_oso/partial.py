@@ -54,12 +54,11 @@ def partial_to_filter(expression: Expression, session: Session, model, get_model
 
 
 def contains_role_allows(expression: Expression):
-    assert expression.operator == "And"
-    for expr in expression.args:
+    def _is_role_allow(op, left, right):
         op = expr.operator
         left = expr.args[0]
         right = expr.args[1]
-        if (
+        is_role_allow = (
             op == "Unify"
             and left is True
             and right.operator == "Dot"
@@ -67,9 +66,20 @@ def contains_role_allows(expression: Expression):
             # and type(right.args[0]) == OsoRoles
             and type(right.args[1]) == Predicate
             and right.args[1].name == "role_allows"
-        ):
+        )
+
+        if is_role_allow:
+            assert right.args[1].args[0] == Variable("_this"), "Role allows can only be performed on resource."
+
+        return is_role_allow
+
+    assert expression.operator == "And"
+    for expr in expression.args:
+        if (_is_role_allow(expr.operator, expr.args[0], expr.args[1]) or
+                _is_role_allow(expr.operator, expr.args[1], expr.args[0])):
             expression.args.remove(expr)
             return True
+
     return False
 
 
