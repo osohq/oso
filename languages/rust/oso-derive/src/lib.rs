@@ -116,15 +116,22 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
         },
         Data::Enum(DataEnum { variants, .. }) => {
             for variant in variants {
-                let vident = variant.ident;
-                let vname = format!("{}::{}", class_name, vident);
-                constants.push(quote! {
-                    .add_constant(#type_name::#vident, #vname)
-                });
+                match variant.fields {
+                    Fields::Unit => {
+                        let vident = variant.ident;
+                        let vname = format!("{}::{}", class_name, vident);
+                        constants.push(quote! {
+                            .add_constant(#type_name::#vident, #vname)
+                        });        
+                    } 
+                    _ => {
+                        return quote_spanned! { type_name.span() => compile_error!("#[derive(PolarClass)] is currently only supported on enums with unit variants."); }.into();
+                    }
+                }
             }
         }
         _ => {
-            return quote_spanned! { type_name.span() => compile_error!("#[derive(PolarClass)] is only supported on structs and enums."); }.into()
+            return quote_spanned! { type_name.span() => compile_error!("#[derive(PolarClass)] is only supported on structs and enums."); }.into();
         }
     }
 
