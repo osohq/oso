@@ -686,7 +686,7 @@ def _add_query_filter(oso, user, action, resource_model):
     # filter = getattr(resource_model, resource_pk_name).in_(resource_ids)
 
     # @NOTE: The dumbest way possible is working.
-    # id = 1 or id = 2 or id = 3 ...
+    # id in [1, ...]
     id_in = getattr(resource_model, resource_pk_name).in_(resource_ids)
     return id_in
 
