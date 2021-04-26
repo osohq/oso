@@ -124,7 +124,7 @@ def sample_data(init_oso):
     return objs
 
 
-## TEST OsoRoles Initialization
+# TEST OsoRoles Initialization
 # - Passing an auth session to OsoRoles raises an exception
 # - Passing a session instead of Session factory to OsoRoles raises an exception
 # - Passing a non-SQLAlchemy user model to OsoRoles raises an exception
@@ -265,7 +265,7 @@ def test_undeclared_permission(init_oso):
     """
     oso.load_str(policy)
 
-    with pytest.raises(OsoError) as e:
+    with pytest.raises(OsoError):
         oso_roles.configure()
 
 
@@ -733,7 +733,7 @@ def test_data_filtering(init_oso, sample_data, auth_sessionmaker):
 
 
 # TODO: all of these
-## TEST WRITE API
+# TEST WRITE API
 # User-role assignment:
 # - Adding user-role assignment grants access
 # - Removing user-role assignment revokes access
@@ -748,14 +748,14 @@ def test_implied_roles_are_mutually_exclusive():
 
 
 # TODO: all of these
-## TEST DATA FILTERING
+# TEST DATA FILTERING
 # - [ ] `role_allows` inside of an `OR` with another expression
 # - [ ] `role_allows` inside of an `AND` with another expression
 
 # TODO: come up with these
-## TEST READ API
+# TEST READ API
 
-#### LEGACY TEST
+# LEGACY TEST
 
 
 def test_roles(init_oso, auth_sessionmaker):
