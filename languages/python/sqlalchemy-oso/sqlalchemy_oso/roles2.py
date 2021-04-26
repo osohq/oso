@@ -25,9 +25,6 @@ def user_in_role_query(
     else:
         recur = f"""
         union
-        -- this would have to be generated based on all the relationships
-        -- I hope there's a way to do this in sqlalchemy but if not it wouldn't
-        -- really be too hard to generate the sql
         select
             {id_query},
             {type_query}
@@ -54,7 +51,7 @@ def user_in_role_query(
                 rp.role
             from role_permissions rp
             join allow_permission ap
-            where rp.permission_id = ap.id
+            on rp.permission_id = ap.id
         ), relevant_roles as (
             -- recursively find all roles that have the permission or
             -- imply a role that has the permission
@@ -79,7 +76,7 @@ def user_in_role_query(
             join relevant_roles rr
             on rr.role = ur.role
             join resources r
-            on r.type = ur.resource_type and cast(r.id as varchar) = ur.resource_id
+            on r.type = ur.resource_type and cast(r.id as text) = ur.resource_id
             where ur.user_id = :user_id
         ) select * from user_in_role
     """
@@ -194,7 +191,7 @@ class OsoRoles:
                 __tablename__ = "role_permissions"
                 id = Column(Integer, primary_key=True)
                 role = Column(String)
-                permission_id = Column(Integer, ForeignKey("permissions.id"))
+                permission_id = Column(Integer)
 
         if models.get("RoleImplication"):
             RoleImplication = models["RoleImplication"]
@@ -203,8 +200,8 @@ class OsoRoles:
             class RoleImplication(sqlalchemy_base):
                 __tablename__ = "role_implications"
                 id = Column(Integer, primary_key=True)
-                from_role = Column(String, ForeignKey("roles.name"))
-                to_role = Column(String, ForeignKey("roles.name"))
+                from_role = Column(String)
+                to_role = Column(String)
 
         self.oso = oso
         self.UserRole = UserRole
@@ -549,7 +546,7 @@ class OsoRoles:
         id_query += "end as id"
         type_query += "end as type"
 
-        resource_id_field = ":resource_id"
+        resource_id_field = "cast(:resource_id as text)"
 
         has_relationships = len(self.relationships) > 0
         self.sql_query = user_in_role_query(
