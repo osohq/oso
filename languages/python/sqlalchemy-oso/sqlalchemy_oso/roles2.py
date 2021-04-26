@@ -586,7 +586,9 @@ class OsoRoles:
 
         try:
             primary_keys = inspect(resource.__class__).primary_key
-            assert len(primary_keys) == 1, "sqlalchemy.roles2 only supports resources with 1 primary key field."
+            assert (
+                len(primary_keys) == 1
+            ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
             resource_pk_name = primary_keys[0].name
         except sqlalchemy.exc.NoInspectionAvailable:
             # Resource is not a sqlalchemy object
@@ -639,9 +641,15 @@ class OsoRoles:
         resource_id = str(getattr(resource, resource_pk_name))
 
         # Check for existing role.
-        user_role = session.query(self.UserRole).filter(
-            self.UserRole.user_id == user_id and self.UserRole.resource_type == resource_type and self.UserRole.resource_id == resource_id
-        ).first()
+        user_role = (
+            session.query(self.UserRole)
+            .filter(
+                self.UserRole.user_id == user_id
+                and self.UserRole.resource_type == resource_type
+                and self.UserRole.resource_id == resource_id
+            )
+            .first()
+        )
         if user_role is not None:
             user_role.role = role_name
         else:
@@ -673,9 +681,15 @@ class OsoRoles:
         resource_id = str(getattr(resource, resource_pk_name))
 
         # Check for existing role.
-        user_role = session.query(self.UserRole).filter(
-            self.UserRole.user_id == user_id and self.UserRole.resource_type == resource_type and self.UserRole.resource_id == resource_id
-        ).first()
+        user_role = (
+            session.query(self.UserRole)
+            .filter(
+                self.UserRole.user_id == user_id
+                and self.UserRole.resource_type == resource_type
+                and self.UserRole.resource_id == resource_id
+            )
+            .first()
+        )
         if user_role is not None:
             session.delete(user_role)
         session.commit()
@@ -697,9 +711,14 @@ class OsoRoles:
         resource_pk_name = inspect(resource.__class__).primary_key[0].name
         resource_id = str(getattr(resource, resource_pk_name))
 
-        user_roles = session.query(self.UserRole).filter(
-            self.UserRole.resource_type == resource_type and self.UserRole.resource_id == resource_id
-        ).all()
+        user_roles = (
+            session.query(self.UserRole)
+            .filter(
+                self.UserRole.resource_type == resource_type
+                and self.UserRole.resource_id == resource_id
+            )
+            .all()
+        )
         return [{"user_id": ur.user_id, "role": ur.role} for ur in user_roles]
 
 
