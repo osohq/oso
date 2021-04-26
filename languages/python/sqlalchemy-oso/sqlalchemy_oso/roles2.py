@@ -160,9 +160,9 @@ class OsoRoles:
                 user_id = Column(
                     user_pk_type, ForeignKey(f"{user_table_name}.{user_pk_name}")
                 )
-                resource_type = Column(String)
-                resource_id = Column(String)  # Most things can turn into a string lol.
-                role = Column(String)
+                resource_type = Column(String, index=True)
+                resource_id = Column(String, index=True)  # Most things can turn into a string lol.
+                role = Column(String, index=True)
 
         if models.get("Permission"):
             Permission = models["Permission"]
@@ -171,8 +171,8 @@ class OsoRoles:
             class Permission(sqlalchemy_base):
                 __tablename__ = "permissions"
                 id = Column(Integer, primary_key=True)
-                resource_type = Column(String)
-                name = Column(String)
+                resource_type = Column(String, index=True)
+                name = Column(String, index=True)
 
         if models.get("Role"):
             Role = models["Role"]
@@ -191,7 +191,7 @@ class OsoRoles:
                 __tablename__ = "role_permissions"
                 id = Column(Integer, primary_key=True)
                 role = Column(String)
-                permission_id = Column(Integer)
+                permission_id = Column(Integer, index=True)
 
         if models.get("RoleImplication"):
             RoleImplication = models["RoleImplication"]
@@ -200,7 +200,7 @@ class OsoRoles:
             class RoleImplication(sqlalchemy_base):
                 __tablename__ = "role_implications"
                 id = Column(Integer, primary_key=True)
-                from_role = Column(String)
+                from_role = Column(String, index=True)
                 to_role = Column(String)
 
         self.oso = oso
