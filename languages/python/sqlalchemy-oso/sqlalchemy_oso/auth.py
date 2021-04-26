@@ -90,6 +90,11 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
         )
         has_role_allows |= role_allows
 
+        if has_role_allows:
+            roles_filter = roles2._add_query_filter(oso, actor, action, model)
+            # TODO: is this the right place to do this? Should it be inside of `_authorize_query()` instead?
+            filter &= roles_filter
+
         if combined_filter is None:
             combined_filter = filter
         else:
@@ -97,10 +102,5 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
 
     if not has_result:
         return sql.false()
-
-    if has_role_allows:
-        roles_filter = roles2._add_query_filter(oso, actor, action, model)
-        # TODO: is this the right place to do this? Should it be inside of `_authorize_query()` instead?
-        combined_filter &= roles_filter
 
     return combined_filter

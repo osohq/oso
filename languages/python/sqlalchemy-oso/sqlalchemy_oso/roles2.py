@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from oso import Variable
 
+import sqlalchemy
 from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy import inspect
@@ -572,12 +573,24 @@ class OsoRoles:
         self.configured = True
 
     def _role_allows(self, user, action, resource):
+        if isinstance(resource, Variable):
+            # resource is a variable, so we are running as a partial. It may be allowed.
+            # Defer to later.
+            return True
+
         session = self._get_session()
 
         user_pk_name = inspect(user.__class__).primary_key[0].name
         user_id = getattr(user, user_pk_name)
 
-        resource_pk_name = inspect(resource.__class__).primary_key[0].name
+        try:
+            primary_keys = inspect(resource.__class__).primary_key
+            assert len(primary_keys) == 1, "sqlalchemy.roles2 only supports resources with 1 primary key field."
+            resource_pk_name = primary_keys[0].name
+        except sqlalchemy.exc.NoInspectionAvailable:
+            # Resource is not a sqlalchemy object
+            return False
+
         resource_id = str(getattr(resource, resource_pk_name))
 
         results = session.execute(
