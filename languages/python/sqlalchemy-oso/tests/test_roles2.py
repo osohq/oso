@@ -1208,12 +1208,36 @@ def test_reassign_user_role(init_oso, sample_data):
     leina = sample_data["leina"]
 
     oso_roles.assign_role(leina, osohq, "org_member")
-    assert oso.is_allowed(leina, "invite", osohq)
+    leina_roles = (
+        session.query(oso_roles.UserRole)
+        .filter(oso_roles.UserRole.user_id == leina.id)
+        .all()
+    )
+    assert len(leina_roles) == 1
+    assert leina_roles[0].role == "org_member"
 
+    oso_roles.assign_role(steve, osohq, "org_owner")
+    steve_roles = (
+        session.query(oso_roles.UserRole)
+        .filter(oso_roles.UserRole.user_id == leina.id)
+        .all()
+    )
+    assert len(steve_roles) == 1
+    assert steve_roles[0].role == "org_owner"
+
+    # reassigning with reassign=False throws an error
     with pytest.raises(OsoError):
         oso_roles.assign_role(leina, osohq, "org_owner", reassign=False)
 
+    # reassign with reassign=True
     oso_roles.assign_role(leina, osohq, "org_owner")
+    leina_roles = (
+        session.query(oso_roles.UserRole)
+        .filter(oso_roles.UserRole.user_id == leina.id)
+        .all()
+    )
+    assert len(leina_roles) == 1
+    assert leina_roles[0].role == "org_owner"
 
     assert oso.is_allowed(leina, "list_repos", osohq)
 
