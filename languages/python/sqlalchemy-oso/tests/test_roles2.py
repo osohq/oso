@@ -1040,7 +1040,6 @@ def test_chained_role_implication(init_oso, sample_data):
     oso.load_str(new_policy)
     oso_roles.synchronize_data()
 
-
     # leina can't edit the issue anymore
     assert not oso.is_allowed(leina, "edit", oso_bug)
     assert oso.is_allowed(leina, "invite", osohq)
