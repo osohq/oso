@@ -691,6 +691,44 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     assert oso.is_allowed(leina, "pull", oso_repo)
 
 
+def test_bug(init_oso, sample_data, auth_sessionmaker):
+    # Ensure that the filter produced by `Roles.role_allows()` is not AND-ed
+    # with a false filter produced by a separate `allow()` rule.
+    oso, oso_roles, session = init_oso
+    policy = """
+    # Users can read their own data.
+    allow(user: User, "read", user);
+
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["read"] and
+        roles = {
+            org_member: {
+                perms: ["read"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.configure()
+
+    osohq = sample_data["osohq"]
+    leina = sample_data["leina"]
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+
+    # This is just to ensure we don't modify the policy above.
+    assert oso.is_allowed(leina, "read", leina)
+
+    oso.actor = leina
+    oso.action = "read"
+    auth_session = auth_sessionmaker()
+
+    results = auth_session.query(Organization).all()
+    assert len(results) == 1
+
+
 # TODO: all of these
 ## TEST WRITE API
 # User-role assignment:
