@@ -691,7 +691,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     assert oso.is_allowed(leina, "pull", oso_repo)
 
 
-def test_bug(init_oso, sample_data, auth_sessionmaker):
+def test_data_filtering(init_oso, sample_data, auth_sessionmaker):
     # Ensure that the filter produced by `Roles.role_allows()` is not AND-ed
     # with a false filter produced by a separate `allow()` rule.
     oso, oso_roles, session = init_oso
