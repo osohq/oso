@@ -638,14 +638,69 @@ class OsoRoles:
         resource_pk_name = inspect(resource.__class__).primary_key[0].name
         resource_id = str(getattr(resource, resource_pk_name))
 
-        user_role = self.UserRole(
-            user_id=user_id,
-            resource_type=resource_type,
-            resource_id=resource_id,
-            role=role_name,
-        )
-        session.add(user_role)
+        # Check for existing role.
+        user_role = session.query(self.UserRole).filter(
+            self.UserRole.user_id == user_id and self.UserRole.resource_type == resource_type and self.UserRole.resource_id == resource_id
+        ).first()
+        if user_role is not None:
+            user_role.role = role_name
+        else:
+            user_role = self.UserRole(
+                user_id=user_id,
+                resource_type=resource_type,
+                resource_id=resource_id,
+                role=role_name,
+            )
+            session.add(user_role)
         session.commit()
+
+    @ensure_configured
+    def remove_role(self, user, resource, role_name, session=None):
+        if not session:
+            session = self._get_session()
+
+        # @TODO: Verify all the rules of what roles you can be assigned to.
+        assert role_name in self.roles
+        role = self.roles[role_name]
+
+        if not resource.__class__ == role.python_class:
+            raise OsoError("Role class does not match python class")
+
+        user_pk_name = inspect(user.__class__).primary_key[0].name
+        user_id = getattr(user, user_pk_name)
+        resource_type = resource.__class__.__name__
+        resource_pk_name = inspect(resource.__class__).primary_key[0].name
+        resource_id = str(getattr(resource, resource_pk_name))
+
+        # Check for existing role.
+        user_role = session.query(self.UserRole).filter(
+            self.UserRole.user_id == user_id and self.UserRole.resource_type == resource_type and self.UserRole.resource_id == resource_id
+        ).first()
+        if user_role is not None:
+            session.delete(user_role)
+        session.commit()
+
+    def for_resource(self, resource_class, session=None):
+        # List the roles for a resource type
+        roles = []
+        for name, role in self.roles.items():
+            if role.python_class == resource_class:
+                roles.append(name)
+        return roles
+
+    def assignments_for_resource(self, resource, session=None):
+        # List the role assignments for a specific resource
+        if not session:
+            session = self._get_session()
+
+        resource_type = resource.__class__.__name__
+        resource_pk_name = inspect(resource.__class__).primary_key[0].name
+        resource_id = str(getattr(resource, resource_pk_name))
+
+        user_roles = session.query(self.UserRole).filter(
+            self.UserRole.resource_type == resource_type and self.UserRole.resource_id == resource_id
+        ).all()
+        return [{"user_id": ur.user_id, "role": ur.role} for ur in user_roles]
 
 
 def _add_query_filter(oso, user, action, resource_model):

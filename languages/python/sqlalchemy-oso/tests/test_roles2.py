@@ -827,8 +827,9 @@ def test_roles(init_oso, auth_sessionmaker):
 
     leina = User(name="leina")
     steve = User(name="steve")
+    gabe = User(name="gabe")
 
-    objs = [leina, steve, apple, osohq, ios, oso_repo, demo_repo, laggy, bug]
+    objs = [leina, steve, gabe, apple, osohq, ios, oso_repo, demo_repo, laggy, bug]
     for obj in objs:
         session.add(obj)
     session.commit()
@@ -863,3 +864,20 @@ def test_roles(init_oso, auth_sessionmaker):
     assert oso_repo.id in result_ids
     assert demo_repo.id in result_ids
     assert ios.id not in result_ids
+
+    assert not oso.is_allowed(gabe, "edit", bug)
+    oso_roles.assign_role(gabe, osohq, "org_member", session=session)
+    assert not oso.is_allowed(gabe, "edit", bug)
+    oso_roles.assign_role(gabe, osohq, "org_owner", session=session)
+    assert oso.is_allowed(gabe, "edit", bug)
+    oso_roles.assign_role(gabe, osohq, "org_member", session=session)
+    assert not oso.is_allowed(gabe, "edit", bug)
+    oso_roles.assign_role(gabe, osohq, "org_owner", session=session)
+    assert oso.is_allowed(gabe, "edit", bug)
+    oso_roles.remove_role(gabe, osohq, "org_owner", session=session)
+    assert not oso.is_allowed(gabe, "edit", bug)
+
+    org_roles = oso_roles.for_resource(Repository)
+    assert set(org_roles) == {'repo_read', 'repo_write'}
+    oso_assignments = oso_roles.assignments_for_resource(osohq)
+    assert oso_assignments == [{'user_id': leina.id, 'role': 'org_owner'}, {'user_id': steve.id, 'role': 'org_member'}]
