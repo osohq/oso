@@ -581,17 +581,17 @@ class OsoRoles:
 
         session = self._get_session()
 
-        user_pk_name = inspect(user.__class__).primary_key[0].name
-        user_id = getattr(user, user_pk_name)
-
         try:
+            user_pk_name = inspect(user.__class__).primary_key[0].name
+            user_id = getattr(user, user_pk_name)
+
             primary_keys = inspect(resource.__class__).primary_key
             assert (
                 len(primary_keys) == 1
             ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
             resource_pk_name = primary_keys[0].name
         except sqlalchemy.exc.NoInspectionAvailable:
-            # Resource is not a sqlalchemy object
+            # User or Resource is not a sqlalchemy object
             return False
 
         resource_id = str(getattr(resource, resource_pk_name))
@@ -732,12 +732,12 @@ def _add_query_filter(oso, user, action, resource_model):
     try:
         user_pk_name = inspect(user.__class__).primary_key[0].name
         user_id = getattr(user, user_pk_name)
-    except sqlalchemy.exc.NoInspectionAvailable:
-        # User is not a sqlalchemy object
-        return sql.false()
 
-    resource_type = resource_model.__name__
-    resource_pk_name = inspect(resource_model).primary_key[0].name
+        resource_type = resource_model.__name__
+        resource_pk_name = inspect(resource_model).primary_key[0].name
+    except sqlalchemy.exc.NoInspectionAvailable:
+        # User or Resource is not a sqlalchemy object
+        return sql.false()
 
     try:
         role_list_sql = oso.roles.list_filter_queries[resource_type]
