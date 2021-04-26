@@ -1,9 +1,7 @@
 use std::collections::HashSet;
 
-use crate::folder::{fold_operation, fold_term, Folder};
-use crate::terms::{Operation, Operator, Symbol, Term, Value};
-use crate::visitor::{walk_operation, Visitor};
-use crate::vm::compare;
+use crate::terms::{Operation, Operator, Partial, Symbol, Term, Value};
+use crate::visitor::{walk_partial, Visitor};
 
 /// A trivially true expression.
 pub const TRUE: Operation = op!(And);
@@ -71,7 +69,7 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
     }
 }
 
-impl Operation {
+impl Partial {
     /// Construct & return a set of symbols that occur in this operation.
     pub fn variables(&self) -> Vec<Symbol> {
         struct VariableVisitor {
@@ -92,118 +90,120 @@ impl Operation {
             vars: vec![],
         };
 
-        walk_operation(&mut visitor, &self);
+        walk_partial(&mut visitor, &self);
         visitor.vars
     }
 
-    /// Replace `var` with a ground (non-variable) value. Checks for
-    /// consistent unifications along the way: if everything's fine,
-    /// returns `Some(grounded_term)`, but if an inconsistent ground
-    /// (anti-)unification is detected, return `None`.
-    pub fn ground(&self, var: Symbol, value: Term) -> Option<Self> {
-        struct Grounder {
-            var: Symbol,
-            value: Term,
-            invert: bool,
-            consistent: bool,
-        }
-
-        impl Folder for Grounder {
-            fn fold_term(&mut self, t: Term) -> Term {
-                if let Value::Variable(v) = t.value() {
-                    if v == &self.var {
-                        return self.value.clone();
-                    }
-                }
-                fold_term(t, self)
-            }
-
-            fn fold_operation(&mut self, o: Operation) -> Operation {
-                match o.operator {
-                    Operator::Unify | Operator::Eq | Operator::Neq => {
-                        let neq = o.operator == Operator::Neq;
-
-                        let l = self.fold_term(o.args[0].clone());
-                        let r = self.fold_term(o.args[1].clone());
-                        if l.is_ground() && r.is_ground() {
-                            let consistent = if neq { l != r } else { l == r };
-                            if self.invert {
-                                if consistent {
-                                    self.consistent = false;
-                                    TRUE
-                                } else {
-                                    FALSE
-                                }
-                            } else if consistent {
-                                TRUE
-                            } else {
-                                self.consistent = false;
-                                FALSE
-                            }
-                        } else {
-                            Operation {
-                                operator: o.operator,
-                                args: vec![l, r],
-                            }
-                        }
-                    }
-                    Operator::Not => {
-                        self.invert = !self.invert;
-                        let o = fold_operation(o, self);
-                        self.invert = !self.invert;
-                        o
-                    }
-                    Operator::Gt | Operator::Geq | Operator::Lt | Operator::Leq => {
-                        let o = if self.invert { invert_operation(o) } else { o };
-                        let left = self.fold_term(o.args[0].clone());
-                        let right = self.fold_term(o.args[1].clone());
-                        match (left.value(), right.value()) {
-                            (Value::Number(_), Value::Number(_))
-                            | (Value::Number(_), Value::Boolean(_))
-                            | (Value::Boolean(_), Value::Number(_))
-                            | (Value::Boolean(_), Value::Boolean(_))
-                            | (Value::String(_), Value::String(_)) => {
-                                if compare(o.operator, &left, &right).unwrap() {
-                                    TRUE
-                                } else {
-                                    self.consistent = false;
-                                    FALSE
-                                }
-                            }
-                            _ => fold_operation(o, self),
-                        }
-                    }
-                    _ => fold_operation(o, self),
-                }
-            }
-        }
-
-        let mut grounder = Grounder {
-            var,
-            value,
-            invert: false,
-            consistent: true,
-        };
-        let grounded = grounder.fold_operation(self.clone());
-        if grounder.consistent {
-            Some(grounded)
-        } else {
-            None
-        }
+    pub fn is_false(&self) -> bool {
+        self.constraints.contains(&FALSE)
     }
+
+    // /// Replace `var` with a ground (non-variable) value. Checks for
+    // /// consistent unifications along the way: if everything's fine,
+    // /// returns `Some(grounded_term)`, but if an inconsistent ground
+    // /// (anti-)unification is detected, return `None`.
+    // pub fn ground(&self, var: Symbol, value: Term) -> Option<Self> {
+    //     struct Grounder {
+    //         var: Symbol,
+    //         value: Term,
+    //         invert: bool,
+    //         consistent: bool,
+    //     }
+
+    //     impl Folder for Grounder {
+    //         fn fold_term(&mut self, t: Term) -> Term {
+    //             if let Value::Variable(v) = t.value() {
+    //                 if v == &self.var {
+    //                     return self.value.clone();
+    //                 }
+    //             }
+    //             fold_term(t, self)
+    //         }
+
+    //         fn fold_partial(&mut self, o: Operation) -> Partial {
+    //             match o.operator {
+    //                 Operator::Unify | Operator::Eq | Operator::Neq => {
+    //                     let neq = o.operator == Operator::Neq;
+
+    //                     let l = self.fold_term(o.args[0].clone());
+    //                     let r = self.fold_term(o.args[1].clone());
+    //                     if l.is_ground() && r.is_ground() {
+    //                         let consistent = if neq { l != r } else { l == r };
+    //                         if self.invert {
+    //                             if consistent {
+    //                                 self.consistent = false;
+    //                                 TRUE
+    //                             } else {
+    //                                 FALSE
+    //                             }
+    //                         } else if consistent {
+    //                             TRUE
+    //                         } else {
+    //                             self.consistent = false;
+    //                             FALSE
+    //                         }
+    //                     } else {
+    //                         Operation {
+    //                             operator: o.operator,
+    //                             args: vec![l, r],
+    //                         }
+    //                     }
+    //                 }
+    //                 Operator::Not => {
+    //                     self.invert = !self.invert;
+    //                     let o = fold_partial(o, self);
+    //                     self.invert = !self.invert;
+    //                     o
+    //                 }
+    //                 Operator::Gt | Operator::Geq | Operator::Lt | Operator::Leq => {
+    //                     let o = if self.invert { invert_partial(o) } else { o };
+    //                     let left = self.fold_term(o.args[0].clone());
+    //                     let right = self.fold_term(o.args[1].clone());
+    //                     match (left.value(), right.value()) {
+    //                         (Value::Number(_), Value::Number(_))
+    //                         | (Value::Number(_), Value::Boolean(_))
+    //                         | (Value::Boolean(_), Value::Number(_))
+    //                         | (Value::Boolean(_), Value::Boolean(_))
+    //                         | (Value::String(_), Value::String(_)) => {
+    //                             if compare(o.operator, &left, &right).unwrap() {
+    //                                 TRUE
+    //                             } else {
+    //                                 self.consistent = false;
+    //                                 FALSE
+    //                             }
+    //                         }
+    //                         _ => fold_partial(o, self),
+    //                     }
+    //                 }
+    //                 _ => fold_partial(o, self),
+    //             }
+    //         }
+    //     }
+
+    //     let mut grounder = Grounder {
+    //         var,
+    //         value,
+    //         invert: false,
+    //         consistent: true,
+    //     };
+    //     let grounded = grounder.fold_partial(self.clone());
+    //     if grounder.consistent {
+    //         Some(grounded)
+    //     } else {
+    //         None
+    //     }
+    // }
 
     /// Augment our constraints with those on `other`.
     ///
     /// Invariant: self and other are ANDs
     pub fn merge_constraints(&mut self, other: Self) {
-        assert_eq!(self.operator, Operator::And);
-        assert_eq!(other.operator, Operator::And);
-        self.args.extend(other.args);
+        self.constraints.extend(other.constraints);
     }
 
     // Invert constraints in operation after CSP.
-    pub fn invert(&self) -> Operation {
-        self.clone_with_constraints(vec![op!(
+    pub fn invert(&self) -> Partial {
+        Partial::from_expression(op!(
             Not,
             term!(value!(Operation {
                 operator: Operator::And,
@@ -214,69 +214,36 @@ impl Operation {
                     .map(|o| term!(value!(o)))
                     .collect()
             }))
-        )])
+        ))
     }
 
     pub fn constraints(&self) -> Vec<Operation> {
-        self.args
-            .iter()
-            .map(|a| a.value().as_expression().unwrap().clone())
-            .collect()
+        self.constraints.clone()
     }
 
     // TODO(gj): can we replace every use of this w/ clone_with_new_constraint for Immutability
     // Purposes?
     pub fn add_constraint(&mut self, o: Operation) {
-        assert_eq!(self.operator, Operator::And);
-        self.args.push(o.into_term());
+        self.constraints.push(o);
     }
 
     pub fn into_term(self) -> Term {
-        Term::new_temporary(Value::Expression(self))
-    }
-
-    pub fn clone_with_constraints(&self, constraints: Vec<Operation>) -> Self {
-        assert_eq!(self.operator, Operator::And);
-        let mut new = self.clone();
-        new.args = constraints.into_iter().map(|c| c.into_term()).collect();
-        new
+        Term::new_temporary(Value::Partial(self))
     }
 
     pub fn clone_with_new_constraint(&self, constraint: Term) -> Self {
-        assert_eq!(self.operator, Operator::And);
         let mut new = self.clone();
+
         match constraint.value() {
-            Value::Expression(e) if e.operator == Operator::And => new.args.extend(e.args.clone()),
-            _ => new.args.push(constraint),
+            Value::Expression(e) if e.operator == Operator::And => new.constraints.extend(
+                e.args
+                    .iter()
+                    .map(|op| op.value().as_expression().unwrap().clone()),
+            ),
+            Value::Expression(e) => new.constraints.push(e.clone()),
+            _ => panic!("unexpected constraint"),
         }
         new
-    }
-
-    pub fn mirror(&self) -> Self {
-        let args = self.args.clone().into_iter().rev().collect();
-        match self.operator {
-            Operator::Unify | Operator::Eq | Operator::Neq => Self {
-                operator: self.operator,
-                args,
-            },
-            Operator::Gt => Self {
-                operator: Operator::Leq,
-                args,
-            },
-            Operator::Geq => Self {
-                operator: Operator::Lt,
-                args,
-            },
-            Operator::Lt => Self {
-                operator: Operator::Geq,
-                args,
-            },
-            Operator::Leq => Self {
-                operator: Operator::Gt,
-                args,
-            },
-            _ => self.clone(),
-        }
     }
 }
 
@@ -298,7 +265,7 @@ mod test {
                     .get(&sym!($sym))
                     .expect(&format!("{} is unbound", $sym))
                     .value()
-                    .as_expression()
+                    .as_partial()
                     .unwrap()
                     .to_polar(),
                 $right
@@ -344,8 +311,8 @@ mod test {
         // p.into_tui();
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(2));
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.a = 3");
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this.b = 4");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "3 = _this.a");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "4 = _this.b");
         assert_query_done!(q);
         Ok(())
     }
@@ -955,6 +922,7 @@ mod test {
     }
 
     #[test]
+    #[ignore = "want to change how partial isa works"]
     fn test_rule_filtering_with_partials() -> TestResult {
         let p = Polar::new();
         p.load_str(
@@ -994,7 +962,7 @@ mod test {
         // Register `x` as a partial.
         p.register_constant(
             sym!("x"),
-            op!(
+            partial!(
                 And,
                 op!(Isa, term!(sym!("x")), term!(pattern!(instance!("A")))).into_term()
             )
@@ -1034,7 +1002,7 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
         assert_eq!(next[&sym!("x")], term!(sym!("y")));
-        assert_eq!(next[&sym!("y")], term!(sym!("x")));
+        assert_eq!(next[&sym!("y")], term!(sym!("y")));
         let next = next_binding(&mut q)?;
         assert_eq!(next[&sym!("x")], term!(1));
         assert_eq!(next[&sym!("y")], term!(1));
@@ -1047,14 +1015,7 @@ mod test {
         assert_query_done!(q);
 
         // Register `y` as a partial.
-        p.register_constant(sym!("y"), term!(value!(op!(And))));
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
-        let next = next_binding(&mut q)?;
-        assert_partial_expressions!(next, "x" => "_this = y", "y" => "x = _this");
-        let next = next_binding(&mut q)?;
-        assert_partial_expressions!(next, "x" => "1 = _this and 1 = y", "y" => "1 = x and 1 = _this");
-        assert_query_done!(q);
-
+        p.register_constant(sym!("y"), Partial::default().into_term());
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
         assert_eq!(next[&sym!("x")], term!(1));
@@ -1065,6 +1026,7 @@ mod test {
     }
 
     #[test]
+    #[ignore = "this is testing it works when manually binding a partial"]
     fn test_partial_unification_2() -> TestResult {
         let p = Polar::new();
         p.load_str(
@@ -1077,7 +1039,7 @@ mod test {
         )?;
 
         // Register `x` as a partial.
-        p.register_constant(sym!("x"), term!(value!(op!(And))));
+        p.register_constant(sym!("x"), Partial::default().into_term());
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expressions!(next, "x" => "_this = y", "y" => "x = _this");
@@ -1092,8 +1054,6 @@ mod test {
         assert_eq!(next[&sym!("y")], term!(2));
         assert_query_done!(q);
 
-        // Register `y` as a partial.
-        p.register_constant(sym!("y"), term!(value!(op!(And))));
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expressions!(next, "x" => "_this = y", "y" => "x = _this");
@@ -1159,7 +1119,6 @@ mod test {
     fn test_dot_lookup_with_partial_as_field() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x, y) if {a: y, b: y}.(x) > 0;")?;
-        p.register_constant(sym!("x"), term!(value!(op!(And))));
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
         assert_eq!(next[&sym!("x")], term!("a"));
@@ -1588,7 +1547,6 @@ mod test {
     fn test_that_cut_with_partial_errors() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x) if cut;")?;
-        p.register_constant(sym!("x"), op!(And).into_term());
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(

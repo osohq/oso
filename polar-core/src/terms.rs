@@ -7,6 +7,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 pub use super::numerics::Numeric;
+pub use super::partial::Partial;
 use super::visitor::{walk_operation, walk_term, Visitor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
@@ -119,6 +120,38 @@ pub struct Operation {
     pub args: TermList,
 }
 
+impl Operation {
+    pub fn into_term(self) -> Term {
+        Term::new_temporary(Value::Expression(self))
+    }
+    pub fn mirror(&self) -> Self {
+        let args = self.args.clone().into_iter().rev().collect();
+        match self.operator {
+            Operator::Unify | Operator::Eq | Operator::Neq => Self {
+                operator: self.operator,
+                args,
+            },
+            Operator::Gt => Self {
+                operator: Operator::Leq,
+                args,
+            },
+            Operator::Geq => Self {
+                operator: Operator::Lt,
+                args,
+            },
+            Operator::Lt => Self {
+                operator: Operator::Geq,
+                args,
+            },
+            Operator::Leq => Self {
+                operator: Operator::Gt,
+                args,
+            },
+            _ => self.clone(),
+        }
+    }
+}
+
 /// Represents a pattern in a specializer or after isa.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Pattern {
@@ -139,6 +172,7 @@ pub enum Value {
     Variable(Symbol),
     RestVariable(Symbol),
     Expression(Operation),
+    Partial(Partial),
 }
 
 impl Value {
@@ -168,6 +202,16 @@ impl Value {
             Value::Expression(op) => Ok(op),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected expression, got: {}", self.to_polar()),
+                stack_trace: None, // @TODO
+            }),
+        }
+    }
+
+    pub fn as_partial(&self) -> Result<&Partial, error::RuntimeError> {
+        match self {
+            Value::Partial(p) => Ok(p),
+            _ => Err(error::RuntimeError::TypeError {
+                msg: format!("Expected partial, got: {}", self.to_polar()),
                 stack_trace: None, // @TODO
             }),
         }
@@ -206,6 +250,7 @@ impl Value {
             Value::Expression(Operation { operator: _, args }) => {
                 args.iter().all(|t| t.is_ground())
             }
+            Value::Partial(_) => false,
         }
     }
 }
@@ -382,12 +427,6 @@ impl Term {
         let mut visitor = VariableChecker::new(var);
         walk_term(&mut visitor, self);
         visitor.occurs
-    }
-
-    pub fn hash_value(&self) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        self.hash(&mut hasher);
-        hasher.finish()
     }
 
     pub fn get_source_id(&self) -> Option<u64> {

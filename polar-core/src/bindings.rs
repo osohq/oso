@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 use crate::error::{PolarResult, RuntimeError};
 use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
-use crate::terms::{has_rest_var, Operation, Operator, Symbol, Term, Value};
+use crate::terms::{has_rest_var, Partial, Symbol, Term, Value};
 
 #[derive(Clone, Debug)]
 pub struct Binding(pub Symbol, pub Term);
@@ -29,16 +29,6 @@ pub enum VariableState {
     Unbound,
     Bound(Term),
     Partial,
-}
-
-/// Represent each binding in a cycle as a unification constraint.
-// TODO(gj): put this in an impl block on VariableState?
-fn cycle_constraints(cycle: Vec<Symbol>) -> Operation {
-    let mut constraints = op!(And);
-    for (x, y) in cycle.iter().zip(cycle.iter().skip(1)) {
-        constraints.add_constraint(op!(Unify, term!(x.clone()), term!(y.clone())));
-    }
-    constraints
 }
 
 impl From<BindingManagerVariableState<'_>> for VariableState {
@@ -67,7 +57,7 @@ enum BindingManagerVariableState<'a> {
     /// Cycle is written as Head | Tail
     /// Isn't strictly a cycle, more of a tree, where Head is the root
     Cycle(Symbol, Vec<Symbol>),
-    Partial(&'a Operation),
+    Partial(&'a Partial),
 }
 
 /// The `BindingManager` maintains associations between variables and values,
@@ -147,24 +137,24 @@ impl BindingManager {
                         .unwrap();
                 }
                 BindingManagerVariableState::Partial(p) => {
-                    if let Some(grounded) = p.ground(var.clone(), val.clone()) {
-                        // eprintln!("Ground: {} <- {}", var, val.to_polar());
-                        let op = p.clone();
-                        // eprintln!("Query: {}", op.to_polar());
-                        self.add_binding(var, val.clone());
-                        // If the main binding succeeded, the follower binding must succeed.
-                        self.do_followers(|_, follower| {
-                            follower.bind(var, val.clone()).map(|_| ())
-                        })
+                    // eprintln!("Ground: {} <- {}", var, val.to_polar());
+                    let op = p.clone();
+                    // eprintln!("Query: {}", op.to_polar());
+                    self.add_binding(var, val.clone());
+                    // If the main binding succeeded, the follower binding must succeed.
+                    self.do_followers(|_, follower| follower.bind(var, val.clone()).map(|_| ()))
                         .unwrap();
-                        return Ok(Some(crate::vm::Goal::Query { term: term!(op) }));
-                        // self.constrain(&grounded)?;
-                    } else {
-                        return Err(RuntimeError::IncompatibleBindings {
-                            msg: "Grounding failed".into(),
-                        }
-                        .into());
-                    }
+                    assert!(op.references.is_empty(), "TODO: ground with references");
+                    return Ok(Some(crate::vm::Goal::Query {
+                        term: term!(crate::terms::Operation {
+                            operator: crate::terms::Operator::And,
+                            args: op
+                                .constraints
+                                .into_iter()
+                                .map(crate::terms::Operation::into_term)
+                                .collect()
+                        }),
+                    }));
                 }
             }
         }
@@ -200,31 +190,9 @@ impl BindingManager {
     /// (Currently all constraints are considered compatible).
     pub fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
         self.do_followers(|_, follower| follower.add_constraint(term))?;
-
-        assert!(term.value().as_expression().is_ok());
-        let mut op = op!(And, term.clone());
-        for var in op.variables().iter().rev() {
-            match self._variable_state(&var) {
-                BindingManagerVariableState::Unbound => {}
-                BindingManagerVariableState::Cycle(head, c) => {
-
-                    // todo!()
-                    // let mut cycle = cycle_constraints(c);
-                    // cycle.merge_constraints(op.clone());
-                    // op = cycle;
-                }
-                BindingManagerVariableState::Partial(e) => {
-                    let mut e = e.clone();
-                    e.merge_constraints(op);
-                    op = e;
-                }
-                BindingManagerVariableState::Bound(_) => {
-                    panic!("Unexpected bound variable {} in constraint.", var);
-                }
-            }
-        }
-
-        self.constrain(&op)
+        let operation = term.value().as_expression().unwrap();
+        let partial = Partial::from_expression(operation.clone());
+        self.constrain(partial)
     }
 
     /// Reset the state of `BindingManager` to what it was at `to`.
@@ -295,7 +263,8 @@ impl BindingManager {
         impl<'a> Folder for Derefer<'a> {
             fn fold_term(&mut self, t: Term) -> Term {
                 match t.value() {
-                    // Value::Expression(_) => t,
+                    Value::Expression(_) => t,
+                    Value::Partial(_) => t,
                     Value::List(_) => fold_term(self.binding_manager.deref(&t), self),
                     Value::Variable(_) | Value::RestVariable(_) => {
                         let derefed = self.binding_manager.deref(&t);
@@ -311,21 +280,18 @@ impl BindingManager {
 
     /// Get constraints on variable `variable`. If the variable is in a cycle,
     /// the cycle is expressed as a partial.
-    pub fn get_constraints(&self, variable: &Symbol) -> Operation {
+    pub fn get_constraints(&self, variable: &Symbol) -> Partial {
         match self._variable_state(variable) {
-            BindingManagerVariableState::Unbound => op!(And),
-            BindingManagerVariableState::Bound(val) => {
-                op!(And, term!(op!(Unify, term!(variable.clone()), val)))
-            }
-            BindingManagerVariableState::Partial(expr) => self
-                .deep_deref(&term!(expr.clone()))
-                .value()
-                .as_expression()
-                .unwrap()
-                .clone(),
-            BindingManagerVariableState::Cycle(_head, _c) => {
-                op!(And)
-            }
+            // BindingManagerVariableState::Unbound => op!(And),
+            // BindingManagerVariableState::Bound(val) => {
+            //     op!(And, term!(op!(Unify, term!(variable.clone()), val)))
+            // }
+            BindingManagerVariableState::Partial(partial) => partial.clone(),
+
+            _ => todo!("non-partials don't have constraints"),
+            // BindingManagerVariableState::Cycle(_head, _c) => {
+            //     op!(And)
+            // }
         }
     }
 
@@ -336,7 +302,8 @@ impl BindingManager {
     pub fn variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> VariableState {
         if let Some(value) = self.value(variable, bsp) {
             match value.value() {
-                Value::Expression(_) => return VariableState::Partial,
+                Value::Partial(_) => return VariableState::Partial,
+                Value::Expression(e) => panic!("{} bound to {}", variable, e.to_polar()),
                 Value::Variable(v) | Value::RestVariable(v) if v == variable => {
                     return VariableState::Unbound;
                 }
@@ -370,7 +337,7 @@ impl BindingManager {
             if !include_temps && var.is_temporary_var() {
                 continue;
             }
-            bindings.insert(var.clone(), self.deep_deref(value));
+            bindings.insert(var.clone(), self.deref(value));
         }
         bindings
     }
@@ -380,7 +347,7 @@ impl BindingManager {
         for var in variables.iter() {
             let value = self.value(var, self.bsp());
             if let Some(value) = value {
-                bindings.insert(var.clone(), self.deep_deref(value));
+                bindings.insert(var.clone(), self.deref(value));
             }
         }
         bindings
@@ -479,20 +446,20 @@ impl BindingManager {
                 .into());
             }
             (
-                BindingManagerVariableState::Bound(left_value),
+                BindingManagerVariableState::Bound(_left_value),
                 BindingManagerVariableState::Partial(_),
             ) => {
                 // Left is bound, right has constraints.
                 // TODO (dhatch): No unwrap.
-                self.add_constraint(&op!(Unify, left_value, term!(right.clone())).into_term())?;
                 panic!("shouldn't have bound and partial here");
+                // self.add_constraint(&op!(Unify, left_value, term!(right.clone())).into_term())?;
             }
             (
                 BindingManagerVariableState::Partial(_),
-                BindingManagerVariableState::Bound(right_value),
+                BindingManagerVariableState::Bound(_right_value),
             ) => {
-                self.add_constraint(&op!(Unify, term!(left.clone()), right_value).into_term())?;
                 panic!("shouldn't have bound and partial here");
+                // self.add_constraint(&op!(Unify, term!(left.clone()), right_value).into_term())?;
             }
             (BindingManagerVariableState::Partial(_), BindingManagerVariableState::Unbound) => {
                 // self.add_binding(right, left)
@@ -517,10 +484,24 @@ impl BindingManager {
             ) => {
                 self.add_binding(&head, term!(right.clone()));
             }
-            (BindingManagerVariableState::Partial(_), BindingManagerVariableState::Partial(_)) => {
-                self.add_constraint(
-                    &op!(Unify, term!(left.clone()), term!(right.clone())).into_term(),
-                )?;
+            (
+                BindingManagerVariableState::Partial(pl),
+                BindingManagerVariableState::Partial(pr),
+            ) => {
+                if left != right {
+                    // merge partials
+                    if left.is_temporary_var() && !right.is_temporary_var() {
+                        let mut new_partial = pr.clone();
+                        new_partial.merge_constraints(pl.clone());
+                        self.add_binding(right, term!(new_partial));
+                        self.add_binding(left, term!(right.clone()));
+                    } else {
+                        let mut new_partial = pl.clone();
+                        new_partial.merge_constraints(pr.clone());
+                        self.add_binding(left, term!(new_partial));
+                        self.add_binding(right, term!(left.clone()));
+                    }
+                }
             }
         }
 
@@ -528,6 +509,10 @@ impl BindingManager {
     }
 
     fn add_binding(&mut self, var: &Symbol, val: Term) {
+        assert!(!matches!(
+            val.value(),
+            Value::Expression(_) | Value::Pattern(_)
+        ));
         self.bindings.push(Binding(var.clone(), val));
     }
 
@@ -550,7 +535,8 @@ impl BindingManager {
         let mut path = vec![variable];
         while let Some(value) = self.value(path.last().unwrap(), bsp) {
             match value.value() {
-                Value::Expression(e) => return BindingManagerVariableState::Partial(e),
+                Value::Partial(p) => return BindingManagerVariableState::Partial(p),
+                Value::Expression(e) => panic!("{} bound to {}", variable, e.to_polar()),
                 Value::Variable(v) | Value::RestVariable(v) => {
                     if &v == path.last().unwrap() {
                         let head = path.pop().expect("path cannot be empty here");
@@ -569,21 +555,42 @@ impl BindingManager {
     }
 
     #[allow(clippy::unnecessary_wraps)]
-    fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
-        assert_eq!(o.operator, Operator::And, "bad constraint {}", o.to_polar());
-        for var in o.variables() {
+    fn constrain(&mut self, p: Partial) -> PolarResult<()> {
+        let all_variables = p.variables();
+        let non_temp = all_variables.iter().filter(|v| !v.is_temporary_var());
+        let temp = all_variables.iter().filter(|v| v.is_temporary_var());
+        let variables = non_temp.chain(temp);
+        // check for existing partial first
+        // merge constraints
+        for var in variables.clone() {
             match self._variable_state(&var) {
-                // A constraint should not contain a bound variable, it should have been removed in
-                // add_constraint by calling ground.
-                // BindingManagerVariableState::Bound(_) => {
-                //     panic!("Unexpected bound variable in constraint.")
-                // }
-                _ => self.add_binding(&var, o.clone().into_term()),
+                BindingManagerVariableState::Partial(partial) => {
+                    let mut partial = partial.clone();
+                    partial.merge_constraints(p);
+                    self.add_binding(&var, partial.into_term());
+                    return Ok(());
+                }
+                _ => {}
             }
-            // TODO: yeah
-            break;
         }
-        Ok(())
+
+        // check for unbound
+        // bind constraint
+        for var in variables {
+            match self._variable_state(&var) {
+                BindingManagerVariableState::Unbound => {
+                    self.add_binding(&var, p.clone().into_term());
+                    return Ok(());
+                }
+                BindingManagerVariableState::Cycle(head, _) => {
+                    self.add_binding(&head, p.clone().into_term());
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
+
+        panic!("didn't find any unbound or partials to constrain")
     }
 
     fn do_followers<F>(&mut self, func: F) -> PolarResult<()>

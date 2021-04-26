@@ -73,22 +73,6 @@ macro_rules! instance {
 }
 
 #[macro_export]
-macro_rules! partial {
-    ($arg:expr) => {
-        Value::Partial(Partial::new(sym!($arg)))
-    };
-    ($arg:expr, [$($args:expr),*]) => {
-        {
-            let mut constraint = Partial::new(sym!($arg));
-            $(
-                constraint.add_constraint($args);
-            )*
-            constraint
-        }
-    };
-}
-
-#[macro_export]
 macro_rules! sym {
     ($arg:expr) => {
         $crate::macros::TestHelper::<Symbol>::from($arg).0
@@ -145,6 +129,13 @@ macro_rules! op {
             operator: Operator::$op_type,
             args: vec![]
         }
+    };
+}
+
+#[macro_export]
+macro_rules! partial {
+    ($op_type:ident, $($args:expr),*) => {
+        Partial::from_expression(op!($op_type, $($args),+))
     };
 }
 
@@ -299,6 +290,13 @@ impl From<Operation> for TestHelper<Value> {
         Self(Value::Expression(other))
     }
 }
+
+impl From<Partial> for TestHelper<Value> {
+    fn from(other: Partial) -> Self {
+        Self(Value::Partial(other))
+    }
+}
+
 impl From<TermList> for TestHelper<Value> {
     fn from(other: TermList) -> Self {
         Self(Value::List(other))

@@ -11,7 +11,7 @@ use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::partial::simplify_bindings;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Term, Value};
+use crate::terms::{Operation, Operator, Partial, Term, Value};
 use crate::vm::{Goals, PolarVirtualMachine};
 
 /// The inverter implements the `not` operation in Polar.
@@ -77,13 +77,23 @@ impl Inverter {
 /// The output constraints are AND[!result1, !result2, ...].
 fn results_to_constraints(results: Vec<BindingManager>) -> Bindings {
     let inverted = results.into_iter().map(invert_partials).collect();
+    eprintln!("Inverted: {:#?}", inverted);
     let reduced = reduce_constraints(inverted);
-    let simplified = simplify_bindings(reduced, true).unwrap_or_else(Bindings::new);
+    eprintln!("Reduced: {:#?}", reduced);
+    // let simplified = simplify_bindings(reduced, true).unwrap_or_else(Bindings::new);
 
-    simplified
+    reduced
         .into_iter()
         .map(|(k, v)| match v.value() {
-            Value::Expression(_) => (k, v),
+            Value::Partial(_) => (
+                k,
+                v.value()
+                    .as_partial()
+                    .unwrap()
+                    .clone()
+                    .into_expression()
+                    .into_term(),
+            ),
             _ => (
                 k.clone(),
                 v.clone_with_value(Value::Expression(op!(Unify, term!(k), v.clone()))),
@@ -99,22 +109,14 @@ fn results_to_constraints(results: Vec<BindingManager>) -> Bindings {
 /// Then, each simplified expression is inverted.
 /// A binding of `var` to `val` after simplification is converted into `var != val`.
 fn invert_partials(bindings: BindingManager) -> Bindings {
-    let mut new_bindings = Bindings::new();
-
-    for var in bindings.variables() {
-        let constraint = bindings.get_constraints(&var);
-        new_bindings.insert(var.clone(), term!(constraint));
-    }
-
-    let simplified = simplify_bindings(new_bindings, true).unwrap_or_else(Bindings::new);
-
-    simplified
-        .into_iter()
+    bindings
+        .bindings(true)
+        .iter()
         .map(|(k, v)| match v.value() {
-            Value::Expression(e) => (k, e.invert().into_term()),
+            Value::Partial(p) => (k.clone(), p.invert().into_term()),
             _ => (
                 k.clone(),
-                term!(op!(And, term!(op!(Neq, term!(k), v.clone())))),
+                partial!(And, term!(op!(Neq, term!(k.clone()), v.clone()))).into_term(),
             ),
         })
         .collect::<Bindings>()
@@ -129,7 +131,7 @@ fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
                 .into_iter()
                 .for_each(|(var, value)| match acc.entry(var.clone()) {
                     Entry::Occupied(mut o) => match (o.get().value(), value.value()) {
-                        (Value::Expression(x), Value::Expression(y)) => {
+                        (Value::Partial(x), Value::Partial(y)) => {
                             let mut x = x.clone();
                             x.merge_constraints(y.clone());
                             o.insert(value.clone_with_value(value!(x)));
@@ -217,10 +219,10 @@ impl Runnable for Inverter {
                         eprintln!("Results: {:#?}", self.results);
                         let constraints =
                             results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
-                        eprintln!("Constaints: {:#?}", constraints);
+                        eprintln!("Constraints: {:#?}", constraints);
                         let constraints =
                             filter_inverted_constraints(constraints, &self.vm, self.bsp);
-                        eprintln!("Constaints: {:#?}", constraints);
+                        eprintln!("Constraints: {:#?}", constraints);
                         if !constraints.is_empty() {
                             // Return inverted constraints to parent VM.
                             // TODO (dhatch): Would be nice to come up with a better way of doing this.

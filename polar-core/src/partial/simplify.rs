@@ -1,10 +1,13 @@
-use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::{
+    collections::{HashMap, HashSet},
+    hash::{Hash, Hasher},
+};
 
 use crate::bindings::Bindings;
 use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
-use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
+use crate::terms::{Operation, Operator, Partial, Symbol, Term, TermList, Value};
 
 use super::partial::{invert_operation, FALSE, TRUE};
 
@@ -21,6 +24,12 @@ macro_rules! if_debug {
             $($e)*
         }
     }
+}
+
+fn hash<H: Hash>(h: &H) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    h.hash(&mut hasher);
+    hasher.finish()
 }
 
 macro_rules! simplify_debug {
@@ -78,9 +87,12 @@ pub fn sub_this(this: Symbol, term: Term) -> Term {
 }
 
 /// Turn `_this = x` into `x` when it's ground.
-fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
-    match term.value() {
-        Value::Expression(o) if o.operator == Operator::Unify => {
+fn simplify_trivial_constraint(this: Symbol, partial: Partial) -> Term {
+    if partial.constraints.is_empty() {
+        return term!(sym!(this));
+    }
+    for o in &partial.constraints {
+        if o.operator == Operator::Unify {
             let left = &o.args[0];
             let right = &o.args[1];
             match (left.value(), right.value()) {
@@ -90,42 +102,40 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
                 | (Value::RestVariable(v), Value::RestVariable(w))
                     if v == &this && w == &this =>
                 {
-                    TRUE.into_term()
+                    return term!(sym!(this));
                 }
                 (Value::Variable(l), _) | (Value::RestVariable(l), _)
                     if l == &this && right.is_ground() =>
                 {
-                    right.clone()
+                    // right.clone()
+                    panic!("this should have been ground earlier")
                 }
                 (_, Value::Variable(r)) | (_, Value::RestVariable(r))
                     if r == &this && left.is_ground() =>
                 {
-                    left.clone()
+                    panic!("this should have been ground earlier")
+                    // left.clone()
                 }
-                _ => term,
+                _ => {}
             }
         }
-        _ => term,
     }
+    partial.into_term()
 }
 
 pub fn simplify_partial(
     var: &Symbol,
-    mut term: Term,
-    output_vars: HashSet<Symbol>,
+    mut partial: Partial,
+    mut bindings: Bindings,
     track_performance: bool,
 ) -> (Term, Option<PerfCounters>) {
-    let mut simplifier = Simplifier::new(output_vars, track_performance);
+    let _ = bindings.remove(var);
+    let mut simplifier = Simplifier::new(bindings, track_performance);
     simplify_debug!("*** simplify partial {:?}", var);
-    simplifier.simplify_partial(&mut term);
-    term = simplify_trivial_constraint(var.clone(), term);
-    if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
-        simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
-        (op!(And, term).into_term(), simplifier.perf_counters())
-    } else {
-        simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
-        (term, simplifier.perf_counters())
-    }
+    simplifier.simplify_partial(&mut partial);
+    let term = simplify_trivial_constraint(var.clone(), partial);
+    simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
+    (term, simplifier.perf_counters())
 }
 
 /// Simplify the values of the bindings to be returned to the host language.
@@ -143,54 +153,40 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
         }
     }
 
-    let mut unsatisfiable = false;
-    let mut simplify_var = |bindings: &Bindings, var: &Symbol, value: &Term| match value.value() {
-        Value::Expression(o) => {
-            assert_eq!(o.operator, Operator::And);
-            let output_vars = if all {
-                let mut hs = HashSet::with_capacity(1);
-                hs.insert(var.clone());
-                hs
-            } else {
-                bindings
-                    .keys()
-                    .filter(|v| !v.is_temporary_var())
-                    .cloned()
-                    .collect::<HashSet<_>>()
-            };
-
-            let (simplified, p) = simplify_partial(var, value.clone(), output_vars, TRACK_PERF);
-            if let Some(p) = p {
-                perf.merge(p);
-            }
-
-            match simplified.value().as_expression() {
-                Ok(o) if o == &FALSE => unsatisfiable = true,
-                _ => (),
-            }
-            simplified
-        }
-        Value::Variable(v) | Value::RestVariable(v)
-            if v.is_temporary_var()
-                && bindings.contains_key(v)
-                && matches!(
-                    bindings[v].value(),
-                    Value::Variable(_) | Value::RestVariable(_)
-                ) =>
-        {
-            bindings[v].clone()
-        }
-        _ => value.clone(),
-    };
-
     simplify_debug!("simplify bindings {}", if all { "all" } else { "not all" });
 
+    let mut unsatisfiable = false;
     let mut simplified_bindings = HashMap::new();
-    for (var, value) in &bindings {
-        if !var.is_temporary_var() || all {
-            let simplified = simplify_var(&bindings, var, value);
-            simplified_bindings.insert(var.clone(), simplified);
-        }
+    for (var, value) in bindings
+        .iter()
+        .filter(|(var, _value)| !var.is_temporary_var() || all)
+    {
+        let simplified = match value.value() {
+            Value::Partial(p) => {
+                let (simplified, p): (Term, _) =
+                    simplify_partial(var, p.clone(), bindings.clone(), TRACK_PERF);
+                if let Some(p) = p {
+                    perf.merge(p);
+                }
+
+                if matches!(simplified.value(), Value::Partial(p) if p.is_false()) {
+                    unsatisfiable = true;
+                }
+                simplified
+            }
+            Value::Variable(v) | Value::RestVariable(v)
+                if v.is_temporary_var()
+                    && bindings.contains_key(v)
+                    && matches!(
+                        bindings[v].value(),
+                        Value::Variable(_) | Value::RestVariable(_)
+                    ) =>
+            {
+                bindings[v].clone()
+            }
+            _ => value.clone(),
+        };
+        simplified_bindings.insert(var.clone(), simplified);
     }
 
     if unsatisfiable {
@@ -290,18 +286,15 @@ impl PerfCounters {
 #[derive(Clone)]
 pub struct Simplifier {
     bindings: Bindings,
-    output_vars: HashSet<Symbol>,
-
     counters: PerfCounters,
 }
 
 type TermSimplifier = dyn Fn(&mut Simplifier, &mut Term);
 
 impl Simplifier {
-    pub fn new(output_vars: HashSet<Symbol>, track_performance: bool) -> Self {
+    pub fn new(bindings: Bindings, track_performance: bool) -> Self {
         Self {
-            bindings: Bindings::new(),
-            output_vars,
+            bindings,
             counters: PerfCounters::new(track_performance),
         }
     }
@@ -339,326 +332,207 @@ impl Simplifier {
         self.bindings.contains_key(var)
     }
 
-    fn is_output(&self, t: &Term) -> bool {
-        match t.value() {
-            Value::Variable(v) | Value::RestVariable(v) => self.output_vars.contains(v),
-            _ => false,
-        }
-    }
-
-    /// output_var.?
-    fn is_dot_output(&self, t: &Term) -> bool {
-        match t.value() {
-            Value::Expression(e) => {
-                e.operator == Operator::Dot
-                    && (self.is_dot_output(&e.args[0]) || self.is_output(&e.args[0]))
+    fn is_trivial_operation(&self, o: &Operation) -> bool {
+        match o.operator {
+            // unify with self
+            Operator::Unify | Operator::Eq if o.args[0] == o.args[1] => true,
+            Operator::Unify | Operator::Eq | Operator::Neq => {
+                // either left or right is unbound, and the other is a dot op
+                matches!(o.args[1].value(), Value::Variable(v) if !self.is_bound(v))
+                    && matches!(
+                        o.args[0].value(),
+                        Value::Expression(Operation {
+                            operator: Operator::Dot,
+                            ..
+                        })
+                    )
+                    || matches!(o.args[0].value(), Value::Variable(v) if !self.is_bound(v))
+                        && matches!(
+                            o.args[1].value(),
+                            Value::Expression(Operation {
+                                operator: Operator::Dot,
+                                ..
+                            })
+                        )
             }
             _ => false,
         }
     }
 
-    /// Determine whether to keep, drop, bind or conditionally bind a unification operation.
-    ///
-    /// Returns:
-    /// - Keep: to indicate that the operation should not be removed
-    /// - Drop: to indicate the operation should be removed with no new bindings
-    /// - Bind(var, val) to indicate that the operation should be removed, and var should be
-    ///                  bound to val.
-    /// - Check(var, val) To indicate that the operation should be removed and var should
-    ///                   be bound to val *if* var is referenced elsewhere in the expression.
-    ///
-    /// Params:
-    ///     constraint: The constraint to consider removing from its parent.
-    fn maybe_bind_constraint(&mut self, constraint: &Operation) -> MaybeDrop {
-        match constraint.operator {
-            // X and X is always true, so drop.
-            Operator::And if constraint.args.is_empty() => MaybeDrop::Drop,
-
-            // Choose a unification to maybe drop.
-            Operator::Unify | Operator::Eq => {
-                let left = &constraint.args[0];
-                let right = &constraint.args[1];
-
-                if left == right {
-                    // The sides are exactly equal, so drop.
-                    MaybeDrop::Drop
-                } else {
-                    // Maybe bind one side to the other.
-                    match (left.value(), right.value()) {
-                        // Always keep unifications of two output variables (x = y).
-                        (Value::Variable(_), Value::Variable(_))
-                            if self.is_output(left) && self.is_output(right) =>
-                        {
-                            MaybeDrop::Keep
-                        }
-                        // Replace non-output variable l with right.
-                        (Value::Variable(l), _) if !self.is_bound(l) && !self.is_output(left) => {
-                            simplify_debug!("*** 1");
-                            MaybeDrop::Bind(l.clone(), right.clone())
-                        }
-                        // Replace non-output variable r with left.
-                        (_, Value::Variable(r)) if !self.is_bound(r) && !self.is_output(right) => {
-                            simplify_debug!("*** 2");
-                            MaybeDrop::Bind(r.clone(), left.clone())
-                        }
-                        // Replace variable with value if the value is ground
-                        // or a dot output (x.foo) and variable is mentioned elsewhere
-                        // in the expression.
-                        (Value::Variable(var), val)
-                            if (val.is_ground() || self.is_dot_output(right))
-                                && !self.is_bound(var) =>
-                        {
-                            simplify_debug!("*** 3");
-                            MaybeDrop::Check(var.clone(), right.clone())
-                        }
-                        // Replace variable with value if the value is ground
-                        // or a dot output (x.foo) and variable is mentioned elsewhere
-                        // in the expression.
-                        (val, Value::Variable(var))
-                            if (val.is_ground() || self.is_dot_output(left))
-                                && !self.is_bound(var) =>
-                        {
-                            simplify_debug!("*** 4");
-                            MaybeDrop::Check(var.clone(), left.clone())
-                        }
-                        // Keep everything else.
-                        _ => MaybeDrop::Keep,
-                    }
-                }
-            }
-            _ => MaybeDrop::Keep,
-        }
-    }
-
-    /// Perform simplification of variable names in an operation by eliminating unification
-    /// operations to express an operation in terms of output variables only.
+    /// Drop trivial partials, and flatten any nested conjunctions
     ///
     /// Also inverts negation operations.
-    ///
-    /// May require multiple calls to perform all eliminiations.
-    pub fn simplify_operation_variables(
-        &mut self,
-        o: &mut Operation,
-        simplify_term: &TermSimplifier,
-    ) {
-        fn toss_trivial_unifies(args: &mut TermList) {
-            args.retain(|c| {
-                let o = c.value().as_expression().unwrap();
+    fn reduce_constraints(&mut self, p: &mut Partial) {
+        struct PartialReducer<'a> {
+            simplifier: &'a Simplifier,
+        }
+
+        impl<'a> Folder for PartialReducer<'a> {
+            fn fold_operation(&mut self, o: Operation) -> Operation {
+                simplify_debug!("fold operation: {}", o.to_polar());
                 match o.operator {
-                    Operator::Unify | Operator::Eq => {
-                        assert_eq!(o.args.len(), 2);
-                        let left = &o.args[0];
-                        let right = &o.args[1];
-                        left != right
+                    // Zero-argument conjunctions & disjunctions represent constants
+                    // TRUE and FALSE, respectively. We do not simplify them.
+                    Operator::Or if o.args.is_empty() => o,
+
+                    // Replace one-argument conjunctions & disjunctions with their argument.
+                    Operator::Or if o.args.len() == 1 => {
+                        if let Value::Expression(operation) = o.args[0].value() {
+                            self.fold_operation(operation.clone())
+                        } else {
+                            o
+                        }
                     }
-                    _ => true,
-                }
-            });
-        }
 
-        if o.operator == Operator::And || o.operator == Operator::Or {
-            toss_trivial_unifies(&mut o.args);
-        }
+                    // Negation. Simplify the negated term, saving & restoring the
+                    // current bindings because bindings may not leak out of a negation.
+                    Operator::Not => {
+                        assert_eq!(o.args.len(), 1);
+                        simplify_debug!("invert op: {}", o.args[0].to_polar());
+                        let inner = o.args[0].value().as_expression().unwrap().clone();
+                        self.fold_operation(invert_operation(inner))
+                    }
 
-        match o.operator {
-            // Zero-argument conjunctions & disjunctions represent constants
-            // TRUE and FALSE, respectively. We do not simplify them.
-            Operator::And | Operator::Or if o.args.is_empty() => (),
-
-            // Replace one-argument conjunctions & disjunctions with their argument.
-            Operator::And | Operator::Or if o.args.len() == 1 => {
-                if let Value::Expression(operation) = o.args[0].value() {
-                    *o = operation.clone();
-                    self.simplify_operation_variables(o, simplify_term);
+                    // Default case.
+                    _ => o,
                 }
             }
+            fn fold_partial(&mut self, p: Partial) -> Partial {
+                let mut p = crate::folder::fold_partial(p, self);
+                simplify_debug!("folded: {}", p.to_polar());
 
-            // Non-trivial conjunctions. Choose unification constraints
-            // to make bindings from and throw away; fold the rest.
-            Operator::And if o.args.len() > 1 => {
-                // Compute which constraints to keep.
-                let mut keep = o.args.iter().map(|_| true).collect::<Vec<bool>>();
-                let mut references = o.args.iter().map(|_| false).collect::<Vec<bool>>();
-                for (i, arg) in o.args.iter().enumerate() {
-                    match self.maybe_bind_constraint(arg.value().as_expression().unwrap()) {
-                        MaybeDrop::Keep => (),
-                        MaybeDrop::Drop => keep[i] = false,
-                        MaybeDrop::Bind(var, value) => {
-                            keep[i] = false;
-                            simplify_debug!("bind {:?}, {:?}", var, value.to_polar());
-                            self.bind(var, value);
+                // flatten any nested ands
+                let mut initial_len = 0;
+                while p.constraints.len() != initial_len {
+                    initial_len = p.constraints.len();
+                    p.constraints = p
+                        .constraints
+                        .into_iter()
+                        .flat_map(|o| match o.operator {
+                            Operator::And => o
+                                .args
+                                .iter()
+                                .map(|t| t.value().as_expression().unwrap().clone())
+                                .collect(),
+                            _ => vec![o],
+                        })
+                        .collect();
+                }
+                simplify_debug!("flattened: {}", p.to_polar());
+                // toss trivial unifications
+                p.constraints
+                    .retain(|o| !self.simplifier.is_trivial_operation(o));
+                simplify_debug!("reduced: {}", p.to_polar());
+
+                p
+            }
+        }
+
+        let mut reducer = PartialReducer { simplifier: &self };
+        *p = reducer.fold_partial(p.clone());
+    }
+
+    /// Deduplicate a partial by removing terms that are mirrors or duplicates
+    /// of other terms.
+    fn deduplicate_partial(&mut self, p: &mut Partial) {
+        // HashSet of term hash values used to deduplicate. We use hash values
+        // to avoid cloning to insert terms.
+        struct PartialDedup {
+            seen: HashSet<u64>,
+        }
+
+        impl Folder for PartialDedup {
+            fn fold_operation(&mut self, mut o: Operation) -> Operation {
+                if o.operator == Operator::And {
+                    o.args.retain(|a| {
+                        if let Ok(expr) = a.value().as_expression() {
+                            let h = hash(expr);
+                            expr != &TRUE // trivial
+                                && !self.seen.contains(&h) // reflection
+                                && self.seen.insert(h) // duplicate
+                        } else {
+                            true
                         }
-                        MaybeDrop::Check(var, value) => {
-                            simplify_debug!("check {:?}, {:?}", var, value.to_polar());
-                            for (j, arg) in o.args.iter().enumerate() {
-                                if j != i && arg.contains_variable(&var) {
-                                    simplify_debug!(
-                                        "check bind {:?}, {:?} ref: {}",
-                                        var,
-                                        value.to_polar(),
-                                        j
-                                    );
-                                    self.bind(var, value);
-                                    keep[i] = false;
+                    });
+                }
+                crate::folder::fold_operation(o, self)
+            }
+        }
 
-                                    // record that this term references var and must be kept.
-                                    references[j] = true;
-                                    break;
+        let mut folder = PartialDedup {
+            seen: HashSet::with_capacity(2 * p.constraints.len()),
+        };
+        for o in p.constraints.iter_mut() {
+            *o = folder.fold_operation(o.clone());
+        }
+    }
+
+    fn deref_partial_variables(&mut self, p: &mut Partial) {
+        // Derefs any variables found in expressions,
+        // and moves any partially bound variables into
+        // the references field
+        struct PartialDeref<'a> {
+            simplifier: &'a Simplifier,
+            references: HashMap<Symbol, Partial>,
+        }
+
+        impl<'a> Folder for PartialDeref<'a> {
+            fn fold_operation(&mut self, o: Operation) -> Operation {
+                simplify_debug!("fold op: {}", o.to_polar());
+                let new_args = o
+                    .args
+                    .iter()
+                    .map(|a| {
+                        simplify_debug!("map arg: {:?}", a);
+                        match a.value() {
+                            Value::Variable(var) | Value::RestVariable(var) => {
+                                if let Some(value) = self.simplifier.bindings.get(var) {
+                                    if let Value::Partial(p) = value.value() {
+                                        simplify_debug!("add ref {} -> {}", var, p.to_polar());
+                                        self.references.insert(var.clone(), p.clone());
+                                        a.clone()
+                                    } else {
+                                        simplify_debug!(
+                                            "partial deref {} -> {}",
+                                            var,
+                                            value.to_polar()
+                                        );
+                                        crate::folder::fold_term(value.clone(), self)
+                                    }
+                                } else {
+                                    simplify_debug!("unbound var {}", var);
+                                    a.clone()
                                 }
                             }
+                            _ => crate::folder::fold_term(a.clone(), self),
                         }
-                    }
-                }
-
-                // Drop the rest.
-                let mut i = 0;
-                o.args.retain(|_| {
-                    i += 1;
-                    keep[i - 1] || references[i - 1]
-                });
-
-                // Simplify the survivors.
-                for arg in &mut o.args {
-                    simplify_term(self, arg);
-                }
-            }
-
-            // Negation. Simplify the negated term, saving & restoring the
-            // current bindings because bindings may not leak out of a negation.
-            Operator::Not => {
-                assert_eq!(o.args.len(), 1);
-                let mut simplified = o.args[0].clone();
-                let mut simplifier = self.clone();
-                simplifier.simplify_partial(&mut simplified);
-                *o = invert_operation(
-                    simplified
-                        .value()
-                        .as_expression()
-                        .expect("a simplified expression")
-                        .clone(),
-                )
-            }
-
-            // Default case.
-            _ => {
-                for arg in &mut o.args {
-                    simplify_term(self, arg);
+                    })
+                    .collect();
+                Operation {
+                    operator: o.operator,
+                    args: new_args,
                 }
             }
         }
-    }
 
-    /// Deduplicate an operation by removing terms that are mirrors or duplicates
-    /// of other terms.
-    pub fn deduplicate_operation(&mut self, o: &mut Operation, simplify_term: &TermSimplifier) {
-        fn preprocess_and(args: &mut TermList) {
-            // HashSet of term hash values used to deduplicate. We use hash values
-            // to avoid cloning to insert terms.
-            let mut seen: HashSet<u64> = HashSet::with_capacity(args.len());
-            args.retain(|a| {
-                let o = a.value().as_expression().unwrap();
-                o != &TRUE // trivial
-                    && !seen.contains(&o.mirror().into_term().hash_value()) // reflection
-                    && seen.insert(a.hash_value()) // duplicate
-            });
-        }
-
-        if o.operator == Operator::And {
-            self.counters.preprocess_and();
-            preprocess_and(&mut o.args);
-        }
-
-        match o.operator {
-            Operator::And | Operator::Or if o.args.is_empty() => (),
-
-            // Replace one-argument conjunctions & disjunctions with their argument.
-            Operator::And | Operator::Or if o.args.len() == 1 => {
-                if let Value::Expression(operation) = o.args[0].value() {
-                    *o = operation.clone();
-                    self.deduplicate_operation(o, simplify_term);
-                }
-            }
-
-            // Default case.
-            _ => {
-                for arg in &mut o.args {
-                    simplify_term(self, arg);
-                }
-            }
-        }
-    }
-
-    /// Simplify a term `term` in place by calling the simplification
-    /// function `simplify_operation` on any Expression in that term.
-    ///
-    /// `simplify_operation` should perform simplification operations in-place
-    /// on the operation argument. To recursively simplify sub-terms in that operation,
-    /// it must call the passed TermSimplifier.
-    pub fn simplify_term<F>(&mut self, term: &mut Term, simplify_operation: F)
-    where
-        F: Fn(&mut Self, &mut Operation, &TermSimplifier) + 'static + Clone,
-    {
-        *term = self.deref(term);
-        if matches!(
-            term.value(),
-            Value::Dictionary(_) | Value::Call(_) | Value::List(_) | Value::Expression(_)
-        ) {
-            let value = term.mut_value();
-            match value {
-                Value::Dictionary(dict) => {
-                    for (_, v) in dict.fields.iter_mut() {
-                        self.simplify_term(v, simplify_operation.clone());
-                    }
-                }
-                Value::Call(call) => {
-                    for arg in call.args.iter_mut() {
-                        self.simplify_term(arg, simplify_operation.clone());
-                    }
-                    if let Some(kwargs) = &mut call.kwargs {
-                        for (_, v) in kwargs.iter_mut() {
-                            self.simplify_term(v, simplify_operation.clone());
-                        }
-                    }
-                }
-                Value::List(list) => {
-                    for elem in list.iter_mut() {
-                        self.simplify_term(elem, simplify_operation.clone());
-                    }
-                }
-                Value::Expression(operation) => {
-                    let so = simplify_operation.clone();
-                    let cont = move |s: &mut Self, term: &mut Term| {
-                        s.simplify_term(term, simplify_operation.clone())
-                    };
-                    so(self, operation, &cont);
-                }
-                // If it's not in the matches above, it's not in here
-                _ => unreachable!(),
-            }
-        }
+        let mut folder = PartialDeref {
+            references: Default::default(),
+            simplifier: &self,
+        };
+        *p = folder.fold_partial(p.clone());
+        p.references.extend(folder.references);
     }
 
     /// Simplify a partial until quiescence.
-    pub fn simplify_partial(&mut self, term: &mut Term) {
-        // TODO(ap): This does not handle hash collisions.
-        let mut last = term.hash_value();
-        let mut nbindings = self.bindings.len();
-        loop {
-            simplify_debug!("simplify loop {:?}", term.to_polar());
-            self.counters.simplify_term();
+    pub fn simplify_partial(&mut self, partial: &mut Partial) {
+        simplify_debug!("simplify loop {:?}", partial.to_polar());
+        self.counters.simplify_term();
 
-            self.simplify_term(term, Simplifier::simplify_operation_variables);
-            let now = term.hash_value();
-            if last == now && self.bindings.len() == nbindings {
-                break;
-            }
-            last = now;
-            nbindings = self.bindings.len();
-        }
+        self.deref_partial_variables(partial);
+        self.deduplicate_partial(partial);
+        self.reduce_constraints(partial);
 
-        self.simplify_term(term, Simplifier::deduplicate_operation);
-
-        self.counters.finish_acc(term.clone());
+        self.counters.finish_acc(partial.clone().into_term());
     }
 }
 

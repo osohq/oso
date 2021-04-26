@@ -590,6 +590,21 @@ pub mod to_polar {
         }
     }
 
+    impl ToPolarString for Partial {
+        fn to_polar(&self) -> String {
+            self.constraints
+                .iter()
+                .map(|c| c.to_polar())
+                .chain(
+                    self.references
+                        .iter()
+                        .map(|(k, v)| format!("{}: {}", k.to_polar(), v.to_polar())),
+                )
+                .collect::<Vec<String>>()
+                .join(" and ")
+        }
+    }
+
     impl ToPolarString for Value {
         fn to_polar(&self) -> String {
             match self {
@@ -610,6 +625,7 @@ pub mod to_polar {
                 Value::Variable(s) => s.to_polar(),
                 Value::RestVariable(s) => format!("*{}", s.to_polar()),
                 Value::Expression(e) => e.to_polar(),
+                Value::Partial(p) => p.to_polar(),
             }
         }
     }

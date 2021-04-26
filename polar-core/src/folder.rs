@@ -81,6 +81,9 @@ pub trait Folder: Sized {
     fn fold_operation(&mut self, o: Operation) -> Operation {
         fold_operation(o, self)
     }
+    fn fold_partial(&mut self, p: Partial) -> Partial {
+        fold_partial(p, self)
+    }
     fn fold_param(&mut self, p: Parameter) -> Parameter {
         fold_param(p, self)
     }
@@ -111,6 +114,7 @@ pub fn fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
         Value::Variable(v) => Value::Variable(fld.fold_variable(v)),
         Value::RestVariable(r) => Value::RestVariable(fld.fold_rest_variable(r)),
         Value::Expression(o) => Value::Expression(fld.fold_operation(o)),
+        Value::Partial(p) => Value::Partial(fld.fold_partial(p)),
     }
 }
 
@@ -205,6 +209,21 @@ pub fn fold_operation<T: Folder>(
     Operation {
         operator: fld.fold_operator(operator),
         args: fld.fold_list(args),
+    }
+}
+
+pub fn fold_partial<T: Folder>(partial: Partial, fld: &mut T) -> Partial {
+    // assert!(
+    //     partial.references.is_empty(),
+    //     "cannot fold partial with references"
+    // );
+    Partial {
+        constraints: partial
+            .constraints
+            .into_iter()
+            .map(|op| fld.fold_operation(op))
+            .collect(),
+        references: partial.references,
     }
 }
 

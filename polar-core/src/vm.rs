@@ -978,52 +978,26 @@ impl PolarVirtualMachine {
             &[left, right],
         );
 
+        let left = self.deref(left);
+        let right = self.deref(right);
+
         match (left.value(), right.value()) {
             (_, Value::Dictionary(_)) => unreachable!("parsed as pattern"),
             (Value::Expression(_), _) | (_, Value::Expression(_)) => {
                 unreachable!("encountered bare expression")
             }
 
-            // TODO(gj): (Var, Rest) + (Rest, Var) cases might be unreachable.
-            (Value::Variable(l), Value::Variable(r))
-            | (Value::Variable(l), Value::RestVariable(r))
-            | (Value::RestVariable(l), Value::Variable(r))
-            | (Value::RestVariable(l), Value::RestVariable(r)) => {
+            (Value::Variable(_l), Value::Variable(_r))
+            | (Value::Variable(_l), Value::RestVariable(_r))
+            | (Value::RestVariable(_l), Value::Variable(_r))
+            | (Value::RestVariable(_l), Value::RestVariable(_r)) => {
                 // Two variables.
-                match (self.variable_state(l), self.variable_state(r)) {
-                    (VariableState::Bound(x), _) => self.push_goal(Goal::Isa {
-                        left: x,
-                        right: right.clone(),
-                    })?,
-                    (_, VariableState::Bound(y)) => self.push_goal(Goal::Isa {
-                        left: left.clone(),
-                        right: y,
-                    })?,
-                    (_, _) => self.add_constraint(&term!(op!(Isa, left.clone(), right.clone())))?,
-                }
+                self.add_constraint(&term!(op!(Isa, left.clone(), right.clone())))?;
             }
-            (Value::Variable(l), _) | (Value::RestVariable(l), _) => match self.variable_state(l) {
-                VariableState::Unbound => self.push_goal(Goal::Unify {
-                    left: left.clone(),
-                    right: right.clone(),
-                })?,
-                VariableState::Bound(x) => self.push_goal(Goal::Isa {
-                    left: x,
-                    right: right.clone(),
-                })?,
-                _ => self.isa_expr(left, right)?,
-            },
-            (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => match self.variable_state(r) {
-                VariableState::Unbound => self.push_goal(Goal::Unify {
-                    left: left.clone(),
-                    right: right.clone(),
-                })?,
-                VariableState::Bound(y) => self.push_goal(Goal::Isa {
-                    left: left.clone(),
-                    right: y,
-                })?,
-                _ => self.isa_expr(left, right)?,
-            },
+
+            (Value::Variable(_), _) => {
+                self.isa_expr(left, right)?;
+            }
 
             (Value::List(left), Value::List(right)) => {
                 self.unify_lists(left, right, |(left, right)| Goal::Isa {
@@ -1098,7 +1072,7 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
-    fn isa_expr(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
+    fn isa_expr(&mut self, left: Term, right: Term) -> PolarResult<()> {
         match right.value() {
             Value::Pattern(Pattern::Dictionary(fields)) => {
                 // Produce a constraint like left.field = value
@@ -1121,46 +1095,26 @@ impl PolarVirtualMachine {
                 // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.
                 let var = left.value().as_symbol()?;
 
+                match self.variable_state(var) {
+                    VariableState::Unbound => {
+                        return self.add_constraint(&op!(Isa, left, right).into_term())
+                    }
+                    VariableState::Bound(_) => {
+                        unreachable!("this case should be handled through deref")
+                    }
+                    VariableState::Partial => {}
+                };
+
                 // Get the existing partial on the LHS variable.
                 let partial = self.binding_manager.get_constraints(var);
-
-                let mut hs = HashSet::with_capacity(1);
-                hs.insert(var.clone());
-
-                let (simplified, _) = simplify_partial(var, partial.into_term(), hs, false);
-                let simplified = simplified.value().as_expression()?;
-
-                // TODO (dhatch): what if there is more than one var = dot_op constraint?
-                // What if the one there is is in a not, or an or, or something
-                let lhs_of_matches = simplified
-                    .constraints()
-                    .into_iter()
-                    .find_map(|c| {
-                        // If the simplified partial includes a `var = dot_op` constraint, use the
-                        // dot op as the LHS of the matches.
-                        if c.operator != Operator::Unify {
-                            None
-                        } else if &c.args[0] == left &&
-                            matches!(c.args[1].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
-                            Some(c.args[1].clone())
-                        } else if &c.args[1] == left &&
-                            matches!(c.args[0].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
-                            Some(c.args[0].clone())
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap_or_else(|| left.clone());
 
                 // Construct field-less matches operation.
                 let tag_pattern = right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
                 let type_constraint = op!(Isa, left.clone(), tag_pattern);
 
-                let new_matches = op!(Isa, lhs_of_matches, right.clone());
-                let runnable = Box::new(IsaConstraintCheck::new(
-                    simplified.constraints(),
-                    new_matches,
-                ));
+                let new_matches = op!(Isa, left.clone(), right.clone());
+                let runnable =
+                    Box::new(IsaConstraintCheck::new(partial.constraints(), new_matches));
 
                 // Construct field constraints.
                 let field_constraints = fields.fields.iter().rev().map(|(f, v)| {
@@ -1185,7 +1139,8 @@ impl PolarVirtualMachine {
                     vec![Goal::CheckError, Goal::Backtrack],
                 )?;
             }
-            _ => self.add_constraint(&op!(Unify, left.clone(), right.clone()).into_term())?,
+            _ => todo!("this is a mistake"),
+            // _ => self.add_constraint(&op!(Unify, left.clone(), right.clone()).into_term())?,
         }
         Ok(())
     }
@@ -1909,7 +1864,8 @@ impl PolarVirtualMachine {
 
                 // Translate `.(object, field, value)` → `.(object, field) = value`.
                 let dot2 = op!(Dot, object.clone(), field.clone());
-                self.add_constraint(&op!(Unify, dot2.into_term(), value.clone()).into_term())?;
+                self.add_constraint(&op!(Unify, value.clone(), dot2.into_term()).into_term())?;
+                // self.add_constraint(term);
             }
             _ => {
                 return Err(self.type_error(

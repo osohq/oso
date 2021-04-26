@@ -65,6 +65,9 @@ pub trait Visitor: Sized {
     fn visit_operation(&mut self, o: &Operation) {
         walk_operation(self, o)
     }
+    fn visit_partial(&mut self, p: &Partial) {
+        walk_partial(self, p)
+    }
     fn visit_param(&mut self, p: &Parameter) {
         walk_param(self, p)
     }
@@ -105,6 +108,7 @@ pub fn walk_term<V: Visitor>(visitor: &mut V, term: &Term) {
         Value::Variable(v) => visitor.visit_variable(v),
         Value::RestVariable(r) => visitor.visit_rest_variable(r),
         Value::Expression(o) => visitor.visit_operation(o),
+        Value::Partial(p) => visitor.visit_partial(p),
     }
 }
 
@@ -149,6 +153,14 @@ pub fn walk_list<V: Visitor>(visitor: &mut V, list: &TermList) {
 pub fn walk_operation<V: Visitor>(visitor: &mut V, expr: &Operation) {
     visitor.visit_operator(&expr.operator);
     walk_elements!(visitor, visit_term, &expr.args);
+}
+
+pub fn walk_partial<V: Visitor>(visitor: &mut V, partial: &Partial) {
+    assert!(
+        partial.references.is_empty(),
+        "cannot walk partial with references"
+    );
+    walk_elements!(visitor, visit_operation, &partial.constraints);
 }
 
 pub fn walk_param<V: Visitor>(visitor: &mut V, param: &Parameter) {
