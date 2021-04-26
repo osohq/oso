@@ -122,8 +122,8 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
                         let vname = format!("{}::{}", class_name, vident);
                         constants.push(quote! {
                             .add_constant(#type_name::#vident, #vname)
-                        });        
-                    } 
+                        });
+                    }
                     _ => {
                         return quote_spanned! { variant.ident.span() => compile_error!("#[derive(PolarClass)] is currently only supported on enums with unit variants."); }.into();
                     }
