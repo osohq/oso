@@ -123,7 +123,13 @@ these in our policy because we registered them with `register_models`!
 To authorize a request, we use the `Oso.is_allowed` method. Here's an
 example in our Org creation handler:
 
-**TODO**
+{{< literalInclude
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes.py"
+    from="docs: begin-is-allowed"
+    to="docs: end-is-allowed"
+    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    linenos=true
+>}}
 
 ## Session Setup
 
