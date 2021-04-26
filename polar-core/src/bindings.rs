@@ -16,8 +16,17 @@ pub struct Binding(pub Symbol, pub Term);
 pub type BindingStack = Vec<Binding>;
 pub type Bindings = HashMap<Symbol, Term>;
 
-pub type Bsp = usize;
+pub type Bsp = Bsps;
 pub type FollowerId = usize;
+
+/// Bsps represents bsps of a binding manager and its followers as a tree.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Bsps {
+    /// Index into `bindings` array
+    bindings_index: usize,
+    /// Store bsps of followers (and their followers) by follower id.
+    followers: HashMap<FollowerId, Bsps>,
+}
 
 /// Variable binding state.
 ///
@@ -28,7 +37,7 @@ pub type FollowerId = usize;
 pub enum VariableState {
     Unbound,
     Bound(Term),
-    Partial(),
+    Partial,
 }
 
 /// Represent each binding in a cycle as a unification constraint.
@@ -51,8 +60,8 @@ impl From<BindingManagerVariableState<'_>> for VariableState {
         match other {
             BindingManagerVariableState::Unbound => VariableState::Unbound,
             BindingManagerVariableState::Bound(b) => VariableState::Bound(b),
-            BindingManagerVariableState::Cycle(_) => VariableState::Partial(),
-            BindingManagerVariableState::Partial(_) => VariableState::Partial(),
+            BindingManagerVariableState::Cycle(_) => VariableState::Partial,
+            BindingManagerVariableState::Partial(_) => VariableState::Partial,
         }
     }
 }
@@ -85,7 +94,7 @@ enum BindingManagerVariableState<'a> {
 #[derive(Clone, Debug, Default)]
 pub struct BindingManager {
     bindings: BindingStack,
-    followers: HashMap<FollowerId, (BindingManager, Bsp)>,
+    followers: HashMap<FollowerId, BindingManager>,
     next_follower_id: FollowerId,
 }
 
@@ -196,8 +205,12 @@ impl BindingManager {
                     e.merge_constraints(op);
                     op = e;
                 }
-                BindingManagerVariableState::Bound(_) => {
-                    panic!("Unexpected bound variable {} in constraint.", var);
+                BindingManagerVariableState::Bound(v) => {
+                    panic!(
+                        "Unexpected bound variable {var} in constraint. {var} = {val}",
+                        var = var,
+                        val = v
+                    );
                 }
             }
         }
@@ -206,15 +219,18 @@ impl BindingManager {
     }
 
     /// Reset the state of `BindingManager` to what it was at `to`.
-    pub fn backtrack(&mut self, to: Bsp) {
-        self.do_followers(|follower_bsp, follower| {
-            let follower_backtrack_to = to.saturating_sub(follower_bsp);
-            follower.backtrack(follower_backtrack_to);
+    pub fn backtrack(&mut self, to: &Bsp) {
+        self.do_followers(|follower_id, follower| {
+            if let Some(follower_to) = to.followers.get(&follower_id) {
+                follower.backtrack(follower_to);
+            } else {
+                follower.backtrack(&Bsp::default());
+            }
             Ok(())
         })
         .unwrap();
 
-        self.bindings.truncate(to)
+        self.bindings.truncate(to.bindings_index)
     }
 
     // *** Binding Inspection ***
@@ -301,17 +317,18 @@ impl BindingManager {
     }
 
     pub fn variable_state(&self, variable: &Symbol) -> VariableState {
-        self.variable_state_at_point(variable, self.bsp())
+        self.variable_state_at_point(variable, &self.bsp())
     }
 
-    pub fn variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> VariableState {
+    pub fn variable_state_at_point(&self, variable: &Symbol, bsp: &Bsp) -> VariableState {
+        let index = bsp.bindings_index;
         let mut next = variable;
-        while let Some(value) = self.value(next, bsp) {
+        while let Some(value) = self.value(next, index) {
             match value.value() {
-                Value::Expression(_) => return VariableState::Partial(),
+                Value::Expression(_) => return VariableState::Partial,
                 Value::Variable(v) | Value::RestVariable(v) => {
                     if v == variable {
-                        return VariableState::Partial();
+                        return VariableState::Partial;
                     } else {
                         next = v;
                     }
@@ -333,16 +350,25 @@ impl BindingManager {
     /// Retrieve an opaque value representing the current state of `BindingManager`.
     /// Can be used to reset state with `backtrack`.
     pub fn bsp(&self) -> Bsp {
-        self.bindings.len()
+        let follower_bsps = self
+            .followers
+            .iter()
+            .map(|(id, f)| (*id, f.bsp()))
+            .collect::<HashMap<_, _>>();
+
+        Bsps {
+            bindings_index: self.bindings.len(),
+            followers: follower_bsps,
+        }
     }
 
     pub fn bindings(&self, include_temps: bool) -> Bindings {
-        self.bindings_after(include_temps, 0)
+        self.bindings_after(include_temps, &Bsp::default())
     }
 
-    pub fn bindings_after(&self, include_temps: bool, after: Bsp) -> Bindings {
+    pub fn bindings_after(&self, include_temps: bool, after: &Bsp) -> Bindings {
         let mut bindings = HashMap::new();
-        for Binding(var, value) in &self.bindings[after..] {
+        for Binding(var, value) in &self.bindings[after.bindings_index..] {
             if !include_temps && var.is_temporary_var() {
                 continue;
             }
@@ -354,7 +380,7 @@ impl BindingManager {
     pub fn variable_bindings(&self, variables: &HashSet<Symbol>) -> Bindings {
         let mut bindings = HashMap::new();
         for var in variables.iter() {
-            let value = self.value(var, self.bsp());
+            let value = self.value(var, self.bsp().bindings_index);
             if let Some(value) = value {
                 bindings.insert(var.clone(), self.deep_deref(value));
             }
@@ -371,16 +397,14 @@ impl BindingManager {
 
     pub fn add_follower(&mut self, follower: BindingManager) -> FollowerId {
         let follower_id = self.next_follower_id;
-        self.followers.insert(follower_id, (follower, self.bsp()));
+        self.followers.insert(follower_id, follower);
         self.next_follower_id += 1;
 
         follower_id
     }
 
     pub fn remove_follower(&mut self, follower_id: &FollowerId) -> Option<BindingManager> {
-        self.followers
-            .remove(follower_id)
-            .map(|(follower, _bsp)| follower)
+        self.followers.remove(follower_id)
     }
 }
 
@@ -496,7 +520,7 @@ impl BindingManager {
 
     /// Look up a variable in the bindings stack and return
     /// a reference to its value if it's bound.
-    fn value(&self, variable: &Symbol, bsp: Bsp) -> Option<&Term> {
+    fn value(&self, variable: &Symbol, bsp: usize) -> Option<&Term> {
         self.bindings[..bsp]
             .iter()
             .rev()
@@ -505,13 +529,18 @@ impl BindingManager {
     }
 
     fn _variable_state(&self, variable: &Symbol) -> BindingManagerVariableState {
-        self._variable_state_at_point(variable, self.bsp())
+        self._variable_state_at_point(variable, &self.bsp())
     }
 
     /// Check the state of `variable` at `bsp`.
-    fn _variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> BindingManagerVariableState {
+    fn _variable_state_at_point(
+        &self,
+        variable: &Symbol,
+        bsp: &Bsp,
+    ) -> BindingManagerVariableState {
+        let index = bsp.bindings_index;
         let mut path = vec![variable];
-        while let Some(value) = self.value(path.last().unwrap(), bsp) {
+        while let Some(value) = self.value(path.last().unwrap(), index) {
             match value.value() {
                 Value::Expression(e) => return BindingManagerVariableState::Partial(e),
                 Value::Variable(v) | Value::RestVariable(v) => {
@@ -545,12 +574,12 @@ impl BindingManager {
         Ok(())
     }
 
-    fn do_followers<F>(&mut self, func: F) -> PolarResult<()>
+    fn do_followers<F>(&mut self, mut func: F) -> PolarResult<()>
     where
-        F: Fn(Bsp, &mut BindingManager) -> PolarResult<()>,
+        F: FnMut(FollowerId, &mut BindingManager) -> PolarResult<()>,
     {
-        for (_id, (follower, bsp)) in self.followers.iter_mut() {
-            func(*bsp, follower)?
+        for (id, follower) in self.followers.iter_mut() {
+            func(*id, follower)?
         }
 
         Ok(())
@@ -823,5 +852,32 @@ mod test {
         assert_eq!(bm.variable_state(&y), VariableState::Unbound);
     }
 
-    // TODO (dhatch): Test backtrack with followers.
+    #[test]
+    fn test_backtrack_followers() {
+        // Regular bindings
+        let mut b1 = BindingManager::new();
+        b1.bind(&sym!("x"), term!(sym!("y"))).unwrap();
+        b1.bind(&sym!("z"), term!(sym!("x"))).unwrap();
+
+        let b2 = BindingManager::new();
+        let b2_id = b1.add_follower(b2);
+
+        b1.add_constraint(&term!(op!(Gt, term!(sym!("x")), term!(1))))
+            .unwrap();
+
+        let bsp = b1.bsp();
+
+        b1.bind(&sym!("a"), term!(sym!("x"))).unwrap();
+        assert!(matches!(
+            b1.variable_state(&sym!("a")),
+            VariableState::Partial
+        ));
+
+        b1.backtrack(&bsp);
+        let b2 = b1.remove_follower(&b2_id).unwrap();
+        assert!(matches!(
+            b2.variable_state(&sym!("a")),
+            VariableState::Unbound
+        ));
+    }
 }
