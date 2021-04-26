@@ -729,8 +729,12 @@ def _add_query_filter(oso, user, action, resource_model):
     # It's very slow and wasteful but actually evaluates correctly so it's a good first version.
     session = oso.roles._get_session()
 
-    user_pk_name = inspect(user.__class__).primary_key[0].name
-    user_id = getattr(user, user_pk_name)
+    try:
+        user_pk_name = inspect(user.__class__).primary_key[0].name
+        user_id = getattr(user, user_pk_name)
+    except sqlalchemy.exc.NoInspectionAvailable:
+        # User is not a sqlalchemy object
+        return sql.false()
 
     resource_type = resource_model.__name__
     resource_pk_name = inspect(resource_model).primary_key[0].name
