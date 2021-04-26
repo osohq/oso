@@ -5,6 +5,7 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy import inspect
 from sqlalchemy.orm import RelationshipProperty
 from sqlalchemy.sql import expression as sql
+from sqlalchemy.sql.elements import True_
 
 from polar.partial import dot_path
 from polar.expression import Expression
@@ -41,6 +42,13 @@ def flip_op(operator):
     return flips[operator]
 
 
+def and_filter(current, new):
+    if isinstance(current, True_):
+        return new
+    else:
+        return current & new
+
+
 def partial_to_filter(expression: Expression, session: Session, model, get_model):
     """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
     expression = preprocess(expression)
@@ -63,10 +71,10 @@ def translate_expr(expression: Expression, session: Session, model, get_model):
 
 def translate_and(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "And"
-    expr = sql.and_()
+    expr = sql.true()
     for expression in expression.args:
         translated = translate_expr(expression, session, model, get_model)
-        expr = expr & translated
+        expr = and_filter(expr, translated)
 
     return expr
 
@@ -123,7 +131,9 @@ def translate_compare(expression: Expression, session: Session, model, get_model
         primary_keys = [pk.name for pk in inspect(model).primary_key]
         pk_filter = sql.true()
         for key in primary_keys:
-            pk_filter &= getattr(model, key) == getattr(right, key)
+            pk_filter = and_filter(
+                pk_filter, getattr(model, key) == getattr(right, key)
+            )
         return pk_filter
 
 
