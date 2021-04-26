@@ -1142,10 +1142,13 @@ def test_assign_remove_user_role(init_oso, sample_data):
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
-        actions = ["invite"] and
+        actions = ["invite", "list_repos"] and
         roles = {
             org_member: {
                 perms: ["invite"]
+            },
+            org_owner: {
+                perms: ["list_repos"]
             }
         };
 
@@ -1161,14 +1164,51 @@ def test_assign_remove_user_role(init_oso, sample_data):
 
     oso_roles.assign_role(leina, osohq, "org_member", session=session)
 
+    # Assign leina member role
+    leina_roles = (
+        session.query(oso_roles.UserRole)
+        .filter(oso_roles.UserRole.user_id == leina.id)
+        .all()
+    )
+    assert len(leina_roles) == 1
+    assert leina_roles[0].role == "org_member"
+
+    # Assign steve owner role
+    oso_roles.assign_role(steve, osohq, "org_owner", session=session)
+
+    steve_roles = (
+        session.query(oso_roles.UserRole)
+        .filter(oso_roles.UserRole.user_id == steve.id)
+        .all()
+    )
+    assert len(steve_roles) == 1
+    assert steve_roles[0].role == "org_owner"
+
     assert oso.is_allowed(leina, "invite", osohq)
     assert not oso.is_allowed(steve, "invite", osohq)
+    assert oso.is_allowed(steve, "list_repos", osohq)
 
     # - Removing user-role assignment revokes access
     removed = oso_roles.remove_role(leina, osohq, "org_member", session=session)
     assert removed
+    leina_roles = (
+        session.query(oso_roles.UserRole)
+        .filter(oso_roles.UserRole.user_id == leina.id)
+        .all()
+    )
+    assert len(leina_roles) == 0
+
+    # make sure steve still has his role
+    steve_roles = (
+        session.query(oso_roles.UserRole)
+        .filter(oso_roles.UserRole.user_id == steve.id)
+        .all()
+    )
+    assert len(steve_roles) == 1
+    assert steve_roles[0].role == "org_owner"
 
     assert not oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(steve, "list_repos", osohq)
 
 
 def test_reassign_user_role(init_oso, sample_data):
@@ -1207,7 +1247,7 @@ def test_reassign_user_role(init_oso, sample_data):
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
 
-    oso_roles.assign_role(leina, osohq, "org_member")
+    oso_roles.assign_role(leina, osohq, "org_member", session)
     leina_roles = (
         session.query(oso_roles.UserRole)
         .filter(oso_roles.UserRole.user_id == leina.id)
@@ -1216,10 +1256,10 @@ def test_reassign_user_role(init_oso, sample_data):
     assert len(leina_roles) == 1
     assert leina_roles[0].role == "org_member"
 
-    oso_roles.assign_role(steve, osohq, "org_owner")
+    oso_roles.assign_role(steve, osohq, "org_owner", session)
     steve_roles = (
         session.query(oso_roles.UserRole)
-        .filter(oso_roles.UserRole.user_id == leina.id)
+        .filter(oso_roles.UserRole.user_id == steve.id)
         .all()
     )
     assert len(steve_roles) == 1
@@ -1230,7 +1270,8 @@ def test_reassign_user_role(init_oso, sample_data):
         oso_roles.assign_role(leina, osohq, "org_owner", reassign=False)
 
     # reassign with reassign=True
-    oso_roles.assign_role(leina, osohq, "org_owner")
+    oso_roles.assign_role(leina, osohq, "org_owner", session)
+
     leina_roles = (
         session.query(oso_roles.UserRole)
         .filter(oso_roles.UserRole.user_id == leina.id)
@@ -1238,8 +1279,6 @@ def test_reassign_user_role(init_oso, sample_data):
     )
     assert len(leina_roles) == 1
     assert leina_roles[0].role == "org_owner"
-
-    assert oso.is_allowed(leina, "list_repos", osohq)
 
 
 # TODO: all of these
