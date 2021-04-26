@@ -160,20 +160,22 @@ def test_oso_roles_init(auth_sessionmaker):
 
 # TEST RESOURCE CONFIGURATION
 # Role declaration:
-# - [ ] duplicate role name throws an error
+# - [x] duplicate role name throws an error
 # - [ ] defining role with no permissions/implications throws an error
 #   TODO write test
 
 # Role-permission assignment:
-# - [ ] duplicate permission throws an error
-# - [ ] assigning permission that wasn't declared throws an error
-# - [ ] assigning permission without valid relationship throws an error
-# - [ ] assigning permission on related role type errors if role exists for permission resource
-# - [ ] assigning the same permission to two roles where one implies the other throws an error
+# - [x] duplicate permission throws an error
+# - [x] assigning permission that wasn't declared throws an error
+# - [ ] assigning permission with bad namespace throws an error
+#   TODO: write test
+# - [x] assigning permission without valid relationship throws an error
+# - [x] assigning permission on related role type errors if role exists for permission resource
+# - [x] assigning the same permission to two roles where one implies the other throws an error
 
 # Role implications:
-# - [ ] implying role that wasn't declared throws an error
-# - [ ] implying role without valid relationship throws an error
+# - [x] implying role that wasn't declared throws an error
+# - [x] implying role without valid relationship throws an error
 
 # Resource predicate:
 # - [ ] only define roles, no actions (role has actions/implications from different resource)
@@ -454,27 +456,24 @@ def test_wrong_type_resource_arguments(init_oso):
 # - [x] Removing a permission of same resource type from a role revokes assignee access
 
 # Parent->child role-permission assignment:
-# - [ ] Adding a permission of child resource type to a role grants assignee access
-# - [ ] Removing a permission of child resource type from a role revokes assignee access
+# - [x] Adding a permission of child resource type to a role grants assignee access
+# - [x] Removing a permission of child resource type from a role revokes assignee access
 
 # Grandparent->child role-permission assignment:
-# - Adding a permission of grandchild resource type to a role grants assignee access
-# - Removing a permission of grandchild resource type from a role revokes assignee access
+# - [x] Adding a permission of grandchild resource type to a role grants assignee access
+# - [x] Removing a permission of grandchild resource type from a role revokes assignee access
 
 # Homogeneous role implications:
-# - Adding a role implication of same resource type to a role grants assignee access
-# - Modifying a role implication of same resource type to a role modifies assignee access
-# - Removing a role implication of same resource type from a role revokes assignee access
+# - [x] Adding a role implication of same resource type to a role grants assignee access
+# - [x] Removing a role implication of same resource type from a role revokes assignee access
 
 # Parent->child role implications:
-# - Adding a role implication of child resource type to a role grants assignee access to child
-# - Modifying a role implication of child resource type to a role modifies assignee access to child
-# - Removing a role implication of child resource type from a role revokes assignee access to child
+# - [x] Adding a role implication of child resource type to a role grants assignee access to child
+# - [x] Removing a role implication of child resource type from a role revokes assignee access to child
 
 # Grandparent->child role implications:
-# - Adding a role implication of grandchild resource type to a role grants assignee access to grandchild
-#   without intermediate parent resource
-#       TODO: is this actually desired behavior? could just make it a parent-child
+# - [x] Adding a role implication of grandchild resource type to a role grants assignee access to grandchild
+#       without intermediate parent resource
 # - Adding a role implication from grandparent->parent->child resource role types grants assignee of grandparent role
 #   access to grandchild resource
 
@@ -606,22 +605,319 @@ def test_parent_child_role_perm(init_oso, sample_data):
 
 # Grandparent->child role-permission assignment:
 def test_grandparent_child_role_perm(init_oso, sample_data):
-    # - Adding a permission of grandchild resource type to a role grants assignee access
+    # - Adding a permission of grandchild resource type to a role grants assignee access (without intermediate resource)
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite", "repo:pull", "issue:edit"]
+                perms: ["invite", "issue:edit"]
             }
         };
 
-    resource(_type: Repository, "repo", actions, _) if
+    resource(_type: Issue, "issue", actions, _) if
+        actions = [
+            "edit"
+        ];
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    parent(issue: Issue, parent_repo: Repository) if
+        issue.repo = parent_repo;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.configure()
+
+    osohq = sample_data["osohq"]
+    oso_bug = sample_data["oso_bug"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(leina, "edit", oso_bug)
+    assert not oso.is_allowed(steve, "edit", oso_bug)
+
+    # - Removing a permission of grandchild resource type from a role revokes assignee access
+    new_policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+
+    resource(_type: Issue, "issue", actions, _) if
+        actions = [
+            "edit"
+        ];
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    parent(issue: Issue, parent_repo: Repository) if
+        issue.repo = parent_repo;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+
+    oso.clear_rules()
+    oso.load_str(new_policy)
+    oso_roles.configure()
+
+    assert not oso.is_allowed(leina, "edit", oso_bug)
+    assert oso.is_allowed(leina, "invite", osohq)
+
+
+# Homogeneous role implications:
+def test_homogeneous_role_implication(init_oso, sample_data):
+    # - Adding a role implication of same resource type to a role grants assignee access
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            },
+            org_owner: {
+                implies: ["org_member"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.configure()
+
+    osohq = sample_data["osohq"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    assert not oso.is_allowed(leina, "invite", osohq)
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+    oso_roles.assign_role(steve, osohq, "org_owner", session=session)
+
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(steve, "invite", osohq)
+
+    # - Removing a role implication of same resource type from a role revokes assignee access
+    new_policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite", "list_repos"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            },
+            org_owner: {
+                # REMOVE "implies"
+                perms: ["list_repos"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+
+    oso.clear_rules()
+    oso.load_str(new_policy)
+    oso_roles.configure()
+
+    # leina can still "invite"
+    assert oso.is_allowed(leina, "invite", osohq)
+
+    # steve can't "invite"
+    assert not oso.is_allowed(steve, "invite", osohq)
+    assert oso.is_allowed(steve, "list_repos", osohq)
+
+
+# Parent->child role implications:
+def test_parent_child_role_implication(init_oso, sample_data):
+    # - Adding a role implication of child resource type to a role grants assignee access to child
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"],
+                implies: ["repo_read"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+
+    """
+    oso.load_str(policy)
+    oso_roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    oso_repo = sample_data["oso_repo"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    # org_member implies repo_read which has the "pull" permission
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(leina, "pull", oso_repo)
+    assert not oso.is_allowed(steve, "pull", oso_repo)
+
+    # - Removing a role implication of child resource type from a role revokes assignee access to child
+    new_policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
         ];
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+
+    oso.clear_rules()
+    oso.load_str(new_policy)
+    oso_roles.configure()
+
+    assert not oso.is_allowed(leina, "pull", oso_repo)
+    assert oso.is_allowed(leina, "invite", osohq)
+
+
+# Grandparent->child role implications:
+def test_grandparent_child_role_implication(init_oso, sample_data):
+    # - Adding a role implication of grandchild resource type to a role grants assignee access to grandchild
+    #   without intermediate parent resource
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"],
+                implies: ["issue_editor"]
+            }
+        };
+
+    resource(_type: Issue, "issue", actions, roles) if
+        actions = [
+            "edit"
+        ] and
+        roles = {
+            issue_editor: {
+                perms: ["edit"]
+            }
+        };
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    parent(issue: Issue, parent_repo: Repository) if
+        issue.repo = parent_repo;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.configure()
+
+    osohq = sample_data["osohq"]
+    oso_bug = sample_data["oso_bug"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(leina, "edit", oso_bug)
+    assert not oso.is_allowed(steve, "edit", oso_bug)
+
+    # - Removing a permission of grandchild resource type from a role revokes assignee access
+    new_policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+
+    resource(_type: Issue, "issue", actions, roles) if
+        actions = [
+            "edit"
+        ] and
+        roles = {
+            issue_editor: {
+                perms: ["edit"]
+            }
+        };
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    parent(issue: Issue, parent_repo: Repository) if
+        issue.repo = parent_repo;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+
+    oso.clear_rules()
+    oso_roles.configured = False
+    oso.load_str(new_policy)
+    oso_roles.synchronize_data()
+
+    assert not oso.is_allowed(leina, "edit", oso_bug)
+    assert oso.is_allowed(leina, "invite", osohq)
+
+
+def test_chained_role_implication(init_oso, sample_data):
+    # - Adding a role implication from grandparent->parent->child resource role types grants assignee of grandparent role
+    #   access to grandchild resource
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite", "issue:edit"]
+            }
+        };
 
     resource(_type: Issue, "issue", actions, _) if
         actions = [
@@ -641,7 +937,6 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
-    oso_repo = sample_data["oso_repo"]
     oso_bug = sample_data["oso_bug"]
     leina = sample_data["leina"]
     steve = sample_data["steve"]
@@ -649,7 +944,6 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     oso_roles.assign_role(leina, osohq, "org_member", session=session)
 
     assert oso.is_allowed(leina, "invite", osohq)
-    assert oso.is_allowed(leina, "pull", oso_repo)
     assert oso.is_allowed(leina, "edit", oso_bug)
     assert not oso.is_allowed(steve, "edit", oso_bug)
 
@@ -659,15 +953,9 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite", "repo:pull"]
+                perms: ["invite"]
             }
         };
-
-    resource(_type: Repository, "repo", actions, _) if
-        actions = [
-            "push",
-            "pull"
-        ];
 
     resource(_type: Issue, "issue", actions, _) if
         actions = [
@@ -685,16 +973,37 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso_roles.configured = False
     oso.load_str(new_policy)
-    oso_roles.synchronize_data()
+    oso_roles.configure()
 
     assert not oso.is_allowed(leina, "edit", oso_bug)
     assert oso.is_allowed(leina, "invite", osohq)
-    assert oso.is_allowed(leina, "pull", oso_repo)
 
 
-def test_data_filtering(init_oso, sample_data, auth_sessionmaker):
+# TODO: all of these
+# TEST WRITE API
+# User-role assignment:
+# - Adding user-role assignment grants access
+# - Removing user-role assignment revokes access
+# - Assigning to non-existent role throws an error
+# - Assigning to role with wrong resource type throws an error
+# - Implied roles are mutually exclusive on user-role assignment
+
+
+def test_implied_roles_are_mutually_exclusive():
+    # - Implied roles are mutually exclusive on user-role assignment
+    pass
+
+
+# TODO: all of these
+## TEST DATA FILTERING
+# - [x] `role_allows` with another rule that produces false filter (implicit OR)
+# - [ ] `role_allows` inside of an `OR` with another expression
+# - [ ] `role_allows` inside of an `AND` with another expression
+# - [ ] `role_allows` inside of a `not` (this probably won't work, so need error handling)
+
+
+def test_data_filtering_implicit_or(init_oso, sample_data, auth_sessionmaker):
     # Ensure that the filter produced by `Roles.role_allows()` is not AND-ed
     # with a false filter produced by a separate `allow()` rule.
     oso, oso_roles, session = init_oso
@@ -714,7 +1023,7 @@ def test_data_filtering(init_oso, sample_data, auth_sessionmaker):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.synchronize_data()
+    oso_roles.configure()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -734,26 +1043,6 @@ def test_data_filtering(init_oso, sample_data, auth_sessionmaker):
     results = auth_session.query(User).all()
     assert len(results) == 1
 
-
-# TODO: all of these
-# TEST WRITE API
-# User-role assignment:
-# - Adding user-role assignment grants access
-# - Removing user-role assignment revokes access
-# - Assigning to non-existent role throws an error
-# - Assigning to role with wrong resource type throws an error
-# - Implied roles are mutually exclusive on user-role assignment
-
-
-def test_implied_roles_are_mutually_exclusive():
-    # - Implied roles are mutually exclusive on user-role assignment
-    pass
-
-
-# TODO: all of these
-# TEST DATA FILTERING
-# - [ ] `role_allows` inside of an `OR` with another expression
-# - [ ] `role_allows` inside of an `AND` with another expression
 
 # TODO: come up with these
 # TEST READ API
