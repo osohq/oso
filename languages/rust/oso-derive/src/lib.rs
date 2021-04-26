@@ -125,7 +125,7 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
                         });        
                     } 
                     _ => {
-                        return quote_spanned! { type_name.span() => compile_error!("#[derive(PolarClass)] is currently only supported on enums with unit variants."); }.into();
+                        return quote_spanned! { variant.ident.span() => compile_error!("#[derive(PolarClass)] is currently only supported on enums with unit variants."); }.into();
                     }
                 }
             }
