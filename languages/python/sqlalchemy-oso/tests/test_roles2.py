@@ -644,7 +644,8 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.configured = False
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     oso_bug = sample_data["oso_bug"]
@@ -684,7 +685,8 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
 
     oso.clear_rules()
     oso.load_str(new_policy)
-    oso_roles.configure()
+    oso_roles.configured = False
+    oso_roles.synchronize_data()
 
     assert not oso.is_allowed(leina, "edit", oso_bug)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -710,7 +712,8 @@ def test_homogeneous_role_implication(init_oso, sample_data):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.configured = False
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -744,7 +747,8 @@ def test_homogeneous_role_implication(init_oso, sample_data):
 
     oso.clear_rules()
     oso.load_str(new_policy)
-    oso_roles.configure()
+    oso_roles.configured = False
+    oso_roles.synchronize_data()
 
     # leina can still "invite"
     assert oso.is_allowed(leina, "invite", osohq)
@@ -826,7 +830,8 @@ def test_parent_child_role_implication(init_oso, sample_data):
 
     oso.clear_rules()
     oso.load_str(new_policy)
-    oso_roles.configure()
+    oso_roles.configured = False
+    oso_roles.synchronize_data()
 
     assert not oso.is_allowed(leina, "pull", oso_repo)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -867,7 +872,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     oso_bug = sample_data["oso_bug"]
@@ -1031,8 +1036,10 @@ def test_chained_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
+    oso_roles.configured = False
     oso.load_str(new_policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
+
 
     # leina can't edit the issue anymore
     assert not oso.is_allowed(leina, "edit", oso_bug)
@@ -1069,7 +1076,7 @@ def test_assign_role_wrong_resource_type(init_oso, sample_data):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -1095,7 +1102,7 @@ def test_assign_remove_nonexistent_role(init_oso, sample_data):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -1123,7 +1130,7 @@ def test_remove_unassigned_role(init_oso, sample_data):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -1148,7 +1155,7 @@ def test_assign_remove_user_role(init_oso, sample_data):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -1197,7 +1204,7 @@ def test_reassign_user_role(init_oso, sample_data):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -1243,7 +1250,7 @@ def test_data_filtering_implicit_or(init_oso, sample_data, auth_sessionmaker):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
