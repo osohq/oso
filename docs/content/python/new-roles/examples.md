@@ -211,3 +211,9 @@ assert oso.is_allowed(leina, "push", oso_repo)
 # Gabe can push to oso_repo because he has WRTIE on oso_repo
 assert oso.is_allowed(gabe, "push", oso_repo)
 ```
+
+## Repository roles
+
+## Cross resource implied roles
+
+## 
