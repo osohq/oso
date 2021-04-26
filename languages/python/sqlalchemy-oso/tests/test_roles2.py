@@ -925,8 +925,8 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
 
 
 def test_chained_role_implication(init_oso, sample_data):
-    # - Adding a role implication from grandparent->parent->child resource role types grants assignee of grandparent role
-    #   access to grandchild resource
+    # - Adding a role implication from grandparent->parent->child resource role types grants assignee of grandparent
+    # role access to grandchild resource
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -992,8 +992,8 @@ def test_chained_role_implication(init_oso, sample_data):
     assert oso.is_allowed(steve, "edit", oso_bug)
     assert not oso.is_allowed(steve, "invite", osohq)
 
-    # - Removing a role implication from grandparent->parent->child resource role types revokes assignee of grandparent role
-    #   access to grandchild resource
+    # - Removing a role implication from grandparent->parent->child resource role types revokes assignee of grandparent
+    # role access to grandchild resource
     new_policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
@@ -1077,11 +1077,10 @@ def test_assign_role_wrong_resource_type(init_oso, sample_data):
     oso.load_str(policy)
     oso_roles.synchronize_data()
 
-    osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
     leina = sample_data["leina"]
 
-    with pytest.raises(OsoError) as e:
+    with pytest.raises(OsoError):
         oso_roles.assign_role(leina, oso_repo, "org_member", session=session)
 
 
@@ -1106,10 +1105,10 @@ def test_assign_remove_nonexistent_role(init_oso, sample_data):
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
 
-    with pytest.raises(OsoError) as e:
+    with pytest.raises(OsoError):
         oso_roles.assign_role(leina, osohq, "org_owner", session=session)
 
-    with pytest.raises(OsoError) as e:
+    with pytest.raises(OsoError):
         oso_roles.remove_role(leina, osohq, "org_owner", session=session)
 
 
@@ -1206,9 +1205,7 @@ def test_reassign_user_role(init_oso, sample_data):
     oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
-    oso_repo = sample_data["oso_repo"]
     leina = sample_data["leina"]
-    steve = sample_data["steve"]
 
     oso_roles.assign_role(leina, osohq, "org_member")
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1222,7 +1219,7 @@ def test_reassign_user_role(init_oso, sample_data):
 
 
 # TODO: all of these
-## TEST DATA FILTERING
+# TEST DATA FILTERING
 # - [x] `role_allows` with another rule that produces false filter (implicit OR)
 # - [ ] `role_allows` inside of an `OR` with another expression
 # - [ ] `role_allows` inside of an `AND` with another expression

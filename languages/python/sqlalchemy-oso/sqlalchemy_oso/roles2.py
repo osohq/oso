@@ -636,13 +636,15 @@ class OsoRoles:
             my_session = session
 
         # @TODO: Verify all the rules of what roles you can be assigned to.
-        if not role_name in self.roles:
+        if role_name not in self.roles:
             raise OsoError(f"Could not find role {role_name}")
         role = self.roles[role_name]
 
         if not resource.__class__ == role.python_class:
             raise OsoError(
-                f'Cannot assign role "{role_name}" for resource {resource} (expected resource to be of type {role.python_class.__name__}).'
+                f'Cannot assign role "{role_name}" '
+                + "for resource {resource} "
+                + "(expected resource to be of type {role.python_class.__name__})."
             )
 
         user_pk_name = inspect(user.__class__).primary_key[0].name
@@ -657,7 +659,7 @@ class OsoRoles:
             .filter(
                 self.UserRole.user_id == user_id,
                 self.UserRole.resource_type == resource_type,
-                self.UserRole.resource_id == resource_id
+                self.UserRole.resource_id == resource_id,
             )
             .first()
         )
@@ -688,7 +690,7 @@ class OsoRoles:
             my_session = session
 
         # @TODO: Verify all the rules of what roles you can be assigned to.
-        if not role_name in self.roles:
+        if role_name not in self.roles:
             raise OsoError(f"Could not find role {role_name}")
         role = self.roles[role_name]
 
@@ -707,7 +709,7 @@ class OsoRoles:
             .filter(
                 self.UserRole.user_id == user_id,
                 self.UserRole.resource_type == resource_type,
-                self.UserRole.resource_id == resource_id
+                self.UserRole.resource_id == resource_id,
             )
             .first()
         )
@@ -743,7 +745,7 @@ class OsoRoles:
             session.query(self.UserRole)
             .filter(
                 self.UserRole.resource_type == resource_type,
-                self.UserRole.resource_id == resource_id
+                self.UserRole.resource_id == resource_id,
             )
             .all()
         )
