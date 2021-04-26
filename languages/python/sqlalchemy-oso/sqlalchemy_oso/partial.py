@@ -42,7 +42,7 @@ def flip_op(operator):
     return flips[operator]
 
 
-def add_filter(current, new):
+def and_filter(current, new):
     if isinstance(current, True_):
         return new
     else:
@@ -74,7 +74,7 @@ def translate_and(expression: Expression, session: Session, model, get_model):
     expr = sql.true()
     for expression in expression.args:
         translated = translate_expr(expression, session, model, get_model)
-        expr = add_filter(expr, translated)
+        expr = and_filter(expr, translated)
 
     return expr
 
@@ -131,7 +131,7 @@ def translate_compare(expression: Expression, session: Session, model, get_model
         primary_keys = [pk.name for pk in inspect(model).primary_key]
         pk_filter = sql.true()
         for key in primary_keys:
-            pk_filter = add_filter(
+            pk_filter = and_filter(
                 pk_filter, getattr(model, key) == getattr(right, key)
             )
         return pk_filter
