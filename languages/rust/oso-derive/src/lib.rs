@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{quote, quote_spanned};
 use syn::{
     Attribute, Data, DataEnum, DataStruct, Fields, Lit, Meta, MetaNameValue, NestedMeta, Path,
 };
@@ -123,7 +123,9 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
                 });
             }
         }
-        _ => unimplemented!("#[derive(PolarClass)] is only supported on structs and enums."),
+        _ => {
+            return quote_spanned! { type_name.span() => compile_error!("#[derive(PolarClass)] is only supported on structs and enums."); }.into()
+        }
     }
 
     let result = quote! {
