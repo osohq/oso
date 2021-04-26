@@ -122,8 +122,8 @@ class Resource:
 def ensure_configured(func):
     def wrapper(self, *args, **kwargs):
         if not self.configured:
-            raise Exception("Must call configure() before calling this.")
-        func(self, *args, **kwargs)
+            self._read_policy()
+        return func(self, *args, **kwargs)
 
     return wrapper
 
@@ -161,7 +161,9 @@ class OsoRoles:
                     user_pk_type, ForeignKey(f"{user_table_name}.{user_pk_name}")
                 )
                 resource_type = Column(String, index=True)
-                resource_id = Column(String, index=True)  # Most things can turn into a string lol.
+                resource_id = Column(
+                    String, index=True
+                )  # Most things can turn into a string lol.
                 role = Column(String, index=True)
 
         if models.get("Permission"):
@@ -215,13 +217,23 @@ class OsoRoles:
         self.roles = {}
         self.relationships = []
 
+        class Roles:
+            @staticmethod
+            def role_allows(user, action, resource):
+                if not self.configured:
+                    self._read_policy()
+                return self._role_allows(user, action, resource)
+
         self.configured = False
+        self.synced = False
+        self.oso.register_class(Roles)
+
         oso.roles = self
 
     def _get_session(self):
         return self.session_maker()
 
-    def configure(self):
+    def _read_policy(self):
         # TODO: should we think about calling this by default when the policy is loaded?
         self.resources = {}
         self.permissions = []
@@ -449,8 +461,18 @@ class OsoRoles:
         if len(self.resources) == 0:
             raise OsoError("Need to define resources to use oso roles.")
 
+        self.configured = True
+
+    @ensure_configured
+    def synchronize_data(self, session=None):
+        """
+        Call to load the roles data from the policy to the database so that it can be evaluated.
+        This must be called every time the policy changes, usually as part of a deploy script.
+        """
         # Sync static data to the database.
-        session = self._get_session()
+        if session is None:
+            session = self._get_session()
+
         session.execute("delete from role_permissions")
         session.execute("delete from role_implications")
         session.execute("delete from roles")
@@ -568,8 +590,6 @@ class OsoRoles:
                 )
             """
 
-        self.configured = True
-
     def _role_allows(self, user, action, resource):
         if isinstance(resource, Variable):
             # resource is a variable, so we are running as a partial. It may be allowed.
@@ -607,17 +627,6 @@ class OsoRoles:
             return True
         else:
             return False
-
-    # TODO: can we just roll this into the OsoRoles __init__() above?
-    def enable(self):
-        class Roles:
-            @staticmethod
-            def role_allows(user, action, resource):
-                if not self.configured:
-                    self.configure()
-                return self._role_allows(user, action, resource)
-
-        self.oso.register_class(Roles)
 
     @ensure_configured
     def assign_role(self, user, resource, role_name, session=None):
@@ -691,6 +700,7 @@ class OsoRoles:
             session.delete(user_role)
         session.commit()
 
+    @ensure_configured
     def for_resource(self, resource_class, session=None):
         # List the roles for a resource type
         roles = []
@@ -699,6 +709,7 @@ class OsoRoles:
                 roles.append(name)
         return roles
 
+    @ensure_configured
     def assignments_for_resource(self, resource, session=None):
         # List the role assignments for a specific resource
         if not session:

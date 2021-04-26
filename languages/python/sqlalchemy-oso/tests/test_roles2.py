@@ -48,6 +48,7 @@ class Issue(Base):
 @pytest.fixture
 def engine():
     engine = create_engine("sqlite:///:memory:")
+
     return engine
 
 
@@ -63,7 +64,6 @@ def init_oso(engine):
     register_models(oso, Base)
 
     roles = OsoRoles(oso, Base, User, Session)
-    roles.enable()
 
     # @NOTE: Right now this has to happen after enabling oso roles to get the
     #        tables.
@@ -217,7 +217,7 @@ def test_duplicate_role_name(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso_roles.configure()
+        oso_roles.synchronize_data()
 
 
 def test_resource_actions(init_oso):
@@ -230,7 +230,7 @@ def test_resource_actions(init_oso):
         ];
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
 
 def test_duplicate_action(init_oso):
@@ -246,7 +246,7 @@ def test_duplicate_action(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso_roles.configure()
+        oso_roles.synchronize_data()
 
 
 def test_undeclared_permission(init_oso):
@@ -266,7 +266,7 @@ def test_undeclared_permission(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso_roles.configure()
+        oso_roles.synchronize_data()
 
 
 def test_undeclared_role(init_oso):
@@ -285,7 +285,7 @@ def test_undeclared_role(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso_roles.configure()
+        oso_roles.synchronize_data()
 
 
 def test_role_implication_without_relationship(init_oso):
@@ -315,7 +315,7 @@ def test_role_implication_without_relationship(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso_roles.configure()
+        oso_roles.synchronize_data()
 
 
 def test_role_permission_without_relationship(init_oso):
@@ -340,7 +340,7 @@ def test_role_permission_without_relationship(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso_roles.configure()
+        oso_roles.synchronize_data()
 
 
 def test_invalid_role_permission(init_oso):
@@ -376,7 +376,7 @@ def test_invalid_role_permission(init_oso):
 
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso_roles.configure()
+        oso_roles.synchronize_data()
 
 
 def test_permission_assignment_to_implied_role(init_oso):
@@ -401,7 +401,7 @@ def test_permission_assignment_to_implied_role(init_oso):
 
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso_roles.configure()
+        oso_roles.synchronize_data()
 
 
 def test_incorrect_arity_resource(init_oso):
@@ -415,7 +415,7 @@ def test_incorrect_arity_resource(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso_roles.configure()
+        oso_roles.synchronize_data()
 
 
 def test_undefined_resource_arguments(init_oso):
@@ -426,7 +426,7 @@ def test_undefined_resource_arguments(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso_roles.configure()
+        oso_roles.synchronize_data()
 
 
 def test_wrong_type_resource_arguments(init_oso):
@@ -444,7 +444,7 @@ def test_wrong_type_resource_arguments(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso_roles.configure()
+        oso_roles.synchronize_data()
 
 
 # TEST CHECK API @TODO all of these
@@ -496,7 +496,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -523,8 +523,9 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     """
 
     oso.clear_rules()
+    oso_roles.configured = False
     oso.load_str(new_policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     assert not oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "list_repos", osohq)
@@ -558,7 +559,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
 
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -595,8 +596,9 @@ def test_parent_child_role_perm(init_oso, sample_data):
     """
 
     oso.clear_rules()
+    oso_roles.configured = False
     oso.load_str(new_policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     assert not oso.is_allowed(leina, "pull", oso_repo)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -636,7 +638,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -683,8 +685,9 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     """
 
     oso.clear_rules()
+    oso_roles.configured = False
     oso.load_str(new_policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     assert not oso.is_allowed(leina, "edit", oso_bug)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -711,7 +714,7 @@ def test_data_filtering(init_oso, sample_data, auth_sessionmaker):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -811,7 +814,7 @@ def test_roles(init_oso, auth_sessionmaker):
 
     # tbd on the name for this, but this is what used to happy lazily.
     # it reads the config from the policy and sets everything up.
-    oso_roles.configure()
+    oso_roles.synchronize_data()
 
     # Create sample data
     # -------------------
