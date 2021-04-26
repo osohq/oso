@@ -487,7 +487,7 @@ class OsoRoles:
         for _, p in permissions.items():
             session.add(p)
 
-        session.commit()
+        session.flush()
 
         roles = []
         role_permissions = []
@@ -631,7 +631,9 @@ class OsoRoles:
     @ensure_configured
     def assign_role(self, user, resource, role_name, session=None, reassign=True):
         if not session:
-            session = self._get_session()
+            my_session = self._get_session()
+        else:
+            my_session = session
 
         # @TODO: Verify all the rules of what roles you can be assigned to.
         if not role_name in self.roles:
@@ -651,7 +653,7 @@ class OsoRoles:
 
         # Check for existing role.
         user_role = (
-            session.query(self.UserRole)
+            my_session.query(self.UserRole)
             .filter(
                 self.UserRole.user_id == user_id
                 and self.UserRole.resource_type == resource_type
@@ -673,13 +675,17 @@ class OsoRoles:
                 resource_id=resource_id,
                 role=role_name,
             )
-            session.add(user_role)
-        session.commit()
+            my_session.add(user_role)
+        my_session.flush()
+        if not session:
+            my_session.commit()
 
     @ensure_configured
     def remove_role(self, user, resource, role_name, session=None):
         if not session:
-            session = self._get_session()
+            my_session = self._get_session()
+        else:
+            my_session = session
 
         # @TODO: Verify all the rules of what roles you can be assigned to.
         if not role_name in self.roles:
@@ -697,7 +703,7 @@ class OsoRoles:
 
         # Check for existing role.
         user_role = (
-            session.query(self.UserRole)
+            my_session.query(self.UserRole)
             .filter(
                 self.UserRole.user_id == user_id
                 and self.UserRole.resource_type == resource_type
@@ -708,8 +714,10 @@ class OsoRoles:
         if user_role is None:
             return False
         else:
-            session.delete(user_role)
-            session.commit()
+            my_session.delete(user_role)
+            my_session.flush()
+            if not session:
+                my_session.commit()
             return True
 
     @ensure_configured
