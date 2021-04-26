@@ -1246,6 +1246,7 @@ def test_reassign_user_role(init_oso, sample_data):
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
+    steve = sample_data["steve"]
 
     oso_roles.assign_role(leina, osohq, "org_member", session)
     leina_roles = (
