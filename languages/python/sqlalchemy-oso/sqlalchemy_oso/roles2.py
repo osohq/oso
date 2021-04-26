@@ -655,9 +655,9 @@ class OsoRoles:
         user_role = (
             my_session.query(self.UserRole)
             .filter(
-                self.UserRole.user_id == user_id
-                and self.UserRole.resource_type == resource_type
-                and self.UserRole.resource_id == resource_id
+                self.UserRole.user_id == user_id,
+                self.UserRole.resource_type == resource_type,
+                self.UserRole.resource_id == resource_id
             )
             .first()
         )
