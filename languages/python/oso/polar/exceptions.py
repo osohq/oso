@@ -181,7 +181,7 @@ class UnknownError(OperationalError):
 
 
 class PolarApiError(OsoError):
-    """ Errors coming from the python bindings to polar, not the engine itself. """
+    """Errors coming from the python bindings to polar, not the engine itself."""
 
     pass
 

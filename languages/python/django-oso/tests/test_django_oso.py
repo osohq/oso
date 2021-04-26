@@ -378,3 +378,20 @@ def test_partial_with_allow_all(rf):
     """
     assert str(authorized_posts.query) == " ".join(expected.split())
     assert authorized_posts.count() == 1
+
+
+def test_unconditional_policy_has_no_filter():
+    from test_app.models import Post
+
+    Oso.load_str(
+        'allow("user", "read", post: test_app::Post) if post.id = 1; allow(_, _, _);'
+    )
+    authorize_filter = authorize_model(None, Post, actor="user", action="read")
+    assert str(authorize_filter) == str(TRUE_FILTER)
+    authorized_posts = Post.objects.filter(authorize_filter)
+    expected = """
+        SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name",
+               "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id"
+        FROM "test_app_post"
+    """
+    assert str(authorized_posts.query) == " ".join(expected.split())

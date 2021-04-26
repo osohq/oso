@@ -124,7 +124,7 @@ def test_instance_from_external_call(test_oso):
 
 
 def test_allow_model(test_oso):
-    """ Test user auditor can list companies but not widgets"""
+    """Test user auditor can list companies but not widgets"""
     user = Actor(name="auditor")
     assert not test_oso.is_allowed(user, "list", Widget)
     assert test_oso.is_allowed(user, "list", Company)
