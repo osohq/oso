@@ -10,6 +10,7 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy import inspect
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
+from sqlalchemy import sql
 
 from oso import OsoError
 
@@ -659,7 +660,11 @@ def _add_query_filter(oso, user, action, resource_model):
 
     resource_type = resource_model.__name__
     resource_pk_name = inspect(resource_model).primary_key[0].name
-    sql = oso.roles.list_filter_queries[resource_type]
+
+    try:
+        role_list_sql = oso.roles.list_filter_queries[resource_type]
+    except KeyError:
+        return sql.false()
 
     # @OPT: It should be possible to pass the select sql as an in filter
     # parameter (instead of doing two queries)
@@ -667,7 +672,7 @@ def _add_query_filter(oso, user, action, resource_model):
     # I think we need access to the query here instead of a filter or
     # to pass on the bindings so they're bound before the execute later.
     results = session.execute(
-        sql,
+        role_list_sql,
         {
             "user_id": user_id,
             "action": action,
@@ -682,14 +687,8 @@ def _add_query_filter(oso, user, action, resource_model):
 
     # @NOTE: The dumbest way possible is working.
     # id = 1 or id = 2 or id = 3 ...
-    filter = None
-    for id in resource_ids:
-        id_check = getattr(resource_model, resource_pk_name) == id
-        if filter is not None:
-            filter |= id_check
-        else:
-            filter = id_check
-    return filter
+    id_in = getattr(resource_model, resource_pk_name).in_(resource_ids)
+    return id_in
 
 
 def _check_valid_model(*args, raise_error=True):

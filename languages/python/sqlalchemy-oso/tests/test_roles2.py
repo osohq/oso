@@ -728,6 +728,9 @@ def test_bug(init_oso, sample_data, auth_sessionmaker):
     results = auth_session.query(Organization).all()
     assert len(results) == 1
 
+    results = auth_session.query(User).all()
+    assert len(results) == 1
+
 
 # TODO: all of these
 ## TEST WRITE API
