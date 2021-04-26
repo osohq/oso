@@ -629,12 +629,13 @@ class OsoRoles:
             return False
 
     @ensure_configured
-    def assign_role(self, user, resource, role_name, session=None):
+    def assign_role(self, user, resource, role_name, session=None, reassign=True):
         if not session:
             session = self._get_session()
 
         # @TODO: Verify all the rules of what roles you can be assigned to.
-        assert role_name in self.roles
+        if not role_name in self.roles:
+            raise OsoError(f"Could not find role {role_name}")
         role = self.roles[role_name]
 
         if not resource.__class__ == role.python_class:
@@ -659,7 +660,12 @@ class OsoRoles:
             .first()
         )
         if user_role is not None:
-            user_role.role = role_name
+            if reassign:
+                user_role.role = role_name
+            else:
+                raise OsoError(
+                    f"User {user_id} already has a role for this resource. To reassign, call with `reassign=True`."
+                )
         else:
             user_role = self.UserRole(
                 user_id=user_id,
@@ -676,7 +682,8 @@ class OsoRoles:
             session = self._get_session()
 
         # @TODO: Verify all the rules of what roles you can be assigned to.
-        assert role_name in self.roles
+        if not role_name in self.roles:
+            raise OsoError(f"Could not find role {role_name}")
         role = self.roles[role_name]
 
         if not resource.__class__ == role.python_class:
@@ -698,9 +705,12 @@ class OsoRoles:
             )
             .first()
         )
-        if user_role is not None:
+        if user_role is None:
+            return False
+        else:
             session.delete(user_role)
-        session.commit()
+            session.commit()
+            return True
 
     @ensure_configured
     def for_resource(self, resource_class, session=None):

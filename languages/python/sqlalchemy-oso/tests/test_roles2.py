@@ -184,10 +184,17 @@ def test_oso_roles_init(auth_sessionmaker):
 # - [ ] using resource predicate with incorrect arity throws an error
 # - [ ] using resource predicate without defining actions/roles throws an error
 # - [ ] using resource predicate with field types throws an error
+# - [ ] duplicate resource name throws an error
+#   TODO: write test
 
 # Role allows:
 # - [ ] calling `roles.configure()` without calling `Roles.role_allows()` from policy issues warning
 #   TODO write test
+
+# TODO: all of these
+# Relationships:
+# - [ ] multiple dot lookups throws an error for now
+# - [ ] nonexistent attribute lookup throws an error for now
 
 
 def test_duplicate_role_name(init_oso):
@@ -478,6 +485,10 @@ def test_wrong_type_resource_arguments(init_oso):
 # Chained role implications:
 # - [x] Adding a role implication from grandparent->parent->child resource role types grants assignee of grandparent role
 #   access to grandchild resource
+
+# Overlapping role assignments:
+# - [ ] Assigning a more permissive and less permissive role to the same user grants most permissive access
+#   TODO
 
 
 # Homogeneous role-permission assignment:
@@ -1036,10 +1047,10 @@ def test_chained_role_implication(init_oso, sample_data):
 # User-role assignment:
 # - [x] Adding user-role assignment grants access
 # - [x] Removing user-role assignment revokes access
-# - [x] Assigning to non-existent role throws an error
+# - [x] Assigning/removing non-existent role throws an error
 # - [x] Removing user from a role they aren't assigned throws an error
 # - [x] Assigning to role with wrong resource type throws an error
-# - Implied roles are mutually exclusive on user-role assignment
+# - [x] Reassigning user role throws error if `reassign=False`
 
 
 def test_assign_role_wrong_resource_type(init_oso, sample_data):
@@ -1068,7 +1079,8 @@ def test_assign_role_wrong_resource_type(init_oso, sample_data):
         oso_roles.assign_role(leina, oso_repo, "org_member", session=session)
 
 
-def test_assign_nonexistent_role(init_oso, sample_data):
+def test_assign_remove_nonexistent_role(init_oso, sample_data):
+    # - Assigning/removing non-existent role throws an error
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -1091,13 +1103,36 @@ def test_assign_nonexistent_role(init_oso, sample_data):
     with pytest.raises(OsoError) as e:
         oso_roles.assign_role(leina, osohq, "org_owner", session=session)
 
-    # - Removing role that user doesn't have throws error
-    # TODO: should this throw an error?
     with pytest.raises(OsoError) as e:
-        oso_roles.remove_role(leina, osohq, "org_member", session=session)
+        oso_roles.remove_role(leina, osohq, "org_owner", session=session)
 
 
-def test_add_user_role(init_oso, sample_data):
+def test_remove_unassigned_role(init_oso, sample_data):
+    # - Removing role that user doesn't have returns false
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.configure()
+
+    osohq = sample_data["osohq"]
+    leina = sample_data["leina"]
+
+    removed = oso_roles.remove_role(leina, osohq, "org_member", session=session)
+    assert not removed
+
+
+def test_assign_remove_user_role(init_oso, sample_data):
     # - Adding user-role assignment grants access
     oso, oso_roles, session = init_oso
     policy = """
@@ -1125,14 +1160,59 @@ def test_add_user_role(init_oso, sample_data):
     assert not oso.is_allowed(steve, "invite", osohq)
 
     # - Removing user-role assignment revokes access
-    oso_roles.remove_role(leina, osohq, "org_member", session=session)
+    removed = oso_roles.remove_role(leina, osohq, "org_member", session=session)
+    assert removed
 
     assert not oso.is_allowed(leina, "invite", osohq)
 
 
-def test_implied_roles_are_mutually_exclusive():
-    # - Implied roles are mutually exclusive on user-role assignment
-    pass
+def test_reassign_user_role(init_oso, sample_data):
+    # - Implied roles for the same resource type are mutually exclusive on user-role assignment
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite", "list_repos"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            },
+            org_owner: {
+                perms: ["list_repos"],
+                implies: ["org_member", "repo_read"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = ["pull"] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+
+    parent(repo: Repository, parent_org: Organization) if
+        repo.org = parent_org;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.configure()
+
+    osohq = sample_data["osohq"]
+    oso_repo = sample_data["oso_repo"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(leina, osohq, "org_member")
+    assert oso.is_allowed(leina, "invite", osohq)
+
+    with pytest.raises(OsoError):
+        oso_roles.assign_role(leina, osohq, "org_owner", reassign=False)
+
+    oso_roles.assign_role(leina, osohq, "org_owner")
+
+    assert oso.is_allowed(leina, "list_repos", osohq)
 
 
 # TODO: all of these
