@@ -69,14 +69,17 @@ def contains_role_allows(expression: Expression):
         )
 
         if is_role_allow:
-            assert right.args[1].args[0] == Variable("_this"), "Role allows can only be performed on resource."
+            assert right.args[1].args[0] == Variable(
+                "_this"
+            ), "Role allows can only be performed on resource."
 
         return is_role_allow
 
     assert expression.operator == "And"
     for expr in expression.args:
-        if (_is_role_allow(expr.operator, expr.args[0], expr.args[1]) or
-                _is_role_allow(expr.operator, expr.args[1], expr.args[0])):
+        if _is_role_allow(expr.operator, expr.args[0], expr.args[1]) or _is_role_allow(
+            expr.operator, expr.args[1], expr.args[0]
+        ):
             expression.args.remove(expr)
             return True
 
