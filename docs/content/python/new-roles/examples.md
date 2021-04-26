@@ -8,7 +8,11 @@ description: >
 # Role modeling by example
 
 In this guide, we'll cover a few different role models in the context of
-the GitClub example application.
+the [GitClub example application](https://github.com/osohq/gitclub-sqlalchemy-flask-react).
+
+{{% callout "Read first" "blue" %}}
+ - [Getting started](getting-started)
+{{% /callout %}}
 
 ## 2. Implied roles
 
