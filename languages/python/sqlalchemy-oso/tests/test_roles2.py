@@ -1282,12 +1282,141 @@ def test_reassign_user_role(init_oso, sample_data):
     assert leina_roles[0].role == "org_owner"
 
 
-# TODO: all of these
 # TEST DATA FILTERING
 # - [x] `role_allows` with another rule that produces false filter (implicit OR)
-# - [ ] `role_allows` inside of an `OR` with another expression
-# - [ ] `role_allows` inside of an `AND` with another expression
-# - [ ] `role_allows` inside of a `not` (this probably won't work, so need error handling)
+# - [x] `role_allows` inside of an `OR` with another expression
+# - [x] `role_allows` inside of an `AND` with another expression
+# - [x] `role_allows` inside of a `not` (this probably won't work, so need error handling)
+
+
+def test_data_filtering_not(init_oso, sample_data, auth_sessionmaker):
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        not Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    apple = sample_data["apple"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+    oso_roles.assign_role(steve, osohq, "org_member", session=session)
+
+    # This is just to ensure we don't modify the policy above.
+    assert not oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(leina, "invite", apple)
+    assert not oso.is_allowed(steve, "invite", osohq)
+    assert oso.is_allowed(steve, "invite", apple)
+
+    oso.actor = leina
+    oso.action = "invite"
+    auth_session = auth_sessionmaker()
+
+    with pytest.raises(OsoError):
+        results = auth_session.query(Organization).all()
+
+
+def test_data_filtering_and(init_oso, sample_data, auth_sessionmaker):
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource) and
+        resource.id = "osohq";
+    """
+    oso.load_str(policy)
+    oso_roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    apple = sample_data["apple"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+    oso_roles.assign_role(leina, apple, "org_member", session=session)
+    oso_roles.assign_role(steve, osohq, "org_member", session=session)
+
+    # This is just to ensure we don't modify the policy above.
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(steve, "invite", osohq)
+    assert not oso.is_allowed(leina, "invite", apple)
+
+    oso.actor = leina
+    oso.action = "invite"
+    auth_session = auth_sessionmaker()
+
+    results = auth_session.query(Organization).all()
+    assert len(results) == 1
+
+    oso.actor = steve
+    oso.action = "invite"
+    auth_session = auth_sessionmaker()
+
+    results = auth_session.query(User).all()
+    assert len(results) == 0
+
+
+def test_data_filtering_explicit_or(init_oso, sample_data, auth_sessionmaker):
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource) or
+        resource.id = "osohq";
+    """
+    oso.load_str(policy)
+    oso_roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    apple = sample_data["apple"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(steve, apple, "org_member", session=session)
+
+    # This is just to ensure we don't modify the policy above.
+    assert oso.is_allowed(steve, "invite", osohq)
+    assert oso.is_allowed(steve, "invite", apple)
+
+    oso.actor = steve
+    oso.action = "invite"
+    auth_session = auth_sessionmaker()
+
+    results = auth_session.query(Organization).all()
+    assert len(results) == 2
+
+    oso.actor = leina
+    oso.action = "invite"
+    auth_session = auth_sessionmaker()
+
+    results = auth_session.query(User).all()
+    assert len(results) == 1
 
 
 def test_data_filtering_implicit_or(init_oso, sample_data, auth_sessionmaker):
