@@ -16,3 +16,11 @@ management API to allow end users to build authorization.
 Snippet of GitClub that implements backend of this
 
 Snippet of GitClub that implements frontend of this
+
+{{% callout "Have feedback?" "green" %}}
+
+Have feedback on this documentation or the library itself? It's under
+active development. Our engineering team would love to [hear from you in
+Slack.](https://join-slack.osohq.com/)
+
+{{% /callout %}}

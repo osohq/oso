@@ -141,3 +141,11 @@ parent. Notice the `"issue:read"` permission for `repo_write` below:
 The `identifier:action_name` string is used to identify actions on other
 resources when specifying a permission on a role. `identifier` is the
 second argument to the `resource` definition.
+
+{{% callout "Have feedback?" "green" %}}
+
+Have feedback on this documentation or the library itself? It's under
+active development. Our engineering team would love to [hear from you in
+Slack.](https://join-slack.osohq.com/)
+
+{{% /callout %}}
