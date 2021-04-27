@@ -1674,7 +1674,7 @@ def test_data_filtering_explicit_or(init_oso, sample_data, auth_sessionmaker):
     auth_session = auth_sessionmaker()
 
     results = auth_session.query(User).all()
-    assert len(results) == 1
+    assert len(results) == 0
 
 
 def test_data_filtering_implicit_or(init_oso, sample_data, auth_sessionmaker):

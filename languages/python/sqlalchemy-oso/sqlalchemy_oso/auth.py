@@ -80,7 +80,6 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
 
     combined_filter = None
     has_result = False
-    has_role_allows = False
     for result in results:
         has_result = True
 
@@ -88,9 +87,8 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
         filter, role_allows = partial_to_filter(
             resource_partial, session, model, get_model=oso.get_class
         )
-        has_role_allows |= role_allows
 
-        if has_role_allows:
+        if role_allows:
             roles_filter = roles2._add_query_filter(oso, actor, action, model)
             # TODO: is this the right place to do this? Should it be inside of `_authorize_query()` instead?
             filter &= roles_filter

@@ -10,7 +10,7 @@ from sqlalchemy.sql.elements import True_
 from polar.partial import dot_path
 from polar.expression import Expression
 from polar.variable import Variable
-from polar.exceptions import UnsupportedError
+from polar.exceptions import UnsupportedError, OsoError
 from polar.predicate import Predicate
 
 from sqlalchemy_oso.preprocess import preprocess
@@ -67,8 +67,7 @@ def contains_role_allows(expression: Expression):
         left = expr.args[0]
         right = expr.args[1]
         is_role_allow = (
-            op == "Unify"
-            and left is True
+            left is True
             and right.operator == "Dot"
             # TODO: check type of right.args[0] (should match whatever the roles object is)
             # and type(right.args[0]) == OsoRoles
@@ -77,6 +76,8 @@ def contains_role_allows(expression: Expression):
         )
 
         if is_role_allow:
+            if op != "Unify":
+                raise OsoError("Roles don't currently work with not.")
             assert right.args[1].args[0] == Variable(
                 "_this"
             ), "Role allows can only be performed on resource."
