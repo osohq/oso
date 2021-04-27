@@ -28,5 +28,5 @@
 	branch = main
 [submodule "docs/examples/gitclub-sqlalchemy-flask-react"]
 	path = docs/examples/gitclub-sqlalchemy-flask-react
-	url = git@github.com:osohq/gitclub-sqlalchemy-flask-react.git
+	url = https://github.com/osohq/gitclub-sqlalchemy-flask-react.git
 	branch = main
