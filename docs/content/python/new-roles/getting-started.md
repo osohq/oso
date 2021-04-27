@@ -145,7 +145,7 @@ example in our Org creation handler:
 The policy is consulted to see if there is an `allow` rule that permits
 access for the `actor`, `action` and `resource` arguments passed to
 `is_allowed`. We can access types and attributes of the objects passed
-into our rules from within the policy, just like they are Python objects!
+into our rules from within the policy, just like we can in Python!
 More on this [here]({{< ref
 "/getting-started/policies.md#instances-and-fields" >}}).
 
