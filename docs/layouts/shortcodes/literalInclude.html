@@ -234,7 +234,7 @@
 {{ $pathTrim := "" }}
 {{ with $gitHub }}
     {{ $pathTrim = ( split $path "/" | after 2 | path.Join) }}
-    {{ $gitHubRef = (printf "%s/blob/main/%s#L%d-%d" $gitHub $pathTrim $gFirstLine $gLastLine) }}
+    {{ $gitHubRef = (printf "%s/blob/main/%s#L%d-L%d" $gitHub $pathTrim $gFirstLine $gLastLine) }}
 {{ end }}
 
 <div class="code" id="{{ $id | urlize }}">
