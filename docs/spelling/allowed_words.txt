@@ -44,6 +44,7 @@ embeddable
 EMR
 EndsWith
 entrypoint
+enum
 enumerables
 enums
 EOF
