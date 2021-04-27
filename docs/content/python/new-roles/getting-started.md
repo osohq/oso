@@ -33,7 +33,7 @@ helps you authorize data in your existing data store. Data required for
 authorization (like role assignment) is stored in the same database as
 the rest of your application data.
 
-First, we'll cover some of the basics of integrating Oso into our
+First, we'll cover some of the basics of integrating Oso into your
 application.
 
 The `Oso` class is the entrypoint to using Oso in our application. We
