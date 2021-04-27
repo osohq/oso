@@ -17,11 +17,11 @@ the [GitClub example application](https://github.com/osohq/gitclub-sqlalchemy-fl
 ## Multiple role types: Repository roles
 
 In the [Getting Started](getting-started) guide, we only discussed a role for a single
-resource type. However, many apps will have multiple levels of roles. It
+resource type (`Org`). However, many apps will have multiple levels of roles. It
 is common to have roles associated with an organization object, like
-owner and member, and more granular roles associated with sub-roles. In
-the GitClub example application, the Organization model has a member and
-owner role. Repositories have reader and writer roles.
+"owner" and "member", and more granular roles associated with resources within an organization/tenant (we'll refer to these as "child resources"). In
+the GitClub example application, the Organization model has "member" and
+"owner" roles. The Repository model has "reader" and "writer" roles.
 
 To define a role for another resource type, we add another `resource`
 rule to our policy.
@@ -47,7 +47,7 @@ Often a role on a parent resource will grant access to all child
 resources. In GitClub, a member of an organization is granted read access to
 all repositories within that organization.
 
-We can model this access control model with **cross resource implied
+We can model this access control model with **cross-resource implied
 roles**.
 
 First, we'll define how organizations and repositories are related.
@@ -114,7 +114,7 @@ An example in GitClub is issues. Repository writers can read issues, but
 repository readers cannot.
 
 First, we define the issue resource in our policy. Even though an issue
-doesn't have roles, we still define it to create the actions.
+doesn't have roles, we still define an issue resource to declare the actions users can take on issues.
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
@@ -127,8 +127,7 @@ doesn't have roles, we still define it to create the actions.
 Notice the last argument to `resource` is `_` instead of `roles`. This
 indicates it is unused.
 
-Then, we just assign the issue action as a permission in a role on the
-parent. Notice the `"issue:read"` permission for `repo_write` below:
+Now, we can assign the issue action to a repository role. Notice the `"issue:read"` permission for `repo_write` below:
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"

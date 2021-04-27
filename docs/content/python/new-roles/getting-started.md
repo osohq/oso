@@ -22,7 +22,7 @@ To install **GitClub** to run alongside this tutorial, follow the
 [`README`](https://github.com/osohq/gitclub-sqlalchemy-flask-react#readme).
 
 ## Installation
-
+Even if you're already using `sqlalchemy-oso`, you'll still need to install the new python package. Make sure you update your imports to import from `sqlalchemy-oso-preview`.
 See our [installation instructions](install).
 
 ## Setting up the Oso Instance
@@ -200,8 +200,7 @@ We can then issue regular SQLAlchemy queries to load authorized data:
     linenos=true
     >}}
 
-`repos` will only contain repositories that are authorized for the
-current user to access based on our policy.
+`repos` will only contain repositories that `g.current_user` is allowed to take `g.current_action` on based on our policy.
 
 ### Using the basic session
 
@@ -255,7 +254,7 @@ We enable it by initializing the `OsoRoles` object.
 
 Roles in Oso are scoped to resources. A role is a grouping of
 permissions that may be performed on that resource. Roles are assigned
-to actors to grant them all permissions the role has.
+to actors to grant them all the permissions the role has.
 
 We define resources in Polar using the ``resource`` rule. The `Org`
 resource represents an Organization in the GitClub example application.
@@ -268,11 +267,11 @@ resource(_type: Org, "org", actions, roles) if
 The rule head has 4 parameters:
 
 - `_type` is the SQLAlchemy model the resource definition is associated with.
-- `"org"` is the identifier for this resource type. (this can be any string
-you choose)
-- `actions`: Are set in the rule body. The `actions` list defines all
+- `"org"` is the identifier for this resource type (this can be any string
+you choose).
+- `actions` are set in the rule body. The `actions` list defines all the
   actions that may be performed on the resource.
-- `roles`: Are set in the rule body. The `roles` dictionary defines all
+- `roles` are set in the rule body. The `roles` dictionary defines all the
   roles for this resource.
 
 In our rule body, we first define the list of available actions for this
@@ -337,9 +336,9 @@ But, we think the expanded form is clearer.
 
 {{% /callout %}}
 
-### Adding role_allow to our policy
+### Adding role_allows to our policy
 
-To allow access based on roles, we call `Roles.role_allow` in our
+To allow access based on roles, we call `Roles.role_allows` in our
 policy:
 
 {{< literalInclude
@@ -364,6 +363,7 @@ access, we must assign them to roles.
     to="docs: end-role-assignment"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
+    hlOpts="hl_lines=10"
     >}}
 
 The `assign_role` method assigns a particular role on a resource.
