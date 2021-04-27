@@ -191,9 +191,8 @@ Here's how we create it in GitClub:
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    lines="10,14,34-40,92"
+    lines="10,14,34-40,94"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
     >}}
 
 Before each request we fetch the logged in user and set the action
@@ -220,7 +219,6 @@ authorization applied. We create one using a typical SQLAlchemy `sessionmaker`.
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
     lines="4,14,29,61"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
 >}}
 
 Often performing actions before authorization like authentication will use
