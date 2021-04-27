@@ -152,7 +152,7 @@ More on this [here]({{< ref
 
 ## SQLAlchemy Session Setup
 
-Oso integrates with SQLAlchemy sessions to authorize access to models.
+Oso integrates with SQLAlchemy [sessions](https://docs.sqlalchemy.org/en/13/orm/session_basics.html#what-does-the-session-do) to authorize access to models.
 In a typical application, we may have one SQLAlchemy session per
 request. Often this is accomplished with a session factory that is
 scoped to the [current
