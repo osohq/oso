@@ -26,7 +26,7 @@ To install **GitClub** to run alongside this tutorial, follow the
 
 ## Installation
 
-To install SQLAlchemy roles, ask Steve to ship you his laptop. **TODO**
+See our [installation instructions](install).
 
 ## Setting up the Oso Instance
 
