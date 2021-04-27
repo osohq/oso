@@ -402,7 +402,7 @@ In our sample app, we call `synchronize_data` in initialization of our app:
     linenos=true
     >}}
 
-{{% callout "Production tip" "orange" %}}
+{{% callout "Going to production" "orange" %}}
 
 Since `OsoRoles.synchronize_data()` performs bulk database operations, a
 production application should call it as part of the deployment process
