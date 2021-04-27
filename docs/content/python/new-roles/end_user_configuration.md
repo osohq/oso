@@ -11,11 +11,27 @@ Most implementations of role-based access control require some level of
 end user configuration. In this guide, we'll see how to use the role
 management API to allow end users to build authorization.
 
-## Code samples
+## Retrieving roles for a resource
 
-Snippet of GitClub that implements backend of this
+Roles can be displayed by using the roles read API.
 
-Snippet of GitClub that implements frontend of this
+{{< literalInclude
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes.py"
+    from="docs: begin-org-role-index"
+    to="docs: end-org-role-index"
+    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    linenos=true
+    >}}
+
+## Assinging users to a role
+
+{{< literalInclude
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes.py"
+    from="docs: begin-role-assignment"
+    to="docs: end-role-assignment"
+    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    linenos=true
+    >}}
 
 {{% callout "Have feedback?" "green" %}}
 
