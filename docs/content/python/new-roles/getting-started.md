@@ -3,6 +3,7 @@ title: Getting started
 weight: 2
 description: >
     Getting started with SQLAlchemy roles
+hideContents: true
 ---
 
 **TODO** i want every API link to go to reference
