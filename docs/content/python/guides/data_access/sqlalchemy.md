@@ -25,6 +25,16 @@ The Oso SQLAlchemy integration is available on
 $ pip install sqlalchemy-oso
 ```
 
+{{% callout "Early access to the next version of sqlalchemy-oso" "blue" %}}
+
+We just released early access to the next version of our SQLAlchemy
+library, which will include improved support for common authorization
+models, like role based access control.
+
+[Check it out here!](/new-roles)
+
+{{% /callout %}}
+
 ## Usage
 
 `sqlalchemy-oso` works over your existing SQLAlchemy ORM models without
