@@ -161,14 +161,12 @@ def test_oso_roles_init(auth_sessionmaker):
 # TEST RESOURCE CONFIGURATION
 # Role declaration:
 # - [x] duplicate role name throws an error
-# - [ ] defining role with no permissions/implications throws an error
-#   TODO write test
+# - [x] defining role with no permissions/implications throws an error
 
 # Role-permission assignment:
 # - [x] duplicate permission throws an error
 # - [x] assigning permission that wasn't declared throws an error
 # - [ ] assigning permission with bad namespace throws an error
-#   TODO: write test
 # - [x] assigning permission without valid relationship throws an error
 # - [x] assigning permission on related role type errors if role exists for permission resource
 # - [x] assigning the same permission to two roles where one implies the other throws an error
@@ -178,23 +176,218 @@ def test_oso_roles_init(auth_sessionmaker):
 # - [x] implying role without valid relationship throws an error
 
 # Resource predicate:
-# - [ ] only define roles, no actions (role has actions/implications from different resource)
-#    TODO write test
+# - [x] only define roles, no actions (role has actions/implications from different resource)
 # - [x] only define actions, not roles
-# - [ ] using resource predicate with incorrect arity throws an error
-# - [ ] using resource predicate without defining actions/roles throws an error
-# - [ ] using resource predicate with field types throws an error
+# - [x] using resource predicate with incorrect arity throws an error
+# - [x] using resource predicate without defining actions/roles throws an error
+# - [x] using resource predicate with field types throws an error
 # - [ ] duplicate resource name throws an error
-#   TODO: write test
 
 # Role allows:
 # - [ ] calling `roles.configure()` without calling `Roles.role_allows()` from policy issues warning
 #   TODO write test
 
-# TODO: all of these
 # Relationships:
-# - [ ] multiple dot lookups throws an error for now
-# - [ ] nonexistent attribute lookup throws an error for now
+# - [x] multiple dot lookups throws an error for now
+# - [x] nonexistent attribute lookup throws an error for now
+# - [x] relationships without resource definition throws an error
+
+
+def test_empty_role(init_oso):
+    # defining role with no permissions/implications throws an error
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite"
+        ] and
+        roles = {
+            member: {}
+        };
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(OsoError):
+        oso_roles.synchronize_data()
+    pass
+
+
+def test_bad_namespace_perm(init_oso):
+    # - [ ] assigning permission with bad namespace throws an error
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = [
+            "invite"
+        ] and
+        roles = {
+            member: {
+                perms: ["repo:pull"]
+            }
+        };
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(OsoError):
+        oso_roles.synchronize_data()
+    pass
+
+
+# TODO
+def test_resource_with_roles_no_actions(init_oso, sample_data):
+    # - [ ] only define roles, no actions (role has actions/implications from different resource)
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", _, roles) if
+        roles = {
+            member: {
+                implies: ["repo_read"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+
+        parent(repo: Repository, parent_org: Organization) if
+            repo.org = parent_org;
+
+        allow(actor, action, resource) if
+            Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+
+    oso_roles.synchronize_data()
+
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+    osohq = sample_data["osohq"]
+    oso_repo = sample_data["oso_repo"]
+
+    oso_roles.assign_role(leina, osohq, "member", session)
+    oso_roles.assign_role(steve, oso_repo, "repo_read", session)
+
+    assert oso.is_allowed(leina, "pull", oso_repo)
+    assert oso.is_allowed(steve, "pull", oso_repo)
+
+
+def test_duplicate_resource_name(init_oso):
+    # - [ ] duplicate resource name throws an error
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            member: {
+                perms: ["invite"]
+            }
+        };
+
+    # DUPLICATE RESOURCE NAME "org"
+    resource(_type: Repository, "org", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(OsoError):
+        oso_roles.synchronize_data()
+
+
+def test_nested_dot_relationship(init_oso):
+    # - [ ] multiple dot lookups throws an error for now
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            member: {
+                perms: ["invite"]
+            }
+        };
+
+    resource(_type: Issue, "issue", actions, roles) if
+        actions = [
+            "edit"
+        ];
+
+    parent(issue, parent_org) if
+        issue.repo.org = parent_org;
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(OsoError):
+        oso_roles.synchronize_data()
+
+
+def test_bad_relationship_lookup(init_oso):
+    # - [ ] nonexistent attribute lookup throws an error for now
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            member: {
+                perms: ["invite"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, _) if
+        actions = [
+            "pull"
+        ];
+
+    parent(repo: Repository, parent_org: Organization) if
+        # INCORRECT FIELD NAME
+        repo.organization = parent_org;
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(OsoError):
+        oso_roles.synchronize_data()
+
+
+def test_relationship_without_specializer(init_oso):
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Repository, "repo", actions, _) if
+        actions = [
+            "pull"
+        ];
+
+    parent(repo, parent_org: Organization) if
+        repo.org = parent_org;
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(OsoError):
+        oso_roles.synchronize_data()
+
+
+def test_relationship_without_resources(init_oso):
+    oso, oso_roles, session = init_oso
+    policy = """
+    parent(repo: Repository, parent_org: Organization) if
+        repo.org = parent_org;
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(OsoError):
+        oso_roles.synchronize_data()
 
 
 def test_duplicate_role_name(init_oso):
@@ -622,10 +815,14 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
-        actions = ["invite"] and
+        actions = ["list_repos", "invite"] and
         roles = {
             org_member: {
-                perms: ["invite", "issue:edit"]
+                perms: ["list_repos", "issue:edit"]
+            },
+            org_owner: {
+                perms: ["invite"],
+                implies: ["org_member"]
             }
         };
 
@@ -654,9 +851,15 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
 
     oso_roles.assign_role(leina, osohq, "org_member", session=session)
 
-    assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(leina, "list_repos", osohq)
     assert oso.is_allowed(leina, "edit", oso_bug)
+    assert not oso.is_allowed(leina, "invite", osohq)
     assert not oso.is_allowed(steve, "edit", oso_bug)
+
+    oso_roles.assign_role(steve, osohq, "org_owner", session=session)
+    assert oso.is_allowed(steve, "edit", oso_bug)
+    assert oso.is_allowed(steve, "list_repos", osohq)
+    assert oso.is_allowed(steve, "invite", osohq)
 
     # - Removing a permission of grandchild resource type from a role revokes assignee access
     new_policy = """
@@ -1048,7 +1251,6 @@ def test_chained_role_implication(init_oso, sample_data):
     assert oso.is_allowed(steve, "edit", oso_bug)
 
 
-# TODO: all of these
 # TEST WRITE API
 # User-role assignment:
 # - [x] Adding user-role assignment grants access
@@ -1460,8 +1662,9 @@ def test_data_filtering_implicit_or(init_oso, sample_data, auth_sessionmaker):
     assert len(results) == 1
 
 
-# TODO: come up with these
 # TEST READ API
+# - [ ] Test getting all roles for a resource
+# - [ ] Test getting all role assignments for a resource
 
 # LEGACY TEST
 
