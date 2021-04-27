@@ -44,8 +44,8 @@ embeddable
 EMR
 EndsWith
 entrypoint
-enumerables
 enum
+enumerables
 enums
 EOF
 FFI
