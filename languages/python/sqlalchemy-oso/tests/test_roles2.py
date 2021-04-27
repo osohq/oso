@@ -166,7 +166,7 @@ def test_oso_roles_init(auth_sessionmaker):
 # Role-permission assignment:
 # - [x] duplicate permission throws an error
 # - [x] assigning permission that wasn't declared throws an error
-# - [ ] assigning permission with bad namespace throws an error
+# - [x] assigning permission with bad namespace throws an error
 # - [x] assigning permission without valid relationship throws an error
 # - [x] assigning permission on related role type errors if role exists for permission resource
 # - [x] assigning the same permission to two roles where one implies the other throws an error
@@ -181,7 +181,7 @@ def test_oso_roles_init(auth_sessionmaker):
 # - [x] using resource predicate with incorrect arity throws an error
 # - [x] using resource predicate without defining actions/roles throws an error
 # - [x] using resource predicate with field types throws an error
-# - [ ] duplicate resource name throws an error
+# - [x] duplicate resource name throws an error
 
 # Role allows:
 # - [ ] calling `roles.configure()` without calling `Roles.role_allows()` from policy issues warning
@@ -213,7 +213,7 @@ def test_empty_role(init_oso):
 
 
 def test_bad_namespace_perm(init_oso):
-    # - [ ] assigning permission with bad namespace throws an error
+    # - assigning permission with bad namespace throws an error
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -235,7 +235,7 @@ def test_bad_namespace_perm(init_oso):
 
 # TODO
 def test_resource_with_roles_no_actions(init_oso, sample_data):
-    # - [ ] only define roles, no actions (role has actions/implications from different resource)
+    # - only define roles, no actions (role has actions/implications from different resource)
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", _, roles) if
@@ -279,7 +279,7 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
 
 
 def test_duplicate_resource_name(init_oso):
-    # - [ ] duplicate resource name throws an error
+    # - duplicate resource name throws an error
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -309,7 +309,7 @@ def test_duplicate_resource_name(init_oso):
 
 
 def test_nested_dot_relationship(init_oso):
-    # - [ ] multiple dot lookups throws an error for now
+    # - multiple dot lookups throws an error for now
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -335,7 +335,7 @@ def test_nested_dot_relationship(init_oso):
 
 
 def test_bad_relationship_lookup(init_oso):
-    # - [ ] nonexistent attribute lookup throws an error for now
+    # - nonexistent attribute lookup throws an error for now
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -680,8 +680,64 @@ def test_wrong_type_resource_arguments(init_oso):
 #   access to grandchild resource
 
 # Overlapping role assignments:
-# - [ ] Assigning a more permissive and less permissive role to the same user grants most permissive access
-#   TODO
+# - [x] Assigning a more permissive and less permissive role to the same user grants most permissive access
+
+# Overlapping role assignments:
+def test_overlapping_permissions(init_oso, sample_data):
+    # - Assigning a more permissive and less permissive role to the same user grants most permissive access
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"],
+                implies: ["repo_read"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            },
+            repo_write: {
+                # repo_write is more permissive than org_member
+                perms: ["push"],
+                implies: ["repo_read"]
+            }
+        };
+
+    parent(repository: Repository, parent_org: Organization) if
+        repository.org = parent_org;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    oso_repo = sample_data["oso_repo"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    # repo_write is more permissive than org_member
+    oso_roles.assign_role(leina, osohq, "org_member")
+    oso_roles.assign_role(steve, osohq, "org_member")
+    oso_roles.assign_role(leina, oso_repo, "repo_write")
+
+    assert oso.is_allowed(leina, "pull", oso_repo)
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(leina, "push", oso_repo)
+
+    assert oso.is_allowed(steve, "pull", oso_repo)
+    assert oso.is_allowed(steve, "invite", osohq)
+    assert not oso.is_allowed(steve, "push", oso_repo)
 
 
 # Homogeneous role-permission assignment:
