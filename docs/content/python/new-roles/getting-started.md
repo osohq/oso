@@ -11,7 +11,7 @@ When managing access to resources within an application, it can be useful to
 group permissions into **roles**, and assign these roles to users. This is
 known as **Role-Based Access Control (RBAC).** The SQLAlchemy roles
 library extends the ``Oso`` core library with built in configuration,
-data modeling and enforcement of roles based access control.
+data modeling and enforcement of role-based access control.
 
 In this guide, we'll walk through the basics of starting to use the
 SQLAlchemy roles library, using the
