@@ -44,7 +44,7 @@ repositories in addition to organizations.
 ## Grant access to sub-resources with implied roles
 
 Often a role on a parent resource will grant access to all child
-resources. In GitClub, a member of an organization is granted access to
+resources. In GitClub, a member of an organization is granted read access to
 all repositories within that organization.
 
 We can model this access control model with **cross resource implied
@@ -97,7 +97,8 @@ organization.
 Currently a `parent` rule body must be of the form:
 
 ```polar
-child.attribute = parent;
+parent(child: ChildType, parent: ParentType) if
+    child.attribute = parent;
 ```
 
 This is sufficient to model resources with single parents.
