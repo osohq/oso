@@ -231,10 +231,10 @@ Now, let's write our first rules that use role based access control. To
 setup the role library, we must:
 
 1. Initialize `OsoRoles`
-2. Add role and resource configurations to our policy.
-3. Use the `Roles.role_allows` method in our policy.
-4. Assign roles to users.
-5. Persist role configuration to our database.
+2. Persist role configuration to our database.
+3. Add role and resource configurations to our policy.
+4. Use the `Roles.role_allows` method in our policy.
+5. Assign roles to users.
 
 ### Initializing `OsoRoles`
 
@@ -249,6 +249,51 @@ We enable it by initializing the `OsoRoles` object.
     linenos=true
     hlOpts="hl_lines=7"
     >}}
+
+### Persisting roles configuration
+
+Oso stores role and permission configuration in your database alongside
+the rest of your SQLAlchemy tables. Additional models are added to your
+`Base` class metadata when initializing `OsoRoles`. The schema for these
+models can be created with [`MetaData.create_all`](https://docs.sqlalchemy.org/en/13/core/metadata.html#sqlalchemy.schema.MetaData.create_all).
+
+In addition to the schema, we still must persist the role configuration
+from the policy into the database. We do this with the
+`OsoRoles.synchronize_data` method. The `synchronize_data` method will
+replace all role configuration to reflect the `resource` definitions in
+the policy.
+
+In our sample app, we call `synchronize_data` in initialization of our app:
+
+{{< literalInclude
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
+    from="docs: begin-configure"
+    to="docs: end-configure"
+    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    linenos=true
+    >}}
+
+{{% callout "Going to production" "orange" %}}
+
+Since `OsoRoles.synchronize_data()` performs bulk database operations, a
+production application should call it as part of the deployment process
+in a script.
+
+{{% /callout %}}
+
+
+{{% callout "Improved role configuration migrations coming soon" "green" %}}
+
+Currently, `OsoRoles.synchronize_data` deletes and replaces all role
+configuration in the database. In a future release, we will have a
+migration tool that only synchronizes changes to the database, and warns
+when removing roles or permissions that are in use.
+
+Roles and permissions are stored in the database to allow creation of
+dynamic role and permission assignments in a future release.
+
+{{% /callout %}}
+
 
 ### Configuring our first resource
 
@@ -373,50 +418,6 @@ user configuration](end_user_configuration).
 
 Role assignment is stored your database along with the rest of your
 SQLAlchemy managed data.
-
-### Persisting roles configuration
-
-Oso stores role and permission configuration in your database alongside
-the rest of your SQLAlchemy tables. Additional models are added to your
-`Base` class metadata when initializing `OsoRoles`. The schema for these
-models can be created with [`MetaData.create_all`](https://docs.sqlalchemy.org/en/13/core/metadata.html#sqlalchemy.schema.MetaData.create_all).
-
-In addition to the schema, we still must persist the role configuration
-from the policy into the database. We do this with the
-`OsoRoles.synchronize_data` method. The `synchronize_data` method will
-replace all role configuration to reflect the `resource` definitions in
-the policy.
-
-In our sample app, we call `synchronize_data` in initialization of our app:
-
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    from="docs: begin-configure"
-    to="docs: end-configure"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
-    >}}
-
-{{% callout "Going to production" "orange" %}}
-
-Since `OsoRoles.synchronize_data()` performs bulk database operations, a
-production application should call it as part of the deployment process
-in a script.
-
-{{% /callout %}}
-
-
-{{% callout "Improved role configuration migrations coming soon" "green" %}}
-
-Currently, `OsoRoles.synchronize_data` deletes and replaces all role
-configuration in the database. In a future release, we will have a
-migration tool that only synchronizes changes to the database, and warns
-when removing roles or permissions that are in use.
-
-Roles and permissions are stored in the database to allow creation of
-dynamic role and permission assignments in a future release.
-
-{{% /callout %}}
 
 ### Implying roles
 
