@@ -227,7 +227,7 @@
         {{ $gLastLine = (add (int $start) (int $count)) }}
     {{ end }}
 {{ else }}
-    {{ $gFirstLine = $firstLine }}
+    {{ $gFirstLine = (add $firstLine 1) }}
     {{ $gLastLine = $lastLine }}
 {{ end }}
 
