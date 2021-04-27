@@ -105,7 +105,7 @@ This is sufficient to model resources with single parents.
 
 {{% /callout %}}
 
-## Cross resource permissions
+## Cross-resource permissions
 
 Sometimes, we may want to grant permissions on child resources but do
 not need that resource to have its own roles.
