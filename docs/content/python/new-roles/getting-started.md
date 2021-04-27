@@ -27,6 +27,15 @@ See our [installation instructions](install).
 
 ## Setting up the Oso Instance
 
+{{% callout "Already using sqlalchemy-oso?" "blue" %}}
+
+We're going to cover some of the basics of using Oso and the
+`sqlalchemy-oso` library. If you're already familiar with this [skip
+ahead to configuring
+roles](#controlling-access-with-roles).
+
+{{% /callout %}}
+
 Oso is a library that we use in our application for authorization. It
 requires no additional infrastructure. Instead, the SQLAlchemy library
 helps you authorize data in your existing data store. Data required for
