@@ -8,14 +8,6 @@ description: >-
 draft: true
 ---
 
-## `sqlalchemy_oso` NEW_VERSION
-
-### Other bugs & improvements
-
-- Fixed bug in `authorize_model` leading to data filtering queries to have a filter
-  even when one policy result was unconditionally true.
-
-
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
