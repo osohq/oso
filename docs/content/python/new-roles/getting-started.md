@@ -5,8 +5,6 @@ description: >
     Getting started with SQLAlchemy roles
 ---
 
-**TODO** i want every API link to go to reference
-
 # Getting started
 
 When managing access to resources within an application, it can be useful to
@@ -21,8 +19,7 @@ SQLAlchemy roles library, using the
 application as an example. GitClub is a SPA (single-page application)
 that uses Flask and SQLAlchemy for the backend, with a React frontend.
 To install **GitClub** to run alongside this tutorial, follow the
-**TODO**
-[README]().
+[README](https://github.com/osohq/gitclub-sqlalchemy-flask-react#readme).
 
 ## Installation
 
@@ -369,9 +366,7 @@ access, we must assign them to roles.
     linenos=true
     >}}
 
-**TODO** api docs
-
-The `assign_role` function assigns a particular role on a resource.
+The `assign_role` method assigns a particular role on a resource.
 Often, you'll make this available in a route so that end users can
 configure role assignments for their organization. More on this in [end
 user configuration](end_user_configuration).

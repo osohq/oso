@@ -38,7 +38,7 @@ This defines two roles on repository, `"repo_read"` and `"repo_write"`.
 This allows us to assign users directly to repositories without
 giving them a role in the entire organization.
 
-Now, we can use [`roles.assign_role`]() **TODO** to assign role on
+Now, we can use `OsoRoles.assign_role` to assign role on
 repositories in addition to organizations.
 
 ## Grant access to sub-resources with implied roles
