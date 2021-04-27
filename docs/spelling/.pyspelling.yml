@@ -10,6 +10,14 @@ matrix:
     pipeline:
       - pyspelling.filters.url:
 
+      - pyspelling.filters.context:
+          context_visible_first: true
+          delimiters:
+            - open: '<div'
+              close: '</div>'
+            - open: '<script>'
+              close: '</script>'
+
       # HTML comments
       - pyspelling.filters.context:
           context_visible_first: true

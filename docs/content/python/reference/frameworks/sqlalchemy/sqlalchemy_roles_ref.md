@@ -23,6 +23,16 @@ SQLAlchemy roles right away, check out [our tutorial](sqlalchemy_roles).
 For a more in-depth understanding of roles, check out our guide to [Role-Based
 Access Control (RBAC) patterns](learn/roles).
 
+{{% callout "Early access to the next version of sqlalchemy-oso" "blue" %}}
+
+We just released early access to the next version of our SQLAlchemy
+library, which will include improved support for common authorization
+models, like role based access control.
+
+[Check it out here!](/new-roles)
+
+{{% /callout %}}
+
 ## Data model
 
 Lets say you have a `User` class and a `Widget` class and you want to assign

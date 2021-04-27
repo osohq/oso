@@ -1,4 +1,4 @@
-run: api_docs
+run: api_docs install
 	hugo server
 
 export JAVA_DIR := $(abspath ../languages/java/oso)

@@ -37,3 +37,13 @@ automatically generated from the Oso Python library source files.
 
 Oso also provides [libraries](frameworks) to integrate with popular Python
 frameworks and ORMS.
+
+{{% callout "Using SQLAlchemy?" "blue" %}}
+
+We just released early access to the next version of our SQLAlchemy
+library, which will include improved support for common authorization
+models, like role based access control.
+
+[Check it out here!](/new-roles)
+
+{{% /callout %}}

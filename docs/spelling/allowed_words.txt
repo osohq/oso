@@ -53,6 +53,7 @@ filesystem
 frontend
 GC
 GDB
+GitClub
 glibc
 Gradle
 Graphene
@@ -107,6 +108,7 @@ Oso's
 osohq
 performant
 Polar's
+Postgres
 precompiled
 prefetch
 pseudocode
