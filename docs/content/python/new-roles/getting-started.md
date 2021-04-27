@@ -3,7 +3,6 @@ title: Getting started
 weight: 2
 description: >
     Getting started with SQLAlchemy roles
-hideContents: true
 ---
 
 **TODO** i want every API link to go to reference
@@ -214,7 +213,7 @@ authorization applied. We create one using a typical SQLAlchemy sessionmaker.
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    lines="4,29,60"
+    lines="4,14,29,61"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
 >}}
