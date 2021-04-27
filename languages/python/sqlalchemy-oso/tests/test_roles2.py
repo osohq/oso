@@ -1583,7 +1583,7 @@ def test_data_filtering_not(init_oso, sample_data, auth_sessionmaker):
     auth_session = auth_sessionmaker()
 
     with pytest.raises(OsoError):
-        results = auth_session.query(Organization).all()
+        auth_session.query(Organization).all()
 
 
 def test_data_filtering_and(init_oso, sample_data, auth_sessionmaker):
