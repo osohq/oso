@@ -64,7 +64,7 @@ This `parent(child, parent)` rule defines that an organization is
 considered a parent of a repository if it is assigned to the
 repository's `org` field.
 
-When Oso evalutes the policy, it uses the `org` relationship defined
+When Oso evaluates the policy, it uses the `org` relationship defined
 on our model:
 
 {{< literalInclude

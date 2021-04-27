@@ -14,7 +14,7 @@ and enforce it over your SQLAlchemy models.
 The library is now available for early access. Our team continues to
 iterate on it and is excited to hear your feedback.
 
-The SQLAlchemy roles library is accompioned by [GitClub](https://github.com/osohq/gitclub-sqlalchemy-flask-react), our best
+The SQLAlchemy roles library is accompanied by [GitClub](https://github.com/osohq/gitclub-sqlalchemy-flask-react), our best
 practice example app for using Oso with SQLAlchemy.
 
 This section of the documentation contains guides and reference for

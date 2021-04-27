@@ -23,7 +23,7 @@ Roles can be displayed by using the roles read API.
     linenos=true
     >}}
 
-## Assinging users to a role
+## Assigning users to a role
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes.py"

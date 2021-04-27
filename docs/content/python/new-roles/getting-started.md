@@ -19,7 +19,7 @@ SQLAlchemy roles library, using the
 application as an example. GitClub is a SPA (single-page application)
 that uses Flask and SQLAlchemy for the backend, with a React frontend.
 To install **GitClub** to run alongside this tutorial, follow the
-[README](https://github.com/osohq/gitclub-sqlalchemy-flask-react#readme).
+[`README`](https://github.com/osohq/gitclub-sqlalchemy-flask-react#readme).
 
 ## Installation
 
@@ -143,7 +143,7 @@ example in our Org creation handler:
 >}}
 
 The policy is consulted to see if there is an `allow` rule that permits
-access for the `actor`, `action` and `resource` arugments passed to
+access for the `actor`, `action` and `resource` arguments passed to
 `is_allowed`. We can access types and attributes of the objects passed
 into our rules from within the policy, just like they are Python objects!
 More on this [here]({{< ref
@@ -206,7 +206,7 @@ current user to access based on our policy.
 ### Using the basic session
 
 The basic session should be used for queries that should not have
-authorization applied. We create one using a typical SQLAlchemy sessionmaker.
+authorization applied. We create one using a typical SQLAlchemy `sessionmaker`.
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
@@ -215,7 +215,7 @@ authorization applied. We create one using a typical SQLAlchemy sessionmaker.
     linenos=true
 >}}
 
-Often providing pre-authorization actions like authentication will use
+Often performing actions before authorization like authentication will use
 the basic session:
 
 {{< literalInclude

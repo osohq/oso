@@ -52,6 +52,7 @@ filesystem
 frontend
 GC
 GDB
+GitClub
 glibc
 Gradle
 Graphene
