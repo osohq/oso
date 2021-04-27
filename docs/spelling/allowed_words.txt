@@ -45,6 +45,7 @@ EMR
 EndsWith
 entrypoint
 enumerables
+enum
 enums
 EOF
 FFI
