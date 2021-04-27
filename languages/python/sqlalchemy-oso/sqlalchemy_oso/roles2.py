@@ -251,41 +251,44 @@ class OsoRoles:
         for result in role_relationships:
             # OMG WOW HACK, OMFG WOW HACK
             # will not work in general lol
-            constraints = result["bindings"]["resource"]
-            assert len(constraints.args) == 2
-            type_check = constraints.args[0]
-            assert type_check.operator == "Isa"
-            assert len(type_check.args) == 2
-            assert type_check.args[0] == Variable("_this")
-            pattern = type_check.args[1]
-            child_t = pattern.tag
-            get_parent = constraints.args[1]
-            assert get_parent.operator == "Isa"
-            assert len(get_parent.args) == 2
-            getter = get_parent.args[0]
-            assert getter.operator == "Dot"
-            assert len(getter.args) == 2
-            assert getter.args[0] == Variable("_this")
-            parent_field = getter.args[1]
-            pattern = get_parent.args[1]
-            parent_t = pattern.tag
+            try:
+                constraints = result["bindings"]["resource"]
+                assert len(constraints.args) == 2
+                type_check = constraints.args[0]
+                assert type_check.operator == "Isa"
+                assert len(type_check.args) == 2
+                assert type_check.args[0] == Variable("_this")
+                pattern = type_check.args[1]
+                child_t = pattern.tag
+                get_parent = constraints.args[1]
+                assert get_parent.operator == "Isa"
+                assert len(get_parent.args) == 2
+                getter = get_parent.args[0]
+                assert getter.operator == "Dot"
+                assert len(getter.args) == 2
+                assert getter.args[0] == Variable("_this")
+                parent_field = getter.args[1]
+                pattern = get_parent.args[1]
+                parent_t = pattern.tag
 
-            child_python_class = self.oso.host.classes[child_t]
-            child_table = child_python_class.__tablename__
-            parent_python_class = self.oso.host.classes[parent_t]
-            parent_table = parent_python_class.__tablename__
+                child_python_class = self.oso.host.classes[child_t]
+                child_table = child_python_class.__tablename__
+                parent_python_class = self.oso.host.classes[parent_t]
+                parent_table = parent_python_class.__tablename__
 
-            relationship = Relationship(
-                child_python_class=child_python_class,
-                child_type=child_t,
-                child_table=child_table,
-                parent_python_class=parent_python_class,
-                parent_type=parent_t,
-                parent_table=parent_table,
-                parent_field=parent_field,
-            )
+                relationship = Relationship(
+                    child_python_class=child_python_class,
+                    child_type=child_t,
+                    child_table=child_table,
+                    parent_python_class=parent_python_class,
+                    parent_type=parent_t,
+                    parent_table=parent_table,
+                    parent_field=parent_field,
+                )
 
-            self.relationships.append(relationship)
+                self.relationships.append(relationship)
+            except AssertionError:
+                raise OsoError("Invalid relationship.")
 
         # Register resources / permissions / roles and implications
         # Based on the role_resource definitions
@@ -333,6 +336,9 @@ class OsoRoles:
             if len(permissions) == 0 and len(role_names) == 0:
                 raise OsoError("Must define actions or roles for resource.")
 
+            if name in self.resources:
+                raise OsoError(f"Duplicate resource name {name}")
+
             resource = Resource(
                 python_class=python_class,
                 name=name,
@@ -365,7 +371,8 @@ class OsoRoles:
                         for permission in role_def["perms"]:
                             if ":" in permission:
                                 resource_name, action = permission.split(":", 1)
-                                assert resource_name in self.resources
+                                if resource_name not in self.resources:
+                                    raise OsoError("Invalid permission namespace.")
                                 permission_python_class = self.resources[
                                     resource_name
                                 ].python_class
@@ -390,6 +397,11 @@ class OsoRoles:
                     implied_roles = []
                     if "implies" in role_def:
                         implied_roles = role_def["implies"]
+
+                    if len(role_permissions) == 0 and len(implied_roles) == 0:
+                        raise OsoError(
+                            "Must define permissions or implied roles for a role."
+                        )
 
                     role = Role(
                         name=name,
@@ -543,9 +555,10 @@ class OsoRoles:
             child_table = relationship.child_table
             child_type = relationship.child_type
             sqlalchemy_field = relationship.parent_field
-            rel = inspect(relationship.child_python_class).relationships[
-                sqlalchemy_field
-            ]
+            child_relationships = inspect(relationship.child_python_class).relationships
+            if sqlalchemy_field not in child_relationships:
+                raise OsoError("Invalid Relationship")
+            rel = child_relationships[sqlalchemy_field]
             parent_join_field = list(rel.remote_side)[0].name
             child_join_field = list(rel.local_columns)[0].name
             select = f"""
