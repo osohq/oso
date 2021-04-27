@@ -41,7 +41,7 @@ giving them a role in the entire organization.
 Now, we can use `OsoRoles.assign_role` to assign role on
 repositories in addition to organizations.
 
-## Grant access to sub-resources with implied roles
+## Grant access to child resources with implied roles
 
 Often a role on a parent resource will grant access to all child
 resources. In GitClub, a member of an organization is granted read access to
