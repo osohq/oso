@@ -22,7 +22,7 @@ Usage of ./searcher:
 ```
 
 You can get API keys from Algolia at https://www.algolia.com/apps/{APPLICATION_ID}/api-keys/all
-## Useful resoruces
+## Useful resources
 
 - Tailwind Cheat Sheet: https://nerdcave.com/tailwind-cheat-sheet
 - Tailwind docs: https://tailwindcss.com/docs/container
