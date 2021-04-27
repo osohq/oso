@@ -7,5 +7,4 @@ weight: 6
 
 # API Documentation
 
-<a href="/python/new-roles/api/sqlalchemy.html">See documentation
-here</a>
+[See documentation here]({{% apiLink "new-roles/api/sqlalchemy.html" %}})
