@@ -1722,6 +1722,70 @@ def test_data_filtering_implicit_or(init_oso, sample_data, auth_sessionmaker):
 # - [ ] Test getting all roles for a resource
 # - [ ] Test getting all role assignments for a resource
 
+
+def test_read_api(init_oso, sample_data):
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite", "list_repos"] and
+        roles = {
+            org_member: {
+                perms: ["list_repos"]
+            },
+            org_owner: {
+                perms: ["invite"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = ["pull"] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+
+    parent(repo: Repository, parent_org: Organization) if
+        repo.org = parent_org;
+
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    oso_repo = sample_data["oso_repo"]
+    ios = sample_data["ios"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    # - [ ] Test getting all roles for a resource
+    repo_roles = oso_roles.for_resource(Repository, session)
+    assert len(repo_roles) == 1
+    assert repo_roles[0] == "repo_read"
+
+    org_roles = oso_roles.for_resource(Organization, session)
+    assert len(org_roles) == 2
+    assert "org_member" in org_roles
+    assert "org_owner" in org_roles
+
+    # - [ ] Test getting all role assignments for a resource
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+    oso_roles.assign_role(leina, oso_repo, "repo_read", session=session)
+
+    oso_roles.assign_role(steve, osohq, "org_owner", session=session)
+    oso_roles.assign_role(steve, ios, "repo_read", session=session)
+
+    osohq_assignments = oso_roles.assignments_for_resource(osohq, session)
+    assert len(osohq_assignments) == 2
+    oso_repo_assignments = oso_roles.assignments_for_resource(oso_repo, session)
+    assert len(oso_repo_assignments) == 1
+    ios_assignments = oso_roles.assignments_for_resource(ios, session)
+    assert len(ios_assignments) == 1
+
+
 # LEGACY TEST
 
 
