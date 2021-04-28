@@ -159,9 +159,12 @@ import('monaco-editor-core').then(monaco => {
   monaco.editor.setTheme('polarTheme');
 
   window.addEventListener('load', () => {
-    let polarCode = document.getElementsByClassName('language-polar');
-    for (let i = 0; i < polarCode.length; i++) {
-      let el = polarCode[i];
+    const literalIncludes = document.querySelectorAll(
+      'div.language-polar > div.highlight code.language-plaintext'
+    );
+    const backtickBlocks = document.querySelectorAll('code.language-polar');
+    const polarSnippets = [...literalIncludes, ...backtickBlocks];
+    for (const el of polarSnippets) {
       monaco.editor
         .colorize(el.innerText, 'polar', { theme: 'polarTheme' })
         .then(colored => {

@@ -237,7 +237,7 @@
     {{ $gitHubRef = (printf "%s/blob/main/%s#L%d-L%d" $gitHub $pathTrim $gFirstLine $gLastLine) }}
 {{ end }}
 
-<div class="code" id="{{ $id | urlize }}">
+<div class="code{{ if $syntax }} language-{{ $syntax }}{{ end }}" id="{{ $id | urlize }}">
   <div class="filename rounded-t-md bg-gray-200 text-gray-700 text-sm py-2">
     {{- with $syntax -}}
       <span class="px-2{{ if eq . "go" }} block w-10{{end}}">
@@ -253,13 +253,16 @@
         <a class="float-right mr-2" href="{{ $gitHubRef }}"><button class="btn-outline">Browse on GitHub</button></a>
     {{ end }}
   </div>
-  {{ $syntax  = $syntax | default "plaintext" }}
   {{ if $linenos }}
       {{ if $hlOpts }}
           {{ $hlOpts = (printf "linenos=table,linenostart=%d,%s" $gFirstLine $hlOpts) }}
       {{ else }}
           {{ $hlOpts = (printf "linenos=table,linenostart=%d" $gFirstLine) }}
       {{ end }}
+  {{ end }}
+  {{ $syntax = $syntax | default "plaintext" }}
+  {{ if (eq $syntax "polar") }}
+    {{ $syntax = "plaintext" }}
   {{ end }}
   {{- highlight $content $syntax $hlOpts -}}
 </div>
