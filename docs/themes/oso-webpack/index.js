@@ -185,12 +185,15 @@ if (searchInput) {
 
 // this handles when the button on the left nav is clicked and it toggles the search box
 window.searchButtonClick = function(e) {
+  e.preventDefault();
+
   if (searchModal.style.display == 'none') {
     searchInput.value = '';
     searchModal.style.display = '';
     searchResultsContainer.innerHTML = '';
   }
-  searchInput.focus();
+
+  setTimeout(() => searchInput.focus(), 0);
 };
 
 import('tinykeys').then(tinykeys => {
