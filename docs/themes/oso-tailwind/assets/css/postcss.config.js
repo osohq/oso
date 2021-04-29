@@ -18,8 +18,6 @@ const purgecss = require('@fullhuman/postcss-purgecss')({
   ]
 });
 
-console.log('purgecss');
-
 module.exports = {
   plugins: [
     require('postcss-import')({
