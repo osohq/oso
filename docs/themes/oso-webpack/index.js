@@ -225,7 +225,7 @@ import('algoliasearch').then(algolia => {
     facetLanguage = facetLanguageMeta.content;
   }
 
-  window.processHits = function(hits) {
+  const processHits = function(hits) {
     var results = '';
     var count = 0;
 
@@ -241,21 +241,8 @@ import('algoliasearch').then(algolia => {
     searchResultsContainer.innerHTML = results;
   };
 
-  window.searchInputKeyUp = function(event) {
-    event.preventDefault();
-    var term = searchInput.value;
-
-    if (term != '') {
-      if (facetLanguage == 'any') {
-        searchTerm(term);
-      } else {
-        searchTermWithFacet(searchInput.value, facetLanguage);
-      }
-    }
-  };
-
   // this searches for a term without a facet
-  window.searchTerm = function(term) {
+  const searchTerm = function(term) {
     index
       .search(term, {
         analytics: true,
@@ -264,12 +251,12 @@ import('algoliasearch').then(algolia => {
         snippetEllipsisText: '...'
       })
       .then(({ hits }) => {
-        window.processHits(hits);
+        processHits(hits);
       });
   };
 
   // this search for a term WITH a facet
-  window.searchTermWithFacet = function(term, language) {
+  const searchTermWithFacet = function(term, language) {
     index
       .search(term, {
         analytics: true,
@@ -282,7 +269,20 @@ import('algoliasearch').then(algolia => {
         facetFilters: [['language:' + language]]
       })
       .then(({ hits }) => {
-        window.processHits(hits);
+        processHits(hits);
       });
+  };
+
+  window.searchInputKeyUp = function(event) {
+    event.preventDefault();
+    var term = searchInput.value;
+
+    if (term != '') {
+      if (facetLanguage == 'any') {
+        searchTerm(term);
+      } else {
+        searchTermWithFacet(searchInput.value, facetLanguage);
+      }
+    }
   };
 });
