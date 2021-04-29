@@ -205,9 +205,8 @@ import('tinykeys').then(tinykeys => {
   });
 });
 
-import('algoliasearch').then(_ => {
+import('algoliasearch').then(algolia => {
   const searchResult = require('./search-result.handlebars');
-  const algoliasearch = require('algoliasearch');
 
   // account from algolia
   const algoliaAccount = 'KROZ8F05YT';
@@ -216,7 +215,7 @@ import('algoliasearch').then(_ => {
   // index name
   const algoliaIndex = 'prod_OSODOCS';
 
-  const client = algoliasearch(algoliaAccount, algoliaReadOnlySearchKey);
+  const client = algolia.default(algoliaAccount, algoliaReadOnlySearchKey);
   const index = client.initIndex(algoliaIndex);
 
   const facetLanguageMeta = document.getElementById('facet-language');
