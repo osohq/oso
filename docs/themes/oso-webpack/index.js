@@ -165,12 +165,46 @@ import('monaco-editor-core').then(monaco => {
     const backtickBlocks = document.querySelectorAll('code.language-polar');
     const polarSnippets = [...literalIncludes, ...backtickBlocks];
     for (const el of polarSnippets) {
+      let spans = el.children;
+      let spanStyles = {};
+      for (let i = 0; i < spans.length; i++) {
+        spanStyles[normalizeSpaces(spans[i].innerText.trimEnd())] =
+          spans[i].style.cssText;
+      }
       monaco.editor
         .colorize(el.innerText, 'polar', { theme: 'polarTheme' })
         .then(colored => {
           el.innerHTML = colored;
           el.parentNode.classList.add('polar-code-in-here');
+          let highlightChildren = el.children;
+          for (let i = 0; i < highlightChildren.length; i++) {
+            let text = highlightChildren[i].innerText.trimEnd();
+            if (text.indexOf('implies') != -1) {
+              console.log(text);
+              console.log(Object.getOwnPropertyNames(spanStyles)[0]);
+              console.log(Object.getOwnPropertyNames(spanStyles)[0] == text);
+            }
+            let style = spanStyles[highlightChildren[i].innerText.trimEnd()];
+            if (typeof style !== 'undefined') {
+              console.log('set style');
+              highlightChildren[i].setAttribute('style', style);
+            }
+
+            if (
+              highlightChildren[i].tagName === 'SPAN' &&
+              highlightChildren[i].children[0].tagName == 'SPAN' &&
+              highlightChildren[i].innerText == ''
+            ) {
+              // THere are random empty spans that show up in chrome. Trying to remove them proves difficult.
+              // It's fine in safari.
+            }
+          }
         });
     }
   });
 });
+
+// It seems that monaco makes spaces U+00A0 (160) instead of U+0020 (32).
+function normalizeSpaces(str) {
+  return str.replaceAll(String.fromCharCode(32), String.fromCharCode(160));
+}
