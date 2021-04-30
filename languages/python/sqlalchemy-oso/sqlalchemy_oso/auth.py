@@ -9,6 +9,7 @@ from sqlalchemy import inspect
 from sqlalchemy.sql import expression as sql
 
 from sqlalchemy_oso.partial import partial_to_filter
+from sqlalchemy_oso.compat import iterate_model_classes
 
 
 def polar_model_name(model) -> str:
@@ -25,10 +26,7 @@ def null_query(session: Session, model) -> Query:
 def register_models(oso: Oso, base):
     """Register all models in model base class ``base`` with oso as classes."""
     # TODO (dhatch): Not sure this is legit b/c it uses an internal interface?
-    for name, model in base._decl_class_registry.items():
-        if name == "_sa_module_registry":
-            continue
-
+    for model in iterate_model_classes(base):
         oso.register_class(model)
 
 
