@@ -27,7 +27,7 @@
                 {{ $currentNode := . }}
                 {{ if eq $currentNode.Section "new-roles" }}
                 <ul>
-                    <li><a href="/">Back to documentation home</a></li>
+                    <li><a href="{{ .Site.Home.Permalink }}index.html">Back to documentation home</a></li>
                     {{ template "tree-nav" dict "sect" .CurrentSection "currentNode" $currentNode "level" 0 "alwaysShow" 1}}
                 </ul>
                 {{ else }}
