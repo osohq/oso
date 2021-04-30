@@ -6,6 +6,16 @@ weight: 2
 
 # Add Roles with SQLAlchemy
 
+{{% callout "Early access to the next version of sqlalchemy-oso" "blue" %}}
+
+We just released early access to the next version of our SQLAlchemy
+library, which will include improved support for common authorization
+models, like role based access control.
+
+[Check it out here!](/new-roles)
+
+{{% /callout %}}
+
 The [`sqlalchemy_oso.roles`](reference/frameworks/sqlalchemy#sqlalchemy_osoroles) module
 provides out-of-the-box Role-Based Access Control features that let you create
 a roles system with a few lines of code, and specify role permissions in a
