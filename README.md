@@ -23,9 +23,8 @@ Developers can typically write a working Oso policy in <5 minutes, add Oso to an
 Oso is ideal for building permissions into user-facing applications, but you
 can check out [Use Cases][use-cases] to learn about other applications for Oso.
 
-Oso currently offers libraries for [Java][badge-java-link],
-[Node.js][badge-nodejs-link], [Python][badge-python-link],
-[Ruby][badge-ruby-link], [Rust][badge-rust-link] and [Go][badge-go-link].
+Oso currently offers libraries for [Node.js][badge-nodejs-link], [Python][badge-python-link], [Go][badge-go-link], 
+[Rust][badge-rust-link], [Ruby][badge-ruby-link], and [Java][badge-java-link].
 
 ## Getting started
 
