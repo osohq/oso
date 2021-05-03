@@ -1785,6 +1785,11 @@ def test_read_api(init_oso, sample_data):
     ios_assignments = oso_roles.assignments_for_resource(ios, session)
     assert len(ios_assignments) == 1
 
+    leina_assignments = oso_roles.assignments_for_user(leina, session)
+    assert len(leina_assignments) == 2
+    steve_assignments = oso_roles.assignments_for_user(steve, session)
+    assert len(steve_assignments) == 2
+
 
 # LEGACY TEST
 

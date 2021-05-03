@@ -764,6 +764,31 @@ class OsoRoles:
         )
         return [{"user_id": ur.user_id, "role": ur.role} for ur in user_roles]
 
+    @ensure_configured
+    def assignments_for_user(self, user, session=None):
+        # List the role assignments for a specific user
+        if not session:
+            session = self._get_session()
+
+        user_pk_name = inspect(user.__class__).primary_key[0].name
+        user_id = getattr(user, user_pk_name)
+
+        user_roles = (
+            session.query(self.UserRole)
+            .filter(
+                self.UserRole.user_id == user_id,
+            )
+            .all()
+        )
+        return [
+            {
+                "resource_type": ur.resource_type,
+                "resource_id": ur.resource_id,
+                "role": ur.role,
+            }
+            for ur in user_roles
+        ]
+
 
 def _add_query_filter(oso, user, action, resource_model):
     # Ok, we're really going for it now. This is probably the biggest wow hack yet.
