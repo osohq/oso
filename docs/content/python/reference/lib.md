@@ -41,7 +41,7 @@ frameworks and ORMS.
 {{% callout "Using SQLAlchemy?" "blue" %}}
 
 We just released early access to the next version of our SQLAlchemy
-library, which will include improved support for common authorization
+library, includes improved support for common authorization
 models, like role based access control.
 
 [Check it out here!](/new-roles)

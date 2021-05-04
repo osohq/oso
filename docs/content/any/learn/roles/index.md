@@ -54,6 +54,19 @@ following RBAC use cases:
 
 <!-- Benefits of RBAC (TODO) -->
 
+{{% ifLang "python" %}}
+{{< callout "Adding roles to your app?" "blue" >}}
+
+We just released early access to the next version of built-in support
+for Roles. Initially supporting SQLAlchemy, this library includes
+improved support for common authorization models, like role based access
+control.
+
+[Check it out here!](/new-roles)
+
+{{< /callout >}}
+{{% /ifLang %}}
+
 ## Global Roles
 
 “Global” roles refers to a single set of roles that applies to the entire

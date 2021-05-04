@@ -2,7 +2,7 @@
 title: Role modeling by example
 weight: 3
 description: >
-    Let's see how to build common role models with SQLAlchemy roles.
+    Let's see how to build common role models using Oso.
 ---
 
 # Role modeling by example

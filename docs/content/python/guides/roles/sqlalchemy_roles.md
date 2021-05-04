@@ -6,7 +6,7 @@ weight: 2
 
 # Add Roles with SQLAlchemy
 
-{{% callout "Early access to the next version of sqlalchemy-oso" "blue" %}}
+{{% callout "Early access to the next version of roles" "blue" %}}
 
 We just released early access to the next version of our SQLAlchemy
 library, which will include improved support for common authorization

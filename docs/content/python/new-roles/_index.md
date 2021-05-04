@@ -4,12 +4,14 @@ weight: 1
 no_nav: true
 ---
 
-SQLAlchemy Roles Early Access
-=============================
+Roles for SQLAlchemy Early Access
+=================================
 
-We're working on the next major version of the SQLAlchemy roles library.
-This library makes it easy to model role based access control in Polar
-and enforce it over your SQLAlchemy models.
+We're working on the next major version of support for roles in Oso. Our
+first release is in the SQLAlchemy library. This library makes it easy
+to model role based access control in Polar and enforce it over your
+SQLAlchemy models. If you're interested in using Roles with other
+languages or frameworks, let us know in our [Slack](https://join-slack.osohq.com/).
 
 The library is now available for early access. Our team continues to
 iterate on it and is excited to hear your feedback.
