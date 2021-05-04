@@ -7,11 +7,10 @@ no_nav: true
 SQLAlchemy Roles Early Access
 =============================
 
-We're working on the next major version of the SQLAlchemy roles library.
-This library makes it easy to model role based access control in Polar
+This library makes it easy to model role-based access control
 and enforce it over your SQLAlchemy models.
 
-The library is now available for early access. Our team continues to
+The library is now available in early access. Our team continues to
 iterate on it and is excited to hear your feedback.
 
 The SQLAlchemy roles library is accompanied by [GitClub](https://github.com/osohq/gitclub-sqlalchemy-flask-react), our best
