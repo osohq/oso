@@ -9,7 +9,7 @@ any: false
 
 Learn the basics of using Oso and get Oso set up in your application.
 
-{{%ifLang "python" %}}
+{{% ifLang "python" %}}
 {{< callout "Early access to the next version of roles" "blue" >}}
 
 We just released early access to the next version of built-in support
