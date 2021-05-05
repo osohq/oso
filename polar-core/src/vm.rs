@@ -1878,8 +1878,8 @@ impl PolarVirtualMachine {
             | Value::List(_)
             | Value::Number(_)
             | Value::String(_) => {
-                // check for partial arguments to an external call
-                if self.check_partial_args(object, field, value)? {
+                // handle partial arguments to an external call
+                if self.handle_partial_args(object, field, value)? {
                     // if there is a valid partial argument, it means we have a special case handler, so don't call out to the method
                     return Ok(QueryEvent::None);
                 }
@@ -1931,7 +1931,7 @@ impl PolarVirtualMachine {
     /// Check for partially bound or unbound variable arguments to an external call.
     /// If any arguments are partially bound or unbound, return an error.
     /// The only exception is the method `OsoRoles.role_allows()`, which expects a partially bound resource argument
-    fn check_partial_args(
+    fn handle_partial_args(
         &mut self,
         object: &Term,
         field: &Term,
@@ -1942,7 +1942,7 @@ impl PolarVirtualMachine {
         if let Value::Call(Call { name, args, kwargs }) = field.value() {
             // get all arg values (args + kwargs)
             let mut arg_values = args.clone();
-            if let Some(kwarg_map) = kwargs.clone() {
+            if let Some(kwarg_map) = kwargs {
                 let mut v: Vec<Term> = kwarg_map.values().cloned().collect();
                 arg_values.append(&mut v)
             }
@@ -1952,7 +1952,7 @@ impl PolarVirtualMachine {
                     match self.binding_manager.variable_state(v) {
                         // bound variables are fine, continue
                         VariableState::Bound(_) => continue,
-                        // partial variables are only fine if being passed into "role_allows"
+                        // TODO: temporary fix so that partial variables are only fine if being passed into "role_allows"
                         VariableState::Partial => {
                             if let Value::ExternalInstance(external) =
                                 self.deep_deref(&object).value()
