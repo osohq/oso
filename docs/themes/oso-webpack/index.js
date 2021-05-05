@@ -90,13 +90,17 @@ import('monaco-editor-core').then(monaco => {
                   '@default': 'keyword'
                 }
               },
-              '@default': { token: 'identifier' }
+              '@default': {
+                token: 'identifier'
+              }
             }
           }
         ],
 
         // whitespace
-        { include: '@whitespace' },
+        {
+          include: '@whitespace'
+        },
 
         // delimiters and operators
         [/[{}()\[\]]/, '@brackets'],
@@ -121,34 +125,77 @@ import('monaco-editor-core').then(monaco => {
 
         // strings
         [/"([^"\\]|\\.)*$/, 'string.invalid'], // non-terminated string
-        [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }]
+        [/"/, {
+          token: 'string.quote',
+          bracket: '@open',
+          next: '@string'
+        }]
       ],
 
       string: [
         [/[^\\"]+/, 'string'],
         [/@escapes/, 'string.escape'],
         [/\\./, 'string.escape.invalid'],
-        [/"/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
+        [/"/, {
+          token: 'string.quote',
+          bracket: '@close',
+          next: '@pop'
+        }]
       ],
 
-      whitespace: [[/[ \t\r\n]+/, 'white'], [/#.*$/, 'comment']]
+      whitespace: [
+        [/[ \t\r\n]+/, 'white'],
+        [/#.*$/, 'comment']
+      ]
     }
   });
 
   // Define a new theme that constains only rules that match this language
   monaco.editor.defineTheme('polarTheme', {
     base: 'vs-dark',
-    rules: [
-      { token: 'keyword.debug', foreground: COLOR.GREEN, fontStyle: 'italic' },
-      { token: 'keyword.print', foreground: COLOR.GREEN, fontStyle: 'italic' },
-      { token: 'keyword', foreground: COLOR.PINK },
-      { token: 'operator', foreground: COLOR.PINK },
-      { token: 'number', foreground: COLOR.PURPLE },
-      { token: 'string', foreground: COLOR.YELLOW },
-      { token: 'comment', foreground: COLOR.BROWN },
-      { token: 'delimiter', foreground: COLOR.SEA_GREEN },
-      { token: 'predicate', foreground: COLOR.BLUE, fontStyle: 'italic' },
-      { token: '', foreground: COLOR.LIGHT_GHOST_WHITE }
+    rules: [{
+        token: 'keyword.debug',
+        foreground: COLOR.GREEN,
+        fontStyle: 'italic'
+      },
+      {
+        token: 'keyword.print',
+        foreground: COLOR.GREEN,
+        fontStyle: 'italic'
+      },
+      {
+        token: 'keyword',
+        foreground: COLOR.PINK
+      },
+      {
+        token: 'operator',
+        foreground: COLOR.PINK
+      },
+      {
+        token: 'number',
+        foreground: COLOR.PURPLE
+      },
+      {
+        token: 'string',
+        foreground: COLOR.YELLOW
+      },
+      {
+        token: 'comment',
+        foreground: COLOR.BROWN
+      },
+      {
+        token: 'delimiter',
+        foreground: COLOR.SEA_GREEN
+      },
+      {
+        token: 'predicate',
+        foreground: COLOR.BLUE,
+        fontStyle: 'italic'
+      },
+      {
+        token: '',
+        foreground: COLOR.LIGHT_GHOST_WHITE
+      }
     ]
   });
 
@@ -159,7 +206,9 @@ import('monaco-editor-core').then(monaco => {
     for (let i = 0; i < polarCode.length; i++) {
       let el = polarCode[i];
       monaco.editor
-        .colorize(el.innerText, 'polar', { theme: 'polarTheme' })
+        .colorize(el.innerText, 'polar', {
+          theme: 'polarTheme'
+        })
         .then(colored => {
           el.innerHTML = colored;
           el.parentNode.classList.add('polar-code-in-here');
@@ -188,7 +237,9 @@ window.searchButtonClick = function(e) {
   e.preventDefault();
 
   if (searchModal.style.display == 'none') {
-    searchInput.value = '';
+    if (searchInput) {
+      searchInput.value = '';
+    }
     searchModal.style.display = '';
     searchResultsContainer.innerHTML = '';
   }
@@ -253,7 +304,9 @@ import('algoliasearch').then(algolia => {
         attributesToSnippet: '*:20',
         snippetEllipsisText: '...'
       })
-      .then(({ hits }) => {
+      .then(({
+        hits
+      }) => {
         processHits(hits);
       });
   };
@@ -269,9 +322,13 @@ import('algoliasearch').then(algolia => {
         maxValuesPerFacet: 5,
         page: 0,
         facets: ['*', 'language'],
-        facetFilters: [['language:' + language]]
+        facetFilters: [
+          ['language:' + language]
+        ]
       })
-      .then(({ hits }) => {
+      .then(({
+        hits
+      }) => {
         processHits(hits);
       });
   };
