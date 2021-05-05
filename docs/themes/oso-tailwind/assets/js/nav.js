@@ -34,14 +34,13 @@ if (langButton) {
   );
 }
 
-const searchModal = document.getElementById('search-modal');
+const searchModalElement = document.getElementById('search-modal');
 // changing this name to avoid any clashes
 const searchInputElement = document.getElementById('search-input');
 const searchBackground = document.getElementById('search-background');
 
 // Close dropdown sideBars if the user clicks outside of them
 window.onclick = function(event) {
-  console.log(event.target);
   switch (event.target) {
     case navButton:
       break;
@@ -53,7 +52,7 @@ window.onclick = function(event) {
       break;
     case searchInputElement:
       break
-    case searchModal:
+    case searchModalElement:
       window.hideSearch(event);
       break
     case searchBackground:

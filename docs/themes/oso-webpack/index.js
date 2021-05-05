@@ -219,10 +219,14 @@ import('monaco-editor-core').then(monaco => {
 const searchResultsContainer = document.getElementById(
   'search-results-container'
 );
+const searchModal = document.getElementById('search-modal');
+
 // hide the search box
 window.hideSearch = function(e) {
-  if (searchModal.style.display == '') {
-    searchModal.style.display = 'none';
+  if (searchModal) {
+    if (searchModal.style.display == '') {
+      searchModal.style.display = 'none';
+    }
   }
 };
 
@@ -236,12 +240,17 @@ if (searchInput) {
 window.searchButtonClick = function(e) {
   e.preventDefault();
 
-  if (searchModal.style.display == 'none') {
-    if (searchInput) {
-      searchInput.value = '';
+  if (searchModal) {
+    if (searchModal.style.display == 'none') {
+      searchModal.style.display = '';
+
+      if (searchInput) {
+        searchInput.value = '';
+      }
+      if (searchResultsContainer) {
+        searchResultsContainer.innerHTML = '';
+      }
     }
-    searchModal.style.display = '';
-    searchResultsContainer.innerHTML = '';
   }
 
   setTimeout(() => searchInput.focus(), 0);
