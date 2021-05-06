@@ -53,7 +53,7 @@ impl Oso {
         let inner = Arc::new(polar_core::polar::Polar::new());
         let host = Host::new(inner.clone());
 
-        let mut oso = Self { host, inner };
+        let mut oso = Self { inner, host };
 
         for class in crate::builtins::classes() {
             oso.register_class(class)
