@@ -1818,6 +1818,7 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
     steve_assignments = oso_roles.assignments_for_user(steve, session)
     assert len(steve_assignments) == 2
 
+
 def test_user_in_role(init_oso, sample_data, Repository, Organization):
     oso, oso_roles, session = init_oso
     policy = """

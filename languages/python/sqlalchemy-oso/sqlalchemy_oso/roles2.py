@@ -82,8 +82,9 @@ def role_allow_query(
     """
     return query
 
+
 def user_in_role_query(
-        id_query, type_query, child_types, resource_id_field, has_relationships
+    id_query, type_query, child_types, resource_id_field, has_relationships
 ):
     child_types = ",".join([f"'{ct}'" for ct in child_types])
 
@@ -698,7 +699,7 @@ class OsoRoles:
 
             primary_keys = inspect(resource.__class__).primary_key
             assert (
-                    len(primary_keys) == 1
+                len(primary_keys) == 1
             ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
             resource_pk_name = primary_keys[0].name
         except sqlalchemy.exc.NoInspectionAvailable:
@@ -736,7 +737,7 @@ class OsoRoles:
 
             primary_keys = inspect(resource.__class__).primary_key
             assert (
-                    len(primary_keys) == 1
+                len(primary_keys) == 1
             ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
             resource_pk_name = primary_keys[0].name
         except sqlalchemy.exc.NoInspectionAvailable:
