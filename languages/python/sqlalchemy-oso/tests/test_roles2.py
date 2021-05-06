@@ -19,11 +19,13 @@ def engine():
 
     return engine
 
+
 @pytest.fixture
 def Base():
     base = declarative_base(name="RoleBase")
 
     return base
+
 
 @pytest.fixture
 def User(Base):
@@ -35,6 +37,7 @@ def User(Base):
 
     return User
 
+
 @pytest.fixture
 def Organization(Base):
     class Organization(Base):
@@ -43,6 +46,7 @@ def Organization(Base):
         id = Column(String(), primary_key=True)
 
     return Organization
+
 
 @pytest.fixture
 def Repository(Base):
@@ -55,6 +59,7 @@ def Repository(Base):
 
     return Repository
 
+
 @pytest.fixture
 def Issue(Base):
     class Issue(Base):
@@ -65,6 +70,7 @@ def Issue(Base):
         repo = relationship("Repository")
 
     return Issue
+
 
 @pytest.fixture
 def init_oso(engine, Base, User, Organization, Repository, Issue):
@@ -1600,7 +1606,9 @@ def test_data_filtering_not(init_oso, sample_data, auth_sessionmaker, Organizati
         auth_session.query(Organization).all()
 
 
-def test_data_filtering_and(init_oso, sample_data, auth_sessionmaker, User, Organization):
+def test_data_filtering_and(
+    init_oso, sample_data, auth_sessionmaker, User, Organization
+):
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -1647,7 +1655,9 @@ def test_data_filtering_and(init_oso, sample_data, auth_sessionmaker, User, Orga
     assert len(results) == 0
 
 
-def test_data_filtering_explicit_or(init_oso, sample_data, auth_sessionmaker, User, Organization):
+def test_data_filtering_explicit_or(
+    init_oso, sample_data, auth_sessionmaker, User, Organization
+):
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -1691,7 +1701,9 @@ def test_data_filtering_explicit_or(init_oso, sample_data, auth_sessionmaker, Us
     assert len(results) == 0
 
 
-def test_data_filtering_implicit_or(init_oso, sample_data, auth_sessionmaker, User, Organization):
+def test_data_filtering_implicit_or(
+    init_oso, sample_data, auth_sessionmaker, User, Organization
+):
     # Ensure that the filter produced by `Roles.role_allows()` is not AND-ed
     # with a false filter produced by a separate `allow()` rule.
     oso, oso_roles, session = init_oso
