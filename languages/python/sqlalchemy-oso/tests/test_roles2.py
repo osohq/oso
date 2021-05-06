@@ -13,47 +13,61 @@ from sqlalchemy_oso.roles2 import OsoRoles
 from oso import Oso, OsoError
 
 
-Base = declarative_base(name="RoleBase")
-
-
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String())
-
-
-class Organization(Base):
-    __tablename__ = "organizations"
-
-    id = Column(String(), primary_key=True)
-
-
-class Repository(Base):
-    __tablename__ = "repositories"
-
-    id = Column(String(), primary_key=True)
-    org_id = Column(String(), ForeignKey("organizations.id"))
-    org = relationship("Organization")
-
-
-class Issue(Base):
-    __tablename__ = "issues"
-
-    id = Column(String(), primary_key=True)
-    repo_id = Column(String(), ForeignKey("repositories.id"))
-    repo = relationship("Repository")
-
-
 @pytest.fixture
 def engine():
     engine = create_engine("sqlite:///:memory:")
 
     return engine
 
+@pytest.fixture
+def Base():
+    base = declarative_base(name="RoleBase")
+
+    return base
 
 @pytest.fixture
-def init_oso(engine):
+def User(Base):
+    class User(Base):
+        __tablename__ = "users"
+
+        id = Column(Integer, primary_key=True)
+        name = Column(String())
+
+    return User
+
+@pytest.fixture
+def Organization(Base):
+    class Organization(Base):
+        __tablename__ = "organizations"
+
+        id = Column(String(), primary_key=True)
+
+    return Organization
+
+@pytest.fixture
+def Repository(Base):
+    class Repository(Base):
+        __tablename__ = "repositories"
+
+        id = Column(String(), primary_key=True)
+        org_id = Column(String(), ForeignKey("organizations.id"))
+        org = relationship("Organization")
+
+    return Repository
+
+@pytest.fixture
+def Issue(Base):
+    class Issue(Base):
+        __tablename__ = "issues"
+
+        id = Column(String(), primary_key=True)
+        repo_id = Column(String(), ForeignKey("repositories.id"))
+        repo = relationship("Repository")
+
+    return Issue
+
+@pytest.fixture
+def init_oso(engine, Base, User, Organization, Repository, Issue):
 
     # Initialize Oso and OsoRoles
     # ---------------------------
@@ -89,7 +103,7 @@ def auth_sessionmaker(init_oso, engine):
 
 
 @pytest.fixture
-def sample_data(init_oso):
+def sample_data(init_oso, User, Organization, Repository, Issue):
     _, _, session = init_oso
     # Create sample data
     # -------------------
@@ -131,7 +145,7 @@ def sample_data(init_oso):
 # - Passing a bad declarative_base to OsoRoles raises an exception
 
 
-def test_oso_roles_init(auth_sessionmaker):
+def test_oso_roles_init(auth_sessionmaker, Base, User, Organization, Repository, Issue):
     oso = Oso()
     register_models(oso, Base)
 
@@ -1547,7 +1561,7 @@ def test_reassign_user_role(init_oso, sample_data):
 # - [x] `role_allows` inside of a `not` (this probably won't work, so need error handling)
 
 
-def test_data_filtering_not(init_oso, sample_data, auth_sessionmaker):
+def test_data_filtering_not(init_oso, sample_data, auth_sessionmaker, Organization):
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -1586,7 +1600,7 @@ def test_data_filtering_not(init_oso, sample_data, auth_sessionmaker):
         auth_session.query(Organization).all()
 
 
-def test_data_filtering_and(init_oso, sample_data, auth_sessionmaker):
+def test_data_filtering_and(init_oso, sample_data, auth_sessionmaker, User, Organization):
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -1633,7 +1647,7 @@ def test_data_filtering_and(init_oso, sample_data, auth_sessionmaker):
     assert len(results) == 0
 
 
-def test_data_filtering_explicit_or(init_oso, sample_data, auth_sessionmaker):
+def test_data_filtering_explicit_or(init_oso, sample_data, auth_sessionmaker, User, Organization):
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -1677,7 +1691,7 @@ def test_data_filtering_explicit_or(init_oso, sample_data, auth_sessionmaker):
     assert len(results) == 0
 
 
-def test_data_filtering_implicit_or(init_oso, sample_data, auth_sessionmaker):
+def test_data_filtering_implicit_or(init_oso, sample_data, auth_sessionmaker, User, Organization):
     # Ensure that the filter produced by `Roles.role_allows()` is not AND-ed
     # with a false filter produced by a separate `allow()` rule.
     oso, oso_roles, session = init_oso
@@ -1723,7 +1737,7 @@ def test_data_filtering_implicit_or(init_oso, sample_data, auth_sessionmaker):
 # - [ ] Test getting all role assignments for a resource
 
 
-def test_read_api(init_oso, sample_data):
+def test_read_api(init_oso, sample_data, Repository, Organization):
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -1794,7 +1808,7 @@ def test_read_api(init_oso, sample_data):
 # LEGACY TEST
 
 
-def test_roles(init_oso, auth_sessionmaker):
+def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issue):
     oso, oso_roles, session = init_oso
 
     policy = """
