@@ -198,7 +198,7 @@ window.searchButtonClick = function(e) {
 
 import('tinykeys').then(tinykeys => {
   tinykeys.default(window, {
-    '$mod+KeyK': e => {
+    'Control+KeyK': e => {
       e.preventDefault();
       window.searchButtonClick(e);
     },
