@@ -32,7 +32,7 @@ def ctx(flask_app):
 @pytest.fixture
 def sqlalchemy(flask_app, oso):
     sqlalchemy = AuthorizedSQLAlchemy(
-        get_oso=lambda: oso, get_user=lambda: "user", get_action=lambda: "read"
+        get_oso=lambda: oso, get_user=lambda: "user", get_actions=lambda: "read"
     )
     sqlalchemy.init_app(flask_app)
     return sqlalchemy

@@ -24,7 +24,7 @@ def test_field_comparison(oso, engine):
     """
     )
 
-    authz_session = AuthorizedSession(oso=oso, user="u", action="a", bind=engine)
+    authz_session = AuthorizedSession(oso=oso, user="u", actions="a", bind=engine)
     posts = authz_session.query(Post).all()
     post_ids = [p.id for p in posts]
 
@@ -49,7 +49,7 @@ def test_scalar_in_list(oso, engine):
     """
     )
 
-    authz_session = AuthorizedSession(oso=oso, user="u", action="a", bind=engine)
+    authz_session = AuthorizedSession(oso=oso, user="u", actions="a", bind=engine)
     posts = authz_session.query(Post).all()
     post_ids = [p.id for p in posts]
 
@@ -76,7 +76,7 @@ def test_ground_object_in_collection(oso, engine):
     """
     )
 
-    authz_session = AuthorizedSession(oso=oso, user="u", action="a", bind=engine)
+    authz_session = AuthorizedSession(oso=oso, user="u", actions="a", bind=engine)
     posts = authz_session.query(Post).all()
     post_ids = [p.id for p in posts]
 
@@ -107,7 +107,7 @@ def test_all_objects_collection_condition(oso, engine):
     """
     )
 
-    authz_session = AuthorizedSession(oso=oso, user="u", action="a", bind=engine)
+    authz_session = AuthorizedSession(oso=oso, user="u", actions="a", bind=engine)
     posts = authz_session.query(Post).all()
     post_ids = [p.id for p in posts]
 
@@ -138,7 +138,7 @@ def test_no_objects_collection_condition(oso, engine):
     """
     )
 
-    authz_session = AuthorizedSession(oso=oso, user="u", action="a", bind=engine)
+    authz_session = AuthorizedSession(oso=oso, user="u", actions="a", bind=engine)
     posts = authz_session.query(Post).all()
     post_ids = [p.id for p in posts]
 

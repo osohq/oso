@@ -76,13 +76,13 @@ def init_oso(engine):
 def auth_sessionmaker(init_oso, engine):
     oso, oso_roles, _ = init_oso
     oso.actor = None
-    oso.action = None
+    oso.actions = None
 
     AuthSessionmaker = authorized_sessionmaker(
         bind=engine,
         get_oso=lambda: oso,
         get_user=lambda: oso.actor,
-        get_action=lambda: oso.action,
+        get_actions=lambda: oso.actions,
     )
 
     return AuthSessionmaker
@@ -1579,7 +1579,7 @@ def test_data_filtering_not(init_oso, sample_data, auth_sessionmaker):
     assert oso.is_allowed(steve, "invite", apple)
 
     oso.actor = leina
-    oso.action = "invite"
+    oso.actions = "invite"
     auth_session = auth_sessionmaker()
 
     with pytest.raises(OsoError):
@@ -1619,14 +1619,14 @@ def test_data_filtering_and(init_oso, sample_data, auth_sessionmaker):
     assert not oso.is_allowed(leina, "invite", apple)
 
     oso.actor = leina
-    oso.action = "invite"
+    oso.actions = "invite"
     auth_session = auth_sessionmaker()
 
     results = auth_session.query(Organization).all()
     assert len(results) == 1
 
     oso.actor = steve
-    oso.action = "invite"
+    oso.actions = "invite"
     auth_session = auth_sessionmaker()
 
     results = auth_session.query(User).all()
@@ -1663,14 +1663,14 @@ def test_data_filtering_explicit_or(init_oso, sample_data, auth_sessionmaker):
     assert oso.is_allowed(steve, "invite", apple)
 
     oso.actor = steve
-    oso.action = "invite"
+    oso.actions = "invite"
     auth_session = auth_sessionmaker()
 
     results = auth_session.query(Organization).all()
     assert len(results) == 2
 
     oso.actor = leina
-    oso.action = "invite"
+    oso.actions = "invite"
     auth_session = auth_sessionmaker()
 
     results = auth_session.query(User).all()
@@ -1708,7 +1708,7 @@ def test_data_filtering_implicit_or(init_oso, sample_data, auth_sessionmaker):
     assert oso.is_allowed(leina, "read", leina)
 
     oso.actor = leina
-    oso.action = "read"
+    oso.actions = "read"
     auth_session = auth_sessionmaker()
 
     results = auth_session.query(Organization).all()
@@ -1891,7 +1891,7 @@ def test_roles(init_oso, auth_sessionmaker):
     assert not oso.is_allowed(steve, "edit", laggy)
 
     oso.actor = leina
-    oso.action = "pull"
+    oso.actions = "pull"
     auth_session = auth_sessionmaker()
 
     results = auth_session.query(Repository).all()

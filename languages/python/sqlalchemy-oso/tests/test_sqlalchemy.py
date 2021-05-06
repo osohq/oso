@@ -121,7 +121,7 @@ def test_authorize_query_multiple_types(engine, oso, fixture_data):
 
 def test_alias(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
-    session = AuthorizedSession(oso, user="user", action="read", bind=engine)
+    session = AuthorizedSession(oso, user="user", actions="read", bind=engine)
 
     post_alias = aliased(Post)
 
@@ -140,7 +140,7 @@ def test_authorized_sessionmaker_relationship(engine, oso, fixture_data):
     Session = authorized_sessionmaker(
         get_oso=lambda: oso,
         get_user=lambda: "user",
-        get_action=lambda: "read",
+        get_actions=lambda: "read",
         bind=engine,
     )
 
@@ -170,7 +170,7 @@ def test_authorized_session_relationship(engine, oso, fixture_data):
     session = AuthorizedSession(
         oso=oso,
         user="user",
-        action="read",
+        actions="read",
         bind=engine,
     )
 
@@ -197,8 +197,8 @@ def test_scoped_session_relationship(engine, oso, fixture_data):
     oso.load_str('allow("other", "read", post: Post) if post.id = 3;')
     oso.load_str('allow("other", "write", post: Post) if post.id = 4;')
 
-    data = {"user": "user", "action": "read"}
-    session = scoped_session(lambda: oso, lambda: data["user"], lambda: data["action"])
+    data = {"user": "user", "actions": "read"}
+    session = scoped_session(lambda: oso, lambda: data["user"], lambda: data["actions"])
     session.configure(bind=engine)
 
     posts = session.query(Post)
@@ -226,7 +226,7 @@ def test_scoped_session_relationship(engine, oso, fixture_data):
     assert posts[0].id == 3
     assert len(session.identity_map.values()) == 1
 
-    data["action"] = "write"
+    data["actions"] = "write"
     assert len(session.identity_map.values()) == 0
     posts = session.query(Post)
     assert posts.count() == 1
@@ -235,7 +235,7 @@ def test_scoped_session_relationship(engine, oso, fixture_data):
     assert len(session.identity_map.values()) == 1
 
     # Change back to original.
-    data = {"user": "user", "action": "read"}
+    data = {"user": "user", "actions": "read"}
     assert len(session.identity_map.values()) == 3
 
 
@@ -248,7 +248,7 @@ def test_authorized_sessionmaker_user_change(engine, oso, fixture_data):
     Session = authorized_sessionmaker(
         get_oso=lambda: oso,
         get_user=lambda: user[0],
-        get_action=lambda: "read",
+        get_actions=lambda: "read",
         bind=engine,
     )
 
@@ -268,7 +268,7 @@ def test_null_with_partial(engine, oso):
     Session = authorized_sessionmaker(
         get_oso=lambda: oso,
         get_user=lambda: "user",
-        get_action=lambda: "read",
+        get_actions=lambda: "read",
         bind=engine,
     )
     posts = Session().query(Post)
@@ -294,7 +294,7 @@ def test_regular_session(engine, oso, fixture_data):
 
 def test_unconditional_policy_has_no_filter(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 1; allow(_, _, _);')
-    session = AuthorizedSession(oso, user="user", action="read", bind=engine)
+    session = AuthorizedSession(oso, user="user", actions="read", bind=engine)
 
     query = session.query(Post)
 
