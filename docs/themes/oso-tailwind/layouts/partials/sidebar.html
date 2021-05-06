@@ -27,7 +27,7 @@
                             </svg>
                             <span class="search-text">Search</span>
                         </div>
-                        <div class="command-k">⌘K</div>
+                        <div class="command-k">Ctrl-K</div>
                     </button>
                 </div>
                 {{ $currentNode := . }}
@@ -48,7 +48,6 @@
         </nav>
     </aside>
 </div>
-
 <!-- templates -->
 {{ define "tree-nav" }}
 {{ $currentNode := .currentNode }}
@@ -66,7 +65,7 @@
     {{ else }}
     hidden
     {{ end }}
-    {{ if eq $level 0 }}font-bold py-2{{else}}font-normal{{end}} 
+    {{ if eq $level 0 }}font-bold py-2{{else}}font-normal{{end}}
     {{ if $isCurrent}}active text-primary{{else}} text-black{{ end }}
 ">
     <a class="flex items-center px-3 hover:text-gray-900 transition-colors duration-200 mb-2" href="{{.RelPermalink}}">
@@ -101,7 +100,7 @@
         {{ else }}
         hidden
         {{ end }}
-        {{end}} 
+        {{end}}
         {{ if eq $level 0 }} font-bold {{ else }} font-normal {{ end}}
         text-black pl-2">
     <a class=" flex items-center px-3 transition-colors duration-200 mb-2" href="{{ .RelPermalink}}">
