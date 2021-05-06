@@ -15,7 +15,7 @@ from sqlalchemy import sql
 from oso import OsoError
 
 
-def user_in_role_query(
+def role_allow_query(
     id_query, type_query, child_types, resource_id_field, has_relationships
 ):
     child_types = ",".join([f"'{ct}'" for ct in child_types])
@@ -59,6 +59,66 @@ def user_in_role_query(
                 select
                     role
                 from permission_roles
+                union
+                select
+                    ri.from_role
+                from role_implications ri
+                join relevant_roles rr
+                on ri.to_role = rr.role
+            ) select * from relevant_roles
+        ), user_in_role as (
+            -- check if the user has any of those roles on any of the relevant resources
+            select
+                ur.resource_type,
+                ur.resource_id,
+                ur.role
+            from user_roles ur
+            join relevant_roles rr
+            on rr.role = ur.role
+            join resources r
+            on r.type = ur.resource_type and cast(r.id as text) = ur.resource_id
+            where ur.user_id = :user_id
+        ) select * from user_in_role
+    """
+    return query
+
+def user_in_role_query(
+        id_query, type_query, child_types, resource_id_field, has_relationships
+):
+    child_types = ",".join([f"'{ct}'" for ct in child_types])
+
+    if not has_relationships:
+        recur = ""
+    else:
+        recur = f"""
+        union
+        select
+            {id_query},
+            {type_query}
+        from resources
+        where type in ({child_types})"""
+    query = f"""
+        -- get all the relevant resources by walking the parent tree
+        with resources as (
+            with recursive resources (id, type) as (
+                select
+                    {resource_id_field} as id,
+                    :resource_type as type
+                {recur}
+            ) select * from resources        
+        ), role as (
+            -- find roles with the permission
+            select
+                r.name
+            from roles r
+            where r.name = :role
+        ), relevant_roles as (
+            -- recursively find all roles that have the permission or
+            -- imply a role that has the permission
+            with recursive relevant_roles (role) as (
+                select
+                    name
+                from role
                 union
                 select
                     ri.from_role
@@ -223,6 +283,12 @@ class OsoRoles:
                 if not self.configured:
                     self._read_policy()
                 return self._role_allows(user, action, resource)
+
+            @staticmethod
+            def user_in_role(user, role, resource):
+                if not self.configured:
+                    self._read_policy()
+                return self._user_in_role(user, role, resource)
 
         self.configured = False
         self.synced = False
@@ -537,7 +603,8 @@ class OsoRoles:
         type_query = "case resources.type\n"
         child_types = []
 
-        self.list_filter_queries = {}
+        self.role_allow_list_filter_queries = {}
+        self.user_in_role_list_filter_queries = {}
 
         # @NOTE: WOW HACK
         for relationship in self.relationships:
@@ -584,7 +651,11 @@ class OsoRoles:
         resource_id_field = "cast(:resource_id as text)"
 
         has_relationships = len(self.relationships) > 0
-        self.sql_query = user_in_role_query(
+        self.role_allow_sql_query = role_allow_query(
+            id_query, type_query, child_types, resource_id_field, has_relationships
+        )
+
+        self.user_in_role_sql_query = user_in_role_query(
             id_query, type_query, child_types, resource_id_field, has_relationships
         )
 
@@ -592,7 +663,17 @@ class OsoRoles:
             python_class = resource.python_class
             id_field = inspect(python_class).primary_key[0].name
             table = python_class.__tablename__
-            self.list_filter_queries[
+            self.role_allow_list_filter_queries[
+                python_class.__name__
+            ] = f"""
+                select
+                  {id_field}
+                from {table} R
+                where exists (
+                  {role_allow_query(id_query, type_query, child_types, "cast(R."+id_field+" as text)", has_relationships)}
+                )
+            """
+            self.user_in_role_list_filter_queries[
                 python_class.__name__
             ] = f"""
                 select
@@ -617,7 +698,7 @@ class OsoRoles:
 
             primary_keys = inspect(resource.__class__).primary_key
             assert (
-                len(primary_keys) == 1
+                    len(primary_keys) == 1
             ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
             resource_pk_name = primary_keys[0].name
         except sqlalchemy.exc.NoInspectionAvailable:
@@ -627,10 +708,48 @@ class OsoRoles:
         resource_id = str(getattr(resource, resource_pk_name))
 
         results = session.execute(
-            self.sql_query,
+            self.role_allow_sql_query,
             {
                 "user_id": user_id,
                 "action": action,
+                "resource_id": resource_id,
+                "resource_type": resource.__class__.__name__,
+            },
+        )
+        role = results.first()
+        if role:
+            return True
+        else:
+            return False
+
+    def _user_in_role(self, user, role, resource):
+        if isinstance(resource, Variable):
+            # resource is a variable, so we are running as a partial. It may be allowed.
+            # Defer to later.
+            return True
+
+        session = self._get_session()
+
+        try:
+            user_pk_name = inspect(user.__class__).primary_key[0].name
+            user_id = getattr(user, user_pk_name)
+
+            primary_keys = inspect(resource.__class__).primary_key
+            assert (
+                    len(primary_keys) == 1
+            ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
+            resource_pk_name = primary_keys[0].name
+        except sqlalchemy.exc.NoInspectionAvailable:
+            # User or Resource is not a sqlalchemy object
+            return False
+
+        resource_id = str(getattr(resource, resource_pk_name))
+
+        results = session.execute(
+            self.user_in_role_sql_query,
+            {
+                "user_id": user_id,
+                "role": role,
                 "resource_id": resource_id,
                 "resource_type": resource.__class__.__name__,
             },
@@ -808,7 +927,7 @@ def _add_query_filter(oso, user, action, resource_model):
         return sql.false()
 
     try:
-        role_list_sql = oso.roles.list_filter_queries[resource_type]
+        role_list_sql = oso.roles.role_allow_list_filter_queries[resource_type]
     except KeyError:
         return sql.false()
 

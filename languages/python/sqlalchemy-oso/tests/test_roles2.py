@@ -125,10 +125,12 @@ def sample_data(init_oso, User, Organization, Repository, Issue):
 
     leina = User(name="leina")
     steve = User(name="steve")
+    gabe = User(name="gabe")
 
     objs = {
         "leina": leina,
         "steve": steve,
+        "gabe": gabe,
         "apple": apple,
         "osohq": osohq,
         "ios": ios,
@@ -1815,6 +1817,50 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
     assert len(leina_assignments) == 2
     steve_assignments = oso_roles.assignments_for_user(steve, session)
     assert len(steve_assignments) == 2
+
+def test_user_in_role(init_oso, sample_data, Repository, Organization):
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        roles = {
+            org_member: {
+                implies: ["repo_read"]
+            },
+            org_owner: {
+                implies: ["org_member"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = ["pull"] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+
+    parent(repo: Repository, parent_org: Organization) if
+        repo.org = parent_org;
+
+
+    allow(actor, "read", repo: Repository) if
+        Roles.user_in_role(actor, "repo_read", repo);
+    """
+    oso.load_str(policy)
+    oso_roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    oso_repo = sample_data["oso_repo"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+    gabe = sample_data["gabe"]
+
+    oso_roles.assign_role(leina, osohq, "org_member")
+    oso_roles.assign_role(steve, oso_repo, "repo_read")
+
+    assert oso.is_allowed(leina, "read", oso_repo)
+    assert oso.is_allowed(steve, "read", oso_repo)
+    assert not oso.is_allowed(gabe, "read", oso_repo)
 
 
 # LEGACY TEST
