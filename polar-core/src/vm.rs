@@ -1879,8 +1879,9 @@ impl PolarVirtualMachine {
             | Value::Number(_)
             | Value::String(_) => {
                 // handle partial arguments to an external call
-                if self.handle_partial_args(object, field, value)? {
+                if let Some(constraint_term) = self.check_partial_args(object, field, value)? {
                     // if there is a valid partial argument, it means we have a special case handler, so don't call out to the method
+                    self.add_constraint(&constraint_term)?;
                     return Ok(QueryEvent::None);
                 }
                 let value = value
@@ -1930,70 +1931,112 @@ impl PolarVirtualMachine {
 
     /// Check for partially bound or unbound variable arguments to an external call.
     /// If any arguments are partially bound or unbound, return an error.
-    /// The only exception is the method `OsoRoles.role_allows()`, which expects a partially bound resource argument
-    fn handle_partial_args(
-        &mut self,
+    /// The only exception is the method `OsoRoles.role_allows()`, which expects a partially bound resource argument.
+    /// If the call is `OsoRoles.role_allows()`, return a term representing a special constraint for the method call.
+    fn check_partial_args(
+        &self,
         object: &Term,
         field: &Term,
         value: &Term,
-    ) -> PolarResult<bool> {
+    ) -> PolarResult<Option<Term>> {
         // If the lookup is a `Value::Call`, then we need to check for partial args
-        let mut has_partial_arg = false;
-        if let Value::Call(Call { name, args, kwargs }) = field.value() {
+        if let Value::Call(Call {
+            name,
+            args,
+            kwargs: maybe_kwargs,
+        }) = field.value()
+        {
             // get all arg values (args + kwargs)
-            let mut arg_values = args.clone();
-            if let Some(kwarg_map) = kwargs {
-                let mut v: Vec<Term> = kwarg_map.values().cloned().collect();
-                arg_values.append(&mut v)
-            }
-            for (i, arg) in arg_values.iter().enumerate() {
-                // Partial/unbound variables cannot be passed to external methods from Polar
-                if let Value::Variable(v) = arg.value() {
-                    match self.binding_manager.variable_state(v) {
-                        // bound variables are fine, continue
-                        VariableState::Bound(_) => continue,
-                        // TODO: temporary fix so that partial variables are only fine if being passed into "role_allows"
-                        VariableState::Partial => {
-                            if let Value::ExternalInstance(external) =
-                                self.deep_deref(&object).value()
-                            {
-                                if let Some(repr) = external.repr.clone() {
-                                    // only allow the third argument (resource) to be partially bound
-                                    if repr.contains("sqlalchemy_oso.roles2.OsoRoles")
-                                        && name.0 == "role_allows"
-                                        && i == 2
-                                    {
-                                        // add constraint for role_allows call
-                                        let dot = op!(
-                                            Dot,
-                                            object.clone(),
-                                            field.clone_with_value(Value::Call(Call {
-                                                name: name.clone(),
-                                                args: vec![arg.clone()],
-                                                kwargs: None
-                                            }))
-                                        );
-                                        let term =
-                                            &op!(Unify, value.clone(), dot.into_term()).into_term();
-                                        self.add_constraint(term)?;
-                                        has_partial_arg = true;
-                                        continue;
-                                    }
-                                }
-                            }
+            let mut arg_results = args
+                .iter()
+                .enumerate()
+                .filter_map(|(i, arg)| {
+                    if let Value::Variable(v) = arg.value() {
+                        match self.binding_manager.variable_state(v) {
+                            // bound variables are fine, continue
+                            VariableState::Bound(_) => None,
+                            // TODO: temporary fix so that partial variables are only fine if being passed into "role_allows"
+                            VariableState::Partial => Some(Ok(i)),
+                            VariableState::Unbound => Some(Err(self.set_error_context(
+                                &arg,
+                                error::RuntimeError::Unsupported {
+                                    msg: format!(
+                                        "cannot call method with unbound variable argument {}",
+                                        v
+                                    ),
+                                },
+                            ))),
                         }
-                        VariableState::Unbound => (),
+                    } else {
+                        None
                     }
-                    return Err(self.set_error_context(
-                        &arg,
-                        error::RuntimeError::Unsupported {
-                            msg: format!("cannot call method with unbound variable argument {}", v),
-                        },
-                    ));
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            let kwarg_results = maybe_kwargs
+                .clone()
+                .map(|kwargs| {
+                    kwargs
+                        .iter()
+                        .filter_map(|(key, arg)| {
+                            if let Value::Variable(v) = arg.value() {
+                                match self.binding_manager.variable_state(v) {
+                                    // bound variables are fine, continue
+                                    VariableState::Bound(_) => None,
+                                    // TODO: temporary fix so that partial variables are only fine if being passed into "role_allows"
+                                    VariableState::Partial => Some(Ok(key.clone())),
+                                    VariableState::Unbound => Some(Err(self.set_error_context(
+                                        &arg,
+                                        error::RuntimeError::Unsupported {
+                                            msg: format!(
+                                                "cannot call method with unbound variable argument {}", v
+                                            ),
+                                        },
+                                    ))),
+                                }
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()?;
+
+            // if arg_results.len() > 1 {
+            //     return
+            // }
+            // TODO: check number of args + arg positioning
+            if let Value::ExternalInstance(external) = self.deep_deref(&object).value() {
+                if let Some(repr) = external.repr.clone() {
+                    // only allow the third argument (resource) to be partially bound
+                    if repr.contains("sqlalchemy_oso.roles2.OsoRoles")
+                        && (name.0 == "role_allows" || name.0 == "user_in_role")
+                    {
+                        // create term to constrain for role_allows call
+                        let dot = op!(
+                            Dot,
+                            object.clone(),
+                            field.clone_with_value(Value::Call(Call {
+                                name: name.clone(),
+                                args: args.clone(),
+                                kwargs: None
+                            }))
+                        );
+                        let constraint_term =
+                            op!(Unify, value.clone(), dot.into_term()).into_term();
+                        return Ok(Some(constraint_term));
+                    }
                 }
             }
+            return Err(self.set_error_context(
+                field,
+                error::RuntimeError::Unsupported {
+                    msg: format!("cannot call method with unbound variable argument"),
+                },
+            ));
         }
-        Ok(has_partial_arg)
+
+        return Ok(None);
     }
 
     fn in_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
@@ -3793,5 +3836,40 @@ mod tests {
             QueryEvent::Debug { message } if &message[..] == "consequent" && vm.bindings(true).is_empty() && vm.is_halted(),
             QueryEvent::Done { result: true }
         ]);
+    }
+
+    #[test]
+    fn test_check_partial_args() {
+        let mut vm = PolarVirtualMachine::new_test(
+            Arc::new(RwLock::new(KnowledgeBase::new())),
+            false,
+            vec![],
+        );
+        let object = term!(ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: Some(String::from("sqlalchemy_oso.roles2.OsoRoles"))
+        });
+        let value = term!(sym!("result"));
+        let resource_var = term!(sym!("resource"));
+        vm.add_constraint(&term!(op!(
+            Isa,
+            resource_var.clone(),
+            term!(pattern!(instance!("Repository")))
+        )))
+        .unwrap();
+        let args = vec![
+            term!(value!("Leina")),
+            term!(value!("read")),
+            resource_var.clone(),
+        ];
+        let field = term!(Call {
+            name: sym!("role_allows"),
+            args,
+            kwargs: None
+        });
+        if let Some(constraint_term) = vm.check_partial_args(&object, &field, &value).unwrap() {
+            eprintln!("{}", constraint_term);
+        }
     }
 }
