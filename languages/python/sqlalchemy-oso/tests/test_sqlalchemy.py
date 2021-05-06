@@ -9,7 +9,7 @@ from sqlalchemy_oso.session import (
     AuthorizedSession,
 )
 
-from .models import User, Post
+from .models import Tag, User, Post
 from .conftest import print_query
 
 
@@ -303,3 +303,45 @@ def test_unconditional_policy_has_no_filter(engine, oso, fixture_data):
         + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
         + "posts.needs_moderation AS posts_needs_moderation \nFROM posts \nWHERE 1 = 1"
     )
+
+
+def test_authorized_sessionmaker_multiple_actions(engine, oso):
+    from sqlalchemy.orm import Session
+
+    session = Session(bind=engine)
+
+    foo_user = User(username="foo")
+    other_user = User(username="other")
+
+    foo_tag = Tag(name="foo", created_by=foo_user)
+    other_tag = Tag(name="other", created_by=other_user)
+
+    foo_post = Post(contents="foo post", created_by=foo_user, tags=[foo_tag, other_tag])
+    other_post = Post(
+        contents="other post", created_by=other_user, tags=[foo_tag, other_tag]
+    )
+
+    session.add_all([foo_user, foo_tag, foo_post, other_user, other_tag, other_post])
+    session.commit()
+
+    oso.load_str(
+        """
+        allow(user: User, "list_tags", post: Post) if post.created_by = user;
+        allow(user: User, "read", tag: Tag) if tag.created_by = user;
+        """
+    )
+
+    AuthSession = authorized_sessionmaker(
+        get_oso=lambda: oso,
+        get_user=lambda: foo_user,
+        get_actions=lambda: {Post: "list_tags", Tag: "read"},
+        bind=engine,
+    )
+
+    session = AuthSession()
+
+    posts = session.query(Post)
+    assert posts.count() == 1
+
+    tags = session.query(Tag)
+    assert tags.count() == 1
