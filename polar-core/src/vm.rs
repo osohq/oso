@@ -1248,15 +1248,12 @@ impl PolarVirtualMachine {
             Value::Call(Call { name, args, kwargs }) => (
                 name.clone(),
                 Some(args.iter().map(|arg| self.deep_deref(arg)).collect()),
-                match kwargs {
-                    Some(unwrapped) => Some(
-                        unwrapped
-                            .iter()
-                            .map(|(k, v)| (k.to_owned(), self.deep_deref(v)))
-                            .collect(),
-                    ),
-                    None => None,
-                },
+                kwargs.as_ref().map(|unwrapped| {
+                    unwrapped
+                        .iter()
+                        .map(|(k, v)| (k.to_owned(), self.deep_deref(v)))
+                        .collect()
+                }),
             ),
             Value::String(field) => (Symbol(field.clone()), None, None),
             v => {
