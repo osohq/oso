@@ -58,7 +58,7 @@ def Repository(Base):
         org = relationship("Organization")
 
     return Repository
-
+  
 
 @pytest.fixture
 def Issue(Base):
