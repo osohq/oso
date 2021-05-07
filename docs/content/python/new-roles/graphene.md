@@ -6,6 +6,7 @@ _build:
   list: never
 no_nav: true
 below_picker: "old-sqlalchemy"
+weight: 20
 ---
 
 {{< rolesIntro framework="Graphene" notYet=true >}}
