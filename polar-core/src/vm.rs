@@ -1956,7 +1956,7 @@ impl PolarVirtualMachine {
                             // bound variables are fine, continue
                             VariableState::Bound(_) => None,
                             // TODO: temporary fix so that partial variables are only fine if being passed into "role_allows"
-                            VariableState::Partial => Some(Ok(i)),
+                            VariableState::Partial => Some(Ok((i, arg))),
                             VariableState::Unbound => Some(Err(self.set_error_context(
                                 field,
                                 error::RuntimeError::Unsupported {
@@ -1985,7 +1985,7 @@ impl PolarVirtualMachine {
                                     // bound variables are fine, continue
                                     VariableState::Bound(_) => None,
                                     // TODO: temporary fix so that partial variables are only fine if being passed into "role_allows"
-                                    VariableState::Partial => Some(Ok(key.clone())),
+                                    VariableState::Partial => Some(Ok((key.clone(), arg.clone()))),
                                     VariableState::Unbound => Some(Err(self.set_error_context(
                                         field,
                                         error::RuntimeError::Unsupported {
@@ -2022,31 +2022,36 @@ impl PolarVirtualMachine {
                                             msg: format!("Cannot call method {} with more than 1 partially bound argument.", name.0
                                             ),
                                         }));
-                        } else if partial_args.len() == 1 && partial_args[0] != 2 {
+                        } else if partial_args.len() == 1 && partial_args[0].0 != 2 {
                             // Non-resource partial arg results in error
                             return Err(self.set_error_context(
                                         field,
                                         error::RuntimeError::Unsupported {
-                                            msg: format!("Cannot call method {} with partially bound argument at index {}.", name.0, partial_args[0]
+                                            msg: format!("Cannot call method {} with partially bound argument at index {}.", name.0, partial_args[0].0
                                             ),
                                         }));
                         } else if partial_kwargs.len() == 1
-                            && !partial_kwargs.contains(&sym!("resource"))
+                            && partial_kwargs[0].0 != sym!("resource")
                         {
                             return Err(self.set_error_context(
                                         field,
                                         error::RuntimeError::Unsupported {
-                                            msg: format!("Cannot call method {} with partially bound argument with keyword {}.", name.0, partial_kwargs[0]
+                                            msg: format!("Cannot call method {} with partially bound argument with keyword {}.", name.0, partial_kwargs[0].0
                                             ),
                                         }));
                         }
+                        let arg = if !partial_args.is_empty() {
+                            partial_args[0].1
+                        } else {
+                            &partial_kwargs[0].1
+                        };
                         // create term to constrain for role_allows call
                         let dot = op!(
                             Dot,
                             object.clone(),
                             field.clone_with_value(Value::Call(Call {
                                 name: name.clone(),
-                                args: args.clone(),
+                                args: vec![arg.clone()],
                                 kwargs: None
                             }))
                         );
