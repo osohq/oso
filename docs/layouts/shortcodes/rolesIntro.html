@@ -1,4 +1,10 @@
-<h1>Oso Roles Library</h1>
+<h1>Oso Roles Library
+    {{ if eq (.Get "cannotUse") true }}
+    <span class="bg-yellow text-gray-700 text-lg rounded-full px-5 py-1 inline-block align-middle">Coming soon for {{ .Get "framework" }}</span>
+    {{ else }}
+    <span class="bg-primary text-white text-lg rounded-full px-5 py-1 inline-block align-middle">Early Access</span>
+    {{ end }}
+</h1>
 
 {{ if eq (.Get "cannotUse") true }}
 <p>The Oso roles library provides a configuration-based approach to adding role-based access control
