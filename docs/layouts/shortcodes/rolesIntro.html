@@ -11,31 +11,34 @@
     to your application. The library is in early access.</p>
 
 <p>Right now, the library is only compatible with SQLAlchemy and generally cannot be used with
-    {{ .Get "framework" }} based apps. Check out our <a href="{{ ref . "learn/roles" }}">roles
-        modeling guide</a> to see how to model roles yourself in Polar, or <a
-        href="http://join-slack.osohq.com">join our Slack</a> to chat
-    with our team about implementing roles.
+    {{ .Get "framework" }} based apps. To get help with roles in your app now or to let us know how badly you want an Oso Roles
+        library in {{ .Get "framework" }}, <a href="http://join-slack.osohq.com">drop into our Slack</a>
+        or <a href="mailto:engineering@osohq.com?subject=Roles%20for%20{{ .Get "framework" }}">send an email to our engineering team</a>.
 {{ else }}
 {{ if eq (.Get "notYet") true }}
 <p>The Oso roles library provides a configuration-based approach to adding role-based access control
     to your application. The library is in early access.</p>
 
 <p>If you are using {{ .Get "framework" }} with SQLAlchemy, the roles library is already compatible!
-Our example application (GitClub) uses Flask, but the same concepts apply. For some pointers on
-using Oso Roles with {{ .Get "framework" }},
-<a href="http://join-slack.osohq.com">jump into our Slack</a> and chat with our team.
+Our example application (<a href="https://github.com/osohq/gitclub-sqlalchemy-flask-react">GitClub</a>) uses Flask, but the same concepts apply. For some pointers on
+using Oso Roles with {{ .Get "framework" }} or if you find yourself getting stuck, <a href="http://join-slack.osohq.com">drop into our Slack</a>
+or <a href="mailto:engineering@osohq.com?subject=Help%20with%20roles">send an email to our engineering team</a> and we'll unblock you.
+
 </p>
 {{ else }}
 <p>The Oso roles library provides a configuration-based approach to adding role-based access control
     to your application. The library is in early access.
 
     The following guides show how to use the library to add roles to a {{ .Get "framework" }} app
-    with GitClub, our best practice example app. The roles library is compatible with the SQLAlchemy
+    with <a href="https://github.com/osohq/gitclub-sqlalchemy-flask-react">GitClub</a>, our best practice example app. The roles library is compatible with the SQLAlchemy
     ORM.</p>
+
+<p>
+If at any point you get stuck, <a href="http://join-slack.osohq.com">drop into our Slack</a>
+or <a href="mailto:engineering@osohq.com?subject=Roles%20for%20{{ .Get "framework" }}">send an email
+    to our engineering team</a> and we'll unblock you.</p>
+
 {{ end }}
 {{ end }}
 
 {{ ($.Site.GetPage "/new-roles/intro.md").Content }}
-
-<p>If you are looking for the the currently released version of the sqlalchemy-oso library, you can
-    find it <a href="{{ ref . "/reference/frameworks/sqlalchemy" }}">here</a>.</p>

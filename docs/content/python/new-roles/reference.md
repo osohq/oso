@@ -1,7 +1,7 @@
 ---
 title: API Documentation
 description: >
-    API Documentation for sqlalchemy roles preview.
+    Python documentation for Oso Roles
 weight: 6
 ---
 

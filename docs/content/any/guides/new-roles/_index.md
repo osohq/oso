@@ -3,7 +3,7 @@ title: "Build Role-Based Access Control (30 min)"
 weight: 1
 ---
 
-# Build Role-Based Access Control (30 min)
+# Build Role-Based Access Control (30 min) {{< earlyAccess textSize="sm">}}
 
 When managing access to resources within an application, it can be
 useful to group permissions into **roles**, and assign these roles to
@@ -25,7 +25,7 @@ The roles library includes:
 - **End-user configuration** - Expose authorization configuration to
   end users using Oso's role data API.
 - **Last-mile customizations** - Extend authorization logic for each resource
-  by writing custom policies using **Polar**, Oso's declarative policy
+  by writing custom policies using Polar, Oso's declarative policy
   language.
 
 ## Get started
@@ -34,10 +34,13 @@ The roles library includes:
 
 {{< tryInFramework >}}
 
+If you are looking for the the currently released version of the sqlalchemy-oso library, you can
+find it [here](/reference/frameworks/sqlalchemy).
+
 {{% /ifLang %}}
 
 {{% ifLang not="python" %}}
-The Oso Roles library is coming soon for {{< lang >}}!
+The Oso Roles library is coming soon for {{< lang >}}! {{< /lang >}}
 
 For now, you can [check out the library documentation for Python]({{< ref path="/new-roles" lang="python" >}}) or read our [guide on role modeling in Polar](/learn/roles).
 

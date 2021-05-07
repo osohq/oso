@@ -2,7 +2,7 @@
 title: Getting started
 weight: 2
 description: >
-    Getting started with SQLAlchemy roles
+    Getting started with Oso Roles
 ---
 
 # Getting started

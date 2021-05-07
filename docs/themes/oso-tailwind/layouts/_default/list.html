@@ -12,12 +12,23 @@
           {{ else }}
             {{ partial "toc.html" . }}
           {{ end }}
+          {{ if (eq .Params.below_picker "old-sqlalchemy") }}
+            <p class="prose max-w-none">If you are looking for the the currently released version of
+                the sqlalchemy-oso library, you can find it <a href="{{ ref . "/reference/frameworks/sqlalchemy" }}">here</a>.</p>
+          {{ end }}
+          {{ if (eq .Params.below_picker "roles-cta") }}
+            <p class="prose max-w-none mt-4">Adding roles to your application? Check out our guide on
+                <a href="{{ ref . "/guides/new-roles" }}">Building Role-Based Access Control with Oso</a>.</p>
+          {{ end }}
           <!--/ Post Content-->
         </div>
       </div>
     </main>
-  {{ else }}
+{{ else }}
     <div class="w-3/5 text-black leading-normal pt-6 mx-auto static">
+    <article class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:mr-64 xl:px-8 pt-10 pb-24 lg:pb-16">
+        <h1>{{ $.Page.Title }}</h1>
+    </article>
       <h2 class="text-xl font-semibold text-primary-dark pb-4">
         Choose your language:
       </h2>
