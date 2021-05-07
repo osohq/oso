@@ -28,6 +28,7 @@ constructable
 coroutine
 CTO
 cURL
+customizations
 dataloader
 dataloaders
 declaratively
@@ -126,6 +127,7 @@ SaaS
 Sascha
 specializer
 specializers
+sqlalchemy
 SQLAlchemy
 SQLAlchemy's
 SQLite
