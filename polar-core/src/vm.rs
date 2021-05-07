@@ -1946,8 +1946,8 @@ impl PolarVirtualMachine {
             kwargs: maybe_kwargs,
         }) = field.value()
         {
-            // get all arg values (args + kwargs)
-            let mut arg_results = args
+            // get all partially-bound args
+            let partial_args = args
                 .iter()
                 .enumerate()
                 .filter_map(|(i, arg)| {
@@ -1958,7 +1958,7 @@ impl PolarVirtualMachine {
                             // TODO: temporary fix so that partial variables are only fine if being passed into "role_allows"
                             VariableState::Partial => Some(Ok(i)),
                             VariableState::Unbound => Some(Err(self.set_error_context(
-                                &arg,
+                                field,
                                 error::RuntimeError::Unsupported {
                                     msg: format!(
                                         "cannot call method with unbound variable argument {}",
@@ -1973,7 +1973,8 @@ impl PolarVirtualMachine {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
-            let kwarg_results = maybe_kwargs
+            // get all partially-bound kwargs
+            let partial_kwargs = maybe_kwargs
                 .clone()
                 .map(|kwargs| {
                     kwargs
@@ -1986,7 +1987,7 @@ impl PolarVirtualMachine {
                                     // TODO: temporary fix so that partial variables are only fine if being passed into "role_allows"
                                     VariableState::Partial => Some(Ok(key.clone())),
                                     VariableState::Unbound => Some(Err(self.set_error_context(
-                                        &arg,
+                                        field,
                                         error::RuntimeError::Unsupported {
                                             msg: format!(
                                                 "cannot call method with unbound variable argument {}", v
@@ -2000,18 +2001,45 @@ impl PolarVirtualMachine {
                         })
                         .collect::<Result<Vec<_>, _>>()
                 })
-                .transpose()?;
+                .transpose()?.unwrap_or(vec![]);
 
-            // if arg_results.len() > 1 {
-            //     return
-            // }
-            // TODO: check number of args + arg positioning
+            // If there are no partial args or kwargs, return
+            if partial_args.len() + partial_kwargs.len() == 0 {
+                return Ok(None);
+            }
+
+            // TODO: temprorary fix--If there are partial args, they must be called on `role_allows` or `user_in_role`
             if let Value::ExternalInstance(external) = self.deep_deref(&object).value() {
                 if let Some(repr) = external.repr.clone() {
-                    // only allow the third argument (resource) to be partially bound
                     if repr.contains("sqlalchemy_oso.roles2.OsoRoles")
                         && (name.0 == "role_allows" || name.0 == "user_in_role")
                     {
+                        if partial_args.len() + partial_kwargs.len() > 1 {
+                            // More than 1 partial arg results in error
+                            return Err(self.set_error_context(
+                                        field,
+                                        error::RuntimeError::Unsupported {
+                                            msg: format!("Cannot call method {} with more than 1 partially bound argument.", name.0
+                                            ),
+                                        }));
+                        } else if partial_args.len() == 1 && partial_args[0] != 2 {
+                            // Non-resource partial arg results in error
+                            return Err(self.set_error_context(
+                                        field,
+                                        error::RuntimeError::Unsupported {
+                                            msg: format!("Cannot call method {} with partially bound argument at index {}.", name.0, partial_args[0]
+                                            ),
+                                        }));
+                        } else if partial_kwargs.len() == 1
+                            && !partial_kwargs.contains(&sym!("resource"))
+                        {
+                            return Err(self.set_error_context(
+                                        field,
+                                        error::RuntimeError::Unsupported {
+                                            msg: format!("Cannot call method {} with partially bound argument with keyword {}.", name.0, partial_kwargs[0]
+                                            ),
+                                        }));
+                        }
                         // create term to constrain for role_allows call
                         let dot = op!(
                             Dot,
@@ -2028,15 +2056,17 @@ impl PolarVirtualMachine {
                     }
                 }
             }
+            // If the call wasn't to one of the specially-allowed methods, throw an error
             return Err(self.set_error_context(
                 field,
                 error::RuntimeError::Unsupported {
-                    msg: format!("cannot call method with unbound variable argument"),
+                    msg: format!("cannot call method with partially-bound arguments"),
                 },
             ));
+        } else {
+            // If the lookup isn't a `Value::Call`, return
+            Ok(None)
         }
-
-        return Ok(None);
     }
 
     fn in_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
