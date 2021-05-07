@@ -1,0 +1,35 @@
+<h1>Oso Roles Library</h1>
+
+{{ if eq (.Get "cannotUse") true }}
+<p>The Oso roles library provides a configuration-based approach to adding role-based access control
+    to your application. The library is in early access.</p>
+
+<p>Right now, the library is only compatible with SQLAlchemy and generally cannot be used with
+    {{ .Get "framework" }} based apps. Check out our <a href="{{ ref . "learn/roles" }}">roles
+        modeling guide</a> to see how to model roles yourself in Polar, or <a
+        href="http://join-slack.osohq.com">join our Slack</a> to chat
+    with our team about implementing roles.
+{{ else }}
+{{ if eq (.Get "notYet") true }}
+<p>The Oso roles library provides a configuration-based approach to adding role-based access control
+    to your application. The library is in early access.</p>
+
+<p>If you are using {{ .Get "framework" }} with SQLAlchemy, the roles library is already compatible!
+Our example application (GitClub) uses Flask, but the same concepts apply. For some pointers on
+using Oso Roles with {{ .Get "framework" }},
+<a href="http://join-slack.osohq.com">jump into our Slack</a> and chat with our team.
+</p>
+{{ else }}
+<p>The Oso roles library provides a configuration-based approach to adding role-based access control
+    to your application. The library is in early access.
+
+    The following guides show how to use the library to add roles to a {{ .Get "framework" }} app
+    with GitClub, our best practice example app. The roles library is compatible with the SQLAlchemy
+    ORM.</p>
+{{ end }}
+{{ end }}
+
+{{ ($.Site.GetPage "/new-roles/intro.md").Content }}
+
+<p>If you are looking for the the currently released version of the sqlalchemy-oso library, you can
+    find it <a href="{{ ref . "/reference/frameworks/sqlalchemy" }}">here</a>.</p>
