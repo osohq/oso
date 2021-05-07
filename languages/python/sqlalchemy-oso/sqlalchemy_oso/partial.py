@@ -53,42 +53,37 @@ def and_filter(current, new):
 def partial_to_filter(expression: Expression, session: Session, model, get_model):
     """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
     expression = preprocess(expression)
+    contains_roles_method = check_for_roles_method(expression)
 
-    role_allows = False
-    if contains_role_allows(expression):
-        role_allows = True
+    return (
+        translate_expr(expression, session, model, get_model),
+        contains_roles_method,
+    )
 
-    return (translate_expr(expression, session, model, get_model), role_allows)
 
-
-def contains_role_allows(expression: Expression):
-    def _is_role_allow(op, left, right):
-        op = expr.operator
-        left = expr.args[0]
-        right = expr.args[1]
-        is_role_allow = (
+def check_for_roles_method(expression: Expression):
+    def _is_roles_method(op, left, right):
+        is_roles_method = (
             left is True
             and right.operator == "Dot"
-            # TODO: check type of right.args[0] (should match whatever the roles object is)
-            # and type(right.args[0]) == OsoRoles
             and type(right.args[1]) == Predicate
-            and right.args[1].name == "role_allows"
+            and (
+                right.args[1].name == "role_allows"
+                or right.args[1].name == "user_in_role"
+            )
         )
 
-        if is_role_allow:
+        if is_roles_method:
             if op != "Unify":
                 raise OsoError("Roles don't currently work with not.")
-            assert right.args[1].args[0] == Variable(
-                "_this"
-            ), "Role allows can only be performed on resource."
 
-        return is_role_allow
+        return is_roles_method
 
     assert expression.operator == "And"
     for expr in expression.args:
-        if _is_role_allow(expr.operator, expr.args[0], expr.args[1]) or _is_role_allow(
-            expr.operator, expr.args[1], expr.args[0]
-        ):
+        if _is_roles_method(
+            expr.operator, expr.args[0], expr.args[1]
+        ) or _is_roles_method(expr.operator, expr.args[1], expr.args[0]):
             expression.args.remove(expr)
             return True
 
