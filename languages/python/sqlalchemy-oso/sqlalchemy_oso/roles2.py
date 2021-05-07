@@ -957,6 +957,37 @@ def _add_query_filter(oso, user, action, resource_model):
     return id_in
 
 
+def _add_query_user_in_role_filter(oso, user, role, resource_model):
+    session = oso.roles._get_session()
+
+    try:
+        user_pk_name = inspect(user.__class__).primary_key[0].name
+        user_id = getattr(user, user_pk_name)
+
+        resource_type = resource_model.__name__
+        resource_pk_name = inspect(resource_model).primary_key[0].name
+    except sqlalchemy.exc.NoInspectionAvailable:
+        # User or Resource is not a sqlalchemy object
+        return sql.false()
+
+    try:
+        list_sql = oso.roles.user_in_role_list_filter_queries[resource_type]
+    except KeyError:
+        return sql.false()
+
+    results = session.execute(
+        list_sql,
+        {
+            "user_id": user_id,
+            "role": role,
+            "resource_type": resource_type,
+        },
+    )
+    resource_ids = [id[0] for id in results.fetchall()]
+    id_in = getattr(resource_model, resource_pk_name).in_(resource_ids)
+    return id_in
+
+
 def _check_valid_model(*args, raise_error=True):
     for model in args:
         valid = True
