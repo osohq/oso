@@ -41,6 +41,7 @@ disambiguated
 disjunction
 disjunctions
 Django
+django
 embeddable
 EMR
 EndsWith
