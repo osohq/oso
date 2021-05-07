@@ -3875,11 +3875,13 @@ mod tests {
             false,
             vec![],
         );
-        let object = term!(ExternalInstance {
+
+        // Test with valid args
+        let object = term!(Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
             constructor: None,
             repr: Some(String::from("sqlalchemy_oso.roles2.OsoRoles"))
-        });
+        }));
         let value = term!(sym!("result"));
         let resource_var = term!(sym!("resource"));
         vm.add_constraint(&term!(op!(
@@ -3893,13 +3895,64 @@ mod tests {
             term!(value!("read")),
             resource_var.clone(),
         ];
-        let field = term!(Call {
+        let role_allows_field = term!(Call {
             name: sym!("role_allows"),
-            args,
+            args: args.clone(),
             kwargs: None
         });
-        if let Some(constraint_term) = vm.check_partial_args(&object, &field, &value).unwrap() {
-            eprintln!("{}", constraint_term);
-        }
+        let user_in_role_field = term!(Call {
+            name: sym!("user_in_role"),
+            args: args.clone(),
+            kwargs: None
+        });
+        let role_allows_dot_args = vec![object.clone(), role_allows_field.clone(), value.clone()];
+        let user_in_role_dot_args = vec![object.clone(), user_in_role_field.clone(), value.clone()];
+        // Test role_allows
+        let res_val = vm
+            .check_partial_args(&object, &role_allows_field, &value)
+            .unwrap()
+            .unwrap();
+
+        assert!(matches!(
+            res_val.value(),
+            Value::Expression(Operation {
+                operator: Dot,
+                args: role_allows_dot_args
+            })
+        ));
+        // Test user_in_role
+        let res_val = vm
+            .check_partial_args(&object, &user_in_role_field, &value)
+            .unwrap()
+            .unwrap();
+
+        assert!(matches!(
+            res_val.value(),
+            Value::Expression(Operation {
+                operator: Dot,
+                args: user_in_role_dot_args
+            })
+        ));
+
+        // Test on invalid instance
+        let object = term!(Value::ExternalInstance(ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: Some(String::from("sqlalchemy_oso.roles2.FakeRoles"))
+        }));
+        assert!(vm
+            .check_partial_args(&object, &role_allows_field, &value)
+            .is_err());
+
+        // Test with invalid method name
+        let bad_method = term!(Call {
+            name: sym!("bad_method"),
+            args: args.clone(),
+            kwargs: None
+        });
+        assert!(vm.check_partial_args(&object, &bad_method, &value).is_err())
+
+        // TODO: Test with invalid arg position
+        // TODO: Test with kwargs
     }
 }
