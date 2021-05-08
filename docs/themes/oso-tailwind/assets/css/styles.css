@@ -8,6 +8,10 @@
 @import "node_modules/tailwindcss/utilities";
 
 
+.really-make-it-white {
+  color: white !important;
+}
+
 button > * {
   pointer-events: none;
 }
