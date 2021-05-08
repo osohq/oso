@@ -12,6 +12,15 @@ The Oso SQLAlchemy integration enables data filtering
 to be used with SQLAlchemy models and provides built-in SQLAlchemy models for
 Role-Based Access Control.
 
+{{% callout "Adding roles to your application with SQLAlchemy?" "blue" %}}
+
+We just released early access to the next version of our roles
+library.
+
+[Check it out here!](/new-roles)
+
+{{% /callout %}}
+
 ## Installation
 
 The Oso SQLAlchemy integration is available on [PyPI](https://pypi.org/project/sqlalchemy-oso/) and can be installed using
@@ -20,16 +29,6 @@ The Oso SQLAlchemy integration is available on [PyPI](https://pypi.org/project/s
 ```
 $ pip install sqlalchemy-oso
 ```
-
-{{% callout "Early access to the next version of sqlalchemy-oso" "blue" %}}
-
-We just released early access to the next version of our SQLAlchemy
-library, which will include improved support for common authorization
-models, like role based access control.
-
-[Check it out here!](/new-roles)
-
-{{% /callout %}}
 
 ## Usage
 
