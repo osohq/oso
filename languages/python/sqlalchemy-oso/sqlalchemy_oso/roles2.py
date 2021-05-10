@@ -724,10 +724,10 @@ class OsoRoles:
             return False
 
     def _user_in_role(self, user, role, resource):
-        if isinstance(resource, Variable):
-            # resource is a variable, so we are running as a partial. It may be allowed.
-            # Defer to later.
-            return True
+        # We shouldn't get any data filtering calls to this method
+        assert not isinstance(resource, Variable)
+        if not isinstance(role, str):
+            raise OsoError("user_in_role() expects a string role, got {}", role)
 
         session = self._get_session()
 
