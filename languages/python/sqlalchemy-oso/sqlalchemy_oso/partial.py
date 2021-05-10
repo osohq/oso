@@ -53,11 +53,11 @@ def and_filter(current, new):
 def partial_to_filter(expression: Expression, session: Session, model, get_model):
     """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
     expression = preprocess(expression)
-    contains_roles_method = check_for_roles_method(expression)
+    roles_method = check_for_roles_method(expression)
 
     return (
         translate_expr(expression, session, model, get_model),
-        contains_roles_method,
+        roles_method,
     )
 
 
@@ -73,21 +73,28 @@ def check_for_roles_method(expression: Expression):
             )
         )
 
+        method = None
         if is_roles_method:
             if op != "Unify":
                 raise OsoError("Roles don't currently work with not.")
+            method = right.args[1]
 
-        return is_roles_method
+        return is_roles_method, method
 
     assert expression.operator == "And"
     for expr in expression.args:
-        if _is_roles_method(
-            expr.operator, expr.args[0], expr.args[1]
-        ) or _is_roles_method(expr.operator, expr.args[1], expr.args[0]):
+        # Try with method call on right
+        is_roles, method = _is_roles_method(expr.operator, expr.args[0], expr.args[1])
+        if is_roles:
             expression.args.remove(expr)
-            return True
+            return method
+        # Try with method call on left
+        is_roles, method = _is_roles_method(expr.operator, expr.args[1], expr.args[0])
+        if is_roles:
+            expression.args.remove(expr)
+            return method
 
-    return False
+    return None
 
 
 def translate_expr(expression: Expression, session: Session, model, get_model):

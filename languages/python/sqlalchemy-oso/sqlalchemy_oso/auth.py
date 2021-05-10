@@ -84,14 +84,28 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
         has_result = True
 
         resource_partial = result["bindings"]["resource"]
-        filter, contains_role_method = partial_to_filter(
+        filter, role_method = partial_to_filter(
             resource_partial, session, model, get_model=oso.get_class
         )
 
-        if contains_role_method:
-            roles_filter = roles2._add_query_filter(oso, actor, action, model)
-            # TODO: is this the right place to do this? Should it be inside of `_authorize_query()` instead?
-            filter &= roles_filter
+        if role_method is not None:
+            actor = role_method.args[0]
+            action_or_role = role_method.args[1]
+            if role_method.name == "role_allows":
+                roles_filter = roles2._add_query_filter(
+                    oso, actor, action_or_role, model
+                )
+                # TODO: is this the right place to do this? Should it be inside of `_authorize_query()` instead?
+                filter &= roles_filter
+            # elif role_method.name == "user_in_role":
+            #     roles_filter = roles2._add_query_user_in_role_filter(
+            #         oso, actor, action_or_role, model
+            #     )
+            #     # TODO: is this the right place to do this? Should it be inside of `_authorize_query()` instead?
+            #     filter &= roles_filter
+            # else:
+            #     # Should never reach here
+            #     assert False
 
         if combined_filter is None:
             combined_filter = filter
