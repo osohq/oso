@@ -3917,18 +3917,18 @@ mod tests {
         });
         let user_in_role_constraint = term!(Call {
             name: sym!("user_in_role"),
-            args: vec![resource_var.clone()],
+            args: vec![resource_var],
             kwargs: None
         });
         let role_allows_constraint_term = term!(op!(
             Unify,
             value.clone(),
-            term!(op!(Dot, object.clone(), role_allows_constraint.clone()))
+            term!(op!(Dot, object.clone(), role_allows_constraint))
         ));
         let user_in_role_constraint_term = term!(op!(
             Unify,
             value.clone(),
-            term!(op!(Dot, object.clone(), user_in_role_constraint.clone()))
+            term!(op!(Dot, object.clone(), user_in_role_constraint))
         ));
         // let user_in_role_dot_args = vec![object.clone(), user_in_role_constraint.clone()];
         // Test role_allows
