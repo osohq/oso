@@ -95,17 +95,15 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
                 roles_filter = roles2._add_query_filter(
                     oso, actor, action_or_role, model
                 )
-                # TODO: is this the right place to do this? Should it be inside of `_authorize_query()` instead?
                 filter &= roles_filter
-            # elif role_method.name == "user_in_role":
-            #     roles_filter = roles2._add_query_user_in_role_filter(
-            #         oso, actor, action_or_role, model
-            #     )
-            #     # TODO: is this the right place to do this? Should it be inside of `_authorize_query()` instead?
-            #     filter &= roles_filter
-            # else:
-            #     # Should never reach here
-            #     assert False
+            elif role_method.name == "user_in_role":
+                roles_filter = roles2._add_query_user_in_role_filter(
+                    oso, actor, action_or_role, model
+                )
+                filter &= roles_filter
+            else:
+                # Should never reach here
+                assert False
 
         if combined_filter is None:
             combined_filter = filter

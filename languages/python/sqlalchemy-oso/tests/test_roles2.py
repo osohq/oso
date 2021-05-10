@@ -1569,6 +1569,52 @@ def test_reassign_user_role(init_oso, sample_data):
 # - [x] `role_allows` inside of a `not` (this probably won't work, so need error handling)
 
 
+@pytest.mark.xfail(
+    reason="Currently failing because we have a bug with filtering roles data--not returning relationships"
+)
+def test_basic_data_filtering(
+    init_oso, sample_data, auth_sessionmaker, User, Organization, Repository
+):
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"],
+                implies: ["repo_read"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = ["pull"] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+
+    parent(repo: Repository, parent_org: Organization) if
+        repo.org = parent_org;
+
+    allow(actor, action, resource: Repository) if
+        resource.org_id = "osohq";
+    """
+    oso.load_str(policy)
+    oso_roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    steve = sample_data["steve"]
+
+    # Make sure basic data filtering works with test data
+    oso.actor = steve
+    oso.action = "pull"
+    auth_session = auth_sessionmaker()
+    results = auth_session.query(Repository).all()
+    assert len(results) == 2
+    assert results[0].org == osohq
+
+
 def test_data_filtering_not(init_oso, sample_data, auth_sessionmaker, Organization):
     oso, oso_roles, session = init_oso
     policy = """
@@ -1617,9 +1663,21 @@ def test_data_filtering_and(
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                perms: ["invite"],
+                implies: ["repo_read"]
             }
         };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = ["pull"] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+
+    parent(repo: Repository, parent_org: Organization) if
+        repo.org = parent_org;
 
     allow(actor, action, resource) if
         Roles.role_allows(actor, action, resource) and
@@ -1658,7 +1716,7 @@ def test_data_filtering_and(
 
 
 def test_data_filtering_explicit_or(
-    init_oso, sample_data, auth_sessionmaker, User, Organization
+    init_oso, sample_data, auth_sessionmaker, User, Organization, Repository
 ):
     oso, oso_roles, session = init_oso
     policy = """
@@ -1666,9 +1724,21 @@ def test_data_filtering_explicit_or(
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                perms: ["invite"],
+                implies: ["repo_read"]
             }
         };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = ["pull"] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+
+    parent(repo: Repository, parent_org: Organization) if
+        repo.org = parent_org;
 
     allow(actor, action, resource) if
         Roles.role_allows(actor, action, resource) or
@@ -1695,12 +1765,18 @@ def test_data_filtering_explicit_or(
     results = auth_session.query(Organization).all()
     assert len(results) == 2
 
+    oso.actor = steve
+    oso.action = "pull"
+    auth_session = auth_sessionmaker()
+    results = auth_session.query(Repository).all()
+    assert len(results) == 1
+    assert results[0].org_id == "apple"
+
     oso.actor = leina
     oso.action = "invite"
     auth_session = auth_sessionmaker()
-
-    results = auth_session.query(User).all()
-    assert len(results) == 0
+    results = auth_session.query(Organization).all()
+    assert len(results) == 1
 
 
 def test_data_filtering_implicit_or(
@@ -1872,7 +1948,9 @@ def test_user_in_role(
     auth_session = auth_sessionmaker()
 
     results = auth_session.query(Repository).all()
-    assert len(results) == 1
+    assert len(results) == 2
+    for repo in results:
+        assert repo.org_id == "osohq"
 
 
 # LEGACY TEST

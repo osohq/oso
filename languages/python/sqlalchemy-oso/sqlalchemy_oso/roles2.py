@@ -106,7 +106,7 @@ def user_in_role_query(
                     {resource_id_field} as id,
                     :resource_type as type
                 {recur}
-            ) select * from resources        
+            ) select * from resources
         ), role as (
             -- find roles with the permission
             select
