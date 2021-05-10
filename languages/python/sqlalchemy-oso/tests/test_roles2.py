@@ -1819,7 +1819,9 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
     assert len(steve_assignments) == 2
 
 
-def test_user_in_role(init_oso, sample_data, Repository, Organization):
+def test_user_in_role(
+    init_oso, sample_data, Repository, Organization, auth_sessionmaker
+):
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -1859,9 +1861,18 @@ def test_user_in_role(init_oso, sample_data, Repository, Organization):
     oso_roles.assign_role(leina, osohq, "org_member")
     oso_roles.assign_role(steve, oso_repo, "repo_read")
 
+    # Without data filtering
     assert oso.is_allowed(leina, "read", oso_repo)
     assert oso.is_allowed(steve, "read", oso_repo)
     assert not oso.is_allowed(gabe, "read", oso_repo)
+
+    # With data filtering
+    oso.actor = leina
+    oso.action = "read"
+    auth_session = auth_sessionmaker()
+
+    results = auth_session.query(Repository).all()
+    assert len(results) == 1
 
 
 # LEGACY TEST
