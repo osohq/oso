@@ -1,3 +1,9 @@
+{{ if (.Get "not") }}
+{{ if ne $.Page.Language.Lang (.Get "not")}}
+{{ .Inner }}
+{{ end }}
+{{ else }}
 {{ if eq $.Page.Language.Lang (.Get 0)}}
 {{ .Inner }}
+{{ end }}
 {{ end }}
