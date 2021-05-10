@@ -78,9 +78,6 @@ def contains_role_allows(expression: Expression):
         if is_role_allow:
             if op != "Unify":
                 raise OsoError("Roles don't currently work with not.")
-            assert right.args[1].args[0] == Variable(
-                "_this"
-            ), "Role allows can only be performed on resource."
 
         return is_role_allow
 

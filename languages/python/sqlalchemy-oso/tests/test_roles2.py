@@ -8,7 +8,6 @@ from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy_oso import authorized_sessionmaker, SQLAlchemyOso
-from sqlalchemy_oso.auth import register_models
 from sqlalchemy_oso.roles2 import OsoRoles
 
 from oso import Oso, OsoError
@@ -150,7 +149,7 @@ def sample_data(init_oso, Organization, Repository, User, Issue):
 # - Passing a bad declarative_base to OsoRoles raises an exception
 
 
-def test_oso_roles_init(auth_sessionmaker):
+def test_oso_roles_init(auth_sessionmaker, Base, User):
     oso = SQLAlchemyOso(Base)
 
     # - Passing an auth session to OsoRoles raises an exception
@@ -1813,9 +1812,9 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
     ios_assignments = oso.roles.assignments_for_resource(ios, session)
     assert len(ios_assignments) == 1
 
-    leina_assignments = oso_roles.assignments_for_user(leina, session)
+    leina_assignments = oso.roles.assignments_for_user(leina, session)
     assert len(leina_assignments) == 2
-    steve_assignments = oso_roles.assignments_for_user(steve, session)
+    steve_assignments = oso.roles.assignments_for_user(steve, session)
     assert len(steve_assignments) == 2
 
 
