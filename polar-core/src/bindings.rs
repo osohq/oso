@@ -205,9 +205,11 @@ impl BindingManager {
                     e.merge_constraints(op);
                     op = e;
                 }
-                BindingManagerVariableState::Bound(_) => {
-                    assert!(
-                        matches!(term.value(), Value::Expression(Operation {operator: Operator::Dot, args }) if matches!(args[1].value(), Value::Call(_)))
+                BindingManagerVariableState::Bound(v) => {
+                    panic!(
+                        "Unexpected bound variable {var} in constraint. {var} = {val}",
+                        var = var,
+                        val = v
                     );
                 }
             }
