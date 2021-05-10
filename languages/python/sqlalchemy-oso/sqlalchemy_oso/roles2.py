@@ -910,7 +910,22 @@ class OsoRoles:
         ]
 
 
-def _add_query_filter(oso, user, action, resource_model):
+def _generate_query_filter(oso, role_method, model):
+    actor = role_method.args[0]
+    action_or_role = role_method.args[1]
+    if role_method.name == "role_allows":
+        return _generate_role_allows_filter(oso, actor, action_or_role, model)
+    elif role_method.name == "user_in_role":
+        return _generate_user_in_role_filter(oso, actor, action_or_role, model)
+    else:
+        # Should never reach here
+        raise OsoError(
+            "Unexpected role method called with partial resource variable: {}",
+            role_method.name,
+        )
+
+
+def _generate_role_allows_filter(oso, user, action, resource_model):
     # Ok, we're really going for it now. This is probably the biggest wow hack yet.
     # We fetch all the resources that the user can view based on roles.
     # Then we add a single filter, where resource_id in [list they can see]
@@ -957,7 +972,7 @@ def _add_query_filter(oso, user, action, resource_model):
     return id_in
 
 
-def _add_query_user_in_role_filter(oso, user, role, resource_model):
+def _generate_user_in_role_filter(oso, user, role, resource_model):
     session = oso.roles._get_session()
 
     try:
