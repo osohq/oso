@@ -119,11 +119,10 @@ pub fn simplify_partial(
     simplify_debug!("*** simplify partial {:?}", var);
     simplifier.simplify_partial(&mut term);
     term = simplify_trivial_constraint(var.clone(), term);
+    simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
     if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
-        simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
         (op!(And, term).into_term(), simplifier.perf_counters())
     } else {
-        simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
         (term, simplifier.perf_counters())
     }
 }
