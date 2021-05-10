@@ -3979,14 +3979,10 @@ mod tests {
             .is_err());
 
         // Test with invalid arg position
-        let bad_args = vec![
-            term!(value!("Leina")),
-            resource_var.clone(),
-            term!(value!("read")),
-        ];
+        let bad_args = vec![term!(value!("Leina")), resource_var, term!(value!("read"))];
         let wrong_arg_order = term!(Call {
             name: sym!("role_allows"),
-            args: bad_args.clone(),
+            args: bad_args,
             kwargs: None
         });
         // TODO: check error messages are correct
