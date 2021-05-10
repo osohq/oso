@@ -1,0 +1,12 @@
+{{ $frameworks := (slice "Flask" "FastAPI" "Graphene" "Falcon" "SQLAlchemy" "Django") }}
+<div class="grid grid-cols-3 gap-8  content-evenly md:mx-20 pb-8">
+{{ range $framework_name := $frameworks }}
+{{ $f_name := "" }}
+{{ if ne $framework_name "SQLAlchemy" }}
+{{ $f_name = (lower $framework_name) }}
+{{ end }}
+<a href="{{ ref $.Page (dict "path" (printf "/%s/%s" "new-roles" $f_name) "lang" "python") }}" class="flex flex-col justify-between items-center shadow-md rounded-lg w-full bg-primary text-white decoration-none hover:bg-yellow hover:text-black py-1 really-make-it-white">
+    <div class="flex text-lg font-semibold text-center align-baseline">{{ $framework_name }}</div>
+</a>
+{{ end }}
+</div>

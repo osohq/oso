@@ -165,7 +165,7 @@ Now the users' allowed actions depend on their assigned roles for both
 the repository and the parent organization, as well as the hierarchy of
 the repository roles (for more information on implementing RBAC with
 Oso, [check out our
-guide](guides/roles)).
+guide](/learn/roles)).
 
 Even with this more complicated policy, we'll still get the correct
 allowed actions for Mike and Sully.
