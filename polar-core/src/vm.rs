@@ -1961,8 +1961,8 @@ impl PolarVirtualMachine {
                                 field,
                                 error::RuntimeError::Unsupported {
                                     msg: format!(
-                                        "cannot call method with unbound variable argument {}",
-                                        v
+                                        "cannot call method {} with unbound variable argument {}",
+                                        name, v
                                     ),
                                 },
                             ))),
@@ -1990,7 +1990,7 @@ impl PolarVirtualMachine {
                                         field,
                                         error::RuntimeError::Unsupported {
                                             msg: format!(
-                                                "cannot call method with unbound variable argument {}", v
+                                                "cannot call method {} with unbound variable argument {}", name, v
                                             ),
                                         },
                                     ))),
@@ -2065,7 +2065,10 @@ impl PolarVirtualMachine {
             Err(self.set_error_context(
                 field,
                 error::RuntimeError::Unsupported {
-                    msg: String::from("cannot call method with partially-bound arguments"),
+                    msg: format!(
+                        "cannot call method {} with partially-bound arguments.",
+                        name,
+                    ),
                 },
             ))
         } else {
@@ -3900,47 +3903,54 @@ mod tests {
             term!(value!("read")),
             resource_var.clone(),
         ];
-        let role_allows_field = term!(Call {
+        let role_allows_call = term!(Call {
             name: sym!("role_allows"),
             args: args.clone(),
             kwargs: None
         });
-        let role_allows_constraint = term!(Call {
-            name: sym!("role_allows"),
-            args: vec![resource_var.clone()],
-            kwargs: None
-        });
-        let user_in_role_field = term!(Call {
+        let user_in_role_call = term!(Call {
             name: sym!("user_in_role"),
             args: args.clone(),
-            kwargs: None
-        });
-        let user_in_role_constraint = term!(Call {
-            name: sym!("user_in_role"),
-            args: vec![resource_var],
             kwargs: None
         });
         let role_allows_constraint_term = term!(op!(
             Unify,
             value.clone(),
-            term!(op!(Dot, object.clone(), role_allows_constraint))
+            term!(op!(
+                Dot,
+                object.clone(),
+                term!(Call {
+                    name: sym!("role_allows"),
+                    args: vec![resource_var.clone()],
+                    kwargs: None
+                })
+            ))
         ));
         let user_in_role_constraint_term = term!(op!(
             Unify,
             value.clone(),
-            term!(op!(Dot, object.clone(), user_in_role_constraint))
+            term!(op!(
+                Dot,
+                object.clone(),
+                term!(Call {
+                    name: sym!("user_in_role"),
+                    args: vec![resource_var.clone()],
+                    kwargs: None
+                })
+            ))
         ));
-        // let user_in_role_dot_args = vec![object.clone(), user_in_role_constraint.clone()];
+
         // Test role_allows
         let res_val = vm
-            .check_partial_args(&object, &role_allows_field, &value)
+            .check_partial_args(&object, &role_allows_call, &value)
             .unwrap()
             .unwrap();
         assert!(
             matches!(res_val, constraint_term if constraint_term == role_allows_constraint_term)
         );
+        // Test user_in_role
         let res_val = vm
-            .check_partial_args(&object, &user_in_role_field, &value)
+            .check_partial_args(&object, &user_in_role_call, &value)
             .unwrap()
             .unwrap();
         assert!(
@@ -3948,24 +3958,41 @@ mod tests {
         );
 
         // Test on invalid instance
-        let object = term!(Value::ExternalInstance(ExternalInstance {
+        let bad_object = term!(Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
             constructor: None,
             repr: Some(String::from("sqlalchemy_oso.roles2.FakeRoles"))
         }));
         assert!(vm
-            .check_partial_args(&object, &role_allows_field, &value)
+            .check_partial_args(&bad_object, &role_allows_call, &value)
             .is_err());
 
         // Test with invalid method name
-        let bad_method = term!(Call {
+        let bad_method_name = term!(Call {
             name: sym!("bad_method"),
             args,
             kwargs: None
         });
-        assert!(vm.check_partial_args(&object, &bad_method, &value).is_err())
+        // TODO: check error messages are correct
+        assert!(vm
+            .check_partial_args(&object, &bad_method_name, &value)
+            .is_err());
 
-        // TODO: Test with invalid arg position
+        // Test with invalid arg position
+        let bad_args = vec![
+            term!(value!("Leina")),
+            resource_var.clone(),
+            term!(value!("read")),
+        ];
+        let wrong_arg_order = term!(Call {
+            name: sym!("role_allows"),
+            args: bad_args.clone(),
+            kwargs: None
+        });
+        // TODO: check error messages are correct
+        assert!(vm
+            .check_partial_args(&object, &wrong_arg_order, &value)
+            .is_err());
         // TODO: Test with kwargs
     }
 }
