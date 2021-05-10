@@ -2040,21 +2040,7 @@ impl PolarVirtualMachine {
                                             ),
                                         }));
                         }
-                        let arg = if !partial_args.is_empty() {
-                            partial_args[0].1
-                        } else {
-                            &partial_kwargs[0].1
-                        };
-                        // create term to constrain for role_allows call
-                        let dot = op!(
-                            Dot,
-                            object.clone(),
-                            field.clone_with_value(Value::Call(Call {
-                                name: name.clone(),
-                                args: vec![arg.clone()],
-                                kwargs: None
-                            }))
-                        );
+                        let dot = op!(Dot, object.clone(), field.clone());
                         let constraint_term =
                             op!(Unify, value.clone(), dot.into_term()).into_term();
                         return Ok(Some(constraint_term));
@@ -3916,28 +3902,12 @@ mod tests {
         let role_allows_constraint_term = term!(op!(
             Unify,
             value.clone(),
-            term!(op!(
-                Dot,
-                object.clone(),
-                term!(Call {
-                    name: sym!("role_allows"),
-                    args: vec![resource_var.clone()],
-                    kwargs: None
-                })
-            ))
+            term!(op!(Dot, object.clone(), role_allows_call.clone()))
         ));
         let user_in_role_constraint_term = term!(op!(
             Unify,
             value.clone(),
-            term!(op!(
-                Dot,
-                object.clone(),
-                term!(Call {
-                    name: sym!("user_in_role"),
-                    args: vec![resource_var.clone()],
-                    kwargs: None
-                })
-            ))
+            term!(op!(Dot, object.clone(), user_in_role_call.clone()))
         ));
 
         // Test role_allows
@@ -3945,17 +3915,12 @@ mod tests {
             .check_partial_args(&object, &role_allows_call, &value)
             .unwrap()
             .unwrap();
-        assert!(
-            matches!(res_val, constraint_term if constraint_term == role_allows_constraint_term)
-        );
-        // Test user_in_role
+        assert_eq!(res_val, role_allows_constraint_term);
         let res_val = vm
             .check_partial_args(&object, &user_in_role_call, &value)
             .unwrap()
             .unwrap();
-        assert!(
-            matches!(res_val, constraint_term if constraint_term == user_in_role_constraint_term)
-        );
+        assert_eq!(res_val, user_in_role_constraint_term);
 
         // Test on invalid instance
         let bad_object = term!(Value::ExternalInstance(ExternalInstance {
