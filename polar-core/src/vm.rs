@@ -2001,7 +2001,7 @@ impl PolarVirtualMachine {
                         })
                         .collect::<Result<Vec<_>, _>>()
                 })
-                .transpose()?.unwrap_or(vec![]);
+                .transpose()?.unwrap_or_else(Vec::new);
 
             // If there are no partial args or kwargs, return
             if partial_args.len() + partial_kwargs.len() == 0 {
@@ -2062,12 +2062,12 @@ impl PolarVirtualMachine {
                 }
             }
             // If the call wasn't to one of the specially-allowed methods, throw an error
-            return Err(self.set_error_context(
+            Err(self.set_error_context(
                 field,
                 error::RuntimeError::Unsupported {
-                    msg: format!("cannot call method with partially-bound arguments"),
+                    msg: String::from("cannot call method with partially-bound arguments"),
                 },
-            ));
+            ))
         } else {
             // If the lookup isn't a `Value::Call`, return
             Ok(None)
@@ -3905,39 +3905,47 @@ mod tests {
             args: args.clone(),
             kwargs: None
         });
+        let role_allows_constraint = term!(Call {
+            name: sym!("role_allows"),
+            args: vec![resource_var.clone()],
+            kwargs: None
+        });
         let user_in_role_field = term!(Call {
             name: sym!("user_in_role"),
             args: args.clone(),
             kwargs: None
         });
-        let role_allows_dot_args = vec![object.clone(), role_allows_field.clone(), value.clone()];
-        let user_in_role_dot_args = vec![object.clone(), user_in_role_field.clone(), value.clone()];
+        let user_in_role_constraint = term!(Call {
+            name: sym!("user_in_role"),
+            args: vec![resource_var.clone()],
+            kwargs: None
+        });
+        let role_allows_constraint_term = term!(op!(
+            Unify,
+            value.clone(),
+            term!(op!(Dot, object.clone(), role_allows_constraint.clone()))
+        ));
+        let user_in_role_constraint_term = term!(op!(
+            Unify,
+            value.clone(),
+            term!(op!(Dot, object.clone(), user_in_role_constraint.clone()))
+        ));
+        // let user_in_role_dot_args = vec![object.clone(), user_in_role_constraint.clone()];
         // Test role_allows
         let res_val = vm
             .check_partial_args(&object, &role_allows_field, &value)
             .unwrap()
             .unwrap();
-
-        assert!(matches!(
-            res_val.value(),
-            Value::Expression(Operation {
-                operator: Dot,
-                args: role_allows_dot_args
-            })
-        ));
-        // Test user_in_role
+        assert!(
+            matches!(res_val, constraint_term if constraint_term == role_allows_constraint_term)
+        );
         let res_val = vm
             .check_partial_args(&object, &user_in_role_field, &value)
             .unwrap()
             .unwrap();
-
-        assert!(matches!(
-            res_val.value(),
-            Value::Expression(Operation {
-                operator: Dot,
-                args: user_in_role_dot_args
-            })
-        ));
+        assert!(
+            matches!(res_val, constraint_term if constraint_term == user_in_role_constraint_term)
+        );
 
         // Test on invalid instance
         let object = term!(Value::ExternalInstance(ExternalInstance {
@@ -3952,7 +3960,7 @@ mod tests {
         // Test with invalid method name
         let bad_method = term!(Call {
             name: sym!("bad_method"),
-            args: args.clone(),
+            args,
             kwargs: None
         });
         assert!(vm.check_partial_args(&object, &bad_method, &value).is_err())
