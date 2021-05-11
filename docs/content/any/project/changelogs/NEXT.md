@@ -29,7 +29,7 @@ before upgrading.
 
 ##### `SQLAlchemyOso` object provides a unified interface for `Oso` and `OsoRoles`
 
-The `SQLAlchemyOso` object is now available to simplify the initializaiton of Oso for SQLAlchemy.
+The `SQLAlchemyOso` object is now available to simplify the initialization of Oso for SQLAlchemy.
 
 Now, instead of the following:
 
