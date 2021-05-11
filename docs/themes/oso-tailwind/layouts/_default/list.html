@@ -7,34 +7,28 @@
           <article class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:mr-64 xl:px-8 pt-10 pb-24 lg:pb-16">
             {{ .Content }}
           </article>
+          {{ if eq $.Kind "page" }}
+            {{ partial "toc.html" $.CurrentSection }}
+          {{ else }}
+            {{ partial "toc.html" . }}
+          {{ end }}
+          {{ if (eq .Params.below_picker "old-sqlalchemy") }}
+            <p class="prose max-w-none">If you are looking for the the currently released version of
+                the sqlalchemy-oso library, you can find it <a href="{{ ref . "/reference/frameworks/sqlalchemy" }}">here</a>.</p>
+          {{ end }}
+          {{ if (eq .Params.below_picker "roles-cta") }}
+            <p class="prose max-w-none mt-4">Adding roles to your application? Check out our guide on
+                <a href="{{ ref . "/guides/new-roles" }}">Building Role-Based Access Control with Oso</a>.</p>
+          {{ end }}
           <!--/ Post Content-->
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-2 justify-center py-4 leading-normal">
-            {{ $pages := .Pages }}
-            {{ if .Params.reverse }}{{ $pages = $pages.Reverse }}{{ end }}
-            {{ $pages = first 6 $pages }}
-            {{ range $pages }}
-            {{ $page := . }}
-              <a href="{{ $page.RelPermalink }}"
-                class="m-2 border-opacity-20 hover:border-opacity-100 border-l-4 border-primary shadow-md rounded">
-                <div
-                  class="bg-primary-lightest text-primary-darkest w-full font-semibold text-lg pl-2 py-2 rounded-tr border-bottom border-gray-200">
-                  {{ $page.Title }}
-                </div>
-                <div class="px-2 pb-0.5 overflow-ellipsis overflow-hidden h-24">
-                  {{ with $page.Description }}
-                    <p>{{ . }}</p>
-                  {{ else }}
-                    <div>{{ $page.Plain | safeHTML }}</div>
-                  {{ end }}
-                </div>
-              </a>
-            {{ end }}
-          </div>
         </div>
       </div>
     </main>
-  {{ else }}
+{{ else }}
     <div class="w-3/5 text-black leading-normal pt-6 mx-auto static">
+    <article class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:mr-64 xl:px-8 pt-10 pb-24 lg:pb-16">
+        <h1>{{ $.Page.Title }}</h1>
+    </article>
       <h2 class="text-xl font-semibold text-primary-dark pb-4">
         Choose your language:
       </h2>
@@ -43,4 +37,5 @@
       </div>
     </div>
   {{ end }}
+{{- partial "search.html" . -}}
 {{ end }}
