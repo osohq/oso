@@ -1615,7 +1615,9 @@ def test_basic_data_filtering(
     assert results[0].org == osohq
 
 
-def test_data_filtering_not(init_oso, sample_data, auth_sessionmaker, Organization):
+def test_data_filtering_role_allows_not(
+    init_oso, sample_data, auth_sessionmaker, Organization
+):
     oso, oso_roles, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
@@ -1654,7 +1656,7 @@ def test_data_filtering_not(init_oso, sample_data, auth_sessionmaker, Organizati
         auth_session.query(Organization).all()
 
 
-def test_data_filtering_and(
+def test_data_filtering_role_allows_and(
     init_oso, sample_data, auth_sessionmaker, User, Organization
 ):
     oso, oso_roles, session = init_oso
@@ -1715,7 +1717,7 @@ def test_data_filtering_and(
     assert len(results) == 0
 
 
-def test_data_filtering_explicit_or(
+def test_data_filtering_role_allows_explicit_or(
     init_oso, sample_data, auth_sessionmaker, User, Organization, Repository
 ):
     oso, oso_roles, session = init_oso
@@ -1779,7 +1781,7 @@ def test_data_filtering_explicit_or(
     assert len(results) == 1
 
 
-def test_data_filtering_implicit_or(
+def test_data_filtering_role_allows_implicit_or(
     init_oso, sample_data, auth_sessionmaker, User, Organization
 ):
     # Ensure that the filter produced by `Roles.role_allows()` is not AND-ed
@@ -1799,6 +1801,215 @@ def test_data_filtering_implicit_or(
 
     allow(actor, action, resource) if
         Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso_roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    leina = sample_data["leina"]
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+
+    # This is just to ensure we don't modify the policy above.
+    assert oso.is_allowed(leina, "read", leina)
+
+    oso.actor = leina
+    oso.action = "read"
+    auth_session = auth_sessionmaker()
+
+    results = auth_session.query(Organization).all()
+    assert len(results) == 1
+
+    results = auth_session.query(User).all()
+    assert len(results) == 1
+
+
+def test_data_filtering_user_in_role_not(
+    init_oso, sample_data, auth_sessionmaker, Organization
+):
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        not Roles.user_in_role(actor, "org_member", resource);
+    """
+    oso.load_str(policy)
+    oso_roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    apple = sample_data["apple"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+    oso_roles.assign_role(steve, osohq, "org_member", session=session)
+
+    # This is just to ensure we don't modify the policy above.
+    assert not oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(leina, "invite", apple)
+    assert not oso.is_allowed(steve, "invite", osohq)
+    assert oso.is_allowed(steve, "invite", apple)
+
+    oso.actor = leina
+    oso.action = "invite"
+    auth_session = auth_sessionmaker()
+
+    with pytest.raises(OsoError):
+        auth_session.query(Organization).all()
+
+
+def test_data_filtering_user_in_role_and(
+    init_oso, sample_data, auth_sessionmaker, User, Organization
+):
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"],
+                implies: ["repo_read"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = ["pull"] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+
+    parent(repo: Repository, parent_org: Organization) if
+        repo.org = parent_org;
+
+    allow(actor, action, resource) if
+        Roles.user_in_role(actor, "org_member", resource) and
+        resource.id = "osohq";
+    """
+    oso.load_str(policy)
+    oso_roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    apple = sample_data["apple"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(leina, osohq, "org_member", session=session)
+    oso_roles.assign_role(leina, apple, "org_member", session=session)
+    oso_roles.assign_role(steve, osohq, "org_member", session=session)
+
+    # This is just to ensure we don't modify the policy above.
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(steve, "invite", osohq)
+    assert not oso.is_allowed(leina, "invite", apple)
+
+    oso.actor = leina
+    oso.action = "invite"
+    auth_session = auth_sessionmaker()
+
+    results = auth_session.query(Organization).all()
+    assert len(results) == 1
+
+    oso.actor = steve
+    oso.action = "invite"
+    auth_session = auth_sessionmaker()
+
+    results = auth_session.query(User).all()
+    assert len(results) == 0
+
+
+def test_data_filtering_user_in_role_explicit_or(
+    init_oso, sample_data, auth_sessionmaker, User, Organization, Repository
+):
+    oso, oso_roles, session = init_oso
+    policy = """
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            org_member: {
+                perms: ["invite"],
+                implies: ["repo_read"]
+            }
+        };
+
+    resource(_type: Repository, "repo", actions, roles) if
+        actions = ["pull"] and
+        roles = {
+            repo_read: {
+                perms: ["pull"]
+            }
+        };
+
+    parent(repo: Repository, parent_org: Organization) if
+        repo.org = parent_org;
+
+    allow(actor, action, resource) if
+        Roles.user_in_role(actor, "org_member", resource) or
+        resource.id = "osohq";
+    """
+    oso.load_str(policy)
+    oso_roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    apple = sample_data["apple"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+
+    oso_roles.assign_role(steve, apple, "org_member", session=session)
+
+    # This is just to ensure we don't modify the policy above.
+    assert oso.is_allowed(steve, "invite", osohq)
+    assert oso.is_allowed(steve, "invite", apple)
+
+    oso.actor = steve
+    oso.action = "invite"
+    auth_session = auth_sessionmaker()
+
+    results = auth_session.query(Organization).all()
+    assert len(results) == 2
+
+    oso.actor = steve
+    oso.action = "pull"
+    auth_session = auth_sessionmaker()
+    results = auth_session.query(Repository).all()
+    assert len(results) == 1
+    assert results[0].org_id == "apple"
+
+    oso.actor = leina
+    oso.action = "invite"
+    auth_session = auth_sessionmaker()
+    results = auth_session.query(Organization).all()
+    assert len(results) == 1
+
+
+def test_data_filtering_user_in_role_implicit_or(
+    init_oso, sample_data, auth_sessionmaker, User, Organization
+):
+    # Ensure that the filter produced by `Roles.role_allows()` is not AND-ed
+    # with a false filter produced by a separate `allow()` rule.
+    oso, oso_roles, session = init_oso
+    policy = """
+    # Users can read their own data.
+    allow(user: User, "read", user);
+
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["read"] and
+        roles = {
+            org_member: {
+                perms: ["read"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        Roles.user_in_role(actor, "org_member", resource);
     """
     oso.load_str(policy)
     oso_roles.synchronize_data()
