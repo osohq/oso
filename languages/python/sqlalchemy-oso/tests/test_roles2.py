@@ -2033,6 +2033,49 @@ def test_data_filtering_user_in_role_implicit_or(
     assert len(results) == 1
 
 
+def test_data_filtering_combo(
+    init_oso, sample_data, auth_sessionmaker, User, Organization
+):
+    oso, session = init_oso
+    policy = """
+    # Users can read their own data.
+    allow(user: User, "read", user);
+
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["read"] and
+        roles = {
+            org_member: {
+                perms: ["read"]
+            }
+        };
+
+    allow(actor, action, resource) if
+        role_allows = Roles.role_allows(actor, action, resource) and
+        user_in_role = Roles.user_in_role(actor, "org_member", resource) and
+        rollw_allows and user_in_role;
+    """
+    oso.load_str(policy)
+    oso.roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    leina = sample_data["leina"]
+
+    oso.roles.assign_role(leina, osohq, "org_member", session=session)
+
+    # This is just to ensure we don't modify the policy above.
+    assert oso.is_allowed(leina, "read", leina)
+
+    oso.actor = leina
+    oso.action = "read"
+    auth_session = auth_sessionmaker()
+
+    results = auth_session.query(Organization).all()
+    assert len(results) == 1
+
+    results = auth_session.query(User).all()
+    assert len(results) == 1
+
+
 # TEST READ API
 # - [ ] Test getting all roles for a resource
 # - [ ] Test getting all role assignments for a resource
