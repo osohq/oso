@@ -2054,6 +2054,7 @@ def test_data_filtering_combo(
         user_in_role = Roles.user_in_role(actor, "org_member", resource) and
         rollw_allows and user_in_role;
     """
+    # You can't directly `and` the two Roles calls right now but it does work if you do it like ^
     oso.load_str(policy)
     oso.roles.synchronize_data()
 
