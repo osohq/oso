@@ -53,43 +53,61 @@ def and_filter(current, new):
 def partial_to_filter(expression: Expression, session: Session, model, get_model):
     """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
     expression = preprocess(expression)
+    roles_method = check_for_roles_method(expression)
 
-    role_allows = False
-    if contains_role_allows(expression):
-        role_allows = True
+    return (
+        translate_expr(expression, session, model, get_model),
+        roles_method,
+    )
 
-    return (translate_expr(expression, session, model, get_model), role_allows)
 
-
-def contains_role_allows(expression: Expression):
-    def _is_role_allow(op, left, right):
-        op = expr.operator
-        left = expr.args[0]
-        right = expr.args[1]
-        is_role_allow = (
-            left is True
+def check_for_roles_method(expression: Expression):
+    def _is_roles_method(op, left, right):
+        is_roles_method = (
+            isinstance(right, Expression)
             and right.operator == "Dot"
-            # TODO: check type of right.args[0] (should match whatever the roles object is)
-            # and type(right.args[0]) == OsoRoles
             and type(right.args[1]) == Predicate
-            and right.args[1].name == "role_allows"
+            and (
+                right.args[1].name == "role_allows"
+                or right.args[1].name == "user_in_role"
+            )
         )
 
-        if is_role_allow:
-            if op != "Unify":
-                raise OsoError("Roles don't currently work with not.")
+        method = None
+        if is_roles_method:
+            assert left is True
+            if op == "Neq":
+                raise OsoError("Roles don't currently work with the `not` operator.")
+            elif op != "Unify":
+                raise OsoError(f"Roles don't work with the `{op}` operator.")
+            method = right.args[1]
 
-        return is_role_allow
+        return is_roles_method, method
 
     assert expression.operator == "And"
+    methods = []
+    to_remove = []
     for expr in expression.args:
-        if _is_role_allow(expr.operator, expr.args[0], expr.args[1]) or _is_role_allow(
-            expr.operator, expr.args[1], expr.args[0]
-        ):
-            expression.args.remove(expr)
-            return True
+        # Try with method call on right
+        is_roles, method = _is_roles_method(expr.operator, expr.args[0], expr.args[1])
+        if is_roles:
+            methods.append(method)
+            to_remove.append(expr)
+        # Try with method call on left
+        is_roles, method = _is_roles_method(expr.operator, expr.args[1], expr.args[0])
+        if is_roles:
+            to_remove.append(expr)
+            methods.append(method)
 
-    return False
+    for expr in to_remove:
+        expression.args.remove(expr)
+    if len(methods) > 1:
+        raise OsoError("Cannot call multiple role methods within the same query.")
+
+    try:
+        return methods[0]
+    except IndexError:
+        return None
 
 
 def translate_expr(expression: Expression, session: Session, model, get_model):
