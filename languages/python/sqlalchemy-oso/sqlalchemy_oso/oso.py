@@ -12,7 +12,7 @@ class SQLAlchemyOso(Oso):
     Accepts a SQLAlchemy declarative_base on initialization, which is used to register
     all relevant SQLAlchemy models with Oso.
 
-    >>> from sqlalchemy-oso import SQLAlchemyOso
+    >>> from sqlalchemy_oso import SQLAlchemyOso
     >>> from sqlalchemy.ext.declarative import declarative_base
     >>> Base = declarative_base(name="MyBaseModel")
     >>> SQLAlchemyOso(Base)
