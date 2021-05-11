@@ -65,7 +65,3 @@ Link to [relevant documentation section]().
 - Bulleted list
 - Of smaller improvements
 - Potentially with doc [links]().
-
-```
-
-```
