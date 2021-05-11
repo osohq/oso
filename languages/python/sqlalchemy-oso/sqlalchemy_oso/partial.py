@@ -75,8 +75,10 @@ def check_for_roles_method(expression: Expression):
 
         method = None
         if is_roles_method:
-            if op != "Unify":
-                raise OsoError("Roles don't currently work with not.")
+            if op == "Neq":
+                raise OsoError("Roles don't currently work with the `not` operator.")
+            elif op != "Unify":
+                raise OsoError(f"Roles don't work with the `{op}` operator.")
             method = right.args[1]
 
         return is_roles_method, method
