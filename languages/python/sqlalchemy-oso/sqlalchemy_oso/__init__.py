@@ -1,6 +1,7 @@
 __version__ = "0.0.1"
 
 from .auth import register_models
-from .session import authorized_sessionmaker, set_get_session
+from .oso import SQLAlchemyOso
+from .session import authorized_sessionmaker
 
-__all__ = ["register_models", "authorized_sessionmaker", "set_get_session"]
+__all__ = ["register_models", "authorized_sessionmaker", "SQLAlchemyOso"]
