@@ -266,7 +266,7 @@ class OsoRoles:
                 from_role = Column(String, index=True)
                 to_role = Column(String)
 
-        self.oso = oso
+        self._wrapped_oso = oso
         self.UserRole = UserRole
         self.Permission = Permission
         self.Role = Role
@@ -293,9 +293,7 @@ class OsoRoles:
 
         self.configured = False
         self.synced = False
-        self.oso.register_class(Roles)
-
-        oso.roles = self
+        self._wrapped_oso.register_class(Roles)
 
     def _get_session(self):
         return self.session_maker()
@@ -308,7 +306,7 @@ class OsoRoles:
         self.relationships = []
 
         # Register relationships
-        role_relationships = self.oso.query_rule(
+        role_relationships = self._wrapped_oso.query_rule(
             "parent",
             Variable("resource"),
             Variable("parent_resource"),
@@ -338,9 +336,9 @@ class OsoRoles:
                 pattern = get_parent.args[1]
                 parent_t = pattern.tag
 
-                child_python_class = self.oso.host.classes[child_t]
+                child_python_class = self._wrapped_oso.host.classes[child_t]
                 child_table = child_python_class.__tablename__
-                parent_python_class = self.oso.host.classes[parent_t]
+                parent_python_class = self._wrapped_oso.host.classes[parent_t]
                 parent_table = parent_python_class.__tablename__
 
                 relationship = Relationship(
@@ -359,7 +357,7 @@ class OsoRoles:
 
         # Register resources / permissions / roles and implications
         # Based on the role_resource definitions
-        role_resources = self.oso.query_rule(
+        role_resources = self._wrapped_oso.query_rule(
             "resource",
             Variable("resource"),
             Variable("name"),
@@ -382,7 +380,7 @@ class OsoRoles:
             permissions = result["bindings"]["permissions"]
             role_defs = result["bindings"]["roles"]
 
-            python_class = self.oso.host.classes[t]
+            python_class = self._wrapped_oso.host.classes[t]
 
             if isinstance(permissions, Variable):
                 permissions = []
