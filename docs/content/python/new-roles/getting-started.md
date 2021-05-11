@@ -80,7 +80,7 @@ automatically registered with Oso.
 ### Enabling built-in roles
 
 In order to enable built-in roles features, we need to pass our app's user
-class as well as a SQLAlchemy sessionmaker to the
+class as well as a SQLAlchemy `sessionmaker` to the
 `sqlalchemy_oso.SQLAlchemyOso.enable_roles` method:
 
 {{< literalInclude
