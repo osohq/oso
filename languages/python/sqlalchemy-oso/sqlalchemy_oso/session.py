@@ -126,12 +126,14 @@ def authorized_sessionmaker(
                                     the request.
     :param class_: Base class to use for sessions.
 
-
-    TODO(gj): add invariant about if you mutate objects (User,
-    checked_permissions, Oso) during a request
-
     All other keyword arguments are passed through to
     :py:func:`sqlalchemy.orm.session.sessionmaker` unchanged.
+
+    **Invariant**: the values returned by the `get_oso()`, `get_user()`, and
+    `get_checked_permissions()` callables provided to this function *must
+    remain fixed for a given session*. This prevents authorization responses
+    from changing, ensuring that the session's identity map never contains
+    unauthorized objects.
     """
     if class_ is None:
         class_ = Session
@@ -161,8 +163,8 @@ def scoped_session(
     scopefunc: Optional[Callable[..., Any]] = None,
     **kwargs
 ):
-    """Return a scoped session maker that uses the user and checked permissions
-    (action-resource pairs) as part of the scope function.
+    """Return a scoped session maker that uses the Oso instance, user, and
+    checked permissions (action-resource pairs) as part of the scope function.
 
     Use in place of sqlalchemy's scoped_session_.
 
@@ -214,9 +216,10 @@ class AuthorizedSessionBase(object):
                                     authorize.
         :param options: Additional keyword arguments to pass to ``Session``.
 
-        The user and checked_permissions parameters are fixed for a given
-        session. This prevents authorization responses from changing, ensuring
-        that the identity map never contains unauthorized objects.
+        **Invariant**: the `oso`, `user`, and `checked_permissions` parameters
+        *must remain fixed for a given session*. This prevents authorization
+        responses from changing, ensuring that the session's identity map never
+        contains unauthorized objects.
         """
         self._oso = oso
         self._oso_user = user
