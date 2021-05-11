@@ -64,7 +64,7 @@ def partial_to_filter(expression: Expression, session: Session, model, get_model
 def check_for_roles_method(expression: Expression):
     def _is_roles_method(op, left, right):
         is_roles_method = (
-            left is True
+            isinstance(right, Expression)
             and right.operator == "Dot"
             and type(right.args[1]) == Predicate
             and (
@@ -75,6 +75,7 @@ def check_for_roles_method(expression: Expression):
 
         method = None
         if is_roles_method:
+            assert left is True
             if op == "Neq":
                 raise OsoError("Roles don't currently work with the `not` operator.")
             elif op != "Unify":
@@ -84,19 +85,29 @@ def check_for_roles_method(expression: Expression):
         return is_roles_method, method
 
     assert expression.operator == "And"
+    methods = []
+    to_remove = []
     for expr in expression.args:
         # Try with method call on right
         is_roles, method = _is_roles_method(expr.operator, expr.args[0], expr.args[1])
         if is_roles:
-            expression.args.remove(expr)
-            return method
+            methods.append(method)
+            to_remove.append(expr)
         # Try with method call on left
         is_roles, method = _is_roles_method(expr.operator, expr.args[1], expr.args[0])
         if is_roles:
-            expression.args.remove(expr)
-            return method
+            to_remove.append(expr)
+            methods.append(method)
 
-    return None
+    for expr in to_remove:
+        expression.args.remove(expr)
+    if len(methods) > 1:
+        raise OsoError("Cannot call multiple role methods within the same query.")
+
+    try:
+        return methods[0]
+    except IndexError:
+        return None
 
 
 def translate_expr(expression: Expression, session: Session, model, get_model):
