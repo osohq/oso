@@ -1,9 +1,10 @@
 """SQLAlchemy session classes and factories for oso."""
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Dict, Optional, Type
 
-from sqlalchemy import event
+from sqlalchemy import event, inspect
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy import orm
 
 from oso import Oso
@@ -51,24 +52,27 @@ def _before_compile(query):
     return _authorize_query(query)
 
 
+Permissions = Optional[Dict[Type[Any], Any]]
+
+
 def _authorize_query(query: Query) -> Optional[Query]:
-    """Authorize an existing query with an Oso instance, user, and actions."""
+    """Authorize an existing query with an Oso instance, user, and checked
+    permissions."""
     # Get the query session.
     session = query.session
 
-    # Check whether this is an oso session.
+    # Check whether this is an Oso session.
     if not isinstance(session, AuthorizedSessionBase):
         # Not an authorized session.
         return None
 
-    actions: Optional[Any] = session.oso_context["actions"]
+    oso: Oso = session.oso_context["oso"]
+    user = session.oso_context["user"]
+    checked_permissions: Permissions = session.oso_context["checked_permissions"]
 
     # Early return if no authorization is to be applied.
-    if actions is None:
+    if checked_permissions is None:
         return None
-
-    oso = session.oso_context["oso"]
-    user = session.oso_context["user"]
 
     # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
     # on queries that have already been made.  If a query has a LIMIT or OFFSET
@@ -83,12 +87,17 @@ def _authorize_query(query: Query) -> Optional[Query]:
         if entity is None:
             continue
 
-        if isinstance(actions, dict):
-            if not entity in actions:
-                continue
-            action = actions[entity]
+        # If entity is an alias, retrieve the underlying class.
+        alias = inspect(entity).class_ if isinstance(entity, AliasedClass) else None
+
+        # Only apply authorization to columns that have been specified as
+        # requiring authorization.
+        if alias in checked_permissions:
+            action = checked_permissions[alias]  # type: ignore
+        elif entity in checked_permissions:
+            action = checked_permissions[entity]  # type: ignore
         else:
-            action = actions
+            continue
 
         session = query.session
         assert isinstance(session, Session)
@@ -102,7 +111,7 @@ def _authorize_query(query: Query) -> Optional[Query]:
 def authorized_sessionmaker(
     get_oso: Callable[[], Oso],
     get_user: Callable[[], Any],
-    get_actions: Callable[[], Any],
+    get_checked_permissions: Callable[[], Permissions],
     class_: Type[Session] = None,
     **kwargs
 ):
@@ -112,9 +121,14 @@ def authorized_sessionmaker(
                     authorization.
     :param get_user: Callable that returns the user for an authorization
                      request.
-    :param get_actions: Callable that returns the actions to authorize for the
-                     request.
+    :param get_checked_permissions: Callable that returns the permissions
+                                    (action-resource pairs) to authorize for
+                                    the request.
     :param class_: Base class to use for sessions.
+
+
+    TODO(gj): add invariant about if you mutate objects (User,
+    checked_permissions, Oso) during a request
 
     All other keyword arguments are passed through to
     :py:func:`sqlalchemy.orm.session.sessionmaker` unchanged.
@@ -122,14 +136,14 @@ def authorized_sessionmaker(
     if class_ is None:
         class_ = Session
 
-    # Oso, user, and actions must remain unchanged for the entire session. This
-    # is to prevent unauthorized objects from ending up in the session's
-    # identity map.
-    class Sess(AuthorizedSessionBase, class_):
+    # Oso, user, and checked permissions must remain unchanged for the entire
+    # session. This is to prevent unauthorized objects from ending up in the
+    # session's identity map.
+    class Sess(AuthorizedSessionBase, class_):  # type: ignore
         def __init__(self, **options):
             options.setdefault("oso", get_oso())
             options.setdefault("user", get_user())
-            options.setdefault("actions", get_actions())
+            options.setdefault("checked_permissions", get_checked_permissions())
             super().__init__(**options)
 
     session = type("Session", (Sess,), {})
@@ -140,9 +154,15 @@ def authorized_sessionmaker(
     return sessionmaker(class_=session, **kwargs)
 
 
-def scoped_session(get_oso, get_user, get_actions, scopefunc=None, **kwargs):
-    """Return a scoped session maker that uses the user and actions as part of
-    the scope function.
+def scoped_session(
+    get_oso: Callable[[], Oso],
+    get_user: Callable[[], Any],
+    get_checked_permissions: Callable[[], Permissions],
+    scopefunc: Optional[Callable[..., Any]] = None,
+    **kwargs
+):
+    """Return a scoped session maker that uses the user and checked permissions
+    (action-resource pairs) as part of the scope function.
 
     Use in place of sqlalchemy's scoped_session_.
 
@@ -152,11 +172,12 @@ def scoped_session(get_oso, get_user, get_actions, scopefunc=None, **kwargs):
                     authorization.
     :param get_user: Callable that returns the user for an authorization
                      request.
-    :param get_actions: Callable that returns the actions to authorize for the
-                     request.
+    :param get_checked_permissions: Callable that returns the permissions
+                                    (action-resource pairs) to authorize for
+                                    the request.
     :param scopefunc: Additional scope function to use for scoping sessions.
-                      Output will be combined with the Oso, actions, and user
-                      objects.
+                      Output will be combined with the Oso, permissions
+                      (action-resource pairs), and user objects.
     :param kwargs: Additional keyword arguments to pass to
                    :py:func:`authorized_sessionmaker`.
 
@@ -165,9 +186,12 @@ def scoped_session(get_oso, get_user, get_actions, scopefunc=None, **kwargs):
     scopefunc = scopefunc or (lambda: None)
 
     def _scopefunc():
-        return (get_oso(), get_actions(), get_user(), scopefunc())
+        checked_permissions = frozenset(get_checked_permissions().items())
+        return (get_oso(), checked_permissions, get_user(), scopefunc())
 
-    factory = authorized_sessionmaker(get_oso, get_user, get_actions, **kwargs)
+    factory = authorized_sessionmaker(
+        get_oso, get_user, get_checked_permissions, **kwargs
+    )
 
     return orm.scoped_session(factory, scopefunc=_scopefunc)
 
@@ -181,27 +205,32 @@ class AuthorizedSessionBase(object):
             pass
     """
 
-    def __init__(self, oso: Oso, user, actions, **options):
+    def __init__(self, oso: Oso, user, checked_permissions: Permissions, **options):
         """Create an authorized session using ``oso``.
 
         :param oso: The Oso instance to use for authorization.
         :param user: The user to perform authorization for.
-        :param actions: The actions to authorize.
+        :param checked_permissions: The permissions (action-resource pairs) to
+                                    authorize.
         :param options: Additional keyword arguments to pass to ``Session``.
 
-        The user and actions parameters are fixed for a given session. This
-        prevents authorization responses from changing, ensuring that the
-        identity map never contains unauthorized objects.
+        The user and checked_permissions parameters are fixed for a given
+        session. This prevents authorization responses from changing, ensuring
+        that the identity map never contains unauthorized objects.
         """
         self._oso = oso
         self._oso_user = user
-        self._oso_actions = actions
+        self._oso_checked_permissions = checked_permissions
 
         super().__init__(**options)  # type: ignore
 
     @property
     def oso_context(self):
-        return {"oso": self._oso, "user": self._oso_user, "actions": self._oso_actions}
+        return {
+            "oso": self._oso,
+            "user": self._oso_user,
+            "checked_permissions": self._oso_checked_permissions,
+        }
 
 
 class AuthorizedSession(AuthorizedSessionBase, Session):
