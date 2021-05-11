@@ -8,9 +8,8 @@ from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy_oso import authorized_sessionmaker, SQLAlchemyOso
-from sqlalchemy_oso.roles2 import OsoRoles
 
-from oso import Oso, OsoError
+from oso import OsoError
 
 
 @pytest.fixture
@@ -172,7 +171,7 @@ def test_oso_roles_init(auth_sessionmaker, Base, User):
 
     # - Passing a bad declarative_base to OsoRoles raises an exception
     with pytest.raises(AttributeError):
-        test_oso = SQLAlchemyOso(FakeClass)
+        SQLAlchemyOso(FakeClass)
 
     # - Calling a roles-specific method before calling `enable_roles` fails
     with pytest.raises(OsoError):
