@@ -36,6 +36,8 @@ roles](#controlling-access-with-roles).
 
 {{% /callout %}}
 
+<!-- @TODO(gj): (nit) dissonance between 'our' & 'your' throughout this doc. -->
+
 Oso is a library that we use in our application for authorization. It
 requires no additional infrastructure. Instead, the SQLAlchemy library
 helps you authorize data in your existing data store. Data required for
@@ -45,46 +47,50 @@ the rest of your application data.
 First, we'll cover some of the basics of integrating Oso into your
 application.
 
-The `Oso` class is the entrypoint to using Oso in our application. We
-usually will have a global instance that is created during application
-initialization, and shared across requests. In a Flask application, you
-may attach this instance to the global flask object, or the current
-application if it needs to be accessed outside of the application
+The `sqlalchemy_oso.SQLAlchemyOso` class is the entrypoint to using Oso in our
+SQLAlchemy application. We usually will have a global instance that is created
+during application initialization and shared across requests. In a Flask
+application, you may attach this instance to the global flask object, or the
+current application if it needs to be accessed outside of the application
 initialization process.
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
     from="docs: begin-init-oso"
-    to="Register authorization data"
+    to="# Enable roles features."
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
 >}}
 
 ### Registering authorization data types
 
-Oso policies are written over the data in our application that we'd like
-to authorize. The policy can directly reference the same types we use in
-our application. First, we must register our classes with Oso using
-`Oso.register_class`.
+Oso policies are written over the data in our application that we'd like to
+authorize. The policy can directly reference the same types we use in our
+application.
 
-Since we are using Oso with SQLAlchemy, we need
-to make Oso aware of our SQLAlchemy models. Later, we'll write
-authorization rules to control access to our models.
+Since we are using Oso with SQLAlchemy, we need to make Oso aware of our
+SQLAlchemy models. Typically, we would make Oso aware of our application
+classes by registering them via `Oso.register_class`, but the `sqlalchemy-oso`
+library provides a handy shortcut.
 
-The `sqlalchemy_oso.register_models` function helps us register
-SQLAlchemy ORM models with Oso.
+By providing our SQLAlchemy base model to the `sqlalchemy_oso.SQLAlchemyOso`
+constructor, all of our SQLAlchemy models that inherit from `Base` will be
+automatically registered with Oso.
+
+### Enabling built-in roles
+
+In order to enable built-in roles features, we need to pass our app's user
+class as well as a SQLAlchemy sessionmaker to the
+`sqlalchemy_oso.SQLAlchemyOso.enable_roles` method:
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
     from="docs: begin-init-oso"
-    to="OsoRoles"
+    to="# Load authorization policy."
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
     hlOpts="hl_lines=6"
 >}}
-
-This registers all models that inherit from `Base` with Oso for use in
-our policy.
 
 ### Loading our policy
 
@@ -98,7 +104,7 @@ Load the policy with the `Oso.load_file` function.
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
     from="docs: begin-init-oso"
-    to="Attach Oso"
+    to="# Attach SQLAlchemyOso instance to Flask application."
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
     hlOpts="hl_lines=10-11"

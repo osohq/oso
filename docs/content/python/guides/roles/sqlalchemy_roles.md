@@ -20,7 +20,7 @@ library which includes improved role configuration and enforcement.
 
 The [`sqlalchemy_oso.roles`](reference/frameworks/sqlalchemy#sqlalchemy_osoroles) module
 provides out-of-the-box Role-Based Access Control features that let you create
-a roles system with a few lines of code, and specify role permissions in a
+a roles system with a few lines of code and specify role permissions in a
 declarative Oso policy.
 
 This guide walks you through how to use `sqlalchemy_oso` to add basic roles to a multi-tenant app.
@@ -41,7 +41,7 @@ $ pip install sqlalchemy_oso
 ```
 
 Alternatively, if you are starting from scratch, clone the [sample
-application](https://github.com/osohq/oso-sqlalchemy-roles-guide/tree/main) and
+application](https://github.com/osohq/oso-sqlalchemy-roles-guide) and
 use the provided `requirements.txt` file:
 
 ```console
