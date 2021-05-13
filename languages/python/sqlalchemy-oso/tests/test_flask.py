@@ -29,9 +29,11 @@ def ctx(flask_app):
         yield ctx
 
 
+from sqlalchemy_oso.session import Permissions
+
 # Global because test_flask_model wants to enforce authorization on a model
 # that's created after initialization of the AuthorizedSQLAlchemy instance.
-checked_permissions = {}
+checked_permissions: Permissions = {}
 
 
 @pytest.fixture
