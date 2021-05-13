@@ -9,7 +9,7 @@ from sqlalchemy_oso.session import (
     AuthorizedSession,
 )
 
-from .models import Tag, User, Post
+from .models import User, Post
 from .conftest import print_query
 
 
