@@ -1569,19 +1569,16 @@ def test_reassign_user_role(init_oso, sample_data):
 # - [x] `role_allows` inside of a `not` (this probably won't work, so need error handling)
 
 
-@pytest.mark.xfail(
-    reason="Currently failing because we have a bug with filtering roles data--not returning relationships"
-)
-def test_basic_data_filtering(
-    init_oso, sample_data, auth_sessionmaker, User, Organization, Repository
+def test_authorizing_related_fields(
+    init_oso, sample_data, auth_sessionmaker, Organization, Repository
 ):
-    oso, oso_roles, session = init_oso
+    oso, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
-        actions = ["invite"] and
+        actions = ["invite", "read"] and
         roles = {
             org_member: {
-                perms: ["invite"],
+                perms: ["invite", "read"],
                 implies: ["repo_read"]
             }
         };
@@ -1597,22 +1594,28 @@ def test_basic_data_filtering(
     parent(repo: Repository, parent_org: Organization) if
         repo.org = parent_org;
 
-    allow(actor, action, resource: Repository) if
-        resource.org_id = "osohq";
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso_roles.synchronize_data()
+    oso.roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     steve = sample_data["steve"]
 
-    # Make sure basic data filtering works with test data
+    oso.roles.assign_role(steve, osohq, "org_member", session)
+
     oso.actor = steve
+
     oso.checked_permissions = {Repository: "pull"}
-    auth_session = auth_sessionmaker()
-    results = auth_session.query(Repository).all()
+    results = auth_sessionmaker().query(Repository).all()
     assert len(results) == 2
-    assert results[0].org == osohq
+    assert results[0].org is None
+
+    oso.checked_permissions = {Organization: "read", Repository: "pull"}
+    results = auth_sessionmaker().query(Repository).all()
+    assert len(results) == 2
+    assert results[0].org.id == osohq.id
 
 
 def test_data_filtering_role_allows_not(
