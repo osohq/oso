@@ -6,20 +6,25 @@ build:
 test-requirements: .make.test-requirements-install
 
 .make.test-requirements-install: requirements-test.txt
-	pip install pytest
 	pip install -r requirements-test.txt
 	touch $@
 
 test: test-requirements
 	pytest tests
 
-fmt:
+dev-requirements: .make.dev-requirements-install
+
+.make.dev-requirements-install: requirements-dev.txt
+	pip install -r requirements-dev.txt
+	touch $@
+
+fmt: dev-requirements
 	black .
 
-lint:
+lint: dev-requirements
 	flake8 .
 
-typecheck:
+typecheck: dev-requirements
 	mypy tests
 	mypy sqlalchemy_oso
 
