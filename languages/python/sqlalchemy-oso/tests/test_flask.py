@@ -3,6 +3,8 @@ import pytest
 from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer
 from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
+from sqlalchemy_oso.session import Permissions
+
 
 from .models import Post, ModelBase
 
@@ -28,8 +30,6 @@ def ctx(flask_app):
     with flask_app.app_context() as ctx:
         yield ctx
 
-
-from sqlalchemy_oso.session import Permissions
 
 # Global because test_flask_model wants to enforce authorization on a model
 # that's created after initialization of the AuthorizedSQLAlchemy instance.
