@@ -6,6 +6,7 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy import orm
+from sqlalchemy.sql import expression
 
 from oso import Oso
 
@@ -56,14 +57,13 @@ Permissions = Optional[Dict[Type[Any], Any]]
 
 
 def _authorize_query(query: Query) -> Optional[Query]:
-    """Authorize an existing query with an Oso instance, user, and checked
-    permissions."""
-    # Get the query session.
+    """Authorize an existing query with an Oso instance, user, and a
+    permissions map indicating which actions to check for which SQLAlchemy
+    models."""
     session = query.session
 
-    # Check whether this is an Oso session.
+    # Early return if this isn't an authorized session.
     if not isinstance(session, AuthorizedSessionBase):
-        # Not an authorized session.
         return None
 
     oso: Oso = session.oso_context["oso"]
@@ -87,19 +87,18 @@ def _authorize_query(query: Query) -> Optional[Query]:
         if entity is None:
             continue
 
-        # If entity is an alias, retrieve the underlying class.
-        alias = inspect(entity).class_ if isinstance(entity, AliasedClass) else None
-
-        # Only apply authorization to columns that have been specified as
-        # requiring authorization.
-        if alias in checked_permissions:
-            action = checked_permissions[alias]  # type: ignore
-        elif entity in checked_permissions:
-            action = checked_permissions[entity]  # type: ignore
+        # If entity is an alias, get the action for the underlying class.
+        if isinstance(entity, AliasedClass):
+            action = checked_permissions.get(inspect(entity).class_)  # type: ignore
         else:
+            action = checked_permissions.get(entity)
+
+        # If permissions map does not specify an action to authorize for entity
+        # or if the specified action is `None`, deny access.
+        if action is None:
+            query = query.filter(expression.false())  # type: ignore
             continue
 
-        session = query.session
         assert isinstance(session, Session)
         authorized_filter = authorize_model(oso, user, action, session, entity)
         if authorized_filter is not None:
