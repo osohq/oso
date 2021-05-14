@@ -806,7 +806,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.roles.configured = False
+    oso.roles.config = None
     oso.load_str(new_policy)
     oso.roles.synchronize_data()
 
@@ -879,7 +879,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.roles.configured = False
+    oso.roles.config = None
     oso.load_str(new_policy)
     oso.roles.synchronize_data()
 
@@ -919,7 +919,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso.roles.configured = False
+    oso.roles.config = None
     oso.roles.synchronize_data()
 
     osohq = sample_data["osohq"]
@@ -966,7 +966,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
 
     oso.clear_rules()
     oso.load_str(new_policy)
-    oso.roles.configured = False
+    oso.roles.config = None
     oso.roles.synchronize_data()
 
     assert not oso.is_allowed(leina, "edit", oso_bug)
@@ -993,7 +993,7 @@ def test_homogeneous_role_implication(init_oso, sample_data):
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso.roles.configured = False
+    oso.roles.config = None
     oso.roles.synchronize_data()
 
     osohq = sample_data["osohq"]
@@ -1028,7 +1028,7 @@ def test_homogeneous_role_implication(init_oso, sample_data):
 
     oso.clear_rules()
     oso.load_str(new_policy)
-    oso.roles.configured = False
+    oso.roles.config = None
     oso.roles.synchronize_data()
 
     # leina can still "invite"
@@ -1111,7 +1111,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
 
     oso.clear_rules()
     oso.load_str(new_policy)
-    oso.roles.configured = False
+    oso.roles.config = None
     oso.roles.synchronize_data()
 
     assert not oso.is_allowed(leina, "pull", oso_repo)
@@ -1197,7 +1197,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.roles.configured = False
+    oso.roles.config = None
     oso.load_str(new_policy)
     oso.roles.synchronize_data()
 
@@ -1317,7 +1317,7 @@ def test_chained_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.roles.configured = False
+    oso.roles.config = None
     oso.load_str(new_policy)
     oso.roles.synchronize_data()
 

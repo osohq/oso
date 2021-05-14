@@ -1,5 +1,5 @@
 # Roles 2
-from typing import Any, List, Set
+from typing import Any, List, Set, Dict
 from dataclasses import dataclass
 
 from oso import Variable
@@ -144,18 +144,19 @@ def user_in_role_query(
     return query
 
 
-# Starting with something like this, tbd
-
-
+# Python representation of the configuration data.
+# Currently this data is read from a polar file that has
+# resource and parent rule definitions.
 @dataclass
 class Relationship:
     child_python_class: Any
     child_type: str
     child_table: str
+    child_join_column: str
     parent_python_class: Any
     parent_type: str
     parent_table: str
-    parent_field: str
+    parent_join_column: str
 
 
 @dataclass
@@ -180,9 +181,303 @@ class Resource:
     roles: Set[str]
 
 
+@dataclass
+class Config:
+    resources: Dict[str, Resource]
+    permissions: List[Permission]
+    roles: Dict[str, Role]
+    relationships: List[Relationship]
+
+
+def read_config(oso):
+    """
+    Queries the polar policy for the configuration
+    """
+    config = Config(resources={}, permissions=[], roles={}, relationships=[])
+
+    # Register relationships
+    role_relationships = oso.query_rule(
+        "parent",
+        Variable("resource"),
+        Variable("parent_resource"),
+        accept_expression=True,
+    )
+
+    # Currently there is only one valid relationship, a parent.
+    # There is also only one way you can write it as a rule in polar.
+    # parent(child_resource, parent_resource) if
+    #     child.parent = parent_resource;
+    #
+    # @TODO: Support other forms of this rule, eg
+    # parent(child_resource, parent_resource) if
+    #     child.parent_id = parent_resource.id;
+    for result in role_relationships:
+        try:
+            constraints = result["bindings"]["resource"]
+            assert len(constraints.args) == 2
+            type_check = constraints.args[0]
+            assert type_check.operator == "Isa"
+            assert len(type_check.args) == 2
+            assert type_check.args[0] == Variable("_this")
+            pattern = type_check.args[1]
+            child_t = pattern.tag
+            get_parent = constraints.args[1]
+            assert get_parent.operator == "Isa"
+            assert len(get_parent.args) == 2
+            getter = get_parent.args[0]
+            assert getter.operator == "Dot"
+            assert len(getter.args) == 2
+            assert getter.args[0] == Variable("_this")
+            child_attr = getter.args[1]
+            pattern = get_parent.args[1]
+            parent_t = pattern.tag
+
+            # @TODO: pull out
+            child_python_class = oso.host.classes[child_t]
+            child_table = child_python_class.__tablename__
+            parent_python_class = oso.host.classes[parent_t]
+            parent_table = parent_python_class.__tablename__
+
+            # the rule has the form
+            # `child.child_attr = parent`
+            # child_attr is assumed to be a sqlalchemy relationship field
+            # so we inspect the model to get the actual sql fields to join on
+            child_relationships = inspect(child_python_class).relationships
+            if child_attr not in child_relationships:
+                raise OsoError(
+                    f"Invalid Relationship: {child_attr} "
+                    + "is not a sqlalchemy relationship field."
+                )
+            rel = child_relationships[child_attr]
+            parent_join_column = list(rel.remote_side)[0].name
+            child_join_column = list(rel.local_columns)[0].name
+
+            relationship = Relationship(
+                child_python_class=child_python_class,
+                child_type=child_t,
+                child_table=child_table,
+                child_join_column=child_join_column,
+                parent_python_class=parent_python_class,
+                parent_type=parent_t,
+                parent_table=parent_table,
+                parent_join_column=parent_join_column,
+            )
+
+            config.relationships.append(relationship)
+        except AssertionError:
+            raise OsoError("Invalid relationship.")
+
+    # Register resources / permissions / roles and implications
+    # Based on the role_resource definitions
+    # These are rules that look like this.
+    # resource(_type: Repository, "repo", actions, roles) if
+    #     actions = [
+    #         "push",
+    #         "pull"
+    #     ] and
+    #     roles = {
+    #         repo_write: {
+    #             perms: ["push", "issue:edit"],
+    #             implies: ["repo_read"]
+    #         },
+    #         repo_read: {
+    #             perms: ["pull"]
+    #         }
+    #     };
+    # The first argument lets us use a specializer to say what the python class is.
+    # The second arg is a name which is used for permission namespacing.
+    # The third arg should be bound to a list of actions defined for the resource.
+    # The fouth arg should be bound to a map from role name to role definition.
+    #   Each role definitions has two fields,
+    #     perms which says which permissions the role has
+    #     and implies which says which other roles are implied by having this one.
+    role_resources = oso.query_rule(
+        "resource",
+        Variable("resource"),
+        Variable("name"),
+        Variable("permissions"),
+        Variable("roles"),
+        accept_expression=True,
+    )
+    role_definitions = []
+    for result in role_resources:
+        # @TODO: Shared code for the type specializer?
+
+        # Parse the type from the _this ISA Foo expression you get from the specializer.
+        resource_def = result["bindings"]["resource"]
+        assert resource_def.operator == "And"
+        assert len(resource_def.args) == 1
+        arg = resource_def.args[0]
+        assert arg.operator == "Isa"
+        assert len(arg.args) == 2
+        assert arg.args[0] == Variable("_this")
+        pattern = arg.args[1]
+        t = pattern.tag
+
+        name = result["bindings"]["name"]
+        permissions = result["bindings"]["permissions"]
+        role_defs = result["bindings"]["roles"]
+
+        assert t in oso.host.classes
+        python_class = oso.host.classes[t]
+
+        if isinstance(permissions, Variable):
+            permissions = []
+
+        # Check for duplicate permissions.
+        for perm in permissions:
+            if permissions.count(perm) > 1:
+                raise OsoError(
+                    f"Duplicate action {perm} for resource {python_class.__name__}"
+                )
+
+        if isinstance(role_defs, Variable):
+            role_names = []
+        else:
+            role_names = role_defs.keys()
+
+        if len(permissions) == 0 and len(role_names) == 0:
+            raise OsoError("Must define actions or roles for resource.")
+
+        if name in config.resources:
+            raise OsoError(f"Duplicate resource name {name}")
+
+        resource = Resource(
+            python_class=python_class,
+            name=name,
+            actions=permissions,
+            roles=role_names,
+        )
+        config.resources[resource.name] = resource
+
+        permissions = [
+            Permission(name=action, python_class=python_class) for action in permissions
+        ]
+        for permission in permissions:
+            config.permissions.append(permission)
+
+        # Collect up the role definitions to process after we know all the permissions
+        role_definitions.append((python_class, role_defs))
+
+    for python_class, role_defs in role_definitions:
+        if isinstance(role_defs, Variable):
+            continue  # No roles defined
+
+        for name, role_def in role_defs.items():
+            if name in config.roles:
+                raise OsoError(f"Duplicate role name {name}")
+
+            for key in role_def.keys():
+                if key not in ("perms", "implies"):
+                    raise OsoError(f"Invalid key in role definition :'{key}'")
+
+            role_permissions = []
+            if "perms" in role_def:
+                for permission in role_def["perms"]:
+                    # TODO: pull out "parse_permission"
+                    if ":" in permission:
+                        resource_name, action = permission.split(":", 1)
+                        if resource_name not in config.resources:
+                            raise OsoError("Invalid permission namespace.")
+                        permission_python_class = config.resources[
+                            resource_name
+                        ].python_class
+                    else:
+                        action = permission
+                        permission_python_class = python_class
+
+                    perm = Permission(name=action, python_class=permission_python_class)
+                    if perm not in config.permissions:
+                        raise OsoError(
+                            f"Permission {perm.name} doesn't exist for resource {perm.python_class.__name__}."
+                        )
+
+                    role_permissions.append(
+                        Permission(name=action, python_class=permission_python_class)
+                    )
+
+            implied_roles = []
+            if "implies" in role_def:
+                implied_roles = role_def["implies"]
+
+            if len(role_permissions) == 0 and len(implied_roles) == 0:
+                raise OsoError("Must define permissions or implied roles for a role.")
+
+            role = Role(
+                name=name,
+                python_class=python_class,
+                permissions=role_permissions,
+                implied_roles=implied_roles,
+            )
+            config.roles[role.name] = role
+
+    # Validate config
+    for name, role in config.roles.items():
+        for permission in role.permissions:
+            if permission.python_class != role.python_class:
+                for _, other_role in config.roles.items():
+                    if other_role.python_class == permission.python_class:
+                        raise OsoError(
+                            f"Permission {permission.name} on {permission.python_class.__name__} "
+                            + f"can not go on role {name} on {role.python_class.__name__} "
+                            + f"because {permission.python_class.__name__} has it's own roles. Use an implication."
+                        )
+
+                cls = permission.python_class
+                while cls != role.python_class:
+                    stepped = False
+                    for rel in config.relationships:
+                        if cls == rel.child_python_class:
+                            cls = rel.parent_python_class
+                            stepped = True
+                            break
+                    if not stepped:
+                        raise OsoError(
+                            f"Permission {permission.name} on {permission.python_class.__name__} "
+                            + f"can not go on role {name} on {role.python_class.__name__} "
+                            + "because no relationship exists."
+                        )
+
+        for implied in role.implied_roles:
+            # Make sure implied role exists
+            if implied not in config.roles:
+                raise OsoError(f"Role '{implied}' implied by '{name}' does not exist.")
+            implied_role = config.roles[implied]
+            # Make sure implied role is on a valid class
+            cls = implied_role.python_class
+            while cls != role.python_class:
+                stepped = False
+                for rel in config.relationships:
+                    if cls == rel.child_python_class:
+                        cls = rel.parent_python_class
+                        stepped = True
+                        break
+                if not stepped:
+                    raise OsoError(
+                        f"Role {name} on {role.python_class.__name__} "
+                        + f"can not imply role {implied} on {implied_role.python_class.__name__} "
+                        + "because no relationship exists."
+                    )
+            # Make sure implied roles dont have overlapping permissions.
+            # @TODO: Follow implication chair further than just one.
+            permissions = role.permissions
+            for implied_perm in implied_role.permissions:
+                if implied_perm in permissions:
+                    raise OsoError(
+                        f"Invalid implication. Role {role} has permission {implied_perm.name} "
+                        + f"on {implied_perm.python_class.__name__} but implies role {implied} "
+                        + f"which also has permission {implied_perm.name} on {implied_perm.python_class.__name__}"
+                    )
+
+    if len(config.resources) == 0:
+        raise OsoError("Need to define resources to use oso roles.")
+
+    return config
+
+
 def ensure_configured(func):
     def wrapper(self, *args, **kwargs):
-        if not self.configured:
+        if self.config is None:
             self._read_policy()
         return func(self, *args, **kwargs)
 
@@ -191,10 +486,6 @@ def ensure_configured(func):
 
 class OsoRoles:
     def __init__(self, oso, sqlalchemy_base, user_model, session_maker):
-        # @Q: Is this where I should create the models?
-        # Would this even work? Do these have to happen at a
-        # certain time or something to get created in the database?
-
         self.session_maker = session_maker
 
         for cls in session_maker.class_.__mro__:
@@ -273,25 +564,20 @@ class OsoRoles:
         self.RolePermission = RolePermission
         self.RoleImplication = RoleImplication
 
-        self.resources = {}
-        self.permissions = []
-        self.roles = {}
-        self.relationships = []
-
         class Roles:
             @staticmethod
             def role_allows(user, action, resource):
-                if not self.configured:
+                if self.config is None:
                     self._read_policy()
                 return self._role_allows(user, action, resource)
 
             @staticmethod
             def user_in_role(user, role, resource):
-                if not self.configured:
+                if self.config is None:
                     self._read_policy()
                 return self._user_in_role(user, role, resource)
 
-        self.configured = False
+        self.config = None
         self.synced = False
         self._wrapped_oso.register_class(Roles)
 
@@ -299,252 +585,14 @@ class OsoRoles:
         return self.session_maker()
 
     def _read_policy(self):
-        # TODO: should we think about calling this by default when the policy is loaded?
-        self.resources = {}
-        self.permissions = []
-        self.roles = {}
-        self.relationships = []
-
-        # Register relationships
-        role_relationships = self._wrapped_oso.query_rule(
-            "parent",
-            Variable("resource"),
-            Variable("parent_resource"),
-            accept_expression=True,
-        )
-
-        for result in role_relationships:
-            # OMG WOW HACK, OMFG WOW HACK
-            # will not work in general lol
-            try:
-                constraints = result["bindings"]["resource"]
-                assert len(constraints.args) == 2
-                type_check = constraints.args[0]
-                assert type_check.operator == "Isa"
-                assert len(type_check.args) == 2
-                assert type_check.args[0] == Variable("_this")
-                pattern = type_check.args[1]
-                child_t = pattern.tag
-                get_parent = constraints.args[1]
-                assert get_parent.operator == "Isa"
-                assert len(get_parent.args) == 2
-                getter = get_parent.args[0]
-                assert getter.operator == "Dot"
-                assert len(getter.args) == 2
-                assert getter.args[0] == Variable("_this")
-                parent_field = getter.args[1]
-                pattern = get_parent.args[1]
-                parent_t = pattern.tag
-
-                child_python_class = self._wrapped_oso.host.classes[child_t]
-                child_table = child_python_class.__tablename__
-                parent_python_class = self._wrapped_oso.host.classes[parent_t]
-                parent_table = parent_python_class.__tablename__
-
-                relationship = Relationship(
-                    child_python_class=child_python_class,
-                    child_type=child_t,
-                    child_table=child_table,
-                    parent_python_class=parent_python_class,
-                    parent_type=parent_t,
-                    parent_table=parent_table,
-                    parent_field=parent_field,
-                )
-
-                self.relationships.append(relationship)
-            except AssertionError:
-                raise OsoError("Invalid relationship.")
-
-        # Register resources / permissions / roles and implications
-        # Based on the role_resource definitions
-        role_resources = self._wrapped_oso.query_rule(
-            "resource",
-            Variable("resource"),
-            Variable("name"),
-            Variable("permissions"),
-            Variable("roles"),
-            accept_expression=True,
-        )
-        role_definitions = []
-        for result in role_resources:
-            resource_def = result["bindings"]["resource"]
-            assert resource_def.operator == "And"
-            assert len(resource_def.args) == 1
-            arg = resource_def.args[0]
-            assert arg.operator == "Isa"
-            assert len(arg.args) == 2
-            assert arg.args[0] == Variable("_this")
-            pattern = arg.args[1]
-            t = pattern.tag
-            name = result["bindings"]["name"]
-            permissions = result["bindings"]["permissions"]
-            role_defs = result["bindings"]["roles"]
-
-            python_class = self._wrapped_oso.host.classes[t]
-
-            if isinstance(permissions, Variable):
-                permissions = []
-            else:
-                permissions = permissions
-
-            for perm in permissions:
-                if permissions.count(perm) > 1:
-                    raise OsoError(
-                        f"Duplicate action {perm} for resource {python_class.__name__}"
-                    )
-
-            if isinstance(role_defs, Variable):
-                role_names = []
-            else:
-                role_names = role_defs.keys()
-
-            if len(permissions) == 0 and len(role_names) == 0:
-                raise OsoError("Must define actions or roles for resource.")
-
-            if name in self.resources:
-                raise OsoError(f"Duplicate resource name {name}")
-
-            resource = Resource(
-                python_class=python_class,
-                name=name,
-                actions=permissions,
-                roles=role_names,
-            )
-            self.resources[resource.name] = resource
-
-            permissions = [
-                Permission(name=action, python_class=python_class)
-                for action in permissions
-            ]
-            for permission in permissions:
-                self.permissions.append(permission)
-
-            role_definitions.append((python_class, role_defs))
-
-        for python_class, role_defs in role_definitions:
-            if not isinstance(role_defs, Variable):
-                for name, role_def in role_defs.items():
-                    if name in self.roles:
-                        raise OsoError(f"Duplicate role name {name}")
-
-                    for key in role_def.keys():
-                        if key != "perms" and key != "implies":
-                            raise OsoError(f"Invalid key in role definition :'{key}'")
-
-                    role_permissions = []
-                    if "perms" in role_def:
-                        for permission in role_def["perms"]:
-                            if ":" in permission:
-                                resource_name, action = permission.split(":", 1)
-                                if resource_name not in self.resources:
-                                    raise OsoError("Invalid permission namespace.")
-                                permission_python_class = self.resources[
-                                    resource_name
-                                ].python_class
-                            else:
-                                action = permission
-                                permission_python_class = python_class
-
-                            perm = Permission(
-                                name=action, python_class=permission_python_class
-                            )
-                            if perm not in self.permissions:
-                                raise OsoError(
-                                    f"Permission {perm.name} doesn't exist for resource {perm.python_class.__name__}."
-                                )
-
-                            role_permissions.append(
-                                Permission(
-                                    name=action, python_class=permission_python_class
-                                )
-                            )
-
-                    implied_roles = []
-                    if "implies" in role_def:
-                        implied_roles = role_def["implies"]
-
-                    if len(role_permissions) == 0 and len(implied_roles) == 0:
-                        raise OsoError(
-                            "Must define permissions or implied roles for a role."
-                        )
-
-                    role = Role(
-                        name=name,
-                        python_class=python_class,
-                        permissions=role_permissions,
-                        implied_roles=implied_roles,
-                    )
-                    self.roles[role.name] = role
-
-        for name, role in self.roles.items():
-            for permission in role.permissions:
-                if permission.python_class != role.python_class:
-                    for _, other_role in self.roles.items():
-                        if other_role.python_class == permission.python_class:
-                            raise OsoError(
-                                f"Permission {permission.name} on {permission.python_class.__name__} "
-                                + f"can not go on role {name} on {role.python_class.__name__} "
-                                + f"because {permission.python_class.__name__} has it's own roles. Use an implication."
-                            )
-
-                    cls = permission.python_class
-                    while cls != role.python_class:
-                        stepped = False
-                        for rel in self.relationships:
-                            if cls == rel.child_python_class:
-                                cls = rel.parent_python_class
-                                stepped = True
-                                break
-                        if not stepped:
-                            raise OsoError(
-                                f"Permission {permission.name} on {permission.python_class.__name__} "
-                                + f"can not go on role {name} on {role.python_class.__name__} "
-                                + "because no relationship exists."
-                            )
-
-            for implied in role.implied_roles:
-                # Make sure implied role exists
-                if implied not in self.roles:
-                    raise OsoError(
-                        f"Role '{implied}' implied by '{name}' does not exist."
-                    )
-                implied_role = self.roles[implied]
-                # Make sure implied role is on a valid class
-                cls = implied_role.python_class
-                while cls != role.python_class:
-                    stepped = False
-                    for rel in self.relationships:
-                        if cls == rel.child_python_class:
-                            cls = rel.parent_python_class
-                            stepped = True
-                            break
-                    if not stepped:
-                        raise OsoError(
-                            f"Role {name} on {role.python_class.__name__} "
-                            + f"can not imply role {implied} on {implied_role.python_class.__name__} "
-                            + "because no relationship exists."
-                        )
-                # Make sure implied roles dont have overlapping permissions.
-                # @TODO: Follow implication chair further than just one.
-                permissions = role.permissions
-                for implied_perm in implied_role.permissions:
-                    if implied_perm in permissions:
-                        raise OsoError(
-                            f"Invalid implication. Role {role} has permission {implied_perm.name} "
-                            + f"on {implied_perm.python_class.__name__} but implies role {implied} "
-                            + f"which also has permission {implied_perm.name} on {implied_perm.python_class.__name__}"
-                        )
-
-        if len(self.resources) == 0:
-            raise OsoError("Need to define resources to use oso roles.")
-
-        self.configured = True
+        self.config = read_config(self._wrapped_oso)
 
     @ensure_configured
     def synchronize_data(self, session=None):
         """
-        Call to load the roles data from the policy to the database so that it can be evaluated.
-        This must be called every time the policy changes, usually as part of a deploy script.
+        Call to load the roles data from the policy to the database so that it can be
+        evaluated. This must be called every time the policy changes, usually as part
+        of a deploy script.
         """
         # Sync static data to the database.
         if session is None:
@@ -556,9 +604,9 @@ class OsoRoles:
         session.execute("delete from permissions")
 
         permissions = {}
-        for p in self.permissions:
+        for p in self.config.permissions:
             name = p.name
-            t = str(p.python_class.__name__)
+            t = str(p.python_class.__name__)  # TODO: pull out
             permissions[(name, t)] = self.Permission(resource_type=t, name=name)
 
         for _, p in permissions.items():
@@ -569,7 +617,7 @@ class OsoRoles:
         roles = []
         role_permissions = []
         role_implications = []
-        for _, role in self.roles.items():
+        for _, role in self.config.roles.items():
             roles.append(
                 self.Role(name=role.name, resource_type=role.python_class.__name__)
             )
@@ -606,7 +654,7 @@ class OsoRoles:
         self.user_in_role_list_filter_queries = {}
 
         # @NOTE: WOW HACK
-        for relationship in self.relationships:
+        for relationship in self.config.relationships:
             parent_id_field = (
                 inspect(relationship.parent_python_class).primary_key[0].name
             )
@@ -617,21 +665,16 @@ class OsoRoles:
             parent_id = parent_id_field
             parent_table = relationship.parent_table
             parent_type = relationship.parent_type
+            parent_join_column = relationship.parent_join_column
             child_id = child_id_field
             child_table = relationship.child_table
             child_type = relationship.child_type
-            sqlalchemy_field = relationship.parent_field
-            child_relationships = inspect(relationship.child_python_class).relationships
-            if sqlalchemy_field not in child_relationships:
-                raise OsoError("Invalid Relationship")
-            rel = child_relationships[sqlalchemy_field]
-            parent_join_field = list(rel.remote_side)[0].name
-            child_join_field = list(rel.local_columns)[0].name
+            child_join_column = relationship.child_join_column
             select = f"""
                 select p.{parent_id}
                 from {child_table} c
                 join {parent_table} p
-                on cast(c.{child_join_field} as text) = cast(p.{parent_join_field} as text)
+                on cast(c.{child_join_column} as text) = cast(p.{parent_join_column} as text)
                 where c.{child_id} = resources.id"""
 
             id_query += ""
@@ -649,7 +692,7 @@ class OsoRoles:
 
         resource_id_field = "cast(:resource_id as text)"
 
-        has_relationships = len(self.relationships) > 0
+        has_relationships = len(self.config.relationships) > 0
         self.role_allow_sql_query = role_allow_query(
             id_query, type_query, child_types, resource_id_field, has_relationships
         )
@@ -658,7 +701,7 @@ class OsoRoles:
             id_query, type_query, child_types, resource_id_field, has_relationships
         )
 
-        for _, resource in self.resources.items():
+        for _, resource in self.config.resources.items():
             python_class = resource.python_class
             id_field = inspect(python_class).primary_key[0].name
             table = python_class.__tablename__
@@ -767,9 +810,9 @@ class OsoRoles:
             my_session = session
 
         # @TODO: Verify all the rules of what roles you can be assigned to.
-        if role_name not in self.roles:
+        if role_name not in self.config.roles:
             raise OsoError(f"Could not find role {role_name}")
-        role = self.roles[role_name]
+        role = self.config.roles[role_name]
 
         if not resource.__class__ == role.python_class:
             raise OsoError(
@@ -813,6 +856,8 @@ class OsoRoles:
         if not session:
             my_session.commit()
 
+    # TODO more helpers for like is role real?
+
     @ensure_configured
     def remove_role(self, user, resource, role_name, session=None):
         if not session:
@@ -821,9 +866,9 @@ class OsoRoles:
             my_session = session
 
         # @TODO: Verify all the rules of what roles you can be assigned to.
-        if role_name not in self.roles:
+        if role_name not in self.config.roles:
             raise OsoError(f"Could not find role {role_name}")
-        role = self.roles[role_name]
+        role = self.config.roles[role_name]
 
         if not resource.__class__ == role.python_class:
             raise OsoError("Role class does not match python class")
@@ -857,7 +902,7 @@ class OsoRoles:
     def for_resource(self, resource_class, session=None):
         # List the roles for a resource type
         roles = []
-        for name, role in self.roles.items():
+        for name, role in self.config.roles.items():
             if role.python_class == resource_class:
                 roles.append(name)
         return roles
