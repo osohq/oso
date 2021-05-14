@@ -344,14 +344,14 @@ def read_config(oso):
         assert resource_def.operator == "And"
         assert len(resource_def.args) == 1
         arg = resource_def.args[0]
-        t = isa_type(arg)
+        type = isa_type(arg)
 
         name = result["bindings"]["name"]
         permissions = result["bindings"]["permissions"]
         role_defs = result["bindings"]["roles"]
 
-        assert t in oso.host.classes
-        python_class = oso.host.classes[t]
+        assert type in oso.host.classes
+        python_class = oso.host.classes[type]
 
         if isinstance(permissions, Variable):
             permissions = []
@@ -359,7 +359,7 @@ def read_config(oso):
         # Check for duplicate permissions.
         for perm in permissions:
             if permissions.count(perm) > 1:
-                raise OsoError(f"Duplicate action {perm} for resource {t}")
+                raise OsoError(f"Duplicate action {perm} for resource {type}")
 
         if isinstance(role_defs, Variable):
             role_names = []
@@ -622,8 +622,8 @@ class OsoRoles:
         permissions = {}
         for p in self.config.permissions:
             name = p.name
-            t = p.type
-            permissions[(name, t)] = self.Permission(resource_type=t, name=name)
+            type = p.type
+            permissions[(name, type)] = self.Permission(resource_type=type, name=name)
 
         for _, p in permissions.items():
             session.add(p)
@@ -717,11 +717,11 @@ class OsoRoles:
 
         for _, resource in self.config.resources.items():
             python_class = resource.python_class
-            t = resource.type
+            type = resource.type
             id_field = inspect(python_class).primary_key[0].name
             table = python_class.__tablename__
             self.role_allow_list_filter_queries[
-                t
+                type
             ] = f"""
                 select
                   {id_field}
@@ -731,7 +731,7 @@ class OsoRoles:
                 )
             """
             self.user_in_role_list_filter_queries[
-                t
+                type
             ] = f"""
                 select
                   {id_field}
