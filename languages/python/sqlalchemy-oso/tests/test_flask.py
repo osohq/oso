@@ -3,6 +3,8 @@ import pytest
 from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer
 from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
+from sqlalchemy_oso.session import Permissions
+
 
 from .models import Post, ModelBase
 
@@ -29,18 +31,26 @@ def ctx(flask_app):
         yield ctx
 
 
+# Global because test_flask_model wants to enforce authorization on a model
+# that's created after initialization of the AuthorizedSQLAlchemy instance.
+checked_permissions: Permissions = {}
+
+
 @pytest.fixture
 def sqlalchemy(flask_app, oso):
     sqlalchemy = AuthorizedSQLAlchemy(
-        get_oso=lambda: oso, get_user=lambda: "user", get_action=lambda: "read"
+        get_oso=lambda: oso,
+        get_user=lambda: "user",
+        get_checked_permissions=lambda: checked_permissions,
     )
     sqlalchemy.init_app(flask_app)
     return sqlalchemy
 
 
-def test_authorized_sqlalchemy(ctx, flask_app, oso, sqlalchemy, post_fixtures):
+def test_authorized_sqlalchemy(ctx, oso, sqlalchemy, post_fixtures):
+    global checked_permissions
+    checked_permissions = {Post: "read"}
     oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
-    sqlalchemy.init_app(flask_app)
     engine = sqlalchemy.get_engine()
     ModelBase.metadata.create_all(engine)
 
@@ -56,13 +66,15 @@ def test_authorized_sqlalchemy(ctx, flask_app, oso, sqlalchemy, post_fixtures):
 
     assert authorized_session.query(Post).count() == 1
 
-    with flask_app.app_context():
-        assert sqlalchemy.session.query(Post).count() == 1
+    assert sqlalchemy.session.query(Post).count() == 1
 
 
-def test_flask_model(ctx, flask_app, oso, sqlalchemy):
+def test_flask_model(ctx, oso, sqlalchemy):
     class TestModel(sqlalchemy.Model):
         id = Column(Integer, primary_key=True)
+
+    global checked_permissions
+    checked_permissions = {TestModel: "read"}
 
     sqlalchemy.create_all()
     sqlalchemy.session.add(TestModel(id=1))
