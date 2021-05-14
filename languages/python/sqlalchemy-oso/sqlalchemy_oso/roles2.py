@@ -864,12 +864,12 @@ class OsoRoles:
 
         if user_role is None:
             return False
-        else:
-            my_session.delete(user_role)
-            my_session.flush()
-            if not session:
-                my_session.commit()
-            return True
+
+        my_session.delete(user_role)
+        my_session.flush()
+        if not session:
+            my_session.commit()
+        return True
 
     @ensure_configured
     def for_resource(self, resource_class, session=None):
@@ -887,7 +887,7 @@ class OsoRoles:
             session = self._get_session()
 
         resource_type = resource.__class__.__name__
-        resource_pk_name = inspect(resource.__class__).primary_key[0].name
+        resource_pk_name, _ = get_pk(resource.__class__)
         resource_id = str(getattr(resource, resource_pk_name))
 
         user_roles = (
@@ -906,7 +906,7 @@ class OsoRoles:
         if not session:
             session = self._get_session()
 
-        user_pk_name = inspect(user.__class__).primary_key[0].name
+        user_pk_name, _ = get_pk(user.__class__)
         user_id = getattr(user, user_pk_name)
 
         user_roles = (
@@ -927,95 +927,47 @@ class OsoRoles:
 
 
 def _generate_query_filter(oso, role_method, model):
-    actor = role_method.args[0]
+    user = role_method.args[0]
     action_or_role = role_method.args[1]
-    if role_method.name == "role_allows":
-        return _generate_role_allows_filter(oso, actor, action_or_role, model)
-    elif role_method.name == "user_in_role":
-        return _generate_user_in_role_filter(oso, actor, action_or_role, model)
-    else:
-        # Should never reach here
-        raise OsoError(
-            "Unexpected role method called with partial resource variable: {}",
-            role_method.name,
-        )
 
-
-def _generate_role_allows_filter(oso, user, action, resource_model):
-    # Ok, we're really going for it now. This is probably the biggest wow hack yet.
-    # We fetch all the resources that the user can view based on roles.
-    # Then we add a single filter, where resource_id in [list they can see]
-    # It's very slow and wasteful but actually evaluates correctly so it's a good first version.
     session = oso.roles._get_session()
 
     try:
-        user_pk_name = inspect(user.__class__).primary_key[0].name
+        user_pk_name, _ = get_pk(user.__class__)
         user_id = getattr(user, user_pk_name)
 
-        resource_type = resource_model.__name__
-        resource_pk_name = inspect(resource_model).primary_key[0].name
+        resource_type = model.__name__
+        resource_pk_name, _ = get_pk(model)
     except sqlalchemy.exc.NoInspectionAvailable:
         # User or Resource is not a sqlalchemy object
         return sql.false()
 
+    params = {
+        "user_id": user_id,
+        "resource_type": resource_type,
+    }
+
     try:
-        role_list_sql = oso.roles.role_allow_list_filter_queries[resource_type]
+        if role_method.name == "role_allows":
+            list_sql = oso.roles.role_allow_list_filter_queries[resource_type]
+            params["action"] = action_or_role
+
+        elif role_method.name == "user_in_role":
+            list_sql = oso.roles.user_in_role_list_filter_queries[resource_type]
+            params["role"] = action_or_role
+
+        else:
+            # Should never reach here
+            raise OsoError(
+                "Unexpected role method called with partial resource variable: {}",
+                role_method.name,
+            )
     except KeyError:
         return sql.false()
 
-    # @OPT: It should be possible to pass the select sql as an in filter
-    # parameter (instead of doing two queries)
-    # but I'm not sure how you bind the variables yet.
-    # I think we need access to the query here instead of a filter or
-    # to pass on the bindings so they're bound before the execute later.
-    results = session.execute(
-        role_list_sql,
-        {
-            "user_id": user_id,
-            "action": action,
-            "resource_type": resource_type,
-        },
-    )
+    results = session.execute(list_sql, params)
     resource_ids = [id[0] for id in results.fetchall()]
-
-    # @Q: Why doesn't this work? Complains that in_ isn't a boolean
-    # expression.
-    # filter = getattr(resource_model, resource_pk_name).in_(resource_ids)
-
-    # @NOTE: The dumbest way possible is working.
-    # id in [1, ...]
-    id_in = getattr(resource_model, resource_pk_name).in_(resource_ids)
-    return id_in
-
-
-def _generate_user_in_role_filter(oso, user, role, resource_model):
-    session = oso.roles._get_session()
-
-    try:
-        user_pk_name = inspect(user.__class__).primary_key[0].name
-        user_id = getattr(user, user_pk_name)
-
-        resource_type = resource_model.__name__
-        resource_pk_name = inspect(resource_model).primary_key[0].name
-    except sqlalchemy.exc.NoInspectionAvailable:
-        # User or Resource is not a sqlalchemy object
-        return sql.false()
-
-    try:
-        list_sql = oso.roles.user_in_role_list_filter_queries[resource_type]
-    except KeyError:
-        return sql.false()
-
-    results = session.execute(
-        list_sql,
-        {
-            "user_id": user_id,
-            "role": role,
-            "resource_type": resource_type,
-        },
-    )
-    resource_ids = [id[0] for id in results.fetchall()]
-    id_in = getattr(resource_model, resource_pk_name).in_(resource_ids)
+    id_in = getattr(model, resource_pk_name).in_(resource_ids)
     return id_in
 
 
