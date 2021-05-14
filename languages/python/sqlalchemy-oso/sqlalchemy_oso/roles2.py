@@ -787,34 +787,28 @@ class OsoRoles:
             user, role, resource, self.user_in_role_sql_query, role=role
         )
 
-    @ensure_configured
-    def assign_role(self, user, resource, role_name, session=None, reassign=True):
-        if not session:
-            my_session = self._get_session()
-        else:
-            my_session = session
-
-        # @TODO: Verify all the rules of what roles you can be assigned to.
+    def _get_user_role(self, session, user, resource, role_name):
+        """ Checks if role_name is a valid role for the resource. """
         if role_name not in self.config.roles:
             raise OsoError(f"Could not find role {role_name}")
+
         role = self.config.roles[role_name]
 
         if not resource.__class__ == role.python_class:
             raise OsoError(
-                f'Cannot assign role "{role_name}" '
+                f'No Role "{role_name}" '
                 + "for resource {resource} "
                 + "(expected resource to be of type {role.type})."
             )
 
-        user_pk_name = inspect(user.__class__).primary_key[0].name
+        user_pk_name, _ = get_pk(user.__class__)
         user_id = getattr(user, user_pk_name)
         resource_type = resource.__class__.__name__
-        resource_pk_name = inspect(resource.__class__).primary_key[0].name
+        resource_pk_name, _ = get_pk(resource.__class__)
         resource_id = str(getattr(resource, resource_pk_name))
 
-        # Check for existing role.
         user_role = (
-            my_session.query(self.UserRole)
+            session.query(self.UserRole)
             .filter(
                 self.UserRole.user_id == user_id,
                 self.UserRole.resource_type == resource_type,
@@ -822,14 +816,32 @@ class OsoRoles:
             )
             .first()
         )
+
+        return user_role
+
+    @ensure_configured
+    def assign_role(self, user, resource, role_name, session=None, reassign=True):
+        if not session:
+            my_session = self._get_session()
+        else:
+            my_session = session
+
+        user_role = self._get_user_role(my_session, user, resource, role_name)
+
         if user_role is not None:
             if reassign:
                 user_role.role = role_name
             else:
                 raise OsoError(
-                    f"User {user_id} already has a role for this resource. To reassign, call with `reassign=True`."
+                    f"User {user} already has a role for this resource. To reassign, call with `reassign=True`."
                 )
         else:
+            user_pk_name, _ = get_pk(user.__class__)
+            user_id = getattr(user, user_pk_name)
+            resource_type = resource.__class__.__name__
+            resource_pk_name, _ = get_pk(resource.__class__)
+            resource_id = str(getattr(resource, resource_pk_name))
+
             user_role = self.UserRole(
                 user_id=user_id,
                 resource_type=resource_type,
@@ -841,8 +853,6 @@ class OsoRoles:
         if not session:
             my_session.commit()
 
-    # TODO more helpers for like is role real?
-
     @ensure_configured
     def remove_role(self, user, resource, role_name, session=None):
         if not session:
@@ -850,30 +860,8 @@ class OsoRoles:
         else:
             my_session = session
 
-        # @TODO: Verify all the rules of what roles you can be assigned to.
-        if role_name not in self.config.roles:
-            raise OsoError(f"Could not find role {role_name}")
-        role = self.config.roles[role_name]
+        user_role = self._get_user_role(my_session, user, resource, role_name)
 
-        if not resource.__class__ == role.python_class:
-            raise OsoError("Role class does not match python class")
-
-        user_pk_name = inspect(user.__class__).primary_key[0].name
-        user_id = getattr(user, user_pk_name)
-        resource_type = resource.__class__.__name__
-        resource_pk_name = inspect(resource.__class__).primary_key[0].name
-        resource_id = str(getattr(resource, resource_pk_name))
-
-        # Check for existing role.
-        user_role = (
-            my_session.query(self.UserRole)
-            .filter(
-                self.UserRole.user_id == user_id,
-                self.UserRole.resource_type == resource_type,
-                self.UserRole.resource_id == resource_id,
-            )
-            .first()
-        )
         if user_role is None:
             return False
         else:
