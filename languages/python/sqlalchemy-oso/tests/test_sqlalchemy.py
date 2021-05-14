@@ -303,3 +303,131 @@ def test_unconditional_policy_has_no_filter(engine, oso, fixture_data):
         + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
         + "posts.needs_moderation AS posts_needs_moderation \nFROM posts \nWHERE 1 = 1"
     )
+
+
+def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
+    """Test that baked relationship queries don't lead to authorization
+    backdoors for AuthorizedSession."""
+    from sqlalchemy.orm import Session
+
+    basic_session = Session(bind=engine)
+    all_posts = basic_session.query(Post)
+    assert all_posts.count() == 9
+    first_post = all_posts[0]
+    # Add related model query to the bakery cache.
+    first_post.created_by
+
+    oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
+
+    # `enable_baked_queries` defaults to `False`.
+    authorized_session = AuthorizedSession(oso, user="user", action="read", bind=engine)
+    authorized_posts = authorized_session.query(Post)
+    assert authorized_posts.count() == 1
+    first_authorized_post = authorized_posts[0]
+    assert first_post.id == first_authorized_post.id
+
+    # Should not be able to view the post's creator because there's no rule
+    # permitting access to "read" users.
+    assert first_authorized_post.created_by is None
+
+    # Explicitly pass `enable_baked_queries=True`.
+    baked_authorized_session = AuthorizedSession(
+        oso, user="user", action="read", bind=engine, enable_baked_queries=True
+    )
+    baked_authorized_posts = baked_authorized_session.query(Post)
+    assert baked_authorized_posts.count() == 1
+    first_baked_authorized_post = baked_authorized_posts[0]
+    assert first_post.id == first_baked_authorized_post.id
+
+    # Should be able to view the post's creator because it's using the User
+    # query baked by `first_post.created_by`.
+    assert first_baked_authorized_post.created_by.id == first_post.created_by.id
+
+
+def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
+    """Test that baked relationship queries don't lead to authorization
+    backdoors for authorized_sessionmaker."""
+    from sqlalchemy.orm import Session
+
+    basic_session = Session(bind=engine)
+    all_posts = basic_session.query(Post)
+    assert all_posts.count() == 9
+    first_post = all_posts[0]
+    # Add related model query to the bakery cache.
+    first_post.created_by
+
+    oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
+
+    # `enable_baked_queries` defaults to `False`.
+    authorized_session = authorized_sessionmaker(
+        get_oso=lambda: oso,
+        get_user=lambda: "user",
+        get_action=lambda: "read",
+        bind=engine,
+    )()
+    authorized_posts = authorized_session.query(Post)
+    assert authorized_posts.count() == 1
+    first_authorized_post = authorized_posts[0]
+    assert first_post.id == first_authorized_post.id
+
+    # Should not be able to view the post's creator because there's no rule
+    # permitting access to "read" users.
+    assert first_authorized_post.created_by is None
+
+    # Explicitly pass `enable_baked_queries=True`.
+    baked_authorized_session = authorized_sessionmaker(
+        get_oso=lambda: oso,
+        get_user=lambda: "user",
+        get_action=lambda: "read",
+        bind=engine,
+        enable_baked_queries=True,
+    )()
+    baked_authorized_posts = baked_authorized_session.query(Post)
+    assert baked_authorized_posts.count() == 1
+    first_baked_authorized_post = baked_authorized_posts[0]
+    assert first_post.id == first_baked_authorized_post.id
+
+    # Should be able to view the post's creator because it's using the User
+    # query baked by `first_post.created_by`.
+    assert first_baked_authorized_post.created_by.id == first_post.created_by.id
+
+
+def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
+    """Test that baked relationship queries don't lead to authorization
+    backdoors for scoped_session."""
+    from sqlalchemy.orm import Session
+
+    basic_session = Session(bind=engine)
+    all_posts = basic_session.query(Post)
+    assert all_posts.count() == 9
+    first_post = all_posts[0]
+    # Add related model query to the bakery cache.
+    first_post.created_by
+
+    oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
+
+    # `enable_baked_queries` defaults to `False`.
+    authorized_session = scoped_session(lambda: oso, lambda: "user", lambda: "read")
+    authorized_session.configure(bind=engine)
+    authorized_posts = authorized_session.query(Post)
+    assert authorized_posts.count() == 1
+    first_authorized_post = authorized_posts[0]
+    assert first_post.id == first_authorized_post.id
+
+    # Should not be able to view the post's creator because there's no rule
+    # permitting access to "read" users.
+    assert first_authorized_post.created_by is None
+
+    # Explicitly pass `enable_baked_queries=True`.
+    baked_authorized_session = scoped_session(
+        lambda: oso, lambda: "user", lambda: "read", enable_baked_queries=True
+    )
+    baked_authorized_session.configure(bind=engine)
+    baked_authorized_posts = baked_authorized_session.query(Post)
+    assert baked_authorized_posts.count() == 1
+    first_baked_authorized_post = baked_authorized_posts[0]
+    assert first_post.id == first_baked_authorized_post.id
+
+    # Should be able to view the post's creator because it's using the User
+    # query baked by `first_post.created_by`.
+    assert first_baked_authorized_post.created_by.id == first_post.created_by.id

@@ -95,6 +95,12 @@ def authorized_sessionmaker(get_oso, get_user, get_action, class_=None, **kwargs
 
     All other keyword arguments are passed through to
     :py:func:`sqlalchemy.orm.session.sessionmaker` unchanged.
+
+    NOTE: Unless ``enable_baked_queries=True`` is passed as a kwarg,
+          _baked_queries are disabled since the caching mechanism can lead to
+          authorization backdoors.
+
+    .. _baked_queries: https://docs.sqlalchemy.org/en/13/orm/extensions/baked.html
     """
     if class_ is None:
         class_ = Session
@@ -132,7 +138,13 @@ def scoped_session(get_oso, get_user, get_action, scopefunc=None, **kwargs):
     :param kwargs: Additional keyword arguments to pass to
                    :py:func:`authorized_sessionmaker`.
 
+    NOTE: Unless ``enable_baked_queries=True`` is passed as a kwarg,
+          _baked_queries are disabled since the caching mechanism can lead to
+          authorization backdoors.
+
     .. _scoped_session: https://docs.sqlalchemy.org/en/13/orm/contextual.html
+
+    .. _baked_queries: https://docs.sqlalchemy.org/en/13/orm/extensions/baked.html
     """
     scopefunc = scopefunc or (lambda: None)
 
@@ -151,6 +163,12 @@ class AuthorizedSessionBase(object):
 
         class MySession(AuthorizedSessionBase, sqlalchemy.orm.Session):
             pass
+
+    NOTE: Unless ``enable_baked_queries=True`` is passed to the constructor,
+          _baked_queries are disabled since the caching mechanism can lead to
+          authorization backdoors.
+
+    .. _baked_queries: https://docs.sqlalchemy.org/en/13/orm/extensions/baked.html
     """
 
     def __init__(self, oso: Oso, user, action, **options):
@@ -169,6 +187,11 @@ class AuthorizedSessionBase(object):
         self._oso_user = user
         self._oso_action = action
 
+        # Unless a user explicitly enables baked queries with the understanding
+        # that it can result in an authorization backdoor, disable them.
+        if "enable_baked_queries" not in options:
+            options["enable_baked_queries"] = False
+
         super().__init__(**options)  # type: ignore
 
     @property
@@ -183,6 +206,12 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
 
     Usually :py:func:`authorized_sessionmaker` is used instead of directly
     instantiating the session.
+
+    NOTE: Unless ``enable_baked_queries=True`` is passed to the constructor,
+          _baked_queries are disabled since the caching mechanism can lead to
+          authorization backdoors.
+
+    .. _baked_queries: https://docs.sqlalchemy.org/en/13/orm/extensions/baked.html
     """
 
     pass
