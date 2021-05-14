@@ -437,3 +437,62 @@ def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
     # Should be able to view the post's creator because it's using the User
     # query baked by `first_post.created_by`.
     assert first_baked_authorized_post.created_by.id == first_post.created_by.id
+
+
+def test_checked_permissions(engine, oso, fixture_data):
+    """Test a query involving multiple models."""
+    oso.load_str(
+        """allow("user", "read", post: Post) if post.id = 1;
+           allow("user", "view", user: User) if user.id = 0;
+           allow("user", "view", user: User) if user.id = 1;
+           allow("all_posts", "read", _: Post);"""
+    )
+
+    # Not applying any authorization to this session.
+    session1 = AuthorizedSession(oso, "user", checked_permissions=None, bind=engine)
+    posts1 = session1.query(Post)
+    assert posts1.count() == 9
+    assert posts1[0].created_by_id == 0
+    assert posts1[0].created_by.username == "foo"
+    users1 = session1.query(User)
+    assert users1.count() == 3
+
+    # Deny access to every model for this session by omission.
+    session2 = AuthorizedSession(oso, "user", checked_permissions={}, bind=engine)
+    posts2 = session2.query(Post)
+    assert posts2.count() == 0
+    users2 = session2.query(User)
+    assert users2.count() == 0
+
+    # Deny access to specific models for this session by inclusion.
+    session3 = AuthorizedSession(
+        oso, "user", checked_permissions={Post: None, User: None}, bind=engine
+    )
+    posts3 = session3.query(Post)
+    assert posts3.count() == 0
+    users3 = session3.query(User)
+    assert users3.count() == 0
+
+    # Allow access to one model but not the other for this session.
+    session4 = AuthorizedSession(
+        oso, "user", checked_permissions={Post: "read"}, bind=engine
+    )
+    posts4 = session4.query(Post)
+    assert posts4.count() == 1
+    assert posts4[0].id == 1
+    assert posts4[0].created_by_id == 0
+    assert posts4[0].created_by is None
+    users4 = session4.query(User)
+    assert users4.count() == 0
+
+    # Allow access to multiple models with multiple actions for this session.
+    session4 = AuthorizedSession(
+        oso, "user", checked_permissions={Post: "read", User: "view"}, bind=engine
+    )
+    posts4 = session4.query(Post)
+    assert posts4.count() == 1
+    assert posts4[0].id == 1
+    assert posts4[0].created_by_id == 0
+    assert posts4[0].created_by.username == "foo"
+    users4 = session4.query(User)
+    assert users4.count() == 2
