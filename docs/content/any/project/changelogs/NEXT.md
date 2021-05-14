@@ -1,42 +1,21 @@
 ---
-title: Release YYYY-MM-DD
-menuTitle: YYYY-MM-DD
+title: Release 2021-05-DD
+menuTitle: 2021-05-DD
 any: true
 description: >-
-  Changelog for Release YYYY-MM-DD (RELEASED_VERSIONS) containing new features,
+  Changelog for Release 2021-05-DD (sqlalchemy-oso 0.6.2) containing new features,
   bug fixes, and more.
 draft: true
 ---
 
-## `RELEASED_PACKAGE_1` NEW_VERSION
+## `sqlalchemy-oso` 0.6.2
 
-### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
+### Other bugs & improvements
 
-#### Breaking changes
+- Authorized sessions now disable [baked queries][] by default because they can
+  lead to authorization backdoors. If you understand the risks and still want
+  to opt-in to the previous behavior of using baked queries, you can pass the
+  `enable_baked_queries=True` kwarg to `sqlalchemy_oso.authorized_sessionmaker()`
+  and friends.
 
-<!-- TODO: remove warning and replace with "None" if no breaking changes. -->
-
-{{% callout "Warning" "orange" %}}
-  This release contains breaking changes. Be sure to follow migration steps
-  before upgrading.
-{{% /callout %}}
-
-##### Breaking change 1
-
-Summary of breaking change.
-
-Link to [migration guide]().
-
-#### New features
-
-##### Feature 1
-
-Summary of user-facing changes.
-
-Link to [relevant documentation section]().
-
-#### Other bugs & improvements
-
-- Bulleted list
-- Of smaller improvements
-- Potentially with doc [links]().
+[baked queries]: https://docs.sqlalchemy.org/en/13/orm/extensions/baked.html
