@@ -749,13 +749,10 @@ class OsoRoles:
                 )
             """
 
-    def _roles_query(self, user, action, resource, query, **args):
-        pass
-
-    def _role_allows(self, user, action, resource):
+    def _roles_query(self, user, arg2, resource, query, **kwargs):
         # We shouldn't get any data filtering calls to this method
-        if not isinstance(action, str):
-            raise OsoError("user_in_role() expects a string action, got {}", action)
+        if not isinstance(arg2, str):
+            raise OsoError("Expected a string, got {}", arg2)
 
         session = self._get_session()
 
@@ -770,58 +767,25 @@ class OsoRoles:
 
         resource_id = str(getattr(resource, resource_pk_name))
 
-        results = session.execute(
-            self.role_allow_sql_query,
-            {
-                "user_id": user_id,
-                "action": action,
-                "resource_id": resource_id,
-                "resource_type": resource.__class__.__name__,
-            },
+        params = {
+            "user_id": user_id,
+            "resource_id": resource_id,
+            "resource_type": resource.__class__.__name__,
+        }
+        params.update(kwargs)
+
+        results = session.execute(query, params)
+        return bool(results.first())
+
+    def _role_allows(self, user, action, resource):
+        return self._roles_query(
+            user, action, resource, self.role_allow_sql_query, action=action
         )
-        role = results.first()
-        if role:
-            return True
-        else:
-            return False
 
     def _user_in_role(self, user, role, resource):
-        # We shouldn't get any data filtering calls to this method
-        assert not isinstance(resource, Variable)
-        if not isinstance(role, str):
-            raise OsoError("user_in_role() expects a string role, got {}", role)
-
-        session = self._get_session()
-
-        try:
-            user_pk_name = inspect(user.__class__).primary_key[0].name
-            user_id = getattr(user, user_pk_name)
-
-            primary_keys = inspect(resource.__class__).primary_key
-            assert (
-                len(primary_keys) == 1
-            ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
-            resource_pk_name = primary_keys[0].name
-        except sqlalchemy.exc.NoInspectionAvailable:
-            # User or Resource is not a sqlalchemy object
-            return False
-
-        resource_id = str(getattr(resource, resource_pk_name))
-
-        results = session.execute(
-            self.user_in_role_sql_query,
-            {
-                "user_id": user_id,
-                "role": role,
-                "resource_id": resource_id,
-                "resource_type": resource.__class__.__name__,
-            },
+        return self._roles_query(
+            user, role, resource, self.user_in_role_sql_query, role=role
         )
-        role = results.first()
-        if role:
-            return True
-        else:
-            return False
 
     @ensure_configured
     def assign_role(self, user, resource, role_name, session=None, reassign=True):
