@@ -12,10 +12,11 @@ draft: true
 
 ### Other bugs & improvements
 
-- Authorized sessions now disable [baked queries][] by default because they can
-  lead to authorization backdoors. If you understand the risks and still want
-  to opt-in to the previous behavior of using baked queries, you can pass the
-  `enable_baked_queries=True` kwarg to `sqlalchemy_oso.authorized_sessionmaker()`
-  and friends.
+- Authorized sessions now disable [baked queries][] by default because the
+  caching mechanism can bypass authorization by using queries from the cache
+  that were previously baked without authorization applied. If you understand
+  the risks and still want to opt-in to the previous behavior of using baked
+  queries, you can pass the `enable_baked_queries=True` keyword argument to
+  `sqlalchemy_oso.authorized_sessionmaker()` and friends.
 
 [baked queries]: https://docs.sqlalchemy.org/en/13/orm/extensions/baked.html
