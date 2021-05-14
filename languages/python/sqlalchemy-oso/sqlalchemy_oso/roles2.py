@@ -15,6 +15,15 @@ from sqlalchemy import sql
 from oso import OsoError
 
 
+def isa_type(arg):
+    assert arg.operator == "Isa"
+    assert len(arg.args) == 2
+    assert arg.args[0] == Variable("_this")
+    pattern = arg.args[1]
+    t = pattern.tag
+    return t
+
+
 def get_pk(model):
     pks = inspect(model).primary_key
     assert (
@@ -202,6 +211,28 @@ class Config:
     relationships: List[Relationship]
 
 
+def parse_permission(permission, python_class, config):
+    """ Parse a permission string, check if it's valid and return a Permission """
+    if ":" in permission:
+        resource_name, action = permission.split(":", 1)
+        if resource_name not in config.resources:
+            raise OsoError("Invalid permission namespace.")
+        permission_python_class = config.resources[resource_name].python_class
+    else:
+        action = permission
+        permission_python_class = python_class
+    perm = Permission(
+        name=action,
+        type=permission_python_class.__name__,
+        python_class=permission_python_class,
+    )
+    if perm not in config.permissions:
+        raise OsoError(
+            f"Permission {perm.name} doesn't exist for resource {perm.type}."
+        )
+    return perm
+
+
 def read_config(oso):
     """
     Queries the polar policy for the configuration
@@ -229,11 +260,7 @@ def read_config(oso):
             constraints = result["bindings"]["resource"]
             assert len(constraints.args) == 2
             type_check = constraints.args[0]
-            assert type_check.operator == "Isa"
-            assert len(type_check.args) == 2
-            assert type_check.args[0] == Variable("_this")
-            pattern = type_check.args[1]
-            child_t = pattern.tag
+            child_t = isa_type(type_check)
             get_parent = constraints.args[1]
             assert get_parent.operator == "Isa"
             assert len(get_parent.args) == 2
@@ -245,7 +272,6 @@ def read_config(oso):
             pattern = get_parent.args[1]
             parent_t = pattern.tag
 
-            # @TODO: pull out
             child_python_class = oso.host.classes[child_t]
             child_table = child_python_class.__tablename__
             parent_python_class = oso.host.classes[parent_t]
@@ -314,18 +340,11 @@ def read_config(oso):
     )
     role_definitions = []
     for result in role_resources:
-        # @TODO: Shared code for the type specializer?
-
-        # Parse the type from the _this ISA Foo expression you get from the specializer.
         resource_def = result["bindings"]["resource"]
         assert resource_def.operator == "And"
         assert len(resource_def.args) == 1
         arg = resource_def.args[0]
-        assert arg.operator == "Isa"
-        assert len(arg.args) == 2
-        assert arg.args[0] == Variable("_this")
-        pattern = arg.args[1]
-        t = pattern.tag
+        t = isa_type(arg)
 
         name = result["bindings"]["name"]
         permissions = result["bindings"]["permissions"]
@@ -389,35 +408,8 @@ def read_config(oso):
             role_permissions = []
             if "perms" in role_def:
                 for permission in role_def["perms"]:
-                    # TODO: pull out "parse_permission"
-                    if ":" in permission:
-                        resource_name, action = permission.split(":", 1)
-                        if resource_name not in config.resources:
-                            raise OsoError("Invalid permission namespace.")
-                        permission_python_class = config.resources[
-                            resource_name
-                        ].python_class
-                    else:
-                        action = permission
-                        permission_python_class = python_class
-
-                    perm = Permission(
-                        name=action,
-                        type=permission_python_class.__name__,
-                        python_class=permission_python_class,
-                    )
-                    if perm not in config.permissions:
-                        raise OsoError(
-                            f"Permission {perm.name} doesn't exist for resource {perm.type}."
-                        )
-
-                    role_permissions.append(
-                        Permission(
-                            name=action,
-                            type=permission_python_class.__name__,
-                            python_class=permission_python_class,
-                        )
-                    )
+                    perm = parse_permission(permission, python_class, config)
+                    role_permissions.append(perm)
 
             implied_roles = []
             if "implies" in role_def:
