@@ -211,6 +211,35 @@
 <h1 id="sqlalchemy--page-root">sqlalchemy-oso-preview API Reference<a class="headerlink" href="#sqlalchemy--page-root" title="Permalink to this headline">¶</a></h1>
 
 <span id="sqlalchemy-oso"></span><h2 id="module-sqlalchemy_oso"><code class="docutils literal notranslate"><span class="pre">sqlalchemy_oso</span></code><a class="headerlink" href="#module-sqlalchemy_oso" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="sqlalchemy_oso.SQLAlchemyOso">
+<em class="property">class </em><code class="sig-prename descclassname">sqlalchemy_oso.</code><code class="sig-name descname">SQLAlchemyOso</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sqlalchemy_base</span></em><span class="sig-paren">)</span><a class="headerlink" href="#sqlalchemy_oso.SQLAlchemyOso" title="Permalink to this definition">¶</a></dt>
+<dd><p>The central object to manage application policy state, e.g.
+the policy data, and verify requests when using Oso with SQLAlchemy.</p>
+<p>Supports SQLAlchemy-specific functionality, including data filtering and role management.</p>
+<p>Accepts a SQLAlchemy declarative_base on initialization, which is used to register
+all relevant SQLAlchemy models with Oso.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sqlalchemy_oso</span> <span class="kn">import</span> <span class="n">SQLAlchemyOso</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sqlalchemy.ext.declarative</span> <span class="kn">import</span> <span class="n">declarative_base</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"MyBaseModel"</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">SQLAlchemyOso</span><span class="p">(</span><span class="n">Base</span><span class="p">)</span>
+<span class="go">&lt;sqlalchemy_oso.oso.SQLAlchemyOso object at 0x...&gt;</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt id="sqlalchemy_oso.SQLAlchemyOso.enable_roles">
+<code class="sig-name descname">enable_roles</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_model</span></em>, <em class="sig-param"><span class="n">session_maker</span></em><span class="sig-paren">)</span><a class="headerlink" href="#sqlalchemy_oso.SQLAlchemyOso.enable_roles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enable the Oso role management API.
+Oso will create SQLAlchemy models to create and assign roles to users (stored in <cite>user_model</cite>).
+The roles API methods will be available on the <cite>roles</cite> property of <cite>SQLAlchemyOso</cite>.</p>
+</dd></dl>
+<dl class="py method">
+<dt id="sqlalchemy_oso.SQLAlchemyOso.roles">
+<em class="property">property </em><code class="sig-name descname">roles</code><a class="headerlink" href="#sqlalchemy_oso.SQLAlchemyOso.roles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Property to access the Oso roles API methods defined in <cite>OsoRoles</cite>.
+This property is only available after calling <cite>enable_roles()</cite>.</p>
+</dd></dl>
+</dd></dl>
 <dl class="py function">
 <dt id="sqlalchemy_oso.authorized_sessionmaker">
 <code class="sig-prename descclassname">sqlalchemy_oso.</code><code class="sig-name descname">authorized_sessionmaker</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">get_oso</span></em>, <em class="sig-param"><span class="n">get_user</span></em>, <em class="sig-param"><span class="n">get_action</span></em>, <em class="sig-param"><span class="n">class_</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#sqlalchemy_oso.authorized_sessionmaker" title="Permalink to this definition">¶</a></dt>
@@ -232,23 +261,6 @@
 <dt id="sqlalchemy_oso.register_models">
 <code class="sig-prename descclassname">sqlalchemy_oso.</code><code class="sig-name descname">register_models</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">oso</span><span class="p">:</span> <span class="n">oso.oso.Oso</span></em>, <em class="sig-param"><span class="n">base</span></em><span class="sig-paren">)</span><a class="headerlink" href="#sqlalchemy_oso.register_models" title="Permalink to this definition">¶</a></dt>
 <dd><p>Register all models in model base class <code class="docutils literal notranslate"><span class="pre">base</span></code> with oso as classes.</p>
-</dd></dl>
-<dl class="py function">
-<dt id="sqlalchemy_oso.set_get_session">
-<code class="sig-prename descclassname">sqlalchemy_oso.</code><code class="sig-name descname">set_get_session</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">oso</span><span class="p">:</span> <span class="n">oso.oso.Oso</span></em>, <em class="sig-param"><span class="n">get_session_func</span></em><span class="sig-paren">)</span><a class="headerlink" href="#sqlalchemy_oso.set_get_session" title="Permalink to this definition">¶</a></dt>
-<dd><p>Set the function that oso uses to expose a SQLAlchemy session to the policy</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>oso</strong> (<a class="reference internal" href="index.html#oso.Oso" title="oso.Oso"><em>Oso</em></a>) – The Oso instance used to evaluate the policy.</p></li>
-<li><p><strong>get_session_func</strong> (<em>lambda</em>) – A function that returns a SQLAlchemy session</p></li>
-</ul>
-</dd>
-</dl>
-<p>The session can be accessed from polar via the OsoSession constant. E.g.,</p>
-<div class="highlight-polar notranslate"><div class="highlight"><pre><span></span>OsoSession<span class="p">.</span><span class="k">get</span><span class="p">().</span><span class="k">query</span><span class="p">(...)</span>
-</pre></div>
-</div>
 </dd></dl>
 
 
