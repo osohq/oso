@@ -20,8 +20,8 @@ def isa_type(arg):
     assert len(arg.args) == 2
     assert arg.args[0] == Variable("_this")
     pattern = arg.args[1]
-    t = pattern.tag
-    return t
+    type = pattern.tag
+    return type
 
 
 def get_pk(model):
@@ -29,9 +29,9 @@ def get_pk(model):
     assert (
         len(pks) == 1
     ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
-    t = pks[0].type
+    type = pks[0].type
     name = pks[0].name
-    return (name, t)
+    return (name, type)
 
 
 def role_allow_query(
@@ -260,7 +260,7 @@ def read_config(oso):
             constraints = result["bindings"]["resource"]
             assert len(constraints.args) == 2
             type_check = constraints.args[0]
-            child_t = isa_type(type_check)
+            child_type = isa_type(type_check)
             get_parent = constraints.args[1]
             assert get_parent.operator == "Isa"
             assert len(get_parent.args) == 2
@@ -270,11 +270,11 @@ def read_config(oso):
             assert getter.args[0] == Variable("_this")
             child_attr = getter.args[1]
             pattern = get_parent.args[1]
-            parent_t = pattern.tag
+            parent_type = pattern.tag
 
-            child_python_class = oso.host.classes[child_t]
+            child_python_class = oso.host.classes[child_type]
             child_table = child_python_class.__tablename__
-            parent_python_class = oso.host.classes[parent_t]
+            parent_python_class = oso.host.classes[parent_type]
             parent_table = parent_python_class.__tablename__
 
             # the rule has the form
@@ -293,11 +293,11 @@ def read_config(oso):
 
             relationship = Relationship(
                 child_python_class=child_python_class,
-                child_type=child_t,
+                child_type=child_type,
                 child_table=child_table,
                 child_join_column=child_join_column,
                 parent_python_class=parent_python_class,
-                parent_type=parent_t,
+                parent_type=parent_type,
                 parent_table=parent_table,
                 parent_join_column=parent_join_column,
             )
@@ -780,7 +780,7 @@ class OsoRoles:
         )
 
     def _get_user_role(self, session, user, resource, role_name):
-        """ Checks if role_name is a valid role for the resource. """
+        """ Gets user role for resource if exists """
         if role_name not in self.config.roles:
             raise OsoError(f"Could not find role {role_name}")
 
