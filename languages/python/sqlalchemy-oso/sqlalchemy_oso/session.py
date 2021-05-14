@@ -120,9 +120,24 @@ def authorized_sessionmaker(
                     authorization.
     :param get_user: Callable that returns the user for an authorization
                      request.
-    :param get_checked_permissions: Callable that returns the permissions
-                                    (action-resource pairs) to authorize for
-                                    the request.
+    :param get_checked_permissions: Callable that returns an optional map of
+                                    permissions (resource-action pairs) to
+                                    authorize for the session. If the callable
+                                    returns ``None``, no authorization will
+                                    be applied to the session. If a map of
+                                    permissions is provided, querying for
+                                    a SQLAlchemy model present in the map
+                                    will authorize results according to the
+                                    action specified as the value in the
+                                    map. E.g., providing a map of ``{Post:
+                                    "read", User: "view"}`` where ``Post`` and
+                                    ``User`` are SQLAlchemy models will apply
+                                    authorization to ``session.query(Post)``
+                                    and ``session.query(User)`` such that
+                                    only ``Post`` objects that the user can
+                                    ``"read"`` and ``User`` objects that the
+                                    user can ``"view"`` are fetched from the
+                                    database.
     :param class_: Base class to use for sessions.
 
     All other keyword arguments are passed through to
@@ -169,7 +184,7 @@ def scoped_session(
     **kwargs
 ):
     """Return a scoped session maker that uses the Oso instance, user, and
-    checked permissions (action-resource pairs) as part of the scope function.
+    checked permissions (resource-action pairs) as part of the scope function.
 
     Use in place of sqlalchemy's scoped_session_.
 
@@ -179,12 +194,27 @@ def scoped_session(
                     authorization.
     :param get_user: Callable that returns the user for an authorization
                      request.
-    :param get_checked_permissions: Callable that returns the permissions
-                                    (action-resource pairs) to authorize for
-                                    the request.
+    :param get_checked_permissions: Callable that returns an optional map of
+                                    permissions (resource-action pairs) to
+                                    authorize for the session. If the callable
+                                    returns ``None``, no authorization will
+                                    be applied to the session. If a map of
+                                    permissions is provided, querying for
+                                    a SQLAlchemy model present in the map
+                                    will authorize results according to the
+                                    action specified as the value in the
+                                    map. E.g., providing a map of ``{Post:
+                                    "read", User: "view"}`` where ``Post`` and
+                                    ``User`` are SQLAlchemy models will apply
+                                    authorization to ``session.query(Post)``
+                                    and ``session.query(User)`` such that
+                                    only ``Post`` objects that the user can
+                                    ``"read"`` and ``User`` objects that the
+                                    user can ``"view"`` are fetched from the
+                                    database.
     :param scopefunc: Additional scope function to use for scoping sessions.
                       Output will be combined with the Oso, permissions
-                      (action-resource pairs), and user objects.
+                      (resource-action pairs), and user objects.
     :param kwargs: Additional keyword arguments to pass to
                    :py:func:`authorized_sessionmaker`.
 
@@ -229,8 +259,26 @@ class AuthorizedSessionBase(object):
 
         :param oso: The Oso instance to use for authorization.
         :param user: The user to perform authorization for.
-        :param checked_permissions: The permissions (action-resource pairs) to
+        :param checked_permissions: The permissions (resource-action pairs) to
                                     authorize.
+        :param checked_permissions: An optional map of permissions
+                                    (resource-action pairs) to authorize for
+                                    the session. If ``None`` is provided,
+                                    no authorization will be applied to
+                                    the session. If a map of permissions
+                                    is provided, querying for a SQLAlchemy
+                                    model present in the map will authorize
+                                    results according to the action
+                                    specified as the value in the map. E.g.,
+                                    providing a map of ``{Post: "read",
+                                    User: "view"}`` where ``Post`` and
+                                    ``User`` are SQLAlchemy models will apply
+                                    authorization to ``session.query(Post)``
+                                    and ``session.query(User)`` such that
+                                    only ``Post`` objects that the user can
+                                    ``"read"`` and ``User`` objects that the
+                                    user can ``"view"`` are fetched from the
+                                    database.
         :param options: Additional keyword arguments to pass to ``Session``.
 
         **Invariant**: the `oso`, `user`, and `checked_permissions` parameters
