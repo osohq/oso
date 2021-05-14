@@ -15,6 +15,16 @@ from sqlalchemy import sql
 from oso import OsoError
 
 
+def get_pk(model):
+    pks = inspect(model).primary_key
+    assert (
+        len(pks) == 1
+    ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
+    t = pks[0].type
+    name = pks[0].name
+    return (name, t)
+
+
 def role_allow_query(
     id_query, type_query, child_types, resource_id_field, has_relationships
 ):
@@ -162,12 +172,14 @@ class Relationship:
 @dataclass
 class Permission:
     python_class: Any
+    type: str
     name: str
 
 
 @dataclass
 class Role:
     name: str
+    type: str
     python_class: Any
     permissions: List[Permission]
     implied_roles: List[str]
@@ -176,6 +188,7 @@ class Role:
 @dataclass
 class Resource:
     name: str
+    type: str
     python_class: Any
     actions: Set[str]
     roles: Set[str]
@@ -327,9 +340,7 @@ def read_config(oso):
         # Check for duplicate permissions.
         for perm in permissions:
             if permissions.count(perm) > 1:
-                raise OsoError(
-                    f"Duplicate action {perm} for resource {python_class.__name__}"
-                )
+                raise OsoError(f"Duplicate action {perm} for resource {t}")
 
         if isinstance(role_defs, Variable):
             role_names = []
@@ -344,6 +355,7 @@ def read_config(oso):
 
         resource = Resource(
             python_class=python_class,
+            type=python_class.__name__,
             name=name,
             actions=permissions,
             roles=role_names,
@@ -351,7 +363,10 @@ def read_config(oso):
         config.resources[resource.name] = resource
 
         permissions = [
-            Permission(name=action, python_class=python_class) for action in permissions
+            Permission(
+                name=action, type=python_class.__name__, python_class=python_class
+            )
+            for action in permissions
         ]
         for permission in permissions:
             config.permissions.append(permission)
@@ -386,14 +401,22 @@ def read_config(oso):
                         action = permission
                         permission_python_class = python_class
 
-                    perm = Permission(name=action, python_class=permission_python_class)
+                    perm = Permission(
+                        name=action,
+                        type=permission_python_class.__name__,
+                        python_class=permission_python_class,
+                    )
                     if perm not in config.permissions:
                         raise OsoError(
-                            f"Permission {perm.name} doesn't exist for resource {perm.python_class.__name__}."
+                            f"Permission {perm.name} doesn't exist for resource {perm.type}."
                         )
 
                     role_permissions.append(
-                        Permission(name=action, python_class=permission_python_class)
+                        Permission(
+                            name=action,
+                            type=permission_python_class.__name__,
+                            python_class=permission_python_class,
+                        )
                     )
 
             implied_roles = []
@@ -406,6 +429,7 @@ def read_config(oso):
             role = Role(
                 name=name,
                 python_class=python_class,
+                type=python_class.__name__,
                 permissions=role_permissions,
                 implied_roles=implied_roles,
             )
@@ -418,9 +442,9 @@ def read_config(oso):
                 for _, other_role in config.roles.items():
                     if other_role.python_class == permission.python_class:
                         raise OsoError(
-                            f"Permission {permission.name} on {permission.python_class.__name__} "
-                            + f"can not go on role {name} on {role.python_class.__name__} "
-                            + f"because {permission.python_class.__name__} has it's own roles. Use an implication."
+                            f"Permission {permission.name} on {permission.type} "
+                            + f"can not go on role {name} on {role.type} "
+                            + f"because {permission.type} has it's own roles. Use an implication."
                         )
 
                 cls = permission.python_class
@@ -433,8 +457,8 @@ def read_config(oso):
                             break
                     if not stepped:
                         raise OsoError(
-                            f"Permission {permission.name} on {permission.python_class.__name__} "
-                            + f"can not go on role {name} on {role.python_class.__name__} "
+                            f"Permission {permission.name} on {permission.type} "
+                            + f"can not go on role {name} on {role.type} "
                             + "because no relationship exists."
                         )
 
@@ -454,8 +478,8 @@ def read_config(oso):
                         break
                 if not stepped:
                     raise OsoError(
-                        f"Role {name} on {role.python_class.__name__} "
-                        + f"can not imply role {implied} on {implied_role.python_class.__name__} "
+                        f"Role {name} on {role.type} "
+                        + f"can not imply role {implied} on {implied_role.type} "
                         + "because no relationship exists."
                     )
             # Make sure implied roles dont have overlapping permissions.
@@ -465,8 +489,8 @@ def read_config(oso):
                 if implied_perm in permissions:
                     raise OsoError(
                         f"Invalid implication. Role {role} has permission {implied_perm.name} "
-                        + f"on {implied_perm.python_class.__name__} but implies role {implied} "
-                        + f"which also has permission {implied_perm.name} on {implied_perm.python_class.__name__}"
+                        + f"on {implied_perm.type} but implies role {implied} "
+                        + f"which also has permission {implied_perm.name} on {implied_perm.type}"
                     )
 
     if len(config.resources) == 0:
@@ -493,9 +517,9 @@ class OsoRoles:
                 raise OsoError(
                     "Must pass a normal session maker not an authorized session maker."
                 )
+
         _check_valid_model(user_model)
-        user_pk_type = inspect(user_model).primary_key[0].type
-        user_pk_name = inspect(user_model).primary_key[0].name
+        user_pk_name, user_pk_type = get_pk(user_model)
         user_table_name = user_model.__tablename__
 
         models = sqlalchemy_base._decl_class_registry
@@ -606,7 +630,7 @@ class OsoRoles:
         permissions = {}
         for p in self.config.permissions:
             name = p.name
-            t = str(p.python_class.__name__)  # TODO: pull out
+            t = p.type
             permissions[(name, t)] = self.Permission(resource_type=t, name=name)
 
         for _, p in permissions.items():
@@ -618,12 +642,10 @@ class OsoRoles:
         role_permissions = []
         role_implications = []
         for _, role in self.config.roles.items():
-            roles.append(
-                self.Role(name=role.name, resource_type=role.python_class.__name__)
-            )
+            roles.append(self.Role(name=role.name, resource_type=role.type))
             for permission in role.permissions:
                 perm_name = permission.name
-                perm_type = str(permission.python_class.__name__)
+                perm_type = permission.type
                 perm_key = (perm_name, perm_type)
                 assert perm_key in permissions
                 perm = permissions[perm_key]
@@ -703,10 +725,11 @@ class OsoRoles:
 
         for _, resource in self.config.resources.items():
             python_class = resource.python_class
+            t = resource.type
             id_field = inspect(python_class).primary_key[0].name
             table = python_class.__tablename__
             self.role_allow_list_filter_queries[
-                python_class.__name__
+                t
             ] = f"""
                 select
                   {id_field}
@@ -716,7 +739,7 @@ class OsoRoles:
                 )
             """
             self.user_in_role_list_filter_queries[
-                python_class.__name__
+                t
             ] = f"""
                 select
                   {id_field}
@@ -726,23 +749,21 @@ class OsoRoles:
                 )
             """
 
+    def _roles_query(self, user, action, resource, query, **args):
+        pass
+
     def _role_allows(self, user, action, resource):
-        if isinstance(resource, Variable):
-            # resource is a variable, so we are running as a partial. It may be allowed.
-            # Defer to later.
-            return True
+        # We shouldn't get any data filtering calls to this method
+        if not isinstance(action, str):
+            raise OsoError("user_in_role() expects a string action, got {}", action)
 
         session = self._get_session()
 
         try:
-            user_pk_name = inspect(user.__class__).primary_key[0].name
+            user_pk_name, _ = get_pk(user.__class__)
             user_id = getattr(user, user_pk_name)
 
-            primary_keys = inspect(resource.__class__).primary_key
-            assert (
-                len(primary_keys) == 1
-            ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
-            resource_pk_name = primary_keys[0].name
+            resource_pk_name, _ = get_pk(resource.__class__)
         except sqlalchemy.exc.NoInspectionAvailable:
             # User or Resource is not a sqlalchemy object
             return False
@@ -818,7 +839,7 @@ class OsoRoles:
             raise OsoError(
                 f'Cannot assign role "{role_name}" '
                 + "for resource {resource} "
-                + "(expected resource to be of type {role.python_class.__name__})."
+                + "(expected resource to be of type {role.type})."
             )
 
         user_pk_name = inspect(user.__class__).primary_key[0].name
