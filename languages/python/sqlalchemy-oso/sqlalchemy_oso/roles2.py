@@ -212,7 +212,7 @@ class Config:
 
 
 def parse_permission(permission, python_class, config):
-    """ Parse a permission string, check if it's valid and return a Permission """
+    """Parse a permission string, check if it's valid and return a Permission"""
     if ":" in permission:
         resource_name, action = permission.split(":", 1)
         if resource_name not in config.resources:
@@ -780,7 +780,7 @@ class OsoRoles:
         )
 
     def _get_user_role(self, session, user, resource, role_name):
-        """ Gets user role for resource if exists """
+        """Gets user role for resource if exists"""
         if role_name not in self.config.roles:
             raise OsoError(f"Could not find role {role_name}")
 
