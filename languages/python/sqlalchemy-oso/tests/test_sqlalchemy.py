@@ -326,7 +326,9 @@ def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
 
     # `enable_baked_queries` defaults to `False`.
-    authorized_session = AuthorizedSession(oso, user="user", action="read", bind=engine)
+    authorized_session = AuthorizedSession(
+        oso, user="user", checked_permissions={Post: "read"}, bind=engine
+    )
     authorized_posts = authorized_session.query(Post)
     assert authorized_posts.count() == 1
     first_authorized_post = authorized_posts[0]
@@ -338,7 +340,11 @@ def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
 
     # Explicitly pass `enable_baked_queries=True`.
     baked_authorized_session = AuthorizedSession(
-        oso, user="user", action="read", bind=engine, enable_baked_queries=True
+        oso,
+        user="user",
+        checked_permissions={Post: "read"},
+        bind=engine,
+        enable_baked_queries=True,
     )
     baked_authorized_posts = baked_authorized_session.query(Post)
     assert baked_authorized_posts.count() == 1
@@ -368,7 +374,7 @@ def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
     authorized_session = authorized_sessionmaker(
         get_oso=lambda: oso,
         get_user=lambda: "user",
-        get_action=lambda: "read",
+        get_checked_permissions=lambda: {Post: "read"},
         bind=engine,
     )()
     authorized_posts = authorized_session.query(Post)
@@ -384,7 +390,7 @@ def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
     baked_authorized_session = authorized_sessionmaker(
         get_oso=lambda: oso,
         get_user=lambda: "user",
-        get_action=lambda: "read",
+        get_checked_permissions=lambda: {Post: "read"},
         bind=engine,
         enable_baked_queries=True,
     )()
@@ -413,7 +419,9 @@ def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
 
     # `enable_baked_queries` defaults to `False`.
-    authorized_session = scoped_session(lambda: oso, lambda: "user", lambda: "read")
+    authorized_session = scoped_session(
+        lambda: oso, lambda: "user", lambda: {Post: "read"}
+    )
     authorized_session.configure(bind=engine)
     authorized_posts = authorized_session.query(Post)
     assert authorized_posts.count() == 1
@@ -426,7 +434,7 @@ def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
 
     # Explicitly pass `enable_baked_queries=True`.
     baked_authorized_session = scoped_session(
-        lambda: oso, lambda: "user", lambda: "read", enable_baked_queries=True
+        lambda: oso, lambda: "user", lambda: {Post: "read"}, enable_baked_queries=True
     )
     baked_authorized_session.configure(bind=engine)
     baked_authorized_posts = baked_authorized_session.query(Post)
