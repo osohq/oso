@@ -9,30 +9,21 @@ aliases:
 
 # Add Oso to a Python Application
 
-This guide covers a little more detail about how to add Oso to an
-application written in Python.
+This guide covers how to add Oso to an application written in Python.
 
-Whereas in the [Quickstart]({{< relref path="getting-started/quickstart"
-lang="python" >}}) we zoomed through an
-example of authorization in a simple web server, in this guide we'll show
-some more practical examples in the context of a more realistic application.
+In the [Quickstart]({{< relref path="getting-started/quickstart" lang="python" >}}) we zoomed through an example of authorization in a simple web server.
+In this guide we'll guide you through adding Oso to your app, and show each example in the context of a real application.
 
-Our sample expenses application is built with Flask, but the patterns we cover
-here can be used with almost any framework. Specific tutorials on integrating
-Oso with other common Python frameworks are coming soon, but in the meantime
-you may find some of our blog posts useful, especially
-[Building a Django app with data access control in 30 minutes](https://www.osohq.com/post/django-access-control)
-and [GraphQL Authorization with Graphene, SQLAlchemy and Oso](https://www.osohq.com/post/graphql-authorization-graphene-sqlalchemy-oso).
-Please also see our reference pages on [Framework & ORM Integrations](/reference/frameworks).
+Our sample expenses application is built with Flask, but the patterns we cover here can be used with almost any framework.
 
 ## Getting The Example
 
-We highly encourage you to follow along with the code by cloning the example repository
-and trying it out. The code can be found here:
+You can follow along with the code by cloning the example repository and trying it out.
+The code can be found here:
 
 * [osohq/oso-flask-tutorial](https://github.com/osohq/oso-flask-tutorial)
 
-Our expenses application reads from a SQLite database, and has a few simple endpoints for returning results. We encourage you to take a look around before continuing!
+Our expenses application reads from a SQLite database and has a few simple endpoints for returning results.
 
 ## Running The Example
 
@@ -56,51 +47,48 @@ $ sqlite3 expenses.db ".read expenses.sql"
 
 ## In Your Application
 
-There are two pieces to get started with Oso in your application.
-The policy file, and the `oso.is_allowed` call.
+In Oso, your authorization rules are expressed in a policy file, written in our language Polar.
+When someone tries to access a resource in your app, your app will need to query Oso to check if that access is allowed.
+That means adding Oso to your app has two parts: writing the policy file and writing the access check.
 
-The policy file captures the authorization logic you want to apply in your application, and the `oso.is_allowed` call is used to enforce that policy in your application.
+In our sample application, we're storing our policies in the `authorization.polar` file, and all the authorization in the application is managed through the `authorization.py` file.
+Your app can take the same structure.
+(When starting out, it's reasonable to capture all policy logic in a single `authorization.polar` file, as we've done here.
+As your app grows, you can break that into many files, depending on your app's needs.)
 
-When starting out, it is reasonable to capture all policy logic in a single `authorization.polar` file, as we have done here. However, over time you will want to break it up into multiple files.
-
-Additionally, there are two main places where we want to enforce our authorization logic: at the request/API layer, and at the data access layer.
-
-The goal of the former is to restrict which _actions_ a user can take in your application, e.g. are they allowed to fetch the expenses report via the `GET /expenses/report` route.
-
-The goal of the latter is to restrict them from viewing data they
-shouldn't have access to, e.g. they should not be able to see other users' data.
-
-### Add Oso
-
-In our sample application, we are storing our policies in the `authorization.polar`
-file, and all of the authorization in the application is managed through the
-`authorization.py` file.
-
-In the application, we need to:
+### Initializing Oso
+In an application, we need to:
 
 1. Create the Oso instance
 2. Load in policy files.
 3. [Register application classes](getting-started/policies#application-types)
-4. Attach the Oso instance to the application
+4. Attach the Oso instance to the application.
 
-We have achieved this using the `init_oso` method:
+We'll write an `init_oso` method to call at app boot time:
 
 {{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.py"
                    from="start-init" >}}
 
-We can now access this `oso` instance anywhere in our application, and specify
-which policy files are loaded in the application configuration.
+We can now access this `oso` instance anywhere in our application and specify which policy files are loaded in the application configuration.
+
+There are two main places where we want to enforce our authorization logic: at the request/API layer and at the data access layer.
+
+The goal of enforcement at the request layer is to restrict which _actions_ a user can take in your application.
+For instance, is a user allowed to fetch the expenses report via the `GET /expenses/report` route?
+
+The goal of enforcement at the data layer is to restrict users from viewing data they shouldn't have access to
+For instance, they shouldn't be able to see other users' data.
+
+
 
 ### Authorizing Routes
 
-We can apply apply authorization to **every** incoming request by setting up
-a middleware function that runs before every request using `before_app_request`:
+We can apply apply authorization to every incoming request by setting up a middleware function that runs before every request using `before_app_request`:
 
 {{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.py"
                    lines="9-14" >}}
 
-Now that this is in place, we can write a simple policy to allow anyone
-to call our index route, and see the hello message:
+Now that this is in place, we can write a simple policy to allow anyone to call our index route, and see the hello message:
 
 {{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.polar"
                    lines="3-4" >}}
@@ -112,18 +100,17 @@ $ curl -H "user: alice@foo.com"  localhost:5000/
 hello alice@foo.com
 ```
 
-But we also have a `/whoami` route that returns a short description of
-the current user. We want to make sure only authenticated users can see
-this.
+### Authorizing a Request
+We have a `/whoami` route that returns a short description of the current user.
+We want to make sure only authenticated users can see this.
 
-We have two different user types here: the `Guest` class and the `User`
-class. The latter corresponds to users who have authenticated.
+In this example, we have the `Guest` class and the `User` class.
+The latter corresponds to users who have authenticated.
 
 {{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/user.py"
                    lines="16-25,52-53" >}}
 
-We can use [specializer rules](polar-syntax#specialization) to only allow the request
-when the actor is an instance of a `User`:
+We can use [specializer rules](polar-syntax#specialization) to only allow the request when the actor is an instance of a `User`:
 
 {{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.polar"
                    lines="6-7" >}}
@@ -144,13 +131,11 @@ Interested in understanding more about what is happening here? Check
 out the [user types](learn/examples/user_types) example.
 {{% /callout %}} -->
 
-The inputs to the `is_allowed` call are the current user, the HTTP method,
-and the HTTP request. This information can often be enough to cover a large
-number of uses. For example, if we know that some paths should only
-be accessed by certain roles, we can certainly check for this at this point.
+The inputs to the `is_allowed` call are the current user, the HTTP method, and the HTTP request.
+This information can often be enough to cover a large number of uses.
+For example, if we know that some paths should only be accessed by certain roles, we could check at this point.
 
-In a RESTful application, you can also consider "mapping" authorization
-logic from the HTTP path to actions and classes in the application.
+In a RESTful application, you could also map authorization logic from the HTTP path to actions and classes in the application.
 
 For example:
 
@@ -160,12 +145,10 @@ allow(user, "GET", http_request) if
     and allow(user, "read", Expense);
 {{< /code >}}
 
-This rule is translating something like `GET /expenses/3` into a check
-whether the user should be allowed to "read" the `Expense` class.
+This rule is translating something like `GET /expenses/3` into a check whether the user should be allowed to "read" the `Expense` class.
 
-However, what if we want to have more fine-grained control? And
-authorize access to the precise resource at `/expenses/3`? We'll cover
-that in the next section.
+However, what if we want to have more fine-grained control, and authorize access to the precise resource at `/expenses/3`?
+We'll cover that in the next section.
 
 ### Authorizing Access to Data
 
@@ -174,20 +157,17 @@ determine who could "GET" expenses. Our final policy looked like:
 
 {{< literalInclude path="examples/quickstart/polar/expenses-02-python.polar" >}}
 
-In our expenses sample application, we have something similar,
-but we've rewritten the policy to use a new `submitted` predicate in case we want
-to change the logic in the future.
+In our expenses sample application, we have something similar, but we've rewritten the policy to use a new `submitted` predicate in case we want to change the logic in the future.
 
 {{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.polar"
                    lines="21-25" >}}
 
-To handle authorizing access to data, we've implemented a little helper method
-for us to use throughout the application:
+To handle authorizing access to data, we've implemented a little helper method for us to use throughout the application:
 
 {{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.py"
                    lines="17-22" >}}
 
-... so authorizing the GET request looks like:
+Authorizing the GET request looks like:
 
 {{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/expense.py"
                    lines="50-52" >}}
@@ -221,20 +201,14 @@ $ curl -H "user: alice@foo.com" localhost:5000/organizations/2
 <p>Not Authorized!</p>
 ```
 
-Applying this pattern to authorizing data means that the objects we are
-passing in to the policy evaluation are already fairly rich objects,
-with attributes and methods we can use to make policy decisions. When
-starting out, it might be more convenient to apply in the route handler
-itself, but try moving it even closer to the data access layer. For
-example, if we moved the `authorize` call into the `Expense.lookup`
-method, then anywhere our application wants to retrieve an expense, we
-are assured that the user does indeed have access to it.
+Applying this pattern to authorizing data means that the objects we're passing in to the policy evaluation are already fairly rich objects, with attributes and methods we can use to make policy decisions.
+When starting out, it might be more convenient to apply in the route handler itself, but try moving it even closer to the data access layer.
+For example, if we moved the `authorize` call into the `Expense.lookup` method, then anywhere our application wants to retrieve an expense, we are assured that the user does indeed have access to it.
 
 ## Your Turn
 
-We currently have a route with no authorization - the submit endpoint.
-We have a rule that allows anyone to PUT to the submit endpoint, but we
-want to make sure only authorized expenses are submitted.
+We currently have a route with no authorization: the submit endpoint.
+We have a rule that allows anyone to PUT to the submit endpoint, but we want to make sure only authorized expenses are submitted.
 
 {{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/authorization.polar"
                    lines="18" >}}
@@ -256,11 +230,8 @@ $ curl -H "user: alice@foo.com" \
 Expense(amount=100, description='Gummy Bears', user_id=1, id=108)
 ```
 
-How might we use the `authorize` method from before, to make sure that
-we check the user is allowed to `create` this expense?
-We would like to do the authorization on the full `Expense` object,
-but before it is persisted to the database, so perhaps between these two
-lines:
+How might we use the `authorize` method from before, to make sure that we check the user is allowed to `create` this expense?
+We would like to do the authorization on the full `Expense` object, but before it is persisted to the database, so perhaps between these two lines:
 
 {{< literalInclude path="examples/python/getting-started/application/expenses-flask/app/expense.py"
                    lines="56-64"
@@ -274,8 +245,7 @@ expense = authorize("create", Expense(**expense_data))
 
 This checks the current user is authorized to create the expense.
 If this passes, then we can happily move on to the `expense.save()`.
-Now, nobody will be able to submit expenses, since we haven't yet
-added any rules saying they can.
+Now, nobody will be able to submit expenses, since we haven't yet added any rules saying they can.
 
 {{% callout "Add a new rule" "green" %}}
 Try editing `authorization.polar` to add a rule saying that
@@ -283,9 +253,7 @@ a user can create an expense for which they are assigned as the
 submitter of the expense.
 {{% /callout %}}
 
-Try editing `authorization.polar` to add a rule saying that a user can
-create an expense for which they are assigned as the submitter of the
-expense.
+Try editing `authorization.polar` to add a rule saying that a user can create an expense for which they are assigned as the submitter of the expense.
 
 Once you have it working, you can test it by verifying as follows:
 
@@ -302,11 +270,12 @@ $ curl -H "user: alice@foo.com" -X PUT -d '{"user_id": 2, "amount": 100, "descri
 
 ## Summary
 
-In this guide, we showed a few examples of how to add Oso to a more
-realistic application. We added some route-level authorization to
-control who is allowed to make requests to certain routes. We also used
-a new `authorize` method to make it convenient to add data access
-controls to our route handlers.
+In this guide, we showed a few examples of how to add Oso to a more realistic application.
+We added some route-level authorization to control who is allowed to make requests to certain routes.
+We also used a new `authorize` method to make it convenient to add data access controls to our route handlers.
+
+Specific tutorials on integrating Oso with other common Python frameworks are coming soon, but in the meantime you may find some of our blog posts useful, especially [Building a Django app with data access control in 30 minutes](https://www.osohq.com/post/django-access-control) and [GraphQL Authorization with Graphene, SQLAlchemy and Oso](https://www.osohq.com/post/graphql-authorization-graphene-sqlalchemy-oso).
+Please also see our reference pages on [Framework & ORM Integrations](/reference/frameworks).
 
 {{% callout "What's next" "blue" %}}
 
