@@ -5,6 +5,7 @@ from sqlalchemy.orm.session import Session
 
 from oso import Oso
 from sqlalchemy_oso.auth import register_models
+from sqlalchemy_oso.compat import AT_LEAST_SQLALCHEMY_VERSION_1_4
 
 from .models import ModelBase, Post, User
 
@@ -98,7 +99,10 @@ def db_uri():
 
 @pytest.fixture
 def engine(db_uri):
-    engine = create_engine(db_uri)
+    if AT_LEAST_SQLALCHEMY_VERSION_1_4:
+        engine = create_engine(db_uri, enable_from_linting=False)
+    else:
+        engine = create_engine(db_uri)
     ModelBase.metadata.create_all(engine)
     return engine
 
