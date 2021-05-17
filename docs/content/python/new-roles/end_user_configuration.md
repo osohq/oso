@@ -2,7 +2,7 @@
 title: Exposing authorization configuration to end-users
 weight: 5
 description: >
-    Allow your users to assign roles and change access levels
+  Allow your users to assign roles and change access levels
 ---
 
 # Exposing authorization to end-users

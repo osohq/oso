@@ -36,6 +36,18 @@ allow(actor, action, resource) if
     role_allow(role, action, resource);
 ```
 
+{{% callout "Adding roles to your application?" "blue" %}}
+
+Oso Roles provides built in support for role configuration, role data
+management and more.
+
+[Check it out here!](/guides/new-roles)
+
+Or, keep reading to learn how to model roles in Polar using your own
+existing roles data management.
+
+{{% /callout %}}
+
 The rest of this document explains how to implement these rules for the
 following RBAC use cases:
 
