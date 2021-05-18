@@ -80,7 +80,7 @@ def init_oso(engine, Base, User, Organization, Repository, Issue):
     session = Session()
 
     oso = SQLAlchemyOso(Base)
-    oso.enable_roles(User, Session)
+    oso.enable_roles(User, String, Session)
 
     # @NOTE: Right now this has to happen after enabling oso roles to get the
     #        tables.
@@ -155,21 +155,21 @@ def test_oso_roles_init(auth_sessionmaker, Base, User):
 
     # - Passing an auth session to OsoRoles raises an exception
     with pytest.raises(OsoError):
-        oso.enable_roles(user_model=User, session_maker=auth_sessionmaker)
+        oso.enable_roles(user_model=User, resource_id_column_type=String, session_maker=auth_sessionmaker)
 
     Session = sessionmaker(bind=engine)
     session = Session()
 
     # - Passing a session instead of Session factory to OsoRoles raises an exception
     with pytest.raises(AttributeError):
-        oso.enable_roles(User, session)
+        oso.enable_roles(User, String, session)
 
     class FakeClass:
         pass
 
     # - Passing a non-SQLAlchemy user model to OsoRoles raises an exception
     with pytest.raises(TypeError):
-        oso.enable_roles(FakeClass, Session)
+        oso.enable_roles(FakeClass, String, Session)
 
     # - Passing a bad declarative_base to OsoRoles raises an exception
     with pytest.raises(AttributeError):

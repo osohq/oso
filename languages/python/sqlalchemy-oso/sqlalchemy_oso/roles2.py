@@ -95,7 +95,7 @@ def role_allow_query(
             join relevant_roles rr
             on rr.role = ur.role
             join resources r
-            on r.type = ur.resource_type and cast(r.id as text) = ur.resource_id
+            on r.type = ur.resource_type and r.id = ur.resource_id
             where ur.user_id = :user_id
         ) select * from user_in_role
     """
@@ -156,7 +156,7 @@ def user_in_role_query(
             join relevant_roles rr
             on rr.role = ur.role
             join resources r
-            on r.type = ur.resource_type and cast(r.id as text) = ur.resource_id
+            on r.type = ur.resource_type and r.id = ur.resource_id
             where ur.user_id = :user_id
         ) select * from user_in_role
     """
@@ -501,7 +501,9 @@ def ensure_configured(func):
 
 
 class OsoRoles:
-    def __init__(self, oso, sqlalchemy_base, user_model, session_maker):
+    def __init__(
+        self, oso, sqlalchemy_base, user_model, resource_id_column_type, session_maker
+    ):
         self.session_maker = session_maker
 
         for cls in session_maker.class_.__mro__:
@@ -530,7 +532,7 @@ class OsoRoles:
                 )
                 resource_type = Column(String, index=True)
                 resource_id = Column(
-                    String, index=True
+                    resource_id_column_type, index=True
                 )  # Most things can turn into a string lol.
                 role = Column(String, index=True)
 
@@ -688,7 +690,7 @@ class OsoRoles:
                 select p.{parent_id}
                 from {child_table} c
                 join {parent_table} p
-                on cast(c.{child_join_column} as text) = cast(p.{parent_join_column} as text)
+                on c.{child_join_column} = p.{parent_join_column}
                 where c.{child_id} = resources.id"""
 
             id_query += ""
@@ -704,7 +706,7 @@ class OsoRoles:
         id_query += "end as id"
         type_query += "end as type"
 
-        resource_id_field = "cast(:resource_id as text)"
+        resource_id_field = ":resource_id"
 
         has_relationships = len(self.config.relationships) > 0
         self.role_allow_sql_query = role_allow_query(
@@ -727,7 +729,7 @@ class OsoRoles:
                   {id_field}
                 from {table} R
                 where exists (
-                  {role_allow_query(id_query, type_query, child_types, "cast(R."+id_field+" as text)", has_relationships)}
+                  {role_allow_query(id_query, type_query, child_types, "R."+id_field, has_relationships)}
                 )
             """
             self.user_in_role_list_filter_queries[
@@ -737,7 +739,7 @@ class OsoRoles:
                   {id_field}
                 from {table} R
                 where exists (
-                  {user_in_role_query(id_query, type_query, child_types, "cast(R."+id_field+" as text)", has_relationships)}
+                  {user_in_role_query(id_query, type_query, child_types, "R."+id_field, has_relationships)}
                 )
             """
 
