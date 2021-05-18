@@ -504,6 +504,7 @@ class OsoRoles:
     def __init__(
         self, oso, sqlalchemy_base, user_model, resource_id_column_type, session_maker
     ):
+        self.resource_id_column_type = resource_id_column_type
         self.session_maker = session_maker
 
         for cls in session_maker.class_.__mro__:
@@ -720,7 +721,11 @@ class OsoRoles:
         for _, resource in self.config.resources.items():
             python_class = resource.python_class
             type = resource.type
-            id_field = inspect(python_class).primary_key[0].name
+            id_field, id_type = get_pk(python_class)
+            if not isinstance(id_type, self.resource_id_column_type):
+                raise OsoError(
+                    "All resource ids must match the passed in resource id type."
+                )
             table = python_class.__tablename__
             self.role_allow_list_filter_queries[
                 type

@@ -155,7 +155,11 @@ def test_oso_roles_init(auth_sessionmaker, Base, User):
 
     # - Passing an auth session to OsoRoles raises an exception
     with pytest.raises(OsoError):
-        oso.enable_roles(user_model=User, resource_id_column_type=String, session_maker=auth_sessionmaker)
+        oso.enable_roles(
+            user_model=User,
+            resource_id_column_type=String,
+            session_maker=auth_sessionmaker,
+        )
 
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -2207,6 +2211,38 @@ def test_user_in_role(
     assert len(results) == 2
     for repo in results:
         assert repo.org_id == "osohq"
+
+
+def test_mismatched_id_types_throws_error(engine, Base, User):
+    class One(Base):
+        __tablename__ = "ones"
+
+        id = Column(String(), primary_key=True)
+
+    class Two(Base):
+        __tablename__ = "twos"
+
+        id = Column(Integer(), primary_key=True)
+
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    oso = SQLAlchemyOso(Base)
+
+    oso.enable_roles(User, String, Session)
+    Base.metadata.create_all(engine)
+
+    policy = """
+    resource(_type: One, "one", ["read"], _roles);
+    resource(_type: Two, "two", ["read"], _roles);
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(OsoError):
+        oso.roles.synchronize_data()
 
 
 # LEGACY TEST
