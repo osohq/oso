@@ -178,9 +178,7 @@ window.hideSearch = function(_e) {
 
 window.addEventListener('load', () => {
   const searchInput = document.getElementById('search-input');
-  if (searchInput) {
-    searchInput.addEventListener('input', e => window.searchInputKeyUp(e));
-  }
+  searchInput.addEventListener('input', e => window.searchInputKeyUp(e));
 });
 
 // this handles when the button on the left nav is clicked and it toggles the search box
