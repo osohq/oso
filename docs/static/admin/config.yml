@@ -1,0 +1,16 @@
+backend:
+  name: git-gateway
+  repo: osohq/oso
+  branch: sraper/netlify-cms # Branch to update (optional; defaults to master)
+publish_mode: editorial_workflow
+media_folder: "assets/img/uploads"
+public_folder: "/img/uploads"
+collections:
+  - name: "getting-started"
+    label: "Getting started"
+    folder: "docs/content/any/getting-started"
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    fields:
+      - {label: "Title", name: "title", widget: "string"}
+      - {label: "Body", name: "body", widget: "markdown"}
