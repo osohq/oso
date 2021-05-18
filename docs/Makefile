@@ -38,7 +38,8 @@ content/ruby/reference/api: $(RUBY_FILES)
 	rm -rf $@
 	cp -R "$(RUBY_DIR)/doc" $@
 
-api_docs:content/java/reference/api content/node/reference/api content/python/reference/api content/ruby/reference/api
+# api_docs:content/java/reference/api content/node/reference/api content/python/reference/api content/ruby/reference/api
+api_docs:
 
 examples:
 	$(MAKE) -C examples submodules
