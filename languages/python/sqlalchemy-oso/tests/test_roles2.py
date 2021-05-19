@@ -2231,16 +2231,17 @@ def test_mismatched_id_types_throws_error(engine, Base, User):
         oso.enable_roles(User, Session)
 
 
-def test_integer_ids(engine, Base, User):
+@pytest.mark.parametrize("sa_type,one_id", [(String, "1"), (Integer, 1)])
+def test_id_types(engine, Base, User, sa_type, one_id):
     class One(Base):
         __tablename__ = "ones"
 
-        id = Column(Integer(), primary_key=True)
+        id = Column(sa_type(), primary_key=True)
 
     class Two(Base):
         __tablename__ = "twos"
 
-        id = Column(Integer(), primary_key=True)
+        id = Column(sa_type(), primary_key=True)
 
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -2261,7 +2262,7 @@ def test_integer_ids(engine, Base, User):
     oso.roles.synchronize_data()
 
     steve = User(name="steve")
-    one = One(id=1)
+    one = One(id=one_id)
 
     session.add(steve)
     session.add(one)

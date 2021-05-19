@@ -526,6 +526,11 @@ class OsoRoles:
             elif resource_id_column_type.__class__ != id_type.__class__:
                 raise OsoError("All resource ids must match have the same id type.")
 
+        if resource_id_column_type is None:
+            raise OsoError(
+                "No models registered, must register models on Base before enabling roles."
+            )
+
         self.resource_id_column_type = resource_id_column_type
 
         models = sqlalchemy_base._decl_class_registry
