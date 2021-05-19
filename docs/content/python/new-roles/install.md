@@ -19,21 +19,7 @@ The roles library is in early access. Our engineering team is available
 to help you integrate it with your application. Sign up below, and we'll
 be in touch!
 
-<div>
-    <form id="subscribe-form-early-access" name="subscribe-form-docs" class="flex py-2">
-        <label>
-            <input placeholder="Email Address"
-            class="border border-gray-500 focus:ring-primary-500 focus:border-primary-500 px-3 py-2 sm:text-sm rounded-md"
-            type="email" maxlength="256" name="Email-Address" id="Email-Address" required="True"/>
-        </label>
-        <button
-            type="submit"
-            data-wait="Churning..."
-            class="ml-2 px-3 py-2 rounded-md sm:text-sm text-gray-600 bg-gray-300 text-gray-700 hover:bg-gray-600 hover:text-gray-900 appearance-none focus:outline-none">
-            Submit
-        </button>
-    </form>
-</div>
+{{% new_roles_install %}}
 
 ## Requirements:
 
