@@ -68,7 +68,7 @@ webpack-deps: .make.webpack-deps.installed
 	touch $@
 
 build: install api_docs clean
-	HUGO_ENV=production hugo
+	HUGO_ENV=production hugo -b https://docs-preview.oso.dev/
 
 build-netlify: install api_docs clean
   HUGO_ENV=production HUGO_VERSION=0.83.1 hugo -b $DEPLOY_URL
