@@ -7,10 +7,33 @@ description: >
 
 # Install
 
-The Oso Roles library is available for early access. To join the
-program, fill out the form below!
+The Oso Roles library is available for early access.
 
-<div class="typeform-widget" data-url="https://form.typeform.com/to/txJG7KbI?typeform-medium=embed-snippet" style="width: 100%; height: 500px;"></div> <script> (function() { var qs,js,q,s,d=document, gi=d.getElementById, ce=d.createElement, gt=d.getElementsByTagName, id="typef_orm", b="https://embed.typeform.com/"; if(!gi.call(d,id)) { js=ce.call(d,"script"); js.id=id; js.src=b+"embed.js"; q=gt.call(d,"script")[0]; q.parentNode.insertBefore(js,q) } })() </script>
+Install from [PyPI](https://pypi.org/project/sqlalchemy-oso-preview/):
+
+```bash
+$ pip install sqlalchemy-oso-preview
+```
+
+The roles library is in early access. Our engineering team is available
+to help you integrate it with your application. Sign up below, and we'll
+be in touch!
+
+<div>
+    <form id="subscribe-form-early-access" name="subscribe-form-docs" class="flex py-2">
+        <label>
+            <input placeholder="Email Address"
+            class="border border-gray-500 focus:ring-primary-500 focus:border-primary-500 px-3 py-2 sm:text-sm rounded-md"
+            type="email" maxlength="256" name="Email-Address" id="Email-Address" required="True"/>
+        </label>
+        <button
+            type="submit"
+            data-wait="Churning..."
+            class="ml-2 px-3 py-2 rounded-md sm:text-sm text-gray-600 bg-gray-300 text-gray-700 hover:bg-gray-600 hover:text-gray-900 appearance-none focus:outline-none">
+            Submit
+        </button>
+    </form>
+</div>
 
 ## Requirements:
 
