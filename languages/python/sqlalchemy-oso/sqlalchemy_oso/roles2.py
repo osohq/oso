@@ -524,7 +524,7 @@ class OsoRoles:
             if resource_id_column_type is None:
                 resource_id_column_type = id_type
             elif resource_id_column_type.__class__ != id_type.__class__:
-                raise OsoError("All resource ids must match have the same id type.")
+                raise OsoError("All resources must have the same id type.")
 
         self.resource_id_column_type = resource_id_column_type
 
