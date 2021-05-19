@@ -8,6 +8,7 @@ from sqlalchemy_oso.session import (
     scoped_session,
     AuthorizedSession,
 )
+from sqlalchemy_oso.compat import AT_LEAST_SQLALCHEMY_VERSION_1_4
 
 from .models import User, Post
 from .conftest import print_query
@@ -273,11 +274,14 @@ def test_null_with_partial(engine, oso):
     )
     posts = Session().query(Post)
 
-    assert str(posts) == (
-        "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title, "
-        + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
-        + "posts.needs_moderation AS posts_needs_moderation \nFROM posts \nWHERE posts.contents IS NULL"
-    )
+    # TODO(gj): 'do_orm_execute' event only fires when a query is executed; not
+    # when it's printed.
+    #
+    # assert str(posts) == (
+    #     "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title, "
+    #     + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
+    #     + "posts.needs_moderation AS posts_needs_moderation \nFROM posts \nWHERE posts.contents IS NULL"
+    # )
     assert posts.count() == 0
 
 
@@ -298,10 +302,15 @@ def test_unconditional_policy_has_no_filter(engine, oso, fixture_data):
 
     query = session.query(Post)
 
+    if AT_LEAST_SQLALCHEMY_VERSION_1_4:
+        true_clause = ""
+    else:
+        true_clause = " \nWHERE 1 = 1"
+
     assert str(query) == (
         "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title, "
         + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
-        + "posts.needs_moderation AS posts_needs_moderation \nFROM posts \nWHERE 1 = 1"
+        + f"posts.needs_moderation AS posts_needs_moderation \nFROM posts{true_clause}"
     )
 
 
@@ -315,12 +324,15 @@ def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
     assert all_posts.count() == 9
     first_post = all_posts[0]
     # Add related model query to the bakery cache.
-    first_post.created_by.id == 0
+    assert first_post.created_by.id == 0
 
     oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
 
     # `enable_baked_queries` defaults to `False`.
     authorized_session = AuthorizedSession(oso, user="user", action="read", bind=engine)
+
+    assert authorized_session.query(User).count() == 0
+
     authorized_posts = authorized_session.query(Post)
     assert authorized_posts.count() == 1
     first_authorized_post = authorized_posts[0]
@@ -345,7 +357,10 @@ def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
     # NOTE(gj): This is actually an authorization bug and not desired behavior,
     # but we're testing that folks are able to use baked queries if they
     # understand the risks and explicitly pass `enable_baked_queries=True`.
-    assert first_baked_authorized_post.created_by.id == first_post.created_by.id
+    if AT_LEAST_SQLALCHEMY_VERSION_1_4:
+        assert first_baked_authorized_post.created_by is None
+    else:
+        assert first_baked_authorized_post.created_by.id == first_post.created_by.id
 
 
 def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
@@ -369,6 +384,9 @@ def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
         get_action=lambda: "read",
         bind=engine,
     )()
+
+    assert authorized_session.query(User).count() == 0
+
     authorized_posts = authorized_session.query(Post)
     assert authorized_posts.count() == 1
     first_authorized_post = authorized_posts[0]
@@ -397,7 +415,10 @@ def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
     # NOTE(gj): This is actually an authorization bug and not desired behavior,
     # but we're testing that folks are able to use baked queries if they
     # understand the risks and explicitly pass `enable_baked_queries=True`.
-    assert first_baked_authorized_post.created_by.id == first_post.created_by.id
+    if AT_LEAST_SQLALCHEMY_VERSION_1_4:
+        assert first_baked_authorized_post.created_by is None
+    else:
+        assert first_baked_authorized_post.created_by.id == first_post.created_by.id
 
 
 def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
@@ -417,6 +438,9 @@ def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
     # `enable_baked_queries` defaults to `False`.
     authorized_session = scoped_session(lambda: oso, lambda: "user", lambda: "read")
     authorized_session.configure(bind=engine)
+
+    assert authorized_session.query(User).count() == 0
+
     authorized_posts = authorized_session.query(Post)
     assert authorized_posts.count() == 1
     first_authorized_post = authorized_posts[0]
@@ -442,4 +466,7 @@ def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
     # NOTE(gj): This is actually an authorization bug and not desired behavior,
     # but we're testing that folks are able to use baked queries if they
     # understand the risks and explicitly pass `enable_baked_queries=True`.
-    assert first_baked_authorized_post.created_by.id == first_post.created_by.id
+    if AT_LEAST_SQLALCHEMY_VERSION_1_4:
+        assert first_baked_authorized_post.created_by is None
+    else:
+        assert first_baked_authorized_post.created_by.id == first_post.created_by.id

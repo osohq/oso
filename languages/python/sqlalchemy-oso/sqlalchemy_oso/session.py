@@ -9,6 +9,7 @@ from sqlalchemy import orm
 from oso import Oso
 
 from sqlalchemy_oso.auth import authorize_model
+from sqlalchemy_oso.compat import AT_LEAST_SQLALCHEMY_VERSION_1_4
 
 
 class _OsoSession:
@@ -45,44 +46,47 @@ def set_get_session(oso: Oso, get_session_func):
     oso.register_constant(_OsoSession, "OsoSession")
 
 
-@event.listens_for(Query, "before_compile", retval=True)
-def _before_compile(query):
-    """Enable before compile hook."""
-    return _authorize_query(query)
+if not AT_LEAST_SQLALCHEMY_VERSION_1_4:
 
+    @event.listens_for(Query, "before_compile", retval=True)
+    def _before_compile(query):
+        """Enable before compile hook."""
+        return _authorize_query(query)
 
-def _authorize_query(query: Query) -> Optional[Query]:
-    """Authorize an existing query with an oso instance, user and action."""
-    # Get the query session.
-    session = query.session
+    def _authorize_query(query: Query) -> Optional[Query]:
+        """Authorize an existing query with an oso instance, user and action."""
+        # Get the query session.
+        session = query.session
 
-    # Check whether this is an oso session.
-    if not isinstance(session, AuthorizedSessionBase):
-        # Not an authorized session.
-        return None
+        # Check whether this is an oso session.
+        if not isinstance(session, AuthorizedSessionBase):
+            # Not an authorized session.
+            return None
 
-    oso = session.oso_context["oso"]
-    user = session.oso_context["user"]
-    action = session.oso_context["action"]
+        oso = session.oso_context["oso"]
+        user = session.oso_context["user"]
+        action = session.oso_context["action"]
 
-    # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
-    # on queries that have already been made.  If a query has a LIMIT or OFFSET
-    # applied, SQLAlchemy will by default throw an error if filters are applied.
-    # This prevents these errors from occuring, but could result in some
-    # incorrect queries. We should remove this if possible.
-    query = query.enable_assertions(False)
+        # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
+        # on queries that have already been made.  If a query has a LIMIT or OFFSET
+        # applied, SQLAlchemy will by default throw an error if filters are applied.
+        # This prevents these errors from occuring, but could result in some
+        # incorrect queries. We should remove this if possible.
+        query = query.enable_assertions(False)
 
-    entities = {column["entity"] for column in query.column_descriptions}
-    for entity in entities:
-        # Only apply authorization to columns that represent a mapper entity.
-        if entity is None:
-            continue
+        entities = {column["entity"] for column in query.column_descriptions}
+        for entity in entities:
+            # Only apply authorization to columns that represent a mapper entity.
+            if entity is None:
+                continue
 
-        authorized_filter = authorize_model(oso, user, action, query.session, entity)
-        if authorized_filter is not None:
-            query = query.filter(authorized_filter)
+            authorized_filter = authorize_model(
+                oso, user, action, query.session, entity
+            )
+            if authorized_filter is not None:
+                query = query.filter(authorized_filter)
 
-    return query
+        return query
 
 
 def authorized_sessionmaker(get_oso, get_user, get_action, class_=None, **kwargs):
@@ -219,3 +223,51 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
     """
 
     pass
+
+
+if AT_LEAST_SQLALCHEMY_VERSION_1_4:
+    from sqlalchemy.orm import ORMExecuteState
+
+    @event.listens_for(Session, "do_orm_execute")
+    def do_orm_execute(execute_state: ORMExecuteState):
+        # BOMB OOT
+        if not isinstance(execute_state.session, AuthorizedSessionBase):
+            return
+
+        oso: Oso = execute_state.session.oso_context["oso"]
+        user = execute_state.session.oso_context["user"]
+        action = execute_state.session.oso_context["action"]
+
+        if not execute_state.is_select:
+            breakpoint()
+
+        def get_entities(x):
+            def _get_entities(x):
+                try:
+                    return set(e for e in (cd["entity"] for cd in x.column_descriptions) if e is not None)
+                except AttributeError:
+                    return set()
+
+            # TODO(gj): currently walking way more than we have to. Probably some
+            # points in the tree where we can safely call it good for that branch
+            # and continue on to more fruitful pastures.
+            def _walk_children(x):
+                return x.get_children()
+
+            entities = _get_entities(x)
+
+            for child in _walk_children(x):
+                entities |= get_entities(child)
+
+            return entities
+
+        entities = get_entities(execute_state.statement)
+
+        for entity in entities:
+            authorized_filter = authorize_model(
+                oso, user, action, execute_state.session, entity
+            )
+            if authorized_filter is not None:
+                execute_state.statement = execute_state.statement.options(
+                    orm.with_loader_criteria(entity, authorized_filter, include_aliases=True)
+                )
