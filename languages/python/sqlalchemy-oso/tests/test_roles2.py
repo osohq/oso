@@ -80,7 +80,7 @@ def init_oso(engine, Base, User, Organization, Repository, Issue):
     session = Session()
 
     oso = SQLAlchemyOso(Base)
-    oso.enable_roles(User, String, Session)
+    oso.enable_roles(User, Session)
 
     # @NOTE: Right now this has to happen after enabling oso roles to get the
     #        tables.
@@ -157,7 +157,6 @@ def test_oso_roles_init(auth_sessionmaker, Base, User):
     with pytest.raises(OsoError):
         oso.enable_roles(
             user_model=User,
-            resource_id_column_type=String,
             session_maker=auth_sessionmaker,
         )
 
@@ -166,14 +165,14 @@ def test_oso_roles_init(auth_sessionmaker, Base, User):
 
     # - Passing a session instead of Session factory to OsoRoles raises an exception
     with pytest.raises(AttributeError):
-        oso.enable_roles(User, String, session)
+        oso.enable_roles(User, session)
 
     class FakeClass:
         pass
 
     # - Passing a non-SQLAlchemy user model to OsoRoles raises an exception
     with pytest.raises(TypeError):
-        oso.enable_roles(FakeClass, String, Session)
+        oso.enable_roles(FakeClass, Session)
 
     # - Passing a bad declarative_base to OsoRoles raises an exception
     with pytest.raises(AttributeError):
@@ -2229,20 +2228,48 @@ def test_mismatched_id_types_throws_error(engine, Base, User):
 
     oso = SQLAlchemyOso(Base)
 
-    oso.enable_roles(User, String, Session)
+    with pytest.raises(OsoError):
+        oso.enable_roles(User, Session)
+
+
+def test_integer_ids(engine, Base, User):
+    class One(Base):
+        __tablename__ = "ones"
+
+        id = Column(Integer(), primary_key=True)
+
+    class Two(Base):
+        __tablename__ = "twos"
+
+        id = Column(Integer(), primary_key=True)
+
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    oso = SQLAlchemyOso(Base)
+    oso.enable_roles(User, Session)
+
     Base.metadata.create_all(engine)
 
     policy = """
-    resource(_type: One, "one", ["read"], _roles);
+    resource(_type: One, "one", ["read"], {boss: {perms: ["read"]}});
     resource(_type: Two, "two", ["read"], _roles);
 
     allow(actor, action, resource) if
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
+    oso.roles.synchronize_data()
 
-    with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+    steve = User(name="steve")
+    one = One(id=1)
+
+    session.add(steve)
+    session.add(one)
+    session.commit()
+
+    oso.roles.assign_role(steve, one, "boss")
+    assert oso.is_allowed(steve, "read", one)
 
 
 # LEGACY TEST

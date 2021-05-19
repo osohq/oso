@@ -30,7 +30,7 @@ class SQLAlchemyOso(Oso):
         self.base = sqlalchemy_base
         self._roles_enabled = False
 
-    def enable_roles(self, user_model, resource_id_column_type, session_maker):
+    def enable_roles(self, user_model, session_maker):
         """Enable the Oso role management API.
         Oso will create SQLAlchemy models to create and assign roles to users (stored in `user_model`).
         The roles API methods will be available on the `roles` property of `SQLAlchemyOso`.
@@ -39,7 +39,6 @@ class SQLAlchemyOso(Oso):
             oso=self,
             sqlalchemy_base=self.base,
             user_model=user_model,
-            resource_id_column_type=resource_id_column_type,
             session_maker=session_maker,
         )
         self._roles_enabled = True

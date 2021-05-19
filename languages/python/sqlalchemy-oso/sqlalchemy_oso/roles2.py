@@ -501,10 +501,7 @@ def ensure_configured(func):
 
 
 class OsoRoles:
-    def __init__(
-        self, oso, sqlalchemy_base, user_model, resource_id_column_type, session_maker
-    ):
-        self.resource_id_column_type = resource_id_column_type
+    def __init__(self, oso, sqlalchemy_base, user_model, session_maker):
         self.session_maker = session_maker
 
         for cls in session_maker.class_.__mro__:
@@ -516,6 +513,20 @@ class OsoRoles:
         _check_valid_model(user_model)
         user_pk_name, user_pk_type = get_pk(user_model)
         user_table_name = user_model.__tablename__
+
+        resource_id_column_type = None
+        for name, model in oso.base._decl_class_registry.items():
+            if name == "_sa_module_registry":
+                continue
+            if model == user_model:
+                continue
+            _, id_type = get_pk(model)
+            if resource_id_column_type is None:
+                resource_id_column_type = id_type
+            elif resource_id_column_type.__class__ != id_type.__class__:
+                raise OsoError("All resource ids must match have the same id type.")
+
+        self.resource_id_column_type = resource_id_column_type
 
         models = sqlalchemy_base._decl_class_registry
 
@@ -721,11 +732,7 @@ class OsoRoles:
         for _, resource in self.config.resources.items():
             python_class = resource.python_class
             type = resource.type
-            id_field, id_type = get_pk(python_class)
-            if not isinstance(id_type, self.resource_id_column_type):
-                raise OsoError(
-                    "All resource ids must match the passed in resource id type."
-                )
+            id_field, _ = get_pk(python_class)
             table = python_class.__tablename__
             self.role_allow_list_filter_queries[
                 type
