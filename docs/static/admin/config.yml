@@ -1,7 +1,7 @@
 backend:
   name: git-gateway
   repo: osohq/oso
-  branch: sraper/netlify-cms # Branch to update (optional; defaults to master)
+  branch: sraper/netlify # Branch to update (optional; defaults to master)
 publish_mode: editorial_workflow
 media_folder: "assets/img/uploads"
 public_folder: "/img/uploads"
