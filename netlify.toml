@@ -1,6 +1,6 @@
 [build]
   base = "docs/"
-  publish = "publish/"
+  publish = "public/"
   command = "make build-netlify"
 
 [build.environment]
