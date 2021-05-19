@@ -71,7 +71,7 @@ build: install api_docs clean
 	HUGO_ENV=production hugo -b https://docs-preview.oso.dev/
 
 build-netlify: install api_docs clean
-  HUGO_ENV=production hugo
+  HUGO_ENV=production hugo -b $DEPLOY_URL
 
 build-prod: install api_docs
 	cd themes/oso-webpack && npm run-script build-prod
