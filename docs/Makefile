@@ -70,6 +70,9 @@ webpack-deps: .make.webpack-deps.installed
 build: install api_docs clean
 	HUGO_ENV=production hugo
 
+build-netlify: install api_docs clean
+  HUGO_ENV=production HUGO_VERSION=0.83.1 hugo -b $DEPLOY_URL
+
 build-prod: install api_docs
 	cd themes/oso-webpack && npm run-script build-prod
 	HUGO_ENV=production hugo -b https://docs.osohq.com/
