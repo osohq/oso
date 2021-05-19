@@ -226,13 +226,13 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
 
 
 if AT_LEAST_SQLALCHEMY_VERSION_1_4:
-    from sqlalchemy.orm import ORMExecuteState
 
     @event.listens_for(Session, "do_orm_execute")
-    def do_orm_execute(execute_state: ORMExecuteState):
+    def do_orm_execute(execute_state):
         # BOMB OOT
         if not isinstance(execute_state.session, AuthorizedSessionBase):
             return
+        assert isinstance(execute_state.session, Session)
 
         oso: Oso = execute_state.session.oso_context["oso"]
         user = execute_state.session.oso_context["user"]
@@ -273,7 +273,8 @@ if AT_LEAST_SQLALCHEMY_VERSION_1_4:
             )
             if authorized_filter is not None:
                 execute_state.statement = execute_state.statement.options(
-                    orm.with_loader_criteria(
+                    # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
+                    orm.with_loader_criteria(  # type: ignore
                         entity, authorized_filter, include_aliases=True
                     )
                 )

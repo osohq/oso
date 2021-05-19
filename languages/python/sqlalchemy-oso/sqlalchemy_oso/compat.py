@@ -4,9 +4,11 @@ Keep us compatible with 1.3 and 1.4 by implementing wrappers when needed here.
 """
 from packaging import version
 
-from sqlalchemy import __version__
+import sqlalchemy
 
-AT_LEAST_SQLALCHEMY_VERSION_1_4 = version.parse(__version__) >= version.parse("1.4")
+AT_LEAST_SQLALCHEMY_VERSION_1_4 = version.parse(
+    sqlalchemy.__version__  # type: ignore
+) >= version.parse("1.4")
 
 
 def iterate_model_classes(declarative_base):
