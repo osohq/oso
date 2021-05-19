@@ -2224,7 +2224,6 @@ def test_mismatched_id_types_throws_error(engine, Base, User):
         id = Column(Integer(), primary_key=True)
 
     Session = sessionmaker(bind=engine)
-    session = Session()
 
     oso = SQLAlchemyOso(Base)
 
