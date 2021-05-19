@@ -18,6 +18,6 @@ def iterate_model_classes(declarative_base):
 
             yield model
     except AttributeError:
-        yield declarative_base  ## TODO ensure that 1.3 includes base in above iter
+        yield declarative_base  # TODO ensure that 1.3 includes base in above iter
         for mapper in declarative_base.registry.mappers:
             yield mapper.class_
