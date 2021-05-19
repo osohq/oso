@@ -155,7 +155,10 @@ def test_oso_roles_init(auth_sessionmaker, Base, User):
 
     # - Passing an auth session to OsoRoles raises an exception
     with pytest.raises(OsoError):
-        oso.enable_roles(user_model=User, session_maker=auth_sessionmaker)
+        oso.enable_roles(
+            user_model=User,
+            session_maker=auth_sessionmaker,
+        )
 
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -2207,6 +2210,66 @@ def test_user_in_role(
     assert len(results) == 2
     for repo in results:
         assert repo.org_id == "osohq"
+
+
+def test_mismatched_id_types_throws_error(engine, Base, User):
+    class One(Base):
+        __tablename__ = "ones"
+
+        id = Column(String(), primary_key=True)
+
+    class Two(Base):
+        __tablename__ = "twos"
+
+        id = Column(Integer(), primary_key=True)
+
+    Session = sessionmaker(bind=engine)
+
+    oso = SQLAlchemyOso(Base)
+
+    with pytest.raises(OsoError):
+        oso.enable_roles(User, Session)
+
+
+@pytest.mark.parametrize("sa_type,one_id", [(String, "1"), (Integer, 1)])
+def test_id_types(engine, Base, User, sa_type, one_id):
+    class One(Base):
+        __tablename__ = "ones"
+
+        id = Column(sa_type(), primary_key=True)
+
+    class Two(Base):
+        __tablename__ = "twos"
+
+        id = Column(sa_type(), primary_key=True)
+
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    oso = SQLAlchemyOso(Base)
+    oso.enable_roles(User, Session)
+
+    Base.metadata.create_all(engine)
+
+    policy = """
+    resource(_type: One, "one", ["read"], {boss: {perms: ["read"]}});
+    resource(_type: Two, "two", ["read"], _roles);
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso.roles.synchronize_data()
+
+    steve = User(name="steve")
+    one = One(id=one_id)
+
+    session.add(steve)
+    session.add(one)
+    session.commit()
+
+    oso.roles.assign_role(steve, one, "boss")
+    assert oso.is_allowed(steve, "read", one)
 
 
 # LEGACY TEST
