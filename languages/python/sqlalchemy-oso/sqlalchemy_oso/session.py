@@ -244,7 +244,11 @@ if AT_LEAST_SQLALCHEMY_VERSION_1_4:
         def get_entities(x):
             def _get_entities(x):
                 try:
-                    return set(e for e in (cd["entity"] for cd in x.column_descriptions) if e is not None)
+                    return set(
+                        e
+                        for e in (cd["entity"] for cd in x.column_descriptions)
+                        if e is not None
+                    )
                 except AttributeError:
                     return set()
 
@@ -269,5 +273,7 @@ if AT_LEAST_SQLALCHEMY_VERSION_1_4:
             )
             if authorized_filter is not None:
                 execute_state.statement = execute_state.statement.options(
-                    orm.with_loader_criteria(entity, authorized_filter, include_aliases=True)
+                    orm.with_loader_criteria(
+                        entity, authorized_filter, include_aliases=True
+                    )
                 )
