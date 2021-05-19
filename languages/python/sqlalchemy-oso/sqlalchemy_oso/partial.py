@@ -120,7 +120,6 @@ def translate_expr(expression: Expression, session: Session, model, get_model):
     else:
         raise UnsupportedError(f"Unsupported {expression}")
 
-
 def translate_and(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "And"
     expr = sql.true()
@@ -130,7 +129,7 @@ def translate_and(expression: Expression, session: Session, model, get_model):
 
     return expr
 
-
+# _this.foo matches X allow(_, _, resource: Post)
 def translate_isa(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "Isa"
     left, right = expression.args
@@ -154,12 +153,15 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
     model_type = inspect(model, raiseerr=True).class_
     return sql.true() if issubclass(model_type, constraint_type) else sql.false()
 
-
+# =, <, >, >= , ...
+# op: = arg: [.(_this, foo), 1] => Post.foo = 1
+# session.query(Post).filter(Post.created_by.username = "user")
 def translate_compare(expression: Expression, session: Session, model, get_model):
     (left, right) = expression.args
     left_path = dot_path(left)
     right_path = dot_path(right)
 
+    # Dot operation is on the left hand side
     if left_path[1:]:
         assert left_path[0] == Variable("_this")
         assert not right_path
@@ -170,6 +172,7 @@ def translate_compare(expression: Expression, session: Session, model, get_model
             model,
             functools.partial(emit_compare, field_name, right, expression.operator),
         )
+    # Dot operation is on right
     elif right_path and right_path[0] == "_this":
         return translate_compare(
             Expression(flip_op(expression.operator), [right, left]),
@@ -177,6 +180,8 @@ def translate_compare(expression: Expression, session: Session, model, get_model
             model,
             get_model,
         )
+    # this = other no dot operation, throws if it's not of the form _this = other other same type as
+    # this
     else:
         assert left == Variable("_this")
         if not isinstance(right, model):
@@ -197,6 +202,8 @@ def translate_compare(expression: Expression, session: Session, model, get_model
         return pk_filter
 
 
+# tag in post.tags
+# (tag.id = 1, ...) in post.tags
 def translate_in(expression, session, model, get_model):
     assert expression.operator == "In"
     left = expression.args[0]
@@ -236,17 +243,28 @@ def translate_in(expression, session, model, get_model):
             path, session, model, functools.partial(emit_contains, field_name, left)
         )
 
+# tag in post.created_by and tag.id = 1 and tag.is_public = true
+# (_this.id = 1 and _this.is_public = true) in post.created_by
+# SELECT * FROM post WHERE EXISTS SELECT 1 FROM tag WHERE <emit_subexpression>
 
+# single relationship: filter(Post.created_by.has(func) )
+# multiple relationship: filter(Post.tags.any(func) )
+
+# post.created_by = 1
+# SELECT FROM post WHERE EXISTS (SELECT 1 FROM user LEFT JOIN post ON post.created_by = user.id WHERE <translate_dot>)
 def translate_dot(path: Tuple[str, ...], session: Session, model, func: EmitFunction):
     if len(path) == 0:
         return func(session, model)
     else:
+        # property = getattr(Post, "created_by"), "is_multi_valued" = False, model = User
+        # property = getattr(Post, "tags"), "is_multi_valued" = True, model = User
         property, model, is_multi_valued = get_relationship(model, path[0])
         if not is_multi_valued:
             return property.has(translate_dot(path[1:], session, model, func))
         else:
             return property.any(translate_dot(path[1:], session, model, func))
 
+# allow( ) if user.id = 1;
 
 def get_relationship(model, field_name: str):
     """Get the property object for field on model. field must be a relationship field.
