@@ -17,16 +17,22 @@ requirements: .make.requirements-install
 	pip install -r requirements.txt
 	touch $@
 
+dev-requirements: .make.dev-requirements-install
+
+.make.dev-requirements-install: requirements-dev.txt
+	pip install -r requirements-dev.txt
+	touch $@
+
 test: requirements test-requirements
 	pytest tests
 
-fmt:
+fmt: dev-requirements
 	black .
 
-lint:
+lint: dev-requirements
 	flake8 .
 
-typecheck:
+typecheck: dev-requirements
 	mypy tests
 	mypy sqlalchemy_oso
 
