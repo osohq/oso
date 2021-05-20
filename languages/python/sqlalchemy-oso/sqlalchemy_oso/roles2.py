@@ -127,7 +127,6 @@ def user_in_role_query(
                 {recur}
             ) select * from resources
         ), role as (
-            -- find roles with the permission
             select
                 r.name
             from roles r
@@ -161,6 +160,120 @@ def user_in_role_query(
         ) select * from user_in_role
     """
     return query
+
+
+def list_filter_query(kind, resource, relationships, id_field):
+    tablename = resource.python_class.__tablename__
+
+    # Get relationships sorted out.
+    rels = []
+    resource_type = resource.type
+    found_parent = True
+    while found_parent:
+        found_parent = False
+        for rel in relationships:
+            if rel.child_type == resource_type:
+                rels.append(rel)
+                resource_type = rel.parent_type
+                found_parent = True
+                break
+
+    # user_id, resource_type, action or role
+
+    sql = ""
+    assert kind in ["role_allow", "user_in_role"]
+    # Get the roles to start from.
+    if kind == "role_allow":
+        # Any role with the permission.
+        sql += f"""
+        with allow_permission as (
+            select
+                p.id
+            from permissions p
+            where p.resource_type = :resource_type and p.name = :action
+        ), starting_roles as (
+            select
+                rp.role as role
+            from role_permissions rp
+            join allow_permission ap
+            on rp.permission_id = ap.id
+        ), 
+        """
+    elif kind == "user_in_role":
+        # The passed in role.
+        sql += f"""
+        with starting_roles as (
+            select
+                r.name as role
+            from roles r
+            where r.name = :role
+        ),
+        """
+    # Get to any of the roles the user could be assigned to.
+    sql += """
+    relevant_roles as (
+        with recursive relevant_roles (role) as (
+            select
+                    role
+            from starting_roles
+            union
+            select
+                    ri.from_role
+            from role_implications ri
+            join relevant_roles rr
+            on ri.to_role = rr.role
+        ) select * from relevant_roles
+    ), user_relevant_roles as (
+        select
+            resource_type, resource_id
+        from user_roles ur
+        join relevant_roles rr
+        on rr.role = ur.role
+        where ur.user_id = :user_id
+    ),
+    """
+
+    parent_ids = ""
+    parent_joins = ""
+    role_joins = f"left join user_relevant_roles urr"
+    role_joins += (
+        f"\non urr.resource_type = '{resource.type}' and urr.resource_id = r.{id_field}"
+    )
+    role_filters = "where urr.resource_id is not NULL"
+
+    for i, rel in enumerate(rels):
+        parent_pk, _ = get_pk(rel.parent_python_class)
+        parent_ids += f", {rel.parent_table}.{parent_pk} as {rel.parent_table}_id"
+        parent_joins += f"\njoin {rel.parent_table}"
+        parent_joins += f"\non {rel.child_table}.{rel.child_join_column} = {rel.parent_table}.{rel.parent_join_column}"
+
+        urr_table = f"urr{i+1}"
+        role_joins += f"\nleft join user_relevant_roles {urr_table}"
+        role_joins += f"\non {urr_table}.resource_type = '{rel.parent_type}' and {urr_table}.resource_id = r.{rel.parent_table}_id"
+        role_filters += f" or {urr_table}.resource_id is not NULL"
+
+    # TODO: join to parents
+    sql += f"""
+    resources_with_parents as (
+        select
+            {tablename}.{id_field}{parent_ids}
+        from {tablename}
+        {parent_joins}
+    )
+    """
+
+    # @TODO: join to roles and filter
+    sql += f"""
+    select
+      r.id
+    from resources_with_parents r
+    {role_joins}
+    {role_filters}
+    """
+
+    # TODO: add the null checks
+
+    return sql
 
 
 # Python representation of the configuration data.
@@ -738,27 +851,20 @@ class OsoRoles:
             python_class = resource.python_class
             type = resource.type
             id_field, _ = get_pk(python_class)
-            table = python_class.__tablename__
-            self.role_allow_list_filter_queries[
-                type
-            ] = f"""
-                select
-                  {id_field}
-                from {table} R
-                where exists (
-                  {role_allow_query(id_query, type_query, child_types, "R."+id_field, has_relationships)}
-                )
-            """
-            self.user_in_role_list_filter_queries[
-                type
-            ] = f"""
-                select
-                  {id_field}
-                from {table} R
-                where exists (
-                  {user_in_role_query(id_query, type_query, child_types, "R."+id_field, has_relationships)}
-                )
-            """
+
+            self.role_allow_list_filter_queries[type] = list_filter_query(
+                "role_allow",
+                resource,
+                self.config.relationships,
+                id_field,
+            )
+
+            self.user_in_role_list_filter_queries[type] = list_filter_query(
+                "user_in_role",
+                resource,
+                self.config.relationships,
+                id_field,
+            )
 
     def _roles_query(self, user, arg2, resource, query, **kwargs):
         # We shouldn't get any data filtering calls to this method
