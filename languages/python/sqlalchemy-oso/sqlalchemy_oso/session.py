@@ -239,7 +239,7 @@ if AT_LEAST_SQLALCHEMY_VERSION_1_4:
         action = execute_state.session.oso_context["action"]
 
         if not execute_state.is_select:
-            breakpoint()
+            raise Exception("should we try to handle this or bomb oot")
 
         def get_entities(x):
             def _get_entities(x):
