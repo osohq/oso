@@ -245,11 +245,13 @@ def list_filter_query(kind, resource, relationships, id_field):
         parent_pk, _ = get_pk(rel.parent_python_class)
         parent_ids += f", {rel.parent_table}.{parent_pk} as {rel.parent_table}_id"
         parent_joins += f"\njoin {rel.parent_table}"
-        parent_joins += f"\non {rel.child_table}.{rel.child_join_column} = {rel.parent_table}.{rel.parent_join_column}"
+        parent_joins += f"\non {rel.child_table}.{rel.child_join_column} "
+        parent_joins += f"= {rel.parent_table}.{rel.parent_join_column}"
 
         urr_table = f"urr{i+1}"
         role_joins += f"\nleft join user_relevant_roles {urr_table}"
-        role_joins += f"\non {urr_table}.resource_type = '{rel.parent_type}' and {urr_table}.resource_id = r.{rel.parent_table}_id"
+        role_joins += f"\non {urr_table}.resource_type = '{rel.parent_type}' "
+        role_joins += f"and {urr_table}.resource_id = r.{rel.parent_table}_id"
         role_filters += f" or {urr_table}.resource_id is not NULL"
 
     # TODO: join to parents
@@ -950,7 +952,8 @@ class OsoRoles:
                 user_role.role = role_name
             else:
                 raise OsoError(
-                    f"User {user} already has a role for this resource. To reassign, call with `reassign=True`."
+                    f"User {user} already has a role for this resource."
+                    + "To reassign, call with `reassign=True`."
                 )
         else:
             user_pk_name, _ = get_pk(user.__class__)
