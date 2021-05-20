@@ -1,4 +1,4 @@
-.PHONY: build test test-requirements fmt lint requirements
+.PHONY: build test test-requirements fmt lint requirements tox
 
 build:
 	rm -rf build
@@ -38,3 +38,7 @@ typecheck: dev-requirements
 
 package:
 	python setup.py sdist bdist_wheel
+
+tox:
+	@pip install -q tox
+	@tox
