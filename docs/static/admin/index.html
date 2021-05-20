@@ -9,5 +9,75 @@
 <body>
 <!-- Include the script that builds the page and powers Netlify CMS -->
 <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
+<script>
+CMS.registerEditorComponent({
+  id: 'ref',
+  label: 'Ref',
+  fields: [
+    {
+      name: 'text',
+      label: 'Text',
+      widget: 'string',
+    },
+    {
+      name: 'url',
+      label: 'Url',
+      widget: 'string',
+    },
+    {
+      name: 'lang',
+      label: 'Lang',
+      widget: 'string',
+    },
+  ],
+  pattern: /\\\[(.+)\]\({{< ref path="(.+)" lang="([a-zA-Z0-9]+)" >}}\)/,
+  fromBlock: (match) => ({
+    text: match[1],
+    url: match[2],
+    lang: match[3],
+  }),
+  toBlock: (obj) => {
+    return `\\[${obj.text}]({{< ref path="${obj.url}" lang="${obj.lang}" >}})`;
+  },
+  toPreview: (obj) => {
+    return `<a href="${window.location.origin}/${obj.lang}${obj.url}">${obj.text}</a>`;
+  },
+});
+CMS.registerEditorComponent({
+  id: 'callout',
+  label: 'Callout',
+  fields: [
+    {
+      name: 'color',
+      label: 'Color',
+      widget: 'select',
+      options: ['blue', 'green'],
+    },
+    {
+      name: 'title',
+      label: 'Title',
+      widget: 'string',
+    },
+    {
+      name: 'body',
+      label: 'Body',
+      widget: 'markdown',
+    }
+  ],
+  pattern: /^{{% callout ([a-zA-Z0-9]+) ([a-zA-Z0-9]+) %}}$/,
+  fromBlock: (match) => ({
+    title: match[1],
+    color: match[2] ? match[2] : 'blue',
+  }),
+  toBlock: (obj) => {
+    return `{{% callout ${obj.title} ${obj.color} %}}\n` +
+      `${obj.body}\n` +
+      '{{% /callout %}}';
+  },
+  toPreview: (obj) => {
+    return `{{% callout ${obj.title} ${obj.color} %}}`;
+  },
+});
+</script>
 </body>
 </html>

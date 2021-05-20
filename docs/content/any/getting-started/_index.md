@@ -1,8 +1,7 @@
 ---
-# TODO: Rename?
-title: "Getting Started"
 weight: 1
 any: false
+title: Getting Started
 below_picker: roles-cta
 ---
 

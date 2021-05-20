@@ -2,15 +2,46 @@ backend:
   name: git-gateway
   repo: osohq/oso
   branch: sraper/netlify # Branch to update (optional; defaults to master)
+local_backend: true
 publish_mode: editorial_workflow
-media_folder: "assets/img/uploads"
+media_folder: "docs/static/img/uploads"
 public_folder: "/img/uploads"
 collections:
   - name: "getting-started"
     label: "Getting started"
-    folder: "docs/content/any/getting-started"
-    create: true
-    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
-    fields:
-      - {label: "Title", name: "title", widget: "string"}
-      - {label: "Body", name: "body", widget: "markdown"}
+    files:
+      - name: "getting-started-landing"
+        label: "Getting started"
+        file: "docs/content/any/getting-started/_index.md"
+        fields:
+          - {label: "Weight", name: "weight", widget: "number"}
+          - {label: "Any", name: "any", widget: "boolean"}
+          - {label: "Title", name: "title", widget: "string"}
+          - {label: "Below picker", name: "below_picker", widget: "select", options: ["old-sqlalchemy", "roles-cta"]}
+          - {label: "Body", name: "body", widget: "markdown"}
+      - name: "getting-started-policies"
+        label: "Policies"
+        file: "docs/content/any/getting-started/policies/index.md"
+        fields:
+          - {label: "Weight", name: "weight", widget: "number"}
+          - {label: "Any", name: "any", widget: "boolean"}
+          - {label: "Title", name: "title", widget: "string"}
+          - {label: "Description", name: "description", widget: "string"}
+          - {label: "Body", name: "body", widget: "markdown"}
+  - name: "go-data"
+    label: "Go"
+    files:
+      - name: "go-policies-data"
+        label: "Go - policies data"
+        file: "docs/content/go/getting-started/policies/data/data.md"
+        widget: "list"
+        fields:
+          - {label: "instance", name: "instance", widget: "string"}
+          - {label: "isAdmin", name: "isAdmin", widget: "string"}
+          - {label: "isAdminOf", name: "isAdminOf", widget: "string"}
+          - {label: "isAllowed", name: "isAllowed", widget: "string"}
+          - {label: "langName", name: "langName", widget: "string"}
+          - {label: "startswith", name: "startswith", widget: "string"}
+          - {label: "classMethodExample", name: "classMethodExample", widget: "markdown"}
+          - {label: "registerClass", name: "registerClass", widget: "markdown"}
+          - {label: "specializedExample", name: "specializedExample", widget: "markdown"}
