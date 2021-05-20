@@ -178,8 +178,6 @@ def list_filter_query(kind, resource, relationships, id_field):
                 found_parent = True
                 break
 
-    # user_id, resource_type, action or role
-
     sql = ""
     assert kind in ["role_allow", "user_in_role"]
     # Get the roles to start from.
@@ -254,7 +252,7 @@ def list_filter_query(kind, resource, relationships, id_field):
         role_joins += f"and {urr_table}.resource_id = r.{rel.parent_table}_id"
         role_filters += f" or {urr_table}.resource_id is not NULL"
 
-    # TODO: join to parents
+    # Join to parents
     sql += f"""
     resources_with_parents as (
         select
@@ -264,7 +262,7 @@ def list_filter_query(kind, resource, relationships, id_field):
     )
     """
 
-    # @TODO: join to roles and filter
+    # Join to roles and filter by having a role
     sql += f"""
     select
       r.id
@@ -272,8 +270,6 @@ def list_filter_query(kind, resource, relationships, id_field):
     {role_joins}
     {role_filters}
     """
-
-    # TODO: add the null checks
 
     return sql
 
