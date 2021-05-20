@@ -226,20 +226,23 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
 
 
 if AT_LEAST_SQLALCHEMY_VERSION_1_4:
+    # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
+    from sqlalchemy.orm import with_loader_criteria  # type: ignore
 
     @event.listens_for(Session, "do_orm_execute")
     def do_orm_execute(execute_state):
-        # BOMB OOT
-        if not isinstance(execute_state.session, AuthorizedSessionBase):
-            return
-        assert isinstance(execute_state.session, Session)
-
-        oso: Oso = execute_state.session.oso_context["oso"]
-        user = execute_state.session.oso_context["user"]
-        action = execute_state.session.oso_context["action"]
-
         if not execute_state.is_select:
-            raise Exception("should we try to handle this or bomb oot")
+            return
+
+        session = execute_state.session
+
+        if not isinstance(session, AuthorizedSessionBase):
+            return
+        assert isinstance(session, Session)
+
+        oso: Oso = session.oso_context["oso"]
+        user = session.oso_context["user"]
+        action = session.oso_context["action"]
 
         def get_entities(x):
             def _get_entities(x):
@@ -252,9 +255,9 @@ if AT_LEAST_SQLALCHEMY_VERSION_1_4:
                 except AttributeError:
                     return set()
 
-            # TODO(gj): currently walking way more than we have to. Probably some
-            # points in the tree where we can safely call it good for that branch
-            # and continue on to more fruitful pastures.
+            # TODO(gj): currently walking way more than we have to. Probably
+            # some points in the tree where we can safely call it good for that
+            # branch and continue on to more fruitful pastures.
             def _walk_children(x):
                 return x.get_children()
 
@@ -265,16 +268,8 @@ if AT_LEAST_SQLALCHEMY_VERSION_1_4:
 
             return entities
 
-        entities = get_entities(execute_state.statement)
-
-        for entity in entities:
-            authorized_filter = authorize_model(
-                oso, user, action, execute_state.session, entity
-            )
-            if authorized_filter is not None:
-                execute_state.statement = execute_state.statement.options(
-                    # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
-                    orm.with_loader_criteria(  # type: ignore
-                        entity, authorized_filter, include_aliases=True
-                    )
-                )
+        for entity in get_entities(execute_state.statement):
+            filter = authorize_model(oso, user, action, session, entity)
+            if filter is not None:
+                where = with_loader_criteria(entity, filter, include_aliases=True)
+                execute_state.statement = execute_state.statement.options(where)
