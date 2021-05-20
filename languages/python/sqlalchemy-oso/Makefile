@@ -23,8 +23,8 @@ dev-requirements: .make.dev-requirements-install
 	pip install -r requirements-dev.txt
 	touch $@
 
-test: requirements test-requirements
-	pytest tests
+test:
+	@$(MAKE) tox
 
 fmt: dev-requirements
 	black .
@@ -41,4 +41,4 @@ package:
 
 tox:
 	@pip install -q tox
-	@tox
+	@tox -p
