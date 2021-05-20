@@ -183,7 +183,7 @@ def list_filter_query(kind, resource, relationships, id_field):
     # Get the roles to start from.
     if kind == "role_allow":
         # Any role with the permission.
-        sql += f"""
+        sql += """
         with allow_permission as (
             select
                 p.id
@@ -195,11 +195,11 @@ def list_filter_query(kind, resource, relationships, id_field):
             from role_permissions rp
             join allow_permission ap
             on rp.permission_id = ap.id
-        ), 
+        ),
         """
     elif kind == "user_in_role":
         # The passed in role.
-        sql += f"""
+        sql += """
         with starting_roles as (
             select
                 r.name as role
@@ -233,7 +233,7 @@ def list_filter_query(kind, resource, relationships, id_field):
 
     parent_ids = ""
     parent_joins = ""
-    role_joins = f"left join user_relevant_roles urr"
+    role_joins = "left join user_relevant_roles urr"
     role_joins += (
         f"\non urr.resource_type = '{resource.type}' and urr.resource_id = r.{id_field}"
     )
