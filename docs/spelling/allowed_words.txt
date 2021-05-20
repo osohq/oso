@@ -111,6 +111,7 @@ iterable
 iterables
 js
 latencies
+lifecycle
 lookups
 macOS
 mailto
