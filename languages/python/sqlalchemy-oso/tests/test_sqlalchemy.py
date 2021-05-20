@@ -351,15 +351,16 @@ def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
     first_baked_authorized_post = baked_authorized_posts[0]
     assert first_post.id == first_baked_authorized_post.id
 
-    # Should be able to view the post's creator because it's using the User
-    # query baked by `first_post.created_by`.
-    #
-    # NOTE(gj): This is actually an authorization bug and not desired behavior,
-    # but we're testing that folks are able to use baked queries if they
-    # understand the risks and explicitly pass `enable_baked_queries=True`.
     if AT_LEAST_SQLALCHEMY_VERSION_1_4:
         assert first_baked_authorized_post.created_by is None
     else:
+        # Should be able to view the post's creator because it's using the User
+        # query baked by `first_post.created_by`.
+        #
+        # NOTE(gj): This is actually an authorization bug and not desired
+        # behavior, but we're testing that folks are able to use baked
+        # queries if they understand the risks and explicitly pass
+        # `enable_baked_queries=True`.
         assert first_baked_authorized_post.created_by.id == first_post.created_by.id
 
 
@@ -409,15 +410,16 @@ def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
     first_baked_authorized_post = baked_authorized_posts[0]
     assert first_post.id == first_baked_authorized_post.id
 
-    # Should be able to view the post's creator because it's using the User
-    # query baked by `first_post.created_by`.
-    #
-    # NOTE(gj): This is actually an authorization bug and not desired behavior,
-    # but we're testing that folks are able to use baked queries if they
-    # understand the risks and explicitly pass `enable_baked_queries=True`.
     if AT_LEAST_SQLALCHEMY_VERSION_1_4:
         assert first_baked_authorized_post.created_by is None
     else:
+        # Should be able to view the post's creator because it's using the User
+        # query baked by `first_post.created_by`.
+        #
+        # NOTE(gj): This is actually an authorization bug and not desired
+        # behavior, but we're testing that folks are able to use baked
+        # queries if they understand the risks and explicitly pass
+        # `enable_baked_queries=True`.
         assert first_baked_authorized_post.created_by.id == first_post.created_by.id
 
 
