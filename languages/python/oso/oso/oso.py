@@ -2,6 +2,7 @@
 
 __version__ = "0.12.2"
 
+import os
 from polar import Polar, Variable, exceptions
 
 
@@ -17,6 +18,7 @@ class Oso(Polar):
 
     def __init__(self):
         """Create an oso object."""
+        self._print_polar_log_message()
         super().__init__()
 
     def is_allowed(self, actor, action, resource) -> bool:
@@ -77,3 +79,8 @@ class Oso(Polar):
             actions.add(action)
 
         return list(actions)
+
+    def _print_polar_log_message(self):
+        if os.environ.get("POLAR_LOG", None):
+            print("It looks like you've enabled Polar tracing. Get help with " +
+                  "traces from our engineering team: https://help.osohq.com/trace")
