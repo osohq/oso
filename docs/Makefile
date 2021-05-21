@@ -83,7 +83,12 @@ clean:
 build-search:
 	cd search && go mod vendor && go build -o ../searcher
 
+require-preview-algolia-vars: require-ALGOLIA_PREVIEW_APPLICATION_ID require-ALGOLIA_PREVIEW_ADMIN_API_KEY require-ALGOLIA_PREVIEW_INDEX
+
 require-algolia-vars: require-ALGOLIA_APPLICATION_ID require-ALGOLIA_ADMIN_API_KEY require-ALGOLIA_INDEX
+
+preview-search: require-preview-algolia-vars build build-search
+	./searcher
 
 search: require-algolia-vars build-prod build-search
 	./searcher
