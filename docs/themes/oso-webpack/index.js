@@ -218,8 +218,14 @@ import('algoliasearch').then(algolia => {
   const algoliaAccount = 'KROZ8F05YT';
   // read only search key
   const algoliaReadOnlySearchKey = '13594a3b7da482e011ce0ab08fdb4c4d';
-  // index name
+  // index name - default to prod index
   const algoliaIndex = 'prod_OSODOCS';
+  // load index from meta if this is preview
+  const searchindexMeta = document.getElementById('search-index');
+  
+  if (searchindexMeta) {
+    algoliaIndex = searchindexMeta.content;
+  }
 
   const client = algolia.default(algoliaAccount, algoliaReadOnlySearchKey);
   const index = client.initIndex(algoliaIndex);
