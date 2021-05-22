@@ -93,6 +93,7 @@ jobs:
       - name: Build searcher
         run: |
           make build-search
+        working-directory: docs
       - name: Build Hugo docs
         if: github.event.inputs.url == 'docs-preview.oso.dev'
         run: |
