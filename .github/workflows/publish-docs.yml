@@ -95,12 +95,12 @@ jobs:
         run: |
           make build-search
         working-directory: docs
-      - name: Build Hugo docs
+      - name: Build Hugo docs (docs-preview.oso.dev)
         if: github.event.inputs.url == 'docs-preview.oso.dev'
         run: |
           make ci-preview-docs
         working-directory: docs
-      - name: Build Hugo docs
+      - name: Build Hugo docs (docs.oso.dev)
         if: github.event.inputs.url == 'docs.oso.dev'
         run: |
           make ci-prod-docs
