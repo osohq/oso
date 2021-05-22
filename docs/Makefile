@@ -87,11 +87,11 @@ require-algolia-vars: require-ALGOLIA_APPLICATION_ID require-ALGOLIA_ADMIN_API_K
 
 ## This is the entry for all doc stuff for preview
 ci-preview-docs: require-algolia-vars build build-search 
-	./searcher -index='preview_OSODOCS'
+	./searcher -index='preview_OSODOCS' -app_id='KROZ8F05YT'
 
 ## This is the entry for all doc stuff for preview
 ci-prod-docs: require-algolia-vars build-prod build-search 
-	./searcher -index='prod_OSODOCS'
+	./searcher -index='prod_OSODOCS' -app_id='KROZ8F05YT'
 
 search: require-algolia-vars build-prod build-search
 	./searcher
