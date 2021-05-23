@@ -244,31 +244,25 @@ if AT_LEAST_SQLALCHEMY_VERSION_1_4:
         user = session.oso_context["user"]
         action = session.oso_context["action"]
 
-        def get_entities(x):
-            def _get_entities(x):
+        def entities_in_statement(statement):
+            def _entities_in_statement(statement):
                 try:
-                    return set(
-                        e
-                        for e in (cd["entity"] for cd in x.column_descriptions)
-                        if e is not None
-                    )
+                    entities = (cd["entity"] for cd in statement.column_descriptions)
+                    return set(e for e in entities if e is not None)
                 except AttributeError:
                     return set()
+
+            entities = _entities_in_statement(statement)
 
             # TODO(gj): currently walking way more than we have to. Probably
             # some points in the tree where we can safely call it good for that
             # branch and continue on to more fruitful pastures.
-            def _walk_children(x):
-                return x.get_children()
-
-            entities = _get_entities(x)
-
-            for child in _walk_children(x):
-                entities |= get_entities(child)
+            for child in statement.get_children():
+                entities |= entities_in_statement(child)
 
             return entities
 
-        for entity in get_entities(execute_state.statement):
+        for entity in entities_in_statement(execute_state.statement):
             filter = authorize_model(oso, user, action, session, entity)
             if filter is not None:
                 where = with_loader_criteria(entity, filter, include_aliases=True)
