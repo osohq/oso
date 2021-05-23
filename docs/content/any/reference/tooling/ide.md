@@ -12,6 +12,7 @@ Oso’s IDE (Integrated Development Environment) integrations provide syntax hig
 ## Supported IDEs
 
 ### [Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=osohq.oso)
+### [Vim](https://github.com/osohq/polar.vim)
 
 ### Want support for your IDE of choice?
 
