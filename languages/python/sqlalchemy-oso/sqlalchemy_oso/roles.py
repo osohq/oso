@@ -124,13 +124,21 @@ def resource_role_class(
     setattr(ResourceRoleMixin, resource_name, resource)
 
     # Add the relationship between the user_model and the resource_model
-    resources = relationship(
-        resource_model.__name__,
-        secondary=tablename,
-        viewonly=True,
-        backref="users",
-        sync_backref=False,
-    )
+    try:  # https://docs.sqlalchemy.org/en/13/changelog/changelog_13.html#change-4b7a56c7d66383c7348ce81d287e3005
+        resources = relationship(
+            resource_model.__name__,
+            secondary=tablename,
+            viewonly=True,
+            backref="users",
+            sync_backref=False,  # Added in SQLAlchemy 1.3.17.
+        )
+    except TypeError:
+        resources = relationship(
+            resource_model.__name__,
+            secondary=tablename,
+            viewonly=True,
+            backref="users",
+        )
     # @Q: Do we try to pluralize this name correctly?
     setattr(user_model, resource_name + "s", resources)
 
