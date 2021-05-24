@@ -108,7 +108,7 @@ def engine(db_uri):
 
 @pytest.fixture
 def session(engine):
-    return Session(bind=engine, enable_baked_queries=False)
+    return Session(bind=engine)
 
 
 @pytest.fixture
