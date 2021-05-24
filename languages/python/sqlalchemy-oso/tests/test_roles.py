@@ -79,7 +79,6 @@ class Issue(Base):
 
 
 RepositoryRoleMixin = oso_roles.resource_role_class(
-    Base,
     User,
     Repository,
     ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"],
@@ -93,7 +92,7 @@ class RepositoryRole(Base, RepositoryRoleMixin):
 
 # For the tests, make OrganizationRoles NOT mutually exclusive
 OrganizationRoleMixin = oso_roles.resource_role_class(
-    Base, User, Organization, ["OWNER", "MEMBER", "BILLING"], mutually_exclusive=False
+    User, Organization, ["OWNER", "MEMBER", "BILLING"], mutually_exclusive=False
 )
 
 
@@ -103,7 +102,7 @@ class OrganizationRole(Base, OrganizationRoleMixin):
 
 
 TeamRoleMixin = oso_roles.resource_role_class(
-    Base, User, Team, ["MAINTAINER", "MEMBER"]
+    User, Team, ["MAINTAINER", "MEMBER"]
 )
 
 
@@ -491,7 +490,6 @@ def test_set_get_session(oso_with_session):
 def test_duplicate_resource_role():
     with pytest.raises(ValueError):
         oso_roles.resource_role_class(
-            Base,
             User,
             Repository,
             ["READ", "TRIAGE", "WRITE", "MAINTAIN", "ADMIN"],
