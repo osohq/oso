@@ -37,10 +37,8 @@ Users are assigned to roles using `OsoRoles.assign_role`.
     hlOpts="hl_lines=10"
     >}}
 
-{{% callout "Have feedback?" "green" %}}
+## Have feedback?
 
 Have feedback on this documentation or the library itself? It's under
 active development. Our engineering team would love to [hear from you in
 Slack.](https://join-slack.osohq.com/)
-
-{{% /callout %}}

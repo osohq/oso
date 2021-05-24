@@ -473,10 +473,8 @@ Notice the `"repo_read"` and `"repo_write"` implications. These are
 roles defined on another resource, Repository. In the next guide, we'll
 see how to setup **cross resource implied roles** like these!
 
-{{% callout "Have feedback?" "green" %}}
+## Have feedback?
 
 Have feedback on this documentation or the library itself? It's under
 active development. Our engineering team would love to [hear from you in
 Slack.](https://join-slack.osohq.com/)
-
-{{% /callout %}}
