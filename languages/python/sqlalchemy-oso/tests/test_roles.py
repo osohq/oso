@@ -101,9 +101,7 @@ class OrganizationRole(Base, OrganizationRoleMixin):
         return {"id": self.id, "name": str(self.name)}
 
 
-TeamRoleMixin = oso_roles.resource_role_class(
-    User, Team, ["MAINTAINER", "MEMBER"]
-)
+TeamRoleMixin = oso_roles.resource_role_class(User, Team, ["MAINTAINER", "MEMBER"])
 
 
 class TeamRole(Base, TeamRoleMixin):
