@@ -616,6 +616,8 @@ def test_empty_constraints_in(session, oso, tag_nested_many_many_test_fixture):
     if USING_SQLAlchemy_v1_3:
         true_clause = ""
     else:
+        # NOTE(gj): The trivial TRUE constraint is not compiled away in
+        # SQLAlchemy 1.4.
         true_clause = " AND 1 = 1"
 
     assert str(posts) == (

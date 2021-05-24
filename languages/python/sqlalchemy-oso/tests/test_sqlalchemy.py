@@ -274,14 +274,23 @@ def test_null_with_partial(engine, oso):
     )
     posts = Session().query(Post)
 
-    # TODO(gj): 'do_orm_execute' event only fires when a query is executed; not
-    # when it's printed.
-    #
-    # assert str(posts) == (
-    #     "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title, "
-    #     + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
-    #     + "posts.needs_moderation AS posts_needs_moderation \nFROM posts \nWHERE posts.contents IS NULL"
-    # )
+    if USING_SQLAlchemy_v1_3:
+        where_clause = " \nWHERE posts.contents IS NULL"
+    else:
+        # NOTE(gj): In constrast to the `Query.before_compile` event we listen
+        # for in 1.3, the `Session.do_orm_execute` event we listen for in
+        # SQLAlchemy 1.4 (unsurprisingly) happens at ORM execution time. Because
+        # of this, the WHERE clauses we add as authorization constraints are
+        # not applied when we (compile and) print out the query in the below
+        # assertion but *are* applied when we actually interact with the ORM
+        # when executing the `count()` method.
+        where_clause = ""
+
+    assert str(posts) == (
+        "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title, "
+        + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
+        + f"posts.needs_moderation AS posts_needs_moderation \nFROM posts{where_clause}"
+    )
     assert posts.count() == 0
 
 
@@ -303,15 +312,23 @@ def test_unconditional_policy_has_no_filter(engine, oso, fixture_data):
     query = session.query(Post)
 
     if USING_SQLAlchemy_v1_3:
-        true_clause = " \nWHERE 1 = 1"
+        where_clause = " \nWHERE 1 = 1"
     else:
-        true_clause = ""
+        # NOTE(gj): In constrast to the `Query.before_compile` event we listen
+        # for in 1.3, the `Session.do_orm_execute` event we listen for in
+        # SQLAlchemy 1.4 (unsurprisingly) happens at ORM execution time. Because
+        # of this, the WHERE clauses we add as authorization constraints are
+        # not applied when we (compile and) print out the query in the below
+        # assertion but *are* applied when we actually interact with the ORM
+        # when executing the `count()` method.
+        where_clause = ""
 
     assert str(query) == (
         "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title, "
         + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
-        + f"posts.needs_moderation AS posts_needs_moderation \nFROM posts{true_clause}"
+        + f"posts.needs_moderation AS posts_needs_moderation \nFROM posts{where_clause}"
     )
+    assert query.count() == 9
 
 
 def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
