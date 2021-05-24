@@ -6,6 +6,13 @@ To get started:
 2. Install [Hugo][]
 3. `make run`
 
+To live reload the `webpack` theme in `themes/oso-webpack`, run:
+
+```
+cd themes/oso-webpack
+npm run serve
+```
+
 # Search Index Generation
 
 The search folder has a tiny Go program that can create an index from the Hugo files and send to Algolia for search

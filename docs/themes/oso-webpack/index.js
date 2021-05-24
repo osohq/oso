@@ -167,25 +167,28 @@ import('monaco-editor-core').then(monaco => {
     }
   });
 });
-const searchResultsContainer = document.getElementById(
-  'search-results-container'
-);
+
 // hide the search box
-window.hideSearch = function(e) {
+window.hideSearch = function(_e) {
+  const searchModal = document.getElementById('search-modal');
   if (searchModal.style.display == '') {
     searchModal.style.display = 'none';
   }
 };
 
-// load up a reference to the search input and add an event listener
-const searchInput = document.getElementById('search-input');
-if (searchInput) {
+window.addEventListener('load', () => {
+  const searchInput = document.getElementById('search-input');
   searchInput.addEventListener('input', e => window.searchInputKeyUp(e));
-}
+});
 
 // this handles when the button on the left nav is clicked and it toggles the search box
 window.searchButtonClick = function(e) {
   e.preventDefault();
+  const searchModal = document.getElementById('search-modal');
+  const searchInput = document.getElementById('search-input');
+  const searchResultsContainer = document.getElementById(
+    'search-results-container'
+  );
 
   if (searchModal.style.display == 'none') {
     searchInput.value = '';
@@ -241,6 +244,10 @@ import('algoliasearch').then(algolia => {
       });
       count += 1;
     });
+
+    const searchResultsContainer = document.getElementById(
+      'search-results-container'
+    );
     searchResultsContainer.innerHTML = results;
   };
 
@@ -277,6 +284,8 @@ import('algoliasearch').then(algolia => {
   };
 
   window.searchInputKeyUp = function(event) {
+    const searchInput = document.getElementById('search-input');
+
     event.preventDefault();
     var term = searchInput.value;
 
