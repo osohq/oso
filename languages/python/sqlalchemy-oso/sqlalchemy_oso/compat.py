@@ -24,5 +24,6 @@ def iterate_model_classes(base_or_registry):
         yield from {mapper.class_ for mapper in mappers}
     else:
         # SQLAlchemy 1.3 declarative registry.
+        # TODO (dhatch): Not sure this is legit b/c it uses an internal interface?
         models = base_or_registry._decl_class_registry.items()
         yield from {model for name, model in models if name != "_sa_module_registry"}

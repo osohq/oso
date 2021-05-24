@@ -25,7 +25,6 @@ def null_query(session: Session, model) -> Query:
 
 def register_models(oso: Oso, base):
     """Register all models in model base class ``base`` with oso as classes."""
-    # TODO (dhatch): Not sure this is legit b/c it uses an internal interface?
     for model in iterate_model_classes(base):
         oso.register_class(model)
 
