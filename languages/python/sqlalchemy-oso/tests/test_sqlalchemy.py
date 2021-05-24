@@ -315,8 +315,8 @@ def test_unconditional_policy_has_no_filter(engine, oso, fixture_data):
 
 
 def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
-    """Test that baked relationship queries don't lead to authorization
-    backdoors for AuthorizedSession."""
+    """Test that baked relationship queries don't lead to authorization bypasses
+    for AuthorizedSession."""
     from sqlalchemy.orm import Session
 
     basic_session = Session(bind=engine)
@@ -328,7 +328,7 @@ def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
 
     oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
 
-    # `enable_baked_queries` defaults to `False`.
+    # Baked queries disabled for sqlalchemy_oso.session.AuthorizedSession.
     authorized_session = AuthorizedSession(oso, user="user", action="read", bind=engine)
 
     assert authorized_session.query(User).count() == 0
@@ -342,31 +342,10 @@ def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
     # permitting access to "read" users.
     assert first_authorized_post.created_by is None
 
-    # Explicitly pass `enable_baked_queries=True`.
-    baked_authorized_session = AuthorizedSession(
-        oso, user="user", action="read", bind=engine, enable_baked_queries=True
-    )
-    baked_authorized_posts = baked_authorized_session.query(Post)
-    assert baked_authorized_posts.count() == 1
-    first_baked_authorized_post = baked_authorized_posts[0]
-    assert first_post.id == first_baked_authorized_post.id
-
-    if AT_LEAST_SQLALCHEMY_VERSION_1_4:
-        assert first_baked_authorized_post.created_by is None
-    else:
-        # Should be able to view the post's creator because it's using the User
-        # query baked by `first_post.created_by`.
-        #
-        # NOTE(gj): This is actually an authorization bug and not desired
-        # behavior, but we're testing that folks are able to use baked
-        # queries if they understand the risks and explicitly pass
-        # `enable_baked_queries=True`.
-        assert first_baked_authorized_post.created_by.id == first_post.created_by.id
-
 
 def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
-    """Test that baked relationship queries don't lead to authorization
-    backdoors for authorized_sessionmaker."""
+    """Test that baked relationship queries don't lead to authorization bypasses
+    for authorized_sessionmaker."""
     from sqlalchemy.orm import Session
 
     basic_session = Session(bind=engine)
@@ -378,7 +357,7 @@ def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
 
     oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
 
-    # `enable_baked_queries` defaults to `False`.
+    # Baked queries disabled for sqlalchemy_oso.session.authorized_sessionmaker.
     authorized_session = authorized_sessionmaker(
         get_oso=lambda: oso,
         get_user=lambda: "user",
@@ -397,35 +376,10 @@ def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
     # permitting access to "read" users.
     assert first_authorized_post.created_by is None
 
-    # Explicitly pass `enable_baked_queries=True`.
-    baked_authorized_session = authorized_sessionmaker(
-        get_oso=lambda: oso,
-        get_user=lambda: "user",
-        get_action=lambda: "read",
-        bind=engine,
-        enable_baked_queries=True,
-    )()
-    baked_authorized_posts = baked_authorized_session.query(Post)
-    assert baked_authorized_posts.count() == 1
-    first_baked_authorized_post = baked_authorized_posts[0]
-    assert first_post.id == first_baked_authorized_post.id
-
-    if AT_LEAST_SQLALCHEMY_VERSION_1_4:
-        assert first_baked_authorized_post.created_by is None
-    else:
-        # Should be able to view the post's creator because it's using the User
-        # query baked by `first_post.created_by`.
-        #
-        # NOTE(gj): This is actually an authorization bug and not desired
-        # behavior, but we're testing that folks are able to use baked
-        # queries if they understand the risks and explicitly pass
-        # `enable_baked_queries=True`.
-        assert first_baked_authorized_post.created_by.id == first_post.created_by.id
-
 
 def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
-    """Test that baked relationship queries don't lead to authorization
-    backdoors for scoped_session."""
+    """Test that baked relationship queries don't lead to authorization bypasses
+    for scoped_session."""
     from sqlalchemy.orm import Session
 
     basic_session = Session(bind=engine)
@@ -437,7 +391,7 @@ def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
 
     oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
 
-    # `enable_baked_queries` defaults to `False`.
+    # Baked queries disabled for sqlalchemy_oso.session.scoped_session.
     authorized_session = scoped_session(lambda: oso, lambda: "user", lambda: "read")
     authorized_session.configure(bind=engine)
 
@@ -451,28 +405,6 @@ def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
     # Should not be able to view the post's creator because there's no rule
     # permitting access to "read" users.
     assert first_authorized_post.created_by is None
-
-    # Explicitly pass `enable_baked_queries=True`.
-    baked_authorized_session = scoped_session(
-        lambda: oso, lambda: "user", lambda: "read", enable_baked_queries=True
-    )
-    baked_authorized_session.configure(bind=engine)
-    baked_authorized_posts = baked_authorized_session.query(Post)
-    assert baked_authorized_posts.count() == 1
-    first_baked_authorized_post = baked_authorized_posts[0]
-    assert first_post.id == first_baked_authorized_post.id
-
-    if AT_LEAST_SQLALCHEMY_VERSION_1_4:
-        assert first_baked_authorized_post.created_by is None
-    else:
-        # Should be able to view the post's creator because it's using the User
-        # query baked by `first_post.created_by`.
-        #
-        # NOTE(gj): This is actually an authorization bug and not desired
-        # behavior, but we're testing that folks are able to use baked
-        # queries if they understand the risks and explicitly pass
-        # `enable_baked_queries=True`.
-        assert first_baked_authorized_post.created_by.id == first_post.created_by.id
 
 
 def test_register_models_declarative_base():
