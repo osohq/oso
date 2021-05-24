@@ -150,8 +150,7 @@ class AuthorizedSessionBase(object):
         self._oso_user = user
         self._oso_action = action
 
-        # Disable baked queries on SQLAlchemy 1.3.
-        if USING_SQLAlchemy_v1_3:
+        if USING_SQLAlchemy_v1_3:  # Disable baked queries on SQLAlchemy 1.3.
             options["enable_baked_queries"] = False
 
         super().__init__(**options)  # type: ignore
