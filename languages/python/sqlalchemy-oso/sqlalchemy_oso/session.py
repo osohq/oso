@@ -2,14 +2,13 @@
 from typing import Optional
 
 from sqlalchemy import event
-from sqlalchemy.orm.query import Query
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import orm
 
 from oso import Oso
 
 from sqlalchemy_oso.auth import authorize_model
-from sqlalchemy_oso.compat import AT_LEAST_SQLALCHEMY_VERSION_1_4
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
 
 class _OsoSession:
@@ -44,49 +43,6 @@ def set_get_session(oso: Oso, get_session_func):
     """
     _OsoSession.set_get_session(get_session_func)
     oso.register_constant(_OsoSession, "OsoSession")
-
-
-if not AT_LEAST_SQLALCHEMY_VERSION_1_4:
-
-    @event.listens_for(Query, "before_compile", retval=True)
-    def _before_compile(query):
-        """Enable before compile hook."""
-        return _authorize_query(query)
-
-    def _authorize_query(query: Query) -> Optional[Query]:
-        """Authorize an existing query with an oso instance, user and action."""
-        # Get the query session.
-        session = query.session
-
-        # Check whether this is an oso session.
-        if not isinstance(session, AuthorizedSessionBase):
-            # Not an authorized session.
-            return None
-
-        oso = session.oso_context["oso"]
-        user = session.oso_context["user"]
-        action = session.oso_context["action"]
-
-        # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
-        # on queries that have already been made.  If a query has a LIMIT or OFFSET
-        # applied, SQLAlchemy will by default throw an error if filters are applied.
-        # This prevents these errors from occuring, but could result in some
-        # incorrect queries. We should remove this if possible.
-        query = query.enable_assertions(False)
-
-        entities = {column["entity"] for column in query.column_descriptions}
-        for entity in entities:
-            # Only apply authorization to columns that represent a mapper entity.
-            if entity is None:
-                continue
-
-            authorized_filter = authorize_model(
-                oso, user, action, query.session, entity
-            )
-            if authorized_filter is not None:
-                query = query.filter(authorized_filter)
-
-        return query
 
 
 def authorized_sessionmaker(get_oso, get_user, get_action, class_=None, **kwargs):
@@ -195,7 +151,7 @@ class AuthorizedSessionBase(object):
         self._oso_action = action
 
         # Disable baked queries on SQLAlchemy 1.3.
-        if not AT_LEAST_SQLALCHEMY_VERSION_1_4:
+        if USING_SQLAlchemy_v1_3:
             options["enable_baked_queries"] = False
 
         super().__init__(**options)  # type: ignore
@@ -224,7 +180,7 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
     pass
 
 
-if AT_LEAST_SQLALCHEMY_VERSION_1_4:
+try:
     # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
     from sqlalchemy.orm import with_loader_criteria  # type: ignore
 
@@ -266,3 +222,47 @@ if AT_LEAST_SQLALCHEMY_VERSION_1_4:
             if filter is not None:
                 where = with_loader_criteria(entity, filter, include_aliases=True)
                 execute_state.statement = execute_state.statement.options(where)
+
+
+except ImportError:
+    from sqlalchemy.orm.query import Query
+
+    @event.listens_for(Query, "before_compile", retval=True)
+    def _before_compile(query):
+        """Enable before compile hook."""
+        return _authorize_query(query)
+
+    def _authorize_query(query: Query) -> Optional[Query]:
+        """Authorize an existing query with an oso instance, user and action."""
+        # Get the query session.
+        session = query.session
+
+        # Check whether this is an oso session.
+        if not isinstance(session, AuthorizedSessionBase):
+            # Not an authorized session.
+            return None
+
+        oso = session.oso_context["oso"]
+        user = session.oso_context["user"]
+        action = session.oso_context["action"]
+
+        # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
+        # on queries that have already been made.  If a query has a LIMIT or OFFSET
+        # applied, SQLAlchemy will by default throw an error if filters are applied.
+        # This prevents these errors from occuring, but could result in some
+        # incorrect queries. We should remove this if possible.
+        query = query.enable_assertions(False)
+
+        entities = {column["entity"] for column in query.column_descriptions}
+        for entity in entities:
+            # Only apply authorization to columns that represent a mapper entity.
+            if entity is None:
+                continue
+
+            authorized_filter = authorize_model(
+                oso, user, action, query.session, entity
+            )
+            if authorized_filter is not None:
+                query = query.filter(authorized_filter)
+
+        return query

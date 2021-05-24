@@ -8,7 +8,7 @@ from sqlalchemy_oso.session import (
     scoped_session,
     AuthorizedSession,
 )
-from sqlalchemy_oso.compat import AT_LEAST_SQLALCHEMY_VERSION_1_4
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
 from .models import User, Post
 from .conftest import print_query
@@ -302,10 +302,10 @@ def test_unconditional_policy_has_no_filter(engine, oso, fixture_data):
 
     query = session.query(Post)
 
-    if AT_LEAST_SQLALCHEMY_VERSION_1_4:
-        true_clause = ""
-    else:
+    if USING_SQLAlchemy_v1_3:
         true_clause = " \nWHERE 1 = 1"
+    else:
+        true_clause = ""
 
     assert str(query) == (
         "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title, "
@@ -424,46 +424,47 @@ def test_register_models_declarative_base():
             oso.register_class(m)
 
 
-if AT_LEAST_SQLALCHEMY_VERSION_1_4:
+@pytest.mark.skipif(
+    USING_SQLAlchemy_v1_3, reason="testing SQLAlchemy 1.4 functionality"
+)
+def test_register_models_registry():
+    """Test that `register_models()` works with a SQLAlchemy 1.4-style
+    registry."""
+    # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
+    from sqlalchemy.orm import registry  # type: ignore
+    from sqlalchemy import Table, Column, Integer
+    from oso import Oso
+    from polar.exceptions import DuplicateClassAliasError
 
-    def test_register_models_registry():
-        """Test that `register_models()` works with a SQLAlchemy 1.4-style
-        registry."""
-        # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
-        from sqlalchemy.orm import registry  # type: ignore
-        from sqlalchemy import Table, Column, Integer
-        from oso import Oso
-        from polar.exceptions import DuplicateClassAliasError
+    from sqlalchemy_oso.auth import register_models
 
-        from sqlalchemy_oso.auth import register_models
+    mapper_registry = registry()
 
-        mapper_registry = registry()
+    user_table = Table(
+        "user",
+        mapper_registry.metadata,
+        Column("id", Integer, primary_key=True),
+    )
 
-        user_table = Table(
-            "user",
-            mapper_registry.metadata,
-            Column("id", Integer, primary_key=True),
-        )
+    class User:
+        pass
 
-        class User:
-            pass
+    mapper_registry.map_imperatively(User, user_table)
 
-        mapper_registry.map_imperatively(User, user_table)
+    post_table = Table(
+        "post",
+        mapper_registry.metadata,
+        Column("id", Integer, primary_key=True),
+    )
 
-        post_table = Table(
-            "post",
-            mapper_registry.metadata,
-            Column("id", Integer, primary_key=True),
-        )
+    class Post:
+        pass
 
-        class Post:
-            pass
+    mapper_registry.map_imperatively(Post, post_table)
 
-        mapper_registry.map_imperatively(Post, post_table)
+    oso = Oso()
+    register_models(oso, mapper_registry)
 
-        oso = Oso()
-        register_models(oso, mapper_registry)
-
-        for m in [Post, User]:
-            with pytest.raises(DuplicateClassAliasError):
-                oso.register_class(m)
+    for m in [Post, User]:
+        with pytest.raises(DuplicateClassAliasError):
+            oso.register_class(m)

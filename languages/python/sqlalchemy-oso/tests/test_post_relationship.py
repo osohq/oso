@@ -6,7 +6,7 @@ https://www.notion.so/osohq/Relationships-621b884edbc6423f93d29e6066e58d16.
 import pytest
 
 from sqlalchemy_oso.auth import authorize_model
-from sqlalchemy_oso.compat import AT_LEAST_SQLALCHEMY_VERSION_1_4
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
 from .models import Post, Tag, User, Category
 from .conftest import print_query
@@ -613,10 +613,10 @@ def test_empty_constraints_in(session, oso, tag_nested_many_many_test_fixture):
         authorize_model(oso, user, "read", session, Post)
     )
 
-    if AT_LEAST_SQLALCHEMY_VERSION_1_4:
-        true_clause = " AND 1 = 1"
-    else:
+    if USING_SQLAlchemy_v1_3:
         true_clause = ""
+    else:
+        true_clause = " AND 1 = 1"
 
     assert str(posts) == (
         "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS"
