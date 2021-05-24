@@ -401,9 +401,10 @@ def get_resource_users_by_role(session, resource, role_name):
     resource_name = _get_resource_name_lower(resource_model)
     filter_kwargs = {resource_name: resource, "name": role_name}
 
+    user_model_pk = getattr(user_model, inspect(user_model).primary_key[0].name)
     users = (
         session.query(user_model)
-        .join(role_model)
+        .join(role_model, role_model.user_id == user_model_pk)
         .filter_by(**filter_kwargs)
         .order_by(user_model.user_id)
         .all()
