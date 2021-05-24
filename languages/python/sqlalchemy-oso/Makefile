@@ -39,6 +39,5 @@ typecheck: dev-requirements
 package:
 	python setup.py sdist bdist_wheel
 
-tox:
-	@pip install -q tox
+tox: dev-requirements
 	@tox -p
