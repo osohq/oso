@@ -30,13 +30,17 @@
     </main>
 {{ else }}
     <div class="w-3/5 text-black leading-normal pt-6 mx-auto static">
-    <article class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:mr-64 xl:px-8 pt-10 pb-24 lg:pb-16">
-        <h1>{{ $.Page.Title }}</h1>
-    </article>
+      <article class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:mr-64 xl:px-8 pt-10 pb-24 lg:pb-16">
+        {{ if .Params.showContentForAnyLanguage }}
+          {{ .Content }}
+        {{ else }}
+          <h1>{{ $.Page.Title }}</h1>
+        {{ end }}
+      </article>
       <h2 class="text-xl font-semibold text-primary-dark pb-4">
         Choose your language:
       </h2>
-      <div class="grid mx-6 grid-cols-3 gap-8 content-evenly">
+      <div class="grid mx-6 pb-4 grid-cols-3 gap-8 content-evenly">
         {{ partial "language-chooser.html" . }}
       </div>
     </div>
