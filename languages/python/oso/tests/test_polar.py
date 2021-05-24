@@ -50,8 +50,8 @@ def test_load_function(polar, query, qvar):
     polar.load_file(filename)
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         polar.load_file(filename)
-    assert (
-        str(e.value).startswith(f"Problem loading file: File {filename} has already been loaded.")
+    assert str(e.value).startswith(
+        f"Problem loading file: File {filename} has already been loaded."
     )
 
     renamed = Path(__file__).parent / "test_file_renamed.polar"
@@ -361,9 +361,8 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.IntegerOverflow) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value).startswith(
-            "'18446744073709551616' caused an integer overflow at line 2, column 17")
+    assert str(e.value).startswith(
+        "'18446744073709551616' caused an integer overflow at line 2, column 17"
     )
 
     # InvalidTokenCharacter
@@ -373,9 +372,9 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value).startswith("'\\n' is not a valid character. Found in this is not at line 2, column 29"
-                                ))
+    assert str(e.value).startswith(
+        "'\\n' is not a valid character. Found in this is not at line 2, column 29"
+    )
 
     rules = """
     f(a) if a = "this is not allowed\0
@@ -383,7 +382,9 @@ def test_parser_errors(polar):
 
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar.load_str(rules)
-    assert str(e.value).startswith("'\\u{0}' is not a valid character. Found in this is not allowed at line 2, column 17")
+    assert str(e.value).startswith(
+        "'\\u{0}' is not a valid character. Found in this is not allowed at line 2, column 17"
+    )
 
     # InvalidToken -- not sure what causes this
 
@@ -393,8 +394,8 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.UnrecognizedEOF) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value).startswith("hit the end of the file unexpectedly. Did you forget a semi-colon at line 2, column 9")
+    assert str(e.value).startswith(
+        "hit the end of the file unexpectedly. Did you forget a semi-colon at line 2, column 9"
     )
 
     # UnrecognizedToken
@@ -403,7 +404,9 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.UnrecognizedToken) as e:
         polar.load_str(rules)
-    assert str(e.value).startswith("did not expect to find the token '1' at line 2, column 5")
+    assert str(e.value).startswith(
+        "did not expect to find the token '1' at line 2, column 5"
+    )
 
     # ExtraToken -- not sure what causes this
 
@@ -415,14 +418,13 @@ def test_runtime_errors(polar, query):
     polar.load_str(rules)
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         query("foo(1,2)")
-    assert (
-        """trace (most recent evaluation last):
+    assert """trace (most recent evaluation last):
   in query at line 1, column 1
     foo(1,2)
   in rule foo at line 2, column 17
     a in b
-Type error: can only use `in` on an iterable value, this is Number(Integer(2)) at line 1, column 7"""
-        in str(e.value)
+Type error: can only use `in` on an iterable value, this is Number(Integer(2)) at line 1, column 7""" in str(
+        e.value
     )
 
 

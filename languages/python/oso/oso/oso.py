@@ -82,5 +82,7 @@ class Oso(Polar):
 
     def _print_polar_log_message(self):
         if os.environ.get("POLAR_LOG", None):
-            print("It looks like you've enabled Polar tracing. Get help with " +
-                  "traces from our engineering team: https://help.osohq.com/trace")
+            print(
+                "It looks like you've enabled Polar tracing. Get help with "
+                + "traces from our engineering team: https://help.osohq.com/trace"
+            )

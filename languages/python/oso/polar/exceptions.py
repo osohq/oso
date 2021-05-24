@@ -15,7 +15,10 @@ class OsoError(Exception):
 
     @classmethod
     def add_get_help(cls, message):
-        return message + f"\n\tGet help with Oso from our engineers: https://help.osohq.com/{cls.__name__}"
+        return (
+            message
+            + f"\n\tGet help with Oso from our engineers: https://help.osohq.com/{cls.__name__}"
+        )
 
 
 class FFIErrorNotFound(OsoError):
