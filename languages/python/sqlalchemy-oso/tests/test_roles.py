@@ -325,7 +325,7 @@ def test_get_resource_users_by_role(test_db_session, abbey_road, vocalists):
     # Test RepoRoles
     users = (
         test_db_session.query(User)
-        .join(RepositoryRole)
+        .join(RepositoryRole, RepositoryRole.user_id == User.user_id)
         .filter_by(repository=abbey_road, name="READ")
         .all()
     )
@@ -336,7 +336,7 @@ def test_get_resource_users_by_role(test_db_session, abbey_road, vocalists):
     # Test TeamRoles
     users = (
         test_db_session.query(User)
-        .join(TeamRole)
+        .join(TeamRole, TeamRole.user_id == User.user_id)
         .filter_by(team=vocalists, name="MEMBER")
         .all()
     )

@@ -2,13 +2,13 @@
 from typing import Optional
 
 from sqlalchemy import event
-from sqlalchemy.orm.query import Query
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import orm
 
 from oso import Oso
 
 from sqlalchemy_oso.auth import authorize_model
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
 
 class _OsoSession:
@@ -45,46 +45,6 @@ def set_get_session(oso: Oso, get_session_func):
     oso.register_constant(_OsoSession, "OsoSession")
 
 
-@event.listens_for(Query, "before_compile", retval=True)
-def _before_compile(query):
-    """Enable before compile hook."""
-    return _authorize_query(query)
-
-
-def _authorize_query(query: Query) -> Optional[Query]:
-    """Authorize an existing query with an oso instance, user and action."""
-    # Get the query session.
-    session = query.session
-
-    # Check whether this is an oso session.
-    if not isinstance(session, AuthorizedSessionBase):
-        # Not an authorized session.
-        return None
-
-    oso = session.oso_context["oso"]
-    user = session.oso_context["user"]
-    action = session.oso_context["action"]
-
-    # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
-    # on queries that have already been made.  If a query has a LIMIT or OFFSET
-    # applied, SQLAlchemy will by default throw an error if filters are applied.
-    # This prevents these errors from occuring, but could result in some
-    # incorrect queries. We should remove this if possible.
-    query = query.enable_assertions(False)
-
-    entities = {column["entity"] for column in query.column_descriptions}
-    for entity in entities:
-        # Only apply authorization to columns that represent a mapper entity.
-        if entity is None:
-            continue
-
-        authorized_filter = authorize_model(oso, user, action, query.session, entity)
-        if authorized_filter is not None:
-            query = query.filter(authorized_filter)
-
-    return query
-
-
 def authorized_sessionmaker(get_oso, get_user, get_action, class_=None, **kwargs):
     """Session factory for sessions with oso authorization applied.
 
@@ -96,12 +56,12 @@ def authorized_sessionmaker(get_oso, get_user, get_action, class_=None, **kwargs
     All other keyword arguments are passed through to
     :py:func:`sqlalchemy.orm.session.sessionmaker` unchanged.
 
-    NOTE: Unless ``enable_baked_queries=True`` is passed as a keyword argument,
-          _baked_queries are disabled since the caching mechanism can bypass
-          authorization by using queries from the cache that were previously
-          baked without authorization applied.
+    NOTE: _baked_queries are disabled on SQLAlchemy 1.3 since the caching
+          mechanism can bypass authorization by using queries from the cache
+          that were previously baked without authorization applied. Note that
+          _baked_queries are deprecated as of SQLAlchemy 1.4.
 
-    .. _baked_queries: https://docs.sqlalchemy.org/en/13/orm/extensions/baked.html
+    .. _baked_queries: https://docs.sqlalchemy.org/en/14/orm/extensions/baked.html
     """
     if class_ is None:
         class_ = Session
@@ -139,14 +99,14 @@ def scoped_session(get_oso, get_user, get_action, scopefunc=None, **kwargs):
     :param kwargs: Additional keyword arguments to pass to
                    :py:func:`authorized_sessionmaker`.
 
-    NOTE: Unless ``enable_baked_queries=True`` is passed as a keyword argument,
-          _baked_queries are disabled since the caching mechanism can bypass
-          authorization by using queries from the cache that were previously
-          baked without authorization applied.
+    NOTE: _baked_queries are disabled on SQLAlchemy 1.3 since the caching
+          mechanism can bypass authorization by using queries from the cache
+          that were previously baked without authorization applied. Note that
+          _baked_queries are deprecated as of SQLAlchemy 1.4.
 
     .. _scoped_session: https://docs.sqlalchemy.org/en/13/orm/contextual.html
 
-    .. _baked_queries: https://docs.sqlalchemy.org/en/13/orm/extensions/baked.html
+    .. _baked_queries: https://docs.sqlalchemy.org/en/14/orm/extensions/baked.html
     """
     scopefunc = scopefunc or (lambda: None)
 
@@ -166,12 +126,12 @@ class AuthorizedSessionBase(object):
         class MySession(AuthorizedSessionBase, sqlalchemy.orm.Session):
             pass
 
-    NOTE: Unless ``enable_baked_queries=True`` is passed to the constructor,
-          _baked_queries are disabled since the caching mechanism can bypass
-          authorization by using queries from the cache that were previously
-          baked without authorization applied.
+    NOTE: _baked_queries are disabled on SQLAlchemy 1.3 since the caching
+          mechanism can bypass authorization by using queries from the cache
+          that were previously baked without authorization applied. Note that
+          _baked_queries are deprecated as of SQLAlchemy 1.4.
 
-    .. _baked_queries: https://docs.sqlalchemy.org/en/13/orm/extensions/baked.html
+    .. _baked_queries: https://docs.sqlalchemy.org/en/14/orm/extensions/baked.html
     """
 
     def __init__(self, oso: Oso, user, action, **options):
@@ -190,9 +150,7 @@ class AuthorizedSessionBase(object):
         self._oso_user = user
         self._oso_action = action
 
-        # Unless a user explicitly enables baked queries with the understanding
-        # that it result in authorization bypasses, disable them.
-        if "enable_baked_queries" not in options:
+        if USING_SQLAlchemy_v1_3:  # Disable baked queries on SQLAlchemy 1.3.
             options["enable_baked_queries"] = False
 
         super().__init__(**options)  # type: ignore
@@ -210,12 +168,100 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
     Usually :py:func:`authorized_sessionmaker` is used instead of directly
     instantiating the session.
 
-    NOTE: Unless ``enable_baked_queries=True`` is passed to the constructor,
-          _baked_queries are disabled since the caching mechanism can bypass
-          authorization by using queries from the cache that were previously
-          baked without authorization applied.
+    NOTE: _baked_queries are disabled on SQLAlchemy 1.3 since the caching
+          mechanism can bypass authorization by using queries from the cache
+          that were previously baked without authorization applied. Note that
+          _baked_queries are deprecated as of SQLAlchemy 1.4.
 
-    .. _baked_queries: https://docs.sqlalchemy.org/en/13/orm/extensions/baked.html
+    .. _baked_queries: https://docs.sqlalchemy.org/en/14/orm/extensions/baked.html
     """
 
     pass
+
+
+try:
+    # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
+    from sqlalchemy.orm import with_loader_criteria  # type: ignore
+
+    @event.listens_for(Session, "do_orm_execute")
+    def do_orm_execute(execute_state):
+        if not execute_state.is_select:
+            return
+
+        session = execute_state.session
+
+        if not isinstance(session, AuthorizedSessionBase):
+            return
+        assert isinstance(session, Session)
+
+        oso: Oso = session.oso_context["oso"]
+        user = session.oso_context["user"]
+        action = session.oso_context["action"]
+
+        def entities_in_statement(statement):
+            def _entities_in_statement(statement):
+                try:
+                    entities = (cd["entity"] for cd in statement.column_descriptions)
+                    return set(e for e in entities if e is not None)
+                except AttributeError:
+                    return set()
+
+            entities = _entities_in_statement(statement)
+
+            # TODO(gj): currently walking way more than we have to. Probably
+            # some points in the tree where we can safely call it good for that
+            # branch and continue on to more fruitful pastures.
+            for child in statement.get_children():
+                entities |= entities_in_statement(child)
+
+            return entities
+
+        for entity in entities_in_statement(execute_state.statement):
+            filter = authorize_model(oso, user, action, session, entity)
+            if filter is not None:
+                where = with_loader_criteria(entity, filter, include_aliases=True)
+                execute_state.statement = execute_state.statement.options(where)
+
+
+except ImportError:
+    from sqlalchemy.orm.query import Query
+
+    @event.listens_for(Query, "before_compile", retval=True)
+    def _before_compile(query):
+        """Enable before compile hook."""
+        return _authorize_query(query)
+
+    def _authorize_query(query: Query) -> Optional[Query]:
+        """Authorize an existing query with an oso instance, user and action."""
+        # Get the query session.
+        session = query.session
+
+        # Check whether this is an oso session.
+        if not isinstance(session, AuthorizedSessionBase):
+            # Not an authorized session.
+            return None
+
+        oso = session.oso_context["oso"]
+        user = session.oso_context["user"]
+        action = session.oso_context["action"]
+
+        # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
+        # on queries that have already been made.  If a query has a LIMIT or OFFSET
+        # applied, SQLAlchemy will by default throw an error if filters are applied.
+        # This prevents these errors from occuring, but could result in some
+        # incorrect queries. We should remove this if possible.
+        query = query.enable_assertions(False)
+
+        entities = {column["entity"] for column in query.column_descriptions}
+        for entity in entities:
+            # Only apply authorization to columns that represent a mapper entity.
+            if entity is None:
+                continue
+
+            authorized_filter = authorize_model(
+                oso, user, action, query.session, entity
+            )
+            if authorized_filter is not None:
+                query = query.filter(authorized_filter)
+
+        return query
