@@ -8,9 +8,7 @@ from packaging.version import parse
 import sqlalchemy
 
 version = parse(sqlalchemy.__version__)  # type: ignore
-v1_3 = parse("1.3")
-v1_4 = parse("1.4")
-USING_SQLAlchemy_v1_3 = version >= v1_3 and version < v1_4
+USING_SQLAlchemy_v1_3 = version >= parse("1.3") and version < parse("1.4")
 
 
 def iterate_model_classes(base_or_registry):
