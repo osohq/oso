@@ -1,6 +1,7 @@
 ---
 title: "Build Role-Based Access Control (30 min)"
 weight: 1
+showContentForAnyLanguage: true
 ---
 
 # Build Role-Based Access Control (30 min) {{< earlyAccess textSize="sm">}}
@@ -28,9 +29,9 @@ The roles library includes:
   by writing custom policies using Polar, Oso's declarative policy
   language.
 
-## Get started
-
 {{% ifLang "python" %}}
+
+## Get started
 
 {{< tryInFramework >}}
 
@@ -39,7 +40,11 @@ find it [here](/reference/frameworks/sqlalchemy).
 
 {{% /ifLang %}}
 
+{{< ifLangExists >}}
 {{% ifLang not="python" %}}
+
+## Get started
+
 The Oso Roles library is coming soon for {{< lang >}}! {{< /lang >}}
 
 For now, you can [check out the library documentation for Python]({{< ref path="/new-roles" lang="python" >}}) or read our [guide on role modeling in Polar](/learn/roles).
@@ -49,3 +54,4 @@ register your interest for an Oso Roles library in {{< lang >}} [drop into our S
 <a href="mailto:engineering@osohq.com?subject=Roles%20support%20for%20{{< currentLanguage >}}&body=I%27m%20interested%20in%20Oso%20roles%20support%20for%20{{< currentLanguage >}}">send an email</a>
 to our engineering team and we'll unblock you.
 {{% /ifLang %}}
+{{% /ifLangExists %}}
