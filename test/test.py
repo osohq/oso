@@ -61,8 +61,7 @@ try:
 except UnrecognizedEOF as e:
     exception_thrown = True
     assert (
-        str(e)
-        == "hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19"
+        str(e).startswith("hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19")
     )
 assert exception_thrown
 
