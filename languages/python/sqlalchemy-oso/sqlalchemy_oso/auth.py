@@ -23,9 +23,10 @@ def null_query(session: Session, model) -> Query:
     return session.query(model).filter(sql.false())
 
 
-def register_models(oso: Oso, base):
-    """Register all models in model base class ``base`` with oso as classes."""
-    for model in iterate_model_classes(base):
+def register_models(oso: Oso, base_or_registry):
+    """Register all models in registry (SQLAlchemy 1.4) or declarative base
+    class (1.3 and 1.4) ``base_or_registry`` with Oso as classes."""
+    for model in iterate_model_classes(base_or_registry):
         oso.register_class(model)
 
 
