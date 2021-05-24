@@ -1,0 +1,3 @@
+{{ if (or (ne $.Page.Language.Lang "any") (or $.Page.Params.any (and (not (isset $.Page.Params "any")) $.Page.Parent.Params.any))) }}
+{{ .Inner }}
+{{ end }}

@@ -100,10 +100,8 @@ rules over the resource.
 
 Coming soon!
 
-{{% callout "Have feedback?" "green" %}}
+## Have feedback?
 
-Have feedback on this documentation or the library itself? It's under
-active development. Our engineering team would love to [hear from you in
-Slack.](https://join-slack.osohq.com/)
-
-{{% /callout %}}
+If at any point you get stuck, drop into our
+[Slack](https://join-slack.osohq.com/) or <a href="mailto:engineering@osohq.com">send an email</a> to our engineering
+team and we'll unblock you.

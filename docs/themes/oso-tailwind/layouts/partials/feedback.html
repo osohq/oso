@@ -1,0 +1,47 @@
+<div class="border-opacity-20 hover:border-opacity-100 border-l-4 border-blue shadow-md rounded">
+  <div
+      class="bg-blue-lightest text-blue-darkest font-semibold text-lg w-full pl-2 py-2 rounded-tr border-bottom border-gray-200">
+    Submit feedback
+  </div>
+  <div class="px-2 pb-0.5">
+    <form id="feedback-form" class="py-2" name="feedback-form">
+      <input
+          class="w-0 h-0"
+          type="email"
+          id="feedback-email-address"
+          name="Email-Address"
+          required="True"
+          value="feedback@osohq.com"
+      />
+      <label id="feedback-form-prompt" for="Message"></label>
+      <textarea
+          id="Message"
+          class="mt-1 mb-2 w-full resize-none border border-gray-500 focus:ring-primary-500 focus:border-primary-500 px-3 py-2 sm:text-sm rounded-md"
+          type="text"
+          rows="4"
+          required="True"
+      ></textarea>
+      <button
+          class="
+          px-3 py-2 rounded-md sm:text-sm text-gray-600 bg-gray-300 text-gray-700 hover:bg-gray-400 hover:text-gray-900 appearance-none focus:outline-none"
+          type="submit"
+          data-wait="Churning"
+      >
+        Submit
+      </button>
+    </form>
+  </div>
+</div>
+<script>
+  const prompts = [
+    ['favorite', 'My favorite part of Oso is...'],
+    ['trickiest', 'The trickiest thing about Oso is...'],
+    ['improvement', 'The biggest improvement that could be made to Oso is...'],
+    ['easier', 'Oso would be easier to use if...'],
+  ];
+  const prompt = prompts[Math.floor(Math.random() * prompts.length)];
+
+  const promptEl = document.getElementById('feedback-form-prompt');
+  promptEl.textContent = prompt[1];
+  document.getElementById('feedback-email-address').value = `feedback+${prompt[0]}@osohq.com`;
+</script>

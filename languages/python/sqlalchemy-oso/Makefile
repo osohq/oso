@@ -1,4 +1,5 @@
-.PHONY: build test test-requirements fmt lint
+.PHONY: build test test-requirements fmt lint tox
+
 build:
 	rm -rf build
 	pip install -e .[flask]
@@ -10,18 +11,27 @@ test-requirements: .make.test-requirements-install
 	pip install -r requirements-test.txt
 	touch $@
 
-test: test-requirements
-	pytest tests
+dev-requirements: .make.dev-requirements-install
 
-fmt:
+.make.dev-requirements-install: requirements-dev.txt
+	pip install -r requirements-dev.txt
+	touch $@
+
+test:
+	@$(MAKE) tox
+
+fmt: dev-requirements
 	black .
 
-lint:
+lint: dev-requirements
 	flake8 .
 
-typecheck:
+typecheck: dev-requirements
 	mypy tests
 	mypy sqlalchemy_oso
 
 package:
 	python setup.py sdist bdist_wheel
+
+tox: dev-requirements
+	@tox -p
