@@ -228,48 +228,43 @@ def list_filter_query(kind, resource, relationships, id_field):
         join relevant_roles rr
         on rr.role = ur.role
         where ur.user_id = :user_id
-    ),
+    )
     """
 
-    parent_ids = ""
-    parent_joins = ""
-    role_joins = "left join user_relevant_roles urr"
-    role_joins += (
-        f"\non urr.resource_type = '{resource.type}' and urr.resource_id = r.{id_field}"
-    )
-    role_filters = "where urr.resource_id is not NULL"
+    # Select data
+    sql += f"""
+    select
+      {tablename}.{id_field}
+    from {tablename}
+    join user_relevant_roles urr
+    on urr.resource_type = '{resource.type}' and urr.resource_id = {tablename}.{id_field}
+    """
+
+    prev_joins = []
 
     for i, rel in enumerate(rels):
         parent_pk, _ = get_pk(rel.parent_python_class)
-        parent_ids += f", {rel.parent_table}.{parent_pk} as {rel.parent_table}_id"
-        parent_joins += f"\njoin {rel.parent_table}"
-        parent_joins += f"\non {rel.child_table}.{rel.child_join_column} "
-        parent_joins += f"= {rel.parent_table}.{rel.parent_join_column}"
 
-        urr_table = f"urr{i+1}"
-        role_joins += f"\nleft join user_relevant_roles {urr_table}"
-        role_joins += f"\non {urr_table}.resource_type = '{rel.parent_type}' "
-        role_joins += f"and {urr_table}.resource_id = r.{rel.parent_table}_id"
-        role_filters += f" or {urr_table}.resource_id is not NULL"
+        join = f"join {rel.parent_table} "
+        join += f"on {rel.child_table}.{rel.child_join_column} "
+        join += f"= {rel.parent_table}.{rel.parent_join_column}"
+        prev_joins.append(join)
 
-    # Join to parents
-    sql += f"""
-    resources_with_parents as (
+        sql += f"""
+        union
         select
-            {tablename}.{id_field}{parent_ids}
+        {tablename}.{id_field}
         from {tablename}
-        {parent_joins}
-    )
-    """
+        """
 
-    # Join to roles and filter by having a role
-    sql += f"""
-    select
-      r.id
-    from resources_with_parents r
-    {role_joins}
-    {role_filters}
-    """
+        for join in prev_joins:
+            sql += join + "\n"
+
+        sql += f"""
+        join user_relevant_roles urr
+        on urr.resource_type = '{rel.parent_type}'
+        and urr.resource_id = {rel.parent_table}.{parent_pk}
+        """
 
     return sql
 
@@ -701,7 +696,7 @@ class OsoRoles:
                 __tablename__ = "role_implications"
                 id = Column(Integer, primary_key=True)
                 from_role = Column(String, index=True)
-                to_role = Column(String)
+                to_role = Column(String, index=True)
 
         self._wrapped_oso = oso
         self.UserRole = UserRole
