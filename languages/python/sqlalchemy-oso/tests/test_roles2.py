@@ -53,7 +53,7 @@ def Repository(Base):
         __tablename__ = "repositories"
 
         id = Column(String(), primary_key=True)
-        org_id = Column(String(), ForeignKey("organizations.id"))
+        org_id = Column(String(), ForeignKey("organizations.id"), index=True)
         org = relationship("Organization")
 
     return Repository
