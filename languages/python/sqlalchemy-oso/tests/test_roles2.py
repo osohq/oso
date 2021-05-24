@@ -53,7 +53,7 @@ def Repository(Base):
         __tablename__ = "repositories"
 
         id = Column(String(), primary_key=True)
-        org_id = Column(String(), ForeignKey("organizations.id"))
+        org_id = Column(String(), ForeignKey("organizations.id"), index=True)
         org = relationship("Organization")
 
     return Repository
@@ -2382,6 +2382,14 @@ def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issu
     assert demo_repo.id in result_ids
     assert ios.id not in result_ids
 
+    oso.actor = leina
+    oso.checked_permissions = {Issue: "edit"}
+    auth_session = auth_sessionmaker()
+
+    results = auth_session.query(Issue).all()
+    assert len(results) == 1
+    result_ids = [issue.id for issue in results]
+    assert bug.id in result_ids
     assert not oso.is_allowed(gabe, "edit", bug)
     oso.roles.assign_role(gabe, osohq, "org_member", session=session)
     assert not oso.is_allowed(gabe, "edit", bug)

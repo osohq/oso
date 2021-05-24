@@ -127,7 +127,6 @@ def user_in_role_query(
                 {recur}
             ) select * from resources
         ), role as (
-            -- find roles with the permission
             select
                 r.name
             from roles r
@@ -161,6 +160,113 @@ def user_in_role_query(
         ) select * from user_in_role
     """
     return query
+
+
+def list_filter_query(kind, resource, relationships, id_field):
+    tablename = resource.python_class.__tablename__
+
+    # Get relationships sorted out.
+    rels = []
+    resource_type = resource.type
+    found_parent = True
+    while found_parent:
+        found_parent = False
+        for rel in relationships:
+            if rel.child_type == resource_type:
+                rels.append(rel)
+                resource_type = rel.parent_type
+                found_parent = True
+                break
+
+    sql = ""
+    assert kind in ["role_allow", "user_in_role"]
+    # Get the roles to start from.
+    if kind == "role_allow":
+        # Any role with the permission.
+        sql += """
+        with allow_permission as (
+            select
+                p.id
+            from permissions p
+            where p.resource_type = :resource_type and p.name = :action
+        ), starting_roles as (
+            select
+                rp.role as role
+            from role_permissions rp
+            join allow_permission ap
+            on rp.permission_id = ap.id
+        ),
+        """
+    elif kind == "user_in_role":
+        # The passed in role.
+        sql += """
+        with starting_roles as (
+            select
+                r.name as role
+            from roles r
+            where r.name = :role
+        ),
+        """
+    # Get to any of the roles the user could be assigned to.
+    sql += """
+    relevant_roles as (
+        with recursive relevant_roles (role) as (
+            select
+                    role
+            from starting_roles
+            union
+            select
+                    ri.from_role
+            from role_implications ri
+            join relevant_roles rr
+            on ri.to_role = rr.role
+        ) select * from relevant_roles
+    ), user_relevant_roles as (
+        select
+            resource_type, resource_id
+        from user_roles ur
+        join relevant_roles rr
+        on rr.role = ur.role
+        where ur.user_id = :user_id
+    )
+    """
+
+    # Select data
+    sql += f"""
+    select
+      {tablename}.{id_field}
+    from {tablename}
+    join user_relevant_roles urr
+    on urr.resource_type = '{resource.type}' and urr.resource_id = {tablename}.{id_field}
+    """
+
+    prev_joins = []
+
+    for i, rel in enumerate(rels):
+        parent_pk, _ = get_pk(rel.parent_python_class)
+
+        join = f"join {rel.parent_table} "
+        join += f"on {rel.child_table}.{rel.child_join_column} "
+        join += f"= {rel.parent_table}.{rel.parent_join_column}"
+        prev_joins.append(join)
+
+        sql += f"""
+        union
+        select
+        {tablename}.{id_field}
+        from {tablename}
+        """
+
+        for join in prev_joins:
+            sql += join + "\n"
+
+        sql += f"""
+        join user_relevant_roles urr
+        on urr.resource_type = '{rel.parent_type}'
+        and urr.resource_id = {rel.parent_table}.{parent_pk}
+        """
+
+    return sql
 
 
 # Python representation of the configuration data.
@@ -590,7 +696,7 @@ class OsoRoles:
                 __tablename__ = "role_implications"
                 id = Column(Integer, primary_key=True)
                 from_role = Column(String, index=True)
-                to_role = Column(String)
+                to_role = Column(String, index=True)
 
         self._wrapped_oso = oso
         self.UserRole = UserRole
@@ -738,27 +844,20 @@ class OsoRoles:
             python_class = resource.python_class
             type = resource.type
             id_field, _ = get_pk(python_class)
-            table = python_class.__tablename__
-            self.role_allow_list_filter_queries[
-                type
-            ] = f"""
-                select
-                  {id_field}
-                from {table} R
-                where exists (
-                  {role_allow_query(id_query, type_query, child_types, "R."+id_field, has_relationships)}
-                )
-            """
-            self.user_in_role_list_filter_queries[
-                type
-            ] = f"""
-                select
-                  {id_field}
-                from {table} R
-                where exists (
-                  {user_in_role_query(id_query, type_query, child_types, "R."+id_field, has_relationships)}
-                )
-            """
+
+            self.role_allow_list_filter_queries[type] = list_filter_query(
+                "role_allow",
+                resource,
+                self.config.relationships,
+                id_field,
+            )
+
+            self.user_in_role_list_filter_queries[type] = list_filter_query(
+                "user_in_role",
+                resource,
+                self.config.relationships,
+                id_field,
+            )
 
     def _roles_query(self, user, arg2, resource, query, **kwargs):
         # We shouldn't get any data filtering calls to this method
@@ -844,7 +943,8 @@ class OsoRoles:
                 user_role.role = role_name
             else:
                 raise OsoError(
-                    f"User {user} already has a role for this resource. To reassign, call with `reassign=True`."
+                    f"User {user} already has a role for this resource."
+                    + "To reassign, call with `reassign=True`."
                 )
         else:
             user_pk_name, _ = get_pk(user.__class__)
