@@ -131,3 +131,22 @@ button > * {
 .btn-outline:hover {
     @apply border-gray-500 bg-gray-800 bg-opacity-10;
 }
+
+code {
+  @apply bg-gray-200;
+  word-wrap: break-word;
+  box-decoration-break: clone;
+  padding: .1rem .3rem .2rem;
+  border-radius: 2px;
+}
+
+pre code {
+  display: block;
+  background: none;
+  white-space: pre;
+  -webkit-overflow-scrolling: touch;
+  overflow-x: scroll;
+  max-width: 100%;
+  min-width: 100px;
+  padding: 0;
+}
