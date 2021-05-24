@@ -2388,7 +2388,7 @@ def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issu
 
     results = auth_session.query(Issue).all()
     assert len(results) == 1
-    result_ids = [repo.id for repo in results]
+    result_ids = [issue.id for issue in results]
     assert bug.id in result_ids
     assert not oso.is_allowed(gabe, "edit", bug)
     oso.roles.assign_role(gabe, osohq, "org_member", session=session)
