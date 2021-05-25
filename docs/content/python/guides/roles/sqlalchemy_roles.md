@@ -100,7 +100,7 @@ return a `403 Forbidden` response to all requests.
 
 The Oso SQLAlchemy library provides the
 `sqlalchemy_oso.roles.resource_role_class()` method to generate a mixin which
-creates a role model. Create the mixin by passing in the base, user, and
+creates a role model. Create the mixin by passing in the user and
 organization models, as well as the role names. Then create a role model that
 extends it:
 
