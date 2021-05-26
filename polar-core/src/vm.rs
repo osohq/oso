@@ -2940,6 +2940,15 @@ impl Runnable for PolarVirtualMachine {
                 .clone();
 
             if let VariableState::Bound(_) = self.variable_state(sym) {
+                self.log_with(
+                    || {
+                        format!(
+                            "Variable {} is bound, pushing Goal::Unify{{left: {}, right: {}}}",
+                            sym, sym, value
+                        )
+                    },
+                    &[],
+                );
                 // If the variable is already bound, unify the result with the variable.
                 // This is necessary for lookups done in rule heads, because the variable will be bound to whatever arg was passed in.
                 self.push_goal(Goal::Unify {
@@ -2948,6 +2957,7 @@ impl Runnable for PolarVirtualMachine {
                 })?;
             } else {
                 // if the variable isn't bound, rebind
+                self.log_with(|| format!("Variable {} is not bound, rebinding", sym), &[]);
                 self.rebind_external_answer(sym, value);
             }
         } else {
