@@ -2249,6 +2249,7 @@ def test_enable_roles_twice(engine, Base, User):
 def test_global_declarative_base(engine, Base, User):
     """Test two different Osos & two different OsoRoles but a shared
     declarative_base(). This shouldn't error."""
+
     class One(Base):
         __tablename__ = "ones"
 
