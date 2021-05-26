@@ -7,22 +7,22 @@ on:
       - gj/fix-things
 
 jobs:
-  version:
-    name: Compute and verify the version number
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set version env
-        env:
-          github_ref: ${{ github.ref }}
-        run: echo "oso_version=${github_ref/refs\/tags\/sqlalchemy-v/}" >> $GITHUB_ENV
-      - name: Check python version matches
-        run: grep "__version__ = \"$oso_version\"" sqlalchemy_oso/__init__.py
-        working-directory: languages/python/sqlalchemy-oso
+  # version:
+  #   name: Compute and verify the version number
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Set version env
+  #       env:
+  #         github_ref: ${{ github.ref }}
+  #       run: echo "oso_version=${github_ref/refs\/tags\/sqlalchemy-v/}" >> $GITHUB_ENV
+  #     - name: Check python version matches
+  #       run: grep "__version__ = \"$oso_version\"" sqlalchemy_oso/__init__.py
+  #       working-directory: languages/python/sqlalchemy-oso
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    needs: version
+    # needs: version
     strategy:
       matrix:
         # Q: Is there any benefit to building on multiple platforms?
@@ -35,7 +35,8 @@ jobs:
       # Used in build.py to find right files
       CIBW_ENVIRONMENT: OSO_ENV=CI
 
-      CIBW_TEST_COMMAND: make -B {project} test
+      CIBW_BEFORE_TEST: pip install tox
+      CIBW_TEST_COMMAND: tox -p
 
       TOX_PARALLEL_NO_SPINNER: 1
 
@@ -75,7 +76,7 @@ jobs:
         id: version
         env:
           github_ref: ${{ github.ref }}
-        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/sqlalchemy-v/}"
+        run: echo "::set-output name=oso_version::0.7.0"
       - name: Download oso python wheels from package run
         uses: actions/download-artifact@v1
         with:
