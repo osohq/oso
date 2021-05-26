@@ -1,4 +1,4 @@
-.PHONY: build test test-requirements fmt lint tox
+.PHONY: build test-requirements dev-requirements test fmt lint typecheck package tox
 
 build:
 	rm -rf build
