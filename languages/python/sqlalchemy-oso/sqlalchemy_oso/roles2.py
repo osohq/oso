@@ -2,7 +2,7 @@
 from typing import Any, List, Set, Dict
 from dataclasses import dataclass
 
-from oso import Variable
+from oso import OsoError, Variable
 
 import sqlalchemy
 from sqlalchemy.types import Integer, String
@@ -11,9 +11,6 @@ from sqlalchemy import inspect
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy import sql
-
-from oso import OsoError
-
 
 def isa_type(arg):
     assert arg.operator == "Isa"
