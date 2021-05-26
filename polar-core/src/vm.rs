@@ -2932,14 +2932,24 @@ impl Runnable for PolarVirtualMachine {
         if let Some(value) = term {
             self.log_with(|| format!("=> {}", value.to_string()), &[]);
 
-            self.rebind_external_answer(
-                &self
-                    .call_id_symbols
-                    .get(&call_id)
-                    .expect("unregistered external call ID")
-                    .clone(),
-                value,
-            );
+            // get the variable to bind result to
+            let sym = &self
+                .call_id_symbols
+                .get(&call_id)
+                .expect("unregistered external call ID")
+                .clone();
+
+            if let VariableState::Bound(_) = self.variable_state(sym) {
+                // If the variable is already bound, unify the result with the variable.
+                // This is necessary for lookups done in rule heads, because the variable will be bound to whatever arg was passed in.
+                self.push_goal(Goal::Unify {
+                    left: Term::new_temporary(Value::Variable(sym.clone())),
+                    right: value,
+                })?;
+            } else {
+                // if the variable isn't bound, rebind
+                self.rebind_external_answer(sym, value);
+            }
         } else {
             self.log("=> No more results.", &[]);
 

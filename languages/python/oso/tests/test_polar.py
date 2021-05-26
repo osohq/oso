@@ -1,6 +1,7 @@
 from datetime import datetime
 from math import inf, isnan, nan
 from pathlib import Path
+from enum import Enum
 
 from polar import (
     polar_class,
@@ -12,7 +13,6 @@ from polar import (
     Pattern,
 )
 from polar.partial import TypeConstraint
-from polar.exceptions import InvalidCallError, UnexpectedPolarTypeError
 
 import pytest
 
@@ -123,7 +123,7 @@ def test_external(polar, qvar, qeval):
     polar.register_class(Foo)
     assert qvar("new Foo().a = x", "x", one=True) == "a"
     with pytest.raises(
-        InvalidCallError, match="tried to call 'a' but it is not callable"
+        exceptions.InvalidCallError, match="tried to call 'a' but it is not callable"
     ):
         assert not qeval("new Foo().a() = x")
     assert not qvar("new Foo().b = x", "x", one=True) == "b"
@@ -894,5 +894,52 @@ def test_unexpected_expression(polar):
     """Ensure expression type raises error from core."""
     polar.load_str("f(x) if x > 2;")
 
-    with pytest.raises(UnexpectedPolarTypeError):
+    with pytest.raises(exceptions.UnexpectedPolarTypeError):
         next(polar.query_rule("f", Variable("x")))
+
+
+def test_lookup_in_head(polar):
+    # Test with enums
+    class Actions(Enum):
+        READ = 1
+        WRITE = 2
+
+    polar.register_constant(Actions, "Actions")
+    p = """allow("leina", Actions.READ, "doc");"""
+    polar.load_str(p)
+
+    assert len(list(polar.query_rule("allow", "leina", Actions.WRITE, "doc"))) == 0
+    assert len(list(polar.query_rule("allow", "leina", "READ", "doc"))) == 0
+    assert len(list(polar.query_rule("allow", "leina", 1, "doc"))) == 0
+    assert len(list(polar.query_rule("allow", "leina", Actions, "doc"))) == 0
+    assert len(list(polar.query_rule("allow", "leina", Actions.READ, "doc"))) == 1
+
+    # Test lookup in specializer raises error
+    p = """allow("leina", action: Actions.READ, "doc");"""
+    with pytest.raises(exceptions.UnrecognizedToken):
+        polar.load_str(p)
+
+    # Test with normal class
+    class Resource:
+        def __init__(self, action):
+            self.action = action
+
+    polar.register_class(Resource, name="Resource")
+    p = """allow("leina", resource.action, resource: Resource);"""
+    polar.load_str(p)
+
+    r = Resource("read")
+
+    assert len(list(polar.query_rule("allow", "leina", "write", r))) == 0
+    assert len(list(polar.query_rule("allow", "leina", "read", r))) == 1
+
+
+# def test_specialize_on_constant(polar):
+#     const_dict = {"foo": "bar"}
+#     polar.register_constant(const_dict, "MY_DICT")
+
+#     p = """allow("leina", "read", resource: MY_DICT);"""
+#     polar.load_str(p)
+
+#     assert len(list(polar.query_rule("allow", "leina", "read", {"foo": "bar"}))) == 1
+#     assert len(list(polar.query_rule("allow", "leina", "read", {}))) == 0
