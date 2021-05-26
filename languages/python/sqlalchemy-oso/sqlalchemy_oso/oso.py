@@ -36,7 +36,7 @@ class SQLAlchemyOso(Oso):
         The roles API methods will be available on the `roles` property of `SQLAlchemyOso`.
         """
         if self._roles_enabled:
-            raise OsoError("Calling 'enable_roles()' twice has no effect.")
+            raise OsoError("Roles feature already enabled.")
         self._roles = OsoRoles(
             oso=self,
             user_model=user_model,
