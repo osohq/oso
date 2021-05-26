@@ -2231,6 +2231,32 @@ def test_mismatched_id_types_throws_error(engine, Base, User):
         oso.enable_roles(User, Session)
 
 
+def test_internal_classes_with_different_pk_types_are_exempt(engine, Base, User):
+    from sqlalchemy_oso.roles2 import get_pk
+
+    class One(Base):
+        __tablename__ = "ones"
+
+        id = Column(Integer(), primary_key=True)
+
+    Session = sessionmaker(bind=engine)
+
+    oso = SQLAlchemyOso(Base)
+
+    # Enabling roles once creates internal models with multiple different PK
+    # types (e.g., Role has a String PK & RolePermission has an Integer PK).
+    oso.enable_roles(User, Session)
+
+    # Get unique PK types.
+    pk_types = {get_pk(m)[1].__class__ for n, m in Base._decl_class_registry.items() if n != "_sa_module_registry"}
+
+    assert len(pk_types) > 1
+
+    # Even though models with multiple PK types are registered, we should skip
+    # over the internal types and only ensure that all external PK types match.
+    oso.enable_roles(User, Session)
+
+
 @pytest.mark.parametrize("sa_type,one_id", [(String, "1"), (Integer, 1)])
 def test_id_types(engine, Base, User, sa_type, one_id):
     class One(Base):
