@@ -37,7 +37,6 @@ class SQLAlchemyOso(Oso):
         """
         self._roles = OsoRoles(
             oso=self,
-            sqlalchemy_base=self.base,
             user_model=user_model,
             session_maker=session_maker,
         )
