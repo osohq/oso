@@ -620,6 +620,7 @@ class OsoRoles:
 
         resource_id_column_type = None
         models = oso.base._decl_class_registry
+        canonical_model = None
 
         for name, model in models.items():
             if name == "_sa_module_registry":
@@ -629,8 +630,13 @@ class OsoRoles:
             _, id_type = get_pk(model)
             if resource_id_column_type is None:
                 resource_id_column_type = id_type
+                canonical_model = model
             elif resource_id_column_type.__class__ != id_type.__class__:
-                raise OsoError("All resources must have the same id type.")
+                raise OsoError(
+                    "All resources must have the same primary key type:"
+                    + f"\n\t{model} has PK type {id_type}"
+                    + f"\n\t{canonical_model} has PK type {resource_id_column_type}"
+                )
 
         if resource_id_column_type is None:
             raise OsoError(
