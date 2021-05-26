@@ -1,6 +1,6 @@
 """Core oso functionality"""
 
-__version__ = "0.12.2"
+__version__ = "0.12.3"
 
 import os
 from polar import Polar, Variable, exceptions
