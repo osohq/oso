@@ -90,6 +90,9 @@
                 </button>
             </a>
             {{ $downloadUrl := $.Site.GetPage "/reference/lib" }}
+            {{ if eq .Section "new-roles" }}
+            {{ $downloadUrl = $.Site.GetPage "/new-roles/install" }}
+            {{ end }}
             <a href="{{ $downloadUrl.RelPermalink }}">
                 <button class=" nav-btn bg-yellow text-black tooltip">
                     <span class="tooltip-text" aria-hidden="true">Get the latest releases of Oso</span>

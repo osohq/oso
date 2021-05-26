@@ -7,7 +7,13 @@ description: >
 
 # Install
 
-The Oso Roles library is available for early access.
+We're shipping new versions of this library regularly. Drop your email here to stay up to speed:
+
+{{% new_roles_install %}}
+
+{{% callout "Want advice modeling roles?" "green" %}}
+Set up a [1x1 Zoom with an Oso engineer](https://calendly.com/osohq/oso-roles-1x1/).
+{{% /callout %}}
 
 Install from [PyPI](https://pypi.org/project/sqlalchemy-oso-preview/):
 
@@ -18,8 +24,6 @@ $ pip install sqlalchemy-oso-preview
 The roles library is in early access. Our engineering team is available
 to help you integrate it with your application. Sign up below, and we'll
 be in touch!
-
-{{% new_roles_install %}}
 
 ## Requirements:
 
@@ -34,10 +38,8 @@ this would be helpful to you!)
   * macOS
   * Windows
 
-{{% callout "Have feedback?" "green" %}}
+## Have feedback?
 
-Have feedback on this documentation or the library itself? It's under
-active development. Our engineering team would love to [hear from you in
-Slack.](https://join-slack.osohq.com/)
-
-{{% /callout %}}
+If at any point you get stuck, drop into our
+[Slack](https://join-slack.osohq.com/) or <a href="mailto:engineering@osohq.com">send an email</a> to our engineering
+team and we'll unblock you.

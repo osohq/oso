@@ -6,6 +6,7 @@ https://www.notion.so/osohq/Relationships-621b884edbc6423f93d29e6066e58d16.
 import pytest
 
 from sqlalchemy_oso.auth import authorize_model
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
 from .models import Post, Tag, User, Category
 from .conftest import print_query
@@ -611,6 +612,14 @@ def test_empty_constraints_in(session, oso, tag_nested_many_many_test_fixture):
     posts = session.query(Post).filter(
         authorize_model(oso, user, "read", session, Post)
     )
+
+    if USING_SQLAlchemy_v1_3:
+        true_clause = ""
+    else:
+        # NOTE(gj): The trivial TRUE constraint is not compiled away in
+        # SQLAlchemy 1.4.
+        true_clause = " AND 1 = 1"
+
     assert str(posts) == (
         "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS"
         + " posts_title, posts.access_level AS posts_access_level,"
@@ -618,7 +627,7 @@ def test_empty_constraints_in(session, oso, tag_nested_many_many_test_fixture):
         + " \nFROM posts"
         + " \nWHERE EXISTS (SELECT 1"
         + " \nFROM post_tags, tags"
-        + " \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_id)"
+        + f" \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_id{true_clause})"
     )
     posts = posts.all()
     assert len(posts) == 5

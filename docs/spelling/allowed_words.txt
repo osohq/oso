@@ -102,7 +102,9 @@ frontend
 glibc
 hardcoded
 hardcoding
+hoc
 href
+ing
 instantiation
 integrations
 io
@@ -110,6 +112,7 @@ iterable
 iterables
 js
 latencies
+lifecycle
 lookups
 macOS
 mailto
