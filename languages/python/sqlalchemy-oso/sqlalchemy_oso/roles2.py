@@ -627,6 +627,8 @@ class OsoRoles:
                 continue
             if model == user_model:
                 continue
+            if model.__module__ == __name__:  # Ignore internal models.
+                continue
             _, id_type = get_pk(model)
             if resource_id_column_type is None:
                 resource_id_column_type = id_type
