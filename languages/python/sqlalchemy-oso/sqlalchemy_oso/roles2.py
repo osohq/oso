@@ -12,6 +12,7 @@ from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy import sql
 
+
 def isa_type(arg):
     assert arg.operator == "Isa"
     assert len(arg.args) == 2
