@@ -31,10 +31,10 @@ jobs:
       # 64-bit builds only
       CIBW_BUILD: "*64"
       # Used in build.py to find right files
-      CIBW_ENVIRONMENT: OSO_ENV=CI
+      CIBW_ENVIRONMENT: OSO_ENV=CI TOX_PARALLEL_NO_SPINNER=1
 
-      CIBW_BEFORE_TEST: make -B test-requirements
-      CIBW_TEST_COMMAND: make -C {project} test
+      CIBW_TEST_REQUIRES: tox
+      CIBW_TEST_COMMAND: tox -p -c {project}
 
     steps:
       - uses: actions/checkout@v2
