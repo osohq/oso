@@ -291,7 +291,6 @@ try:
         if checked_permissions is None:
             return
 
-
         def entities_in_statement(statement):
             def _entities_in_statement(statement):
                 try:
