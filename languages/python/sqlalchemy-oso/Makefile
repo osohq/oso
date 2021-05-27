@@ -1,4 +1,5 @@
-.PHONY: build test test-requirements fmt lint
+.PHONY: build test-requirements dev-requirements test fmt lint typecheck package tox
+
 build:
 	rm -rf build
 	pip install -e .[flask]
@@ -9,14 +10,14 @@ test-requirements: .make.test-requirements-install
 	pip install -r requirements-test.txt
 	touch $@
 
-test: test-requirements
-	pytest tests
-
 dev-requirements: .make.dev-requirements-install
 
 .make.dev-requirements-install: requirements-dev.txt
 	pip install -r requirements-dev.txt
 	touch $@
+
+test:
+	@$(MAKE) tox
 
 fmt: dev-requirements
 	black .
@@ -30,3 +31,6 @@ typecheck: dev-requirements
 
 package:
 	python setup.py sdist bdist_wheel
+
+tox: dev-requirements
+	@tox -p

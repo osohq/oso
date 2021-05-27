@@ -174,6 +174,8 @@ jobs:
       - name: Test django
         run: make python-django-test
       - name: Test sqlalchemy
+        env:
+          TOX_PARALLEL_NO_SPINNER: 1
         run: make python-sqlalchemy-test
       - name: Lint Python code
         run: make -C languages/python lint
