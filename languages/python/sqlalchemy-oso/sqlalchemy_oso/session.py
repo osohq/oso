@@ -5,7 +5,7 @@ from sqlalchemy import event, inspect
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy import orm
-from sqlalchemy.sql import expression
+from sqlalchemy.sql import expression as expr
 
 from oso import Oso
 
@@ -286,7 +286,11 @@ try:
 
         oso: Oso = session.oso_context["oso"]
         user = session.oso_context["user"]
-        action = session.oso_context["action"]
+        checked_permissions: Permissions = session.oso_context["checked_permissions"]
+
+        # Early return if no authorization is to be applied.
+        if checked_permissions is None:
+            return
 
         def entities_in_statement(statement):
             def _entities_in_statement(statement):
@@ -307,10 +311,22 @@ try:
             return entities
 
         for entity in entities_in_statement(execute_state.statement):
-            filter = authorize_model(oso, user, action, session, entity)
-            if filter is not None:
-                where = with_loader_criteria(entity, filter, include_aliases=True)
+            # If entity is an alias, get the action for the underlying class.
+            if isinstance(entity, AliasedClass):
+                action = checked_permissions.get(inspect(entity).class_)  # type: ignore
+            else:
+                action = checked_permissions.get(entity)
+
+            # If permissions map does not specify an action to authorize for entity
+            # or if the specified action is `None`, deny access.
+            if action is None:
+                where = with_loader_criteria(entity, expr.false(), include_aliases=True)
                 execute_state.statement = execute_state.statement.options(where)
+            else:
+                filter = authorize_model(oso, user, action, session, entity)
+                if filter is not None:
+                    where = with_loader_criteria(entity, filter, include_aliases=True)
+                    execute_state.statement = execute_state.statement.options(where)
 
 
 except ImportError:
@@ -361,7 +377,7 @@ except ImportError:
             # If permissions map does not specify an action to authorize for entity
             # or if the specified action is `None`, deny access.
             if action is None:
-                query = query.filter(expression.false())  # type: ignore
+                query = query.filter(expr.false())  # type: ignore
                 continue
 
             assert isinstance(session, Session)
