@@ -10,6 +10,7 @@ from sqlalchemy.sql import expression as sql
 
 from sqlalchemy_oso.partial import partial_to_filter
 from sqlalchemy_oso import roles2
+
 from sqlalchemy_oso.compat import iterate_model_classes
 
 

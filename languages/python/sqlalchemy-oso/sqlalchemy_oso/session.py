@@ -96,7 +96,6 @@ def authorized_sessionmaker(
           mechanism can bypass authorization by using queries from the cache
           that were previously baked without authorization applied. Note that
           _baked_queries are deprecated as of SQLAlchemy 1.4.
-
     .. _baked_queries: https://docs.sqlalchemy.org/en/14/orm/extensions/baked.html
     """
     if class_ is None:
@@ -291,6 +290,7 @@ try:
         # Early return if no authorization is to be applied.
         if checked_permissions is None:
             return
+
 
         def entities_in_statement(statement):
             def _entities_in_statement(statement):
