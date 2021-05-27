@@ -11,6 +11,7 @@ from sqlalchemy import inspect
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy import sql
+from .compat import iterate_model_classes
 
 
 def isa_type(arg):
@@ -619,12 +620,13 @@ class OsoRoles:
         user_table_name = user_model.__tablename__
 
         resource_id_column_type = None
-        models = oso.base._decl_class_registry
         canonical_model = None
 
+        models = {
+            model.__name__.split(".")[-1]: model
+            for model in iterate_model_classes(oso.base)
+        }
         for name, model in models.items():
-            if name == "_sa_module_registry":
-                continue
             if model == user_model:
                 continue
             if model.__module__ == __name__:  # Ignore internal models.
