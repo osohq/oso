@@ -76,6 +76,7 @@ booleans
 bundlers
 cURL
 cgo
+changelog
 classpath
 codebase
 constructable

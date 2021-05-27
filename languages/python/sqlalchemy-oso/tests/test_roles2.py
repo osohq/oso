@@ -2231,6 +2231,38 @@ def test_mismatched_id_types_throws_error(engine, Base, User):
         oso.enable_roles(User, Session)
 
 
+def test_enable_roles_twice(engine, Base, User):
+    class One(Base):
+        __tablename__ = "ones"
+
+        id = Column(Integer(), primary_key=True)
+
+    Session = sessionmaker(bind=engine)
+    oso = SQLAlchemyOso(Base)
+
+    oso.enable_roles(User, Session)
+
+    with pytest.raises(OsoError):
+        oso.enable_roles(User, Session)
+
+
+def test_global_declarative_base(engine, Base, User):
+    """Test two different Osos & two different OsoRoles but a shared
+    declarative_base(). This shouldn't error."""
+
+    class One(Base):
+        __tablename__ = "ones"
+
+        id = Column(Integer(), primary_key=True)
+
+    Session = sessionmaker(bind=engine)
+    oso = SQLAlchemyOso(Base)
+    oso.enable_roles(User, Session)
+
+    oso2 = SQLAlchemyOso(Base)
+    oso2.enable_roles(User, Session)
+
+
 @pytest.mark.parametrize("sa_type,one_id", [(String, "1"), (Integer, 1)])
 def test_id_types(engine, Base, User, sa_type, one_id):
     class One(Base):

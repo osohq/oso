@@ -2,7 +2,7 @@
 from typing import Any, List, Set, Dict
 from dataclasses import dataclass
 
-from oso import Variable
+from oso import OsoError, Variable
 
 import sqlalchemy
 from sqlalchemy.types import Integer, String
@@ -11,8 +11,6 @@ from sqlalchemy import inspect
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy import sql
-
-from oso import OsoError
 
 
 def isa_type(arg):
@@ -607,7 +605,7 @@ def ensure_configured(func):
 
 
 class OsoRoles:
-    def __init__(self, oso, sqlalchemy_base, user_model, session_maker):
+    def __init__(self, oso, user_model, session_maker):
         self.session_maker = session_maker
 
         for cls in session_maker.class_.__mro__:
@@ -621,16 +619,26 @@ class OsoRoles:
         user_table_name = user_model.__tablename__
 
         resource_id_column_type = None
-        for name, model in oso.base._decl_class_registry.items():
+        models = oso.base._decl_class_registry
+        canonical_model = None
+
+        for name, model in models.items():
             if name == "_sa_module_registry":
                 continue
             if model == user_model:
                 continue
+            if model.__module__ == __name__:  # Ignore internal models.
+                continue
             _, id_type = get_pk(model)
             if resource_id_column_type is None:
                 resource_id_column_type = id_type
+                canonical_model = model
             elif resource_id_column_type.__class__ != id_type.__class__:
-                raise OsoError("All resources must have the same id type.")
+                raise OsoError(
+                    "All resources must have the same primary key type:"
+                    + f"\n\t{model} has PK type {id_type}"
+                    + f"\n\t{canonical_model} has PK type {resource_id_column_type}"
+                )
 
         if resource_id_column_type is None:
             raise OsoError(
@@ -639,15 +647,13 @@ class OsoRoles:
 
         self.resource_id_column_type = resource_id_column_type
 
-        models = sqlalchemy_base._decl_class_registry
-
         # @NOTE: This is pretty hacky, also will break if the user defines their own classes with these names, so we should
         # make them more unique
         if models.get("UserRole"):
             UserRole = models["UserRole"]
         else:
             # Tables for the management api to save data.
-            class UserRole(sqlalchemy_base):
+            class UserRole(oso.base):
                 __tablename__ = "user_roles"
                 id = Column(Integer, primary_key=True)
                 user_id = Column(
@@ -663,7 +669,7 @@ class OsoRoles:
             Permission = models["Permission"]
         else:
 
-            class Permission(sqlalchemy_base):
+            class Permission(oso.base):
                 __tablename__ = "permissions"
                 id = Column(Integer, primary_key=True)
                 resource_type = Column(String, index=True)
@@ -673,7 +679,7 @@ class OsoRoles:
             Role = models["Role"]
         else:
 
-            class Role(sqlalchemy_base):
+            class Role(oso.base):
                 __tablename__ = "roles"
                 name = Column(String, primary_key=True)
                 resource_type = Column(String)
@@ -682,7 +688,7 @@ class OsoRoles:
             RolePermission = models["RolePermission"]
         else:
 
-            class RolePermission(sqlalchemy_base):
+            class RolePermission(oso.base):
                 __tablename__ = "role_permissions"
                 id = Column(Integer, primary_key=True)
                 role = Column(String)
@@ -692,7 +698,7 @@ class OsoRoles:
             RoleImplication = models["RoleImplication"]
         else:
 
-            class RoleImplication(sqlalchemy_base):
+            class RoleImplication(oso.base):
                 __tablename__ = "role_implications"
                 id = Column(Integer, primary_key=True)
                 from_role = Column(String, index=True)

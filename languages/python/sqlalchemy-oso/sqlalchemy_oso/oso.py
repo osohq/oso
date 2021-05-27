@@ -35,9 +35,10 @@ class SQLAlchemyOso(Oso):
         Oso will create SQLAlchemy models to create and assign roles to users (stored in `user_model`).
         The roles API methods will be available on the `roles` property of `SQLAlchemyOso`.
         """
+        if self._roles_enabled:
+            raise OsoError("Roles feature already enabled.")
         self._roles = OsoRoles(
             oso=self,
-            sqlalchemy_base=self.base,
             user_model=user_model,
             session_maker=session_maker,
         )
