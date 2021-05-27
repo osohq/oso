@@ -1057,7 +1057,10 @@ impl PolarVirtualMachine {
                 // For each field in the dict, look up the corresponding field on the instance and
                 // then isa them.
                 for (field, right_value) in right.fields.iter() {
-                    let (call_id, answer) = self.new_call_var("isa_value", Value::Boolean(false));
+                    // Generate symbol for the lookup result and leave the variable unbound, so that unification with the result does not fail.
+                    // Unification with the lookup result happens in `fn external_call_result()`.
+                    let answer = self.kb.read().unwrap().gensym("isa_value");
+                    let call_id = self.new_call_id(&answer);
 
                     let lookup = Goal::LookupExternal {
                         instance: left.clone(),
@@ -1065,7 +1068,7 @@ impl PolarVirtualMachine {
                         field: right_value.clone_with_value(Value::String(field.0.clone())),
                     };
                     let isa = Goal::Isa {
-                        left: answer,
+                        left: Term::new_temporary(Value::Variable(answer)),
                         right: right_value.clone(),
                     };
                     self.append_goals(vec![lookup, isa])?;
@@ -2155,8 +2158,12 @@ impl PolarVirtualMachine {
             }
             // Push an `ExternalLookup` goal for external instances
             (_, Value::ExternalInstance(_)) => {
-                // Generate symbol for next result and bind to `false` (default)
-                let (call_id, next_term) = self.new_call_var("next_value", Value::Boolean(false));
+                // Generate symbol for next result and leave the variable unbound, so that unification with the result does not fail
+                // Unification of the `next_term` variable with the result of `NextExternal` happens in `fn external_call_result()`
+                // `external_call_result` is the handler for results from both `LookupExternal` and `NextExternal`, so neither can bind the
+                // call ID variable to `false`.
+                let next_term = self.kb.read().unwrap().gensym("next_value");
+                let call_id = self.new_call_id(&next_term);
 
                 // append unify goal to be evaluated after
                 // next result is fetched
@@ -2167,7 +2174,7 @@ impl PolarVirtualMachine {
                     },
                     Goal::Unify {
                         left: item.clone(),
-                        right: next_term,
+                        right: Term::new_temporary(Value::Variable(next_term)),
                     },
                 ])?;
             }
@@ -2921,7 +2928,7 @@ impl Runnable for PolarVirtualMachine {
 
     /// Handle an external result provided by the application.
     ///
-    /// If the value is `Some(_)` then we have a result, and bind the
+    /// If the value is `Some(_)` then we have a result, and unify the
     /// symbol associated with the call ID to the result value. If the
     /// value is `None` then the external has no (more) results, so we
     /// backtrack to the choice point left by `Goal::LookupExternal`.
@@ -2939,27 +2946,10 @@ impl Runnable for PolarVirtualMachine {
                 .expect("unregistered external call ID")
                 .clone();
 
-            if let VariableState::Bound(_) = self.variable_state(sym) {
-                self.log_with(
-                    || {
-                        format!(
-                            "Variable {} is bound, pushing Goal::Unify{{left: {}, right: {}}}",
-                            sym, sym, value
-                        )
-                    },
-                    &[],
-                );
-                // If the variable is already bound, unify the result with the variable.
-                // This is necessary for lookups done in rule heads, because the variable will be bound to whatever arg was passed in.
-                self.push_goal(Goal::Unify {
-                    left: Term::new_temporary(Value::Variable(sym.clone())),
-                    right: value,
-                })?;
-            } else {
-                // if the variable isn't bound, rebind
-                self.log_with(|| format!("Variable {} is not bound, rebinding", sym), &[]);
-                self.rebind_external_answer(sym, value);
-            }
+            self.push_goal(Goal::Unify {
+                left: Term::new_temporary(Value::Variable(sym.clone())),
+                right: value,
+            })?;
         } else {
             self.log("=> No more results.", &[]);
 
