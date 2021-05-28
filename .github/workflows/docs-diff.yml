@@ -143,6 +143,7 @@ jobs:
         run: rm -rf head/java/reference/api head/python/reference/api head/ruby/reference/api head/node/reference/api
 
       - name: Diff
+        id: diff
         run: set -o pipefail && diff -q --recursive base head | tee diff.txt
         continue-on-error: true
       - id: get-comment-body
@@ -161,17 +162,22 @@ jobs:
           body="${body//$'\n'/'%0A'}"
           body="${body//$'\r'/'%0D'}"
           echo "::set-output name=body::$body"
-        if: ${{ failure() }}
+        if: ${{ steps.diff.outcome == "failure" }}
       - name: Comment
         uses: peter-evans/create-or-update-comment@v1
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: ${{ steps.get-comment-body.outputs.body }}
-        if: ${{ failure() }}
+        if: ${{ steps.diff.outcome == "failure" }}
       - name: Look for resolving comment.
+        id: comment-check
         uses: peter-evans/find-comment@v1
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body-includes: "Docs changes ok"
           comment-author: ${{ github.event.pull_request.user.login }}
-        if: ${{ failure() }}
+        if: ${{ steps.diff.outcome == "failure" }}
+      - name: Make sure comment exists.
+        uses: peter-evans/find-comment@v1
+        run: test -n ${{ steps.comment-check.comment-id }}
+        if: ${{ steps.diff.outcome == "failure" }}
