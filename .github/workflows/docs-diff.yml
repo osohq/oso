@@ -3,8 +3,6 @@ name: Docs Diff
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  pull_request_review_comment:
-    types: [created, edited, deleted]
 jobs:
   build-head:
     name: Build docs on HEAD.
@@ -149,9 +147,9 @@ jobs:
       - id: get-comment-body
         run: |
           body=$(cat <<EOF
-            This PR contains docs changes. Comment "Docs changes ok" if you expected this,
-            or review the changes by running the docs locally, checking for out of date
-            code snippets.
+            This PR contains docs changes. Comment "Docs changes ok" and rerun the job
+            if you expected this, and review the changes by running the docs locally,
+            checking for out of date code snippets.
 
             Diff:
 
@@ -174,7 +172,7 @@ jobs:
       - name: Comment
         uses: peter-evans/create-or-update-comment@v1
         with:
-          comment-id: ${{ steps.comment-bot-check.comment-id }}
+          comment-id: ${{ steps.comment-bot-check.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body: ${{ steps.get-comment-body.outputs.body }}
           edit-mode: replace
@@ -195,5 +193,5 @@ jobs:
         with:
           comment-id: ${{ steps.comment-bot.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
-          reaction: "+1"
+          reactions: +1
         if: ${{ steps.diff.outcome == 'failure' }}
