@@ -241,9 +241,9 @@ Now, let's write our first rules that use role based access control. To
 setup the role library, we must:
 
 1. Persist role configuration to our database.
-3. Add role and resource configurations to our policy.
-4. Use the `Roles.role_allows` method in our policy.
-5. Assign roles to users.
+2. Add role and resource configurations to our policy.
+3. Use the `Roles.role_allows` method in our policy.
+4. Assign roles to users.
 
 
 ### Persisting roles configuration
