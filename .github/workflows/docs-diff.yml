@@ -178,6 +178,5 @@ jobs:
           comment-author: ${{ github.event.pull_request.user.login }}
         if: ${{ steps.diff.outcome == "failure" }}
       - name: Make sure comment exists.
-        uses: peter-evans/find-comment@v1
         run: test -n ${{ steps.comment-check.comment-id }}
         if: ${{ steps.diff.outcome == "failure" }}
