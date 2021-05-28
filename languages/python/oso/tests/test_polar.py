@@ -932,14 +932,3 @@ def test_lookup_in_head(polar):
 
     assert len(list(polar.query_rule("allow", "leina", "write", r))) == 0
     assert len(list(polar.query_rule("allow", "leina", "read", r))) == 1
-
-
-# def test_specialize_on_constant(polar):
-#     const_dict = {"foo": "bar"}
-#     polar.register_constant(const_dict, "MY_DICT")
-
-#     p = """allow("leina", "read", resource: MY_DICT);"""
-#     polar.load_str(p)
-
-#     assert len(list(polar.query_rule("allow", "leina", "read", {"foo": "bar"}))) == 1
-#     assert len(list(polar.query_rule("allow", "leina", "read", {}))) == 0
