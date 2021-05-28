@@ -162,4 +162,4 @@ jobs:
         uses: peter-evans/create_or_update_comment@v1
         with:
           issue-number: ${{ github.event.number }}
-          body: : ${{ steps.get-comment-body.outputs.body }}
+          body: ${{ steps.get-comment-body.outputs.body }}
