@@ -142,6 +142,6 @@ def test_roles3():
     # Gabe can push to oso_repo because he has WRTIE on oso_repo
     assert oso.is_allowed(gabe, "push", oso_repo)
 
-    # Data filtering test:
-    auth_filter = authorize_model(oso, leina, "push", session, Repository)
-    assert str(auth_filter) == "repositories.organization_id = :org_id_1"
+    # # Data filtering test:
+    # auth_filter = authorize_model(oso, leina, "push", session, Repository)
+    # assert str(auth_filter) == "repositories.organization_id = :org_id_1"
