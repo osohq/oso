@@ -160,8 +160,7 @@ jobs:
           body="${body//$'\n'/'%0A'}"
           body="${body//$'\r'/'%0D'}"
           echo "::set-output name=body::$body"
-        with:
-          continue-on-error: true
+        continue-on-error: true
       - name: Comment
         uses: peter-evans/create-or-update-comment@v1
         with:
