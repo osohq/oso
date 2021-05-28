@@ -452,7 +452,7 @@ Here's the full `Org` resource definition from the GitClub example app:
     linenos=true
 >}}
 
-Notice the `"repo_read"` and `"repo_write"` implications. These are
+Notice the `"repo_read"` and `"repo_admin"` implications. These are
 roles defined on another resource, Repository. In the next guide, we'll
 see how to setup **cross resource implied roles** like these!
 
