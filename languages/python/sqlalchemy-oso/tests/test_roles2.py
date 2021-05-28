@@ -247,7 +247,7 @@ def test_bad_namespace_perm(init_oso):
         ] and
         roles = {
             member: {
-                perms: ["repo:pull"]
+                permissions: ["repo:pull"]
             }
         };
     """
@@ -277,7 +277,7 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
         ] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
 
@@ -311,7 +311,7 @@ def test_duplicate_resource_name(init_oso):
         actions = ["invite"] and
         roles = {
             member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -323,7 +323,7 @@ def test_duplicate_resource_name(init_oso):
         ] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
     """
@@ -341,7 +341,7 @@ def test_nested_dot_relationship(init_oso):
         actions = ["invite"] and
         roles = {
             member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -367,7 +367,7 @@ def test_bad_relationship_lookup(init_oso):
         actions = ["invite"] and
         roles = {
             member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -426,7 +426,7 @@ def test_duplicate_role_name(init_oso):
         ] and
         roles = {
             member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -437,7 +437,7 @@ def test_duplicate_role_name(init_oso):
         ] and
         roles = {
             member: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
     """
@@ -486,7 +486,7 @@ def test_undeclared_permission(init_oso):
         ] and
         roles = {
             org_member: {
-                perms: ["create_repo"]
+                permissions: ["create_repo"]
             }
         };
     """
@@ -536,7 +536,7 @@ def test_role_implication_without_relationship(init_oso):
         ] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
     """
@@ -555,7 +555,7 @@ def test_role_permission_without_relationship(init_oso):
         ] and
         roles = {
             org_member: {
-                perms: ["repo:push"]
+                permissions: ["repo:push"]
             }
         };
 
@@ -581,7 +581,7 @@ def test_invalid_role_permission(init_oso):
         roles = {
             org_member: {
                 # THIS IS NOT ALLOWED
-                perms: ["repo:push"]
+                permissions: ["repo:push"]
             }
         };
 
@@ -592,7 +592,7 @@ def test_invalid_role_permission(init_oso):
         ] and
         roles = {
             repo_read: {
-                perms: ["push"]
+                permissions: ["push"]
             }
 
         };
@@ -616,10 +616,10 @@ def test_permission_assignment_to_implied_role(init_oso):
         ] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             },
             org_owner: {
-                perms: ["invite"],
+                permissions: ["invite"],
                 implies: ["org_member"]
             }
 
@@ -716,7 +716,7 @@ def test_overlapping_permissions(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"],
+                permissions: ["invite"],
                 implies: ["repo_read"]
             }
         };
@@ -728,11 +728,11 @@ def test_overlapping_permissions(init_oso, sample_data):
         ] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             },
             repo_write: {
                 # repo_write is more permissive than org_member
-                perms: ["push"],
+                permissions: ["push"],
                 implies: ["repo_read"]
             }
         };
@@ -774,7 +774,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -800,7 +800,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
         roles = {
             org_member: {
                 # REMOVE INVITE AND ADD LIST_REPOS
-                perms: ["list_repos"]
+                permissions: ["list_repos"]
             }
         };
 
@@ -827,7 +827,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite", "repo:pull"]
+                permissions: ["invite", "repo:pull"]
             }
         };
 
@@ -864,7 +864,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -899,10 +899,10 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
         actions = ["list_repos", "invite"] and
         roles = {
             org_member: {
-                perms: ["list_repos", "issue:edit"]
+                permissions: ["list_repos", "issue:edit"]
             },
             org_owner: {
-                perms: ["invite"],
+                permissions: ["invite"],
                 implies: ["org_member"]
             }
         };
@@ -948,7 +948,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -985,7 +985,7 @@ def test_homogeneous_role_implication(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             },
             org_owner: {
                 implies: ["org_member"]
@@ -1017,11 +1017,11 @@ def test_homogeneous_role_implication(init_oso, sample_data):
         actions = ["invite", "list_repos"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             },
             org_owner: {
                 # REMOVE "implies"
-                perms: ["list_repos"]
+                permissions: ["list_repos"]
             }
         };
 
@@ -1051,7 +1051,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"],
+                permissions: ["invite"],
                 implies: ["repo_read"]
             }
         };
@@ -1063,7 +1063,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
         ] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
 
@@ -1095,7 +1095,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -1131,7 +1131,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"],
+                permissions: ["invite"],
                 implies: ["issue_editor"]
             }
         };
@@ -1142,7 +1142,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
         ] and
         roles = {
             issue_editor: {
-                perms: ["edit"]
+                permissions: ["edit"]
             }
         };
 
@@ -1175,7 +1175,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -1185,7 +1185,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
         ] and
         roles = {
             issue_editor: {
-                perms: ["edit"]
+                permissions: ["edit"]
             }
         };
 
@@ -1217,7 +1217,7 @@ def test_chained_role_implication(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"],
+                permissions: ["invite"],
                 implies: ["repo_read"]
 
             }
@@ -1230,7 +1230,7 @@ def test_chained_role_implication(init_oso, sample_data):
         ] and
         roles = {
             repo_read: {
-                perms: ["pull"],
+                permissions: ["pull"],
                 implies: ["issue_editor"]
             }
         };
@@ -1241,7 +1241,7 @@ def test_chained_role_implication(init_oso, sample_data):
         ] and
         roles = {
             issue_editor: {
-                perms: ["edit"]
+                permissions: ["edit"]
             }
         };
 
@@ -1283,7 +1283,7 @@ def test_chained_role_implication(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -1294,7 +1294,7 @@ def test_chained_role_implication(init_oso, sample_data):
         ] and
         roles = {
             repo_read: {
-                perms: ["pull"],
+                permissions: ["pull"],
                 implies: ["issue_editor"]
             }
         };
@@ -1305,7 +1305,7 @@ def test_chained_role_implication(init_oso, sample_data):
         ] and
         roles = {
             issue_editor: {
-                perms: ["edit"]
+                permissions: ["edit"]
             }
         };
 
@@ -1350,7 +1350,7 @@ def test_assign_role_wrong_resource_type(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -1375,7 +1375,7 @@ def test_assign_remove_nonexistent_role(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -1403,7 +1403,7 @@ def test_remove_unassigned_role(init_oso, sample_data):
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -1428,10 +1428,10 @@ def test_assign_remove_user_role(init_oso, sample_data):
         actions = ["invite", "list_repos"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             },
             org_owner: {
-                perms: ["list_repos"]
+                permissions: ["list_repos"]
             }
         };
 
@@ -1502,10 +1502,10 @@ def test_reassign_user_role(init_oso, sample_data):
         actions = ["invite", "list_repos"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             },
             org_owner: {
-                perms: ["list_repos"],
+                permissions: ["list_repos"],
                 implies: ["org_member", "repo_read"]
             }
         };
@@ -1514,7 +1514,7 @@ def test_reassign_user_role(init_oso, sample_data):
         actions = ["pull"] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
 
@@ -1581,7 +1581,7 @@ def test_authorizing_related_fields(
         actions = ["invite", "read"] and
         roles = {
             org_member: {
-                perms: ["invite", "read"],
+                permissions: ["invite", "read"],
                 implies: ["repo_read"]
             }
         };
@@ -1590,7 +1590,7 @@ def test_authorizing_related_fields(
         actions = ["pull"] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
 
@@ -1630,7 +1630,7 @@ def test_data_filtering_role_allows_not(
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -1671,7 +1671,7 @@ def test_data_filtering_role_allows_and(
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"],
+                permissions: ["invite"],
                 implies: ["repo_read"]
             }
         };
@@ -1680,7 +1680,7 @@ def test_data_filtering_role_allows_and(
         actions = ["pull"] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
 
@@ -1732,7 +1732,7 @@ def test_data_filtering_role_allows_explicit_or(
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"],
+                permissions: ["invite"],
                 implies: ["repo_read"]
             }
         };
@@ -1741,7 +1741,7 @@ def test_data_filtering_role_allows_explicit_or(
         actions = ["pull"] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
 
@@ -1801,7 +1801,7 @@ def test_data_filtering_role_allows_implicit_or(
         actions = ["read"] and
         roles = {
             org_member: {
-                perms: ["read"]
+                permissions: ["read"]
             }
         };
 
@@ -1839,7 +1839,7 @@ def test_data_filtering_user_in_role_not(
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -1880,7 +1880,7 @@ def test_data_filtering_user_in_role_and(
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"],
+                permissions: ["invite"],
                 implies: ["repo_read"]
             }
         };
@@ -1889,7 +1889,7 @@ def test_data_filtering_user_in_role_and(
         actions = ["pull"] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
 
@@ -1941,7 +1941,7 @@ def test_data_filtering_user_in_role_explicit_or(
         actions = ["invite"] and
         roles = {
             org_member: {
-                perms: ["invite"],
+                permissions: ["invite"],
                 implies: ["repo_read"]
             }
         };
@@ -1950,7 +1950,7 @@ def test_data_filtering_user_in_role_explicit_or(
         actions = ["pull"] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
 
@@ -2010,7 +2010,7 @@ def test_data_filtering_user_in_role_implicit_or(
         actions = ["read"] and
         roles = {
             org_member: {
-                perms: ["read"]
+                permissions: ["read"]
             }
         };
 
@@ -2051,7 +2051,7 @@ def test_data_filtering_combo(
         actions = ["read"] and
         roles = {
             org_member: {
-                perms: ["read"]
+                permissions: ["read"]
             }
         };
 
@@ -2093,10 +2093,10 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
         actions = ["invite", "list_repos"] and
         roles = {
             org_member: {
-                perms: ["list_repos"]
+                permissions: ["list_repos"]
             },
             org_owner: {
-                perms: ["invite"]
+                permissions: ["invite"]
             }
         };
 
@@ -2104,7 +2104,7 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
         actions = ["pull"] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
 
@@ -2173,7 +2173,7 @@ def test_user_in_role(
         actions = ["pull"] and
         roles = {
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
 
@@ -2284,7 +2284,7 @@ def test_id_types(engine, Base, User, sa_type, one_id):
     Base.metadata.create_all(engine)
 
     policy = """
-    resource(_type: One, "one", ["read"], {boss: {perms: ["read"]}});
+    resource(_type: One, "one", ["read"], {boss: {permissions: ["read"]}});
     resource(_type: Two, "two", ["read"], _roles);
 
     allow(actor, action, resource) if
@@ -2318,11 +2318,11 @@ def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issu
         ] and
         roles = {
             org_member: {
-                perms: ["create_repo"],
+                permissions: ["create_repo"],
                 implies: ["repo_read"]
             },
             org_owner: {
-                perms: ["invite"],
+                permissions: ["invite"],
                 implies: ["org_member", "repo_write"]
             }
         };
@@ -2334,11 +2334,11 @@ def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issu
         ] and
         roles = {
             repo_write: {
-                perms: ["push", "issue:edit"],
+                permissions: ["push", "issue:edit"],
                 implies: ["repo_read"]
             },
             repo_read: {
-                perms: ["pull"]
+                permissions: ["pull"]
             }
         };
 
