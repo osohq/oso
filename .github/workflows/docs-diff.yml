@@ -188,10 +188,3 @@ jobs:
       - name: Make sure comment exists.
         run: test ${{ steps.comment-check.outputs.comment-id }} -gt 0
         if: ${{ steps.diff.outcome == 'failure' }}
-      - name: Thumbs up
-        uses: peter-evans/create-or-update-comment@v1
-        with:
-          comment-id: ${{ steps.comment-bot.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
-          reactions: +1
-        if: ${{ steps.diff.outcome == 'failure' }}
