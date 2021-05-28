@@ -29,7 +29,7 @@
 [submodule "docs/examples/gitclub-sqlalchemy-flask-react"]
 	path = docs/examples/gitclub-sqlalchemy-flask-react
 	url = https://github.com/osohq/gitclub-sqlalchemy-flask-react.git
-	branch = main
+	branch = gj/auth-session-ergonomics
 [submodule "docs/examples/python/getting-started/application"]
 	path = docs/examples/python/getting-started/application
 	url = https://github.com/osohq/oso-flask-tutorial.git
