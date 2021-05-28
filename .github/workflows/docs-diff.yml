@@ -3,6 +3,8 @@ name: Docs Diff
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  pull_request_review_comment:
+    types: [created, edited, deleted]
 jobs:
   build-head:
     name: Build docs on HEAD.
