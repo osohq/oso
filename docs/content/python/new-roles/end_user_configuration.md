@@ -21,7 +21,7 @@ Roles can be displayed by using the roles read API.
     to="docs: end-org-role-index"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
-    hlOpts="hl_lines=4"
+    hlOpts="hl_lines=5"
     >}}
 
 ## Assigning users to a role
