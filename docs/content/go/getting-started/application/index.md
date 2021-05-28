@@ -7,6 +7,8 @@ aliases:
   - /getting-started/application/index.html
 ---
 
+This is a diff
+
 # Add Oso to a Go Application
 
 {{% coming_soon %}}
