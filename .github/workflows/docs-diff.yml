@@ -158,8 +158,18 @@ jobs:
           body="${body//$'\n'/'%0A'}"
           body="${body//$'\r'/'%0D'}"
           echo "::set-output name=body::$body"
+        with:
+          continue-on-error: true
       - name: Comment
         uses: peter-evans/create-or-update-comment@v1
         with:
-          issue-number: ${{ github.event.number }}
+          issue-number: ${{ github.event.pull_request.number }}
           body: ${{ steps.get-comment-body.outputs.body }}
+        if: ${{ failure() }}
+      - name: Look for resolving comment.
+        uses: peter-evans/find-comment@v1
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body-includes: "Docs changes ok"
+          comment-author: ${{ github.event.pull_request.user.login }}
+        if: ${{ failure() }}
