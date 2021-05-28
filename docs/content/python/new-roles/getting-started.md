@@ -92,6 +92,23 @@ class as well as a SQLAlchemy `sessionmaker` to the
     hlOpts="hl_lines=6"
 >}}
 
+Oso stores role and permission configuration in your database alongside
+the rest of your SQLAlchemy tables. Additional models are added to your
+`Base` class metadata when enabling Oso roles.
+
+{{% callout "Improved role configuration migrations coming soon" "green" %}}
+
+Currently, `enable_roles` deletes and replaces all role
+configuration in the database. In a future release, we will have a
+migration tool that only synchronizes changes to the database, and warns
+when removing roles or permissions that are in use.
+
+Roles and permissions are stored in the database to allow creation of
+dynamic role and permission assignments in a future release.
+
+{{% /callout %}}
+
+
 ### Loading our policy
 
 Oso uses the Polar language to define authorization policies. An
@@ -203,8 +220,8 @@ provide a helper decorator to define the permissions to check
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/helpers.py"
-    from="docs: begin-docs: begin-session-decorator"
-    to="docs: end-docs: begin-session-decorator"
+    from="docs: begin-session-decorator"
+    to="docs: end-session-decorator"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     >}}
 
@@ -237,72 +254,12 @@ individual actions.
 
 ## Controlling access with roles
 
-Now, let's write our first rules that use role based access control. To
-setup the role library, we must:
+Now, let's write our first rules that use role based access control.
+The steps to take are:
 
-1. Initialize `OsoRoles`
-2. Persist role configuration to our database.
-3. Add role and resource configurations to our policy.
-4. Use the `Roles.role_allows` method in our policy.
-5. Assign roles to users.
-
-### Initializing `OsoRoles`
-
-`OsoRoles` extends Oso with role specific configuration & enforcement.
-We enable it by initializing the `OsoRoles` object.
-
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    from="docs: begin-init-oso"
-    to="docs: end-init-oso"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
-    hlOpts="hl_lines=7"
-    >}}
-
-### Persisting roles configuration
-
-Oso stores role and permission configuration in your database alongside
-the rest of your SQLAlchemy tables. Additional models are added to your
-`Base` class metadata when initializing `OsoRoles`. The schema for these
-models can be created with [`MetaData.create_all`](https://docs.sqlalchemy.org/en/13/core/metadata.html#sqlalchemy.schema.MetaData.create_all).
-
-In addition to the schema, we still must persist the role configuration
-from the policy into the database. We do this with the
-`OsoRoles.synchronize_data` method. The `synchronize_data` method will
-replace all role configuration to reflect the `resource` definitions in
-the policy.
-
-In our sample app, we call `synchronize_data` in initialization of our app:
-
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    from="docs: begin-configure"
-    to="docs: end-configure"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
-    >}}
-
-{{% callout "Going to production" "orange" %}}
-
-Since `OsoRoles.synchronize_data()` performs bulk database operations, a
-production application should call it as part of the deployment process
-in a script.
-
-{{% /callout %}}
-
-
-{{% callout "Improved role configuration migrations coming soon" "green" %}}
-
-Currently, `OsoRoles.synchronize_data` deletes and replaces all role
-configuration in the database. In a future release, we will have a
-migration tool that only synchronizes changes to the database, and warns
-when removing roles or permissions that are in use.
-
-Roles and permissions are stored in the database to allow creation of
-dynamic role and permission assignments in a future release.
-
-{{% /callout %}}
+1. Add role and resource configurations to our policy.
+2. Use the `Roles.role_allows` method in our policy.
+3. Assign roles to users.
 
 
 ### Configuring our first resource
