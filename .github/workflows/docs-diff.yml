@@ -139,5 +139,27 @@ jobs:
         run: rm -rf base/java/reference/api base/python/reference/api base/ruby/reference/api base/node/reference/api
       - name: Remove ignored files (generated api docs)
         run: rm -rf head/java/reference/api head/python/reference/api head/ruby/reference/api head/node/reference/api
+
       - name: Diff
-        run: diff --recursive base head
+        run: diff --recursive base head | tee diff.txt
+      - id: get-comment-body
+        run: |
+          body=$(cat <<EOF
+            This PR contains docs changes. Comment "Docs changes ok" if you expected this,
+            or review the changes by running the docs locally, checking for out of date
+            code snippets.
+
+            Diff:
+
+          EOF
+          )
+          body=$(cat <(echo $body) diff.txt)
+          body="${body//'%'/'%25'}"
+          body="${body//$'\n'/'%0A'}"
+          body="${body//$'\r'/'%0D'}"
+          echo "::set-output name=body::$body"
+      - name: Comment
+        uses: peter-evans/create_or_update_comment@v1
+        with:
+          issue-number: ${{ github.event.number }}
+          body: : ${{ steps.get-comment-body.outputs.body }}
