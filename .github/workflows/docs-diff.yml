@@ -135,5 +135,9 @@ jobs:
         with:
           name: new-docs
           path: head
+      - name: Remove ignored files (generated api docs)
+        run: rm -rf base/java/reference/api base/python/reference/api base/ruby/reference/api base/node/reference/api
+      - name: Remove ignored files (generated api docs)
+        run: rm -rf head/java/reference/api head/python/reference/api head/ruby/reference/api head/node/reference/api
       - name: Diff
         run: diff --recursive base head
