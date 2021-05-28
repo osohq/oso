@@ -67,7 +67,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: github.base_ref
+          ref: ${{ github.base_ref }}
       - uses: actions/cache@v2
         with:
           path: |
