@@ -150,7 +150,7 @@ To perform authorization, we use the `Oso.is_allowed` method. Here's an
 example in our Org creation handler:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes.py"
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
     from="docs: begin-is-allowed"
     to="docs: end-is-allowed"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
@@ -168,20 +168,15 @@ More on this [here]({{< ref
 ## SQLAlchemy Session Setup
 
 Oso integrates with SQLAlchemy [sessions](https://docs.sqlalchemy.org/en/13/orm/session_basics.html#what-does-the-session-do) to authorize access to models.
+
 In a typical application, we may have one SQLAlchemy session per
 request. Often this is accomplished with a session factory that is
 scoped to the [current
 thread](https://docs.sqlalchemy.org/en/13/orm/contextual.html).
 
-When using Oso, two SQLAlchemy sessions are usually necessary:
-
-- *authorized session*: A session instance that will only return
-  authorized objects from a query. An authorized session is fixed to one
-  *authorization query* (that is one set of `actor`, `action`, and `resource`
-  type). *An authorized session only applies authorization on read
-  queries*. To authorize mutations to single objects, use `is_allowed`.
-- *basic session*: A session instance that returns all data, including
-  data not authorized for the current user.
+When using Oso, you should use `sqlalchemy_oso.authorized_sessionmaker`
+to create *authorized sessions*. An authorized session applies authorization
+to all *read* queries. 
 
 ### Using the authorized session
 
@@ -191,52 +186,54 @@ uses [data filtering](../../guides/data_access) to translate the
 policy's rules into a SQLAlchemy query. Only authorized objects will be
 fetched from the database.
 
-The authorized session is typically created during application
-initialization using `sqlalchemy_oso.authorized_sessionmaker`.
-Here's how we create it in GitClub:
+The authorized session is created using `sqlalchemy_oso.authorized_sessionmaker`.
+The `authorized_sessionmaker` requires as input: the Oso instance, the current user,
+and what permissions to check.
+
+In GitClub, we initialize the session on the application
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    lines="10,14,34-40,94"
+    from="docs: begin-authorized-session"
+    to="docs: end-authorized-session"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     >}}
 
-Before each request we fetch the logged in user and set the action
-depending upon the route.
-
-We can then issue regular SQLAlchemy queries to load authorized data:
+provide a helper decorator to define the permissions to check
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes.py"
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/helpers.py"
+    from="docs: begin-docs: begin-session-decorator"
+    to="docs: end-docs: begin-session-decorator"
+    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    >}}
+
+and we can then issue regular SQLAlchemy queries to load authorized data in our
+route handlers
+
+{{< literalInclude
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/repos.py"
     from="docs: begin-repo-index"
     to="docs: end-repo-index"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
     >}}
 
-`repos` will only contain repositories that `g.current_user` is allowed to take `g.current_action` on based on our policy.
+### Making a query without authorization
 
-### Using the basic session
-
-The basic session should be used for queries that should not have
-authorization applied. We create one using a typical SQLAlchemy `sessionmaker`.
+We can make queries without any authorization by setting the `checked_permissions=None`
+parameter. We pass this through in the `@session` decorator: 
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    lines="4,14,29,61"
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
+    from="docs: begin-is-allowed"
+    to="docs: end-is-allowed"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
 >}}
 
-Often performing actions before authorization like authentication will use
-the basic session:
+In this case, we are still able to use the regular `oso.is_allowed` to authorize
+individual actions.
 
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    from="docs: begin-authn"
-    to="docs: end-authn"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
->}}
 
 ## Controlling access with roles
 
@@ -416,7 +413,7 @@ Now we've configured roles and setup our policy. For users to have
 access, we must assign them to roles.
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes.py"
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/role_assignments.py"
     from="docs: begin-role-assignment"
     to="docs: end-role-assignment"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
