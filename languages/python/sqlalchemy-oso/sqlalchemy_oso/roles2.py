@@ -431,11 +431,11 @@ def read_config(oso):
     #     ] and
     #     roles = {
     #         repo_write: {
-    #             perms: ["push", "issue:edit"],
+    #             permissions: ["push", "issue:edit"],
     #             implies: ["repo_read"]
     #         },
     #         repo_read: {
-    #             perms: ["pull"]
+    #             permissions: ["pull"]
     #         }
     #     };
     # The first argument lets us use a specializer to say what the python class is.
@@ -443,7 +443,7 @@ def read_config(oso):
     # The third arg should be bound to a list of actions defined for the resource.
     # The fouth arg should be bound to a map from role name to role definition.
     #   Each role definitions has two fields,
-    #     perms which says which permissions the role has
+    #     permissions which says which permissions the role has
     #     and implies which says which other roles are implied by having this one.
     role_resources = oso.query_rule(
         "resource",
@@ -517,12 +517,12 @@ def read_config(oso):
                 raise OsoError(f"Duplicate role name {name}")
 
             for key in role_def.keys():
-                if key not in ("perms", "implies"):
+                if key not in ("permissions", "implies"):
                     raise OsoError(f"Invalid key in role definition :'{key}'")
 
             role_permissions = []
-            if "perms" in role_def:
-                for permission in role_def["perms"]:
+            if "permissions" in role_def:
+                for permission in role_def["permissions"]:
                     perm = parse_permission(permission, python_class, config)
                     role_permissions.append(perm)
 
