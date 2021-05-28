@@ -143,7 +143,7 @@ jobs:
         run: rm -rf head/java/reference/api head/python/reference/api head/ruby/reference/api head/node/reference/api
 
       - name: Diff
-        run: diff -q --recursive base head | tee diff.txt
+        run: set -o pipefail && diff -q --recursive base head | tee diff.txt
       - id: get-comment-body
         run: |
           body=$(cat <<EOF
