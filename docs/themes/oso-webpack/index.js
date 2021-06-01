@@ -218,18 +218,17 @@ import('algoliasearch').then(algolia => {
   const algoliaAccount = 'KROZ8F05YT';
   // read only search key
   const algoliaReadOnlySearchKey = '13594a3b7da482e011ce0ab08fdb4c4d';
-  // index name
-  const algoliaIndex = 'prod_OSODOCS';
+  // index name - default to prod index
+  let algoliaIndex = 'prod_OSODOCS';
+  // load index from meta if this is preview
+  const searchindexMeta = document.getElementById('search-index');
+
+  if (searchindexMeta) {
+    algoliaIndex = searchindexMeta.content;
+  }
 
   const client = algolia.default(algoliaAccount, algoliaReadOnlySearchKey);
   const index = client.initIndex(algoliaIndex);
-
-  const facetLanguageMeta = document.getElementById('facet-language');
-  var facetLanguage = 'any';
-
-  if (facetLanguageMeta) {
-    facetLanguage = facetLanguageMeta.content;
-  }
 
   const processHits = function(hits) {
     var results = '';
@@ -288,6 +287,13 @@ import('algoliasearch').then(algolia => {
 
     event.preventDefault();
     var term = searchInput.value;
+
+    const facetLanguageMeta = document.getElementById('facet-language');
+    var facetLanguage = 'any';
+
+    if (facetLanguageMeta) {
+      facetLanguage = facetLanguageMeta.content;
+    }
 
     if (term != '') {
       if (facetLanguage == 'any') {
