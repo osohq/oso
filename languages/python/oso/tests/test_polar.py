@@ -898,26 +898,24 @@ def test_unexpected_expression(polar):
         next(polar.query_rule("f", Variable("x")))
 
 
-def test_lookup_in_head(polar):
+def test_lookup_in_head(polar, is_allowed):
     # Test with enums
     class Actions(Enum):
         READ = 1
         WRITE = 2
 
     polar.register_constant(Actions, "Actions")
-    p = """allow("leina", Actions.READ, "doc");"""
-    polar.load_str(p)
+    polar.load_str('allow("leina", Actions.READ, "doc");')
 
-    assert len(list(polar.query_rule("allow", "leina", Actions.WRITE, "doc"))) == 0
-    assert len(list(polar.query_rule("allow", "leina", "READ", "doc"))) == 0
-    assert len(list(polar.query_rule("allow", "leina", 1, "doc"))) == 0
-    assert len(list(polar.query_rule("allow", "leina", Actions, "doc"))) == 0
-    assert len(list(polar.query_rule("allow", "leina", Actions.READ, "doc"))) == 1
+    assert not is_allowed("leina", Actions.WRITE, "doc")
+    assert not is_allowed("leina", "READ", "doc")
+    assert not is_allowed("leina", 1, "doc")
+    assert not is_allowed("leina", Actions, "doc")
+    assert is_allowed("leina", Actions.READ, "doc")
 
     # Test lookup in specializer raises error
-    p = """allow("leina", action: Actions.READ, "doc");"""
     with pytest.raises(exceptions.UnrecognizedToken):
-        polar.load_str(p)
+        polar.load_str('allow("leina", action: Actions.READ, "doc");')
 
     # Test with normal class
     class Resource:
@@ -925,10 +923,9 @@ def test_lookup_in_head(polar):
             self.action = action
 
     polar.register_class(Resource, name="Resource")
-    p = """allow("leina", resource.action, resource: Resource);"""
-    polar.load_str(p)
+    polar.load_str('allow("leina", resource.action, resource: Resource);')
 
     r = Resource("read")
 
-    assert len(list(polar.query_rule("allow", "leina", "write", r))) == 0
-    assert len(list(polar.query_rule("allow", "leina", "read", r))) == 1
+    assert not is_allowed("leina", "write", r)
+    assert is_allowed("leina", "read", r)
