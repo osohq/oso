@@ -14,6 +14,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
       AWS_REGION: "us-east-1"
+      ALGOLIA_ADMIN_API_KEY: ${{ secrets.ALGOLIA_ADMIN_API_KEY }}
     steps:
       - uses: actions/checkout@v2
 
@@ -66,7 +67,7 @@ jobs:
         with:
           hugo-version: '0.79.1'
       - name: Build Hugo docs
-        run: make build
+        run: make ci-preview-docs
         working-directory: docs
 
 
