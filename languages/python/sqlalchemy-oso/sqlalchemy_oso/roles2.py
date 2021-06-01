@@ -363,7 +363,7 @@ def parse_role_name(role_name, resource_class, config, other_ok=False):
     :return: Normalized role name (with namespace)
     :rtype: str
     """
-    if not resource_class in config.class_to_resource_name:
+    if resource_class not in config.class_to_resource_name:
         raise OsoError(f"Unrecognized resource type {resource_class}.")
     resource_name = config.class_to_resource_name[resource_class]
     if ":" in role_name:
