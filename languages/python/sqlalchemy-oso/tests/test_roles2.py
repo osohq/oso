@@ -464,18 +464,22 @@ def test_relationship_without_resources(init_oso):
         oso.roles.synchronize_data()
 
 
-def test_duplicate_role_name(init_oso):
+def test_duplicate_role_name(init_oso, sample_data):
     # duplicate role name throws an error
     # Organization and Repository resources both have role named "member"
     oso, session = init_oso
     policy = """
     resource(_type: Organization, "org", actions, roles) if
         actions = [
-            "invite"
+            "invite", "create_repo"
         ] and
         roles = {
+            owner: {
+                permissions: ["invite"],
+                implies: ["member", "repo:member"]
+            },
             member: {
-                permissions: ["invite"]
+                permissions: ["create_repo"]
             }
         };
 
@@ -489,11 +493,38 @@ def test_duplicate_role_name(init_oso):
                 permissions: ["pull"]
             }
         };
+
+    parent(repo: Repository, parent_org: Organization) if
+        repo.org = parent_org;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
 
-    with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+    # with pytest.raises(OsoError):
+    oso.roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    oso_repo = sample_data["oso_repo"]
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+    gabe = sample_data["gabe"]
+
+    oso.roles.assign_role(leina, osohq, "owner", session)
+    oso.roles.assign_role(steve, oso_repo, "member", session)
+    oso.roles.assign_role(gabe, osohq, "member", session)
+    session.commit()
+
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(leina, "pull", oso_repo)
+
+    assert not oso.is_allowed(steve, "invite", osohq)
+    assert oso.is_allowed(steve, "pull", oso_repo)
+
+    assert not oso.is_allowed(gabe, "invite", osohq)
+    assert oso.is_allowed(gabe, "create_repo", osohq)
+    assert not oso.is_allowed(gabe, "pull", oso_repo)
 
 
 def test_resource_actions(init_oso):

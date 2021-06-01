@@ -321,6 +321,7 @@ class Resource:
 @dataclass
 class Config:
     resources: Dict[str, Resource]
+    class_to_resource_name: Dict[Any, str]
     permissions: List[Permission]
     roles: Dict[str, Role]
     relationships: List[Relationship]
@@ -348,11 +349,47 @@ def parse_permission(permission, python_class, config):
     return perm
 
 
+def parse_role_name(role_name, resource_class, config, other_ok=False):
+    """Parse a role name and return a normalized role name (with namspace).
+
+    :param role_name: un-normalized role name
+    :type role_name: str
+    :param resource_class: python class of resource inside which this role was defined
+    :type resource_class: Any
+    :param config: role config
+    :type config: Config
+    :param other_ok: Flag to indicate if a namespace other than `resource_name` is allowed, defaults to False
+    :type other_ok: bool, optional
+    :return: Normalized role name (with namespace)
+    :rtype: str
+    """
+    assert resource_class in config.class_to_resource_name
+    resource_name = config.class_to_resource_name[resource_class]
+    if ":" in role_name:
+        namespace, _ = role_name.split(":", 1)
+        if namespace not in config.resources:
+            raise OsoError(f"Invalid role namespace {namespace}.")
+    else:
+        role_name = f"{resource_name}:{role_name}"
+
+    return role_name
+
+
 def read_config(oso):
+    """Queries the Oso policy for resource and relationship configurations
+
+    :param oso: Oso object with correct policy loaded
+    :type oso: Oso
+    :return: configuration object that stores resource, permissions, roles, and relationships
+    :rtype: Config
     """
-    Queries the polar policy for the configuration
-    """
-    config = Config(resources={}, permissions=[], roles={}, relationships=[])
+    config = Config(
+        resources={},
+        class_to_resource_name={},
+        permissions=[],
+        roles={},
+        relationships=[],
+    )
 
     # Register relationships
     role_relationships = oso.query_rule(
@@ -461,7 +498,7 @@ def read_config(oso):
         arg = resource_def.args[0]
         type = isa_type(arg)
 
-        name = result["bindings"]["name"]
+        resource_name = result["bindings"]["name"]
         permissions = result["bindings"]["permissions"]
         role_defs = result["bindings"]["roles"]
 
@@ -484,17 +521,18 @@ def read_config(oso):
         if len(permissions) == 0 and len(role_names) == 0:
             raise OsoError("Must define actions or roles for resource.")
 
-        if name in config.resources:
-            raise OsoError(f"Duplicate resource name {name}")
+        if resource_name in config.resources:
+            raise OsoError(f"Duplicate resource name {resource_name}")
 
         resource = Resource(
             python_class=python_class,
             type=python_class.__name__,
-            name=name,
+            name=resource_name,
             actions=permissions,
             roles=role_names,
         )
         config.resources[resource.name] = resource
+        config.class_to_resource_name[python_class] = resource_name
 
         permissions = [
             Permission(
@@ -512,9 +550,20 @@ def read_config(oso):
         if isinstance(role_defs, Variable):
             continue  # No roles defined
 
-        for name, role_def in role_defs.items():
-            if name in config.roles:
-                raise OsoError(f"Duplicate role name {name}")
+        for role_name, role_def in role_defs.items():
+            # preprocess role name
+            role_name = parse_role_name(role_name, python_class, config)
+            # split = role_name.split(":")
+            # if len(split) > 1:
+            #     if split[0] != resource_name:
+            #         raise OsoError(
+            #             f"Cannot define role for resource {split[0]} inside resource definition for {resource_name}."
+            #         )
+            # else:
+            #     role_name = f"{resource_name}:{role_name}"
+
+            if role_name in config.roles:
+                raise OsoError(f"Duplicate role name {role_name}")
 
             for key in role_def.keys():
                 if key not in ("permissions", "implies"):
@@ -528,13 +577,16 @@ def read_config(oso):
 
             implied_roles = []
             if "implies" in role_def:
-                implied_roles = role_def["implies"]
+                implied_roles = [
+                    parse_role_name(role, python_class, config, other_ok=True)
+                    for role in role_def["implies"]
+                ]
 
             if len(role_permissions) == 0 and len(implied_roles) == 0:
                 raise OsoError("Must define permissions or implied roles for a role.")
 
             role = Role(
-                name=name,
+                name=role_name,
                 python_class=python_class,
                 type=python_class.__name__,
                 permissions=role_permissions,
@@ -543,15 +595,15 @@ def read_config(oso):
             config.roles[role.name] = role
 
     # Validate config
-    for name, role in config.roles.items():
+    for role_name, role in config.roles.items():
         for permission in role.permissions:
             if permission.python_class != role.python_class:
                 for _, other_role in config.roles.items():
                     if other_role.python_class == permission.python_class:
                         raise OsoError(
-                            f"Permission {permission.name} on {permission.type} "
-                            + f"can not go on role {name} on {role.type} "
-                            + f"because {permission.type} has it's own roles. Use an implication."
+                            f"""Permission {permission.name} on {permission.type}
+                            can not go on role {role_name} on {role.type}
+                            because {permission.type} has it's own roles. Use an implication."""
                         )
 
                 cls = permission.python_class
@@ -565,14 +617,16 @@ def read_config(oso):
                     if not stepped:
                         raise OsoError(
                             f"Permission {permission.name} on {permission.type} "
-                            + f"can not go on role {name} on {role.type} "
+                            + f"can not go on role {role_name} on {role.type} "
                             + "because no relationship exists."
                         )
 
         for implied in role.implied_roles:
             # Make sure implied role exists
             if implied not in config.roles:
-                raise OsoError(f"Role '{implied}' implied by '{name}' does not exist.")
+                raise OsoError(
+                    f"Role '{implied}' implied by '{role_name}' does not exist."
+                )
             implied_role = config.roles[implied]
             # Make sure implied role is on a valid class
             cls = implied_role.python_class
@@ -585,7 +639,7 @@ def read_config(oso):
                         break
                 if not stepped:
                     raise OsoError(
-                        f"Role {name} on {role.type} "
+                        f"Role {role_name} on {role.type} "
                         + f"can not imply role {implied} on {implied_role.type} "
                         + "because no relationship exists."
                     )
@@ -694,7 +748,7 @@ class OsoRoles:
             class Role(oso.base):
                 __tablename__ = "roles"
                 name = Column(String, primary_key=True)
-                resource_type = Column(String)
+                resource_type = Column(String, primary_key=True)
 
         if models.get("RolePermission"):
             RolePermission = models["RolePermission"]
@@ -928,6 +982,7 @@ class OsoRoles:
 
     def _get_user_role(self, session, user, resource, role_name):
         """Gets user role for resource if exists"""
+        role_name = parse_role_name(role_name, type(resource), self.config)
         if role_name not in self.config.roles:
             raise OsoError(f"Could not find role {role_name}")
 
@@ -935,9 +990,9 @@ class OsoRoles:
 
         if not resource.__class__ == role.python_class:
             raise OsoError(
-                f'No Role "{role_name}" '
-                + "for resource {resource} "
-                + "(expected resource to be of type {role.type})."
+                f"""No Role "{role_name}"
+                for resource {resource}
+                (expected resource to be of type {role.type})."""
             )
 
         user_pk_name, _ = get_pk(user.__class__)
@@ -960,6 +1015,9 @@ class OsoRoles:
 
     @ensure_configured
     def assign_role(self, user, resource, role_name, session=None, reassign=True):
+        role_name = parse_role_name(role_name, type(resource), self.config)
+        assert ":" in role_name
+
         if not session:
             my_session = self._get_session()
         else:
@@ -995,6 +1053,8 @@ class OsoRoles:
 
     @ensure_configured
     def remove_role(self, user, resource, role_name, session=None):
+        role_name = parse_role_name(role_name, type(resource), self.config)
+        assert ":" in role_name
         if not session:
             my_session = self._get_session()
         else:
