@@ -266,7 +266,7 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
     resource(_type: Organization, "org", _, roles) if
         roles = {
             member: {
-                implies: ["repo_read"]
+                implies: ["repo:reader"]
             }
         };
 
@@ -276,7 +276,7 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
             "pull"
         ] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -297,7 +297,7 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
     oso_repo = sample_data["oso_repo"]
 
     oso.roles.assign_role(leina, osohq, "member", session)
-    oso.roles.assign_role(steve, oso_repo, "repo_read", session)
+    oso.roles.assign_role(steve, oso_repo, "reader", session)
 
     assert oso.is_allowed(leina, "pull", oso_repo)
     assert oso.is_allowed(steve, "pull", oso_repo)
@@ -322,7 +322,7 @@ def test_duplicate_resource_name(init_oso):
             "pull"
         ] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -516,7 +516,7 @@ def test_undeclared_permission(init_oso):
             "invite"
         ] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["create_repo"]
             }
         };
@@ -536,7 +536,7 @@ def test_undeclared_role(init_oso):
             "invite"
         ] and
         roles = {
-            org_member: {
+            member: {
                 implies: ["fake_role"]
             }
         };
@@ -555,8 +555,8 @@ def test_role_implication_without_relationship(init_oso):
             "invite"
         ] and
         roles = {
-            org_member: {
-                implies: ["repo_read"]
+            member: {
+                implies: ["repo:reader"]
             }
         };
 
@@ -566,7 +566,7 @@ def test_role_implication_without_relationship(init_oso):
             "pull"
         ] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -585,7 +585,7 @@ def test_role_permission_without_relationship(init_oso):
             "invite"
         ] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["repo:push"]
             }
         };
@@ -610,7 +610,7 @@ def test_invalid_role_permission(init_oso):
             "invite"
         ] and
         roles = {
-            org_member: {
+            member: {
                 # THIS IS NOT ALLOWED
                 permissions: ["repo:push"]
             }
@@ -622,7 +622,7 @@ def test_invalid_role_permission(init_oso):
             "pull"
         ] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["push"]
             }
 
@@ -646,12 +646,12 @@ def test_permission_assignment_to_implied_role(init_oso):
             "invite"
         ] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             },
-            org_owner: {
+            owner: {
                 permissions: ["invite"],
-                implies: ["org_member"]
+                implies: ["org:member"]
             }
 
         };
@@ -694,7 +694,7 @@ def test_wrong_type_resource_arguments(init_oso):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 # incorrect key name
                 actions: ["invite"]
             }
@@ -746,9 +746,9 @@ def test_overlapping_permissions(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"],
-                implies: ["repo_read"]
+                implies: ["repo:reader"]
             }
         };
 
@@ -758,13 +758,13 @@ def test_overlapping_permissions(init_oso, sample_data):
             "pull"
         ] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             },
-            repo_write: {
-                # repo_write is more permissive than org_member
+            writer: {
+                # writer is more permissive than reader
                 permissions: ["push"],
-                implies: ["repo_read"]
+                implies: ["reader"]
             }
         };
 
@@ -782,10 +782,10 @@ def test_overlapping_permissions(init_oso, sample_data):
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    # repo_write is more permissive than org_member
-    oso.roles.assign_role(leina, osohq, "org_member")
-    oso.roles.assign_role(steve, osohq, "org_member")
-    oso.roles.assign_role(leina, oso_repo, "repo_write")
+    # writer is more permissive than member
+    oso.roles.assign_role(leina, osohq, "member")
+    oso.roles.assign_role(steve, osohq, "member")
+    oso.roles.assign_role(leina, oso_repo, "writer")
 
     assert oso.is_allowed(leina, "pull", oso_repo)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -804,7 +804,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             }
         };
@@ -819,7 +819,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert not oso.is_allowed(steve, "invite", osohq)
@@ -829,7 +829,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite", "list_repos"] and
         roles = {
-            org_member: {
+            member: {
                 # REMOVE INVITE AND ADD LIST_REPOS
                 permissions: ["list_repos"]
             }
@@ -857,7 +857,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite", "repo:pull"]
             }
         };
@@ -883,7 +883,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "pull", oso_repo)
@@ -894,7 +894,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             }
         };
@@ -929,12 +929,12 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["list_repos", "invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["list_repos", "issue:edit"]
             },
-            org_owner: {
+            owner: {
                 permissions: ["invite"],
-                implies: ["org_member"]
+                implies: ["member"]
             }
         };
 
@@ -961,14 +961,14 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
 
     assert oso.is_allowed(leina, "list_repos", osohq)
     assert oso.is_allowed(leina, "edit", oso_bug)
     assert not oso.is_allowed(leina, "invite", osohq)
     assert not oso.is_allowed(steve, "edit", oso_bug)
 
-    oso.roles.assign_role(steve, osohq, "org_owner", session=session)
+    oso.roles.assign_role(steve, osohq, "owner", session=session)
     assert oso.is_allowed(steve, "edit", oso_bug)
     assert oso.is_allowed(steve, "list_repos", osohq)
     assert oso.is_allowed(steve, "invite", osohq)
@@ -978,7 +978,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             }
         };
@@ -1015,11 +1015,11 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             },
-            org_owner: {
-                implies: ["org_member"]
+            owner: {
+                implies: ["member"]
             }
         };
 
@@ -1036,8 +1036,8 @@ def test_homogeneous_role_implication(init_oso, sample_data):
 
     assert not oso.is_allowed(leina, "invite", osohq)
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
-    oso.roles.assign_role(steve, osohq, "org_owner", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
+    oso.roles.assign_role(steve, osohq, "owner", session=session)
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(steve, "invite", osohq)
@@ -1047,10 +1047,10 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite", "list_repos"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             },
-            org_owner: {
+            owner: {
                 # REMOVE "implies"
                 permissions: ["list_repos"]
             }
@@ -1081,9 +1081,9 @@ def test_parent_child_role_implication(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"],
-                implies: ["repo_read"]
+                implies: ["repo:reader"]
             }
         };
 
@@ -1093,7 +1093,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
             "pull"
         ] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -1113,8 +1113,8 @@ def test_parent_child_role_implication(init_oso, sample_data):
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    # org_member implies repo_read which has the "pull" permission
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    # member implies reader which has the "pull" permission
+    oso.roles.assign_role(leina, osohq, "member", session=session)
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "pull", oso_repo)
@@ -1125,7 +1125,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             }
         };
@@ -1161,9 +1161,9 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"],
-                implies: ["issue_editor"]
+                implies: ["issue:editor"]
             }
         };
 
@@ -1172,7 +1172,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
             "edit"
         ] and
         roles = {
-            issue_editor: {
+            editor: {
                 permissions: ["edit"]
             }
         };
@@ -1194,7 +1194,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "edit", oso_bug)
@@ -1205,7 +1205,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             }
         };
@@ -1215,7 +1215,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
             "edit"
         ] and
         roles = {
-            issue_editor: {
+            editor: {
                 permissions: ["edit"]
             }
         };
@@ -1247,9 +1247,9 @@ def test_chained_role_implication(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"],
-                implies: ["repo_read"]
+                implies: ["repo:reader"]
 
             }
         };
@@ -1260,9 +1260,9 @@ def test_chained_role_implication(init_oso, sample_data):
             "pull"
         ] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"],
-                implies: ["issue_editor"]
+                implies: ["issue:editor"]
             }
         };
 
@@ -1271,7 +1271,7 @@ def test_chained_role_implication(init_oso, sample_data):
             "edit"
         ] and
         roles = {
-            issue_editor: {
+            editor: {
                 permissions: ["edit"]
             }
         };
@@ -1294,8 +1294,8 @@ def test_chained_role_implication(init_oso, sample_data):
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
-    oso.roles.assign_role(steve, oso_repo, "repo_read", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
+    oso.roles.assign_role(steve, oso_repo, "reader", session=session)
 
     # leina can invite to the org, pull from the repo, and edit the issue
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1313,7 +1313,7 @@ def test_chained_role_implication(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             }
         };
@@ -1324,9 +1324,9 @@ def test_chained_role_implication(init_oso, sample_data):
             "pull"
         ] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"],
-                implies: ["issue_editor"]
+                implies: ["issue:editor"]
             }
         };
 
@@ -1335,7 +1335,7 @@ def test_chained_role_implication(init_oso, sample_data):
             "edit"
         ] and
         roles = {
-            issue_editor: {
+            editor: {
                 permissions: ["edit"]
             }
         };
@@ -1380,7 +1380,7 @@ def test_assign_role_wrong_resource_type(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             }
         };
@@ -1395,7 +1395,7 @@ def test_assign_role_wrong_resource_type(init_oso, sample_data):
     leina = sample_data["leina"]
 
     with pytest.raises(OsoError):
-        oso.roles.assign_role(leina, oso_repo, "org_member", session=session)
+        oso.roles.assign_role(leina, oso_repo, "member", session=session)
 
 
 def test_assign_remove_nonexistent_role(init_oso, sample_data):
@@ -1405,7 +1405,7 @@ def test_assign_remove_nonexistent_role(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             }
         };
@@ -1420,10 +1420,10 @@ def test_assign_remove_nonexistent_role(init_oso, sample_data):
     leina = sample_data["leina"]
 
     with pytest.raises(OsoError):
-        oso.roles.assign_role(leina, osohq, "org_owner", session=session)
+        oso.roles.assign_role(leina, osohq, "owner", session=session)
 
     with pytest.raises(OsoError):
-        oso.roles.remove_role(leina, osohq, "org_owner", session=session)
+        oso.roles.remove_role(leina, osohq, "owner", session=session)
 
 
 def test_remove_unassigned_role(init_oso, sample_data):
@@ -1433,7 +1433,7 @@ def test_remove_unassigned_role(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             }
         };
@@ -1447,7 +1447,7 @@ def test_remove_unassigned_role(init_oso, sample_data):
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
 
-    removed = oso.roles.remove_role(leina, osohq, "org_member", session=session)
+    removed = oso.roles.remove_role(leina, osohq, "member", session=session)
     assert not removed
 
 
@@ -1458,10 +1458,10 @@ def test_assign_remove_user_role(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite", "list_repos"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             },
-            org_owner: {
+            owner: {
                 permissions: ["list_repos"]
             }
         };
@@ -1476,7 +1476,7 @@ def test_assign_remove_user_role(init_oso, sample_data):
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
 
     # Assign leina member role
     leina_roles = (
@@ -1485,10 +1485,10 @@ def test_assign_remove_user_role(init_oso, sample_data):
         .all()
     )
     assert len(leina_roles) == 1
-    assert leina_roles[0].role == "org_member"
+    assert leina_roles[0].role == "org:member"
 
     # Assign steve owner role
-    oso.roles.assign_role(steve, osohq, "org_owner", session=session)
+    oso.roles.assign_role(steve, osohq, "owner", session=session)
 
     steve_roles = (
         session.query(oso.roles.UserRole)
@@ -1496,14 +1496,14 @@ def test_assign_remove_user_role(init_oso, sample_data):
         .all()
     )
     assert len(steve_roles) == 1
-    assert steve_roles[0].role == "org_owner"
+    assert steve_roles[0].role == "org:owner"
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert not oso.is_allowed(steve, "invite", osohq)
     assert oso.is_allowed(steve, "list_repos", osohq)
 
     # - Removing user-role assignment revokes access
-    removed = oso.roles.remove_role(leina, osohq, "org_member", session=session)
+    removed = oso.roles.remove_role(leina, osohq, "member", session=session)
     assert removed
     leina_roles = (
         session.query(oso.roles.UserRole)
@@ -1519,7 +1519,7 @@ def test_assign_remove_user_role(init_oso, sample_data):
         .all()
     )
     assert len(steve_roles) == 1
-    assert steve_roles[0].role == "org_owner"
+    assert steve_roles[0].role == "org:owner"
 
     assert not oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(steve, "list_repos", osohq)
@@ -1532,19 +1532,19 @@ def test_reassign_user_role(init_oso, sample_data):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite", "list_repos"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             },
-            org_owner: {
+            owner: {
                 permissions: ["list_repos"],
-                implies: ["org_member", "repo_read"]
+                implies: ["member", "repo:reader"]
             }
         };
 
     resource(_type: Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -1562,30 +1562,30 @@ def test_reassign_user_role(init_oso, sample_data):
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session)
+    oso.roles.assign_role(leina, osohq, "member", session)
     leina_roles = (
         session.query(oso.roles.UserRole)
         .filter(oso.roles.UserRole.user_id == leina.id)
         .all()
     )
     assert len(leina_roles) == 1
-    assert leina_roles[0].role == "org_member"
+    assert leina_roles[0].role == "org:member"
 
-    oso.roles.assign_role(steve, osohq, "org_owner", session)
+    oso.roles.assign_role(steve, osohq, "owner", session)
     steve_roles = (
         session.query(oso.roles.UserRole)
         .filter(oso.roles.UserRole.user_id == steve.id)
         .all()
     )
     assert len(steve_roles) == 1
-    assert steve_roles[0].role == "org_owner"
+    assert steve_roles[0].role == "org:owner"
 
     # reassigning with reassign=False throws an error
     with pytest.raises(OsoError):
-        oso.roles.assign_role(leina, osohq, "org_owner", reassign=False)
+        oso.roles.assign_role(leina, osohq, "owner", reassign=False)
 
     # reassign with reassign=True
-    oso.roles.assign_role(leina, osohq, "org_owner", session)
+    oso.roles.assign_role(leina, osohq, "owner", session)
 
     leina_roles = (
         session.query(oso.roles.UserRole)
@@ -1593,7 +1593,7 @@ def test_reassign_user_role(init_oso, sample_data):
         .all()
     )
     assert len(leina_roles) == 1
-    assert leina_roles[0].role == "org_owner"
+    assert leina_roles[0].role == "org:owner"
 
 
 # TEST DATA FILTERING
@@ -1611,16 +1611,16 @@ def test_authorizing_related_fields(
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite", "read"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite", "read"],
-                implies: ["repo_read"]
+                implies: ["repo:reader"]
             }
         };
 
     resource(_type: Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -1637,7 +1637,7 @@ def test_authorizing_related_fields(
     osohq = sample_data["osohq"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(steve, osohq, "org_member", session)
+    oso.roles.assign_role(steve, osohq, "member", session)
 
     oso.actor = steve
 
@@ -1660,7 +1660,7 @@ def test_data_filtering_role_allows_not(
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             }
         };
@@ -1676,8 +1676,8 @@ def test_data_filtering_role_allows_not(
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
-    oso.roles.assign_role(steve, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
+    oso.roles.assign_role(steve, osohq, "member", session=session)
 
     # This is just to ensure we don't modify the policy above.
     assert not oso.is_allowed(leina, "invite", osohq)
@@ -1701,16 +1701,16 @@ def test_data_filtering_role_allows_and(
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"],
-                implies: ["repo_read"]
+                implies: ["repo:reader"]
             }
         };
 
     resource(_type: Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -1730,9 +1730,9 @@ def test_data_filtering_role_allows_and(
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
-    oso.roles.assign_role(leina, apple, "org_member", session=session)
-    oso.roles.assign_role(steve, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
+    oso.roles.assign_role(leina, apple, "member", session=session)
+    oso.roles.assign_role(steve, osohq, "member", session=session)
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1762,16 +1762,16 @@ def test_data_filtering_role_allows_explicit_or(
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"],
-                implies: ["repo_read"]
+                implies: ["repo:reader"]
             }
         };
 
     resource(_type: Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -1791,7 +1791,7 @@ def test_data_filtering_role_allows_explicit_or(
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(steve, apple, "org_member", session=session)
+    oso.roles.assign_role(steve, apple, "member", session=session)
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(steve, "invite", osohq)
@@ -1831,7 +1831,7 @@ def test_data_filtering_role_allows_implicit_or(
     resource(_type: Organization, "org", actions, roles) if
         actions = ["read"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["read"]
             }
         };
@@ -1845,7 +1845,7 @@ def test_data_filtering_role_allows_implicit_or(
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "read", leina)
@@ -1869,13 +1869,13 @@ def test_data_filtering_user_in_role_not(
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"]
             }
         };
 
     allow(actor, action, resource) if
-        not Roles.user_in_role(actor, "org_member", resource);
+        not Roles.user_in_role(actor, "member", resource);
     """
     oso.load_str(policy)
     oso.roles.synchronize_data()
@@ -1885,8 +1885,8 @@ def test_data_filtering_user_in_role_not(
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
-    oso.roles.assign_role(steve, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
+    oso.roles.assign_role(steve, osohq, "member", session=session)
 
     # This is just to ensure we don't modify the policy above.
     assert not oso.is_allowed(leina, "invite", osohq)
@@ -1910,16 +1910,16 @@ def test_data_filtering_user_in_role_and(
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"],
-                implies: ["repo_read"]
+                implies: ["repo:reader"]
             }
         };
 
     resource(_type: Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -1928,7 +1928,7 @@ def test_data_filtering_user_in_role_and(
         repo.org = parent_org;
 
     allow(actor, action, resource) if
-        Roles.user_in_role(actor, "org_member", resource) and
+        Roles.user_in_role(actor, "member", resource) and
         resource.id = "osohq";
     """
     oso.load_str(policy)
@@ -1939,9 +1939,9 @@ def test_data_filtering_user_in_role_and(
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
-    oso.roles.assign_role(leina, apple, "org_member", session=session)
-    oso.roles.assign_role(steve, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
+    oso.roles.assign_role(leina, apple, "member", session=session)
+    oso.roles.assign_role(steve, osohq, "member", session=session)
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1971,16 +1971,16 @@ def test_data_filtering_user_in_role_explicit_or(
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["invite"],
-                implies: ["repo_read"]
+                implies: ["repo:reader"]
             }
         };
 
     resource(_type: Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -1989,7 +1989,10 @@ def test_data_filtering_user_in_role_explicit_or(
         repo.org = parent_org;
 
     allow(actor, action, resource) if
-        Roles.user_in_role(actor, "org_member", resource) or
+        Roles.role_allows(actor, action, resource);
+
+    allow(actor, _, resource) if
+        Roles.user_in_role(actor, "member", resource) or
         resource.id = "osohq";
     """
     oso.load_str(policy)
@@ -2000,7 +2003,8 @@ def test_data_filtering_user_in_role_explicit_or(
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(steve, apple, "org_member", session=session)
+    oso.roles.assign_role(steve, apple, "member", session=session)
+    session.commit()
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(steve, "invite", osohq)
@@ -2040,13 +2044,13 @@ def test_data_filtering_user_in_role_implicit_or(
     resource(_type: Organization, "org", actions, roles) if
         actions = ["read"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["read"]
             }
         };
 
     allow(actor, action, resource) if
-        Roles.user_in_role(actor, "org_member", resource);
+        Roles.user_in_role(actor, "member", resource);
     """
     oso.load_str(policy)
     oso.roles.synchronize_data()
@@ -2054,7 +2058,7 @@ def test_data_filtering_user_in_role_implicit_or(
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "read", leina)
@@ -2081,14 +2085,14 @@ def test_data_filtering_combo(
     resource(_type: Organization, "org", actions, roles) if
         actions = ["read"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["read"]
             }
         };
 
     allow(actor, action, resource) if
         role_allows = Roles.role_allows(actor, action, resource) and
-        user_in_role = Roles.user_in_role(actor, "org_member", resource) and
+        user_in_role = Roles.user_in_role(actor, "member", resource) and
         role_allows and user_in_role;
     """
     # You can't directly `and` the two Roles calls right now but it does work if you do it like ^
@@ -2098,7 +2102,7 @@ def test_data_filtering_combo(
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
 
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "read", leina)
@@ -2123,10 +2127,10 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
     resource(_type: Organization, "org", actions, roles) if
         actions = ["invite", "list_repos"] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["list_repos"]
             },
-            org_owner: {
+            owner: {
                 permissions: ["invite"]
             }
         };
@@ -2134,7 +2138,7 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
     resource(_type: Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -2158,19 +2162,19 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
     # - [ ] Test getting all roles for a resource
     repo_roles = oso.roles.for_resource(Repository, session)
     assert len(repo_roles) == 1
-    assert repo_roles[0] == "repo_read"
+    assert repo_roles[0] == "repo:reader"
 
     org_roles = oso.roles.for_resource(Organization, session)
     assert len(org_roles) == 2
-    assert "org_member" in org_roles
-    assert "org_owner" in org_roles
+    assert "org:member" in org_roles
+    assert "org:owner" in org_roles
 
     # - [ ] Test getting all role assignments for a resource
-    oso.roles.assign_role(leina, osohq, "org_member", session=session)
-    oso.roles.assign_role(leina, oso_repo, "repo_read", session=session)
+    oso.roles.assign_role(leina, osohq, "member", session=session)
+    oso.roles.assign_role(leina, oso_repo, "reader", session=session)
 
-    oso.roles.assign_role(steve, osohq, "org_owner", session=session)
-    oso.roles.assign_role(steve, ios, "repo_read", session=session)
+    oso.roles.assign_role(steve, osohq, "owner", session=session)
+    oso.roles.assign_role(steve, ios, "reader", session=session)
 
     osohq_assignments = oso.roles.assignments_for_resource(osohq, session)
     assert len(osohq_assignments) == 2
@@ -2192,18 +2196,18 @@ def test_user_in_role(
     policy = """
     resource(_type: Organization, "org", _actions, roles) if
         roles = {
-            org_member: {
-                implies: ["repo_read"]
+            member: {
+                implies: ["repo:reader"]
             },
-            org_owner: {
-                implies: ["org_member"]
+            owner: {
+                implies: ["member"]
             }
         };
 
     resource(_type: Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -2213,7 +2217,7 @@ def test_user_in_role(
 
 
     allow(actor, "read", repo: Repository) if
-        Roles.user_in_role(actor, "repo_read", repo);
+        Roles.user_in_role(actor, "reader", repo);
     """
     oso.load_str(policy)
     oso.roles.synchronize_data()
@@ -2224,8 +2228,8 @@ def test_user_in_role(
     steve = sample_data["steve"]
     gabe = sample_data["gabe"]
 
-    oso.roles.assign_role(leina, osohq, "org_member")
-    oso.roles.assign_role(steve, oso_repo, "repo_read")
+    oso.roles.assign_role(leina, osohq, "member")
+    oso.roles.assign_role(steve, oso_repo, "reader")
 
     # Without data filtering
     assert oso.is_allowed(leina, "read", oso_repo)
@@ -2348,13 +2352,13 @@ def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issu
             "create_repo"
         ] and
         roles = {
-            org_member: {
+            member: {
                 permissions: ["create_repo"],
-                implies: ["repo_read"]
+                implies: ["repo:reader"]
             },
-            org_owner: {
+            owner: {
                 permissions: ["invite"],
-                implies: ["org_member", "repo_write"]
+                implies: ["member", "repo:writer"]
             }
         };
 
@@ -2364,11 +2368,11 @@ def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issu
             "pull"
         ] and
         roles = {
-            repo_write: {
+            writer: {
                 permissions: ["push", "issue:edit"],
-                implies: ["repo_read"]
+                implies: ["reader"]
             },
-            repo_read: {
+            reader: {
                 permissions: ["pull"]
             }
         };
@@ -2416,8 +2420,8 @@ def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issu
 
     # @NOTE: Need the users and resources in the db before assigning roles
     # so you have to call session.commit() first.
-    oso.roles.assign_role(leina, osohq, "org_owner", session=session)
-    oso.roles.assign_role(steve, osohq, "org_member", session=session)
+    oso.roles.assign_role(leina, osohq, "owner", session=session)
+    oso.roles.assign_role(steve, osohq, "member", session=session)
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "create_repo", osohq)
@@ -2454,21 +2458,21 @@ def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issu
     result_ids = [issue.id for issue in results]
     assert bug.id in result_ids
     assert not oso.is_allowed(gabe, "edit", bug)
-    oso.roles.assign_role(gabe, osohq, "org_member", session=session)
+    oso.roles.assign_role(gabe, osohq, "member", session=session)
     assert not oso.is_allowed(gabe, "edit", bug)
-    oso.roles.assign_role(gabe, osohq, "org_owner", session=session)
+    oso.roles.assign_role(gabe, osohq, "owner", session=session)
     assert oso.is_allowed(gabe, "edit", bug)
-    oso.roles.assign_role(gabe, osohq, "org_member", session=session)
+    oso.roles.assign_role(gabe, osohq, "member", session=session)
     assert not oso.is_allowed(gabe, "edit", bug)
-    oso.roles.assign_role(gabe, osohq, "org_owner", session=session)
+    oso.roles.assign_role(gabe, osohq, "owner", session=session)
     assert oso.is_allowed(gabe, "edit", bug)
-    oso.roles.remove_role(gabe, osohq, "org_owner", session=session)
+    oso.roles.remove_role(gabe, osohq, "owner", session=session)
     assert not oso.is_allowed(gabe, "edit", bug)
 
     org_roles = oso.roles.for_resource(Repository)
-    assert set(org_roles) == {"repo_read", "repo_write"}
+    assert set(org_roles) == {"repo:reader", "repo:writer"}
     oso_assignments = oso.roles.assignments_for_resource(osohq)
     assert oso_assignments == [
-        {"user_id": leina.id, "role": "org_owner"},
-        {"user_id": steve.id, "role": "org_member"},
+        {"user_id": leina.id, "role": "org:owner"},
+        {"user_id": steve.id, "role": "org:member"},
     ]

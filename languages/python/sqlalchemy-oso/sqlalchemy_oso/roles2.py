@@ -353,7 +353,8 @@ def parse_role_name(role_name, resource_class, config, other_ok=False):
     :return: Normalized role name (with namespace)
     :rtype: str
     """
-    assert resource_class in config.class_to_resource_name
+    if not resource_class in config.class_to_resource_name:
+        raise OsoError(f"Unrecognized resource type {resource_class}.")
     resource_name = config.class_to_resource_name[resource_class]
     if ":" in role_name:
         namespace, _ = role_name.split(":", 1)
@@ -738,7 +739,7 @@ class OsoRoles:
             class Role(oso.base):
                 __tablename__ = "roles"
                 name = Column(String, primary_key=True)
-                resource_type = Column(String, primary_key=True)
+                resource_type = Column(String)
 
         if models.get("RolePermission"):
             RolePermission = models["RolePermission"]
@@ -955,6 +956,7 @@ class OsoRoles:
         )
 
     def _user_in_role(self, user, role, resource):
+        role = parse_role_name(role, type(resource), self.config)
         return self._roles_query(
             user, role, resource, self.user_in_role_sql_query, role=role
         )
@@ -1133,7 +1135,8 @@ def _generate_query_filter(oso, role_method, model):
 
         elif role_method.name == "user_in_role":
             list_sql = oso.roles.user_in_role_list_filter_queries[resource_type]
-            params["role"] = action_or_role
+            role = parse_role_name(action_or_role, model, oso.roles.config)
+            params["role"] = role
 
         else:
             # Should never reach here
