@@ -25,7 +25,6 @@
 
     {{- $styles := resources.Get "css/styles.css" | postCSS (dict "config" "./assets/css/postcss.config.js") -}}
 
-    <script async src="{{ $.Site.BaseURL }}bundle.js"></script>
 
     <link href="{{ $.Site.BaseURL}}all.min.css" rel="stylesheet"> <!--load all styles -->
 
@@ -35,6 +34,8 @@
     {{ else }}
     <meta id="search-index" name="search-index" content="preview_OSODOCS" />    
     {{ end }}
+
+    <script async src="{{ $.Site.BaseURL }}bundle.js"></script>
 
     {{- if .Site.IsServer }}
     <link rel="stylesheet" href="{{ $styles.RelPermalink }}">
