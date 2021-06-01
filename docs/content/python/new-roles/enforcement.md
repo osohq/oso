@@ -22,7 +22,7 @@ user's role for a particular organization.
 a single resource. Here's how that looks for the `POST /orgs` endpoint:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes.py"
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
     from="docs: begin-is-allowed"
     to="docs: end-is-allowed"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
@@ -40,7 +40,7 @@ enforcing authorization on a list endpoint. Here's how that looks for the `GET
 /orgs` endpoint:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes.py"
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
     from="docs: begin-org-index"
     to="docs: end-org-index"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
@@ -79,7 +79,7 @@ In the `POST /orgs` route handler, we pass `g.current_user` to
 `Oso.is_allowed()` as the actor:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes.py"
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
     from="docs: begin-is-allowed"
     to="docs: end-is-allowed"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
