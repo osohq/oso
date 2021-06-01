@@ -1,3 +1,5 @@
 pytest==5.3.5
 flask
 flask_sqlalchemy
+pytest-pgsql
+psycopg2

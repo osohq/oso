@@ -1,10 +1,14 @@
 # Roles 2 tests
 import pytest
+import psycopg2
+import random
+import string
 
 from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
 from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker, close_all_sessions
 from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy_oso import authorized_sessionmaker, SQLAlchemyOso
@@ -12,11 +16,32 @@ from sqlalchemy_oso import authorized_sessionmaker, SQLAlchemyOso
 from oso import OsoError
 
 
-@pytest.fixture
-def engine():
-    engine = create_engine("sqlite:///:memory:")
+@pytest.fixture(params=["postgres", "sqlite"])
+def engine(request):
+    if request.param == "postgres":
+        # This database must be created before running tests.
+        id = "".join(random.choice(string.ascii_lowercase) for i in range(10))
+        name = f"roles_test_{id}"
 
-    return engine
+        conn = psycopg2.connect(host="localhost")
+        conn.autocommit = True
+        cursor = conn.cursor()
+        cursor.execute(f"create database {name}")
+        conn.close()
+
+        engine = create_engine(f"postgresql://localhost/{name}", poolclass=NullPool)
+        yield engine
+        engine.dispose()
+        close_all_sessions()
+
+        conn = psycopg2.connect(host="localhost")
+        conn.autocommit = True
+        cursor = conn.cursor()
+        cursor.execute(f"drop database if exists {name}")
+        conn.close()
+    elif request.param == "sqlite":
+        engine = create_engine("sqlite:///:memory:")
+        yield engine
 
 
 @pytest.fixture
@@ -71,8 +96,57 @@ def Issue(Base):
     return Issue
 
 
+# Taken directly from an issue on flask-sqlalchemy
+#  https://github.com/pallets/flask-sqlalchemy/issues/722
+def drop_everything(engine):
+    """(On a live db) drops all foreign key constraints before dropping all tables.
+    Workaround for SQLAlchemy not doing DROP ## CASCADE for drop_all()
+    (https://github.com/pallets/flask-sqlalchemy/issues/722)
+    """
+    from sqlalchemy.engine.reflection import Inspector
+    from sqlalchemy.schema import (
+        DropConstraint,
+        DropTable,
+        MetaData,
+        Table,
+        ForeignKeyConstraint,
+    )
+
+    con = engine.connect()
+    trans = con.begin()
+    inspector = Inspector.from_engine(engine)
+
+    # We need to re-create a minimal metadata with only the required things to
+    # successfully emit drop constraints and tables commands for postgres (based
+    # on the actual schema of the running instance)
+    meta = MetaData()
+    tables = []
+    all_fkeys = []
+
+    for table_name in inspector.get_table_names():
+        fkeys = []
+
+        for fkey in inspector.get_foreign_keys(table_name):
+            if not fkey["name"]:
+                continue
+
+            fkeys.append(ForeignKeyConstraint((), (), name=fkey["name"]))
+
+        tables.append(Table(table_name, meta, *fkeys))
+        all_fkeys.extend(fkeys)
+
+    for fkey in all_fkeys:
+        con.execute(DropConstraint(fkey))
+
+    for table in tables:
+        con.execute(DropTable(table))
+
+    trans.commit()
+
+
 @pytest.fixture
 def init_oso(engine, Base, User, Organization, Repository, Issue):
+    drop_everything(engine)
 
     # Initialize Oso and OsoRoles
     # ---------------------------
@@ -150,7 +224,7 @@ def sample_data(init_oso, Organization, Repository, User, Issue):
 # - Passing a bad declarative_base to OsoRoles raises an exception
 
 
-def test_oso_roles_init(auth_sessionmaker, Base, User):
+def test_oso_roles_init(engine, auth_sessionmaker, Base, User):
     oso = SQLAlchemyOso(Base)
 
     # - Passing an auth session to OsoRoles raises an exception
@@ -255,7 +329,6 @@ def test_bad_namespace_perm(init_oso):
 
     with pytest.raises(OsoError):
         oso.roles.synchronize_data()
-    pass
 
 
 # TODO
@@ -298,6 +371,8 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
 
     oso.roles.assign_role(leina, osohq, "member", session)
     oso.roles.assign_role(steve, oso_repo, "repo_read", session)
+
+    session.commit()
 
     assert oso.is_allowed(leina, "pull", oso_repo)
     assert oso.is_allowed(steve, "pull", oso_repo)
@@ -790,6 +865,8 @@ def test_homogeneous_role_perm(init_oso, sample_data):
 
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
 
+    session.commit()
+
     assert oso.is_allowed(leina, "invite", osohq)
     assert not oso.is_allowed(steve, "invite", osohq)
 
@@ -853,6 +930,8 @@ def test_parent_child_role_perm(init_oso, sample_data):
     steve = sample_data["steve"]
 
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
+
+    session.commit()
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "pull", oso_repo)
@@ -931,6 +1010,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     steve = sample_data["steve"]
 
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    session.commit()
 
     assert oso.is_allowed(leina, "list_repos", osohq)
     assert oso.is_allowed(leina, "edit", oso_bug)
@@ -938,6 +1018,8 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     assert not oso.is_allowed(steve, "edit", oso_bug)
 
     oso.roles.assign_role(steve, osohq, "org_owner", session=session)
+    session.commit()
+
     assert oso.is_allowed(steve, "edit", oso_bug)
     assert oso.is_allowed(steve, "list_repos", osohq)
     assert oso.is_allowed(steve, "invite", osohq)
@@ -1007,6 +1089,7 @@ def test_homogeneous_role_implication(init_oso, sample_data):
 
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
     oso.roles.assign_role(steve, osohq, "org_owner", session=session)
+    session.commit()
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(steve, "invite", osohq)
@@ -1084,6 +1167,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
 
     # org_member implies repo_read which has the "pull" permission
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    session.commit()
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "pull", oso_repo)
@@ -1164,6 +1248,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     steve = sample_data["steve"]
 
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    session.commit()
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "edit", oso_bug)
@@ -1265,6 +1350,7 @@ def test_chained_role_implication(init_oso, sample_data):
 
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
     oso.roles.assign_role(steve, oso_repo, "repo_read", session=session)
+    session.commit()
 
     # leina can invite to the org, pull from the repo, and edit the issue
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1446,6 +1532,7 @@ def test_assign_remove_user_role(init_oso, sample_data):
     steve = sample_data["steve"]
 
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    session.commit()
 
     # Assign leina member role
     leina_roles = (
@@ -1458,6 +1545,7 @@ def test_assign_remove_user_role(init_oso, sample_data):
 
     # Assign steve owner role
     oso.roles.assign_role(steve, osohq, "org_owner", session=session)
+    session.commit()
 
     steve_roles = (
         session.query(oso.roles.UserRole)
@@ -1473,6 +1561,7 @@ def test_assign_remove_user_role(init_oso, sample_data):
 
     # - Removing user-role assignment revokes access
     removed = oso.roles.remove_role(leina, osohq, "org_member", session=session)
+    session.commit()
     assert removed
     leina_roles = (
         session.query(oso.roles.UserRole)
@@ -1532,6 +1621,7 @@ def test_reassign_user_role(init_oso, sample_data):
     steve = sample_data["steve"]
 
     oso.roles.assign_role(leina, osohq, "org_member", session)
+    session.commit()
     leina_roles = (
         session.query(oso.roles.UserRole)
         .filter(oso.roles.UserRole.user_id == leina.id)
@@ -1541,6 +1631,7 @@ def test_reassign_user_role(init_oso, sample_data):
     assert leina_roles[0].role == "org_member"
 
     oso.roles.assign_role(steve, osohq, "org_owner", session)
+    session.commit()
     steve_roles = (
         session.query(oso.roles.UserRole)
         .filter(oso.roles.UserRole.user_id == steve.id)
@@ -1555,6 +1646,7 @@ def test_reassign_user_role(init_oso, sample_data):
 
     # reassign with reassign=True
     oso.roles.assign_role(leina, osohq, "org_owner", session)
+    session.commit()
 
     leina_roles = (
         session.query(oso.roles.UserRole)
@@ -1607,6 +1699,7 @@ def test_authorizing_related_fields(
     steve = sample_data["steve"]
 
     oso.roles.assign_role(steve, osohq, "org_member", session)
+    session.commit()
 
     oso.actor = steve
 
@@ -1647,6 +1740,7 @@ def test_data_filtering_role_allows_not(
 
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
     oso.roles.assign_role(steve, osohq, "org_member", session=session)
+    session.commit()
 
     # This is just to ensure we don't modify the policy above.
     assert not oso.is_allowed(leina, "invite", osohq)
@@ -1702,6 +1796,7 @@ def test_data_filtering_role_allows_and(
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
     oso.roles.assign_role(leina, apple, "org_member", session=session)
     oso.roles.assign_role(steve, osohq, "org_member", session=session)
+    session.commit()
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1761,6 +1856,7 @@ def test_data_filtering_role_allows_explicit_or(
     steve = sample_data["steve"]
 
     oso.roles.assign_role(steve, apple, "org_member", session=session)
+    session.commit()
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(steve, "invite", osohq)
@@ -1815,6 +1911,7 @@ def test_data_filtering_role_allows_implicit_or(
     leina = sample_data["leina"]
 
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    session.commit()
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "read", leina)
@@ -1856,6 +1953,7 @@ def test_data_filtering_user_in_role_not(
 
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
     oso.roles.assign_role(steve, osohq, "org_member", session=session)
+    session.commit()
 
     # This is just to ensure we don't modify the policy above.
     assert not oso.is_allowed(leina, "invite", osohq)
@@ -1911,6 +2009,7 @@ def test_data_filtering_user_in_role_and(
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
     oso.roles.assign_role(leina, apple, "org_member", session=session)
     oso.roles.assign_role(steve, osohq, "org_member", session=session)
+    session.commit()
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1970,6 +2069,7 @@ def test_data_filtering_user_in_role_explicit_or(
     steve = sample_data["steve"]
 
     oso.roles.assign_role(steve, apple, "org_member", session=session)
+    session.commit()
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(steve, "invite", osohq)
@@ -2024,6 +2124,7 @@ def test_data_filtering_user_in_role_implicit_or(
     leina = sample_data["leina"]
 
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    session.commit()
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "read", leina)
@@ -2068,6 +2169,7 @@ def test_data_filtering_combo(
     leina = sample_data["leina"]
 
     oso.roles.assign_role(leina, osohq, "org_member", session=session)
+    session.commit()
 
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "read", leina)
@@ -2140,6 +2242,7 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
 
     oso.roles.assign_role(steve, osohq, "org_owner", session=session)
     oso.roles.assign_role(steve, ios, "repo_read", session=session)
+    session.commit()
 
     osohq_assignments = oso.roles.assignments_for_resource(osohq, session)
     assert len(osohq_assignments) == 2
@@ -2301,6 +2404,7 @@ def test_id_types(engine, Base, User, sa_type, one_id):
     session.commit()
 
     oso.roles.assign_role(steve, one, "boss")
+    session.commit()
     assert oso.is_allowed(steve, "read", one)
 
 
@@ -2387,6 +2491,7 @@ def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issu
     # so you have to call session.commit() first.
     oso.roles.assign_role(leina, osohq, "org_owner", session=session)
     oso.roles.assign_role(steve, osohq, "org_member", session=session)
+    session.commit()
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "create_repo", osohq)
@@ -2424,14 +2529,19 @@ def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issu
     assert bug.id in result_ids
     assert not oso.is_allowed(gabe, "edit", bug)
     oso.roles.assign_role(gabe, osohq, "org_member", session=session)
+    session.commit()
     assert not oso.is_allowed(gabe, "edit", bug)
     oso.roles.assign_role(gabe, osohq, "org_owner", session=session)
+    session.commit()
     assert oso.is_allowed(gabe, "edit", bug)
     oso.roles.assign_role(gabe, osohq, "org_member", session=session)
+    session.commit()
     assert not oso.is_allowed(gabe, "edit", bug)
     oso.roles.assign_role(gabe, osohq, "org_owner", session=session)
+    session.commit()
     assert oso.is_allowed(gabe, "edit", bug)
     oso.roles.remove_role(gabe, osohq, "org_owner", session=session)
+    session.commit()
     assert not oso.is_allowed(gabe, "edit", bug)
 
     org_roles = oso.roles.for_resource(Repository)
