@@ -427,8 +427,8 @@ def read_config(oso):
             child_relationships = inspect(child_python_class).relationships
             if child_attr not in child_relationships:
                 raise OsoError(
-                    f"Invalid Relationship: {child_attr} "
-                    + "is not a sqlalchemy relationship field."
+                    f"""Invalid Relationship: {child_attr}
+                    is not a sqlalchemy relationship field."""
                 )
             rel = child_relationships[child_attr]
             parent_join_column = list(rel.remote_side)[0].name
@@ -544,15 +544,6 @@ def read_config(oso):
         for role_name, role_def in role_defs.items():
             # preprocess role name
             role_name = parse_role_name(role_name, python_class, config)
-            # split = role_name.split(":")
-            # if len(split) > 1:
-            #     if split[0] != resource_name:
-            #         raise OsoError(
-            #             f"Cannot define role for resource {split[0]} inside resource definition for {resource_name}."
-            #         )
-            # else:
-            #     role_name = f"{resource_name}:{role_name}"
-
             if role_name in config.roles:
                 raise OsoError(f"Duplicate role name {role_name}")
 
@@ -607,9 +598,9 @@ def read_config(oso):
                             break
                     if not stepped:
                         raise OsoError(
-                            f"Permission {permission.name} on {permission.type} "
-                            + f"can not go on role {role_name} on {role.type} "
-                            + "because no relationship exists."
+                            f"""Permission {permission.name} on {permission.type}
+                            can not go on role {role_name} on {role.type}
+                            because no relationship exists."""
                         )
 
         for implied in role.implied_roles:
@@ -630,9 +621,9 @@ def read_config(oso):
                         break
                 if not stepped:
                     raise OsoError(
-                        f"Role {role_name} on {role.type} "
-                        + f"can not imply role {implied} on {implied_role.type} "
-                        + "because no relationship exists."
+                        f"""Role {role_name} on {role.type}
+                        can not imply role {implied} on {implied_role.type}
+                        because no relationship exists."""
                     )
             # Make sure implied roles dont have overlapping permissions.
             # @TODO: Follow implication chair further than just one.
@@ -640,9 +631,9 @@ def read_config(oso):
             for implied_perm in implied_role.permissions:
                 if implied_perm in permissions:
                     raise OsoError(
-                        f"Invalid implication. Role {role} has permission {implied_perm.name} "
-                        + f"on {implied_perm.type} but implies role {implied} "
-                        + f"which also has permission {implied_perm.name} on {implied_perm.type}"
+                        f"""Invalid implication. Role {role} has permission {implied_perm.name}
+                        on {implied_perm.type} but implies role {implied}
+                        which also has permission {implied_perm.name} on {implied_perm.type}"""
                     )
 
     if len(config.resources) == 0:
@@ -692,9 +683,9 @@ class OsoRoles:
                 canonical_model = model
             elif resource_id_column_type.__class__ != id_type.__class__:
                 raise OsoError(
-                    "All resources must have the same primary key type:"
-                    + f"\n\t{model} has PK type {id_type}"
-                    + f"\n\t{canonical_model} has PK type {resource_id_column_type}"
+                    f"""All resources must have the same primary key type:
+                    \n\t{model} has PK type {id_type}
+                    \n\t{canonical_model} has PK type {resource_id_column_type}"""
                 )
 
         if resource_id_column_type is None:
@@ -1011,8 +1002,8 @@ class OsoRoles:
                 user_role.role = role_name
             else:
                 raise OsoError(
-                    f"User {user} already has a role for this resource."
-                    + "To reassign, call with `reassign=True`."
+                    f"""User {user} already has a role for this resource.
+                    To reassign, call with `reassign=True`."""
                 )
         else:
             user_pk_name, _ = get_pk(user.__class__)
