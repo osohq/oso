@@ -58,7 +58,7 @@ def role_allow_query(
         with resources as (
             with recursive resources (id, type) as (
                 select
-                    {resource_id_field} as id,
+                    cast({resource_id_field} as {resource_id_type}) as id,
                     :resource_type as type
                 {recur}
             ) select * from resources
