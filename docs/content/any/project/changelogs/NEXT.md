@@ -20,7 +20,6 @@ before upgrading.
 {{% /callout %}}
 
 We've made some updates to the syntax of the `resource` predicate, used to configure resources + roles for sqlalchemy-oso-preview. The goal of these changes is to improve the readability of the configuration and make the roles
-features more intuitive to use.
 
 #### Rename "perms" -> "permissions" in resource roles configuration
 
@@ -31,10 +30,15 @@ We have renamed this field to `permissions` for clarity.
 
 Previously, we required role names to be globally unique. Now, role names will be internally namespaced, removing the globally unique requirement. Like permissions, the role namespace is the resource name specified in the `resource` predicate. Roles names must be unique within a single resource namespace. Roles associated with other resources must be referenced using the namespace. Roles within the same resource can be referenced without the namespace.
 
+#### Remove the `_type:` syntax from the `resource` predicate
+
+The `resource` predicate used to take the resource type parameter as a specializer. Now the predicate takes this parameter as a direct argument, removing the need for the `resource(_type: ResourceType, ...)` syntax. Now, the syntax is `resource(ResourceType, ...)`.
+
 Below is an example `resource` predicate that reflects the above changes. For a more in-depth example, see our [documentation](TODO!!!!) and [example repository](TODO!!!).
 
 ```polar
-    resource(_type: Organization, "org", actions, roles) if
+    # Removed `_type: ` from first argument
+    resource(Organization, "org", actions, roles) if
         actions = ["invite", "list_repos"] and
         roles = {
             member: {
