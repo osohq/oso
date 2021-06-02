@@ -152,6 +152,8 @@ jobs:
         image: postgres
         env:
           POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -186,7 +188,7 @@ jobs:
       - name: Test sqlalchemy
         env:
           TOX_PARALLEL_NO_SPINNER: 1
-          POSTGRES_HOST: postgres
+          POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
           POSTGRES_USER: postgres
           POSTGRES_PASS: postgres
