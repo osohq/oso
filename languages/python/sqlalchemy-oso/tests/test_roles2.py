@@ -29,7 +29,7 @@ if pg_host is not None:
 @pytest.fixture(params=databases)
 def engine(request):
     if request.param == "postgres":
-        # This database must be created before running tests.
+        # Create a new database to run the tests.
         id = "".join(random.choice(string.ascii_lowercase) for i in range(10))
         name = f"roles_test_{id}"
 
@@ -51,11 +51,13 @@ def engine(request):
         cursor.execute(f"create database {name}")
         conn.close()
 
+        # Run tests.
         engine = create_engine(f"{connect_string}/{name}", poolclass=NullPool)
         yield engine
         engine.dispose()
         close_all_sessions()
 
+        # Destroy database.
         conn = psycopg2.connect(**kwargs)
         conn.autocommit = True
         cursor = conn.cursor()
@@ -118,58 +120,8 @@ def Issue(Base):
     return Issue
 
 
-# Taken directly from an issue on flask-sqlalchemy
-#  https://github.com/pallets/flask-sqlalchemy/issues/722
-def drop_everything(engine):
-    """(On a live db) drops all foreign key constraints before dropping all tables.
-    Workaround for SQLAlchemy not doing DROP ## CASCADE for drop_all()
-    (https://github.com/pallets/flask-sqlalchemy/issues/722)
-    """
-    from sqlalchemy.engine.reflection import Inspector
-    from sqlalchemy.schema import (
-        DropConstraint,
-        DropTable,
-        MetaData,
-        Table,
-        ForeignKeyConstraint,
-    )
-
-    con = engine.connect()
-    trans = con.begin()
-    inspector = Inspector.from_engine(engine)
-
-    # We need to re-create a minimal metadata with only the required things to
-    # successfully emit drop constraints and tables commands for postgres (based
-    # on the actual schema of the running instance)
-    meta = MetaData()
-    tables = []
-    all_fkeys = []
-
-    for table_name in inspector.get_table_names():
-        fkeys = []
-
-        for fkey in inspector.get_foreign_keys(table_name):
-            if not fkey["name"]:
-                continue
-
-            fkeys.append(ForeignKeyConstraint((), (), name=fkey["name"]))
-
-        tables.append(Table(table_name, meta, *fkeys))
-        all_fkeys.extend(fkeys)
-
-    for fkey in all_fkeys:
-        con.execute(DropConstraint(fkey))
-
-    for table in tables:
-        con.execute(DropTable(table))
-
-    trans.commit()
-
-
 @pytest.fixture
 def init_oso(engine, Base, User, Organization, Repository, Issue):
-    drop_everything(engine)
-
     # Initialize Oso and OsoRoles
     # ---------------------------
     Session = sessionmaker(bind=engine)
