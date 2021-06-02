@@ -419,6 +419,12 @@ impl PolarVirtualMachine {
         (call_id, Term::new_temporary(Value::Variable(sym)))
     }
 
+    fn get_call_sym(&self, call_id: &u64) -> &Symbol {
+        self.call_id_symbols
+            .get(&call_id)
+            .expect("unregistered external call ID")
+    }
+
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
     /// result is needed to achieve it, or `None` if it can run internally.
     fn next(&mut self, goal: Rc<Goal>) -> PolarResult<QueryEvent> {
@@ -529,6 +535,16 @@ impl PolarVirtualMachine {
                 msg: format!("Goal stack overflow! MAX_GOALS = {}", self.stack_limit),
             }
             .into());
+        }
+        // For LookupExternal and NextExternal goals, make sure that the call id result variable is unbound
+        match goal {
+            Goal::LookupExternal { call_id, .. } | Goal::NextExternal { call_id, .. } => {
+                assert!(matches!(
+                    self.variable_state(self.get_call_sym(&call_id)),
+                    VariableState::Unbound
+                ));
+            }
+            _ => (),
         }
 
         self.goals.push(Rc::new(goal));
@@ -1887,16 +1903,13 @@ impl PolarVirtualMachine {
                     self.add_constraint(&constraint_term)?;
                     return Ok(QueryEvent::None);
                 }
-                let value = value
-                    .value()
-                    .as_symbol()
-                    .map_err(|mut e| {
-                        e.add_stack_trace(self);
-                        e
-                    })
-                    .expect("bad lookup value");
-                let call_id = self.new_call_id(value);
+                let answer = self.kb.read().unwrap().gensym("lookup_value");
+                let call_id = self.new_call_id(&answer);
                 self.append_goals(vec![
+                    Goal::Unify {
+                        left: Term::new_temporary(Value::Variable(answer)),
+                        right: value.clone(),
+                    },
                     Goal::LookupExternal {
                         call_id,
                         field: field.clone(),
@@ -2940,14 +2953,10 @@ impl Runnable for PolarVirtualMachine {
             self.log_with(|| format!("=> {}", value.to_string()), &[]);
 
             // Fetch variable to unify with call result.
-            let sym = &self
-                .call_id_symbols
-                .get(&call_id)
-                .expect("unregistered external call ID")
-                .clone();
+            let sym = &self.get_call_sym(&call_id).to_owned();
 
             self.push_goal(Goal::Unify {
-                left: Term::new_temporary(Value::Variable(sym.clone())),
+                left: Term::new_temporary(Value::Variable(sym.to_owned())),
                 right: value,
             })?;
         } else {
