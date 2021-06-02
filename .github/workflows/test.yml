@@ -190,6 +190,7 @@ jobs:
           POSTGRES_PORT: 5432
           POSTGRES_USER: postgres
           POSTGRES_PASS: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
         run: make python-sqlalchemy-test
       - name: Lint Python code
         run: make -C languages/python lint
