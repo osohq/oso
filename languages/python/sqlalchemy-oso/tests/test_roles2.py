@@ -3,6 +3,7 @@ import pytest
 import psycopg2
 import random
 import string
+import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
@@ -15,26 +16,47 @@ from sqlalchemy_oso import authorized_sessionmaker, SQLAlchemyOso
 
 from oso import OsoError
 
+pg_host = os.environ.get("POSTGRES_HOST")
+pg_port = os.environ.get("POSTGRES_PORT")
+pg_user = os.environ.get("POSTGRES_USER")
+pg_pass = os.environ.get("POSTGRES_PASSWORD")
 
-@pytest.fixture(params=["postgres", "sqlite"])
+databases = ["sqlite"]
+if pg_host is not None:
+    databases.append("postgres")
+
+
+@pytest.fixture(params=databases)
 def engine(request):
     if request.param == "postgres":
         # This database must be created before running tests.
         id = "".join(random.choice(string.ascii_lowercase) for i in range(10))
         name = f"roles_test_{id}"
 
-        conn = psycopg2.connect(host="localhost")
+        connect_string = "postgresql://"
+        kwargs = {"host": pg_host}
+        if pg_user is not None:
+            kwargs["user"] = pg_user
+            connect_string += pg_user
+        if pg_pass is not None:
+            kwargs["password"] = pg_pass
+            connect_string += ":" + pg_user
+        connect_string += "@" + pg_host
+        if pg_port is not None:
+            kwargs["port"] = pg_port
+            connect_string += ":" + pg_port
+        conn = psycopg2.connect(**kwargs)
         conn.autocommit = True
         cursor = conn.cursor()
         cursor.execute(f"create database {name}")
         conn.close()
 
-        engine = create_engine(f"postgresql://localhost/{name}", poolclass=NullPool)
+        engine = create_engine(f"{connect_string}/{name}", poolclass=NullPool)
         yield engine
         engine.dispose()
         close_all_sessions()
 
-        conn = psycopg2.connect(host="localhost")
+        conn = psycopg2.connect(**kwargs)
         conn.autocommit = True
         cursor = conn.cursor()
         cursor.execute(f"drop database if exists {name}")
