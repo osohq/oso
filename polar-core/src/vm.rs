@@ -2939,7 +2939,7 @@ impl Runnable for PolarVirtualMachine {
         if let Some(value) = term {
             self.log_with(|| format!("=> {}", value.to_string()), &[]);
 
-            // get the variable to bind result to
+            // Fetch variable to unify with call result.
             let sym = &self
                 .call_id_symbols
                 .get(&call_id)
