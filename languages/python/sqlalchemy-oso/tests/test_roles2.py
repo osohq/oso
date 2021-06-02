@@ -2257,12 +2257,12 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
     # - [ ] Test getting all roles for a resource
     repo_roles = oso.roles.for_resource(Repository, session)
     assert len(repo_roles) == 1
-    assert repo_roles[0] == "repo:reader"
+    assert repo_roles[0] == "reader"
 
     org_roles = oso.roles.for_resource(Organization, session)
     assert len(org_roles) == 2
-    assert "org:member" in org_roles
-    assert "org:owner" in org_roles
+    assert "member" in org_roles
+    assert "owner" in org_roles
 
     # - [ ] Test getting all role assignments for a resource
     oso.roles.assign_role(leina, osohq, "member", session=session)
@@ -2439,7 +2439,9 @@ def test_id_types(engine, Base, User, sa_type, one_id):
 # LEGACY TEST
 
 
-def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issue):
+def test_roles_integration(
+    init_oso, auth_sessionmaker, User, Organization, Repository, Issue
+):
     oso, session = init_oso
 
     policy = """
@@ -2573,9 +2575,9 @@ def test_roles(init_oso, auth_sessionmaker, User, Organization, Repository, Issu
     assert not oso.is_allowed(gabe, "edit", bug)
 
     org_roles = oso.roles.for_resource(Repository)
-    assert set(org_roles) == {"repo:reader", "repo:writer"}
+    assert set(org_roles) == {"reader", "writer"}
     oso_assignments = oso.roles.assignments_for_resource(osohq)
     assert oso_assignments == [
-        {"user_id": leina.id, "role": "org:owner"},
-        {"user_id": steve.id, "role": "org:member"},
+        {"user_id": leina.id, "role": "owner"},
+        {"user_id": steve.id, "role": "member"},
     ]

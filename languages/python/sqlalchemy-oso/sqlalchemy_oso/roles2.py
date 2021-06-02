@@ -376,6 +376,11 @@ def parse_role_name(role_name, resource_class, config, other_ok=False):
     return role_name
 
 
+def remove_role_namespace(role_name):
+    _, name = role_name.split(":", 1)
+    return name
+
+
 def read_config(oso):
     """Queries the Oso policy for resource and relationship configurations
 
@@ -1070,7 +1075,7 @@ class OsoRoles:
         roles = []
         for name, role in self.config.roles.items():
             if role.python_class == resource_class:
-                roles.append(name)
+                roles.append(remove_role_namespace(name))
         return roles
 
     @ensure_configured
@@ -1091,7 +1096,10 @@ class OsoRoles:
             )
             .all()
         )
-        return [{"user_id": ur.user_id, "role": ur.role} for ur in user_roles]
+        return [
+            {"user_id": ur.user_id, "role": remove_role_namespace(ur.role)}
+            for ur in user_roles
+        ]
 
     @ensure_configured
     def assignments_for_user(self, user, session=None):
@@ -1113,7 +1121,7 @@ class OsoRoles:
             {
                 "resource_type": ur.resource_type,
                 "resource_id": ur.resource_id,
-                "role": ur.role,
+                "role": remove_role_namespace(ur.role),
             }
             for ur in user_roles
         ]
