@@ -19,7 +19,7 @@ This release contains breaking changes. Be sure to follow migration steps
 before upgrading.
 {{% /callout %}}
 
-We've made some updates to the syntax of the `resource` predicate, used to configure resources + roles for sqlalchemy-oso-preview. The goal of these changes is to improve the readability of the config and make the roles
+We've made some updates to the syntax of the `resource` predicate, used to configure resources + roles for sqlalchemy-oso-preview. The goal of these changes is to improve the readability of the configuration and make the roles
 features more intuitive to use.
 
 #### Rename "perms" -> "permissions" in resource roles configuration

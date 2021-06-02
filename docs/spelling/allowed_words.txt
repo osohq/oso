@@ -126,6 +126,7 @@ multitenant
 musl
 mutex
 namespace
+namespaced
 namespaces
 natively
 nbsp
