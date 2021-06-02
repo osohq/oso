@@ -222,7 +222,7 @@ def test_empty_role(init_oso):
     # defining role with no permissions/implications throws an error
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite"
         ] and
@@ -241,7 +241,7 @@ def test_bad_namespace_perm(init_oso):
     # - assigning permission with bad namespace throws an error
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite"
         ] and
@@ -263,14 +263,14 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
     # - only define roles, no actions (role has actions/implications from different resource)
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", _, roles) if
+    resource(Organization, "org", _, roles) if
         roles = {
             member: {
                 implies: ["repo:reader"]
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -307,7 +307,7 @@ def test_duplicate_resource_name(init_oso):
     # - duplicate resource name throws an error
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -316,7 +316,7 @@ def test_duplicate_resource_name(init_oso):
         };
 
     # DUPLICATE RESOURCE NAME "org"
-    resource(_type: Repository, "org", actions, roles) if
+    resource(Repository, "org", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -337,7 +337,7 @@ def test_nested_dot_relationship(init_oso):
     # - multiple dot lookups throws an error for now
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -345,7 +345,7 @@ def test_nested_dot_relationship(init_oso):
             }
         };
 
-    resource(_type: Issue, "issue", actions, roles) if
+    resource(Issue, "issue", actions, roles) if
         actions = [
             "edit"
         ];
@@ -363,7 +363,7 @@ def test_bad_relationship_lookup(init_oso):
     # - nonexistent attribute lookup throws an error for now
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -371,7 +371,7 @@ def test_bad_relationship_lookup(init_oso):
             }
         };
 
-    resource(_type: Repository, "repo", actions, _) if
+    resource(Repository, "repo", actions, _) if
         actions = [
             "pull"
         ];
@@ -389,7 +389,7 @@ def test_bad_relationship_lookup(init_oso):
 def test_relationship_without_specializer(init_oso):
     oso, session = init_oso
     policy = """
-    resource(_type: Repository, "repo", actions, _) if
+    resource(Repository, "repo", actions, _) if
         actions = [
             "pull"
         ];
@@ -418,7 +418,7 @@ def test_relationship_without_resources(init_oso):
 def test_duplicate_role_name_same_resource(init_oso):
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite", "create_repo"
         ] and
@@ -442,7 +442,7 @@ def test_duplicate_role_name_different_resources(init_oso, sample_data):
     # Organization and Repository resources both have role named "member"
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite", "create_repo"
         ] and
@@ -456,7 +456,7 @@ def test_duplicate_role_name_different_resources(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -503,7 +503,7 @@ def test_resource_actions(init_oso):
     # only define actions, not roles
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite"
         ];
@@ -516,7 +516,7 @@ def test_duplicate_action(init_oso):
     # - duplicate action
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite",
             "invite"
@@ -532,7 +532,7 @@ def test_undeclared_permission(init_oso):
     # - assign permission that wasn't declared
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite"
         ] and
@@ -552,7 +552,7 @@ def test_undeclared_role(init_oso):
     # - imply role that wasn't declared
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite"
         ] and
@@ -571,7 +571,7 @@ def test_role_implication_without_relationship(init_oso):
     # - imply role without valid relationship
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite"
         ] and
@@ -581,7 +581,7 @@ def test_role_implication_without_relationship(init_oso):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -601,7 +601,7 @@ def test_role_permission_without_relationship(init_oso):
     # - assign permission without valid relationship
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite"
         ] and
@@ -611,7 +611,7 @@ def test_role_permission_without_relationship(init_oso):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -626,7 +626,7 @@ def test_invalid_role_permission(init_oso):
     # assigning permission on related role type errors if role exists for permission resource
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite"
         ] and
@@ -637,7 +637,7 @@ def test_invalid_role_permission(init_oso):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -662,7 +662,7 @@ def test_permission_assignment_to_implied_role(init_oso):
     # assigning the same permission to two roles where one implies the other throws an error
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite"
         ] and
@@ -687,7 +687,7 @@ def test_incorrect_arity_resource(init_oso):
     # - use resource predicate with incorrect arity
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions) if
+    resource(Organization, "org", actions) if
         actions = [
             "invite"
         ];
@@ -701,7 +701,7 @@ def test_undefined_resource_arguments(init_oso):
     # - use resource predicate without defining actions/roles
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles);
+    resource(Organization, "org", actions, roles);
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
@@ -712,7 +712,7 @@ def test_wrong_type_resource_arguments(init_oso):
     # - use resource predicate with field types
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -764,7 +764,7 @@ def test_overlapping_permissions(init_oso, sample_data):
     # - Assigning a more permissive and less permissive role to the same user grants most permissive access
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -773,7 +773,7 @@ def test_overlapping_permissions(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -822,7 +822,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     # - Adding a permission of same resource type to a role grants assignee access
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -847,7 +847,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
 
     # - Removing a permission of same resource type from a role revokes assignee access
     new_policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite", "list_repos"] and
         roles = {
             member: {
@@ -875,7 +875,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
     # - Adding a permission of child resource type to a role grants assignee access
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -883,7 +883,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -912,7 +912,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
 
     # - Removing a permission of child resource type from a role revokes assignee access
     new_policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -920,7 +920,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -947,7 +947,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     # - Adding a permission of grandchild resource type to a role grants assignee access (without intermediate resource)
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["list_repos", "invite"] and
         roles = {
             member: {
@@ -959,7 +959,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
             }
         };
 
-    resource(_type: Issue, "issue", actions, _) if
+    resource(Issue, "issue", actions, _) if
         actions = [
             "edit"
         ];
@@ -996,7 +996,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
 
     # - Removing a permission of grandchild resource type from a role revokes assignee access
     new_policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1004,7 +1004,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
             }
         };
 
-    resource(_type: Issue, "issue", actions, _) if
+    resource(Issue, "issue", actions, _) if
         actions = [
             "edit"
         ];
@@ -1033,7 +1033,7 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     # - Adding a role implication of same resource type to a role grants assignee access
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1065,7 +1065,7 @@ def test_homogeneous_role_implication(init_oso, sample_data):
 
     # - Removing a role implication of same resource type from a role revokes assignee access
     new_policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite", "list_repos"] and
         roles = {
             member: {
@@ -1099,7 +1099,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
     # - Adding a role implication of child resource type to a role grants assignee access to child
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1108,7 +1108,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -1143,7 +1143,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
 
     # - Removing a role implication of child resource type from a role revokes assignee access to child
     new_policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1151,7 +1151,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -1179,7 +1179,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     #   without intermediate parent resource
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1188,7 +1188,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    resource(_type: Issue, "issue", actions, roles) if
+    resource(Issue, "issue", actions, roles) if
         actions = [
             "edit"
         ] and
@@ -1223,7 +1223,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
 
     # - Removing a permission of grandchild resource type from a role revokes assignee access
     new_policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1231,7 +1231,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    resource(_type: Issue, "issue", actions, roles) if
+    resource(Issue, "issue", actions, roles) if
         actions = [
             "edit"
         ] and
@@ -1265,7 +1265,7 @@ def test_chained_role_implication(init_oso, sample_data):
     # role access to grandchild resource
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1275,7 +1275,7 @@ def test_chained_role_implication(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -1287,7 +1287,7 @@ def test_chained_role_implication(init_oso, sample_data):
             }
         };
 
-    resource(_type: Issue, "issue", actions, roles) if
+    resource(Issue, "issue", actions, roles) if
         actions = [
             "edit"
         ] and
@@ -1331,7 +1331,7 @@ def test_chained_role_implication(init_oso, sample_data):
     # - Removing a role implication from grandparent->parent->child resource role types revokes assignee of grandparent
     # role access to grandchild resource
     new_policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1339,7 +1339,7 @@ def test_chained_role_implication(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -1351,7 +1351,7 @@ def test_chained_role_implication(init_oso, sample_data):
             }
         };
 
-    resource(_type: Issue, "issue", actions, roles) if
+    resource(Issue, "issue", actions, roles) if
         actions = [
             "edit"
         ] and
@@ -1398,7 +1398,7 @@ def test_assign_role_wrong_resource_type(init_oso, sample_data):
     # - Assigning to role with wrong resource type throws an error
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1423,7 +1423,7 @@ def test_assign_remove_nonexistent_role(init_oso, sample_data):
     # - Assigning/removing non-existent role throws an error
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1451,7 +1451,7 @@ def test_remove_unassigned_role(init_oso, sample_data):
     # - Removing role that user doesn't have returns false
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1476,7 +1476,7 @@ def test_assign_remove_user_role(init_oso, sample_data):
     # - Adding user-role assignment grants access
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite", "list_repos"] and
         roles = {
             member: {
@@ -1550,7 +1550,7 @@ def test_reassign_user_role(init_oso, sample_data):
     # - Implied roles for the same resource type are mutually exclusive on user-role assignment
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite", "list_repos"] and
         roles = {
             member: {
@@ -1562,7 +1562,7 @@ def test_reassign_user_role(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
             reader: {
@@ -1629,7 +1629,7 @@ def test_authorizing_related_fields(
 ):
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite", "read"] and
         roles = {
             member: {
@@ -1638,7 +1638,7 @@ def test_authorizing_related_fields(
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
             reader: {
@@ -1678,7 +1678,7 @@ def test_data_filtering_role_allows_not(
 ):
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1719,7 +1719,7 @@ def test_data_filtering_role_allows_and(
 ):
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1728,7 +1728,7 @@ def test_data_filtering_role_allows_and(
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
             reader: {
@@ -1780,7 +1780,7 @@ def test_data_filtering_role_allows_explicit_or(
 ):
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1789,7 +1789,7 @@ def test_data_filtering_role_allows_explicit_or(
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
             reader: {
@@ -1849,7 +1849,7 @@ def test_data_filtering_role_allows_implicit_or(
     # Users can read their own data.
     allow(user: User, "read", user);
 
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["read"] and
         roles = {
             member: {
@@ -1887,7 +1887,7 @@ def test_data_filtering_user_in_role_not(
 ):
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1928,7 +1928,7 @@ def test_data_filtering_user_in_role_and(
 ):
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1937,7 +1937,7 @@ def test_data_filtering_user_in_role_and(
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
             reader: {
@@ -1989,7 +1989,7 @@ def test_data_filtering_user_in_role_explicit_or(
 ):
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite"] and
         roles = {
             member: {
@@ -1998,7 +1998,7 @@ def test_data_filtering_user_in_role_explicit_or(
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
             reader: {
@@ -2062,7 +2062,7 @@ def test_data_filtering_user_in_role_implicit_or(
     # Users can read their own data.
     allow(user: User, "read", user);
 
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["read"] and
         roles = {
             member: {
@@ -2103,7 +2103,7 @@ def test_data_filtering_combo(
     # Users can read their own data.
     allow(user: User, "read", user);
 
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["read"] and
         roles = {
             member: {
@@ -2145,7 +2145,7 @@ def test_data_filtering_combo(
 def test_read_api(init_oso, sample_data, Repository, Organization):
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = ["invite", "list_repos"] and
         roles = {
             member: {
@@ -2156,7 +2156,7 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
             reader: {
@@ -2215,7 +2215,7 @@ def test_user_in_role(
 ):
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", _actions, roles) if
+    resource(Organization, "org", _actions, roles) if
         roles = {
             member: {
                 implies: ["repo:reader"]
@@ -2225,7 +2225,7 @@ def test_user_in_role(
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = ["pull"] and
         roles = {
             reader: {
@@ -2340,8 +2340,8 @@ def test_id_types(engine, Base, User, sa_type, one_id):
     Base.metadata.create_all(engine)
 
     policy = """
-    resource(_type: One, "one", ["read"], {boss: {permissions: ["read"]}});
-    resource(_type: Two, "two", ["read"], _roles);
+    resource(One, "one", ["read"], {boss: {permissions: ["read"]}});
+    resource(Two, "two", ["read"], _roles);
 
     allow(actor, action, resource) if
         Roles.role_allows(actor, action, resource);
@@ -2369,7 +2369,7 @@ def test_roles_integration(
     oso, session = init_oso
 
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(Organization, "org", actions, roles) if
         actions = [
             "invite",
             "create_repo"
@@ -2385,7 +2385,7 @@ def test_roles_integration(
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(Repository, "repo", actions, roles) if
         actions = [
             "push",
             "pull"
@@ -2400,7 +2400,7 @@ def test_roles_integration(
             }
         };
 
-    resource(_type: Issue, "issue", actions, _) if
+    resource(Issue, "issue", actions, _) if
         actions = [
             "edit"
         ];

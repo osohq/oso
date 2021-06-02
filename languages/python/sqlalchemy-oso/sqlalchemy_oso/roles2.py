@@ -488,18 +488,12 @@ def read_config(oso):
     )
     role_definitions = []
     for result in role_resources:
-        resource_def = result["bindings"]["resource"]
-        assert resource_def.operator == "And"
-        assert len(resource_def.args) == 1
-        arg = resource_def.args[0]
-        type = isa_type(arg)
+        python_class = result["bindings"]["resource"]
+        assert python_class in oso.host.classes.values()
 
         resource_name = result["bindings"]["name"]
         permissions = result["bindings"]["permissions"]
         role_defs = result["bindings"]["roles"]
-
-        assert type in oso.host.classes
-        python_class = oso.host.classes[type]
 
         if isinstance(permissions, Variable):
             permissions = []
