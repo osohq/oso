@@ -334,10 +334,10 @@ resource(_type: Org, "org", actions, roles) if
     actions = ["read", "create_repo"] and
     roles = {
         org_member: {
-            perms: ["read"],
+            permissions: ["read"],
         },
         org_owner: {
-            perms: ["read", "create_repo"],
+            permissions: ["read", "create_repo"],
         }
     };
 ```
@@ -364,10 +364,10 @@ We could have written this rule without a body, like:
 resource( _type: Org, "org", ["read", "create_repo"],
     {
         org_member: {
-            perms: ["read"],
+            permissions: ["read"],
         },
         org_owner: {
-            perms: ["read", "create_repo"],
+            permissions: ["read", "create_repo"],
         }
     }
 );
@@ -429,10 +429,10 @@ resource(_type: Org, "org", actions, roles) if
     actions = ["read", "create_repo"] and
     roles = {
         org_member: {
-            perms: ["read"],
+            permissions: ["read"],
         },
         org_owner: {
-            perms: ["create_repo"],
+            permissions: ["create_repo"],
             implies: ["org_member"]
         }
     };
