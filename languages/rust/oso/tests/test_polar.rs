@@ -923,3 +923,29 @@ fn test_expression_error() {
     let err = oso.query_err("f(x)");
     assert!(err.contains("unbound"));
 }
+
+#[test]
+fn test_query_rule_for_class() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    #[derive(PolarClass, Default, Debug, Clone)]
+    struct Foo {}
+
+    let foo_class = Foo::get_polar_class_builder().name("Foo").build();
+
+    oso.oso.register_class(foo_class.clone())?;
+
+    oso.load_str("test(var) if bind_foo(var) and is_foo(var); bind_foo(Foo); is_foo(Foo);");
+
+    let query_results = oso
+        .oso
+        .query_rule("test", (PolarValue::Variable("class".to_owned()),))?
+        .count();
+    assert_eq!(query_results, 1);
+
+    let query_results = oso.oso.query_rule("test", (foo_class,))?.count();
+    assert_eq!(query_results, 1);
+
+    Ok(())
+}
