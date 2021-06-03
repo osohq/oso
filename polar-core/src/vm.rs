@@ -536,13 +536,12 @@ impl PolarVirtualMachine {
             }
             .into());
         }
-        // For LookupExternal and NextExternal goals, make sure that the call id result variable is unbound
         match goal {
             Goal::LookupExternal { call_id, .. } | Goal::NextExternal { call_id, .. } => {
                 assert!(matches!(
                     self.variable_state(self.get_call_sym(call_id)),
                     VariableState::Unbound
-                ));
+                ), "The call_id result variables for LookupExternal and NextExternal goals must be unbound.");
             }
             _ => (),
         }
