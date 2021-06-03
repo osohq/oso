@@ -1,6 +1,7 @@
 # Roles 2 tests
 import pytest
 import psycopg2
+from mysql.connector import connect
 import random
 import string
 import os
@@ -16,19 +17,30 @@ from sqlalchemy_oso import authorized_sessionmaker, SQLAlchemyOso
 
 from oso import OsoError
 
+
 pg_host = os.environ.get("POSTGRES_HOST")
 pg_port = os.environ.get("POSTGRES_PORT")
 pg_user = os.environ.get("POSTGRES_USER")
 pg_pass = os.environ.get("POSTGRES_PASSWORD")
 
+mysql_host = os.environ.get("MYSQL_HOST")
+mysql_port = os.environ.get("MYSQL_PORT")
+mysql_user = os.environ.get("MYSQL_USER")
+mysql_pass = os.environ.get("MYSQL_PASSWORD")
+
 databases = ["sqlite"]
 if pg_host is not None:
     databases.append("postgres")
+if mysql_host is not None:
+    databases.append("mysql")
 
 
 @pytest.fixture(params=databases)
 def engine(request):
-    if request.param == "postgres":
+    if request.param == "sqlite":
+        engine = create_engine("sqlite:///:memory:")
+        yield engine
+    elif request.param == "postgres":
         # Create a new database to run the tests.
         id = "".join(random.choice(string.ascii_lowercase) for i in range(10))
         name = f"roles_test_{id}"
@@ -63,9 +75,36 @@ def engine(request):
         cursor = conn.cursor()
         cursor.execute(f"drop database if exists {name}")
         conn.close()
-    elif request.param == "sqlite":
-        engine = create_engine("sqlite:///:memory:")
+    elif request.param == "mysql":
+        # Create a new database to run the tests.
+        id = "".join(random.choice(string.ascii_lowercase) for i in range(10))
+        name = f"roles_test_{id}"
+
+        # Need all these env vars for mysql
+        connect_string = "mysql+mysqlconnector://"
+        connect_string += mysql_user
+        connect_string += ":" + mysql_pass
+        connect_string += "@" + mysql_host
+        connect_string += ":" + mysql_port
+
+        with connect(
+            host=mysql_host, user=mysql_user, password=mysql_pass, port=mysql_port
+        ) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(f"create database {name}")
+
+        # Run tests.
+        engine = create_engine(f"{connect_string}/{name}", poolclass=NullPool)
         yield engine
+        engine.dispose()
+        close_all_sessions()
+
+        # Destroy database.
+        with connect(
+            host=mysql_host, user=mysql_user, password=mysql_pass, port=mysql_port
+        ) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(f"drop database {name}")
 
 
 @pytest.fixture
@@ -81,7 +120,7 @@ def User(Base):
         __tablename__ = "users"
 
         id = Column(Integer, primary_key=True)
-        name = Column(String())
+        name = Column(String(255))
 
     return User
 
@@ -91,7 +130,7 @@ def Organization(Base):
     class Organization(Base):
         __tablename__ = "organizations"
 
-        id = Column(String(), primary_key=True)
+        id = Column(String(255), primary_key=True)
 
     return Organization
 
@@ -101,8 +140,8 @@ def Repository(Base):
     class Repository(Base):
         __tablename__ = "repositories"
 
-        id = Column(String(), primary_key=True)
-        org_id = Column(String(), ForeignKey("organizations.id"), index=True)
+        id = Column(String(255), primary_key=True)
+        org_id = Column(String(255), ForeignKey("organizations.id"), index=True)
         org = relationship("Organization")
 
     return Repository
@@ -113,8 +152,8 @@ def Issue(Base):
     class Issue(Base):
         __tablename__ = "issues"
 
-        id = Column(String(), primary_key=True)
-        repo_id = Column(String(), ForeignKey("repositories.id"))
+        id = Column(String(255), primary_key=True)
+        repo_id = Column(String(255), ForeignKey("repositories.id"))
         repo = relationship("Repository")
 
     return Issue
@@ -2293,7 +2332,7 @@ def test_mismatched_id_types_throws_error(engine, Base, User):
     class One(Base):
         __tablename__ = "ones"
 
-        id = Column(String(), primary_key=True)
+        id = Column(String(255), primary_key=True)
 
     class Two(Base):
         __tablename__ = "twos"
@@ -2340,7 +2379,9 @@ def test_global_declarative_base(engine, Base, User):
     oso2.enable_roles(User, Session)
 
 
-@pytest.mark.parametrize("sa_type,one_id", [(String, "1"), (Integer, 1)])
+@pytest.mark.parametrize(
+    "sa_type,one_id", [(String(255), "1"), (Integer, 1), (String(255), "1")]
+)
 def test_id_types(engine, Base, User, sa_type, one_id):
     class One(Base):
         __tablename__ = "ones"

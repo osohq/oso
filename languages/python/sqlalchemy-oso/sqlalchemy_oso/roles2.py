@@ -11,6 +11,7 @@ from sqlalchemy import inspect
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy import sql
+from sqlalchemy.dialects import mysql
 from .compat import iterate_model_classes
 
 
@@ -671,11 +672,11 @@ class OsoRoles:
                 user_id = Column(
                     user_pk_type, ForeignKey(f"{user_table_name}.{user_pk_name}")
                 )
-                resource_type = Column(String, index=True)
+                resource_type = Column(String(255), index=True)
                 resource_id = Column(
                     resource_id_column_type, index=True
                 )  # Most things can turn into a string lol.
-                role = Column(String, index=True)
+                role = Column(String(255), index=True)
 
         if models.get("Permission"):
             Permission = models["Permission"]
@@ -684,8 +685,8 @@ class OsoRoles:
             class Permission(oso.base):
                 __tablename__ = "permissions"
                 id = Column(Integer, primary_key=True)
-                resource_type = Column(String, index=True)
-                name = Column(String, index=True)
+                resource_type = Column(String(255), index=True)
+                name = Column(String(255), index=True)
 
         if models.get("Role"):
             Role = models["Role"]
@@ -693,8 +694,8 @@ class OsoRoles:
 
             class Role(oso.base):
                 __tablename__ = "roles"
-                name = Column(String, primary_key=True)
-                resource_type = Column(String)
+                name = Column(String(255), primary_key=True)
+                resource_type = Column(String(255))
 
         if models.get("RolePermission"):
             RolePermission = models["RolePermission"]
@@ -703,7 +704,7 @@ class OsoRoles:
             class RolePermission(oso.base):
                 __tablename__ = "role_permissions"
                 id = Column(Integer, primary_key=True)
-                role = Column(String)
+                role = Column(String(255))
                 permission_id = Column(Integer, index=True)
 
         if models.get("RoleImplication"):
@@ -713,8 +714,8 @@ class OsoRoles:
             class RoleImplication(oso.base):
                 __tablename__ = "role_implications"
                 id = Column(Integer, primary_key=True)
-                from_role = Column(String, index=True)
-                to_role = Column(String, index=True)
+                from_role = Column(String(255), index=True)
+                to_role = Column(String(255), index=True)
 
         self._wrapped_oso = oso
         self.UserRole = UserRole
@@ -849,6 +850,12 @@ class OsoRoles:
 
         resource_id_field = ":resource_id"
         resource_id_type = self.resource_id_column_type.compile()
+
+        if (
+            isinstance(session.bind.dialect, mysql.dialect)
+            or isinstance(session.bind.dialect, mysql.mysqlconnector.dialect)
+        ) and resource_id_type == "VARCHAR(255)":
+            resource_id_type = "CHAR(255)"
 
         has_relationships = len(self.config.relationships) > 0
         self.role_allow_sql_query = role_allow_query(
