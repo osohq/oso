@@ -2174,8 +2174,8 @@ impl PolarVirtualMachine {
                 // Unification of the `next_term` variable with the result of `NextExternal` happens in `fn external_call_result()`
                 // `external_call_result` is the handler for results from both `LookupExternal` and `NextExternal`, so neither can bind the
                 // call ID variable to `false`.
-                let next_term = self.kb.read().unwrap().gensym("next_value");
-                let call_id = self.new_call_id(&next_term);
+                let next_sym = self.kb.read().unwrap().gensym("next_value");
+                let call_id = self.new_call_id(&next_sym);
 
                 // append unify goal to be evaluated after
                 // next result is fetched
@@ -2186,7 +2186,7 @@ impl PolarVirtualMachine {
                     },
                     Goal::Unify {
                         left: item.clone(),
-                        right: Term::new_temporary(Value::Variable(next_term)),
+                        right: Term::new_temporary(Value::Variable(next_sym)),
                     },
                 ])?;
             }
