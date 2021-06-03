@@ -1,19 +1,16 @@
 # type: ignore
 
 import pytest
-import datetime
 
 from sqlalchemy import create_engine
-from sqlalchemy.types import Integer, String, DateTime
+from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-from sqlalchemy_oso import roles as oso_roles, register_models
-from sqlalchemy_oso.auth import authorize_model
-from sqlalchemy_oso.roles import OsoRoles
-from sqlalchemy_oso.session import set_get_session
-from oso import Oso, Variable
+from sqlalchemy_oso import SQLAlchemyOso
+
+# from sqlalchemy_oso.auth import authorize_model
 
 Base = declarative_base(name="RoleBase")
 
@@ -47,10 +44,6 @@ class Repository(Base):
     organization_id = Column(Integer, ForeignKey("organizations.name"))
     organization = relationship("Organization", backref="repositories", lazy=True)
 
-    # time info
-    created_date = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_date = Column(DateTime, default=datetime.datetime.utcnow)
-
     def __repr__(self):
         return self.name
 
@@ -65,16 +58,16 @@ class Issue(Base):
 
 
 def test_roles3():
-    oso = Oso()
     engine = create_engine("sqlite://", echo=False)
     Session = sessionmaker(bind=engine)
-    roles = OsoRoles(oso, User, Base, Session)
 
-    register_models(oso, Base)
+    oso = SQLAlchemyOso(Base)
+    oso.enable_roles(User, Session)
 
     oso.load_file("sqlalchemy_oso/roles.polar")
     oso.load_file("sqlalchemy_oso/roles_demo.polar")
-    roles.synchronize_data()  # role_allows rule gets added here probably
+
+    oso.roles.synchronize_data()  # role_allows rule gets added here probably
 
     Base.metadata.create_all(engine)
 
@@ -93,9 +86,9 @@ def test_roles3():
         session.add(obj)
 
     # Things that happen in the app via the management api.
-    roles.assign_role(leina, osohq, "owner", session=session)
-    roles.assign_role(steve, osohq, "member", session=session)
-    roles.assign_role(gabe, oso_repo, "write", session=session)
+    oso.roles.assign_role(leina, osohq, "owner", session)
+    oso.roles.assign_role(steve, osohq, "member", session)
+    oso.roles.assign_role(gabe, oso_repo, "write", session)
 
     # Test
 

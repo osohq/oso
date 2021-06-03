@@ -1,6 +1,6 @@
 from oso import Oso, OsoError
 from .auth import register_models
-from .roles2 import OsoRoles
+from .roles import OsoRoles
 
 
 class SQLAlchemyOso(Oso):
@@ -40,6 +40,7 @@ class SQLAlchemyOso(Oso):
         self._roles = OsoRoles(
             oso=self,
             user_model=user_model,
+            sqlalchemy_base=self.base,
             session_maker=session_maker,
         )
         self._roles_enabled = True

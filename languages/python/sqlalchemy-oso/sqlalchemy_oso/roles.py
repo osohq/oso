@@ -40,7 +40,7 @@ class OsoRoles:
             self.roles[resource_class] = role_class
             setattr(resource_class, "role_definitions", roles)
 
-    def assign_role(self, user, resource, role, *, session=None):
+    def assign_role(self, user, resource, role, session=None):
         local_session = session is None
         if local_session:
             session = self.session_maker()
