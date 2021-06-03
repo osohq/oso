@@ -419,7 +419,7 @@ impl PolarVirtualMachine {
         (call_id, Term::new_temporary(Value::Variable(sym)))
     }
 
-    fn get_call_sym(&self, call_id: &u64) -> &Symbol {
+    fn get_call_sym(&self, call_id: u64) -> &Symbol {
         self.call_id_symbols
             .get(&call_id)
             .expect("unregistered external call ID")
@@ -540,7 +540,7 @@ impl PolarVirtualMachine {
         match goal {
             Goal::LookupExternal { call_id, .. } | Goal::NextExternal { call_id, .. } => {
                 assert!(matches!(
-                    self.variable_state(self.get_call_sym(&call_id)),
+                    self.variable_state(self.get_call_sym(call_id)),
                     VariableState::Unbound
                 ));
             }
@@ -2953,7 +2953,7 @@ impl Runnable for PolarVirtualMachine {
             self.log_with(|| format!("=> {}", value.to_string()), &[]);
 
             // Fetch variable to unify with call result.
-            let sym = (&self).get_call_sym(&call_id).to_owned();
+            let sym = (&self).get_call_sym(call_id).to_owned();
 
             self.push_goal(Goal::Unify {
                 left: Term::new_temporary(Value::Variable(sym)),
