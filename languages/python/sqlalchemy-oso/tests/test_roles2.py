@@ -17,7 +17,6 @@ from sqlalchemy_oso import authorized_sessionmaker, SQLAlchemyOso
 
 from oso import OsoError
 
-
 pg_host = os.environ.get("POSTGRES_HOST")
 pg_port = os.environ.get("POSTGRES_PORT")
 pg_user = os.environ.get("POSTGRES_USER")
