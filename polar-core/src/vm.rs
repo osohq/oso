@@ -2953,10 +2953,10 @@ impl Runnable for PolarVirtualMachine {
             self.log_with(|| format!("=> {}", value.to_string()), &[]);
 
             // Fetch variable to unify with call result.
-            let sym = &self.get_call_sym(&call_id).to_owned();
+            let sym = (&self).get_call_sym(&call_id).to_owned();
 
             self.push_goal(Goal::Unify {
-                left: Term::new_temporary(Value::Variable(sym.to_owned())),
+                left: Term::new_temporary(Value::Variable(sym)),
                 right: value,
             })?;
         } else {
