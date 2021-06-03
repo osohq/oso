@@ -34,7 +34,12 @@ def get_pk(model):
 
 
 def role_allow_query(
-    id_query, type_query, child_types, resource_id_field, has_relationships
+    id_query,
+    type_query,
+    child_types,
+    resource_id_field,
+    resource_id_type,
+    has_relationships,
 ):
     child_types = ",".join([f"'{ct}'" for ct in child_types])
 
@@ -53,7 +58,7 @@ def role_allow_query(
         with resources as (
             with recursive resources (id, type) as (
                 select
-                    {resource_id_field} as id,
+                    cast({resource_id_field} as {resource_id_type}) as id,
                     :resource_type as type
                 {recur}
             ) select * from resources
@@ -102,7 +107,12 @@ def role_allow_query(
 
 
 def user_in_role_query(
-    id_query, type_query, child_types, resource_id_field, has_relationships
+    id_query,
+    type_query,
+    child_types,
+    resource_id_field,
+    resource_id_type,
+    has_relationships,
 ):
     child_types = ",".join([f"'{ct}'" for ct in child_types])
 
@@ -121,7 +131,7 @@ def user_in_role_query(
         with resources as (
             with recursive resources (id, type) as (
                 select
-                    {resource_id_field} as id,
+                    cast({resource_id_field} as {resource_id_type}) as id,
                     :resource_type as type
                 {recur}
             ) select * from resources
@@ -838,14 +848,25 @@ class OsoRoles:
         type_query += "end as type"
 
         resource_id_field = ":resource_id"
+        resource_id_type = self.resource_id_column_type.compile()
 
         has_relationships = len(self.config.relationships) > 0
         self.role_allow_sql_query = role_allow_query(
-            id_query, type_query, child_types, resource_id_field, has_relationships
+            id_query,
+            type_query,
+            child_types,
+            resource_id_field,
+            resource_id_type,
+            has_relationships,
         )
 
         self.user_in_role_sql_query = user_in_role_query(
-            id_query, type_query, child_types, resource_id_field, has_relationships
+            id_query,
+            type_query,
+            child_types,
+            resource_id_field,
+            resource_id_type,
+            has_relationships,
         )
 
         for _, resource in self.config.resources.items():
