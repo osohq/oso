@@ -66,20 +66,17 @@ class Issue(Base):
 
 def test_roles3():
     oso = Oso()
-    roles = OsoRoles(Base)
+    engine = create_engine("sqlite://", echo=False)
+    Session = sessionmaker(bind=engine)
+    roles = OsoRoles(oso, User, Base, Session)
 
     register_models(oso, Base)
 
-    oso.load_file("../roles.polar")
-    oso.load_file("../roles_demo.polar")
-    roles.enable(oso, Base, User)  # role_allows rule gets added here probably
+    oso.load_file("sqlalchemy_oso/roles.polar")
+    oso.load_file("sqlalchemy_oso/roles_demo.polar")
+    roles.synchronize_data()  # role_allows rule gets added here probably
 
-    engine = create_engine("sqlite://", echo=False)
     Base.metadata.create_all(engine)
-    # Runtime
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    roles.set_session(session)
 
     steve = User(name="steve")
     leina = User(name="leina")
@@ -91,14 +88,14 @@ def test_roles3():
 
     objs = [steve, leina, gabe, osohq, oso_repo, acme, anvil_repo]
 
+    session = Session()
     for obj in objs:
         session.add(obj)
-    session.commit()
 
     # Things that happen in the app via the management api.
-    roles.assign_role(leina, osohq, "owner")
-    roles.assign_role(steve, osohq, "member")
-    roles.assign_role(gabe, oso_repo, "write")
+    roles.assign_role(leina, osohq, "owner", session=session)
+    roles.assign_role(steve, osohq, "member", session=session)
+    roles.assign_role(gabe, oso_repo, "write", session=session)
 
     # Test
 

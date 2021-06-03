@@ -75,8 +75,8 @@ def one():
     roles.enable(oso)
     oso.register_constant(roles, "roles")
 
-    oso.load_file("roles.polar")
-    oso.load_file("roles_demo.polar")
+    oso.load_file("sqlalchemy-oso/sqlalchemy_oso/roles.polar")
+    oso.load_file("sqlalchemy-oso/sqlalchemy_oso/roles_demo.polar")
 
     ###########################################################################
 
@@ -124,8 +124,8 @@ def six():
     roles = OsoRoles()
     roles.enable(oso)
 
-    oso.load_file("roles.polar")
-    oso.load_file("roles_demo.polar")
+    oso.load_file("sqlalchemy-oso/sqlalchemy_oso/roles.polar")
+    oso.load_file("sqlalchemy-oso/sqlalchemy_oso/roles_demo.polar")
 
     ### Basic resource role configuration ###
 

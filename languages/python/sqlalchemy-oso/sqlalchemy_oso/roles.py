@@ -8,6 +8,8 @@ from sqlalchemy.orm.util import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError, UnmappedClassError
 from sqlalchemy import inspect, UniqueConstraint
 from sqlalchemy.exc import IntegrityError
+from oso import Oso
+
 from .session import _OsoSession
 
 # Global list to keep track of role classes as they are created, used to
@@ -16,36 +18,45 @@ ROLE_CLASSES: List[Any] = []
 
 
 class OsoRoles:
-    def __init__(self, sqlalchemy_base):
-        self.base = sqlalchemy_base
+    def __init__(self, oso: Oso, user_model, sqlalchemy_base, session_maker):
+        self.oso = oso
+        self.user_model = user_model
+        self.sqlalchemy_base = sqlalchemy_base
+        self.session_maker = session_maker
         self.roles = {}
 
-    def enable(self, oso, sqlalchemy_base, user_model):
+    def synchronize_data(self):
         print("Enabling Oso roles...")
-        oso.register_constant(self, "OsoRoles")
-        for res in oso.query("role(resource_class, definitions, _)"):
+        self.oso.register_constant(self, "OsoRoles")
+        for res in self.oso.query("role(resource_class, definitions, _)"):
             resource_class = res["bindings"]["resource_class"]
             roles = list(res["bindings"]["definitions"].keys())
-            role_mixin = resource_role_class(
-                sqlalchemy_base, user_model, resource_class, roles
-            )
+            role_mixin = resource_role_class(self.user_model, resource_class, roles)
 
             role_class = type(
-                f"{resource_class.__name__}Role", (sqlalchemy_base, role_mixin), {}
+                f"{resource_class.__name__}Role", (self.sqlalchemy_base, role_mixin), {}
             )
             print(f"Adding roles {role_class.__name__} to {resource_class.__name__}")
             self.roles[resource_class] = role_class
             setattr(resource_class, "role_definitions", roles)
 
-    def set_session(self, session):
-        self.session = session
-
-    def assign_role(self, user, resource, role):
-        return add_user_role(self.session, user, resource, role, commit=True)
+    def assign_role(self, user, resource, role, *, session=None):
+        local_session = session is None
+        if local_session:
+            session = self.session_maker()
+        try:
+            return add_user_role(session, user, resource, role, commit=True)
+        finally:
+            if local_session:
+                session.close()
 
     def get_actor_roles(self, user):
-        for resource_model in self.roles.keys():
-            yield from get_user_roles(self.session, user, resource_model)
+        session = self.session_maker()
+        try:
+            for resource_model in self.roles.keys():
+                yield from get_user_roles(session, user, resource_model)
+        finally:
+            session.close()
 
 
 def resource_role_class(
