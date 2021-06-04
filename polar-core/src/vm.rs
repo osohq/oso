@@ -2171,7 +2171,7 @@ impl PolarVirtualMachine {
             // Push an `ExternalLookup` goal for external instances
             (_, Value::ExternalInstance(_)) => {
                 // Generate symbol for next result and leave the variable unbound, so that unification with the result does not fail
-                // Unification of the `next_term` variable with the result of `NextExternal` happens in `fn external_call_result()`
+                // Unification of the `next_sym` variable with the result of `NextExternal` happens in `fn external_call_result()`
                 // `external_call_result` is the handler for results from both `LookupExternal` and `NextExternal`, so neither can bind the
                 // call ID variable to `false`.
                 let next_sym = self.kb.read().unwrap().gensym("next_value");
