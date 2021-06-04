@@ -45,6 +45,7 @@ func (p *PolarFfi) delete() {
 func getError() error {
 	err := C.polar_get_error()
 	errStr := C.GoString(err)
+	C.string_free(err)
 	var polarError errors.FormattedPolarError
 	jsonErr := json.Unmarshal([]byte(errStr), &polarError)
 	if jsonErr != nil {
@@ -68,8 +69,10 @@ func processMessages(i ffiInterface) {
 			return
 		}
 		message := C.GoString(msgPtr)
+		C.string_free(msgPtr)
 		var messageStruct types.Message
 		err := json.Unmarshal([]byte(message), &messageStruct)
+
 		if err != nil {
 			panic(err)
 		}
@@ -96,9 +99,11 @@ func (p PolarFfi) NewId() (uint64, error) {
 
 func (p PolarFfi) Load(s string, filename *string) error {
 	cString := C.CString(s)
+	defer C.free(unsafe.Pointer(cString))
 	var cFilename *C.char
 	if filename != nil {
 		cFilename = C.CString(*filename)
+		defer C.free(unsafe.Pointer(cFilename))
 	}
 	result := C.polar_load(p.ptr, cString, cFilename)
 	processMessages(p)
@@ -119,6 +124,7 @@ func (p PolarFfi) ClearRules() error {
 
 func (p PolarFfi) NewQueryFromStr(queryStr string) (*QueryFfi, error) {
 	cs := C.CString(queryStr)
+	defer C.free(unsafe.Pointer(cs))
 	result := C.polar_new_query(p.ptr, cs, 0)
 	processMessages(p)
 	if result == nil {
@@ -131,6 +137,8 @@ func (p PolarFfi) NewQueryFromTerm(queryTerm types.Term) (*QueryFfi, error) {
 	json, err := ffiSerialize(queryTerm)
 	if err != nil {
 		return nil, err
+	} else {
+		defer C.free(unsafe.Pointer(json))
 	}
 	result := C.polar_new_query_from_term(p.ptr, json, 0)
 	processMessages(p)
@@ -152,10 +160,12 @@ func (p PolarFfi) NextInlineQuery() (*QueryFfi, error) {
 
 func (p PolarFfi) RegisterConstant(term types.Term, name string) error {
 	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
 	cTerm, err := ffiSerialize(term)
 	if err != nil {
-		defer C.free(unsafe.Pointer(cName))
 		return err
+	} else {
+		defer C.free(unsafe.Pointer(cTerm))
 	}
 	result := C.polar_register_constant(p.ptr, cName, cTerm)
 	processMessages(p)
@@ -191,6 +201,8 @@ func (q QueryFfi) CallResult(callID uint64, term *types.Term) error {
 		s, err = ffiSerialize(term)
 		if err != nil {
 			return err
+		} else {
+			defer C.free(unsafe.Pointer(s))
 		}
 	}
 
@@ -216,7 +228,9 @@ func (q QueryFfi) QuestionResult(callID uint64, answer bool) error {
 }
 
 func (q QueryFfi) ApplicationError(message string) error {
-	result := C.polar_application_error(q.ptr, C.CString(message))
+	cMessage := C.CString(message)
+	defer C.free(unsafe.Pointer(cMessage))
+	result := C.polar_application_error(q.ptr, cMessage)
 	if result == 0 {
 		return getError()
 	}
@@ -230,6 +244,7 @@ func (q QueryFfi) NextEvent() (*string, error) {
 		return nil, getError()
 	}
 	goEvent := C.GoString(event)
+	C.string_free(event)
 	return &goEvent, nil
 }
 
@@ -238,6 +253,8 @@ func (q QueryFfi) DebugCommand(command *string) error {
 	cStr, err := ffiSerialize(term)
 	if err != nil {
 		return err
+	} else {
+		defer C.free(unsafe.Pointer(cStr))
 	}
 	result := C.polar_debug_command(q.ptr, cStr)
 	processMessages(q)
