@@ -8,9 +8,10 @@ from sqlalchemy.orm.util import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError, UnmappedClassError
 from sqlalchemy import inspect, UniqueConstraint
 from sqlalchemy.exc import IntegrityError
-from oso import Oso
+from oso import Oso, Variable
 
 from .session import _OsoSession
+from .compat import iterate_model_classes
 
 # Global list to keep track of role classes as they are created, used to
 # generate RBAC base policy in Polar
@@ -27,18 +28,26 @@ class OsoRoles:
 
     def synchronize_data(self):
         print("Enabling Oso roles...")
-        self.oso.register_constant(self, "OsoRoles")
-        for res in self.oso.query("role(resource_class, definitions, _)"):
-            resource_class = res["bindings"]["resource_class"]
-            roles = list(res["bindings"]["definitions"].keys())
-            role_mixin = resource_role_class(self.user_model, resource_class, roles)
+        for cls in iterate_model_classes(self.sqlalchemy_base):
+            for res in self.oso.query_rule(
+                "resource",
+                cls,
+                Variable("_"),
+                Variable("_"),
+                Variable("roles"),
+                accept_expression=True,
+            ):
+                roles = list(res["bindings"]["roles"].keys())
+                role_mixin = resource_role_class(self.user_model, cls, roles)
 
-            role_class = type(
-                f"{resource_class.__name__}Role", (self.sqlalchemy_base, role_mixin), {}
-            )
-            print(f"Adding roles {role_class.__name__} to {resource_class.__name__}")
-            self.roles[resource_class] = role_class
-            setattr(resource_class, "role_definitions", roles)
+                role_class = type(
+                    f"{cls.__name__}Role",
+                    (self.sqlalchemy_base, role_mixin),
+                    {},
+                )
+                print(f"Adding roles {role_class.__name__} to {cls.__name__}")
+                self.roles[cls] = role_class
+                setattr(cls, "role_definitions", roles)
 
     def assign_role(self, user, resource, role, session=None):
         local_session = session is None

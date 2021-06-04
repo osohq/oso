@@ -88,7 +88,7 @@ def test_roles3():
     # Things that happen in the app via the management api.
     oso.roles.assign_role(leina, osohq, "owner", session)
     oso.roles.assign_role(steve, osohq, "member", session)
-    oso.roles.assign_role(gabe, oso_repo, "write", session)
+    oso.roles.assign_role(gabe, oso_repo, "writer", session)
 
     # Test
 
