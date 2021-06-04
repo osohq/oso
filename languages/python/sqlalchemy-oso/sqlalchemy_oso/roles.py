@@ -26,6 +26,8 @@ class OsoRoles:
         self.session_maker = session_maker
         self.roles = {}
 
+        oso.load_file("sqlalchemy_oso/roles.polar")
+
     def synchronize_data(self):
         print("Enabling Oso roles...")
         for cls in iterate_model_classes(self.sqlalchemy_base):

@@ -64,7 +64,6 @@ def test_roles3():
     oso = SQLAlchemyOso(Base)
     oso.enable_roles(User, Session)
 
-    oso.load_file("sqlalchemy_oso/roles.polar")
     oso.load_file("sqlalchemy_oso/roles_demo.polar")
 
     oso.roles.synchronize_data()  # role_allows rule gets added here probably
