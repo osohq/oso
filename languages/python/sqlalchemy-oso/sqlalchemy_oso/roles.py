@@ -40,7 +40,7 @@ class OsoRoles:
                 accept_expression=True,
             ):
                 namespace = res["bindings"]["namespace"]
-                self.oso.load_str(f"class_namespace({cls.__name__}, {namespace});")
+                self.oso.load_str(f'class_namespace({cls.__name__}, "{namespace}");')
 
                 roles = list(res["bindings"]["roles"].keys())
                 role_mixin = resource_role_class(self.user_model, cls, roles)
