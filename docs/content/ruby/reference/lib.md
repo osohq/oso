@@ -1,5 +1,5 @@
 ---
-title: Ruby Library
+title: Ruby Authorization Library
 weight: 2
 any: false
 ---
@@ -22,11 +22,11 @@ gem 'oso-oso', '~> {{< version >}}'
 
 ## Requirements
 
-* Ruby version 2.4 or greater
-* Supported platforms:
-  * Linux
-  * macOS
-  * Windows
+- Ruby version 2.4 or greater
+- Supported platforms:
+  - Linux
+  - macOS
+  - Windows
 
 ## API Reference
 

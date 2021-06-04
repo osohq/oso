@@ -1,9 +1,9 @@
 ---
-title: Python Library
+title: Python Authorization Library
 weight: 2
 any: false
 aliases:
-    - /using/libraries/python/api.html
+  - /using/libraries/python/api.html
 ---
 
 # Python Authorization Library
@@ -17,11 +17,11 @@ $ pip install oso
 
 ## Requirements
 
-* Python version 3.6 or greater
-* Supported platforms:
-  * Linux
-  * macOS
-  * Windows
+- Python version 3.6 or greater
+- Supported platforms:
+  - Linux
+  - macOS
+  - Windows
 
 The standard Python package is known to work on glibc-based distributions, but
 not on musl-based ones like Alpine Linux. Wheels built against musl that you

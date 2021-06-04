@@ -1,5 +1,5 @@
 ---
-title: Rust Library
+title: Rust Authorization Library
 weight: 2
 any: false
 ---
@@ -20,10 +20,10 @@ For more information on the Oso Rust library, see the library documentation.
 
 ## Requirements
 
-* Supported platforms:
-  * Linux
-  * macOS
-  * Windows
+- Supported platforms:
+  - Linux
+  - macOS
+  - Windows
 
 ## API Reference
 
