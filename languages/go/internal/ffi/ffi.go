@@ -18,6 +18,15 @@ import (
 	"github.com/osohq/go-oso/types"
 )
 
+/*
+Reads a c string from polar core to a go string and frees the c string.
+*/
+func readStr(cStr *C.char) string {
+	goStr := C.GoString(cStr)
+	C.string_free(cStr)
+	return goStr
+}
+
 func ffiSerialize(input interface{}) (*C.char, error) {
 	json, err := json.Marshal(input)
 	if err != nil {
@@ -44,8 +53,7 @@ func (p *PolarFfi) delete() {
 
 func getError() error {
 	err := C.polar_get_error()
-	errStr := C.GoString(err)
-	C.string_free(err)
+	errStr := readStr(err)
 	var polarError errors.FormattedPolarError
 	jsonErr := json.Unmarshal([]byte(errStr), &polarError)
 	if jsonErr != nil {
@@ -68,8 +76,7 @@ func processMessages(i ffiInterface) {
 		if msgPtr == nil {
 			return
 		}
-		message := C.GoString(msgPtr)
-		C.string_free(msgPtr)
+		message := readStr(msgPtr)
 		var messageStruct types.Message
 		err := json.Unmarshal([]byte(message), &messageStruct)
 
@@ -135,10 +142,9 @@ func (p PolarFfi) NewQueryFromStr(queryStr string) (*QueryFfi, error) {
 
 func (p PolarFfi) NewQueryFromTerm(queryTerm types.Term) (*QueryFfi, error) {
 	json, err := ffiSerialize(queryTerm)
+	defer C.free(unsafe.Pointer(json))
 	if err != nil {
 		return nil, err
-	} else {
-		defer C.free(unsafe.Pointer(json))
 	}
 	result := C.polar_new_query_from_term(p.ptr, json, 0)
 	processMessages(p)
@@ -162,10 +168,9 @@ func (p PolarFfi) RegisterConstant(term types.Term, name string) error {
 	cName := C.CString(name)
 	defer C.free(unsafe.Pointer(cName))
 	cTerm, err := ffiSerialize(term)
+	defer C.free(unsafe.Pointer(cTerm))
 	if err != nil {
 		return err
-	} else {
-		defer C.free(unsafe.Pointer(cTerm))
 	}
 	result := C.polar_register_constant(p.ptr, cName, cTerm)
 	processMessages(p)
@@ -199,10 +204,9 @@ func (q QueryFfi) CallResult(callID uint64, term *types.Term) error {
 	var err error
 	if term != nil {
 		s, err = ffiSerialize(term)
+		defer C.free(unsafe.Pointer(s))
 		if err != nil {
 			return err
-		} else {
-			defer C.free(unsafe.Pointer(s))
 		}
 	}
 
@@ -243,18 +247,16 @@ func (q QueryFfi) NextEvent() (*string, error) {
 	if event == nil {
 		return nil, getError()
 	}
-	goEvent := C.GoString(event)
-	C.string_free(event)
+	goEvent := readStr(event)
 	return &goEvent, nil
 }
 
 func (q QueryFfi) DebugCommand(command *string) error {
 	term := types.Term{types.Value{types.ValueString(*command)}}
 	cStr, err := ffiSerialize(term)
+	defer C.free(unsafe.Pointer(cStr))
 	if err != nil {
 		return err
-	} else {
-		defer C.free(unsafe.Pointer(cStr))
 	}
 	result := C.polar_debug_command(q.ptr, cStr)
 	processMessages(q)
@@ -269,6 +271,6 @@ func (q QueryFfi) Source() (*string, error) {
 	if source == nil {
 		return nil, getError()
 	}
-	goSource := C.GoString(source)
+	goSource := readStr(source)
 	return &goSource, nil
 }

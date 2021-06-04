@@ -129,6 +129,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 		case QueryEventNextExternal:
 			err = q.handleNextExternal(ev)
 		default:
+			defer q.Cleanup()
 			return nil, fmt.Errorf("unexpected query event: %v", ev)
 		}
 		if err != nil {
