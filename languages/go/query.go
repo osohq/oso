@@ -35,6 +35,10 @@ func newQuery(ffiQuery ffi.QueryFfi, host host.Host) Query {
 	}
 }
 
+func (q *Query) Cleanup() {
+	q.ffiQuery.Delete()
+}
+
 func (q *Query) resultsChannel() (<-chan map[string]interface{}, <-chan error) {
 	results := make(chan map[string]interface{}, 1)
 	errors := make(chan error, 1)
@@ -94,7 +98,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 
 		switch ev := event.QueryEventVariant.(type) {
 		case QueryEventDone:
-			defer q.ffiQuery.Delete()
+			defer q.Cleanup()
 			return nil, nil
 		case QueryEventDebug:
 			err = q.handleDebug(ev)
@@ -125,9 +129,11 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 		case QueryEventNextExternal:
 			err = q.handleNextExternal(ev)
 		default:
+			defer q.Cleanup()
 			return nil, fmt.Errorf("unexpected query event: %v", ev)
 		}
 		if err != nil {
+			defer q.Cleanup()
 			return nil, err
 		}
 	}
