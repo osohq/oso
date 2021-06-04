@@ -10,7 +10,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy_oso import SQLAlchemyOso
 
-# from sqlalchemy_oso.auth import authorize_model
+from sqlalchemy_oso.auth import authorize_model
 
 Base = declarative_base(name="RoleBase")
 
@@ -131,6 +131,9 @@ def test_roles3():
     # Gabe can push to oso_repo because he has WRTIE on oso_repo
     assert oso.is_allowed(gabe, "push", oso_repo)
 
-    # # Data filtering test:
-    # auth_filter = authorize_model(oso, leina, "push", session, Repository)
-    # assert str(auth_filter) == "repositories.organization_id = :org_id_1"
+    # Data filtering test:
+    auth_filter = authorize_model(oso, leina, "push", session, Repository)
+    assert str(auth_filter) == ":param_1 = repositories.organization_id"
+    authorized_repos = session.query(Repository).filter(auth_filter).all()
+    assert len(authorized_repos) == 1
+    assert authorized_repos[0] == oso_repo
