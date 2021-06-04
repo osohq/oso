@@ -52,6 +52,11 @@ class OsoRoles:
                 self.roles[cls] = role_class
                 setattr(cls, "role_definitions", roles)
 
+        # Temp hack to ensure all tables are created regardless of ordering of
+        # synchronize_data() and Base.metadata.create_all(engine).
+        engine = self.session_maker.kw["bind"]
+        self.sqlalchemy_base.metadata.create_all(engine)
+
     def assign_role(self, user, resource, role, session=None):
         local_session = session is None
         if local_session:
