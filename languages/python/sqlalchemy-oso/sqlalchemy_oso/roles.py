@@ -32,11 +32,14 @@ class OsoRoles:
             for res in self.oso.query_rule(
                 "resource",
                 cls,
-                Variable("_"),
+                Variable("namespace"),
                 Variable("_"),
                 Variable("roles"),
                 accept_expression=True,
             ):
+                namespace = res["bindings"]["namespace"]
+                self.oso.load_str(f"class_namespace({cls.__name__}, {namespace});")
+
                 roles = list(res["bindings"]["roles"].keys())
                 role_mixin = resource_role_class(self.user_model, cls, roles)
 

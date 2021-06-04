@@ -27,7 +27,7 @@ role_implies(role, implied, child_resource) if
     parent_resource = role.resource and
     parent(parent_resource, child_resource) and
     hack_type_check(parent_resource, resource_class) and
-    resource_class_to_namespace(resource_class, namespace) and
+    class_namespace(resource_class, namespace) and
     resource(resource_class, namespace, _, roles) and
     name = role.name and
     implied_role in roles.(name).implies and
@@ -49,14 +49,14 @@ has_permission(role, action, resource) if
 
 # check for direct permission
 role_has_permission(role_name, action, resource_class) if
-    resource_class_to_namespace(resource_class, namespace) and
+    class_namespace(resource_class, namespace) and
     resource(resource_class, namespace, _actions, roles) and
     [role_name, role_details] in roles and
     action in role_details.permissions;
 
 # check for permission via implied map
 role_has_permission(role_name, action, resource_class) if
-    resource_class_to_namespace(resource_class, namespace) and
+    class_namespace(resource_class, namespace) and
     resource(resource_class, namespace, _actions, roles) and
     [role_name, role_details] in roles and
     implied_role in role_details.implies and
@@ -65,6 +65,3 @@ role_has_permission(role_name, action, resource_class) if
 #### Internal hacks
 hack_type_check(_: Organization, Organization);
 hack_type_check(_: Repository, Repository);
-
-resource_class_to_namespace(Organization, "org");
-resource_class_to_namespace(Repository, "repo");
