@@ -384,7 +384,7 @@ the Polar `matches` operator:
 ```polar
 # A user that is an administrator may read any document.
 allow(user, "read", document) if
-    actor matches User and
+    user matches User and
     user.admin = true;
 
 # A user may read any document that they own.
