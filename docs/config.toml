@@ -10,6 +10,7 @@ defaultContentLanguage = "any"
 [params]
   description = "Explore our guides and reference articles for learning Oso and adding it to your application."
   images = ["oso-2020-white-on-black-rounded.png"]
+  osoMarketingSiteURL = "https://www.osohq.com"
 
 [languages]
   [languages.any]

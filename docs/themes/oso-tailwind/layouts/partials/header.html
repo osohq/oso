@@ -13,18 +13,17 @@
 <nav id="header"
     class="static 2xl:sticky top-8 h-16 lg:h-20 lg:z-50 max-w-8xl mx-auto bg-primary-dark flex flex-none items-center">
     <div id="header-logo" class="pl-6">
-        <a class="text-white text-base no-underline hover:no-underline text-xl" href="{{ $.Site.BaseURL }}index.html">
+        <a class="text-white text-base no-underline hover:no-underline text-xl" href="{{ $.Site.Params.osoMarketingSiteURL }}">
             <!-- h-12 is 48px -- double for quality sakes -->
             {{- $image := resources.Get "img/oso_logo.png" -}}
             {{ $image = $image.Resize "x96" }}
             <img src="{{ $image.Permalink }}" class="mr-12 lg:mr-16 h-8 lg:h-12">
         </a>
     </div>
-    <div id="header-page-title" class="flex-grow flex items-center">
-    </div>
-    <div class="flex-none px-6">
+    <div class="flex-none">
         {{- partial "language-dropdown.html" . }}
     </div>
+    <div class="flex-grow"></div>
     <div class="flex lg:hidden px-4">
         <!-- Mobile menu button -->
         <button id="nav-toggle"
@@ -74,18 +73,6 @@
                     </div>
                     <span class="hidden md:block">
                         Authorization Academy
-                    </span>
-                </button>
-            </a>
-            <a href="https://www.osohq.com/company/blog/">
-                <button class="nav-btn tooltip">
-                    <span class="tooltip-text" aria-hidden="true">Read the latest from the engineering
-                        team</span>
-                    <div class=" h-5 w-5 mr-2">
-                        {{ partialCached "fontawesome.html" "blog" "blog" }}
-                    </div>
-                    <span class="hidden md:block">
-                        Blog
                     </span>
                 </button>
             </a>
