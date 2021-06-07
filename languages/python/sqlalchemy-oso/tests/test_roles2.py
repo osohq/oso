@@ -2436,6 +2436,44 @@ def test_id_types(engine, Base, User, sa_type, one_id):
     assert oso.is_allowed(steve, "read", one)
 
 
+def test_role_allows_with_other_rules(
+    init_oso, sample_data, auth_sessionmaker, User, Organization
+):
+    oso, session = init_oso
+    policy = """
+    # Users can read their own data.
+    allow(user: User, "read", user);
+
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["read"] and
+        roles = {
+            member: {
+                permissions: ["read"]
+            }
+        };
+
+    allow(_, _, resource) if resource = 1;
+    allow(_, _, resource: Boolean) if resource;
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso.roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    leina = sample_data["leina"]
+
+    oso.roles.assign_role(leina, osohq, "member", session=session)
+    session.commit()
+
+    # This is just to ensure we don't modify the policy above.
+    assert oso.is_allowed(leina, "read", osohq)
+    assert oso.is_allowed(leina, "read", 1)
+    assert not oso.is_allowed(leina, "read", 2)
+    assert oso.is_allowed(leina, "read", True)
+    assert not oso.is_allowed(leina, "read", False)
+
+
 # LEGACY TEST
 
 
