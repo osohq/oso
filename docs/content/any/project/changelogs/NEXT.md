@@ -8,9 +8,11 @@ description: >-
 draft: true
 ---
 
-## `sqlalchemy-oso-preview` 0.0.5
+## `oso` v0.12.4
 
-### Breaking changes
+### Core
+
+#### Breaking changes
 
 <!-- TODO: remove warning and replace with "None" if no breaking changes. -->
 
@@ -72,3 +74,6 @@ Link to [relevant documentation section]().
   when verifying that all models descending from the given base class have
   primary keys of the same type. For more on that requirement, see [the version
   0.0.4 changelog](project/changelogs/2021-05-26).
+
+- Fixed bug with dot lookups in the head of a rule ([#933](https://github.com/osohq/oso/pull/933)).
+

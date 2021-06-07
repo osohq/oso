@@ -21,6 +21,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
       AWS_REGION: "us-east-1"
       PUBLISH_DOCS: 1
+      ALGOLIA_ADMIN_API_KEY: ${{ secrets.ALGOLIA_ADMIN_API_KEY }}
     steps:
       - uses: actions/checkout@v2
 
@@ -90,17 +91,15 @@ jobs:
         uses: peaceiris/actions-hugo@v2
         with:
           hugo-version: '0.79.1'
-      - name: Build Hugo docs
+      - name: Build Hugo docs (docs-preview.oso.dev)
         if: github.event.inputs.url == 'docs-preview.oso.dev'
         run: |
-          make build
-          HUGO_ENV=production hugo -b "https://docs-preview.oso.dev/"
+          make ci-preview-docs
         working-directory: docs
-      - name: Build Hugo docs
+      - name: Build Hugo docs (docs.oso.dev)
         if: github.event.inputs.url == 'docs.oso.dev'
         run: |
-          make build-prod
-          HUGO_ENV=production hugo -b "https://docs.osohq.com/"
+          make ci-prod-docs
         working-directory: docs
 
       ### Push to S3 + invalidate cache

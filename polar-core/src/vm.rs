@@ -419,6 +419,12 @@ impl PolarVirtualMachine {
         (call_id, Term::new_temporary(Value::Variable(sym)))
     }
 
+    fn get_call_sym(&self, call_id: u64) -> &Symbol {
+        self.call_id_symbols
+            .get(&call_id)
+            .expect("unregistered external call ID")
+    }
+
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
     /// result is needed to achieve it, or `None` if it can run internally.
     fn next(&mut self, goal: Rc<Goal>) -> PolarResult<QueryEvent> {
@@ -529,6 +535,15 @@ impl PolarVirtualMachine {
                 msg: format!("Goal stack overflow! MAX_GOALS = {}", self.stack_limit),
             }
             .into());
+        }
+        match goal {
+            Goal::LookupExternal { call_id, .. } | Goal::NextExternal { call_id, .. } => {
+                assert!(matches!(
+                    self.variable_state(self.get_call_sym(call_id)),
+                    VariableState::Unbound
+                ), "The call_id result variables for LookupExternal and NextExternal goals must be unbound.");
+            }
+            _ => (),
         }
 
         self.goals.push(Rc::new(goal));
@@ -1057,7 +1072,10 @@ impl PolarVirtualMachine {
                 // For each field in the dict, look up the corresponding field on the instance and
                 // then isa them.
                 for (field, right_value) in right.fields.iter() {
-                    let (call_id, answer) = self.new_call_var("isa_value", Value::Boolean(false));
+                    // Generate symbol for the lookup result and leave the variable unbound, so that unification with the result does not fail.
+                    // Unification with the lookup result happens in `fn external_call_result()`.
+                    let answer = self.kb.read().unwrap().gensym("isa_value");
+                    let call_id = self.new_call_id(&answer);
 
                     let lookup = Goal::LookupExternal {
                         instance: left.clone(),
@@ -1065,7 +1083,7 @@ impl PolarVirtualMachine {
                         field: right_value.clone_with_value(Value::String(field.0.clone())),
                     };
                     let isa = Goal::Isa {
-                        left: answer,
+                        left: Term::new_temporary(Value::Variable(answer)),
                         right: right_value.clone(),
                     };
                     self.append_goals(vec![lookup, isa])?;
@@ -1884,16 +1902,13 @@ impl PolarVirtualMachine {
                     self.add_constraint(&constraint_term)?;
                     return Ok(QueryEvent::None);
                 }
-                let value = value
-                    .value()
-                    .as_symbol()
-                    .map_err(|mut e| {
-                        e.add_stack_trace(self);
-                        e
-                    })
-                    .expect("bad lookup value");
-                let call_id = self.new_call_id(value);
+                let answer = self.kb.read().unwrap().gensym("lookup_value");
+                let call_id = self.new_call_id(&answer);
                 self.append_goals(vec![
+                    Goal::Unify {
+                        left: Term::new_temporary(Value::Variable(answer)),
+                        right: value.clone(),
+                    },
                     Goal::LookupExternal {
                         call_id,
                         field: field.clone(),
@@ -2155,8 +2170,12 @@ impl PolarVirtualMachine {
             }
             // Push an `ExternalLookup` goal for external instances
             (_, Value::ExternalInstance(_)) => {
-                // Generate symbol for next result and bind to `false` (default)
-                let (call_id, next_term) = self.new_call_var("next_value", Value::Boolean(false));
+                // Generate symbol for next result and leave the variable unbound, so that unification with the result does not fail
+                // Unification of the `next_sym` variable with the result of `NextExternal` happens in `fn external_call_result()`
+                // `external_call_result` is the handler for results from both `LookupExternal` and `NextExternal`, so neither can bind the
+                // call ID variable to `false`.
+                let next_sym = self.kb.read().unwrap().gensym("next_value");
+                let call_id = self.new_call_id(&next_sym);
 
                 // append unify goal to be evaluated after
                 // next result is fetched
@@ -2167,7 +2186,7 @@ impl PolarVirtualMachine {
                     },
                     Goal::Unify {
                         left: item.clone(),
-                        right: next_term,
+                        right: Term::new_temporary(Value::Variable(next_sym)),
                     },
                 ])?;
             }
@@ -2921,7 +2940,7 @@ impl Runnable for PolarVirtualMachine {
 
     /// Handle an external result provided by the application.
     ///
-    /// If the value is `Some(_)` then we have a result, and bind the
+    /// If the value is `Some(_)` then we have a result, and unify the
     /// symbol associated with the call ID to the result value. If the
     /// value is `None` then the external has no (more) results, so we
     /// backtrack to the choice point left by `Goal::LookupExternal`.
@@ -2932,14 +2951,13 @@ impl Runnable for PolarVirtualMachine {
         if let Some(value) = term {
             self.log_with(|| format!("=> {}", value.to_string()), &[]);
 
-            self.rebind_external_answer(
-                &self
-                    .call_id_symbols
-                    .get(&call_id)
-                    .expect("unregistered external call ID")
-                    .clone(),
-                value,
-            );
+            // Fetch variable to unify with call result.
+            let sym = self.get_call_sym(call_id).to_owned();
+
+            self.push_goal(Goal::Unify {
+                left: Term::new_temporary(Value::Variable(sym)),
+                right: value,
+            })?;
         } else {
             self.log("=> No more results.", &[]);
 
