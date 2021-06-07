@@ -2035,7 +2035,7 @@ impl PolarVirtualMachine {
         // TODO: temprorary fix--If there are partial args, they must be called on `role_allows` or `user_in_role`
         if let Value::ExternalInstance(external) = self.deep_deref(&object).value() {
             if let Some(repr) = external.repr.clone() {
-                if repr.contains("sqlalchemy_oso.roles2.OsoRoles")
+                if repr.contains("sqlalchemy_oso.roles.OsoRoles")
                     && (name.0 == "role_allows" || name.0 == "user_in_role")
                 {
                     if partial_args.len() + partial_kwargs.len() > 1 {
@@ -3902,7 +3902,7 @@ mod tests {
         let object = term!(Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
             constructor: None,
-            repr: Some(String::from("sqlalchemy_oso.roles2.OsoRoles"))
+            repr: Some(String::from("sqlalchemy_oso.roles.OsoRoles"))
         }));
         let value = term!(sym!("result"));
         let resource_var = term!(sym!("resource"));
@@ -3988,7 +3988,7 @@ mod tests {
         let bad_object = term!(Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
             constructor: None,
-            repr: Some(String::from("sqlalchemy_oso.roles2.FakeRoles"))
+            repr: Some(String::from("sqlalchemy_oso.roles.FakeRoles"))
         }));
         assert!(vm
             .check_partial_args(&bad_object, &role_allows_call, &value)

@@ -1,6 +1,6 @@
 from oso import Oso, OsoError
 from .auth import register_models
-from .roles2 import OsoRoles
+from .roles import OsoRoles
 
 
 class SQLAlchemyOso(Oso):

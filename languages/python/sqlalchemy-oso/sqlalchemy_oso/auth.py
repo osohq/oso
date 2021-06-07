@@ -9,7 +9,7 @@ from sqlalchemy import inspect
 from sqlalchemy.sql import expression as sql
 
 from sqlalchemy_oso.partial import partial_to_filter
-from sqlalchemy_oso import roles2
+from sqlalchemy_oso import roles
 
 from sqlalchemy_oso.compat import iterate_model_classes
 
@@ -88,7 +88,7 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
         )
 
         if role_method is not None:
-            roles_filter = roles2._generate_query_filter(oso, role_method, model)
+            roles_filter = roles._generate_query_filter(oso, role_method, model)
             filter &= roles_filter
 
         if combined_filter is None:
