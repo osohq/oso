@@ -225,10 +225,10 @@ We can make queries without any authorization by setting the `checked_permission
 parameter. We pass this through in the `@session` decorator:
 
 {{< literalInclude
-path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
-from="docs: begin-is-allowed"
-to="docs: end-is-allowed"
-gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
+    from="docs: begin-is-allowed"
+    to="docs: end-is-allowed"
+    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
 >}}
 
 In this case, we are still able to use the regular `oso.is_allowed` to authorize

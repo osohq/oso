@@ -34,7 +34,7 @@ rule to our policy.
     linenos=true
 >}}
 
-This defines two roles on repository, `"repo_read"` and `"repo_write"`.
+This defines two roles on repository, `"reader"` and `"writer"`.
 This allows us to assign users directly to repositories without
 giving them a role in the entire organization.
 
@@ -88,9 +88,14 @@ definition.
     hlOpts="hl_lines=6"
     >}}
 
-The `"repo_read"` entry in `implies: ` for `org_member` gives organization
-members the `repo_read` role on all repositories within the
+The `"repo:reader"` entry in `implies: ` for `member` gives organization
+members the `reader` role on all child repositories within the
 organization.
+
+The `identifier:role_name` format is used to identify roles on other
+resources when specifying a role implication. `identifier` is the
+second argument to the `resource` definition. This format is also used for
+actions, as we'll see later on.
 
 {{% callout "Parent limitations" "blue" %}}
 
@@ -127,7 +132,7 @@ doesn't have roles, we still define an issue resource to declare the actions use
 Notice the last argument to `resource` is `_` instead of `roles`. This
 indicates it is unused.
 
-Now, we can assign the issue action to a repository role. Notice the `"issue:read"` permission for `repo_write` below:
+Now, we can assign the issue action to a repository role. Notice the `"issue:read"` permission for `writer` below:
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
@@ -137,7 +142,7 @@ Now, we can assign the issue action to a repository role. Notice the `"issue:rea
     linenos=true
 >}}
 
-The `identifier:action_name` string is used to identify actions on other
+As with implied roles, the `identifier:action_name` string is used to identify actions on other
 resources when specifying a permission on a role. `identifier` is the
 second argument to the `resource` definition.
 
