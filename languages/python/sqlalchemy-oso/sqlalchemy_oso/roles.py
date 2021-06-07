@@ -101,7 +101,7 @@ class PolarRoles:
             #     raise OsoError(f"Duplicate resource name {resource_name}")
 
             self.oso.load_str(
-                f'class_namespace(_: {resource_class}, "{resource_name}");'
+                f'resource_namespace(_: {resource_class}, "{resource_name}");'
             )
 
             role_mixin = resource_role_class(self.user_model, python_class, role_names)

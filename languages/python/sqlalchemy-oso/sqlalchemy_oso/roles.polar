@@ -64,7 +64,7 @@ role_implies(role, implied, resource) if
 #     parent_resource = role.resource and
 #     print("parent", child_resource, parent_resource) and
 #     parent(child_resource, parent_resource) and
-#     class_namespace(parent_resource, namespace) and
+#     resource_namespace(parent_resource, namespace) and
 #     resource(parent_resource, namespace, _, roles) and
 #     name = role.name and
 #     implied_role in roles.(name).implies and
@@ -81,7 +81,7 @@ role_implies(role, implied, resource) if
 #     # print("@@@@@@@@", role2) and
 #     # resource(resource2, namespace2, _, roles2) and
 #     # print("<<<<<<<<", roles2) and
-#     # class_namespace(resource2, namespace2) and
+#     # resource_namespace(resource2, namespace2) and
 #     # print(">>>>>>>>", namespace2));
 #     # # implied2 = {
 #     # #     name: role2,
@@ -105,14 +105,14 @@ has_permission(role, action, resource) if
 
 # check for direct permission
 role_has_permission(role_name, action, resource) if
-    class_namespace(resource, namespace) and
+    resource_namespace(resource, namespace) and
     resource(resource, namespace, _actions, roles) and
     [role_name, role_details] in roles and
     action in role_details.permissions;
 
 # check for permission via implied map
 role_has_permission(role_name, action, resource) if
-    class_namespace(resource, namespace) and
+    resource_namespace(resource, namespace) and
     resource(resource, namespace, _actions, roles) and
     [role_name, role_details] in roles and
     implied_role in role_details.implies and
