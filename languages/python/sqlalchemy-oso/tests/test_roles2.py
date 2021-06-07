@@ -952,6 +952,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
+    ios = sample_data["ios"]
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
@@ -961,6 +962,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "pull", oso_repo)
+    assert not oso.is_allowed(leina, "pull", ios)
     assert not oso.is_allowed(steve, "pull", oso_repo)
 
     # - Removing a permission of child resource type from a role revokes assignee access
@@ -1032,6 +1034,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
 
     osohq = sample_data["osohq"]
     oso_bug = sample_data["oso_bug"]
+    ios_laggy = sample_data["ios_laggy"]
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
@@ -1040,6 +1043,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
 
     assert oso.is_allowed(leina, "list_repos", osohq)
     assert oso.is_allowed(leina, "edit", oso_bug)
+    assert not oso.is_allowed(leina, "edit", ios_laggy)
     assert not oso.is_allowed(leina, "invite", osohq)
     assert not oso.is_allowed(steve, "edit", oso_bug)
 
@@ -1107,6 +1111,7 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     oso.roles.synchronize_data()
 
     osohq = sample_data["osohq"]
+    apple = sample_data["apple"]
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
@@ -1117,7 +1122,9 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     session.commit()
 
     assert oso.is_allowed(leina, "invite", osohq)
+    assert not oso.is_allowed(leina, "invite", apple)
     assert oso.is_allowed(steve, "invite", osohq)
+    assert not oso.is_allowed(steve, "invite", apple)
 
     # - Removing a role implication of same resource type from a role revokes assignee access
     new_policy = """
@@ -1187,6 +1194,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
+    ios = sample_data["ios"]
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
@@ -1196,6 +1204,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "pull", oso_repo)
+    assert not oso.is_allowed(leina, "pull", ios)
     assert not oso.is_allowed(steve, "pull", oso_repo)
 
     # - Removing a role implication of child resource type from a role revokes assignee access to child
@@ -1269,6 +1278,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
 
     osohq = sample_data["osohq"]
     oso_bug = sample_data["oso_bug"]
+    ios_laggy = sample_data["ios_laggy"]
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
@@ -1277,6 +1287,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
 
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "edit", oso_bug)
+    assert not oso.is_allowed(leina, "edit", ios_laggy)
     assert not oso.is_allowed(steve, "edit", oso_bug)
 
     # - Removing a permission of grandchild resource type from a role revokes assignee access
@@ -1370,6 +1381,7 @@ def test_chained_role_implication(init_oso, sample_data):
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
     oso_bug = sample_data["oso_bug"]
+    ios_laggy = sample_data["ios_laggy"]
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
@@ -1381,10 +1393,12 @@ def test_chained_role_implication(init_oso, sample_data):
     assert oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(steve, "pull", oso_repo)
     assert oso.is_allowed(leina, "edit", oso_bug)
+    assert not oso.is_allowed(leina, "edit", ios_laggy)
 
     # steve can pull from the repo and edit the issue, but can NOT invite to the org
     assert oso.is_allowed(steve, "pull", oso_repo)
     assert oso.is_allowed(steve, "edit", oso_bug)
+    assert not oso.is_allowed(steve, "edit", ios_laggy)
     assert not oso.is_allowed(steve, "invite", osohq)
 
     # - Removing a role implication from grandparent->parent->child resource role types revokes assignee of grandparent
@@ -2434,6 +2448,44 @@ def test_id_types(engine, Base, User, sa_type, one_id):
     oso.roles.assign_role(steve, one, "boss")
     session.commit()
     assert oso.is_allowed(steve, "read", one)
+
+
+def test_role_allows_with_other_rules(
+    init_oso, sample_data, auth_sessionmaker, User, Organization
+):
+    oso, session = init_oso
+    policy = """
+    # Users can read their own data.
+    allow(user: User, "read", user);
+
+    resource(_type: Organization, "org", actions, roles) if
+        actions = ["read"] and
+        roles = {
+            member: {
+                permissions: ["read"]
+            }
+        };
+
+    allow(_, _, resource) if resource = 1;
+    allow(_, _, resource: Boolean) if resource;
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
+    """
+    oso.load_str(policy)
+    oso.roles.synchronize_data()
+
+    osohq = sample_data["osohq"]
+    leina = sample_data["leina"]
+
+    oso.roles.assign_role(leina, osohq, "member", session=session)
+    session.commit()
+
+    # This is just to ensure we don't modify the policy above.
+    assert oso.is_allowed(leina, "read", osohq)
+    assert oso.is_allowed(leina, "read", 1)
+    assert not oso.is_allowed(leina, "read", 2)
+    assert oso.is_allowed(leina, "read", True)
+    assert not oso.is_allowed(leina, "read", False)
 
 
 # LEGACY TEST
