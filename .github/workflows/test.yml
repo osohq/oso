@@ -147,6 +147,18 @@ jobs:
   python_test:
     runs-on: ubuntu-latest
     needs: [build]
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
@@ -176,6 +188,11 @@ jobs:
       - name: Test sqlalchemy
         env:
           TOX_PARALLEL_NO_SPINNER: 1
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
         run: make python-sqlalchemy-test
       - name: Lint Python code
         run: make -C languages/python lint

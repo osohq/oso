@@ -12,9 +12,14 @@ try:
 except IOError:
     long_description = ""
 
+# Hack around tox, don't count oso as a dependency when running under tox.
 install_requires = ""
 with open("requirements.txt") as fp:
-    install_requires += fp.read()
+    for line in fp.readlines():
+        if "TOX_ENV_NAME" in os.environ and line.startswith("oso"):
+            continue
+        install_requires += line
+        install_requires += "\n"
 
 
 def read(rel_path):
@@ -37,7 +42,7 @@ def get_version(rel_path):
 
 
 setup(
-    name="sqlalchemy-oso",
+    name="sqlalchemy-oso-preview",
     version=get_version("sqlalchemy_oso/__init__.py"),
     description="oso sqlalchemy integration",
     long_description=long_description,
