@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1623081577596,
+  "lastUpdate": 1623084323471,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -55011,6 +55011,240 @@ window.BENCHMARK_DATA = {
             "name": "partial_rule_depth/100",
             "value": 113429744,
             "range": "± 1251940",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "39131582+samraper@users.noreply.github.com",
+            "name": "samraper",
+            "username": "samraper"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4f85bb0780624b0c534ccd8146ffebc1e9e89b95",
+          "message": "Fix Go svg not showing up in Safari (#952)",
+          "timestamp": "2021-06-07T12:33:25-04:00",
+          "tree_id": "01667bdd22a38c6df3805b71c96f545f5034a6eb",
+          "url": "https://github.com/osohq/oso/commit/4f85bb0780624b0c534ccd8146ffebc1e9e89b95"
+        },
+        "date": 1623084321338,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 48021,
+            "range": "± 1703",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2383173,
+            "range": "± 4683",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 11479635,
+            "range": "± 243300",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 22861823,
+            "range": "± 58990",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 822,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2341,
+            "range": "± 38",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 56369,
+            "range": "± 1368",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 487638,
+            "range": "± 8479",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 19010,
+            "range": "± 647",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 19020,
+            "range": "± 663",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18997,
+            "range": "± 675",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18996,
+            "range": "± 665",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 17287,
+            "range": "± 554",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5188,
+            "range": "± 597",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 6075,
+            "range": "± 1514",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 7533,
+            "range": "± 428",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 19300,
+            "range": "± 1753",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 5712,
+            "range": "± 110",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 12396,
+            "range": "± 366",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 7790,
+            "range": "± 167",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "load_policy",
+            "value": 790528,
+            "range": "± 6256",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/1",
+            "value": 23408,
+            "range": "± 1173",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/5",
+            "value": 86472,
+            "range": "± 3992",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/10",
+            "value": 186538,
+            "range": "± 6993",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/20",
+            "value": 466938,
+            "range": "± 8811",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/40",
+            "value": 1339213,
+            "range": "± 7555",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/80",
+            "value": 4159040,
+            "range": "± 14566",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/100",
+            "value": 6145598,
+            "range": "± 22635",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/1",
+            "value": 82207,
+            "range": "± 4319",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/5",
+            "value": 290460,
+            "range": "± 9168",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/10",
+            "value": 708772,
+            "range": "± 17583",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/20",
+            "value": 2260571,
+            "range": "± 68767",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/40",
+            "value": 8509725,
+            "range": "± 147794",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/80",
+            "value": 57498879,
+            "range": "± 1111483",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/100",
+            "value": 114089390,
+            "range": "± 948490",
             "unit": "ns/iter"
           }
         ]
