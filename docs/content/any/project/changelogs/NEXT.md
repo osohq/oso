@@ -78,4 +78,3 @@ Link to [relevant documentation section]().
 - Fixed bug with dot lookups in the head of a rule ([#933](https://github.com/osohq/oso/pull/933)).
 
 - Fixed some memory leaks in the go library ([#944](https://github.com/osohq/oso/issues/944)).
-  Thanks to @bhb603 for finding them.
