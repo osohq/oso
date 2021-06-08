@@ -4,14 +4,13 @@ weight: 1
 showContentForAnyLanguage: true
 ---
 
-# Build Role-Based Access Control (30 min) {{< earlyAccess textSize="sm">}}
+# Build Role-Based Access Control (30 min)
 
 When managing access to resources within an application, it can be
 useful to group permissions into **roles**, and assign these roles to
 users. This is known as **Role-Based Access Control (RBAC).** The Oso
 Roles library provides a configuration-based approach to adding
-role-based access control to your application. The library is in early
-access.
+role-based access control to your application.
 
 The roles library includes:
 
@@ -34,9 +33,6 @@ The roles library includes:
 ## Get started
 
 {{< tryInFramework >}}
-
-If you are looking for the the currently released version of the sqlalchemy-oso library, you can
-find it [here](/reference/frameworks/sqlalchemy).
 
 {{% /ifLang %}}
 
