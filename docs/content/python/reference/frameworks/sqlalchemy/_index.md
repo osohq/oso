@@ -40,4 +40,6 @@ is automatically generated from the Oso SQLAlchemy library source files.
 
 ## Roles Reference
 
-The SQLAlchemy Roles Reference has more details on the library's built-in roles features.
+The [SQLAlchemy Roles Reference](/new-roles) has more details on the library's built-in roles features. 
+
+

@@ -21,10 +21,6 @@ that uses Flask and SQLAlchemy for the backend, with a React frontend.
 To install **GitClub** to run alongside this tutorial, follow the
 [`README`](https://github.com/osohq/gitclub-sqlalchemy-flask-react#readme).
 
-## Installation
-
-Even if you're already using `sqlalchemy-oso`, you'll still need to install the new python package. Make sure you update your imports to import from `sqlalchemy-oso-preview`.
-See our [installation instructions](install).
 
 ## Setting up the Oso Instance
 
