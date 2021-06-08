@@ -25,8 +25,8 @@ Access Control (RBAC) patterns](learn/roles).
 
 {{% callout "Early access to the next version of sqlalchemy-oso" "blue" %}}
 
-We just released early access to the next version of our SQLAlchemy
-library, which will include improved support for common authorization
+We just released the next version of our SQLAlchemy
+library, which includes improved support for common authorization
 models, like role based access control.
 
 [Check it out here!](/new-roles)

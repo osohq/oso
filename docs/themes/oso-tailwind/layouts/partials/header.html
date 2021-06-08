@@ -3,9 +3,11 @@
     <div id="header-page-title" class="flex-grow">
         <p class="text-white font-base text-sm  text-center truncate">
             {{ if eq $.Page.Language.Lang "python" }}
-                Adding roles to your app? <a class="underline" href="{{ ref . "/guides/new-roles" }}">Try our new roles library</a>, now in early access.
+            Adding roles to your app? <a class="underline" href="{{ ref . " /guides/new-roles" }}">Try our new roles
+                library</a>, now in early access.
             {{ else }}
-                Want to get started? Jump into <a class="underline" href="https://join-slack.osohq.com">our Slack</a> and an engineer from the core team can help you out.
+            Want to get started? Jump into <a class="underline" href="https://join-slack.osohq.com">our Slack</a> and an
+            engineer from the core team can help you out.
             {{ end }}
         </p>
     </div>
@@ -13,7 +15,8 @@
 <nav id="header"
     class="static 2xl:sticky top-8 h-16 lg:h-20 lg:z-50 max-w-8xl mx-auto bg-primary-dark flex flex-none items-center">
     <div id="header-logo" class="pl-6">
-        <a class="text-white text-base no-underline hover:no-underline text-xl" href="{{ $.Site.Params.osoMarketingSiteURL }}">
+        <a class="text-white text-base no-underline hover:no-underline text-xl"
+            href="{{ $.Site.Params.osoMarketingSiteURL }}">
             <!-- h-12 is 48px -- double for quality sakes -->
             {{- $image := resources.Get "img/oso_logo.png" -}}
             {{ $image = $image.Resize "x96" }}
