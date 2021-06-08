@@ -10,7 +10,7 @@ description: >
 When managing access to resources within an application, it can be useful to
 group permissions into **roles**, and assign these roles to users. This is
 known as **Role-Based Access Control (RBAC).** The SQLAlchemy roles
-library extends the ``Oso`` core library with built in configuration,
+library extends the `Oso` core library with built in configuration,
 data modeling and enforcement of role-based access control.
 
 In this guide, we'll walk through the basics of starting to use the
@@ -22,6 +22,7 @@ To install **GitClub** to run alongside this tutorial, follow the
 [`README`](https://github.com/osohq/gitclub-sqlalchemy-flask-react#readme).
 
 ## Installation
+
 Even if you're already using `sqlalchemy-oso`, you'll still need to install the new python package. Make sure you update your imports to import from `sqlalchemy-oso-preview`.
 See our [installation instructions](install).
 
@@ -164,7 +165,6 @@ into our rules from within the policy, just like we can in Python!
 More on this [here]({{< ref
 "/getting-started/policies.md#instances-and-fields" >}}).
 
-
 ## SQLAlchemy Session Setup
 
 Oso integrates with SQLAlchemy [sessions](https://docs.sqlalchemy.org/en/13/orm/session_basics.html#what-does-the-session-do) to authorize access to models.
@@ -175,8 +175,8 @@ scoped to the [current
 thread](https://docs.sqlalchemy.org/en/13/orm/contextual.html).
 
 When using Oso, you should use `sqlalchemy_oso.authorized_sessionmaker`
-to create *authorized sessions*. An authorized session applies authorization
-to all *read* queries. 
+to create _authorized sessions_. An authorized session applies authorization
+to all _read_ queries.
 
 ### Using the authorized session
 
@@ -222,7 +222,7 @@ route handlers
 ### Making a query without authorization
 
 We can make queries without any authorization by setting the `checked_permissions=None`
-parameter. We pass this through in the `@session` decorator: 
+parameter. We pass this through in the `@session` decorator:
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
@@ -234,7 +234,6 @@ parameter. We pass this through in the `@session` decorator:
 In this case, we are still able to use the regular `oso.is_allowed` to authorize
 individual actions.
 
-
 ## Controlling access with roles
 
 Now, let's write our first rules that use role based access control. To
@@ -244,7 +243,6 @@ setup the role library, we must:
 2. Add role and resource configurations to our policy.
 3. Use the `Roles.role_allows` method in our policy.
 4. Assign roles to users.
-
 
 ### Persisting roles configuration
 
@@ -277,7 +275,6 @@ in a script.
 
 {{% /callout %}}
 
-
 {{% callout "Improved role configuration migrations coming soon" "green" %}}
 
 Currently, `OsoRoles.synchronize_data` deletes and replaces all role
@@ -290,14 +287,13 @@ dynamic role and permission assignments in a future release.
 
 {{% /callout %}}
 
-
 ### Configuring our first resource
 
 Roles in Oso are scoped to resources. A role is a grouping of
 permissions that may be performed on that resource. Roles are assigned
 to actors to grant them all the permissions the role has.
 
-We define resources in Polar using the ``resource`` rule. The `Org`
+We define resources in Polar using the `resource` rule. The `Org`
 resource represents an Organization in the GitClub example application.
 Let's walk through the resource definition for `Org`.
 
@@ -309,7 +305,7 @@ The rule head has 4 parameters:
 
 - `_type` is the SQLAlchemy model the resource definition is associated with.
 - `"org"` is the identifier for this resource type (this can be any string
-you choose).
+  you choose).
 - `actions` are set in the rule body. The `actions` list defines all the
   actions that may be performed on the resource.
 - `roles` are set in the rule body. The `roles` dictionary defines all the
@@ -333,10 +329,10 @@ the role name to a role configuration.
 resource(_type: Org, "org", actions, roles) if
     actions = ["read", "create_repo"] and
     roles = {
-        org_member: {
+        member: {
             permissions: ["read"],
         },
-        org_owner: {
+        owner: {
             permissions: ["read", "create_repo"],
         }
     };
@@ -344,8 +340,8 @@ resource(_type: Org, "org", actions, roles) if
 
 This resource definition defines two roles:
 
-- *org_member*: Has the `read` permission.
-- *org_owner*: Has the `read` and `create_repo` permissions.
+- _member_: Has the `read` permission.
+- _owner_: Has the `read` and `create_repo` permissions.
 
 Permissions are actions associated with a resource type. A permission can
 directly reference an action defined in the same resource. Later, we'll
@@ -363,10 +359,10 @@ We could have written this rule without a body, like:
 ```polar
 resource( _type: Org, "org", ["read", "create_repo"],
     {
-        org_member: {
+        member: {
             permissions: ["read"],
         },
-        org_owner: {
+        owner: {
             permissions: ["read", "create_repo"],
         }
     }
@@ -417,8 +413,8 @@ SQLAlchemy managed data.
 
 ### Implying roles
 
-The `"org_owner"` role is a more permissive role than `"org_member"`. It
-covers all the permissions of `"org_member"`, with some additional
+The `"owner"` role is a more permissive role than `"member"`. It
+covers all the permissions of `"member"`, with some additional
 permissions granted (`"create_repo"`) in our example.
 
 Instead of duplicating the permissions, we can represent this
@@ -428,18 +424,18 @@ relationship in our policy using **implied roles**.
 resource(_type: Org, "org", actions, roles) if
     actions = ["read", "create_repo"] and
     roles = {
-        org_member: {
+        member: {
             permissions: ["read"],
         },
-        org_owner: {
+        owner: {
             permissions: ["create_repo"],
-            implies: ["org_member"]
+            implies: ["member"]
         }
     };
 ```
 
-The `"org_owner"` now implies the `"org_member"` role. Any user with the
-`"org_owner"` role will be granted all permissions associated with both
+The `"owner"` now implies the `"member"` role. Any user with the
+`"owner"` role will be granted all permissions associated with both
 roles.
 
 Here's the full `Org` resource definition from the GitClub example app:
@@ -452,7 +448,7 @@ Here's the full `Org` resource definition from the GitClub example app:
     linenos=true
 >}}
 
-Notice the `"repo_read"` and `"repo_admin"` implications. These are
+Notice the `"repo:reader"` and `"repo:admin"` implications. These are
 roles defined on another resource, Repository. In the next guide, we'll
 see how to setup **cross resource implied roles** like these!
 
