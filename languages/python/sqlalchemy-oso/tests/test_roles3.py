@@ -94,7 +94,7 @@ def test_roles3():
     # Test Org roles
     # Leina can invite people to osohq because she is an OWNER
     assert oso.is_allowed(leina, "invite", osohq)
-    # assert not oso.is_allowed(leina, "invite", acme)
+    assert not oso.is_allowed(leina, "invite", acme)
 
     # Steve can create repos in osohq because he is a MEMBER
     assert oso.is_allowed(steve, "create_repo", osohq)

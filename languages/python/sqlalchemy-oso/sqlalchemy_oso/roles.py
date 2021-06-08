@@ -57,7 +57,6 @@ class PolarRoles:
         oso.host.get_field = get_field_type
 
     def synchronize_data(self):
-        print("Enabling Oso roles...")
         for res in self.oso.query_rule(
             "resource",
             Variable("resource"),
@@ -111,7 +110,6 @@ class PolarRoles:
                 (self.sqlalchemy_base, role_mixin),
                 {},
             )
-            print(f"Adding roles {role_class.__name__} to {resource_class}")
             self.roles[python_class] = role_class
             setattr(python_class, "role_definitions", role_names)
 
