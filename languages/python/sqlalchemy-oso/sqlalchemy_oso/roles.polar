@@ -3,130 +3,82 @@ actor_role(actor, role) if
     role in actor.repository_roles or
     role in actor.organization_roles;
 
+normalize_sqlalchemy_role(_: {name: name, resource: resource}, [namespace, name]) if
+    resource(resource, namespace, _, _);
+
 allow(actor, action, resource) if
-    resource(resource, namespace, actions, roles) and
+    resource(resource, _, actions, _) and
     action in actions and # 'action' is valid for 'resource'
     print("action", action) and
-    role_with_direct_permission(required_role, action, resource) and
-    role_implies_required_role(implied_role, required_role, resource) and
-    print("required", required_role) and
-    print("    implied by", implied_role) and
-    false and
-    actor_role(actor, assigned_role) and
-    [role_name, role_details] in roles and (
-        action in role_details.permissions and
+    role_with_direct_permission(required_role, [action], resource) and
 
-        required_role(namespace, role_name, resource, required_role) and
-        print("required_role", required_role) and
-        false
-    ) or (
-        action in role_details.permissions and
-        assigned_role matches {name: role_name, resource: resource} # direct role assignment
-    ) or (
-        # Check resource-local implications.
-        implied_role in role_details.implies and
-        action in roles.(implied_role).permissions and
-        resource = assigned_role.resource and
-        resource(resource, _, _, roles) and
-        assigned_role_name = assigned_role.name and
-        implied_role in roles.(assigned_role_name).implies
-    ) or (
-        # Assigned role is for a parent of the resource. Walk ancestry looking
-        # for role implication. TODO(gj): currently only one level of checking.
-        parent(resource, assigned_role.resource) and
-        resource(assigned_role.resource, _, _, assigned_roles) and
-        assigned_role_name = assigned_role.name and
-        ":".join([namespace, role_name]) in assigned_roles.(assigned_role_name).implies and
-        action in role_details.permissions
-    );
+    actor_role(actor, assigned_role) and
+    normalize_sqlalchemy_role(assigned_role, normalized_role) and
+    normalized_role = [assigned_namespace, assigned_base_role] and
+    print("  normalized", assigned_namespace, assigned_base_role) and
+
+    implied_role(implied_role, required_role, resource) and
+    implied_role = [implied_namespace, implied_base_role] and
+    print("    implied role", implied_namespace, implied_base_role) and
+
+    implied_namespace = assigned_namespace and
+    implied_base_role = assigned_base_role and
+    print("    resources", assigned_role.resource, resource);
 
 # checking direct permission
-role_with_direct_permission(role, action, resource) if
-    not action.__contains__(":") and
+role_with_direct_permission(role, [action], resource) if
     resource(resource, namespace, _, roles) and
     [role_name, role_details] in roles and
     action in role_details.permissions and
-    role = ":".join([namespace, role_name]) or (
+    role = [namespace, role_name] or (
         parent(resource, parent_resource) and
-        role_with_direct_permission(role, ":".join([namespace, action]), parent_resource)
+        role_with_direct_permission(role, [namespace, action], parent_resource)
     );
 
 # checking parent
-role_with_direct_permission(role, action, resource) if
-    action.__contains__(":") and
+role_with_direct_permission(role, [action_namespace, action], resource) if
     resource(resource, namespace, _, roles) and
     [role_name, role_details] in roles and
     action in role_details.permissions and
-    role = ":".join([namespace, role_name]) or (
+    role = [namespace, role_name] or (
         parent(resource, parent_resource) and
-        role_with_direct_permission(role, action, parent_resource)
+        role_with_direct_permission(role, [action_namespace, action], parent_resource)
     );
 
+# A role implies itself.
+implied_role(role, role, _);
+
+implied_role(implied_role, [namespace, role], resource) if
+    # print("  checking parent for", namespace, role) and
+    parent(resource, parent_resource) and
+    # print("  parent", resource, parent_resource) and
+    implied_role(implied_role, [namespace, role], parent_resource);
+
 # checking local implications
-role_implies_required_role(implied_role, required_role, resource) if
-    [namespace, role] = required_role.split(":") and
+implied_role(implied_role, [namespace, role], resource) if
     resource(resource, namespace, _, roles) and
-    print("  checking local implications for", required_role) and
-    (
-        parent(resource, parent_resource) and
-        role_implies_required_role(implied_role, required_role, parent_resource)
-    ) or
+    # print("  checking local implications for", namespace, role) and
     [role_name, role_details] in roles and
+    # print("    checking local role", role_name, roles) and
     role in role_details.implies and
-    implication = ":".join([namespace, role_name]) and
-    print("    found", implication) and
+    implication = [namespace, role_name] and
+    # print("    found local implication", namespace, role_name) and
     implied_role = implication or (
         parent(resource, parent_resource) and
-        role_implies_required_role(implied_role, implication, parent_resource)
+        implied_role(implied_role, implication, parent_resource)
     );
 
 # checking non-local implications
-role_implies_required_role(implied_role, required_role, resource) if
-    [namespace, _] = required_role.split(":") and
+implied_role(implied_role, [namespace, role], resource) if
     resource(resource, resource_namespace, _, roles) and
     not namespace = resource_namespace and
-    print("  checking non-local implications for", required_role) and
-    (
-        parent(resource, parent_resource) and
-        role_implies_required_role(implied_role, required_role, parent_resource)
-    ) or
+    # print("  checking non-local implications for", namespace, role) and
     [role_name, role_details] in roles and
-    print("  checking", role_name) and
-    required_role in role_details.implies and
-    implication = ":".join([resource_namespace, role_name]) and
+    # print("  checking if", role_name, "implies", namespace, role) and
+    ":".join([namespace, role]) in role_details.implies and
+    implication = [resource_namespace, role_name] and
+    # print("    found non-local implication", resource_namespace, role_name) and
     implied_role = implication or (
         parent(resource, parent_resource) and
-        role_implies_required_role(implied_role, implication, parent_resource)
+        implied_role(implied_role, implication, parent_resource)
     );
-
-# implied_role() if
-#     implied_role in role_details.implies and (
-#         print("implied_role ->", implied_role) and
-#         print("\t->", roles.(implied_role)) and
-#         action in roles.(implied_role).permissions and
-#         role = ":".join([namespace, role_name])
-#     ) or (
-#         parent(resource, parent_resource) and
-#         role_has_permission(role, action, parent_resource)
-#     );
-
-    # resource(resource, namespace, _, roles) and
-    # [role_name, role_details] in roles and
-    # action in role_details.permissions and
-    # role = ":".join([namespace, role_name]) or (
-    #     parent(resource, parent_resource) and
-    #     role_has_permission(role, action, parent_resource)
-    # );
-
-
-
-# - Does actor have 'role' that permits 'action' on 'resource'?
-# - Does actor have 'role2' that implies 'role' that permits 'action' on 'resource'?
-# - Does actor have 'role3' on 'resource3' (a parent of 'resource') that implies 'role' or 'role2'?
-#   - And so on up the ancestry...
-# - Does actor have 'role4' on 'resource3' (a parent of 'resource') that permits 'resource_namespace:action'?
-#   - What about >1 hop in the ancestry? E.g., an OrgRole grants 'issue:edit'.
-
-
-# Find roles that have this permission
-# Does the user have a role that implies
