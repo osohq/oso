@@ -46,7 +46,7 @@ def get_version(rel_path):
 
 
 setup(
-    name="sqlalchemy-oso-preview",
+    name="sqlalchemy-oso",
     version=get_version("sqlalchemy_oso/__init__.py"),
     description="oso sqlalchemy integration",
     long_description=long_description,
