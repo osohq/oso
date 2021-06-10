@@ -1,0 +1,19 @@
+{{- /* apiDeepLink $class */ -}}
+{{- /* Makes a deep link to the currently selected language's documentation for a given class */ -}}
+{{- /* To link to a specific method of the class, supply it as an inner shortcode or string */ -}}
+{{- $class := (.Get 0) -}}
+{{- if eq $.Page.Language.Lang "node" -}}
+{{- $apiBase := printf "%s%s/%s" $.Site.BaseURL $.Page.Language "reference/api/classes" -}}
+{{- $classLink := printf "%[1]s/%[2]s.%[2]s-1.html" $apiBase (lower $class) -}}
+<code style="display: inline-block; line-height: initial;">
+  {{- if eq (len .Inner) 0 -}}
+  <a href="{{- $classLink -}}">
+    {{- $class -}}
+  </a>
+  {{- else -}}
+  <a href="{{- (printf "%s#%s" $classLink (lower .Inner)) | safeURL -}}">
+    {{- $class -}}.{{- .Inner -}}()
+  </a>
+  {{- end -}}
+</code>
+{{- end -}}
