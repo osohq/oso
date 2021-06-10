@@ -40,7 +40,7 @@ frameworks and ORMS.
 
 {{% callout "Adding roles to your application with SQLAlchemy?" "blue" %}}
 
-We just released early access to the next version of our roles
+We just released the next version of our roles
 library.
 
 [Check it out here!](/guides/new-roles)
