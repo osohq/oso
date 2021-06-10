@@ -2919,22 +2919,8 @@ impl Runnable for PolarVirtualMachine {
         };
 
         let mut bindings = self.bindings(true);
-        // eprintln!("BINDINGS:");
-        // for (x, y) in bindings.iter() {
-        //     eprintln!("\t{} => {}", x, y.to_polar());
-        // }
         if !self.inverting {
-            if let Some(bs) = simplify_bindings(bindings.clone(), false) {
-                eprintln!("SIMPLIFIED:");
-                for (x, y) in bs.iter() {
-                    eprintln!("\t{} => {}", x, y.to_polar());
-                    let mut vars = HashSet::new();
-                    y.variables(&mut vars);
-                    eprintln!("\tBut actually:");
-                    for var in vars.iter() {
-                        eprintln!("\t\t{} => {}", var, bindings.get(var).unwrap().to_polar());
-                    }
-                }
+            if let Some(bs) = simplify_bindings(bindings, false) {
                 bindings = bs;
             } else {
                 return Ok(QueryEvent::None);

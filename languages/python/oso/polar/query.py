@@ -136,7 +136,9 @@ class Query:
             answer = self.host.isa_with_path(base_tag, path, class_tag)
             self.ffi_query.question_result(data["call_id"], answer)
         except AttributeError as e:
-            # self.ffi_query.application_error(str(e))
+            # TODO(gj): make sure we are printing but not failing on receipt of
+            # this error in core.
+            self.ffi_query.application_error(str(e))
             self.ffi_query.question_result(data["call_id"], False)
 
     def handle_external_unify(self, data):

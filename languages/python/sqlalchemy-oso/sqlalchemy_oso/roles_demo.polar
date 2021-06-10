@@ -23,5 +23,6 @@ resource(_: Repository, "repo", actions, roles) if
         }
     };
 
-parent(repo: Repository, org: Organization) if
-    org = repo.organization;
+parent(repo: Repository, org) if
+    org = repo.organization and
+    org matches Organization;

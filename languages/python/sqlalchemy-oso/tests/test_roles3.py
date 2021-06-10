@@ -91,19 +91,19 @@ def test_roles3():
 
     # Test
 
-    # # Test Org roles
-    # # Leina can invite people to osohq because she is an OWNER
-    # assert oso.is_allowed(leina, "invite", osohq)
-    # assert not oso.is_allowed(leina, "invite", acme)
-    #
-    # # Steve can create repos in osohq because he is a MEMBER
-    # assert oso.is_allowed(steve, "create_repo", osohq)
-    #
-    # # Steve can't invite people to osohq because only OWNERs can invite, and he's not an OWNER
-    # assert not oso.is_allowed(steve, "invite", osohq)
-    #
-    # # Leina can create a repo because she's the OWNER and OWNER implies MEMBER
-    # assert oso.is_allowed(leina, "create_repo", osohq)
+    # Test Org roles
+    # Leina can invite people to osohq because she is an OWNER
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert not oso.is_allowed(leina, "invite", acme)
+
+    # Steve can create repos in osohq because he is a MEMBER
+    assert oso.is_allowed(steve, "create_repo", osohq)
+
+    # Steve can't invite people to osohq because only OWNERs can invite, and he's not an OWNER
+    assert not oso.is_allowed(steve, "invite", osohq)
+
+    # Leina can create a repo because she's the OWNER and OWNER implies MEMBER
+    assert oso.is_allowed(leina, "create_repo", osohq)
 
     # # Steve can pull from oso_repo because he is a MEMBER of osohq
     # # which implies READ on oso_repo
@@ -115,17 +115,21 @@ def test_roles3():
     # oso.register_constant({"name": "member", "resource": osohq}, "osohq_member")
     # oso.repl()
 
-    from oso import Variable
+    # from oso import Variable
+    #
+    # print("")
+    # for res in oso.query_rule(
+    #     "implied_role",
+    #     Variable("x"),
+    #     ["reader", anvil_repo],
+    #     anvil_repo,
+    #     accept_expression=True,
+    # ):
+    #     print(res["bindings"])
+    #
+    # return
 
-    print("")
-    for res in oso.query_rule(
-        "implied_role", Variable("x"), ["reader", anvil_repo], anvil_repo
-    ):
-        print(res["bindings"]["x"])
-
-    return
-
-    # assert oso.is_allowed(steve, "pull", oso_repo)
+    assert oso.is_allowed(steve, "pull", oso_repo)
     assert not oso.is_allowed(steve, "pull", anvil_repo)
     # Leina can pull from oso_repo because she's an OWNER of osohq
     # which implies WRITE on oso_repo
@@ -144,9 +148,9 @@ def test_roles3():
     # Gabe can push to oso_repo because he has WRTIE on oso_repo
     assert oso.is_allowed(gabe, "push", oso_repo)
 
-    # Data filtering test:
-    auth_filter = authorize_model(oso, leina, "push", session, Repository)
-    assert str(auth_filter) == ":param_1 = repositories.organization_id"
-    authorized_repos = session.query(Repository).filter(auth_filter).all()
-    assert len(authorized_repos) == 1
-    assert authorized_repos[0] == oso_repo
+    # # Data filtering test:
+    # auth_filter = authorize_model(oso, leina, "push", session, Repository)
+    # assert str(auth_filter) == ":param_1 = repositories.organization_id"
+    # authorized_repos = session.query(Repository).filter(auth_filter).all()
+    # assert len(authorized_repos) == 1
+    # assert authorized_repos[0] == oso_repo
