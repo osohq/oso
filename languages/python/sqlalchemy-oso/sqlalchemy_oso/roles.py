@@ -42,10 +42,7 @@ class PolarRoles:
         oso.load_file("sqlalchemy_oso/roles.polar")
 
         def get_field_type(model, field):
-            try:
-                field = getattr(model, field)
-            except AttributeError:
-                raise PolarRuntimeError(f"Cannot get property {field} on {model}.")
+            field = getattr(model, field)
 
             try:
                 return field.entity.class_

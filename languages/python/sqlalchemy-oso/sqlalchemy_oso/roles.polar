@@ -69,7 +69,7 @@ implied_role(implied_role, [role, resource], resource) if
 implied_role(implied_role, [role, role_resource], resource) if
     # not resource = role_resource and
     # TODO(gj): should this be role_resource?
-    resource(resource, namespace, _, roles) and
+    resource(resource, _namespace, _, roles) and
     resource(role_resource, role_namespace, _, _) and
     # print("        checking non-local implications for", role_namespace, role) and
     [role_name, role_details] in roles and

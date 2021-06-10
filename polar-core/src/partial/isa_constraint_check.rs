@@ -1,6 +1,7 @@
 use crate::counter::Counter;
 use crate::error::{OperationalError, PolarResult};
 use crate::events::QueryEvent;
+use crate::formatting::ToPolarString;
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Pattern, Term, Value};
 
@@ -25,6 +26,7 @@ pub struct IsaConstraintCheck {
 
 impl IsaConstraintCheck {
     pub fn new(existing: Vec<Operation>, proposed: Operation) -> Self {
+        // eprintln!("  proposed: {}", proposed.to_polar());
         Self {
             existing,
             proposed,
@@ -53,6 +55,9 @@ impl IsaConstraintCheck {
         mut constraint: Operation,
         counter: &Counter,
     ) -> (Option<QueryEvent>, Option<QueryEvent>) {
+        // eprintln!("\tchecking {}", constraint.to_polar());
+        // eprintln!("\tagainst {}", self.proposed.to_polar());
+
         // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
         // partial, Integer)`.
         if constraint.operator != Operator::Isa {
@@ -77,7 +82,8 @@ impl IsaConstraintCheck {
             return (None, None);
         }
 
-        let proposed = self.proposed.args.pop().unwrap();
+        // TODO(gj): why were we popping?
+        let proposed = self.proposed.args.last().unwrap();
         let existing = constraint.args.pop().unwrap();
 
         // x matches A{} vs. x matches B{}
@@ -151,6 +157,13 @@ impl Runnable for IsaConstraintCheck {
 
         let counter = counter.expect("IsaConstraintCheck requires a Counter");
         loop {
+            // eprintln!(
+            //     "existing:\n\t{}",
+            //     self.existing
+            //         .iter()
+            //         .map(|x| x.to_polar())
+            //         .fold(String::new(), |a, b| a + &b + "\n\t")
+            // );
             // If there's an alternative waiting to be checked, check it.
             if let Some(alternative) = self.alternative_check.take() {
                 return Ok(alternative);
