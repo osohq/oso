@@ -1857,4 +1857,26 @@ mod test {
 
         Ok(())
     }
+
+    #[test]
+    fn test_simplifying_compound_terms() -> TestResult {
+        let p = Polar::new();
+        p.load_str("f(x, y) if y > 1 and x = [y];")?;
+
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
+        let next = next_binding(&mut q)?;
+        assert_partial_expression!(next, "y", "_this > 1");
+        let x_binding = next[&sym!("x")].value();
+        if let Value::List(x_list) = x_binding {
+            assert_eq!(x_list.len(), 1);
+            assert_eq!(
+                x_list[0].value().as_expression().unwrap().to_polar(),
+                "y > 1"
+            );
+        } else {
+            panic!("x should be bound to a list");
+        }
+        assert_query_done!(q);
+        Ok(())
+    }
 }
