@@ -21,7 +21,7 @@ pg_user = os.environ.get("POSTGRES_USER")
 pg_pass = os.environ.get("POSTGRES_PASSWORD")
 
 databases = ["sqlite"]
-if pg_host is not None and "CIBUILDWHEEL" not in os.environ:
+if pg_host is not None:
     databases.append("postgres")
 
 

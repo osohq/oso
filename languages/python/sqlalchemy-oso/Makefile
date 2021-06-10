@@ -14,7 +14,6 @@ dev-requirements: .make.dev-requirements-install
 
 .make.dev-requirements-install: requirements-dev.txt
 	pip install -r requirements-dev.txt
-	pip install psycopg2
 	touch $@
 
 test:
