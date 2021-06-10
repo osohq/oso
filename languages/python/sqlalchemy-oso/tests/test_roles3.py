@@ -104,26 +104,28 @@ def test_roles3():
     #
     # # Leina can create a repo because she's the OWNER and OWNER implies MEMBER
     # assert oso.is_allowed(leina, "create_repo", osohq)
-    #
-    # # # Steve can pull from oso_repo because he is a MEMBER of osohq
-    # # # which implies READ on oso_repo
-    # # oso.register_constant(steve, "steve")
-    # # oso.register_constant(osohq, "osohq")
-    # # oso.register_constant(oso_repo, "oso_repo")
-    # # oso.register_constant(anvil_repo, "anvil_repo")
-    # # oso.register_constant({"name": "owner", "resource": osohq}, "osohq_owner")
-    # # oso.register_constant({"name": "member", "resource": osohq}, "osohq_member")
-    # # oso.repl()
-    #
-    # # from oso import Variable
-    # #
-    # # print("")
-    # # for res in oso.query_rule(
-    # #     "role_implies", {"name": "owner", "resource": osohq}, Variable("x")
-    # # ):
-    # #     print(res["bindings"]["x"])
 
-    assert oso.is_allowed(steve, "pull", oso_repo)
+    # # Steve can pull from oso_repo because he is a MEMBER of osohq
+    # # which implies READ on oso_repo
+    # oso.register_constant(steve, "steve")
+    # oso.register_constant(osohq, "osohq")
+    # oso.register_constant(oso_repo, "oso_repo")
+    # oso.register_constant(anvil_repo, "anvil_repo")
+    # oso.register_constant({"name": "owner", "resource": osohq}, "osohq_owner")
+    # oso.register_constant({"name": "member", "resource": osohq}, "osohq_member")
+    # oso.repl()
+
+    from oso import Variable
+
+    print("")
+    for res in oso.query_rule(
+        "implied_role", Variable("x"), ["reader", anvil_repo], anvil_repo
+    ):
+        print(res["bindings"]["x"])
+
+    return
+
+    # assert oso.is_allowed(steve, "pull", oso_repo)
     assert not oso.is_allowed(steve, "pull", anvil_repo)
     # Leina can pull from oso_repo because she's an OWNER of osohq
     # which implies WRITE on oso_repo
