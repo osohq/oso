@@ -148,6 +148,7 @@ def test_roles3():
     # Gabe can push to oso_repo because he has WRTIE on oso_repo
     assert oso.is_allowed(gabe, "push", oso_repo)
 
+    # TODO(gj): look at wowhack in sqlalchemy_oso/partial.py
     # # Data filtering test:
     # auth_filter = authorize_model(oso, leina, "push", session, Repository)
     # assert str(auth_filter) == ":param_1 = repositories.organization_id"

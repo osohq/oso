@@ -1135,7 +1135,6 @@ impl PolarVirtualMachine {
                 // TODO(gj): assert that a simplified expression contains at most 1 unification
                 // involving a particular variable.
                 // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.
-                // eprintln!("left => {}", left.to_polar());
                 let var = left.value().as_symbol()?;
 
                 // Get the existing partial on the LHS variable.
@@ -1144,12 +1143,8 @@ impl PolarVirtualMachine {
                 let mut hs = HashSet::with_capacity(1);
                 hs.insert(var.clone());
 
-                // eprintln!("pre-simplification: {}", partial.to_polar());
-
                 let (simplified, _) = simplify_partial(var, partial.into_term(), hs, false);
                 let simplified = simplified.value().as_expression()?;
-
-                // eprintln!("post-simplification: {}", simplified.to_polar());
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
                 // What if the one there is is in a not, or an or, or something
@@ -1178,7 +1173,6 @@ impl PolarVirtualMachine {
                 let type_constraint = op!(Isa, left.clone(), tag_pattern);
 
                 let new_matches = op!(Isa, lhs_of_matches, right.clone());
-                // eprintln!("new_matches => {}", new_matches.to_polar());
                 let runnable = Box::new(IsaConstraintCheck::new(
                     simplified.constraints(),
                     new_matches,
