@@ -10,7 +10,7 @@ allow(actor, action, resource) if
     action in actions and # 'action' is valid for 'resource'
     # print("action", action) and
     role_with_direct_permission(required_role, [action], resource) and
-    required_role = [required_role_name, required_role_resource] and
+    # required_role = [required_role_name, required_role_resource] and
     # print("  required ->", required_role_name, required_role_resource) and
 
     actor_role(actor, assigned_role) and

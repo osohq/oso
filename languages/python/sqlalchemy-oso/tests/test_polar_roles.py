@@ -1,5 +1,6 @@
 # Roles 2 tests
 import pytest
+from datetime import datetime
 
 from sqlalchemy import create_engine
 from sqlalchemy.types import Integer, String
@@ -54,7 +55,27 @@ class Issue(Base):
 RepoRoleMixin = resource_role_class(
     User,
     Repo,
-    ["reader", "writer"],
+    [
+        "reader",
+        "reader1",
+        "reader2",
+        "reader3",
+        "reader4",
+        "reader5",
+        "reader6",
+        "reader7",
+        "reader8",
+        "reader9",
+        "reader10",
+        "reader11",
+        "reader12",
+        "reader13",
+        "reader14",
+        "reader15",
+        "reader16",
+        "reader17",
+        "writer",
+    ],
 )
 
 
@@ -1669,9 +1690,7 @@ def test_authorizing_related_fields(
     assert results[0].org.id == osohq.id
 
 
-def test_data_filtering_role_allows_not(
-    init_oso, sample_data, auth_sessionmaker, Org
-):
+def test_data_filtering_role_allows_not(init_oso, sample_data, auth_sessionmaker, Org):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -1882,9 +1901,7 @@ def test_data_filtering_role_allows_implicit_or(
     assert len(results) == 1
 
 
-def test_data_filtering_user_in_role_not(
-    init_oso, sample_data, auth_sessionmaker, Org
-):
+def test_data_filtering_user_in_role_not(init_oso, sample_data, auth_sessionmaker, Org):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -2098,9 +2115,7 @@ def test_data_filtering_user_in_role_implicit_or(
     assert len(results) == 1
 
 
-def test_data_filtering_combo(
-    init_oso, sample_data, auth_sessionmaker, User, Org
-):
+def test_data_filtering_combo(init_oso, sample_data, auth_sessionmaker, User, Org):
     oso, session = init_oso
     policy = """
     # Users can read their own data.
@@ -2215,9 +2230,7 @@ def test_read_api(init_oso, sample_data, Repo, Org):
     assert len(steve_assignments) == 2
 
 
-def test_user_in_role(
-    init_oso, sample_data, Repo, Org, auth_sessionmaker
-):
+def test_user_in_role(init_oso, sample_data, Repo, Org, auth_sessionmaker):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", _actions, roles) if
@@ -2388,12 +2401,11 @@ def test_role_allows_with_other_rules(
         Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso.roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
 
-    oso.roles.assign_role(leina, osohq, "member", session=session)
+    assign_role(leina, osohq, "member", session=session)
     session.commit()
 
     # This is just to ensure we don't modify the policy above.
@@ -2532,7 +2544,7 @@ def test_roles_integration(init_oso, sample_data):
     assert not oso.is_allowed(gabe, "edit", bug)
 
 
-def test_perf(init_oso, sample_data, User, Repo, Org, Issue):
+def test_perf_polar(init_oso, sample_data):
     oso, session = init_oso
 
     # Test many direct roles
@@ -2540,6 +2552,9 @@ def test_perf(init_oso, sample_data, User, Repo, Org, Issue):
 	resource(_: Repo, "repo", actions, roles) if
 	actions = ["read", "write"] and
 	roles = {
+		reader: {
+		permissions: ["read"]
+		},
 		reader1: {
 		permissions: ["read"]
 		},
@@ -2613,18 +2628,16 @@ def test_perf(init_oso, sample_data, User, Repo, Org, Issue):
     # """
     oso.load_str(p)
 
-    oso.roles.synchronize_data()
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+    osohq = sample_data["osohq"]
+    oso_repo = sample_data["oso_repo"]
 
-    # leina = sample_data["leina"]
-    # steve = sample_data["steve"]
-    # osohq = sample_data["osohq"]
-    # oso_repo = sample_data["oso_repo"]
+    assign_role(leina, oso_repo, "writer", session)
+    assign_role(steve, oso_repo, "reader1", session)
+    session.commit()
 
-    # oso.roles.assign_role(leina, oso_repo, "writer", session)
-    # oso.roles.assign_role(steve, oso_repo, "reader1", session)
-    # session.commit()
-
-    # s = datetime.now()
-    # oso.is_allowed(leina, "write", oso_repo)
-    # e = datetime.now()
-    # print(f"Executed in {e-s}")
+    s = datetime.now()
+    assert oso.is_allowed(leina, "write", oso_repo)
+    e = datetime.now()
+    print(f"Executed in {(e-s).microseconds/1000} ms")
