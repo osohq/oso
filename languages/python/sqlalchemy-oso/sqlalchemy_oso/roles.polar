@@ -6,7 +6,7 @@ actor_role(actor, role) if
 allow(actor, action, resource) if
     resource(resource, _, actions, _) and
     action in actions and # 'action' is valid for 'resource'
-    # print("action", action) and
+    # print(action, resource) and
     role_with_direct_permission(required_role, [action], resource) and
     # required_role = [required_role_name, required_role_resource] and
     # print("  required ->", required_role_name, required_role_resource) and
@@ -39,11 +39,11 @@ role_with_direct_permission(role, [action], resource) if
 # checking parent
 # TODO(gj): I think I can drop this definition
 role_with_direct_permission(role, [namespace, action], resource) if
-    resource(resource, _, _, roles) and
     (
         parent(resource, parent_resource) and
         role_with_direct_permission(role, [namespace, action], parent_resource)
     ) or (
+        resource(resource, _, _, roles) and
         [role_name, role_details] in roles and
         ":".join([namespace, action]) in role_details.permissions and
         role = [role_name, resource]
