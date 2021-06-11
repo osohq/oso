@@ -340,7 +340,7 @@ def test_bad_relationship_lookup(init_oso):
             }
         };
 
-    resource(_type: Repo, "repo", actions, _) if
+    resource(_type: Repo, "repo", actions, {}) if
         actions = [
             "pull"
         ];
@@ -359,7 +359,7 @@ def test_bad_relationship_lookup(init_oso):
 def test_relationship_without_specializer(init_oso):
     oso, session = init_oso
     policy = """
-    resource(_type: Repo, "repo", actions, _) if
+    resource(_type: Repo, "repo", actions, {}) if
         actions = [
             "pull"
         ];
