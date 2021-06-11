@@ -33,6 +33,13 @@ def isa_type(arg):
 
 class PolarRoles:
     def __init__(self, oso: Oso, user_model, sqlalchemy_base, session_maker):
+        for cls in session_maker.class_.__mro__:
+            if cls.__name__ == "AuthorizedSessionBase":
+                raise OsoError(
+                    "Must pass a normal session maker not an authorized session maker."
+                )
+        _check_valid_model(user_model)
+
         self.oso = oso
         self.user_model = user_model
         self.sqlalchemy_base = sqlalchemy_base
