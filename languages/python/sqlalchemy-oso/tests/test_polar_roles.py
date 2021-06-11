@@ -769,12 +769,10 @@ def test_overlapping_permissions(init_oso, sample_data):
 
     parent(repo: Repo, parent_org: Org) if
         repo.org = parent_org;
-
-    allow(actor, action, resource) if
-        Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso.roles.synchronize_data()
+    # TODO: validation
+    # oso.roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -782,9 +780,9 @@ def test_overlapping_permissions(init_oso, sample_data):
     steve = sample_data["steve"]
 
     # writer is more permissive than member
-    oso.roles.assign_role(leina, osohq, "member")
-    oso.roles.assign_role(steve, osohq, "member")
-    oso.roles.assign_role(leina, oso_repo, "writer")
+    assign_role(leina, osohq, "member", session=session)
+    assign_role(steve, osohq, "member", session=session)
+    assign_role(leina, oso_repo, "writer", session=session)
 
     assert oso.is_allowed(leina, "pull", oso_repo)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -807,18 +805,16 @@ def test_homogeneous_role_perm(init_oso, sample_data):
                 permissions: ["invite"]
             }
         };
-
-    allow(actor, action, resource) if
-        Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
-    oso.roles.synchronize_data()
+    # TODO: validation
+    # oso.roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "member", session=session)
+    assign_role(leina, osohq, "member", session=session)
 
     session.commit()
 
@@ -835,15 +831,15 @@ def test_homogeneous_role_perm(init_oso, sample_data):
                 permissions: ["list_repos"]
             }
         };
-
-    allow(actor, action, resource) if
-        Roles.role_allows(actor, action, resource);
     """
 
     oso.clear_rules()
-    oso.roles.config = None
+    # TODO: ability to reset roles config?
+    # oso.roles.config = None
+    oso.load_file("sqlalchemy_oso/roles.polar")
     oso.load_str(new_policy)
-    oso.roles.synchronize_data()
+    # TODO: validation
+    # oso.roles.synchronize_data()
 
     assert not oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "list_repos", osohq)
@@ -863,21 +859,19 @@ def test_parent_child_role_perm(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repo, "repo", actions, roles) if
+    resource(_type: Repo, "repo", actions, {}) if
         actions = [
             "push",
             "pull"
         ];
 
-    parent(repo: Repo, parent_org: Org) if
-        repo.org = parent_org;
-
-    allow(actor, action, resource) if
-        Roles.role_allows(actor, action, resource);
-
+    parent(repo: Repo, parent_org) if
+        repo.org = parent_org and
+        parent_org matches Org;
     """
     oso.load_str(policy)
-    oso.roles.synchronize_data()
+    # TODO: validation
+    # oso.roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -885,7 +879,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "member", session=session)
+    assign_role(leina, osohq, "member", session=session)
 
     session.commit()
 
@@ -904,23 +898,24 @@ def test_parent_child_role_perm(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repo, "repo", actions, roles) if
+    resource(_type: Repo, "repo", actions, {}) if
         actions = [
             "push",
             "pull"
         ];
 
-    parent(repo: Repo, parent_org: Org) if
-        repo.org = parent_org;
-
-    allow(actor, action, resource) if
-        Roles.role_allows(actor, action, resource);
+    parent(repo: Repo, parent_org) if
+        repo.org = parent_org and
+        parent_org matches Org;
     """
 
     oso.clear_rules()
-    oso.roles.config = None
+    # TODO: big red button to reset roles policy
+    # oso.roles.config = None
+    oso.load_file("sqlalchemy_oso/roles.polar")
     oso.load_str(new_policy)
-    oso.roles.synchronize_data()
+    # TODO: validation
+    # oso.roles.synchronize_data()
 
     assert not oso.is_allowed(leina, "pull", oso_repo)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -943,23 +938,24 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
             }
         };
 
-    resource(_type: Issue, "issue", actions, _) if
+    resource(_type: Issue, "issue", actions, {}) if
         actions = [
             "edit"
         ];
 
-    parent(repo: Repo, parent_org: Org) if
-        repo.org = parent_org;
+    parent(repo: Repo, parent_org) if
+        repo.org = parent_org and
+        parent_org matches Org;
 
-    parent(issue: Issue, parent_repo: Repo) if
-        issue.repo = parent_repo;
-
-    allow(actor, action, resource) if
-        Roles.role_allows(actor, action, resource);
+    parent(issue: Issue, parent_repo) if
+        issue.repo = parent_repo and
+        parent_repo matches Repo;
     """
     oso.load_str(policy)
-    oso.roles.config = None
-    oso.roles.synchronize_data()
+    # TODO: some way to reset roles config?
+    # oso.roles.config = None
+    # TODO: validation
+    # oso.roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     oso_bug = sample_data["oso_bug"]
@@ -967,7 +963,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     leina = sample_data["leina"]
     steve = sample_data["steve"]
 
-    oso.roles.assign_role(leina, osohq, "member", session=session)
+    assign_role(leina, osohq, "member", session=session)
     session.commit()
 
     assert oso.is_allowed(leina, "list_repos", osohq)
@@ -976,7 +972,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     assert not oso.is_allowed(leina, "invite", osohq)
     assert not oso.is_allowed(steve, "edit", oso_bug)
 
-    oso.roles.assign_role(steve, osohq, "owner", session=session)
+    assign_role(steve, osohq, "owner", session=session)
     session.commit()
     assert oso.is_allowed(steve, "edit", oso_bug)
     assert oso.is_allowed(steve, "list_repos", osohq)
@@ -992,25 +988,27 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
             }
         };
 
-    resource(_type: Issue, "issue", actions, _) if
+    resource(_type: Issue, "issue", actions, {}) if
         actions = [
             "edit"
         ];
 
-    parent(repo: Repo, parent_org: Org) if
-        repo.org = parent_org;
+    parent(repo: Repo, parent_org) if
+        repo.org = parent_org and
+        parent_org matches Org;
 
-    parent(issue: Issue, parent_repo: Repo) if
-        issue.repo = parent_repo;
-
-    allow(actor, action, resource) if
-        Roles.role_allows(actor, action, resource);
+    parent(issue: Issue, parent_repo) if
+        issue.repo = parent_repo and
+        parent_repo matches Repo;
     """
 
     oso.clear_rules()
+    oso.load_file("sqlalchemy_oso/roles.polar")
     oso.load_str(new_policy)
-    oso.roles.config = None
-    oso.roles.synchronize_data()
+    # TODO: big red button to reset roles policy
+    # oso.roles.config = None
+    # TODO: validation
+    # oso.roles.synchronize_data()
 
     assert not oso.is_allowed(leina, "edit", oso_bug)
     assert oso.is_allowed(leina, "invite", osohq)
