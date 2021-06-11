@@ -1,6 +1,6 @@
 # Roles 2 tests
 import pytest
-from datetime import datetime
+import timeit
 
 from sqlalchemy import create_engine
 from sqlalchemy.types import Integer, String
@@ -57,23 +57,6 @@ RepoRoleMixin = resource_role_class(
     Repo,
     [
         "reader",
-        "reader1",
-        "reader2",
-        "reader3",
-        "reader4",
-        "reader5",
-        "reader6",
-        "reader7",
-        "reader8",
-        "reader9",
-        "reader10",
-        "reader11",
-        "reader12",
-        "reader13",
-        "reader14",
-        "reader15",
-        "reader16",
-        "reader17",
         "writer",
     ],
 )
@@ -2553,61 +2536,10 @@ def test_perf_polar(init_oso, sample_data):
 	actions = ["read", "write"] and
 	roles = {
 		reader: {
-		permissions: ["read"]
-		},
-		reader1: {
-		permissions: ["read"]
-		},
-		reader2: {
-		permissions: ["read"]
-		},
-		reader3: {
-		permissions: ["read"]
-		},
-		reader4: {
-		permissions: ["read"]
-		},
-		reader5: {
-		permissions: ["read"]
-		},
-		reader6: {
-		permissions: ["read"]
-		},
-		reader7: {
-		permissions: ["read"]
-		},
-		reader8: {
-		permissions: ["read"]
-		},
-		reader9: {
-		permissions: ["read"]
-		},
-		reader10: {
-		permissions: ["read"]
-		},
-		reader11: {
-		permissions: ["read"]
-		},
-		reader12: {
-		permissions: ["read"]
-		},
-		reader13: {
-		permissions: ["read"]
-		},
-		reader14: {
-		permissions: ["read"]
-		},
-		reader15: {
-		permissions: ["read"]
-		},
-		reader16: {
-		permissions: ["read"]
-		},
-		reader17: {
-		permissions: ["read"]
+            permissions: ["read"]
 		},
 		writer: {
-		permissions: ["write"]
+            permissions: ["write"]
 		}
 	};"""
 
@@ -2633,11 +2565,25 @@ def test_perf_polar(init_oso, sample_data):
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
 
-    assign_role(leina, oso_repo, "writer", session)
-    assign_role(steve, oso_repo, "reader1", session)
+    # Create 100 repositories
+    oso_repos = []
+    for i in range(100):
+        name = f"oso_repo_{i}"
+        repo = Repo(name=name, org=osohq)
+        oso_repos.append(repo)
+        session.add(repo)
+
     session.commit()
 
-    s = datetime.now()
-    assert oso.is_allowed(leina, "write", oso_repo)
-    e = datetime.now()
-    print(f"Executed in {(e-s).microseconds/1000} ms")
+    n_roles = 100
+    for i in range(n_roles):
+        assign_role(leina, oso_repos[i], "writer", session)
+    session.commit()
+
+    assert len(leina.repo_roles) == n_roles
+
+    number = 10
+    time = timeit.timeit(
+        lambda: oso.is_allowed(leina, "write", oso_repos[99]), number=number
+    )
+    print(f"Executed in : {time/number*1000} ms\n Averaged over {number} repetitions.")

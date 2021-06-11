@@ -4,7 +4,7 @@ import psycopg2
 import random
 import string
 import os
-from datetime import datetime
+import timeit
 
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
@@ -2636,7 +2636,7 @@ def test_roles_integration(
     ]
 
 
-def test_perf_sqlalchemy(init_oso, sample_data):
+def test_perf_sqlalchemy(init_oso, sample_data, Repository):
     oso, session = init_oso
 
     # Test many direct roles
@@ -2728,11 +2728,26 @@ def test_perf_sqlalchemy(init_oso, sample_data):
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
 
-    oso.roles.assign_role(leina, oso_repo, "writer", session)
-    oso.roles.assign_role(steve, oso_repo, "reader1", session)
+    # Create 100 repositories
+    oso_repos = []
+    for i in range(100):
+        name = f"oso_repo_{i}"
+        repo = Repository(id=name, org=osohq)
+        oso_repos.append(repo)
+        session.add(repo)
+
     session.commit()
 
-    s = datetime.now()
-    assert oso.is_allowed(leina, "write", oso_repo)
-    e = datetime.now()
-    print(f"Executed in {(e-s).microseconds/1000} ms")
+    for i in range(100):
+        oso.roles.assign_role(leina, oso_repos[i], "writer", session)
+    session.commit()
+
+    leina_roles = oso.roles.assignments_for_user(leina, session)
+
+    assert len(leina_roles) == 100
+
+    number = 10
+    time = timeit.timeit(
+        lambda: oso.is_allowed(leina, "write", oso_repos[99]), number=number
+    )
+    print(f"Executed in : {time/number*1000} ms\n Averaged over {number} repetitions.")
