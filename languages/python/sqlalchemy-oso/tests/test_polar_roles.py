@@ -1068,6 +1068,7 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
+    oso.load_file("sqlalchemy_oso/roles.polar")
     oso.load_str(new_policy)
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
@@ -1150,6 +1151,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
+    oso.load_file("sqlalchemy_oso/roles.polar")
     oso.load_str(new_policy)
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
@@ -1237,6 +1239,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
+    oso.load_file("sqlalchemy_oso/roles.polar")
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
     oso.load_str(new_policy)
@@ -1358,6 +1361,7 @@ def test_chained_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
+    oso.load_file("sqlalchemy_oso/roles.polar")
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
     oso.load_str(new_policy)
