@@ -115,15 +115,56 @@ class PolarRoles:
         engine = self.session_maker.kw["bind"]
         self.sqlalchemy_base.metadata.create_all(engine)
 
-    def assign_role(self, user, resource, role, session=None):
+    def assign_role(self, user, resource, role_name, session=None, reassign=True):
         local_session = session is None
         if local_session:
             session = self.session_maker()
         try:
-            return add_user_role(session, user, resource, role, commit=True)
+            existing_roles = get_user_roles(session, user, type(resource), resource.id)
+            assert len(existing_roles) < 2
+            if len(existing_roles) == 1:
+                if reassign:
+                    existing_roles[0].name = role_name
+                else:
+                    raise OsoError(
+                        f"""User {user} already has a role for this resource.
+                        To reassign, call with `reassign=True`."""
+                    )
+            else:
+                return add_user_role(session, user, resource, role_name, commit=True)
         finally:
             if local_session:
                 session.close()
+
+    def remove_role(self, user, resource, role_name, session=None):
+        local_session = session is None
+        if local_session:
+            session = self.session_maker()
+        try:
+            existing_roles = get_user_roles(session, user, type(resource), resource.id)
+            assert len(existing_roles) < 2
+            if len(existing_roles) == 1:
+                session.delete(existing_roles[0])
+                session.flush()
+                if local_session:
+                    session.commit()
+                return True
+            else:
+                return False
+        finally:
+            if local_session:
+                session.close()
+
+    def for_resource(self, resource_class):
+        # List the roles for a resource type
+        yield from self.roles[resource_class].choices
+
+    def assignments_for_resource(self, resource):
+        # List the role assignments for a specific resource
+        return [
+            {"user_id": ur.user_id, "role": ur.name}
+            for ur in resource.roles
+        ]
 
     def get_actor_roles(self, user):
         session = self.session_maker()

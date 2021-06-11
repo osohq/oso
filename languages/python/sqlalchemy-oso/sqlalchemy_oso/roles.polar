@@ -8,42 +8,47 @@ normalize_sqlalchemy_role(_: {name: name, resource: resource}, [name, resource])
 allow(actor, action, resource) if
     resource(resource, _, actions, _) and
     action in actions and # 'action' is valid for 'resource'
-    print("action", action) and
+    # print("action", action) and
     role_with_direct_permission(required_role, [action], resource) and
     required_role = [required_role_name, required_role_resource] and
-    print("  required ->", required_role_name, required_role_resource) and
+    # print("  required ->", required_role_name, required_role_resource) and
 
     actor_role(actor, assigned_role) and
-    print("    assigned ->", assigned_role.name, assigned_role.resource) and
+    # print("    assigned ->", assigned_role.name, assigned_role.resource) and
 
     implied_role(implied_role, required_role, resource) and
     implied_role = [implied_role_name, implied_role_resource] and
     # print("      implied =>", implied_role_name, implied_role_resource) and
 
     implied_role_name = assigned_role.name and
-    print("      matches  ==>", implied_role_name, assigned_role.name) and
-    print("      checking ==>", implied_role_resource, assigned_role.resource) and
+    # print("      matches  ==>", implied_role_name, assigned_role.name) and
+    # print("      checking ==>", implied_role_resource, assigned_role.resource) and
     implied_role_resource = assigned_role.resource;
 
 # checking direct permission
 role_with_direct_permission(role, [action], resource) if
     resource(resource, namespace, _, roles) and
-    [role_name, role_details] in roles and
-    action in role_details.permissions and
-    role = [role_name, resource] or (
+    (
         parent(resource, parent_resource) and
         role_with_direct_permission(role, [namespace, action], parent_resource)
+    ) or (
+        # print("roles =>", roles) and
+        [role_name, role_details] in roles and
+        action in role_details.permissions and
+        role = [role_name, resource]
     );
 
 # checking parent
 # TODO(gj): I think I can drop this definition
-role_with_direct_permission(role, [action_namespace, action], resource) if
+role_with_direct_permission(role, [namespace, action], resource) if
     resource(resource, _, _, roles) and
-    [role_name, role_details] in roles and
-    action in role_details.permissions and
-    role = [role_name, resource] or (
+    (
         parent(resource, parent_resource) and
-        role_with_direct_permission(role, [action_namespace, action], parent_resource)
+        role_with_direct_permission(role, [namespace, action], parent_resource)
+    ) or (
+        [role_name, role_details] in roles and
+        ":".join([namespace, action]) in role_details.permissions and
+        role = [role_name, resource]
     );
 
 # A role implies itself.
@@ -58,6 +63,7 @@ implied_role(implied_role, [role, role_resource], resource) if
 # checking local implications
 implied_role(implied_role, [role, resource], resource) if
     resource(resource, _namespace, _, roles) and
+    # print("roles =>", roles) and
     # print("        checking local implications for", role, resource) and
     [role_name, role_details] in roles and
     # print("          checking local role", role_name) and
