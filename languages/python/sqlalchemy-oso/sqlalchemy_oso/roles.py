@@ -11,7 +11,6 @@ from sqlalchemy import inspect
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy import sql
-
 from .compat import iterate_model_classes
 
 
