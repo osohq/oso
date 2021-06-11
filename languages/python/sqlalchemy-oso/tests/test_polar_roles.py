@@ -2426,7 +2426,7 @@ def test_role_allows_with_other_rules(init_oso, sample_data):
     assert not oso.is_allowed(leina, "read", False)
 
 
-# LEGACY TEST
+# LEGACY TESTS
 
 
 def test_roles_integration(init_oso, sample_data):
@@ -2554,6 +2554,102 @@ def test_roles_integration(init_oso, sample_data):
     assert not oso.is_allowed(gabe, "edit", oso_bug)
 
 
+# Legacy test from sam/polar-roles
+def test_legacy_sam_polar_roles(init_oso, sample_data):
+    oso, session = init_oso
+
+    policy = """
+        resource(_: Org, "org", actions, roles) if
+            actions = ["create_repo", "invite"] and
+            roles = {
+                member: {
+                    permissions: ["create_repo"],
+                    implies: ["repo:reader"]
+                },
+                owner: {
+                    permissions: ["invite"],
+                    implies: ["member", "repo:writer"]
+                }
+            };
+
+        resource(_: Repo, "repo", actions, roles) if
+            actions = ["pull", "push"] and
+            roles = {
+                writer: {
+                    permissions: ["push"],
+                    implies: ["reader"]
+                },
+                reader: {
+                    permissions: ["pull"]
+                }
+            };
+
+        parent(repo: Repo, org) if
+            org = repo.org and
+            org matches Org;
+    """
+    oso.load_str(policy)
+
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+    gabe = sample_data["gabe"]
+
+    osohq = sample_data["osohq"]
+    apple = sample_data["apple"]
+
+    oso_repo = sample_data["oso_repo"]
+    ios = sample_data["ios"]
+
+    # Things that happen in the app via the management api.
+    assign_role(leina, osohq, "owner", session)
+    assign_role(steve, osohq, "member", session)
+    assign_role(gabe, oso_repo, "writer", session)
+
+    # Test
+
+    # Test Org roles
+    # Leina can invite people to osohq because she is an OWNER
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert not oso.is_allowed(leina, "invite", apple)
+
+    # Steve can create repos in osohq because he is a MEMBER
+    assert oso.is_allowed(steve, "create_repo", osohq)
+
+    # Steve can't invite people to osohq because only OWNERs can invite, and he's not an OWNER
+    assert not oso.is_allowed(steve, "invite", osohq)
+
+    # Leina can create a repo because she's the OWNER and OWNER implies MEMBER
+    assert oso.is_allowed(leina, "create_repo", osohq)
+
+    assert oso.is_allowed(steve, "pull", oso_repo)
+    assert not oso.is_allowed(steve, "pull", ios)
+    # Leina can pull from oso_repo because she's an OWNER of osohq
+    # which implies WRITE on oso_repo
+    # which implies READ on oso_repo
+    assert oso.is_allowed(leina, "pull", oso_repo)
+    # Gabe can pull from oso_repo because he has WRTIE on oso_repo
+    # which implies READ on oso_repo
+    assert oso.is_allowed(gabe, "pull", oso_repo)
+
+    # Steve can NOT push to oso_repo because he is a MEMBER of osohq
+    # which implies READ on oso_repo but not WRITE
+    assert not oso.is_allowed(steve, "push", oso_repo)
+    # Leina can push to oso_repo because she's an OWNER of osohq
+    # which implies WRITE on oso_repo
+    assert oso.is_allowed(leina, "push", oso_repo)
+    # Gabe can push to oso_repo because he has WRTIE on oso_repo
+    assert oso.is_allowed(gabe, "push", oso_repo)
+
+    # TODO(gj): look at wowhack in sqlalchemy_oso/partial.py
+    # # Data filtering test:
+    # auth_filter = authorize_model(oso, leina, "push", session, Repository)
+    # assert str(auth_filter) == ":param_1 = repositories.organization_id"
+    # authorized_repos = session.query(Repository).filter(auth_filter).all()
+    # assert len(authorized_repos) == 1
+    # assert authorized_repos[0] == oso_repo
+
+
+@pytest.mark.skip("this b slow")
 def test_perf_polar(init_oso, sample_data):
     oso, session = init_oso
 
