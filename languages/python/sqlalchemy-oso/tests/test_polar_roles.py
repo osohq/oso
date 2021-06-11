@@ -2260,51 +2260,53 @@ def test_user_in_role(init_oso, sample_data):
     assert oso.is_allowed(steve, "read", oso_repo)
     assert not oso.is_allowed(gabe, "read", oso_repo)
 
-    # With data filtering
-    oso.actor = leina
-    oso.checked_permissions = {Repo: "read"}
-    auth_session = auth_sessionmaker()
-
-    results = auth_session.query(Repo).all()
-    assert len(results) == 2
-    for repo in results:
-        assert repo.org_id == "osohq"
+    # # With data filtering
+    # oso.actor = leina
+    # oso.checked_permissions = {Repo: "read"}
+    # auth_session = auth_sessionmaker()
+    #
+    # results = auth_session.query(Repo).all()
+    # assert len(results) == 2
+    # for repo in results:
+    #     assert repo.org_id == "osohq"
 
 
 @pytest.mark.skip("TODO: validation / this isn't our problem anymore")
 def test_mismatched_id_types_throws_error(engine, Base, User):
-    class One(Base):
-        __tablename__ = "ones"
-
-        id = Column(String(), primary_key=True)
-
-    class Two(Base):
-        __tablename__ = "twos"
-
-        id = Column(Integer(), primary_key=True)
-
-    Session = sessionmaker(bind=engine)
-
-    oso = SQLAlchemyOso(Base)
-
-    with pytest.raises(OsoError):
-        oso.enable_roles(User, Session)
+    pass
+    # class One(Base):
+    #     __tablename__ = "ones"
+    #
+    #     id = Column(String(), primary_key=True)
+    #
+    # class Two(Base):
+    #     __tablename__ = "twos"
+    #
+    #     id = Column(Integer(), primary_key=True)
+    #
+    # Session = sessionmaker(bind=engine)
+    #
+    # oso = SQLAlchemyOso(Base)
+    #
+    # with pytest.raises(OsoError):
+    #     oso.enable_roles(User, Session)
 
 
 @pytest.mark.skip("TODO: not a thing anymore, maybe?")
 def test_enable_roles_twice(engine, Base, User):
-    class One(Base):
-        __tablename__ = "ones"
-
-        id = Column(Integer(), primary_key=True)
-
-    Session = sessionmaker(bind=engine)
-    oso = SQLAlchemyOso(Base)
-
-    oso.enable_roles(User, Session)
-
-    with pytest.raises(OsoError):
-        oso.enable_roles(User, Session)
+    pass
+    # class One(Base):
+    #     __tablename__ = "ones"
+    #
+    #     id = Column(Integer(), primary_key=True)
+    #
+    # Session = sessionmaker(bind=engine)
+    # oso = SQLAlchemyOso(Base)
+    #
+    # oso.enable_roles(User, Session)
+    #
+    # with pytest.raises(OsoError):
+    #     oso.enable_roles(User, Session)
 
 
 @pytest.mark.skip("TODO: not our problem anymore")
@@ -2312,58 +2314,60 @@ def test_global_declarative_base(engine, Base, User):
     """Test two different Osos & two different OsoRoles but a shared
     declarative_base(). This shouldn't error."""
 
-    class One(Base):
-        __tablename__ = "ones"
-
-        id = Column(Integer(), primary_key=True)
-
-    Session = sessionmaker(bind=engine)
-    oso = SQLAlchemyOso(Base)
-    oso.enable_roles(User, Session)
-
-    oso2 = SQLAlchemyOso(Base)
-    oso2.enable_roles(User, Session)
+    pass
+    # class One(Base):
+    #     __tablename__ = "ones"
+    #
+    #     id = Column(Integer(), primary_key=True)
+    #
+    # Session = sessionmaker(bind=engine)
+    # oso = SQLAlchemyOso(Base)
+    # oso.enable_roles(User, Session)
+    #
+    # oso2 = SQLAlchemyOso(Base)
+    # oso2.enable_roles(User, Session)
 
 
 @pytest.mark.skip("TODO: not our problem anymore")
 @pytest.mark.parametrize("sa_type,one_id", [(String, "1"), (Integer, 1)])
 def test_id_types(engine, Base, User, sa_type, one_id):
-    class One(Base):
-        __tablename__ = "ones"
-
-        id = Column(sa_type(), primary_key=True)
-
-    class Two(Base):
-        __tablename__ = "twos"
-
-        id = Column(sa_type(), primary_key=True)
-
-    Session = sessionmaker(bind=engine)
-    session = Session()
-
-    oso = SQLAlchemyOso(Base)
-    oso.enable_roles(User, Session)
-
-    Base.metadata.create_all(engine)
-
-    policy = """
-    resource(_type: One, "one", ["read"], {boss: {permissions: ["read"]}});
-    resource(_type: Two, "two", ["read"], _roles);
-    """
-    oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
-
-    steve = User(name="steve")
-    one = One(id=one_id)
-
-    session.add(steve)
-    session.add(one)
-    session.commit()
-
-    assign_role(steve, one, "boss", session)
-    session.commit()
-    assert oso.is_allowed(steve, "read", one)
+    pass
+    # class One(Base):
+    #     __tablename__ = "ones"
+    #
+    #     id = Column(sa_type(), primary_key=True)
+    #
+    # class Two(Base):
+    #     __tablename__ = "twos"
+    #
+    #     id = Column(sa_type(), primary_key=True)
+    #
+    # Session = sessionmaker(bind=engine)
+    # session = Session()
+    #
+    # oso = SQLAlchemyOso(Base)
+    # oso.enable_roles(User, Session)
+    #
+    # Base.metadata.create_all(engine)
+    #
+    # policy = """
+    # resource(_type: One, "one", ["read"], {boss: {permissions: ["read"]}});
+    # resource(_type: Two, "two", ["read"], _roles);
+    # """
+    # oso.load_str(policy)
+    # # TODO: validation
+    # # oso.roles.synchronize_data()
+    #
+    # steve = User(name="steve")
+    # one = One(id=one_id)
+    #
+    # session.add(steve)
+    # session.add(one)
+    # session.commit()
+    #
+    # assign_role(steve, one, "boss", session)
+    # session.commit()
+    # assert oso.is_allowed(steve, "read", one)
 
 
 def test_role_allows_with_other_rules(init_oso, sample_data):
@@ -2459,11 +2463,11 @@ def test_roles_integration(init_oso, sample_data):
     gabe = sample_data["gabe"]
 
     osohq = sample_data["osohq"]
-    apple = sample_data["apple"]
+    # apple = sample_data["apple"]
 
     oso_repo = sample_data["oso_repo"]
-    ios = sample_data["ios"]
-    demo_repo = sample_data["demo_repo"]
+    # ios = sample_data["ios"]
+    # demo_repo = sample_data["demo_repo"]
 
     ios_laggy = sample_data["ios_laggy"]
     oso_bug = sample_data["oso_bug"]
@@ -2628,16 +2632,16 @@ def test_perf_polar(init_oso, sample_data):
 
     # Test many direct roles
     p = """
-	resource(_: Repo, "repo", actions, roles) if
-	actions = ["read", "write"] and
-	roles = {
-		reader: {
-            permissions: ["read"]
-		},
-		writer: {
-            permissions: ["write"]
-		}
-	};"""
+        resource(_: Repo, "repo", actions, roles) if
+        actions = ["read", "write"] and
+        roles = {
+            reader: {
+                permissions: ["read"]
+            },
+            writer: {
+                permissions: ["write"]
+            }
+        };"""
 
     # p = """resource(_: Repo, "repo", actions, roles) if
     # actions = ["pull", "push"] and
@@ -2657,9 +2661,9 @@ def test_perf_polar(init_oso, sample_data):
     oso.load_str(p)
 
     leina = sample_data["leina"]
-    steve = sample_data["steve"]
+    # steve = sample_data["steve"]
     osohq = sample_data["osohq"]
-    oso_repo = sample_data["oso_repo"]
+    # oso_repo = sample_data["oso_repo"]
 
     # Create 100 repositories
     oso_repos = []

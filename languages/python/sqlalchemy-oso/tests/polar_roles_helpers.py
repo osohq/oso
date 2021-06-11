@@ -1,8 +1,7 @@
 # Roles 2
 from typing import Any, List
 
-from oso import Oso, OsoError, Variable
-from polar.exceptions import PolarRuntimeError
+from oso import OsoError, Variable
 
 from sqlalchemy import inspect, UniqueConstraint
 from sqlalchemy.exc import IntegrityError

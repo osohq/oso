@@ -2641,67 +2641,29 @@ def test_perf_sqlalchemy(init_oso, sample_data, Repository):
 
     # Test many direct roles
     p = """
-	resource(_: Repository, "repo", actions, roles) if
-	actions = ["read", "write"] and
-	roles = {
-		reader: {
-		permissions: ["read"]
-		},
-		reader1: {
-		permissions: ["read"]
-		},
-		reader2: {
-		permissions: ["read"]
-		},
-		reader3: {
-		permissions: ["read"]
-		},
-		reader4: {
-		permissions: ["read"]
-		},
-		reader5: {
-		permissions: ["read"]
-		},
-		reader6: {
-		permissions: ["read"]
-		},
-		reader7: {
-		permissions: ["read"]
-		},
-		reader8: {
-		permissions: ["read"]
-		},
-		reader9: {
-		permissions: ["read"]
-		},
-		reader10: {
-		permissions: ["read"]
-		},
-		reader11: {
-		permissions: ["read"]
-		},
-		reader12: {
-		permissions: ["read"]
-		},
-		reader13: {
-		permissions: ["read"]
-		},
-		reader14: {
-		permissions: ["read"]
-		},
-		reader15: {
-		permissions: ["read"]
-		},
-		reader16: {
-		permissions: ["read"]
-		},
-		reader17: {
-		permissions: ["read"]
-		},
-		writer: {
-		permissions: ["write"]
-		}
-	};
+        resource(_: Repository, "repo", actions, roles) if
+        actions = ["read", "write"] and
+        roles = {
+            reader: { permissions: ["read"] },
+            reader1: { permissions: ["read"] },
+            reader2: { permissions: ["read"] },
+            reader3: { permissions: ["read"] },
+            reader4: { permissions: ["read"] },
+            reader5: { permissions: ["read"] },
+            reader6: { permissions: ["read"] },
+            reader7: { permissions: ["read"] },
+            reader8: { permissions: ["read"] },
+            reader9: { permissions: ["read"] },
+            reader10: { permissions: ["read"] },
+            reader11: { permissions: ["read"] },
+            reader12: { permissions: ["read"] },
+            reader13: { permissions: ["read"] },
+            reader14: { permissions: ["read"] },
+            reader15: { permissions: ["read"] },
+            reader16: { permissions: ["read"] },
+            reader17: { permissions: ["read"] },
+            writer: { permissions: ["write"] }
+        };
 
     allow(actor, action, resource) if Roles.role_allows(actor, action, resource);"""
 
@@ -2724,9 +2686,9 @@ def test_perf_sqlalchemy(init_oso, sample_data, Repository):
     oso.roles.synchronize_data()
 
     leina = sample_data["leina"]
-    steve = sample_data["steve"]
+    # steve = sample_data["steve"]
     osohq = sample_data["osohq"]
-    oso_repo = sample_data["oso_repo"]
+    # oso_repo = sample_data["oso_repo"]
 
     # Create 100 repositories
     oso_repos = []
