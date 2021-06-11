@@ -2538,6 +2538,9 @@ def test_roles_integration(
 
     parent(issue: Issue, parent_repo: Repository) if
         issue.repo = parent_repo;
+
+    allow(actor, action, resource) if
+        Roles.role_allows(actor, action, resource);
     """
     oso.load_str(policy)
 
