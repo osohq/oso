@@ -53,8 +53,9 @@ def and_filter(current, new):
 def partial_to_filter(expression: Expression, session: Session, model, get_model):
     """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
     expression = preprocess(expression)
+    roles_method = check_for_roles_method(expression)
 
-    return translate_expr(expression, session, model, get_model)
+    return (translate_expr(expression, session, model, get_model), roles_method)
 
 
 def check_for_roles_method(expression: Expression):

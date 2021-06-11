@@ -5,17 +5,14 @@ from dataclasses import dataclass
 from oso import OsoError, Variable
 
 import sqlalchemy
-from sqlalchemy import inspect, sql
+from sqlalchemy.types import Integer, String
+from sqlalchemy.schema import Column, ForeignKey
+from sqlalchemy import inspect
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
-from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy.types import Integer, String
+from sqlalchemy import sql
 
 from .compat import iterate_model_classes
-
-# Global list to keep track of role classes as they are created, used to
-# generate RBAC base policy in Polar
-ROLE_CLASSES: List[Any] = []
 
 
 def isa_type(arg):
