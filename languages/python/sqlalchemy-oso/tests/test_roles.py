@@ -4,6 +4,7 @@ import psycopg2
 import random
 import string
 import os
+from datetime import datetime
 
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
@@ -2632,3 +2633,101 @@ def test_roles_integration(
         {"user_id": leina.id, "role": "owner"},
         {"user_id": steve.id, "role": "member"},
     ]
+
+
+def test_perf(init_oso, sample_data, User, Repository, Organization, Issue):
+    oso, session = init_oso
+
+    # Test many direct roles
+    p = """
+	resource(_: Repository, "repo", actions, roles) if
+	actions = ["read", "write"] and
+	roles = {
+		reader1: {
+		permissions: ["read"]
+		},
+		reader2: {
+		permissions: ["read"]
+		},
+		reader3: {
+		permissions: ["read"]
+		},
+		reader4: {
+		permissions: ["read"]
+		},
+		reader5: {
+		permissions: ["read"]
+		},
+		reader6: {
+		permissions: ["read"]
+		},
+		reader7: {
+		permissions: ["read"]
+		},
+		reader8: {
+		permissions: ["read"]
+		},
+		reader9: {
+		permissions: ["read"]
+		},
+		reader10: {
+		permissions: ["read"]
+		},
+		reader11: {
+		permissions: ["read"]
+		},
+		reader12: {
+		permissions: ["read"]
+		},
+		reader13: {
+		permissions: ["read"]
+		},
+		reader14: {
+		permissions: ["read"]
+		},
+		reader15: {
+		permissions: ["read"]
+		},
+		reader16: {
+		permissions: ["read"]
+		},
+		reader17: {
+		permissions: ["read"]
+		},
+		writer: {
+		permissions: ["write"]
+		}
+	};"""
+
+    # p = """resource(_: Repository, "repo", actions, roles) if
+    # actions = ["pull", "push"] and
+    # roles = {
+    # 	writer: {
+    # 	permissions: ["push"],
+    # 	implies: ["reader"]
+    # 	},
+    # 	reader: {
+    # 	permissions: ["pull"]
+    # 	}
+    # };
+
+    # parent(repo: Repository, org: Organization) if
+    # org = repo.organization;
+    # """
+    oso.load_str(p)
+
+    oso.roles.synchronize_data()
+
+    # leina = sample_data["leina"]
+    # steve = sample_data["steve"]
+    # osohq = sample_data["osohq"]
+    # oso_repo = sample_data["oso_repo"]
+
+    # oso.roles.assign_role(leina, oso_repo, "writer", session)
+    # oso.roles.assign_role(steve, oso_repo, "reader1", session)
+    # session.commit()
+
+    # s = datetime.now()
+    # oso.is_allowed(leina, "write", oso_repo)
+    # e = datetime.now()
+    # print(f"Executed in {e-s}")
