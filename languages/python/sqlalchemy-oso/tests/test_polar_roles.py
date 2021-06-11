@@ -13,161 +13,104 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import relationship, sessionmaker, close_all_sessions
 from sqlalchemy.ext.declarative import declarative_base
 
-from sqlalchemy_oso import authorized_sessionmaker, SQLAlchemyOso
-
-from oso import OsoError
-
-pg_host = os.environ.get("POSTGRES_HOST")
-pg_port = os.environ.get("POSTGRES_PORT")
-pg_user = os.environ.get("POSTGRES_USER")
-pg_pass = os.environ.get("POSTGRES_PASSWORD")
-
-databases = ["sqlite"]
-if pg_host is not None:
-    databases.append("postgres")
+from oso import Oso, OsoError
+from sqlalchemy_oso import register_models
+from .polar_roles_helpers import resource_role_class, assign_role, remove_role
 
 
-@pytest.fixture(params=databases)
-def engine(request):
-    if request.param == "postgres":
-        # Create a new database to run the tests.
-        id = "".join(random.choice(string.ascii_lowercase) for i in range(10))
-        name = f"roles_test_{id}"
-
-        connect_string = "postgresql://"
-        kwargs = {"host": pg_host}
-        if pg_user is not None:
-            kwargs["user"] = pg_user
-            connect_string += pg_user
-        if pg_pass is not None:
-            kwargs["password"] = pg_pass
-            connect_string += ":" + pg_user
-        connect_string += "@" + pg_host
-        if pg_port is not None:
-            kwargs["port"] = pg_port
-            connect_string += ":" + pg_port
-        conn = psycopg2.connect(**kwargs)
-        conn.autocommit = True
-        cursor = conn.cursor()
-        cursor.execute(f"create database {name}")
-        conn.close()
-
-        # Run tests.
-        engine = create_engine(f"{connect_string}/{name}", poolclass=NullPool)
-        yield engine
-        engine.dispose()
-        close_all_sessions()
-
-        # Destroy database.
-        conn = psycopg2.connect(**kwargs)
-        conn.autocommit = True
-        cursor = conn.cursor()
-        cursor.execute(f"drop database if exists {name}")
-        conn.close()
-    elif request.param == "sqlite":
-        engine = create_engine("sqlite:///:memory:")
-        yield engine
+Base = declarative_base(name="RoleBase")
 
 
-@pytest.fixture
-def Base():
-    base = declarative_base(name="RoleBase")
+class Organization(Base):
+    __tablename__ = "organizations"
 
-    return base
+    name = Column(String(), primary_key=True)
+    base_repo_role = Column(String())
 
 
-@pytest.fixture
-def User(Base):
-    class User(Base):
-        __tablename__ = "users"
+class User(Base):
+    __tablename__ = "users"
 
-        id = Column(Integer, primary_key=True)
-        name = Column(String())
+    name = Column(String(), primary_key=True)
 
-    return User
+
+class Repository(Base):
+    __tablename__ = "repositories"
+
+    repo_id = Column(Integer, primary_key=True)
+    name = Column(String(256))
+
+    # many-to-one relationship with organizations
+    organization_id = Column(Integer, ForeignKey("organizations.name"))
+    organization = relationship("Organization", backref="repositories", lazy=True)
+
+    def repr(self):
+        return {"id": self.repo_id, "name": self.name}
+
+
+class Issue(Base):
+    __tablename__ = "issues"
+
+    issue_id = Column(Integer, primary_key=True)
+    name = Column(String(256))
+    repository_id = Column(Integer, ForeignKey("repositories.repo_id"))
+    repository = relationship("Repository", backref="issues", lazy=True)
+
+
+RepositoryRoleMixin = resource_role_class(
+    User,
+    Repository,
+    ["reader", "writer"],
+)
+
+
+class RepositoryRole(Base, RepositoryRoleMixin):
+    def repr(self):
+        return {"id": self.id, "name": str(self.name)}
+
+
+# For the tests, make OrganizationRoles NOT mutually exclusive
+OrganizationRoleMixin = resource_role_class(
+    User, Organization, ["owner", "member"], mutually_exclusive=False
+)
+
+
+class OrganizationRole(Base, OrganizationRoleMixin):
+    def repr(self):
+        return {"id": self.id, "name": str(self.name)}
 
 
 @pytest.fixture
-def Organization(Base):
-    class Organization(Base):
-        __tablename__ = "organizations"
-
-        id = Column(String(), primary_key=True)
-
-    return Organization
-
-
-@pytest.fixture
-def Repository(Base):
-    class Repository(Base):
-        __tablename__ = "repositories"
-
-        id = Column(String(), primary_key=True)
-        org_id = Column(String(), ForeignKey("organizations.id"), index=True)
-        org = relationship("Organization")
-
-    return Repository
-
-
-@pytest.fixture
-def Issue(Base):
-    class Issue(Base):
-        __tablename__ = "issues"
-
-        id = Column(String(), primary_key=True)
-        repo_id = Column(String(), ForeignKey("repositories.id"))
-        repo = relationship("Repository")
-
-    return Issue
-
-
-@pytest.fixture
-def init_oso(engine, Base, User, Organization, Repository, Issue):
-    # Initialize Oso and OsoRoles
+def init_oso():
     # ---------------------------
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    oso = SQLAlchemyOso(Base)
-    oso.enable_roles(User, Session)
+    oso = Oso()
+    register_models(oso, Base)
 
-    # @NOTE: Right now this has to happen after enabling oso roles to get the
-    #        tables.
-    Base.metadata.create_all(engine)
+    oso.load_file("sqlalchemy_oso/roles.polar")
 
     return (oso, session)
 
 
 @pytest.fixture
-def auth_sessionmaker(init_oso, engine):
-    oso, _ = init_oso
-    oso.actor = None
-    oso.checked_permissions = None
-
-    AuthSessionmaker = authorized_sessionmaker(
-        bind=engine,
-        get_oso=lambda: oso,
-        get_user=lambda: oso.actor,
-        get_checked_permissions=lambda: oso.checked_permissions,
-    )
-
-    return AuthSessionmaker
-
-
-@pytest.fixture
-def sample_data(init_oso, Organization, Repository, User, Issue):
+def sample_data(init_oso):
     _, session = init_oso
     # Create sample data
     # -------------------
-    apple = Organization(id="apple")
-    osohq = Organization(id="osohq")
+    apple = Organization(name="apple")
+    osohq = Organization(name="osohq")
 
-    ios = Repository(id="ios", org=apple)
-    oso_repo = Repository(id="oso", org=osohq)
-    demo_repo = Repository(id="demo", org=osohq)
+    ios = Repository(name="ios", organization=apple)
+    oso_repo = Repository(name="oso", organization=osohq)
+    demo_repo = Repository(name="demo", organization=osohq)
 
-    ios_laggy = Issue(id="laggy", repo=ios)
-    oso_bug = Issue(id="bug", repo=oso_repo)
+    laggy = Issue(name="laggy", repository=ios)
+    bug = Issue(name="bug", repository=oso_repo)
 
     leina = User(name="leina")
     steve = User(name="steve")
@@ -182,8 +125,8 @@ def sample_data(init_oso, Organization, Repository, User, Issue):
         "ios": ios,
         "oso_repo": oso_repo,
         "demo_repo": demo_repo,
-        "ios_laggy": ios_laggy,
-        "oso_bug": oso_bug,
+        "laggy": laggy,
+        "bug": bug,
     }
     for obj in objs.values():
         session.add(obj)
@@ -200,36 +143,8 @@ def sample_data(init_oso, Organization, Repository, User, Issue):
 
 
 def test_oso_roles_init(engine, auth_sessionmaker, Base, User):
-    oso = SQLAlchemyOso(Base)
-
-    # - Passing an auth session to OsoRoles raises an exception
-    with pytest.raises(OsoError):
-        oso.enable_roles(
-            user_model=User,
-            session_maker=auth_sessionmaker,
-        )
-
-    Session = sessionmaker(bind=engine)
-    session = Session()
-
-    # - Passing a session instead of Session factory to OsoRoles raises an exception
-    with pytest.raises(AttributeError):
-        oso.enable_roles(User, session)
-
-    class FakeClass:
-        pass
-
-    # - Passing a non-SQLAlchemy user model to OsoRoles raises an exception
-    with pytest.raises(TypeError):
-        oso.enable_roles(FakeClass, Session)
-
-    # - Passing a bad declarative_base to OsoRoles raises an exception
-    with pytest.raises(AttributeError):
-        SQLAlchemyOso(FakeClass)
-
-    # - Calling a roles-specific method before calling `enable_roles` fails
-    with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+    # TODO: need to create method for initializing polar roles
+    assert 0
 
 
 # TEST RESOURCE CONFIGURATION
@@ -282,8 +197,9 @@ def test_empty_role(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
-    pass
+        # TODO: where are we going to do config validation?
+        # Maybe when user loads their policy file?
+        assert 0
 
 
 def test_bad_namespace_perm(init_oso):
@@ -303,7 +219,9 @@ def test_bad_namespace_perm(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        # TODO: where are we going to do config validation?
+        # Maybe when user loads their policy file?
+        assert 0
 
 
 # TODO
@@ -337,7 +255,10 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
     """
     oso.load_str(policy)
 
-    oso.roles.synchronize_data()
+    # TODO: where are we going to do config validation?
+    # Maybe when user loads their policy file?
+    # oso.roles.synchronize_data()
+    assert 0
 
     leina = sample_data["leina"]
     steve = sample_data["steve"]
@@ -2492,9 +2413,7 @@ def test_role_allows_with_other_rules(
 # LEGACY TEST
 
 
-def test_roles_integration(
-    init_oso, auth_sessionmaker, User, Organization, Repository, Issue
-):
+def test_roles_integration(init_oso, sample_data):
     oso, session = init_oso
 
     policy = """
@@ -2535,44 +2454,35 @@ def test_roles_integration(
         ];
 
     parent(repository: Repository, parent_org) if
-        repository.org = parent_org and
+        repository.organization = parent_org and
         parent_org matches Organization;
 
     parent(issue: Issue, parent_repo) if
-        issue.repo = parent_repo and
+        issue.repository = parent_repo and
         parent_repo matches Repository;
     """
     oso.load_str(policy)
 
-    # tbd on the name for this, but this is what used to happy lazily.
-    # it reads the config from the policy and sets everything up.
-    oso.roles.synchronize_data()
-
-    # Create sample data
+    # Get sample data
     # -------------------
-    apple = Organization(id="apple")
-    osohq = Organization(id="osohq")
+    leina = sample_data["leina"]
+    steve = sample_data["steve"]
+    gabe = sample_data["gabe"]
 
-    ios = Repository(id="ios", org=apple)
-    oso_repo = Repository(id="oso", org=osohq)
-    demo_repo = Repository(id="demo", org=osohq)
+    osohq = sample_data["osohq"]
+    apple = sample_data["apple"]
 
-    laggy = Issue(id="laggy", repo=ios)
-    bug = Issue(id="bug", repo=oso_repo)
+    oso_repo = sample_data["oso_repo"]
+    ios = sample_data["ios"]
+    demo_repo = sample_data["demo_repo"]
 
-    leina = User(name="leina")
-    steve = User(name="steve")
-    gabe = User(name="gabe")
-
-    objs = [leina, steve, gabe, apple, osohq, ios, oso_repo, demo_repo, laggy, bug]
-    for obj in objs:
-        session.add(obj)
-    session.commit()
+    laggy = sample_data["laggy"]
+    bug = sample_data["bug"]
 
     # @NOTE: Need the users and resources in the db before assigning roles
     # so you have to call session.commit() first.
-    oso.roles.assign_role(leina, osohq, "owner", session=session)
-    oso.roles.assign_role(steve, osohq, "member", session=session)
+    assign_role(leina, osohq, "owner", session=session)
+    assign_role(steve, osohq, "member", session=session)
     session.commit()
 
     assert oso.is_allowed(leina, "invite", osohq)
@@ -2592,47 +2502,40 @@ def test_roles_integration(
 
     oso.actor = leina
     oso.checked_permissions = {Repository: "pull"}
-    auth_session = auth_sessionmaker()
+    # auth_session = auth_sessionmaker()
 
-    results = auth_session.query(Repository).all()
-    assert len(results) == 2
-    result_ids = [repo.id for repo in results]
-    assert oso_repo.id in result_ids
-    assert demo_repo.id in result_ids
-    assert ios.id not in result_ids
+    # results = auth_session.query(Repository).all()
+    # assert len(results) == 2
+    # result_ids = [repo.id for repo in results]
+    # assert oso_repo.id in result_ids
+    # assert demo_repo.id in result_ids
+    # assert ios.id not in result_ids
 
-    oso.actor = leina
-    oso.checked_permissions = {Issue: "edit"}
-    auth_session = auth_sessionmaker()
+    # oso.actor = leina
+    # oso.checked_permissions = {Issue: "edit"}
+    # auth_session = auth_sessionmaker()
 
-    results = auth_session.query(Issue).all()
-    assert len(results) == 1
-    result_ids = [issue.id for issue in results]
-    assert bug.id in result_ids
+    # results = auth_session.query(Issue).all()
+    # assert len(results) == 1
+    # result_ids = [issue.id for issue in results]
+    # assert bug.id in result_ids
+
     assert not oso.is_allowed(gabe, "edit", bug)
-    oso.roles.assign_role(gabe, osohq, "member", session=session)
+    assign_role(gabe, osohq, "member", session=session)
     session.commit()
     assert not oso.is_allowed(gabe, "edit", bug)
-    oso.roles.assign_role(gabe, osohq, "owner", session=session)
+    assign_role(gabe, osohq, "owner", session=session)
     session.commit()
     assert oso.is_allowed(gabe, "edit", bug)
-    oso.roles.assign_role(gabe, osohq, "member", session=session)
+    assign_role(gabe, osohq, "member", session=session)
     session.commit()
     assert not oso.is_allowed(gabe, "edit", bug)
-    oso.roles.assign_role(gabe, osohq, "owner", session=session)
+    assign_role(gabe, osohq, "owner", session=session)
     session.commit()
     assert oso.is_allowed(gabe, "edit", bug)
-    oso.roles.remove_role(gabe, osohq, "owner", session=session)
+    remove_role(gabe, osohq, "owner", session=session)
     session.commit()
     assert not oso.is_allowed(gabe, "edit", bug)
-
-    org_roles = oso.roles.for_resource(Repository)
-    assert set(org_roles) == {"reader", "writer"}
-    oso_assignments = oso.roles.assignments_for_resource(osohq)
-    assert oso_assignments == [
-        {"user_id": leina.id, "role": "owner"},
-        {"user_id": steve.id, "role": "member"},
-    ]
 
 
 def test_perf(init_oso, sample_data, User, Repository, Organization, Issue):
