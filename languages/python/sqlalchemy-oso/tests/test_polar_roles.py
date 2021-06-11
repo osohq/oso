@@ -107,8 +107,8 @@ def sample_data(init_oso):
     oso_repo = Repo(name="oso", org=osohq)
     demo_repo = Repo(name="demo", org=osohq)
 
-    laggy = Issue(name="laggy", repo=ios)
-    bug = Issue(name="bug", repo=oso_repo)
+    ios_laggy = Issue(name="laggy", repo=ios)
+    oso_bug = Issue(name="bug", repo=oso_repo)
 
     leina = User(name="leina")
     steve = User(name="steve")
@@ -123,8 +123,8 @@ def sample_data(init_oso):
         "ios": ios,
         "oso_repo": oso_repo,
         "demo_repo": demo_repo,
-        "laggy": laggy,
-        "bug": bug,
+        "ios_laggy": ios_laggy,
+        "oso_bug": oso_bug,
     }
     for obj in objs.values():
         session.add(obj)
@@ -2465,8 +2465,8 @@ def test_roles_integration(init_oso, sample_data):
     ios = sample_data["ios"]
     demo_repo = sample_data["demo_repo"]
 
-    laggy = sample_data["laggy"]
-    bug = sample_data["bug"]
+    ios_laggy = sample_data["ios_laggy"]
+    oso_bug = sample_data["oso_bug"]
 
     # @NOTE: Need the users and resources in the db before assigning roles
     # so you have to call session.commit() first.
@@ -2478,16 +2478,16 @@ def test_roles_integration(init_oso, sample_data):
     assert oso.is_allowed(leina, "create_repo", osohq)
     assert oso.is_allowed(leina, "push", oso_repo)
     assert oso.is_allowed(leina, "pull", oso_repo)
-    assert oso.is_allowed(leina, "edit", bug)
+    assert oso.is_allowed(leina, "edit", oso_bug)
 
     assert not oso.is_allowed(steve, "invite", osohq)
     assert oso.is_allowed(steve, "create_repo", osohq)
     assert not oso.is_allowed(steve, "push", oso_repo)
     assert oso.is_allowed(steve, "pull", oso_repo)
-    assert not oso.is_allowed(steve, "edit", bug)
+    assert not oso.is_allowed(steve, "edit", oso_bug)
 
-    assert not oso.is_allowed(leina, "edit", laggy)
-    assert not oso.is_allowed(steve, "edit", laggy)
+    assert not oso.is_allowed(leina, "edit", ios_laggy)
+    assert not oso.is_allowed(steve, "edit", ios_laggy)
 
     oso.actor = leina
     oso.checked_permissions = {Repo: "pull"}
@@ -2507,24 +2507,24 @@ def test_roles_integration(init_oso, sample_data):
     # results = auth_session.query(Issue).all()
     # assert len(results) == 1
     # result_ids = [issue.id for issue in results]
-    # assert bug.id in result_ids
+    # assert oso_bug.id in result_ids
 
-    assert not oso.is_allowed(gabe, "edit", bug)
+    assert not oso.is_allowed(gabe, "edit", oso_bug)
     assign_role(gabe, osohq, "member", session=session)
     session.commit()
-    assert not oso.is_allowed(gabe, "edit", bug)
+    assert not oso.is_allowed(gabe, "edit", oso_bug)
     assign_role(gabe, osohq, "owner", session=session)
     session.commit()
-    assert oso.is_allowed(gabe, "edit", bug)
+    assert oso.is_allowed(gabe, "edit", oso_bug)
     assign_role(gabe, osohq, "member", session=session)
     session.commit()
-    assert not oso.is_allowed(gabe, "edit", bug)
+    assert not oso.is_allowed(gabe, "edit", oso_bug)
     assign_role(gabe, osohq, "owner", session=session)
     session.commit()
-    assert oso.is_allowed(gabe, "edit", bug)
+    assert oso.is_allowed(gabe, "edit", oso_bug)
     remove_role(gabe, osohq, "owner", session=session)
     session.commit()
-    assert not oso.is_allowed(gabe, "edit", bug)
+    assert not oso.is_allowed(gabe, "edit", oso_bug)
 
 
 def test_perf_polar(init_oso, sample_data):
