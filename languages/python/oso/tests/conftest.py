@@ -70,6 +70,16 @@ def qeval(query):
 
 
 @pytest.fixture
+def is_allowed(polar):
+    """Check if actor may perform action on resource."""
+
+    def _is_allowed(actor, action, resource):
+        return len(list(polar.query_rule("allow", actor, action, resource))) > 0
+
+    return _is_allowed
+
+
+@pytest.fixture
 def qvar(query):
     """Query something and pull out the results for the variable v"""
 

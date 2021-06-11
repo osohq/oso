@@ -22,7 +22,7 @@ def log_queries():
 
 
 def test_authorize_query_no_access(engine, oso, fixture_data):
-    session = AuthorizedSession(oso, "user", "action", bind=engine)
+    session = AuthorizedSession(oso, "user", {Post: "action"}, bind=engine)
     query = session.query(Post)
 
     assert query.count() == 0
@@ -46,31 +46,31 @@ def test_authorize_query_basic(engine, oso, fixture_data, query):
         "post.needs_moderation = true;"
     )
 
-    session = AuthorizedSession(oso, "user", "read", bind=engine)
+    session = AuthorizedSession(oso, "user", {Post: "read"}, bind=engine)
     authorized = query(session)
 
     assert authorized.count() == 5
     assert authorized.all()[0].contents == "foo public post"
     assert authorized.all()[0].id == 0
 
-    session = AuthorizedSession(oso, "user", "write", bind=engine)
+    session = AuthorizedSession(oso, "user", {Post: "write"}, bind=engine)
     posts = query(session)
 
     assert posts.count() == 4
     assert posts.all()[0].contents == "foo private post"
     assert posts.all()[1].contents == "foo private post 2"
 
-    session = AuthorizedSession(oso, "admin", "read", bind=engine)
+    session = AuthorizedSession(oso, "admin", {Post: "read"}, bind=engine)
     posts = query(session)
     assert posts.count() == 9
 
-    session = AuthorizedSession(oso, "moderator", "read", bind=engine)
+    session = AuthorizedSession(oso, "moderator", {Post: "read"}, bind=engine)
     posts = query(session)
     print_query(posts)
     assert posts.all()[0].contents == "private for moderation"
     assert posts.all()[1].contents == "public for moderation"
 
-    session = AuthorizedSession(oso, "guest", "read", bind=engine)
+    session = AuthorizedSession(oso, "guest", {Post: "read"}, bind=engine)
     posts = query(session)
     assert posts.count() == 0
 
@@ -83,7 +83,7 @@ def test_authorize_query_multiple_types(engine, oso, fixture_data):
     oso.load_str('allow("all_posts", "read", _: Post);')
 
     # Query two models. Only return authorized objects from each (no join).
-    session = AuthorizedSession(oso, "user", "read", bind=engine)
+    session = AuthorizedSession(oso, "user", {Post: "read", User: "read"}, bind=engine)
     authorized = session.query(Post, User)
     print_query(authorized)
     assert authorized.count() == 2
@@ -112,7 +112,7 @@ def test_authorize_query_multiple_types(engine, oso, fixture_data):
     # are returned.
     # Could this leak data somehow? Maybe if users are allowed to filter arbitrary
     # values and see a count, but not retrieve the objects?
-    session = AuthorizedSession(oso, "all_posts", "read", bind=engine)
+    session = AuthorizedSession(oso, "all_posts", {Post: "read"}, bind=engine)
     authorized = session.query(Post).join(User).filter(User.username == "admin_user")
     print_query(authorized)
     assert authorized.count() == 2
@@ -122,7 +122,9 @@ def test_authorize_query_multiple_types(engine, oso, fixture_data):
 
 def test_alias(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
-    session = AuthorizedSession(oso, user="user", action="read", bind=engine)
+    session = AuthorizedSession(
+        oso, user="user", checked_permissions={Post: "read"}, bind=engine
+    )
 
     post_alias = aliased(Post)
 
@@ -141,7 +143,7 @@ def test_authorized_sessionmaker_relationship(engine, oso, fixture_data):
     Session = authorized_sessionmaker(
         get_oso=lambda: oso,
         get_user=lambda: "user",
-        get_action=lambda: "read",
+        get_checked_permissions=lambda: {Post: "read", User: "read"},
         bind=engine,
     )
 
@@ -171,7 +173,7 @@ def test_authorized_session_relationship(engine, oso, fixture_data):
     session = AuthorizedSession(
         oso=oso,
         user="user",
-        action="read",
+        checked_permissions={Post: "read", User: "read"},
         bind=engine,
     )
 
@@ -198,8 +200,10 @@ def test_scoped_session_relationship(engine, oso, fixture_data):
     oso.load_str('allow("other", "read", post: Post) if post.id = 3;')
     oso.load_str('allow("other", "write", post: Post) if post.id = 4;')
 
-    data = {"user": "user", "action": "read"}
-    session = scoped_session(lambda: oso, lambda: data["user"], lambda: data["action"])
+    data = {"user": "user", "checked_permissions": {Post: "read", User: "read"}}
+    session = scoped_session(
+        lambda: oso, lambda: data["user"], lambda: data["checked_permissions"]
+    )
     session.configure(bind=engine)
 
     posts = session.query(Post)
@@ -227,7 +231,7 @@ def test_scoped_session_relationship(engine, oso, fixture_data):
     assert posts[0].id == 3
     assert len(session.identity_map.values()) == 1
 
-    data["action"] = "write"
+    data["checked_permissions"] = {Post: "write", User: "write"}
     assert len(session.identity_map.values()) == 0
     posts = session.query(Post)
     assert posts.count() == 1
@@ -236,7 +240,7 @@ def test_scoped_session_relationship(engine, oso, fixture_data):
     assert len(session.identity_map.values()) == 1
 
     # Change back to original.
-    data = {"user": "user", "action": "read"}
+    data = {"user": "user", "checked_permissions": {Post: "read", User: "read"}}
     assert len(session.identity_map.values()) == 3
 
 
@@ -249,7 +253,7 @@ def test_authorized_sessionmaker_user_change(engine, oso, fixture_data):
     Session = authorized_sessionmaker(
         get_oso=lambda: oso,
         get_user=lambda: user[0],
-        get_action=lambda: "read",
+        get_checked_permissions=lambda: {Post: "read"},
         bind=engine,
     )
 
@@ -269,7 +273,7 @@ def test_null_with_partial(engine, oso):
     Session = authorized_sessionmaker(
         get_oso=lambda: oso,
         get_user=lambda: "user",
-        get_action=lambda: "read",
+        get_checked_permissions=lambda: {Post: "read"},
         bind=engine,
     )
     posts = Session().query(Post)
@@ -307,7 +311,9 @@ def test_regular_session(engine, oso, fixture_data):
 
 def test_unconditional_policy_has_no_filter(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 1; allow(_, _, _);')
-    session = AuthorizedSession(oso, user="user", action="read", bind=engine)
+    session = AuthorizedSession(
+        oso, user="user", checked_permissions={Post: "read"}, bind=engine
+    )
 
     query = session.query(Post)
 
@@ -346,7 +352,9 @@ def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
 
     # Baked queries disabled for sqlalchemy_oso.session.AuthorizedSession.
-    authorized_session = AuthorizedSession(oso, user="user", action="read", bind=engine)
+    authorized_session = AuthorizedSession(
+        oso, user="user", checked_permissions={Post: "read"}, bind=engine
+    )
 
     assert authorized_session.query(User).count() == 0
 
@@ -370,7 +378,7 @@ def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
     assert all_posts.count() == 9
     first_post = all_posts[0]
     # Add related model query to the bakery cache.
-    first_post.created_by.id == 0
+    assert first_post.created_by.id == 0
 
     oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
 
@@ -378,7 +386,7 @@ def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
     authorized_session = authorized_sessionmaker(
         get_oso=lambda: oso,
         get_user=lambda: "user",
-        get_action=lambda: "read",
+        get_checked_permissions=lambda: {Post: "read"},
         bind=engine,
     )()
 
@@ -404,12 +412,14 @@ def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
     assert all_posts.count() == 9
     first_post = all_posts[0]
     # Add related model query to the bakery cache.
-    first_post.created_by.id == 0
+    assert first_post.created_by.id == 0
 
     oso.load_str('allow("user", "read", post: Post) if post.id = 0;')
 
     # Baked queries disabled for sqlalchemy_oso.session.scoped_session.
-    authorized_session = scoped_session(lambda: oso, lambda: "user", lambda: "read")
+    authorized_session = scoped_session(
+        lambda: oso, lambda: "user", lambda: {Post: "read"}
+    )
     authorized_session.configure(bind=engine)
 
     assert authorized_session.query(User).count() == 0
@@ -422,6 +432,65 @@ def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
     # Should not be able to view the post's creator because there's no rule
     # permitting access to "read" users.
     assert first_authorized_post.created_by is None
+
+
+def test_checked_permissions(engine, oso, fixture_data):
+    """Test a query involving multiple models."""
+    oso.load_str(
+        """allow("user", "read", post: Post) if post.id = 1;
+           allow("user", "view", user: User) if user.id = 0;
+           allow("user", "view", user: User) if user.id = 1;
+           allow("all_posts", "read", _: Post);"""
+    )
+
+    # Not applying any authorization to this session.
+    session1 = AuthorizedSession(oso, "user", checked_permissions=None, bind=engine)
+    posts1 = session1.query(Post)
+    assert posts1.count() == 9
+    assert posts1[0].created_by_id == 0
+    assert posts1[0].created_by.username == "foo"
+    users1 = session1.query(User)
+    assert users1.count() == 3
+
+    # Deny access to every model for this session by omission.
+    session2 = AuthorizedSession(oso, "user", checked_permissions={}, bind=engine)
+    posts2 = session2.query(Post)
+    assert posts2.count() == 0
+    users2 = session2.query(User)
+    assert users2.count() == 0
+
+    # Deny access to specific models for this session by inclusion.
+    session3 = AuthorizedSession(
+        oso, "user", checked_permissions={Post: None, User: None}, bind=engine
+    )
+    posts3 = session3.query(Post)
+    assert posts3.count() == 0
+    users3 = session3.query(User)
+    assert users3.count() == 0
+
+    # Allow access to one model but not the other for this session.
+    session4 = AuthorizedSession(
+        oso, "user", checked_permissions={Post: "read"}, bind=engine
+    )
+    posts4 = session4.query(Post)
+    assert posts4.count() == 1
+    assert posts4[0].id == 1
+    assert posts4[0].created_by_id == 0
+    assert posts4[0].created_by is None
+    users4 = session4.query(User)
+    assert users4.count() == 0
+
+    # Allow access to multiple models with multiple actions for this session.
+    session4 = AuthorizedSession(
+        oso, "user", checked_permissions={Post: "read", User: "view"}, bind=engine
+    )
+    posts4 = session4.query(Post)
+    assert posts4.count() == 1
+    assert posts4[0].id == 1
+    assert posts4[0].created_by_id == 0
+    assert posts4[0].created_by.username == "foo"
+    users4 = session4.query(User)
+    assert users4.count() == 2
 
 
 def test_register_models_declarative_base():

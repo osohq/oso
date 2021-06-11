@@ -1,6 +1,7 @@
 from datetime import datetime
 from math import inf, isnan, nan
 from pathlib import Path
+from enum import Enum
 
 from polar import (
     polar_class,
@@ -12,7 +13,6 @@ from polar import (
     Pattern,
 )
 from polar.partial import TypeConstraint
-from polar.exceptions import InvalidCallError, UnexpectedPolarTypeError
 
 import pytest
 
@@ -123,7 +123,7 @@ def test_external(polar, qvar, qeval):
     polar.register_class(Foo)
     assert qvar("new Foo().a = x", "x", one=True) == "a"
     with pytest.raises(
-        InvalidCallError, match="tried to call 'a' but it is not callable"
+        exceptions.InvalidCallError, match="tried to call 'a' but it is not callable"
     ):
         assert not qeval("new Foo().a() = x")
     assert not qvar("new Foo().b = x", "x", one=True) == "b"
@@ -894,5 +894,38 @@ def test_unexpected_expression(polar):
     """Ensure expression type raises error from core."""
     polar.load_str("f(x) if x > 2;")
 
-    with pytest.raises(UnexpectedPolarTypeError):
+    with pytest.raises(exceptions.UnexpectedPolarTypeError):
         next(polar.query_rule("f", Variable("x")))
+
+
+def test_lookup_in_head(polar, is_allowed):
+    # Test with enums
+    class Actions(Enum):
+        READ = 1
+        WRITE = 2
+
+    polar.register_constant(Actions, "Actions")
+    polar.load_str('allow("leina", Actions.READ, "doc");')
+
+    assert not is_allowed("leina", Actions.WRITE, "doc")
+    assert not is_allowed("leina", "READ", "doc")
+    assert not is_allowed("leina", 1, "doc")
+    assert not is_allowed("leina", Actions, "doc")
+    assert is_allowed("leina", Actions.READ, "doc")
+
+    # Test lookup in specializer raises error
+    with pytest.raises(exceptions.UnrecognizedToken):
+        polar.load_str('allow("leina", action: Actions.READ, "doc");')
+
+    # Test with normal class
+    class Resource:
+        def __init__(self, action):
+            self.action = action
+
+    polar.register_class(Resource, name="Resource")
+    polar.load_str('allow("leina", resource.action, resource: Resource);')
+
+    r = Resource("read")
+
+    assert not is_allowed("leina", "write", r)
+    assert is_allowed("leina", "read", r)

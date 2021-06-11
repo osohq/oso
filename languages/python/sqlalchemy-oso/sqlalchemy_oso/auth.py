@@ -9,6 +9,8 @@ from sqlalchemy import inspect
 from sqlalchemy.sql import expression as sql
 
 from sqlalchemy_oso.partial import partial_to_filter
+from sqlalchemy_oso import roles
+
 from sqlalchemy_oso.compat import iterate_model_classes
 
 
@@ -81,9 +83,14 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
         has_result = True
 
         resource_partial = result["bindings"]["resource"]
-        filter = partial_to_filter(
+        filter, role_method = partial_to_filter(
             resource_partial, session, model, get_model=oso.get_class
         )
+
+        if role_method is not None:
+            roles_filter = roles._generate_query_filter(oso, role_method, model)
+            filter &= roles_filter
+
         if combined_filter is None:
             combined_filter = filter
         else:

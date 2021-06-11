@@ -10,6 +10,7 @@ defaultContentLanguage = "any"
 [params]
   description = "Explore our guides and reference articles for learning Oso and adding it to your application."
   images = ["oso-2020-white-on-black-rounded.png"]
+  osoMarketingSiteURL = "https://www.osohq.com"
 
 [languages]
   [languages.any]
@@ -17,26 +18,26 @@ defaultContentLanguage = "any"
     contentDir = "content/any"
     languageName = "Any"
 
-  [languages.java]
-    languageName = "Java"
-    contentDir = "content/java"
-    weight = 1
-    [languages.java.params]
-      icon = "java"
-
   [languages.node]
     languageName = "Node.js"
     contentDir = "content/node"
-    weight = 2
+    weight = 1
     [languages.node.params]
       icon = "node-js"
 
   [languages.python]
     languageName = "Python"
     contentDir = "content/python"
-    weight = 3
+    weight = 2
     [languages.python.params]
       icon = "python"
+
+  [languages.go]
+    languageName = "Go"
+    contentDir = "content/go"
+    weight = 3
+    [languages.go.params]
+      icon = "go"
 
   [languages.ruby]
     languageName = "Ruby"
@@ -52,12 +53,12 @@ defaultContentLanguage = "any"
     [languages.rust.params]
       icon = "rust"
 
-  [languages.go]
-    languageName = "Go"
-    contentDir = "content/go"
-    weight = 5
-    [languages.go.params]
-      icon = "go"
+  [languages.java]
+    languageName = "Java"
+    contentDir = "content/java"
+    weight = 6
+    [languages.java.params]
+      icon = "java"
 
 [module]
   [[module.mounts]]

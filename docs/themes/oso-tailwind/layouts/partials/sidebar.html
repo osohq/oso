@@ -92,7 +92,13 @@
     {{end}}
     {{ end }}
 </li>
-{{else}}
+{{ else if isset .Params "href" }}
+<li data-nav-id="{{.Params.href}}" title="{{.Title}}" class="font-normal text-black pl-2">
+    <a class=" flex items-center px-3 transition-colors duration-200 mb-2" href="{{ .Params.href }}">
+        {{or .Params.menuTitle .LinkTitle .Title}}
+    </a>
+</li>
+{{ else }}
 {{ $isCurrent := eq .File.UniqueID $currentFileUniqueID }}
 <li data-nav-id="{{.RelPermalink}}" title="{{.Title}}" class="{{if $isCurrent }}
         active text-primary

@@ -1,5 +1,5 @@
 ---
-title: SQLAlchemy Roles Reference
+title: Old Roles Reference
 description: Detailed explanation of the SQLAlchemy built-in roles features and how to use them.
 aliases:
   - ../../getting-started/roles/index.html
@@ -8,6 +8,16 @@ weight: 3
 ---
 
 # Built-in Roles with SQLAlchemy
+
+{{% callout "Depreciated" "orange" %}}
+
+This guide covers our old implementation of roles. It is still available as `roles_old` but will be removed in a future update.
+
+We have released a new version of our roles library for SQLAlchemy.
+
+[Check it out here!](/new-roles)
+
+{{% /callout %}}
 
 Oso includes support for adding roles directly to your application via our ORM
 integrations. These features let you declaratively create models to represent
@@ -22,16 +32,6 @@ SQLAlchemy roles right away, check out [our tutorial](sqlalchemy_roles).
 
 For a more in-depth understanding of roles, check out our guide to [Role-Based
 Access Control (RBAC) patterns](learn/roles).
-
-{{% callout "Early access to the next version of sqlalchemy-oso" "blue" %}}
-
-We just released early access to the next version of our SQLAlchemy
-library, which will include improved support for common authorization
-models, like role based access control.
-
-[Check it out here!](/new-roles)
-
-{{% /callout %}}
 
 ## Data model
 

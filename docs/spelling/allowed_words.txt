@@ -76,6 +76,7 @@ booleans
 bundlers
 cURL
 cgo
+changelog
 classpath
 codebase
 constructable
@@ -125,6 +126,7 @@ multitenant
 musl
 mutex
 namespace
+namespaced
 namespaces
 natively
 nbsp

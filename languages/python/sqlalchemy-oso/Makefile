@@ -1,4 +1,4 @@
-.PHONY: build test test-requirements fmt lint tox
+.PHONY: build test-requirements dev-requirements test fmt lint typecheck package tox
 
 build:
 	rm -rf build
@@ -7,7 +7,6 @@ build:
 test-requirements: .make.test-requirements-install
 
 .make.test-requirements-install: requirements-test.txt
-	pip install pytest
 	pip install -r requirements-test.txt
 	touch $@
 
