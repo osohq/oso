@@ -1506,11 +1506,7 @@ def test_assign_remove_user_role(init_oso, sample_data):
     session.commit()
 
     # Assign leina member role
-    leina_roles = (
-        session.query(OrgRole)
-        .filter_by(user_id=leina.name)
-        .all()
-    )
+    leina_roles = session.query(OrgRole).filter_by(user_id=leina.name).all()
     assert len(leina_roles) == 1
     assert leina_roles[0].name == "member"
 
@@ -1518,11 +1514,7 @@ def test_assign_remove_user_role(init_oso, sample_data):
     assign_role(steve, osohq, "owner", session=session)
     session.commit()
 
-    steve_roles = (
-        session.query(OrgRole)
-        .filter_by(user_id=steve.name)
-        .all()
-    )
+    steve_roles = session.query(OrgRole).filter_by(user_id=steve.name).all()
     assert len(steve_roles) == 1
     assert steve_roles[0].name == "owner"
 
@@ -1534,19 +1526,11 @@ def test_assign_remove_user_role(init_oso, sample_data):
     removed = remove_role(leina, osohq, "member", session=session)
     session.commit()
     assert removed
-    leina_roles = (
-        session.query(OrgRole)
-        .filter_by(user_id=leina.name)
-        .all()
-    )
+    leina_roles = session.query(OrgRole).filter_by(user_id=leina.name).all()
     assert len(leina_roles) == 0
 
     # make sure steve still has his role
-    steve_roles = (
-        session.query(OrgRole)
-        .filter_by(user_id=steve.name)
-        .all()
-    )
+    steve_roles = session.query(OrgRole).filter_by(user_id=steve.name).all()
     assert len(steve_roles) == 1
     assert steve_roles[0].name == "owner"
 
@@ -1594,21 +1578,13 @@ def test_reassign_user_role(init_oso, sample_data):
 
     assign_role(leina, osohq, "member", session)
     session.commit()
-    leina_roles = (
-        session.query(OrgRole)
-        .filter_by(user_id=leina.name)
-        .all()
-    )
+    leina_roles = session.query(OrgRole).filter_by(user_id=leina.name).all()
     assert len(leina_roles) == 1
     assert leina_roles[0].name == "member"
 
     assign_role(steve, osohq, "owner", session)
     session.commit()
-    steve_roles = (
-        session.query(OrgRole)
-        .filter_by(user_id=steve.name)
-        .all()
-    )
+    steve_roles = session.query(OrgRole).filter_by(user_id=steve.name).all()
     assert len(steve_roles) == 1
     assert steve_roles[0].name == "owner"
 
@@ -1620,11 +1596,7 @@ def test_reassign_user_role(init_oso, sample_data):
     assign_role(leina, osohq, "owner", session)
     session.commit()
 
-    leina_roles = (
-        session.query(OrgRole)
-        .filter_by(user_id=leina.name)
-        .all()
-    )
+    leina_roles = session.query(OrgRole).filter_by(user_id=leina.name).all()
     assert len(leina_roles) == 1
     assert leina_roles[0].name == "owner"
 
@@ -1723,6 +1695,7 @@ def test_data_filtering_role_allows_not(init_oso, sample_data, auth_sessionmaker
 
     with pytest.raises(OsoError):
         auth_session.query(Org).all()
+
 
 @pytest.mark.skip("need role_allow instead of allow")
 def test_data_filtering_role_allows_and(
