@@ -1,7 +1,7 @@
 # TODO(gj): hard-coded SQLAlchemy role lookups.
 actor_role(actor, role) if
-    role in actor.repository_roles or
-    role in actor.organization_roles;
+    role in actor.repo_roles or
+    role in actor.org_roles;
 
 normalize_sqlalchemy_role(_: {name: name, resource: resource}, [name, resource]);
 
