@@ -3,8 +3,6 @@ actor_role(actor, role) if
     role in actor.repo_roles or
     role in actor.org_roles;
 
-normalize_sqlalchemy_role(_: {name: name, resource: resource}, [name, resource]);
-
 allow(actor, action, resource) if
     resource(resource, _, actions, _) and
     action in actions and # 'action' is valid for 'resource'
