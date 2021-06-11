@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - gj/steve/hack-tox-harder
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -187,7 +188,6 @@ jobs:
         run: make python-django-test
       - name: Test sqlalchemy
         env:
-          TOX_PARALLEL_NO_SPINNER: 1
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
           POSTGRES_USER: postgres
