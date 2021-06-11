@@ -62,7 +62,7 @@ RepoRoleMixin = resource_role_class(
 )
 
 
-class RepoRole(Base, RepoRoleMixin):
+class RepoRole(Base, RepoRoleMixin):  # type: ignore
     def repr(self):
         return {"id": self.id, "name": str(self.name)}
 
@@ -73,7 +73,7 @@ OrgRoleMixin = resource_role_class(
 )
 
 
-class OrgRole(Base, OrgRoleMixin):
+class OrgRole(Base, OrgRoleMixin):  # type: ignore
     def repr(self):
         return {"id": self.id, "name": str(self.name)}
 
