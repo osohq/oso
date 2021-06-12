@@ -53,9 +53,7 @@ def remove_role(user, resource, role_name, session):
         return False
 
 
-def resource_role_class(
-    user_model, resource_model, role_choices, mutually_exclusive=True
-):
+def resource_role_class(user_model, resource_model, role_choices):
     """Create a resource-specific role Mixin
     for SQLAlchemy models. The role mixin is an
     `Association Object <https://docs.sqlalchemy.org/en/13/orm/basic_relationships.html#association-object>`_
@@ -79,8 +77,6 @@ def resource_role_class(
     :param roles: An order-independent list of the built-in roles for this resource-specific role type.
     :type roles: List[str]
 
-    :param mutually_exclusive: Boolean flag that sets whether or not users \
-    can have more than one role for a given resource. Defaults to ``True``.
     :type roles: bool
 
     :return: the ResourceRole mixin, which must then be mixed into a SQLAlchemy model for the role. E.g.,
@@ -112,10 +108,7 @@ def resource_role_class(
 
     resource_name = _get_resource_name_lower(resource_model)
     tablename = f"{resource_name}_roles"
-    if mutually_exclusive:
-        unique_constraint = UniqueConstraint(f"{resource_name}_id", "user_id")
-    else:
-        unique_constraint = UniqueConstraint(f"{resource_name}_id", "name", "user_id")
+    unique_constraint = UniqueConstraint(f"{resource_name}_id", "user_id")
 
     class ResourceRoleMixin:
         choices = role_choices
@@ -271,7 +264,5 @@ def add_user_role(session, user, resource, role_name, commit=False):
             session.rollback()
             raise Exception(
                 f"""Cannot assign user {user} to role {role_name} for
-                {resource_name} either because the assignment already exists, or
-                because the role is mutually exclusive and the user already has
-                another role for this resource."""
+                {resource_name} either because the assignment already exists."""
             )
