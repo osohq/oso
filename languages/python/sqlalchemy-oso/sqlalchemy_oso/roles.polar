@@ -8,7 +8,7 @@ allow(actor, action, resource) if
     action in actions and # 'action' is valid for 'resource'
     role_grants_permission(required_role, [namespace, action], resource) and
     actor_role(actor, assigned_role) and
-    implied_role([implied_role_name, implied_role_resource], required_role, resource) and
+    role_implies_required_role([implied_role_name, implied_role_resource], required_role, resource) and
     implied_role_name = assigned_role.name and
     implied_role_resource = assigned_role.resource;
 
@@ -32,24 +32,24 @@ role_grants_permission(role, [namespace, action], resource) if
     role = [name, resource];
 
 # A role implies itself.
-implied_role(role, role, _);
+role_implies_required_role(role, role, _);
 
-implied_role(implied_role, [role, role_resource], resource) if
+role_implies_required_role(implied_role, role, resource) if
     parent(resource, parent_resource) and
-    implied_role(implied_role, [role, role_resource], parent_resource);
+    role_implies_required_role(implied_role, role, parent_resource);
 
 # checking local implications
-implied_role(implied_role, [role, resource], resource) if
+role_implies_required_role(implied_role, [role, resource], resource) if
     resource(resource, _, _, roles) and
     [name, config] in roles and
     role in config.implies and
-    implied_role(implied_role, [name, resource], resource);
+    role_implies_required_role(implied_role, [name, resource], resource);
 
 # checking non-local implications
-implied_role(implied_role, [role, role_resource], resource) if
+role_implies_required_role(implied_role, [role, role_resource], resource) if
     not resource = role_resource and
     resource(resource, _, _, roles) and
     resource(role_resource, role_namespace, _, _) and
     [name, config] in roles and
     ":".join([role_namespace, role]) in config.implies and
-    implied_role(implied_role, [name, resource], resource);
+    role_implies_required_role(implied_role, [name, resource], resource);
