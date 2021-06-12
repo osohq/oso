@@ -13,7 +13,7 @@ allow(actor, action, resource) if
     role_has_permission(role, action, resource, roles) or
 
     # Role grants non-local permission (action & role defined in different namespaces).
-    parent_role_has_permission(role, ":".join([namespace, action]), resource) and
+    ancestor_role_has_permission(role, ":".join([namespace, action]), resource) and
 
     role_implies_permitted_role([implied_role_name, implied_role_resource], role, resource) and
     actor_role(actor, assigned_role) and
@@ -24,13 +24,10 @@ role_has_permission([name, resource], action, resource, roles) if
     [name, config] in roles and
     action in config.permissions;
 
-parent_role_has_permission(role, action, resource) if
-    parent(resource, parent) and
-    parent_role_has_permission(role, action, parent);
-
-parent_role_has_permission(role, action, resource) if
-    resource(resource, _, _, roles) and
-    role_has_permission(role, action, resource, roles);
+ancestor_role_has_permission(role, action, resource) if
+    ancestor(resource, ancestor) and
+    resource(ancestor, _, _, roles) and
+    role_has_permission(role, action, ancestor, roles);
 
 # A role implies itself.
 role_implies_permitted_role(role, role, _);
@@ -54,3 +51,6 @@ role_implies_permitted_role(role, [implied_role, implied_role_resource], resourc
     [name, config] in roles and
     ":".join([implied_role_namespace, implied_role]) in config.implies and
     role_implies_permitted_role(role, [name, resource], resource);
+
+ancestor(child, parent) if parent(child, parent);
+ancestor(child, grandparent) if parent(child, parent) and ancestor(parent, grandparent);
