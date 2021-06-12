@@ -12,19 +12,11 @@ from sqlalchemy.orm.util import object_mapper
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String
 
+from sqlalchemy_oso.roles import get_pk
+
 # Global list to keep track of role classes as they are created, used to
 # generate RBAC base policy in Polar
 ROLE_CLASSES: List[Any] = []
-
-
-def get_pk(model):
-    pks = inspect(model).primary_key
-    assert (
-        len(pks) == 1
-    ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
-    type = pks[0].type
-    name = pks[0].name
-    return (name, type)
 
 
 def assign_role(user, resource, role_name, session, reassign=True):
