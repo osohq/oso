@@ -12,7 +12,7 @@ from sqlalchemy.orm.util import object_mapper
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String
 
-from sqlalchemy_oso.roles import get_pk
+from sqlalchemy_oso.roles import _check_valid_model, get_pk
 
 # Global list to keep track of role classes as they are created, used to
 # generate RBAC base policy in Polar
@@ -274,15 +274,3 @@ def add_user_role(session, user, resource, role_name, commit=False):
                 because the role is mutually exclusive and the user already has
                 another role for this resource."""
             )
-
-
-def _check_valid_model(*args, raise_error=True):
-    for model in args:
-        valid = True
-        try:
-            class_mapper(model)
-        except UnmappedClassError:
-            valid = False
-
-        if raise_error and not valid:
-            raise TypeError(f"Expected a model (mapped class); received: {model}")
