@@ -75,6 +75,7 @@ Accepts the string to query for.
 Returns a channel of resulting binding maps, and a channel for errors.
 As the query is evaluated, all resulting bindings will be written to the results channel,
 and any errors will be written to the error channel.
+The results channel must be completely consumed or it will leak memory.
 */
 func (o Oso) QueryStr(q string) (<-chan map[string]interface{}, <-chan error) {
 	if query, err := (*o.p).queryStr(q); err != nil {
@@ -95,6 +96,7 @@ Accepts the name of the rule to query, and a variadic list of rule arguments.
 Returns a channel of resulting binding maps, and a channel for errors.
 As the query is evaluated, all resulting bindings will be written to the results channel,
 and any errors will be written to the error channel.
+The results channel must be completely consumed or it will leak memory.
 */
 func (o Oso) QueryRule(name string, args ...interface{}) (<-chan map[string]interface{}, <-chan error) {
 	if query, err := (*o.p).queryRule(name, args...); err != nil {
@@ -142,6 +144,8 @@ func (o Oso) IsAllowed(actor interface{}, action interface{}, resource interface
 	if err != nil {
 		return false, err
 	} else if results != nil {
+		// Manually clean up query since we are not pulling all results.
+		defer query.Cleanup()
 		return true, nil
 	} else {
 		return false, nil

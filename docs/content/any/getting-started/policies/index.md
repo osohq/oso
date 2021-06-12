@@ -60,7 +60,7 @@ it should be straightforward to turn into a Polar rule.
 
 If you're unsure of what _kind_ of authorization policy to write,
 you may want to head over to the [Conceptual Guides](learn) or
-start with a familiar pattern such as [roles](/guides/roles).
+start with a familiar pattern such as [roles](/learn/roles).
 This tutorial will not be concerned with a specific kind of policy,
 but rather with the language in which many different kinds of
 policies may be expressed.
@@ -384,7 +384,7 @@ the Polar `matches` operator:
 ```polar
 # A user that is an administrator may read any document.
 allow(user, "read", document) if
-    actor matches User and
+    user matches User and
     user.admin = true;
 
 # A user may read any document that they own.
@@ -513,8 +513,7 @@ with three parameters. That's a natural place to start with Oso,
 because the `is_allowed` function generates queries of the form
 `allow(actor, action, resource)`. But you can write rules for
 whatever you like, and use them from within your `allow` rules.
-For instance, the built-in [roles library](/guides/roles) supplies
-an `allow` rule that looks like this:
+For instance a rule that handles roles might look like this:
 
 ```polar
 allow(user, action, resource) if

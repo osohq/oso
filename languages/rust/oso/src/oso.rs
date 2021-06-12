@@ -53,7 +53,7 @@ impl Oso {
         let inner = Arc::new(polar_core::polar::Polar::new());
         let host = Host::new(inner.clone());
 
-        let mut oso = Self { host, inner };
+        let mut oso = Self { inner, host };
 
         for class in crate::builtins::classes() {
             oso.register_class(class)
@@ -219,7 +219,13 @@ impl Oso {
     pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
         let name = class.name.clone();
         let class_name = self.host.cache_class(class.clone(), name)?;
-        self.register_constant(class, &class_name)
+
+        for hook in &class.register_hooks {
+            hook.call(self)?;
+        }
+        self.register_constant(class, &class_name)?;
+
+        Ok(())
     }
 
     /// Register a rust type as a Polar constant.

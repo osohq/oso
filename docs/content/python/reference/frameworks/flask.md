@@ -1,8 +1,8 @@
 ---
 weight: 5
-title: Flask Library
+title: Flask Authorization Library
 aliases:
-    - /using/frameworks/flask.html
+  - /using/frameworks/flask.html
 description: The Oso Flask integration provides request authorization middleware for usage with Flask.
 ---
 
@@ -19,6 +19,14 @@ The Oso Flask integration is available on [PyPI](https://pypi.org/project/flask-
 ```
 $ pip install flask-oso
 ```
+
+{{% callout "Adding roles to your application with Flask?" "blue" %}}
+
+We just released the next version of our roles library.
+
+[Check it out here!](/new-roles/flask)
+
+{{% /callout %}}
 
 ## Usage
 
@@ -77,10 +85,10 @@ def create_app():
 ### Performing authorization
 
 When using the `flask-oso` integration, the primary authorization function is
-`flask_oso.FlaskOso.authorize()`.  It accepts the same arguments as
+`flask_oso.FlaskOso.authorize()`. It accepts the same arguments as
 `is_allowed()`, but provides sensible defaults for working with
 Flask. The actor defaults to `flask.g.current_user` (this can be
-customized, see `set_get_actor()`).  The `action`
+customized, see `set_get_actor()`). The `action`
 defaults to the method of the current request `flask.request.method`.
 `resource` must be provided.
 
@@ -100,7 +108,7 @@ def get_expense(id):
     return expense.json()
 ```
 
-Notice we didn’t need to check the return value of `authorize`.  **By default,
+Notice we didn’t need to check the return value of `authorize`. **By default,
 a failed authorization will return a \`\`403 Forbidden\`\` response for the current
 request.** This can be controlled with
 `set_unauthorized_action()`.
@@ -108,13 +116,13 @@ request.** This can be controlled with
 ### Requiring authorization
 
 One downside to calling `flask_oso.FlaskOso.authorize()`
-explicitly within route handlers is that the check might be forgotten.  To help detect this, the
+explicitly within route handlers is that the check might be forgotten. To help detect this, the
 `flask_oso.FlaskOso.require_authorization()` option can be enabled during
 initialization. This will cause an `oso.OsoError` to be raised if
 a call to `flask_oso.FlaskOso.authorize()` **is not** made during the
 processing of a request.
 
-Sometimes a route will not need authorization.  To prevent this route from
+Sometimes a route will not need authorization. To prevent this route from
 causing an authorization error, call
 `flask_oso.FlaskOso.skip_authorization()` during request processing:
 
@@ -146,7 +154,7 @@ Some developers may prefer a decorator-based API for performing authorization.
 `flask_oso` provides two decorators:
 
 `flask_oso.skip_authorization()` marks a route as not requiring
-authorization.  It is the decorator version of
+authorization. It is the decorator version of
 `flask_oso.FlaskOso.skip_authorization()`.
 
 `flask_oso.authorize()` decorates a route and calls

@@ -1968,3 +1968,24 @@ fn test_builtin_iterables() {
     qeval(&mut p, r#"forall(x in "abc", x in "abacus")"#);
     qnull(&mut p, r#"forall(x in "abcd", x in "abacus")"#);
 }
+
+#[test]
+/// Regression test for lookups done in rule head: old behavior was for query to succeed
+/// despite argument not matching lookup result
+fn test_lookup_in_rule_head() -> TestResult {
+    let p = Polar::new();
+    p.register_constant(sym!("Foo"), term!(true));
+    p.load_str(r#"test(foo: Foo, foo.bar());"#)?;
+
+    let good_q = p.new_query("test(new Foo(), 1)", false)?;
+
+    let mock_foo_lookup =
+        |_, _, _, _: Option<Vec<Term>>, _: Option<BTreeMap<Symbol, Term>>| Some(term!(1));
+    let results = query_results!(good_q, mock_foo_lookup);
+    assert_eq!(results.len(), 1);
+
+    let bad_q = p.new_query("test(new Foo(), 2)", false)?;
+    let results = query_results!(bad_q, mock_foo_lookup);
+    assert_eq!(results.len(), 0);
+    Ok(())
+}

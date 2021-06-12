@@ -1,0 +1,22 @@
+<div class="grid grid-cols-2 md:grid-cols-3 gap-2 justify-center py-4 leading-normal">
+  {{ $pages := .Pages }}
+  {{ if .Params.reverse }}{{ $pages = $pages.Reverse }}{{ end }}
+  {{ $pages = first 6 $pages }}
+  {{ range $pages }}
+  {{ $page := . }}
+  <a href="{{ $page.RelPermalink }}"
+    class="m-2 border-opacity-20 hover:border-opacity-100 border-l-4 border-primary shadow-md rounded">
+    <div
+      class="bg-primary-lightest text-primary-darkest w-full font-semibold text-lg pl-2 py-2 rounded-tr border-bottom border-gray-200">
+      {{ $page.Title }}
+    </div>
+    <div class="px-2 pb-0.5 overflow-ellipsis overflow-hidden h-24">
+      {{ with $page.Description }}
+      <p>{{ . }}</p>
+      {{ else }}
+      <div>{{ $page.Plain | safeHTML }}</div>
+      {{ end }}
+    </div>
+  </a>
+  {{ end }}
+</div>

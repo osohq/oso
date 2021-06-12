@@ -1,6 +1,7 @@
 from datetime import datetime
 from math import inf, isnan, nan
 from pathlib import Path
+from enum import Enum
 
 from polar import (
     polar_class,
@@ -12,7 +13,6 @@ from polar import (
     Pattern,
 )
 from polar.partial import TypeConstraint
-from polar.exceptions import InvalidCallError, UnexpectedPolarTypeError
 
 import pytest
 
@@ -50,9 +50,8 @@ def test_load_function(polar, query, qvar):
     polar.load_file(filename)
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         polar.load_file(filename)
-    assert (
-        str(e.value)
-        == f"Problem loading file: File {filename} has already been loaded."
+    assert str(e.value).startswith(
+        f"Problem loading file: File {filename} has already been loaded."
     )
 
     renamed = Path(__file__).parent / "test_file_renamed.polar"
@@ -60,7 +59,7 @@ def test_load_function(polar, query, qvar):
         polar.load_file(renamed)
 
     expected = f"Problem loading file: A file with the same contents as {renamed} named {filename} has already been loaded."
-    assert str(e.value) == expected
+    assert str(e.value).startswith(expected)
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert qvar("f(x)", "x") == [1, 2, 3]
 
@@ -124,7 +123,7 @@ def test_external(polar, qvar, qeval):
     polar.register_class(Foo)
     assert qvar("new Foo().a = x", "x", one=True) == "a"
     with pytest.raises(
-        InvalidCallError, match="tried to call 'a' but it is not callable"
+        exceptions.InvalidCallError, match="tried to call 'a' but it is not callable"
     ):
         assert not qeval("new Foo().a() = x")
     assert not qvar("new Foo().b = x", "x", one=True) == "b"
@@ -362,9 +361,8 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.IntegerOverflow) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value)
-        == "'18446744073709551616' caused an integer overflow at line 2, column 17"
+    assert str(e.value).startswith(
+        "'18446744073709551616' caused an integer overflow at line 2, column 17"
     )
 
     # InvalidTokenCharacter
@@ -374,9 +372,8 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value)
-        == "'\\n' is not a valid character. Found in this is not at line 2, column 29"
+    assert str(e.value).startswith(
+        "'\\n' is not a valid character. Found in this is not at line 2, column 29"
     )
 
     rules = """
@@ -385,9 +382,8 @@ def test_parser_errors(polar):
 
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value)
-        == "'\\u{0}' is not a valid character. Found in this is not allowed at line 2, column 17"
+    assert str(e.value).startswith(
+        "'\\u{0}' is not a valid character. Found in this is not allowed at line 2, column 17"
     )
 
     # InvalidToken -- not sure what causes this
@@ -398,9 +394,8 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.UnrecognizedEOF) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value)
-        == "hit the end of the file unexpectedly. Did you forget a semi-colon at line 2, column 9"
+    assert str(e.value).startswith(
+        "hit the end of the file unexpectedly. Did you forget a semi-colon at line 2, column 9"
     )
 
     # UnrecognizedToken
@@ -409,7 +404,9 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.UnrecognizedToken) as e:
         polar.load_str(rules)
-    assert str(e.value) == "did not expect to find the token '1' at line 2, column 5"
+    assert str(e.value).startswith(
+        "did not expect to find the token '1' at line 2, column 5"
+    )
 
     # ExtraToken -- not sure what causes this
 
@@ -421,14 +418,13 @@ def test_runtime_errors(polar, query):
     polar.load_str(rules)
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         query("foo(1,2)")
-    assert (
-        str(e.value)
-        == """trace (most recent evaluation last):
+    assert """trace (most recent evaluation last):
   in query at line 1, column 1
     foo(1,2)
   in rule foo at line 2, column 17
     a in b
-Type error: can only use `in` on an iterable value, this is Number(Integer(2)) at line 1, column 7"""
+Type error: can only use `in` on an iterable value, this is Number(Integer(2)) at line 1, column 7""" in str(
+        e.value
     )
 
 
@@ -874,7 +870,7 @@ def test_partial_rule_filtering(polar):
     x = Variable("x")
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         next(polar.query_rule("f", x, bindings={x: TypeConstraint(x, "A")}))
-    assert str(e.value) == "Cannot generically walk fields of a Python class"
+    assert str(e.value).startswith("Cannot generically walk fields of a Python class")
 
 
 def test_iterators(polar, qeval, qvar):
@@ -898,5 +894,38 @@ def test_unexpected_expression(polar):
     """Ensure expression type raises error from core."""
     polar.load_str("f(x) if x > 2;")
 
-    with pytest.raises(UnexpectedPolarTypeError):
+    with pytest.raises(exceptions.UnexpectedPolarTypeError):
         next(polar.query_rule("f", Variable("x")))
+
+
+def test_lookup_in_head(polar, is_allowed):
+    # Test with enums
+    class Actions(Enum):
+        READ = 1
+        WRITE = 2
+
+    polar.register_constant(Actions, "Actions")
+    polar.load_str('allow("leina", Actions.READ, "doc");')
+
+    assert not is_allowed("leina", Actions.WRITE, "doc")
+    assert not is_allowed("leina", "READ", "doc")
+    assert not is_allowed("leina", 1, "doc")
+    assert not is_allowed("leina", Actions, "doc")
+    assert is_allowed("leina", Actions.READ, "doc")
+
+    # Test lookup in specializer raises error
+    with pytest.raises(exceptions.UnrecognizedToken):
+        polar.load_str('allow("leina", action: Actions.READ, "doc");')
+
+    # Test with normal class
+    class Resource:
+        def __init__(self, action):
+            self.action = action
+
+    polar.register_class(Resource, name="Resource")
+    polar.load_str('allow("leina", resource.action, resource: Resource);')
+
+    r = Resource("read")
+
+    assert not is_allowed("leina", "write", r)
+    assert is_allowed("leina", "read", r)

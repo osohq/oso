@@ -1,5 +1,5 @@
 ---
-title: Java Library
+title: Java Authorization Library
 weight: 2
 any: false
 description: Download instructions and API reference for the Oso Java library.
@@ -40,11 +40,11 @@ For more information on the Oso Java library, see the library documentation.
 
 ## Requirements
 
-* Java version 10 or greater
-* Supported platforms:
-  * Linux
-  * macOS
-  * Windows
+- Java version 10 or greater
+- Supported platforms:
+  - Linux
+  - macOS
+  - Windows
 
 ## API Reference
 

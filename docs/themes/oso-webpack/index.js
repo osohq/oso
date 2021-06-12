@@ -1,7 +1,3 @@
-// import('oso')
-//   .catch(e => console.error('Error importing `oso`:', e))
-//   .then(m => (window.oso = m));
-
 import('monaco-editor-core').then(monaco => {
   // Monokai colors
   const COLOR = {
@@ -170,4 +166,141 @@ import('monaco-editor-core').then(monaco => {
         });
     }
   });
+});
+
+// hide the search box
+window.hideSearch = function(_e) {
+  const searchModal = document.getElementById('search-modal');
+  if (searchModal.style.display == '') {
+    searchModal.style.display = 'none';
+  }
+};
+
+window.addEventListener('load', () => {
+  const searchInput = document.getElementById('search-input');
+  searchInput.addEventListener('input', e => window.searchInputKeyUp(e));
+});
+
+// this handles when the button on the left nav is clicked and it toggles the search box
+window.searchButtonClick = function(e) {
+  e.preventDefault();
+  const searchModal = document.getElementById('search-modal');
+  const searchInput = document.getElementById('search-input');
+  const searchResultsContainer = document.getElementById(
+    'search-results-container'
+  );
+
+  if (searchModal.style.display == 'none') {
+    searchInput.value = '';
+    searchModal.style.display = '';
+    searchResultsContainer.innerHTML = '';
+  }
+
+  setTimeout(() => searchInput.focus(), 0);
+};
+
+import('tinykeys').then(tinykeys => {
+  tinykeys.default(window, {
+    'Control+KeyK': e => {
+      e.preventDefault();
+      window.searchButtonClick(e);
+    },
+    Escape: e => {
+      window.hideSearch(e);
+    }
+  });
+});
+
+import('algoliasearch').then(algolia => {
+  const searchResult = require('./search-result.handlebars');
+
+  // account from algolia
+  const algoliaAccount = 'KROZ8F05YT';
+  // read only search key
+  const algoliaReadOnlySearchKey = '13594a3b7da482e011ce0ab08fdb4c4d';
+  // index name - default to prod index
+  let algoliaIndex = 'prod_OSODOCS';
+  // load index from meta if this is preview
+  const searchindexMeta = document.getElementById('search-index');
+
+  if (searchindexMeta) {
+    algoliaIndex = searchindexMeta.content;
+  }
+
+  const client = algolia.default(algoliaAccount, algoliaReadOnlySearchKey);
+  const index = client.initIndex(algoliaIndex);
+
+  const processHits = function(hits) {
+    var results = '';
+    var count = 0;
+
+    hits.forEach(element => {
+      results += searchResult({
+        count: count,
+        category: element.section + ' -> ' + element.language,
+        title: element.title,
+        link: element.permalink
+      });
+      count += 1;
+    });
+
+    const searchResultsContainer = document.getElementById(
+      'search-results-container'
+    );
+    searchResultsContainer.innerHTML = results;
+  };
+
+  // this searches for a term without a facet
+  const searchTerm = function(term) {
+    index
+      .search(term, {
+        analytics: true,
+        hitsPerPage: 5,
+        attributesToSnippet: '*:20',
+        snippetEllipsisText: '...'
+      })
+      .then(({ hits }) => {
+        processHits(hits);
+      });
+  };
+
+  // this search for a term WITH a facet
+  const searchTermWithFacet = function(term, language) {
+    index
+      .search(term, {
+        analytics: true,
+        hitsPerPage: 5,
+        attributesToSnippet: '*:20',
+        snippetEllipsisText: '...',
+        maxValuesPerFacet: 5,
+        page: 0,
+        facets: ['*', 'language'],
+        facetFilters: [['language:' + language]]
+      })
+      .then(({ hits }) => {
+        processHits(hits);
+      });
+  };
+
+  window.searchInputKeyUp = function(event) {
+    const searchInput = document.getElementById('search-input');
+
+    event.preventDefault();
+    var term = searchInput.value;
+
+    const facetLanguageMeta = document.getElementById('facet-language');
+    var facetLanguage = 'any';
+
+    if (facetLanguageMeta) {
+      facetLanguage = facetLanguageMeta.content;
+    }
+
+    if (term != '') {
+      if (facetLanguage == 'any') {
+        searchTerm(term);
+      } else {
+        searchTermWithFacet(searchInput.value, facetLanguage);
+      }
+    }
+  };
 });

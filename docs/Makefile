@@ -1,4 +1,4 @@
-run: api_docs
+run: api_docs install
 	hugo server
 
 export JAVA_DIR := $(abspath ../languages/java/oso)
@@ -84,6 +84,14 @@ build-search:
 	cd search && go mod vendor && go build -o ../searcher
 
 require-algolia-vars: require-ALGOLIA_APPLICATION_ID require-ALGOLIA_ADMIN_API_KEY require-ALGOLIA_INDEX
+
+## This is the entry for all doc stuff for preview
+ci-preview-docs: require-ALGOLIA_ADMIN_API_KEY build build-search 
+	./searcher -index='preview_OSODOCS' -app_id='KROZ8F05YT'
+
+## This is the entry for all doc stuff for production
+ci-prod-docs: require-ALGOLIA_ADMIN_API_KEY build-prod build-search 
+	./searcher -index='prod_OSODOCS' -app_id='KROZ8F05YT'
 
 search: require-algolia-vars build-prod build-search
 	./searcher

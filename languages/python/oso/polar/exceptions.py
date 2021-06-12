@@ -11,7 +11,14 @@ class OsoError(Exception):
         self.message = message
         self.details = details
         self.stack_trace = details.get("stack_trace") if details else None
-        super().__init__(self.message)
+        super().__init__(self.add_get_help(self.message))
+
+    @classmethod
+    def add_get_help(cls, message):
+        return (
+            message
+            + f"\n\tGet help with Oso from our engineers: https://help.osohq.com/error/{cls.__name__}"
+        )
 
 
 class FFIErrorNotFound(OsoError):
@@ -181,7 +188,7 @@ class UnknownError(OperationalError):
 
 
 class PolarApiError(OsoError):
-    """ Errors coming from the python bindings to polar, not the engine itself. """
+    """Errors coming from the python bindings to polar, not the engine itself."""
 
     pass
 

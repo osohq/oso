@@ -1,9 +1,9 @@
 ---
-title: Python Library
+title: Python Authorization Library
 weight: 2
 any: false
 aliases:
-    - /using/libraries/python/api.html
+  - /using/libraries/python/api.html
 ---
 
 # Python Authorization Library
@@ -17,11 +17,11 @@ $ pip install oso
 
 ## Requirements
 
-* Python version 3.6 or greater
-* Supported platforms:
-  * Linux
-  * macOS
-  * Windows
+- Python version 3.6 or greater
+- Supported platforms:
+  - Linux
+  - macOS
+  - Windows
 
 The standard Python package is known to work on glibc-based distributions, but
 not on musl-based ones like Alpine Linux. Wheels built against musl that you
@@ -37,3 +37,12 @@ automatically generated from the Oso Python library source files.
 
 Oso also provides [libraries](frameworks) to integrate with popular Python
 frameworks and ORMS.
+
+{{% callout "Adding roles to your application with SQLAlchemy?" "blue" %}}
+
+We just released the next version of our roles
+library.
+
+[Check it out here!](/guides/new-roles)
+
+{{% /callout %}}

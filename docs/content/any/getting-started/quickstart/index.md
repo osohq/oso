@@ -176,9 +176,17 @@ as:
 For more on leveraging application data in an Oso policy, check out
 [Application Types](policies#application-types).
 
-{{% callout "What's next!" "blue" %}}
+## Want to talk it through?
+
+If you have any questions, are getting stuck, or just want to talk something
+through, jump into [Slack](https://join-slack.osohq.com/) and an engineer from
+the core team (or one of the hundreds of developers in the growing community)
+will help you out.
+
+{{% callout "What's next" "blue" %}}
 
 - Explore how to [add Oso to an application](application).
+- [Use Oso Roles](/guides/new-roles) to add Role-Based Access Control to your application
 - Dive into [writing policies](policies) in detail.
 
 {{% /callout %}}

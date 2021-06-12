@@ -1,5 +1,5 @@
 // Basic navigation functionality
-document.querySelector('button > svg').addEventListener('click', function (e) {
+document.querySelector('button > svg').addEventListener('click', function(e) {
   e.stopPropagation();
   e.preventDefault();
 });
@@ -35,7 +35,11 @@ if (langButton) {
 }
 
 // Close dropdown sideBars if the user clicks outside of them
-window.onclick = function (event) {
+window.onclick = function(event) {
+  const searchModal = document.getElementById('search-modal');
+  const searchInput = document.getElementById('search-input');
+  const searchBackground = document.getElementById('search-background');
+
   console.log(event.target);
   switch (event.target) {
     case navButton:
@@ -46,7 +50,14 @@ window.onclick = function (event) {
       break;
     case langButton:
       break;
-
+    case searchInput:
+      break;
+    case searchModal:
+      window.hideSearch(event);
+      break;
+    case searchBackground:
+      window.hideSearch(event);
+      break;
     default:
       // default to hidden
       var contents = [navContent, langsideBar, sideBarContent, navToggleOpen];

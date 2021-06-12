@@ -1,8 +1,8 @@
 ---
 weight: 4
-title: Django Library
+title: Django Authorization Library
 aliases:
-    - /using/frameworks/django.html
+  - /using/frameworks/django.html
 description: The Oso Django integration provides request middleware and ORM integrations for data filtering.
 ---
 
@@ -23,7 +23,7 @@ $ pip install django-oso
 ## Usage
 
 The `django_oso` Django plugin contains a reusable Django app that makes
-authorization with Oso and Django easy.  To use, ensure `django_oso` is in
+authorization with Oso and Django easy. To use, ensure `django_oso` is in
 `INSTALLED_APPS`:
 
 ```python
@@ -44,18 +44,18 @@ configuration change.
 ### Loading policies
 
 `django_oso` expects policy files to be included in the `policy` directory
-of each installed app.  Upon startup, all `.polar` files found in that
+of each installed app. Upon startup, all `.polar` files found in that
 directory (or sub-directories) will be loaded using
-`oso.Oso.load_file()`.  To load additional files outside of these
+`oso.Oso.load_file()`. To load additional files outside of these
 directories, call `load_file()` on
 `django_oso.oso.Oso`.
 
 ### Registering classes & models
 
-Often, authorization rules will be expressed over Django models.  Therefore,
+Often, authorization rules will be expressed over Django models. Therefore,
 `django_oso` will register every model for each installed app upon startup as
 a class with Oso. The `django.http.HttpRequest` is also registered
-under `HttpRequest`.  Django models are referenced in a Polar file using the
+under `HttpRequest`. Django models are referenced in a Polar file using the
 syntax `app_name::ModelName`. If an app name contains `.`, for example
 `django.contrib.auth`, it will be referenced in Oso as
 `django::contrib::auth`.
@@ -68,7 +68,7 @@ Additional classes can be registered as needed using
 To authorize a request, use the `django_oso.auth.authorize()` function.
 It calls
 `is_allowed()`, but provides sensible defaults for working with
-Django. The actor defaults to `request.user`.  The `action`
+Django. The actor defaults to `request.user`. The `action`
 defaults to the method of the request.
 `resource` must be provided.
 
@@ -91,7 +91,7 @@ def get_expense(request, id):
 ### Requiring authorization on every request
 
 Since `authorize()` is just a function call, it can be
-forgotten.  To enforce authorization on every request, use the
+forgotten. To enforce authorization on every request, use the
 `RequireAuthorization()` middleware. Any view that
 does not call `authorize()` or
 `skip_authorization()` will raise an exception.

@@ -36,6 +36,8 @@
       can be either a single line number or a range of lines (represented as a
       pair of numbers separated by a hyphen). In the resulting code snippet,
       segments will be separated by an ellipsis to indicate elided code.
+  - gitHub: specify GitHub link to generate a link to example. E.g
+    ``https://github.com/osohq/gitclub-sqlalchemy-flask-react/``
 */}}
 
 {{ $dynPath := $.Params.dynPath }}
@@ -48,6 +50,12 @@
 {{ $hlOpts := $.Params.hlOpts | default "" }}
 {{ $lines := $.Params.lines }}
 {{ $loc := slice }}
+{{ $gitHub := $.Params.gitHub }}
+{{ $gitHubRef := "" }}
+{{ $pathTrim := "" }}
+{{ $firstLine := 0 }}
+{{ $lastLine := 0 }}
+{{ $linenos := $.Params.linenos | default false }}
 
 {{/* Turn "1,3-5,11-17" into a slice of maps consisting of a single key-value
      pair where the key is the starting line and the value is the length of the
@@ -149,7 +157,6 @@
   {{ $syntax = (index (split $file "." | last 1) 0) }}
 
   {{ $from := $.Params.from }}
-  {{ $firstLine := 0 }}
   {{ $to := $.Params.to }}
   {{ $length := 0 }}
   {{ $content = readFile $path }}
@@ -167,6 +174,8 @@
           {{ $length = sub $index $firstLine }}
         {{ end }}
       {{ end }}
+
+      {{ $lastLine = add $firstLine $length }}
 
       {{/* Trim snippet to boundaries. */}}
       {{ with first $length (after $firstLine .) }}
@@ -206,6 +215,28 @@
   {{ $syntax = $syntaxoverride }}
 {{ end }}
 
+{{ $gFirstLine := 0 }}
+{{ $gLastLine := 0 }}
+{{ if $loc }}
+    {{ $firstLoc := (index $loc 0) }}
+    {{ $lastLoc := (index $loc (sub (len $loc) 1)) }}
+    {{ range $start, $count := $firstLoc }}
+        {{ $gFirstLine = (int $start) }}
+    {{ end }}
+    {{ range $start, $count := $lastLoc }}
+        {{ $gLastLine = (add (int $start) (int $count)) }}
+    {{ end }}
+{{ else }}
+    {{ $gFirstLine = (add $firstLine 1) }}
+    {{ $gLastLine = $lastLine }}
+{{ end }}
+
+{{ $pathTrim := "" }}
+{{ with $gitHub }}
+    {{ $pathTrim = ( split $path "/" | after 2 | path.Join) }}
+    {{ $gitHubRef = (printf "%s/blob/main/%s#L%d-L%d" $gitHub $pathTrim $gFirstLine $gLastLine) }}
+{{ end }}
+
 <div class="code" id="{{ $id | urlize }}">
   <div class="filename rounded-t-md bg-gray-200 text-gray-700 text-sm py-2">
     {{- with $syntax -}}
@@ -213,13 +244,22 @@
         {{- partialCached "fontawesome.html" . . -}}
       </span>
     {{- end -}}
-    {{ $file }}
+    {{ if $gitHub }}
+        {{ $pathTrim }}
+    {{ else }}
+        {{ $file }}
+    {{ end }}
+    {{ with $gitHubRef }}
+        <a class="float-right mr-2" href="{{ $gitHubRef }}"><button class="btn-outline">Browse on GitHub</button></a>
+    {{ end }}
   </div>
-  {{ with $syntax }}
-    {{- highlight $content . $hlOpts -}}
-  {{ else }}
-    <pre><code>
-      {{- $content -}}
-    </code></pre>
+  {{ $syntax  = $syntax | default "plaintext" }}
+  {{ if $linenos }}
+      {{ if $hlOpts }}
+          {{ $hlOpts = (printf "linenos=table,linenostart=%d,%s" $gFirstLine $hlOpts) }}
+      {{ else }}
+          {{ $hlOpts = (printf "linenos=table,linenostart=%d" $gFirstLine) }}
+      {{ end }}
   {{ end }}
+  {{- highlight $content $syntax $hlOpts -}}
 </div>

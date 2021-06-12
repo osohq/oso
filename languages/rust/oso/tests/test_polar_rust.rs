@@ -371,6 +371,88 @@ fn test_tuple_structs() {
 }
 
 #[test]
+fn test_enums() {
+    common::setup();
+
+    let mut test = OsoTest::new();
+
+    // test an enum with no variants
+    // this should simply not panic
+    #[derive(Clone, PolarClass)]
+    enum Foo {}
+
+    test.oso.register_class(Foo::get_polar_class()).unwrap();
+
+    // test an enum with variants
+    #[derive(Clone, Debug, PartialEq, PolarClass)]
+    enum Role {
+        Admin,
+        Member,
+    }
+
+    test.load_str(
+        r#"
+        is_admin(Role::Admin); 
+        is_member(Role::Member);"#,
+    );
+
+    test.oso
+        .register_class(
+            Role::get_polar_class_builder()
+                .with_equality_check()
+                .build(),
+        )
+        .unwrap();
+
+    test.qvar_one(r#"is_admin(x)"#, "x", Role::Admin);
+    test.qvar_one(r#"is_member(x)"#, "x", Role::Member);
+}
+
+#[test]
+fn test_enums_and_structs() {
+    common::setup();
+
+    let mut test = OsoTest::new();
+    test.load_str("allow(user: User, _action, _resource) if user.role = Role::Admin;");
+
+    #[derive(Clone, Debug, PolarClass)]
+    struct User {
+        name: String,
+        #[polar(attribute)]
+        role: Role,
+    }
+
+    #[derive(Clone, Debug, PartialEq, PolarClass)]
+    enum Role {
+        Admin,
+        Member,
+    }
+
+    test.oso.register_class(User::get_polar_class()).unwrap();
+
+    test.oso
+        .register_class(
+            Role::get_polar_class_builder()
+                .with_equality_check()
+                .build(),
+        )
+        .unwrap();
+
+    let admin = User {
+        name: "sudo".to_string(),
+        role: Role::Admin,
+    };
+
+    let member = User {
+        name: "not sudo".to_string(),
+        role: Role::Member,
+    };
+
+    assert!(test.oso.is_allowed(admin, "read", "resource").unwrap());
+    assert!(!test.oso.is_allowed(member, "read", "resource").unwrap());
+}
+
+#[test]
 fn test_results_and_options() {
     common::setup();
 

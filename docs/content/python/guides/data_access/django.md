@@ -62,7 +62,7 @@ The corresponding policy looks as follows:
 ### Trying it out
 
 If you want to follow along, clone the Oso repository from [GitHub](https://github.com/osohq/oso) and `cd`
-into it and then into the `docs/examples/list-filtering/django` directory.
+into it and then into the `docs/examples/data_access/django` directory.
 Then, run `make setup` to install dependencies (primarily Django and
 `django-oso`) and seed the database.
 

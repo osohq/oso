@@ -1,14 +1,29 @@
 ---
-title: Add Roles with SQLAlchemy
+title: Old Add Roles with SQLAlchemy
 description: Learn how to use Oso's SQLAlchemy integration to add roles to a multi-tenant app.
 weight: 2
+layout: list
+_build:
+  list: never
 ---
 
 # Add Roles with SQLAlchemy
 
-The [`sqlalchemy_oso.roles`](reference/frameworks/sqlalchemy#sqlalchemy_osoroles) module
+{{% callout "Depreciated" "orange" %}}
+
+This guide covers our old implementation of roles. It is still available as `roles_old` but will be removed in a future update.
+
+We have released a new version of our roles library for SQLAlchemy.
+
+[Check it out here!](/new-roles)
+
+The examples in this guide have not been updated but can be used in the newest version of the library by replacing any call to `sqlalchemy_oso.roles.*` with `sqlalchemy_oso.roles_old.*`.
+
+{{% /callout %}}
+
+The [`sqlalchemy_oso.roles_old`](reference/frameworks/sqlalchemy#sqlalchemy_osoroles) module
 provides out-of-the-box Role-Based Access Control features that let you create
-a roles system with a few lines of code, and specify role permissions in a
+a roles system with a few lines of code and specify role permissions in a
 declarative Oso policy.
 
 This guide walks you through how to use `sqlalchemy_oso` to add basic roles to a multi-tenant app.
@@ -29,7 +44,7 @@ $ pip install sqlalchemy_oso
 ```
 
 Alternatively, if you are starting from scratch, clone the [sample
-application](https://github.com/osohq/oso-sqlalchemy-roles-guide/tree/main) and
+application](https://github.com/osohq/oso-sqlalchemy-roles-guide) and
 use the provided `requirements.txt` file:
 
 ```console
@@ -41,7 +56,7 @@ application code. This method should initialize Oso and load your policy file,
 which can be an empty `.polar` file. It should also call
 `sqlalchemy_oso.session.set_get_session()` to configure access to the
 SQLAlchemy session Oso should use to make queries. Then call
-`sqlalchemy_oso.roles.enable_roles()` to load the base Oso policy for roles:
+`sqlalchemy_oso.roles_old.enable_roles()` to load the base Oso policy for roles:
 
 {{< literalInclude path="examples/roles/sqlalchemy/basic/app/__init__.py"
                    lines="6,11-14,57-66" >}}
@@ -87,8 +102,8 @@ return a `403 Forbidden` response to all requests.
 ### Create the `OrganizationRole` class using the role mixin
 
 The Oso SQLAlchemy library provides the
-`sqlalchemy_oso.roles.resource_role_class()` method to generate a mixin which
-creates a role model. Create the mixin by passing in the base, user, and
+`sqlalchemy_oso.roles_old.resource_role_class()` method to generate a mixin which
+creates a role model. Create the mixin by passing in the user and
 organization models, as well as the role names. Then create a role model that
 extends it:
 
@@ -99,7 +114,7 @@ extends it:
 
 To give the roles permissions, write an Oso policy.
 
-Since we already called `sqlalchemy_oso.roles.enable_roles()` in our
+Since we already called `sqlalchemy_oso.roles_old.enable_roles()` in our
 `init_oso()` method, you can write Polar `role_allow` rules over
 `OrganizationRole`s:
 
@@ -124,8 +139,8 @@ they try to access either protected endpoint.
 Next, add a new endpoint to your application that users can hit to assign
 roles. To control who can assign roles, add another call to
 `flask_oso.FlaskOso.authorize()`. Additionally, use the Oso role API to create
-role assignments with `sqlalchemy_oso.roles.add_user_role()` and
-`sqlalchemy_oso.roles.reassign_user_role()`:
+role assignments with `sqlalchemy_oso.roles_old.add_user_role()` and
+`sqlalchemy_oso.roles_old.reassign_user_role()`:
 
 {{< literalInclude path="examples/roles/sqlalchemy/basic/app/routes.py"
                    lines="30-47"
@@ -217,6 +232,6 @@ The fully-implemented GitHub sample app, complete with tests, can be found
 
 {{% callout "What's next" "blue" %}}
 
-- Read more about using [roles](learn/roles) with Oso.
+- Read more about using [roles_old](learn/roles) with Oso.
 
 {{% /callout %}}
