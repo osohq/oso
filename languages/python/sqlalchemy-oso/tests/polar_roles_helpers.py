@@ -139,13 +139,6 @@ def resource_role_class(user_model, resource_model, role_choices):
         def __repr__(self):
             return ""
 
-        def asdict(self):
-            return {
-                "name": self.name,
-                "user": self.user.repr(),
-                "resource": self.resource.repr(),
-            }
-
     @declared_attr
     def named_resource_id(cls):
         name, type = get_pk(resource_model)
