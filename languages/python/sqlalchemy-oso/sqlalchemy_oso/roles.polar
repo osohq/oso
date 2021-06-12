@@ -15,7 +15,7 @@ allow(actor, action, resource) if
     # Role grants non-local permission (action & role defined in different namespaces).
     parent_role_has_permission(role, ":".join([namespace, action]), resource) and
 
-    role_implies_required_role([implied_role_name, implied_role_resource], role, resource) and
+    role_implies_permitted_role([implied_role_name, implied_role_resource], role, resource) and
     actor_role(actor, assigned_role) and
     implied_role_name = assigned_role.name and
     implied_role_resource = assigned_role.resource;
@@ -33,24 +33,24 @@ parent_role_has_permission(role, action, resource) if
     role_has_permission(role, action, resource, roles);
 
 # A role implies itself.
-role_implies_required_role(role, role, _);
+role_implies_permitted_role(role, role, _);
 
-role_implies_required_role(implied_role, role, resource) if
+role_implies_permitted_role(role, implied_role, resource) if
     parent(resource, parent_resource) and
-    role_implies_required_role(implied_role, role, parent_resource);
+    role_implies_permitted_role(role, implied_role, parent_resource);
 
 # checking local implications
-role_implies_required_role(implied_role, [role, resource], resource) if
+role_implies_permitted_role(role, [implied_role, resource], resource) if
     resource(resource, _, _, roles) and
     [name, config] in roles and
-    role in config.implies and
-    role_implies_required_role(implied_role, [name, resource], resource);
+    implied_role in config.implies and
+    role_implies_permitted_role(role, [name, resource], resource);
 
 # checking non-local implications
-role_implies_required_role(implied_role, [role, role_resource], resource) if
-    not resource = role_resource and
+role_implies_permitted_role(role, [implied_role, implied_role_resource], resource) if
+    not resource = implied_role_resource and
     resource(resource, _, _, roles) and
-    resource(role_resource, role_namespace, _, _) and
+    resource(implied_role_resource, implied_role_namespace, _, _) and
     [name, config] in roles and
-    ":".join([role_namespace, role]) in config.implies and
-    role_implies_required_role(implied_role, [name, resource], resource);
+    ":".join([implied_role_namespace, implied_role]) in config.implies and
+    role_implies_permitted_role(role, [name, resource], resource);
