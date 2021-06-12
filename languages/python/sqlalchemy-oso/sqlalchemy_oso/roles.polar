@@ -47,7 +47,7 @@ implied_role(implied_role, [role, resource], resource) if
 
 # checking non-local implications
 implied_role(implied_role, [role, role_resource], resource) if
-    # not resource = role_resource and
+    not resource = role_resource and
     resource(resource, _, _, roles) and
     resource(role_resource, role_namespace, _, _) and
     [name, config] in roles and
