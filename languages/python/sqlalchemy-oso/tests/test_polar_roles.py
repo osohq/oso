@@ -40,9 +40,6 @@ class Repo(Base):
     org_id = Column(Integer, ForeignKey("orgs.name"))
     org = relationship("Org", backref="repos", lazy=True)
 
-    def repr(self):
-        return {"id": self.repo_id, "name": self.name}
-
 
 class Issue(Base):
     __tablename__ = "issues"
