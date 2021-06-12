@@ -270,8 +270,8 @@ def resource_role_class(
         def user(cls):
             return relationship(user_model.__name__, backref=tablename)
 
-        def __repr__(self):
-            return f"Role({self.name} for {self.user} on {self.resource})"
+        # def __repr__(self):
+        #     return f"Role({self.name} for {self.user} on {self.resource})"
 
         def asdict(self):
             return {
