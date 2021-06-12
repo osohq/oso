@@ -1,13 +1,13 @@
 # Roles 2
 from typing import Any, List
 
-from oso import OsoError, Variable
+from oso import OsoError
 
 from sqlalchemy import inspect, UniqueConstraint
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import class_mapper, relationship, validates, synonym
-from sqlalchemy.orm.exc import UnmappedClassError, UnmappedInstanceError
+from sqlalchemy.orm import relationship, validates, synonym
+from sqlalchemy.orm.exc import UnmappedInstanceError
 from sqlalchemy.orm.util import object_mapper
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String
@@ -45,6 +45,7 @@ def remove_role(user, resource, role_name, session):
     )
     assert len(existing_roles) < 2
     if len(existing_roles) == 1:
+        assert existing_roles[0].name == role_name
         session.delete(existing_roles[0])
         session.flush()
         return True
@@ -125,7 +126,7 @@ def resource_role_class(
         __table_args__ = (unique_constraint,)
 
         @validates("name")
-        def validate_name(self, key, name):
+        def validate_name(self, _, name):
             if name not in self.choices:
                 raise ValueError(
                     f"{name} Is not a valid choice for {self.__class__.__name__}"
