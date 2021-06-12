@@ -46,7 +46,7 @@ role_implies_permitted_role(role, [implied_role, resource], resource) if
 
 # checking non-local implications
 role_implies_permitted_role(role, [implied_role, implied_role_resource], resource) if
-    not resource = implied_role_resource and
+    ancestor(implied_role_resource, resource) and
     resource(resource, _, _, roles) and
     resource(implied_role_resource, implied_role_namespace, _, _) and
     [name, config] in roles and
