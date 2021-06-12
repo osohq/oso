@@ -166,6 +166,18 @@ func TestIsAllowed(t *testing.T) {
 
 }
 
+func TestGetAllowedActions(t *testing.T) {
+	var o oso.Oso
+	var err error
+	if o, err = oso.NewOso(); err != nil {
+			t.Fatalf("Failed to set up Oso: %v", err)
+	}
+	o.LoadString("allow(\"foo\", \"bar\", \"baz\");")
+	t.Log(o.IsAllowed("foo", "bar", "baz"))
+	t.Log(o.GetAllowedActions("foo", "baz"))
+
+}
+
 type Foo struct {
 	Name string
 	Num  int

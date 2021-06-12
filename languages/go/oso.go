@@ -149,6 +149,28 @@ func (o Oso) IsAllowed(actor interface{}, action interface{}, resource interface
 }
 
 /*
+Return a set of actions allowed by the given (actor, resource) combination allowed
+by the policy.
+*/
+func (o Oso) GetAllowedActions(actor interface{}, resource interface{}) (map[interface{}]interface{}, error) {
+	results := make(map[interface{}]interface{}, 1)
+	query, err := (*o.p).queryRule("allow", actor, resource)
+	if err != nil {
+			return nil, err
+	}
+	for {
+			if v, err := query.Next(); err != nil {
+					return nil, err
+			} else if v == nil {
+					break
+			} else {
+					results[v] = 1
+			}
+	}
+	return results, nil
+}
+
+/*
 Start the oso repl where you can make queries and see results printed out.
 */
 func (o Oso) Repl() error {
