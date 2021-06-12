@@ -17,106 +17,6 @@ from sqlalchemy.types import Integer, String
 ROLE_CLASSES: List[Any] = []
 
 
-def isa_type(arg):
-    assert arg.operator == "Isa"
-    assert len(arg.args) == 2
-    assert arg.args[0] == Variable("_this")
-    pattern = arg.args[1]
-    type = pattern.tag
-    return type
-
-    # class PolarRoles:
-    #     def __init__(self, oso: Oso, user_model, sqlalchemy_base, session_maker):
-    #         for cls in session_maker.class_.__mro__:
-    #             if cls.__name__ == "AuthorizedSessionBase":
-    #                 raise OsoError(
-    #                     "Must pass a normal session maker not an authorized session maker."
-    #                 )
-    #         _check_valid_model(user_model)
-
-    #         self.oso = oso
-    #         self.user_model = user_model
-    #         self.sqlalchemy_base = sqlalchemy_base
-    #         self.session_maker = session_maker
-    #         self.roles = {}
-
-    #         oso.load_file("sqlalchemy_oso/roles.polar")
-
-    #         def get_field_type(model, field):
-    #             field = getattr(model, field)
-
-    #             try:
-    #                 return field.entity.class_
-    #             except AttributeError as e:
-    #                 raise PolarRuntimeError(
-    #                     f"Cannot determine type of {field} on {model}."
-    #                 ) from e
-
-    #         oso.host.get_field = get_field_type
-
-    # def synchronize_data(self):
-    #     for res in self.oso.query_rule(
-    #         "resource",
-    #         Variable("resource"),
-    #         Variable("name"),
-    #         Variable("permissions"),
-    #         Variable("roles"),
-    #         accept_expression=True,
-    #     ):
-    #         resource_def = res["bindings"]["resource"]
-    #         assert resource_def.operator == "And"
-    #         assert len(resource_def.args) == 1
-    #         arg = resource_def.args[0]
-    #         resource_class = isa_type(arg)
-
-    #         resource_name = res["bindings"]["name"]
-    #         permissions = res["bindings"]["permissions"]
-    #         role_defs = res["bindings"]["roles"]
-
-    #         assert resource_class in self.oso.host.classes
-    #         python_class = self.oso.host.classes[resource_class]
-
-    #         if isinstance(permissions, Variable):
-    #             permissions = []
-
-    #         # Check for duplicate permissions.
-    #         for perm in permissions:
-    #             if permissions.count(perm) > 1:
-    #                 raise OsoError(
-    #                     f"Duplicate action {perm} for resource {resource_class}"
-    #                 )
-
-    #         if isinstance(role_defs, Variable):
-    #             role_names = []
-    #         else:
-    #             role_names = role_defs.keys()
-
-    #         if len(permissions) == 0 and len(role_names) == 0:
-    #             raise OsoError("Must define actions or roles for resource.")
-
-    #         # if resource_name in config.resources:
-    #         #     raise OsoError(f"Duplicate resource name {resource_name}")
-
-    #         self.oso.load_str(
-    #             f'resource_namespace(_: {resource_class}, "{resource_name}");'
-    #         )
-
-    #         role_mixin = resource_role_class(self.user_model, python_class, role_names)
-
-    #         role_class = type(
-    #             f"{resource_class}Role",
-    #             (self.sqlalchemy_base, role_mixin),
-    #             {},
-    #         )
-    #         self.roles[python_class] = role_class
-    #         setattr(python_class, "role_definitions", role_names)
-
-    #     # Temp hack to ensure all tables are created regardless of ordering of
-    #     # synchronize_data() and Base.metadata.create_all(engine).
-    #     engine = self.session_maker.kw["bind"]
-    #     self.sqlalchemy_base.metadata.create_all(engine)
-
-
 def get_pk(model):
     pks = inspect(model).primary_key
     assert (
@@ -158,25 +58,6 @@ def remove_role(user, resource, role_name, session):
         return True
     else:
         return False
-
-
-# def for_resource(resource_class):
-#     # List the roles for a resource type
-#     yield from self.roles[resource_class].choices
-
-
-# def assignments_for_resource(self, resource):
-#     # List the role assignments for a specific resource
-#     return [{"user_id": ur.user_id, "role": ur.name} for ur in resource.roles]
-
-
-# def get_actor_roles(self, user):
-#     session = self.session_maker()
-#     try:
-#         for resource_model in self.roles.keys():
-#             yield from get_user_roles(session, user, resource_model)
-#     finally:
-#         session.close()
 
 
 def resource_role_class(
