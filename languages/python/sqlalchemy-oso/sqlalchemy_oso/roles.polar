@@ -35,31 +35,21 @@ role_grants_permission(role, [namespace, action], resource) if
 implied_role(role, role, _);
 
 implied_role(implied_role, [role, role_resource], resource) if
-    # print("  checking parent for", namespace, role) and
     parent(resource, parent_resource) and
-    # print("  parent", resource, parent_resource) and
     implied_role(implied_role, [role, role_resource], parent_resource);
 
 # checking local implications
 implied_role(implied_role, [role, resource], resource) if
     resource(resource, _, _, roles) and
-    # print("roles =>", roles) and
-    # print("        checking local implications for", role, resource) and
-    [role_name, role_details] in roles and
-    # print("          checking local role", role_name) and
-    role in role_details.implies and
-    # print("    ", namespace, role_name, "implies", namespace, role) and
-    implied_role(implied_role, [role_name, resource], resource);
+    [name, config] in roles and
+    role in config.implies and
+    implied_role(implied_role, [name, resource], resource);
 
 # checking non-local implications
 implied_role(implied_role, [role, role_resource], resource) if
     # not resource = role_resource and
-    # TODO(gj): should this be role_resource?
     resource(resource, _, _, roles) and
     resource(role_resource, role_namespace, _, _) and
-    # print("        checking non-local implications for", role_namespace, role) and
-    [role_name, role_details] in roles and
-    # print("          checking if", role_name, resource, "implies", role, role_resource) and
-    ":".join([role_namespace, role]) in role_details.implies and
-    # print("    ", namespace, role_name, "implies", role_namespace, role) and
-    implied_role(implied_role, [role_name, resource], resource);
+    [name, config] in roles and
+    ":".join([role_namespace, role]) in config.implies and
+    implied_role(implied_role, [name, resource], resource);
