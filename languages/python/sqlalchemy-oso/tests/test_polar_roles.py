@@ -2627,7 +2627,7 @@ def test_legacy_sam_polar_roles(init_oso, sample_data):
     # assert authorized_repos[0] == oso_repo
 
 
-@pytest.mark.skipif(not os.environ.get('PERF'), reason="this b slow")
+@pytest.mark.skipif(not os.environ.get("PERF"), reason="this b slow")
 def test_perf_polar(init_oso, sample_data):
     oso, session = init_oso
 
