@@ -54,16 +54,14 @@ RepoRoleMixin = resource_role_class(User, Repo, ["reader", "writer"])
 
 
 class RepoRole(Base, RepoRoleMixin):  # type: ignore
-    def repr(self):
-        return {"id": self.id, "name": str(self.name)}
+    pass
 
 
 OrgRoleMixin = resource_role_class(User, Org, ["owner", "member"])
 
 
 class OrgRole(Base, OrgRoleMixin):  # type: ignore
-    def repr(self):
-        return {"id": self.id, "name": str(self.name)}
+    pass
 
 
 @pytest.fixture
