@@ -4,50 +4,32 @@ actor_role(actor, role) if
     role in actor.org_roles;
 
 allow(actor, action, resource) if
-    resource(resource, _, actions, _) and
+    resource(resource, namespace, actions, _) and
     action in actions and # 'action' is valid for 'resource'
-    # print(action, resource) and
-    role_with_direct_permission(required_role, [action], resource) and
-    # required_role = [required_role_name, required_role_resource] and
-    # print("  required ->", required_role_name, required_role_resource) and
-
+    role_grants_permission(required_role, [namespace, action], resource) and
     actor_role(actor, assigned_role) and
-    # print("    assigned ->", assigned_role.name, assigned_role.resource) and
-
-    implied_role(implied_role, required_role, resource) and
-    implied_role = [implied_role_name, implied_role_resource] and
-    # print("      implied =>", implied_role_name, implied_role_resource) and
-
+    implied_role([implied_role_name, implied_role_resource], required_role, resource) and
     implied_role_name = assigned_role.name and
-    # print("      matches  ==>", implied_role_name, assigned_role.name) and
-    # print("      checking ==>", implied_role_resource, assigned_role.resource) and
     implied_role_resource = assigned_role.resource;
 
-# checking direct permission
-role_with_direct_permission(role, [action], resource) if
-    resource(resource, namespace, _, roles) and
-    (
-        parent(resource, parent_resource) and
-        role_with_direct_permission(role, [namespace, action], parent_resource)
-    ) or (
-        # print("roles =>", roles) and
-        [role_name, role_details] in roles and
-        action in role_details.permissions and
-        role = [role_name, resource]
-    );
+role_grants_permission(role, namespaced_action, resource) if
+    parent(resource, parent) and
+    role_grants_permission(role, namespaced_action, parent);
 
-# checking parent
-# TODO(gj): I think I can drop this definition
-role_with_direct_permission(role, [namespace, action], resource) if
-    (
-        parent(resource, parent_resource) and
-        role_with_direct_permission(role, [namespace, action], parent_resource)
-    ) or (
-        resource(resource, _, _, roles) and
-        [role_name, role_details] in roles and
-        ":".join([namespace, action]) in role_details.permissions and
-        role = [role_name, resource]
-    );
+# Role grants local permission (action & role defined in same namespace).
+role_grants_permission(role, [namespace, action], resource) if
+    resource(resource, namespace, _, roles) and
+    [name, config] in roles and
+    action in config.permissions and
+    role = [name, resource];
+
+# Role grants non-local permission (action & role defined in different namespaces).
+role_grants_permission(role, [namespace, action], resource) if
+    resource(resource, resource_namespace, _, roles) and
+    not namespace = resource_namespace and
+    [name, config] in roles and
+    ":".join([namespace, action]) in config.permissions and
+    role = [name, resource];
 
 # A role implies itself.
 implied_role(role, role, _);
@@ -60,7 +42,7 @@ implied_role(implied_role, [role, role_resource], resource) if
 
 # checking local implications
 implied_role(implied_role, [role, resource], resource) if
-    resource(resource, _namespace, _, roles) and
+    resource(resource, _, _, roles) and
     # print("roles =>", roles) and
     # print("        checking local implications for", role, resource) and
     [role_name, role_details] in roles and
@@ -73,7 +55,7 @@ implied_role(implied_role, [role, resource], resource) if
 implied_role(implied_role, [role, role_resource], resource) if
     # not resource = role_resource and
     # TODO(gj): should this be role_resource?
-    resource(resource, _namespace, _, roles) and
+    resource(resource, _, _, roles) and
     resource(role_resource, role_namespace, _, _) and
     # print("        checking non-local implications for", role_namespace, role) and
     [role_name, role_details] in roles and
