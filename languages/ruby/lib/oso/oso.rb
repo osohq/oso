@@ -17,7 +17,7 @@ module Oso
     # @param resource [Object] Object.
     # @return [Boolean] An access control decision.
     def allowed?(actor:, action:, resource:)
-      not query_rule('allow', actor, action, resource).first.nil?
+      !query_rule('allow', actor, action, resource).first.nil?
     end
   end
 end

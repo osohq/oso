@@ -477,9 +477,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
                        [one, two, three, four]
                      end
 
-                    def self.tv
-                      Thread.current["foo"]
-                    end
+                     def self.tv
+                       Thread.current['foo']
+                     end
                    end)
         subject.register_class(TestClass)
       end
@@ -489,7 +489,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
 
       it 'has access to the thread context' do
-        Thread.current["foo"] = "bar"
+        Thread.current['foo'] = 'bar'
         # you need to use load string here or it might not
         # run on a fiber
         subject.load_str('?= TestClass.tv = "bar";')

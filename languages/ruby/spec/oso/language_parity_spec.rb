@@ -83,7 +83,6 @@ oso.register_constant Math, name: 'MyMath'
 oso.load_str '?= MyMath.acos(1.0) = 0.0;'
 
 # Test built-in type specializers.
-# rubocop:disable Layout/EmptyLineAfterGuardClause
 raise if oso.query('builtinSpecializers(true, "Boolean")').first.nil?
 raise unless oso.query('builtinSpecializers(false, "Boolean")').first.nil?
 raise if oso.query('builtinSpecializers(2, "Integer")').first.nil?
@@ -115,4 +114,3 @@ oso.load_str '?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;'
 # Test unspecialized rule ordering
 result = oso.query_rule('testUnspecializedRuleOrder', 'foo', 'bar', Oso::Polar::Variable.new('z'))
 raise unless result.map { |res| res['z'] }.to_a == [1, 2, 3]
-# rubocop:enable Layout/EmptyLineAfterGuardClause
