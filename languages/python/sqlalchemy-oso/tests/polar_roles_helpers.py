@@ -134,8 +134,7 @@ def resource_role_class(
 
         @declared_attr
         def user_id(cls):
-            type = inspect(user_model).primary_key[0].type
-            name = inspect(user_model).primary_key[0].name
+            name, type = get_pk(user_model)
             table_name = user_model.__tablename__
             return Column(type, ForeignKey(f"{table_name}.{name}"))
 
@@ -155,8 +154,7 @@ def resource_role_class(
 
     @declared_attr
     def named_resource_id(cls):
-        type = inspect(resource_model).primary_key[0].type
-        name = inspect(resource_model).primary_key[0].name
+        name, type = get_pk(resource_model)
         table_name = resource_model.__tablename__
         return Column(type, ForeignKey(f"{table_name}.{name}"))
 
@@ -229,7 +227,7 @@ def get_user_roles(session, user, resource_model, resource_id=None):
     _check_valid_instance(user)
     _check_valid_model(resource_model)
     role_model = get_role_model_for_resource_model(resource_model)
-    resource_pk = inspect(resource_model).primary_key[0].name
+    resource_pk, _ = get_pk(resource_model)
 
     roles = (
         session.query(role_model)
