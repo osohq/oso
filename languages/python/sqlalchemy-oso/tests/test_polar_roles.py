@@ -50,14 +50,7 @@ class Issue(Base):
     repo = relationship("Repo", backref="issues", lazy=True)
 
 
-RepoRoleMixin = resource_role_class(
-    User,
-    Repo,
-    [
-        "reader",
-        "writer",
-    ],
-)
+RepoRoleMixin = resource_role_class(User, Repo, ["reader", "writer"])
 
 
 class RepoRole(Base, RepoRoleMixin):  # type: ignore
@@ -65,10 +58,7 @@ class RepoRole(Base, RepoRoleMixin):  # type: ignore
         return {"id": self.id, "name": str(self.name)}
 
 
-# For the tests, make OrgRoles NOT mutually exclusive
-OrgRoleMixin = resource_role_class(
-    User, Org, ["owner", "member"], mutually_exclusive=False
-)
+OrgRoleMixin = resource_role_class(User, Org, ["owner", "member"])
 
 
 class OrgRole(Base, OrgRoleMixin):  # type: ignore
