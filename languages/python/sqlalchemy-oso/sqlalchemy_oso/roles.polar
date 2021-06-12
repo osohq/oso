@@ -7,10 +7,8 @@ allow(actor, action, resource) if
     resource(resource, namespace, actions, _) and
     action in actions and # 'action' is valid for 'resource'
     role_grants_permission(required_role, [namespace, action], resource) and
-    actor_role(actor, assigned_role) and
     role_implies_required_role([implied_role_name, implied_role_resource], required_role, resource) and
-    implied_role_name = assigned_role.name and
-    implied_role_resource = assigned_role.resource;
+    actor_role(actor, _: {name: implied_role_name, resource: implied_role_resource});
 
 role_grants_permission(role, namespaced_action, resource) if
     parent(resource, parent) and
