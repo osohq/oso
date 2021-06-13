@@ -1,8 +1,3 @@
-# TODO(gj): hard-coded SQLAlchemy role lookups.
-actor_role(actor, role) if
-    role in actor.repo_roles or
-    role in actor.org_roles;
-
 allow(actor, action, resource) if
     resource(resource, namespace, actions, roles) and
 
