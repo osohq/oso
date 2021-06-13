@@ -214,23 +214,23 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
     # - only define roles, no actions (role has actions/implications from different resource)
     oso, session = init_oso
     policy = """
-    resource(_type: Org, "org", _, roles) if
-        roles = {
-            member: {
-                implies: ["repo:reader"]
-            }
-        };
+        resource(_type: Org, "org", _, roles) if
+            roles = {
+                member: {
+                    implies: ["repo:reader"]
+                }
+            };
 
-    resource(_type: Repo, "repo", actions, roles) if
-        actions = [
-            "push",
-            "pull"
-        ] and
-        roles = {
-            reader: {
-                permissions: ["pull"]
-            }
-        };
+        resource(_type: Repo, "repo", actions, roles) if
+            actions = [
+                "push",
+                "pull"
+            ] and
+            roles = {
+                reader: {
+                    permissions: ["pull"]
+                }
+            };
 
         parent(repo: Repo, parent_org) if
             repo.org = parent_org and
