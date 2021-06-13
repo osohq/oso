@@ -6,13 +6,11 @@ from oso import OsoError
 from sqlalchemy import inspect, UniqueConstraint
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import relationship, validates, synonym
-from sqlalchemy.orm.exc import UnmappedInstanceError
+from sqlalchemy.orm import class_mapper, relationship, validates, synonym
+from sqlalchemy.orm.exc import UnmappedClassError, UnmappedInstanceError
 from sqlalchemy.orm.util import object_mapper
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String
-
-from sqlalchemy_oso.roles import _check_valid_model, get_pk
 
 # Global list to keep track of role classes as they are created, used to
 # generate RBAC base policy in Polar
@@ -188,6 +186,28 @@ def _check_valid_instance(*args, raise_error=True):
 
         if raise_error and not valid:
             raise TypeError(f"Expected a mapped object instance; received: {instance}")
+
+
+def _check_valid_model(*args, raise_error=True):
+    for model in args:
+        valid = True
+        try:
+            class_mapper(model)
+        except UnmappedClassError:
+            valid = False
+
+        if raise_error and not valid:
+            raise TypeError(f"Expected a model (mapped class); received: {model}")
+
+
+def get_pk(model):
+    pks = inspect(model).primary_key
+    assert (
+        len(pks) == 1
+    ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
+    type = pks[0].type
+    name = pks[0].name
+    return (name, type)
 
 
 def get_role_model_for_resource_model(resource_model):

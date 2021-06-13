@@ -10,8 +10,7 @@ from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from oso import Oso, OsoError
-from sqlalchemy_oso import register_models
-from .polar_roles_helpers import resource_role_class, assign_role, remove_role
+from .polar_roles_sqlalchemy_helpers import resource_role_class, assign_role, remove_role
 
 
 Base = declarative_base(name="RoleBase")
@@ -23,11 +22,17 @@ class Org(Base):
     name = Column(String(), primary_key=True)
     base_repo_role = Column(String())
 
+    def __repr__(self):
+        return f"Org({self.name})"
+
 
 class User(Base):
     __tablename__ = "users"
 
     name = Column(String(), primary_key=True)
+
+    def __repr__(self):
+        return f"User({self.name})"
 
 
 class Repo(Base):
@@ -40,6 +45,9 @@ class Repo(Base):
     org_id = Column(Integer, ForeignKey("orgs.name"))
     org = relationship("Org", backref="repos", lazy=True)
 
+    def __repr__(self):
+        return f"Repo({self.name}) <- {self.org}"
+
 
 class Issue(Base):
     __tablename__ = "issues"
@@ -48,6 +56,9 @@ class Issue(Base):
     name = Column(String(256))
     repo_id = Column(Integer, ForeignKey("repos.repo_id"))
     repo = relationship("Repo", backref="issues", lazy=True)
+
+    def __repr__(self):
+        return f"Issue({self.name}) <- {self.repo}"
 
 
 RepoRoleMixin = resource_role_class(User, Repo, ["reader", "writer"])
@@ -74,9 +85,11 @@ def init_oso():
     session = Session()
 
     oso = Oso()
-    register_models(oso, Base)
 
-    oso.load_file("sqlalchemy_oso/roles.polar")
+    for m in Base.registry.mappers:
+        oso.register_class(m.class_)
+
+    oso.enable_roles()
 
     return (oso, session)
 
@@ -849,7 +862,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     oso.clear_rules()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
-    oso.load_file("sqlalchemy_oso/roles.polar")
+    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: validation
     # oso.roles.synchronize_data()
@@ -933,7 +946,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
     oso.clear_rules()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
-    oso.load_file("sqlalchemy_oso/roles.polar")
+    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: validation
     # oso.roles.synchronize_data()
@@ -1032,7 +1045,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.load_file("sqlalchemy_oso/roles.polar")
+    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
@@ -1105,7 +1118,7 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.load_file("sqlalchemy_oso/roles.polar")
+    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
@@ -1198,7 +1211,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.load_file("sqlalchemy_oso/roles.polar")
+    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
@@ -1298,7 +1311,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.load_file("sqlalchemy_oso/roles.polar")
+    oso.enable_roles()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
     oso.load_str(new_policy)
@@ -1432,7 +1445,7 @@ def test_chained_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.load_file("sqlalchemy_oso/roles.polar")
+    oso.enable_roles()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
     oso.load_str(new_policy)
