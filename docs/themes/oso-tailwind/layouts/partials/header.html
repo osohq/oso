@@ -67,18 +67,6 @@
                     </span>
                 </button>
             </a>
-            <a href="https://www.osohq.com/developers/authorization-academy">
-                <button class="nav-btn tooltip">
-                    <span class="tooltip-text" aria-hidden="true">Read our series on authorization
-                        best practices</span>
-                    <div class=" h-5 w-5 mr-2">
-                        {{ partialCached "fontawesome.html" "university" "university" }}
-                    </div>
-                    <span class="hidden md:block">
-                        Authorization Academy
-                    </span>
-                </button>
-            </a>
             {{ $downloadUrl := $.Site.GetPage "/reference/lib" }}
             {{ if eq .Section "new-roles" }}
             {{ $downloadUrl = $.Site.GetPage "/new-roles/install" }}
