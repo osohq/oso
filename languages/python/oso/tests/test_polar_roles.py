@@ -199,9 +199,7 @@ def test_empty_role(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        # TODO: where are we going to do config validation?
-        # Maybe when user loads their policy file?
-        pass
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -222,9 +220,7 @@ def test_bad_namespace_perm(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        # TODO: where are we going to do config validation?
-        # Maybe when user loads their policy file?
-        pass
+        oso.validate_config()
 
 
 def test_resource_with_roles_no_actions(init_oso, sample_data):
@@ -258,6 +254,7 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
             role in actor.org_roles;
     """
     oso.load_str(policy)
+    oso.validate_config()
 
     # TODO: where are we going to do config validation?
     # Maybe when user loads their policy file?
@@ -305,7 +302,7 @@ def test_duplicate_resource_name(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -332,7 +329,7 @@ def test_nested_dot_relationship(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -361,7 +358,7 @@ def test_bad_relationship_lookup(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -380,7 +377,7 @@ def test_relationship_without_specializer(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -394,7 +391,7 @@ def test_relationship_without_resources(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -417,7 +414,7 @@ def test_duplicate_role_name_same_resource(init_oso):
         """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 def test_role_namespaces(init_oso, sample_data):
@@ -457,9 +454,7 @@ def test_role_namespaces(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -494,6 +489,7 @@ def test_resource_actions(init_oso):
         ];
     """
     oso.load_str(policy)
+    oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -510,7 +506,7 @@ def test_duplicate_action(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -531,7 +527,7 @@ def test_undeclared_permission(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -551,7 +547,7 @@ def test_undeclared_role(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -582,7 +578,7 @@ def test_role_implication_without_relationship(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -608,7 +604,7 @@ def test_role_permission_without_relationship(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -646,7 +642,7 @@ def test_invalid_role_permission(init_oso):
 
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -672,7 +668,7 @@ def test_permission_assignment_to_implied_role(init_oso):
 
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -687,7 +683,7 @@ def test_incorrect_arity_resource(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -699,7 +695,7 @@ def test_undefined_resource_arguments(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 @pytest.mark.skip("TODO: validation")
@@ -718,7 +714,7 @@ def test_wrong_type_resource_arguments(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.validate_config()
 
 
 # TEST CHECK API
@@ -793,8 +789,7 @@ def test_overlapping_permissions(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -833,8 +828,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -868,8 +862,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     # oso.roles.config = None
     oso.enable_roles()
     oso.load_str(new_policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     assert not oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(leina, "list_repos", osohq)
@@ -904,8 +897,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -952,8 +944,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
     # oso.roles.config = None
     oso.enable_roles()
     oso.load_str(new_policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     assert not oso.is_allowed(leina, "pull", oso_repo)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -994,10 +985,9 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
+    oso.validate_config()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
-    # TODO: validation
-    # oso.roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     oso_bug = sample_data["oso_bug"]
@@ -1051,10 +1041,9 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     oso.clear_rules()
     oso.enable_roles()
     oso.load_str(new_policy)
+    oso.validate_config()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
-    # TODO: validation
-    # oso.roles.synchronize_data()
 
     assert not oso.is_allowed(leina, "edit", oso_bug)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1081,10 +1070,9 @@ def test_homogeneous_role_implication(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
+    oso.validate_config()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
-    # TODO: validation
-    # oso.roles.synchronize_data()
 
     osohq = sample_data["osohq"]
     apple = sample_data["apple"]
@@ -1124,10 +1112,9 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     oso.clear_rules()
     oso.enable_roles()
     oso.load_str(new_policy)
+    oso.validate_config()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
-    # TODO: validation
-    # oso.roles.synchronize_data()
 
     # leina can still "invite"
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1171,8 +1158,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -1217,10 +1203,9 @@ def test_parent_child_role_implication(init_oso, sample_data):
     oso.clear_rules()
     oso.enable_roles()
     oso.load_str(new_policy)
+    oso.validate_config()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
-    # TODO: validation
-    # oso.roles.synchronize_data()
 
     assert not oso.is_allowed(leina, "pull", oso_repo)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1264,8 +1249,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     oso_bug = sample_data["oso_bug"]
@@ -1319,8 +1303,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
     oso.load_str(new_policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     assert not oso.is_allowed(leina, "edit", oso_bug)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1376,8 +1359,7 @@ def test_chained_role_implication(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -1453,8 +1435,7 @@ def test_chained_role_implication(init_oso, sample_data):
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
     oso.load_str(new_policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     # leina can't edit the issue anymore
     assert not oso.is_allowed(leina, "edit", oso_bug)
@@ -1492,8 +1473,7 @@ def test_assign_role_wrong_resource_type(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     oso_repo = sample_data["oso_repo"]
     leina = sample_data["leina"]
@@ -1520,8 +1500,7 @@ def test_assign_remove_nonexistent_role(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -1550,8 +1529,7 @@ def test_remove_unassigned_role(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -1582,8 +1560,7 @@ def test_assign_remove_user_role(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -1660,8 +1637,7 @@ def test_reassign_user_role(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -1731,8 +1707,7 @@ def test_authorizing_related_fields(
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     steve = sample_data["steve"]
@@ -1770,8 +1745,7 @@ def test_data_filtering_role_allows_not(init_oso, sample_data, auth_sessionmaker
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     apple = sample_data["apple"]
@@ -1832,8 +1806,7 @@ def test_data_filtering_role_allows_and(
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     apple = sample_data["apple"]
@@ -1901,8 +1874,7 @@ def test_data_filtering_role_allows_explicit_or(
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     apple = sample_data["apple"]
@@ -1961,8 +1933,7 @@ def test_data_filtering_role_allows_implicit_or(
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -2004,8 +1975,7 @@ def test_data_filtering_user_in_role_not(init_oso, sample_data, auth_sessionmake
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     apple = sample_data["apple"]
@@ -2066,8 +2036,7 @@ def test_data_filtering_user_in_role_and(
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     apple = sample_data["apple"]
@@ -2138,8 +2107,7 @@ def test_data_filtering_user_in_role_explicit_or(
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     apple = sample_data["apple"]
@@ -2201,8 +2169,7 @@ def test_data_filtering_user_in_role_implicit_or(
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -2250,8 +2217,7 @@ def test_data_filtering_combo(init_oso, sample_data, auth_sessionmaker, User, Or
     """
     # You can't directly `and` the two Roles calls right now but it does work if you do it like ^
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -2308,8 +2274,7 @@ def test_read_api(init_oso, sample_data, Repo, Org):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -2382,8 +2347,7 @@ def test_user_in_role(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
-    # TODO: validation
-    # oso.roles.synchronize_data()
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     oso_repo = sample_data["oso_repo"]
@@ -2531,6 +2495,7 @@ def test_role_allows_with_other_rules(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
+    oso.validate_config()
 
     osohq = sample_data["osohq"]
     leina = sample_data["leina"]
@@ -2602,6 +2567,7 @@ def test_roles_integration(init_oso, sample_data):
         role in actor.org_roles;
     """
     oso.load_str(policy)
+    oso.validate_config()
 
     # Get sample data
     # -------------------
@@ -2717,6 +2683,7 @@ def test_legacy_sam_polar_roles(init_oso, sample_data):
             role in actor.org_roles;
     """
     oso.load_str(policy)
+    oso.validate_config()
 
     leina = sample_data["leina"]
     steve = sample_data["steve"]
@@ -2815,6 +2782,7 @@ def test_perf_polar(init_oso, sample_data):
     # org = repo.org and org matches Org;
     # """
     oso.load_str(p)
+    oso.validate_config()
 
     leina = sample_data["leina"]
     # steve = sample_data["steve"]

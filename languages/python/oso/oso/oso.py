@@ -46,6 +46,17 @@ class Oso(Polar):
     def enable_roles(self):
         self.load_file(Path(__file__).parent / "roles.polar")
 
+    # @TODO: No good place to automatically call this as it has to be called
+    # after the policy is loaded which might happen before calling enable_roles
+    # and might happen after calling enable_roles. Seperate method for now.
+    def validate_config(self):
+        try:
+            self.load_file(Path(__file__).parent / "validate.polar")
+        except exceptions.InlineQueryFailedError as e:
+            # @TODO: No good way to turn an inline query error into what we want
+            # it to be. Need a better way to pass a failure string out of polar.
+            raise exceptions.OsoError(f"Config Error: {e.message}")
+
     def get_allowed_actions(self, actor, resource, allow_wildcard=False) -> list:
         """Determine the actions ``actor`` is allowed to take on ``resource``.
 
