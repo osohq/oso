@@ -1,6 +1,5 @@
 # Roles 2 tests
 import pytest
-import psycopg2
 import random
 import string
 import os
@@ -30,6 +29,8 @@ if pg_host is not None:
 @pytest.fixture(params=databases)
 def engine(request):
     if request.param == "postgres":
+        import psycopg2
+
         # Create a new database to run the tests.
         id = "".join(random.choice(string.ascii_lowercase) for i in range(10))
         name = f"roles_test_{id}"

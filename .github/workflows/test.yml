@@ -187,7 +187,6 @@ jobs:
         run: make python-django-test
       - name: Test sqlalchemy
         env:
-          TOX_PARALLEL_NO_SPINNER: 1
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
           POSTGRES_USER: postgres
