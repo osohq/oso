@@ -183,7 +183,6 @@ def test_oso_roles_init():
 # - [x] relationships without resource definition throws an error
 
 
-@pytest.mark.skip("TODO: validation")
 def test_empty_role(init_oso):
     # defining role with no permissions/implications throws an error
     oso, session = init_oso
@@ -202,7 +201,6 @@ def test_empty_role(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_bad_namespace_perm(init_oso):
     # - assigning permission with bad namespace throws an error
     oso, session = init_oso
@@ -274,7 +272,6 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
     assert oso.is_allowed(steve, "pull", oso_repo)
 
 
-@pytest.mark.skip("TODO: validation")
 def test_duplicate_resource_name(init_oso):
     # - duplicate resource name throws an error
     oso, session = init_oso
@@ -305,7 +302,7 @@ def test_duplicate_resource_name(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
+@pytest.mark.skip("No longer an error")
 def test_nested_dot_relationship(init_oso):
     # - multiple dot lookups throws an error for now
     oso, session = init_oso
@@ -332,7 +329,7 @@ def test_nested_dot_relationship(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
+@pytest.mark.skip("can't detect, not sqlalchemy")
 def test_bad_relationship_lookup(init_oso):
     # - nonexistent attribute lookup throws an error for now
     oso, session = init_oso
@@ -361,7 +358,7 @@ def test_bad_relationship_lookup(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
+@pytest.mark.skip("Can't really test relationship types")
 def test_relationship_without_specializer(init_oso):
     oso, session = init_oso
     policy = """
@@ -380,7 +377,6 @@ def test_relationship_without_specializer(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_relationship_without_resources(init_oso):
     oso, session = init_oso
     policy = """
@@ -394,7 +390,6 @@ def test_relationship_without_resources(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_duplicate_role_name_same_resource(init_oso):
     oso, session = init_oso
     policy = """
@@ -478,7 +473,6 @@ def test_role_namespaces(init_oso, sample_data):
     assert not oso.is_allowed(gabe, "pull", oso_repo)
 
 
-@pytest.mark.skip("TODO: validation")
 def test_resource_actions(init_oso):
     # only define actions, not roles
     oso, session = init_oso
@@ -492,7 +486,6 @@ def test_resource_actions(init_oso):
     oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_duplicate_action(init_oso):
     # - duplicate action
     oso, session = init_oso
@@ -509,7 +502,6 @@ def test_duplicate_action(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_undeclared_permission(init_oso):
     # - assign permission that wasn't declared
     oso, session = init_oso
@@ -530,7 +522,6 @@ def test_undeclared_permission(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_undeclared_role(init_oso):
     # - imply role that wasn't declared
     oso, session = init_oso
@@ -550,7 +541,7 @@ def test_undeclared_role(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
+@pytest.mark.skip("Can't really test relationship types")
 def test_role_implication_without_relationship(init_oso):
     # - imply role without valid relationship
     oso, session = init_oso
@@ -581,7 +572,7 @@ def test_role_implication_without_relationship(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
+@pytest.mark.skip("Can't really test relationship types")
 def test_role_permission_without_relationship(init_oso):
     # - assign permission without valid relationship
     oso, session = init_oso
@@ -607,7 +598,6 @@ def test_role_permission_without_relationship(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_invalid_role_permission(init_oso):
     # assigning permission on related role type errors if role exists for permission resource
     oso, session = init_oso
@@ -645,7 +635,6 @@ def test_invalid_role_permission(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_permission_assignment_to_implied_role(init_oso):
     # assigning the same permission to two roles where one implies the other throws an error
     oso, session = init_oso
@@ -671,7 +660,6 @@ def test_permission_assignment_to_implied_role(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_incorrect_arity_resource(init_oso):
     # - use resource predicate with incorrect arity
     oso, session = init_oso
@@ -686,7 +674,6 @@ def test_incorrect_arity_resource(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_undefined_resource_arguments(init_oso):
     # - use resource predicate without defining actions/roles
     oso, session = init_oso
@@ -698,7 +685,6 @@ def test_undefined_resource_arguments(init_oso):
         oso.validate_config()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_wrong_type_resource_arguments(init_oso):
     # - use resource predicate with field types
     oso, session = init_oso
