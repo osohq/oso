@@ -15,7 +15,11 @@ except IOError:
 # Hack around tox, don't count oso as a dependency when running under tox.
 install_requires = ""
 with open("requirements.txt") as fp:
-    install_requires += fp.read()
+    for line in fp.readlines():
+        if "CIBUILDWHEEL" not in os.environ and line.startswith("oso"):
+            continue
+        install_requires += line
+        install_requires += "\n"
 
 
 def read(rel_path):
