@@ -16,11 +16,7 @@ except IOError:
 install_requires = ""
 with open("requirements.txt") as fp:
     for line in fp.readlines():
-        if (
-            "CIBUILDWHEEL" not in os.environ
-            and "TOX_ENV_NAME" in os.environ
-            and line.startswith("oso")
-        ):
+        if "CIBUILDWHEEL" not in os.environ and line.startswith("oso"):
             continue
         install_requires += line
         install_requires += "\n"

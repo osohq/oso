@@ -14,7 +14,6 @@ dev-requirements: .make.dev-requirements-install
 
 .make.dev-requirements-install: requirements-dev.txt
 	pip install -r requirements-dev.txt
-	pip install psycopg2
 	touch $@
 
 test:
@@ -34,4 +33,4 @@ package:
 	python setup.py sdist bdist_wheel
 
 tox: dev-requirements
-	@tox -p
+	TOX_PARALLEL_NO_SPINNER=1 tox -p
