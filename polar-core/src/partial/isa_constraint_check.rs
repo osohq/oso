@@ -77,6 +77,7 @@ impl IsaConstraintCheck {
             return (None, None);
         }
 
+        // TODO(gj): why are we popping here?
         let proposed = self.proposed.args.pop().unwrap();
         let existing = constraint.args.pop().unwrap();
 
