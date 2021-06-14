@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - gj/steve/hack-tox-harder
   pull_request:
     types: [opened, synchronize, reopened]
 
