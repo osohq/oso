@@ -10,7 +10,11 @@ from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from oso import Oso, OsoError
-from .polar_roles_sqlalchemy_helpers import resource_role_class, assign_role, remove_role
+from .polar_roles_sqlalchemy_helpers import (
+    resource_role_class,
+    assign_role,
+    remove_role,
+)
 
 
 Base = declarative_base(name="RoleBase")
