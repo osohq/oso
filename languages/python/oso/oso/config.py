@@ -1,4 +1,4 @@
-from typing import Any, List, Set, Dict
+from typing import List, Set, Dict
 from dataclasses import dataclass
 from polar import Variable
 from polar.exceptions import OsoError
