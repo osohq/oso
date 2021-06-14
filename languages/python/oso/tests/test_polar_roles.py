@@ -20,7 +20,7 @@ from .polar_roles_sqlalchemy_helpers import (
 Base = declarative_base(name="RoleBase")
 
 
-class Org(Base):
+class Org(Base):  # type: ignore
     __tablename__ = "orgs"
 
     name = Column(String(), primary_key=True)
@@ -30,7 +30,7 @@ class Org(Base):
         return f"Org({self.name})"
 
 
-class User(Base):
+class User(Base):  # type: ignore
     __tablename__ = "users"
 
     name = Column(String(), primary_key=True)
@@ -39,7 +39,7 @@ class User(Base):
         return f"User({self.name})"
 
 
-class Repo(Base):
+class Repo(Base):  # type: ignore
     __tablename__ = "repos"
 
     repo_id = Column(Integer, primary_key=True)
@@ -47,19 +47,19 @@ class Repo(Base):
 
     # many-to-one relationship with orgs
     org_id = Column(Integer, ForeignKey("orgs.name"))
-    org = relationship("Org", backref="repos", lazy=True)
+    org = relationship("Org", backref="repos", lazy=True)  # type: ignore
 
     def __repr__(self):
         return f"Repo({self.name}) <- {self.org}"
 
 
-class Issue(Base):
+class Issue(Base):  # type: ignore
     __tablename__ = "issues"
 
     issue_id = Column(Integer, primary_key=True)
     name = Column(String(256))
     repo_id = Column(Integer, ForeignKey("repos.repo_id"))
-    repo = relationship("Repo", backref="issues", lazy=True)
+    repo = relationship("Repo", backref="issues", lazy=True)  # type: ignore
 
     def __repr__(self):
         return f"Issue({self.name}) <- {self.repo}"
