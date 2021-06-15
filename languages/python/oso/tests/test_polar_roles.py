@@ -24,7 +24,6 @@ class Org(Base):  # type: ignore
     __tablename__ = "orgs"
 
     name = Column(String(), primary_key=True)
-    base_repo_role = Column(String())
 
     def __repr__(self):
         return f"Org({self.name})"
@@ -42,11 +41,10 @@ class User(Base):  # type: ignore
 class Repo(Base):  # type: ignore
     __tablename__ = "repos"
 
-    repo_id = Column(Integer, primary_key=True)
-    name = Column(String(256))
+    name = Column(String(256), primary_key=True)
 
     # many-to-one relationship with orgs
-    org_id = Column(Integer, ForeignKey("orgs.name"))
+    org_name = Column(String, ForeignKey("orgs.name"))
     org = relationship("Org", backref="repos", lazy=True)  # type: ignore
 
     def __repr__(self):
@@ -56,9 +54,8 @@ class Repo(Base):  # type: ignore
 class Issue(Base):  # type: ignore
     __tablename__ = "issues"
 
-    issue_id = Column(Integer, primary_key=True)
-    name = Column(String(256))
-    repo_id = Column(Integer, ForeignKey("repos.repo_id"))
+    name = Column(String(256), primary_key=True)
+    repo_name = Column(String(256), ForeignKey("repos.name"))
     repo = relationship("Repo", backref="issues", lazy=True)  # type: ignore
 
     def __repr__(self):
@@ -2673,8 +2670,8 @@ def test_roles_integration(init_oso, sample_data):
     assert not oso.is_allowed(leina, "edit", ios_laggy)
     assert not oso.is_allowed(steve, "edit", ios_laggy)
 
-    oso.actor = leina
-    oso.checked_permissions = {Repo: "pull"}
+    # oso.actor = leina
+    # oso.checked_permissions = {Repo: "pull"}
     # auth_session = auth_sessionmaker()
 
     # results = auth_session.query(Repo).all()
