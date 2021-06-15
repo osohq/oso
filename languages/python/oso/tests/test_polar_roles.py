@@ -256,6 +256,9 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
         actor_role(actor, role) if
             role in actor.repo_roles or
             role in actor.org_roles;
+
+        allow(actor, action, resource) if
+            role_allow(actor, action, resource);
     """
     oso.load_str(policy)
 
@@ -328,6 +331,9 @@ def test_nested_dot_relationship(init_oso):
 
     parent(issue, parent_org) if
         issue.repo.org = parent_org;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
 
@@ -455,6 +461,9 @@ def test_role_namespaces(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
 
@@ -791,6 +800,9 @@ def test_overlapping_permissions(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -831,6 +843,9 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -861,6 +876,9 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -902,6 +920,9 @@ def test_parent_child_role_perm(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -945,6 +966,9 @@ def test_parent_child_role_perm(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -992,6 +1016,9 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: big red button to reset roles policy?
@@ -1046,6 +1073,9 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -1079,6 +1109,9 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: big red button to reset roles policy?
@@ -1119,6 +1152,9 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -1169,6 +1205,9 @@ def test_parent_child_role_implication(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1212,6 +1251,9 @@ def test_parent_child_role_implication(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -1262,6 +1304,9 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1312,6 +1357,9 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -1374,6 +1422,9 @@ def test_chained_role_implication(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1446,6 +1497,9 @@ def test_chained_role_implication(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -1580,6 +1634,9 @@ def test_assign_remove_user_role(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1753,8 +1810,8 @@ def test_authorizing_related_fields(
     assert results[0].org.id == osohq.id
 
 
-@pytest.mark.skip("not worrying about data filtering yet")
-def test_data_filtering_role_allows_not(init_oso, sample_data, auth_sessionmaker, Org):
+# TODO(gj): data filtering
+def test_data_filtering_role_allows_not(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -1768,6 +1825,9 @@ def test_data_filtering_role_allows_not(init_oso, sample_data, auth_sessionmaker
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        not role_allow(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1788,18 +1848,16 @@ def test_data_filtering_role_allows_not(init_oso, sample_data, auth_sessionmaker
     assert not oso.is_allowed(steve, "invite", osohq)
     assert oso.is_allowed(steve, "invite", apple)
 
-    oso.actor = leina
-    oso.checked_permissions = {Org: "invite"}
-    auth_session = auth_sessionmaker()
+    # oso.actor = leina
+    # oso.checked_permissions = {Org: "invite"}
+    # auth_session = auth_sessionmaker()
+    #
+    # with pytest.raises(OsoError):
+    #     auth_session.query(Org).all()
 
-    with pytest.raises(OsoError):
-        auth_session.query(Org).all()
 
-
-@pytest.mark.skip("need role_allow instead of allow")
-def test_data_filtering_role_allows_and(
-    init_oso, sample_data, auth_sessionmaker, User, Org
-):
+# TODO(gj): data filtering
+def test_data_filtering_role_allows_and(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -1824,8 +1882,8 @@ def test_data_filtering_role_allows_and(
         parent_org matches Org;
 
     allow(actor, action, resource) if
-        Roles.role_allows(actor, action, resource) and
-        resource.id = "osohq";
+        role_allow(actor, action, resource) and
+        resource.name = "osohq";
 
     actor_role(actor, role) if
         role in actor.repo_roles or
@@ -1850,25 +1908,23 @@ def test_data_filtering_role_allows_and(
     assert oso.is_allowed(steve, "invite", osohq)
     assert not oso.is_allowed(leina, "invite", apple)
 
-    oso.actor = leina
-    oso.checked_permissions = {Org: "invite"}
-    auth_session = auth_sessionmaker()
+    # oso.actor = leina
+    # oso.checked_permissions = {Org: "invite"}
+    # auth_session = auth_sessionmaker()
+    #
+    # results = auth_session.query(Org).all()
+    # assert len(results) == 1
+    #
+    # oso.actor = steve
+    # oso.checked_permissions = {Org: "invite", User: "invite"}
+    # auth_session = auth_sessionmaker()
+    #
+    # results = auth_session.query(User).all()
+    # assert len(results) == 0
 
-    results = auth_session.query(Org).all()
-    assert len(results) == 1
 
-    oso.actor = steve
-    oso.checked_permissions = {Org: "invite", User: "invite"}
-    auth_session = auth_sessionmaker()
-
-    results = auth_session.query(User).all()
-    assert len(results) == 0
-
-
-@pytest.mark.skip("need role_allow instead of allow")
-def test_data_filtering_role_allows_explicit_or(
-    init_oso, sample_data, auth_sessionmaker, User, Org, Repo
-):
+# TODO(gj): data filtering
+def test_data_filtering_role_allows_explicit_or(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -1893,8 +1949,8 @@ def test_data_filtering_role_allows_explicit_or(
         parent_org matches Org;
 
     allow(actor, action, resource) if
-        Roles.role_allows(actor, action, resource) or
-        resource.id = "osohq";
+        role_allow(actor, action, resource) or
+        resource.name = "osohq";
 
     actor_role(actor, role) if
         role in actor.repo_roles or
@@ -1916,31 +1972,29 @@ def test_data_filtering_role_allows_explicit_or(
     assert oso.is_allowed(steve, "invite", osohq)
     assert oso.is_allowed(steve, "invite", apple)
 
-    oso.actor = steve
-    oso.checked_permissions = {Org: "invite"}
-    auth_session = auth_sessionmaker()
+    # oso.actor = steve
+    # oso.checked_permissions = {Org: "invite"}
+    # auth_session = auth_sessionmaker()
+    #
+    # results = auth_session.query(Org).all()
+    # assert len(results) == 2
+    #
+    # oso.actor = steve
+    # oso.checked_permissions = {Repo: "pull"}
+    # auth_session = auth_sessionmaker()
+    # results = auth_session.query(Repo).all()
+    # assert len(results) == 1
+    # assert results[0].org_id == "apple"
+    #
+    # oso.actor = leina
+    # oso.checked_permissions = {Org: "invite", User: "invite"}
+    # auth_session = auth_sessionmaker()
+    # results = auth_session.query(Org).all()
+    # assert len(results) == 1
 
-    results = auth_session.query(Org).all()
-    assert len(results) == 2
 
-    oso.actor = steve
-    oso.checked_permissions = {Repo: "pull"}
-    auth_session = auth_sessionmaker()
-    results = auth_session.query(Repo).all()
-    assert len(results) == 1
-    assert results[0].org_id == "apple"
-
-    oso.actor = leina
-    oso.checked_permissions = {Org: "invite", User: "invite"}
-    auth_session = auth_sessionmaker()
-    results = auth_session.query(Org).all()
-    assert len(results) == 1
-
-
-@pytest.mark.skip("not worrying about data filtering yet")
-def test_data_filtering_role_allows_implicit_or(
-    init_oso, sample_data, auth_sessionmaker, User, Org
-):
+# TODO(gj): data filtering
+def test_data_filtering_role_allows_implicit_or(init_oso, sample_data):
     # Ensure that the filter produced by `Roles.role_allows()` is not AND-ed
     # with a false filter produced by a separate `allow()` rule.
     oso, session = init_oso
@@ -1959,6 +2013,9 @@ def test_data_filtering_role_allows_implicit_or(
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1973,15 +2030,15 @@ def test_data_filtering_role_allows_implicit_or(
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "read", leina)
 
-    oso.actor = leina
-    oso.checked_permissions = {Org: "read", User: "read"}
-    auth_session = auth_sessionmaker()
-
-    results = auth_session.query(Org).all()
-    assert len(results) == 1
-
-    results = auth_session.query(User).all()
-    assert len(results) == 1
+    # oso.actor = leina
+    # oso.checked_permissions = {Org: "read", User: "read"}
+    # auth_session = auth_sessionmaker()
+    #
+    # results = auth_session.query(Org).all()
+    # assert len(results) == 1
+    #
+    # results = auth_session.query(User).all()
+    # assert len(results) == 1
 
 
 @pytest.mark.skip("need role_allow instead of allow")
@@ -2529,6 +2586,9 @@ def test_role_allows_with_other_rules(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
 
@@ -2600,6 +2660,9 @@ def test_roles_integration(init_oso, sample_data):
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
+
+    allow(actor, action, resource) if
+        role_allow(actor, action, resource);
     """
     oso.load_str(policy)
 
@@ -2715,6 +2778,9 @@ def test_legacy_sam_polar_roles(init_oso, sample_data):
         actor_role(actor, role) if
             role in actor.repo_roles or
             role in actor.org_roles;
+
+        allow(actor, action, resource) if
+            role_allow(actor, action, resource);
     """
     oso.load_str(policy)
 

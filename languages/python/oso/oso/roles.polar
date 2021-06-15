@@ -1,4 +1,4 @@
-allow(actor, action, resource) if
+role_allow(actor, action, resource) if
     resource(resource, namespace, actions, roles) and
 
     # 'action' is valid for 'resource'
