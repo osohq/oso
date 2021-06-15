@@ -126,6 +126,8 @@ impl Iterator for Query {
     }
 }
 
+const ROLES_POLICY: &str = include_str!("roles.polar");
+
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
     messages: MessageQueue,
@@ -295,6 +297,10 @@ impl Polar {
 
     pub fn next_message(&self) -> Option<Message> {
         self.messages.next()
+    }
+
+    pub fn enable_roles(&self) -> PolarResult<()> {
+        self.load_str(ROLES_POLICY)
     }
 }
 

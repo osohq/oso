@@ -43,9 +43,6 @@ class Oso(Polar):
         except StopIteration:
             return False
 
-    def enable_roles(self):
-        self.load_file(Path(__file__).parent / "roles.polar")
-
     def get_allowed_actions(self, actor, resource, allow_wildcard=False) -> list:
         """Determine the actions ``actor`` is allowed to take on ``resource``.
 

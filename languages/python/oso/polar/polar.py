@@ -86,6 +86,9 @@ class Polar:
         del self.host
         del self.ffi_polar
 
+    def enable_roles(self):
+        self.ffi_polar.enable_roles()
+
     def load_file(self, policy_file):
         """Load Polar policy from a ".polar" file."""
         policy_file = Path(policy_file)
