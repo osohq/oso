@@ -36,7 +36,7 @@ Before:
 ```ruby
 query = oso.query_rule('allow', actor, action, resource)
 first = query.results.next
-# raises StopIterator if no resutls
+# raises StopIterator if no results
 ```
 
 After:
