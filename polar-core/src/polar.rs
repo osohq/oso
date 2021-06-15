@@ -299,14 +299,15 @@ impl Polar {
         self.messages.next()
     }
 
+    /// Load the Polar roles policy idempotently.
     pub fn enable_roles(&self) -> PolarResult<()> {
-        self.load(ROLES_POLICY, Some(ROLES_POLICY.to_owned()))
-            .map_err(|_| {
-                error::RuntimeError::FileLoading {
-                    msg: "Roles already enabled.".to_owned(),
-                }
-                .into()
-            })
+        match self.load(ROLES_POLICY, Some(ROLES_POLICY.to_owned())) {
+            Err(error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { .. }),
+                ..
+            }) => Ok(()),
+            result => result,
+        }
     }
 }
 
@@ -322,15 +323,13 @@ mod tests {
     }
 
     #[test]
-    fn errors_on_loading_roles_policy_twice() {
+    fn roles_policy_loads_idempotently() {
         let polar = Polar::new();
-        assert!(matches!(polar.enable_roles(), Ok(())));
-        assert!(matches!(
-            polar.enable_roles(),
-            Err(error::PolarError {
-                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
-                ..
-            }) if msg == "Roles already enabled."
-        ));
+        assert!(polar.enable_roles().is_ok());
+        assert_eq!(polar.loaded_files.read().unwrap().len(), 1);
+        assert_eq!(polar.loaded_content.read().unwrap().len(), 1);
+        assert!(polar.enable_roles().is_ok());
+        assert_eq!(polar.loaded_files.read().unwrap().len(), 1);
+        assert_eq!(polar.loaded_content.read().unwrap().len(), 1);
     }
 }
