@@ -87,6 +87,12 @@ class Polar:
         del self.ffi_polar
 
     def enable_roles(self):
+        class InternalRolesHelpers:
+            @staticmethod
+            def join(separator, left, right):
+                return separator.join([left, right])
+
+        self.register_constant(InternalRolesHelpers, "__oso_internal_roles_helpers__")
         self.ffi_polar.enable_roles()
 
     def load_file(self, policy_file):
