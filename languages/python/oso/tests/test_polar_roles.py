@@ -1944,7 +1944,7 @@ def test_data_filtering_role_allows_explicit_or(init_oso, sample_data):
 
     osohq = sample_data["osohq"]
     apple = sample_data["apple"]
-    leina = sample_data["leina"]
+    # leina = sample_data["leina"]
     steve = sample_data["steve"]
 
     assign_role(steve, apple, "member", session=session)
@@ -2178,7 +2178,7 @@ def test_data_filtering_user_in_role_explicit_or(init_oso, sample_data):
 
     osohq = sample_data["osohq"]
     apple = sample_data["apple"]
-    leina = sample_data["leina"]
+    # leina = sample_data["leina"]
     steve = sample_data["steve"]
 
     assign_role(steve, apple, "member", session=session)
