@@ -2023,8 +2023,8 @@ def test_data_filtering_role_allows_implicit_or(init_oso, sample_data):
     # assert len(results) == 1
 
 
-@pytest.mark.skip("need role_allow instead of allow")
-def test_data_filtering_user_in_role_not(init_oso, sample_data, auth_sessionmaker, Org):
+# TODO(gj): data filtering
+def test_data_filtering_user_in_role_not(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -2036,7 +2036,7 @@ def test_data_filtering_user_in_role_not(init_oso, sample_data, auth_sessionmake
         };
 
     allow(actor, action, resource) if
-        not Roles.user_in_role(actor, "member", resource);
+        not user_in_role(actor, "member", resource);
 
     actor_role(actor, role) if
         role in actor.repo_roles or
@@ -2061,18 +2061,16 @@ def test_data_filtering_user_in_role_not(init_oso, sample_data, auth_sessionmake
     assert not oso.is_allowed(steve, "invite", osohq)
     assert oso.is_allowed(steve, "invite", apple)
 
-    oso.actor = leina
-    oso.checked_permissions = {Org: "invite"}
-    auth_session = auth_sessionmaker()
+    # oso.actor = leina
+    # oso.checked_permissions = {Org: "invite"}
+    # auth_session = auth_sessionmaker()
+    #
+    # with pytest.raises(OsoError):
+    #     auth_session.query(Org).all()
 
-    with pytest.raises(OsoError):
-        auth_session.query(Org).all()
 
-
-@pytest.mark.skip("need user_in_role")
-def test_data_filtering_user_in_role_and(
-    init_oso, sample_data, auth_sessionmaker, User, Org
-):
+# TODO(gj): data filtering
+def test_data_filtering_user_in_role_and(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -2097,8 +2095,8 @@ def test_data_filtering_user_in_role_and(
         parent_org matches Org;
 
     allow(actor, action, resource) if
-        Roles.user_in_role(actor, "member", resource) and
-        resource.id = "osohq";
+        user_in_role(actor, "member", resource) and
+        resource.name = "osohq";
 
     actor_role(actor, role) if
         role in actor.repo_roles or
@@ -2123,25 +2121,23 @@ def test_data_filtering_user_in_role_and(
     assert oso.is_allowed(steve, "invite", osohq)
     assert not oso.is_allowed(leina, "invite", apple)
 
-    oso.actor = leina
-    oso.checked_permissions = {Org: "invite"}
-    auth_session = auth_sessionmaker()
+    # oso.actor = leina
+    # oso.checked_permissions = {Org: "invite"}
+    # auth_session = auth_sessionmaker()
+    #
+    # results = auth_session.query(Org).all()
+    # assert len(results) == 1
+    #
+    # oso.actor = steve
+    # oso.checked_permissions = {User: "invite"}
+    # auth_session = auth_sessionmaker()
+    #
+    # results = auth_session.query(User).all()
+    # assert len(results) == 0
 
-    results = auth_session.query(Org).all()
-    assert len(results) == 1
 
-    oso.actor = steve
-    oso.checked_permissions = {User: "invite"}
-    auth_session = auth_sessionmaker()
-
-    results = auth_session.query(User).all()
-    assert len(results) == 0
-
-
-@pytest.mark.skip("need user_in_role")
-def test_data_filtering_user_in_role_explicit_or(
-    init_oso, sample_data, auth_sessionmaker, User, Org, Repo
-):
+# TODO(gj): data filtering
+def test_data_filtering_user_in_role_explicit_or(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -2166,11 +2162,11 @@ def test_data_filtering_user_in_role_explicit_or(
         parent_org matches Org;
 
     allow(actor, action, resource) if
-        Roles.role_allows(actor, action, resource);
+        role_allow(actor, action, resource);
 
     allow(actor, _, resource) if
-        Roles.user_in_role(actor, "member", resource) or
-        resource.id = "osohq";
+        user_in_role(actor, "member", resource) or
+        resource.name = "osohq";
 
     actor_role(actor, role) if
         role in actor.repo_roles or
@@ -2192,32 +2188,30 @@ def test_data_filtering_user_in_role_explicit_or(
     assert oso.is_allowed(steve, "invite", osohq)
     assert oso.is_allowed(steve, "invite", apple)
 
-    oso.actor = steve
-    oso.checked_permissions = {Org: "invite"}
-    auth_session = auth_sessionmaker()
+    # oso.actor = steve
+    # oso.checked_permissions = {Org: "invite"}
+    # auth_session = auth_sessionmaker()
+    #
+    # results = auth_session.query(Org).all()
+    # assert len(results) == 2
+    #
+    # oso.actor = steve
+    # oso.checked_permissions = {Repo: "pull"}
+    # auth_session = auth_sessionmaker()
+    # results = auth_session.query(Repo).all()
+    # assert len(results) == 1
+    # assert results[0].org_id == "apple"
+    #
+    # oso.actor = leina
+    # oso.checked_permissions = {Org: "invite"}
+    # auth_session = auth_sessionmaker()
+    # results = auth_session.query(Org).all()
+    # assert len(results) == 1
 
-    results = auth_session.query(Org).all()
-    assert len(results) == 2
 
-    oso.actor = steve
-    oso.checked_permissions = {Repo: "pull"}
-    auth_session = auth_sessionmaker()
-    results = auth_session.query(Repo).all()
-    assert len(results) == 1
-    assert results[0].org_id == "apple"
-
-    oso.actor = leina
-    oso.checked_permissions = {Org: "invite"}
-    auth_session = auth_sessionmaker()
-    results = auth_session.query(Org).all()
-    assert len(results) == 1
-
-
-@pytest.mark.skip("need user_in_role")
-def test_data_filtering_user_in_role_implicit_or(
-    init_oso, sample_data, auth_sessionmaker, User, Org
-):
-    # Ensure that the filter produced by `Roles.role_allows()` is not AND-ed
+# TODO(gj): data filtering
+def test_data_filtering_user_in_role_implicit_or(init_oso, sample_data):
+    # Ensure that the filter produced by `user_in_role/3` is not AND-ed
     # with a false filter produced by a separate `allow()` rule.
     oso, session = init_oso
     policy = """
@@ -2232,8 +2226,8 @@ def test_data_filtering_user_in_role_implicit_or(
             }
         };
 
-    allow(actor, action, resource) if
-        Roles.user_in_role(actor, "member", resource);
+    allow(actor, _, resource) if
+        user_in_role(actor, "member", resource);
 
     actor_role(actor, role) if
         role in actor.repo_roles or
@@ -2252,19 +2246,19 @@ def test_data_filtering_user_in_role_implicit_or(
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "read", leina)
 
-    oso.actor = leina
-    oso.checked_permissions = {Org: "read", User: "read"}
-    auth_session = auth_sessionmaker()
+    # oso.actor = leina
+    # oso.checked_permissions = {Org: "read", User: "read"}
+    # auth_session = auth_sessionmaker()
+    #
+    # results = auth_session.query(Org).all()
+    # assert len(results) == 1
+    #
+    # results = auth_session.query(User).all()
+    # assert len(results) == 1
 
-    results = auth_session.query(Org).all()
-    assert len(results) == 1
 
-    results = auth_session.query(User).all()
-    assert len(results) == 1
-
-
-@pytest.mark.skip("need user_in_role")
-def test_data_filtering_combo(init_oso, sample_data, auth_sessionmaker, User, Org):
+# TODO(gj): data filtering
+def test_data_filtering_combo(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     # Users can read their own data.
@@ -2279,15 +2273,13 @@ def test_data_filtering_combo(init_oso, sample_data, auth_sessionmaker, User, Or
         };
 
     allow(actor, action, resource) if
-        role_allows = Roles.role_allows(actor, action, resource) and
-        user_in_role = Roles.user_in_role(actor, "member", resource) and
-        role_allows and user_in_role;
+        role_allow(actor, action, resource) and
+        user_in_role(actor, "member", resource);
 
     actor_role(actor, role) if
         role in actor.repo_roles or
         role in actor.org_roles;
     """
-    # You can't directly `and` the two Roles calls right now but it does work if you do it like ^
     oso.load_str(policy)
     # TODO: validation
     # oso.roles.synchronize_data()
@@ -2301,13 +2293,13 @@ def test_data_filtering_combo(init_oso, sample_data, auth_sessionmaker, User, Or
     # This is just to ensure we don't modify the policy above.
     assert oso.is_allowed(leina, "read", leina)
 
-    oso.actor = leina
-    oso.checked_permissions = {Org: "read"}
-    auth_session = auth_sessionmaker()
-
-    # TODO: for now this will error
-    with pytest.raises(OsoError):
-        auth_session.query(Org).all()
+    # oso.actor = leina
+    # oso.checked_permissions = {Org: "read"}
+    # auth_session = auth_sessionmaker()
+    #
+    # # TODO: for now this will error
+    # with pytest.raises(OsoError):
+    #     auth_session.query(Org).all()
 
 
 # TEST READ API
@@ -2383,7 +2375,7 @@ def test_read_api(init_oso, sample_data, Repo, Org):
     assert len(steve_assignments) == 2
 
 
-@pytest.mark.skip("TODO: user_in_role")
+# TODO(gj): data filtering
 def test_user_in_role(init_oso, sample_data):
     oso, session = init_oso
     policy = """
@@ -2409,8 +2401,8 @@ def test_user_in_role(init_oso, sample_data):
         repo.org = parent_org and
         parent_org matches Org;
 
-    allow(actor, "read", repo: Repository) if
-        Roles.user_in_role(actor, "reader", repo);
+    allow(actor, "read", repo: Repo) if
+        user_in_role(actor, "reader", repo);
 
     actor_role(actor, role) if
         role in actor.repo_roles or
@@ -2814,9 +2806,9 @@ def test_legacy_sam_polar_roles(init_oso, sample_data):
 
     # TODO(gj): look at wowhack in sqlalchemy_oso/partial.py
     # # Data filtering test:
-    # auth_filter = authorize_model(oso, leina, "push", session, Repository)
+    # auth_filter = authorize_model(oso, leina, "push", session, Repo)
     # assert str(auth_filter) == ":param_1 = repositories.organization_id"
-    # authorized_repos = session.query(Repository).filter(auth_filter).all()
+    # authorized_repos = session.query(Repo).filter(auth_filter).all()
     # assert len(authorized_repos) == 1
     # assert authorized_repos[0] == oso_repo
 
