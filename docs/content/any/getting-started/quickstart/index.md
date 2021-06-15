@@ -1,180 +1,150 @@
 ---
 title: Quickstart (5 min)
 description: |
-  Ready to get started? See Oso in action, and walk through our quick
-  tutorial for adding authorization to a simple web server.
+  Ready to get started? See Oso in action, and walk through adding roles to an app.
 weight: 1
 ---
 
-# Oso in 5 minutes
+# Oso Quickstart
 
-Oso helps developers build authorization into their applications. If you’ve
-never used Oso before and want to see it in action, this guide is for you.
-We’re going to walk through how to use Oso to add authorization to a simple web
-server.
+Oso is an open-source, batteries-included library for authorizing actions in your app.
+Out of the box, Oso lets you give your users roles and lets you specify permissions for those roles.
+Roles can be as simple as User and Admin, or as complex as a management hierarchy.
 
-{{% callout "Try it!" "green" %}}
-  To follow along, clone the {{% exampleGet "githubApp" %}}:
+[DIAGRAM]
 
-  ```console
-  git clone {{% exampleGet "githubURL" %}}
-  ```
-{{% /callout %}}
+Oso isn’t restricted to roles, though — you can replace any authorization code in your app with an Oso policy.
 
-## Run the server
+Why use Oso?
+- Authorization always starts out simple, but can be increasingly difficult to manage as your app grows.
+- Authorization is security and should be as reliable as possible.
+- If you’re not an authorization expert, Oso’s design will guide you to best practices.
 
-Our sample application serves data about expenses submitted by users. The
-sample application has three important files.
+Oso is a library — it runs alongside your app code and doesn’t make any calls over the network.
+Your data doesn’t leave your server. Oso also doesn’t persist user data inside the library, so you stay in control of your data.
 
-One file defines a simple `Expense` class and some sample data stored in a map.
+Here’s how data flows between your app and the Oso library:
 
-A second file has our HTTP server code, where we have defined a route handler
-for `GET` requests to the path `/expenses/:id`. We’ve already added an
-authorization check using the [Oso library](reference) to control access to
-expense resources. <!-- TODO(gj): You can learn more about how to add Oso to
-your application [here](Add To Your Application). -->
+[DIAGRAM]
 
-The third file is the Oso policy file, `expenses.polar`, and is currently
-empty.
+## Install the Oso library
 
-{{% callout "Try it!" "green" %}}
-{{% exampleGet "installation" %}}
+```bash
+pip install --upgrade oso
+# Or find the Oso package on <http://pypi.python.org/pypi/oso/>
+```
+## Add Oso to your app
+To start, `import` Oso, create an Oso instance, and enable roles.
+(Roles are a new thing in Oso, and they’re hidden behind a feature flag.)
 
-With the server running, open a second terminal and make a request using
-cURL:
-
-```console
-$ curl localhost:5050/expenses/1
-Not Authorized!
+```python
+from oso import Oso
+oso = Oso()
+oso.enable_roles()
 ```
 
-You’ll get a “Not Authorized!” response because we haven’t added any rules to
-our Oso policy (in `expenses.polar`), and Oso is deny-by-default.
-{{% /callout %}}
+## Accept or deny requests
 
-Let’s start implementing our access control scheme by adding some rules to the
-Oso policy.
+When a request arrives, your application will ask Oso if it should accept the request. Oso needs three pieces of information to make that decision:
+- Who is making the request? (the "actor")
+- What are they trying to do? (the "action")
+- What are they doing it to? (the "resource")
 
-## Adding our first rule
+In Oso, these pieces of information are passed to the `is_allowed` call: `is_allowed(actor, action, resource)`.
+`is_allowed` will return `True` or `False`, and your application can choose how to enforce that decision.
 
-Oso rules are written in a declarative policy language called Polar. You can
-include any kind of rule in a policy, but the Oso library is designed to
-evaluate [allow rules](glossary#allow-rules), which specify the conditions that
-allow an **actor** to perform an **action** on a **resource**.
+That enforcement can happen in the request handler, at the database layer, or in middleware — here, we’ve chosen to enforce in the request handler.
+Here’s a Flask route that displays a page if this user is allowed to read the associated page.
 
-{{% callout "Edit it!" "blue" %}}
-In our policy file (`expenses.polar`), let's add a rule that allows anyone
-with an email ending in `"@example.com"` to view all expenses:
+```python
+from flask import Flask
 
-{{< literalInclude dynPath="expensesPath1"
-                   fallback="expenses1" >}}
+app = Flask(__name__)
+@app.route("/some/page/<pagenum>")
+def page_show(pagenum):
+   page = Page.pages[int(pagenum)]
+   if oso.is_allowed(
+       get_user(), # the user doing the request
+       "read", # the action we want to do
+       page): # the resource we want to do it to
 
-Note that the call to `{{< exampleGet "endswith" >}}` is actually calling
-out to {{< exampleGet "endswithURL" >}}. The actor value passed to Oso is a
-string, and Oso allows us to call methods on it.
-{{% /callout %}}
-
-The `Expense` and `String` terms following the colons in the head of the rule
-are [specializers](polar-syntax#specialization), patterns that control rule
-execution based on whether they match the supplied argument. This syntax
-ensures that the rule will only be evaluated when the actor is a string and the
-resource is an instance of the `Expense` class.
-
-{{% callout "Try it!" "green" %}}
-  Once we've added our new rule and restarted the web server, every user with
-  an `@example.com` email should be allowed to view any expense:
-
-  ```console
-  $ curl -H "user: alice@example.com" localhost:5050/expenses/1
-  Expense(...)
-  ```
-{{% /callout %}}
-
-Okay, so what just happened?
-
-When we ask Oso for a policy decision via `Oso.{{% exampleGet "isAllowed" %}}()`, the Oso engine
-searches through its knowledge base to determine whether the provided
-**actor**, **action**, and **resource** satisfy any **allow** rules. In the
-above case, we passed in `"alice@example.com"` as the **actor**, `"GET"` as the
-**action**, and the `Expense` object with `id=1` as the **resource**. Since
-`"alice@example.com"` ends with `@example.com`, our rule is satisfied, and
-Alice is allowed to view the requested expense.
-
-{{% callout "Try it!" "green" %}}
-  If a user's email doesn't end in `"@example.com"`, the rule fails, and they
-  are denied access:
-
-```console
-$ curl -H "user: alice@foo.com" localhost:5050/expenses/1
-Not Authorized!
+       return f'<h1>A Page</h1><p>this is page {pagenum}</p>'
+   else:
+       return f'<h1>Sorry</h1><p>You are not allowed to see this page</p>'
 ```
 
-  If you aren’t seeing the same thing, make sure you created your policy
-  correctly in `expenses.polar`.
-{{% /callout %}}
+Oso denies requests unless you explicitly tell it to accept that sort of request.
+You can tell Oso what requests to accept by providing it with a file full of rules, which we call a ‘policy’.
 
-## Using application data
+## Write an authorization policy
+Here is a typical policy, written in our declarative language, **Polar**.
+It lets any actor with the role `user` read a page, but only lets actors with the role `admin` write to a page.
 
-We now have some basic access control in place, but we can do better.
-Currently, anyone with an email ending in `@example.com` can see all expenses —
-including expenses submitted by others.
+We can load our example policy from a file with the extension `.polar`.
 
-{{% callout "Edit it!" "blue" %}}
-  Let's modify our existing rule such that users can only see their own
-  expenses:
-
-  {{< literalInclude dynPath="expensesPath2"
-                     fallback="expenses2" >}}
-{{% /callout %}}
-
-Behind the scenes, Oso looks up the `submitted_by` field on the provided
-`Expense` instance and compares that value against the provided **actor**. And
-just like that, an actor can only see an expense if they submitted it!
-
-{{% callout "Try it!" "green" %}}
-  Alice can see her own expenses but not Bhavik's:
-
-```console
-$ curl -H "user: alice@example.com" localhost:5050/expenses/1
-Expense(...)
+```python
+oso.load_file("example.polar")
 ```
 
-```console
-$ curl -H "user: alice@example.com" localhost:5050/expenses/3
-Not Authorized!
+Here’s the example.polar file:
+
+```polar
+actor_role(actor, role) if
+   resources = Page.pages and
+   r in resources and
+   actions = r.has_roles(actor) and
+   action in actions and
+   role = { name: action, resource: r };
+
+resource(_type: Page, "page", actions, roles) if
+   actions = ["read", "write"] and
+   roles = {
+       admin: {
+           permissions: ["write"],
+           implies: ["user"]
+       },
+       user: {
+           permissions: ["read"]
+       }
+   };
+ ```
+
+An _actor_role_ rule expresses the relationship between an actor and a role object of the form `{name: “the-role-name”, resource: TheResourceObject}`.
+The `is_allowed` call in your Python code will look up this rule, so this is required.
+
+A _resource_ rule governs access to a specific resource in your app — for instance, a page, an object, a route, or a database entry.
+Here, there are two possible actions that can be done to a Page: “read” and “write.”
+Users can read, but not write, to a page.
+Admins are allowed to write to a Page.
+The line `implies: [“user”]` says that admins can also do anything Users are allowed to do; that is, read a Page.
+
+There’s much more you can do with Polar, including defining parent-child relationships — we’re just scratching the surface here.
+
+## Calling back into your Python code
+
+You can call properties and methods on your Python objects from Polar.
+These will defer control back to your app.
+Oso leaves the decision of how to store role assignments up to you — you might choose to store those role assignments in a database, in memory, or create them dynamically.
+Our `actor_role` rule calls your Python method `has_roles` to get all the roles for our actor.
+
+```polar
+actor_role(actor, role) if
+     resources = Page.pages and
+     r in resources and
+     actions = r.has_roles(actor) and
+     action in actions and
+     role = { name: action, resource: r };
+ ```
+
+To access properties on your Python objects, you must `register` their classes with Oso.
+
+```python
+from oso import Oso
+oso = Oso()
+
+oso.register_class(Page)
+oso.register_class(User)
 ```
-
-  ```console
-  $ curl -H "user: alice@example.com" localhost:5050/expenses/3
-  Not Authorized!
-  ```
-{{% /callout %}}
-
-Feel free to play around with the current policy and experiment with adding
-your own rules!
-
-For example, if you have `Expense` and `User` classes defined in your
-application, you could write a policy rule in Oso that says a `User` may
-`"approve"` an `Expense` if they manage the `User` who submitted the expense
-and the expense’s amount is less than $100.00:
-
-{{< code file="expenses.polar" >}}
-allow(approver: User, "approve", expense: Expense) if
-    approver = expense.{{% exampleGet "submitted_by" %}}.{{% exampleGet "manager" %}}
-    and expense.{{% exampleGet "amount" %}} < 10000;
-{{< /code >}}
-
-In the process of evaluating that rule, the Oso engine would call back into the
-application in order to make determinations that rely on application data, such
-as:
-
-- Which user submitted the expense in question?
-- Who is their manager?
-- Is their manager the user who’s attempting to approve the expense?
-- Does the expense’s `amount` field contain a value less than $100.00?
-
-For more on leveraging application data in an Oso policy, check out
-[Application Types](policies#application-types).
 
 ## Want to talk it through?
 
@@ -183,10 +153,94 @@ through, jump into [Slack](https://join-slack.osohq.com/) and an engineer from
 the core team (or one of the hundreds of developers in the growing community)
 will help you out.
 
+## Complete Running Example
+
+```python
+# install Oso
+# put this code in a file named example.py
+# run:
+# python example.py
+# browse http://127.0.0.1:5000/some/page/2
+
+class Page:
+   pages = []
+
+   def __init__(self, pagenum):
+       self.pagenum = pagenum
+
+   # in a real application the returned list would
+   # include all the roles available for this actor
+   # for now every actor has the role "user"
+   def has_roles(self, actor):
+       return ["user"]
+
+   def get_pages():
+       return Page.pages
+
+Page.pages = [Page(0), Page(1), Page(2)]
+
+class User:
+   def __init__(self, name):
+       self.name = name
+
+# Get the user -
+def get_user():
+   return User("someuser")
+
+def get_page(pagenum):
+   return Page.pages[pagenum]
+
+from oso import Oso
+oso = Oso()
+oso.enable_roles()
+oso.register_class(Page)
+oso.register_class(User)
+
+from flask import Flask
+
+app = Flask(__name__)
+@app.route("/some/page/<pagenum>")
+def page_show(pagenum):
+   page = Page.pages[int(pagenum)]
+   if oso.is_allowed(
+       get_user(), # the user doing the request
+       "read", # the action we want to do
+       page): # the resource we want to do it to
+
+       return f'<h1>A Page</h1><p>this is page {pagenum}</p>'
+   else:
+       return f'<h1>Sorry</h1><p>You are not allowed to see this page</p>'
+
+# we can load our policy from a file, or from a string, as here
+oso.load_str("""
+
+  actor_role(actor, role) if
+       resources = Page.pages and
+       r in resources and
+       actions = r.has_roles(actor) and
+       action in actions and
+       role = { name: action, resource: r };
+
+   resource(_type: Page, "page", actions, roles) if
+       actions = ["read", "write"] and
+       roles = {
+           admin: {
+               permissions: ["write"],
+               implies: ["user"]
+           },
+           user: {
+               permissions: ["read"]
+           }
+       };
+
+   """)
+
+app.run()
+```
+
 {{% callout "What's next" "blue" %}}
 
 - Explore how to [add Oso to an application](application).
-- [Use Oso Roles](/guides/new-roles) to add Role-Based Access Control to your application
 - Dive into [writing policies](policies) in detail.
 
 {{% /callout %}}
