@@ -87,6 +87,14 @@ export class Polar {
   }
 
   /**
+   * Enable Oso's built-in roles feature.
+   */
+  enableRoles() {
+    this.#ffiPolar.enableRoles();
+    this.processMessages();
+  }
+
+  /**
    * Clear rules from the Polar KB, but
    * retain all registered classes and constants.
    */
