@@ -8,9 +8,9 @@ description: >-
 draft: true
 ---
 
-## `RELEASED_PACKAGE_1` NEW_VERSION
+## `oso-oso 0.13.0` NEW_VERSION
 
-### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
+### Ruby (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
 
@@ -20,6 +20,34 @@ draft: true
   This release contains breaking changes. Be sure to follow migration steps
   before upgrading.
 {{% /callout %}}
+
+The `Query` object returned by `Polar::Polar#query` is now an `Enumerable`.
+Previously, you would need to access the `results` attribute which
+was an enumerator.
+
+The main impact of this change is that queries are no longer run
+on a Fiber, and therefore any methods using Fiber-local variables
+(e.g. `Thread.current[:var]`) will work fine.
+
+If you are only using `Oso#allowed?` there is no change needed.
+
+Before:
+
+```ruby
+query = oso.query_rule('allow', actor, action, resource)
+first = query.results.next
+# raises StopIterator if no resutls
+```
+
+After:
+
+```ruby
+query = oso.query_rule('allow', actor, action, resource)
+first = query.first
+# first is nil if there are no results
+```
+
+
 
 ##### Breaking change 1
 
