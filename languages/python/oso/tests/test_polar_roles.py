@@ -1579,6 +1579,8 @@ def test_assign_remove_nonexistent_role(init_oso, sample_data):
         remove_role(leina, osohq, "owner", session=session)
 
 
+# TODO: this is just testing our own code / we don't handle role management
+# anymore
 def test_remove_unassigned_role(init_oso, sample_data):
     # - Removing role that user doesn't have returns false
     oso, session = init_oso
