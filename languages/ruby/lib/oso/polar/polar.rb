@@ -81,7 +81,7 @@ module Oso
       # @raise [InlineQueryFailedError] on the first failed inline query.
       # @raise [Error] if any of the FFI calls raise one.
       # @return [self] for chaining.
-      def load_str(str, filename: nil) # rubocop:disable Metrics/MethodLength
+      def load_str(str, filename: nil)
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
         ffi_polar.load(str, filename: filename)
@@ -89,11 +89,7 @@ module Oso
           next_query = ffi_polar.next_inline_query
           break if next_query.nil?
 
-          begin
-            Query.new(next_query, host: host).results.next
-          rescue StopIteration
-            raise InlineQueryFailedError, next_query.source
-          end
+          raise InlineQueryFailedError, next_query.source if Query.new(next_query, host: host).first.nil?
         end
         self
       end
@@ -118,7 +114,7 @@ module Oso
         else
           raise InvalidQueryTypeError
         end
-        Query.new(ffi_query, host: new_host).results
+        Query.new(ffi_query, host: new_host)
       end
 
       # Query for a rule.
@@ -214,7 +210,7 @@ module Oso
         end
 
         begin
-          results = Query.new(ffi_query, host: host).results.to_a
+          results = Query.new(ffi_query, host: host).to_a
         rescue PolarRuntimeError => e
           print_error(e)
           return

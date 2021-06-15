@@ -6,8 +6,7 @@ module Oso
   module Polar
     # A single Polar query.
     class Query # rubocop:disable Metrics/ClassLength
-      # @return [Enumerator]
-      attr_reader :results
+      include Enumerable
 
       # @param ffi_query [FFI::Query]
       # @param host [Oso::Polar::Host]
@@ -15,7 +14,6 @@ module Oso
         @calls = {}
         @ffi_query = ffi_query
         @host = host
-        @results = start
       end
 
       private
@@ -120,61 +118,59 @@ module Oso
       # @yieldparam [Hash<String, Object>]
       # @return [Enumerator]
       # @raise [Error] if any of the FFI calls raise one.
-      def start # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
-        Enumerator.new do |yielder| # rubocop:disable Metrics/BlockLength
-          loop do # rubocop:disable Metrics/BlockLength
-            event = ffi_query.next_event
-            case event.kind
-            when 'Done'
-              break
-            when 'Result'
-              yielder << event.data['bindings'].transform_values { |v| host.to_ruby(v) }
-            when 'MakeExternal'
-              handle_make_external(event.data)
-            when 'ExternalCall'
-              call_id = event.data['call_id']
-              instance = event.data['instance']
-              attribute = event.data['attribute']
-              args = event.data['args'] || []
-              kwargs = event.data['kwargs'] || {}
-              handle_call(attribute, call_id: call_id, instance: instance, args: args, kwargs: kwargs)
-            when 'ExternalIsSubSpecializer'
-              instance_id = event.data['instance_id']
-              left_tag = event.data['left_class_tag']
-              right_tag = event.data['right_class_tag']
-              answer = host.subspecializer?(instance_id, left_tag: left_tag, right_tag: right_tag)
-              question_result(answer, call_id: event.data['call_id'])
-            when 'ExternalIsa'
-              instance = event.data['instance']
-              class_tag = event.data['class_tag']
-              answer = host.isa?(instance, class_tag: class_tag)
-              question_result(answer, call_id: event.data['call_id'])
-            when 'ExternalUnify'
-              left_instance_id = event.data['left_instance_id']
-              right_instance_id = event.data['right_instance_id']
-              answer = host.unify?(left_instance_id, right_instance_id)
-              question_result(answer, call_id: event.data['call_id'])
-            when 'Debug'
-              puts event.data['message'] if event.data['message']
-              print 'debug> '
-              begin
-                input = $stdin.readline.chomp.chomp(';')
-              rescue EOFError
-                next
-              end
-              command = JSON.dump(host.to_polar(input))
-              ffi_query.debug_command(command)
-            when 'ExternalOp'
-              raise UnimplementedOperationError, 'comparison operators'
-            when 'NextExternal'
-              call_id = event.data['call_id']
-              iterable = event.data['iterable']
-              handle_next_external(call_id, iterable)
-            else
-              raise "Unhandled event: #{JSON.dump(event.inspect)}"
+      def each # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+        loop do # rubocop:disable Metrics/BlockLength
+          event = ffi_query.next_event
+          case event.kind
+          when 'Done'
+            break
+          when 'Result'
+            yield event.data['bindings'].transform_values { |v| host.to_ruby(v) }
+          when 'MakeExternal'
+            handle_make_external(event.data)
+          when 'ExternalCall'
+            call_id = event.data['call_id']
+            instance = event.data['instance']
+            attribute = event.data['attribute']
+            args = event.data['args'] || []
+            kwargs = event.data['kwargs'] || {}
+            handle_call(attribute, call_id: call_id, instance: instance, args: args, kwargs: kwargs)
+          when 'ExternalIsSubSpecializer'
+            instance_id = event.data['instance_id']
+            left_tag = event.data['left_class_tag']
+            right_tag = event.data['right_class_tag']
+            answer = host.subspecializer?(instance_id, left_tag: left_tag, right_tag: right_tag)
+            question_result(answer, call_id: event.data['call_id'])
+          when 'ExternalIsa'
+            instance = event.data['instance']
+            class_tag = event.data['class_tag']
+            answer = host.isa?(instance, class_tag: class_tag)
+            question_result(answer, call_id: event.data['call_id'])
+          when 'ExternalUnify'
+            left_instance_id = event.data['left_instance_id']
+            right_instance_id = event.data['right_instance_id']
+            answer = host.unify?(left_instance_id, right_instance_id)
+            question_result(answer, call_id: event.data['call_id'])
+          when 'Debug'
+            puts event.data['message'] if event.data['message']
+            print 'debug> '
+            begin
+              input = $stdin.readline.chomp.chomp(';')
+            rescue EOFError
+              next
             end
+            command = JSON.dump(host.to_polar(input))
+            ffi_query.debug_command(command)
+          when 'ExternalOp'
+            raise UnimplementedOperationError, 'comparison operators'
+          when 'NextExternal'
+            call_id = event.data['call_id']
+            iterable = event.data['iterable']
+            handle_next_external(call_id, iterable)
+          else
+            raise "Unhandled event: #{JSON.dump(event.inspect)}"
           end
-        end.lazy
+        end
       end
     end
   end
