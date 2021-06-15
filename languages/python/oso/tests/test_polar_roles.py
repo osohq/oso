@@ -2830,6 +2830,9 @@ def test_perf_polar(init_oso, sample_data):
         actor_role(actor, role) if
             role in actor.repo_roles or
             role in actor.org_roles;
+
+        allow(actor, action, resource) if
+            role_allow(actor, action, resource);
         """
 
     # p = """resource(_: Repo, "repo", actions, roles) if
@@ -2871,8 +2874,12 @@ def test_perf_polar(init_oso, sample_data):
 
     assert len(leina.repo_roles) == n_roles
 
+    def test_query():
+        return oso.is_allowed(leina, "write", oso_repos[99])
+
+    # Ensure valid policy is loaded.
+    assert test_query()
+
     number = 10
-    time = timeit.timeit(
-        lambda: oso.is_allowed(leina, "write", oso_repos[99]), number=number
-    )
+    time = timeit.timeit(test_query, number=number)
     print(f"Executed in : {time/number*1000} ms\n Averaged over {number} repetitions.")
