@@ -862,8 +862,6 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
     oso.enable_roles()
     oso.load_str(new_policy)
     oso.validate_config()
@@ -950,8 +948,6 @@ def test_parent_child_role_perm(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
     oso.enable_roles()
     oso.load_str(new_policy)
     oso.validate_config()
@@ -999,8 +995,6 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     """
     oso.load_str(policy)
     oso.validate_config()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
 
     osohq = sample_data["osohq"]
     oso_bug = sample_data["oso_bug"]
@@ -1058,8 +1052,6 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     oso.enable_roles()
     oso.load_str(new_policy)
     oso.validate_config()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
 
     assert not oso.is_allowed(leina, "edit", oso_bug)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1090,8 +1082,6 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     """
     oso.load_str(policy)
     oso.validate_config()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
 
     osohq = sample_data["osohq"]
     apple = sample_data["apple"]
@@ -1135,8 +1125,6 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     oso.enable_roles()
     oso.load_str(new_policy)
     oso.validate_config()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
 
     # leina can still "invite"
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1232,8 +1220,6 @@ def test_parent_child_role_implication(init_oso, sample_data):
     oso.enable_roles()
     oso.load_str(new_policy)
     oso.validate_config()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
 
     assert not oso.is_allowed(leina, "pull", oso_repo)
     assert oso.is_allowed(leina, "invite", osohq)
@@ -1334,8 +1320,6 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
 
     oso.clear_rules()
     oso.enable_roles()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
     oso.load_str(new_policy)
     oso.validate_config()
 
@@ -1472,8 +1456,6 @@ def test_chained_role_implication(init_oso, sample_data):
 
     oso.clear_rules()
     oso.enable_roles()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
     oso.load_str(new_policy)
     oso.validate_config()
 
