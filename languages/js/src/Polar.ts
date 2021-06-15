@@ -90,6 +90,13 @@ export class Polar {
    * Enable Oso's built-in roles feature.
    */
   enableRoles() {
+    this.registerConstant(
+      {
+        join: (separator: string, left: string, right: string) =>
+          [left, right].join(separator),
+      },
+      '__oso_internal_roles_helpers__'
+    );
     this.#ffiPolar.enableRoles();
     this.processMessages();
   }

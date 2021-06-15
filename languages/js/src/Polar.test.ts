@@ -921,13 +921,6 @@ describe('Polar roles', () => {
     `;
 
     const p = new Polar();
-    p.registerConstant(
-      {
-        join: (separator: string, left: string, right: string) =>
-          [left, right].join(separator),
-      },
-      '__oso_internal_roles_helpers__'
-    );
     [Org, Repo, Issue, User].forEach(c => p.registerClass(c));
     await p.loadStr(policy);
     p.enableRoles();
