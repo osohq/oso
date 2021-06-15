@@ -185,7 +185,7 @@ def test_oso_roles_init():
 
 def test_empty_role(init_oso):
     # defining role with no permissions/implications throws an error
-    oso, session = init_oso
+    oso, _ = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
         actions = [
