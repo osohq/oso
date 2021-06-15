@@ -1540,10 +1540,6 @@ def test_assign_role_wrong_resource_type(init_oso, sample_data):
                 permissions: ["invite"]
             }
         };
-
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1568,10 +1564,6 @@ def test_assign_remove_nonexistent_role(init_oso, sample_data):
                 permissions: ["invite"]
             }
         };
-
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1598,10 +1590,6 @@ def test_remove_unassigned_role(init_oso, sample_data):
                 permissions: ["invite"]
             }
         };
-
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1711,10 +1699,6 @@ def test_reassign_user_role(init_oso, sample_data):
     parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
-
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1782,10 +1766,6 @@ def test_authorizing_related_fields(
     parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
-
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
     """
     oso.load_str(policy)
     # TODO: validation
@@ -2359,10 +2339,6 @@ def test_read_api(init_oso, sample_data, Repo, Org):
     parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
-
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
     """
     oso.load_str(policy)
     # TODO: validation
