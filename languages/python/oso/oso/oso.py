@@ -3,7 +3,6 @@
 __version__ = "0.12.4"
 
 import os
-from pathlib import Path
 from polar import Polar, Variable, exceptions
 
 
