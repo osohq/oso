@@ -38,8 +38,9 @@ This defines two roles on repository, `"reader"` and `"writer"`.
 This allows us to assign users directly to repositories without
 giving them a role in the entire organization.
 
-Now, we can use `OsoRoles.assign_role` to assign role on
-repositories in addition to organizations.
+Now, we can use
+{{% apiDeepLink "OsoRoles" "OsoRoles.assign_role" "sqlalchemy" %}}assign_role{{% /apiDeepLink %}}
+to assign role on repositories in addition to organizations.
 
 ## Grant access to child resources with implied roles
 

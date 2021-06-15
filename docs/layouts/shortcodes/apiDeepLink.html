@@ -1,19 +1,37 @@
-{{- /* apiDeepLink $class */ -}}
+{{- /* apiDeepLink $class $label $pythonFramework */ -}}
 {{- /* Makes a deep link to the currently selected language's documentation for a given class */ -}}
 {{- /* To link to a specific method of the class, supply it as an inner shortcode or string */ -}}
 {{- $class := (.Get 0) -}}
-{{- if eq $.Page.Language.Lang "node" -}}
-{{- $apiBase := printf "%s%s/%s" $.Site.BaseURL $.Page.Language "reference/api/classes" -}}
-{{- $classLink := printf "%[1]s/%[2]s.%[2]s-1.html" $apiBase (lower $class) -}}
-<code style="display: inline-block; line-height: initial;">
-  {{- if eq (len .Inner) 0 -}}
-  <a href="{{- $classLink -}}">
-    {{- $class -}}
-  </a>
-  {{- else -}}
-  <a href="{{- (printf "%s#%s" $classLink (lower .Inner)) | safeURL -}}">
-    {{- $class -}}.{{- .Inner -}}()
-  </a>
-  {{- end -}}
-</code>
+{{- $label := (.Get 1) -}}
+{{- $pythonFramework := (.Get 2) -}}
+{{- $href := "" -}}
+{{- $genText := "" -}}
+{{- $baseUrl := printf "%s%s" $.Site.BaseURL $.Page.Language -}}
+{{- if eq (len .Inner) 0 -}}
+  {{- $genText = $class -}}
+{{- else -}}
+  {{- $genText = printf "%s.%s()" $class .Inner -}}
 {{- end -}}
+{{- if eq $.Page.Language.Lang "node" -}}
+  {{- $apiBase := printf "%s/%s" $baseUrl "reference/api/classes" -}}
+  {{- $classLink := printf "%[1]s/%[2]s.%[2]s-1.html" $apiBase (lower $class) -}}
+  {{- if eq (len .Inner) 0 -}}
+    {{- $href = $classLink -}}
+  {{- else -}}
+    {{- $href = (printf "%s#%s" $classLink (lower .Inner)) -}}
+  {{- end -}}
+{{- else if eq $.Page.Language.Lang "python" -}}
+  {{- $apiBase := printf "%s/%s" $baseUrl "reference/api" -}}
+  {{- if eq (len $pythonFramework) 0 -}}
+    {{- $href = printf "%s/%s" $apiBase "index.html" -}}
+  {{- else -}}
+    {{- $href = printf "%s/%s.html" $apiBase $pythonFramework -}}
+  {{- end -}}
+{{- else -}}
+  {{ $href = printf "%s/%s" $baseUrl "reference/api/index.html" }}
+{{- end -}}
+<code style="display:inline-block; line-height: initial; margin: 0;">
+  <a href="{{- $href | safeURL -}}">
+    {{- default $genText $label -}}
+  </a>
+</code>
