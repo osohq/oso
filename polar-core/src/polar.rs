@@ -300,7 +300,13 @@ impl Polar {
     }
 
     pub fn enable_roles(&self) -> PolarResult<()> {
-        self.load_str(ROLES_POLICY)
+        self.load(ROLES_POLICY, Some(ROLES_POLICY.to_owned()))
+            .map_err(|_| {
+                error::RuntimeError::FileLoading {
+                    msg: "Roles already enabled.".to_owned(),
+                }
+                .into()
+            })
     }
 }
 
@@ -313,5 +319,18 @@ mod tests {
         let polar = Polar::new();
         let _query = polar.new_query("1 = 1", false);
         let _ = polar.load_str("f(_);");
+    }
+
+    #[test]
+    fn errors_on_loading_roles_policy_twice() {
+        let polar = Polar::new();
+        assert!(matches!(polar.enable_roles(), Ok(())));
+        assert!(matches!(
+            polar.enable_roles(),
+            Err(error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            }) if msg == "Roles already enabled."
+        ));
     }
 }
