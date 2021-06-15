@@ -476,12 +476,23 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
                      def my_method(one, two, three:, four:)
                        [one, two, three, four]
                      end
+
+                     def self.tv
+                       Thread.current['foo']
+                     end
                    end)
         subject.register_class(TestClass)
       end
 
       it 'accepts positional and keyword args' do
         expect(qvar(subject, 'x = (new TestClass()).my_method(1, 2, four: 4, three: 3)', 'x')).to eq([[1, 2, 3, 4]])
+      end
+
+      it 'has access to the thread context' do
+        Thread.current['foo'] = 'bar'
+        # you need to use load string here or it might not
+        # run on a fiber
+        subject.load_str('?= TestClass.tv = "bar";')
       end
     end
 
