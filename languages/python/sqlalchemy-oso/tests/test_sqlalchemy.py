@@ -3,6 +3,7 @@ import pytest
 
 from sqlalchemy.orm import aliased
 
+from oso import OsoError
 from sqlalchemy_oso.session import (
     authorized_sessionmaker,
     scoped_session,
@@ -19,6 +20,12 @@ def log_queries():
 
     logging.basicConfig()
     logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+
+
+def test_cannot_use_if_polar_roles_enabled(engine, oso):
+    oso.enable_roles()
+    with pytest.raises(OsoError, match="Polar roles"):
+        AuthorizedSession(oso, "user", {}, bind=engine)
 
 
 def test_authorize_query_no_access(engine, oso, fixture_data):

@@ -7,7 +7,7 @@ from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy import orm
 from sqlalchemy.sql import expression as expr
 
-from oso import Oso
+from oso import Oso, OsoError
 
 from sqlalchemy_oso.auth import authorize_model
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
@@ -231,6 +231,9 @@ class AuthorizedSessionBase(object):
         responses from changing, ensuring that the session's identity map never
         contains unauthorized objects.
         """
+        if oso._polar_roles_enabled:
+            raise OsoError("Data filtering not yet supported with Polar roles enabled.")
+
         self._oso = oso
         self._oso_user = user
         self._oso_checked_permissions = checked_permissions

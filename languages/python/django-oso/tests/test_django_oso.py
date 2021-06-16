@@ -30,6 +30,12 @@ def partial_policy():
     Oso.load_file(Path(__file__).parent / "partial.polar")
 
 
+def test_cannot_use_if_polar_roles_enabled():
+    Oso.enable_roles()
+    with pytest.raises(OsoError, match="Polar roles"):
+        authorize_model(None, None)
+
+
 def test_policy_autoload():
     """Test that policies are loaded from policy directory."""
     # These rules are added by the policies in the test app.
