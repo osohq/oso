@@ -3,7 +3,7 @@ import pytest
 
 from sqlalchemy.orm import aliased
 
-from oso.errors import UnsupportedError
+from polar.exceptions import UnsupportedError
 from sqlalchemy_oso.session import (
     authorized_sessionmaker,
     scoped_session,

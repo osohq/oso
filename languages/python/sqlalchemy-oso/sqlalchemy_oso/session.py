@@ -8,7 +8,7 @@ from sqlalchemy import orm
 from sqlalchemy.sql import expression as expr
 
 from oso import Oso
-from oso.errors import UnsupportedError
+from polar.exceptions import UnsupportedError
 
 from sqlalchemy_oso.auth import authorize_model
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
