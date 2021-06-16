@@ -10,6 +10,7 @@ from django_oso.auth import authorize, authorize_model
 from polar import Variable, Expression
 
 from polar.exceptions import UnsupportedError
+from oso import OsoError
 from .conftest import negated_condition
 
 
