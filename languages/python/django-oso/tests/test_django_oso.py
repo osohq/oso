@@ -9,7 +9,7 @@ from django_oso.oso import Oso, reset_oso
 from django_oso.auth import authorize, authorize_model
 from polar import Variable, Expression
 
-from oso import OsoError
+from oso.errors import UnsupportedError
 from .conftest import negated_condition
 
 
@@ -32,7 +32,7 @@ def partial_policy():
 
 def test_cannot_use_if_polar_roles_enabled():
     Oso.enable_roles()
-    with pytest.raises(OsoError, match="Polar roles"):
+    with pytest.raises(UnsupportedError, match="Polar roles"):
         authorize_model(None, None)
 
 
