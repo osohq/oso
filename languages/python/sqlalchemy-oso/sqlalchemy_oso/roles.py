@@ -668,6 +668,9 @@ def ensure_configured(func):
 
 class OsoRoles:
     def __init__(self, oso, user_model, session_maker):
+        if oso._polar_roles_enabled:
+            raise OsoError("Polar roles feature already enabled.")
+
         self.session_maker = session_maker
 
         for cls in session_maker.class_.__mro__:

@@ -13,8 +13,9 @@ from sqlalchemy.orm import relationship, sessionmaker, close_all_sessions
 from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy_oso import authorized_sessionmaker, SQLAlchemyOso
+from sqlalchemy_oso.roles import OsoRoles
 
-from oso import OsoError
+from oso import Oso, OsoError
 
 pg_host = os.environ.get("POSTGRES_HOST")
 pg_port = os.environ.get("POSTGRES_PORT")
@@ -191,6 +192,19 @@ def sample_data(init_oso, Organization, Repository, User, Issue):
     session.commit()
 
     return objs
+
+
+def test_polar_roles_and_sqlalchemy_roles_cannot_coexist(engine, User):
+    oso = Oso()
+    oso.enable_roles()
+    Session = sessionmaker(bind=engine)
+
+    with pytest.raises(OsoError, match="Polar roles feature already enabled."):
+        OsoRoles(
+            oso=oso,
+            user_model=User,
+            session_maker=Session,
+        )
 
 
 # TEST OsoRoles Initialization

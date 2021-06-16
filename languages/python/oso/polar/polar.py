@@ -64,6 +64,7 @@ class Polar:
     def __init__(self, classes=CLASSES):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
+        self._polar_roles_enabled = False
 
         # Register global constants.
         self.register_constant(None, name="nil")
@@ -94,6 +95,7 @@ class Polar:
 
         self.register_constant(InternalRolesHelpers, "__oso_internal_roles_helpers__")
         self.ffi_polar.enable_roles()
+        self._polar_roles_enabled = True
 
     def load_file(self, policy_file):
         """Load Polar policy from a ".polar" file."""
@@ -129,6 +131,7 @@ class Polar:
 
     def clear_rules(self):
         self.ffi_polar.clear_rules()
+        self._polar_roles_enabled = False
 
     def query(self, query, *, bindings=None, accept_expression=False):
         """Query for a predicate, parsing it if necessary.
