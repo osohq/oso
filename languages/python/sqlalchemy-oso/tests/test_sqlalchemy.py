@@ -22,7 +22,7 @@ def log_queries():
     logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 
-def test_cannot_use_if_polar_roles_enabled(engine, oso):
+def test_cannot_use_data_filtering_if_polar_roles_enabled(engine, oso):
     oso.enable_roles()
     with pytest.raises(UnsupportedError, match="Polar roles"):
         AuthorizedSession(oso, "user", {}, bind=engine)
