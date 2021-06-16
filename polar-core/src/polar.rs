@@ -301,7 +301,7 @@ impl Polar {
 
     /// Load the Polar roles policy idempotently.
     pub fn enable_roles(&self) -> PolarResult<()> {
-        match self.load(ROLES_POLICY, Some(ROLES_POLICY.to_owned())) {
+        match self.load(ROLES_POLICY, Some("Built-in Polar Roles Policy".to_owned())) {
             Err(error::PolarError {
                 kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { .. }),
                 ..
