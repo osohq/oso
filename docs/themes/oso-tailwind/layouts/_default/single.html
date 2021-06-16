@@ -7,13 +7,17 @@
           <article class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:px-8 pb-24 lg:pb-16">
             {{ .Content }}
           </article>
-          {{with .PrevInSection }}
-          <a class="flex justify-end" href="{{.RelPermalink}}">
-          <button class="btn btn-blue">
-          Read next: {{.Title}}
-          </button>
-          </a>
-          {{end}}
+          {{ $currentPage := . }}
+          {{ range $pageIdx, $page := .CurrentSection.RegularPages }}
+            {{ if and (eq $currentPage $page) (lt (add $pageIdx 1) (len .CurrentSection.RegularPages)) }}
+              {{ $nextRegPage := index .CurrentSection.RegularPages (add $pageIdx 1) }}
+              <a class="flex justify-end" href="{{$nextRegPage.RelPermalink}}">
+                <button class="btn btn-blue">
+                  Read next: {{$nextRegPage.Title}}
+                </button>
+              </a>
+            {{ end }}
+          {{ end }}
           <hr class="max-w-4xl mx-auto text-center border-gray-100 my-12" />
           <div class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:px-8 pb-24 lg:pb-16">
             {{- partial "feedback.html" . -}}
