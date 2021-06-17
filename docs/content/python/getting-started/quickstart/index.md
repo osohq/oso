@@ -32,7 +32,8 @@ pip install --upgrade oso
 ```
 ## Add Oso to your app
 To start, `import` Oso, create an Oso instance, and enable roles.
-(Roles are a new thing in Oso, and they're hidden behind a feature flag.)
+Enabling roles gives you access to Oso's builtin support for
+role-based access control. 
 
 ```python
 from oso import Oso
@@ -127,7 +128,7 @@ There's much more you can do with Polar, including defining parent-child relatio
 You can call properties and methods on your Python objects from Polar.
 These will defer control back to your app.
 Oso leaves the decision of how to store role assignments up to you — you might choose to store those role assignments in a database, in memory, or create them dynamically.
-Our `actor_role` rule calls your Python method `has_roles` to get all the roles for our actor.
+Our `actor_role` rule calls the Python method `has_roles` to get all the roles for our actor.
 
 ```polar
 actor_role(actor, role) if
