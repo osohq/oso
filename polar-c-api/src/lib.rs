@@ -444,3 +444,21 @@ pub extern "C" fn polar_enable_roles(polar_ptr: *mut Polar) -> i32 {
         }
     })
 }
+
+#[no_mangle]
+pub extern "C" fn polar_validate_roles_config(
+    polar_ptr: *mut Polar,
+    validation_query_results: *const c_char,
+) -> i32 {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let validation_query_results = unsafe { ffi_string!(validation_query_results) };
+        match polar.validate_roles_config(&validation_query_results) {
+            Err(err) => {
+                set_error(err);
+                POLAR_FAILURE
+            }
+            Ok(_) => POLAR_SUCCESS,
+        }
+    })
+}

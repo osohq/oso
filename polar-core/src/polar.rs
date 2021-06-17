@@ -8,6 +8,7 @@ use super::rules::*;
 use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
+use super::validate::validate_roles_config;
 use super::vm::*;
 use super::warnings::check_singletons;
 
@@ -127,6 +128,7 @@ impl Iterator for Query {
 }
 
 const ROLES_POLICY: &str = include_str!("roles.polar");
+const VALIDATE_ROLES_CONFIG_RESOURCES: &str = "resource(resource, name, permissions, roles)";
 
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
@@ -301,13 +303,24 @@ impl Polar {
 
     /// Load the Polar roles policy idempotently.
     pub fn enable_roles(&self) -> PolarResult<()> {
-        match self.load(ROLES_POLICY, Some("Built-in Polar Roles Policy".to_owned())) {
+        let result = match self.load(ROLES_POLICY, Some("Built-in Polar Roles Policy".to_owned())) {
             Err(error::PolarError {
                 kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { .. }),
                 ..
             }) => Ok(()),
             result => result,
-        }
+        };
+
+        // Push inline queries to validate config.
+        let src_id = self.kb.read().unwrap().new_id();
+        let term = parser::parse_query(src_id, VALIDATE_ROLES_CONFIG_RESOURCES)?;
+        self.kb.write().unwrap().inline_queries.push(term);
+
+        result
+    }
+
+    pub fn validate_roles_config(&self, validation_query_results: &str) -> PolarResult<()> {
+        validate_roles_config(validation_query_results)
     }
 }
 

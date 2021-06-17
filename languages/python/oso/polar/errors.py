@@ -18,6 +18,7 @@ from polar.exceptions import (
     UnsupportedError,
     ParameterError,
     PolarApiError,
+    ValidationError,
 )
 
 
@@ -44,6 +45,8 @@ def get_python_error(err_str):
         return _operational_error(subkind, message, details)
     elif kind == "Parameter":
         return _api_error(message, details)
+    elif kind == "Validation":
+        return _validation_error(message, details)
 
 
 def _parse_error(subkind, message, details):
@@ -75,6 +78,10 @@ def _operational_error(subkind, message, details):
         return UnknownError(message, details)
     else:
         return OperationalError(message, details)
+
+
+def _validation_error(message, details):
+    return ValidationError(message, details)
 
 
 def _api_error(subkind, message, details):

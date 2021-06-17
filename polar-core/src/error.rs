@@ -33,6 +33,7 @@ pub enum ErrorKind {
     Runtime(RuntimeError),
     Operational(OperationalError),
     Parameter(ParameterError),
+    Validation(ValidationError),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,6 +114,15 @@ impl From<ParameterError> for PolarError {
     }
 }
 
+impl From<ValidationError> for PolarError {
+    fn from(err: ValidationError) -> Self {
+        Self {
+            kind: ErrorKind::Validation(err),
+            context: None,
+        }
+    }
+}
+
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
 
 impl std::error::Error for PolarError {}
@@ -124,6 +134,7 @@ impl fmt::Display for PolarError {
             ErrorKind::Runtime(e) => write!(f, "{}", e)?,
             ErrorKind::Operational(e) => write!(f, "{}", e)?,
             ErrorKind::Parameter(e) => write!(f, "{}", e)?,
+            ErrorKind::Validation(e) => write!(f, "{}", e)?,
         }
         if let Some(ref context) = self.context {
             write!(f, "{}", context)?;
@@ -334,5 +345,14 @@ pub struct ParameterError(pub String);
 impl fmt::Display for ParameterError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Invalid parameter used in FFI function: {}", self.0)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationError(pub String);
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Config Validation Error: {}", self.0)
     }
 }

@@ -2,7 +2,7 @@ use wasm_bindgen::JsValue;
 
 use polar_core::error::{
     ErrorKind, FormattedPolarError, OperationalError, ParameterError, ParseError, PolarError,
-    RuntimeError,
+    RuntimeError, ValidationError,
 };
 
 pub struct Error {
@@ -47,6 +47,7 @@ fn kind(err: &PolarError) -> String {
         Operational(Unknown) => "OperationalError::Unknown",
         Operational(InvalidState(..)) => "OperationalError::InvalidState",
         Parameter(ParameterError(..)) => "ParameterError::ParameterError",
+        Validation(ValidationError(..)) => "ValidationError::ValidationError",
     }
     .to_owned()
 }

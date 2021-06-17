@@ -22,6 +22,13 @@ class Polar:
         process_messages(self.next_message)
         check_result(result)
 
+    def validate_roles_config(self, config_data):
+        """Load the built-in roles policy."""
+        string = ffi_serialize(config_data)
+        result = lib.polar_validate_roles_config(self.ptr, string)
+        process_messages(self.next_message)
+        check_result(result)
+
     def load(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
         string = to_c_str(string)
