@@ -82,12 +82,15 @@ It lets any actor with the role `"user"` read a page, but only actors with the r
 We can load our example policy from a file with the extension `.polar`.
 
 ```python
-oso.load_file("example.polar")
+oso.load_file("authorization.polar")
 ```
 
-Here's the example.polar file:
+Here's the authorization.polar file:
 
 ```polar
+allow(actor, action, resource) if
+    role_allow(actor, action, resource);
+
 actor_role(actor, role) if
     role in actor.get_roles();
 
@@ -104,7 +107,12 @@ resource(_type: Page, "page", actions, roles) if
     };
  ```
 
-An _actor_role_ rule expresses the relationship between an actor and a role object of the form `{name: "the-role-name", resource: TheResourceObject}`.
+The `allow` rule is the top-level rule that we use to say who can do what in our application.
+In this case, we are delegating to Oso's builtin `role_allow` rule which implements all the
+authorization logic for role-based access control based on the data we provide in `actor_role`
+and `resource`.
+
+An `actor_role` rule expresses the relationship between an actor and a role object of the form `{name: "the-role-name", resource: TheResourceObject}`.
 The `is_allowed` call in your Python code will look up this rule, so this is required.
 
 A _resource_ rule governs access to a specific resource in your app — for instance, a page, an object, a route, or a database entry.
@@ -124,12 +132,8 @@ Oso leaves the decision of how to store role assignments up to you — you might
 Our `actor_role` rule calls your Python method `has_roles` to get all the roles for our actor.
 
 ```polar
-actor_role(actor: User, role) if
-     resources = Page.pages and
-     r in resources and
-     actions = r.has_roles(actor) and
-     action in actions and
-     role = { name: action, resource: r };
+actor_role(actor, role) if
+    role in actor.get_roles();
  ```
 
 To refer to your Python classes in Polar, you must `register` them with Oso.
@@ -151,87 +155,10 @@ will help you out.
 
 ## Complete Running Example
 
-```python
-# install Oso
-# put this code in a file named example.py
-# run:
-# python example.py
-# browse http://127.0.0.1:5000/page/2
+Download and run the code locally by cloning the {{% exampleGet "githubApp" %}}:
 
-class Page:
-   pages = []
-
-   def __init__(self, pagenum):
-       self.pagenum = pagenum
-
-   # in a real application the returned list would
-   # include all the roles available for this actor
-   # for now every actor has the role "user"
-   def has_roles(self, actor):
-       return ["user"]
-
-   def get_pages():
-       return Page.pages
-
-Page.pages = [Page(0), Page(1), Page(2)]
-
-class User:
-   def __init__(self, name):
-       self.name = name
-
-# Get the user -
-def get_user():
-   return User("someuser")
-
-def get_page(pagenum):
-   return Page.pages[pagenum]
-
-from oso import Oso
-oso = Oso()
-oso.enable_roles()
-oso.register_class(Page)
-oso.register_class(User)
-
-from flask import Flask
-
-app = Flask(__name__)
-@app.route("/page/<pagenum>")
-def page_show(pagenum):
-   page = Page.pages[int(pagenum)]
-   if oso.is_allowed(
-       get_user(), # the user doing the request
-       "read", # the action we want to do
-       page): # the resource we want to do it to
-
-       return f'<h1>A Page</h1><p>this is page {pagenum}</p>'
-   else:
-       return f'<h1>Sorry</h1><p>You are not allowed to see this page</p>'
-
-# we can load our policy from a file, or from a string, as here
-oso.load_str("""
-
-  actor_role(actor, role) if
-       resources = Page.pages and
-       r in resources and
-       actions = r.has_roles(actor) and
-       action in actions and
-       role = { name: action, resource: r };
-
-   resource(_type: Page, "page", actions, roles) if
-       actions = ["read", "write"] and
-       roles = {
-           admin: {
-               permissions: ["write"],
-               implies: ["user"]
-           },
-           user: {
-               permissions: ["read"]
-           }
-       };
-
-   """)
-
-app.run()
+```console
+git clone {{% exampleGet "githubURL" %}}
 ```
 
 {{% callout "What's next" "blue" %}}
