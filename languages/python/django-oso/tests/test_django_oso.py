@@ -31,8 +31,15 @@ def partial_policy():
     Oso.load_file(Path(__file__).parent / "partial.polar")
 
 
-def test_cannot_use_if_polar_roles_enabled():
+@pytest.fixture
+def oso_with_polar_roles_enabled():
     Oso.enable_roles()
+    yield Oso
+    Oso._polar_roles_enabled = False
+    Oso.clear_rules()
+
+
+def test_cannot_use_if_polar_roles_enabled(oso_with_polar_roles_enabled):
     with pytest.raises(UnsupportedError, match="Polar roles"):
         authorize_model(None, None)
 
