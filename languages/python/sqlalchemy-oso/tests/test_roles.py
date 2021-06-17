@@ -486,7 +486,6 @@ def test_duplicate_role_name_same_resource(init_oso):
         """
     with pytest.raises(ParserError):
         oso.load_str(policy)
-    oso.roles.synchronize_data()
 
 
 def test_duplicate_role_name_different_resources(init_oso, sample_data):
