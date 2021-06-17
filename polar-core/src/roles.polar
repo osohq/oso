@@ -14,9 +14,7 @@ role_allow(actor, action, resource) if
 
 user_in_role(actor, role, resource) if
     __oso_internal__role_implies_permitted_role([implied_role_name, implied_role_resource], [role, resource], resource) and
-    actor_role(actor, assigned_role) and
-    implied_role_name = assigned_role.name and
-    implied_role_resource = assigned_role.resource;
+    actor_has_role_for_resource(actor, implied_role_name, implied_role_resource);
 
 __oso_internal__role_has_permission([name, resource], action, resource, roles) if
     [name, config] in roles and
