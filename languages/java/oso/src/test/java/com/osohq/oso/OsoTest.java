@@ -104,7 +104,7 @@ public class OsoTest {
   public void testAllowModel() throws Exception {
     Actor auditor = new Actor("auditor");
 
-    assertTrue(o.isAllowed(auditor, "list", new Company(1)));
-    assertFalse(o.isAllowed(auditor, "list", new Widget(1)));
+    assertTrue(o.isAllowed(auditor, "list", Company.class));
+    assertFalse(o.isAllowed(auditor, "list", Widget.class));
   }
 }
