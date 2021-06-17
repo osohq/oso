@@ -111,10 +111,11 @@ In this case, we are delegating to Oso's builtin `role_allow` rule which impleme
 authorization logic for role-based access control based on the data we provide in `actor_role`
 and `resource`.
 
-An `actor_role` rule expresses the relationship between an actor and a role object of the form `{name: "the-role-name", resource: TheResourceObject}`.
-The `is_allowed` call in your Python code will look up this rule, so this is required.
+An `actor_role` rule looks up role objects that are associated with an actor.
+Role objects are of the form `{name: "the-role-name", resource: TheResourceObject}`.
+The Oso builtin roles will look up this rule, so this is required.
 
-A _resource_ rule governs access to a specific resource in your app — for instance, a page, an object, a route, or a database entry.
+A `resource` rule governs access to a specific resource in your app — for instance, a page, an object, a route, or a database entry.
 Here, there are two possible actions that can be done to a `Page`: `"read"` and `"write"`.
 Users can read, but not write, to a `Page`.
 Admins are allowed to write to a `Page`.
@@ -128,14 +129,14 @@ There's much more you can do with Polar, including defining parent-child relatio
 You can call properties and methods on your Python objects from Polar.
 These will defer control back to your app.
 Oso leaves the decision of how to store role assignments up to you — you might choose to store those role assignments in a database, in memory, or create them dynamically.
-Our `actor_role` rule calls the Python method `has_roles` to get all the roles for our actor.
+Our `actor_role` rule calls the Python method `get_roles` to get all the roles for our actor.
 
 ```polar
 actor_role(actor, role) if
     role in actor.get_roles();
  ```
 
-To refer to your Python classes in Polar, you must `register` them with Oso.
+To refer to your Python classes in Polar, you must _register_ them with Oso.
 
 ```python
 from oso import Oso
