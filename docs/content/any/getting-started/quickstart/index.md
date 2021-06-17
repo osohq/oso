@@ -11,7 +11,7 @@ Oso is an open-source, batteries-included library for authorizing actions in you
 Out of the box, Oso lets you give your users roles and lets you specify permissions for those roles.
 Roles can be as simple as User and Admin, or as complex as a management hierarchy.
 
-[DIAGRAM]
+![Diagram showing an application hierarchy with site admins, store owners, and customers](/getting-started/quickstart/images/app-hierarchy.png)
 
 Oso isn’t restricted to roles, though — you can replace any authorization code in your app with an Oso policy.
 
