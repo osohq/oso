@@ -9,7 +9,7 @@ weight: 1
 
 Oso is an open-source, batteries-included library for authorizing actions in your app.
 Out of the box, Oso lets you give your users roles and lets you specify permissions for those roles.
-Roles can be as simple as User and Admin, or as complex as a management hierarchy.
+Roles can be as simple as "user" and "admin", or as complex as a management hierarchy.
 
 ![Diagram showing an application hierarchy with site admins, store owners, and customers](/getting-started/quickstart/images/app-hierarchy.png)
 
@@ -61,15 +61,15 @@ from flask import Flask
 app = Flask(__name__)
 @app.route("/page/<pagenum>")
 def page_show(pagenum):
-   page = Page.pages[int(pagenum)]
-   if oso.is_allowed(
-       get_user(), # the user doing the request
-       "read", # the action we want to do
-       page): # the resource we want to do it to
-
-       return f'<h1>A Page</h1><p>this is page {pagenum}</p>'
-   else:
-       return f'<h1>Sorry</h1><p>You are not allowed to see this page</p>'
+    page = Page.get_page(pagenum)
+    if oso.is_allowed(
+        User.get_current_user(),  # the user doing the request
+        "read",  # the action we want to do
+        page,  # the resource we want to do it to
+    ):
+        return f"<h1>A Page</h1><p>this is page {pagenum}</p>", 200
+    else:
+        return f"<h1>Sorry</h1><p>You are not allowed to see this page</p>", 403
 ```
 
 Oso denies requests unless you explicitly tell it to accept that sort of request.
@@ -89,23 +89,19 @@ Here's the example.polar file:
 
 ```polar
 actor_role(actor, role) if
-   resources = Page.pages and
-   r in resources and
-   actions = r.has_roles(actor) and
-   action in actions and
-   role = { name: action, resource: r };
+    role in actor.get_roles();
 
 resource(_type: Page, "page", actions, roles) if
-   actions = ["read", "write"] and
-   roles = {
-       user: {
-           permissions: ["read"]
-       },
-       admin: {
-           permissions: ["write"],
-           implies: ["user"]
-       }
-   };
+    actions = ["read", "write"] and
+    roles = {
+        user: {
+            permissions: ["read"]
+        },
+        admin: {
+            permissions: ["write"],
+            implies: ["user"]
+        }
+    };
  ```
 
 An _actor_role_ rule expresses the relationship between an actor and a role object of the form `{name: "the-role-name", resource: TheResourceObject}`.
