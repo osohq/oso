@@ -1968,7 +1968,7 @@ def test_data_filtering_role_allows_implicit_or(
     assert len(results) == 1
 
 
-def test_data_filtering_user_in_role_not(
+def test_data_filtering_actor_can_assume_role_not(
     init_oso, sample_data, auth_sessionmaker, Organization
 ):
     oso, session = init_oso
@@ -2010,7 +2010,7 @@ def test_data_filtering_user_in_role_not(
         auth_session.query(Organization).all()
 
 
-def test_data_filtering_user_in_role_and(
+def test_data_filtering_actor_can_assume_role_and(
     init_oso, sample_data, auth_sessionmaker, User, Organization
 ):
     oso, session = init_oso
@@ -2072,7 +2072,7 @@ def test_data_filtering_user_in_role_and(
     assert len(results) == 0
 
 
-def test_data_filtering_user_in_role_explicit_or(
+def test_data_filtering_actor_can_assume_role_explicit_or(
     init_oso, sample_data, auth_sessionmaker, User, Organization, Repository
 ):
     oso, session = init_oso
@@ -2140,7 +2140,7 @@ def test_data_filtering_user_in_role_explicit_or(
     assert len(results) == 1
 
 
-def test_data_filtering_user_in_role_implicit_or(
+def test_data_filtering_actor_can_assume_role_implicit_or(
     init_oso, sample_data, auth_sessionmaker, User, Organization
 ):
     # Ensure that the filter produced by `Roles.role_allows()` is not AND-ed
@@ -2202,8 +2202,8 @@ def test_data_filtering_combo(
 
     allow(actor, action, resource) if
         role_allows = Roles.role_allows(actor, action, resource) and
-        user_in_role = Roles.actor_can_assume_role(actor, "member", resource) and
-        role_allows and user_in_role;
+        actor_can_assume_role = Roles.actor_can_assume_role(actor, "member", resource) and
+        role_allows and actor_can_assume_role;
     """
     # You can't directly `and` the two Roles calls right now but it does work if you do it like ^
     oso.load_str(policy)

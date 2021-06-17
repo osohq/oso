@@ -2014,7 +2014,7 @@ def test_data_filtering_role_allows_implicit_or(init_oso, sample_data):
 
 
 # TODO(gj): data filtering
-def test_data_filtering_user_in_role_not(init_oso, sample_data):
+def test_data_filtering_actor_can_assume_role_not(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -2060,7 +2060,7 @@ def test_data_filtering_user_in_role_not(init_oso, sample_data):
 
 
 # TODO(gj): data filtering
-def test_data_filtering_user_in_role_and(init_oso, sample_data):
+def test_data_filtering_actor_can_assume_role_and(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -2127,7 +2127,7 @@ def test_data_filtering_user_in_role_and(init_oso, sample_data):
 
 
 # TODO(gj): data filtering
-def test_data_filtering_user_in_role_explicit_or(init_oso, sample_data):
+def test_data_filtering_actor_can_assume_role_explicit_or(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -2200,8 +2200,8 @@ def test_data_filtering_user_in_role_explicit_or(init_oso, sample_data):
 
 
 # TODO(gj): data filtering
-def test_data_filtering_user_in_role_implicit_or(init_oso, sample_data):
-    # Ensure that the filter produced by `user_in_role/3` is not AND-ed
+def test_data_filtering_actor_can_assume_role_implicit_or(init_oso, sample_data):
+    # Ensure that the filter produced by `actor_can_assume_role/3` is not AND-ed
     # with a false filter produced by a separate `allow()` rule.
     oso, session = init_oso
     policy = """
