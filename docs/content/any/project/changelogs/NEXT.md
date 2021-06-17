@@ -50,6 +50,27 @@ first = query.first
 
 ### Core
 
+#### Breaking changes
+
+Attempting to create a dictionary with a repeated key is now a parser error.
+Previously, the first (key, value) pair would be taken and the others would
+be dropped.
+
+Before:
+
+```polar
+query> d = {a: 1, a: 2}
+d = {'a': 1}
+```
+
+After:
+
+```polar
+query> d = {a: 1, a: 2}
+ParserError
+Duplicate key: a at line 1, column 6
+```
+
 #### Other bugs & improvements
 
 Trailing commas are now supported in dictionaries and lists.
