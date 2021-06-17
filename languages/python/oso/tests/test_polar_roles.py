@@ -2026,7 +2026,7 @@ def test_data_filtering_user_in_role_not(init_oso, sample_data):
         };
 
     allow(actor, action, resource) if
-        not user_in_role(actor, "member", resource);
+        not actor_can_assume_role(actor, "member", resource);
 
     actor_role(actor, role) if
         role in actor.repo_roles or
@@ -2085,7 +2085,7 @@ def test_data_filtering_user_in_role_and(init_oso, sample_data):
         parent_org matches Org;
 
     allow(actor, action, resource) if
-        user_in_role(actor, "member", resource) and
+        actor_can_assume_role(actor, "member", resource) and
         resource.name = "osohq";
 
     actor_role(actor, role) if
@@ -2155,7 +2155,7 @@ def test_data_filtering_user_in_role_explicit_or(init_oso, sample_data):
         role_allow(actor, action, resource);
 
     allow(actor, _, resource) if
-        user_in_role(actor, "member", resource) or
+        actor_can_assume_role(actor, "member", resource) or
         resource.name = "osohq";
 
     actor_role(actor, role) if
@@ -2217,7 +2217,7 @@ def test_data_filtering_user_in_role_implicit_or(init_oso, sample_data):
         };
 
     allow(actor, _, resource) if
-        user_in_role(actor, "member", resource);
+        actor_can_assume_role(actor, "member", resource);
 
     actor_role(actor, role) if
         role in actor.repo_roles or
@@ -2264,7 +2264,7 @@ def test_data_filtering_combo(init_oso, sample_data):
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource) and
-        user_in_role(actor, "member", resource);
+        actor_can_assume_role(actor, "member", resource);
 
     actor_role(actor, role) if
         role in actor.repo_roles or
@@ -2366,7 +2366,7 @@ def test_read_api(init_oso, sample_data, Repo, Org):
 
 
 # TODO(gj): data filtering
-def test_user_in_role(init_oso, sample_data):
+def test_actor_can_assume_role(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", [], roles) if
@@ -2392,7 +2392,7 @@ def test_user_in_role(init_oso, sample_data):
         parent_org matches Org;
 
     allow(actor, "read", repo: Repo) if
-        user_in_role(actor, "reader", repo);
+        actor_can_assume_role(actor, "reader", repo);
 
     actor_role(actor, role) if
         role in actor.repo_roles or
