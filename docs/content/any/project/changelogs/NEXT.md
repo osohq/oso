@@ -8,7 +8,7 @@ description: >-
 draft: true
 ---
 
-## `oso-oso 0.13.0` NEW_VERSION
+## `oso 0.13.0`
 
 ### Ruby (e.g., 'Core' or 'Python' or 'Node.js')
 
@@ -48,23 +48,17 @@ first = query.first
 ```
 
 
-
-##### Breaking change 1
-
-Summary of breaking change.
-
-Link to [migration guide]().
-
-#### New features
-
-##### Feature 1
-
-Summary of user-facing changes.
-
-Link to [relevant documentation section]().
+### Core
 
 #### Other bugs & improvements
 
-- Bulleted list
-- Of smaller improvements
-- Potentially with doc [links]().
+Trailing commas are now supported in dictionaries and lists.
+For example:
+
+```polar
+allow(_user, action, repository: Repository) if
+  action in [
+    "read",
+    "write",
+  ];
+```
