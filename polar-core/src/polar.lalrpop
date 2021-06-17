@@ -133,15 +133,22 @@ New: Value = {
     },
 };
 
+Field<T>: (Symbol, Term) = {
+    <name:Name> ":" <value:T> => (name, value)
+}
+
 Fields<T>: BTreeMap<Symbol, Term> = {
-    <name:Name> ":" <value:T> => {
+    <field:Field<T>> => {
         let mut fields = BTreeMap::new();
-        fields.insert(name, value);
+        fields.insert(field.0, field.1);
         fields
     },
-    <name:Name> ":" <value:T> "," <mut fields:Fields<T>> => {
-        fields.insert(name, value);
-        fields
+    <mut fields:Fields<T>> "," <tail:Field<T>?> => match tail {
+        None => fields,
+        Some((name, value)) => {
+            fields.insert(name, value);
+            fields
+        }
     }
 };
 
@@ -499,9 +506,14 @@ Exp1<T>: ValueOrLogical = {
 
 ListTerms<T>: Vec<Term> = {
     <ExpectValue<Exp6<T>>> => vec![<>],
-    <mut list:ListTerms<T>> "," <tail:ExpectValue<Exp6<T>>> => {
-        list.push(tail);
-        list
+    <mut list:ListTerms<T>> "," <tail:ExpectValue<Exp6<T>>?> => {
+        match tail {
+            None => list,
+            Some(tail) => {
+                list.push(tail);
+                list
+            }
+        }
     },
 }
 
