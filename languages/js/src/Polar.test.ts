@@ -913,8 +913,9 @@ describe('Polar roles', () => {
           issue.repo = parent_repo and
           parent_repo matches Repo;
 
-      actor_role(actor, role) if
-          role in actor.roles;
+      actor_has_role_for_resource(actor, role_name, role_resource) if
+          role in actor.roles and
+          role matches {name: role_name, resource: role_resource};
 
       allow(actor, action, resource) if
           role_allow(actor, action, resource);
