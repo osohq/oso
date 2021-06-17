@@ -399,7 +399,7 @@ def read_config(oso):
 
     # Register relationships
     role_relationships = oso.query_rule(
-        "parent",
+        "child_parent",
         Variable("resource"),
         Variable("parent_resource"),
         accept_expression=True,
@@ -407,11 +407,11 @@ def read_config(oso):
 
     # Currently there is only one valid relationship, a parent.
     # There is also only one way you can write it as a rule in polar.
-    # parent(child_resource, parent_resource) if
+    # child_parent(child_resource, parent_resource) if
     #     child.parent = parent_resource;
     #
     # @TODO: Support other forms of this rule, eg
-    # parent(child_resource, parent_resource) if
+    # child_parent(child_resource, parent_resource) if
     #     child.parent_id = parent_resource.id;
     for result in role_relationships:
         try:

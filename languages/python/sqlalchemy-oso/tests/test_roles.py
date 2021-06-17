@@ -330,7 +330,7 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
             }
         };
 
-        parent(repo: Repository, parent_org: Organization) if
+        child_parent(repo: Repository, parent_org: Organization) if
             repo.org = parent_org;
 
         allow(actor, action, resource) if
@@ -401,7 +401,7 @@ def test_nested_dot_relationship(init_oso):
             "edit"
         ];
 
-    parent(issue, parent_org) if
+    child_parent(issue, parent_org) if
         issue.repo.org = parent_org;
     """
     oso.load_str(policy)
@@ -427,7 +427,7 @@ def test_bad_relationship_lookup(init_oso):
             "pull"
         ];
 
-    parent(repo: Repository, parent_org: Organization) if
+    child_parent(repo: Repository, parent_org: Organization) if
         # INCORRECT FIELD NAME
         repo.organization = parent_org;
     """
@@ -445,7 +445,7 @@ def test_relationship_without_specializer(init_oso):
             "pull"
         ];
 
-    parent(repo, parent_org: Organization) if
+    child_parent(repo, parent_org: Organization) if
         repo.org = parent_org;
     """
     oso.load_str(policy)
@@ -457,7 +457,7 @@ def test_relationship_without_specializer(init_oso):
 def test_relationship_without_resources(init_oso):
     oso, session = init_oso
     policy = """
-    parent(repo: Repository, parent_org: Organization) if
+    child_parent(repo: Repository, parent_org: Organization) if
         repo.org = parent_org;
     """
     oso.load_str(policy)
@@ -518,7 +518,7 @@ def test_duplicate_role_name_different_resources(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    child_parent(repo: Repository, parent_org: Organization) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
@@ -700,7 +700,7 @@ def test_invalid_role_permission(init_oso):
 
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    child_parent(repo: Repository, parent_org: Organization) if
         repo.org = parent_org;
     """
 
@@ -840,7 +840,7 @@ def test_overlapping_permissions(init_oso, sample_data):
             }
         };
 
-    parent(repository: Repository, parent_org: Organization) if
+    child_parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
     allow(actor, action, resource) if
@@ -942,7 +942,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
             "pull"
         ];
 
-    parent(repository: Repository, parent_org: Organization) if
+    child_parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
     allow(actor, action, resource) if
@@ -983,7 +983,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
             "pull"
         ];
 
-    parent(repository: Repository, parent_org: Organization) if
+    child_parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1021,10 +1021,10 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
             "edit"
         ];
 
-    parent(repository: Repository, parent_org: Organization) if
+    child_parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    child_parent(issue: Issue, parent_repo: Repository) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -1070,10 +1070,10 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
             "edit"
         ];
 
-    parent(repository: Repository, parent_org: Organization) if
+    child_parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    child_parent(issue: Issue, parent_repo: Repository) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -1184,7 +1184,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repository: Repository, parent_org: Organization) if
+    child_parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1225,7 +1225,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
             "pull"
         ];
 
-    parent(repository: Repository, parent_org: Organization) if
+    child_parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1266,10 +1266,10 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repository: Repository, parent_org: Organization) if
+    child_parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    child_parent(issue: Issue, parent_repo: Repository) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -1312,10 +1312,10 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repository: Repository, parent_org: Organization) if
+    child_parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    child_parent(issue: Issue, parent_repo: Repository) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -1368,10 +1368,10 @@ def test_chained_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repository: Repository, parent_org: Organization) if
+    child_parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    child_parent(issue: Issue, parent_repo: Repository) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -1436,10 +1436,10 @@ def test_chained_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repository: Repository, parent_org: Organization) if
+    child_parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    child_parent(issue: Issue, parent_repo: Repository) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -1648,7 +1648,7 @@ def test_reassign_user_role(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    child_parent(repo: Repository, parent_org: Organization) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1727,7 +1727,7 @@ def test_authorizing_related_fields(
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    child_parent(repo: Repository, parent_org: Organization) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1819,7 +1819,7 @@ def test_data_filtering_role_allows_and(
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    child_parent(repo: Repository, parent_org: Organization) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1881,7 +1881,7 @@ def test_data_filtering_role_allows_explicit_or(
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    child_parent(repo: Repository, parent_org: Organization) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
@@ -2032,7 +2032,7 @@ def test_data_filtering_user_in_role_and(
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    child_parent(repo: Repository, parent_org: Organization) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
@@ -2094,7 +2094,7 @@ def test_data_filtering_user_in_role_explicit_or(
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    child_parent(repo: Repository, parent_org: Organization) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
@@ -2254,7 +2254,7 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    child_parent(repo: Repository, parent_org: Organization) if
         repo.org = parent_org;
 
 
@@ -2324,7 +2324,7 @@ def test_user_in_role(
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    child_parent(repo: Repository, parent_org: Organization) if
         repo.org = parent_org;
 
 
@@ -2535,10 +2535,10 @@ def test_roles_integration(
             "edit"
         ];
 
-    parent(repository: Repository, parent_org: Organization) if
+    child_parent(repository: Repository, parent_org: Organization) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    child_parent(issue: Issue, parent_repo: Repository) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -2680,7 +2680,7 @@ def test_perf_sqlalchemy(init_oso, sample_data, Repository):
     # 	}
     # };
 
-    # parent(repo: Repository, org: Organization) if
+    # child_parent(repo: Repository, org: Organization) if
     # org = repo.organization;
     # """
     oso.load_str(p)
