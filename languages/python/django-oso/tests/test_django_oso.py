@@ -39,7 +39,7 @@ def oso_with_polar_roles_enabled():
     Oso.clear_rules()
 
 
-def test_cannot_use_if_polar_roles_enabled(oso_with_polar_roles_enabled):
+def test_cannot_use_data_filtering_if_polar_roles_enabled(oso_with_polar_roles_enabled):
     with pytest.raises(UnsupportedError, match="Polar roles"):
         authorize_model(None, None)
 

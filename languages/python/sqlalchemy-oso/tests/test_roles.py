@@ -13,6 +13,7 @@ from sqlalchemy.orm import relationship, sessionmaker, close_all_sessions
 from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy_oso import authorized_sessionmaker, SQLAlchemyOso
+
 from oso import OsoError
 
 pg_host = os.environ.get("POSTGRES_HOST")
