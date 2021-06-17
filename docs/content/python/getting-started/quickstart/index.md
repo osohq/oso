@@ -139,9 +139,6 @@ actor_role(actor, role) if
 To refer to your Python classes in Polar, you must _register_ them with Oso.
 
 ```python
-from oso import Oso
-oso = Oso()
-
 oso.register_class(Page)
 oso.register_class(User)
 ```
