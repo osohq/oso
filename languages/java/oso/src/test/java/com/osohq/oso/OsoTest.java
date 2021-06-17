@@ -100,7 +100,6 @@ public class OsoTest {
   }
 
   @Test
-  @Disabled
   public void testAllowModel() throws Exception {
     Actor auditor = new Actor("auditor");
 
