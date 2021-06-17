@@ -25,7 +25,7 @@ Your data doesn't leave your server. Oso also doesn't persist user data inside t
 
 Here's how data flows between your app and the Oso library:
 
-![Diagram showing an application hierarchy with site admins, store owners, and customers](/getting-started/quickstart/images/app-hierarchy.png)
+![Architecture diagram for Oso library loading a polcicy file and making authorization decisions](/getting-started/quickstart/images/arch-simple.png)
 ## Install the Oso library
 
 ```bash
