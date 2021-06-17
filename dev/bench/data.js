@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1623849571459,
+  "lastUpdate": 1623951291367,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -58989,6 +58989,240 @@ window.BENCHMARK_DATA = {
             "name": "partial_rule_depth/100",
             "value": 105592408,
             "range": "± 1128470",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4f50de1c5043a440f03568a20bedfd781feb7935",
+          "message": "Move Polar roles to core and add API for Node.js (#973)\n\n* Load Polar roles policy in core\r\n\r\n* Error if enable_roles() is called twice\r\n\r\n* Actually let's just load it idempotently\r\n\r\n* Do it in JS too\r\n\r\n* Working Polar roles in Node.js\r\n\r\n* Simplify Polar roles test fixtures in Python\r\n\r\n* Move internal join helper into enableRoles()\r\n\r\n* Add internal join helper to Python enable_roles()\r\n\r\n* Update perf policy\r\n\r\n* make -C languages/python/oso lint\r\n\r\n* Ensure SQLAlchemy roles init fails if Polar roles enabled\r\n\r\n* Better 'filename' for built-in Polar roles policy\r\n\r\n* Clean up Node.js enableRoles()\r\n\r\n* Error if data filtering while Polar roles enabled\r\n\r\n* OsoError -> UnsupportedError\r\n\r\n* Helps if I import the right thing\r\n\r\n* Third time's the charm\r\n\r\n* Remove unreachable check\r\n\r\n`OsoRoles.__init__()` will blow up if it's passed an `Oso` instead of a\r\n`SQLAlchemyOso`, and there's no way (short of maybe poking around the\r\nPython mro) to get at the shadowee `Oso.enable_roles()` instead of the\r\nshadower `SQLAlchemyOso.enable_roles()`.\r\n\r\n* Direct folks using data filtering + Polar roles to SQLAlchemy roles\r\n\r\nhttps://github.com/osohq/oso/pull/973#discussion_r652901779\r\n\r\n* Better DX for enable_roles() & then clear_rules()\r\n\r\nhttps://github.com/osohq/oso/pull/973#discussion_r653087767\r\n\r\nhttps://github.com/osohq/oso/pull/973#discussion_r653088564\r\n\r\n* lol it's a global Oso\r\n\r\n* Align Django test name w/ SQLAlchemy test name\r\n\r\n* Allow clippy warning in test\r\n\r\nsuggestion is to use `assert!(...)` instead of `assert_eq!(...)` since we're\r\ncomparing against a boolean, but changing it to `assert!(...)` then causes\r\nclippy to complain that `assert!(true)` is going to be optimized away by the\r\ncompiler. There's no pleasing clippy.\r\n\r\n* Apparently that was only the clip of the iceberg\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>",
+          "timestamp": "2021-06-17T13:20:36-04:00",
+          "tree_id": "490094c7f343a6ed22798f6ab9b887502c5f49b6",
+          "url": "https://github.com/osohq/oso/commit/4f50de1c5043a440f03568a20bedfd781feb7935"
+        },
+        "date": 1623951288599,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 54715,
+            "range": "± 4621",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2660869,
+            "range": "± 157004",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 13130025,
+            "range": "± 712400",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 27081184,
+            "range": "± 1661114",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 898,
+            "range": "± 71",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2627,
+            "range": "± 249",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 64353,
+            "range": "± 3819",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 542812,
+            "range": "± 29658",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 21776,
+            "range": "± 1353",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 21588,
+            "range": "± 1623",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 21419,
+            "range": "± 1735",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 22981,
+            "range": "± 1097",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 20652,
+            "range": "± 2122",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6413,
+            "range": "± 1524",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 7937,
+            "range": "± 2306",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 9657,
+            "range": "± 1827",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 24975,
+            "range": "± 17484",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 7010,
+            "range": "± 360",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 15669,
+            "range": "± 1576",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 9194,
+            "range": "± 746",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "load_policy",
+            "value": 1071968,
+            "range": "± 64112",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/1",
+            "value": 27654,
+            "range": "± 3322",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/5",
+            "value": 102351,
+            "range": "± 11605",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/10",
+            "value": 233134,
+            "range": "± 27692",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/20",
+            "value": 563588,
+            "range": "± 33386",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/40",
+            "value": 1671241,
+            "range": "± 84197",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/80",
+            "value": 5168683,
+            "range": "± 218605",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/100",
+            "value": 7433555,
+            "range": "± 481749",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/1",
+            "value": 93636,
+            "range": "± 7788",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/5",
+            "value": 341348,
+            "range": "± 27251",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/10",
+            "value": 850976,
+            "range": "± 43618",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/20",
+            "value": 2803949,
+            "range": "± 166143",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/40",
+            "value": 11787665,
+            "range": "± 626324",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/80",
+            "value": 86004296,
+            "range": "± 3851806",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/100",
+            "value": 163808512,
+            "range": "± 4605791",
             "unit": "ns/iter"
           }
         ]
