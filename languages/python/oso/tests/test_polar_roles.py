@@ -24,7 +24,6 @@ class Org(Base):  # type: ignore
     __tablename__ = "orgs"
 
     name = Column(String(), primary_key=True)
-    base_repo_role = Column(String())
 
     def __repr__(self):
         return f"Org({self.name})"
@@ -42,11 +41,10 @@ class User(Base):  # type: ignore
 class Repo(Base):  # type: ignore
     __tablename__ = "repos"
 
-    repo_id = Column(Integer, primary_key=True)
-    name = Column(String(256))
+    name = Column(String(256), primary_key=True)
 
     # many-to-one relationship with orgs
-    org_id = Column(Integer, ForeignKey("orgs.name"))
+    org_name = Column(String, ForeignKey("orgs.name"))
     org = relationship("Org", backref="repos", lazy=True)  # type: ignore
 
     def __repr__(self):
@@ -56,9 +54,8 @@ class Repo(Base):  # type: ignore
 class Issue(Base):  # type: ignore
     __tablename__ = "issues"
 
-    issue_id = Column(Integer, primary_key=True)
-    name = Column(String(256))
-    repo_id = Column(Integer, ForeignKey("repos.repo_id"))
+    name = Column(String(256), primary_key=True)
+    repo_name = Column(String(256), ForeignKey("repos.name"))
     repo = relationship("Repo", backref="issues", lazy=True)  # type: ignore
 
     def __repr__(self):
@@ -884,7 +881,6 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     oso.clear_rules()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
-    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: validation
     # oso.roles.synchronize_data()
@@ -974,7 +970,6 @@ def test_parent_child_role_perm(init_oso, sample_data):
     oso.clear_rules()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
-    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: validation
     # oso.roles.synchronize_data()
@@ -1079,7 +1074,6 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
@@ -1158,7 +1152,6 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
@@ -1257,7 +1250,6 @@ def test_parent_child_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
@@ -1363,7 +1355,6 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.enable_roles()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
     oso.load_str(new_policy)
@@ -1503,7 +1494,6 @@ def test_chained_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.enable_roles()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
     oso.load_str(new_policy)
@@ -2673,8 +2663,8 @@ def test_roles_integration(init_oso, sample_data):
     assert not oso.is_allowed(leina, "edit", ios_laggy)
     assert not oso.is_allowed(steve, "edit", ios_laggy)
 
-    oso.actor = leina
-    oso.checked_permissions = {Repo: "pull"}
+    # oso.actor = leina
+    # oso.checked_permissions = {Repo: "pull"}
     # auth_session = auth_sessionmaker()
 
     # results = auth_session.query(Repo).all()
@@ -2833,6 +2823,9 @@ def test_perf_polar(init_oso, sample_data):
         actor_role(actor, role) if
             role in actor.repo_roles or
             role in actor.org_roles;
+
+        allow(actor, action, resource) if
+            role_allow(actor, action, resource);
         """
 
     # p = """resource(_: Repo, "repo", actions, roles) if
@@ -2874,8 +2867,12 @@ def test_perf_polar(init_oso, sample_data):
 
     assert len(leina.repo_roles) == n_roles
 
+    def test_query():
+        return oso.is_allowed(leina, "write", oso_repos[99])
+
+    # Ensure valid policy is loaded.
+    assert test_query()
+
     number = 10
-    time = timeit.timeit(
-        lambda: oso.is_allowed(leina, "write", oso_repos[99]), number=number
-    )
+    time = timeit.timeit(test_query, number=number)
     print(f"Executed in : {time/number*1000} ms\n Averaged over {number} repetitions.")

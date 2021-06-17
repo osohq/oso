@@ -16,6 +16,12 @@ class Polar:
         """Request a unique ID from the canonical external ID tracker."""
         return check_result(lib.polar_get_external_id(self.ptr))
 
+    def enable_roles(self):
+        """Load the built-in roles policy."""
+        result = lib.polar_enable_roles(self.ptr)
+        process_messages(self.next_message)
+        check_result(result)
+
     def load(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
         string = to_c_str(string)

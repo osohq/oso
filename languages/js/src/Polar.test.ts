@@ -802,3 +802,154 @@ describe('iterators', () => {
     ).toBe(6);
   });
 });
+
+// test_roles_integration
+describe('Polar roles', () => {
+  test('works', async () => {
+    class Org {
+      readonly name: string;
+
+      constructor(name: string) {
+        this.name = name;
+      }
+    }
+
+    class Repo {
+      readonly name: string;
+      readonly org: Org;
+
+      constructor(name: string, org: Org) {
+        this.name = name;
+        this.org = org;
+      }
+    }
+
+    class Issue {
+      readonly name: string;
+      readonly repo: Repo;
+
+      constructor(name: string, repo: Repo) {
+        this.name = name;
+        this.repo = repo;
+      }
+    }
+
+    class Role {
+      readonly name: string;
+      readonly resource: Org | Repo;
+
+      constructor(name: string, resource: Org | Repo) {
+        this.name = name;
+        this.resource = resource;
+      }
+    }
+
+    class User {
+      readonly name: string;
+      readonly roles: Role[];
+
+      constructor(name: string, roles: Role[]) {
+        this.name = name;
+        this.roles = roles;
+      }
+    }
+
+    // Test fixtures.
+    const osohq = new Org('osohq');
+    const apple = new Org('apple');
+    const oso = new Repo('oso', osohq);
+    const ios = new Repo('ios', apple);
+    const bug = new Issue('bug', oso);
+    const laggy = new Issue('laggy', ios);
+
+    const osohqOwner = new Role('owner', osohq);
+    const osohqMember = new Role('member', osohq);
+
+    const leina = new User('leina', [osohqOwner]);
+    const steve = new User('steve', [osohqMember]);
+
+    const policy = `
+      resource(_type: Org, "org", actions, roles) if
+          actions = [
+              "invite",
+              "create_repo"
+          ] and
+          roles = {
+              member: {
+                  permissions: ["create_repo"],
+                  implies: ["repo:reader"]
+              },
+              owner: {
+                  permissions: ["invite"],
+                  implies: ["member", "repo:writer"]
+              }
+          };
+
+      resource(_type: Repo, "repo", actions, roles) if
+          actions = [
+              "push",
+              "pull"
+          ] and
+          roles = {
+              writer: {
+                  permissions: ["push", "issue:edit"],
+                  implies: ["reader"]
+              },
+              reader: {
+                  permissions: ["pull"]
+              }
+          };
+
+      resource(_type: Issue, "issue", actions, {}) if
+          actions = [
+              "edit"
+          ];
+
+      parent(repo: Repo, parent_org) if
+          repo.org = parent_org and
+          parent_org matches Org;
+
+      parent(issue: Issue, parent_repo) if
+          issue.repo = parent_repo and
+          parent_repo matches Repo;
+
+      actor_role(actor, role) if
+          role in actor.roles;
+
+      allow(actor, action, resource) if
+          role_allow(actor, action, resource);
+    `;
+
+    const p = new Polar();
+    [Org, Repo, Issue, User].forEach(c => p.registerClass(c));
+    await p.loadStr(policy);
+    p.enableRoles();
+
+    const isAllowed = async (...args: unknown[]) => {
+      const result = await query(p, pred('allow', ...args));
+      return result.length !== 0;
+    };
+
+    expect(await isAllowed(leina, 'invite', osohq));
+    expect(await isAllowed(leina, 'create_repo', osohq));
+    expect(await isAllowed(leina, 'push', oso));
+    expect(await isAllowed(leina, 'pull', oso));
+    expect(await isAllowed(leina, 'edit', bug));
+
+    expect(!(await isAllowed(steve, 'invite', osohq)));
+    expect(await isAllowed(steve, 'create_repo', osohq));
+    expect(!(await isAllowed(steve, 'push', oso)));
+    expect(await isAllowed(steve, 'pull', oso));
+    expect(!(await isAllowed(steve, 'edit', bug)));
+
+    expect(!(await isAllowed(leina, 'edit', laggy)));
+    expect(!(await isAllowed(steve, 'edit', laggy)));
+
+    let gabe = new User('gabe', []);
+    expect(!(await isAllowed(gabe, 'edit', bug)));
+    gabe = new User('gabe', [osohqMember]);
+    expect(!(await isAllowed(gabe, 'edit', bug)));
+    gabe = new User('gabe', [osohqOwner]);
+    expect(await isAllowed(gabe, 'edit', bug));
+  });
+});

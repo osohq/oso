@@ -119,7 +119,7 @@ fn test_data_conversions_polar_values() -> oso::Result<()> {
             String::from_polar(x_vec.get(1).unwrap().to_owned())?,
             String::from("two")
         );
-        assert_eq!(bool::from_polar(x_vec.get(2).unwrap().to_owned())?, true);
+        assert!(bool::from_polar(x_vec.get(2).unwrap().to_owned())?);
     } else {
         panic!("x not list.");
     }
@@ -308,13 +308,10 @@ fn test_basic_queries() {
     let results = oso.query("f(1)");
 
     assert_eq!(results.len(), 1);
-    assert_eq!(
-        results
-            .get(0)
-            .map(|r| r.keys().next().is_none())
-            .unwrap_or_default(),
-        true
-    );
+    assert!(results
+        .get(0)
+        .map(|r| r.keys().next().is_none())
+        .unwrap_or_default());
 }
 
 // TODO unit test
