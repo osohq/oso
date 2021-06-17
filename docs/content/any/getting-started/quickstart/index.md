@@ -31,7 +31,7 @@ Here’s how data flows between your app and the Oso library:
 
 ```bash
 pip install --upgrade oso
-# Or find the Oso package on <http://pypi.python.org/pypi/oso/>
+# Or find the Oso package on <[http://pypi.python.org/pypi/oso/](http://pypi.python.org/pypi/oso/)>
 ```
 ## Add Oso to your app
 To start, `import` Oso, create an Oso instance, and enable roles.
@@ -114,9 +114,9 @@ The `is_allowed` call in your Python code will look up this rule, so this is req
 
 A _resource_ rule governs access to a specific resource in your app — for instance, a page, an object, a route, or a database entry.
 Here, there are two possible actions that can be done to a Page: “read” and “write.”
-Users can read, but not write, to a page.
-Admins are allowed to write to a Page.
-The line `implies: [“user”]` says that admins can also do anything Users are allowed to do; that is, read a Page.
+`users` can `read`, but not `write`, to a `Page`.
+`admins` are allowed to `write` to a `Page`.
+The line `implies: [“user”]` says that `admins` can also do anything `users` are allowed to do; that is, `read` a `Page`.
 
 There’s much more you can do with Polar, including defining parent-child relationships — we’re just scratching the surface here.
 
@@ -136,7 +136,7 @@ actor_role(actor, role) if
      role = { name: action, resource: r };
  ```
 
-To access properties on your Python objects, you must `register` their classes with Oso.
+To refer to your Python classes in Polar, you must `register` them with Oso.
 
 ```python
 from oso import Oso
