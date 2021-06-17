@@ -88,14 +88,18 @@ class Polar:
         del self.ffi_polar
 
     def enable_roles(self):
-        class InternalRolesHelpers:
-            @staticmethod
-            def join(separator, left, right):
-                return separator.join([left, right])
+        if not self._polar_roles_enabled:
 
-        self.register_constant(InternalRolesHelpers, "__oso_internal_roles_helpers__")
-        self.ffi_polar.enable_roles()
-        self._polar_roles_enabled = True
+            class InternalRolesHelpers:
+                @staticmethod
+                def join(separator, left, right):
+                    return separator.join([left, right])
+
+            self.register_constant(
+                InternalRolesHelpers, "__oso_internal_roles_helpers__"
+            )
+            self.ffi_polar.enable_roles()
+            self._polar_roles_enabled = True
 
     def load_file(self, policy_file):
         """Load Polar policy from a ".polar" file."""
@@ -131,7 +135,8 @@ class Polar:
 
     def clear_rules(self):
         self.ffi_polar.clear_rules()
-        self._polar_roles_enabled = False
+        if self._polar_roles_enabled:
+            self.ffi_polar.enable_roles()
 
     def query(self, query, *, bindings=None, accept_expression=False):
         """Query for a predicate, parsing it if necessary.

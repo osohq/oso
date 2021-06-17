@@ -881,7 +881,6 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     oso.clear_rules()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
-    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: validation
     # oso.roles.synchronize_data()
@@ -971,7 +970,6 @@ def test_parent_child_role_perm(init_oso, sample_data):
     oso.clear_rules()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
-    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: validation
     # oso.roles.synchronize_data()
@@ -1076,7 +1074,6 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
@@ -1155,7 +1152,6 @@ def test_homogeneous_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
@@ -1254,7 +1250,6 @@ def test_parent_child_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.enable_roles()
     oso.load_str(new_policy)
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
@@ -1360,7 +1355,6 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.enable_roles()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
     oso.load_str(new_policy)
@@ -1500,7 +1494,6 @@ def test_chained_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    oso.enable_roles()
     # TODO: big red button to reset roles policy?
     # oso.roles.config = None
     oso.load_str(new_policy)
