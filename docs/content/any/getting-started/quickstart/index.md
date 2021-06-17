@@ -25,7 +25,7 @@ Your data doesn't leave your server. Oso also doesn't persist user data inside t
 
 Here's how data flows between your app and the Oso library:
 
-![Architecture diagram for Oso library loading a polcicy file and making authorization decisions](/getting-started/quickstart/images/arch-simple.png)
+![Architecture diagram for Oso library loading a polcicy file and making authorization decisions. ](/getting-started/quickstart/images/arch-simple.png)
 ## Install the Oso library
 
 ```bash
@@ -59,7 +59,7 @@ Here's a Flask route that displays a page if this user is allowed to read the as
 from flask import Flask
 
 app = Flask(__name__)
-@app.route("/some/page/<pagenum>")
+@app.route("/page/<pagenum>")
 def page_show(pagenum):
    page = Page.pages[int(pagenum)]
    if oso.is_allowed(
@@ -128,7 +128,7 @@ Oso leaves the decision of how to store role assignments up to you — you might
 Our `actor_role` rule calls your Python method `has_roles` to get all the roles for our actor.
 
 ```polar
-actor_role(actor, role) if
+actor_role(actor: User, role) if
      resources = Page.pages and
      r in resources and
      actions = r.has_roles(actor) and
@@ -160,7 +160,7 @@ will help you out.
 # put this code in a file named example.py
 # run:
 # python example.py
-# browse http://127.0.0.1:5000/some/page/2
+# browse http://127.0.0.1:5000/page/2
 
 class Page:
    pages = []
@@ -199,7 +199,7 @@ oso.register_class(User)
 from flask import Flask
 
 app = Flask(__name__)
-@app.route("/some/page/<pagenum>")
+@app.route("/page/<pagenum>")
 def page_show(pagenum):
    page = Page.pages[int(pagenum)]
    if oso.is_allowed(
