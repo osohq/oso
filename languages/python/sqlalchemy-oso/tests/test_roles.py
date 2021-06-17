@@ -1982,7 +1982,7 @@ def test_data_filtering_user_in_role_not(
         };
 
     allow(actor, action, resource) if
-        not Roles.user_in_role(actor, "member", resource);
+        not Roles.actor_can_assume_role(actor, "member", resource);
     """
     oso.load_str(policy)
     oso.roles.synchronize_data()
@@ -2036,7 +2036,7 @@ def test_data_filtering_user_in_role_and(
         repo.org = parent_org;
 
     allow(actor, action, resource) if
-        Roles.user_in_role(actor, "member", resource) and
+        Roles.actor_can_assume_role(actor, "member", resource) and
         resource.id = "osohq";
     """
     oso.load_str(policy)
@@ -2101,7 +2101,7 @@ def test_data_filtering_user_in_role_explicit_or(
         Roles.role_allows(actor, action, resource);
 
     allow(actor, _, resource) if
-        Roles.user_in_role(actor, "member", resource) or
+        Roles.actor_can_assume_role(actor, "member", resource) or
         resource.id = "osohq";
     """
     oso.load_str(policy)
@@ -2159,7 +2159,7 @@ def test_data_filtering_user_in_role_implicit_or(
         };
 
     allow(actor, action, resource) if
-        Roles.user_in_role(actor, "member", resource);
+        Roles.actor_can_assume_role(actor, "member", resource);
     """
     oso.load_str(policy)
     oso.roles.synchronize_data()
@@ -2202,7 +2202,7 @@ def test_data_filtering_combo(
 
     allow(actor, action, resource) if
         role_allows = Roles.role_allows(actor, action, resource) and
-        user_in_role = Roles.user_in_role(actor, "member", resource) and
+        user_in_role = Roles.actor_can_assume_role(actor, "member", resource) and
         role_allows and user_in_role;
     """
     # You can't directly `and` the two Roles calls right now but it does work if you do it like ^
@@ -2301,7 +2301,7 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
     assert len(steve_assignments) == 2
 
 
-def test_user_in_role(
+def test_actor_can_assume_role(
     init_oso, sample_data, Repository, Organization, auth_sessionmaker
 ):
     oso, session = init_oso
@@ -2329,7 +2329,7 @@ def test_user_in_role(
 
 
     allow(actor, "read", repo: Repository) if
-        Roles.user_in_role(actor, "reader", repo);
+        Roles.actor_can_assume_role(actor, "reader", repo);
     """
     oso.load_str(policy)
     oso.roles.synchronize_data()

@@ -2036,7 +2036,7 @@ impl PolarVirtualMachine {
         if let Value::ExternalInstance(external) = self.deep_deref(&object).value() {
             if let Some(repr) = external.repr.clone() {
                 if repr.contains("sqlalchemy_oso.roles.OsoRoles")
-                    && (name.0 == "role_allows" || name.0 == "user_in_role")
+                    && (name.0 == "role_allows" || name.0 == "actor_can_assume_role")
                 {
                     if partial_args.len() + partial_kwargs.len() > 1 {
                         // More than 1 partial arg results in error
@@ -3927,7 +3927,7 @@ mod tests {
             kwargs: None
         });
         let user_in_role_call = term!(Call {
-            name: sym!("user_in_role"),
+            name: sym!("actor_can_assume_role"),
             args: args.clone(),
             kwargs: None
         });

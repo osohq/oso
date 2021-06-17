@@ -782,10 +782,10 @@ class OsoRoles:
                 return self._role_allows(user, action, resource)
 
             @staticmethod
-            def user_in_role(user, role, resource):
+            def actor_can_assume_role(user, role, resource):
                 if self.config is None:
                     self._read_policy()
-                return self._user_in_role(user, role, resource)
+                return self._actor_can_assume_role(user, role, resource)
 
         self.config = None
         self.synced = False
@@ -972,7 +972,7 @@ class OsoRoles:
             user, action, resource, self.role_allow_sql_query, action=action
         )
 
-    def _user_in_role(self, user, role, resource):
+    def _actor_can_assume_role(self, user, role, resource):
         role = parse_role_name(role, type(resource), self.config)
         return self._roles_query(
             user, role, resource, self.user_in_role_sql_query, role=role
@@ -1153,7 +1153,7 @@ def _generate_query_filter(oso, role_method, model):
             list_sql = oso.roles.role_allow_list_filter_queries[resource_type]
             params["action"] = action_or_role
 
-        elif role_method.name == "user_in_role":
+        elif role_method.name == "actor_can_assume_role":
             list_sql = oso.roles.user_in_role_list_filter_queries[resource_type]
             role = parse_role_name(action_or_role, model, oso.roles.config)
             params["role"] = role
