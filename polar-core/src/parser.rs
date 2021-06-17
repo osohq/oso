@@ -363,4 +363,16 @@ mod tests {
             term!(op!(Unify, dict, list))
         );
     }
+
+    #[test]
+    fn duplicate_keys() {
+        let q = r#"{a: 1, a: 2}"#;
+        assert!(matches!(
+            super::parse_query(0, q).expect_err("parse error"),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::DuplicateKey { .. }),
+                ..
+            }
+        ));
+    }
 }

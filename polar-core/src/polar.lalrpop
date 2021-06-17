@@ -143,11 +143,14 @@ Fields<T>: BTreeMap<Symbol, Term> = {
         fields.insert(field.0, field.1);
         fields
     },
-    <mut fields:Fields<T>> "," <tail:Field<T>?> => match tail {
-        None => fields,
+    <loc:@L> <mut fields:Fields<T>> "," <tail:Field<T>?> =>? match tail {
+        None => Ok(fields),
         Some((name, value)) => {
-            fields.insert(name, value);
-            fields
+            let existing = fields.insert(name.clone(), value);
+            if existing.is_some() {
+                return Err(ParseError::User { error: error::ParseError::DuplicateKey { loc, key: name.0 } })
+            }
+            Ok(fields)
         }
     }
 };

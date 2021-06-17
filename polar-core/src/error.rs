@@ -53,7 +53,8 @@ impl PolarError {
                 | ParseError::UnrecognizedToken { loc, .. }
                 | ParseError::ExtraToken { loc, .. }
                 | ParseError::WrongValueType { loc, .. }
-                | ParseError::ReservedWord { loc, .. } => {
+                | ParseError::ReservedWord { loc, .. }
+                | ParseError::DuplicateKey { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -171,6 +172,10 @@ pub enum ParseError {
         term: Term,
         expected: String,
     },
+    DuplicateKey {
+        loc: usize,
+        key: String,
+    },
 }
 
 impl fmt::Display for ErrorContext {
@@ -222,6 +227,9 @@ impl fmt::Display for ParseError {
             ),
             Self::WrongValueType { term, expected, .. } => {
                 write!(f, "Wrong value type: {}. Expected a {}", term, expected)
+            }
+            Self::DuplicateKey { key, .. } => {
+                write!(f, "Duplicate key: {}", key)
             }
         }
     }
