@@ -250,9 +250,13 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
             repo.org = parent_org and
             parent_org matches Org;
 
-        actor_role(actor, role) if
-            role in actor.repo_roles or
-            role in actor.org_roles;
+        actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+            role in actor.repo_roles and
+            role matches {name: role_name, resource: role_resource};
+
+        actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+            role in actor.org_roles and
+            role matches {name: role_name, resource: role_resource};
 
         allow(actor, action, resource) if
             role_allow(actor, action, resource);
@@ -455,9 +459,13 @@ def test_role_namespaces(init_oso, sample_data):
         repo.org = parent_org and
         parent_org matches Org;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -794,9 +802,13 @@ def test_overlapping_permissions(init_oso, sample_data):
         repo.org = parent_org and
         parent_org matches Org;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -837,9 +849,13 @@ def test_homogeneous_role_perm(init_oso, sample_data):
             }
         };
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -869,10 +885,13 @@ def test_homogeneous_role_perm(init_oso, sample_data):
                 permissions: ["list_repos"]
             }
         };
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -913,9 +932,13 @@ def test_parent_child_role_perm(init_oso, sample_data):
         repo.org = parent_org and
         parent_org matches Org;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -959,9 +982,13 @@ def test_parent_child_role_perm(init_oso, sample_data):
         repo.org = parent_org and
         parent_org matches Org;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -1008,9 +1035,13 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -1065,9 +1096,13 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -1100,9 +1135,13 @@ def test_homogeneous_role_implication(init_oso, sample_data):
             }
         };
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -1143,9 +1182,13 @@ def test_homogeneous_role_implication(init_oso, sample_data):
             }
         };
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -1195,9 +1238,13 @@ def test_parent_child_role_implication(init_oso, sample_data):
         repo.org = parent_org and
         parent_org matches Org;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -1241,9 +1288,13 @@ def test_parent_child_role_implication(init_oso, sample_data):
         repo.org = parent_org and
         parent_org matches Org;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -1293,9 +1344,13 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -1346,9 +1401,13 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -1410,9 +1469,13 @@ def test_chained_role_implication(init_oso, sample_data):
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -1485,9 +1548,13 @@ def test_chained_role_implication(init_oso, sample_data):
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -1611,9 +1678,13 @@ def test_assign_remove_user_role(init_oso, sample_data):
             }
         };
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -1794,9 +1865,13 @@ def test_data_filtering_role_allows_not(init_oso, sample_data):
             }
         };
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         not role_allow(actor, action, resource);
@@ -1857,9 +1932,13 @@ def test_data_filtering_role_allows_and(init_oso, sample_data):
         role_allow(actor, action, resource) and
         resource.name = "osohq";
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1924,9 +2003,13 @@ def test_data_filtering_role_allows_explicit_or(init_oso, sample_data):
         role_allow(actor, action, resource) or
         resource.name = "osohq";
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1982,9 +2065,13 @@ def test_data_filtering_role_allows_implicit_or(init_oso, sample_data):
             }
         };
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -2028,9 +2115,13 @@ def test_data_filtering_user_in_role_not(init_oso, sample_data):
     allow(actor, action, resource) if
         not user_in_role(actor, "member", resource);
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
     """
     oso.load_str(policy)
     # TODO: validation
@@ -2088,9 +2179,13 @@ def test_data_filtering_user_in_role_and(init_oso, sample_data):
         user_in_role(actor, "member", resource) and
         resource.name = "osohq";
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
     """
     oso.load_str(policy)
     # TODO: validation
@@ -2158,9 +2253,13 @@ def test_data_filtering_user_in_role_explicit_or(init_oso, sample_data):
         user_in_role(actor, "member", resource) or
         resource.name = "osohq";
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
     """
     oso.load_str(policy)
     # TODO: validation
@@ -2219,9 +2318,13 @@ def test_data_filtering_user_in_role_implicit_or(init_oso, sample_data):
     allow(actor, _, resource) if
         user_in_role(actor, "member", resource);
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
     """
     oso.load_str(policy)
     # TODO: validation
@@ -2266,9 +2369,13 @@ def test_data_filtering_combo(init_oso, sample_data):
         role_allow(actor, action, resource) and
         user_in_role(actor, "member", resource);
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
     """
     oso.load_str(policy)
     # TODO: validation
@@ -2394,9 +2501,13 @@ def test_user_in_role(init_oso, sample_data):
     allow(actor, "read", repo: Repo) if
         user_in_role(actor, "reader", repo);
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
     """
     oso.load_str(policy)
     # TODO: validation
@@ -2543,9 +2654,13 @@ def test_role_allows_with_other_rules(init_oso, sample_data):
     allow(_, _, resource) if resource = 1;
     allow(_, _, resource: Boolean) if resource;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -2617,9 +2732,13 @@ def test_roles_integration(init_oso, sample_data):
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
-    actor_role(actor, role) if
-        role in actor.repo_roles or
-        role in actor.org_roles;
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+        role in actor.repo_roles and
+        role matches {name: role_name, resource: role_resource};
+
+    actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+        role in actor.org_roles and
+        role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
@@ -2735,9 +2854,13 @@ def test_legacy_sam_polar_roles(init_oso, sample_data):
             org = repo.org and
             org matches Org;
 
-        actor_role(actor, role) if
-            role in actor.repo_roles or
-            role in actor.org_roles;
+        actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+            role in actor.repo_roles and
+            role matches {name: role_name, resource: role_resource};
+
+        actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+            role in actor.org_roles and
+            role matches {name: role_name, resource: role_resource};
 
         allow(actor, action, resource) if
             role_allow(actor, action, resource);
@@ -2820,9 +2943,13 @@ def test_perf_polar(init_oso, sample_data):
             }
         };
 
-        actor_role(actor, role) if
-            role in actor.repo_roles or
-            role in actor.org_roles;
+        actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
+            role in actor.repo_roles and
+            role matches {name: role_name, resource: role_resource};
+
+        actor_has_role_for_resource(actor, role_name: String, role_resource: Org) if
+            role in actor.org_roles and
+            role matches {name: role_name, resource: role_resource};
 
         allow(actor, action, resource) if
             role_allow(actor, action, resource);
