@@ -78,7 +78,7 @@ You can tell Oso what requests to accept by providing it with a file full of rul
 
 ## Write an authorization policy
 Here is a typical policy, written in our declarative language, **Polar**.
-It lets any actor with the role `user` read a page, but only lets actors with the role `admin` write to a page.
+It lets any actor with the role `"user"` read a page, but only actors with the role `"admin"` can write to a page.
 
 We can load our example policy from a file with the extension `.polar`.
 
@@ -113,10 +113,11 @@ An _actor_role_ rule expresses the relationship between an actor and a role obje
 The `is_allowed` call in your Python code will look up this rule, so this is required.
 
 A _resource_ rule governs access to a specific resource in your app — for instance, a page, an object, a route, or a database entry.
-Here, there are two possible actions that can be done to a Page: "read" and "write."
-`users` can `read`, but not `write`, to a `Page`.
-`admins` are allowed to `write` to a `Page`.
-The line `implies: ["user"]` says that `admins` can also do anything `users` are allowed to do; that is, `read` a `Page`.
+Here, there are two possible actions that can be done to a `Page`: `"read"` and `"write"`.
+Users can read, but not write, to a `Page`.
+Admins are allowed to write to a `Page`.
+
+The line `implies: ["user"]` says that admins can also do anything users are allowed to do; that is, read a `Page`.
 
 There’s much more you can do with Polar, including defining parent-child relationships — we’re just scratching the surface here.
 
