@@ -13,20 +13,19 @@ Roles can be as simple as User and Admin, or as complex as a management hierarch
 
 ![Diagram showing an application hierarchy with site admins, store owners, and customers](/getting-started/quickstart/images/app-hierarchy.png)
 
-Oso isn’t restricted to roles, though — you can replace any authorization code in your app with an Oso policy.
+Oso isn't restricted to roles, though — you can replace any authorization code in your app with an Oso policy.
 
 Why use Oso?
 - Authorization always starts out simple, but can be increasingly difficult to manage as your app grows.
 - Authorization is security and should be as reliable as possible.
-- If you’re not an authorization expert, Oso’s design will guide you to best practices.
+- If you're not an authorization expert, Oso's design will guide you to best practices.
 
-Oso is a library — it runs alongside your app code and doesn’t make any calls over the network.
-Your data doesn’t leave your server. Oso also doesn’t persist user data inside the library, so you stay in control of your data.
+Oso is a library — it runs alongside your app code and doesn't make any calls over the network.
+Your data doesn't leave your server. Oso also doesn't persist user data inside the library, so you stay in control of your data.
 
-Here’s how data flows between your app and the Oso library:
+Here's how data flows between your app and the Oso library:
 
-[DIAGRAM]
-
+![Diagram showing an application hierarchy with site admins, store owners, and customers](/getting-started/quickstart/images/app-hierarchy.png)
 ## Install the Oso library
 
 ```bash
@@ -35,7 +34,7 @@ pip install --upgrade oso
 ```
 ## Add Oso to your app
 To start, `import` Oso, create an Oso instance, and enable roles.
-(Roles are a new thing in Oso, and they’re hidden behind a feature flag.)
+(Roles are a new thing in Oso, and they're hidden behind a feature flag.)
 
 ```python
 from oso import Oso
@@ -53,8 +52,8 @@ When a request arrives, your application will ask Oso if it should accept the re
 In Oso, these pieces of information are passed to the `is_allowed` call: `is_allowed(actor, action, resource)`.
 `is_allowed` will return `True` or `False`, and your application can choose how to enforce that decision.
 
-That enforcement can happen in the request handler, at the database layer, or in middleware — here, we’ve chosen to enforce in the request handler.
-Here’s a Flask route that displays a page if this user is allowed to read the associated page.
+That enforcement can happen in the request handler, at the database layer, or in middleware — here, we've chosen to enforce in the request handler.
+Here's a Flask route that displays a page if this user is allowed to read the associated page.
 
 ```python
 from flask import Flask
@@ -86,7 +85,7 @@ We can load our example policy from a file with the extension `.polar`.
 oso.load_file("example.polar")
 ```
 
-Here’s the example.polar file:
+Here's the example.polar file:
 
 ```polar
 actor_role(actor, role) if
@@ -119,7 +118,7 @@ Admins are allowed to write to a `Page`.
 
 The line `implies: ["user"]` says that admins can also do anything users are allowed to do; that is, read a `Page`.
 
-There’s much more you can do with Polar, including defining parent-child relationships — we’re just scratching the surface here.
+There's much more you can do with Polar, including defining parent-child relationships — we're just scratching the surface here.
 
 ## Calling back into your Python code
 
