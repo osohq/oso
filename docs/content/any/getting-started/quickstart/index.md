@@ -15,10 +15,8 @@ Roles can be as simple as "user" and "admin", or as complex as a management hier
 
 Oso isn't restricted to roles, though — you can replace any authorization code in your app with an Oso policy.
 
-Why use Oso?
-- Authorization always starts out simple, but can be increasingly difficult to manage as your app grows.
-- Authorization is security and should be as reliable as possible.
-- If you're not an authorization expert, Oso's design will guide you to best practices.
+Why use Oso? Authorization always starts out simple, but can be increasingly
+difficult to manage as your app grows. Oso's design will guide you to best practices.
 
 Oso is a library — it runs alongside your app code and doesn't make any calls over the network.
 Your data doesn't leave your server. Oso also doesn't persist user data inside the library, so you stay in control of your data.
