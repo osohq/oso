@@ -1,4 +1,5 @@
 # Roles 2 tests
+from polar.exceptions import ParserError
 import pytest
 import random
 import string
@@ -483,9 +484,9 @@ def test_duplicate_role_name_same_resource(init_oso):
             }
         };
         """
-    oso.load_str(policy)
-    with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+    with pytest.raises(ParserError):
+        oso.load_str(policy)
+    oso.roles.synchronize_data()
 
 
 def test_duplicate_role_name_different_resources(init_oso, sample_data):
