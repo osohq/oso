@@ -7,6 +7,8 @@ aliases:
 weight: 1
 ---
 
+<!-- TODO: this whole doc is a bit out of date semantically with new roles stuff--worth updating? -->
+
 # Role-Based Access Control (RBAC) Patterns
 
 When managing access to resources within an application, it can be useful to

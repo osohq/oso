@@ -917,7 +917,7 @@ describe('Polar roles', () => {
           role in actor.roles;
 
       allow(actor, action, resource) if
-          role_allow(actor, action, resource);
+          role_allows(actor, action, resource);
     `;
 
     const p = new Polar();
