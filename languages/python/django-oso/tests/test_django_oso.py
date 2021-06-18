@@ -33,9 +33,9 @@ def partial_policy():
 
 @pytest.fixture
 def oso_with_polar_roles_enabled():
+    Oso.load_str('resource(_: String, "string", ["get"], roles);')
     Oso.enable_roles()
     yield Oso
-    Oso._polar_roles_enabled = False
     Oso.clear_rules()
 
 
