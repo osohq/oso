@@ -102,5 +102,5 @@ allow(_user, action, repository: Repository) if
 Two built-in Polar predicates used for implementing [Role-Based Access Control](TODO) have been renamed for
 clarity and consistency.
 
-The `parent(child, parent)` predicate has been renamed to `child_parent(child, parent)`.
+The `parent(child, parent)` predicate has been renamed to `parent_child(parent, child)`.
 The `user_in_role(actor, role, resource)` predicate has been renamed to `actor_can_assume_role(actor, role, resource)`.
