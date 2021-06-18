@@ -58,7 +58,6 @@ fn test_data_conversions() {
     test.qvar_one("c(x)", "x", true);
 
     use oso::PolarValue;
-    //use polar_core::terms::Value;
 
     // TODO: do we want to handle hlists better?
     // e.g. https://docs.rs/hlist/0.1.2/hlist/
@@ -67,7 +66,7 @@ fn test_data_conversions() {
     let mut x = first.get_typed::<Vec<PolarValue>>("x").unwrap();
     assert_eq!(i64::try_from(x.remove(0)).unwrap(), 1);
     assert_eq!(String::try_from(x.remove(0)).unwrap(), "two");
-    assert_eq!(bool::try_from(x.remove(0)).unwrap(), true);
+    assert!(bool::try_from(x.remove(0)).unwrap());
 }
 
 // This logic is changing. Updated when fixed

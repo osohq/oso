@@ -24,6 +24,14 @@ impl Polar {
             .map_err(Error::into)
     }
 
+    #[wasm_bindgen(js_class = Polar, js_name = enableRoles)]
+    pub fn wasm_enable_roles(&self) -> JsResult<()> {
+        self.0
+            .enable_roles()
+            .map_err(Error::from)
+            .map_err(Error::into)
+    }
+
     #[wasm_bindgen(js_class = Polar, js_name = clearRules)]
     pub fn wasm_clear_rules(&self) {
         self.0.clear_rules()

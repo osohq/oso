@@ -66,7 +66,7 @@ def check_for_roles_method(expression: Expression):
             and type(right.args[1]) == Predicate
             and (
                 right.args[1].name == "role_allows"
-                or right.args[1].name == "user_in_role"
+                or right.args[1].name == "actor_can_assume_role"
             )
         )
 

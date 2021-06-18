@@ -8,9 +8,9 @@ description: >-
 draft: true
 ---
 
-## `oso-oso 0.13.0` NEW_VERSION
+## `oso 0.13.0`
 
-### Ruby (e.g., 'Core' or 'Python' or 'Node.js')
+### Ruby
 
 #### Breaking changes
 
@@ -47,24 +47,60 @@ first = query.first
 # first is nil if there are no results
 ```
 
+### Core
 
+#### Breaking changes
 
-##### Breaking change 1
+Attempting to create a dictionary with a repeated key is now a parser error.
+Previously, the first (key, value) pair would be taken and the others would
+be dropped.
 
-Summary of breaking change.
+Before:
 
-Link to [migration guide]().
+```polar
+query> d = {a: 1, a: 2}
+d = {'a': 1}
+```
 
-#### New features
+After:
 
-##### Feature 1
-
-Summary of user-facing changes.
-
-Link to [relevant documentation section]().
+```polar
+query> d = {a: 1, a: 2}
+ParserError
+Duplicate key: a at line 1, column 6
+```
 
 #### Other bugs & improvements
 
-- Bulleted list
-- Of smaller improvements
-- Potentially with doc [links]().
+Trailing commas are now supported in dictionaries and lists.
+For example:
+
+```polar
+allow(_user, action, repository: Repository) if
+  action in [
+    "read",
+    "write",
+  ];
+```
+
+
+## `sqlalchemy-oso 0.9.0`
+
+### SQLAlchemy (Python)
+
+#### Breaking changes
+
+<!-- TODO: remove warning and replace with "None" if no breaking changes. -->
+
+{{% callout "Warning" "orange" %}}
+  This release contains breaking changes. Be sure to follow migration steps
+  before upgrading.
+{{% /callout %}}
+
+##### Renamed `parent` and `user_in_role` predicates for Role-Based Access Control policies
+
+Two built-in Polar predicates used for implementing [Role-Based Access Control](TODO) have been renamed for
+clarity and consistency.
+
+The `parent(child, parent)` predicate has been renamed to `child_parent(child, parent)`.
+The `user_in_role(actor, role, resource)` predicate has been renamed to `actor_can_assume_role(actor, role, resource)`.

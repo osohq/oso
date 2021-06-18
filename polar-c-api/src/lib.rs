@@ -430,3 +430,17 @@ pub extern "C" fn query_free(query: *mut Query) -> i32 {
         POLAR_SUCCESS
     })
 }
+
+#[no_mangle]
+pub extern "C" fn polar_enable_roles(polar_ptr: *mut Polar) -> i32 {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        match polar.enable_roles() {
+            Err(err) => {
+                set_error(err);
+                POLAR_FAILURE
+            }
+            Ok(_) => POLAR_SUCCESS,
+        }
+    })
+}

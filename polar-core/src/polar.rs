@@ -126,6 +126,8 @@ impl Iterator for Query {
     }
 }
 
+const ROLES_POLICY: &str = include_str!("roles.polar");
+
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
     messages: MessageQueue,
@@ -296,6 +298,17 @@ impl Polar {
     pub fn next_message(&self) -> Option<Message> {
         self.messages.next()
     }
+
+    /// Load the Polar roles policy idempotently.
+    pub fn enable_roles(&self) -> PolarResult<()> {
+        match self.load(ROLES_POLICY, Some("Built-in Polar Roles Policy".to_owned())) {
+            Err(error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { .. }),
+                ..
+            }) => Ok(()),
+            result => result,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -307,5 +320,16 @@ mod tests {
         let polar = Polar::new();
         let _query = polar.new_query("1 = 1", false);
         let _ = polar.load_str("f(_);");
+    }
+
+    #[test]
+    fn roles_policy_loads_idempotently() {
+        let polar = Polar::new();
+        assert!(polar.enable_roles().is_ok());
+        assert_eq!(polar.loaded_files.read().unwrap().len(), 1);
+        assert_eq!(polar.loaded_content.read().unwrap().len(), 1);
+        assert!(polar.enable_roles().is_ok());
+        assert_eq!(polar.loaded_files.read().unwrap().len(), 1);
+        assert_eq!(polar.loaded_content.read().unwrap().len(), 1);
     }
 }

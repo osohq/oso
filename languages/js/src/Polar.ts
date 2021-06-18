@@ -87,6 +87,18 @@ export class Polar {
   }
 
   /**
+   * Enable Oso's built-in roles feature.
+   */
+  enableRoles() {
+    const helpers = {
+      join: (sep: string, l: string, r: string) => [l, r].join(sep),
+    };
+    this.registerConstant(helpers, '__oso_internal_roles_helpers__');
+    this.#ffiPolar.enableRoles();
+    this.processMessages();
+  }
+
+  /**
    * Clear rules from the Polar KB, but
    * retain all registered classes and constants.
    */

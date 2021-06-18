@@ -3,7 +3,6 @@
 __version__ = "0.12.4"
 
 import os
-from pathlib import Path
 from polar import Polar, Variable, exceptions
 
 
@@ -42,9 +41,6 @@ class Oso(Polar):
             return True
         except StopIteration:
             return False
-
-    def enable_roles(self):
-        self.load_file(Path(__file__).parent / "roles.polar")
 
     def get_allowed_actions(self, actor, resource, allow_wildcard=False) -> list:
         """Determine the actions ``actor`` is allowed to take on ``resource``.

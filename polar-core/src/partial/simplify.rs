@@ -668,6 +668,7 @@ mod test {
     /// Ensure that debug flags are false. Do not remove this test. It is here
     /// to ensure we don't release with debug logs or performance tracking enabled.
     #[test]
+    #[allow(clippy::bool_assert_comparison)]
     fn test_debug_off() {
         assert_eq!(SIMPLIFY_DEBUG, false);
         assert_eq!(TRACK_PERF, false);
