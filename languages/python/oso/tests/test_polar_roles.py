@@ -138,10 +138,6 @@ def sample_data(init_oso):
 # - Passing a bad declarative_base to OsoRoles raises an exception
 
 
-def test_oso_roles_init(init_oso):
-    oso, session = init_oso
-
-
 # TEST RESOURCE CONFIGURATION
 # Role declaration:
 # - [x] duplicate role name throws an error
