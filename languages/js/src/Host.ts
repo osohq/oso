@@ -3,22 +3,29 @@ import {
   PolarError,
   UnregisteredClassError,
   UnregisteredInstanceError,
-  UnexpectedPolarTypeError,
 } from './errors';
 import { ancestors, repr } from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
+import { Expression } from './Expression';
+import { Pattern } from './Pattern';
 import { Predicate } from './Predicate';
 import { Variable } from './Variable';
-import type { Class, EqualityFn, obj, PolarTerm } from './types';
-import { PolarOperator } from './types';
+import type {
+  Class,
+  EqualityFn,
+  obj,
+  PolarComparisonOperator,
+  PolarTerm,
+} from './types';
 import {
-  isPolarStr,
-  isPolarNum,
   isPolarBool,
-  isPolarList,
   isPolarDict,
+  isPolarExpression,
   isPolarInstance,
+  isPolarList,
+  isPolarNum,
   isPolarPredicate,
+  isPolarStr,
   isPolarVariable,
 } from './types';
 
@@ -195,25 +202,28 @@ export class Host {
    * @internal
    */
   async externalOp(
-    op: PolarOperator,
-    left: PolarTerm,
-    right: PolarTerm
+    op: PolarComparisonOperator,
+    leftTerm: PolarTerm,
+    rightTerm: PolarTerm
   ): Promise<boolean> {
-    const leftjs = await this.toJs(left);
-    const rightjs = await this.toJs(right);
+    const left = await this.toJs(leftTerm);
+    const right = await this.toJs(rightTerm);
     switch (op) {
-      case PolarOperator.Eq:
-        return this.#equalityFn(leftjs, rightjs);
-      case PolarOperator.Geq:
-        return leftjs >= rightjs;
-      case PolarOperator.Gt:
-        return leftjs > rightjs;
-      case PolarOperator.Leq:
-        return leftjs <= rightjs;
-      case PolarOperator.Lt:
-        return leftjs < rightjs;
-      case PolarOperator.Neq:
-        return !this.#equalityFn(leftjs, rightjs);
+      case 'Eq':
+        return this.#equalityFn(left, right);
+      case 'Geq':
+        return left >= right;
+      case 'Gt':
+        return left > right;
+      case 'Leq':
+        return left <= right;
+      case 'Lt':
+        return left < right;
+      case 'Neq':
+        return !this.#equalityFn(left, right);
+      default:
+        const _: never = op;
+        return _;
     }
   }
 
@@ -326,13 +336,19 @@ export class Host {
       const i = this.getInstance(t.ExternalInstance.instance_id);
       return i instanceof Promise ? await i : i;
     } else if (isPolarPredicate(t)) {
-      let { name, args } = t.Call;
-      args = await Promise.all(args.map(async a => await this.toJs(a)));
+      const { name, args: argTerms } = t.Call;
+      const args = await Promise.all(argTerms.map(a => this.toJs(a)));
       return new Predicate(name, args);
     } else if (isPolarVariable(t)) {
       return new Variable(t.Variable);
+    } else if (isPolarExpression(t)) {
+      // TODO(gj): Only allow expressions if the flag has been frobbed.
+      const { operator, args: argTerms } = t.Expression;
+      const args = await Promise.all(argTerms.map(a => this.toJs(a)));
+      return new Expression(operator, args);
     } else {
-      throw new UnexpectedPolarTypeError();
+      const _: never = t;
+      return _;
     }
   }
 }

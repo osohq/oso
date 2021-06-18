@@ -19,13 +19,16 @@ export function isPolarStr(v: PolarValue): v is PolarStr {
 
 /**
  * Type guard to test if a string received from across the WebAssembly
- * boundary is a PolarOperator.
+ * boundary is a PolarComparisonOperator.
  *
  * @internal
  */
-export function isPolarOperator(s: string): s is PolarOperator {
-  return s in PolarOperator;
+export function isPolarComparisonOperator(
+  s: string
+): s is PolarComparisonOperator {
+  return s in comparisonOperators;
 }
+
 /**
  * Polar numeric type.
  *
@@ -178,6 +181,18 @@ interface PolarInstance {
 }
 
 /**
+ * Polar expression type.
+ *
+ * @internal
+ */
+interface PolarExpression {
+  Expression: {
+    args: PolarTerm[];
+    operator: PolarOperator;
+  };
+}
+
+/**
  * Type guard to test if a Polar value received from across the WebAssembly
  * boundary is a Polar application instance.
  *
@@ -185,6 +200,16 @@ interface PolarInstance {
  */
 export function isPolarInstance(v: PolarValue): v is PolarInstance {
   return (v as PolarInstance).ExternalInstance !== undefined;
+}
+
+/**
+ * Type guard to test if a Polar value received from across the WebAssembly
+ * boundary is a Polar expression.
+ *
+ * @internal
+ */
+export function isPolarExpression(v: PolarValue): v is PolarExpression {
+  return (v as PolarExpression).Expression !== undefined;
 }
 
 /**
@@ -200,7 +225,8 @@ type PolarValue =
   | PolarDict
   | PolarPredicate
   | PolarVariable
-  | PolarInstance;
+  | PolarInstance
+  | PolarExpression;
 
 /**
  * Union of Polar value types.
@@ -227,7 +253,8 @@ function isPolarValue(v: any): v is PolarValue {
     isPolarDict(v) ||
     isPolarPredicate(v) ||
     isPolarVariable(v) ||
-    isPolarInstance(v)
+    isPolarInstance(v) ||
+    isPolarExpression(v)
   );
 }
 
@@ -321,21 +348,50 @@ export interface ExternalIsa {
 }
 
 /**
- * Polar operators.
+ * Polar comparison operators.
  *
- * Currently, the only operators supported for external operations are
- * comparison operators.
+ * Currently, these are the only operators supported for external operations.
  *
  * @internal
  */
-export enum PolarOperator {
-  Eq = 'Eq',
-  Geq = 'Geq',
-  Gt = 'Gt',
-  Leq = 'Leq',
-  Lt = 'Lt',
-  Neq = 'Neq',
-}
+const comparisonOperators = {
+  Eq: 'Eq',
+  Geq: 'Geq',
+  Gt: 'Gt',
+  Leq: 'Leq',
+  Lt: 'Lt',
+  Neq: 'Neq',
+} as const;
+export type PolarComparisonOperator = keyof typeof comparisonOperators;
+
+/**
+ * Polar operators.
+ *
+ * @internal
+ */
+const operators = {
+  Add: 'Add',
+  And: 'And',
+  Assign: 'Assign',
+  Cut: 'Cut',
+  Debug: 'Debug',
+  Div: 'Div',
+  Dot: 'Dot',
+  ForAll: 'ForAll',
+  In: 'In',
+  Isa: 'Isa',
+  Mod: 'Mod',
+  Mul: 'Mul',
+  New: 'New',
+  Not: 'Not',
+  Or: 'Or',
+  Print: 'Print',
+  Rem: 'Rem',
+  Sub: 'Sub',
+  Unify: 'Unify',
+  ...comparisonOperators,
+} as const;
+export type PolarOperator = keyof typeof operators;
 
 /**
  * The `ExternalOp` [[`QueryEvent`]] is how Polar evaluates an operation
@@ -346,7 +402,7 @@ export enum PolarOperator {
 export interface ExternalOp {
   args: PolarTerm[];
   callId: number;
-  operator: PolarOperator;
+  operator: PolarComparisonOperator;
 }
 
 /**

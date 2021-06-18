@@ -105,9 +105,9 @@ export class UnregisteredInstanceError extends PolarError {
 }
 
 export class UnexpectedPolarTypeError extends PolarError {
-  constructor() {
+  constructor(ty: any) {
     // Doesn't have a tag because it doesn't seem we get this from the wasm API.
-    super('Unexpected polar type.');
+    super(`Unexpected polar type: ${ty}`);
     Object.setPrototypeOf(this, UnexpectedPolarTypeError.prototype);
   }
 }

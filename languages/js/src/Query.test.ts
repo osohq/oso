@@ -41,12 +41,12 @@ describe('#registerCall', () => {
     p.registerConstant(sync, 'sync');
 
     expect(await qvar(p, 'sync.undefined = x', 'x', true)).toBeUndefined();
-    expect(query(p, 'sync.undefined()')).rejects.toThrow(
+    await expect(query(p, 'sync.undefined()')).rejects.toThrow(
       '.undefined is not a function at line 1, column 1'
     );
 
     expect(await qvar(p, 'sync.null = x', 'x', true)).toBeNull();
-    expect(query(p, 'sync.null()')).rejects.toThrow(
+    await expect(query(p, 'sync.null()')).rejects.toThrow(
       '.null is not a function at line 1, column 1'
     );
 
@@ -70,7 +70,7 @@ describe('#registerCall', () => {
     expect(await qvar(p, 'sync.arrowFn() = x', 'x')).toStrictEqual([[1, 2, 3]]);
 
     expect(await qvar(p, 'x in sync.iterator', 'x')).toStrictEqual([1, 2, 3]);
-    expect(query(p, 'sync.iterator()')).rejects.toThrow(
+    await expect(query(p, 'sync.iterator()')).rejects.toThrow(
       '.iterator is not a function at line 1, column 1'
     );
 
@@ -85,36 +85,36 @@ describe('#registerCall', () => {
       sync.array
     );
     expect(await qvar(p, 'x in sync.array', 'x')).toStrictEqual(sync.array);
-    expect(query(p, 'sync.array()')).rejects.toThrow(
+    await expect(query(p, 'sync.array()')).rejects.toThrow(
       '.array is not a function at line 1, column 1'
     );
 
     expect(await qvar(p, 'sync.object = x', 'x')).toStrictEqual([sync.object]);
-    expect(query(p, 'sync.object()')).rejects.toThrow(
+    await expect(query(p, 'sync.object()')).rejects.toThrow(
       '.object is not a function at line 1, column 1'
     );
 
     expect(await qvar(p, 'x in sync.validCustomIterator', 'x')).toStrictEqual([
       1, 2, 3,
     ]);
-    expect(query(p, 'sync.validCustomIterator()')).rejects.toThrow(
+    await expect(query(p, 'sync.validCustomIterator()')).rejects.toThrow(
       '.validCustomIterator is not a function at line 1, column 1'
     );
 
     expect(
       await qvar(p, 'sync.invalidCustomIterator = x', 'x', true)
     ).toStrictEqual(sync.invalidCustomIterator);
-    expect(query(p, 'sync.invalidCustomIterator()')).rejects.toThrow(
+    await expect(query(p, 'sync.invalidCustomIterator()')).rejects.toThrow(
       '.invalidCustomIterator is not a function at line 1, column 1'
     );
 
     expect(await qvar(p, 'sync.map = x', 'x', true)).toStrictEqual(sync.map);
-    expect(query(p, 'sync.map()')).rejects.toThrow(
+    await expect(query(p, 'sync.map()')).rejects.toThrow(
       '.map is not a function at line 1, column 1'
     );
 
     expect(await qvar(p, 'sync.set = x', 'x', true)).toStrictEqual(sync.set);
-    expect(query(p, 'sync.set()')).rejects.toThrow(
+    await expect(query(p, 'sync.set()')).rejects.toThrow(
       '.set is not a function at line 1, column 1'
     );
   });

@@ -3,7 +3,11 @@ import { inspect } from 'util';
 const _readFile = require('fs')?.readFile;
 
 import { InvalidQueryEventError, KwargsError, PolarError } from './errors';
-import { isPolarTerm, isPolarOperator, QueryEventKind } from './types';
+import {
+  isPolarComparisonOperator,
+  isPolarTerm,
+  QueryEventKind,
+} from './types';
 import type { obj, QueryEvent } from './types';
 
 /**
@@ -227,7 +231,7 @@ function parseExternalOp({ call_id: callId, args, operator }: obj): QueryEvent {
         args.some((a: unknown) => !isPolarTerm(a))))
   )
     throw new Error();
-  if (!isPolarOperator(operator))
+  if (!isPolarComparisonOperator(operator))
     throw new PolarError(
       `Unsupported external operation '${repr(args[0])} ${operator} ${repr(
         args[1]
