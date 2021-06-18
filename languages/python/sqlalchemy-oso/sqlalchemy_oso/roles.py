@@ -463,7 +463,8 @@ def read_config(oso):
             config.relationships.append(relationship)
         except AssertionError:
             raise OsoError(
-                f"Invalid relationship. All relationships must take the form:\n```\nparent_child(parent: ParentClass, child: ChildClass) if\n\tchild.parent_attr = parent;\n```"
+                """Invalid relationship. All relationships must take the form:
+        ```\nparent_child(parent: ParentClass, child: ChildClass) if\n\tchild.parent_attr = parent;\n```"""
             )
 
     # Register resources / permissions / roles and implications
