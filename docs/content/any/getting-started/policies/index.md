@@ -515,6 +515,7 @@ because the `is_allowed` function generates queries of the form
 whatever you like, and use them from within your `allow` rules.
 For instance a rule that handles roles might look like this:
 
+<!-- TODO: We should update these rules to reflect our current role policy semantics. -->
 ```polar
 allow(user, action, resource) if
     resource_role_applies_to(resource, role_resource) and

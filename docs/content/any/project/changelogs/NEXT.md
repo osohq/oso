@@ -10,7 +10,7 @@ draft: true
 
 ## `oso 0.13.0`
 
-### Ruby (e.g., 'Core' or 'Python' or 'Node.js')
+### Ruby
 
 #### Breaking changes
 
@@ -47,7 +47,6 @@ first = query.first
 # first is nil if there are no results
 ```
 
-
 ### Core
 
 #### Breaking changes
@@ -83,3 +82,25 @@ allow(_user, action, repository: Repository) if
     "write",
   ];
 ```
+
+
+## `sqlalchemy-oso 0.9.0`
+
+### SQLAlchemy (Python)
+
+#### Breaking changes
+
+<!-- TODO: remove warning and replace with "None" if no breaking changes. -->
+
+{{% callout "Warning" "orange" %}}
+  This release contains breaking changes. Be sure to follow migration steps
+  before upgrading.
+{{% /callout %}}
+
+##### Renamed `parent` and `user_in_role` predicates for Role-Based Access Control policies
+
+Two built-in Polar predicates used for implementing [Role-Based Access Control](TODO) have been renamed for
+clarity and consistency.
+
+The `parent(child, parent)` predicate has been renamed to `child_parent(child, parent)`.
+The `user_in_role(actor, role, resource)` predicate has been renamed to `actor_can_assume_role(actor, role, resource)`.

@@ -2032,11 +2032,11 @@ impl PolarVirtualMachine {
             return Ok(None);
         }
 
-        // TODO: temprorary fix--If there are partial args, they must be called on `role_allows` or `user_in_role`
+        // TODO: temprorary fix--If there are partial args, they must be called on `role_allows` or `actor_can_assume_role`
         if let Value::ExternalInstance(external) = self.deep_deref(&object).value() {
             if let Some(repr) = external.repr.clone() {
                 if repr.contains("sqlalchemy_oso.roles.OsoRoles")
-                    && (name.0 == "role_allows" || name.0 == "user_in_role")
+                    && (name.0 == "role_allows" || name.0 == "actor_can_assume_role")
                 {
                     if partial_args.len() + partial_kwargs.len() > 1 {
                         // More than 1 partial arg results in error
@@ -3926,8 +3926,8 @@ mod tests {
             args: args.clone(),
             kwargs: None
         });
-        let user_in_role_call = term!(Call {
-            name: sym!("user_in_role"),
+        let actor_can_assume_role_call = term!(Call {
+            name: sym!("actor_can_assume_role"),
             args: args.clone(),
             kwargs: None
         });
@@ -3948,14 +3948,14 @@ mod tests {
                 })
             ))
         ));
-        let user_in_role_constraint_term = term!(op!(
+        let actor_can_assume_role_constraint_term = term!(op!(
             Unify,
             value.clone(),
             term!(op!(
                 Dot,
                 object.clone(),
                 term!(Call {
-                    name: sym!("user_in_role"),
+                    name: sym!("actor_can_assume_role"),
                     args: vec![
                         term!(value!("Leina")),
                         term!(value!("read")),
@@ -3975,12 +3975,12 @@ mod tests {
         // Test adding the actual constraint
         vm.add_constraint(&res_val).unwrap();
 
-        // Test user_in_role
+        // Test actor_can_assume_role
         let res_val = vm
-            .check_partial_args(&object, &user_in_role_call, &value)
+            .check_partial_args(&object, &actor_can_assume_role_call, &value)
             .unwrap()
             .unwrap();
-        assert_eq!(res_val, user_in_role_constraint_term);
+        assert_eq!(res_val, actor_can_assume_role_constraint_term);
         // Test adding the actual constraint
         vm.add_constraint(&res_val).unwrap();
 
