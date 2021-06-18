@@ -9,48 +9,30 @@ description: >
 
 When managing access to resources within an application, it can be useful to
 group permissions into **roles**, and assign these roles to users. This is
-known as **Role-Based Access Control (RBAC).** The SQLAlchemy roles
-library extends the `Oso` core library with built in configuration,
-data modeling and enforcement of role-based access control.
+known as **Role-Based Access Control (RBAC).** The `Oso` core library
+comes with built in configuration for role-based access control.
 
 In this guide, we'll walk through the basics of starting to use the
-SQLAlchemy roles library, using the
-[GitClub](https://github.com/osohq/gitclub-sqlalchemy-flask-react)
-application as an example. GitClub is a SPA (single-page application)
-that uses Flask and SQLAlchemy for the backend, with a React frontend.
-To install **GitClub** to run alongside this tutorial, follow the
-[`README`](https://github.com/osohq/gitclub-sqlalchemy-flask-react#readme).
+roles feature.
 
 
 ## Setting up the Oso Instance
 
-{{% callout "Already using sqlalchemy-oso?" "blue" %}}
-
-We're going to cover some of the basics of using Oso and the
-`sqlalchemy-oso` library. If you're already familiar with this [skip
-ahead to configuring
-roles](#controlling-access-with-roles).
-
-{{% /callout %}}
-
-<!-- @TODO(gj): (nit) dissonance between 'our' & 'your' throughout this doc. -->
-
-Oso is a library that we use in our application for authorization. It
-requires no additional infrastructure. Instead, the SQLAlchemy library
-helps you authorize data in your existing data store. Data required for
-authorization (like role assignment) is stored in the same database as
-the rest of your application data.
 
 First, we'll cover some of the basics of integrating Oso into your
 application.
 
-The `sqlalchemy_oso.SQLAlchemyOso` class is the entrypoint to using Oso in our
-SQLAlchemy application. We usually will have a global instance that is created
+The `oso.Oso` class is the entrypoint to using Oso in our application.
+We usually will have a global instance that is created
 during application initialization and shared across requests. In a Flask
 application, you may attach this instance to the global flask object, or the
 current application if it needs to be accessed outside of the application
 initialization process.
 
+```py
+
+
+```
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
     from="docs: begin-init-oso"
@@ -178,7 +160,7 @@ to all _read_ queries.
 
 The authorized session is used for fetching data from the database that
 must be limited to the current user. When performing authorization, Oso
-uses [data filtering](../../guides/data_access) to translate the
+uses [data filtering](/guides/data_access) to translate the
 policy's rules into a SQLAlchemy query. Only authorized objects will be
 fetched from the database.
 

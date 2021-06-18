@@ -24,7 +24,7 @@ $ pip install flask-oso
 
 We just released the next version of our roles library.
 
-[Check it out here!](/new-roles/flask)
+[Check it out here!](/guides/roles)
 
 {{% /callout %}}
 

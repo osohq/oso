@@ -3,7 +3,7 @@
     <div id="header-page-title" class="flex-grow">
         <p class="text-white font-base text-sm  text-center truncate">
             {{ if eq $.Page.Language.Lang "python" }}
-            Adding roles to your app? <a class="underline" href="{{ ref . " /guides/new-roles" }}">Try our new roles
+            Adding roles to your app? <a class="underline" href="{{ ref . " /guides/roles" }}">Try our new roles
                 library</a>.
             {{ else }}
             Want to get started? Jump into <a class="underline" href="https://join-slack.osohq.com">our Slack</a> and an
@@ -68,8 +68,8 @@
                 </button>
             </a>
             {{ $downloadUrl := $.Site.GetPage "/reference/lib" }}
-            {{ if eq .Section "new-roles" }}
-            {{ $downloadUrl = $.Site.GetPage "/new-roles/install" }}
+            {{ if eq .Section "roles" }}
+            {{ $downloadUrl = $.Site.GetPage "/guides/roles/sqlalchemy/install" }}
             {{ end }}
             <a href="{{ $downloadUrl.RelPermalink }}">
                 <button class=" nav-btn bg-yellow text-black tooltip">

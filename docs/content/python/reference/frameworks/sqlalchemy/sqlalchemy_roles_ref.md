@@ -15,7 +15,7 @@ This guide covers our old implementation of roles. It is still available as `rol
 
 We have released a new version of our roles library for SQLAlchemy.
 
-[Check it out here!](/new-roles)
+[Check it out here!](/guides/roles/sqlalchemy)
 
 {{% /callout %}}
 
@@ -28,7 +28,7 @@ defined, instead of writing rules over users directly.
 
 This feature is currently supported in [the SQLAlchemy library]({{< relref
 path="reference/frameworks/sqlalchemy" lang="python" >}}). If you want to get started with
-SQLAlchemy roles right away, check out [our tutorial](sqlalchemy_roles).
+SQLAlchemy roles right away, check out [our tutorial](/guides/roles/sqlalchemy).
 
 For a more in-depth understanding of roles, check out our guide to [Role-Based
 Access Control (RBAC) patterns](learn/roles).

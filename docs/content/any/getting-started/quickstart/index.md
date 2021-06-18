@@ -186,7 +186,7 @@ will help you out.
 {{% callout "What's next" "blue" %}}
 
 - Explore how to [add Oso to an application](application).
-- [Use Oso Roles](/guides/new-roles) to add Role-Based Access Control to your application
+- [Use Oso Roles](/guides/roles) to add Role-Based Access Control to your application
 - Dive into [writing policies](policies) in detail.
 
 {{% /callout %}}

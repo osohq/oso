@@ -43,6 +43,6 @@ frameworks and ORMS.
 We just released the next version of our roles
 library.
 
-[Check it out here!](/guides/new-roles)
+[Check it out here!](/guides/roles)
 
 {{% /callout %}}

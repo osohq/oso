@@ -18,36 +18,48 @@ The roles library includes:
   permissions for each resource. The roles configuration supports
   multi-tenancy, resource-specific roles, and hierarchical roles. Groups
   and custom roles are coming soon.
-- **Data management** - Manage user role assignments in your database,
-  linking with your resource data.
 - **Enforcement** - Enforce authorization consistently throughout your
   application routing and data access layers.
-- **End-user configuration** - Expose authorization configuration to
-  end users using Oso's role data API.
 - **Last-mile customizations** - Extend authorization logic for each resource
   by writing custom policies using Polar, Oso's declarative policy
   language.
 
 {{% ifLang "python" %}}
+## SQLAlchemy
+
+If you are using SQLAlchemy for managing your application data, you
+can use the `sqlalchemy-oso` framework integration to additionally handle:
+
+- **Data management** - Manage user role assignments in your database,
+  linking with your resource data.
+- **End-user configuration** - Expose authorization configuration to
+  end users using Oso's role data API.
+
+[Check out the library documentation for SQLAlchemy](./sqlalchemy/getting-started)
+
+
+{{% /ifLang %}}
+
+{{% ifLang "node" %}}
 
 ## Get started
-
-{{< tryInFramework >}}
 
 {{% /ifLang %}}
 
 {{< ifLangExists >}}
+{{% ifLang not="node" %}}
 {{% ifLang not="python" %}}
 
 ## Get started
 
 The Oso Roles library is coming soon for {{< lang >}}! {{< /lang >}}
 
-For now, you can [check out the library documentation for Python]({{< ref path="/new-roles" lang="python" >}}) or read our [guide on role modeling in Polar](/learn/roles).
+For now, you can [check out the library documentation for Python]({{< ref path="/guides/roles/sqlalchemy" lang="python" >}}) or read our [guide on role modeling in Polar](/learn/roles).
 
 If you want to get roles working in your app now or just want to
 register your interest for an Oso Roles library in {{< lang >}} [drop into our Slack](http://join-slack.osohq.com) or
 <a href="mailto:engineering@osohq.com?subject=Roles%20support%20for%20{{< currentLanguage >}}&body=I%27m%20interested%20in%20Oso%20roles%20support%20for%20{{< currentLanguage >}}">send an email</a>
 to our engineering team and we'll unblock you.
+{{% /ifLang %}}
 {{% /ifLang %}}
 {{% /ifLangExists %}}

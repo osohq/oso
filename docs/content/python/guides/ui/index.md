@@ -136,7 +136,7 @@ With this relatively straightforward policy, it's easy to trace where
 the users' allowed actions come from. But `Oso.get_allowed_actions()`
 can be especially powerful with more complicated policies. For example,
 if we used Oso's [SQLAlchemy Roles library
-features](guides/roles/sqlalchemy_roles),
+features](guides/roles/sqlalchemy),
 we could have a policy that looks like this instead:
 
 ```python

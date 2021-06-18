@@ -16,7 +16,7 @@ Role-Based Access Control.
 
 We just released the next version of our roles library.
 
-[Check it out here!](/new-roles)
+[Check it out here!](/guides/roles/sqlalchemy)
 
 {{% /callout %}}
 
@@ -31,7 +31,7 @@ $ pip install sqlalchemy-oso
 
 ## Usage
 
-See the [data filtering guide](guides/data_access/sqlalchemy) and [roles guide](guides/new-roles) for usage information.
+See the [data filtering guide](guides/data_access/sqlalchemy) and [roles guide](guides/roles) for usage information.
 
 ## API Reference
 
@@ -40,6 +40,6 @@ is automatically generated from the Oso SQLAlchemy library source files.
 
 ## Roles Reference
 
-The [SQLAlchemy Roles Reference](/new-roles) has more details on the library's built-in roles features. 
+The [SQLAlchemy Roles Reference](/guides/roles/sqlalchemy) has more details on the library's built-in roles features. 
 
 

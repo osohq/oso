@@ -43,7 +43,7 @@ allow(actor, action, resource) if
 Oso Roles provides built in support for role configuration, role data
 management and more.
 
-[Check it out here!](/guides/new-roles)
+[Check it out here!](/guides/roles)
 
 Or, keep reading to learn how to model roles in Polar using your own
 existing roles data management.
@@ -477,7 +477,7 @@ user_in_role_for_resource(user: User, "admin", resource: Repository) if
 
 {{< ifLang "python" >}}
 - Learn how to use roles with
-[SQLAlchemy](guides/roles/sqlalchemy_roles).
+[SQLAlchemy](guides/roles/sqlalchemy).
 {{< /ifLang >}}
 
 - Check out our [How-To Guides](guides) for more on using Polar
