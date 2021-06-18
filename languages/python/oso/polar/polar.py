@@ -158,8 +158,7 @@ class Polar:
 
     def clear_rules(self):
         self.ffi_polar.clear_rules()
-        if self._polar_roles_enabled:
-            self.ffi_polar.enable_roles()
+        self._polar_roles_enabled = False
 
     def query(self, query, *, bindings=None, accept_expression=False):
         """Query for a predicate, parsing it if necessary.

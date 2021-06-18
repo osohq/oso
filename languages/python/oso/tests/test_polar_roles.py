@@ -864,10 +864,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
     allow(actor, action, resource) if
         role_allow(actor, action, resource);
     """
-
     oso.clear_rules()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
     oso.load_str(new_policy)
     oso.enable_roles()
 
