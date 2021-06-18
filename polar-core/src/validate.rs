@@ -246,7 +246,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                     let role = Role {
                         name: role_name.clone(),
                         typ: typ.clone(),
-                        actions: actions,
+                        actions,
                         implied_roles: implications,
                     };
                     if role_definitions.contains_key(&role_name) {
@@ -268,18 +268,13 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
         let resource = Resource {
             typ: typ.clone(),
             name: name.clone(),
-            actions: actions,
+            actions,
             roles: role_definitions,
         };
         if resources.contains_key(&name) {
             return Err(ValidationError(format!("Duplicate resource name {}.", name)).into());
         }
         resources.insert(name, resource);
-
-        eprintln!(
-            "{:?}\n{:?}\n{:?}\n{:?}",
-            resource_def, resource_name, resource_actions, resource_roles
-        );
     }
 
     Ok(())
