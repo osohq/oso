@@ -48,7 +48,7 @@ fn kind(err: &PolarError) -> String {
         Operational(Unknown) => "OperationalError::Unknown",
         Operational(InvalidState(..)) => "OperationalError::InvalidState",
         Parameter(ParameterError(..)) => "ParameterError::ParameterError",
-        Validation(RolesValidationError(..)) => "RolesValidationError::RolesValidationError",
+        RolesValidation(RolesValidationError(..)) => "RolesValidationError::RolesValidationError",
     }
     .to_owned()
 }

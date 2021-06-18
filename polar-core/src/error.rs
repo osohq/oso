@@ -33,7 +33,7 @@ pub enum ErrorKind {
     Runtime(RuntimeError),
     Operational(OperationalError),
     Parameter(ParameterError),
-    Validation(RolesValidationError),
+    RolesValidation(RolesValidationError),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -118,7 +118,7 @@ impl From<ParameterError> for PolarError {
 impl From<RolesValidationError> for PolarError {
     fn from(err: RolesValidationError) -> Self {
         Self {
-            kind: ErrorKind::Validation(err),
+            kind: ErrorKind::RolesValidation(err),
             context: None,
         }
     }
@@ -135,7 +135,7 @@ impl fmt::Display for PolarError {
             ErrorKind::Runtime(e) => write!(f, "{}", e)?,
             ErrorKind::Operational(e) => write!(f, "{}", e)?,
             ErrorKind::Parameter(e) => write!(f, "{}", e)?,
-            ErrorKind::Validation(e) => write!(f, "{}", e)?,
+            ErrorKind::RolesValidation(e) => write!(f, "{}", e)?,
         }
         if let Some(ref context) = self.context {
             write!(f, "{}", context)?;
