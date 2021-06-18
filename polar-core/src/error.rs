@@ -361,6 +361,6 @@ pub struct ValidationError(pub String);
 
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Config Validation Error: {}", self.0)
+        write!(f, "Oso Roles Validation Error: {}", self.0)
     }
 }

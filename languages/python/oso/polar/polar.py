@@ -119,8 +119,8 @@ class Polar:
             # turn bindings back into polar
             for results in validation_query_results:
                 for result in results:
-                    for k in result["bindings"]:
-                        result["bindings"][k] = host.to_polar(result["bindings"][k])
+                    for k, v in result["bindings"].items():
+                        result["bindings"][k] = host.to_polar(v)
 
             self.ffi_polar.validate_roles_config(validation_query_results)
 
