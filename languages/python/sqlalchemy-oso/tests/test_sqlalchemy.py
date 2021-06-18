@@ -23,6 +23,7 @@ def log_queries():
 
 
 def test_cannot_use_data_filtering_if_polar_roles_enabled(engine, oso):
+    Oso.load_str('resource(_: String, "string", ["get"], roles);')
     oso.enable_roles()
     with pytest.raises(UnsupportedError, match="Polar roles"):
         AuthorizedSession(oso, "user", {}, bind=engine)
