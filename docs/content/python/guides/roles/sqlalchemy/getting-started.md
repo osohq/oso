@@ -2,7 +2,7 @@
 title: Getting started
 weight: 2
 description: >
-    Getting started with Oso Roles
+    Get started with Oso Roles
 ---
 
 # Getting started

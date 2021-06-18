@@ -2,7 +2,7 @@
 title: Getting started
 weight: 2
 description: >
-    Getting started with Oso Roles
+    Get started with Oso Roles
 ---
 
 # Getting started
@@ -15,9 +15,7 @@ comes with built in configuration for role-based access control.
 In this guide, we'll walk through the basics of starting to use the
 roles feature.
 
-
 ## Setting up the Oso Instance
-
 
 First, we'll cover some of the basics of integrating Oso into your
 application.
@@ -29,47 +27,14 @@ application, you may attach this instance to the global flask object, or the
 current application if it needs to be accessed outside of the application
 initialization process.
 
+In order to enable the built-in roles features, we 
+`oso.Oso.enable_roles` method:
+
 ```py
-
-
+from oso import Oso
+oso = Oso()
+oso.enable_roles()
 ```
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    from="docs: begin-init-oso"
-    to="# Enable roles features."
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
->}}
-
-### Registering authorization data types
-
-Oso policies are written over the data in our application that we'd like to
-authorize. The policy can directly reference the same types we use in our
-application.
-
-Since we are using Oso with SQLAlchemy, we need to make Oso aware of our
-SQLAlchemy models. Typically, we would make Oso aware of our application
-classes by registering them via `Oso.register_class`, but the `sqlalchemy-oso`
-library provides a handy shortcut.
-
-By providing our SQLAlchemy base model to the `sqlalchemy_oso.SQLAlchemyOso`
-constructor, all of our SQLAlchemy models that inherit from `Base` will be
-automatically registered with Oso.
-
-### Enabling built-in roles
-
-In order to enable built-in roles features, we need to pass our app's user
-class as well as a SQLAlchemy `sessionmaker` to the
-`sqlalchemy_oso.SQLAlchemyOso.enable_roles` method:
-
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    from="docs: begin-init-oso"
-    to="# Load authorization policy."
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
-    hlOpts="hl_lines=6"
->}}
 
 ### Loading our policy
 
@@ -80,190 +45,18 @@ code.
 
 Load the policy with the `Oso.load_file` function.
 
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    from="docs: begin-init-oso"
-    to="# Attach SQLAlchemyOso instance to Flask application."
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
-    hlOpts="hl_lines=10-11"
->}}
-
-
-## Writing an authorization rule over a SQLAlchemy model
-
-Now that we've setup Oso, we can write rules in our Polar policy to
-control access to SQLAlchemy models. The entrypoint
-to a policy is the `allow` rule, which specifies when an `actor` can
-perform an `action` on a particular `resource`.
-
-We can write simple rules in our policy, like this one which allows all
-users to create new organizations:
-
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
-    from="docs: org-create-rule"
-    to="end: org-create-rule"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
->}}
-
-This is an `allow` rule. The arguments are the `actor`, `action` and
-`resource` being authorized. Our rule has the following behavior for
-each argument:
-
-- `_: User`: the `actor` argument must have the `User` type. Since the
-  argument is unused we name it `_`.
-- `"create"`: the `action` must match the string literal `"create"`
-- `_: Org`: the `resource` argument must have the `Org` type.
-
-Notice that `User` and `Org` are SQLAlchemy models. We can reference
-these in our policy because we registered them with `register_models`!
-
-For more on policy basics see our [writing policies
-guide](/getting-started/policies).
-
-## Enforcing authorization in our routes
-
-To perform authorization, we use the `Oso.is_allowed` method. Here's an
-example in our Org creation handler:
-
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
-    from="docs: begin-is-allowed"
-    to="docs: end-is-allowed"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
->}}
-
-The policy is consulted to see if there is an `allow` rule that permits
-access for the `actor`, `action` and `resource` arguments passed to
-`is_allowed`. We can access types and attributes of the objects passed
-into our rules from within the policy, just like we can in Python!
-More on this [here]({{< ref
-"/getting-started/policies.md#instances-and-fields" >}}).
-
-## SQLAlchemy Session Setup
-
-Oso integrates with SQLAlchemy [sessions](https://docs.sqlalchemy.org/en/13/orm/session_basics.html#what-does-the-session-do) to authorize access to models.
-
-In a typical application, we may have one SQLAlchemy session per
-request. Often this is accomplished with a session factory that is
-scoped to the [current
-thread](https://docs.sqlalchemy.org/en/13/orm/contextual.html).
-
-When using Oso, you should use `sqlalchemy_oso.authorized_sessionmaker`
-to create _authorized sessions_. An authorized session applies authorization
-to all _read_ queries.
-
-### Using the authorized session
-
-The authorized session is used for fetching data from the database that
-must be limited to the current user. When performing authorization, Oso
-uses [data filtering](/guides/data_access) to translate the
-policy's rules into a SQLAlchemy query. Only authorized objects will be
-fetched from the database.
-
-The authorized session is created using `sqlalchemy_oso.authorized_sessionmaker`.
-The `authorized_sessionmaker` requires as input: the Oso instance, the current user,
-and what permissions to check.
-
-In GitClub, we initialize the session on the application
-
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    from="docs: begin-authorized-session"
-    to="docs: end-authorized-session"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    >}}
-
-provide a helper decorator to define the permissions to check
-
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/helpers.py"
-    from="docs: begin-session-decorator"
-    to="docs: end-session-decorator"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    >}}
-
-and we can then issue regular SQLAlchemy queries to load authorized data in our
-route handlers
-
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/repos.py"
-    from="docs: begin-repo-index"
-    to="docs: end-repo-index"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
-    >}}
-
-### Making a query without authorization
-
-We can make queries without any authorization by setting the `checked_permissions=None`
-parameter. We pass this through in the `@session` decorator:
-
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
-    from="docs: begin-is-allowed"
-    to="docs: end-is-allowed"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
->}}
-
-In this case, we are still able to use the regular `oso.is_allowed` to authorize
-individual actions.
+```py
+oso.load_file("authorization.polar")
+```
 
 ## Controlling access with roles
 
 Now, let's write our first rules that use role based access control. To
 setup the role library, we must:
 
-1. Persist role configuration to our database.
-2. Add role and resource configurations to our policy.
-3. Use the `Roles.role_allows` method in our policy.
-4. Assign roles to users.
-
-### Persisting roles configuration
-
-Oso stores role and permission configuration in your database alongside
-the rest of your SQLAlchemy tables. Additional models are added to your
-`Base` class metadata when calling `SQLAlchemyOso.enable_roles`. The schema for these
-models can be created with [`MetaData.create_all`](https://docs.sqlalchemy.org/en/13/core/metadata.html#sqlalchemy.schema.MetaData.create_all).
-
-In addition to the schema, we still must persist the role configuration
-from the policy into the database. We do this with the
-`OsoRoles.synchronize_data` method. The `synchronize_data` method will
-replace all role configuration to reflect the `resource` definitions in
-the policy.
-
-In our sample app, we call `synchronize_data` in initialization of our app:
-
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
-    from="docs: begin-configure"
-    to="docs: end-configure"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
-    >}}
-
-{{% callout "Going to production" "orange" %}}
-
-Since `OsoRoles.synchronize_data()` performs bulk database operations, a
-production application should call it as part of the deployment process
-in a script.
-
-{{% /callout %}}
-
-{{% callout "Improved role configuration migrations coming soon" "green" %}}
-
-Currently, `OsoRoles.synchronize_data` deletes and replaces all role
-configuration in the database. In a future release, we will have a
-migration tool that only synchronizes changes to the database, and warns
-when removing roles or permissions that are in use.
-
-Roles and permissions are stored in the database to allow creation of
-dynamic role and permission assignments in a future release.
-
-{{% /callout %}}
+1. Add role and resource configurations to our policy.
+2. Use the `role_allows` method in our policy.
+3. Assign roles to users.
 
 ### Configuring our first resource
 
@@ -281,7 +74,7 @@ resource(_type: Org, "org", actions, roles) if
 
 The rule head has 4 parameters:
 
-- `_type` is the SQLAlchemy model the resource definition is associated with.
+- `_type` is the Python class the resource definition is associated with.
 - `"org"` is the identifier for this resource type (this can be any string
   you choose).
 - `actions` are set in the rule body. The `actions` list defines all the
@@ -353,16 +146,12 @@ But, we think the expanded form is clearer.
 
 ### Adding role_allows to our policy
 
-To allow access based on roles, we call `Roles.role_allows` in our
-policy:
+To allow access based on roles, we add the following `allow` rule
 
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
-    from="docs: begin-role-allow"
-    to="docs: end-role-allow"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
->}}
+```polar
+allow(actor, action, resource) if
+    role_allow(actor, action, resource);
+```
 
 Oso will now allow access to any resource that is allowed based on the
 role definitions.
@@ -372,22 +161,60 @@ role definitions.
 Now we've configured roles and setup our policy. For users to have
 access, we must assign them to roles.
 
-{{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/role_assignments.py"
-    from="docs: begin-role-assignment"
-    to="docs: end-role-assignment"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
-    linenos=true
-    hlOpts="hl_lines=10"
-    >}}
+We do this by writing an `actor_role` rule. This is how you tell Oso what roles
+a user has.
 
-The `assign_role` method assigns a particular role on a resource.
-Often, you'll make this available in a route so that end users can
-configure role assignments for their organization. More on this in [end
-user configuration](end_user_configuration).
+{{% callout "Managing roles with SQLAlchemy" "green" %}}
 
-Role assignment is stored your database along with the rest of your
-SQLAlchemy managed data.
+If you're using SQLAlchemy, there's nothing to do here!
+Oso already manages role data as part of the `sqlalchemy-oso`
+integration.
+
+[Check it out here.](./sqlalchemy/getting-started)
+
+{{% /callout %}}
+
+You can use your own data models for roles with Oso. You just need to tell us
+what roles a user has through the `actor_role` rule. As an example, we might
+add a method onto the user that returns a list of roles for that user:
+
+```py
+ROLES = {
+    "alice": [
+        {"name": "user", "resource": Page.pages[0]},
+        {"name": "admin", "resource": Page.pages[1]},
+    ],
+    "bob": [{"name": "admin", "resource": Page.pages[2]}],
+}
+
+
+class User:
+    def __init__(self, name):
+        self.name = name
+
+    # Get all the roles for this user
+    def get_roles(self):
+        global ROLES
+        return ROLES[self.name]
+```
+
+And the `actor_role` would be implemented as:
+
+```polar
+actor_role(actor, role) if
+    role in actor.get_roles();
+```
+
+The `actor_role` is evaluated with `actor` bound to the same actor
+as you call the `allow` rule with, typically a `user`.
+
+`role` is an "output parameter". It will not be bound to anything when
+the rule enters. The expectation is that you will set this in the body of
+the rule.
+
+Each `role` returned must be structured as
+`{name: "the-role-name", resource: TheResourceObject}`.
+
 
 ### Implying roles
 

@@ -37,6 +37,10 @@ can use the `sqlalchemy-oso` framework integration to additionally handle:
 
 [Check out the library documentation for SQLAlchemy](./sqlalchemy/getting-started)
 
+## Get started
+
+Continue on to the [getting started guide](./getting-started) to see how to
+add Oso roles to a Python application.
 
 {{% /ifLang %}}
 
