@@ -34,3 +34,7 @@
 	path = docs/examples/python/getting-started/application
 	url = https://github.com/osohq/oso-flask-tutorial.git
 	branch = authorized
+[submodule "docs/examples/node/getting-started/application"]
+	path = docs/examples/node/getting-started/application
+	url = https://github.com/osohq/oso-express-tutorial.git
+	branch = oso-auth
