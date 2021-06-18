@@ -197,7 +197,7 @@ class ParameterError(PolarApiError):
     pass
 
 
-class ValidationError(PolarApiError):
+class RolesValidationError(PolarApiError):
     pass
 
 

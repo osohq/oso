@@ -8,7 +8,7 @@ use super::rules::*;
 use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
-use super::validate::{validate_roles_config, VALIDATE_ROLES_CONFIG_RESOURCES};
+use super::roles_validation::{validate_roles_config, VALIDATE_ROLES_CONFIG_RESOURCES};
 use super::vm::*;
 use super::warnings::check_singletons;
 

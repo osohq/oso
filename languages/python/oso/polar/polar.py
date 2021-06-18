@@ -25,7 +25,6 @@ from .ffi import Polar as FfiPolar
 from .host import Host
 from .query import Query
 from .predicate import Predicate
-from .variable import Variable
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use super::bindings::Bindings;
-use super::error::{PolarResult, ValidationError};
+use super::error::{PolarResult, RolesValidationError};
 use super::terms::*;
 
 use serde::{Deserialize, Serialize};
@@ -34,14 +34,14 @@ pub const VALIDATE_ROLES_CONFIG_RESOURCES: &str = "resource(resource, name, acti
 
 pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> {
     let roles_config: Vec<Vec<ResultEvent>> = serde_json::from_str(&validation_query_results)
-        .map_err(|_| ValidationError("Invalid config query result".to_string()))?;
+        .map_err(|_| RolesValidationError("Invalid config query result".to_string()))?;
 
-    let role_resources = roles_config
-        .first()
-        .ok_or_else(|| ValidationError("Need to define resources to use oso roles.".to_owned()))?;
+    let role_resources = roles_config.first().ok_or_else(|| {
+        RolesValidationError("Need to define resources to use oso roles.".to_owned())
+    })?;
     if role_resources.is_empty() {
         return Err(
-            ValidationError("Need to define resources to use oso roles.".to_owned()).into(),
+            RolesValidationError("Need to define resources to use oso roles.".to_owned()).into(),
         );
     }
 
@@ -77,13 +77,13 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                                 [this_expr, typ_expr] => {
                                     if let Value::Variable(Symbol(sym)) = this_expr.value() {
                                         if sym != "_this" {
-                                            return Err(ValidationError(
+                                            return Err(RolesValidationError(
                                                 "Invalid resource, no type specializer.".to_owned(),
                                             )
                                             .into());
                                         }
                                     } else {
-                                        return Err(ValidationError(
+                                        return Err(RolesValidationError(
                                             "Invalid resource, no type specializer.".to_owned(),
                                         )
                                         .into());
@@ -95,37 +95,38 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                                     {
                                         tag.0.clone()
                                     } else {
-                                        return Err(ValidationError(
+                                        return Err(RolesValidationError(
                                             "Invalid resource, no type specializer.".to_owned(),
                                         )
                                         .into());
                                     }
                                 }
                                 _ => {
-                                    return Err(ValidationError(
+                                    return Err(RolesValidationError(
                                         "Invalid resource, no type specializer.".to_owned(),
                                     )
                                     .into())
                                 }
                             }
                         } else {
-                            return Err(ValidationError(
+                            return Err(RolesValidationError(
                                 "Invalid resource, no type specializer.".to_owned(),
                             )
                             .into());
                         }
                     }
                     _ => {
-                        return Err(ValidationError(
+                        return Err(RolesValidationError(
                             "Invalid resource, no type specializer.".to_owned(),
                         )
                         .into())
                     }
                 }
             } else {
-                return Err(
-                    ValidationError("Invalid resource, no type specializer.".to_owned()).into(),
-                );
+                return Err(RolesValidationError(
+                    "Invalid resource, no type specializer.".to_owned(),
+                )
+                .into());
             }
         };
 
@@ -133,9 +134,10 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
             if let Value::String(name) = resource_name {
                 name.clone()
             } else {
-                return Err(
-                    ValidationError("Invalid resource, name is not a string.".to_owned()).into(),
-                );
+                return Err(RolesValidationError(
+                    "Invalid resource, name is not a string.".to_owned(),
+                )
+                .into());
             }
         };
 
@@ -147,7 +149,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                         if let Value::String(action) = a.value() {
                             action_strings.push(action.clone());
                         } else {
-                            return Err(ValidationError(
+                            return Err(RolesValidationError(
                                 "Invalid action, not a string.".to_owned(),
                             )
                             .into());
@@ -155,7 +157,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                     }
                 }
                 Value::Variable(_) => (),
-                _ => return Err(ValidationError("Invalid actions.".to_owned()).into()),
+                _ => return Err(RolesValidationError("Invalid actions.".to_owned()).into()),
             }
             action_strings
         };
@@ -163,9 +165,11 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
         let mut acts = HashSet::new();
         for action in &actions {
             if acts.contains(action) {
-                return Err(
-                    ValidationError(format!("Duplicate action {} for {}.", action, typ)).into(),
-                );
+                return Err(RolesValidationError(format!(
+                    "Duplicate action {} for {}.",
+                    action, typ
+                ))
+                .into());
             }
             acts.insert(action.to_owned());
         }
@@ -177,7 +181,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                 if let Value::Dictionary(Dictionary { fields: def_dict }) = definition.value() {
                     for key in def_dict.keys() {
                         if key.0 != "permissions" && key.0 != "implies" {
-                            return Err(ValidationError(format!(
+                            return Err(RolesValidationError(format!(
                                 "Invalid key for role definition {}",
                                 key.0
                             ))
@@ -193,7 +197,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                                     if let Value::String(action) = action_term.value() {
                                         actions.push(action.clone())
                                     } else {
-                                        return Err(ValidationError(format!(
+                                        return Err(RolesValidationError(format!(
                                             "Invalid actions for role {}, must be a string.",
                                             role_name
                                         ))
@@ -202,7 +206,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                                 }
                                 actions
                             } else {
-                                return Err(ValidationError(format!(
+                                return Err(RolesValidationError(format!(
                                     "Invalid actions for role {}",
                                     role_name
                                 ))
@@ -221,7 +225,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                                     if let Value::String(implies) = implies_term.value() {
                                         implications.push(implies.clone())
                                     } else {
-                                        return Err(ValidationError(format!(
+                                        return Err(RolesValidationError(format!(
                                             "Invalid implies for role {}, must be a string.",
                                             role_name
                                         ))
@@ -230,7 +234,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                                 }
                                 implications
                             } else {
-                                return Err(ValidationError(format!(
+                                return Err(RolesValidationError(format!(
                                     "Invalid implies for role {}",
                                     role_name
                                 ))
@@ -241,7 +245,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                         }
                     };
                     if actions.is_empty() && implications.is_empty() {
-                        return Err(ValidationError(
+                        return Err(RolesValidationError(
                             "Must define actions or implications for a role.".to_owned(),
                         )
                         .into());
@@ -253,19 +257,21 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                         implied_roles: implications,
                     };
                     if role_definitions.contains_key(&role_name) {
-                        return Err(
-                            ValidationError(format!("Duplicate role name {}.", role_name)).into(),
-                        );
+                        return Err(RolesValidationError(format!(
+                            "Duplicate role name {}.",
+                            role_name
+                        ))
+                        .into());
                     }
                     role_definitions.insert(role_name, role)
                 } else {
-                    return Err(ValidationError("Invalid role definitions".to_owned()).into());
+                    return Err(RolesValidationError("Invalid role definitions".to_owned()).into());
                 };
             }
         }
 
         if actions.is_empty() && role_definitions.is_empty() {
-            return Err(ValidationError("Must define actions or roles.".to_owned()).into());
+            return Err(RolesValidationError("Must define actions or roles.".to_owned()).into());
         }
 
         let resource = Resource {
@@ -275,7 +281,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
             roles: role_definitions,
         };
         if resources.contains_key(&name) {
-            return Err(ValidationError(format!("Duplicate resource name {}.", name)).into());
+            return Err(RolesValidationError(format!("Duplicate resource name {}.", name)).into());
         }
         resources.insert(name, resource);
     }

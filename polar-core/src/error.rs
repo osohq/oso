@@ -33,7 +33,7 @@ pub enum ErrorKind {
     Runtime(RuntimeError),
     Operational(OperationalError),
     Parameter(ParameterError),
-    Validation(ValidationError),
+    Validation(RolesValidationError),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -115,8 +115,8 @@ impl From<ParameterError> for PolarError {
     }
 }
 
-impl From<ValidationError> for PolarError {
-    fn from(err: ValidationError) -> Self {
+impl From<RolesValidationError> for PolarError {
+    fn from(err: RolesValidationError) -> Self {
         Self {
             kind: ErrorKind::Validation(err),
             context: None,
@@ -357,9 +357,9 @@ impl fmt::Display for ParameterError {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValidationError(pub String);
+pub struct RolesValidationError(pub String);
 
-impl fmt::Display for ValidationError {
+impl fmt::Display for RolesValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Oso Roles Validation Error: {}", self.0)
     }

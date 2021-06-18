@@ -300,6 +300,51 @@ def test_duplicate_resource_name(init_oso):
         oso.enable_roles()
 
 
+@pytest.mark.skip("TODO: relationship validation")
+def test_bad_relationship_lookup(init_oso):
+    # - nonexistent attribute lookup throws an error for now
+    oso, session = init_oso
+    policy = """
+    resource(_type: Org, "org", actions, roles) if
+        actions = ["invite"] and
+        roles = {
+            member: {
+                permissions: ["invite"]
+            }
+        };
+    resource(_type: Repo, "repo", actions, {}) if
+        actions = [
+            "pull"
+        ];
+    child_parent(repo: Repo, parent_org) if
+        # INCORRECT FIELD NAME
+        repo.organization = parent_org and
+        parent_org matches Org;
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(OsoError):
+        oso.enable_roles()
+
+
+@pytest.mark.skip("TODO: validation")
+def test_relationship_without_specializer(init_oso):
+    oso, session = init_oso
+    policy = """
+    resource(_type: Repo, "repo", actions, {}) if
+        actions = [
+            "pull"
+        ];
+    child_parent(repo, parent_org) if
+        repo.org = parent_org and
+        parent_org matches Org;
+    """
+    oso.load_str(policy)
+
+    with pytest.raises(OsoError):
+        oso.enable_roles()
+
+
 def test_relationship_without_resources(init_oso):
     oso, session = init_oso
     policy = """
@@ -445,6 +490,61 @@ def test_undeclared_role(init_oso):
                 implies: ["fake_role"]
             }
         };
+    """
+    oso.load_str(policy)
+    with pytest.raises(OsoError):
+        oso.enable_roles()
+
+
+@pytest.mark.skip("TODO: relationship validation")
+def test_role_implication_without_relationship(init_oso):
+    # - imply role without valid relationship
+    oso, session = init_oso
+    policy = """
+    resource(_type: Org, "org", actions, roles) if
+        actions = [
+            "invite"
+        ] and
+        roles = {
+            member: {
+                implies: ["repo:reader"]
+            }
+        };
+    resource(_type: Repo, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            reader: {
+                permissions: ["pull"]
+            }
+        };
+    """
+    oso.load_str(policy)
+    with pytest.raises(OsoError):
+        oso.enable_roles()
+
+
+@pytest.mark.skip("TODO: relationship validation")
+def test_role_permission_without_relationship(init_oso):
+    # - assign permission without valid relationship
+    oso, session = init_oso
+    policy = """
+    resource(_type: Org, "org", actions, roles) if
+        actions = [
+            "invite"
+        ] and
+        roles = {
+            member: {
+                permissions: ["repo:push"]
+            }
+        };
+    resource(_type: Repo, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ];
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):

@@ -18,7 +18,7 @@ from polar.exceptions import (
     UnsupportedError,
     ParameterError,
     PolarApiError,
-    ValidationError,
+    RolesValidationError,
 )
 
 
@@ -81,7 +81,7 @@ def _operational_error(subkind, message, details):
 
 
 def _validation_error(message, details):
-    return ValidationError(message, details)
+    return RolesValidationError(message, details)
 
 
 def _api_error(subkind, message, details):
