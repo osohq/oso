@@ -279,7 +279,7 @@ def test_nested_dot_relationship(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.enable_roles()
 
 
 @pytest.mark.skip("TODO: relationship validation")
