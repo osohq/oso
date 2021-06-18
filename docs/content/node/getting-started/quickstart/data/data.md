@@ -36,7 +36,7 @@ load_policy: |
     ```js
     oso.loadFile("authorization.polar")
     ```
-get_roles: getRoles
+getroles: getRoles
 classes: JavaScript classes
 objects: JavaScript objects
 methods: JavaScript methods

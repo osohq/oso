@@ -36,7 +36,7 @@ load_policy: |
     ```python
     oso.load_file("authorization.polar")
     ```
-get_roles: get_roles
+getroles: get_roles
 classes: Python classes
 objects: Python objects
 methods: Python methods

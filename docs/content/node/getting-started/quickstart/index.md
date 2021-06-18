@@ -23,7 +23,7 @@ Your data doesn't leave your server. Oso also doesn't persist user data inside t
 
 Here's how data flows between your app and the Oso library:
 
-![Architecture diagram for Oso library loading a polcicy file and making authorization decisions. ](/getting-started/quickstart/images/arch-simple.png)
+![Architecture diagram for Oso library loading a policy file and making authorization decisions. ](/getting-started/quickstart/images/arch-simple.png)
 ## Install the Oso library
 
 {{% exampleGet "installation_new" %}}
@@ -70,7 +70,7 @@ allow(actor, action, resource) if
     role_allow(actor, action, resource);
 
 actor_role(actor, role) if
-    role in actor.{{% exampleGet "get_roles" %}}();
+    role in actor.{{% exampleGet "getroles" %}}();
 
 resource(_type: Page, "page", actions, roles) if
     actions = ["read", "write"] and
@@ -105,14 +105,14 @@ There's much more you can do with Polar, including defining parent-child relatio
 
 ## Calling back into your {{% lang %}} code
 
-You can call properties and methods on your {{% lang %}} objects from Polar.
+You can call properties and methods on your {{% exampleGet "objects" %}} from Polar.
 These will defer control back to your app.
 Oso leaves the decision of how to store role assignments up to you — you might choose to store those role assignments in a database, in memory, or create them dynamically.
-Our `actor_role` rule calls the {{% lang %}} method `{{% exampleGet "get_roles" %}}` to get all the roles for our actor.
+Our `actor_role` rule calls the {{% exampleGet "methods" %}} `{{% exampleGet "getroles" %}}` to get all the roles for our actor.
 
 ```polar
 actor_role(actor, role) if
-    role in actor.{{% exampleGet "get_roles" %}}();
+    role in actor.{{% exampleGet "getroles" %}}();
  ```
 
 To refer to your {{% exampleGet "classes" %}} in Polar, you must _register_ them with Oso.
