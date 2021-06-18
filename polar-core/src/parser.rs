@@ -347,4 +347,32 @@ mod tests {
             ));
         }
     }
+
+    #[test]
+    fn trailing_commas() {
+        let q = r#"{a: 1,}"#;
+        let dict = term!(btreemap! { sym!("a") => term!(1)});
+        assert_eq!(parse_term(q), dict);
+
+        let q = r#"[1, 2,]"#;
+        let list = term!([1, 2]);
+        assert_eq!(parse_term(q), list);
+
+        assert_eq!(
+            parse_query(r#"{a: 1,} = [1, 2,]"#),
+            term!(op!(Unify, dict, list))
+        );
+    }
+
+    #[test]
+    fn duplicate_keys() {
+        let q = r#"{a: 1, a: 2}"#;
+        assert!(matches!(
+            super::parse_query(0, q).expect_err("parse error"),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::DuplicateKey { .. }),
+                ..
+            }
+        ));
+    }
 }

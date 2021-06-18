@@ -8,7 +8,7 @@ description: >-
 draft: true
 ---
 
-## `oso-oso 0.13.0`
+## `oso 0.13.0`
 
 ### Ruby
 
@@ -47,6 +47,43 @@ first = query.first
 # first is nil if there are no results
 ```
 
+### Core
+
+#### Breaking changes
+
+Attempting to create a dictionary with a repeated key is now a parser error.
+Previously, the first (key, value) pair would be taken and the others would
+be dropped.
+
+Before:
+
+```polar
+query> d = {a: 1, a: 2}
+d = {'a': 1}
+```
+
+After:
+
+```polar
+query> d = {a: 1, a: 2}
+ParserError
+Duplicate key: a at line 1, column 6
+```
+
+#### Other bugs & improvements
+
+Trailing commas are now supported in dictionaries and lists.
+For example:
+
+```polar
+allow(_user, action, repository: Repository) if
+  action in [
+    "read",
+    "write",
+  ];
+```
+
+
 ## `sqlalchemy-oso 0.9.0`
 
 ### SQLAlchemy (Python)
@@ -67,17 +104,3 @@ clarity and consistency.
 
 The `parent(child, parent)` predicate has been renamed to `child_parent(child, parent)`.
 The `user_in_role(actor, role, resource)` predicate has been renamed to `actor_can_assume_role(actor, role, resource)`.
-
-#### New features
-
-##### Feature 1
-
-Summary of user-facing changes.
-
-Link to [relevant documentation section]().
-
-#### Other bugs & improvements
-
-- Bulleted list
-- Of smaller improvements
-- Potentially with doc [links]().
