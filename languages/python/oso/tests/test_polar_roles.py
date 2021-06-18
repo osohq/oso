@@ -625,6 +625,19 @@ def test_incorrect_arity_resource(init_oso):
         oso.enable_roles()
 
 
+# TODO(gj): should we try catching this?
+@pytest.mark.skip(reason="TODO: More validation")
+def test_incorrect_arity_resource_multiple(init_oso):
+    oso, _ = init_oso
+    policy = """
+    resource(_type: Org, "org", actions) if actions = ["invite"];
+    resource(_type: Repo, "repo", actions, {}) if actions = ["invite"];
+    """
+    oso.load_str(policy)
+    with pytest.raises(OsoError):
+        oso.enable_roles()
+
+
 def test_undefined_resource_arguments(init_oso):
     # - use resource predicate without defining actions/roles
     oso, session = init_oso
