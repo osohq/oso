@@ -246,7 +246,7 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
                 }
             };
 
-        parent(repo: Repo, parent_org) if
+        child_parent(repo: Repo, parent_org) if
             repo.org = parent_org and
             parent_org matches Org;
 
@@ -259,7 +259,7 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
             role matches {name: role_name, resource: role_resource};
 
         allow(actor, action, resource) if
-            role_allow(actor, action, resource);
+            role_allows(actor, action, resource);
     """
     oso.load_str(policy)
 
@@ -330,11 +330,11 @@ def test_nested_dot_relationship(init_oso):
             "edit"
         ];
 
-    parent(issue, parent_org) if
+    child_parent(issue, parent_org) if
         issue.repo.org = parent_org;
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
 
@@ -360,7 +360,7 @@ def test_bad_relationship_lookup(init_oso):
             "pull"
         ];
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         # INCORRECT FIELD NAME
         repo.organization = parent_org and
         parent_org matches Org;
@@ -380,7 +380,7 @@ def test_relationship_without_specializer(init_oso):
             "pull"
         ];
 
-    parent(repo, parent_org) if
+    child_parent(repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
     """
@@ -394,7 +394,7 @@ def test_relationship_without_specializer(init_oso):
 def test_relationship_without_resources(init_oso):
     oso, session = init_oso
     policy = """
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
     """
@@ -455,7 +455,7 @@ def test_role_namespaces(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
@@ -468,7 +468,7 @@ def test_role_namespaces(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
 
@@ -653,7 +653,7 @@ def test_invalid_role_permission(init_oso):
 
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
     """
@@ -798,7 +798,7 @@ def test_overlapping_permissions(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
@@ -811,7 +811,7 @@ def test_overlapping_permissions(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -858,7 +858,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -894,7 +894,7 @@ def test_homogeneous_role_perm(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -928,7 +928,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
             "pull"
         ];
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
@@ -941,7 +941,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -978,7 +978,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
             "pull"
         ];
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
@@ -991,7 +991,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -1027,11 +1027,11 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
             "edit"
         ];
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
-    parent(issue: Issue, parent_repo) if
+    child_parent(issue: Issue, parent_repo) if
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
@@ -1044,7 +1044,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: big red button to reset roles policy?
@@ -1088,11 +1088,11 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
             "edit"
         ];
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
-    parent(issue: Issue, parent_repo) if
+    child_parent(issue: Issue, parent_repo) if
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
@@ -1105,7 +1105,7 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -1144,7 +1144,7 @@ def test_homogeneous_role_implication(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: big red button to reset roles policy?
@@ -1191,7 +1191,7 @@ def test_homogeneous_role_implication(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -1234,7 +1234,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
@@ -1247,7 +1247,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1284,7 +1284,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
             "pull"
         ];
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
@@ -1297,7 +1297,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -1336,11 +1336,11 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
-    parent(issue: Issue, parent_repo) if
+    child_parent(issue: Issue, parent_repo) if
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
@@ -1353,7 +1353,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1393,11 +1393,11 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
-    parent(issue: Issue, parent_repo) if
+    child_parent(issue: Issue, parent_repo) if
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
@@ -1410,7 +1410,7 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -1461,11 +1461,11 @@ def test_chained_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
-    parent(issue: Issue, parent_repo) if
+    child_parent(issue: Issue, parent_repo) if
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
@@ -1478,7 +1478,7 @@ def test_chained_role_implication(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1540,11 +1540,11 @@ def test_chained_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
-    parent(issue: Issue, parent_repo) if
+    child_parent(issue: Issue, parent_repo) if
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
@@ -1557,7 +1557,7 @@ def test_chained_role_implication(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
 
     oso.clear_rules()
@@ -1687,7 +1687,7 @@ def test_assign_remove_user_role(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1759,7 +1759,7 @@ def test_reassign_user_role(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
     """
@@ -1826,7 +1826,7 @@ def test_authorizing_related_fields(
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
     """
@@ -1874,7 +1874,7 @@ def test_data_filtering_role_allows_not(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        not role_allow(actor, action, resource);
+        not role_allows(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -1924,12 +1924,12 @@ def test_data_filtering_role_allows_and(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource) and
+        role_allows(actor, action, resource) and
         resource.name = "osohq";
 
     actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
@@ -1995,12 +1995,12 @@ def test_data_filtering_role_allows_explicit_or(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource) or
+        role_allows(actor, action, resource) or
         resource.name = "osohq";
 
     actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
@@ -2074,7 +2074,7 @@ def test_data_filtering_role_allows_implicit_or(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
     # TODO: validation
@@ -2101,7 +2101,7 @@ def test_data_filtering_role_allows_implicit_or(init_oso, sample_data):
 
 
 # TODO(gj): data filtering
-def test_data_filtering_user_in_role_not(init_oso, sample_data):
+def test_data_filtering_actor_can_assume_role_not(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -2113,7 +2113,7 @@ def test_data_filtering_user_in_role_not(init_oso, sample_data):
         };
 
     allow(actor, action, resource) if
-        not user_in_role(actor, "member", resource);
+        not actor_can_assume_role(actor, "member", resource);
 
     actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
         role in actor.repo_roles and
@@ -2151,7 +2151,7 @@ def test_data_filtering_user_in_role_not(init_oso, sample_data):
 
 
 # TODO(gj): data filtering
-def test_data_filtering_user_in_role_and(init_oso, sample_data):
+def test_data_filtering_actor_can_assume_role_and(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -2171,12 +2171,12 @@ def test_data_filtering_user_in_role_and(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
     allow(actor, action, resource) if
-        user_in_role(actor, "member", resource) and
+        actor_can_assume_role(actor, "member", resource) and
         resource.name = "osohq";
 
     actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
@@ -2222,7 +2222,7 @@ def test_data_filtering_user_in_role_and(init_oso, sample_data):
 
 
 # TODO(gj): data filtering
-def test_data_filtering_user_in_role_explicit_or(init_oso, sample_data):
+def test_data_filtering_actor_can_assume_role_explicit_or(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
@@ -2242,15 +2242,15 @@ def test_data_filtering_user_in_role_explicit_or(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
 
     allow(actor, _, resource) if
-        user_in_role(actor, "member", resource) or
+        actor_can_assume_role(actor, "member", resource) or
         resource.name = "osohq";
 
     actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
@@ -2299,8 +2299,8 @@ def test_data_filtering_user_in_role_explicit_or(init_oso, sample_data):
 
 
 # TODO(gj): data filtering
-def test_data_filtering_user_in_role_implicit_or(init_oso, sample_data):
-    # Ensure that the filter produced by `user_in_role/3` is not AND-ed
+def test_data_filtering_actor_can_assume_role_implicit_or(init_oso, sample_data):
+    # Ensure that the filter produced by `actor_can_assume_role/3` is not AND-ed
     # with a false filter produced by a separate `allow()` rule.
     oso, session = init_oso
     policy = """
@@ -2316,7 +2316,7 @@ def test_data_filtering_user_in_role_implicit_or(init_oso, sample_data):
         };
 
     allow(actor, _, resource) if
-        user_in_role(actor, "member", resource);
+        actor_can_assume_role(actor, "member", resource);
 
     actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
         role in actor.repo_roles and
@@ -2366,8 +2366,8 @@ def test_data_filtering_combo(init_oso, sample_data):
         };
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource) and
-        user_in_role(actor, "member", resource);
+        role_allows(actor, action, resource) and
+        actor_can_assume_role(actor, "member", resource);
 
     actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
         role in actor.repo_roles and
@@ -2427,7 +2427,7 @@ def test_read_api(init_oso, sample_data, Repo, Org):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
     """
@@ -2473,7 +2473,7 @@ def test_read_api(init_oso, sample_data, Repo, Org):
 
 
 # TODO(gj): data filtering
-def test_user_in_role(init_oso, sample_data):
+def test_actor_can_assume_role(init_oso, sample_data):
     oso, session = init_oso
     policy = """
     resource(_type: Org, "org", [], roles) if
@@ -2494,12 +2494,12 @@ def test_user_in_role(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
     allow(actor, "read", repo: Repo) if
-        user_in_role(actor, "reader", repo);
+        actor_can_assume_role(actor, "reader", repo);
 
     actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
         role in actor.repo_roles and
@@ -2663,7 +2663,7 @@ def test_role_allows_with_other_rules(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
 
@@ -2724,11 +2724,11 @@ def test_roles_integration(init_oso, sample_data):
             "edit"
         ];
 
-    parent(repo: Repo, parent_org) if
+    child_parent(repo: Repo, parent_org) if
         repo.org = parent_org and
         parent_org matches Org;
 
-    parent(issue: Issue, parent_repo) if
+    child_parent(issue: Issue, parent_repo) if
         issue.repo = parent_repo and
         parent_repo matches Repo;
 
@@ -2741,7 +2741,7 @@ def test_roles_integration(init_oso, sample_data):
         role matches {name: role_name, resource: role_resource};
 
     allow(actor, action, resource) if
-        role_allow(actor, action, resource);
+        role_allows(actor, action, resource);
     """
     oso.load_str(policy)
 
@@ -2850,7 +2850,7 @@ def test_legacy_sam_polar_roles(init_oso, sample_data):
                 }
             };
 
-        parent(repo: Repo, org) if
+        child_parent(repo: Repo, org) if
             org = repo.org and
             org matches Org;
 
@@ -2863,7 +2863,7 @@ def test_legacy_sam_polar_roles(init_oso, sample_data):
             role matches {name: role_name, resource: role_resource};
 
         allow(actor, action, resource) if
-            role_allow(actor, action, resource);
+            role_allows(actor, action, resource);
     """
     oso.load_str(policy)
 
@@ -2952,7 +2952,7 @@ def test_perf_polar(init_oso, sample_data):
             role matches {name: role_name, resource: role_resource};
 
         allow(actor, action, resource) if
-            role_allow(actor, action, resource);
+            role_allows(actor, action, resource);
         """
 
     # p = """resource(_: Repo, "repo", actions, roles) if
@@ -2967,7 +2967,7 @@ def test_perf_polar(init_oso, sample_data):
     # 	}
     # };
 
-    # parent(repo: Repo, org) if
+    # child_parent(repo: Repo, org) if
     # org = repo.org and org matches Org;
     # """
     oso.load_str(p)
