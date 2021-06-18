@@ -33,6 +33,7 @@ fn kind(err: &PolarError) -> String {
         Parse(ReservedWord { .. }) => "ParseError::ReservedWord",
         Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
         Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
+        Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
         Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",

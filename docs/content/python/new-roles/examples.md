@@ -60,7 +60,7 @@ First, we'll define how organizations and repositories are related.
     linenos=true
 >}}
 
-This `parent(child, parent)` rule defines that an organization is
+This `child_parent(child, parent)` rule defines that an organization is
 considered a parent of a repository if it is assigned to the
 repository's `org` field.
 
@@ -99,10 +99,10 @@ actions, as we'll see later on.
 
 {{% callout "Parent limitations" "blue" %}}
 
-Currently a `parent` rule body must be of the form:
+Currently a `child_parent` rule body must be of the form:
 
 ```polar
-parent(child: ChildType, parent: ParentType) if
+child_parent(child: ChildType, parent: ParentType) if
     child.attribute = parent;
 ```
 

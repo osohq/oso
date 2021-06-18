@@ -905,19 +905,20 @@ describe('Polar roles', () => {
               "edit"
           ];
 
-      parent(repo: Repo, parent_org) if
+      child_parent(repo: Repo, parent_org) if
           repo.org = parent_org and
           parent_org matches Org;
 
-      parent(issue: Issue, parent_repo) if
+      child_parent(issue: Issue, parent_repo) if
           issue.repo = parent_repo and
           parent_repo matches Repo;
 
-      actor_role(actor, role) if
-          role in actor.roles;
+      actor_has_role_for_resource(actor, role_name, role_resource) if
+          role in actor.roles and
+          role matches {name: role_name, resource: role_resource};
 
       allow(actor, action, resource) if
-          role_allow(actor, action, resource);
+          role_allows(actor, action, resource);
     `;
 
     const p = new Polar();
