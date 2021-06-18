@@ -308,28 +308,6 @@ def test_relationship_without_resources(init_oso):
         oso.enable_roles()
 
 
-def test_duplicate_role_name_same_resource(init_oso):
-    oso, session = init_oso
-    policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = [
-            "invite", "create_repo"
-        ] and
-        roles = {
-            owner: {
-                permissions: ["invite"],
-                implies: ["member", "repo:member"]
-            },
-            owner: {
-                permissions: ["create_repo"]
-            }
-        };
-        """
-    oso.load_str(policy)
-    with pytest.raises(OsoError):
-        oso.enable_roles()
-
-
 def test_role_namespaces(init_oso, sample_data):
     oso, session = init_oso
     policy = """

@@ -102,27 +102,27 @@ class Polar:
             self.ffi_polar.enable_roles()
             self._polar_roles_enabled = True
 
-        # validate config
-        validation_query_results = []
-        while True:
-            query = self.ffi_polar.next_inline_query()
-            if query is None:  # Load is done
-                break
-            try:
-                host = self.host.copy()
-                host.set_accept_expression(True)
-                validation_query_results.append(list(Query(query, host=host).run()))
-            except StopIteration:
-                source = query.source()
-                raise InlineQueryFailedError(source.get())
+            # validate config
+            validation_query_results = []
+            while True:
+                query = self.ffi_polar.next_inline_query()
+                if query is None:  # Load is done
+                    break
+                try:
+                    host = self.host.copy()
+                    host.set_accept_expression(True)
+                    validation_query_results.append(list(Query(query, host=host).run()))
+                except StopIteration:
+                    source = query.source()
+                    raise InlineQueryFailedError(source.get())
 
-        # turn bindings back into polar
-        for results in validation_query_results:
-            for result in results:
-                for k in result["bindings"]:
-                    result["bindings"][k] = host.to_polar(result["bindings"][k])
+            # turn bindings back into polar
+            for results in validation_query_results:
+                for result in results:
+                    for k in result["bindings"]:
+                        result["bindings"][k] = host.to_polar(result["bindings"][k])
 
-        self.ffi_polar.validate_roles_config(validation_query_results)
+            self.ffi_polar.validate_roles_config(validation_query_results)
 
     def load_file(self, policy_file):
         """Load Polar policy from a ".polar" file."""
