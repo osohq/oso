@@ -8,9 +8,9 @@ description: >-
 draft: true
 ---
 
-## `oso 0.13.0`
+## `RELEASED_PACKAGE_1` NEW_VERSION
 
-### Ruby
+### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
 
@@ -21,86 +21,22 @@ draft: true
   before upgrading.
 {{% /callout %}}
 
-The `Query` object returned by `Polar::Polar#query` is now an `Enumerable`.
-Previously, you would need to access the `results` attribute which
-was an enumerator.
+##### Breaking change 1
 
-The main impact of this change is that queries are no longer run
-on a Fiber, and therefore any methods using Fiber-local variables
-(e.g. `Thread.current[:var]`) will work fine.
+Summary of breaking change.
 
-If you are only using `Oso#allowed?` there is no change needed.
+Link to [migration guide]().
 
-Before:
+#### New features
 
-```ruby
-query = oso.query_rule('allow', actor, action, resource)
-first = query.results.next
-# raises StopIterator if no results
-```
+##### Feature 1
 
-After:
+Summary of user-facing changes.
 
-```ruby
-query = oso.query_rule('allow', actor, action, resource)
-first = query.first
-# first is nil if there are no results
-```
-
-### Core
-
-#### Breaking changes
-
-Attempting to create a dictionary with a repeated key is now a parser error.
-Previously, the first (key, value) pair would be taken and the others would
-be dropped.
-
-Before:
-
-```polar
-query> d = {a: 1, a: 2}
-d = {'a': 1}
-```
-
-After:
-
-```polar
-query> d = {a: 1, a: 2}
-ParserError
-Duplicate key: a at line 1, column 6
-```
+Link to [relevant documentation section]().
 
 #### Other bugs & improvements
 
-Trailing commas are now supported in dictionaries and lists.
-For example:
-
-```polar
-allow(_user, action, repository: Repository) if
-  action in [
-    "read",
-    "write",
-  ];
-```
-
-
-## `sqlalchemy-oso 0.9.0`
-
-### SQLAlchemy (Python)
-
-#### Breaking changes
-
-<!-- TODO: remove warning and replace with "None" if no breaking changes. -->
-
-{{% callout "Warning" "orange" %}}
-  This release contains breaking changes. Be sure to follow migration steps
-  before upgrading.
-{{% /callout %}}
-
-##### Renamed `parent` and `user_in_role` predicates for Role-Based Access Control policies
-
-Two built-in Polar predicates used for implementing [Role-Based Access Control](TODO) have been renamed for
-clarity and consistency.
-
-The `parent(child, parent)` predicate has been renamed to `parent_child(parent, child)`.
-The `user_in_role(actor, role, resource)` predicate has been renamed to `actor_can_assume_role(actor, role, resource)`.
+- Bulleted list
+- Of smaller improvements
+- Potentially with doc [links]().
