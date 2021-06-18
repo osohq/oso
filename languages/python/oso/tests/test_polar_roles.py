@@ -43,7 +43,6 @@ class Repo(Base):  # type: ignore
 
     name = Column(String(256), primary_key=True)
 
-    # many-to-one relationship with orgs
     org_name = Column(String, ForeignKey("orgs.name"))
     org = relationship("Org", backref="repos", lazy=True)  # type: ignore
 
@@ -78,7 +77,6 @@ class OrgRole(Base, OrgRoleMixin):  # type: ignore
 
 @pytest.fixture
 def init_oso():
-    # ---------------------------
     engine = create_engine("sqlite://")
     Base.metadata.create_all(engine)
 
@@ -96,8 +94,7 @@ def init_oso():
 @pytest.fixture
 def sample_data(init_oso):
     _, session = init_oso
-    # Create sample data
-    # -------------------
+
     apple = Org(name="apple")
     osohq = Org(name="osohq")
 
@@ -129,48 +126,6 @@ def sample_data(init_oso):
     session.commit()
 
     return objs
-
-
-# TEST OsoRoles Initialization
-# - Passing an auth session to OsoRoles raises an exception
-# - Passing a session instead of Session factory to OsoRoles raises an exception
-# - Passing a non-SQLAlchemy user model to OsoRoles raises an exception
-# - Passing a bad declarative_base to OsoRoles raises an exception
-
-
-# TEST RESOURCE CONFIGURATION
-# Role declaration:
-# - [x] duplicate role name throws an error
-# - [x] defining role with no permissions/implications throws an error
-
-# Role-permission assignment:
-# - [x] duplicate permission throws an error
-# - [x] assigning permission that wasn't declared throws an error
-# - [x] assigning permission with bad namespace throws an error
-# - [x] assigning permission without valid relationship throws an error
-# - [x] assigning permission on related role type errors if role exists for permission resource
-# - [x] assigning the same permission to two roles where one implies the other throws an error
-
-# Role implications:
-# - [x] implying role that wasn't declared throws an error
-# - [x] implying role without valid relationship throws an error
-
-# Resource predicate:
-# - [x] only define roles, no actions (role has actions/implications from different resource)
-# - [x] only define actions, not roles
-# - [x] using resource predicate with incorrect arity throws an error
-# - [x] using resource predicate without defining actions/roles throws an error
-# - [x] using resource predicate with field types throws an error
-# - [x] duplicate resource name throws an error
-
-# Role allows:
-# - [ ] calling `roles.configure()` without calling `Roles.role_allows()` from policy issues warning
-#   TODO write test
-
-# Relationships:
-# - [x] multiple dot lookups throws an error for now
-# - [x] nonexistent attribute lookup throws an error for now
-# - [x] relationships without resource definition throws an error
 
 
 def test_empty_role(init_oso):
@@ -667,39 +622,6 @@ def test_wrong_type_resource_arguments(init_oso):
         oso.enable_roles()
 
 
-# TEST CHECK API
-# Homogeneous role-permission assignment:
-# - [x] Adding a permission of same resource type to a role grants assignee access
-# - [x] Modifying a permission of same resource type on a role modifies assignee access
-# - [x] Removing a permission of same resource type from a role revokes assignee access
-
-# Parent->child role-permission assignment:
-# - [x] Adding a permission of child resource type to a role grants assignee access
-# - [x] Removing a permission of child resource type from a role revokes assignee access
-
-# Grandparent->child role-permission assignment:
-# - [x] Adding a permission of grandchild resource type to a role grants assignee access
-# - [x] Removing a permission of grandchild resource type from a role revokes assignee access
-
-# Homogeneous role implications:
-# - [x] Adding a role implication of same resource type to a role grants assignee access
-# - [x] Removing a role implication of same resource type from a role revokes assignee access
-
-# Parent->child role implications:
-# - [x] Adding a role implication of child resource type to a role grants assignee access to child
-# - [x] Removing a role implication of child resource type from a role revokes assignee access to child
-
-# Grandparent->child role implications:
-# - [x] Adding a role implication of grandchild resource type to a role grants assignee access to grandchild
-#       without intermediate parent resource
-
-# Chained role implications:
-# - [x] Adding a role implication from grandparent->parent->child resource role types grants assignee of grandparent role
-#   access to grandchild resource
-
-# Overlapping role assignments:
-# - [x] Assigning a more permissive and less permissive role to the same user grants most permissive access
-
 # Overlapping role assignments:
 def test_overlapping_permissions(init_oso, sample_data):
     # - Assigning a more permissive and less permissive role to the same user grants most permissive access
@@ -920,8 +842,6 @@ def test_parent_child_role_perm(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
     oso.load_str(new_policy)
     oso.enable_roles()
 
@@ -1031,8 +951,6 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
 
     oso.clear_rules()
     oso.load_str(new_policy)
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
     oso.enable_roles()
 
     assert not oso.is_allowed(leina, "edit", oso_bug)
@@ -1113,8 +1031,6 @@ def test_homogeneous_role_implication(init_oso, sample_data):
 
     oso.clear_rules()
     oso.load_str(new_policy)
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
     oso.enable_roles()
 
     # leina can still "invite"
@@ -1217,8 +1133,6 @@ def test_parent_child_role_implication(init_oso, sample_data):
 
     oso.clear_rules()
     oso.load_str(new_policy)
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
     oso.enable_roles()
 
     assert not oso.is_allowed(leina, "pull", oso_repo)
@@ -1327,8 +1241,6 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
     oso.load_str(new_policy)
     oso.enable_roles()
 
@@ -1472,8 +1384,6 @@ def test_chained_role_implication(init_oso, sample_data):
     """
 
     oso.clear_rules()
-    # TODO: big red button to reset roles policy?
-    # oso.roles.config = None
     oso.load_str(new_policy)
     oso.enable_roles()
 
@@ -1485,42 +1395,12 @@ def test_chained_role_implication(init_oso, sample_data):
     assert oso.is_allowed(steve, "edit", oso_bug)
 
 
-# TEST WRITE API
-# User-role assignment:
-# - [x] Adding user-role assignment grants access
-# - [x] Removing user-role assignment revokes access
-# - [x] Assigning/removing non-existent role throws an error
-# - [x] Removing user from a role they aren't assigned throws an error
-# - [x] Assigning to role with wrong resource type throws an error
-# - [x] Reassigning user role throws error if `reassign=False`
-
-
 # TODO: this is just testing our own code / we don't handle role management
 # anymore
-def test_remove_unassigned_role(init_oso, sample_data):
-    # - Removing role that user doesn't have returns false
-    oso, session = init_oso
-    policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = ["invite"] and
-        roles = {
-            member: {
-                permissions: ["invite"]
-            }
-        };
-    """
-    oso.load_str(policy)
-    oso.enable_roles()
-
-    osohq = sample_data["osohq"]
-    leina = sample_data["leina"]
-
-    removed = remove_role(leina, osohq, "member", session=session)
-    assert not removed
-
-
-# TODO: this is just testing our own code / we don't handle role management
-# anymore
+#
+# NOTE(gj): leaving this for now since it actually exercises the policy, but
+# I assume the policy bits we're exercising here are already covered by other
+# tests. Once that's verified, we can remove this test.
 def test_assign_remove_user_role(init_oso, sample_data):
     # - Adding user-role assignment grants access
     oso, session = init_oso
@@ -1588,75 +1468,6 @@ def test_assign_remove_user_role(init_oso, sample_data):
 
     assert not oso.is_allowed(leina, "invite", osohq)
     assert oso.is_allowed(steve, "list_repos", osohq)
-
-
-# TODO: this is just testing our own code / we don't handle role management
-# anymore
-def test_reassign_user_role(init_oso, sample_data):
-    # - Implied roles for the same resource type are mutually exclusive on user-role assignment
-    oso, session = init_oso
-    policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = ["invite", "list_repos"] and
-        roles = {
-            member: {
-                permissions: ["invite"]
-            },
-            owner: {
-                permissions: ["list_repos"],
-                implies: ["member", "repo:reader"]
-            }
-        };
-
-    resource(_type: Repo, "repo", actions, roles) if
-        actions = ["pull"] and
-        roles = {
-            reader: {
-                permissions: ["pull"]
-            }
-        };
-
-    child_parent(repo: Repo, parent_org) if
-        repo.org = parent_org and
-        parent_org matches Org;
-    """
-    oso.load_str(policy)
-    oso.enable_roles()
-
-    osohq = sample_data["osohq"]
-    leina = sample_data["leina"]
-    steve = sample_data["steve"]
-
-    assign_role(leina, osohq, "member", session)
-    session.commit()
-    leina_roles = session.query(OrgRole).filter_by(user_id=leina.name).all()
-    assert len(leina_roles) == 1
-    assert leina_roles[0].name == "member"
-
-    assign_role(steve, osohq, "owner", session)
-    session.commit()
-    steve_roles = session.query(OrgRole).filter_by(user_id=steve.name).all()
-    assert len(steve_roles) == 1
-    assert steve_roles[0].name == "owner"
-
-    # reassigning with reassign=False throws an error
-    with pytest.raises(OsoError):
-        assign_role(leina, osohq, "owner", session=session, reassign=False)
-
-    # reassign with reassign=True
-    assign_role(leina, osohq, "owner", session)
-    session.commit()
-
-    leina_roles = session.query(OrgRole).filter_by(user_id=leina.name).all()
-    assert len(leina_roles) == 1
-    assert leina_roles[0].name == "owner"
-
-
-# TEST DATA FILTERING
-# - [x] `role_allows` with another rule that produces false filter (implicit OR)
-# - [x] `role_allows` inside of an `OR` with another expression
-# - [x] `role_allows` inside of an `AND` with another expression
-# - [x] `role_allows` inside of a `not` (this probably won't work, so need error handling)
 
 
 @pytest.mark.skip("not worrying about data filtering yet")
