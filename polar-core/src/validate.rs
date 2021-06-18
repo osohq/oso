@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use super::bindings::Bindings;
 use super::error::{PolarResult, ValidationError};
 use super::terms::*;
@@ -35,9 +36,9 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
     let roles_config: Vec<Vec<ResultEvent>> = serde_json::from_str(&validation_query_results)
         .map_err(|_| ValidationError("Invalid config query result".to_string()))?;
 
-    let role_resources = roles_config.first().ok_or(ValidationError(
-        "Need to define resources to use oso roles.".to_owned(),
-    ))?;
+    let role_resources = roles_config
+        .first()
+        .ok_or_else(|| ValidationError("Need to define resources to use oso roles.".to_owned()))?;
     if role_resources.is_empty() {
         return Err(
             ValidationError("Need to define resources to use oso roles.".to_owned()).into(),
@@ -174,11 +175,12 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
             for (name_sym, definition) in dict.iter() {
                 let role_name = name_sym.0.clone();
                 if let Value::Dictionary(Dictionary { fields: def_dict }) = definition.value() {
-                    for (key, _) in def_dict {
+                    for key in def_dict.keys() {
                         if key.0 != "permissions" && key.0 != "implies" {
-                            return Err(ValidationError(
-                                format!("Invalid key for role definition {}", key.0).into(),
-                            )
+                            return Err(ValidationError(format!(
+                                "Invalid key for role definition {}",
+                                key.0
+                            ))
                             .into());
                         }
                     }
@@ -228,16 +230,17 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                                 }
                                 implications
                             } else {
-                                return Err(ValidationError(
-                                    format!("Invalid implies for role {}", role_name).into(),
-                                )
+                                return Err(ValidationError(format!(
+                                    "Invalid implies for role {}",
+                                    role_name
+                                ))
                                 .into());
                             }
                         } else {
                             vec![]
                         }
                     };
-                    if actions.len() == 0 && implications.len() == 0 {
+                    if actions.is_empty() && implications.is_empty() {
                         return Err(ValidationError(
                             "Must define actions or implications for a role.".to_owned(),
                         )
@@ -261,7 +264,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
             }
         }
 
-        if actions.len() == 0 && role_definitions.len() == 0 {
+        if actions.is_empty() && role_definitions.is_empty() {
             return Err(ValidationError("Must define actions or roles.".to_owned()).into());
         }
 
