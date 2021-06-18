@@ -15,6 +15,7 @@ import { Predicate } from './Predicate';
 import { processMessage } from './messages';
 import type { Class, Options, QueryResult } from './types';
 import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
+import { kebabCase } from 'lodash';
 
 /** Create and manage an instance of the Polar runtime. */
 export class Polar {
@@ -31,11 +32,19 @@ export class Polar {
    * @internal
    */
   #host: Host;
+  /**
+   * Flag that tracks if polar roles are enabled.
+   * 
+   * @internal
+   * 
+   */
+  #polarRolesEnabled: Boolean;
 
   constructor(opts: Options = {}) {
     this.#ffiPolar = new FfiPolar();
     const equalityFn = opts.equalityFn || ((x, y) => x == y);
     this.#host = new Host(this.#ffiPolar, equalityFn);
+    this.#polarRolesEnabled = false
 
     // Register global constants.
     this.registerConstant(null, 'nil');
@@ -89,13 +98,39 @@ export class Polar {
   /**
    * Enable Oso's built-in roles feature.
    */
-  enableRoles() {
+  async enableRoles() {
     const helpers = {
       join: (sep: string, l: string, r: string) => [l, r].join(sep),
     };
     this.registerConstant(helpers, '__oso_internal_roles_helpers__');
     this.#ffiPolar.enableRoles();
+    this.#polarRolesEnabled = false
     this.processMessages();
+
+    // Validate config
+    let validationQueryResults = []
+    while (true) {
+      const query = this.#ffiPolar.nextInlineQuery();
+      this.processMessages();
+      if (query === undefined) break;
+      const source = query.source();
+      const { results } = new Query(query, this.#host);
+      let queryResults = []
+      while (true) {
+        let result = await results.next();
+        if (!(result)) { break }
+        queryResults.push(result);
+      }
+      validationQueryResults.push(queryResults)
+    }
+    // TODO: Turn bindings back into polar
+    //
+    //         for results in validation_query_results:
+    //             for result in results:
+    //                 for k, v in result["bindings"].items():
+    //                     result["bindings"][k] = host.to_polar(v)
+
+    this.#ffiPolar.validateRolesConfig(JSON.stringify(validationQueryResults))
   }
 
   /**
