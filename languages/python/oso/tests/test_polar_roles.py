@@ -4,7 +4,7 @@ import timeit
 import os
 
 from sqlalchemy import create_engine
-from sqlalchemy.types import Integer, String
+from sqlalchemy.types import String
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
