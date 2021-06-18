@@ -113,25 +113,24 @@ export class Polar {
       this.processMessages();
       if (query === undefined) break;
       const source = query.source();
+      console.log(source)
       const { results } = new Query(query, this.#host);
       let queryResults = [];
-      while (true) {
-        let result = await results.next();
-        if (!result) {
-          break;
-        }
+      for await (const result of results) {
         queryResults.push(result);
       }
       validationQueryResults.push(queryResults);
     }
-    // TODO: Turn bindings back into polar
-    //
-    //         for results in validation_query_results:
-    //             for result in results:
-    //                 for k, v in result["bindings"].items():
-    //                     result["bindings"][k] = host.to_polar(v)
 
-    this.#ffiPolar.validateRolesConfig(JSON.stringify(validationQueryResults));
+    const polarValidationQueryResult = validationQueryResults.map(results => results.map(result => {
+      result.forEach((v, k) => {
+        result.set(k, this.#host.toPolar(v))
+      });
+      return { "bindings": result };
+    }))
+
+    console.log(polarValidationQueryResult)
+    this.#ffiPolar.validateRolesConfig(JSON.stringify(polarValidationQueryResult));
   }
 
   /**
