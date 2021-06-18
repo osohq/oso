@@ -41,7 +41,7 @@ The roles library includes:
 
 ## Get started
 
-The Oso Roles library is coming soon for {{< lang >}}! {{< /lang >}}
+The Oso Roles library is coming soon for {{< lang >}}!
 
 For now, you can [check out the library documentation for Python]({{< ref path="/new-roles" lang="python" >}}) or read our [guide on role modeling in Polar](/learn/roles).
 
