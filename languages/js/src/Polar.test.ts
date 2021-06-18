@@ -905,11 +905,11 @@ describe('Polar roles', () => {
               "edit"
           ];
 
-      child_parent(repo: Repo, parent_org) if
+      parent_child(parent_org, repo: Repo) if
           repo.org = parent_org and
           parent_org matches Org;
 
-      child_parent(issue: Issue, parent_repo) if
+      parent_child(parent_repo, issue: Issue) if
           issue.repo = parent_repo and
           parent_repo matches Repo;
 
