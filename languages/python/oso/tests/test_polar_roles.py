@@ -195,10 +195,9 @@ def test_empty_role(init_oso):
         oso.enable_roles()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_bad_namespace_perm(init_oso):
     # - assigning permission with bad namespace throws an error
-    oso, session = init_oso
+    oso, _ = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
         actions = [
@@ -213,9 +212,7 @@ def test_bad_namespace_perm(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        # TODO: where are we going to do config validation?
-        # Maybe when user loads their policy file?
-        pass
+        oso.enable_roles()
 
 
 def test_resource_with_roles_no_actions(init_oso, sample_data):
@@ -268,7 +265,6 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
     assert oso.is_allowed(steve, "pull", oso_repo)
 
 
-@pytest.mark.skip("TODO: validation")
 def test_duplicate_resource_name(init_oso):
     # - duplicate resource name throws an error
     oso, session = init_oso
@@ -296,88 +292,9 @@ def test_duplicate_resource_name(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.enable_roles()
 
 
-@pytest.mark.skip("TODO: validation")
-def test_nested_dot_relationship(init_oso):
-    # - multiple dot lookups throws an error for now
-    oso, session = init_oso
-    policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = ["invite"] and
-        roles = {
-            member: {
-                permissions: ["invite"]
-            }
-        };
-
-    resource(_type: Issue, "issue", actions, roles) if
-        actions = [
-            "edit"
-        ];
-
-    parent(issue, parent_org) if
-        issue.repo.org = parent_org;
-
-    allow(actor, action, resource) if
-        role_allow(actor, action, resource);
-    """
-    oso.load_str(policy)
-
-    with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
-
-
-@pytest.mark.skip("TODO: validation")
-def test_bad_relationship_lookup(init_oso):
-    # - nonexistent attribute lookup throws an error for now
-    oso, session = init_oso
-    policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = ["invite"] and
-        roles = {
-            member: {
-                permissions: ["invite"]
-            }
-        };
-
-    resource(_type: Repo, "repo", actions, {}) if
-        actions = [
-            "pull"
-        ];
-
-    parent(repo: Repo, parent_org) if
-        # INCORRECT FIELD NAME
-        repo.organization = parent_org and
-        parent_org matches Org;
-    """
-    oso.load_str(policy)
-
-    with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
-
-
-@pytest.mark.skip("TODO: validation")
-def test_relationship_without_specializer(init_oso):
-    oso, session = init_oso
-    policy = """
-    resource(_type: Repo, "repo", actions, {}) if
-        actions = [
-            "pull"
-        ];
-
-    parent(repo, parent_org) if
-        repo.org = parent_org and
-        parent_org matches Org;
-    """
-    oso.load_str(policy)
-
-    with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
-
-
-@pytest.mark.skip("TODO: validation")
 def test_relationship_without_resources(init_oso):
     oso, session = init_oso
     policy = """
@@ -388,10 +305,9 @@ def test_relationship_without_resources(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.enable_roles()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_duplicate_role_name_same_resource(init_oso):
     oso, session = init_oso
     policy = """
@@ -411,7 +327,7 @@ def test_duplicate_role_name_same_resource(init_oso):
         """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.enable_roles()
 
 
 def test_role_namespaces(init_oso, sample_data):
@@ -478,7 +394,6 @@ def test_role_namespaces(init_oso, sample_data):
     assert not oso.is_allowed(gabe, "pull", oso_repo)
 
 
-@pytest.mark.skip("TODO: validation")
 def test_resource_actions(init_oso):
     # only define actions, not roles
     oso, session = init_oso
@@ -489,9 +404,9 @@ def test_resource_actions(init_oso):
         ];
     """
     oso.load_str(policy)
+    oso.enable_roles()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_duplicate_action(init_oso):
     # - duplicate action
     oso, session = init_oso
@@ -505,10 +420,9 @@ def test_duplicate_action(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.enable_roles()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_undeclared_permission(init_oso):
     # - assign permission that wasn't declared
     oso, session = init_oso
@@ -526,10 +440,9 @@ def test_undeclared_permission(init_oso):
     oso.load_str(policy)
 
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.enable_roles()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_undeclared_role(init_oso):
     # - imply role that wasn't declared
     oso, session = init_oso
@@ -546,67 +459,9 @@ def test_undeclared_role(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.enable_roles()
 
 
-@pytest.mark.skip("TODO: validation")
-def test_role_implication_without_relationship(init_oso):
-    # - imply role without valid relationship
-    oso, session = init_oso
-    policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = [
-            "invite"
-        ] and
-        roles = {
-            member: {
-                implies: ["repo:reader"]
-            }
-        };
-
-    resource(_type: Repo, "repo", actions, roles) if
-        actions = [
-            "push",
-            "pull"
-        ] and
-        roles = {
-            reader: {
-                permissions: ["pull"]
-            }
-        };
-    """
-    oso.load_str(policy)
-    with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
-
-
-@pytest.mark.skip("TODO: validation")
-def test_role_permission_without_relationship(init_oso):
-    # - assign permission without valid relationship
-    oso, session = init_oso
-    policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = [
-            "invite"
-        ] and
-        roles = {
-            member: {
-                permissions: ["repo:push"]
-            }
-        };
-
-    resource(_type: Repo, "repo", actions, roles) if
-        actions = [
-            "push",
-            "pull"
-        ];
-    """
-    oso.load_str(policy)
-    with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
-
-
-@pytest.mark.skip("TODO: validation")
 def test_invalid_role_permission(init_oso):
     # assigning permission on related role type errors if role exists for permission resource
     oso, session = init_oso
@@ -641,13 +496,12 @@ def test_invalid_role_permission(init_oso):
 
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.enable_roles()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_permission_assignment_to_implied_role(init_oso):
     # assigning the same permission to two roles where one implies the other throws an error
-    oso, session = init_oso
+    oso, _ = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles) if
         actions = [
@@ -667,10 +521,9 @@ def test_permission_assignment_to_implied_role(init_oso):
 
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.enable_roles()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_incorrect_arity_resource(init_oso):
     # - use resource predicate with incorrect arity
     oso, session = init_oso
@@ -682,10 +535,9 @@ def test_incorrect_arity_resource(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.enable_roles()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_undefined_resource_arguments(init_oso):
     # - use resource predicate without defining actions/roles
     oso, session = init_oso
@@ -694,10 +546,9 @@ def test_undefined_resource_arguments(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.enable_roles()
 
 
-@pytest.mark.skip("TODO: validation")
 def test_wrong_type_resource_arguments(init_oso):
     # - use resource predicate with field types
     oso, session = init_oso
@@ -713,7 +564,7 @@ def test_wrong_type_resource_arguments(init_oso):
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+        oso.enable_roles()
 
 
 # TEST CHECK API
@@ -1485,55 +1336,6 @@ def test_chained_role_implication(init_oso, sample_data):
 # - [x] Reassigning user role throws error if `reassign=False`
 
 
-@pytest.mark.skip("TODO: validation / not doing management anymore")
-def test_assign_role_wrong_resource_type(init_oso, sample_data):
-    # - Assigning to role with wrong resource type throws an error
-    oso, session = init_oso
-    policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = ["invite"] and
-        roles = {
-            writer: {
-                permissions: ["invite"]
-            }
-        };
-    """
-    oso.load_str(policy)
-    oso.enable_roles()
-
-    oso_repo = sample_data["oso_repo"]
-    leina = sample_data["leina"]
-
-    with pytest.raises(OsoError):
-        assign_role(leina, oso_repo, "writer", session=session)
-
-
-@pytest.mark.skip("TODO: validation / not doing management anymore")
-def test_assign_remove_nonexistent_role(init_oso, sample_data):
-    # - Assigning/removing non-existent role throws an error
-    oso, session = init_oso
-    policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = ["invite"] and
-        roles = {
-            member: {
-                permissions: ["invite"]
-            }
-        };
-    """
-    oso.load_str(policy)
-    oso.enable_roles()
-
-    osohq = sample_data["osohq"]
-    leina = sample_data["leina"]
-
-    with pytest.raises(OsoError):
-        assign_role(leina, osohq, "owner", session=session)
-
-    with pytest.raises(OsoError):
-        remove_role(leina, osohq, "owner", session=session)
-
-
 # TODO: this is just testing our own code / we don't handle role management
 # anymore
 def test_remove_unassigned_role(init_oso, sample_data):
@@ -2244,78 +2046,6 @@ def test_data_filtering_combo(init_oso, sample_data):
     #     auth_session.query(Org).all()
 
 
-# TEST READ API
-# - [ ] Test getting all roles for a resource
-# - [ ] Test getting all role assignments for a resource
-
-
-@pytest.mark.skip("TODO: not handling role management anymore")
-def test_read_api(init_oso, sample_data, Repo, Org):
-    oso, session = init_oso
-    policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = ["invite", "list_repos"] and
-        roles = {
-            member: {
-                permissions: ["list_repos"]
-            },
-            owner: {
-                permissions: ["invite"]
-            }
-        };
-
-    resource(_type: Repo, "repo", actions, roles) if
-        actions = ["pull"] and
-        roles = {
-            reader: {
-                permissions: ["pull"]
-            }
-        };
-
-    parent(repo: Repo, parent_org) if
-        repo.org = parent_org and
-        parent_org matches Org;
-    """
-    oso.load_str(policy)
-    oso.enable_roles()
-
-    osohq = sample_data["osohq"]
-    oso_repo = sample_data["oso_repo"]
-    ios = sample_data["ios"]
-    leina = sample_data["leina"]
-    steve = sample_data["steve"]
-
-    # - [ ] Test getting all roles for a resource
-    repo_roles = oso.roles.for_resource(Repo, session)
-    assert len(repo_roles) == 1
-    assert repo_roles[0] == "reader"
-
-    org_roles = oso.roles.for_resource(Org, session)
-    assert len(org_roles) == 2
-    assert "member" in org_roles
-    assert "owner" in org_roles
-
-    # - [ ] Test getting all role assignments for a resource
-    assign_role(leina, osohq, "member", session=session)
-    assign_role(leina, oso_repo, "reader", session=session)
-
-    assign_role(steve, osohq, "owner", session=session)
-    assign_role(steve, ios, "reader", session=session)
-    session.commit()
-
-    osohq_assignments = oso.roles.assignments_for_resource(osohq, session)
-    assert len(osohq_assignments) == 2
-    oso_repo_assignments = oso.roles.assignments_for_resource(oso_repo, session)
-    assert len(oso_repo_assignments) == 1
-    ios_assignments = oso.roles.assignments_for_resource(ios, session)
-    assert len(ios_assignments) == 1
-
-    leina_assignments = oso.roles.assignments_for_user(leina, session)
-    assert len(leina_assignments) == 2
-    steve_assignments = oso.roles.assignments_for_user(steve, session)
-    assert len(steve_assignments) == 2
-
-
 # TODO(gj): data filtering
 def test_user_in_role(init_oso, sample_data):
     oso, session = init_oso
@@ -2375,105 +2105,6 @@ def test_user_in_role(init_oso, sample_data):
     # assert len(results) == 2
     # for repo in results:
     #     assert repo.org_id == "osohq"
-
-
-@pytest.mark.skip("TODO: validation / this isn't our problem anymore")
-def test_mismatched_id_types_throws_error(engine, Base, User):
-    pass
-    # class One(Base):
-    #     __tablename__ = "ones"
-    #
-    #     id = Column(String(), primary_key=True)
-    #
-    # class Two(Base):
-    #     __tablename__ = "twos"
-    #
-    #     id = Column(Integer(), primary_key=True)
-    #
-    # Session = sessionmaker(bind=engine)
-    #
-    # oso = SQLAlchemyOso(Base)
-    #
-    # with pytest.raises(OsoError):
-    #     oso.enable_roles(User, Session)
-
-
-@pytest.mark.skip("TODO: not a thing anymore, maybe?")
-def test_enable_roles_twice(engine, Base, User):
-    pass
-    # class One(Base):
-    #     __tablename__ = "ones"
-    #
-    #     id = Column(Integer(), primary_key=True)
-    #
-    # Session = sessionmaker(bind=engine)
-    # oso = SQLAlchemyOso(Base)
-    #
-    # oso.enable_roles(User, Session)
-    #
-    # with pytest.raises(OsoError):
-    #     oso.enable_roles(User, Session)
-
-
-@pytest.mark.skip("TODO: not our problem anymore")
-def test_global_declarative_base(engine, Base, User):
-    """Test two different Osos & two different OsoRoles but a shared
-    declarative_base(). This shouldn't error."""
-
-    pass
-    # class One(Base):
-    #     __tablename__ = "ones"
-    #
-    #     id = Column(Integer(), primary_key=True)
-    #
-    # Session = sessionmaker(bind=engine)
-    # oso = SQLAlchemyOso(Base)
-    # oso.enable_roles(User, Session)
-    #
-    # oso2 = SQLAlchemyOso(Base)
-    # oso2.enable_roles(User, Session)
-
-
-@pytest.mark.skip("TODO: not our problem anymore")
-@pytest.mark.parametrize("sa_type,one_id", [(String, "1"), (Integer, 1)])
-def test_id_types(engine, Base, User, sa_type, one_id):
-    pass
-    # class One(Base):
-    #     __tablename__ = "ones"
-    #
-    #     id = Column(sa_type(), primary_key=True)
-    #
-    # class Two(Base):
-    #     __tablename__ = "twos"
-    #
-    #     id = Column(sa_type(), primary_key=True)
-    #
-    # Session = sessionmaker(bind=engine)
-    # session = Session()
-    #
-    # oso = SQLAlchemyOso(Base)
-    # oso.enable_roles(User, Session)
-    #
-    # Base.metadata.create_all(engine)
-    #
-    # policy = """
-    # resource(_type: One, "one", ["read"], {boss: {permissions: ["read"]}});
-    # resource(_type: Two, "two", ["read"], _roles);
-    # """
-    # oso.load_str(policy)
-    # # TODO: validation
-    # # oso.roles.synchronize_data()
-    #
-    # steve = User(name="steve")
-    # one = One(id=one_id)
-    #
-    # session.add(steve)
-    # session.add(one)
-    # session.commit()
-    #
-    # assign_role(steve, one, "boss", session)
-    # session.commit()
-    # assert oso.is_allowed(steve, "read", one)
 
 
 def test_role_allows_with_other_rules(init_oso, sample_data):
