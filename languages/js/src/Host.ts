@@ -16,6 +16,7 @@ import type {
   obj,
   PolarComparisonOperator,
   PolarTerm,
+  PolarDict,
 } from './types';
 import {
   isPolarBool,
@@ -24,6 +25,7 @@ import {
   isPolarInstance,
   isPolarList,
   isPolarNum,
+  isPolarPattern,
   isPolarPredicate,
   isPolarStr,
   isPolarVariable,
@@ -270,6 +272,39 @@ export class Host {
         return { value: { Call: { name: v.name, args } } };
       case v instanceof Variable:
         return { value: { Variable: v.name } };
+      case v instanceof Expression:
+        return {
+          value: {
+            Expression: {
+              operator: v.operator,
+              args: v.args.map((a: unknown) => this.toPolar(a)),
+            },
+          },
+        };
+      case v instanceof Pattern:
+        if (v.tag === undefined) {
+          const dictionary = this.toPolar(v.fields).value as PolarDict;
+          return { value: { Pattern: dictionary } };
+        } else {
+          return {
+            value: {
+              Pattern: {
+                Instance: {
+                  tag: v.tag,
+                  fields: (this.toPolar(v.fields).value as PolarDict)
+                    .Dictionary,
+                },
+              },
+            },
+          };
+        }
+      case typeof v === 'object' && !(v instanceof Map) && v !== null:
+        const toPolarized = Object.entries(v).reduce((obj: obj, [k, v]) => {
+          obj[k] = this.toPolar(v);
+          return obj;
+        }, {});
+        return { value: { Dictionary: { fields: toPolarized } } };
+      // TODO(gj): will we ever have a Map here?
       default:
         const instance_id = this.cacheInstance(v);
         return {
@@ -346,6 +381,18 @@ export class Host {
       const { operator, args: argTerms } = t.Expression;
       const args = await Promise.all(argTerms.map(a => this.toJs(a)));
       return new Expression(operator, args);
+    } else if (isPolarPattern(t)) {
+      if ('Dictionary' in t.Pattern) {
+        const fields: Map<string, unknown> = await this.toJs({
+          value: t.Pattern,
+        });
+        return new Pattern({ tag: undefined, fields });
+      } else {
+        const fields: Map<string, unknown> = await this.toJs({
+          value: { Dictionary: { fields: t.Pattern.Instance.fields.fields } },
+        });
+        return new Pattern({ tag: t.Pattern.Instance.tag, fields });
+      }
     } else {
       const _: never = t;
       return _;

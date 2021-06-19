@@ -13,7 +13,7 @@ import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
-import type { Class, Options, QueryResult } from './types';
+import type { Class, obj, Options, QueryResult } from './types';
 import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
 
 /** Create and manage an instance of the Polar runtime. */
@@ -113,7 +113,6 @@ export class Polar {
       this.processMessages();
       if (query === undefined) break;
       const source = query.source();
-      console.log(source)
       const { results } = new Query(query, this.#host);
       let queryResults = [];
       for await (const result of results) {
@@ -122,15 +121,26 @@ export class Polar {
       validationQueryResults.push(queryResults);
     }
 
-    const polarValidationQueryResult = validationQueryResults.map(results => results.map(result => {
-      result.forEach((v, k) => {
-        result.set(k, this.#host.toPolar(v))
-      });
-      return { "bindings": result };
-    }))
+    const polarValidationQueryResult = validationQueryResults.map(results =>
+      results.map(result => {
+        const bindings = [...result.entries()].reduce((obj: obj, [k, v]) => {
+          obj[k] = this.#host.toPolar(v);
+          return obj;
+        }, {});
+        return { bindings };
+      })
+    );
 
-    console.log(polarValidationQueryResult)
-    this.#ffiPolar.validateRolesConfig(JSON.stringify(polarValidationQueryResult));
+    // console.dir(
+    //   require('util').inspect(polarValidationQueryResult, {
+    //     showHidden: false,
+    //     depth: null,
+    //   })
+    // );
+
+    this.#ffiPolar.validateRolesConfig(
+      JSON.stringify(polarValidationQueryResult)
+    );
   }
 
   /**

@@ -110,7 +110,7 @@ export function isPolarList(v: PolarValue): v is PolarList {
  *
  * @internal
  */
-interface PolarDict {
+export interface PolarDict {
   Dictionary: {
     fields: Map<string, PolarTerm> | { [key: string]: PolarTerm };
   };
@@ -192,6 +192,23 @@ interface PolarExpression {
   };
 }
 
+interface PolarPatternInstance {
+  Instance: {
+    tag?: string;
+    // Why is this union necessary?
+    fields: { fields: Map<string, PolarTerm> | { [key: string]: PolarTerm } };
+  };
+}
+
+/**
+ * Polar pattern type.
+ *
+ * @internal
+ */
+interface PolarPattern {
+  Pattern: PolarDict | PolarPatternInstance;
+}
+
 /**
  * Type guard to test if a Polar value received from across the WebAssembly
  * boundary is a Polar application instance.
@@ -213,6 +230,16 @@ export function isPolarExpression(v: PolarValue): v is PolarExpression {
 }
 
 /**
+ * Type guard to test if a Polar value received from across the WebAssembly
+ * boundary is a Polar pattern.
+ *
+ * @internal
+ */
+export function isPolarPattern(v: PolarValue): v is PolarPattern {
+  return (v as PolarPattern).Pattern !== undefined;
+}
+
+/**
  * Union of Polar value types.
  *
  * @internal
@@ -226,7 +253,8 @@ type PolarValue =
   | PolarPredicate
   | PolarVariable
   | PolarInstance
-  | PolarExpression;
+  | PolarExpression
+  | PolarPattern;
 
 /**
  * Union of Polar value types.
@@ -254,7 +282,8 @@ function isPolarValue(v: any): v is PolarValue {
     isPolarPredicate(v) ||
     isPolarVariable(v) ||
     isPolarInstance(v) ||
-    isPolarExpression(v)
+    isPolarExpression(v) ||
+    isPolarPattern(v)
   );
 }
 

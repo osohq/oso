@@ -105,7 +105,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                                     return Err(RolesValidationError(
                                         "Invalid resource, no type specializer.".to_owned(),
                                     )
-                                    .into())
+                                    .into());
                                 }
                             }
                         } else {
@@ -119,7 +119,7 @@ pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> 
                         return Err(RolesValidationError(
                             "Invalid resource, no type specializer.".to_owned(),
                         )
-                        .into())
+                        .into());
                     }
                 }
             } else {
