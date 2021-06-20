@@ -105,6 +105,16 @@ export function isPolarList(v: PolarValue): v is PolarList {
   return (v as PolarList).List !== undefined;
 }
 
+// TODO(gj): need to figure out this subclassing issue.
+export class Fields extends Map<string, PolarTerm> {
+  toObject() {
+    return [...this.entries()].reduce((obj: obj, [k, v]) => {
+      obj[k] = v;
+      return obj;
+    }, {});
+  }
+}
+
 /**
  * Polar dictionary type.
  *
@@ -112,7 +122,7 @@ export function isPolarList(v: PolarValue): v is PolarList {
  */
 export interface PolarDict {
   Dictionary: {
-    fields: Map<string, PolarTerm> | { [key: string]: PolarTerm };
+    fields: Fields;
   };
 }
 
@@ -195,8 +205,7 @@ interface PolarExpression {
 interface PolarPatternInstance {
   Instance: {
     tag?: string;
-    // Why is this union necessary?
-    fields: { fields: Map<string, PolarTerm> | { [key: string]: PolarTerm } };
+    fields: { fields: Fields };
   };
 }
 
@@ -311,7 +320,7 @@ export type Class<T extends {} = {}> = new (...args: any[]) => T;
  * @internal
  */
 export interface Result {
-  bindings: Map<string, PolarTerm>;
+  bindings: Fields;
 }
 
 /**

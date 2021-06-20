@@ -19,6 +19,7 @@ import type {
   PolarDict,
 } from './types';
 import {
+  Fields,
   isPolarBool,
   isPolarDict,
   isPolarExpression,
@@ -156,7 +157,9 @@ export class Host {
     id: number
   ): Promise<void> {
     const cls = this.getClass(name);
-    const args = await Promise.all(fields.map(async f => await this.toJs(f)));
+    // Turn Polar dictionaries into JS objects.
+    const toObj = (f: unknown) => (f instanceof Fields ? f.toObject() : f);
+    const args = await Promise.all(fields.map(f => this.toJs(f).then(toObj)));
     const instance = new cls(...args);
     this.cacheInstance(instance, id);
   }
@@ -298,13 +301,8 @@ export class Host {
             },
           };
         }
-      case typeof v === 'object' && !(v instanceof Map) && v !== null:
-        const toPolarized = Object.entries(v).reduce((obj: obj, [k, v]) => {
-          obj[k] = this.toPolar(v);
-          return obj;
-        }, {});
-        return { value: { Dictionary: { fields: toPolarized } } };
-      // TODO(gj): will we ever have a Map here?
+      case v instanceof Fields:
+        return { value: { Dictionary: { fields: v } } };
       default:
         const instance_id = this.cacheInstance(v);
         return {
@@ -353,20 +351,13 @@ export class Host {
     } else if (isPolarList(t)) {
       return await Promise.all(t.List.map(async el => await this.toJs(el)));
     } else if (isPolarDict(t)) {
-      const { fields } = t.Dictionary;
-      let entries =
-        typeof fields.entries === 'function'
-          ? Array.from(fields.entries())
-          : Object.entries(fields);
-      entries = await Promise.all(
-        entries.map(async ([k, v]) => [k, await this.toJs(v)]) as Promise<
-          [string, any]
-        >[]
+      const entries = await Promise.all(
+        [...t.Dictionary.fields.entries()].map(async ([k, v]) => [
+          k,
+          await this.toJs(v),
+        ]) as Promise<[string, any]>[]
       );
-      return entries.reduce((obj: obj, [k, v]) => {
-        obj[k] = v;
-        return obj;
-      }, {});
+      return new Fields(entries);
     } else if (isPolarInstance(t)) {
       const i = this.getInstance(t.ExternalInstance.instance_id);
       return i instanceof Promise ? await i : i;

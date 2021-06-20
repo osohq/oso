@@ -23,6 +23,7 @@ import {
   C,
   ConstructorArgs,
   ConstructorNoArgs,
+  ConstructorMapObjectArgs,
   Counter,
   Foo,
   NonIterable,
@@ -38,7 +39,6 @@ import {
   PolarFileNotFoundError,
   PolarFileExtensionError,
   InvalidIteratorError,
-  UnexpectedPolarTypeError,
 } from './errors';
 
 test('it works', async () => {
@@ -499,6 +499,27 @@ describe('#makeInstance', () => {
     expect(instance).toStrictEqual(new ConstructorArgs(1, 2));
   });
 
+  test('handles JS Maps & objects', async () => {
+    const p = new Polar();
+    p.registerClass(ConstructorMapObjectArgs);
+    p.registerClass(Map);
+    const shouldPass = [
+      // All args match ctor's expectation.
+      '?= x = new ConstructorMapObjectArgs(new Map([["one", 1]]), {two: 2}, new Map([["three", 3]]), {four: 4}) and x.one = 1 and x.two = 2 and x.three = 3 and x.four = 4;',
+      // All Maps passed instead of objects. Field lookups on Maps return undefined.
+      '?= x = new ConstructorMapObjectArgs(new Map([["one", 1]]), new Map([["two", 2]]), new Map([["three", 3]]), new Map([["four", 4]])) and x.one = 1 and x.two = undefined and x.three = 3 and x.four = undefined;',
+    ];
+    expect(Promise.all(shouldPass.map(x => p.loadStr(x)))).resolves;
+
+    // All objects passed instead of Maps. TypeErrors abound when we try to
+    // call Map methods on the objects.
+    await expect(
+      p.loadStr(
+        '?= new ConstructorMapObjectArgs({one: 1}, {two: 2}, {three: 3}, {four: 4});'
+      )
+    ).rejects.toThrow(TypeError('oneMap.get is not a function'));
+  });
+
   test('rejects keyword args', async () => {
     const p = new Polar();
     p.registerClass(ConstructorArgs);
@@ -553,8 +574,8 @@ describe('#registerConstant', () => {
     test('on dicts', async () => {
       const p = new Polar();
       expect(
-        await query(p, 'd = {a: 1} and d.a = 1 and d.hasOwnProperty("a")')
-      ).toStrictEqual([map({ d: { a: 1 } })]);
+        await query(p, 'd = {a: 1} and d.a = 1 and d.has("a")')
+      ).toStrictEqual([map({ d: map({ a: 1 }) })]);
     });
 
     describe('that return undefined', () => {
@@ -772,11 +793,7 @@ describe('iterators', () => {
   test('work over builtins', async () => {
     const p = new Polar();
     expect(
-      await qvar(
-        p,
-        'd = {a: 1, b: 2} and x in Dictionary.entries({a: 1, b: 2}) and x in d',
-        'x'
-      )
+      await qvar(p, 'd = {a: 1, b: 2} and x in d.entries() and x in d', 'x')
     ).toStrictEqual([
       ['a', 1],
       ['b', 2],
