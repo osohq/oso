@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "@types/jest": "^26.0.9",
-    "@types/node": "^14.0.14",
+    "@types/node": "^15.0.0",
     "chokidar-cli": "^2.1.0",
     "gts": "^3.1.0",
     "jest": "^27.0.4",
