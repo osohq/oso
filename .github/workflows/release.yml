@@ -429,10 +429,10 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Use Node.js 10.14.2
+      - name: Use Node.js 10.17.0
         uses: actions/setup-node@v1
         with:
-          node-version: 10.14.2
+          node-version: 10.17.0
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
