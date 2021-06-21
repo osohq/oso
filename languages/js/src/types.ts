@@ -106,22 +106,6 @@ export function isPolarList(v: PolarValue): v is PolarList {
 }
 
 /**
- * JS analogue of Polar's Dictionary type.
- *
- * Polar dictionaries allow field access via the dot operator, which mirrors
- * the way JS objects behave. However, if we translate Polar dictionaries into
- * JS objects, we lose the ability to distinguish between dictionaries and
- * instances, since all JS instances are objects. By subclassing `Object`, we
- * can use `instanceof` to determine if a JS value should be serialized as a
- * Polar dictionary or external instance.
- *
- * @internal
- */
-export class Dict extends Object {
-  [index: string]: any;
-}
-
-/**
  * Polar dictionary type.
  *
  * @internal
@@ -581,4 +565,20 @@ export function isIterableIterator(x: any): boolean {
  */
 export function isAsyncIterator(x: any): boolean {
   return Symbol.asyncIterator in Object(x);
+}
+
+/**
+ * JS analogue of Polar's Dictionary type.
+ *
+ * Polar dictionaries allow field access via the dot operator, which mirrors
+ * the way JS objects behave. However, if we translate Polar dictionaries into
+ * JS objects, we lose the ability to distinguish between dictionaries and
+ * instances, since all JS instances are objects. By subclassing `Object`, we
+ * can use `instanceof` to determine if a JS value should be serialized as a
+ * Polar dictionary or external instance.
+ *
+ * @internal
+ */
+export class Dict extends Object {
+  [index: string]: any;
 }
