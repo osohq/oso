@@ -331,6 +331,7 @@ export function printError(e: Error) {
  */
 export function isConstructor(f: unknown): boolean {
   try {
+    // @ts-ignore
     Reflect.construct(String, [], f);
     return true;
   } catch (e) {

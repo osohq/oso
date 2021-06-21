@@ -521,9 +521,9 @@ describe('#registerConstant', () => {
   describe('can call host language methods', () => {
     test('on strings', async () => {
       const p = new Polar();
-      expect(
-        await query(p, 'x = "abc" and x.indexOf("bc") = 1')
-      ).toStrictEqual([map({ x: 'abc' })]);
+      expect(await query(p, 'x = "abc" and x.indexOf("bc") = 1')).toStrictEqual(
+        [map({ x: 'abc' })]
+      );
     });
 
     test('on numbers', async () => {
@@ -794,9 +794,9 @@ describe('iterators', () => {
   test('work for custom classes', async () => {
     const p = new Polar();
     p.registerClass(BarIterator, 'BarIterator');
-    expect(
-      await qvar(p, 'x in new BarIterator([1, 2, 3])', 'x')
-    ).toStrictEqual([1, 2, 3]);
+    expect(await qvar(p, 'x in new BarIterator([1, 2, 3])', 'x')).toStrictEqual(
+      [1, 2, 3]
+    );
     expect(
       await qvar(p, 'x = new BarIterator([1, 2, 3]).sum()', 'x', true)
     ).toBe(6);

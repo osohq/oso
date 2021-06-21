@@ -429,10 +429,10 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Use Node.js 10.14.2
+      - name: Use Node.js 12.20.0
         uses: actions/setup-node@v1
         with:
-          node-version: 10.14.2
+          node-version: 12.20.0
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -659,7 +659,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node-version: [10, 11, 12, 13, 14]
+        node-version: ['10.0.0', '12.0.0', '14.0.0', '16.0.0']
     steps:
       - uses: actions/checkout@v2
       - name: Set version env

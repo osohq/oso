@@ -54,9 +54,7 @@ describe('#registerCall', () => {
       sync.generator
     );
     expect(await qvar(p, 'x in sync.generator()', 'x')).toStrictEqual([
-      1,
-      2,
-      3,
+      1, 2, 3,
     ]);
 
     expect(await qvar(p, 'sync.function = x', 'x', true)).toStrictEqual(
@@ -97,9 +95,7 @@ describe('#registerCall', () => {
     );
 
     expect(await qvar(p, 'x in sync.validCustomIterator', 'x')).toStrictEqual([
-      1,
-      2,
-      3,
+      1, 2, 3,
     ]);
     expect(query(p, 'sync.validCustomIterator()')).rejects.toThrow(
       '.validCustomIterator is not a function at line 1, column 1'
@@ -153,27 +149,19 @@ describe('#registerCall', () => {
     p.registerConstant(async, 'async');
 
     expect(await qvar(p, 'async.promise = x', 'x', true)).toStrictEqual([
-      1,
-      2,
-      3,
+      1, 2, 3,
     ]);
 
     expect(await qvar(p, 'async.function() = x', 'x', true)).toStrictEqual([
-      1,
-      2,
-      3,
+      1, 2, 3,
     ]);
 
     expect(await qvar(p, 'async.arrow() = x', 'x', true)).toStrictEqual([
-      1,
-      2,
-      3,
+      1, 2, 3,
     ]);
 
     expect(await qvar(p, 'x in async.generator()', 'x')).toStrictEqual([
-      1,
-      2,
-      3,
+      1, 2, 3,
     ]);
 
     expect(await qvar(p, 'x in async.iterator', 'x')).toStrictEqual([1, 2, 3]);
