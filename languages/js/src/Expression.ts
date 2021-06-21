@@ -1,5 +1,4 @@
 import type { PolarOperator } from './types';
-// import { Pattern } from 'Pattern';
 
 /** Polar expression. */
 export class Expression {
@@ -11,11 +10,3 @@ export class Expression {
     this.args = args;
   }
 }
-
-// /** Polar type constraint. */
-// export class TypeConstraint extends Expression {
-//   constructor(constrainee: unknown, tag: string) {
-//     const isa = new Expression('Isa', [constrainee, new Pattern(tag)]);
-//     super('And', [isa]);
-//   }
-// }

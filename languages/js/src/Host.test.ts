@@ -1,5 +1,7 @@
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Expression } from './Expression';
+import { Pattern } from './Pattern';
+import { Dict } from './types';
 import { Host } from './Host';
 import { pred } from '../test/helpers';
 import { Actor, User, Widget } from '../test/classes';
@@ -16,6 +18,10 @@ describe('conversions between JS + Polar values', () => {
     const set = new Set([Math, float, Infinity, NaN, undefined, null]);
     const map = new Map([[str, set]]);
     const obj = { [str]: bool };
+    const dict = new Dict();
+    dict[str] = bool;
+    const instancePattern = new Pattern({ tag: str, fields: dict });
+    const dictPattern = new Pattern({ fields: dict });
     const promises = {
       resolved: Promise.resolve(int),
       pending: Promise.reject(str).catch(() => {}),
@@ -30,6 +36,9 @@ describe('conversions between JS + Polar values', () => {
       },
     };
     const value = [
+      dict,
+      instancePattern,
+      dictPattern,
       list,
       obj,
       map,

@@ -282,17 +282,16 @@ export class Host {
           },
         };
       case v instanceof Pattern:
+        const dict = this.toPolar(v.fields).value as PolarDict;
         if (v.tag === undefined) {
-          const dictionary = this.toPolar(v.fields).value as PolarDict;
-          return { value: { Pattern: dictionary } };
+          return { value: { Pattern: dict } };
         } else {
           return {
             value: {
               Pattern: {
                 Instance: {
                   tag: v.tag,
-                  fields: (this.toPolar(v.fields).value as PolarDict)
-                    .Dictionary,
+                  fields: dict.Dictionary,
                 },
               },
             },
@@ -375,15 +374,15 @@ export class Host {
       return new Expression(operator, args);
     } else if (isPolarPattern(t)) {
       if ('Dictionary' in t.Pattern) {
-        const fields: Map<string, unknown> = await this.toJs({
-          value: t.Pattern,
-        });
-        return new Pattern({ tag: undefined, fields });
+        const fields = await this.toJs({ value: t.Pattern });
+        return new Pattern({ fields });
       } else {
-        const fields: Map<string, unknown> = await this.toJs({
-          value: { Dictionary: { fields: t.Pattern.Instance.fields.fields } },
-        });
-        return new Pattern({ tag: t.Pattern.Instance.tag, fields });
+        let {
+          tag,
+          fields: { fields },
+        } = t.Pattern.Instance;
+        const dict = await this.toJs({ value: { Dictionary: { fields } } });
+        return new Pattern({ tag, fields: dict });
       }
     } else {
       const _: never = t;
