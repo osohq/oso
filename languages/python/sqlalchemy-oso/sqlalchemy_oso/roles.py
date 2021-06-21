@@ -399,19 +399,19 @@ def read_config(oso):
 
     # Register relationships
     role_relationships = oso.query_rule(
-        "child_parent",
-        Variable("resource"),
+        "parent_child",
         Variable("parent_resource"),
+        Variable("resource"),
         accept_expression=True,
     )
 
     # Currently there is only one valid relationship, a parent.
     # There is also only one way you can write it as a rule in polar.
-    # child_parent(child_resource, parent_resource) if
+    # parent_child(parent_resource, child_resource) if
     #     child.parent = parent_resource;
     #
     # @TODO: Support other forms of this rule, eg
-    # child_parent(child_resource, parent_resource) if
+    # parent_child(parent_resource, child_resource) if
     #     child.parent_id = parent_resource.id;
     for result in role_relationships:
         try:
@@ -462,7 +462,10 @@ def read_config(oso):
 
             config.relationships.append(relationship)
         except AssertionError:
-            raise OsoError("Invalid relationship.")
+            raise OsoError(
+                """Invalid relationship. All relationships must take the form:
+        ```\nparent_child(parent: ParentClass, child: ChildClass) if\n\tchild.parent_attr = parent;\n```"""
+            )
 
     # Register resources / permissions / roles and implications
     # Based on the role_resource definitions
