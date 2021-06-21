@@ -1,9 +1,9 @@
 {{- /* apiDeepLink $class $label $pythonFramework */ -}}
 {{- /* Makes a deep link to the currently selected language's documentation for a given class */ -}}
 {{- /* To link to a specific method of the class, supply it as an inner shortcode or string */ -}}
-{{- $class := (.Get 0) -}}
-{{- $label := (.Get 1) -}}
-{{- $pythonFramework := (.Get 2) -}}
+{{- $class := (.Get "class") -}}
+{{- $label := (.Get "label") -}}
+{{- $pythonFramework := (.Get "pythonFramework") -}}
 {{- $href := "" -}}
 {{- $genText := "" -}}
 {{- $baseUrl := printf "%s%s" $.Site.BaseURL $.Page.Language -}}

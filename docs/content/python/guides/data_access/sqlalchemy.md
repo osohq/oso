@@ -40,11 +40,13 @@ To get started, we need to:
 
 ### Register models with Oso
 
-`sqlalchemy_oso.register_models()` registers all models that descend from a
+{{% apiDeepLink label="sqlalchemy_oso.register_models" pythonFramework="sqlalchemy" %}}register_models{{% /apiDeepLink %}}
+registers all models that descend from a
 declarative base class as types that are available in the policy.
 
-Alternatively, the `oso.Oso.register_class()` method can be called on each
-SQLAlchemy model that you want to reference in your policy.
+Alternatively, the
+{{% apiDeepLink class="Oso" label="oso.Oso.register_class" %}}register_class{{% /apiDeepLink %}}
+method can be called on each SQLAlchemy model that you want to reference in your policy.
 
 ### Create a SQLAlchemy Session that uses Oso
 

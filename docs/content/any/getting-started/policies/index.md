@@ -71,7 +71,7 @@ policies may be expressed.
 To use Oso for authorization, your application must first:
 
 1. Load the Oso library: `from oso import Oso`
-2. Create an {{% apiDeepLink "Oso" /%}} instance: `oso = Oso()`
+2. Create an {{% apiDeepLink class="Oso" /%}} instance: `oso = Oso()`
 3. Load a policy: `oso.load_file(policy)`.
 
 Then, at authorization time, you can call:
