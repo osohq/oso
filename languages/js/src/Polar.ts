@@ -130,6 +130,8 @@ export class Polar {
 
     const results = validationQueryResults.map(results =>
       results.map(result => ({
+        // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
+        // trivially `JSON.stringify()`-able.
         bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
           obj[k] = this.#host.toPolar(v);
           return obj;
