@@ -8,7 +8,7 @@ aliases:
 ---
 
 
-# Add Authorization to a Python App
+# Add Authorization to a Node App
 
 After reading this guide, you will know how to:
 
