@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URL;
+import java.util.HashMap;
 import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -96,6 +98,12 @@ public class OsoTest {
     Company company = new Company(1);
     Actor guest = new Actor("guest");
     assertTrue(o.isAllowed(guest, "frob", company));
+
+    // if the guest user can do it, then the dict should
+    // create an instance of the user and be allowed
+    HashMap<String, String> userMap = new HashMap<String, String>();
+    userMap.put("username", "guest");
+    assertTrue(o.isAllowed(userMap, "frob", company));
   }
 
   @Test
