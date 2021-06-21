@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct ResultEvent {
+pub struct ResultEvent {
     bindings: Bindings,
 }
 
@@ -32,11 +32,8 @@ struct Resource {
 
 pub const VALIDATE_ROLES_CONFIG_RESOURCES: &str = "resource(resource, name, actions, roles)";
 
-pub fn validate_roles_config(validation_query_results: &str) -> PolarResult<()> {
-    let roles_config: Vec<Vec<ResultEvent>> = serde_json::from_str(&validation_query_results)
-        .map_err(|_| RolesValidationError("Invalid config query result".to_string()))?;
-
-    let role_resources = roles_config.first().ok_or_else(|| {
+pub fn validate_roles_config(results: Vec<Vec<ResultEvent>>) -> PolarResult<()> {
+    let role_resources = results.first().ok_or_else(|| {
         RolesValidationError("Need to define resources to use oso roles.".to_owned())
     })?;
     if role_resources.is_empty() {

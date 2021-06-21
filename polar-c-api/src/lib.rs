@@ -453,12 +453,13 @@ pub extern "C" fn polar_validate_roles_config(
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let validation_query_results = unsafe { ffi_string!(validation_query_results) };
-        match polar.validate_roles_config(&validation_query_results) {
-            Err(err) => {
-                set_error(err);
+        serde_json::from_str(&validation_query_results)
+            .map_err(|_| error::RolesValidationError("Invalid config query result".into()).into())
+            .and_then(|results| polar.validate_roles_config(results))
+            .err()
+            .map_or(POLAR_SUCCESS, |e| {
+                set_error(e);
                 POLAR_FAILURE
-            }
-            Ok(_) => POLAR_SUCCESS,
-        }
+            })
     })
 }

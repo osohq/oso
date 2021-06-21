@@ -4,6 +4,7 @@ use super::kb::*;
 use super::messages::*;
 use super::parser;
 use super::rewrites::*;
+use super::roles_validation::ResultEvent;
 use super::roles_validation::{validate_roles_config, VALIDATE_ROLES_CONFIG_RESOURCES};
 use super::rules::*;
 use super::runnable::Runnable;
@@ -318,8 +319,8 @@ impl Polar {
         result
     }
 
-    pub fn validate_roles_config(&self, validation_query_results: &str) -> PolarResult<()> {
-        validate_roles_config(validation_query_results)
+    pub fn validate_roles_config(&self, results: Vec<Vec<ResultEvent>>) -> PolarResult<()> {
+        validate_roles_config(results)
     }
 }
 
