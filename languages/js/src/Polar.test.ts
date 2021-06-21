@@ -499,20 +499,20 @@ describe('#makeInstance', () => {
     expect(instance).toStrictEqual(new ConstructorArgs(1, 2));
   });
 
-  test('handles JS Maps & objects', async () => {
+  test('handles JS Maps & Polar dicts', async () => {
     const p = new Polar();
     p.registerClass(ConstructorMapObjectArgs);
     p.registerClass(Map);
     const shouldPass = [
       // All args match ctor's expectation.
       '?= x = new ConstructorMapObjectArgs(new Map([["one", 1]]), {two: 2}, new Map([["three", 3]]), {four: 4}) and x.one = 1 and x.two = 2 and x.three = 3 and x.four = 4;',
-      // All Maps passed instead of objects. Field lookups on Maps return undefined.
+      // All Maps passed instead of dicts. Field lookups on Maps return undefined.
       '?= x = new ConstructorMapObjectArgs(new Map([["one", 1]]), new Map([["two", 2]]), new Map([["three", 3]]), new Map([["four", 4]])) and x.one = 1 and x.two = undefined and x.three = 3 and x.four = undefined;',
     ];
     expect(Promise.all(shouldPass.map(x => p.loadStr(x)))).resolves;
 
-    // All objects passed instead of Maps. TypeErrors abound when we try to
-    // call Map methods on the objects.
+    // All dicts passed instead of Maps. TypeErrors abound when we try to
+    // call Map methods on the dicts.
     await expect(
       p.loadStr(
         '?= new ConstructorMapObjectArgs({one: 1}, {two: 2}, {three: 3}, {four: 4});'
