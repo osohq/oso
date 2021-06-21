@@ -427,6 +427,6 @@ pub extern "C" fn polar_validate_roles_config(
             .map_err(|_| error::RolesValidationError("Invalid config query result".into()).into())
             .and_then(|results| polar.validate_roles_config(results))
             .err()
-            .map_or(POLAR_SUCCESS, |e| set_error(e))
+            .map_or(POLAR_SUCCESS, set_error)
     })
 }
