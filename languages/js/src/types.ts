@@ -126,7 +126,7 @@ export class Dict extends Object {
  *
  * @internal
  */
-export interface PolarDict {
+interface PolarDict {
   Dictionary: {
     fields: Map<string, PolarTerm>;
   };
@@ -208,7 +208,12 @@ interface PolarExpression {
   };
 }
 
-interface PolarPatternInstance {
+/**
+ * Polar instance (tagged dict) pattern variant.
+ *
+ * @internal
+ */
+interface PolarInstancePattern {
   Instance: {
     tag?: string;
     fields: { fields: Map<string, PolarTerm> };
@@ -216,12 +221,19 @@ interface PolarPatternInstance {
 }
 
 /**
+ * Polar (untagged) dict pattern variant.
+ *
+ * @internal
+ */
+type PolarDictPattern = PolarDict;
+
+/**
  * Polar pattern type.
  *
  * @internal
  */
 interface PolarPattern {
-  Pattern: PolarDict | PolarPatternInstance;
+  Pattern: PolarDictPattern | PolarInstancePattern;
 }
 
 /**
