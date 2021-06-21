@@ -32,17 +32,17 @@ export class Polar {
    */
   #host: Host;
   /**
-   * Flag that tracks if polar roles are enabled.
+   * Flag that tracks if the Oso roles feature is enabled.
    *
    * @internal
    */
-  #polarRolesEnabled: boolean;
+  #rolesEnabled: boolean;
 
   constructor(opts: Options = {}) {
     this.#ffiPolar = new FfiPolar();
     const equalityFn = opts.equalityFn || ((x, y) => x == y);
     this.#host = new Host(this.#ffiPolar, equalityFn);
-    this.#polarRolesEnabled = false;
+    this.#rolesEnabled = false;
 
     // Register global constants.
     this.registerConstant(null, 'nil');
@@ -97,41 +97,48 @@ export class Polar {
    * Enable Oso's built-in roles feature.
    */
   async enableRoles() {
-    if (!this.#polarRolesEnabled) {
+    if (!this.#rolesEnabled) {
       const helpers = {
         join: (sep: string, l: string, r: string) => [l, r].join(sep),
       };
       this.registerConstant(helpers, '__oso_internal_roles_helpers__');
       this.#ffiPolar.enableRoles();
       this.processMessages();
-
-      // Validate config
-      let validationQueryResults = [];
-      while (true) {
-        const query = this.#ffiPolar.nextInlineQuery();
-        this.processMessages();
-        if (query === undefined) break;
-        const { results } = new Query(query, this.#host);
-        const queryResults = [];
-        for await (const result of results) {
-          queryResults.push(result);
-        }
-        validationQueryResults.push(queryResults);
-      }
-
-      const results = validationQueryResults.map(results =>
-        results.map(result => ({
-          bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
-            obj[k] = this.#host.toPolar(v);
-            return obj;
-          }, {}),
-        }))
-      );
-
-      this.#ffiPolar.validateRolesConfig(JSON.stringify(results));
-      this.processMessages();
-      this.#polarRolesEnabled = true;
+      await this.validateRolesConfig();
+      this.#rolesEnabled = true;
     }
+  }
+
+  /**
+   * Validate Oso roles config.
+   *
+   * @internal
+   */
+  private async validateRolesConfig() {
+    const validationQueryResults = [];
+    while (true) {
+      const query = this.#ffiPolar.nextInlineQuery();
+      this.processMessages();
+      if (query === undefined) break;
+      const { results } = new Query(query, this.#host);
+      const queryResults = [];
+      for await (const result of results) {
+        queryResults.push(result);
+      }
+      validationQueryResults.push(queryResults);
+    }
+
+    const results = validationQueryResults.map(results =>
+      results.map(result => ({
+        bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
+          obj[k] = this.#host.toPolar(v);
+          return obj;
+        }, {}),
+      }))
+    );
+
+    this.#ffiPolar.validateRolesConfig(JSON.stringify(results));
+    this.processMessages();
   }
 
   /**
@@ -141,7 +148,7 @@ export class Polar {
   clearRules() {
     this.#ffiPolar.clearRules();
     this.processMessages();
-    this.#polarRolesEnabled = false;
+    this.#rolesEnabled = false;
   }
 
   /**
@@ -178,6 +185,11 @@ export class Polar {
       const { done } = await results.next();
       results.return();
       if (done) throw new InlineQueryFailedError(source);
+    }
+
+    // TODO(gj): Make sure this is correct.
+    if (this.#rolesEnabled) {
+      this.validateRolesConfig();
     }
   }
 
