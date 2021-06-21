@@ -31,15 +31,38 @@ struct Resource {
 }
 
 pub const VALIDATE_ROLES_CONFIG_RESOURCES: &str = "resource(resource, name, actions, roles)";
+pub const VALIDATE_ROLES_CONFIG_ACTOR_HAS_ROLE_FOR_RESOURCE: &str =
+    "actor_has_role_for_resource(actor, role_name, resource)";
 
-pub fn validate_roles_config(results: Vec<Vec<ResultEvent>>) -> PolarResult<()> {
-    let role_resources = results.first().ok_or_else(|| {
-        RolesValidationError("Need to define resources to use oso roles.".to_owned())
+pub fn validate_roles_config(roles_config: Vec<Vec<ResultEvent>>) -> PolarResult<()> {
+    let actor_role = roles_config.first().ok_or_else(|| {
+        // TODO: add link to docs in error message
+        RolesValidationError(
+            "Need to define `actor_has_role_for_resource(actor, role_name, resource)` predicate to use oso roles.
+Make sure to load policy before calling Oso.enable_roles()."
+                .to_owned(),
+        )
+    })?;
+    if actor_role.is_empty() {
+        return Err(RolesValidationError(
+            "Need to define `actor_has_role_for_resource(actor, role_name, resource)` predicate to use oso roles.
+Make sure to load policy before calling Oso.enable_roles()."
+                .to_owned(),
+        )
+        .into());
+    }
+
+    let role_resources = roles_config.get(1).ok_or_else(|| {
+        // TODO: add link to docs in error message
+        RolesValidationError(
+            "Need to define at least one `resource(type, name, actions, roles)` predicate to use oso roles.".to_owned(),
+        )
     })?;
     if role_resources.is_empty() {
-        return Err(
-            RolesValidationError("Need to define resources to use oso roles.".to_owned()).into(),
-        );
+        return Err(RolesValidationError(
+            "Need to define at least one `resource(type, name, actions, roles)` predicate to use oso roles.".to_owned(),
+        )
+        .into());
     }
 
     let mut resources = HashMap::new();
@@ -179,7 +202,7 @@ pub fn validate_roles_config(results: Vec<Vec<ResultEvent>>) -> PolarResult<()> 
                     for key in def_dict.keys() {
                         if key.0 != "permissions" && key.0 != "implies" {
                             return Err(RolesValidationError(format!(
-                                "Invalid key for role definition {}",
+                                "Role definition contains invalid key: {}",
                                 key.0
                             ))
                             .into());
