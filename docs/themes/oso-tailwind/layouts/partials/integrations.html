@@ -1,0 +1,61 @@
+{{ $pages := .Pages }}
+{{ if .Params.reverse }}{{ $pages = $pages.Reverse }}{{ end }}
+{{ with $pages }}
+  <span class="prose block mb-4">
+    <h2>Integrations</h2>
+  </span>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {{ range . }}
+      {{ $page := . }}
+      {{- $framework := $page.Title -}}
+      {{- $description := $page.Description -}}
+      {{- $link := $page.RelPermalink -}}
+      {{- $exampleAppURL := $page.Params.exampleAppURL -}}
+      <div class="flex flex-col p-8 inline-block shadow-md hover:shadow-xl focus:shadow-xl transition-shadow">
+        <div class="text-lg">{{- $framework -}}</div>
+        <div class="flex-grow text-gray-500 my-2">{{- $description -}}</div>
+        <div class="grid grid-cols-2 gap-2">
+          {{- with $link -}}
+          <a
+              href="{{- . | safeURL -}}"
+              class="no-a inline-block px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+          >
+            Documentation
+          </a>
+          {{- end -}}
+          {{- with $exampleAppURL -}}
+          <a
+              href="{{- . | safeURL -}}"
+              class="no-a inline-block px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+          >
+            Example app
+          </a>
+          {{- end -}}
+        </div>
+      </div>
+    {{ end }}
+  </div>
+{{ end }}
+{{ with .Language.Params.frameworks }}
+<span class="prose block mt-16 mb-4">
+  <h2>Request integrations</h2>
+</span>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {{ range . }}
+      {{ $framework := index . 0 }}
+      {{ $description := index . 1 }}
+      <div class="flex flex-col p-8 inline-block shadow-md hover:shadow-xl focus:shadow-xl transition-shadow">
+        <div class="text-lg">{{- $framework -}}</div>
+        <div class="flex-grow text-gray-500 my-2">{{- $description -}}</div>
+        <div class="grid grid-cols-2 gap-2">
+          <a
+              href=""
+              class="no-a inline-block px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+          >
+            Request this feature
+          </a>
+        </div>
+      </div>
+    {{ end }}
+</div>
+{{ end }}

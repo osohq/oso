@@ -150,3 +150,8 @@ pre code {
   min-width: 100px;
   padding: 0;
 }
+
+.no-a {
+  color: rgb(55, 65, 81)!important;
+  text-decoration: none!important;
+}

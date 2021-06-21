@@ -4,6 +4,7 @@ title: Flask Authorization Library
 aliases:
   - /using/frameworks/flask.html
 description: The Oso Flask integration provides request authorization middleware for usage with Flask.
+exampleAppURL: "https://github.com/osohq/gitclub-sqlalchemy-flask-react"
 ---
 
 # Flask

@@ -4,6 +4,7 @@ weight: 3
 any: false
 aliases:
     - /using/libraries/python/api.html
+frameworksTOC: true
 ---
 
 # Framework & ORM Integrations
