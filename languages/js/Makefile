@@ -40,7 +40,7 @@ repl: build
 # Remove existing build.
 clean: install
 	yarn clean
-	rm $(WASM_FILES)
+	rm -f $(WASM_FILES)
 
 install: .make.deps.installed
 

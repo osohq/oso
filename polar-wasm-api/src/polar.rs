@@ -32,6 +32,18 @@ impl Polar {
             .map_err(Error::into)
     }
 
+    #[wasm_bindgen(js_class = Polar, js_name = validateRolesConfig)]
+    pub fn wasm_validate_roles_config(&self, validation_query_results: &str) -> JsResult<()> {
+        serde_json::from_str(validation_query_results)
+            .map_err(serde_serialization_error)
+            .and_then(|term| {
+                self.0
+                    .validate_roles_config(term)
+                    .map_err(Error::from)
+                    .map_err(Error::into)
+            })
+    }
+
     #[wasm_bindgen(js_class = Polar, js_name = clearRules)]
     pub fn wasm_clear_rules(&self) {
         self.0.clear_rules()
