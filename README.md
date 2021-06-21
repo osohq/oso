@@ -57,7 +57,7 @@ requirements:
 
 - Java: 10+
   - Maven: 3.6+
-- Node.js: 10.17.0+
+- Node.js: 12.20.0+
   - Yarn 1.22+
 - Python: 3.6+
 - Ruby: 2.4+
