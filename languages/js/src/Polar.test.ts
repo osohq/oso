@@ -1,4 +1,5 @@
 import { Polar } from './Polar';
+import { Expression } from './Expression';
 import { Variable } from './Variable';
 import {
   map,
@@ -22,6 +23,7 @@ import {
   C,
   ConstructorArgs,
   ConstructorNoArgs,
+  ConstructorMapObjectArgs,
   Counter,
   Foo,
   NonIterable,
@@ -37,7 +39,6 @@ import {
   PolarFileNotFoundError,
   PolarFileExtensionError,
   InvalidIteratorError,
-  UnexpectedPolarTypeError,
 } from './errors';
 
 test('it works', async () => {
@@ -82,7 +83,7 @@ describe('#registerClass', () => {
     p.registerClass(Foo);
     p.registerClass(Bar);
     expect(await qvar(p, 'new Foo("A").a = x', 'x', true)).toStrictEqual('A');
-    expect(qvar(p, 'new Foo("A").a() = x', 'x', true)).rejects.toThrow(
+    await expect(qvar(p, 'new Foo("A").a() = x', 'x', true)).rejects.toThrow(
       `trace (most recent evaluation last):
   in query at line 1, column 1
     new Foo(\"A\").a() = x
@@ -92,7 +93,7 @@ describe('#registerClass', () => {
     new Foo(\"A\").a()
 Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     );
-    expect(qvar(p, 'x in new Foo("A").b', 'x', true)).rejects.toThrow(
+    await expect(qvar(p, 'x in new Foo("A").b', 'x', true)).rejects.toThrow(
       'function is not iterable'
     );
     expect(await qvar(p, 'x in new Foo("A").b()', 'x', true)).toStrictEqual(
@@ -156,10 +157,12 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     expect(await qvar(p, 'try(new X(), x)', 'x')).toStrictEqual([]);
   });
 
-  test('rejects keyword arguments in method calls', () => {
+  test('rejects keyword arguments in method calls', async () => {
     const p = new Polar();
     p.registerClass(A);
-    expect(query(p, 'x = (new A()).a(arg: 1)')).rejects.toThrow(KwargsError);
+    await expect(query(p, 'x = (new A()).a(arg: 1)')).rejects.toThrow(
+      KwargsError
+    );
   });
 
   describe('animal tests', () => {
@@ -364,19 +367,23 @@ describe('#loadFile', () => {
   test('passes the filename across the FFI boundary', async () => {
     const p = new Polar();
     const file = await tempFile(';', 'invalid.polar');
-    expect(p.loadFile(file)).rejects.toThrow(
+    await expect(p.loadFile(file)).rejects.toThrow(
       `did not expect to find the token ';' at line 1, column 1 in file ${file}`
     );
   });
 
-  test('throws if given a non-Polar file', () => {
+  test('throws if given a non-Polar file', async () => {
     const p = new Polar();
-    expect(p.loadFile('other.ext')).rejects.toThrow(PolarFileExtensionError);
+    await expect(p.loadFile('other.ext')).rejects.toThrow(
+      PolarFileExtensionError
+    );
   });
 
-  test('throws if given a non-existent file', () => {
+  test('throws if given a non-existent file', async () => {
     const p = new Polar();
-    expect(p.loadFile('other.polar')).rejects.toThrow(PolarFileNotFoundError);
+    await expect(p.loadFile('other.polar')).rejects.toThrow(
+      PolarFileNotFoundError
+    );
   });
 
   test('throws if two files with the same contents are loaded', async () => {
@@ -384,7 +391,7 @@ describe('#loadFile', () => {
     await expect(
       p.loadFile(await tempFile('', 'a.polar'))
     ).resolves.not.toThrow();
-    expect(p.loadFile(await tempFile('', 'b.polar'))).rejects.toThrow(
+    await expect(p.loadFile(await tempFile('', 'b.polar'))).rejects.toThrow(
       /Problem loading file: A file with the same contents as .*b.polar named .*a.polar has already been loaded./
     );
   });
@@ -492,11 +499,32 @@ describe('#makeInstance', () => {
     expect(instance).toStrictEqual(new ConstructorArgs(1, 2));
   });
 
-  test('rejects keyword args', () => {
+  test('handles JS Maps & Polar dicts', async () => {
+    const p = new Polar();
+    p.registerClass(ConstructorMapObjectArgs);
+    p.registerClass(Map);
+    const shouldPass = [
+      // All args match ctor's expectation.
+      '?= x = new ConstructorMapObjectArgs(new Map([["one", 1]]), {two: 2}, new Map([["three", 3]]), {four: 4}) and x.one = 1 and x.two = 2 and x.three = 3 and x.four = 4;',
+      // All Maps passed instead of dicts. Field lookups on Maps return undefined.
+      '?= x = new ConstructorMapObjectArgs(new Map([["one", 1]]), new Map([["two", 2]]), new Map([["three", 3]]), new Map([["four", 4]])) and x.one = 1 and x.two = undefined and x.three = 3 and x.four = undefined;',
+    ];
+    expect(Promise.all(shouldPass.map(x => p.loadStr(x)))).resolves;
+
+    // All dicts passed instead of Maps. TypeErrors abound when we try to
+    // call Map methods on the dicts.
+    await expect(
+      p.loadStr(
+        '?= new ConstructorMapObjectArgs({one: 1}, {two: 2}, {three: 3}, {four: 4});'
+      )
+    ).rejects.toThrow(TypeError('oneMap.get is not a function'));
+  });
+
+  test('rejects keyword args', async () => {
     const p = new Polar();
     p.registerClass(ConstructorArgs);
     const q = 'x = new ConstructorArgs(first: 1, second: 2)';
-    expect(query(p, q)).rejects.toThrow(KwargsError);
+    await expect(query(p, q)).rejects.toThrow(KwargsError);
   });
 });
 
@@ -521,9 +549,9 @@ describe('#registerConstant', () => {
   describe('can call host language methods', () => {
     test('on strings', async () => {
       const p = new Polar();
-      expect(
-        await query(p, 'x = "abc" and x.indexOf("bc") = 1')
-      ).toStrictEqual([map({ x: 'abc' })]);
+      expect(await query(p, 'x = "abc" and x.indexOf("bc") = 1')).toStrictEqual(
+        [map({ x: 'abc' })]
+      );
     });
 
     test('on numbers', async () => {
@@ -555,7 +583,7 @@ describe('#registerConstant', () => {
         const p = new Polar();
         p.registerConstant({}, 'u');
         expect(await query(p, 'u.x = u.y')).toStrictEqual([map()]);
-        expect(query(p, 'u.x.y')).rejects.toThrow();
+        await expect(query(p, 'u.x.y')).rejects.toThrow();
       });
     });
 
@@ -564,14 +592,16 @@ describe('#registerConstant', () => {
       const p = new Polar();
       p.registerConstant({ x: null }, 'u');
       expect(await query(p, 'u.x = nil')).toStrictEqual([map()]);
-      expect(query(p, 'u.x.y')).rejects.toThrow();
+      await expect(query(p, 'u.x.y')).rejects.toThrow();
     });
   });
 
   // TODO(gj): Is this expected?
-  test('errors when calling host language methods on booleans', () => {
+  test('errors when calling host language methods on booleans', async () => {
     const p = new Polar();
-    expect(query(p, 'b = true and b.constructor = Boolean')).rejects.toThrow(
+    await expect(
+      query(p, 'b = true and b.constructor = Boolean')
+    ).rejects.toThrow(
       'Type error: can only perform lookups on dicts and instances, this is true at line 1, column 5'
     );
   });
@@ -634,58 +664,49 @@ describe('errors', () => {
       expect(p.loadStr('f(1); f(2); ?= f(1); ?= not f(3);')).resolves;
     });
 
-    test('fails if an inline query fails', () => {
+    test('fails if an inline query fails', async () => {
       const p = new Polar();
-      expect(p.loadStr('g(1); ?= g(2);')).rejects.toThrow(
+      await expect(p.loadStr('g(1); ?= g(2);')).rejects.toThrow(
         InlineQueryFailedError
       );
     });
   });
 
-  describe('with expressions', () => {
-    test('errors if an expression is received', () => {
-      const p = new Polar();
-      expect(p.loadStr('f(x) if x > 2;')).resolves;
-      let result = p.query('f(x)').next();
-      expect(result).rejects.toThrow(UnexpectedPolarTypeError);
-    });
-  });
-
   describe('when parsing', () => {
-    test('raises on IntegerOverflow errors', () => {
+    test('raises on IntegerOverflow errors', async () => {
       const p = new Polar();
       const int = '18446744073709551616';
       const rule = `f(a) if a = ${int};`;
-      expect(p.loadStr(rule)).rejects.toThrow(
+      await expect(p.loadStr(rule)).rejects.toThrow(
         `'${int}' caused an integer overflow at line 1, column 13`
       );
     });
 
-    test('raises on InvalidTokenCharacter errors', () => {
+    test('raises on InvalidTokenCharacter errors', async () => {
       const p = new Polar();
       const rule = `
         f(a) if a = "this is not
         allowed";
       `;
-      expect(p.loadStr(rule)).rejects.toThrow(
+      await expect(p.loadStr(rule)).rejects.toThrow(
         "'\\n' is not a valid character. Found in this is not at line 2, column 33"
       );
     });
 
     test.todo('raises on InvalidToken');
 
-    test('raises on UnrecognizedEOF errors', () => {
+    test('raises on UnrecognizedEOF errors', async () => {
       const p = new Polar();
       const rule = 'f(a)';
-      expect(p.loadStr(rule)).rejects.toThrow(
+      await expect(p.loadStr(rule)).rejects.toThrow(
         'hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 5'
       );
     });
 
-    test('raises on UnrecognizedToken errors', () => {
+    test('raises on UnrecognizedToken errors', async () => {
       const p = new Polar();
       const rule = '1;';
-      expect(p.loadStr(rule)).rejects.toThrow(
+      await expect(p.loadStr(rule)).rejects.toThrow(
         "did not expect to find the token '1' at line 1, column 1"
       );
     });
@@ -697,7 +718,7 @@ describe('errors', () => {
     test('include a stack trace', async () => {
       const p = new Polar();
       await p.loadStr('foo(a,b) if a in b;');
-      expect(query(p, 'foo(1,2)')).rejects.toThrow(
+      await expect(query(p, 'foo(1,2)')).rejects.toThrow(
         `trace (most recent evaluation last):
   in query at line 1, column 1
     foo(1,2)
@@ -707,10 +728,10 @@ Type error: can only use \`in\` on an iterable value, this is Number(Integer(2))
       );
     });
 
-    test('work for lookups', () => {
+    test('work for lookups', async () => {
       const p = new Polar();
       p.registerConstant(undefined, 'undefined');
-      expect(query(p, 'undefined.foo')).rejects.toThrow(
+      await expect(query(p, 'undefined.foo')).rejects.toThrow(
         `trace (most recent evaluation last):
   in query at line 1, column 1
     undefined.foo
@@ -786,7 +807,7 @@ describe('iterators', () => {
   test('fails for non iterables', async () => {
     const p = new Polar();
     p.registerClass(NonIterable, 'NonIterable');
-    expect(query(p, 'x in new NonIterable()')).rejects.toThrow(
+    await expect(query(p, 'x in new NonIterable()')).rejects.toThrow(
       InvalidIteratorError
     );
   });
@@ -794,13 +815,24 @@ describe('iterators', () => {
   test('work for custom classes', async () => {
     const p = new Polar();
     p.registerClass(BarIterator, 'BarIterator');
-    expect(
-      await qvar(p, 'x in new BarIterator([1, 2, 3])', 'x')
-    ).toStrictEqual([1, 2, 3]);
+    expect(await qvar(p, 'x in new BarIterator([1, 2, 3])', 'x')).toStrictEqual(
+      [1, 2, 3]
+    );
     expect(
       await qvar(p, 'x = new BarIterator([1, 2, 3]).sum()', 'x', true)
     ).toBe(6);
   });
+});
+
+test('handles expressions', async () => {
+  const p = new Polar();
+  await p.loadStr('f(x) if x > 2;');
+  const result = (await query(p, 'f(x)'))[0];
+  const x = result.get('x');
+  expect(x).toBeInstanceOf(Expression);
+  const gt = new Expression('Gt', [new Variable('_this'), 2]);
+  const expected = new Expression('And', [gt]);
+  expect(x).toStrictEqual(expected);
 });
 
 // test_roles_integration
@@ -905,11 +937,11 @@ describe('Polar roles', () => {
               "edit"
           ];
 
-      child_parent(repo: Repo, parent_org) if
+      parent_child(parent_org, repo: Repo) if
           repo.org = parent_org and
           parent_org matches Org;
 
-      child_parent(issue: Issue, parent_repo) if
+      parent_child(parent_repo, issue: Issue) if
           issue.repo = parent_repo and
           parent_repo matches Repo;
 
@@ -924,7 +956,7 @@ describe('Polar roles', () => {
     const p = new Polar();
     [Org, Repo, Issue, User].forEach(c => p.registerClass(c));
     await p.loadStr(policy);
-    p.enableRoles();
+    await p.enableRoles();
 
     const isAllowed = async (...args: unknown[]) => {
       const result = await query(p, pred('allow', ...args));

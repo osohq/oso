@@ -42,9 +42,8 @@ macro_rules! ffi_try {
         if let Ok(res) = catch_unwind(AssertUnwindSafe(|| $body)) {
             res
         } else {
-            set_error(error::OperationalError::Unknown.into());
             // return as an int or a pointer
-            POLAR_FAILURE as _
+            set_error(error::OperationalError::Unknown.into()) as _
         }
     };
 }
@@ -53,8 +52,9 @@ thread_local! {
     static LAST_ERROR: RefCell<Option<Box<error::PolarError>>> = RefCell::new(None);
 }
 
-fn set_error(e: error::PolarError) {
-    LAST_ERROR.with(|prev| *prev.borrow_mut() = Some(Box::new(e)))
+fn set_error(e: error::PolarError) -> i32 {
+    LAST_ERROR.with(|prev| *prev.borrow_mut() = Some(Box::new(e)));
+    POLAR_FAILURE
 }
 
 #[no_mangle]
@@ -93,10 +93,7 @@ pub extern "C" fn polar_load(
         };
 
         match polar.load(&src, filename) {
-            Err(err) => {
-                set_error(err);
-                POLAR_FAILURE
-            }
+            Err(err) => set_error(err),
             Ok(_) => POLAR_SUCCESS,
         }
     })
@@ -127,10 +124,7 @@ pub extern "C" fn polar_register_constant(
                 polar.register_constant(terms::Symbol::new(name.as_ref()), value);
                 POLAR_SUCCESS
             }
-            Err(e) => {
-                set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
-                POLAR_FAILURE
-            }
+            Err(e) => set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into()),
         }
     })
 }
@@ -249,23 +243,16 @@ pub extern "C" fn polar_debug_command(query_ptr: *mut Query, value: *const c_cha
             match t.as_ref().map(terms::Term::value) {
                 Ok(terms::Value::String(command)) => match query.debug_command(command) {
                     Ok(_) => POLAR_SUCCESS,
-                    Err(e) => {
-                        set_error(e);
-                        POLAR_FAILURE
-                    }
+                    Err(e) => set_error(e),
                 },
-                Ok(_) => {
-                    set_error(
-                        error::RuntimeError::Serialization {
-                            msg: "received bad command".to_string(),
-                        }
-                        .into(),
-                    );
-                    POLAR_FAILURE
-                }
+                Ok(_) => set_error(
+                    error::RuntimeError::Serialization {
+                        msg: "received bad command".to_string(),
+                    }
+                    .into(),
+                ),
                 Err(e) => {
-                    set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
-                    POLAR_FAILURE
+                    set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into())
                 }
             }
         } else {
@@ -289,17 +276,15 @@ pub extern "C" fn polar_call_result(
             match t {
                 Ok(t) => term = Some(t),
                 Err(e) => {
-                    set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
-                    return POLAR_FAILURE;
+                    return set_error(
+                        error::RuntimeError::Serialization { msg: e.to_string() }.into(),
+                    );
                 }
             }
         }
         match query.call_result(call_id, term) {
             Ok(_) => POLAR_SUCCESS,
-            Err(e) => {
-                set_error(e);
-                POLAR_FAILURE
-            }
+            Err(e) => set_error(e),
         }
     })
 }
@@ -311,10 +296,7 @@ pub extern "C" fn polar_question_result(query_ptr: *mut Query, call_id: u64, res
         let result = result != POLAR_FAILURE;
         match query.question_result(call_id, result) {
             Ok(_) => POLAR_SUCCESS,
-            Err(e) => {
-                set_error(e);
-                POLAR_FAILURE
-            }
+            Err(e) => set_error(e),
         }
     })
 }
@@ -331,10 +313,7 @@ pub extern "C" fn polar_application_error(query_ptr: *mut Query, message: *mut c
 
         match query.application_error(s) {
             Ok(_) => POLAR_SUCCESS,
-            Err(e) => {
-                set_error(e);
-                POLAR_FAILURE
-            }
+            Err(e) => set_error(e),
         }
     })
 }
@@ -378,15 +357,9 @@ pub extern "C" fn polar_bind(
         match value {
             Ok(value) => match query.bind(terms::Symbol::new(name.as_ref()), value) {
                 Ok(_) => POLAR_SUCCESS,
-                Err(e) => {
-                    set_error(e);
-                    POLAR_FAILURE
-                }
+                Err(e) => set_error(e),
             },
-            Err(e) => {
-                set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
-                POLAR_FAILURE
-            }
+            Err(e) => set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into()),
         }
     })
 }
@@ -436,11 +409,24 @@ pub extern "C" fn polar_enable_roles(polar_ptr: *mut Polar) -> i32 {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         match polar.enable_roles() {
-            Err(err) => {
-                set_error(err);
-                POLAR_FAILURE
-            }
+            Err(err) => set_error(err),
             Ok(_) => POLAR_SUCCESS,
         }
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn polar_validate_roles_config(
+    polar_ptr: *mut Polar,
+    validation_query_results: *const c_char,
+) -> i32 {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let validation_query_results = unsafe { ffi_string!(validation_query_results) };
+        serde_json::from_str(&validation_query_results)
+            .map_err(|_| error::RolesValidationError("Invalid config query result".into()).into())
+            .and_then(|results| polar.validate_roles_config(results))
+            .err()
+            .map_or(POLAR_SUCCESS, set_error)
     })
 }
