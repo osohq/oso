@@ -27,8 +27,7 @@ guide apply to any framework.
 
 [example-repo]: https://github.com/osohq/oso-express-tutorial
 
-Clone [the example app][example-repo], install dependencies in a virtual
-environment, seed the database, and fire up the server:
+Clone [the example app][example-repo], install dependencies, seed the database, and fire up the server:
 
 ```console
 $ git clone https://github.com/osohq/oso-express-tutorial.git
@@ -67,9 +66,25 @@ Once the library's installed, create a new file in the `src` directory called
 `authorization.ts`. In this file, we'll write helper functions for
 initializing and accessing Oso:
 
-{{< literalInclude
-    path="examples/node/getting-started/application/src/authorization.ts"
-    lines="1-4,6-12,14-20" >}}
+```typescript
+import { Oso } from 'oso';                  // 1
+import { User } from './user';
+import { Expense } from './expense';
+
+let oso: Oso;
+
+const initOso = async () => {
+  const oso = new Oso();                    // 2
+  oso.registerClass(User);                  // 3
+  oso.registerClass(Expense);
+  return oso;
+}
+
+const getOso = async () => {
+  if (!oso) oso = await initOso();          // 4
+  return oso;
+};
+```
 
 We've **(1)** imported the `Oso` module, **(2)** constructed a new Oso instance,
 **(3)** registered a pair of our application classes with Oso so that we can
@@ -112,8 +127,8 @@ controller function:
 
 {{< literalInclude
     path="examples/node/getting-started/application/src/controllers.ts"
-    lines="3,5-16"
-    hlOpts="hl_lines=10" >}}
+    lines="3-16"
+    hlOpts="hl_lines=8" >}}
 
 Restart the Express app, and then repeat the same request from earlier. It should
 now result in a `403 Forbidden`:
@@ -142,8 +157,8 @@ earlier:
 
 {{< literalInclude
     path="examples/node/getting-started/application/src/authorization.ts"
-    lines="8,015"
-    hlOpts="hl_lines=13" >}}
+    lines="5,9-15"
+    hlOpts="hl_lines=9" >}}
 
 At this point, all requests to `getExpense` will still be denied because our
 policy is empty.
@@ -235,28 +250,22 @@ Expense(amount=17743, description='Pug irony.', user_id=1, id=2)
 ```
 
 {{% callout "What's next" "blue" %}}
+Want to know even more about adding Oso to your Node app? 
 
-<!-- TODO(gj): page doesn't exist yet in new docs
-- To explore integrating Oso in your app in more depth continue to [Access Patterns](). -->
 - To learn about different patterns for structuring authorization code, see
   [Role-Based Access Control (RBAC) Patterns](learn/roles).
 - For a deeper introduction to policy syntax, see [Writing Policies](policies).
 - For reference on using the Node Oso library, see [Node Authorization Library](reference).
 
-Specific tutorials on integrating
-you may find some of our blog posts useful, especially
-and [GraphQL Authorization with Graphene, SQLAlchemy and Oso](https://www.osohq.com/post/graphql-authorization-graphene-sqlalchemy-oso).
-Please also see the reference pages on [Framework & ORM Integrations](reference/frameworks).
+Here are some other great resources that might help you get started:
 
-Want to know even more about adding Oso to your Node app? Here are some other great resources that might help you get started.
-
-## NestJS library by Bjerk AS
+### NestJS library by Bjerk AS
 
 The good folks at [Bjerk AS][bjerk] have made a [NestJS][nestjs] integration
 for Oso available via [GitHub][nestjs-oso-github] and [npm][nestjs-oso-npm].
 Its documentation includes a Quickstart guide.
 
-## Sam's blog post
+### Sam's blog post
 
 Oso CTO Sam Scott blogged about [Adding Authorization to a Node.js
 App][adding-authorization-post]. That post also uses [NestJS][nestjs] as a
