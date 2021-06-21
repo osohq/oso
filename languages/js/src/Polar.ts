@@ -97,38 +97,41 @@ export class Polar {
    * Enable Oso's built-in roles feature.
    */
   async enableRoles() {
-    const helpers = {
-      join: (sep: string, l: string, r: string) => [l, r].join(sep),
-    };
-    this.registerConstant(helpers, '__oso_internal_roles_helpers__');
-    this.#ffiPolar.enableRoles();
-    this.processMessages();
-
-    // Validate config
-    let validationQueryResults = [];
-    while (true) {
-      const query = this.#ffiPolar.nextInlineQuery();
+    if (!this.#polarRolesEnabled) {
+      const helpers = {
+        join: (sep: string, l: string, r: string) => [l, r].join(sep),
+      };
+      this.registerConstant(helpers, '__oso_internal_roles_helpers__');
+      this.#ffiPolar.enableRoles();
       this.processMessages();
-      if (query === undefined) break;
-      const { results } = new Query(query, this.#host);
-      const queryResults = [];
-      for await (const result of results) {
-        queryResults.push(result);
+
+      // Validate config
+      let validationQueryResults = [];
+      while (true) {
+        const query = this.#ffiPolar.nextInlineQuery();
+        this.processMessages();
+        if (query === undefined) break;
+        const { results } = new Query(query, this.#host);
+        const queryResults = [];
+        for await (const result of results) {
+          queryResults.push(result);
+        }
+        validationQueryResults.push(queryResults);
       }
-      validationQueryResults.push(queryResults);
+
+      const results = validationQueryResults.map(results =>
+        results.map(result => ({
+          bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
+            obj[k] = this.#host.toPolar(v);
+            return obj;
+          }, {}),
+        }))
+      );
+
+      this.#ffiPolar.validateRolesConfig(JSON.stringify(results));
+      this.processMessages();
+      this.#polarRolesEnabled = true;
     }
-
-    const results = validationQueryResults.map(results =>
-      results.map(result => ({
-        bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
-          obj[k] = this.#host.toPolar(v);
-          return obj;
-        }, {}),
-      }))
-    );
-
-    this.#ffiPolar.validateRolesConfig(JSON.stringify(results));
-    this.#polarRolesEnabled = true;
   }
 
   /**
