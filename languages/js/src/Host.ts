@@ -350,10 +350,10 @@ export class Host {
     } else if (isPolarList(t)) {
       return await Promise.all(t.List.map(async el => await this.toJs(el)));
     } else if (isPolarDict(t)) {
-      const toJs = ([k, v]: [string, PolarTerm]) =>
+      const valueToJs = ([k, v]: [string, PolarTerm]) =>
         this.toJs(v).then(v => [k, v]) as Promise<[string, any]>;
       const { fields } = t.Dictionary;
-      const entries = await Promise.all([...fields.entries()].map(toJs));
+      const entries = await Promise.all([...fields.entries()].map(valueToJs));
       return entries.reduce((dict: Dict, [k, v]) => {
         dict[k] = v;
         return dict;
