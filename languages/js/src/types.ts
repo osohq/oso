@@ -105,14 +105,20 @@ export function isPolarList(v: PolarValue): v is PolarList {
   return (v as PolarList).List !== undefined;
 }
 
-// TODO(gj): need to figure out this subclassing issue.
-export class Fields extends Map<string, PolarTerm> {
-  toObject() {
-    return [...this.entries()].reduce((obj: obj, [k, v]) => {
-      obj[k] = v;
-      return obj;
-    }, {});
-  }
+/**
+ * JS analogue of Polar's Dictionary type.
+ *
+ * Polar dictionaries allow field access via the dot operator, which mirrors
+ * the way JS objects behave. However, if we translate Polar dictionaries into
+ * JS objects, we lose the ability to distinguish between dictionaries and
+ * instances, since all JS instances are objects. By subclassing `Object`, we
+ * can use `instanceof` to determine if a JS value should be serialized as a
+ * Polar dictionary or external instance.
+ *
+ * @internal
+ */
+export class Dict extends Object {
+  [index: string]: any;
 }
 
 /**
@@ -122,7 +128,7 @@ export class Fields extends Map<string, PolarTerm> {
  */
 export interface PolarDict {
   Dictionary: {
-    fields: Fields;
+    fields: Map<string, PolarTerm>;
   };
 }
 
@@ -205,7 +211,7 @@ interface PolarExpression {
 interface PolarPatternInstance {
   Instance: {
     tag?: string;
-    fields: { fields: Fields };
+    fields: { fields: Map<string, PolarTerm> };
   };
 }
 
@@ -320,7 +326,7 @@ export type Class<T extends {} = {}> = new (...args: any[]) => T;
  * @internal
  */
 export interface Result {
-  bindings: Fields;
+  bindings: Map<string, PolarTerm>;
 }
 
 /**

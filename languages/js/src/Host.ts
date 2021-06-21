@@ -13,13 +13,12 @@ import { Variable } from './Variable';
 import type {
   Class,
   EqualityFn,
-  obj,
   PolarComparisonOperator,
   PolarTerm,
   PolarDict,
 } from './types';
 import {
-  Fields,
+  Dict,
   isPolarBool,
   isPolarDict,
   isPolarExpression,
@@ -157,9 +156,7 @@ export class Host {
     id: number
   ): Promise<void> {
     const cls = this.getClass(name);
-    // Turn Polar dictionaries into JS objects.
-    const toObj = (f: unknown) => (f instanceof Fields ? f.toObject() : f);
-    const args = await Promise.all(fields.map(f => this.toJs(f).then(toObj)));
+    const args = await Promise.all(fields.map(f => this.toJs(f)));
     const instance = new cls(...args);
     this.cacheInstance(instance, id);
   }
@@ -301,8 +298,11 @@ export class Host {
             },
           };
         }
-      case v instanceof Fields:
-        return { value: { Dictionary: { fields: v } } };
+      case v instanceof Dict:
+        const fields = new Map(
+          Object.entries(v).map(([k, v]) => [k, this.toPolar(v)])
+        );
+        return { value: { Dictionary: { fields } } };
       default:
         const instance_id = this.cacheInstance(v);
         return {
@@ -351,13 +351,14 @@ export class Host {
     } else if (isPolarList(t)) {
       return await Promise.all(t.List.map(async el => await this.toJs(el)));
     } else if (isPolarDict(t)) {
-      const entries = await Promise.all(
-        [...t.Dictionary.fields.entries()].map(async ([k, v]) => [
-          k,
-          await this.toJs(v),
-        ]) as Promise<[string, any]>[]
-      );
-      return new Fields(entries);
+      const toJs = ([k, v]: [string, PolarTerm]) =>
+        this.toJs(v).then(v => [k, v]) as Promise<[string, any]>;
+      const { fields } = t.Dictionary;
+      const entries = await Promise.all([...fields.entries()].map(toJs));
+      return entries.reduce((dict: Dict, [k, v]) => {
+        dict[k] = v;
+        return dict;
+      }, new Dict());
     } else if (isPolarInstance(t)) {
       const i = this.getInstance(t.ExternalInstance.instance_id);
       return i instanceof Promise ? await i : i;

@@ -35,9 +35,8 @@ export class Polar {
    * Flag that tracks if polar roles are enabled.
    *
    * @internal
-   *
    */
-  #polarRolesEnabled: Boolean;
+  #polarRolesEnabled: boolean;
 
   constructor(opts: Options = {}) {
     this.#ffiPolar = new FfiPolar();
@@ -103,7 +102,6 @@ export class Polar {
     };
     this.registerConstant(helpers, '__oso_internal_roles_helpers__');
     this.#ffiPolar.enableRoles();
-    this.#polarRolesEnabled = false;
     this.processMessages();
 
     // Validate config
@@ -112,35 +110,25 @@ export class Polar {
       const query = this.#ffiPolar.nextInlineQuery();
       this.processMessages();
       if (query === undefined) break;
-      const source = query.source();
       const { results } = new Query(query, this.#host);
-      let queryResults = [];
+      const queryResults = [];
       for await (const result of results) {
         queryResults.push(result);
       }
       validationQueryResults.push(queryResults);
     }
 
-    const polarValidationQueryResult = validationQueryResults.map(results =>
-      results.map(result => {
-        const bindings = [...result.entries()].reduce((obj: obj, [k, v]) => {
+    const results = validationQueryResults.map(results =>
+      results.map(result => ({
+        bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
           obj[k] = this.#host.toPolar(v);
           return obj;
-        }, {});
-        return { bindings };
-      })
+        }, {}),
+      }))
     );
 
-    // console.dir(
-    //   require('util').inspect(polarValidationQueryResult, {
-    //     showHidden: false,
-    //     depth: null,
-    //   })
-    // );
-
-    this.#ffiPolar.validateRolesConfig(
-      JSON.stringify(polarValidationQueryResult)
-    );
+    this.#ffiPolar.validateRolesConfig(JSON.stringify(results));
+    this.#polarRolesEnabled = true;
   }
 
   /**
@@ -150,6 +138,7 @@ export class Polar {
   clearRules() {
     this.#ffiPolar.clearRules();
     this.processMessages();
+    this.#polarRolesEnabled = false;
   }
 
   /**

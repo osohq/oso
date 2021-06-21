@@ -574,8 +574,8 @@ describe('#registerConstant', () => {
     test('on dicts', async () => {
       const p = new Polar();
       expect(
-        await query(p, 'd = {a: 1} and d.a = 1 and d.has("a")')
-      ).toStrictEqual([map({ d: map({ a: 1 }) })]);
+        await query(p, 'd = {a: 1} and d.a = 1 and d.hasOwnProperty("a")')
+      ).toStrictEqual([map({ d: { a: 1 } })]);
     });
 
     describe('that return undefined', () => {
@@ -793,7 +793,11 @@ describe('iterators', () => {
   test('work over builtins', async () => {
     const p = new Polar();
     expect(
-      await qvar(p, 'd = {a: 1, b: 2} and x in d.entries() and x in d', 'x')
+      await qvar(
+        p,
+        'd = {a: 1, b: 2} and x in Dictionary.entries({a: 1, b: 2}) and x in d',
+        'x'
+      )
     ).toStrictEqual([
       ['a', 1],
       ['b', 2],
