@@ -15,7 +15,7 @@ import type {
   EqualityFn,
   PolarComparisonOperator,
   PolarTerm,
-  PolarDict,
+  PolarDictPattern,
 } from './types';
 import {
   Dict,
@@ -282,7 +282,7 @@ export class Host {
           },
         };
       case v instanceof Pattern:
-        const dict = this.toPolar(v.fields).value as PolarDict;
+        const dict = this.toPolar(v.fields).value as PolarDictPattern;
         if (v.tag === undefined) {
           return { value: { Pattern: dict } };
         } else {

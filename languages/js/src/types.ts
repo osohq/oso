@@ -209,7 +209,7 @@ interface PolarInstancePattern {
  *
  * @internal
  */
-type PolarDictPattern = PolarDict;
+export type PolarDictPattern = PolarDict;
 
 /**
  * Polar pattern type.
