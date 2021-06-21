@@ -362,8 +362,8 @@ export class Host {
       const i = this.getInstance(t.ExternalInstance.instance_id);
       return i instanceof Promise ? await i : i;
     } else if (isPolarPredicate(t)) {
-      const { name, args: argTerms } = t.Call;
-      const args = await Promise.all(argTerms.map(a => this.toJs(a)));
+      let { name, args } = t.Call;
+      args = await Promise.all(args.map(a => this.toJs(a)));
       return new Predicate(name, args);
     } else if (isPolarVariable(t)) {
       return new Variable(t.Variable);
