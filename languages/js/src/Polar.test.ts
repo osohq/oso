@@ -940,4 +940,20 @@ describe('Oso roles', () => {
     gabe = new User('gabe', [osohqOwner]);
     expect(await isAllowed(gabe, 'edit', bug));
   });
+
+  test('roles config is revalidated when loading additional rules after enabling roles', async () => {
+    const { Org, Repo } = rolesHelpers;
+    const p = new Polar();
+    p.registerClass(Org);
+    p.registerClass(Repo);
+    const validPolicy = `resource(_: Repo, "repo", ["read"], {});
+                         actor_has_role_for_resource(_, _, _);`;
+    const invalidPolicy = `resource(_: Org, "org", [], {});
+                           actor_has_role_for_resource(_, _, _);`;
+    await p.loadStr(validPolicy);
+    await p.enableRoles();
+    await expect(p.loadStr(invalidPolicy)).rejects.toThrow(
+      'Oso Roles Validation Error:'
+    );
+  });
 });
