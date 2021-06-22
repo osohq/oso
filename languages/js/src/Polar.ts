@@ -188,6 +188,11 @@ export class Polar {
       results.return();
       if (done) throw new InlineQueryFailedError(source);
     }
+
+    if (this.#rolesEnabled) {
+      this.#rolesEnabled = false;
+      await this.enableRoles();
+    }
   }
 
   /**

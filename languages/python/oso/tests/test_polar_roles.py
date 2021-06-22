@@ -1,4 +1,3 @@
-# Roles 2 tests
 import pytest
 import timeit
 import os
@@ -10,6 +9,7 @@ from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from oso import Oso, OsoError
+from polar.exceptions import RolesValidationError
 from .polar_roles_sqlalchemy_helpers import (
     resource_role_class,
     assign_role,
@@ -2575,7 +2575,6 @@ def test_perf_polar(init_oso, sample_data):
 
 
 def test_enable_roles_before_loading_policy(init_oso):
-    # - duplicate resource name throws an error
     oso, _ = init_oso
     with pytest.raises(OsoError) as e:
         oso.enable_roles()
@@ -2583,7 +2582,6 @@ def test_enable_roles_before_loading_policy(init_oso):
 
 
 def test_missing_actor_has_role_for_resource(init_oso):
-    # - duplicate resource name throws an error
     oso, _ = init_oso
     p = """
         resource(_: Repo, "repo", actions, roles) if
@@ -2602,3 +2600,15 @@ def test_missing_actor_has_role_for_resource(init_oso):
     assert e.match(
         r"Need to define `actor_has_role_for_resource\(actor, role_name, resource\)`"
     )
+
+
+def test_role_config_revalidated_when_loading_rules_after_enabling_roles(init_oso):
+    oso, _ = init_oso
+    valid_policy = """resource(_: Repo, "repo", ["read"], {});
+                      actor_has_role_for_resource(_, _, _);"""
+    invalid_policy = """resource(_: Org, "org", [], {});
+                        actor_has_role_for_resource(_, _, _);"""
+    oso.load_str(valid_policy)
+    oso.enable_roles()
+    with pytest.raises(RolesValidationError):
+        oso.load_str(invalid_policy)
