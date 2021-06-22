@@ -7,6 +7,7 @@ on:
       - main
 
 jobs:
+  # TODO(gj): is it weird that the wheel jobs depend on `version` but the lib jobs don't?
   version:
     name: Compute and verify the version number
     runs-on: ubuntu-latest
@@ -673,11 +674,8 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: oso_js_node
-      - name: Run tests
-        # Timeout fix: https://stackoverflow.com/a/51508426
-        run: |
-          yarn install --prod  --network-timeout 100000
-          node dist/test/parity.js
+      - name: Run parity tests
+        run: node dist/test/parity.js
         working-directory: oso_js_node
 
   test_quickstarts:
@@ -876,6 +874,7 @@ jobs:
           asset_path: ./go-oso.zip
           asset_name: go-oso-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
+  # TODO(gj): update this to post to Quill or a private channel on community Slack.
   alert-failure:
     name: Alert on failure
     if: ${{ !success() }}
