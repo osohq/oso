@@ -835,57 +835,12 @@ test('handles expressions', async () => {
   expect(x).toStrictEqual(expected);
 });
 
+import * as rolesHelpers from '../test/rolesHelpers';
+
 // test_roles_integration
-describe('Polar roles', () => {
+describe('Oso roles', () => {
   test('works', async () => {
-    class Org {
-      readonly name: string;
-
-      constructor(name: string) {
-        this.name = name;
-      }
-    }
-
-    class Repo {
-      readonly name: string;
-      readonly org: Org;
-
-      constructor(name: string, org: Org) {
-        this.name = name;
-        this.org = org;
-      }
-    }
-
-    class Issue {
-      readonly name: string;
-      readonly repo: Repo;
-
-      constructor(name: string, repo: Repo) {
-        this.name = name;
-        this.repo = repo;
-      }
-    }
-
-    class Role {
-      readonly name: string;
-      readonly resource: Org | Repo;
-
-      constructor(name: string, resource: Org | Repo) {
-        this.name = name;
-        this.resource = resource;
-      }
-    }
-
-    class User {
-      readonly name: string;
-      readonly roles: Role[];
-
-      constructor(name: string, roles: Role[]) {
-        this.name = name;
-        this.roles = roles;
-      }
-    }
-
+    const { Issue, Org, Repo, Role, User } = rolesHelpers;
     // Test fixtures.
     const osohq = new Org('osohq');
     const apple = new Org('apple');
