@@ -155,6 +155,11 @@ class Polar:
                     source = query.source()
                     raise InlineQueryFailedError(source.get())
 
+        # If roles are enabled, re-validate config when new rules are loaded.
+        if self._polar_roles_enabled:
+            self._polar_roles_enabled = False
+            self.enable_roles()
+
     def clear_rules(self):
         self.ffi_polar.clear_rules()
         self._polar_roles_enabled = False
