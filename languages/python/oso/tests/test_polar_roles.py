@@ -1,4 +1,3 @@
-# Roles 2 tests
 import pytest
 import timeit
 import os

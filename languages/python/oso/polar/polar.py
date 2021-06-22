@@ -64,6 +64,7 @@ class Polar:
     def __init__(self, classes=CLASSES):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
+        # TODO(gj): rename to _oso_roles_enabled
         self._polar_roles_enabled = False
 
         # Register global constants.
