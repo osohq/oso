@@ -2575,7 +2575,6 @@ def test_perf_polar(init_oso, sample_data):
 
 
 def test_enable_roles_before_loading_policy(init_oso):
-    # - duplicate resource name throws an error
     oso, _ = init_oso
     with pytest.raises(OsoError) as e:
         oso.enable_roles()
@@ -2583,7 +2582,6 @@ def test_enable_roles_before_loading_policy(init_oso):
 
 
 def test_missing_actor_has_role_for_resource(init_oso):
-    # - duplicate resource name throws an error
     oso, _ = init_oso
     p = """
         resource(_: Repo, "repo", actions, roles) if
