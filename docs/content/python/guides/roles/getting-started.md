@@ -66,8 +66,8 @@ set up the role library, we must:
 ### Configuring our first resource
 
 Roles in Oso are scoped to resources. A role is a grouping of
-permissions that may be performed on that resource. Roles are assigned
-to actors to grant them all the permissions the role has.
+permissions -- the actions that may be performed on that resource.
+Roles are assigned to actors to grant them all the permissions the role has.
 
 We define resources in Polar using the `resource` rule. The `Org`
 resource represents an Organization in the GitClub example application.
@@ -82,9 +82,9 @@ The rule head has 4 parameters:
 - `_type` is the Python class the resource definition is associated with.
 - `"org"` is the identifier for this resource type (this can be any string
   you choose).
-- `actions` are set in the rule body. The `actions` list defines all the
+- `actions` is a list enumerating all the
   actions that may be performed on the resource.
-- `roles` are set in the rule body. The `roles` dictionary defines all the
+- `roles` is a dictionary defining all the
   roles for this resource.
 
 In our rule body, we first define the list of available actions for this
@@ -121,7 +121,8 @@ This resource definition defines two roles:
 
 Permissions are actions associated with a resource type. A permission can
 directly reference an action defined in the same resource. Later, we'll
-see how to add permissions defined on other resources to roles.
+see how to leverage relationships between resources to grant a role a
+permission defined on a different resource
 
 {{% callout "resource(...) is just a rule" "blue" %}}
 
@@ -130,7 +131,7 @@ has an `if` and `and` between variable assignments. `actions` and
 `roles` are unbound parameters, meaning they can be assigned inside of
 the rule body.
 
-We could have written this rule without a body, like:
+We could have written this rule without a body:
 
 ```polar
 resource( _type: Org, "org", ["read", "create_repo"],
@@ -145,7 +146,7 @@ resource( _type: Org, "org", ["read", "create_repo"],
 );
 ```
 
-But, we think the expanded form is clearer.
+But we think the expanded form is clearer.
 
 {{% /callout %}}
 
@@ -155,7 +156,7 @@ To allow access based on roles, we add the following `allow` rule
 
 ```polar
 allow(actor, action, resource) if
-    role_allow(actor, action, resource);
+    role_allows(actor, action, resource);
 ```
 
 Oso will now allow access to any resource that is allowed based on the
@@ -165,11 +166,7 @@ role definitions.
 
 Now we've configured roles and set
 up our policy. For users to have
-access, we must assign them to roles.
-
-We do this by writing an `actor_has_role_for_resource` rule.
-This is how you tell Oso what roles
-a user has.
+access, we must assign them roles.
 
 {{% callout "Managing roles with SQLAlchemy" "green" %}}
 
@@ -182,7 +179,8 @@ integration.
 {{% /callout %}}
 
 You can use your own data models for roles with Oso. You just need to tell us
-what roles a user has through the `actor_has_role_for_resource` rule. As an example, we might
+what roles a user has for a particularl resource
+through the `actor_has_role_for_resource` rule. As an example, we might
 add a method onto the user that returns a list of roles for that user:
 
 ```py
@@ -215,12 +213,16 @@ actor_has_role_for_resource(actor, role_name, resource) if
 ```
 
 The `actor_has_role_for_resource` is evaluated with `actor` bound to the same actor
-as you call the `allow` rule with, typically a `user`.
+that you call the `allow` rule with, typically  an instance of some `User` model.
 
 `role_name` and `resource` are "output parameters".
-They wont be bound to anything when the rule enters.
-The expectation is that you will set them in the body of
-the rule.
+In the body of the `actor_has_role_for_resource` rule, you
+should unify `role_name` with the name of the actor's role and
+`resource` with the instance the actor has the role for. In
+the example above, Bob has the `"admin"` role for the
+`Page.pages[2]` resource, so when `role in actor.get_roles()` is
+evaluated with Bob as the `actor`, `role.name` will return `"admin"`
+and `role.resource` will return `Page.pages[2]`.
 
 ### Implying roles
 
@@ -245,7 +247,7 @@ resource(_type: Org, "org", actions, roles) if
     };
 ```
 
-The `"owner"` now implies the `"member"` role. Any user with the
+The `"owner"` role now implies the `"member"` role. Any user with the
 `"owner"` role will be granted all permissions associated with both
 roles.
 
@@ -260,7 +262,7 @@ Here's the full `Org` resource definition from the GitClub example app:
 >}}
 
 Notice the `"repo:reader"` and `"repo:admin"` implications. These are
-roles defined on another resource, Repository. In the next guide, we'll
+roles defined on another resource, `Repo`. In the next guide, we'll
 see how to set up **cross resource implied roles** like these!
 
 ## Have feedback?
