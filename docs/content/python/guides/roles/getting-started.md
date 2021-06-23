@@ -179,7 +179,7 @@ integration.
 {{% /callout %}}
 
 You can use your own data models for roles with Oso. You just need to tell us
-what roles a user has for a particularl resource
+what roles a user has for a particular resource
 through the `actor_has_role_for_resource` rule. As an example, we might
 add a method onto the user that returns a list of roles for that user:
 
