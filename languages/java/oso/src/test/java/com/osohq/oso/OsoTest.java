@@ -1,13 +1,14 @@
 package com.osohq.oso;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.URL;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class OsoTest {
   protected Oso o;
@@ -111,5 +112,39 @@ public class OsoTest {
 
     assertTrue(o.isAllowed(auditor, "list", Company.class));
     assertFalse(o.isAllowed(auditor, "list", Widget.class));
+  }
+
+  @Test
+  public void getGetAllowedActions() throws Exception {
+
+    Oso o = new Oso();
+    o.registerClass(Actor.class, "Actor");
+    o.registerClass(Widget.class, "Widget");
+
+    o.loadStr(
+        "allow(actor: Actor{name: \"sally\"}, action, resource: Widget{id: 1})"
+            + " if action in [\"CREATE\", \"READ\"];");
+
+    Actor actor = new Actor("sally");
+    Widget widget = new Widget(1);
+    HashSet<Object> actions = o.getAllowedActions(actor, widget);
+
+    assertEquals(actions.size(), 2);
+    assertTrue(actions.contains("CREATE"));
+    assertTrue(actions.contains("READ"));
+
+    o.loadStr(
+        "allow(actor: Actor{name: \"fred\"}, action, resource: Widget{id: 2})"
+            + " if action in [1, 2, 3, 4];");
+
+    Actor actor2 = new Actor("fred");
+    Widget widget2 = new Widget(2);
+    HashSet<Object> actions2 = o.getAllowedActions(actor2, widget2);
+
+    assertEquals(actions2.size(), 4);
+    assertTrue(actions2.contains(1));
+    assertTrue(actions2.contains(2));
+    assertTrue(actions2.contains(3));
+    assertTrue(actions2.contains(4));
   }
 }
