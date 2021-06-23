@@ -121,7 +121,7 @@ public class OsoTest {
     o.registerClass(Widget.class, "Widget");
 
     o.loadStr(
-        "allow(actor: Actor{name: \"sally\"}, action, resource: Widget{id: 1})"
+        "allow(_actor: Actor{name: \"sally\"}, action, _resource: Widget{id: 1})"
             + " if action in [\"CREATE\", \"READ\"];");
 
     Actor actor = new Actor("sally");
