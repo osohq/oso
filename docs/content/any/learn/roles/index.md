@@ -40,7 +40,7 @@ allow(actor, action, resource) if
 
 {{% callout "Adding roles to your application?" "blue" %}}
 
-Oso Roles provides built in support for role configuration, role data
+Oso Roles provides built-in support for role configuration, role data
 management and more.
 
 [Check it out here!](/guides/roles)

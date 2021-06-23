@@ -9,8 +9,8 @@ description: >
 
 When managing access to resources within an application, it can be useful to
 group permissions into **roles**, and assign these roles to users. This is
-known as **Role-Based Access Control (RBAC).** The `Oso` core library
-comes with built in configuration for role-based access control.
+known as **Role-Based Access Control (RBAC).** The `Oso` library
+comes with built-in configuration for role-based access control.
 
 In this guide, we'll walk through the basics of starting to use the
 roles feature.
@@ -22,17 +22,13 @@ application.
 
 The `oso.Oso` class is the entrypoint to using Oso in our application.
 We usually will have a global instance that is created
-during application initialization and shared across requests. In a Flask
-application, you may attach this instance to the global flask object, or the
-current application if it needs to be accessed outside of the application
-initialization process.
+during application initialization and shared across requests.
 
 ### Loading our policy
 
-Oso uses the Polar language to define authorization policies. An
-authorization policy specifies what requests are allowed and what data a
-user can access. The policy is stored in a Polar file, along with your
-code.
+Oso uses the [Polar language](/reference/polar/polar-syntax) to define authorization
+policies. An authorization policy specifies what requests are allowed and what data a
+user can access. The policy is stored in a Polar file, along with your code.
 
 Load the policy with the `Oso.load_file` function.
 
@@ -43,7 +39,7 @@ oso.load_file("authorization.polar")
 ### Enable Oso roles
 
 
-In order to enable the built-in roles features, we 
+In order to enable the built-in roles features, we call the
 `oso.Oso.enable_roles` method:
 
 ```py
@@ -60,8 +56,8 @@ You must load all policy files before enabling roles.
 
 ## Controlling access with roles
 
-Now, let's write our first rules that use role based access control. To
-setup the role library, we must:
+Now, let's write our first rules that use role-based access control. To
+set up the role library, we must:
 
 1. Add role and resource configurations to our policy.
 2. Use the `role_allows` method in our policy.
@@ -167,7 +163,8 @@ role definitions.
 
 ### Assigning roles to users
 
-Now we've configured roles and setup our policy. For users to have
+Now we've configured roles and set
+up our policy. For users to have
 access, we must assign them to roles.
 
 We do this by writing an `actor_has_role_for_resource` rule.
@@ -264,7 +261,7 @@ Here's the full `Org` resource definition from the GitClub example app:
 
 Notice the `"repo:reader"` and `"repo:admin"` implications. These are
 roles defined on another resource, Repository. In the next guide, we'll
-see how to setup **cross resource implied roles** like these!
+see how to set up **cross resource implied roles** like these!
 
 ## Have feedback?
 

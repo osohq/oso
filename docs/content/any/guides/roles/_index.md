@@ -56,9 +56,11 @@ add Oso roles to a Python application.
 
 ## Get started
 
-The Oso Roles library is coming soon for {{< lang >}}! {{< /lang >}}
+The Oso Roles library is coming soon for {{< lang >}}!
 
-For now, you can [check out the library documentation for Python]({{< ref path="/guides/roles/sqlalchemy" lang="python" >}}) or read our [guide on role modeling in Polar](/learn/roles).
+For now, you can check out the library documentation for [Python]({{< ref path="/guides/roles" lang="python" >}}) or
+[Node]({{< ref path="/guides/roles" lang="node" >}}),
+or read our [guide on role modeling in Polar](/learn/roles).
 
 If you want to get roles working in your app now or just want to
 register your interest for an Oso Roles library in {{< lang >}} [drop into our Slack](http://join-slack.osohq.com) or

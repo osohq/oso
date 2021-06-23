@@ -10,7 +10,7 @@ description: >
 When managing access to resources within an application, it can be useful to
 group permissions into **roles**, and assign these roles to users. This is
 known as **Role-Based Access Control (RBAC).** The SQLAlchemy roles
-library extends the `Oso` core library with built in configuration,
+library extends the `Oso` core library with built-in configuration,
 data modeling and enforcement of role-based access control.
 
 In this guide, we'll walk through the basics of starting to use the
@@ -232,7 +232,7 @@ individual actions.
 
 ## Controlling access with roles
 
-Now, let's write our first rules that use role based access control. To
+Now, let's write our first rules that use role-based access control. To
 setup the role library, we must:
 
 1. Persist role configuration to our database.
