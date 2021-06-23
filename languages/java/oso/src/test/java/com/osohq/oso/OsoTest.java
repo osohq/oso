@@ -145,5 +145,9 @@ public class OsoTest {
     assertTrue(actions2.contains(2));
     assertTrue(actions2.contains(3));
     assertTrue(actions2.contains(4));
+
+    Actor actor3 = new Actor("doug");
+    Widget widget3 = new Widget(4);
+    assertTrue(o.getAllowedActions(actor3, widget3).isEmpty());
   }
 }
