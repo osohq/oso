@@ -31,7 +31,7 @@ $ pip install sqlalchemy-oso
 
 ## Usage
 
-See the [data filtering guide](guides/data_access/sqlalchemy) and [roles guide](guides/roles) for usage information.
+See the [data filtering guide](guides/data_access/sqlalchemy) and [roles guide](guides/roles/sqlalchemy) for usage information.
 
 ## API Reference
 
