@@ -9,10 +9,10 @@ showContentForAnyLanguage: true
 When managing access to resources within an application, it can be
 useful to group permissions into **roles**, and assign these roles to
 users. This is known as **Role-Based Access Control (RBAC).** The Oso
-Roles library provides a configuration-based approach to adding
+Roles feature provides a configuration-based approach to adding
 role-based access control to your application.
 
-The roles library includes:
+The roles feature includes:
 
 - **Role configuration** - Declarative configuration for roles and
   permissions for each resource. The roles configuration supports
