@@ -12,7 +12,7 @@ _build:
 
 This guide covers our old implementation of roles. It is still available as `roles_old` but will be removed in a future update.
 
-We have released a new version of our roles library for SQLAlchemy.
+We have released a new version of our roles feature for SQLAlchemy.
 
 [Check it out here!](/guides/roles/sqlalchemy)
 

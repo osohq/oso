@@ -22,7 +22,7 @@ $ pip install flask-oso
 
 {{% callout "Adding roles to your application with Flask?" "blue" %}}
 
-We just released the next version of our roles library.
+We just released the next version of our roles feature.
 
 [Check it out here!](/guides/roles)
 

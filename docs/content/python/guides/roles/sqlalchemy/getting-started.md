@@ -14,7 +14,7 @@ library extends the `Oso` core library with built-in configuration,
 data modeling and enforcement of role-based access control.
 
 In this guide, we'll walk through the basics of starting to use the
-SQLAlchemy roles library, using the
+SQLAlchemy roles feature, using the
 [GitClub](https://github.com/osohq/gitclub-sqlalchemy-flask-react)
 application as an example. GitClub is a SPA (single-page application)
 that uses Flask and SQLAlchemy for the backend, with a React frontend.

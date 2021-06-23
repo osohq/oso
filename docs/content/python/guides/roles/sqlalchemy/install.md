@@ -7,7 +7,7 @@ description: >
 
 # Install
 
-The roles library is part of the oso sqlalchemy library.
+The roles feature is part of the oso sqlalchemy library.
 
 ```console
 $ pip install sqlalchemy-oso

@@ -14,7 +14,7 @@ Role-Based Access Control.
 
 {{% callout "Adding roles to your application with SQLAlchemy?" "blue" %}}
 
-We just released the next version of our roles library.
+We just released the next version of our roles feature.
 
 [Check it out here!](/guides/roles/sqlalchemy)
 
