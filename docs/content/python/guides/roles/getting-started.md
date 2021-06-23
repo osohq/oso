@@ -27,15 +27,6 @@ application, you may attach this instance to the global flask object, or the
 current application if it needs to be accessed outside of the application
 initialization process.
 
-In order to enable the built-in roles features, we 
-`oso.Oso.enable_roles` method:
-
-```py
-from oso import Oso
-oso = Oso()
-oso.enable_roles()
-```
-
 ### Loading our policy
 
 Oso uses the Polar language to define authorization policies. An
@@ -48,6 +39,24 @@ Load the policy with the `Oso.load_file` function.
 ```py
 oso.load_file("authorization.polar")
 ```
+
+### Enable Oso roles
+
+
+In order to enable the built-in roles features, we 
+`oso.Oso.enable_roles` method:
+
+```py
+oso.enable_roles()
+```
+
+{{% callout "Load policies before enabling roles" "blue" %}}
+
+Oso will validate your roles configuration when you call `enable_roles`.
+You must load all policy files before enabling roles.
+
+{{% /callout %}}
+
 
 ## Controlling access with roles
 
@@ -161,7 +170,8 @@ role definitions.
 Now we've configured roles and setup our policy. For users to have
 access, we must assign them to roles.
 
-We do this by writing an `actor_role` rule. This is how you tell Oso what roles
+We do this by writing an `actor_has_role_for_resource` rule.
+This is how you tell Oso what roles
 a user has.
 
 {{% callout "Managing roles with SQLAlchemy" "green" %}}
@@ -175,7 +185,7 @@ integration.
 {{% /callout %}}
 
 You can use your own data models for roles with Oso. You just need to tell us
-what roles a user has through the `actor_role` rule. As an example, we might
+what roles a user has through the `actor_has_role_for_resource` rule. As an example, we might
 add a method onto the user that returns a list of roles for that user:
 
 ```py
@@ -198,23 +208,22 @@ class User:
         return ROLES[self.name]
 ```
 
-And the `actor_role` would be implemented as:
+And the `actor_has_role_for_resource` would be implemented as:
 
 ```polar
-actor_role(actor, role) if
-    role in actor.get_roles();
+actor_has_role_for_resource(actor, role_name, resource) if
+    role in actor.get_roles() and
+    role_name = role.name and
+    resource = role.resource;
 ```
 
-The `actor_role` is evaluated with `actor` bound to the same actor
+The `actor_has_role_for_resource` is evaluated with `actor` bound to the same actor
 as you call the `allow` rule with, typically a `user`.
 
-`role` is an "output parameter". It will not be bound to anything when
-the rule enters. The expectation is that you will set this in the body of
+`role_name` and `resource` are "output parameters".
+They wont be bound to anything when the rule enters.
+The expectation is that you will set them in the body of
 the rule.
-
-Each `role` returned must be structured as
-`{name: "the-role-name", resource: TheResourceObject}`.
-
 
 ### Implying roles
 
