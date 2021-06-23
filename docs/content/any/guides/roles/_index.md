@@ -2,6 +2,8 @@
 title: "Build Role-Based Access Control (30 min)"
 weight: 1
 showContentForAnyLanguage: true
+aliases:
+  - /python/getting-started/roles/builtin_roles.html
 ---
 
 # Build Role-Based Access Control (30 min)

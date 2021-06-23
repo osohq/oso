@@ -1,9 +1,10 @@
 ---
 title: Write Oso Policies (30 min)
 weight: 3
-any: false
+any: true
 aliases:
   - ../getting-started/policies/index.html
+  - ../learn/policies.html
 description: Learn about writing Oso policies - the source of truth for authorization logic.
 ---
 
