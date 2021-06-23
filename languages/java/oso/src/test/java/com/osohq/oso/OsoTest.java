@@ -133,7 +133,7 @@ public class OsoTest {
     assertTrue(actions.contains("READ"));
 
     o.loadStr(
-        "allow(actor: Actor{name: \"fred\"}, action, resource: Widget{id: 2})"
+        "allow(_actor: Actor{name: \"fred\"}, action, _resource: Widget{id: 2})"
             + " if action in [1, 2, 3, 4];");
 
     Actor actor2 = new Actor("fred");
