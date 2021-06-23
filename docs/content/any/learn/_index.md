@@ -1,6 +1,8 @@
 ---
 title: "Concepts"
 weight: 3
+aliases:
+ - ./learn/examples.html
 ---
 
 # Learn Oso
