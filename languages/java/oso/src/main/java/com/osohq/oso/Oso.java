@@ -46,9 +46,7 @@ public class Oso extends Polar {
    */
   public HashSet<Object> getAllowedActions(Object actor, Object resource)
       throws Exceptions.OsoException {
-
-    Query q = queryRule("allow", actor, new Variable("action"), resource);
-    return q.results().stream()
+    return queryRule("allow", actor, new Variable("action"), resource).results().stream()
         .map(action -> action.get("action"))
         .collect(Collectors.toCollection(HashSet::new));
   }
