@@ -13,9 +13,9 @@ weight: 3
 
 This guide covers our old implementation of roles. It is still available as `roles_old` but will be removed in a future update.
 
-We have released a new version of our roles library for SQLAlchemy.
+We have released a new version of our roles feature for SQLAlchemy.
 
-[Check it out here!](/new-roles)
+[Check it out here!](/guides/roles/sqlalchemy)
 
 {{% /callout %}}
 
@@ -28,7 +28,7 @@ defined, instead of writing rules over users directly.
 
 This feature is currently supported in [the SQLAlchemy library]({{< relref
 path="reference/frameworks/sqlalchemy" lang="python" >}}). If you want to get started with
-SQLAlchemy roles right away, check out [our tutorial](sqlalchemy_roles).
+SQLAlchemy roles right away, check out [our tutorial](/guides/roles/sqlalchemy).
 
 For a more in-depth understanding of roles, check out our guide to [Role-Based
 Access Control (RBAC) patterns](learn/roles).
@@ -36,7 +36,7 @@ Access Control (RBAC) patterns](learn/roles).
 ## Data model
 
 Lets say you have a `User` class and a `Widget` class and you want to assign
-users a role for a widget like “OWNER” or “USER”. Using the roles library you
+users a role for a widget like “OWNER” or “USER”. Using the roles feature you
 can generate a `WidgetRole` model which allows you to assign a user a role for
 a `Widget`. The schema for this new model’s table looks like this:
 
