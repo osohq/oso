@@ -4,7 +4,6 @@ weight: 1
 showContentForAnyLanguage: true
 aliases:
  - /python/getting-started/roles/builtin_roles.html
- - ../new-roles.html
  - new-roles.html
 ---
 
