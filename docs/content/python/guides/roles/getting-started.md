@@ -2,7 +2,7 @@
 title: Getting started
 weight: 2
 description: >
-    Get started with Oso Roles
+    Get started with Oso Roles for Python
 ---
 
 # Getting started
@@ -15,7 +15,7 @@ comes with built-in configuration for role-based access control.
 In this guide, we'll walk through the basics of starting to use the
 roles feature.
 
-## Setting up the Oso Instance
+## Setting up the Oso instance
 
 First, we'll cover some of the basics of integrating Oso into your
 application.
@@ -36,7 +36,7 @@ Load the policy with the `Oso.load_file` function.
 oso.load_file("authorization.polar")
 ```
 
-### Enable Oso roles
+### Enable Oso Roles
 
 
 In order to enable the built-in roles features, we call the
@@ -150,7 +150,7 @@ But we think the expanded form is clearer.
 
 {{% /callout %}}
 
-### Adding role_allows to our policy
+### Adding `role_allows` to our policy
 
 To allow access based on roles, we add the following `allow` rule
 
