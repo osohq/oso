@@ -2,29 +2,28 @@
 title: Getting started
 weight: 2
 description: >
-    Get started with Oso Roles
+    Get started with Oso Roles for SQLAlchemy
 ---
 
 # Getting started
 
 When managing access to resources within an application, it can be useful to
-group permissions into **roles**, and assign these roles to users. This is
-known as **Role-Based Access Control (RBAC).** The SQLAlchemy roles
-library extends the `Oso` core library with built-in configuration,
-data modeling and enforcement of role-based access control.
+group permissions into **roles**, and assign these roles to users. This is known
+as **Role-Based Access Control (RBAC).** The Oso Roles for SQLAlchemy feature
+extends [Oso Roles for Python](/guides/roles) by exposing an API for managing
+role assignments and reading roles data.
 
 In this guide, we'll walk through the basics of starting to use the
-SQLAlchemy roles feature, using the
+Oso Roles for SQLAlchemy feature, using the
 [GitClub](https://github.com/osohq/gitclub-sqlalchemy-flask-react)
 application as an example. GitClub is a SPA (single-page application)
 that uses Flask and SQLAlchemy for the backend, with a React frontend.
 To install **GitClub** to run alongside this tutorial, follow the
 [`README`](https://github.com/osohq/gitclub-sqlalchemy-flask-react#readme).
 
+## Setting up the Oso instance
 
-## Setting up the Oso Instance
-
-{{% callout "Already using sqlalchemy-oso?" "blue" %}}
+{{% callout "Already using `sqlalchemy-oso`?" "blue" %}}
 
 We're going to cover some of the basics of using Oso and the
 `sqlalchemy-oso` library. If you're already familiar with this [skip
@@ -76,7 +75,7 @@ automatically registered with Oso.
 
 ### Enabling built-in roles
 
-In order to enable built-in roles features, we need to pass our app's user
+In order to enable the built-in roles feature, we need to pass our app's user
 class as well as a SQLAlchemy `sessionmaker` to the
 `sqlalchemy_oso.SQLAlchemyOso.enable_roles` method:
 
@@ -161,7 +160,7 @@ into our rules from within the policy, just like we can in Python!
 More on this [here]({{< ref
 "/getting-started/policies.md#instances-and-fields" >}}).
 
-## SQLAlchemy Session Setup
+## SQLAlchemy session setup
 
 Oso integrates with SQLAlchemy [sessions](https://docs.sqlalchemy.org/en/13/orm/session_basics.html#what-does-the-session-do) to authorize access to models.
 
@@ -369,7 +368,7 @@ But, we think the expanded form is clearer.
 
 {{% /callout %}}
 
-### Adding role_allows to our policy
+### Adding `role_allows` to our policy
 
 To allow access based on roles, we call `Roles.role_allows` in our
 policy:

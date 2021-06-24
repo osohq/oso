@@ -8,8 +8,8 @@ description: >
 # Getting started
 
 When managing access to resources within an application, it can be useful to
-group permissions into **roles**, and assign these roles to users. This is
-known as **Role-Based Access Control (RBAC).** The `Oso` library
+group permissions into **roles** and assign these roles to users. This is
+known as **Role-Based Access Control (RBAC).** The Oso library
 comes with built-in configuration for role-based access control.
 
 In this guide, we'll walk through the basics of starting to use the
