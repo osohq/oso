@@ -40,8 +40,7 @@ allow(actor, action, resource) if
 
 {{% callout "Adding roles to your application?" "blue" %}}
 
-Oso Roles provides built-in support for role configuration, role data
-management and more.
+Oso Roles provides built-in support for role configuration and more.
 
 [Check it out here!](/guides/roles)
 
@@ -475,11 +474,12 @@ user_in_role_for_resource(user: User, "admin", resource: Repository) if
 
 {{% callout "What's next" "blue" %}}
 
+- Learn how to set up roles via [Oso Roles](guides/roles).
 {{< ifLang "python" >}}
-- Learn how to use roles with
-[SQLAlchemy](guides/roles/sqlalchemy).
+  - Or [Oso Roles for SQLAlchemy]({{< ref path="guides/roles/sqlalchemy"
+    lang="python" >}}), if you're already using SQLAlchemy to manage application
+    data.
 {{< /ifLang >}}
-
 - Check out our [How-To Guides](guides) for more on using Polar
   policies for authorization.
 - Check out the [Polar reference](reference/polar) for more on the Polar

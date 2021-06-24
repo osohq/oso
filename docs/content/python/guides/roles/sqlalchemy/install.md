@@ -2,12 +2,12 @@
 title: Install
 weight: 1
 description: >
-    Install Oso Roles
+    Install Oso Roles for SQLAlchemy
 ---
 
 # Install
 
-The roles feature is part of the oso sqlalchemy library.
+The roles feature is part of the `sqlalchemy-oso` library.
 
 ```console
 $ pip install sqlalchemy-oso
