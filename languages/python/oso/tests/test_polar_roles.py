@@ -356,7 +356,7 @@ def test_relationship_without_resources(init_oso):
     with pytest.raises(OsoError) as e:
         oso.enable_roles()
     assert e.match(
-        r"Need to define at least one `resource\(type, name, actions, roles\)` predicate to use oso roles"
+        r"Need to define at least one `resource\(type, name, actions, roles\)` predicate to use Oso Roles"
     )
 
 
@@ -650,7 +650,7 @@ def test_incorrect_arity_resource(init_oso):
     with pytest.raises(OsoError) as e:
         oso.enable_roles()
     assert e.match(
-        r"Need to define at least one `resource\(type, name, actions, roles\)` predicate to use oso roles."
+        r"Need to define at least one `resource\(type, name, actions, roles\)` predicate to use Oso Roles."
     )
 
 
