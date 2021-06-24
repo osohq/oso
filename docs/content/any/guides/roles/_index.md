@@ -29,8 +29,9 @@ The roles feature includes:
 {{% ifLang "python" %}}
 ## SQLAlchemy
 
-If you are using SQLAlchemy for managing your application data, you
-can use the `sqlalchemy-oso` framework integration to additionally handle:
+If you are using SQLAlchemy to manage your application data, you can use the
+Oso Roles for SQLAlchemy feature in the `sqlalchemy-oso` framework integration
+to additionally handle:
 
 - **Data management** - Manage user role assignments in your database,
   linking with your resource data.
@@ -42,13 +43,16 @@ can use the `sqlalchemy-oso` framework integration to additionally handle:
 ## Get started
 
 Continue on to the [getting started guide](./getting-started) to see how to
-add Oso roles to a Python application.
+add Oso Roles to a Python application.
 
 {{% /ifLang %}}
 
 {{% ifLang "node" %}}
 
 ## Get started
+
+Continue on to the [getting started guide](./getting-started) to see how to
+add Oso Roles to a Node.js application.
 
 {{% /ifLang %}}
 
@@ -58,14 +62,14 @@ add Oso roles to a Python application.
 
 ## Get started
 
-The Oso Roles library is coming soon for {{< lang >}}!
+The Oso Roles feature is coming soon for {{< lang >}}!
 
-For now, you can check out the library documentation for [Python]({{< ref path="/guides/roles" lang="python" >}}) or
+For now, you can check out the feature documentation for [Python]({{< ref path="/guides/roles" lang="python" >}}) or
 [Node]({{< ref path="/guides/roles" lang="node" >}}),
 or read our [guide on role modeling in Polar](/learn/roles).
 
 If you want to get roles working in your app now or just want to
-register your interest for an Oso Roles library in {{< lang >}} [drop into our Slack](http://join-slack.osohq.com) or
+register your interest for the Oso Roles feature in {{< lang >}} [drop into our Slack](http://join-slack.osohq.com) or
 <a href="mailto:engineering@osohq.com?subject=Roles%20support%20for%20{{< currentLanguage >}}&body=I%27m%20interested%20in%20Oso%20roles%20support%20for%20{{< currentLanguage >}}">send an email</a>
 to our engineering team and we'll unblock you.
 {{% /ifLang %}}
