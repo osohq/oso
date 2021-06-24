@@ -3,8 +3,8 @@
     <div id="header-page-title" class="flex-grow">
         <p class="text-white font-base text-sm  text-center truncate">
             {{ if eq $.Page.Language.Lang "python" }}
-            Adding roles to your app? <a class="underline" href="{{ ref . " /guides/new-roles" }}">Try our new roles
-                library</a>.
+            Adding roles to your app? <a class="underline" href="{{ ref . " /guides/roles" }}">Try our new roles
+                guide</a>.
             {{ else }}
             Want to get started? Jump into <a class="underline" href="https://join-slack.osohq.com">our Slack</a> and an
             engineer from the core team can help you out.
@@ -68,9 +68,6 @@
                 </button>
             </a>
             {{ $downloadUrl := $.Site.GetPage "/reference/lib" }}
-            {{ if eq .Section "new-roles" }}
-            {{ $downloadUrl = $.Site.GetPage "/new-roles/install" }}
-            {{ end }}
             <a href="{{ $downloadUrl.RelPermalink }}">
                 <button class=" nav-btn bg-yellow text-black tooltip">
                     <span class="tooltip-text" aria-hidden="true">Get the latest releases of Oso</span>

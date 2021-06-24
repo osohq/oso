@@ -32,7 +32,7 @@ export class Polar {
    */
   #host: Host;
   /**
-   * Flag that tracks if the Oso roles feature is enabled.
+   * Flag that tracks if the roles feature is enabled.
    *
    * @internal
    */
@@ -110,7 +110,7 @@ export class Polar {
   }
 
   /**
-   * Validate Oso roles config.
+   * Validate roles config.
    *
    * @internal
    */
