@@ -38,14 +38,14 @@ pub fn validate_roles_config(roles_config: Vec<Vec<ResultEvent>>) -> PolarResult
     let actor_role = roles_config.first().ok_or_else(|| {
         // TODO: add link to docs in error message
         RolesValidationError(
-            "Need to define `actor_has_role_for_resource(actor, role_name, resource)` predicate to use oso roles.
+            "Need to define `actor_has_role_for_resource(actor, role_name, resource)` predicate to use Oso Roles.
 Make sure to load policy before calling Oso.enable_roles()."
                 .to_owned(),
         )
     })?;
     if actor_role.is_empty() {
         return Err(RolesValidationError(
-            "Need to define `actor_has_role_for_resource(actor, role_name, resource)` predicate to use oso roles.
+            "Need to define `actor_has_role_for_resource(actor, role_name, resource)` predicate to use Oso Roles.
 Make sure to load policy before calling Oso.enable_roles()."
                 .to_owned(),
         )
@@ -55,12 +55,12 @@ Make sure to load policy before calling Oso.enable_roles()."
     let role_resources = roles_config.get(1).ok_or_else(|| {
         // TODO: add link to docs in error message
         RolesValidationError(
-            "Need to define at least one `resource(type, name, actions, roles)` predicate to use oso roles.".to_owned(),
+            "Need to define at least one `resource(type, name, actions, roles)` predicate to use Oso Roles.".to_owned(),
         )
     })?;
     if role_resources.is_empty() {
         return Err(RolesValidationError(
-            "Need to define at least one `resource(type, name, actions, roles)` predicate to use oso roles.".to_owned(),
+            "Need to define at least one `resource(type, name, actions, roles)` predicate to use Oso Roles.".to_owned(),
         )
         .into());
     }

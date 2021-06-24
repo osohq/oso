@@ -40,7 +40,7 @@ frameworks and ORMS.
 
 {{% callout "Adding roles to your application?" "blue" %}}
 
-We just released the next version of the Oso roles feature.
+We just released the next version of the Oso Roles feature.
 
 [Check it out here!](/guides/roles/)
 

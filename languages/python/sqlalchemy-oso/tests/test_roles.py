@@ -133,7 +133,7 @@ def init_oso(engine, Base, User, Organization, Repository, Issue):
     oso = SQLAlchemyOso(Base)
     oso.enable_roles(User, Session)
 
-    # @NOTE: Right now this has to happen after enabling oso roles to get the
+    # @NOTE: Right now this has to happen after enabling Oso Roles to get the
     #        tables.
     Base.metadata.create_all(engine)
 

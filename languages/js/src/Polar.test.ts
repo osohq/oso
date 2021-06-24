@@ -838,7 +838,7 @@ test('handles expressions', async () => {
 import * as rolesHelpers from '../test/rolesHelpers';
 
 // test_roles_integration
-describe('Oso roles', () => {
+describe('Oso Roles', () => {
   test('works', async () => {
     const { Issue, Org, Repo, Role, User } = rolesHelpers;
     // Test fixtures.
