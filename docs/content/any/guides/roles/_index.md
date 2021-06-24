@@ -1,12 +1,12 @@
 ---
-title: "Build Role-Based Access Control (30 min)"
+title: "Build Role-Based Access Control"
 weight: 1
 showContentForAnyLanguage: true
 aliases:
   - /python/getting-started/roles/builtin_roles.html
 ---
 
-# Build Role-Based Access Control (30 min)
+# Build Role-Based Access Control
 
 When managing access to resources within an application, it can be
 useful to group permissions into **roles**, and assign these roles to
