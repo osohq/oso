@@ -3,7 +3,9 @@ title: "Build Role-Based Access Control"
 weight: 1
 showContentForAnyLanguage: true
 aliases:
-  - /python/getting-started/roles/builtin_roles.html
+ - /python/getting-started/roles/builtin_roles.html
+ - ../new-roles.html
+ - new-roles.html
 ---
 
 # Build Role-Based Access Control
