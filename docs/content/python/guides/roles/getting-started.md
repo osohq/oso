@@ -38,7 +38,6 @@ oso.load_file("authorization.polar")
 
 ### Enable Oso Roles
 
-
 In order to enable the built-in roles features, we call the
 `oso.Oso.enable_roles` method:
 
@@ -52,7 +51,6 @@ Oso will validate your roles configuration when you call `enable_roles`.
 You must load all policy files before enabling roles.
 
 {{% /callout %}}
-
 
 ## Controlling access with roles
 
@@ -213,7 +211,7 @@ actor_has_role_for_resource(actor, role_name, resource) if
 ```
 
 The `actor_has_role_for_resource` is evaluated with `actor` bound to the same actor
-that you call the `allow` rule with, typically  an instance of some `User` model.
+that you call the `allow` rule with, typically an instance of some `User` model.
 
 `role_name` and `resource` are "output parameters".
 In the body of the `actor_has_role_for_resource` rule, you
