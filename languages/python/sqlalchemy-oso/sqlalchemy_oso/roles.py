@@ -655,7 +655,7 @@ def read_config(oso):
                     )
 
     if len(config.resources) == 0:
-        raise OsoError("Need to define resources to use oso roles.")
+        raise OsoError("Need to define resources to use Oso Roles.")
 
     return config
 
