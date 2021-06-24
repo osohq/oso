@@ -4,7 +4,7 @@
   {{ $pages = first 6 $pages }}
   {{ range $pages }}
   {{ $page := . }}
-  <a href="{{ $page.RelPermalink }}"
+  <a {{ with $page.Params.href }} href="{{ . }}" target="_blank" {{ else }} href="{{ $page.RelPermalink }}" {{ end }}
     class="m-2 border-opacity-20 hover:border-opacity-100 border-l-4 border-primary shadow-md rounded">
     <div
       class="bg-primary-lightest text-primary-darkest w-full font-semibold text-lg pl-2 py-2 rounded-tr border-bottom border-gray-200">
