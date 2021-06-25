@@ -1,11 +1,12 @@
 package com.osohq.oso;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.net.URL;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -111,5 +112,59 @@ public class OsoTest {
 
     assertTrue(o.isAllowed(auditor, "list", Company.class));
     assertFalse(o.isAllowed(auditor, "list", Widget.class));
+  }
+
+  @Test
+  public void testGetAllowedActions() throws Exception {
+
+    Oso o = new Oso();
+    o.registerClass(Actor.class, "Actor");
+    o.registerClass(Widget.class, "Widget");
+
+    o.loadStr(
+        "allow(_actor: Actor{name: \"sally\"}, action, _resource: Widget{id: 1})"
+            + " if action in [\"CREATE\", \"READ\"];");
+
+    Actor actor = new Actor("sally");
+    Widget widget = new Widget(1);
+    HashSet<Object> actions = o.getAllowedActions(actor, widget);
+
+    assertEquals(actions.size(), 2);
+    assertTrue(actions.contains("CREATE"));
+    assertTrue(actions.contains("READ"));
+
+    o.loadStr(
+        "allow(_actor: Actor{name: \"fred\"}, action, _resource: Widget{id: 2})"
+            + " if action in [1, 2, 3, 4];");
+
+    Actor actor2 = new Actor("fred");
+    Widget widget2 = new Widget(2);
+    HashSet<Object> actions2 = o.getAllowedActions(actor2, widget2);
+
+    assertEquals(actions2.size(), 4);
+    assertTrue(actions2.contains(1));
+    assertTrue(actions2.contains(2));
+    assertTrue(actions2.contains(3));
+    assertTrue(actions2.contains(4));
+
+    Actor actor3 = new Actor("doug");
+    Widget widget3 = new Widget(4);
+    assertTrue(o.getAllowedActions(actor3, widget3).isEmpty());
+  }
+
+  @Test
+  public void testGetAllowedActionsWildcard() throws Exception {
+    Oso o = new Oso();
+
+    o.registerClass(Actor.class, "Actor");
+    o.registerClass(Widget.class, "Widget");
+
+    o.loadStr("allow(_actor: Actor{name: \"John\"}, _action, _resource: Widget{id: 1});");
+
+    Actor actor = new Actor("John");
+    Widget widget = new Widget(1);
+
+    assertEquals(Set.of("*"), o.getAllowedActions(actor, widget, true));
+    assertThrows(Exceptions.OsoException.class, () -> o.getAllowedActions(actor, widget, false));
   }
 }
