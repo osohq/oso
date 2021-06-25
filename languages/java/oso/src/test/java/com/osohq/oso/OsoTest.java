@@ -6,6 +6,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -114,7 +115,7 @@ public class OsoTest {
   }
 
   @Test
-  public void getGetAllowedActions() throws Exception {
+  public void testGetAllowedActions() throws Exception {
 
     Oso o = new Oso();
     o.registerClass(Actor.class, "Actor");
@@ -149,5 +150,21 @@ public class OsoTest {
     Actor actor3 = new Actor("doug");
     Widget widget3 = new Widget(4);
     assertTrue(o.getAllowedActions(actor3, widget3).isEmpty());
+  }
+
+  @Test
+  public void testGetAllowedActionsWildcard() throws Exception {
+    Oso o = new Oso();
+
+    o.registerClass(Actor.class, "Actor");
+    o.registerClass(Widget.class, "Widget");
+
+    o.loadStr("allow(_actor: Actor{name: \"John\"}, _action, _resource: Widget{id: 1});");
+
+    Actor actor = new Actor("John");
+    Widget widget = new Widget(1);
+
+    assertEquals(Set.of("*"), o.getAllowedActions(actor, widget, true));
+    assertThrows(Exceptions.OsoException.class, () -> o.getAllowedActions(actor, widget, false));
   }
 }
