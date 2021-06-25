@@ -200,22 +200,14 @@ export class Query {
             break;
           }
           case QueryEventKind.ExternalCall: {
-            const {
-              attribute,
-              callId,
-              instance,
-              args,
-            } = event.data as ExternalCall;
+            const { attribute, callId, instance, args } =
+              event.data as ExternalCall;
             await this.handleCall(attribute, callId, instance, args);
             break;
           }
           case QueryEventKind.ExternalIsSubspecializer: {
-            const {
-              instanceId,
-              leftTag,
-              rightTag,
-              callId,
-            } = event.data as ExternalIsSubspecializer;
+            const { instanceId, leftTag, rightTag, callId } =
+              event.data as ExternalIsSubspecializer;
             const answer = await this.#host.isSubspecializer(
               instanceId,
               leftTag,

@@ -23,7 +23,7 @@ class Polar:
         check_result(result)
 
     def validate_roles_config(self, config_data):
-        """Validate the user's Oso roles config."""
+        """Validate the user's Oso Roles config."""
         string = ffi_serialize(config_data)
         result = lib.polar_validate_roles_config(self.ptr, string)
         process_messages(self.next_message)

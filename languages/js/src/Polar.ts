@@ -13,7 +13,7 @@ import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
-import type { Class, Options, QueryResult } from './types';
+import type { Class, obj, Options, QueryResult } from './types';
 import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
 
 /** Create and manage an instance of the Polar runtime. */
@@ -31,11 +31,18 @@ export class Polar {
    * @internal
    */
   #host: Host;
+  /**
+   * Flag that tracks if the roles feature is enabled.
+   *
+   * @internal
+   */
+  #rolesEnabled: boolean;
 
   constructor(opts: Options = {}) {
     this.#ffiPolar = new FfiPolar();
     const equalityFn = opts.equalityFn || ((x, y) => x == y);
     this.#host = new Host(this.#ffiPolar, equalityFn);
+    this.#rolesEnabled = false;
 
     // Register global constants.
     this.registerConstant(null, 'nil');
@@ -89,12 +96,50 @@ export class Polar {
   /**
    * Enable Oso's built-in roles feature.
    */
-  enableRoles() {
-    const helpers = {
-      join: (sep: string, l: string, r: string) => [l, r].join(sep),
-    };
-    this.registerConstant(helpers, '__oso_internal_roles_helpers__');
-    this.#ffiPolar.enableRoles();
+  async enableRoles() {
+    if (!this.#rolesEnabled) {
+      const helpers = {
+        join: (sep: string, l: string, r: string) => [l, r].join(sep),
+      };
+      this.registerConstant(helpers, '__oso_internal_roles_helpers__');
+      this.#ffiPolar.enableRoles();
+      this.processMessages();
+      await this.validateRolesConfig();
+      this.#rolesEnabled = true;
+    }
+  }
+
+  /**
+   * Validate roles config.
+   *
+   * @internal
+   */
+  private async validateRolesConfig() {
+    const validationQueryResults = [];
+    while (true) {
+      const query = this.#ffiPolar.nextInlineQuery();
+      this.processMessages();
+      if (query === undefined) break;
+      const { results } = new Query(query, this.#host);
+      const queryResults = [];
+      for await (const result of results) {
+        queryResults.push(result);
+      }
+      validationQueryResults.push(queryResults);
+    }
+
+    const results = validationQueryResults.map(results =>
+      results.map(result => ({
+        // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
+        // trivially `JSON.stringify()`-able.
+        bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
+          obj[k] = this.#host.toPolar(v);
+          return obj;
+        }, {}),
+      }))
+    );
+
+    this.#ffiPolar.validateRolesConfig(JSON.stringify(results));
     this.processMessages();
   }
 
@@ -105,6 +150,7 @@ export class Polar {
   clearRules() {
     this.#ffiPolar.clearRules();
     this.processMessages();
+    this.#rolesEnabled = false;
   }
 
   /**
@@ -141,6 +187,11 @@ export class Polar {
       const { done } = await results.next();
       results.return();
       if (done) throw new InlineQueryFailedError(source);
+    }
+
+    if (this.#rolesEnabled) {
+      this.#rolesEnabled = false;
+      await this.enableRoles();
     }
   }
 

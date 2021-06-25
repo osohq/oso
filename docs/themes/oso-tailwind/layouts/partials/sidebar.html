@@ -31,19 +31,12 @@
                     </button>
                 </div>
                 {{ $currentNode := . }}
-                {{ if eq $currentNode.Section "new-roles" }}
-                <ul>
-                    <li><a href="{{ .Site.Home.Permalink }}index.html">Back to documentation home</a></li>
-                    {{ template "tree-nav" dict "sect" .CurrentSection "currentNode" $currentNode "level" 0 "alwaysShow" 1}}
-                </ul>
-                {{ else }}
                 <ul>
                     {{ template "tree-nav" dict "sect" (.GetPage "/introduction") "currentNode" $currentNode "level" 0}}
                     {{ range .Site.Home.Sections.ByWeight }}
                     {{ template "tree-nav" dict "sect" . "currentNode" $currentNode "level" 0 "alwaysShow" 0 }}
                     {{ end }}
                 </ul>
-                {{ end }}
             </div>
         </nav>
     </aside>

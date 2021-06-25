@@ -1,4 +1,3 @@
-# Roles 2 tests
 import pytest
 import timeit
 import os
@@ -10,6 +9,7 @@ from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from oso import Oso, OsoError
+from polar.exceptions import RolesValidationError
 from .polar_roles_sqlalchemy_helpers import (
     resource_role_class,
     assign_role,
@@ -139,11 +139,14 @@ def test_empty_role(init_oso):
         roles = {
             member: {}
         };
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
 
-    with pytest.raises(OsoError):
+    with pytest.raises(OsoError) as e:
         oso.enable_roles()
+
+    assert e.match("Must define actions or implications for a role.")
 
 
 @pytest.mark.skip(reason="TODO: More validation")
@@ -160,6 +163,7 @@ def test_bad_namespace_perm(init_oso):
                 permissions: ["repo:pull"]
             }
         };
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
 
@@ -244,11 +248,14 @@ def test_duplicate_resource_name(init_oso):
                 permissions: ["pull"]
             }
         };
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
 
-    with pytest.raises(OsoError):
+    with pytest.raises(OsoError) as e:
         oso.enable_roles()
+    assert e.match("Duplicate resource name org.")
 
 
 # TODO(gj): Test that this is fine in Oso Roles.
@@ -275,6 +282,8 @@ def test_nested_dot_relationship(init_oso):
 
     allow(actor, action, resource) if
         role_allows(actor, action, resource);
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
 
@@ -303,6 +312,8 @@ def test_bad_relationship_lookup(init_oso):
         # INCORRECT FIELD NAME
         repo.organization = parent_org and
         parent_org matches Org;
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
 
@@ -322,6 +333,8 @@ def test_relationship_without_specializer(init_oso):
     parent_child(parent_org, repo) if
         repo.org = parent_org and
         parent_org matches Org;
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
 
@@ -335,11 +348,16 @@ def test_relationship_without_resources(init_oso):
     parent_child(parent_org, repo: Repo) if
         repo.org = parent_org and
         parent_org matches Org;
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
 
-    with pytest.raises(OsoError):
+    with pytest.raises(OsoError) as e:
         oso.enable_roles()
+    assert e.match(
+        r"Need to define at least one `resource\(type, name, actions, roles\)` predicate to use Oso Roles"
+    )
 
 
 def test_role_namespaces(init_oso, sample_data):
@@ -418,6 +436,8 @@ def test_resource_actions(init_oso):
         actions = [
             "invite"
         ];
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
     oso.enable_roles()
@@ -432,11 +452,15 @@ def test_duplicate_action(init_oso):
             "invite",
             "invite"
         ];
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
 
-    with pytest.raises(OsoError):
+    with pytest.raises(OsoError) as e:
         oso.enable_roles()
+
+    assert e.match("Duplicate action invite for Org.")
 
 
 @pytest.mark.skip(reason="TODO: More validation")
@@ -453,6 +477,8 @@ def test_undeclared_permission(init_oso):
                 permissions: ["create_repo"]
             }
         };
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
 
@@ -474,6 +500,8 @@ def test_undeclared_role(init_oso):
                 implies: ["fake_role"]
             }
         };
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
@@ -504,6 +532,8 @@ def test_role_implication_without_relationship(init_oso):
                 permissions: ["pull"]
             }
         };
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
@@ -529,6 +559,8 @@ def test_role_permission_without_relationship(init_oso):
             "push",
             "pull"
         ];
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
@@ -566,6 +598,8 @@ def test_invalid_role_permission(init_oso):
     parent_child(parent_org, repo: Repo) if
         repo.org = parent_org and
         parent_org matches Org;
+
+    actor_has_role_for_resource(_, _, _);
     """
 
     oso.load_str(policy)
@@ -592,6 +626,8 @@ def test_permission_assignment_to_implied_role(init_oso):
             }
 
         };
+
+    actor_has_role_for_resource(_, _, _);
     """
 
     oso.load_str(policy)
@@ -607,10 +643,15 @@ def test_incorrect_arity_resource(init_oso):
         actions = [
             "invite"
         ];
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
-    with pytest.raises(OsoError):
+    with pytest.raises(OsoError) as e:
         oso.enable_roles()
+    assert e.match(
+        r"Need to define at least one `resource\(type, name, actions, roles\)` predicate to use Oso Roles."
+    )
 
 
 # TODO(gj): should we try catching this?
@@ -620,6 +661,8 @@ def test_incorrect_arity_resource_multiple(init_oso):
     policy = """
     resource(_type: Org, "org", actions) if actions = ["invite"];
     resource(_type: Repo, "repo", actions, {}) if actions = ["invite"];
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
@@ -631,10 +674,13 @@ def test_undefined_resource_arguments(init_oso):
     oso, _ = init_oso
     policy = """
     resource(_type: Org, "org", actions, roles);
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
-    with pytest.raises(OsoError):
+    with pytest.raises(OsoError) as e:
         oso.enable_roles()
+    e.match("Must define actions or roles.")
 
 
 def test_wrong_type_resource_arguments(init_oso):
@@ -649,10 +695,13 @@ def test_wrong_type_resource_arguments(init_oso):
                 actions: ["invite"]
             }
         };
+
+    actor_has_role_for_resource(_, _, _);
     """
     oso.load_str(policy)
-    with pytest.raises(OsoError):
+    with pytest.raises(OsoError) as e:
         oso.enable_roles()
+    assert e.match("Role definition contains invalid key: actions")
 
 
 # Overlapping role assignments:
@@ -2523,3 +2572,43 @@ def test_perf_polar(init_oso, sample_data):
     number = 10
     time = timeit.timeit(test_query, number=number)
     print(f"Executed in : {time/number*1000} ms\n Averaged over {number} repetitions.")
+
+
+def test_enable_roles_before_loading_policy(init_oso):
+    oso, _ = init_oso
+    with pytest.raises(OsoError) as e:
+        oso.enable_roles()
+    assert e.match("Make sure to load policy before calling Oso.enable_roles().")
+
+
+def test_missing_actor_has_role_for_resource(init_oso):
+    oso, _ = init_oso
+    p = """
+        resource(_: Repo, "repo", actions, roles) if
+        actions = ["read", "write"] and
+        roles = {
+            reader: {
+                permissions: ["read"]
+            },
+            writer: {
+                permissions: ["write"]
+            }
+        };"""
+    oso.load_str(p)
+    with pytest.raises(OsoError) as e:
+        oso.enable_roles()
+    assert e.match(
+        r"Need to define `actor_has_role_for_resource\(actor, role_name, resource\)`"
+    )
+
+
+def test_role_config_revalidated_when_loading_rules_after_enabling_roles(init_oso):
+    oso, _ = init_oso
+    valid_policy = """resource(_: Repo, "repo", ["read"], {});
+                      actor_has_role_for_resource(_, _, _);"""
+    invalid_policy = """resource(_: Org, "org", [], {});
+                        actor_has_role_for_resource(_, _, _);"""
+    oso.load_str(valid_policy)
+    oso.enable_roles()
+    with pytest.raises(RolesValidationError):
+        oso.load_str(invalid_policy)
