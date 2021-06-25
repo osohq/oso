@@ -60,7 +60,7 @@ retrieving objects from the database.
 
 ## Using with Flask
 
-`sqlalchemy-oso` has built in support for the popular `flask_sqlalchemy`
+`sqlalchemy-oso` has built-in support for the popular `flask_sqlalchemy`
 library. <!-- TODO(gj): bring back when API docs are up:
 See `sqlalchemy_oso.flask.AuthorizedSQLAlchemy`. -->
 
