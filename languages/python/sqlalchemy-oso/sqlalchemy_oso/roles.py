@@ -94,7 +94,10 @@ def role_allow_query(
                 ur.resource_type,
                 ur.resource_id,
                 ur.role
-            from user_roles ur
+            from (
+              select * from user_roles
+              -- replace_me  
+            )  ur
             join relevant_roles rr
             on rr.role = ur.role
             join resources r
@@ -232,10 +235,12 @@ def list_filter_query(kind, resource, relationships, id_field):
     ), user_relevant_roles as (
         select
             resource_type, resource_id
-        from user_roles ur
+        from (
+            select * from user_roles ur where ur.user_id = :user_id
+            -- replace_me
+        ) ur
         join relevant_roles rr
         on rr.role = ur.role
-        where ur.user_id = :user_id
     )
     """
 
@@ -969,9 +974,25 @@ class OsoRoles:
         results = session.execute(query, params)
         return bool(results.first())
 
+    def _user_roles_sql(self, actor):
+        actor_roles = list(map(lambda r: r["bindings"], self._wrapped_oso.query_rule(
+            "actor_has_role_for_resource", actor, Variable("role"), Variable("resource"))))
+        config = self.config
+        user_roles_sql = ""
+        for role in actor_roles:
+            role_name = role["role"]
+            resource = role["resource"]
+            resource_name = config.class_to_resource_name[resource.__class__]
+            resource_config = config.resources[resource_name]
+            role_name = ":".join([resource_config.name, role_name])
+
+            user_roles_sql += f'union select null as id, {actor.id} as user_id, "{resource_config.type}" as resource_type, {resource.id} as resource_id, "{role_name}" as \'role\''
+        return user_roles_sql
+
     def _role_allows(self, user, action, resource):
+        user_roles_sql = self._user_roles_sql(user)
         return self._roles_query(
-            user, action, resource, self.role_allow_sql_query, action=action
+            user, action, resource, self.role_allow_sql_query.replace("-- replace_me", user_roles_sql), action=action
         )
 
     def _actor_can_assume_role(self, user, role, resource):
@@ -1153,6 +1174,9 @@ def _generate_query_filter(oso, role_method, model):
     try:
         if role_method.name == "role_allows":
             list_sql = oso.roles.role_allow_list_filter_queries[resource_type]
+            user_roles_sql = oso.roles._user_roles_sql(user)
+            list_sql = list_sql.replace("-- replace_me", user_roles_sql)
+
             params["action"] = action_or_role
 
         elif role_method.name == "actor_can_assume_role":
