@@ -10,9 +10,10 @@ added, modified, etc. Names marked as `code` are literal, and should agree
 
 Top-level authorization API.
 
-| Method       | Python | Ruby | Java | Node.js | Rust |
-| ------------ | ------ | ---- | ---- | ------- | ---- |
-| `is_allowed` | x      | x    | x    | x       | x    |
+| Method                | Python | Ruby | Java | Node.js | Rust |
+| --------------------- | ------ | ---- | ---- | ------- | ---- |
+| `is_allowed`          | x      | x    | x    | x       | x    |
+| `get_allowed_actions` | x      |      | x    |         | x    |
 
 - `Polar` methods
 
