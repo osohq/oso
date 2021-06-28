@@ -2581,7 +2581,6 @@ def test_enable_roles_before_loading_policy(init_oso):
     assert e.match("Make sure to load policy before calling Oso.enable_roles().")
 
 
-@pytest.mark.skip("TODO: validate that actor_has_role_for_resource rule exists")
 def test_missing_actor_has_role_for_resource(init_oso):
     oso, _ = init_oso
     p = """
