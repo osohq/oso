@@ -321,7 +321,7 @@ impl Polar {
     }
 
     pub fn validate_roles_config(&self, results: Vec<Vec<ResultEvent>>) -> PolarResult<()> {
-        validate_roles_config(self, results)
+        validate_roles_config(&self.kb.read().unwrap().rules, results)
     }
 }
 
