@@ -5,8 +5,7 @@ use super::messages::*;
 use super::parser;
 use super::rewrites::*;
 use super::roles_validation::{
-    validate_roles_config, ResultEvent, VALIDATE_ROLES_CONFIG_ACTOR_HAS_ROLE_FOR_RESOURCE,
-    VALIDATE_ROLES_CONFIG_RESOURCES,
+    validate_roles_config, ResultEvent, VALIDATE_ROLES_CONFIG_RESOURCES,
 };
 use super::rules::*;
 use super::runnable::Runnable;
@@ -316,8 +315,6 @@ impl Polar {
         // Push inline queries to validate config.
         let src_id = self.kb.read().unwrap().new_id();
         let term = parser::parse_query(src_id, VALIDATE_ROLES_CONFIG_RESOURCES)?;
-        self.kb.write().unwrap().inline_queries.push(term);
-        let term = parser::parse_query(src_id, VALIDATE_ROLES_CONFIG_ACTOR_HAS_ROLE_FOR_RESOURCE)?;
         self.kb.write().unwrap().inline_queries.push(term);
 
         result
