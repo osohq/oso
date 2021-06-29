@@ -40,3 +40,33 @@ Link to [relevant documentation section]().
 - Bulleted list
 - Of smaller improvements
 - Potentially with doc [links]().
+
+## `sqlalchemy-oso` NEW_VERSION
+
+### Breaking changes
+
+<!-- TODO: remove warning and replace with "None" if no breaking changes. -->
+
+{{% callout "Warning" "orange" %}}
+  This release contains breaking changes. Be sure to follow migration steps
+  before upgrading.
+{{% /callout %}}
+
+#### Breaking change 1
+
+Summary of breaking change.
+
+Link to [migration guide]().
+
+### New features
+
+#### Feature 1
+
+Summary of user-facing changes.
+
+Link to [relevant documentation section]().
+
+### Other bugs & improvements
+
+- Thanks to [@tomashozman](https://github.com/tomashozman) for cleaning up some
+  SQLAlchemy imports ([#997](https://github.com/osohq/oso/pull/997)).
