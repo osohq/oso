@@ -1,5 +1,10 @@
 package oso
 
+import (
+	"errors"
+	"github.com/osohq/go-oso/types"
+)
+
 /*
 The central object to manage policy state and verify requests.
 */
@@ -156,20 +161,34 @@ func (o Oso) IsAllowed(actor interface{}, action interface{}, resource interface
 Return a set of actions allowed by the given (actor, resource) combination allowed
 by the policy.
 */
-func (o Oso) GetAllowedActions(actor interface{}, resource interface{}) (map[interface{}]interface{}, error) {
-	results := make(map[interface{}]interface{}, 1)
+func (o Oso) GetAllowedActions(actor interface{}, resource interface{}, allowWildcard bool) (map[interface{}]interface{}, error) {
+	results := make(map[interface{}]interface{})
 	query, err := (*o.p).queryRule("allow", actor, resource)
 	if err != nil {
-			return nil, err
+		return nil, err
 	}
+
 	for {
-			if v, err := query.Next(); err != nil {
-					return nil, err
-			} else if v == nil {
-					break
-			} else {
-					results[v] = 1
+		if v, err := query.Next(); err != nil {
+			return nil, err
+		} else if v == nil {
+			break
+		} else {
+			switch v := interface{}(v).(type) {
+			case types.ValueVariable:
+				if allowWildcard {
+					results[v] = "*"
+				} else {
+					return nil, errors.New(`The result of get_allowed_actions() contained an
+													"unconstrained" action that could represent any
+													action, but allow_wildcard was set to False. To fix,
+													set allow_wildcard to True and compare with the "*"
+													string.`)
+				}
+			default:
+				results[v] = 1
 			}
+		}
 	}
 	return results, nil
 }

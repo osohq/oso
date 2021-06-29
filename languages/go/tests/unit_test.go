@@ -166,16 +166,60 @@ func TestIsAllowed(t *testing.T) {
 
 }
 
+type Actor struct {
+	Name string
+}
+
+type Widget struct {
+	Id int
+}
+
+type Company struct {
+	Id int
+}
+
 func TestGetAllowedActions(t *testing.T) {
 	var o oso.Oso
 	var err error
 	if o, err = oso.NewOso(); err != nil {
-			t.Fatalf("Failed to set up Oso: %v", err)
+		t.Fatalf("Failed to set up Oso: %v", err)
 	}
-	o.LoadString("allow(\"foo\", \"bar\", \"baz\");")
-	t.Log(o.IsAllowed("foo", "bar", "baz"))
-	t.Log(o.GetAllowedActions("foo", "baz"))
 
+	o.RegisterClass(reflect.TypeOf(Actor{}), nil)
+	o.RegisterClass(reflect.TypeOf(Widget{}), nil)
+	o.RegisterClass(reflect.TypeOf(Company{}), nil)
+
+	o.LoadString("allow(_actor: Actor{name: \"Sally\"}, action, _resource: Widget{id: 1}) if action in [\"CREATE\", \"READ\"];")
+
+	actor := Actor{Name: "Sally"}
+	resource := Widget{Id: 1}
+
+	res, err := o.GetAllowedActions(actor, resource, false)
+	if err != nil {
+		t.Fatalf("Failed to get allowed actions: %v", err)
+	}
+	if _, ok := res["CREATE"]; !ok {
+		t.Error("expected CREATE action")
+	}
+	if _, ok := res["READ"]; !ok {
+		t.Error("expected READ action")
+	}
+
+	o.LoadString("allow(_actor: Actor{name: \"John\"}, _action, _resource: Widget{id: 1});")
+
+	actor = Actor{Name: "John"}
+	res, err = o.GetAllowedActions(actor, resource, true)
+	if err != nil {
+		t.Fatalf("Failed to get allowed actions: %v", err)
+	}
+	if _, ok := res["*"]; !ok {
+		t.Error("expected * action")
+	}
+
+	res, err = o.GetAllowedActions(actor, resource, false)
+	if err == nil {
+		t.Fatal("Expected an error from GetAllowedActions")
+	}
 }
 
 type Foo struct {
