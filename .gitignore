@@ -136,6 +136,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# direnv
+.envrc
+
 # Spyder project settings
 .spyderproject
 .spyproject

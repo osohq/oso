@@ -35,7 +35,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     it 'calls through to the allow rule' do
       subject.load_str('allow(1, 2, 3);')
       result = subject.query_rule('allow', 1, 2, 3)
-      expect(result.next).to eq({})
+      expect(result.first).to eq({})
     end
   end
 end

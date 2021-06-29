@@ -1,5 +1,5 @@
 use oso::{Action, Oso, PolarClass};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 mod common;
@@ -136,10 +136,15 @@ fn test_instance_from_external_call() -> oso::Result<()> {
     common::setup();
     let oso = test_oso();
 
-    let actor = Actor::new(String::from("guest"));
+    let guest = Actor::new("guest".to_string());
     let resource = Company::new(1);
+    assert!(oso.is_allowed(guest, "frob", resource.clone())?);
 
-    assert!(oso.is_allowed(actor, "frob", resource)?);
+    // if the guest user can do it, then the dict should
+    // create an instance of the user and be allowed
+    let mut user_dict = HashMap::new();
+    user_dict.insert("username", "guest".to_string());
+    assert!(oso.is_allowed(user_dict, "frob", resource)?);
 
     Ok(())
 }

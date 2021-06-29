@@ -89,7 +89,7 @@ def role_allow_query(
                 join relevant_roles rr
                 on ri.to_role = rr.role
             ) select * from relevant_roles
-        ), user_in_role as (
+        ), actor_can_assume_role as (
             -- check if the user has any of those roles on any of the relevant resources
             select
                 ur.resource_type,
@@ -101,12 +101,12 @@ def role_allow_query(
             join resources r
             on r.type = ur.resource_type and r.id = ur.resource_id
             where ur.user_id = :user_id
-        ) select * from user_in_role
+        ) select * from actor_can_assume_role
     """
     return query
 
 
-def user_in_role_query(
+def actor_can_assume_role_query(
     id_query,
     type_query,
     child_types,
@@ -154,7 +154,7 @@ def user_in_role_query(
                 join relevant_roles rr
                 on ri.to_role = rr.role
             ) select * from relevant_roles
-        ), user_in_role as (
+        ), actor_can_assume_role as (
             -- check if the user has any of those roles on any of the relevant resources
             select
                 ur.resource_type,
@@ -166,7 +166,7 @@ def user_in_role_query(
             join resources r
             on r.type = ur.resource_type and r.id = ur.resource_id
             where ur.user_id = :user_id
-        ) select * from user_in_role
+        ) select * from actor_can_assume_role
     """
     return query
 
@@ -188,7 +188,7 @@ def list_filter_query(kind, resource, relationships, id_field):
                 break
 
     sql = ""
-    assert kind in ["role_allow", "user_in_role"]
+    assert kind in ["role_allow", "actor_can_assume_role"]
     # Get the roles to start from.
     if kind == "role_allow":
         # Any role with the permission.
@@ -206,7 +206,7 @@ def list_filter_query(kind, resource, relationships, id_field):
             on rp.permission_id = ap.id
         ),
         """
-    elif kind == "user_in_role":
+    elif kind == "actor_can_assume_role":
         # The passed in role.
         sql += """
         with starting_roles as (
@@ -399,19 +399,19 @@ def read_config(oso):
 
     # Register relationships
     role_relationships = oso.query_rule(
-        "parent",
-        Variable("resource"),
+        "parent_child",
         Variable("parent_resource"),
+        Variable("resource"),
         accept_expression=True,
     )
 
     # Currently there is only one valid relationship, a parent.
     # There is also only one way you can write it as a rule in polar.
-    # parent(child_resource, parent_resource) if
+    # parent_child(parent_resource, child_resource) if
     #     child.parent = parent_resource;
     #
     # @TODO: Support other forms of this rule, eg
-    # parent(child_resource, parent_resource) if
+    # parent_child(parent_resource, child_resource) if
     #     child.parent_id = parent_resource.id;
     for result in role_relationships:
         try:
@@ -462,7 +462,10 @@ def read_config(oso):
 
             config.relationships.append(relationship)
         except AssertionError:
-            raise OsoError("Invalid relationship.")
+            raise OsoError(
+                """Invalid relationship. All relationships must take the form:
+        ```\nparent_child(parent: ParentClass, child: ChildClass) if\n\tchild.parent_attr = parent;\n```"""
+            )
 
     # Register resources / permissions / roles and implications
     # Based on the role_resource definitions
@@ -652,7 +655,7 @@ def read_config(oso):
                     )
 
     if len(config.resources) == 0:
-        raise OsoError("Need to define resources to use oso roles.")
+        raise OsoError("Need to define resources to use Oso Roles.")
 
     return config
 
@@ -782,10 +785,10 @@ class OsoRoles:
                 return self._role_allows(user, action, resource)
 
             @staticmethod
-            def user_in_role(user, role, resource):
+            def actor_can_assume_role(user, role, resource):
                 if self.config is None:
                     self._read_policy()
-                return self._user_in_role(user, role, resource)
+                return self._actor_can_assume_role(user, role, resource)
 
         self.config = None
         self.synced = False
@@ -859,7 +862,7 @@ class OsoRoles:
         child_types = []
 
         self.role_allow_list_filter_queries = {}
-        self.user_in_role_list_filter_queries = {}
+        self.actor_can_assume_role_list_filter_queries = {}
 
         # @NOTE: WOW HACK
         for relationship in self.config.relationships:
@@ -911,7 +914,7 @@ class OsoRoles:
             has_relationships,
         )
 
-        self.user_in_role_sql_query = user_in_role_query(
+        self.actor_can_assume_role_sql_query = actor_can_assume_role_query(
             id_query,
             type_query,
             child_types,
@@ -932,8 +935,8 @@ class OsoRoles:
                 id_field,
             )
 
-            self.user_in_role_list_filter_queries[type] = list_filter_query(
-                "user_in_role",
+            self.actor_can_assume_role_list_filter_queries[type] = list_filter_query(
+                "actor_can_assume_role",
                 resource,
                 self.config.relationships,
                 id_field,
@@ -972,10 +975,10 @@ class OsoRoles:
             user, action, resource, self.role_allow_sql_query, action=action
         )
 
-    def _user_in_role(self, user, role, resource):
+    def _actor_can_assume_role(self, user, role, resource):
         role = parse_role_name(role, type(resource), self.config)
         return self._roles_query(
-            user, role, resource, self.user_in_role_sql_query, role=role
+            user, role, resource, self.actor_can_assume_role_sql_query, role=role
         )
 
     def _get_user_role(self, session, user, resource, role_name):
@@ -1153,8 +1156,10 @@ def _generate_query_filter(oso, role_method, model):
             list_sql = oso.roles.role_allow_list_filter_queries[resource_type]
             params["action"] = action_or_role
 
-        elif role_method.name == "user_in_role":
-            list_sql = oso.roles.user_in_role_list_filter_queries[resource_type]
+        elif role_method.name == "actor_can_assume_role":
+            list_sql = oso.roles.actor_can_assume_role_list_filter_queries[
+                resource_type
+            ]
             role = parse_role_name(action_or_role, model, oso.roles.config)
             params["role"] = role
 

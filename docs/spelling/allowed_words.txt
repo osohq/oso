@@ -143,7 +143,6 @@ roadmap
 runtime
 specializer
 specializers
-sqlalchemy
 stderr
 stdout
 struct

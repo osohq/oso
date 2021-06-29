@@ -4,6 +4,9 @@ use super::kb::*;
 use super::messages::*;
 use super::parser;
 use super::rewrites::*;
+use super::roles_validation::{
+    validate_roles_config, ResultEvent, VALIDATE_ROLES_CONFIG_RESOURCES,
+};
 use super::rules::*;
 use super::runnable::Runnable;
 use super::sources::*;
@@ -125,6 +128,8 @@ impl Iterator for Query {
         Some(event)
     }
 }
+
+const ROLES_POLICY: &str = include_str!("roles.polar");
 
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
@@ -296,6 +301,28 @@ impl Polar {
     pub fn next_message(&self) -> Option<Message> {
         self.messages.next()
     }
+
+    /// Load the Polar roles policy idempotently.
+    pub fn enable_roles(&self) -> PolarResult<()> {
+        let result = match self.load(ROLES_POLICY, Some("Built-in Polar Roles Policy".to_owned())) {
+            Err(error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { .. }),
+                ..
+            }) => Ok(()),
+            result => result,
+        };
+
+        // Push inline queries to validate config.
+        let src_id = self.kb.read().unwrap().new_id();
+        let term = parser::parse_query(src_id, VALIDATE_ROLES_CONFIG_RESOURCES)?;
+        self.kb.write().unwrap().inline_queries.push(term);
+
+        result
+    }
+
+    pub fn validate_roles_config(&self, results: Vec<Vec<ResultEvent>>) -> PolarResult<()> {
+        validate_roles_config(&self.kb.read().unwrap().rules, results)
+    }
 }
 
 #[cfg(test)]
@@ -307,5 +334,16 @@ mod tests {
         let polar = Polar::new();
         let _query = polar.new_query("1 = 1", false);
         let _ = polar.load_str("f(_);");
+    }
+
+    #[test]
+    fn roles_policy_loads_idempotently() {
+        let polar = Polar::new();
+        assert!(polar.enable_roles().is_ok());
+        assert_eq!(polar.loaded_files.read().unwrap().len(), 1);
+        assert_eq!(polar.loaded_content.read().unwrap().len(), 1);
+        assert!(polar.enable_roles().is_ok());
+        assert_eq!(polar.loaded_files.read().unwrap().len(), 1);
+        assert_eq!(polar.loaded_content.read().unwrap().len(), 1);
     }
 }

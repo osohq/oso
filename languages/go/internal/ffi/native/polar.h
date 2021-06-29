@@ -79,3 +79,5 @@ int32_t polar_free(polar_Polar *polar);
  * it can be properly freed
  */
 int32_t query_free(polar_Query *query);
+
+int32_t polar_enable_roles(polar_Polar *polar_ptr);

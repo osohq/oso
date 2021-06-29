@@ -2,14 +2,14 @@ allow(actor, action, resource) if
     allowRole(role, action, resource) and
     actorInRole(actor, role, resource);
 
-allow(_: {sub: sub}, action, resource) if
-    allow(new Actor(name: sub), action, resource);
+allow(_: Dictionary{sub: sub}, action, resource) if
+    allow(new Actor(sub), action, resource);
 
 allow("guest", action, resource) if
-    allow(new Actor(name: "guest"), action, resource);
+    allow(new Actor("guest"), action, resource);
 
-allow(_: {username: name}, action, resource) if
-    allow(new Actor(name: name), action, resource);
+allow(_: Dictionary{username: name}, action, resource) if
+    allow(new Actor(name), action, resource);
 
 allow(_actor: Actor, "get", _resource: Widget);
 allow(actor: Actor, "create", resource: Company) if

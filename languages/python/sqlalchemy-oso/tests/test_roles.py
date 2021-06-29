@@ -1,9 +1,10 @@
 # Roles 2 tests
+from polar.exceptions import ParserError
 import pytest
-import psycopg2
 import random
 import string
 import os
+import timeit
 
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
@@ -29,6 +30,8 @@ if pg_host is not None:
 @pytest.fixture(params=databases)
 def engine(request):
     if request.param == "postgres":
+        import psycopg2
+
         # Create a new database to run the tests.
         id = "".join(random.choice(string.ascii_lowercase) for i in range(10))
         name = f"roles_test_{id}"
@@ -130,7 +133,7 @@ def init_oso(engine, Base, User, Organization, Repository, Issue):
     oso = SQLAlchemyOso(Base)
     oso.enable_roles(User, Session)
 
-    # @NOTE: Right now this has to happen after enabling oso roles to get the
+    # @NOTE: Right now this has to happen after enabling Oso Roles to get the
     #        tables.
     Base.metadata.create_all(engine)
 
@@ -328,7 +331,7 @@ def test_resource_with_roles_no_actions(init_oso, sample_data):
             }
         };
 
-        parent(repo: Repository, parent_org: Organization) if
+        parent_child(parent_org: Organization, repo: Repository) if
             repo.org = parent_org;
 
         allow(actor, action, resource) if
@@ -399,7 +402,7 @@ def test_nested_dot_relationship(init_oso):
             "edit"
         ];
 
-    parent(issue, parent_org) if
+    parent_child(parent_org: Organization, issue: Issue) if
         issue.repo.org = parent_org;
     """
     oso.load_str(policy)
@@ -425,7 +428,7 @@ def test_bad_relationship_lookup(init_oso):
             "pull"
         ];
 
-    parent(repo: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo: Repository) if
         # INCORRECT FIELD NAME
         repo.organization = parent_org;
     """
@@ -443,7 +446,7 @@ def test_relationship_without_specializer(init_oso):
             "pull"
         ];
 
-    parent(repo, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo) if
         repo.org = parent_org;
     """
     oso.load_str(policy)
@@ -455,7 +458,7 @@ def test_relationship_without_specializer(init_oso):
 def test_relationship_without_resources(init_oso):
     oso, session = init_oso
     policy = """
-    parent(repo: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo: Repository) if
         repo.org = parent_org;
     """
     oso.load_str(policy)
@@ -481,9 +484,8 @@ def test_duplicate_role_name_same_resource(init_oso):
             }
         };
         """
-    oso.load_str(policy)
-    with pytest.raises(OsoError):
-        oso.roles.synchronize_data()
+    with pytest.raises(ParserError):
+        oso.load_str(policy)
 
 
 def test_duplicate_role_name_different_resources(init_oso, sample_data):
@@ -516,7 +518,7 @@ def test_duplicate_role_name_different_resources(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo: Repository) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
@@ -698,7 +700,7 @@ def test_invalid_role_permission(init_oso):
 
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo: Repository) if
         repo.org = parent_org;
     """
 
@@ -838,7 +840,7 @@ def test_overlapping_permissions(init_oso, sample_data):
             }
         };
 
-    parent(repository: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repository: Repository) if
         repository.org = parent_org;
 
     allow(actor, action, resource) if
@@ -940,7 +942,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
             "pull"
         ];
 
-    parent(repository: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repository: Repository) if
         repository.org = parent_org;
 
     allow(actor, action, resource) if
@@ -981,7 +983,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
             "pull"
         ];
 
-    parent(repository: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repository: Repository) if
         repository.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1019,10 +1021,10 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
             "edit"
         ];
 
-    parent(repository: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repository: Repository) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    parent_child(parent_repo: Repository, issue: Issue) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -1068,10 +1070,10 @@ def test_grandparent_child_role_perm(init_oso, sample_data):
             "edit"
         ];
 
-    parent(repository: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repository: Repository) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    parent_child(parent_repo: Repository, issue: Issue) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -1182,7 +1184,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repository: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repository: Repository) if
         repository.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1223,7 +1225,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
             "pull"
         ];
 
-    parent(repository: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repository: Repository) if
         repository.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1264,10 +1266,10 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repository: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repository: Repository) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    parent_child(parent_repo: Repository, issue: Issue) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -1310,10 +1312,10 @@ def test_grandparent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repository: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repository: Repository) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    parent_child(parent_repo: Repository, issue: Issue) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -1366,10 +1368,10 @@ def test_chained_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repository: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repository: Repository) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    parent_child(parent_repo: Repository, issue: Issue) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -1434,10 +1436,10 @@ def test_chained_role_implication(init_oso, sample_data):
             }
         };
 
-    parent(repository: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repository: Repository) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    parent_child(parent_repo: Repository, issue: Issue) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -1646,7 +1648,7 @@ def test_reassign_user_role(init_oso, sample_data):
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo: Repository) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1725,7 +1727,7 @@ def test_authorizing_related_fields(
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo: Repository) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1817,7 +1819,7 @@ def test_data_filtering_role_allows_and(
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo: Repository) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1879,7 +1881,7 @@ def test_data_filtering_role_allows_explicit_or(
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo: Repository) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
@@ -1966,7 +1968,7 @@ def test_data_filtering_role_allows_implicit_or(
     assert len(results) == 1
 
 
-def test_data_filtering_user_in_role_not(
+def test_data_filtering_actor_can_assume_role_not(
     init_oso, sample_data, auth_sessionmaker, Organization
 ):
     oso, session = init_oso
@@ -1980,7 +1982,7 @@ def test_data_filtering_user_in_role_not(
         };
 
     allow(actor, action, resource) if
-        not Roles.user_in_role(actor, "member", resource);
+        not Roles.actor_can_assume_role(actor, "member", resource);
     """
     oso.load_str(policy)
     oso.roles.synchronize_data()
@@ -2008,7 +2010,7 @@ def test_data_filtering_user_in_role_not(
         auth_session.query(Organization).all()
 
 
-def test_data_filtering_user_in_role_and(
+def test_data_filtering_actor_can_assume_role_and(
     init_oso, sample_data, auth_sessionmaker, User, Organization
 ):
     oso, session = init_oso
@@ -2030,11 +2032,11 @@ def test_data_filtering_user_in_role_and(
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo: Repository) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
-        Roles.user_in_role(actor, "member", resource) and
+        Roles.actor_can_assume_role(actor, "member", resource) and
         resource.id = "osohq";
     """
     oso.load_str(policy)
@@ -2070,7 +2072,7 @@ def test_data_filtering_user_in_role_and(
     assert len(results) == 0
 
 
-def test_data_filtering_user_in_role_explicit_or(
+def test_data_filtering_actor_can_assume_role_explicit_or(
     init_oso, sample_data, auth_sessionmaker, User, Organization, Repository
 ):
     oso, session = init_oso
@@ -2092,14 +2094,14 @@ def test_data_filtering_user_in_role_explicit_or(
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo: Repository) if
         repo.org = parent_org;
 
     allow(actor, action, resource) if
         Roles.role_allows(actor, action, resource);
 
     allow(actor, _, resource) if
-        Roles.user_in_role(actor, "member", resource) or
+        Roles.actor_can_assume_role(actor, "member", resource) or
         resource.id = "osohq";
     """
     oso.load_str(policy)
@@ -2138,7 +2140,7 @@ def test_data_filtering_user_in_role_explicit_or(
     assert len(results) == 1
 
 
-def test_data_filtering_user_in_role_implicit_or(
+def test_data_filtering_actor_can_assume_role_implicit_or(
     init_oso, sample_data, auth_sessionmaker, User, Organization
 ):
     # Ensure that the filter produced by `Roles.role_allows()` is not AND-ed
@@ -2157,7 +2159,7 @@ def test_data_filtering_user_in_role_implicit_or(
         };
 
     allow(actor, action, resource) if
-        Roles.user_in_role(actor, "member", resource);
+        Roles.actor_can_assume_role(actor, "member", resource);
     """
     oso.load_str(policy)
     oso.roles.synchronize_data()
@@ -2200,8 +2202,8 @@ def test_data_filtering_combo(
 
     allow(actor, action, resource) if
         role_allows = Roles.role_allows(actor, action, resource) and
-        user_in_role = Roles.user_in_role(actor, "member", resource) and
-        role_allows and user_in_role;
+        actor_can_assume_role = Roles.actor_can_assume_role(actor, "member", resource) and
+        role_allows and actor_can_assume_role;
     """
     # You can't directly `and` the two Roles calls right now but it does work if you do it like ^
     oso.load_str(policy)
@@ -2252,7 +2254,7 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo: Repository) if
         repo.org = parent_org;
 
 
@@ -2299,7 +2301,7 @@ def test_read_api(init_oso, sample_data, Repository, Organization):
     assert len(steve_assignments) == 2
 
 
-def test_user_in_role(
+def test_actor_can_assume_role(
     init_oso, sample_data, Repository, Organization, auth_sessionmaker
 ):
     oso, session = init_oso
@@ -2322,12 +2324,12 @@ def test_user_in_role(
             }
         };
 
-    parent(repo: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repo: Repository) if
         repo.org = parent_org;
 
 
     allow(actor, "read", repo: Repository) if
-        Roles.user_in_role(actor, "reader", repo);
+        Roles.actor_can_assume_role(actor, "reader", repo);
     """
     oso.load_str(policy)
     oso.roles.synchronize_data()
@@ -2533,10 +2535,10 @@ def test_roles_integration(
             "edit"
         ];
 
-    parent(repository: Repository, parent_org: Organization) if
+    parent_child(parent_org: Organization, repository: Repository) if
         repository.org = parent_org;
 
-    parent(issue: Issue, parent_repo: Repository) if
+    parent_child(parent_repo: Repository, issue: Issue) if
         issue.repo = parent_repo;
 
     allow(actor, action, resource) if
@@ -2633,3 +2635,82 @@ def test_roles_integration(
         {"user_id": leina.id, "role": "owner"},
         {"user_id": steve.id, "role": "member"},
     ]
+
+
+def test_perf_sqlalchemy(init_oso, sample_data, Repository):
+    oso, session = init_oso
+
+    # Test many direct roles
+    p = """
+        resource(_: Repository, "repo", actions, roles) if
+        actions = ["read", "write"] and
+        roles = {
+            reader: { permissions: ["read"] },
+            reader1: { permissions: ["read"] },
+            reader2: { permissions: ["read"] },
+            reader3: { permissions: ["read"] },
+            reader4: { permissions: ["read"] },
+            reader5: { permissions: ["read"] },
+            reader6: { permissions: ["read"] },
+            reader7: { permissions: ["read"] },
+            reader8: { permissions: ["read"] },
+            reader9: { permissions: ["read"] },
+            reader10: { permissions: ["read"] },
+            reader11: { permissions: ["read"] },
+            reader12: { permissions: ["read"] },
+            reader13: { permissions: ["read"] },
+            reader14: { permissions: ["read"] },
+            reader15: { permissions: ["read"] },
+            reader16: { permissions: ["read"] },
+            reader17: { permissions: ["read"] },
+            writer: { permissions: ["write"] }
+        };
+
+    allow(actor, action, resource) if Roles.role_allows(actor, action, resource);"""
+
+    # p = """resource(_: Repository, "repo", actions, roles) if
+    # actions = ["pull", "push"] and
+    # roles = {
+    # 	writer: {
+    # 	permissions: ["push"],
+    # 	implies: ["reader"]
+    # 	},
+    # 	reader: {
+    # 	permissions: ["pull"]
+    # 	}
+    # };
+
+    # parent_child(org: Organization, repo: Repository) if
+    # org = repo.organization;
+    # """
+    oso.load_str(p)
+    oso.roles.synchronize_data()
+
+    leina = sample_data["leina"]
+    # steve = sample_data["steve"]
+    osohq = sample_data["osohq"]
+    # oso_repo = sample_data["oso_repo"]
+
+    # Create 100 repositories
+    oso_repos = []
+    for i in range(100):
+        name = f"oso_repo_{i}"
+        repo = Repository(id=name, org=osohq)
+        oso_repos.append(repo)
+        session.add(repo)
+
+    session.commit()
+
+    for i in range(100):
+        oso.roles.assign_role(leina, oso_repos[i], "writer", session)
+    session.commit()
+
+    leina_roles = oso.roles.assignments_for_user(leina, session)
+
+    assert len(leina_roles) == 100
+
+    number = 10
+    time = timeit.timeit(
+        lambda: oso.is_allowed(leina, "write", oso_repos[99]), number=number
+    )
+    print(f"Executed in : {time/number*1000} ms\n Averaged over {number} repetitions.")
