@@ -136,29 +136,30 @@ With this relatively straightforward policy, it's easy to trace where
 the users' allowed actions come from. But `Oso.get_allowed_actions()`
 can be especially powerful with more complicated policies. For example,
 if we used Oso's [SQLAlchemy Roles library
-features](guides/roles/sqlalchemy_roles),
+features](guides/roles/sqlalchemy),
 we could have a policy that looks like this instead:
 
-```python
-# Repository Permissions
-# ----------------------
+```polar
+resource(_type: Organization, "org", actions, roles) if
+  actions = [] and
+  roles = {
+    member: {
+      permissions: ["repo:CREATE"],
+      implies: ["repo:reader"]
+    },
+  };
 
-# Members of the parent organization can create new repos
-role_allow(_role: OrganizationRole{name: "MEMBER"}, "CREATE", _repo: Repository);
-
-# Users with the "READ" role can read and list issues for the repo
-role_allow(_role: RepositoryRole{name: "READ"}, action: String, _repo: Repository) if
-    action in ["READ", "LIST_ISSUES"];
-
-# Users with the "ADMIN" role can list roles and delete the repo
-role_allow(_role: RepositoryRole{name: "ADMIN"}, action: String, _repo: Repository) if
-    action in ["LIST_ROLES", "DELETE"];
-
-# Role Hierarchies
-# ----------------
-
-# Specify repository role order (most senior on left)
-repository_role_order(["ADMIN", "MAINTAIN", "WRITE", "TRIAGE", "READ"]);
+resource(_type: Repository, "repo", actions, {}) if
+  actions = ["CREATE", "READ", "UPDATE", "DELETE", "LIST_ISSUES", "LIST_ROLES"] and
+  roles = {
+    reader: {
+      permissions: ["READ", "LIST_ISSUES"]
+    },
+    admin: {
+      permissions: ["LIST_ROLES", "DELETE"],
+      implies: ["reader"]
+    }
+  }
 ```
 
 Now the users' allowed actions depend on their assigned roles for both

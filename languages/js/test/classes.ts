@@ -95,6 +95,25 @@ export class ConstructorArgs {
 
 export class ConstructorNoArgs {}
 
+export class ConstructorMapObjectArgs {
+  readonly one?: number;
+  readonly two: number;
+  readonly three?: number;
+  readonly four: number;
+
+  constructor(
+    oneMap: Map<'one', number>,
+    { two }: { two: number },
+    threeMap: Map<'three', number>,
+    { four }: { four: number }
+  ) {
+    this.one = oneMap.get('one');
+    this.two = two;
+    this.three = threeMap.get('three');
+    this.four = four;
+  }
+}
+
 let counter = 0;
 
 export class Counter {

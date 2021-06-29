@@ -7,6 +7,8 @@ aliases:
 weight: 1
 ---
 
+<!-- TODO: this whole doc is a bit out of date semantically with new roles stuff--worth updating? -->
+
 # Role-Based Access Control (RBAC) Patterns
 
 When managing access to resources within an application, it can be useful to
@@ -38,10 +40,9 @@ allow(actor, action, resource) if
 
 {{% callout "Adding roles to your application?" "blue" %}}
 
-Oso Roles provides built in support for role configuration, role data
-management and more.
+Oso Roles provides built-in support for role configuration and more.
 
-[Check it out here!](/guides/new-roles)
+[Check it out here!](/guides/roles)
 
 Or, keep reading to learn how to model roles in Polar using your own
 existing roles data management.
@@ -473,11 +474,12 @@ user_in_role_for_resource(user: User, "admin", resource: Repository) if
 
 {{% callout "What's next" "blue" %}}
 
+- Learn how to set up roles via [Oso Roles](guides/roles).
 {{< ifLang "python" >}}
-- Learn how to use roles with
-[SQLAlchemy](guides/roles/sqlalchemy_roles).
+  - Or [Oso Roles for SQLAlchemy]({{< ref path="guides/roles/sqlalchemy"
+    lang="python" >}}), if you're already using SQLAlchemy to manage application
+    data.
 {{< /ifLang >}}
-
 - Check out our [How-To Guides](guides) for more on using Polar
   policies for authorization.
 - Check out the [Polar reference](reference/polar) for more on the Polar

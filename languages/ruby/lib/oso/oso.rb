@@ -17,10 +17,7 @@ module Oso
     # @param resource [Object] Object.
     # @return [Boolean] An access control decision.
     def allowed?(actor:, action:, resource:)
-      query_rule('allow', actor, action, resource).next
-      true
-    rescue StopIteration
-      false
+      !query_rule('allow', actor, action, resource).first.nil?
     end
   end
 end

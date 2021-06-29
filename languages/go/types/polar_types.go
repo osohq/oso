@@ -1317,6 +1317,16 @@ type ParseErrorWrongValueType struct {
 
 func (ParseErrorWrongValueType) isParseError() {}
 
+// ParseErrorWrongValueType struct
+type ParseErrorDuplicateKey struct {
+	// Loc
+	Loc uint64 `json:"loc"`
+	// Expected
+	Key string `json:"key"`
+}
+
+func (ParseErrorDuplicateKey) isParseError() {}
+
 // ParseError enum
 type ParseErrorVariant interface {
 	isParseError()
@@ -1448,6 +1458,17 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		*result = ParseError{variant}
 		return nil
 
+	case "DuplicateKey":
+		var variant ParseErrorDuplicateKey
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ParseError{variant}
+		return nil
+
 	}
 
 	return fmt.Errorf("Cannot deserialize ParseError: %s", string(b))
@@ -1499,6 +1520,11 @@ func (variant ParseError) MarshalJSON() ([]byte, error) {
 	case ParseErrorWrongValueType:
 		return json.Marshal(map[string]ParseErrorWrongValueType{
 			"WrongValueType": inner,
+		})
+
+	case ParseErrorDuplicateKey:
+		return json.Marshal(map[string]ParseErrorDuplicateKey{
+			"DuplicateKey": inner,
 		})
 
 	}
