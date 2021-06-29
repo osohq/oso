@@ -68,5 +68,5 @@ Link to [relevant documentation section]().
 
 ### Other bugs & improvements
 
-- Thanks to [@tomashozman](https://github.com/tomashozman) for cleaning up some
-  SQLAlchemy imports ([#997](https://github.com/osohq/oso/pull/997)).
+- Thanks to [`@tomashozman`](https://github.com/tomashozman) for cleaning up
+  some SQLAlchemy imports ([#997](https://github.com/osohq/oso/pull/997)).
