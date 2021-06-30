@@ -5,14 +5,14 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
-# Get the long description from the README file
+# Get the long description from the README file.
 try:
     with open(path.join(here, "README.md"), encoding="utf-8") as f:
         long_description = f.read()
 except IOError:
     long_description = ""
 
-# Hack around tox, don't count oso as a dependency when running under tox.
+# Hack around Tox, don't count Oso as a dependency when running under Tox.
 install_requires = ""
 with open("requirements.txt") as fp:
     for line in fp.readlines():
@@ -24,14 +24,19 @@ with open("requirements.txt") as fp:
 
 def read(rel_path):
     here = os.path.abspath(os.path.dirname(__file__))
-    # intentionally *not* adding an encoding option to open, See:
+
+    # Intentionally *not* adding an encoding option to open, See:
     #   https://github.com/pypa/virtualenv/issues/201#issuecomment-3145690
+
     with codecs.open(os.path.join(here, rel_path), "r") as fp:
         return fp.read()
 
 
 def get_version(rel_path):
-    """Get version from file. Copied from pip: https://github.com/pypa/pip/blob/master/setup.py#L19"""
+    """Get version from file. Copied from pip:
+    https://github.com/pypa/pip/blob/master/setup.py#L19
+    """
+
     for line in read(rel_path).splitlines():
         if line.startswith("__version__"):
             # __version__ = "0.9"
@@ -57,6 +62,7 @@ setup(
     packages=find_packages(exclude=["tests", "tests.*"]),
     python_requires=">=3.6",
     install_requires=install_requires,
+
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
     # syntax, for example:
@@ -65,7 +71,9 @@ setup(
     #
     # Similar to `install_requires` above, these must be valid existing
     # projects.
+
     extras_require={"flask": ["flask", "flask_sqlalchemy"]},
+
     # If there are data files included in your packages that need to be
     # installed, specify them here.
     #
@@ -85,9 +93,11 @@ setup(
     #
     # For example, the following would provide a command called `sample` which
     # executes the function `main` from this package when invoked:
+
     entry_points={
         "console_scripts": [],
     },  # Optional
+
     # List additional URLs that are relevant to your project as a dict.
     #
     # This field corresponds to the "Project-URL" metadata fields:
@@ -97,6 +107,7 @@ setup(
     # issues, where the source is hosted, where to say thanks to the package
     # maintainers, and where to support the project financially. The key is
     # what's used to render the link text on PyPI.
+
     project_urls={
         "Source": "https://github.com/osohq/oso/tree/main/languages/python/sqlalchemy-oso",
         # "Docs": "...",
