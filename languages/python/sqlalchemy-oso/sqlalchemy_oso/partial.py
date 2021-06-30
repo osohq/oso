@@ -1,21 +1,21 @@
 import functools
+
 from typing import Any, Callable, Tuple
 
-from sqlalchemy.orm.session import Session
-from sqlalchemy import inspect
-from sqlalchemy.orm import RelationshipProperty
-from sqlalchemy.sql import expression as sql
-from sqlalchemy.sql.elements import True_
-
-from polar.partial import dot_path
+from polar.exceptions import OsoError, UnsupportedError
 from polar.expression import Expression
-from polar.variable import Variable
-from polar.exceptions import UnsupportedError, OsoError
+from polar.partial import dot_path
 from polar.predicate import Predicate
-
+from polar.variable import Variable
+from sqlalchemy import inspect, sql
+from sqlalchemy.orm import RelationshipProperty
+from sqlalchemy.orm.session import Session
+from sqlalchemy.sql.elements import True_
 from sqlalchemy_oso.preprocess import preprocess
 
-# TODO (dhatch) Better types here, first any is model, second any is a sqlalchemy expr.
+# TODO (dhatch) Better types here, first any is model, second any is an
+# SQLAlchemy expr.
+
 EmitFunction = Callable[[Session, Any], Any]
 
 
@@ -51,7 +51,10 @@ def and_filter(current, new):
 
 
 def partial_to_filter(expression: Expression, session: Session, model, get_model):
-    """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
+    """Convert constraints in `partial` to a filter over `model` that should be
+    applied to query.
+    """
+
     expression = preprocess(expression)
     roles_method = check_for_roles_method(expression)
 
@@ -85,12 +88,12 @@ def check_for_roles_method(expression: Expression):
     methods = []
     to_remove = []
     for expr in expression.args:
-        # Try with method call on right
+        # Try with method call on right.
         is_roles, method = _is_roles_method(expr.operator, expr.args[0], expr.args[1])
         if is_roles:
             methods.append(method)
             to_remove.append(expr)
-        # Try with method call on left
+        # Try with method call on left.
         is_roles, method = _is_roles_method(expr.operator, expr.args[1], expr.args[0])
         if is_roles:
             to_remove.append(expr)
@@ -135,7 +138,8 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "Isa"
     left, right = expression.args
     left_path = dot_path(left)
-    # # WOWHACK(gj): this fixes the data filtering test at the bottom of
+
+    # # WOWHACK(gj): This fixes the data filtering test at the bottom of
     # # tests/test_roles3.py
     # if not left_path:
     #     left_cls = inspect(left, raiseerr=True).class_
@@ -152,6 +156,7 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
     assert not right.fields, "Unexpected fields in isa expression"
     constraint_type = get_model(right.tag)
     model_type = inspect(model, raiseerr=True).class_
+
     return sql.true() if issubclass(model_type, constraint_type) else sql.false()
 
 
@@ -164,6 +169,7 @@ def translate_compare(expression: Expression, session: Session, model, get_model
         assert left_path[0] == Variable("_this")
         assert not right_path
         path, field_name = left_path[1:-1], left_path[-1]
+
         return translate_dot(
             path,
             session,
@@ -194,6 +200,7 @@ def translate_compare(expression: Expression, session: Session, model, get_model
             pk_filter = and_filter(
                 pk_filter, getattr(model, key) == getattr(right, key)
             )
+
         return pk_filter
 
 
@@ -231,7 +238,9 @@ def translate_in(expression, session, model, get_model):
     else:
         # Contains: LHS is not an expression.
         # TODO (dhatch) Missing check, left type must match type of the target?
+
         path, field_name = path[:-1], path[-1]
+
         return translate_dot(
             path, session, model, functools.partial(emit_contains, field_name, left)
         )
@@ -249,10 +258,12 @@ def translate_dot(path: Tuple[str, ...], session: Session, model, func: EmitFunc
 
 
 def get_relationship(model, field_name: str):
-    """Get the property object for field on model. field must be a relationship field.
+    """Get the property object for a field called `field_name` on a model.
+    The field must be a relationship one.
 
     :returns: (property, model, is_multi_valued)
     """
+
     property = getattr(model, field_name)
     assert isinstance(property.property, RelationshipProperty)
     relationship = property.property
@@ -262,20 +273,30 @@ def get_relationship(model, field_name: str):
 
 
 def emit_compare(field_name, value, operator, session, model):
-    """Emit a comparison operation comparing the value of ``field_name`` on ``model`` to ``value``."""
+    """Emit a comparison operation comparing the value of `field_name` on `model`
+    to `value`.
+    """
+
     assert not isinstance(value, Variable), "value is a variable"
     property = getattr(model, field_name)
+
     return COMPARISONS[operator](property, value)
 
 
 def emit_subexpression(sub_expression: Expression, get_model, session: Session, model):
-    """Emit a sub-expression on ``model``."""
+    """Emit a sub-expression on `model`."""
+
     return translate_expr(sub_expression, session, model, get_model)
 
 
 def emit_contains(field_name, value, session, model):
-    """Emit a contains operation, checking that multi-valued relationship field ``field_name`` contains ``value``."""
-    # TODO (dhatch): Could this be valid for fields that are not relationship fields?
+    """Emit a contains operation, checking that multi-valued relationship field
+    `field_name` contains `value`.
+    """
+
+    # TODO (dhatch): Could this be valid for fields that are not relationship
+    # fields?
+
     property, model, is_multi_valued = get_relationship(model, field_name)
     assert is_multi_valued
 

@@ -1,15 +1,15 @@
 # Roles 2
-from typing import Any, List, Set, Dict
 from dataclasses import dataclass
+from typing import Any, Dict, List, Set
 
 from oso import OsoError, Variable
-
-from sqlalchemy.exc import NoInspectionAvailable
-from sqlalchemy.types import Integer, String
-from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy import inspect, sql
+from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
+from sqlalchemy.schema import Column, ForeignKey
+from sqlalchemy.types import Integer, String
+
 from .compat import iterate_model_classes
 
 
@@ -19,6 +19,7 @@ def isa_type(arg):
     assert arg.args[0] == Variable("_this")
     pattern = arg.args[1]
     type = pattern.tag
+
     return type
 
 
@@ -29,6 +30,7 @@ def get_pk(model):
     ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
     type = pks[0].type
     name = pks[0].name
+
     return (name, type)
 
 
@@ -45,63 +47,62 @@ def role_allow_query(
     if not has_relationships:
         recur = ""
     else:
-        recur = f"""
-        union
+        recur = f"""union
         select
             {id_query},
             {type_query}
         from resources
         where type in ({child_types})"""
-    query = f"""
-        -- get all the relevant resources by walking the parent tree
-        with resources as (
-            with recursive resources (id, type) as (
-                select
-                    cast({resource_id_field} as {resource_id_type}) as id,
-                    :resource_type as type
-                {recur}
-            ) select * from resources
-        ), allow_permission as (
-            -- Find the permission
-            select
-                p.id
-            from permissions p
-            where p.resource_type = :resource_type and p.name = :action
-        ), permission_roles as (
-            -- find roles with the permission
-            select
-                rp.role
-            from role_permissions rp
-            join allow_permission ap
-            on rp.permission_id = ap.id
-        ), relevant_roles as (
-            -- recursively find all roles that have the permission or
-            -- imply a role that has the permission
-            with recursive relevant_roles (role) as (
-                select
-                    role
-                from permission_roles
-                union
-                select
-                    ri.from_role
-                from role_implications ri
-                join relevant_roles rr
-                on ri.to_role = rr.role
-            ) select * from relevant_roles
-        ), actor_can_assume_role as (
-            -- check if the user has any of those roles on any of the relevant resources
-            select
-                ur.resource_type,
-                ur.resource_id,
-                ur.role
-            from user_roles ur
-            join relevant_roles rr
-            on rr.role = ur.role
-            join resources r
-            on r.type = ur.resource_type and r.id = ur.resource_id
-            where ur.user_id = :user_id
-        ) select * from actor_can_assume_role
-    """
+
+    query = f"""-- get all the relevant resources by walking the parent tree
+with resources as (
+    with recursive resources (id, type) as (
+        select
+            cast({resource_id_field} as {resource_id_type}) as id,
+            :resource_type as type
+        {recur}
+    ) select * from resources
+), allow_permission as (
+    -- Find the permission
+    select
+        p.id
+    from permissions p
+    where p.resource_type = :resource_type and p.name = :action
+), permission_roles as (
+    -- find roles with the permission
+    select
+        rp.role
+    from role_permissions rp
+    join allow_permission ap
+    on rp.permission_id = ap.id
+), relevant_roles as (
+    -- recursively find all roles that have the permission or
+    -- imply a role that has the permission
+    with recursive relevant_roles (role) as (
+        select
+            role
+        from permission_roles
+        union
+        select
+            ri.from_role
+        from role_implications ri
+        join relevant_roles rr
+        on ri.to_role = rr.role
+    ) select * from relevant_roles
+), actor_can_assume_role as (
+    -- check if the user has any of those roles on any of the relevant resources
+    select
+        ur.resource_type,
+        ur.resource_id,
+        ur.role
+    from user_roles ur
+    join relevant_roles rr
+    on rr.role = ur.role
+    join resources r
+    on r.type = ur.resource_type and r.id = ur.resource_id
+    where ur.user_id = :user_id
+) select * from actor_can_assume_role"""
+
     return query
 
 
@@ -118,55 +119,54 @@ def actor_can_assume_role_query(
     if not has_relationships:
         recur = ""
     else:
-        recur = f"""
-        union
+        recur = f"""union
         select
             {id_query},
             {type_query}
         from resources
         where type in ({child_types})"""
-    query = f"""
-        -- get all the relevant resources by walking the parent tree
-        with resources as (
-            with recursive resources (id, type) as (
-                select
-                    cast({resource_id_field} as {resource_id_type}) as id,
-                    :resource_type as type
-                {recur}
-            ) select * from resources
-        ), role as (
-            select
-                r.name
-            from roles r
-            where r.name = :role
-        ), relevant_roles as (
-            -- recursively find all roles that have the permission or
-            -- imply a role that has the permission
-            with recursive relevant_roles (role) as (
-                select
-                    name
-                from role
-                union
-                select
-                    ri.from_role
-                from role_implications ri
-                join relevant_roles rr
-                on ri.to_role = rr.role
-            ) select * from relevant_roles
-        ), actor_can_assume_role as (
-            -- check if the user has any of those roles on any of the relevant resources
-            select
-                ur.resource_type,
-                ur.resource_id,
-                ur.role
-            from user_roles ur
-            join relevant_roles rr
-            on rr.role = ur.role
-            join resources r
-            on r.type = ur.resource_type and r.id = ur.resource_id
-            where ur.user_id = :user_id
-        ) select * from actor_can_assume_role
-    """
+
+    query = f"""-- get all the relevant resources by walking the parent tree
+with resources as (
+    with recursive resources (id, type) as (
+        select
+            cast({resource_id_field} as {resource_id_type}) as id,
+            :resource_type as type
+        {recur}
+    ) select * from resources
+), role as (
+    select
+        r.name
+    from roles r
+    where r.name = :role
+), relevant_roles as (
+    -- recursively find all roles that have the permission or
+    -- imply a role that has the permission
+    with recursive relevant_roles (role) as (
+        select
+            name
+        from role
+        union
+        select
+            ri.from_role
+        from role_implications ri
+        join relevant_roles rr
+        on ri.to_role = rr.role
+    ) select * from relevant_roles
+), actor_can_assume_role as (
+    -- check if the user has any of those roles on any of the relevant resources
+    select
+        ur.resource_type,
+        ur.resource_id,
+        ur.role
+    from user_roles ur
+    join relevant_roles rr
+    on rr.role = ur.role
+    join resources r
+    on r.type = ur.resource_type and r.id = ur.resource_id
+    where ur.user_id = :user_id
+) select * from actor_can_assume_role"""
+
     return query
 
 
@@ -191,62 +191,55 @@ def list_filter_query(kind, resource, relationships, id_field):
     # Get the roles to start from.
     if kind == "role_allow":
         # Any role with the permission.
-        sql += """
-        with allow_permission as (
-            select
-                p.id
-            from permissions p
-            where p.resource_type = :resource_type and p.name = :action
-        ), starting_roles as (
-            select
-                rp.role as role
-            from role_permissions rp
-            join allow_permission ap
-            on rp.permission_id = ap.id
-        ),
-        """
+        sql += """\nwith allow_permission as (
+    select
+        p.id
+    from permissions p
+    where p.resource_type = :resource_type and p.name = :action
+), starting_roles as (
+    select
+        rp.role as role
+    from role_permissions rp
+    join allow_permission ap
+    on rp.permission_id = ap.id
+),"""
     elif kind == "actor_can_assume_role":
         # The passed in role.
-        sql += """
-        with starting_roles as (
-            select
-                r.name as role
-            from roles r
-            where r.name = :role
-        ),
-        """
+        sql += """\nwith starting_roles as (
+    select
+        r.name as role
+    from roles r
+    where r.name = :role
+),"""
+
     # Get to any of the roles the user could be assigned to.
-    sql += """
-    relevant_roles as (
-        with recursive relevant_roles (role) as (
-            select
-                    role
-            from starting_roles
-            union
-            select
-                    ri.from_role
-            from role_implications ri
-            join relevant_roles rr
-            on ri.to_role = rr.role
-        ) select * from relevant_roles
-    ), user_relevant_roles as (
+    sql += """\nrelevant_roles as (
+    with recursive relevant_roles (role) as (
         select
-            resource_type, resource_id
-        from user_roles ur
+            role
+        from starting_roles
+        union
+        select
+            ri.from_role
+        from role_implications ri
         join relevant_roles rr
-        on rr.role = ur.role
-        where ur.user_id = :user_id
-    )
-    """
+        on ri.to_role = rr.role
+    ) select * from relevant_roles
+), user_relevant_roles as (
+    select
+        resource_type, resource_id
+    from user_roles ur
+    join relevant_roles rr
+    on rr.role = ur.role
+    where ur.user_id = :user_id
+)"""
 
     # Select data
-    sql += f"""
-    select
-      {tablename}.{id_field}
-    from {tablename}
-    join user_relevant_roles urr
-    on urr.resource_type = '{resource.type}' and urr.resource_id = {tablename}.{id_field}
-    """
+    sql += f"""\nselect
+    {tablename}.{id_field}
+from {tablename}
+join user_relevant_roles urr
+on urr.resource_type = '{resource.type}' and urr.resource_id = {tablename}.{id_field}"""
 
     prev_joins = []
 
@@ -258,28 +251,26 @@ def list_filter_query(kind, resource, relationships, id_field):
         join += f"= {rel.parent_table}.{rel.parent_join_column}"
         prev_joins.append(join)
 
-        sql += f"""
-        union
-        select
-        {tablename}.{id_field}
-        from {tablename}
-        """
+        sql += f"""\nunion
+select
+    {tablename}.{id_field}
+from {tablename}\n"""
 
         for join in prev_joins:
-            sql += join + "\n"
+            sql += f"{join}\n"
 
-        sql += f"""
-        join user_relevant_roles urr
-        on urr.resource_type = '{rel.parent_type}'
-        and urr.resource_id = {rel.parent_table}.{parent_pk}
-        """
+        sql += f"""\njoin user_relevant_roles urr
+on urr.resource_type = '{rel.parent_type}'
+and urr.resource_id = {rel.parent_table}.{parent_pk}"""
 
     return sql
 
 
 # Python representation of the configuration data.
-# Currently this data is read from a polar file that has
+# Currently this data is read from a Polar file that has
 # resource and parent rule definitions.
+
+
 @dataclass
 class Relationship:
     child_python_class: Any
@@ -327,7 +318,8 @@ class Config:
 
 
 def parse_permission(permission, python_class, config):
-    """Parse a permission string, check if it's valid and return a Permission"""
+    """Parse a permission string, check if it's valid and return a Permission."""
+
     if ":" in permission:
         resource_name, action = permission.split(":", 1)
         if resource_name not in config.resources:
@@ -345,23 +337,31 @@ def parse_permission(permission, python_class, config):
         raise OsoError(
             f"Permission {perm.name} doesn't exist for resource {perm.type}."
         )
+
     return perm
 
 
 def parse_role_name(role_name, resource_class, config, other_ok=False):
-    """Parse a role name and return a normalized role name (with namspace).
+    """Parse a role name and return a normalized role name (with namespace).
 
-    :param role_name: un-normalized role name
+    :param role_name: Non-normalized role name.
     :type role_name: str
-    :param resource_class: python class of resource inside which this role was defined
+
+    :param resource_class: Python class of the resource in which this role was
+                           defined.
     :type resource_class: Any
-    :param config: role config
+
+    :param config: Role config.
     :type config: Config
-    :param other_ok: Flag to indicate if a namespace other than `resource_name` is allowed, defaults to False
+
+    :param other_ok: Flag to indicate if a namespace other than `resource_name`
+                     is allowed. Defaults to `False`.
     :type other_ok: bool, optional
-    :return: Normalized role name (with namespace)
+
+    :return: Normalized role name. (with namespace)
     :rtype: str
     """
+
     if resource_class not in config.class_to_resource_name:
         raise OsoError(f"Unrecognized resource type {resource_class}.")
     resource_name = config.class_to_resource_name[resource_class]
@@ -377,17 +377,21 @@ def parse_role_name(role_name, resource_class, config, other_ok=False):
 
 def remove_role_namespace(role_name):
     _, name = role_name.split(":", 1)
+
     return name
 
 
 def read_config(oso):
     """Queries the Oso policy for resource and relationship configurations
 
-    :param oso: Oso object with correct policy loaded
+    :param oso: Oso object with a correct policy loaded.
     :type oso: Oso
-    :return: configuration object that stores resource, permissions, roles, and relationships
+
+    :return: Configuration object that stores resource, permissions, roles,
+             and relationships.
     :rtype: Config
     """
+
     config = Config(
         resources={},
         class_to_resource_name={},
@@ -405,13 +409,14 @@ def read_config(oso):
     )
 
     # Currently there is only one valid relationship, a parent.
-    # There is also only one way you can write it as a rule in polar.
+    # There is also only one way you can write it as a rule in Polar.
     # parent_child(parent_resource, child_resource) if
     #     child.parent = parent_resource;
     #
-    # @TODO: Support other forms of this rule, eg
+    # @TODO: Support other forms of this rule, e.g.,
     # parent_child(parent_resource, child_resource) if
     #     child.parent_id = parent_resource.id;
+
     for result in role_relationships:
         try:
             constraints = result["bindings"]["resource"]
@@ -434,15 +439,15 @@ def read_config(oso):
             parent_python_class = oso.host.classes[parent_type]
             parent_table = parent_python_class.__tablename__
 
-            # the rule has the form
-            # `child.child_attr = parent`
-            # child_attr is assumed to be a sqlalchemy relationship field
-            # so we inspect the model to get the actual sql fields to join on
+            # The rule has the form `child.child_attr = parent`.
+            # child_attr is assumed to be an SQLAlchemy relationship field, so we
+            # inspect the model to get the actual sql fields to join on.
+
             child_relationships = inspect(child_python_class).relationships
             if child_attr not in child_relationships:
                 raise OsoError(
                     f"""Invalid Relationship: {child_attr}
-                    is not a sqlalchemy relationship field."""
+is not an SQLAlchemy relationship field."""
                 )
             rel = child_relationships[child_attr]
             parent_join_column = list(rel.remote_side)[0].name
@@ -463,12 +468,15 @@ def read_config(oso):
         except AssertionError:
             raise OsoError(
                 """Invalid relationship. All relationships must take the form:
-        ```\nparent_child(parent: ParentClass, child: ChildClass) if\n\tchild.parent_attr = parent;\n```"""
+``
+parent_child(parent: ParentClass, child: ChildClass) if
+    child.parent_attr = parent;
+``"""
             )
 
-    # Register resources / permissions / roles and implications
-    # Based on the role_resource definitions
-    # These are rules that look like this.
+    # Register resources / permissions / roles and implications.
+    # Based on the role_resource definitions.
+    # These are rules that look like this:
     # resource(_type: Repository, "repo", actions, roles) if
     #     actions = [
     #         "push",
@@ -488,8 +496,10 @@ def read_config(oso):
     # The third arg should be bound to a list of actions defined for the resource.
     # The fouth arg should be bound to a map from role name to role definition.
     #   Each role definitions has two fields,
-    #     permissions which says which permissions the role has
-    #     and implies which says which other roles are implied by having this one.
+    #     `permissions`, which defines what permissions the role has.
+    #     `implies`, which defines what other roles are implied by having this
+    #     one.
+
     role_resources = oso.query_rule(
         "resource",
         Variable("resource"),
@@ -551,15 +561,17 @@ def read_config(oso):
         for permission in permissions:
             config.permissions.append(permission)
 
-        # Collect up the role definitions to process after we know all the permissions
+        # Collect up the role definitions to process,
+        # after we know all the permissions.
+
         role_definitions.append((python_class, role_defs))
 
     for python_class, role_defs in role_definitions:
         if isinstance(role_defs, Variable):
-            continue  # No roles defined
+            continue  # No roles defined.
 
         for role_name, role_def in role_defs.items():
-            # preprocess role name
+            # Preprocess role name.
             role_name = parse_role_name(role_name, python_class, config)
             if role_name in config.roles:
                 raise OsoError(f"Duplicate role name {role_name}")
@@ -593,7 +605,7 @@ def read_config(oso):
             )
             config.roles[role.name] = role
 
-    # Validate config
+    # Validate config.
     for role_name, role in config.roles.items():
         for permission in role.permissions:
             if permission.python_class != role.python_class:
@@ -601,8 +613,8 @@ def read_config(oso):
                     if other_role.python_class == permission.python_class:
                         raise OsoError(
                             f"""Permission {permission.name} on {permission.type}
-                            can not go on role {role_name} on {role.type}
-                            because {permission.type} has it's own roles. Use an implication."""
+can not go on role {role_name} on {role.type}"
+because {permission.type} has its own roles. Use an implication."""
                         )
 
                 cls = permission.python_class
@@ -616,18 +628,18 @@ def read_config(oso):
                     if not stepped:
                         raise OsoError(
                             f"""Permission {permission.name} on {permission.type}
-                            can not go on role {role_name} on {role.type}
-                            because no relationship exists."""
+can not go on role {role_name} on {role.type}
+because no relationship exists."""
                         )
 
         for implied in role.implied_roles:
-            # Make sure implied role exists
+            # Make sure implied role exists.
             if implied not in config.roles:
                 raise OsoError(
                     f"Role '{implied}' implied by '{role_name}' does not exist."
                 )
             implied_role = config.roles[implied]
-            # Make sure implied role is on a valid class
+            # Make sure implied role is on a valid class.
             cls = implied_role.python_class
             while cls != role.python_class:
                 stepped = False
@@ -639,18 +651,19 @@ def read_config(oso):
                 if not stepped:
                     raise OsoError(
                         f"""Role {role_name} on {role.type}
-                        can not imply role {implied} on {implied_role.type}
-                        because no relationship exists."""
+can not imply role {implied} on {implied_role.type}
+because no relationship exists."""
                     )
             # Make sure implied roles dont have overlapping permissions.
             # @TODO: Follow implication chair further than just one.
+
             permissions = role.permissions
             for implied_perm in implied_role.permissions:
                 if implied_perm in permissions:
                     raise OsoError(
                         f"""Invalid implication. Role {role} has permission {implied_perm.name}
-                        on {implied_perm.type} but implies role {implied}
-                        which also has permission {implied_perm.name} on {implied_perm.type}"""
+on {implied_perm.type} but implies role {implied}
+which also has permission {implied_perm.name} on {implied_perm.type}"""
                     )
 
     if len(config.resources) == 0:
@@ -701,8 +714,8 @@ class OsoRoles:
             elif resource_id_column_type.__class__ != id_type.__class__:
                 raise OsoError(
                     f"""All resources must have the same primary key type:
-                    \n\t{model} has PK type {id_type}
-                    \n\t{canonical_model} has PK type {resource_id_column_type}"""
+    {model} has PK type {id_type}
+    {canonical_model} has PK type {resource_id_column_type}"""
                 )
 
         if resource_id_column_type is None:
@@ -712,12 +725,13 @@ class OsoRoles:
 
         self.resource_id_column_type = resource_id_column_type
 
-        # @NOTE: This is pretty hacky, also will break if the user defines their own classes with these names, so we should
-        # make them more unique
+        # @NOTE: This is pretty hacky, and will break if the user defines their
+        # own classes with these names, so we should make them more unique.
+
         if models.get("UserRole"):
             UserRole = models["UserRole"]
         else:
-            # Tables for the management api to save data.
+            # Tables for the management API to save data.
             class UserRole(oso.base):
                 __tablename__ = "user_roles"
                 id = Column(Integer, primary_key=True)
@@ -801,11 +815,11 @@ class OsoRoles:
 
     @ensure_configured
     def synchronize_data(self, session=None):
+        """Call to load the roles data from the policy to the database so that it
+        can be evaluated. This must be called every time the policy changes,
+        usually as part of a deploy script.
         """
-        Call to load the roles data from the policy to the database so that it can be
-        evaluated. This must be called every time the policy changes, usually as part
-        of a deploy script.
-        """
+
         # Sync static data to the database.
         if session is None:
             session = self._get_session()
@@ -880,12 +894,11 @@ class OsoRoles:
             child_table = relationship.child_table
             child_type = relationship.child_type
             child_join_column = relationship.child_join_column
-            select = f"""
-                select p.{parent_id}
-                from {child_table} c
-                join {parent_table} p
-                on c.{child_join_column} = p.{parent_join_column}
-                where c.{child_id} = resources.id"""
+            select = f"""select p.{parent_id}
+from {child_table} c
+join {parent_table} p
+on c.{child_join_column} = p.{parent_join_column}
+where c.{child_id} = resources.id"""
 
             id_query += ""
 
@@ -954,7 +967,7 @@ class OsoRoles:
 
             resource_pk_name, _ = get_pk(resource.__class__)
         except NoInspectionAvailable:
-            # User or Resource is not a sqlalchemy object
+            # User or Resource is not an SQLAlchemy object.
             return False
 
         resource_id = str(getattr(resource, resource_pk_name))
@@ -967,6 +980,7 @@ class OsoRoles:
         params.update(kwargs)
 
         results = session.execute(query, params)
+
         return bool(results.first())
 
     def _role_allows(self, user, action, resource):
@@ -981,7 +995,8 @@ class OsoRoles:
         )
 
     def _get_user_role(self, session, user, resource, role_name):
-        """Gets user role for resource if exists"""
+        """Gets the user's role for a given resource, if it exists."""
+
         role_name = parse_role_name(role_name, type(resource), self.config)
         if role_name not in self.config.roles:
             raise OsoError(f"Could not find role {role_name}")
@@ -991,8 +1006,8 @@ class OsoRoles:
         if not resource.__class__ == role.python_class:
             raise OsoError(
                 f"""No Role "{role_name}"
-                for resource {resource}
-                (expected resource to be of type {role.type})."""
+for resource {resource}
+(expected resource to be of type {role.type})."""
             )
 
         user_pk_name, _ = get_pk(user.__class__)
@@ -1031,7 +1046,7 @@ class OsoRoles:
             else:
                 raise OsoError(
                     f"""User {user} already has a role for this resource.
-                    To reassign, call with `reassign=True`."""
+To reassign, call with `reassign=True`."""
                 )
         else:
             user_pk_name, _ = get_pk(user.__class__)
@@ -1069,6 +1084,7 @@ class OsoRoles:
         my_session.flush()
         if not session:
             my_session.commit()
+
         return True
 
     @ensure_configured
@@ -1078,6 +1094,7 @@ class OsoRoles:
         for name, role in self.config.roles.items():
             if role.python_class == resource_class:
                 roles.append(remove_role_namespace(name))
+
         return roles
 
     @ensure_configured
@@ -1098,6 +1115,7 @@ class OsoRoles:
             )
             .all()
         )
+
         return [
             {"user_id": ur.user_id, "role": remove_role_namespace(ur.role)}
             for ur in user_roles
@@ -1119,6 +1137,7 @@ class OsoRoles:
             )
             .all()
         )
+
         return [
             {
                 "resource_type": ur.resource_type,
@@ -1142,7 +1161,7 @@ def _generate_query_filter(oso, role_method, model):
         resource_type = model.__name__
         resource_pk_name, _ = get_pk(model)
     except NoInspectionAvailable:
-        # User or Resource is not a sqlalchemy object
+        # User or Resource is not an SQLAlchemy object.
         return sql.false()
 
     params = {

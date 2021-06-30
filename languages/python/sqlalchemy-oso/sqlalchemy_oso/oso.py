@@ -1,30 +1,32 @@
 from oso import Oso, OsoError
+
 from .auth import register_models
 from .roles import OsoRoles
 
 
 class SQLAlchemyOso(Oso):
-    """The central object to manage application policy state, e.g.
-    the policy data, and verify requests when using Oso with SQLAlchemy.
+    """The central object to manage application policy state - e.g. the policy
+    data, and verify requests when using Oso with SQLAlchemy.
 
-    Supports SQLAlchemy-specific functionality, including data filtering and role management.
+    Supports SQLAlchemy-specific functionality, including data filtering and role
+    management.
 
-    Accepts a SQLAlchemy declarative_base on initialization, which is used to register
-    all relevant SQLAlchemy models with Oso.
+    Accepts an SQLAlchemy declarative_base on initialization, which is used to
+    register all relevant SQLAlchemy models with Oso.
 
     >>> from sqlalchemy_oso import SQLAlchemyOso
     >>> from sqlalchemy.ext.declarative import declarative_base
     >>> Base = declarative_base(name="MyBaseModel")
     >>> SQLAlchemyOso(Base)
     <sqlalchemy_oso.oso.SQLAlchemyOso object at 0x...>
-
     """
 
     def __init__(self, sqlalchemy_base):
         super().__init__()
 
-        # Register all sqlalchemy models on sqlalchemy_base
+        # Register all SQLAlchemy models on sqlalchemy_base.
         # TODO (dhatch): Not sure this is legit b/c it uses an internal interface?
+
         register_models(self, sqlalchemy_base)
 
         self.base = sqlalchemy_base
@@ -32,9 +34,11 @@ class SQLAlchemyOso(Oso):
 
     def enable_roles(self, user_model, session_maker):
         """Enable the Oso Roles management API.
-        Oso will create SQLAlchemy models to create and assign roles to users (stored in `user_model`).
-        The roles API methods will be available on the `roles` property of `SQLAlchemyOso`.
+        Oso will create SQLAlchemy models to create and assign roles to users
+        (stored in `user_model`). The roles API methods will be available on
+        the `roles` property of `SQLAlchemyOso`.
         """
+
         if self._roles_enabled:
             raise OsoError("Roles feature already enabled.")
         self._roles = OsoRoles(
@@ -49,6 +53,7 @@ class SQLAlchemyOso(Oso):
         """Property to access the Oso Roles API methods defined in `OsoRoles`.
         This property is only available after calling `enable_roles()`.
         """
+
         if not self._roles_enabled:
             raise OsoError(
                 "Cannot access 'roles' on 'SQLAlchemyOso' before calling 'enable_roles()'"

@@ -3,17 +3,20 @@
 Keep us compatible with multiple SQLAlchemy versions by implementing wrappers
 when needed here.
 """
-from packaging.version import parse
 
 import sqlalchemy
 
-version = parse(sqlalchemy.__version__)  # type: ignore
+from packaging.version import parse
+
+version = parse(sqlalchemy.__version__)  # Type: ignore
 USING_SQLAlchemy_v1_3 = version >= parse("1.3") and version < parse("1.4")
 
 
 def iterate_model_classes(base_or_registry):
     """Return an iterator of model classes that descend from a declarative base
-    (SQLAlchemy 1.3 or 1.4) or exist in a registry (SQLAlchemy 1.4)."""
+    (SQLAlchemy 1.3 or 1.4) or exist in a registry (SQLAlchemy 1.4).
+    """
+
     try:  # 1.3 declarative base.
         models = base_or_registry._decl_class_registry.items()
         yield from {model for name, model in models if name != "_sa_module_registry"}

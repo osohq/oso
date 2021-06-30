@@ -1,11 +1,11 @@
-"""Wrappers for using ``sqlalchemy_oso`` with the flask_sqlalchemy_ library.
+"""Wrappers for using `sqlalchemy_oso` with the flask_sqlalchemy_ library.
 
 .. _flask_sqlalchemy: https://flask-sqlalchemy.palletsprojects.com/en/2.x/
 """
 
 try:
-    from flask import _app_ctx_stack  # type: ignore
-    from flask_sqlalchemy import SQLAlchemy, SignallingSession
+    from flask import _app_ctx_stack  # Type: ignore
+    from flask_sqlalchemy import SignallingSession, SQLAlchemy
 except ImportError:
     import warnings
 
@@ -18,14 +18,17 @@ from sqlalchemy_oso.session import authorized_sessionmaker, scoped_session
 
 
 class AuthorizedSQLAlchemy(SQLAlchemy):
-    """flask_sqlalchemy ``SQLAlchemy`` subclass that uses oso.
+    """flask_sqlalchemy `SQLAlchemy` subclass that uses oso.
 
-    Creates sessions with oso authorization applied. See flask_sqlalchemy_ documentation
-    for more information on using flask_sqlalchemy.
+    Creates sessions with oso authorization applied.
+    See flask_sqlalchemy documentation for more information on its usage.
 
-    :param get_oso: Callable that returns the :py:class:`oso.Oso` instance to use for authorization.
-    :param get_user: Callable that returns the user to authorize for the current request.
-    :param get_checked_permissions: Callable that returns the permissions to authorize for the current request.
+    :param get_oso: Callable that returns the :py:class:`oso.Oso` instance to use
+                    for authorization.
+    :param get_user: Callable that returns the user to authorize for the current
+                     request.
+    :param get_checked_permissions: Callable that returns the permissions to
+                                    authorize for the current request.
 
     >>> from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
     >>> db = AuthorizedSQLAlchemy(
