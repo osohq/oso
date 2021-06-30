@@ -4,13 +4,12 @@ from dataclasses import dataclass
 
 from oso import OsoError, Variable
 
-import sqlalchemy
+from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy.types import Integer, String
 from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy import inspect
+from sqlalchemy import inspect, sql
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
-from sqlalchemy import sql
 from .compat import iterate_model_classes
 
 
@@ -954,7 +953,7 @@ class OsoRoles:
             user_id = getattr(user, user_pk_name)
 
             resource_pk_name, _ = get_pk(resource.__class__)
-        except sqlalchemy.exc.NoInspectionAvailable:
+        except NoInspectionAvailable:
             # User or Resource is not a sqlalchemy object
             return False
 
@@ -1142,7 +1141,7 @@ def _generate_query_filter(oso, role_method, model):
 
         resource_type = model.__name__
         resource_pk_name, _ = get_pk(model)
-    except sqlalchemy.exc.NoInspectionAvailable:
+    except NoInspectionAvailable:
         # User or Resource is not a sqlalchemy object
         return sql.false()
 
