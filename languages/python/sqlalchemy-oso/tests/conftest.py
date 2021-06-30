@@ -1,9 +1,8 @@
 import pytest
 
+from oso import Oso
 from sqlalchemy import create_engine
 from sqlalchemy.orm.session import Session
-
-from oso import Oso
 from sqlalchemy_oso.auth import register_models
 
 from .models import ModelBase, Post, User
@@ -103,6 +102,7 @@ def engine(db_uri):
     except TypeError:  # SQLAlchemy 1.3
         engine = create_engine(db_uri)
     ModelBase.metadata.create_all(engine)
+
     return engine
 
 

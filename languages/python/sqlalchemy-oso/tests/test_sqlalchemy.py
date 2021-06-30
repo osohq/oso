@@ -1,15 +1,15 @@
 """Test hooks & SQLAlchemy API integrations."""
+
 import pytest
 
-from sqlalchemy.orm import aliased
-
 from polar.exceptions import UnsupportedError
+from sqlalchemy.orm import aliased
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 from sqlalchemy_oso.session import (
     authorized_sessionmaker,
     scoped_session,
     AuthorizedSession,
 )
-from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
 from .models import User, Post
 from .conftest import print_query
@@ -46,7 +46,7 @@ def test_authorize_query_no_access(engine, oso, fixture_data):
     ],
 )
 def test_authorize_query_basic(engine, oso, fixture_data, query):
-    # TODO: copied from test_authorize_model_basic
+    # TODO: Copied from test_authorize_model_basic.
     oso.load_str('allow("user", "read", post: Post) if post.access_level = "public";')
     oso.load_str('allow("user", "write", post: Post) if post.access_level = "private";')
     oso.load_str('allow("admin", "read", post: Post);')
@@ -87,12 +87,14 @@ def test_authorize_query_basic(engine, oso, fixture_data, query):
 
 def test_authorize_query_multiple_types(engine, oso, fixture_data):
     """Test a query involving multiple models."""
+
     oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
     oso.load_str('allow("user", "read", user: User) if user.id = 0;')
     oso.load_str('allow("user", "read", user: User) if user.id = 1;')
     oso.load_str('allow("all_posts", "read", _: Post);')
 
     # Query two models. Only return authorized objects from each (no join).
+
     session = AuthorizedSession(oso, "user", {Post: "read", User: "read"}, bind=engine)
     authorized = session.query(Post, User)
     print_query(authorized)
@@ -103,6 +105,7 @@ def test_authorize_query_multiple_types(engine, oso, fixture_data):
 
     # Query two models, with a join condition. Only return authorized objects that meet the join
     # condition.
+
     authorized = session.query(Post, User.username).join(User)
     print_query(authorized)
     assert authorized.count() == 1
@@ -114,6 +117,7 @@ def test_authorize_query_multiple_types(engine, oso, fixture_data):
 
     # This one is odd... we don't return any fields from the User model,
     # so no authorization is applied for users.
+
     print_query(authorized)
     assert authorized.count() == 1
 
@@ -122,6 +126,7 @@ def test_authorize_query_multiple_types(engine, oso, fixture_data):
     # are returned.
     # Could this leak data somehow? Maybe if users are allowed to filter arbitrary
     # values and see a count, but not retrieve the objects?
+
     session = AuthorizedSession(oso, "all_posts", {Post: "read"}, bind=engine)
     authorized = session.query(Post).join(User).filter(User.username == "admin_user")
     print_query(authorized)
@@ -146,7 +151,7 @@ def test_alias(engine, oso, fixture_data):
 
 def test_authorized_sessionmaker_relationship(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
-    # Post with creator id = 1
+    # Post with creator id = 1.
     oso.load_str('allow("user", "read", post: Post) if post.id = 7;')
     oso.load_str('allow("user", "read", user: User) if user.id = 0;')
 
@@ -170,13 +175,13 @@ def test_authorized_sessionmaker_relationship(engine, oso, fixture_data):
     assert post_1.created_by == users.get(0)
 
     post_7 = posts.get(7)
-    # created_by isn't actually none, but we can't see it
+    # Created_by isn't actually none, but we can't see it.
     assert post_7.created_by is None
 
 
 def test_authorized_session_relationship(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
-    # Post with creator id = 1
+    # Post with creator id = 1.
     oso.load_str('allow("user", "read", post: Post) if post.id = 7;')
     oso.load_str('allow("user", "read", user: User) if user.id = 0;')
 
@@ -198,13 +203,13 @@ def test_authorized_session_relationship(engine, oso, fixture_data):
     assert post_1.created_by == users.get(0)
 
     post_7 = posts.get(7)
-    # created_by isn't actually none, but we can't see it
+    # Created_by isn't actually none, but we can't see it.
     assert post_7.created_by is None
 
 
 def test_scoped_session_relationship(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
-    # Post with creator id = 1
+    # Post with creator id = 1.
     oso.load_str('allow("user", "read", post: Post) if post.id = 7;')
     oso.load_str('allow("user", "read", user: User) if user.id = 0;')
     oso.load_str('allow("other", "read", post: Post) if post.id = 3;')
@@ -227,7 +232,7 @@ def test_scoped_session_relationship(engine, oso, fixture_data):
     assert post_1.created_by == users.get(0)
 
     post_7 = posts.get(7)
-    # created_by isn't actually none, but we can't see it
+    # Created_by isn't actually none, but we can't see it.
     assert post_7.created_by is None
     assert len(session.identity_map.values()) == 3
 
@@ -298,18 +303,22 @@ def test_null_with_partial(engine, oso):
         # not applied when we (compile and) print out the query in the below
         # assertion but *are* applied when we actually interact with the ORM
         # when executing the `count()` method.
+
         where_clause = ""
 
     assert str(posts) == (
-        "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title, "
-        + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
-        + f"posts.needs_moderation AS posts_needs_moderation \nFROM posts{where_clause}"
+        f"""SELECT
+    posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title,
+    posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id,
+    posts.needs_moderation AS posts_needs_moderation
+FROM posts{where_clause}"""
     )
     assert posts.count() == 0
 
 
 def test_regular_session(engine, oso, fixture_data):
     """Test that a regular session doesn't apply authorization."""
+
     from sqlalchemy.orm import Session
 
     session = Session(bind=engine)
@@ -325,7 +334,7 @@ def test_unconditional_policy_has_no_filter(engine, oso, fixture_data):
         oso, user="user", checked_permissions={Post: "read"}, bind=engine
     )
 
-    query = session.query(Post)
+    posts = session.query(Post)
 
     if USING_SQLAlchemy_v1_3:
         where_clause = " \nWHERE 1 = 1"
@@ -337,19 +346,24 @@ def test_unconditional_policy_has_no_filter(engine, oso, fixture_data):
         # not applied when we (compile and) print out the query in the below
         # assertion but *are* applied when we actually interact with the ORM
         # when executing the `count()` method.
+
         where_clause = ""
 
-    assert str(query) == (
-        "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title, "
-        + "posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id, "
-        + f"posts.needs_moderation AS posts_needs_moderation \nFROM posts{where_clause}"
+    assert str(posts) == (
+       f"""SELECT
+    posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title,
+    posts.access_level AS posts_access_level, posts.created_by_id AS posts_created_by_id,
+    posts.needs_moderation AS posts_needs_moderation
+FROM posts{where_clause}"""
     )
-    assert query.count() == 9
+    assert posts.count() == 9
 
 
 def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
     """Test that baked relationship queries don't lead to authorization bypasses
-    for AuthorizedSession."""
+    for AuthorizedSession.
+    """
+
     from sqlalchemy.orm import Session
 
     basic_session = Session(bind=engine)
@@ -375,12 +389,15 @@ def test_bakery_caching_for_AuthorizedSession(engine, oso, fixture_data):
 
     # Should not be able to view the post's creator because there's no rule
     # permitting access to "read" users.
+
     assert first_authorized_post.created_by is None
 
 
 def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
     """Test that baked relationship queries don't lead to authorization bypasses
-    for authorized_sessionmaker."""
+    for authorized_sessionmaker.
+    """
+
     from sqlalchemy.orm import Session
 
     basic_session = Session(bind=engine)
@@ -409,12 +426,15 @@ def test_bakery_caching_for_authorized_sessionmaker(engine, oso, fixture_data):
 
     # Should not be able to view the post's creator because there's no rule
     # permitting access to "read" users.
+
     assert first_authorized_post.created_by is None
 
 
 def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
     """Test that baked relationship queries don't lead to authorization bypasses
-    for scoped_session."""
+    for scoped_session.
+    """
+
     from sqlalchemy.orm import Session
 
     basic_session = Session(bind=engine)
@@ -441,6 +461,7 @@ def test_bakery_caching_for_scoped_session(engine, oso, fixture_data):
 
     # Should not be able to view the post's creator because there's no rule
     # permitting access to "read" users.
+
     assert first_authorized_post.created_by is None
 
 
@@ -507,7 +528,6 @@ def test_register_models_declarative_base():
     """Test that `register_models()` registers models."""
     from oso import Oso
     from polar.exceptions import DuplicateClassAliasError
-
     from sqlalchemy_oso.auth import register_models
 
     from .models import Category, ModelBase, Tag
@@ -524,14 +544,15 @@ def test_register_models_declarative_base():
     USING_SQLAlchemy_v1_3, reason="testing SQLAlchemy 1.4 functionality"
 )
 def test_register_models_registry():
-    """Test that `register_models()` works with a SQLAlchemy 1.4-style
-    registry."""
+    """Test that `register_models()` works with an SQLAlchemy 1.4-style
+    registry.
+    """
+
     # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
-    from sqlalchemy.orm import registry  # type: ignore
-    from sqlalchemy import Table, Column, Integer
     from oso import Oso
     from polar.exceptions import DuplicateClassAliasError
-
+    from sqlalchemy import Table, Column, Integer
+    from sqlalchemy.orm import registry  # Type: ignore
     from sqlalchemy_oso.auth import register_models
 
     mapper_registry = registry()

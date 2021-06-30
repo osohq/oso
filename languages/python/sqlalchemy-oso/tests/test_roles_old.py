@@ -1,18 +1,16 @@
-# type: ignore
-
+# Type: ignore
 import pytest
 import datetime
 
+from oso import Oso, Variable
 from sqlalchemy import create_engine
-from sqlalchemy.types import Integer, String, DateTime
-from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-
+from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.schema import Column, ForeignKey
+from sqlalchemy.types import Integer, String, DateTime
 from sqlalchemy_oso import roles_old as oso_roles, register_models
 from sqlalchemy_oso.roles_old import enable_roles
 from sqlalchemy_oso.session import set_get_session
-from oso import Oso, Variable
 
 Base = declarative_base(name="RoleBase")
 
@@ -43,7 +41,7 @@ class Team(Base):
     team_id = Column(Integer, primary_key=True)
     name = Column(String(256))
 
-    # many-to-one relationship with organizations
+    # Many-to-one relationship with organizations.
     organization_id = Column(Integer, ForeignKey("organizations.name"))
     organization = relationship("Organization", backref="teams", lazy=True)
 
@@ -57,11 +55,11 @@ class Repository(Base):
     repo_id = Column(Integer, primary_key=True)
     name = Column(String(256))
 
-    # many-to-one relationship with organizations
+    # Many-to-one relationship with organizations.
     organization_id = Column(Integer, ForeignKey("organizations.name"))
     organization = relationship("Organization", backref="repositories", lazy=True)
 
-    # time info
+    # Time info.
     created_date = Column(DateTime, default=datetime.datetime.utcnow)
     updated_date = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -90,7 +88,7 @@ class RepositoryRole(Base, RepositoryRoleMixin):
         return {"id": self.id, "name": str(self.name)}
 
 
-# For the tests, make OrganizationRoles NOT mutually exclusive
+# For the tests, make OrganizationRoles NOT mutually exclusive.
 OrganizationRoleMixin = oso_roles.resource_role_class(
     User, Organization, ["OWNER", "MEMBER", "BILLING"], mutually_exclusive=False
 )
@@ -151,7 +149,7 @@ def load_fixture_data(session):
     ]
     for repo in repositories:
         session.add(repo)
-    # TODO: issues
+    # TODO: Issues.
     roles = [
         RepositoryRole(name="READ", repository=abby_road, user=john),
         RepositoryRole(name="READ", repository=abby_road, user=paul),
@@ -269,13 +267,13 @@ def test_resource_users_relationship_fields(john):
 
 
 def test_get_user_resources_and_roles(test_db_session, john):
-    # Test with ORM method
+    # Test with ORM method.
     roles = john.organization_roles
     assert len(roles) == 1
     assert roles[0].name == "OWNER"
     assert roles[0].organization.name == "The Beatles"
 
-    # Test with oso method
+    # Test with Oso method.
     roles = oso_roles.get_user_roles(test_db_session, john, Organization)
     assert len(roles) == 1
     assert roles[0].name == "OWNER"
@@ -283,7 +281,8 @@ def test_get_user_resources_and_roles(test_db_session, john):
 
 
 def test_get_user_roles_for_resource(test_db_session, john, beatles):
-    # Test with ORM method
+    # Test with ORM method.
+
     resource_roles = (
         test_db_session.query(OrganizationRole)
         .filter_by(user=john, organization=beatles)
@@ -292,7 +291,8 @@ def test_get_user_roles_for_resource(test_db_session, john, beatles):
     assert len(resource_roles) == 1
     assert resource_roles[0].name == "OWNER"
 
-    # Test with oso method
+    # Test with Oso method.
+
     resource_roles = oso_roles.get_user_roles(
         test_db_session, john, Organization, beatles.name
     )
@@ -301,14 +301,16 @@ def test_get_user_roles_for_resource(test_db_session, john, beatles):
 
 
 def test_get_resource_roles(test_db_session, abbey_road):
-    # Test with ORM method
+    # Test with ORM method.
+
     user_roles = abbey_road.roles
     assert user_roles[0].user.email == "john@beatles.com"
     assert user_roles[0].name == "READ"
     assert user_roles[1].user.email == "paul@beatles.com"
     assert user_roles[0].name == "READ"
 
-    # Test with oso method
+    # Test with Oso method.
+
     user_roles = oso_roles.get_resource_roles(test_db_session, abbey_road)
     assert user_roles[0].user.email == "john@beatles.com"
     assert user_roles[0].name == "READ"
@@ -317,9 +319,9 @@ def test_get_resource_roles(test_db_session, abbey_road):
 
 
 def test_get_resource_users_by_role(test_db_session, abbey_road, vocalists):
-    # Test with ORM method
+    # Test with ORM method.
 
-    # Test RepoRoles
+    # Test RepoRoles.
     users = (
         test_db_session.query(User)
         .join(RepositoryRole, RepositoryRole.user_id == User.user_id)
@@ -330,7 +332,7 @@ def test_get_resource_users_by_role(test_db_session, abbey_road, vocalists):
     assert users[0].email == "john@beatles.com"
     assert users[1].email == "paul@beatles.com"
 
-    # Test TeamRoles
+    # Test TeamRoles.
     users = (
         test_db_session.query(User)
         .join(TeamRole, TeamRole.user_id == User.user_id)
@@ -340,15 +342,15 @@ def test_get_resource_users_by_role(test_db_session, abbey_road, vocalists):
     assert len(users) == 1
     assert users[0].email == "paul@beatles.com"
 
-    # Test with oso method
+    # Test with Oso method.
 
-    # Test RepoRoles
+    # Test RepoRoles.
     users = oso_roles.get_resource_users_by_role(test_db_session, abbey_road, "READ")
     assert len(users) == 2
     assert users[0].email == "john@beatles.com"
     assert users[1].email == "paul@beatles.com"
 
-    # Test TeamRoles
+    # Test TeamRoles.
     users = oso_roles.get_resource_users_by_role(test_db_session, vocalists, "MEMBER")
     assert len(users) == 1
     assert users[0].email == "paul@beatles.com"
@@ -362,11 +364,11 @@ def test_add_user_role(test_db_session, abbey_road, ringo, beatles):
     )
     assert len(roles) == 0
 
-    # Test can't add invalid role
+    # Test can't add invalid role.
     with pytest.raises(ValueError):
         oso_roles.add_user_role(test_db_session, ringo, abbey_road, "FAKE", commit=True)
 
-    # Test adding valid role
+    # Test adding valid role.
     oso_roles.add_user_role(test_db_session, ringo, abbey_road, "READ", commit=True)
 
     roles = (
@@ -377,11 +379,13 @@ def test_add_user_role(test_db_session, abbey_road, ringo, beatles):
     assert len(roles) == 1
     assert roles[0].name == "READ"
 
-    # ensure user cannot have duplicate role
+    # Ensure the user cannot have duplicate roles.
     with pytest.raises(Exception):
         oso_roles.add_user_role(test_db_session, ringo, abbey_road, "READ", commit=True)
 
-    # ensure user cannot have two roles for the same resource if `mutually_exclusive=True`
+    # Ensure the user cannot have two roles for the same resource if
+    # `mutually_exclusive=True`.
+
     with pytest.raises(Exception):
         oso_roles.add_user_role(
             test_db_session, ringo, abbey_road, "WRITE", commit=True
@@ -396,11 +400,13 @@ def test_add_user_role(test_db_session, abbey_road, ringo, beatles):
     assert len(roles) == 1
     assert roles[0].name == "MEMBER"
 
-    # ensure user cannot have two roles for the same resource
+    # Ensure the user cannot have two roles for the same resource.
     with pytest.raises(Exception):
         oso_roles.add_user_role(test_db_session, ringo, beatles, "MEMBER", commit=True)
 
-    # ensure user can have two roles for the same resource if `mutually_exclusive=False`
+    # Ensure the user can have two roles for the same resource if
+    # `mutually_exclusive=False`.
+
     oso_roles.add_user_role(test_db_session, ringo, beatles, "BILLING")
 
     roles = (
@@ -414,7 +420,7 @@ def test_add_user_role(test_db_session, abbey_road, ringo, beatles):
 
 
 def test_delete_user_role(test_db_session, john, paul, abbey_road):
-    # Test with explicit role arg
+    # Test with explicit role arg.
     roles = (
         test_db_session.query(RepositoryRole)
         .filter_by(user=john, repository=abbey_road, name="READ")
@@ -431,7 +437,7 @@ def test_delete_user_role(test_db_session, john, paul, abbey_road):
     )
     assert len(roles) == 0
 
-    # Test with no role arg
+    # Test with no role arg.
     roles = (
         test_db_session.query(RepositoryRole)
         .filter_by(user=paul, repository=abbey_road)
@@ -500,7 +506,7 @@ def test_enable_roles(
     oso = oso_with_session
     enable_roles(oso)
 
-    # Get test data
+    # Get test data.
     read_repo_role = (
         test_db_session.query(RepositoryRole)
         .filter_by(user=john, repository=abbey_road)
@@ -512,7 +518,7 @@ def test_enable_roles(
         .first()
     )
 
-    # test base `resource_role_applies_to`
+    # Test base `resource_role_applies_to`.
     results = list(
         oso.query_rule(
             "resource_role_applies_to", abbey_road, Variable("role_resource")
@@ -521,7 +527,7 @@ def test_enable_roles(
     assert len(results) == 1
     assert results[0].get("bindings").get("role_resource") == abbey_road
 
-    # test custom `resource_role_applies_to` rules (for nested resources)
+    # Test custom `resource_role_applies_to` rules. (for nested resources)
     resource_role_applies_to_str = """resource_role_applies_to(repo: Repository, parent_org) if
         parent_org = repo.organization and
         parent_org matches Organization;
@@ -537,24 +543,25 @@ def test_enable_roles(
     assert results[0].get("bindings").get("role_resource") == abbey_road
     assert results[1].get("bindings").get("role_resource") == beatles
 
-    # test `user_in_role` for RepositoryRole
+    # Test `user_in_role` for RepositoryRole.
     results = list(oso.query_rule("user_in_role", john, Variable("role"), abbey_road))
     assert len(results) == 1
     assert results[0].get("bindings").get("role").name == "READ"
 
-    # test `user_in_role` for OrganizationRole
+    # Test `user_in_role` for OrganizationRole.
     results = list(oso.query_rule("user_in_role", john, Variable("role"), beatles))
     assert len(results) == 1
     assert results[0].get("bindings").get("role").name == "OWNER"
 
-    # test `inherits_role` and `resource_role_order`
-    # make sure `inherits_role` returns nothing without a role order rule
+    # Test `inherits_role` and `resource_role_order`.
+    # Make sure `inherits_role` returns nothing without a role order rule.
+
     results = list(
         oso.query_rule("inherits_role", org_owner_role, Variable("inherited_role"))
     )
     assert len(results) == 0
 
-    # test role_order rule
+    # Test role_order rule.
     role_order_str = 'organization_role_order(["OWNER", "MEMBER", "BILLING"]);'
     oso.load_str(role_order_str)
 
@@ -566,11 +573,11 @@ def test_enable_roles(
     assert results[0].get("bindings").get("inherited_role").name == "BILLING"
     assert results[1].get("bindings").get("inherited_role").name == "MEMBER"
 
-    # make sure this query fails before any rules are added
+    # Make sure this query fails before any rules are added.
     results = list(oso.query_rule("role_allow", john, "READ", abbey_road))
     assert len(results) == 0
 
-    # test basic `role_allow` rule
+    # Test basic `role_allow` rule.
     role_allow_str = (
         'role_allow(role: RepositoryRole{name: "READ"}, "READ", repo: Repository);'
     )
@@ -579,7 +586,7 @@ def test_enable_roles(
     results = list(oso.query_rule("role_allow", read_repo_role, "READ", abbey_road))
     assert len(results) == 1
 
-    # test `role_allow` rule using nested resource
+    # Test `role_allow` rule using nested resource.
     nested_role_allow_str = (
         'role_allow(role: OrganizationRole{name: "MEMBER"}, "READ", repo: Repository);'
     )
@@ -587,7 +594,7 @@ def test_enable_roles(
     results = list(oso.query_rule("role_allow", org_owner_role, "READ", abbey_road))
     assert len(results) == 1
 
-    # test top-level `allow`
+    # Test top-level `allow`.
     results = list(oso.query_rule("allow", john, "READ", abbey_road))
     assert len(results) == 2
 
