@@ -2,18 +2,23 @@
 from typing import Any, List
 
 from oso import OsoError
-
-from sqlalchemy import inspect, UniqueConstraint
+from sqlalchemy import UniqueConstraint, inspect
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import class_mapper, relationship, validates, synonym
+from sqlalchemy.orm import (
+    class_mapper,
+    declared_attr,
+    relationship,
+    validates,
+    synonym,
+)
 from sqlalchemy.orm.exc import UnmappedClassError, UnmappedInstanceError
 from sqlalchemy.orm.util import object_mapper
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String
 
 # Global list to keep track of role classes as they are created, used to
-# generate RBAC base policy in Polar
+# generate RBAC base policy in Polar.
+
 ROLE_CLASSES: List[Any] = []
 
 
@@ -30,7 +35,7 @@ def assign_role(user, resource, role_name, session, reassign=True):
         else:
             raise OsoError(
                 f"""User {user} already has a role for this resource.
-                To reassign, call with `reassign=True`."""
+To reassign, call with `reassign=True`."""
             )
     else:
         return add_user_role(session, user, resource, role_name, commit=True)
@@ -55,29 +60,34 @@ def resource_role_class(user_model, resource_model, role_choices):
     """Create a resource-specific role Mixin
     for SQLAlchemy models. The role mixin is an
     `Association Object <https://docs.sqlalchemy.org/en/13/orm/basic_relationships.html#association-object>`_
-    between the ``user_model`` and the ``resource_model``.
+    between the `user_model` and the `resource_model`.
 
-    :param user_model: The SQLAlchemy model representing users that the \
-    resource-specific roles can be assigned to. The generated Role mixin will \
-    have a many-to-one (Foreign Key) relationship with this user model. \
-    A many-to-many relationship to ``resource_model`` is added to ``user_model``; \
-    the relationship is named following the convention: ``resource_model.__name__.lower() + "s"``.
-
-    :param resource_model: The SQLAlchemy model representing resources that \
-    the generated Role mixin will be scoped to. The Role mixin will \
-    have a many-to-one (ForeignKey) relationship with this resource model. \
-    A many-to-many relationship to ``user_model`` is added to ``resource_model``; \
-    the relationship is named ``users``. \
-    NOTE: only one role model can be created per resource model. Attempting to call \
-    ``resource_role_class()`` more than once for the same resource model will result in \
-    a ``ValueError``.
-
-    :param roles: An order-independent list of the built-in roles for this resource-specific role type.
+    :param user_model: The SQLAlchemy model representing users that the
+                       resource-specific roles can be assigned to.
+                       The generated Role mixin will have a many-to-one
+                       (Foreign Key) relationship with this user model.
+                       A many-to-many relationship to `resource_model` is added
+                       to `user_model`; the relationship is named following the
+                       convention: `resource_model.__name__.lower() + "s"`.
+    :param resource_model: The SQLAlchemy model representing resources that the
+                           generated Role mixin will be scoped to. The Role mixin
+                           will have a many-to-one (Foreign Key) relationship with
+                           this resource model. A many-to-many relationship to
+                           `user_model` is added to `resource_model`; the
+                           relationship is named `users`.
+                           NOTE: only one role model can be created per resource
+                           model. Attempting to call `resource_role_class()`
+                           more than once for the same resource model will result
+                           in a `ValueError`.
+    :param roles: An order-independent list of the built-in roles for this
+                  resource-specific role type.
     :type roles: List[str]
 
+    :param mutually_exclusive: Boolean flag that sets whether or not users can
+    have more than one role for a given resource. Defaults to `True`.
     :type roles: bool
 
-    :return: the ResourceRole mixin, which must then be mixed into a SQLAlchemy model for the role. E.g.,
+    :return: The ResourceRole mixin, which must then be mixed into an SQLAlchemy model for the role. E.g.,
 
         .. code-block:: python
 
@@ -87,14 +97,13 @@ def resource_role_class(user_model, resource_model, role_choices):
 
             class OrganizationRole(Base, OrganizationRoleMixin):
                 pass
-
-
     """
 
     global ROLE_CLASSES
     if resource_model in [role.get("resource_model") for role in ROLE_CLASSES]:
         raise ValueError(
-            f"Cannot create two Role classes for the same `resource_model`: {resource_model.__name__}"
+            f"""Cannot create two Role classes for the same `resource_model`:
+{resource_model.__name__}"""
         )
 
     ROLE_CLASSES.append(
@@ -122,12 +131,14 @@ def resource_role_class(user_model, resource_model, role_choices):
                 raise ValueError(
                     f"{name} Is not a valid choice for {self.__class__.__name__}"
                 )
+
             return name
 
         @declared_attr
         def user_id(cls):
             name, type = get_pk(user_model)
             table_name = user_model.__tablename__
+
             return Column(type, ForeignKey(f"{table_name}.{name}"))
 
         @declared_attr
@@ -141,6 +152,7 @@ def resource_role_class(user_model, resource_model, role_choices):
     def named_resource_id(cls):
         name, type = get_pk(resource_model)
         table_name = resource_model.__tablename__
+
         return Column(type, ForeignKey(f"{table_name}.{name}"))
 
     @declared_attr
@@ -155,7 +167,7 @@ def resource_role_class(user_model, resource_model, role_choices):
     setattr(ResourceRoleMixin, resource_name, named_resource)
     setattr(ResourceRoleMixin, "resource", resource)
 
-    # Add the relationship between the user_model and the resource_model
+    # Add the relationship between the user_model and the resource_model.
     resources = relationship(
         resource_model.__name__,
         secondary=tablename,
@@ -207,11 +219,13 @@ def get_pk(model):
     ), "sqlalchemy.roles2 only supports resources with 1 primary key field."
     type = pks[0].type
     name = pks[0].name
+
     return (name, type)
 
 
 def get_role_model_for_resource_model(resource_model):
     _check_valid_model(resource_model)
+
     return (
         inspect(resource_model, raiseerr=True)
         .relationships.get("roles")
@@ -224,13 +238,19 @@ def get_user_roles(session, user, resource_model, resource_id=None):
     E.g., get all of a user's repositories and their role for each
     repository.
     Or optionally, all roles scoped to a specific resource_id.
-    :param session: SQLAlchemy session
+
+    :param session: The SQLAlchemy session.
     :type session: sqlalchemy.orm.session.Session
-    :param user: user record (python object) of the SQLAlchemy user model \
-    associated with roles scoped to the supplied ``resource_model``
-    :param resource_id: (optional) the resource id for which to get the user's roles.
-    :return: list of the user's roles
+
+    :param user: The user record (python object) of the SQLAlchemy user model
+                 associated with roles scoped to the supplied `resource_model`.
+
+    :param resource_id: (optional) The resource ID for which to get the user's
+                        roles.
+
+    :return: A list of the user's roles.
     """
+
     _check_valid_instance(user)
     _check_valid_model(resource_model)
     role_model = get_role_model_for_resource_model(resource_model)
@@ -246,26 +266,33 @@ def get_user_roles(session, user, resource_model, resource_id=None):
 
     if resource_id:
         roles = roles.filter(getattr(resource_model, resource_pk) == resource_id)
+
     return roles.all()
 
 
-# - Assign a user to an organization with a role
+# Assign a user to an organization with a role
 def add_user_role(session, user, resource, role_name, commit=False):
     """Add a user to a role for a specific resource.
-    :param session: SQLAlchemy session
+
+    :param session: The SQLAlchemy session.
     :type session: sqlalchemy.orm.session.Session
-    :param user: user record (python object) to assign the role to
-    :param role_name: the name of the role to assign to the user
+
+    :param user: The user record (python object) to assign the role to.
+
+    :param role_name: The name of the role to assign to the user.
     :type role_name: str
-    :param commit: flag to specify whether or not session should be committed after adding role; defaults to ``False``
+
+    :param commit: A flag to specify whether or not the session should be
+                   committed after adding the role. Defaults to `False`.
     :type commit: boolean
     """
+
     _check_valid_instance(user, resource)
-    # get models
+    # Get models.
     resource_model = type(resource)
     role_model = get_role_model_for_resource_model(resource_model)
 
-    # create and save role
+    # Create and save the role.
     resource_name = _get_resource_name_lower(resource_model)
     kwargs = {"name": role_name, resource_name: resource, "user": user}
     new_role = role_model(**kwargs)
@@ -276,6 +303,6 @@ def add_user_role(session, user, resource, role_name, commit=False):
         except IntegrityError:
             session.rollback()
             raise Exception(
-                f"""Cannot assign user {user} to role {role_name} for
-                {resource_name} either because the assignment already exists."""
+                f"""Cannot assign user {user} to role {role_name} for {resource_name} either,
+because the assignment already exists."""
             )

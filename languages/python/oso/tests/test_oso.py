@@ -1,4 +1,4 @@
-"""Tests the Polar API as an external consumer"""
+"""Tests the Polar API as an external consumer."""
 
 from pathlib import Path
 import pytest
@@ -8,6 +8,7 @@ from polar import exceptions
 
 # Fake global actor name → company ID map.
 # Should be an external database lookup.
+
 actors = {"guest": "1", "president": "1"}
 
 
@@ -18,8 +19,8 @@ class Actor:
         self.name = name
 
     def companies(self):
-        yield Company(id="0")  # fake, will fail
-        yield Company(id=actors[self.name])  # real, will pass
+        yield Company(id="0")  # Fake, will fail.
+        yield Company(id=actors[self.name])  # Real, will pass.
 
 
 class Widget:
@@ -124,7 +125,7 @@ def test_instance_from_external_call(test_oso):
 
 
 def test_allow_model(test_oso):
-    """Test user auditor can list companies but not widgets"""
+    """Test user auditor can list companies, but not widgets."""
     user = Actor(name="auditor")
     assert not test_oso.is_allowed(user, "list", Widget)
     assert test_oso.is_allowed(user, "list", Company)
