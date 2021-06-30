@@ -1,6 +1,6 @@
 """Core oso functionality"""
 
-__version__ = "0.13.1"
+__version__ = "0.13.0"
 
 import os
 from polar import Polar, Variable, exceptions
@@ -13,7 +13,6 @@ class Oso(Polar):
     >>> from oso import Oso
     >>> Oso()
     <oso.oso.Oso object at 0x...>
-
     """
 
     def __init__(self):
@@ -22,20 +21,20 @@ class Oso(Polar):
         super().__init__()
 
     def is_allowed(self, actor, action, resource) -> bool:
-        """Evaluate whether ``actor`` is allowed to perform ``action`` on ``resource``.
+        """Evaluate whether `actor` is allowed to perform `action` on `resource`.
 
         Uses allow rules in the Polar policy to determine whether a request is
-        permitted. ``actor`` and ``resource`` should be classes that have been
-        registered with Polar using the :py:func:`register_class` function or
-        the ``polar_class`` decorator.
+        permitted. `actor` and `resource` should be classes that have been registered
+        registered with Polar using the :py:func:`register_class` function or the
+        `polar_class` decorator.
 
         :param actor: The actor performing the request.
         :param action: The action the actor is attempting to perform.
         :param resource: The resource being accessed.
 
-        :return: ``True`` if the request is allowed, ``False`` otherwise.
-
+        :return: `True` if the request is allowed, `False` otherwise.
         """
+
         try:
             next(self.query_rule("allow", actor, action, resource))
             return True
@@ -43,24 +42,25 @@ class Oso(Polar):
             return False
 
     def get_allowed_actions(self, actor, resource, allow_wildcard=False) -> list:
-        """Determine the actions ``actor`` is allowed to take on ``resource``.
+        """Determine the actions `actor` is allowed to take on `resource`.
 
-        Collects all actions allowed by allow rules in the Polar policy for the
-        given combination of actor and resource.
+        Collects all actions allowed by allow rules in the Polar policy for the given
+        combination of actor and resource.
 
-        :param actor: The actor for whom to collect allowed actions
+        :param actor: The actor for whom to collect allowed actions.
 
-        :param resource: The resource being accessed
+        :param resource: The resource being accessed.
 
-        :param allow_wildcard: Flag to determine behavior if the policy \
-        includes a wildcard action. E.g., a rule allowing any action: \
-        ``allow(_actor, _action, _resource)``. If ``True``, the method will \
-        return ``["*"]``, if ``False``, the method will raise an exception.
+        :param allow_wildcard: Flag to determine behavior if the policy includes a
+        wildcard action. E.g., a rule allowing any action:
+        `allow(_actor, _action, _resource)`. If `True`, the method will return `["*"]`,
+        if `False`, the method will raise an exception.
 
         :type allow_wildcard: bool
 
         :return: A list of the unique allowed actions.
         """
+
         results = self.query_rule("allow", actor, Variable("action"), resource)
         actions = set()
         for result in results:
@@ -68,11 +68,9 @@ class Oso(Polar):
             if isinstance(action, Variable):
                 if not allow_wildcard:
                     raise exceptions.OsoError(
-                        """The result of get_allowed_actions() contained an
-                        "unconstrained" action that could represent any
-                        action, but allow_wildcard was set to False. To fix,
-                        set allow_wildcard to True and compare with the "*"
-                        string."""
+                        """The result of get_allowed_actions() contained an "unconstrained" action
+that could represent any action, but allow_wildcard was set to False. To fix,
+set allow_wildcard to True and compare with the "*" string."""
                     )
                 else:
                     return ["*"]
@@ -83,6 +81,6 @@ class Oso(Polar):
     def _print_polar_log_message(self):
         if os.environ.get("POLAR_LOG", None):
             print(
-                "Polar tracing enabled. Get help with "
-                + "traces from our engineering team: https://help.osohq.com/trace"
+                """Polar tracing enabled. Get help with traces from our engineering team:
+https://help.osohq.com/trace"""
             )
