@@ -1,6 +1,6 @@
 [package]
 name = "polar-c-api"
-version = "0.13.0"
+version = "0.13.1"
 authors = ["Oso Security, Inc. <support@osohq.com>"]
 edition = "2018"
 
@@ -10,7 +10,7 @@ crate-type = ["lib", "staticlib", "cdylib"]
 bench = false
 
 [dependencies]
-polar-core = { path = "../polar-core", version = "0.13.0" }
+polar-core = { path = "../polar-core", version = "0.13.1" }
 serde_json = "1.0.61"
 
 [build_dependencies]
