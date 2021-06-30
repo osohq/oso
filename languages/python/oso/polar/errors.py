@@ -2,28 +2,29 @@ import json
 
 from polar.exceptions import (
     ExtraToken,
+    FileLoadingError,
     IntegerOverflow,
     InvalidToken,
-    UnrecognizedToken,
-    SerializationError,
-    PolarTypeError,
-    StackOverflowError,
-    FileLoadingError,
-    PolarRuntimeError,
-    UnknownError,
-    OperationalError,
     InvalidTokenCharacter,
-    UnrecognizedEOF,
-    ParserError,
-    UnsupportedError,
+    OperationalError,
     ParameterError,
+    ParserError,
     PolarApiError,
+    PolarRuntimeError,
+    PolarTypeError,
     RolesValidationError,
+    SerializationError,
+    StackOverflowError,
+    UnknownError,
+    UnrecognizedEOF,
+    UnrecognizedToken,
+    UnsupportedError
 )
 
 
 def get_python_error(err_str):
     """Fetch a Polar error and map it into a Python exception."""
+
     err = json.loads(err_str)
 
     message = err["formatted"]
@@ -32,8 +33,10 @@ def get_python_error(err_str):
     try:
         subkind, details = next(iter(body.items()))
     except (AttributeError, TypeError, StopIteration):
+
         # Not all errors have subkind and details.
         # TODO (dhatch): This bug may exist in other libraries.
+
         subkind = None
         details = None
 
@@ -44,7 +47,7 @@ def get_python_error(err_str):
     elif kind == "Operational":
         return _operational_error(subkind, message, details)
     elif kind == "Parameter":
-        # TODO(gj): this is wrong -- method has arity 3.
+        # TODO(gj): This is wrong -- method has arity 3.
         return _api_error(message, details)
     elif kind == "RolesValidation":
         return _validation_error(message, details)
@@ -52,6 +55,7 @@ def get_python_error(err_str):
 
 def _parse_error(subkind, message, details):
     """Map parsing errors."""
+
     parse_errors = {
         "ExtraToken": ExtraToken(message, details),
         "IntegerOverflow": IntegerOverflow(message, details),

@@ -21,11 +21,14 @@ def dot_path(
 
     _this => (_this,)
     _this.created_by => (_this, 'created_by',)
-    _this.created_by.username => (_this, 'created_by', 'username')"""
+    _this.created_by.username => (_this, 'created_by', 'username')
+    """
 
     if isinstance(expr, Variable):
         return (expr,)
     elif not (isinstance(expr, Expression) and expr.operator == "Dot"):
         return ()
+
     (left, right) = expr.args
+
     return dot_path(left) + (right,)

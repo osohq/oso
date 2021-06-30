@@ -1,6 +1,7 @@
 import os
-from cffi import FFI
 import sys
+
+from cffi import FFI
 
 ffibuilder = FFI()
 
@@ -41,5 +42,5 @@ with open(include_dir + "/polar.h") as f:
     ffibuilder.cdef(header)
 
 
-if __name__ == "__main__":  # not when running with setuptools
+if __name__ == "__main__":  # Not when running with setuptools
     ffibuilder.compile(verbose=True)

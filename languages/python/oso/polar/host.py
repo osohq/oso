@@ -3,13 +3,13 @@
 from math import inf, isnan, nan
 
 from .exceptions import (
-    PolarRuntimeError,
-    UnregisteredClassError,
     DuplicateClassAliasError,
-    UnregisteredInstanceError,
     DuplicateInstanceRegistrationError,
-    UnexpectedPolarTypeError,
+    PolarRuntimeError,
     UNEXPECTED_EXPRESSION_MESSAGE,
+    UnexpectedPolarTypeError,
+    UnregisteredClassError,
+    UnregisteredInstanceError,
 )
 from .variable import Variable
 from .predicate import Predicate
@@ -21,10 +21,10 @@ class Host:
 
     def __init__(self, polar, classes=None, instances=None, get_field=None):
         assert polar, "no Polar handle"
-        self.ffi_polar = polar  # a "weak" handle, which we do not free
+        self.ffi_polar = polar  # A "weak" handle, which we do not free.
         self.classes = (classes or {}).copy()
         self.instances = (instances or {}).copy()
-        self._accept_expression = False  # default, see set_accept_expression
+        self._accept_expression = False  # Default, see set_accept_expression.
 
         def default_get_field(_obj, _field):
             raise PolarRuntimeError("Cannot generically walk fields of a Python class")
@@ -33,6 +33,7 @@ class Host:
 
     def copy(self):
         """Copy an existing cache."""
+
         return type(self)(
             self.ffi_polar,
             classes=self.classes,
@@ -42,6 +43,7 @@ class Host:
 
     def get_class(self, name):
         """Fetch a Python class from the cache."""
+
         try:
             return self.classes[name]
         except KeyError:
@@ -49,28 +51,36 @@ class Host:
 
     def cache_class(self, cls, name=None):
         """Cache Python class by name."""
+
         name = cls.__name__ if name is None else name
         if name in self.classes.keys():
             raise DuplicateClassAliasError(name, self.get_class(name), cls)
 
         self.classes[name] = cls
+
         return name
 
     def get_instance(self, id):
         """Look up Python instance by id."""
+
         if id not in self.instances:
             raise UnregisteredInstanceError(id)
+
         return self.instances[id]
 
     def cache_instance(self, instance, id=None):
         """Cache Python instance under Polar-generated id."""
+
         if id is None:
             id = self.ffi_polar.new_id()
+
         self.instances[id] = instance
+
         return id
 
     def make_instance(self, name, args, kwargs, id):
         """Construct and cache a Python instance."""
+
         if id in self.instances:
             raise DuplicateInstanceRegistrationError(id)
         cls = self.get_class(name)
@@ -78,36 +88,45 @@ class Host:
             instance = cls(*args, **kwargs)
         except TypeError as e:
             raise PolarRuntimeError(f"Error constructing instance of {name}: {e}")
+
         return self.cache_instance(instance, id)
 
     def unify(self, left_instance_id, right_instance_id) -> bool:
         """Return true if the left instance is equal to the right."""
+
         left = self.get_instance(left_instance_id)
         right = self.get_instance(right_instance_id)
+
         return left == right
 
     def isa(self, instance, class_tag) -> bool:
         instance = self.to_python(instance)
         cls = self.get_class(class_tag)
+
         return isinstance(instance, cls)
 
     def isa_with_path(self, base_tag, path, class_tag) -> bool:
         base = self.get_class(base_tag)
         cls = self.get_class(class_tag)
+
         for field in path:
             field = self.to_python(field)
             base = self.get_field(base, field)
+
         return issubclass(base, cls)
 
     def is_subclass(self, left_tag, right_tag) -> bool:
         """Return true if left is a subclass (or the same class) as right."""
+
         left = self.get_class(left_tag)
         right = self.get_class(right_tag)
+
         return issubclass(left, right)
 
     def is_subspecializer(self, instance_id, left_tag, right_tag) -> bool:
         """Return true if the left class is more specific than the right class
         with respect to the given instance."""
+
         try:
             mro = self.get_instance(instance_id).__class__.__mro__
             left = self.get_class(left_tag)
@@ -132,15 +151,16 @@ class Host:
                 return args[0] != args[1]
             else:
                 raise PolarRuntimeError(
-                    f"Unsupported external operation '{type(args[0])} {op} {type(args[1])}'"
+                    f"Unsupported external operation \"{type(args[0])} {op} {type(args[1])}\""
                 )
         except TypeError:
             raise PolarRuntimeError(
-                f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
+                f"External operation \"{type(args[0])} {op} {type(args[1])}\" failed."
             )
 
     def to_polar(self, v):
         """Convert a Python object to a Polar term."""
+
         if type(v) == bool:
             val = {"Boolean": v}
         elif type(v) == int:
@@ -197,10 +217,12 @@ class Host:
                 }
             }
         term = {"value": val}
+
         return term
 
     def to_python(self, value):
         """Convert a Polar term to a Python object."""
+
         value = value["value"]
         tag = [*value][0]
         if tag in ["String", "Boolean"]:
@@ -217,7 +239,7 @@ class Host:
                 else:
                     if not isinstance(number, float):
                         raise PolarRuntimeError(
-                            f'Expected a floating point number, got "{number}"'
+                            f"Expected a floating point number, got \"{number}\""
                         )
             return number
         elif tag == "List":
@@ -256,4 +278,5 @@ class Host:
 
     def set_accept_expression(self, accept):
         """Set whether the Host accepts Expression types from Polar, or raises an error."""
+
         self._accept_expression = accept

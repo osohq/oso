@@ -14,16 +14,19 @@ class Polar:
 
     def new_id(self):
         """Request a unique ID from the canonical external ID tracker."""
+
         return check_result(lib.polar_get_external_id(self.ptr))
 
     def enable_roles(self):
         """Load the built-in roles policy."""
+
         result = lib.polar_enable_roles(self.ptr)
         process_messages(self.next_message)
         check_result(result)
 
     def validate_roles_config(self, config_data):
         """Validate the user's Oso Roles config."""
+
         string = ffi_serialize(config_data)
         result = lib.polar_validate_roles_config(self.ptr, string)
         process_messages(self.next_message)
@@ -31,6 +34,7 @@ class Polar:
 
     def load(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
+
         string = to_c_str(string)
         filename = to_c_str(str(filename)) if filename else ffi.NULL
         result = lib.polar_load(self.ptr, string, filename)
@@ -39,6 +43,7 @@ class Polar:
 
     def clear_rules(self):
         """Clear all rules from the Polar KB"""
+
         result = lib.polar_clear_rules(self.ptr)
         process_messages(self.next_message)
         check_result(result)
@@ -47,6 +52,7 @@ class Polar:
         new_q_ptr = lib.polar_new_query(self.ptr, to_c_str(query_str), 0)
         process_messages(self.next_message)
         query = check_result(new_q_ptr)
+
         return Query(query)
 
     def new_query_from_term(self, query_term):
@@ -55,6 +61,7 @@ class Polar:
         )
         process_messages(self.next_message)
         query = check_result(new_q_ptr)
+
         return Query(query)
 
     def next_inline_query(self):
@@ -62,6 +69,7 @@ class Polar:
         process_messages(self.next_message)
         if is_null(q):
             return None
+
         return Query(q)
 
     def register_constant(self, value, name):
@@ -84,6 +92,7 @@ class Query:
 
     def call_result(self, call_id, value):
         """Make an external call and propagate FFI errors."""
+
         if value is None:
             value = ffi.NULL
         else:
@@ -96,6 +105,7 @@ class Query:
 
     def application_error(self, message):
         """Pass an error back to polar to get stack trace and other info."""
+
         message = to_c_str(message)
         check_result(lib.polar_application_error(self.ptr, message))
 
@@ -103,6 +113,7 @@ class Query:
         event = lib.polar_next_query_event(self.ptr)
         process_messages(self.next_message)
         event = check_result(event)
+
         return QueryEvent(event)
 
     def debug_command(self, command):
@@ -116,6 +127,7 @@ class Query:
     def source(self):
         source = lib.polar_query_source_info(self.ptr)
         source = check_result(source)
+
         return Source(source)
 
     def bind(self, name, value):
@@ -163,6 +175,7 @@ class Source:
 def check_result(result):
     if result == 0 or is_null(result):
         raise Error().get()
+
     return result
 
 
