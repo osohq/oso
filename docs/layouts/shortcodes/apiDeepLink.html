@@ -1,20 +1,28 @@
-{{- /* apiDeepLink $class $label $pythonFramework */ -}}
-{{- /* Makes a deep link to the currently selected language's documentation for a given class */ -}}
-{{- /* To link to a specific method of the class, supply it as an inner shortcode or string */ -}}
+{{- /* apiDeepLink $class $label $pythonFramework $module */ -}}
+{{- /* Makes a deep link to the currently selected language's documentation. */ -}}
+{{- /* Accepts a module and class as params, and a function as an inner shotcode or string. */ -}}
+{{- /* $module will default to "oso", $label will default to a $class, $class.(.Inner)(), */ -}}
+{{- /* or (.Inner)(), depending on which parameters are provided. */ -}}
 {{- $class := (.Get "class") -}}
 {{- $label := (.Get "label") -}}
 {{- $pythonFramework := (.Get "pythonFramework") -}}
+{{- $module := default "oso" (.Get "module") -}}
 {{- $href := "" -}}
 {{- $genText := "" -}}
 {{- $baseUrl := printf "%s%s" $.Site.BaseURL $.Page.Language -}}
-{{- if eq (len .Inner) 0 -}}
+{{- if ne (len $class) 0 -}}
   {{- $genText = $class -}}
-{{- else -}}
-  {{- $genText = printf "%s.%s()" $class .Inner -}}
+{{- end -}}
+{{- if ne (len .Inner) 0 -}}
+  {{- if eq (len $genText) 0 -}}
+    {{- $genText = printf "%s()" .Inner -}}
+  {{- else -}}
+    {{- $genText = printf "%s.%s()" $genText .Inner -}}
+  {{- end -}}
 {{- end -}}
 {{- if eq $.Page.Language.Lang "node" -}}
   {{- $apiBase := printf "%s/%s" $baseUrl "reference/api/classes" -}}
-  {{- $classLink := printf "%[1]s/%[2]s.%[2]s-1.html" $apiBase (lower $class) -}}
+  {{- $classLink := printf "%s/%s.%s-1.html" $apiBase $module (lower $class) -}}
   {{- if eq (len .Inner) 0 -}}
     {{- $href = $classLink -}}
   {{- else -}}
@@ -27,6 +35,17 @@
   {{- else -}}
     {{- $href = printf "%s/%s.html" $apiBase $pythonFramework -}}
   {{- end -}}
+  {{- $hashLink := $module -}}
+  {{- with $class -}}
+    {{- $hashLink = printf "%s.%s" $hashLink . -}}
+  {{- end -}}
+  {{- with .Inner -}}
+    {{- $hashLink = printf "%s.%s" $hashLink . -}}
+  {{- end -}}
+  {{- if and (eq (len $class) 0) (eq (len .Inner) 0) -}}
+    {{- $hashLink = printf "module-%s" $module -}}
+  {{- end -}}
+  {{- $href = printf "%s#%s" $href $hashLink -}}
 {{- else -}}
   {{ $href = printf "%s/%s" $baseUrl "reference/api/index.html" }}
 {{- end -}}

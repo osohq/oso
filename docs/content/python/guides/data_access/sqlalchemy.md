@@ -40,7 +40,7 @@ To get started, we need to:
 
 ### Register models with Oso
 
-{{% apiDeepLink label="sqlalchemy_oso.register_models" pythonFramework="sqlalchemy" %}}register_models{{% /apiDeepLink %}}
+{{% apiDeepLink module="sqlalchemy_oso" label="sqlalchemy_oso.register_models" pythonFramework="sqlalchemy" %}}register_models{{% /apiDeepLink %}}
 registers all models that descend from a
 declarative base class as types that are available in the policy.
 

@@ -71,7 +71,7 @@ true
 We can also use application objects in the REPL, but we have to load
 and register the defining modules before we launch the REPL. The easiest
 way to do that is to write a script that imports the necessary modules,
-plus `oso`, and then use the {{% apiDeepLink class="Oso" %}}repl{{% /apiDeepLink %}}
+plus `oso`, and then use the {{% apiDeepLink module="oso" class="Oso" %}}repl{{% /apiDeepLink %}}
 API method to start the REPL:
 
 {{% exampleGet replApi %}}

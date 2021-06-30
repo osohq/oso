@@ -39,7 +39,7 @@ This allows us to assign users directly to repositories without
 giving them a role in the entire organization.
 
 Now, we can use
-{{% apiDeepLink class="OsoRoles" pythonFramework="sqlalchemy" %}}assign_role{{% /apiDeepLink %}}
+{{% apiDeepLink module="sqlalchemy_oso.roles" pythonFramework="sqlalchemy" label="OsoRoles.assign_role" %}}{{% /apiDeepLink %}}
 to assign role on repositories in addition to organizations.
 
 ## Grant access to child resources with implied roles
