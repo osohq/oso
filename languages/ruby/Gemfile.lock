@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    oso-oso (0.13.0)
+    oso-oso (0.13.1)
       ffi (~> 1.0)
 
 GEM
