@@ -119,8 +119,8 @@ users to create new organizations:
 
 {{< literalInclude
     path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
-    from="docs: org-create-rule"
-    to="end: org-create-rule"
+    from="docs: begin-org-create-rule"
+    to="docs: end-org-create-rule"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
 >}}
