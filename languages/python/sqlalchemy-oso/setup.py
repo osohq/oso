@@ -5,14 +5,14 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
-# Get the long description from the README file
+# Get the long description from the README file.
 try:
     with open(path.join(here, "README.md"), encoding="utf-8") as f:
         long_description = f.read()
 except IOError:
     long_description = ""
 
-# Hack around tox, don't count oso as a dependency when running under tox.
+# Hack around Tox, don't count Oso as a dependency when running under Tox.
 install_requires = ""
 with open("requirements.txt") as fp:
     for line in fp.readlines():
@@ -24,14 +24,19 @@ with open("requirements.txt") as fp:
 
 def read(rel_path):
     here = os.path.abspath(os.path.dirname(__file__))
-    # intentionally *not* adding an encoding option to open, See:
+
+    # Intentionally *not* adding an encoding option to open, See:
     #   https://github.com/pypa/virtualenv/issues/201#issuecomment-3145690
+
     with codecs.open(os.path.join(here, rel_path), "r") as fp:
         return fp.read()
 
 
 def get_version(rel_path):
-    """Get version from file. Copied from pip: https://github.com/pypa/pip/blob/master/setup.py#L19"""
+    """Get version from file. Copied from pip:
+    https://github.com/pypa/pip/blob/master/setup.py#L19
+    """
+
     for line in read(rel_path).splitlines():
         if line.startswith("__version__"):
             # __version__ = "0.9"
