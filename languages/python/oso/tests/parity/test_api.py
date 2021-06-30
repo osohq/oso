@@ -1,30 +1,31 @@
-"""Tests the Polar API as an external consumer"""
-from contextlib import contextmanager
+"""Tests the Polar API as an external consumer."""
+
 import os
 import pytest
 
+from contextlib import contextmanager
 from pathlib import Path
 
 from polar import Predicate
 from polar.exceptions import (
     InvalidIteratorError,
-    PolarRuntimeError,
     PolarFileExtensionError,
     PolarFileNotFoundError,
+    PolarRuntimeError,
 )
 
 from .test_api_externals import (
-    Http,
-    Widget,
-    DooDad,
     Actor,
     Company,
+    DooDad,
+    Http,
+    Widget,
     get_frobbed,
     set_frobbed,
 )
 
 
-# Set if running tests against old code
+# Set if running tests against old code.
 EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
 
 # *** FIXTURES *** #
@@ -88,7 +89,7 @@ def test_method_resolution_order(polar, load_policy, query):
     assert query(Predicate(name="allow", args=[actor, action, resource]))
     assert get_frobbed() == ["Widget"]
 
-    # DooDad is a Widget
+    # DooDad is a Widget.
     set_frobbed([])
     resource = DooDad(id="2")
     assert query(Predicate(name="allow", args=[actor, action, resource]))
@@ -148,6 +149,7 @@ def test_resource_mapping(polar, load_policy, query):
             )
         ):
             return Response("Denied", status=403)
+
         return Response("Ok", status=204)
 
     @app.route("/widget/", methods=["POST"])
@@ -159,6 +161,7 @@ def test_resource_mapping(polar, load_policy, query):
             )
         ):
             return Response("Denied", status=403)
+
         return Response("Ok", status=204)
 
     with app.test_client() as client:
@@ -187,9 +190,9 @@ def test_patching(polar, widget_in_company, actor_in_role, load_policy, query):
     )
 
 
-# Instance Caching tests (move these somewhere else eventually)
+# Instance Caching tests. (move these somewhere else eventually)
 def test_instance_round_trip(polar, query, qvar):
-    # direct round trip
+    # Direct round trip.
     user = Actor("sam")
     assert polar.host.to_python(polar.host.to_polar(user)) is user
 
@@ -199,7 +202,7 @@ def test_instance_round_trip(polar, query, qvar):
     reason="Instance literals are not instantiated for unify right now.",
 )
 def test_instance_initialization(polar, query, qvar):
-    # test round trip through kb query
+    # Test round trip through kb query.
     user = Actor("sam")
     env = query('new Actor(name:"sam") = returned_user')[0]
     assert polar.host.to_python(env["returned_user"]) == user
@@ -271,8 +274,9 @@ def test_clear_rules(polar, load_policy, query):
     assert query(Predicate(name="allow", args=[actor, "edit", resource]))
     assert query(Predicate(name="allow", args=[actor, "delete", resource]))
 
-    # raises exception because new policy file specifies on a class defined in the old file,
-    # but not in the new file
+    # Raises exception because new policy file specifies on a class defined in
+    # the old file, but not in the new file.
+
     polar.clear_rules()
     with pytest.raises(PolarRuntimeError):
         polar.load_file(fails)

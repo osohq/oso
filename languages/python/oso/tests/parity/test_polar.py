@@ -5,13 +5,15 @@
 # - Property tests for polar parser.
 # - Property tests for polar semantics.
 # - External functions / python binding tests of some kind, maybe.
-from pathlib import Path
 
 import os
 import pytest
 
+from pathlib import Path
+
 from polar.exceptions import PolarRuntimeError
-from .test_polar_externals import Qux, Bar, Foo, MyClass, YourClass, OurClass
+
+from .test_polar_externals import Bar, Foo, MyClass, OurClass, Qux, YourClass
 
 
 EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
@@ -87,7 +89,7 @@ def test_disjunctive_rule(tell, qeval):
     assert qeval("1=0 or (1=1 and 1=1)")
     assert not qeval("1=0 or (1=0 and 1=1)")
 
-    # not sure if these test anything but :)
+    # Not sure if these test anything but :)
     assert qeval("1=0 or (1=0 or 1=1)")
     assert not qeval("1=0 or (1=0 or 1=0)")
 
@@ -142,11 +144,11 @@ def test_defining_things(tell, qeval):
 
 
 def test_dictionaries(tell, qeval, qvar):
-    # *** basic dictionary lookup ***
+    # *** Basic dictionary lookup. ***
     tell('dict({hello: "world", foo: "bar"})')
     assert qeval('dict(d) and d.hello = "world"')
 
-    # dictionary lookups with variable fields ###
+    # Dictionary lookups with variable fields. ###
     tell("attr(d, k, d.(k))")
 
     # k = "hello", {hello: "steve"}.(k) = "steve"
@@ -158,7 +160,7 @@ def test_dictionaries(tell, qeval, qvar):
     # k = key, {hello: "steve"}.(k) = "steve", key = "hello"
     assert qvar('attr({hello: "steve"}, key, "steve")', "key", one=True) == "hello"
 
-    # *** nested lookups ***
+    # *** Nested lookups. ***
     assert qeval(
         'attr({hello: {this: {is: "nested"}}}, "hello", {this: {is: "nested"}})'
     )
@@ -176,7 +178,7 @@ def test_dictionaries(tell, qeval, qvar):
     tell("lookup(dict, result) if result = dict.a.b.c;")
     assert qeval('lookup({a: {b: {c: "nested"}}}, "nested")')
 
-    # *** more basic lookup tests ***
+    # *** More basic lookup tests. ***
     tell('user({name: "steve", job: "programmer", state: "NY"})')
     tell('user({name: "alex", job: "programmer", state: "CO"})')
     tell('user({name: "graham", job: "business", state: "NY"})')
@@ -215,7 +217,7 @@ def test_argument_patterns(tell, qeval, qvar, externals):
 
 
 @pytest.mark.skip(reason="No longer support external instance unification")
-# TODO: update to use internal classes (depends on instantiation bug fix)
+# TODO: Update to use internal classes. (depends on instantiation bug fix)
 def test_keys_are_confusing(tell, qeval, qvar, externals):
     assert qeval("new MyClass(x: 1, y: 2) = new MyClass(y: 2, x: 1)")
     assert qeval("new MyClass(x: 1, y: 2) = new MyClass(x: 1, y: 2)")
@@ -263,7 +265,7 @@ def test_nested_matches(qeval, qvar, externals):
 
 
 def test_field_unification(qeval):
-    # test dictionary field unification
+    # Test dictionary field unification.
     assert qeval("{} = {}")
     assert qeval("{x: 1} = {x: 1}")
     assert not qeval("{x: 1} = {x: 2}")
@@ -273,7 +275,7 @@ def test_field_unification(qeval):
 
 
 def test_field_unification_external(qeval, externals):
-    # test instance field unification
+    # Test instance field unification.
     assert qeval("new MyClass(x: 1, y: 2) = new MyClass(y: 2, x: 1)")
     assert not qeval("new MyClass(x: 1, y: 2) = {y: 2, x: 1}")
     assert qeval("new MyClass(x: 1, y: 2) = new OurClass(y: 2, x: 1)")
@@ -325,6 +327,8 @@ def test_groups(load_file, qeval, query):
 
 # TODO: Fix with
 # https://www.notion.so/osohq/Internal-classes-cannot-be-instantiated-9554c7298feb4842b5448e7edf1d8b8b
+
+
 @pytest.mark.skip("Skipped because of bug in class init.")
 def test_group_field_access(load_file, qvar):
     load_file(Path(__file__).parent / "policies/groups.pol")
