@@ -1,15 +1,16 @@
 """SQLAlchemy session classes and factories for oso."""
-from typing import Any, Callable, Dict, Optional, Type
 
-from sqlalchemy import event, inspect
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.orm.util import AliasedClass
-from sqlalchemy import orm
-from sqlalchemy.sql import expression as expr
+from typing import Any, Callable, Dict, Optional, Type
 
 from oso import Oso
 from polar.exceptions import UnsupportedError
-
+from sqlalchemy import event, inspect, sql
+from sqlalchemy.orm import (
+    Session,
+    scoped_session as sa_scoped_session,
+    sessionmaker
+)
+from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy_oso.auth import authorize_model
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
@@ -21,6 +22,7 @@ class _OsoSession:
     def get(cls):
         session = cls._get()
         new_session = Session(bind=session.bind)
+
         return new_session
 
     @classmethod
@@ -30,12 +32,12 @@ class _OsoSession:
 
 
 def set_get_session(oso: Oso, get_session_func):
-    """Set the function that oso uses to expose a SQLAlchemy session to the policy
+    """Set the function that oso uses to expose an SQLAlchemy session to the policy
 
     :param oso: The Oso instance used to evaluate the policy.
     :type oso: Oso
 
-    :param get_session_func: A function that returns a SQLAlchemy session
+    :param get_session_func: A function that returns an SQLAlchemy session.
     :type get_session_func: lambda
 
     The session can be accessed from polar via the OsoSession constant. E.g.,
@@ -44,6 +46,7 @@ def set_get_session(oso: Oso, get_session_func):
 
         OsoSession.get().query(...)
     """
+
     _OsoSession.set_get_session(get_session_func)
     oso.register_constant(_OsoSession, "OsoSession")
 
@@ -67,45 +70,46 @@ def authorized_sessionmaker(
     :param get_checked_permissions: Callable that returns an optional map of
                                     permissions (resource-action pairs) to
                                     authorize for the session. If the callable
-                                    returns ``None``, no authorization will
-                                    be applied to the session. If a map of
-                                    permissions is provided, querying for
-                                    a SQLAlchemy model present in the map
-                                    will authorize results according to the
-                                    action specified as the value in the
-                                    map. E.g., providing a map of ``{Post:
-                                    "read", User: "view"}`` where ``Post`` and
-                                    ``User`` are SQLAlchemy models will apply
-                                    authorization to ``session.query(Post)``
-                                    and ``session.query(User)`` such that
-                                    only ``Post`` objects that the user can
-                                    ``"read"`` and ``User`` objects that the
-                                    user can ``"view"`` are fetched from the
-                                    database.
+                                    returns `None`, no authorization will be
+                                    applied to the session. If a map of
+                                    permissions is provided, querying for an
+                                    SQLAlchemy model present in the map will
+                                    authorize results according to the action
+                                    specified as the value in the map. E.g.,
+                                    providing a map of `{Post: "read", User:
+                                    "view"}` where `Post` and `User` are
+                                    SQLAlchemy models will apply authorization to
+                                    `session.query(Post)` and
+                                    `session.query(User)` such that only `Post`
+                                    `objects that the user can `"read"` and
+                                    `User` objects that the user can `"view"` are
+                                    fetched from the database.
     :param class_: Base class to use for sessions.
 
     All other keyword arguments are passed through to
     :py:func:`sqlalchemy.orm.session.sessionmaker` unchanged.
 
     **Invariant**: the values returned by the `get_oso()`, `get_user()`, and
-    `get_checked_permissions()` callables provided to this function *must
-    remain fixed for a given session*. This prevents authorization responses
-    from changing, ensuring that the session's identity map never contains
-    unauthorized objects.
+    `get_checked_permissions()` callables provided to this function *must remain
+    fixed for a given session*. This prevents authorization responses from
+    changing, ensuring that the session's identity map never contains unauthorized
+    objects.
 
     NOTE: _baked_queries are disabled on SQLAlchemy 1.3 since the caching
-          mechanism can bypass authorization by using queries from the cache
+          mechanism can bypass authorization by using queries from the cache that
           that were previously baked without authorization applied. Note that
           _baked_queries are deprecated as of SQLAlchemy 1.4.
     .. _baked_queries: https://docs.sqlalchemy.org/en/14/orm/extensions/baked.html
     """
+
     if class_ is None:
         class_ = Session
 
     # Oso, user, and checked permissions must remain unchanged for the entire
     # session. This is to prevent unauthorized objects from ending up in the
     # session's identity map.
-    class Sess(AuthorizedSessionBase, class_):  # type: ignore
+
+    class Sess(AuthorizedSessionBase, class_):  # Type: ignore
         def __init__(self, **options):
             options.setdefault("oso", get_oso())
             options.setdefault("user", get_user())
@@ -114,9 +118,9 @@ def authorized_sessionmaker(
 
     session = type("Session", (Sess,), {})
 
-    # We call sessionmaker here because sessionmaker adds a configure
-    # method to the returned session and we want to replicate that
-    # functionality.
+    # We call sessionmaker here because sessionmaker adds a configure method to
+    # the returned session and we want to replicate that functionality.
+
     return sessionmaker(class_=session, **kwargs)
 
 
@@ -130,7 +134,7 @@ def scoped_session(
     """Return a scoped session maker that uses the Oso instance, user, and
     checked permissions (resource-action pairs) as part of the scope function.
 
-    Use in place of sqlalchemy's scoped_session_.
+    Use in place of SQLAlchemy's scoped_session.
 
     Uses :py:func:`authorized_sessionmaker` as the factory.
 
@@ -141,21 +145,20 @@ def scoped_session(
     :param get_checked_permissions: Callable that returns an optional map of
                                     permissions (resource-action pairs) to
                                     authorize for the session. If the callable
-                                    returns ``None``, no authorization will
-                                    be applied to the session. If a map of
-                                    permissions is provided, querying for
-                                    a SQLAlchemy model present in the map
-                                    will authorize results according to the
-                                    action specified as the value in the
-                                    map. E.g., providing a map of ``{Post:
-                                    "read", User: "view"}`` where ``Post`` and
-                                    ``User`` are SQLAlchemy models will apply
-                                    authorization to ``session.query(Post)``
-                                    and ``session.query(User)`` such that
-                                    only ``Post`` objects that the user can
-                                    ``"read"`` and ``User`` objects that the
-                                    user can ``"view"`` are fetched from the
-                                    database.
+                                    returns `None`, no authorization will be
+                                    applied to the session. If a map of
+                                    permissions is provided, querying for an
+                                    SQLAlchemy model present in the map will
+                                    authorize results according to the action
+                                    specified as the value in the map. E.g.,
+                                    providing a map of `{Post: "read", User:
+                                    "view"}` where `Post` and `User` are
+                                    SQLAlchemy models will apply authorization to
+                                    `session.query(Post)` and
+                                    `session.query(User)` such that only `Post`
+                                    `objects that the user can `"read"` and
+                                    `User` objects that the user can `"view"` are
+                                    fetched from the database.
     :param scopefunc: Additional scope function to use for scoping sessions.
                       Output will be combined with the Oso, permissions
                       (resource-action pairs), and user objects.
@@ -163,14 +166,15 @@ def scoped_session(
                    :py:func:`authorized_sessionmaker`.
 
     NOTE: _baked_queries are disabled on SQLAlchemy 1.3 since the caching
-          mechanism can bypass authorization by using queries from the cache
-          that were previously baked without authorization applied. Note that
+          mechanism can bypass authorization by using queries from the cache that
+          were previously baked without authorization applied. Note that
           _baked_queries are deprecated as of SQLAlchemy 1.4.
 
     .. _scoped_session: https://docs.sqlalchemy.org/en/13/orm/contextual.html
 
     .. _baked_queries: https://docs.sqlalchemy.org/en/14/orm/extensions/baked.html
     """
+
     scopefunc = scopefunc or (lambda: None)
 
     def _scopefunc():
@@ -181,7 +185,7 @@ def scoped_session(
         get_oso, get_user, get_checked_permissions, **kwargs
     )
 
-    return orm.scoped_session(factory, scopefunc=_scopefunc)
+    return sa_scoped_session(factory, scopefunc=_scopefunc)
 
 
 class AuthorizedSessionBase(object):
@@ -193,49 +197,48 @@ class AuthorizedSessionBase(object):
             pass
 
     NOTE: _baked_queries are disabled on SQLAlchemy 1.3 since the caching
-          mechanism can bypass authorization by using queries from the cache
-          that were previously baked without authorization applied. Note that
+          mechanism can bypass authorization by using queries from the cache that
+          were previously baked without authorization applied. Note that
           _baked_queries are deprecated as of SQLAlchemy 1.4.
 
     .. _baked_queries: https://docs.sqlalchemy.org/en/14/orm/extensions/baked.html
     """
 
     def __init__(self, oso: Oso, user, checked_permissions: Permissions, **options):
-        """Create an authorized session using ``oso``.
+        """Create an authorized session using `oso`.
 
         :param oso: The Oso instance to use for authorization.
         :param user: The user to perform authorization for.
         :param checked_permissions: The permissions (resource-action pairs) to
                                     authorize.
         :param checked_permissions: An optional map of permissions
-                                    (resource-action pairs) to authorize for
-                                    the session. If ``None`` is provided,
-                                    no authorization will be applied to
-                                    the session. If a map of permissions
-                                    is provided, querying for a SQLAlchemy
-                                    model present in the map will authorize
-                                    results according to the action
-                                    specified as the value in the map. E.g.,
-                                    providing a map of ``{Post: "read",
-                                    User: "view"}`` where ``Post`` and
-                                    ``User`` are SQLAlchemy models will apply
-                                    authorization to ``session.query(Post)``
-                                    and ``session.query(User)`` such that
-                                    only ``Post`` objects that the user can
-                                    ``"read"`` and ``User`` objects that the
-                                    user can ``"view"`` are fetched from the
-                                    database.
-        :param options: Additional keyword arguments to pass to ``Session``.
+                                    (resource-action pairs) to authorize for the
+                                    session. If `None` is provided, no
+                                    authorization will be applied to the session.
+                                    If a map of permissions is provided, querying
+                                    for an SQLAlchemy model present in the map
+                                    will authorize results according to the
+                                    action specified as the value in the map.
+                                    E.g., providing a map of `{Post: "read",
+                                    User: "view"}` where `Post` and `User` are
+                                    SQLAlchemy models will apply authorization
+                                    to `session.query(Post)` and
+                                    `session.query(User)` such that only `Post`
+                                    objects that the user can `"read"` and
+                                    `User` objects that the user can `"view"` are
+                                    fetched from the database.
+        :param options: Additional keyword arguments to pass to `Session`.
 
         **Invariant**: the `oso`, `user`, and `checked_permissions` parameters
         *must remain fixed for a given session*. This prevents authorization
         responses from changing, ensuring that the session's identity map never
         contains unauthorized objects.
         """
+
         if oso._polar_roles_enabled:
             raise UnsupportedError(
-                "Data filtering not yet supported for the Polar roles feature."
-                + "Please use the SQLAlchemy roles feature instead: https://docs.osohq.com/python/guides/roles/sqlalchemy.html"
+                """Data filtering not yet supported for the Polar roles feature.
+Please use the SQLAlchemy roles feature instead: https://docs.osohq.com/python/guides/roles/sqlalchemy.html"""
             )
 
         self._oso = oso
@@ -245,7 +248,7 @@ class AuthorizedSessionBase(object):
         if USING_SQLAlchemy_v1_3:  # Disable baked queries on SQLAlchemy 1.3.
             options["enable_baked_queries"] = False
 
-        super().__init__(**options)  # type: ignore
+        super().__init__(**options)  # Type: ignore
 
     @property
     def oso_context(self):
@@ -265,8 +268,8 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
     instantiating the session.
 
     NOTE: _baked_queries are disabled on SQLAlchemy 1.3 since the caching
-          mechanism can bypass authorization by using queries from the cache
-          that were previously baked without authorization applied. Note that
+          mechanism can bypass authorization by using queries from the cache that
+          were previously baked without authorization applied. Note that
           _baked_queries are deprecated as of SQLAlchemy 1.4.
 
     .. _baked_queries: https://docs.sqlalchemy.org/en/14/orm/extensions/baked.html
@@ -277,7 +280,7 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
 
 try:
     # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
-    from sqlalchemy.orm import with_loader_criteria  # type: ignore
+    from sqlalchemy.orm import with_loader_criteria  # Type: ignore
 
     @event.listens_for(Session, "do_orm_execute")
     def do_orm_execute(execute_state):
@@ -311,6 +314,7 @@ try:
             # TODO(gj): currently walking way more than we have to. Probably
             # some points in the tree where we can safely call it good for that
             # branch and continue on to more fruitful pastures.
+
             for child in statement.get_children():
                 entities |= entities_in_statement(child)
 
@@ -319,34 +323,36 @@ try:
         for entity in entities_in_statement(execute_state.statement):
             # If entity is an alias, get the action for the underlying class.
             if isinstance(entity, AliasedClass):
-                action = checked_permissions.get(inspect(entity).class_)  # type: ignore
+                action = checked_permissions.get(inspect(entity).class_)  # Type: ignore
             else:
                 action = checked_permissions.get(entity)
 
             # If permissions map does not specify an action to authorize for entity
             # or if the specified action is `None`, deny access.
+
             if action is None:
-                where = with_loader_criteria(entity, expr.false(), include_aliases=True)
+                where = with_loader_criteria(entity, sql.false(), include_aliases=True)
                 execute_state.statement = execute_state.statement.options(where)
             else:
                 filter = authorize_model(oso, user, action, session, entity)
                 if filter is not None:
                     where = with_loader_criteria(entity, filter, include_aliases=True)
                     execute_state.statement = execute_state.statement.options(where)
-
-
 except ImportError:
     from sqlalchemy.orm.query import Query
 
     @event.listens_for(Query, "before_compile", retval=True)
     def _before_compile(query):
         """Enable before compile hook."""
+
         return _authorize_query(query)
 
     def _authorize_query(query: Query) -> Optional[Query]:
         """Authorize an existing query with an Oso instance, user, and a
         permissions map indicating which actions to check for which SQLAlchemy
-        models."""
+        models.
+        """
+
         session = query.session
 
         # Early return if this isn't an authorized session.
@@ -361,12 +367,13 @@ except ImportError:
         if checked_permissions is None:
             return None
 
-        # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
-        # on queries that have already been made.  If a query has a LIMIT or OFFSET
+        # TODO (dhatch): This is necessary to allow `authorize_query` to work on
+        # queries that have already been made.  If a query has a LIMIT or OFFSET
         # applied, SQLAlchemy will by default throw an error if filters are applied.
         # This prevents these errors from occuring, but could result in some
         # incorrect queries. We should remove this if possible.
-        query = query.enable_assertions(False)  # type: ignore
+
+        query = query.enable_assertions(False)  # Type: ignore
 
         entities = {column["entity"] for column in query.column_descriptions}
         for entity in entities:
@@ -376,19 +383,20 @@ except ImportError:
 
             # If entity is an alias, get the action for the underlying class.
             if isinstance(entity, AliasedClass):
-                action = checked_permissions.get(inspect(entity).class_)  # type: ignore
+                action = checked_permissions.get(inspect(entity).class_)  # Type: ignore
             else:
                 action = checked_permissions.get(entity)
 
             # If permissions map does not specify an action to authorize for entity
             # or if the specified action is `None`, deny access.
+
             if action is None:
-                query = query.filter(expr.false())  # type: ignore
+                query = query.filter(sql.false())  # Type: ignore
                 continue
 
             assert isinstance(session, Session)
             authorized_filter = authorize_model(oso, user, action, session, entity)
             if authorized_filter is not None:
-                query = query.filter(authorized_filter)  # type: ignore
+                query = query.filter(authorized_filter)  # Type: ignore
 
         return query

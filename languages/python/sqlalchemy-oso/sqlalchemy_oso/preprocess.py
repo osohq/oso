@@ -1,12 +1,11 @@
 """Convert expressions from oso into a format that the SQLAlchemy translation can use."""
 
 from collections import defaultdict
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
 
+from polar.exceptions import UnsupportedError
 from polar.expression import Expression
 from polar.variable import Variable
-from polar.exceptions import UnsupportedError
-
 
 TGroupedExpressions = Dict[Variable, List[Expression]]
 
@@ -35,10 +34,11 @@ def preprocess(expression: Expression) -> Expression:
 def preprocess_expression(
     expression: Expression, variables: TGroupedExpressions
 ) -> Optional[Expression]:
-    """Collect expressions over variables into ``variables``.
+    """Collect expressions over variables into `variables`.
 
     Return the expression with those removed.
     """
+
     # Walk expression and collect variable expressions
     new_expr: Optional[Expression] = expression
     if expression.operator == "And":
@@ -69,6 +69,7 @@ def preprocess_and(
 
 def get_variable(expression_or_variable):
     """Get variable out of nested dot or single variable."""
+
     if isinstance(expression_or_variable, Variable):
         return expression_or_variable
     elif isinstance(expression_or_variable, Expression):
@@ -79,17 +80,20 @@ def get_variable(expression_or_variable):
 
 
 def is_this(variable):
-    """Return true if ``variable`` is ``_this``."""
+    """Return true if `variable` is `_this`."""
+
     return variable == Variable("_this")
 
 
 def sub_this(variable: Variable, expression: Expression) -> Expression:
-    """Substitute _this for ``variable`` in ``expression``."""
+    """Substitute _this for `variable` in `expression`."""
+
     return sub_var(variable, Variable("_this"), expression)
 
 
 def sub_var(variable: Variable, value, expression: Expression) -> Expression:
-    """Substitute ``value`` for ``variable`` in ``expression``."""
+    """Substitute `value` for `variable` in `expression`."""
+
     new_expr = []
     for arg in expression.args:
         if isinstance(arg, Expression):
@@ -105,7 +109,10 @@ def sub_var(variable: Variable, value, expression: Expression) -> Expression:
 def preprocess_leaf(
     expression: Expression, variables: TGroupedExpressions
 ) -> Optional[Expression]:
-    """If leaf is a variable other than _this, add the expression to variables and return None."""
+    """If leaf is a variable other than _this, add the expression to variables
+    and return None.
+    """
+
     assert len(expression.args) == 2
     left, right = expression.args
     left_var = get_variable(left)
