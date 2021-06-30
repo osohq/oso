@@ -1,7 +1,7 @@
 import random
 import time
-from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from oso import Oso, OsoError
 
@@ -53,8 +53,8 @@ def test_multi():
     for _ in range(32):
         futures.append(tp.submit(torch_oso, oso))
 
-    for i, future in enumerate(concurrent.futures.as_completed(futures)):
+    for i, future in enumerate(as_completed(futures)):
         future.result()
 
-    # If we got here none of these crashed.
+    # If we got here, none of these crashed.
     assert True

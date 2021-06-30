@@ -1,7 +1,9 @@
+import pytest
+
 from datetime import datetime
+from enum import Enum
 from math import inf, isnan, nan
 from pathlib import Path
-from enum import Enum
 
 from polar import (
     polar_class,
@@ -13,8 +15,6 @@ from polar import (
     Pattern,
 )
 from polar.partial import TypeConstraint
-
-import pytest
 
 
 def test_anything_works(polar, query):
@@ -45,6 +45,7 @@ def test_data_conversions(polar, qvar, query):
 
 def test_load_function(polar, query, qvar):
     """Make sure the load function works."""
+
     # Loading the same file twice doesn't mess stuff up.
     filename = Path(__file__).parent / "test_file.polar"
     polar.load_file(filename)
@@ -287,7 +288,7 @@ def test_specializers_mixed(polar, qvar, qeval, query):
 
     polar.register_class(Animal)
 
-    # load rules
+    # Load rules.
     rules = """
     what_is(_: Animal, res) if res = "animal_class";
     what_is(_: Animal{genus: "canis"}, res) if res = "canine_class";
@@ -308,7 +309,7 @@ def test_specializers_mixed(polar, qvar, qeval, query):
     dog_dict = '{species: "canis familiaris", genus: "canis", family: "canidae"}'
     canine_dict = '{genus: "canis", family: "canidae"}'
 
-    # test number of results
+    # Test the number of results.
     assert len(query(f"what_is({wolf}, res)")) == 6
     assert len(query(f"what_is({dog}, res)")) == 6
     assert len(query(f"what_is({canine}, res)")) == 4
@@ -316,7 +317,7 @@ def test_specializers_mixed(polar, qvar, qeval, query):
     assert len(query(f"what_is({dog_dict}, res)")) == 2
     assert len(query(f"what_is({canine_dict}, res)")) == 1
 
-    # test rule ordering for instances
+    # Test rule ordering for instances.
     assert qvar(f"what_is({wolf}, res)", "res") == [
         "wolf_class",
         "canine_class",
@@ -340,7 +341,7 @@ def test_specializers_mixed(polar, qvar, qeval, query):
         "canine_dict",
     ]
 
-    # test rule ordering for dicts
+    # Test rule ordering for dicts.
     assert qvar(f"what_is({wolf_dict}, res)", "res") == ["wolf_dict", "canine_dict"]
     assert qvar(f"what_is({dog_dict}, res)", "res") == ["dog_dict", "canine_dict"]
     assert qvar(f"what_is({canine_dict}, res)", "res") == ["canine_dict"]
@@ -386,9 +387,9 @@ def test_parser_errors(polar):
         "'\\u{0}' is not a valid character. Found in this is not allowed at line 2, column 17"
     )
 
-    # InvalidToken -- not sure what causes this
-
+    # InvalidToken -- not sure what causes this.
     # UnrecognizedEOF
+
     rules = """
     f(a)
     """
@@ -408,7 +409,7 @@ def test_parser_errors(polar):
         "did not expect to find the token '1' at line 2, column 5"
     )
 
-    # ExtraToken -- not sure what causes this
+    # ExtraToken -- not sure what causes this.
 
 
 def test_runtime_errors(polar, query):
@@ -450,17 +451,17 @@ def test_return_list(polar, query):
 
     polar.register_class(User)
 
-    # for testing lists
+    # For testing lists.
     polar.load_str('allow(actor: User, "join", "party") if "social" in actor.groups();')
 
     assert query(Predicate(name="allow", args=[User(), "join", "party"]))
 
 
 def test_query(load_file, polar, query):
-    """Test that queries work with variable arguments"""
+    """Tests that queries work with variable arguments."""
 
     load_file(Path(__file__).parent / "test_file.polar")
-    # plaintext polar query: query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
+    # Plaintext polar query: query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
     assert query(Predicate(name="f", args=[Variable("a")])) == [
         {"a": 1},
@@ -470,7 +471,7 @@ def test_query(load_file, polar, query):
 
 
 def test_constructor(polar, qvar):
-    """Test that class constructor is called correctly with constructor syntax."""
+    """Tests that the class constructor is called correctly with constructor syntax."""
 
     class Foo:
         def __init__(self, a, b, bar, baz):
@@ -481,7 +482,7 @@ def test_constructor(polar, qvar):
 
     polar.register_class(Foo)
 
-    # test positional args
+    # Test positional args.
     instance = qvar(
         "instance = new Foo(1,2,3,4)",
         "instance",
@@ -492,7 +493,7 @@ def test_constructor(polar, qvar):
     assert instance.bar == 3
     assert instance.baz == 4
 
-    # test positional and kwargs
+    # Test positional and kwargs.
     instance = qvar(
         "instance = new Foo(1, 2, bar: 3, baz: 4)",
         "instance",
@@ -503,7 +504,7 @@ def test_constructor(polar, qvar):
     assert instance.bar == 3
     assert instance.baz == 4
 
-    # test kwargs
+    # Test kwargs.
     instance = qvar(
         "instance = new Foo(bar: 3, a: 1, baz: 4, b: 2)",
         "instance",
@@ -584,7 +585,7 @@ def test_external_op(polar, query):
 
 
 def test_datetime(polar, query):
-    # test datetime comparison
+    # Test datetime comparison.
     t1 = datetime(2020, 5, 25)
     t2 = datetime.now()
     t3 = datetime(2030, 5, 25)
@@ -594,7 +595,7 @@ def test_datetime(polar, query):
     assert query(Predicate("lt", [t1, t2]))
     assert not query(Predicate("lt", [t2, t1]))
 
-    # test creating datetime from polar
+    # Test creating datetime from polar.
     polar.load_str("dt(x) if x = new Datetime(year: 2020, month: 5, day: 25);")
     assert query(Predicate("dt", [Variable("x")])) == [{"x": datetime(2020, 5, 25)}]
     polar.load_str("ltnow(x) if x < Datetime.now();")
@@ -608,7 +609,8 @@ def test_datetime(polar, query):
 
 
 def test_nil(polar, query, qvar):
-    """Test that nil is pre-registered as None."""
+    """Tests that nil is pre-registered as None."""
+
     polar.load_str("null(nil);")
     assert qvar("null(x)", "x") == [None]
     assert query(Predicate("null", [None])) == [{}]
@@ -616,7 +618,8 @@ def test_nil(polar, query, qvar):
 
 
 def test_other_constants(polar, qvar):
-    """Test that other objects may be registered as constants."""
+    """Tests that other objects may be registered as constants."""
+
     d = {"a": 1}
     polar.register_constant(d, "d")
     assert qvar("x = d.a", "x") == [1]
@@ -678,15 +681,16 @@ def test_register_constants_with_decorator():
 
 
 def test_unbound_variable(polar, query):
-    """Test that unbound variable is returned."""
+    """Tests that unbound variable is returned."""
+
     polar.load_str("rule(x, y) if y = 1;")
 
     first = query("rule(x, y)")[0]
 
-    # y will be bound to 1
+    # y will be bound to 1.
     first["y"] = 1
 
-    # x should be unbound
+    # x should be unbound.
     assert isinstance(first["x"], Variable)
 
 
@@ -726,6 +730,7 @@ def test_method_with_kwargs(polar, qvar):
         def kwarg_method(self, x=1, y=2):
             self.x = x
             self.y = y
+
             return True
 
     polar.register_class(Test)
@@ -892,6 +897,7 @@ def test_iterators(polar, qeval, qvar):
 
 def test_unexpected_expression(polar):
     """Ensure expression type raises error from core."""
+
     polar.load_str("f(x) if x > 2;")
 
     with pytest.raises(exceptions.UnexpectedPolarTypeError):
@@ -899,7 +905,8 @@ def test_unexpected_expression(polar):
 
 
 def test_lookup_in_head(polar, is_allowed):
-    # Test with enums
+    # Test with enums.
+
     class Actions(Enum):
         READ = 1
         WRITE = 2
@@ -913,11 +920,11 @@ def test_lookup_in_head(polar, is_allowed):
     assert not is_allowed("leina", Actions, "doc")
     assert is_allowed("leina", Actions.READ, "doc")
 
-    # Test lookup in specializer raises error
+    # Test lookup in specializer raises error.
     with pytest.raises(exceptions.UnrecognizedToken):
         polar.load_str('allow("leina", action: Actions.READ, "doc");')
 
-    # Test with normal class
+    # Test with normal class.
     class Resource:
         def __init__(self, action):
             self.action = action

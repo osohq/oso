@@ -1,5 +1,7 @@
 """Set of test helpers to match test helpers from Python Polar."""
+
 import pytest
+
 from typing import Dict
 
 from polar import Polar
@@ -9,6 +11,7 @@ from polar import Polar
 @pytest.fixture
 def db():
     """Set up the polar database"""
+
     raise NotImplementedError()
 
 
@@ -18,6 +21,7 @@ TEST_CLASSES: Dict[str, type] = {}
 @pytest.fixture
 def polar():
     """Set up a polar instance and tear it down after the test."""
+
     p = Polar()
     yield p
     del p
@@ -25,11 +29,12 @@ def polar():
 
 @pytest.fixture
 def tell(polar):
-    """Define a fact or rule in the polar database"""
+    """Define a fact or rule in the polar database."""
 
     def _tell(f):
         # TODO (dhatch): Temporary until rewritten parser supports optional
         # semicolon.
+
         if not f.endswith(";"):
             f += ";"
 
@@ -50,7 +55,7 @@ def load_file(polar):
 
 @pytest.fixture
 def query(polar):
-    """Query something and return the results as a list"""
+    """Query something and return the results as a list."""
 
     def _query(q):
         return list(r["bindings"] for r in polar.query(q))
@@ -60,7 +65,7 @@ def query(polar):
 
 @pytest.fixture
 def qeval(query):
-    """Query something and return if there's exactly 1 result"""
+    """Query something and return it if there's exactly 1 result."""
 
     def _qeval(q):
         result = list(query(q))
@@ -81,7 +86,7 @@ def is_allowed(polar):
 
 @pytest.fixture
 def qvar(query):
-    """Query something and pull out the results for the variable v"""
+    """Query something and pull out the results for the variable v."""
 
     def _qvar(q, v, one=False):
         results = query(q)
