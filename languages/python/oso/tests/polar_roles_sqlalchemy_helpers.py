@@ -6,7 +6,6 @@ from sqlalchemy import UniqueConstraint, inspect
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import (
     class_mapper,
-    declared_attr,
     relationship,
     validates,
     synonym,
@@ -15,6 +14,13 @@ from sqlalchemy.orm.exc import UnmappedClassError, UnmappedInstanceError
 from sqlalchemy.orm.util import object_mapper
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String
+
+try:
+    # Since SQLALchemy 1.4, this exists in `orm`, rather than `ext`.
+    # Remove once we move to 1.4 (and above) only.
+    from sqlalchemy.orm import declared_attr
+except ImportError:
+    from sqlalchemy.ext.declarative import declared_attr
 
 # Global list to keep track of role classes as they are created, used to
 # generate RBAC base policy in Polar.
