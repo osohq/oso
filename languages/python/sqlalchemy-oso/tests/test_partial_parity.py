@@ -1,7 +1,6 @@
 import pytest
 
 from sqlalchemy.orm import Session
-
 from sqlalchemy_oso.session import AuthorizedSession
 
 from .models import Post, Tag
@@ -21,7 +20,7 @@ def test_field_comparison(oso, engine):
         """
         allow(_, _, post: Post) if
             post.title = post.contents;
-    """
+        """
     )
 
     authz_session = AuthorizedSession(
@@ -48,7 +47,7 @@ def test_scalar_in_list(oso, engine):
         """
         allow(_, _, post: Post) if
             post.contents in ["post", "allowed posts"];
-    """
+        """
     )
 
     authz_session = AuthorizedSession(
@@ -77,7 +76,7 @@ def test_ground_object_in_collection(oso, engine):
         """
         allow(_, _, post: Post) if
             allowed_tag in post.tags;
-    """
+        """
     )
 
     authz_session = AuthorizedSession(
@@ -110,7 +109,7 @@ def test_all_objects_collection_condition(oso, engine):
         """
         allow(_, _, post: Post) if
             forall(tag in post.tags, tag.is_public = true);
-    """
+        """
     )
 
     authz_session = AuthorizedSession(
@@ -143,7 +142,7 @@ def test_no_objects_collection_condition(oso, engine):
         """
         allow(_, _, post: Post) if
             not (tag in post.tags and tag.is_public = true);
-    """
+        """
     )
 
     authz_session = AuthorizedSession(

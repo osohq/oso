@@ -1,10 +1,9 @@
 import pytest
 
-from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer
+from sqlalchemy.orm import Session
 from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
 from sqlalchemy_oso.session import Permissions
-
 
 from .models import Post, ModelBase
 
@@ -15,6 +14,7 @@ flask_sqlalchemy = pytest.importorskip("flask_sqlalchemy")
 @pytest.fixture
 def db_uri(tmp_path):
     tempfile = tmp_path / "db.sqlite"
+
     return f"sqlite:///{tempfile}"
 
 
@@ -22,6 +22,7 @@ def db_uri(tmp_path):
 def flask_app(db_uri):
     app = flask.Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
+
     return app
 
 
@@ -33,6 +34,7 @@ def ctx(flask_app):
 
 # Global because test_flask_model wants to enforce authorization on a model
 # that's created after initialization of the AuthorizedSQLAlchemy instance.
+
 checked_permissions: Permissions = {}
 
 
@@ -44,6 +46,7 @@ def sqlalchemy(flask_app, oso):
         get_checked_permissions=lambda: checked_permissions,
     )
     sqlalchemy.init_app(flask_app)
+
     return sqlalchemy
 
 

@@ -3,6 +3,7 @@
 Tests come from the relationship document & operations laid out there
 https://www.notion.so/osohq/Relationships-621b884edbc6423f93d29e6066e58d16.
 """
+
 import pytest
 
 from sqlalchemy_oso.auth import authorize_model
@@ -17,7 +18,10 @@ def assert_query_equals(query, expected_str):
 
 
 def test_authorize_model_basic(session, oso, fixture_data):
-    """Test that a simple policy with checks on non-relationship attributes is correct."""
+    """Test that a simple policy with checks on non-relationship attributes
+    is correct.
+    """
+
     oso.load_str('allow("user", "read", post: Post) if post.access_level = "public";')
     oso.load_str('allow("user", "write", post: Post) if post.access_level = "private";')
     oso.load_str('allow("admin", "read", post: Post);')
@@ -62,8 +66,11 @@ def test_authorize_model_basic(session, oso, fixture_data):
 
 
 def test_authorize_scalar_attribute_eq(session, oso, fixture_data):
-    """Test authorization rules on a relationship with one object equaling another."""
-    # Object equals another object
+    """Test authorization rules on a relationship with one object equaling
+    another.
+    """
+
+    # Object equals another object.
     oso.load_str(
         'allow(actor: User, "read", post: Post) if post.created_by = actor and '
         'post.access_level = "private";'
@@ -94,7 +101,8 @@ def test_authorize_scalar_attribute_eq(session, oso, fixture_data):
 
 def test_authorize_scalar_attribute_condition(session, oso, fixture_data):
     """Scalar attribute condition checks."""
-    # Object equals another object
+
+    # Object equals another object.
 
     oso.load_str(
         'allow(actor: User, "read", post: Post) if post.created_by.is_banned = false and '
@@ -106,7 +114,7 @@ def test_authorize_scalar_attribute_condition(session, oso, fixture_data):
         'post.access_level = "public";'
     )
 
-    # moderator can see posts made by banned users.
+    # Moderator can see posts made by banned users.
     oso.load_str(
         """allow(actor: User, "read", post: Post) if
                 actor.is_moderator = true
@@ -143,6 +151,7 @@ def test_authorize_scalar_attribute_condition(session, oso, fixture_data):
 @pytest.fixture
 def tag_test_fixture(session):
     """Test data for tests with tags."""
+
     user = User(username="user")
     other_user = User(username="other_user")
     moderator = User(username="moderator", is_moderator=True)
@@ -268,17 +277,18 @@ def tag_nested_test_fixture(session):
 
 # TODO (dhatch): This doesn't actually exercise nested attribute code, because
 # the nested piece is in a sub expression.
+
+
 def test_nested_relationship_many_single(session, oso, tag_nested_test_fixture):
     """Test that nested relationships work.
 
-    post - (many) -> tags - (single) -> User
+    post - (many) → tags - (single) → User
 
     A user can read a post with a tag if the tag's creator is the user.
     """
+
     oso.load_str(
-        """
-        allow(user, "read", post: Post) if tag in post.tags and tag.created_by = user;
-    """
+        'allow(user, "read", post: Post) if tag in post.tags and tag.created_by = user;'
     )
 
     posts = session.query(Post).filter(
@@ -375,12 +385,14 @@ def tag_nested_many_many_test_fixture(session):
 def test_nested_relationship_many_many(session, oso, tag_nested_many_many_test_fixture):
     """Test that nested relationships work.
 
-    post - (many) -> tags - (many) -> User
+    post - (many) → tags - (many) → User
 
     A user can read a post with a tag if the tag's creator is the user.
     """
+
     # TODO This direction doesn't work, because tag in user.tags is a concrete object.
     # allow(user, "read", post: Post) if tag in post.tags and tag in user.tags;
+
     oso.load_str(
         """
     allow(user, "read", post: Post) if tag in post.tags and user in tag.users;
@@ -415,10 +427,11 @@ def test_nested_relationship_many_many_constrained(
 ):
     """Test that nested relationships work.
 
-    post - (many) -> tags - (many) -> User
+    post - (many) → tags - (many) → User
 
     A user can read a post with a tag if the tag's creator is the user.
     """
+
     oso.load_str(
         """
     allow(_, "read", post: Post) if tag in post.tags and user in tag.users and
@@ -441,8 +454,9 @@ def test_nested_relationship_many_many_constrained(
 def test_nested_relationship_many_many_many_constrained(session, engine, oso):
     """Test that nested relationships work.
 
-    post - (many) -> tags - (many) -> category - (many) -> User
+    post - (many) → tags - (many) → category - (many) → User
     """
+
     foo = User(username="foo")
     bar = User(username="bar")
 
@@ -520,6 +534,7 @@ def test_nested_relationship_many_many_many_constrained(session, engine, oso):
 
     # A user can read a post that they are the moderator of the category of if the
     # tag is public.
+
     oso.load_str(
         """
         allow(user, "read_2", post: Post) if
@@ -547,6 +562,7 @@ def test_nested_relationship_many_many_many_constrained(session, engine, oso):
 
     # A user can read a post that they are the moderator of the category of if the
     # tag is public and the category name is public.
+
     oso.load_str(
         """
         allow(user, "read_3", post: Post) if
@@ -618,6 +634,7 @@ def test_empty_constraints_in(session, oso, tag_nested_many_many_test_fixture):
     else:
         # NOTE(gj): The trivial TRUE constraint is not compiled away in
         # SQLAlchemy 1.4.
+
         true_clause = " AND 1 = 1"
 
     assert str(posts) == (
@@ -707,7 +724,7 @@ def test_deeply_nested_in(session, oso, tag_nested_many_many_test_fixture):
             bar in foo.created_by.posts and bar.id > 2 and
             baz in bar.created_by.posts and baz.id > 3 and
             post in baz.created_by.posts and post.id > 4;
-    """
+        """
     )
 
     posts = session.query(Post).filter(
@@ -750,7 +767,7 @@ def test_in_intersection(session, oso, tag_nested_many_many_test_fixture):
             u in post.users and
             t in post.tags and
             u in t.users;
-    """
+        """
     )
 
     posts = session.query(Post).filter(

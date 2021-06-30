@@ -1,8 +1,7 @@
+from sqlalchemy import Column, Integer, String, Enum, Boolean, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Table
-from sqlalchemy.ext.declarative import declarative_base
-
-from sqlalchemy import Column, Integer, String, Enum, Boolean, ForeignKey
 
 
 ModelBase = declarative_base(name="ModelBase")
@@ -99,9 +98,9 @@ class User(ModelBase):
     is_moderator = Column(Boolean, nullable=False, default=False)
     is_banned = Column(Boolean, nullable=False, default=False)
 
-    # Single tag
+    # Single tag.
     tag_name = Column(Integer, ForeignKey("tags.name"))
     tag = relationship("Tag", foreign_keys=[tag_name])
 
-    # Many tags
+    # Many tags.
     tags = relationship("Tag", secondary=user_tags, back_populates="users")
