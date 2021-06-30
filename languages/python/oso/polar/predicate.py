@@ -12,11 +12,12 @@ class Predicate:
         self.args = args
 
     def __str__(self):
-        return f'{self.name}({", ".join(self.args)})'
+        return f"{self.name}({', '.join(self.args)})"
 
     def __eq__(self, other):
         if not isinstance(other, Predicate):
             return False
+
         return (
             self.name == other.name
             and len(self.args) == len(other.args)

@@ -1,36 +1,39 @@
 """Communicate with the Polar virtual machine: load rules, make queries, etc."""
 
-from datetime import datetime, timedelta
 import os
-from pathlib import Path
 import sys
+
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Dict
 
 try:
-    # importing readline on compatible platforms
-    # changes how `input` works for the REPL
+    # Importing readline on compatible platforms
+    # changes how `input` works for the REPL.
+
     import readline  # noqa: F401
 except ImportError:
     pass
 
 from .exceptions import (
-    PolarRuntimeError,
     InlineQueryFailedError,
+    InvalidQueryTypeError,
     ParserError,
     PolarFileExtensionError,
     PolarFileNotFoundError,
-    InvalidQueryTypeError,
+    PolarRuntimeError,
 )
 from .ffi import Polar as FfiPolar
 from .host import Host
-from .query import Query
 from .predicate import Predicate
+from .query import Query
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
 def supports_color():
     supported_platform = sys.platform != "win32" or "ANSICON" in os.environ
     is_a_tty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
+
     return supported_platform and is_a_tty
 
 
@@ -45,6 +48,7 @@ if supports_color():
     # observed in the Python REPL on Linux by @samscott89 and @plotnick, but
     # not on macOS or Windows (with readline installed) or in the Ruby or
     # Node.js REPLs, both of which also use readline.
+
     RESET = "\001\x1b[0m\002"
     FG_BLUE = "\001\x1b[34m\002"
     FG_RED = "\001\x1b[31m\002"
@@ -64,7 +68,7 @@ class Polar:
     def __init__(self, classes=CLASSES):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
-        # TODO(gj): rename to _oso_roles_enabled
+        # TODO(gj): Rename to _oso_roles_enabled.
         self._polar_roles_enabled = False
 
         # Register global constants.
@@ -102,7 +106,7 @@ class Polar:
             self.ffi_polar.enable_roles()
             self._polar_roles_enabled = True
 
-            # validate config
+            # Validate config.
             validation_query_results = []
             while True:
                 query = self.ffi_polar.next_inline_query()
@@ -116,7 +120,7 @@ class Polar:
                     source = query.source()
                     raise InlineQueryFailedError(source.get())
 
-            # turn bindings back into polar
+            # Turn bindings back into Polar.
             for results in validation_query_results:
                 for result in results:
                     for k, v in result["bindings"].items():
@@ -126,6 +130,7 @@ class Polar:
 
     def load_file(self, policy_file):
         """Load Polar policy from a ".polar" file."""
+
         policy_file = Path(policy_file)
         extension = policy_file.suffix
         fname = str(policy_file)
@@ -142,9 +147,10 @@ class Polar:
 
     def load_str(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
+
         self.ffi_polar.load(string, filename)
 
-        # check inline queries
+        # Check inline queries.
         while True:
             query = self.ffi_polar.next_inline_query()
             if query is None:  # Load is done
@@ -172,6 +178,7 @@ class Polar:
 
         :return: The result of the query.
         """
+
         host = self.host.copy()
         host.set_accept_expression(accept_expression)
 
@@ -186,17 +193,19 @@ class Polar:
             yield res
 
     def query_rule(self, name, *args, **kwargs):
-        """Query for rule with name ``name`` and arguments ``args``.
+        """Query for rule with name `name` and arguments `args`.
 
         :param name: The name of the predicate to query.
         :param args: Arguments for the predicate.
 
         :return: The result of the query.
         """
+
         return self.query(Predicate(name=name, args=args), **kwargs)
 
     def repl(self, files=[]):
         """Start an interactive REPL session."""
+
         for f in files:
             self.load_file(f)
 
@@ -232,24 +241,28 @@ class Polar:
 
     def register_class(self, cls, *, name=None):
         """Register `cls` as a class accessible by Polar."""
+
         cls_name = self.host.cache_class(cls, name)
         self.register_constant(cls, cls_name)
 
     def register_constant(self, value, name):
         """Register `value` as a Polar constant variable called `name`."""
+
         self.ffi_polar.register_constant(self.host.to_polar(value), name)
 
     def get_class(self, name):
-        """Return class registered for ``name``.
+        """Return class registered for `name`.
 
         :raises UnregisteredClassError: If the class is not registered.
         """
+
         return self.host.get_class(name)
 
 
 def polar_class(_cls=None, *, name=None):
     """Decorator to register a Python class with Polar.
-    An alternative to ``register_class()``."""
+    An alternative to `register_class()`.
+    """
 
     def wrap(cls):
         cls_name = cls.__name__ if name is None else name

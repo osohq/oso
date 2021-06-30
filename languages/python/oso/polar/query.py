@@ -1,10 +1,11 @@
-from collections.abc import Iterable
 import json
 
+from collections.abc import Iterable
+
 from .exceptions import (
-    InvalidIteratorError,
     InvalidCallError,
     InvalidConstructorError,
+    InvalidIteratorError,
     PolarRuntimeError,
 )
 
@@ -36,10 +37,12 @@ class Query:
 
     def bind(self, name, value):
         """Bind `name` to `value` for the duration of the query."""
+
         self.ffi_query.bind(name, self.host.to_polar(value))
 
     def run(self):
         """Run the event loop and yield results."""
+
         assert self.ffi_query, "no query to run"
         while True:
             ffi_event = self.ffi_query.next_event()
@@ -108,7 +111,7 @@ class Query:
             result = attr(*args, **kwargs)
         elif not data["args"] is None:
             raise InvalidCallError(
-                f"tried to call '{attribute}' but it is not callable"
+                f'tried to call "{attribute}" but it is not callable'
             )
         else:  # If it's just an attribute, it's the result.
             result = attr
@@ -136,8 +139,9 @@ class Query:
             answer = self.host.isa_with_path(base_tag, path, class_tag)
             self.ffi_query.question_result(data["call_id"], answer)
         except AttributeError as e:
-            # TODO(gj): make sure we are printing but not failing on receipt of
+            # TODO(gj): Make sure we are printing but not failing on receipt of
             # this error in core.
+
             self.ffi_query.application_error(str(e))
             self.ffi_query.question_result(data["call_id"], False)
 
