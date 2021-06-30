@@ -1,9 +1,10 @@
-# External class definitions for use in `test_api.py` tests
-from dataclasses import dataclass
+# External class definitions for use in `test_api.py` tests.
 import re
 
-from polar import polar_class
+from dataclasses import dataclass
 from typing import List, Optional
+
+from polar import polar_class
 
 
 @polar_class
@@ -24,15 +25,16 @@ class Http:
         path_str = f'path="{self.path}"' if self.path != "" else None
         query_str = f"query={q}" if q != {} else None
         field_str = ", ".join(x for x in [host_str, path_str, query_str] if x)
+
         return f"Http({field_str})"
 
 
 @polar_class
 class PathMapper:
-    """Map from a template string with capture groups of the form
-    ``{name}`` to a dictionary of the form ``{name: captured_value}``
+    """Map from a template string with capture groups of the form `{name}` to a
+    dictionary of the form `{name: captured_value}`.
 
-    :param template: the template string to match against
+    :param template: The template string to match against.
     """
 
     def __init__(self, template):
@@ -52,6 +54,7 @@ class PathMapper:
 
 # Fake global actor name → company ID map.
 # Should be an external database lookup.
+
 actors = {"guest": "1", "president": "1"}
 
 frobbed: List[str] = []
@@ -59,6 +62,7 @@ frobbed: List[str] = []
 
 def get_frobbed():
     global frobbed
+
     return frobbed
 
 
@@ -86,6 +90,7 @@ class Widget:
     def frob(self, what):
         global frobbed
         frobbed.append(what)
+
         return self
 
 
@@ -102,8 +107,8 @@ class Actor:
     widget: Optional[Widget] = None
 
     def companies(self):
-        yield Company(id="0")  # fake, will fail
-        yield Company(id=actors[self.name])  # real, will pass
+        yield Company(id="0")  # Fake, will fail.
+        yield Company(id=actors[self.name])  # Real, will pass.
 
     def groups(self):
         return ["social", "dev", "product"]

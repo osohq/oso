@@ -1,4 +1,4 @@
-# External class definitions for use in `test_polar.py` tests
+# External class definitions for use in `test_polar.py` tests.
 
 
 class Foo:
@@ -26,6 +26,7 @@ class MyClass:
     def __eq__(self, other):
         if isinstance(other, MyClass):
             return self.x == other.x and self.y == other.y
+
         return False
 
 
