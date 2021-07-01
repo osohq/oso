@@ -161,9 +161,9 @@ func (o Oso) IsAllowed(actor interface{}, action interface{}, resource interface
 Return a set of actions allowed by the given (actor, resource) combination allowed
 by the policy.
 */
-func (o Oso) GetAllowedActions(actor interface{}, resource interface{}, allowWildcard bool) (map[interface{}]interface{}, error) {
-	results := make(map[interface{}]interface{})
-	query, err := (*o.p).queryRule("allow", actor, resource)
+func (o Oso) GetAllowedActions(actor interface{}, resource interface{}, allowWildcard bool) (map[interface{}]struct{}, error) {
+	results := make(map[interface{}]struct{})
+	query, err := (*o.p).queryRule("allow", actor, types.ValueVariable("action"), resource)
 	if err != nil {
 		return nil, err
 	}
@@ -173,20 +173,20 @@ func (o Oso) GetAllowedActions(actor interface{}, resource interface{}, allowWil
 			return nil, err
 		} else if v == nil {
 			break
-		} else {
-			switch v := interface{}(v).(type) {
+		} else if action, ok := (*v)["action"].(interface{}); ok {
+			switch val := (action).(type) {
 			case types.ValueVariable:
 				if allowWildcard {
-					results[v] = "*"
+					results["*"] = struct{}{}
 				} else {
 					return nil, errors.New(`The result of get_allowed_actions() contained an
-													"unconstrained" action that could represent any
-													action, but allow_wildcard was set to False. To fix,
-													set allow_wildcard to True and compare with the "*"
-													string.`)
+												"unconstrained" action that could represent any
+												action, but allow_wildcard was set to False. To fix,
+												set allow_wildcard to True and compare with the "*"
+												string.`)
 				}
 			default:
-				results[v] = 1
+				results[val] = struct{}{}
 			}
 		}
 	}
