@@ -189,7 +189,7 @@ func TestGetAllowedActions(t *testing.T) {
 	o.RegisterClass(reflect.TypeOf(Widget{}), nil)
 	o.RegisterClass(reflect.TypeOf(Company{}), nil)
 
-	o.LoadString("allow(_actor: Actor{name: \"Sally\"}, action, _resource: Widget{id: 1}) if action in [\"CREATE\", \"READ\"];")
+	o.LoadString("allow(_actor: Actor{Name: \"Sally\"}, action, _resource: Widget{Id: 1}) if action in [\"CREATE\", \"READ\"];")
 
 	actor := Actor{Name: "Sally"}
 	resource := Widget{Id: 1}
@@ -205,7 +205,7 @@ func TestGetAllowedActions(t *testing.T) {
 		t.Error("expected READ action")
 	}
 
-	o.LoadString("allow(_actor: Actor{name: \"John\"}, _action, _resource: Widget{id: 1});")
+	o.LoadString("allow(_actor: Actor{Name: \"John\"}, _action, _resource: Widget{Id: 1});")
 
 	actor = Actor{Name: "John"}
 	res, err = o.GetAllowedActions(actor, resource, true)
