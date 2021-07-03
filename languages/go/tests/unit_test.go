@@ -220,6 +220,15 @@ func TestGetAllowedActions(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected an error from GetAllowedActions")
 	}
+
+	res, err = o.GetAllowedActions(actor, Widget{Id: 2}, false)
+	if err != nil {
+		t.Fatalf("Failed to get allowed actions: %v", err)
+	}
+	if len(res) != 0 {
+		t.Error("expected no actions", res)
+	}
+
 }
 
 type Foo struct {
