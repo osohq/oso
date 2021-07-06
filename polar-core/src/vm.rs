@@ -31,10 +31,7 @@ use crate::terms::*;
 use crate::traces::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
-#[cfg(not(target_arch = "wasm32"))]
-pub const QUERY_TIMEOUT_S: std::time::Duration = std::time::Duration::from_secs(30);
-#[cfg(target_arch = "wasm32")]
-pub const QUERY_TIMEOUT_S: f64 = 30_000.0;
+pub const QUERY_TIMEOUT_MILLIS: u64 = 30_000;
 
 #[derive(Debug, Clone)]
 #[must_use = "ignored goals are never accomplished"]
@@ -230,10 +227,7 @@ pub struct PolarVirtualMachine {
     query_start_time: Option<std::time::Instant>,
     #[cfg(target_arch = "wasm32")]
     query_start_time: Option<f64>,
-    #[cfg(not(target_arch = "wasm32"))]
-    query_timeout: std::time::Duration,
-    #[cfg(target_arch = "wasm32")]
-    query_timeout: f64,
+    query_timeout_millis: u64,
 
     /// Maximum size of goal stack
     stack_limit: usize,
@@ -302,7 +296,7 @@ impl PolarVirtualMachine {
             goals: GoalStack::new_reversed(goals),
             binding_manager: BindingManager::new(),
             query_start_time: None,
-            query_timeout: QUERY_TIMEOUT_S,
+            query_timeout_millis: QUERY_TIMEOUT_MILLIS,
             stack_limit: MAX_STACK_SIZE,
             csp: Bsp::default(),
             choices: vec![],
@@ -389,7 +383,7 @@ impl PolarVirtualMachine {
 
     #[cfg(test)]
     fn set_query_timeout(&mut self, timeout_s: u64) {
-        self.query_timeout = std::time::Duration::from_secs(timeout_s);
+        self.query_timeout_millis = timeout_s as u64 * 1_000;
     }
 
     pub fn new_id(&self) -> u64 {
@@ -867,12 +861,12 @@ impl PolarVirtualMachine {
             .query_start_time
             .expect("Query start time not recorded");
 
-        if now - start_time > self.query_timeout {
+        if (now - start_time).as_millis() as u64 > self.query_timeout_millis {
             return Err(error::RuntimeError::QueryTimeout {
                 msg: format!(
                     "Query running for {}. Exceeded query timeout of {} seconds",
                     (now - start_time).as_secs(),
-                    self.query_timeout.as_secs()
+                    self.query_timeout_millis / 1_000
                 ),
             }
             .into());
@@ -888,12 +882,12 @@ impl PolarVirtualMachine {
             .query_start_time
             .expect("Query start time not recorded");
 
-        if now - start_time > self.query_timeout {
+        if (now - start_time) as u64 > self.query_timeout_millis {
             return Err(error::RuntimeError::QueryTimeout {
                 msg: format!(
-                    "Query running for {}. Exceeded query timeout of {} seconds",
-                    (now - start_time) / 1_000.0,
-                    self.query_timeout / 1_000.0
+                    "Query running for {} seconds. Exceeded query timeout of {} seconds",
+                    (now - start_time) as u64 / 1_000,
+                    self.query_timeout_millis / 1_000
                 ),
             }
             .into());
