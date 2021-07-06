@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1625072344835,
+  "lastUpdate": 1625613078651,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -64371,6 +64371,240 @@ window.BENCHMARK_DATA = {
             "name": "partial_rule_depth/100",
             "value": 122477823,
             "range": "± 1968362",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gkaemmer@users.noreply.github.com",
+            "name": "Graham Kaemmer",
+            "username": "gkaemmer"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fbb0f65e019fcaccfada2a1d38f0b2d597a0b54d",
+          "message": "Add gkaemmer to list of allowed committers (#1002)",
+          "timestamp": "2021-07-06T18:58:41-04:00",
+          "tree_id": "4fdd5d6fa3905062005a37360c8f5ec0aa29ed8e",
+          "url": "https://github.com/osohq/oso/commit/fbb0f65e019fcaccfada2a1d38f0b2d597a0b54d"
+        },
+        "date": 1625613075870,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 56067,
+            "range": "± 2606",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2804157,
+            "range": "± 56244",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 13477263,
+            "range": "± 309316",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 26505947,
+            "range": "± 639162",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 937,
+            "range": "± 49",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2725,
+            "range": "± 44",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 66035,
+            "range": "± 1841",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 594619,
+            "range": "± 10707",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 22993,
+            "range": "± 1128",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 22970,
+            "range": "± 856",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 22757,
+            "range": "± 770",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 22941,
+            "range": "± 870",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 20448,
+            "range": "± 792",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6124,
+            "range": "± 598",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 7373,
+            "range": "± 1443",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 8957,
+            "range": "± 459",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 22352,
+            "range": "± 3562",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 6681,
+            "range": "± 187",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 14779,
+            "range": "± 359",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 9161,
+            "range": "± 178",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "load_policy",
+            "value": 931999,
+            "range": "± 18145",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/1",
+            "value": 27905,
+            "range": "± 1771",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/5",
+            "value": 102507,
+            "range": "± 5762",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/10",
+            "value": 223504,
+            "range": "± 7564",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/20",
+            "value": 547515,
+            "range": "± 13858",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/40",
+            "value": 1565584,
+            "range": "± 45944",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/80",
+            "value": 4769666,
+            "range": "± 150694",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/100",
+            "value": 7206827,
+            "range": "± 191166",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/1",
+            "value": 97272,
+            "range": "± 4675",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/5",
+            "value": 338338,
+            "range": "± 17656",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/10",
+            "value": 824210,
+            "range": "± 35322",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/20",
+            "value": 2641644,
+            "range": "± 69885",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/40",
+            "value": 10085639,
+            "range": "± 348260",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/80",
+            "value": 65921604,
+            "range": "± 1556529",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/100",
+            "value": 127575930,
+            "range": "± 2779666",
             "unit": "ns/iter"
           }
         ]
