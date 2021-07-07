@@ -1,6 +1,6 @@
 ---
 title: Django
-weight: 20
+weight: 3
 ---
 
 For more on using Oso with Django, see:
