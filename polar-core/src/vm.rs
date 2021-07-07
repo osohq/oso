@@ -850,46 +850,30 @@ impl PolarVirtualMachine {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn check_timeout(&self) -> PolarResult<()> {
-        // TODO (dhatch): How do we reliably not do this when debugging.
-
+    fn query_duration(&self) -> u64 {
         let now = std::time::Instant::now();
-        let start_time = self
-            .query_start_time
-            .expect("Query start time not recorded");
-
-        if (now - start_time).as_millis() as u64 > self.query_timeout_ms {
-            return Err(error::RuntimeError::QueryTimeout {
-                msg: format!(
-                    "Query running for {}. Exceeded query timeout of {} seconds",
-                    (now - start_time).as_secs(),
-                    self.query_timeout_ms / 1_000
-                ),
-            }
-            .into());
-        }
-
-        Ok(())
+        let start = self.query_start_time.expect("Query start not recorded");
+        (now - start).as_millis() as u64
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn check_timeout(&self) -> PolarResult<()> {
-        let now = js_sys::Date::now();
-        let start_time = self
-            .query_start_time
-            .expect("Query start time not recorded");
+    fn query_duration(&self) -> u64 {
+        let now: f64 = js_sys::Date::now();
+        let start = self.query_start_time.expect("Query start not recorded");
+        (now - start) as u64
+    }
 
-        if (now - start_time) as u64 > self.query_timeout_ms {
+    fn check_timeout(&self) -> PolarResult<()> {
+        let elapsed = self.query_duration();
+        if elapsed > self.query_timeout_ms {
             return Err(error::RuntimeError::QueryTimeout {
                 msg: format!(
-                    "Query running for {} seconds. Exceeded query timeout of {} seconds",
-                    (now - start_time) as u64 / 1_000,
-                    self.query_timeout_ms / 1_000
+                    "Query running for {}ms. Exceeded query timeout of {}ms.",
+                    elapsed, self.query_timeout_ms
                 ),
             }
             .into());
         }
-
         Ok(())
     }
 }
