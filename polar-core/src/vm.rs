@@ -863,7 +863,16 @@ impl PolarVirtualMachine {
         (now - start) as u64
     }
 
+    fn is_query_timeout_disabled(&self) -> bool {
+        self.query_timeout_ms == 0
+    }
+
     fn check_timeout(&self) -> PolarResult<()> {
+        if self.is_query_timeout_disabled() {
+            // Useful for debugging
+            return Ok(())
+        }
+
         let elapsed = self.query_duration();
         if elapsed > self.query_timeout_ms {
             return Err(error::RuntimeError::QueryTimeout {
@@ -3748,6 +3757,7 @@ mod tests {
         let vm = PolarVirtualMachine::default();
         std::env::remove_var("POLAR_TIMEOUT_MS");
         assert!(vm.query_timeout_ms == 0);
+        assert!(vm.is_query_timeout_disabled())
     }
 
     #[test]
