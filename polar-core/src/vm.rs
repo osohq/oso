@@ -3756,7 +3756,6 @@ mod tests {
         std::env::set_var("POLAR_TIMEOUT_MS", "0");
         let vm = PolarVirtualMachine::default();
         std::env::remove_var("POLAR_TIMEOUT_MS");
-        assert!(vm.query_timeout_ms == 0);
         assert!(vm.is_query_timeout_disabled())
     }
 
