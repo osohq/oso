@@ -803,9 +803,10 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
   end
 
-  context 'Oso roles' do
+  # test_roles_integration
+  context 'Oso roles' do # rubocop:disable Metrics/BlockLength
     require_relative './roles_helpers'
-    it 'works' do
+    it 'works' do # rubocop:disable Metrics/BlockLength
       osohq = RolesHelpers::Org.new('osohq')
       apple = RolesHelpers::Org.new('apple')
       oso = RolesHelpers::Repo.new('oso', osohq)
@@ -813,11 +814,11 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       bug = RolesHelpers::Issue.new('bug', oso)
       laggy = RolesHelpers::Issue.new('laggy', ios)
 
-      osohqOwner = RolesHelpers::Role.new('owner', osohq)
-      osohqMember = RolesHelpers::Role.new('member', osohq)
+      osohq_owner = RolesHelpers::Role.new('owner', osohq)
+      osohq_member = RolesHelpers::Role.new('member', osohq)
 
-      leina = RolesHelpers::User.new('leina', [osohqOwner])
-      steve = RolesHelpers::User.new('steve', [osohqMember])
+      leina = RolesHelpers::User.new('leina', [osohq_owner])
+      steve = RolesHelpers::User.new('steve', [osohq_member])
 
       policy = <<~POLAR
         resource(_type: Org, "org", actions, roles) if
@@ -872,12 +873,12 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
             role_allows(actor, action, resource);
       POLAR
 
-      subject.register_class(RolesHelpers::Org, name: "Org")
-      subject.register_class(RolesHelpers::Repo, name: "Repo")
-      subject.register_class(RolesHelpers::Issue, name: "Issue")
-      subject.register_class(RolesHelpers::User, name: "User")
+      subject.register_class(RolesHelpers::Org, name: 'Org')
+      subject.register_class(RolesHelpers::Repo, name: 'Repo')
+      subject.register_class(RolesHelpers::Issue, name: 'Issue')
+      subject.register_class(RolesHelpers::User, name: 'User')
       subject.load_str(policy)
-      subject.enable_roles()
+      subject.enable_roles
 
       expect(subject.query_rule('allow', leina, 'invite', osohq).to_a).not_to be_empty
 
@@ -891,15 +892,15 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(subject.query_rule('allow', steve, 'push', oso).to_a).to be_empty
       expect(subject.query_rule('allow', steve, 'pull', oso).to_a).not_to be_empty
       expect(subject.query_rule('allow', steve, 'edit', bug).to_a).to be_empty
-      
+
       expect(subject.query_rule('allow', leina, 'edit', laggy).to_a).to be_empty
       expect(subject.query_rule('allow', steve, 'edit', laggy).to_a).to be_empty
-      
+
       gabe = RolesHelpers::User.new('gabe', [])
       expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).to be_empty
-      gabe = RolesHelpers::User.new('gabe', [osohqMember])
+      gabe = RolesHelpers::User.new('gabe', [osohq_member])
       expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).to be_empty
-      gabe = RolesHelpers::User.new('gabe', [osohqOwner])
+      gabe = RolesHelpers::User.new('gabe', [osohq_owner])
       expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).not_to be_empty
     end
   end
