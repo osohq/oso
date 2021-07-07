@@ -287,7 +287,7 @@ impl PolarVirtualMachine {
         goals: Goals,
         messages: MessageQueue,
     ) -> Self {
-        let timeout_ms = std::env::var("POLAR_TIMEOUT_MS")
+        let query_timeout_ms = std::env::var("POLAR_TIMEOUT_MS")
             .ok()
             .and_then(|timeout_str| timeout_str.parse::<u64>().ok())
             .unwrap_or(DEFAULT_TIMEOUT_MS);
@@ -300,7 +300,7 @@ impl PolarVirtualMachine {
             goals: GoalStack::new_reversed(goals),
             binding_manager: BindingManager::new(),
             query_start_time: None,
-            query_timeout_ms: timeout_ms,
+            query_timeout_ms,
             stack_limit: MAX_STACK_SIZE,
             csp: Bsp::default(),
             choices: vec![],
