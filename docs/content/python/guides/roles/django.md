@@ -1,5 +1,5 @@
 ---
-title: Django
+title: With Django
 weight: 3
 ---
 

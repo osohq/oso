@@ -1,5 +1,5 @@
 ---
-title: SQLAlchemy
+title: With SQLAlchemy
 weight: 2
 description: >
     Use Oso with SQLAlchemy to handle all roles data management,
