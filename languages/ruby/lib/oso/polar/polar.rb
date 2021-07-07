@@ -52,16 +52,16 @@ module Oso
       end
 
       def enable_roles
-        if !polar_roles_enabled
-          roles_helper = Class.new do
-            def self.join(separator, left, right)
-              [left, right].join(separator)
-            end
+        return if polar_roles_enabled
+
+        roles_helper = Class.new do
+          def self.join(separator, left, right)
+            [left, right].join(separator)
           end
-          register_constant(roles_helper, name: "__oso_internal_roles_helpers__")
-          ffi_polar.enable_roles
-          self.polar_roles_enabled = true
         end
+        register_constant(roles_helper, name: '__oso_internal_roles_helpers__')
+        ffi_polar.enable_roles
+        self.polar_roles_enabled = true
       end
 
       # Clear all rules and rule sources from the current Polar instance

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RolesHelpers
   class Org
     attr_reader :name
