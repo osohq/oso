@@ -287,6 +287,10 @@ impl PolarVirtualMachine {
         goals: Goals,
         messages: MessageQueue,
     ) -> Self {
+        let timeout_ms = std::env::var("POLAR_TIMEOUT_MS")
+            .ok()
+            .and_then(|timeout_str| timeout_str.parse::<u64>().ok())
+            .unwrap_or(DEFAULT_TIMEOUT_MS);
         let constants = kb
             .read()
             .expect("cannot acquire KB read lock")
@@ -296,9 +300,7 @@ impl PolarVirtualMachine {
             goals: GoalStack::new_reversed(goals),
             binding_manager: BindingManager::new(),
             query_start_time: None,
-            query_timeout_ms: std::env::var("POLAR_TIMEOUT_MS")
-                .map(|timeout_str| timeout_str.parse::<u64>().unwrap_or(DEFAULT_TIMEOUT_MS))
-                .unwrap_or(DEFAULT_TIMEOUT_MS),
+            query_timeout_ms: timeout_ms,
             stack_limit: MAX_STACK_SIZE,
             csp: Bsp::default(),
             choices: vec![],
@@ -877,7 +879,7 @@ impl PolarVirtualMachine {
         if elapsed > self.query_timeout_ms {
             return Err(error::RuntimeError::QueryTimeout {
                 msg: format!(
-                    "Query running for {}ms. Exceeded query timeout of {}ms.",
+                    "Query running for {}ms, which exceeds the timeout of {}ms. To disable timeouts, set the POLAR_TIMEOUT_MS environment variable to 0.",
                     elapsed, self.query_timeout_ms
                 ),
             }
