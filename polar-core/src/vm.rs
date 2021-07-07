@@ -870,7 +870,7 @@ impl PolarVirtualMachine {
     fn check_timeout(&self) -> PolarResult<()> {
         if self.is_query_timeout_disabled() {
             // Useful for debugging
-            return Ok(())
+            return Ok(());
         }
 
         let elapsed = self.query_duration();
