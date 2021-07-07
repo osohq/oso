@@ -179,6 +179,7 @@ window.hideSearch = function(_e) {
 window.addEventListener('load', () => {
   const searchInput = document.getElementById('search-input');
   searchInput.addEventListener('input', e => window.searchInputKeyUp(e));
+  makePromptsUnselectable();
 });
 
 // this handles when the button on the left nav is clicked and it toggles the search box
@@ -304,3 +305,15 @@ import('algoliasearch').then(algolia => {
     }
   };
 });
+
+
+function makePromptsUnselectable() {
+  const languages = ['bash', 'console'];
+  languages.forEach(l => {
+    const els = document.querySelectorAll(`code.language-${l}[data-lang="${l}"]`);
+    els.forEach(el => {
+      const newHtml = el.innerHTML.replace(/^\$ /gm, '<span style="user-select:none">$ </span>');
+      el.innerHTML = newHtml;
+    });
+  })
+};
