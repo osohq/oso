@@ -37,6 +37,7 @@ module Oso
       def initialize
         @ffi_polar = FFI::Polar.create
         @host = Host.new(ffi_polar)
+        @polar_roles_enabled = false
 
         # Register global constants.
         register_constant nil, name: 'nil'
@@ -50,11 +51,25 @@ module Oso
         register_class String
       end
 
+      def enable_roles
+        if !polar_roles_enabled
+          roles_helper = Class.new do
+            def self.join(separator, left, right)
+              [left, right].join(separator)
+            end
+          end
+          register_constant(roles_helper, name: "__oso_internal_roles_helpers__")
+          ffi_polar.enable_roles
+          self.polar_roles_enabled = true
+        end
+      end
+
       # Clear all rules and rule sources from the current Polar instance
       #
       # @return [self] for chaining.
       def clear_rules
         ffi_polar.clear_rules
+        ffi_polar.enable_roles if polar_roles_enabled
         self
       end
 
@@ -170,6 +185,7 @@ module Oso
 
       # @return [FFI::Polar]
       attr_reader :ffi_polar
+      attr_accessor :polar_roles_enabled
 
       # The R and L in REPL for systems where readline is available.
       def repl_readline(prompt)

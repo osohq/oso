@@ -802,4 +802,105 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(qvar(subject, 'x = new Bar([1, 2, 3]).sum()', 'x', one: true)).to eq(6)
     end
   end
+
+  context 'Oso roles' do
+    require_relative './roles_helpers'
+    it 'works' do
+      osohq = RolesHelpers::Org.new('osohq')
+      apple = RolesHelpers::Org.new('apple')
+      oso = RolesHelpers::Repo.new('oso', osohq)
+      ios = RolesHelpers::Repo.new('ios', apple)
+      bug = RolesHelpers::Issue.new('bug', oso)
+      laggy = RolesHelpers::Issue.new('laggy', ios)
+
+      osohqOwner = RolesHelpers::Role.new('owner', osohq)
+      osohqMember = RolesHelpers::Role.new('member', osohq)
+
+      leina = RolesHelpers::User.new('leina', [osohqOwner])
+      steve = RolesHelpers::User.new('steve', [osohqMember])
+
+      policy = <<~POLAR
+        resource(_type: Org, "org", actions, roles) if
+            actions = [
+                "invite",
+                "create_repo"
+            ] and
+            roles = {
+                member: {
+                    permissions: ["create_repo"],
+                    implies: ["repo:reader"]
+                },
+                owner: {
+                    permissions: ["invite"],
+                    implies: ["member", "repo:writer"]
+                }
+            };
+
+        resource(_type: Repo, "repo", actions, roles) if
+            actions = [
+                "push",
+                "pull"
+            ] and
+            roles = {
+                writer: {
+                    permissions: ["push", "issue:edit"],
+                    implies: ["reader"]
+                },
+                reader: {
+                    permissions: ["pull"]
+                }
+            };
+
+        resource(_type: Issue, "issue", actions, {}) if
+            actions = [
+                "edit"
+            ];
+
+        parent_child(parent_org, repo: Repo) if
+            repo.org = parent_org and
+            parent_org matches Org;
+
+        parent_child(parent_repo, issue: Issue) if
+            issue.repo = parent_repo and
+            parent_repo matches Repo;
+
+        actor_has_role_for_resource(actor, role_name, role_resource) if
+            role in actor.roles and
+            role matches {name: role_name, resource: role_resource};
+
+        allow(actor, action, resource) if
+            role_allows(actor, action, resource);
+      POLAR
+
+      subject.register_class(RolesHelpers::Org, name: "Org")
+      subject.register_class(RolesHelpers::Repo, name: "Repo")
+      subject.register_class(RolesHelpers::Issue, name: "Issue")
+      subject.register_class(RolesHelpers::User, name: "User")
+      subject.load_str(policy)
+      subject.enable_roles()
+
+      expect(subject.query_rule('allow', leina, 'invite', osohq).to_a).not_to be_empty
+
+      expect(subject.query_rule('allow', leina, 'create_repo', osohq).to_a).not_to be_empty
+      expect(subject.query_rule('allow', leina, 'push', oso).to_a).not_to be_empty
+      expect(subject.query_rule('allow', leina, 'pull', oso).to_a).not_to be_empty
+      expect(subject.query_rule('allow', leina, 'edit', bug).to_a).not_to be_empty
+
+      expect(subject.query_rule('allow', steve, 'invite', osohq).to_a).to be_empty
+      expect(subject.query_rule('allow', steve, 'create_repo', osohq).to_a).not_to be_empty
+      expect(subject.query_rule('allow', steve, 'push', oso).to_a).to be_empty
+      expect(subject.query_rule('allow', steve, 'pull', oso).to_a).not_to be_empty
+      expect(subject.query_rule('allow', steve, 'edit', bug).to_a).to be_empty
+      
+      expect(subject.query_rule('allow', leina, 'edit', laggy).to_a).to be_empty
+      expect(subject.query_rule('allow', steve, 'edit', laggy).to_a).to be_empty
+      
+      gabe = RolesHelpers::User.new('gabe', [])
+      expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).to be_empty
+      gabe = RolesHelpers::User.new('gabe', [osohqMember])
+      expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).to be_empty
+      gabe = RolesHelpers::User.new('gabe', [osohqOwner])
+      expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).not_to be_empty
+    end
+  end
 end
