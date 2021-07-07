@@ -31,7 +31,7 @@ use crate::terms::*;
 use crate::traces::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
-pub const QUERY_TIMEOUT_MILLIS: u64 = 30_000;
+pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;
 
 #[derive(Debug, Clone)]
 #[must_use = "ignored goals are never accomplished"]
@@ -227,7 +227,7 @@ pub struct PolarVirtualMachine {
     query_start_time: Option<std::time::Instant>,
     #[cfg(target_arch = "wasm32")]
     query_start_time: Option<f64>,
-    query_timeout_millis: u64,
+    query_timeout_ms: u64,
 
     /// Maximum size of goal stack
     stack_limit: usize,
@@ -296,7 +296,9 @@ impl PolarVirtualMachine {
             goals: GoalStack::new_reversed(goals),
             binding_manager: BindingManager::new(),
             query_start_time: None,
-            query_timeout_millis: QUERY_TIMEOUT_MILLIS,
+            query_timeout_ms: std::env::var("POLAR_TIMEOUT_MS")
+                .map(|timeout_str| timeout_str.parse::<u64>().unwrap_or(DEFAULT_TIMEOUT_MS))
+                .unwrap_or(DEFAULT_TIMEOUT_MS),
             stack_limit: MAX_STACK_SIZE,
             csp: Bsp::default(),
             choices: vec![],
@@ -379,11 +381,6 @@ impl PolarVirtualMachine {
     #[cfg(test)]
     fn set_stack_limit(&mut self, limit: usize) {
         self.stack_limit = limit;
-    }
-
-    #[cfg(test)]
-    fn set_query_timeout(&mut self, timeout_s: u64) {
-        self.query_timeout_millis = timeout_s as u64 * 1_000;
     }
 
     pub fn new_id(&self) -> u64 {
@@ -861,12 +858,12 @@ impl PolarVirtualMachine {
             .query_start_time
             .expect("Query start time not recorded");
 
-        if (now - start_time).as_millis() as u64 > self.query_timeout_millis {
+        if (now - start_time).as_millis() as u64 > self.query_timeout_ms {
             return Err(error::RuntimeError::QueryTimeout {
                 msg: format!(
                     "Query running for {}. Exceeded query timeout of {} seconds",
                     (now - start_time).as_secs(),
-                    self.query_timeout_millis / 1_000
+                    self.query_timeout_ms / 1_000
                 ),
             }
             .into());
@@ -882,12 +879,12 @@ impl PolarVirtualMachine {
             .query_start_time
             .expect("Query start time not recorded");
 
-        if (now - start_time) as u64 > self.query_timeout_millis {
+        if (now - start_time) as u64 > self.query_timeout_ms {
             return Err(error::RuntimeError::QueryTimeout {
                 msg: format!(
                     "Query running for {} seconds. Exceeded query timeout of {} seconds",
                     (now - start_time) as u64 / 1_000,
-                    self.query_timeout_millis / 1_000
+                    self.query_timeout_ms / 1_000
                 ),
             }
             .into());
@@ -3759,9 +3756,21 @@ mod tests {
     }
 
     #[test]
+    fn test_timeout_configuration() {
+        let vm = PolarVirtualMachine::default();
+        assert!(vm.query_timeout_ms == DEFAULT_TIMEOUT_MS);
+
+        std::env::set_var("POLAR_TIMEOUT_MS", "0");
+        let vm = PolarVirtualMachine::default();
+        std::env::remove_var("POLAR_TIMEOUT_MS");
+        assert!(vm.query_timeout_ms == 0);
+    }
+
+    #[test]
     fn test_timeout() {
+        std::env::set_var("POLAR_TIMEOUT_MS", "500");
         let mut vm = PolarVirtualMachine::default();
-        vm.set_query_timeout(1);
+        std::env::remove_var("POLAR_TIMEOUT_MS");
         // Turn this off so we don't hit it.
         vm.set_stack_limit(std::usize::MAX);
 
