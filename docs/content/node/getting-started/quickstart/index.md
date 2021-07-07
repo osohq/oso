@@ -1,7 +1,7 @@
 ---
 title: Quickstart (5 min)
 description: |
-  Ready to get started? See Oso in action, and walk through adding roles to an app.
+  Ready to get started? See Oso in action and walk through adding roles to an app.
 weight: 1
 ---
 
@@ -15,8 +15,9 @@ Roles can be as simple as "user" and "admin", or as complex as a management hier
 
 Oso isn't restricted to roles, though — you can replace any authorization code in your app with an Oso policy.
 
-Why use Oso? Authorization always starts out simple, but can be increasingly
-difficult to manage as your app grows. Oso's design will guide you to best practices.
+Why use Oso?
+Authorization always starts out simple, but it can be increasingly difficult to manage as your app grows.
+Oso's design will guide you to best practices.
 
 Oso is a library — it runs alongside your app code and doesn't make any calls over the network.
 Your data doesn't leave your server. Oso also doesn't persist user data inside the library, so you stay in control of your data.
@@ -38,16 +39,16 @@ role-based access control.
 
 ## Accept or deny requests
 
-When a request arrives, your application will ask Oso if it should accept the request. Oso needs three pieces of information to make that decision:
+When a request arrives, your application will need to ask Oso if it should accept the request. Oso needs three pieces of information to make that decision:
 - Who is making the request? (the "actor")
 - What are they trying to do? (the "action")
 - What are they doing it to? (the "resource")
 
-In Oso, these pieces of information are passed to the `{{% exampleGet "isAllowed" %}}` call: `{{% exampleGet "isAllowed" %}}(actor, action, resource)`.
+You'll pass these pieces of information are to Oso's `{{% exampleGet "isAllowed" %}}` method: `{{% exampleGet "isAllowed" %}}(actor, action, resource)`.
 `{{% exampleGet "isAllowed" %}}` will return `True` or `False`, and your application can choose how to enforce that decision.
 
 That enforcement can happen in the request handler, at the database layer, or in middleware — here, we've chosen to enforce in the request handler.
-Here's {{% exampleGet "example_app" %}} route that displays a page if this user is allowed to read the associated page.
+Here's {{% exampleGet "example_app" %}} route that only displays a page if the current user is allowed to read it.
 
 {{% exampleGet "app_code" %}}
 
@@ -57,7 +58,7 @@ You can tell Oso what requests to accept by providing it with a file full of rul
 
 ## Write an authorization policy
 Here is a typical policy, written in our declarative language, **Polar**.
-It lets any actor with the role `"user"` read a page, but only actors with the role `"admin"` can write to a page.
+It lets any actor with the role `"guest"` read a page, but only actors with the role `"admin"` can write to a page.
 
 We can load our example policy from a file with the extension `.polar`.
 
@@ -75,18 +76,18 @@ actor_role(actor, role) if
 resource(_type: Page, "page", actions, roles) if
     actions = ["read", "write"] and
     roles = {
-        user: {
+        guest: {
             permissions: ["read"]
         },
         admin: {
             permissions: ["write"],
-            implies: ["user"]
+            implies: ["guest"]
         }
     };
  ```
 
 The `allow` rule is the top-level rule that we use to say who can do what in our application.
-In this case, we are delegating to Oso's builtin `role_allow` rule which implements all the
+In this case, we are delegating to Oso's built-in `role_allow` rule which implements all the
 authorization logic for role-based access control based on the data we provide in `actor_role`
 and `resource`.
 
@@ -95,13 +96,13 @@ Role objects are of the form `{name: "the-role-name", resource: TheResourceObjec
 The Oso builtin roles will look up this rule, so this is required.
 
 A `resource` rule governs access to a specific resource in your app — for instance, a page, an object, a route, or a database entry.
-Here, there are two possible actions that can be done to a `Page`: `"read"` and `"write"`.
-Users can read, but not write, to a `Page`.
+In the above configuration for `Page`, there are two possible actions: `"read"` and `"write"`.
+Guests can read, but not write, to a `Page`.
 Admins are allowed to write to a `Page`.
 
-The line `implies: ["user"]` says that admins can also do anything users are allowed to do; that is, read a `Page`.
+The line `implies: ["guest"]` says that admins can also do anything guests are allowed to do; that is, admins can also read a `Page`.
 
-There's much more you can do with Polar, including defining parent-child relationships — we're just scratching the surface here.
+There's much more you can do with Oso — we're just scratching the surface here. Polar is a very expressive language, and you can encode authorization logic far beyond what we've shown in this guide.
 
 ## Calling back into your {{% lang %}} code
 
