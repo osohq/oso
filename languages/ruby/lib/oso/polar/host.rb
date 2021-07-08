@@ -12,13 +12,18 @@ module Oso
       attr_reader :classes
       # @return [Hash<Integer, Object>]
       attr_reader :instances
+      # @return [Boolean]
+      attr_reader :accept_expression
 
       public
+
+      attr_writer :accept_expression
 
       def initialize(ffi_polar)
         @ffi_polar = ffi_polar
         @classes = {}
         @instances = {}
+        @accept_expression = false
       end
 
       def initialize_copy(other)
@@ -173,7 +178,16 @@ module Oso
                   { 'Call' => { 'name' => value.name, 'args' => value.args.map { |el| to_polar(el) } } }
                 when value.instance_of?(Variable)
                   # This is supported so that we can query for unbound variables
-                  { 'Variable' => value }
+                  { 'Variable' => value.name }
+                when value.instance_of?(Expression)
+                  { 'Expression' => { 'operator' => value.operator, 'args' => value.args.map{ |el| to_polar(el) } } }
+                when value.instance_of?(Pattern)
+                  dict = to_polar(value.fields)['value']
+                  if value.tag.nil?
+                    { 'Pattern' => dict }
+                  else
+                    { 'Pattern' => { 'Instance' => { 'tag' => value.tag, 'fields' => dict['Dictionary'] } } }
+                  end
                 else
                   { 'ExternalInstance' => { 'instance_id' => cache_instance(value), 'repr' => value.to_s } }
                 end
@@ -219,7 +233,23 @@ module Oso
         when 'Call'
           Predicate.new(value['name'], args: value['args'].map { |a| to_ruby(a) })
         when 'Variable'
-          Variable.new(value['name'])
+          Variable.new(value)
+        when 'Expression'
+          raise UnexpectedPolarTypeError, tag unless accept_expression
+          args = value['args'].map { |a| to_ruby(a) }
+          Expression.new(value['operator'], args)
+        when 'Pattern'
+          case value.keys.first
+          when 'Instance'
+            tag = value.values.first['tag']
+            fields = value.values.first['fields']['fields'].transform_values { |v| to_ruby(v) }
+            Pattern.new(tag, fields)
+          when 'Dictionary'
+            fields = value.values.first['fields'].transform_values { |v| to_ruby(v) }
+            Pattern.new(nil, fields)
+          else
+            raise UnexpectedPolarTypeError, "#{value.keys.first} variant of Pattern"
+          end
         else
           raise UnexpectedPolarTypeError, tag
         end

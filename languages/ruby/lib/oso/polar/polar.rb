@@ -62,6 +62,27 @@ module Oso
         register_constant(roles_helper, name: '__oso_internal_roles_helpers__')
         ffi_polar.enable_roles
         self.polar_roles_enabled = true
+
+        # validate config
+        validation_query_results = []
+        loop do
+          query = ffi_polar.next_inline_query
+          break if query.nil?
+          new_host = host.dup
+          new_host.accept_expression = true
+          results = Query.new(query, host: new_host).to_a
+          raise InlineQueryFailedError, query.source if results.empty?
+          validation_query_results.append(results)
+        end
+
+        # turn bindings back into polar
+        validation_query_results = validation_query_results.map do |results|
+          results.map do |result|
+            {'bindings' => result.transform_values { |v| host.to_polar(v) } }
+          end
+        end
+
+        ffi_polar.validate_roles_config(validation_query_results)
       end
 
       # Clear all rules and rule sources from the current Polar instance
@@ -106,6 +127,13 @@ module Oso
 
           raise InlineQueryFailedError, next_query.source if Query.new(next_query, host: host).first.nil?
         end
+
+        # If roles are enabled, re-validate config when new rules are loaded.
+        if polar_roles_enabled
+            self.polar_roles_enabled = false
+            self.enable_roles
+        end
+
         self
       end
 
