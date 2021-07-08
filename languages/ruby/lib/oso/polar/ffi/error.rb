@@ -24,7 +24,7 @@ module Oso
         #
         # @return [::Oso::Polar::Error] if there's an FFI error.
         # @return [::Oso::Polar::FFIErrorNotFound] if there isn't one.
-        def self.get # rubocop:disable Metrics/MethodLength
+        def self.get # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
           error = Rust.get
           return ::Oso::Polar::FFIErrorNotFound if error.null?
 

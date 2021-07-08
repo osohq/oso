@@ -180,7 +180,7 @@ module Oso
                   # This is supported so that we can query for unbound variables
                   { 'Variable' => value.name }
                 when value.instance_of?(Expression)
-                  { 'Expression' => { 'operator' => value.operator, 'args' => value.args.map{ |el| to_polar(el) } } }
+                  { 'Expression' => { 'operator' => value.operator, 'args' => value.args.map { |el| to_polar(el) } } }
                 when value.instance_of?(Pattern)
                   dict = to_polar(value.fields)['value']
                   if value.tag.nil?
@@ -236,6 +236,7 @@ module Oso
           Variable.new(value)
         when 'Expression'
           raise UnexpectedPolarTypeError, tag unless accept_expression
+
           args = value['args'].map { |a| to_ruby(a) }
           Expression.new(value['operator'], args)
         when 'Pattern'
