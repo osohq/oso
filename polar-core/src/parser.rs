@@ -375,4 +375,34 @@ mod tests {
             }
         ));
     }
+
+    #[test]
+    fn test_parse_new_operators() {
+        let rules = r#"
+            # single-word infix
+            _frobs_(x, y) if x.frobs(y);
+
+            # multi-word infix
+            _frobbed-by_(x, y) if x frobs y;
+
+            # single-word postfix
+            enfrobnicated_(x) if _ frobbed by x;
+
+            # multi-word postfix
+            done-been-frobbed_(x) if enfrobnicated x;
+
+            # single-word prefix
+            _frobulated(x) if done been frobbed x;
+
+            # multi-word prefix
+            _has-done-a-frobbing(x) if x frobulated;
+
+            # single-word multi-infix
+            hast_frobnicated_mightily(x, _y) if x has done a frobbing;
+
+            # multi-word multi-infix
+            be-hold_whomst-hath-frobnicated_big-much(x, y) if hast x frobnicated y mightily;
+        "#;
+        assert_eq!(parse_rules(0, rules).unwrap()[0].to_polar(), rules.trim());
+    }
 }
