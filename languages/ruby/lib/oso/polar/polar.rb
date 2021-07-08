@@ -72,7 +72,7 @@ module Oso
           new_host.accept_expression = true
           results = Query.new(query, host: new_host).to_a
           raise InlineQueryFailedError, query.source if results.empty?
-          validation_query_results.append(results)
+          validation_query_results.push results
         end
 
         # turn bindings back into polar
