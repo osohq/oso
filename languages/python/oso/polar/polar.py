@@ -165,7 +165,7 @@ class Polar:
         self.ffi_polar.clear_rules()
         self._polar_roles_enabled = False
 
-    def query(self, query, *, bindings=None, accept_expression=False):
+    def query(self, query, *, bindings=None, accept_expression=False, enable_tracing=False):
         """Query for a predicate, parsing it if necessary.
 
         :param query: The predicate to query for.
@@ -176,9 +176,10 @@ class Polar:
         host.set_accept_expression(accept_expression)
 
         if isinstance(query, str):
-            query = self.ffi_polar.new_query_from_str(query)
+            query = self.ffi_polar.new_query_from_str(query, enable_tracing=enable_tracing)
         elif isinstance(query, Predicate):
-            query = self.ffi_polar.new_query_from_term(host.to_polar(query))
+            query = self.ffi_polar.new_query_from_term(host.to_polar(query),
+                                                       enable_tracing=enable_tracing)
         else:
             raise InvalidQueryTypeError()
 
