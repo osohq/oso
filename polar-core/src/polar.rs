@@ -11,6 +11,7 @@ use super::rules::*;
 use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
+use super::traces_v2;
 use super::vm::*;
 use super::warnings::check_singletons;
 
@@ -110,6 +111,10 @@ impl Query {
 
     pub fn bind(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
         self.vm.bind(&name, value)
+    }
+
+    pub fn trace(&self) -> Vec<traces_v2::Event> {
+        self.vm.get_trace_events()
     }
 }
 

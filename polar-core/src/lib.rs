@@ -28,6 +28,7 @@ pub mod rules;
 mod runnable;
 mod sources;
 pub mod terms;
+mod traces_v2;
 pub mod traces;
 mod visitor;
 mod vm;

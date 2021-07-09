@@ -29,6 +29,7 @@ use crate::runnable::Runnable;
 use crate::sources::*;
 use crate::terms::*;
 use crate::traces::*;
+use crate::traces_v2;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;
@@ -105,6 +106,7 @@ pub enum Goal {
         outer: usize,
         inner: usize,
     },
+    TraceV2Pop(u64),
     TraceRule {
         trace: Rc<Trace>,
     },
@@ -220,6 +222,8 @@ pub struct PolarVirtualMachine {
     pub trace_stack: TraceStack, // Stack of traces higher up the tree.
     pub trace: Vec<Rc<Trace>>,   // Traces for the current level of the trace tree.
 
+    trace_recorder: traces_v2::ScopedRecorder,
+
     // Errors from outside the vm.
     pub external_error: Option<String>,
 
@@ -307,6 +311,7 @@ impl PolarVirtualMachine {
             queries: vec![],
             tracing,
             trace_stack: vec![],
+            trace_recorder: traces_v2::ScopedRecorder::default(),
             trace: vec![],
             external_error: None,
             debugger: Debugger::default(),
@@ -463,6 +468,12 @@ impl PolarVirtualMachine {
             Goal::CheckError => return self.check_error(),
             Goal::Noop => {}
             Goal::Query { term } => {
+                let id = self.trace_recorder.push_parent(traces_v2::Event::execute_goal(
+                    Goal::Query { term: term.clone() },
+                    self.source(term),
+                ));
+                self.push_goal(Goal::TraceV2Pop(id))?;
+
                 let result = self.query(term);
                 self.maybe_break(DebugEvent::Query)?;
                 return result;
@@ -491,6 +502,9 @@ impl PolarVirtualMachine {
                 trace.children.append(&mut children);
                 self.trace.push(Rc::new(trace.clone()));
                 self.maybe_break(DebugEvent::Pop)?;
+            }
+            Goal::TraceV2Pop(id) => {
+                self.trace_recorder.pop_to(*id)
             }
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
@@ -647,7 +661,10 @@ impl PolarVirtualMachine {
             self.print(&format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()));
         }
 
-        self.binding_manager.bind(var, val)
+        self.binding_manager.bind(var, val).and_then(|r| {
+            self.trace_recorder.push(traces_v2::Event::bindings(self.bindings(true)));
+            Ok(r)
+        })
     }
 
     pub fn add_binding_follower(&mut self) -> FollowerId {
@@ -887,6 +904,10 @@ impl PolarVirtualMachine {
         }
         Ok(())
     }
+
+    pub fn get_trace_events(&self) -> Vec<traces_v2::Event> {
+        self.trace_recorder.events().clone()
+    }
 }
 
 /// Implementations of instructions.
@@ -894,6 +915,8 @@ impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) -> PolarResult<()> {
+        self.trace_recorder.push(traces_v2::Event::backtrack());
+
         if self.log {
             self.print("⇒ backtrack");
         }
@@ -931,6 +954,8 @@ impl PolarVirtualMachine {
                                 trace_stack,
                             })
                         }
+                        let id = self.trace_recorder.push_parent(traces_v2::Event::execute_choice());
+                        self.push_goal(Goal::TraceV2Pop(id))?;
                         self.goals.append(&mut alternative);
                         break;
                     }
@@ -2862,6 +2887,7 @@ impl Runnable for PolarVirtualMachine {
 
         if self.goals.is_empty() {
             if self.choices.is_empty() {
+                self.trace_recorder.push(traces_v2::Event::done());
                 return Ok(QueryEvent::Done { result: true });
             } else {
                 self.backtrack()?;
@@ -2914,6 +2940,7 @@ impl Runnable for PolarVirtualMachine {
                 .collect();
         }
 
+        self.trace_recorder.push(traces_v2::Event::result(bindings.clone()));
         Ok(QueryEvent::Result { bindings, trace })
     }
 

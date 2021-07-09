@@ -126,6 +126,9 @@ class Query:
         process_messages(self.next_message)
         check_result(result)
 
+    def trace(self):
+        return ffi.string(ffi.gc(lib.polar_get_query_trace(self.ptr), lib.string_free))
+
 
 class QueryEvent:
     def __init__(self, ptr):

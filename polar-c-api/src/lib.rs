@@ -221,6 +221,18 @@ pub extern "C" fn polar_next_query_event(query_ptr: *mut Query) -> *const c_char
     })
 }
 
+#[no_mangle]
+pub extern "C" fn polar_get_query_trace(query_ptr: *mut Query) -> *const c_char {
+    ffi_try!({
+        let query = unsafe { ffi_ref!(query_ptr) };
+        let trace = query.trace();
+        let trace_json = serde_json::to_string(&trace).unwrap();
+        CString::new(trace_json)
+            .expect("String should not contain any 0 bytes")
+            .into_raw()
+    })
+}
+
 /// Execute one debugger command for the given query.
 ///
 /// ## Returns

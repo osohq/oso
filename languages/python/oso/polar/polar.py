@@ -165,13 +165,7 @@ class Polar:
         self.ffi_polar.clear_rules()
         self._polar_roles_enabled = False
 
-    def query(self, query, *, bindings=None, accept_expression=False, enable_tracing=False):
-        """Query for a predicate, parsing it if necessary.
-
-        :param query: The predicate to query for.
-
-        :return: The result of the query.
-        """
+    def _query(self, query, *, bindings=None, accept_expression=False, enable_tracing=False):
         host = self.host.copy()
         host.set_accept_expression(accept_expression)
 
@@ -183,7 +177,17 @@ class Polar:
         else:
             raise InvalidQueryTypeError()
 
-        for res in Query(query, host=host, bindings=bindings).run():
+        return Query(query, host=host, bindings=bindings)
+
+    def query(self, query, *, bindings=None, accept_expression=False, enable_tracing=False):
+        """Query for a predicate, parsing it if necessary.
+
+        :param query: The predicate to query for.
+
+        :return: The result of the query.
+        """
+        for res in self._query(query, bindings=bindings, accept_expression=accept_expression,
+                               enable_tracing=enable_tracing).run():
             yield res
 
     def query_rule(self, name, *args, **kwargs):
