@@ -1,13 +1,14 @@
+use std::convert::TryFrom;
 /// Traces v2. Better traces.
 use std::option::Option;
-use std::convert::TryFrom;
 
 use serde::Serialize;
 
 use crate::bindings::Bindings;
+use crate::formatting::ToPolarString;
 use crate::sources::Source;
-use crate::vm;
 use crate::terms::Term;
+use crate::vm;
 
 /// Top level event for trace containing common fields.
 #[derive(Clone, Serialize)]
@@ -37,7 +38,7 @@ impl Event {
             timestamp_ms: _timestamp_ms(),
             id: 0,
             parent_id: 0,
-            event_type: EventDetail::Backtrack
+            event_type: EventDetail::Backtrack,
         }
     }
 
@@ -46,7 +47,7 @@ impl Event {
             timestamp_ms: _timestamp_ms(),
             id: 0,
             parent_id: 0,
-            event_type: EventDetail::ExecuteChoice {}
+            event_type: EventDetail::ExecuteChoice {},
         }
     }
 
@@ -55,7 +56,7 @@ impl Event {
             timestamp_ms: _timestamp_ms(),
             id: 0,
             parent_id: 0,
-            event_type: EventDetail::ChoicePush {}
+            event_type: EventDetail::ChoicePush {},
         }
     }
 
@@ -64,9 +65,7 @@ impl Event {
             timestamp_ms: _timestamp_ms(),
             id: 0,
             parent_id: 0,
-            event_type: EventDetail::Bindings {
-                bindings
-            }
+            event_type: EventDetail::Bindings { bindings },
         }
     }
 
@@ -75,9 +74,7 @@ impl Event {
             timestamp_ms: _timestamp_ms(),
             id: 0,
             parent_id: 0,
-            event_type: EventDetail::Result {
-                bindings
-            }
+            event_type: EventDetail::Result { bindings },
         }
     }
 
@@ -86,7 +83,7 @@ impl Event {
             timestamp_ms: _timestamp_ms(),
             id: 0,
             parent_id: 0,
-            event_type: EventDetail::Done
+            event_type: EventDetail::Done,
         }
     }
 }
@@ -94,7 +91,7 @@ impl Event {
 #[derive(Clone, Serialize)]
 #[serde(tag = "goal_type")]
 pub enum Goal {
-    Query { term: Term }
+    Query { term: Term, polar: String },
 }
 
 impl TryFrom<vm::Goal> for Goal {
@@ -103,9 +100,10 @@ impl TryFrom<vm::Goal> for Goal {
     fn try_from(other: vm::Goal) -> Result<Self, ()> {
         match other {
             vm::Goal::Query { term } => {
-                Ok(Goal::Query { term })
-            },
-            _ => Err(())
+                let polar = term.to_polar();
+                Ok(Goal::Query { term, polar })
+            }
+            _ => Err(()),
         }
     }
 }
@@ -181,6 +179,10 @@ impl ScopedRecorder {
         self.parent_id.last().cloned().unwrap_or_default()
     }
 
+    pub fn push_parent_id(&mut self, id: u64) {
+        self.parent_id.push(id);
+    }
+
     pub fn push_parent(&mut self, mut event: Event) -> u64 {
         let id = self.push(event);
         dbg!("push_parent", id, self.parent_id());
@@ -203,7 +205,7 @@ impl ScopedRecorder {
             dbg!("pop_to", &self.parent_id, target);
             let id = self.parent_id.pop().unwrap();
             if id == target {
-                return
+                return;
             }
         }
     }
@@ -213,7 +215,7 @@ impl ScopedRecorder {
             dbg!("pop_up_to", &self.parent_id, target);
             let id = self.parent_id.last().unwrap();
             if id == &target {
-                return
+                return;
             }
 
             self.parent_id.pop();
