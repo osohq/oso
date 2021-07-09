@@ -183,12 +183,14 @@ impl ScopedRecorder {
 
     pub fn push_parent(&mut self, mut event: Event) -> u64 {
         let id = self.push(event);
+        dbg!("push_parent", id, self.parent_id());
         self.parent_id.push(id);
         id
     }
 
     pub fn push(&mut self, mut event: Event) -> u64 {
         event.parent_id = self.parent_id();
+        dbg!("push", event.id, event.parent_id);
         self.recorder.push(event)
     }
 
@@ -198,7 +200,7 @@ impl ScopedRecorder {
 
     pub fn pop_to(&mut self, target: u64) {
         loop {
-            dbg!(&self.parent_id, target);
+            dbg!("pop_to", &self.parent_id, target);
             let id = self.parent_id.pop().unwrap();
             if id == target {
                 return
@@ -208,7 +210,7 @@ impl ScopedRecorder {
 
     pub fn pop_up_to(&mut self, target: u64) {
         loop {
-            dbg!(&self.parent_id, target);
+            dbg!("pop_up_to", &self.parent_id, target);
             let id = self.parent_id.last().unwrap();
             if id == &target {
                 return

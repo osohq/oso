@@ -473,7 +473,11 @@ impl PolarVirtualMachine {
                     Goal::Query { term: term.clone() },
                     self.source(term),
                 ));
-                self.push_goal(Goal::TraceV2Pop(id))?;
+
+                self.push_choice(vec![vec![
+                    Goal::TraceV2Pop(id),
+                    Goal::Backtrack
+                ]]);
 
                 let result = self.query(term);
                 self.maybe_break(DebugEvent::Query)?;
