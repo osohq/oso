@@ -186,3 +186,6 @@ class Query:
         except EOFError:
             command = "continue"
         self.ffi_query.debug_command(self.host.to_polar(command))
+
+    def trace(self):
+        return json.loads(self.ffi_query.trace())
