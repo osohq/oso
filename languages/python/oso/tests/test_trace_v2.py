@@ -56,12 +56,14 @@ def test_graph():
             label = event_type
             if event_type == "ExecuteGoal":
                 label = node["goal"]["polar"]
-            dot.node(name, label=label, color=color)
+            if event_type != "Bindings":
+                dot.node(name, label=label, color=color)
 
         for node in data:
-            parent_id = node["parent_id"]
-            id = node["id"]
-            if parent_id != id:
-                dot.edge(str(parent_id), str(id))
+            if node["event_type"] != "Bindings":
+                parent_id = node["parent_id"]
+                id = node["id"]
+                if parent_id != id:
+                    dot.edge(str(parent_id), str(id))
 
     dot.render("trace.gv", view=True)
