@@ -1,0 +1,23 @@
+[package]
+name = "procosious"
+description = "Oso as a proc macro"
+authors = ["Oso Security, Inc. <support@osohq.com>"]
+license = "Apache-2.0"
+homepage = "https://github.com/osohq/oso"
+readme = "README.md"
+
+version = "0.0.1"
+
+edition = "2018"
+
+[lib]
+proc-macro = true
+bench = false
+
+[dependencies]
+quote = "1.0.8"
+oso = { path="../oso" }
+
+[dependencies.syn]
+version = "1.0.58"
+features = ["full"]

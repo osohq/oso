@@ -709,6 +709,7 @@ dependencies = [
  "oso-derive",
  "polar-core",
  "proc-macro2 1.0.27",
+ "procosious",
  "quote",
  "rustyline",
  "rustyline-derive",
@@ -895,6 +896,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0d8caf72986c1a598726adc988bb5984792ef84f5ee5aa50209145ee8077038"
 dependencies = [
  "unicode-xid 0.2.1",
+]
+
+[[package]]
+name = "procosious"
+version = "0.0.1"
+dependencies = [
+ "oso",
+ "quote",
+ "syn",
 ]
 
 [[package]]

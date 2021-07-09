@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use crate::errors::OsoError;
 use crate::host::{Host, Instance, PolarIterator};
+use crate::ToPolar;
 use crate::{FromPolar, PolarValue};
 
 use polar_core::events::*;
@@ -31,6 +32,12 @@ impl Query {
         }
     }
 
+    pub fn bind(&mut self, k: String, v: impl ToPolar) -> crate::Result<()> {
+        self.inner
+            .bind(Symbol(k), v.to_polar().to_term(&mut self.host))
+            .map_err(|e| e.into())
+    }
+
     pub fn next_result(&mut self) -> Option<crate::Result<ResultSet>> {
         loop {
             let event = self.inner.next()?;
@@ -44,7 +51,7 @@ impl Query {
                 QueryEvent::None => Ok(()),
                 QueryEvent::Done { .. } => return None,
                 QueryEvent::Result { bindings, .. } => {
-                    return Some(ResultSet::from_bindings(bindings, self.host.clone()));
+                    return Some(Ok(ResultSet::from_bindings(bindings, self.host.clone())));
                 }
                 QueryEvent::MakeExternal {
                     instance_id,
@@ -272,25 +279,8 @@ pub struct ResultSet {
 }
 
 impl ResultSet {
-    pub fn from_bindings(
-        bindings: polar_core::kb::Bindings,
-        host: crate::host::Host,
-    ) -> crate::Result<Self> {
-        // Check for expression.
-        for term in bindings.values() {
-            if term.value().as_expression().is_ok() {
-                return Err(OsoError::Custom {
-                    message: r#"
-Recieved Expression from Polar VM. The Expression type is not yet supported in this language.
-
-This may mean you performed an operation in your policy over an unbound variable.
-                    "#
-                    .to_owned(),
-                });
-            }
-        }
-
-        Ok(Self { bindings, host })
+    pub fn from_bindings(bindings: polar_core::kb::Bindings, host: crate::host::Host) -> Self {
+        Self { bindings, host }
     }
 
     /// Return the keys in bindings.

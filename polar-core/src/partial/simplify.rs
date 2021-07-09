@@ -65,16 +65,17 @@ impl Folder for VariableSubber {
 }
 
 /// Substitute `sym!("_this")` for a variable in a partial.
-pub fn sub_this(this: Symbol, term: Term) -> Term {
-    if term
-        .value()
-        .as_symbol()
-        .map(|s| s == &this)
-        .unwrap_or(false)
-    {
-        return term;
-    }
-    fold_term(term, &mut VariableSubber::new(this))
+pub fn sub_this(_this: Symbol, term: Term) -> Term {
+    term
+    // if term
+    //     .value()
+    //     .as_symbol()
+    //     .map(|s| s == &this)
+    //     .unwrap_or(false)
+    // {
+    //     return term;
+    // }
+    // fold_term(term, &mut VariableSubber::new(this))
 }
 
 /// Turn `_this = x` into `x` when it's ground.

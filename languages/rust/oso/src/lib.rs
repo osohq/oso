@@ -87,7 +87,7 @@ pub use errors::{OsoError, Result};
 pub use host::{Class, ClassBuilder, FromPolar, FromPolarList, PolarValue, ToPolar, ToPolarList};
 pub use query::{Query, ResultSet};
 
-use polar_core::{polar::Polar, terms::Numeric};
+use polar_core::{polar::Polar, terms::{Numeric, Operation, Operator, Pattern, Symbol, Term, ToPolarString, Value}};
 
 /// Classes that can be used as types in Polar policies.
 ///
@@ -126,12 +126,77 @@ extern crate oso_derive;
 pub use oso_derive::*;
 
 use lazy_static::lazy_static;
-use std::sync::{Arc, Mutex};
+use std::{
+    borrow::Borrow,
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 lazy_static! {
     pub static ref GLOBAL_OSO: Arc<Mutex<Oso>> = Default::default();
+    pub static ref ALLOW_CACHE: Arc<Mutex<HashMap<(PolarValue, PolarValue), PolarValue>>> =
+        Default::default();
+}
+pub fn magic_is_allowed<Actor, Action, Resource>(
+    actor: Actor,
+    action: Action,
+    resource: Resource,
+) -> crate::Result<bool>
+where
+    Actor: ToPolar,
+    Action: ToPolar,
+    Resource: ToPolar,
+{
+    let oso = GLOBAL_OSO.lock().unwrap();
+    let mut cache = ALLOW_CACHE.lock().unwrap();
+
+    let actor = actor.to_polar();
+    let action = action.to_polar();
+    let resource = resource.to_polar();
+
+    let mut cached = None;
+
+    if let Some(partial_res) = cache.get(&(actor.clone(), action.clone())) {
+        println!(
+            "Using precomputed partial: {}",
+            match partial_res {
+                PolarValue::Expression(o) => {
+                    o.to_polar()
+                }
+                v => format!("{:#?}", v),
+            }
+        );
+        cached = Some(partial_res.clone());
+    } else {
+        let resource_var = PolarValue::Variable("resource".to_string());
+        let mut query = oso.query_rule("allow", (actor.clone(), action.clone(), resource_var))?;
+        if let Some(Ok(res)) = query.next_result() {
+            let partial_res = res.get("resource").unwrap();
+            cache.insert((actor.clone(), action.clone()), partial_res.clone());
+            cached = Some(partial_res)
+        }
+    }
+
+    match cached {
+        None => Ok(false),
+        Some(p @ PolarValue::Expression(_)) => oso.query_partial(p, resource),
+        Some(p) => Ok(p == resource.to_polar()),
+    }
 }
 
-struct CodegenVisitor {
+// pub fn type_constraint<T>() -> PolarValue {
+//     let term = Operation {
+//         operator: Operator::And,
+//         args: vec![Term::new_temporary(Value::Expression(Operation {
+//             operator: Operator::Isa,
+//             args: vec![Term::new_temporary(Value::Pattern(Pattern {
+//                 tag: std::any::type_name::<T>().to_string(),
+//             }))],
+//         }))],
+//     };
+//     PolarValue::Expression(term)
+// }
+
+pub struct CodegenVisitor {
     tokens: proc_macro2::TokenStream,
 }
 

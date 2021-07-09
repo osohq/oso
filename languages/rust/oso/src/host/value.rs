@@ -21,6 +21,29 @@ pub enum PolarValue {
     List(Vec<PolarValue>),
     Variable(String),
     Instance(Instance),
+    Expression(Operation),
+}
+
+impl std::cmp::Eq for PolarValue {}
+
+impl std::hash::Hash for PolarValue {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::mem::discriminant(self).hash(state);
+        match self {
+            PolarValue::Integer(inner) => inner.hash(state),
+            // PolarValue::Float(inner) => inner.hash(state),
+            PolarValue::String(inner) => inner.hash(state),
+            PolarValue::Boolean(inner) => inner.hash(state),
+            // PolarValue::Map(inner) => inner.hash(state),
+            PolarValue::List(inner) => inner.hash(state),
+            PolarValue::Variable(inner) => inner.hash(state),
+            // PolarValue::Instance(inner) => inner.hash(state),
+            PolarValue::Expression(inner) => inner.hash(state),
+            _ => {
+                // oh well
+            }
+        }
+    }
 }
 
 impl PartialEq for PolarValue {
@@ -72,16 +95,7 @@ impl PolarValue {
                 PolarValue::List(list)
             }
             Value::Variable(Symbol(sym)) => PolarValue::Variable(sym.clone()),
-            Value::Expression(_) => {
-                return Err(crate::OsoError::Custom {
-                    message: r#"
-Recieved Expression from Polar VM. The Expression type is not yet supported in this language.
-
-This may mean you performed an operation in your policy over an unbound variable.
-                        "#
-                    .to_owned(),
-                })
-            }
+            Value::Expression(op) => PolarValue::Expression(op.clone()),
             _ => {
                 return Err(crate::OsoError::Custom {
                     message: "Unsupported value type".to_owned(),
@@ -122,6 +136,7 @@ This may mean you performed an operation in your policy over an unbound variable
                 Value::List(list)
             }
             PolarValue::Variable(s) => Value::Variable(Symbol(s.clone())),
+            PolarValue::Expression(op) => Value::Expression(op.clone()),
         };
         Term::new_from_ffi(value)
     }

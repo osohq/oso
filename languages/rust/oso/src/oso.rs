@@ -214,6 +214,25 @@ impl Oso {
         Ok(query)
     }
 
+    #[must_use = "Query that is not consumed does nothing."]
+    pub fn query_partial(
+        &self,
+        partial: PolarValue,
+        resource: impl ToPolar,
+    ) -> crate::Result<bool> {
+        let mut query_host = self.host.clone();
+        let query_term = partial.to_term(&mut query_host);
+        let query = self.inner.new_query_from_term(query_term, false);
+        check_messages!(self.inner);
+        let mut query = Query::new(query, query_host);
+        query.bind("resource".to_string(), resource)?;
+        match query.next_result() {
+            None => Ok(false),
+            Some(Ok(_)) => Ok(true),
+            Some(Err(e)) => Err(e),
+        }
+    }
+
     /// Register a rust type as a Polar class.
     /// See [`oso::Class`] docs.
     pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
