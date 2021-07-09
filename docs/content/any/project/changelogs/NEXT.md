@@ -38,9 +38,9 @@ Link to [relevant documentation section]().
 - Thanks to [`@tomashozman`](https://github.com/tomashozman) for cleaning up
   some SQLAlchemy imports ([#997](https://github.com/osohq/oso/pull/997)).
 
-## `RELEASED_PACKAGE_1` NEW_VERSION
+## `oso` NEW_VERSION
 
-### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
+### Core
 
 #### Breaking changes
 
@@ -59,11 +59,9 @@ Link to [migration guide]().
 
 #### New features
 
-##### Feature 1
+##### Custom query timeouts
 
-Summary of user-facing changes.
-
-Link to [relevant documentation section]().
+Added the ability for users to configure query timeouts using a `POLAR_TIMEOUT_MS` environment variable. To disable timeouts (which is useful for debugging), set `POLAR_TIMEOUT_MS` to `0`.
 
 #### Other bugs & improvements
 
