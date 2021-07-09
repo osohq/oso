@@ -50,6 +50,15 @@ impl Event {
         }
     }
 
+    pub fn choice_push() -> Self {
+        Event {
+            timestamp_ms: _timestamp_ms(),
+            id: 0,
+            parent_id: 0,
+            event_type: EventDetail::ChoicePush {}
+        }
+    }
+
     pub fn bindings(bindings: Bindings) -> Self {
         Event {
             timestamp_ms: _timestamp_ms(),
@@ -189,10 +198,23 @@ impl ScopedRecorder {
 
     pub fn pop_to(&mut self, target: u64) {
         loop {
+            dbg!(&self.parent_id, target);
             let id = self.parent_id.pop().unwrap();
             if id == target {
                 return
             }
+        }
+    }
+
+    pub fn pop_up_to(&mut self, target: u64) {
+        loop {
+            dbg!(&self.parent_id, target);
+            let id = self.parent_id.last().unwrap();
+            if id == &target {
+                return
+            }
+
+            self.parent_id.pop();
         }
     }
 

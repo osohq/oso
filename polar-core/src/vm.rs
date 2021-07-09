@@ -142,6 +142,7 @@ pub struct Choice {
     queries: Queries,      // query stack snapshot
     trace: Vec<Rc<Trace>>, // trace snapshot
     trace_stack: TraceStack,
+    trace_parent_id: u64
 }
 
 pub type Choices = Vec<Choice>;
@@ -468,7 +469,7 @@ impl PolarVirtualMachine {
             Goal::CheckError => return self.check_error(),
             Goal::Noop => {}
             Goal::Query { term } => {
-                let id = self.trace_recorder.push_parent(traces_v2::Event::execute_goal(
+            let id = self.trace_recorder.push_parent(traces_v2::Event::execute_goal(
                     Goal::Query { term: term.clone() },
                     self.source(term),
                 ));
@@ -572,6 +573,8 @@ impl PolarVirtualMachine {
         I: IntoIterator<Item = Goals>,
         I::IntoIter: std::iter::DoubleEndedIterator,
     {
+        let trace_id = self.trace_recorder.push_parent(traces_v2::Event::choice_push());
+
         // Make sure that alternatives are executed in order of first to last.
         let alternatives = alternatives
             .into_iter()
@@ -586,6 +589,7 @@ impl PolarVirtualMachine {
             queries: self.queries.clone(),
             trace: self.trace.clone(),
             trace_stack: self.trace_stack.clone(),
+            trace_parent_id: trace_id
         });
     }
 
@@ -932,6 +936,7 @@ impl PolarVirtualMachine {
                     queries,
                     trace,
                     trace_stack,
+                    trace_parent_id
                 }) => {
                     self.binding_manager.backtrack(&bsp);
                     if let Some(mut alternative) = alternatives.pop() {
@@ -952,10 +957,11 @@ impl PolarVirtualMachine {
                                 queries,
                                 trace,
                                 trace_stack,
+                                trace_parent_id
                             })
                         }
+                        self.trace_recorder.pop_up_to(trace_parent_id);
                         let id = self.trace_recorder.push_parent(traces_v2::Event::execute_choice());
-                        self.push_goal(Goal::TraceV2Pop(id))?;
                         self.goals.append(&mut alternative);
                         break;
                     }
