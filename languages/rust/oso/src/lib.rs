@@ -79,7 +79,6 @@ pub mod errors;
 mod extras;
 mod host;
 mod oso;
-pub mod proc_madness;
 mod query;
 
 pub use crate::oso::{Action, Oso};
@@ -87,7 +86,13 @@ pub use errors::{OsoError, Result};
 pub use host::{Class, ClassBuilder, FromPolar, FromPolarList, PolarValue, ToPolar, ToPolarList};
 pub use query::{Query, ResultSet};
 
-use polar_core::{polar::Polar, terms::{Numeric, Operation, Operator, Pattern, Symbol, Term, ToPolarString, Value}};
+use polar_core::{
+    polar::Polar,
+    terms::{
+        InstanceLiteral, Numeric, Operation, Operator, Pattern, Symbol, Term, ToPolarString, Value,
+    },
+    visitor::Visitor,
+};
 
 /// Classes that can be used as types in Polar policies.
 ///
@@ -196,11 +201,12 @@ where
 //     PolarValue::Expression(term)
 // }
 
+#[derive(Default, Debug)]
 pub struct CodegenVisitor {
-    tokens: proc_macro2::TokenStream,
+    pub tokens: proc_macro2::TokenStream,
 }
 
-use quote::{quote, ToTokens};
+use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 
 impl CodegenVisitor {
     fn visit_any<T: ToTokens>(&mut self, t: T) {
@@ -211,8 +217,13 @@ impl CodegenVisitor {
         }
     }
 }
+fn term_to_tokens(term: &Term) -> proc_macro2::TokenStream {
+    let mut cv = CodegenVisitor::default();
+    cv.visit_term(&term);
+    cv.tokens
+}
 
-impl polar_core::visitor::Visitor for CodegenVisitor {
+impl Visitor for CodegenVisitor {
     fn visit_number(&mut self, n: &polar_core::terms::Numeric) {
         match n {
             Numeric::Float(f) => self.visit_any(f),
@@ -232,12 +243,14 @@ impl polar_core::visitor::Visitor for CodegenVisitor {
         todo!()
     }
 
-    fn visit_symbol(&mut self, _s: &polar_core::terms::Symbol) {
-        todo!()
+    fn visit_symbol(&mut self, s: &polar_core::terms::Symbol) {
+        let name = format_ident!("{}", s.0);
+        self.tokens.append(name);
     }
 
-    fn visit_variable(&mut self, _v: &polar_core::terms::Symbol) {
-        todo!()
+    fn visit_variable(&mut self, v: &polar_core::terms::Symbol) {
+        let name = format_ident!("{}", v.0);
+        self.tokens.append(name);
     }
 
     fn visit_rest_variable(&mut self, _r: &polar_core::terms::Symbol) {
@@ -285,7 +298,73 @@ impl polar_core::visitor::Visitor for CodegenVisitor {
     }
 
     fn visit_operation(&mut self, o: &polar_core::terms::Operation) {
-        polar_core::visitor::walk_operation(self, o)
+        match o.operator {
+            Operator::Debug => todo!(),
+            Operator::Print => todo!(),
+            Operator::Cut => todo!(),
+            Operator::In => todo!(),
+            Operator::Isa => {
+                let lhs = term_to_tokens(&o.args[0]);
+                let name = match &o.args[1].value() {
+                    Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) => tag.0.clone(),
+                    v => todo!("can only match instance literals, this is {:#?}", v),
+                };
+                let rhs = format_ident!("{}", name);
+                self.tokens.extend(quote! {
+                    std::any::Any::is::<#rhs>(&#lhs)
+                });
+            }
+            Operator::New => todo!(),
+            Operator::Dot => {
+                let lhs = term_to_tokens(&o.args[0]);
+                let attr = match o.args[1].value() {
+                    Value::String(s) => format_ident!("{}", s),
+                    _ => todo!("only support attribute lookups"),
+                };
+                self.tokens.extend(quote! {
+                    #lhs.#attr
+                })
+            }
+            Operator::Not => todo!(),
+            Operator::Mul => todo!(),
+            Operator::Div => todo!(),
+            Operator::Mod => todo!(),
+            Operator::Rem => todo!(),
+            Operator::Add => todo!(),
+            Operator::Sub => todo!(),
+            Operator::Eq => todo!(),
+            Operator::Geq => todo!(),
+            Operator::Leq => todo!(),
+            Operator::Neq => todo!(),
+            Operator::Gt => todo!(),
+            Operator::Lt => todo!(),
+            Operator::Unify => {
+                let lhs = term_to_tokens(&o.args[0]);
+                let rhs = term_to_tokens(&o.args[1]);
+
+                self.tokens.extend(quote! {
+                    #lhs == #rhs
+                })
+            }
+            Operator::Or => todo!(),
+            Operator::And => {
+                let children = o.args.iter().map(|t| {
+                    let mut cv = CodegenVisitor::default();
+                    cv.visit_term(&t);
+                    cv.tokens
+                });
+                self.tokens.extend(quote! {
+                    true
+                    #(
+                        && (
+                            #children
+                        )
+                    )*
+                });
+            }
+            Operator::ForAll => todo!(),
+            Operator::Assign => todo!(),
+        }
     }
 
     fn visit_param(&mut self, p: &polar_core::rules::Parameter) {

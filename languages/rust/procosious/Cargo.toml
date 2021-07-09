@@ -17,6 +17,7 @@ bench = false
 [dependencies]
 quote = "1.0.8"
 oso = { path="../oso" }
+polar-core = { path = "../../../polar-core"}
 
 [dependencies.syn]
 version = "1.0.58"

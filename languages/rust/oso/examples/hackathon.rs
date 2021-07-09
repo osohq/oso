@@ -6,30 +6,38 @@ use oso::{magic_is_allowed, PolarClass};
 load_file!("test.polar");
 
 #[derive(Clone, PolarClass)]
-struct Resource {
+struct PolarResource {
     #[polar(attribute)]
     id: i64,
 }
 
+#[derive(Clone, PolarClass)]
+struct Resource {
+    id: i64,
+    bar: String,
+}
+
 fn main() {
     let _ = tracing_subscriber::fmt::try_init();
-    // let x = is_allowed!("sam", "hack", "Polar" as String);
-    // assert!(x);
+    let resource1 = Resource {
+        id: 1,
+        bar: "abc".to_string(),
+    };
+    let resource233 = Resource {
+        id: 233,
+        bar: "abc".to_string(),
+    };
+    println!("Can sam get resource 1?");
+    assert!(!is_allowed!("sam", "get", resource1));
+    println!("Can sam get resource 233?");
+    assert!(is_allowed!("sam", "get", resource233));
 
-    // let x = is_allowed!("sam", "upset", "Polar" as String);
-    // assert!(!x);
+    // precompute_test();
+}
 
-    // let y = magic_is_allowed("sam", "hack", "Polar").unwrap();
-    // assert!(y);
-
-    // let y = magic_is_allowed("sam", "hack", "Polar").unwrap();
-    // assert!(y);
-
-    // let y = magic_is_allowed("sam", "other", "Polar").unwrap();
-    // assert!(!y);
-
-    let resource1 = Resource { id: 1 };
-    let resource233 = Resource { id: 233 };
+fn precompute_test() {
+    let resource1 = PolarResource { id: 1 };
+    let resource233 = PolarResource { id: 233 };
     println!("Can sam get resource 1?");
     let res1 = magic_is_allowed("sam", "get", resource1.clone()).unwrap();
     println!("{:#?}", res1);
