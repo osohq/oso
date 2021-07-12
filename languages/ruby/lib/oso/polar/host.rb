@@ -3,6 +3,32 @@
 module Oso
   module Polar
     # Translate between Polar and the host language (Ruby).
+
+    class PolarClass
+      # Ruby code reloaders (i.e. the one used by rails) swap out the value of
+      # a constant on code changes. Because of this, we can't reliably call
+      # `is_a?` on the constant that was passed to `register_class`.
+      #
+      # Example (where Foo is a class defined in foo.rb):
+      #   > klass = Foo
+      #   > Foo.new.is_a? klass
+      #     => true
+      #   > ... user changes foo.rb ...
+      #   > Foo.new.is_a? klass
+      #     => false
+      #
+      # To solve this, when we need to access the class (e.g. during isa), we
+      # look it up using const_get, which will always return the up-to-date
+      # version of the class.
+      attr_reader :name
+      def initialize(klass)
+        @name = klass.name
+      end
+
+      def get
+        Object.const_get(name)
+      end
+    end
     class Host # rubocop:disable Metrics/ClassLength
       protected
 
@@ -35,7 +61,7 @@ module Oso
       def get_class(name)
         raise UnregisteredClassError, name unless classes.key? name
 
-        classes[name]
+        classes[name].get
       end
 
       # Store a Ruby class in the {#classes} cache.
@@ -48,7 +74,7 @@ module Oso
       def cache_class(cls, name:)
         raise DuplicateClassAliasError.new name: name, old: get_class(name), new: cls if classes.key? name
 
-        classes[name] = cls
+        classes[name] = PolarClass.new(cls)
         name
       end
 
