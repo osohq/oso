@@ -381,14 +381,14 @@ mod tests {
         let cases = vec![
             (
                 // Single-word infix
-                "frobbed_by(x, y) if x frobs y;",
+                "frobs(x, y) if x frobs y;",
                 // TODO(gj): if they wrote it infix, print it infix.
-                "frobbed_by(x, y) if frobs(x, y);",
+                "frobs(x, y) if frobs(x, y);",
             ),
             (
-                // Multi-word infix with underscores
-                "enfrobnicated(x, y) if y frobbed_by x;",
-                "enfrobnicated(x, y) if frobbed_by(y, x);",
+                // Multi-word infix
+                "enfrobnicated_on_behalf_of(x, y, z) if x enfrobnicated y on_behalf_of z;",
+                "enfrobnicated_on_behalf_of(x, y, z) if enfrobnicated_on_behalf_of(x, y, z);",
             ),
         ];
 

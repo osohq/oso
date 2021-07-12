@@ -444,8 +444,14 @@ Exp4<T>: ValueOrLogical = {
 
 // Infix predicates
 InfixExp<T>: Value = {
-    <exp4:ExpectValue<Exp4<T>>> <name:Name> <exp5:ExpectValue<Exp5<T>>> => {
-        let args = vec![exp4, exp5];
+    <first_arg:ExpectValue<Exp4<T>>> <mut predicate_args:(<Name> <ExpectValue<Exp5<T>>>)*> <last_predicate:Name> <last_arg:ExpectValue<Exp5<T>>> => {
+        let (mut predicates, mut args): (Vec<_>, Vec<_>) = predicate_args.into_iter().unzip();
+        predicates.push(last_predicate);
+        let mut concatted = predicates.into_iter().fold(String::new(), |acc, word| acc + &word.0 + "_");
+        concatted.pop(); // pop the trailing underscore
+        let name = Symbol(concatted);
+        args.insert(0, first_arg);
+        args.push(last_arg);
         let kwargs = None;
         Value::Call(Call{name, args, kwargs})
     },
