@@ -1,12 +1,17 @@
 package com.osohq.oso;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.lang.reflect.Constructor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 public class Host implements Cloneable {
   private Ffi.Polar ffiPolar;
@@ -294,16 +299,12 @@ public class Host implements Cloneable {
         return new Predicate(value.getJSONObject(tag).getString("name"), args);
       case "Variable":
         return new Variable(value.getString(tag));
+      case "Expression":
+        return new Expression(
+            value.getJSONObject(tag).getEnum(Operator.class, "operator"),
+            polarListToJava(value.getJSONObject(tag).getJSONArray("args")));
       default:
-        if (tag.equals("Expression")) {
-          throw new Exceptions.UnexpectedPolarTypeError(
-              "Recieved Expression from Polar VM. The Expression type is not yet supported in this"
-                  + " language.\n"
-                  + "This may mean you performed an operation in your policy over an unbound"
-                  + " variable.");
-        } else {
-          throw new Exceptions.UnexpectedPolarTypeError(tag);
-        }
+        throw new Exceptions.UnexpectedPolarTypeError(tag);
     }
   }
 

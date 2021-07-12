@@ -7,8 +7,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.util.*;
-import org.json.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -591,11 +599,19 @@ public class PolarTest {
   }
 
   @Test
-  public void testExpressionError() throws Exception {
+  public void testExpressionGt() throws Exception {
+    // GIVEN
     p.loadStr("f(x) if x > 2;");
-
-    Exception exception =
-        assertThrows(Exceptions.UnexpectedPolarTypeError.class, () -> p.query("f(x)").results());
-    assertTrue(exception.getMessage().contains("unbound"));
+    // WHEN
+    List<HashMap<String, Object>> res = p.query("f(x)").results();
+    // THEN
+    assertEquals(1, res.size());
+    HashMap<String, Object> hm = res.get(0);
+    assertEquals(1, hm.size());
+    Object expr = hm.get("x");
+    assertEquals(
+        new Expression(
+            Operator.And, List.of(new Expression(Operator.Gt, List.of(new Variable("_this"), 2)))),
+        expr);
   }
 }
