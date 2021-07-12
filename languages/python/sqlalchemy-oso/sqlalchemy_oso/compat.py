@@ -3,9 +3,8 @@
 Keep us compatible with multiple SQLAlchemy versions by implementing wrappers
 when needed here.
 """
-from packaging.version import parse
-
 import sqlalchemy
+from packaging.version import parse
 
 version = parse(sqlalchemy.__version__)  # type: ignore
 USING_SQLAlchemy_v1_3 = version >= parse("1.3") and version < parse("1.4")

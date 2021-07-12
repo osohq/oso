@@ -1,7 +1,6 @@
-from flask import g, current_app, request, Request
-from werkzeug.exceptions import Forbidden
-
+from flask import Request, current_app, g, request
 from oso import OsoError
+from werkzeug.exceptions import Forbidden
 
 from .context import _app_context
 

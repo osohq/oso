@@ -1,7 +1,7 @@
+import concurrent.futures
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
 
 from oso import Oso, OsoError
 

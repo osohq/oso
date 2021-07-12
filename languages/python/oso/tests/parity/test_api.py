@@ -1,28 +1,27 @@
 """Tests the Polar API as an external consumer"""
-from contextlib import contextmanager
 import os
-import pytest
-
+from contextlib import contextmanager
 from pathlib import Path
+
+import pytest
 
 from polar import Predicate
 from polar.exceptions import (
     InvalidIteratorError,
-    PolarRuntimeError,
     PolarFileExtensionError,
     PolarFileNotFoundError,
+    PolarRuntimeError,
 )
 
 from .test_api_externals import (
-    Http,
-    Widget,
-    DooDad,
     Actor,
     Company,
+    DooDad,
+    Http,
+    Widget,
     get_frobbed,
     set_frobbed,
 )
-
 
 # Set if running tests against old code
 EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
@@ -129,7 +128,7 @@ def test_querystring_resource_map(polar, load_policy, query):
 def test_resource_mapping(polar, load_policy, query):
     # from flask import Flask, request, Response, g
     try:
-        from flask import Flask, request, Response, g
+        from flask import Flask, Response, g, request
     except ImportError:
         return pytest.skip("Flask not available in environment.")
 

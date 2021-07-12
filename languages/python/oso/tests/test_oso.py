@@ -1,6 +1,7 @@
 """Tests the Polar API as an external consumer"""
 
 from pathlib import Path
+
 import pytest
 
 from oso import Oso, polar_class

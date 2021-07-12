@@ -1,15 +1,15 @@
 # Roles 2
-from typing import Any, List, Set, Dict
 from dataclasses import dataclass
+from typing import Any, Dict, List, Set
 
 from oso import OsoError, Variable
-
-from sqlalchemy.exc import NoInspectionAvailable
-from sqlalchemy.types import Integer, String
-from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy import inspect, sql
+from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
+from sqlalchemy.schema import Column, ForeignKey
+from sqlalchemy.types import Integer, String
+
 from .compat import iterate_model_classes
 
 

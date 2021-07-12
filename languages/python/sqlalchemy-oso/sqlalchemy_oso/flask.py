@@ -5,7 +5,7 @@
 
 try:
     from flask import _app_ctx_stack  # type: ignore
-    from flask_sqlalchemy import SQLAlchemy, SignallingSession
+    from flask_sqlalchemy import SignallingSession, SQLAlchemy
 except ImportError:
     import warnings
 

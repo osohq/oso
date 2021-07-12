@@ -1,16 +1,16 @@
 # Roles 2
 from typing import Any, List
 
-from oso import OsoError
-
-from sqlalchemy import inspect, UniqueConstraint
+from sqlalchemy import UniqueConstraint, inspect
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import class_mapper, relationship, validates, synonym
+from sqlalchemy.orm import class_mapper, relationship, synonym, validates
 from sqlalchemy.orm.exc import UnmappedClassError, UnmappedInstanceError
 from sqlalchemy.orm.util import object_mapper
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String
+
+from oso import OsoError
 
 # Global list to keep track of role classes as they are created, used to
 # generate RBAC base policy in Polar

@@ -1,9 +1,8 @@
 import pytest
-
+from oso import Oso
 from sqlalchemy import create_engine
 from sqlalchemy.orm.session import Session
 
-from oso import Oso
 from sqlalchemy_oso.auth import register_models
 
 from .models import ModelBase, Post, User

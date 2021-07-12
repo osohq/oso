@@ -1,12 +1,12 @@
 from typing import Tuple, Union
-from django.db.models import F, Q, Model
-from django.apps import apps
-from django.db.models.expressions import Exists, OuterRef
 
-from polar.expression import Expression
-from polar.exceptions import UnsupportedError
-from polar.partial import dot_path
+from django.apps import apps
+from django.db.models import F, Model, Q
+from django.db.models.expressions import Exists, OuterRef
 from oso import Variable
+from polar.exceptions import UnsupportedError
+from polar.expression import Expression
+from polar.partial import dot_path
 
 from .oso import django_model_name
 

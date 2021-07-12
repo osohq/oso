@@ -1,4 +1,5 @@
 from oso import Oso, OsoError
+
 from .auth import register_models
 from .roles import OsoRoles
 

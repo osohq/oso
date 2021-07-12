@@ -1,18 +1,17 @@
 """Test hooks & SQLAlchemy API integrations."""
 import pytest
-
+from polar.exceptions import UnsupportedError
 from sqlalchemy.orm import aliased
 
-from polar.exceptions import UnsupportedError
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 from sqlalchemy_oso.session import (
+    AuthorizedSession,
     authorized_sessionmaker,
     scoped_session,
-    AuthorizedSession,
 )
-from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
-from .models import User, Post
 from .conftest import print_query
+from .models import Post, User
 
 
 def log_queries():
@@ -527,10 +526,10 @@ def test_register_models_registry():
     """Test that `register_models()` works with a SQLAlchemy 1.4-style
     registry."""
     # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
-    from sqlalchemy.orm import registry  # type: ignore
-    from sqlalchemy import Table, Column, Integer
     from oso import Oso
     from polar.exceptions import DuplicateClassAliasError
+    from sqlalchemy import Column, Integer, Table
+    from sqlalchemy.orm import registry  # type: ignore
 
     from sqlalchemy_oso.auth import register_models
 

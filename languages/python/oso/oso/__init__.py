@@ -1,3 +1,4 @@
-from polar import polar_class, Variable, Predicate
-from .oso import Oso
+from polar import Predicate, Variable, polar_class
 from polar.exceptions import OsoError
+
+from .oso import Oso

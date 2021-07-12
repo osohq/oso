@@ -1,6 +1,7 @@
 """Set of test helpers to match test helpers from Python Polar."""
-import pytest
 from typing import Dict
+
+import pytest
 
 from polar import Polar
 

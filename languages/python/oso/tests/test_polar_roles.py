@@ -1,21 +1,21 @@
-import pytest
-import timeit
 import os
+import timeit
 
+import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.types import String
-from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.schema import Column, ForeignKey
+from sqlalchemy.types import String
 
 from oso import Oso, OsoError
 from polar.exceptions import RolesValidationError
+
 from .polar_roles_sqlalchemy_helpers import (
-    resource_role_class,
     assign_role,
     remove_role,
+    resource_role_class,
 )
-
 
 Base = declarative_base(name="RoleBase")
 

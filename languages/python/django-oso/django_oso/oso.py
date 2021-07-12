@@ -3,10 +3,8 @@ import os.path
 
 from django.apps import apps
 from django.http import HttpRequest
-
 from oso import Oso as _Oso
 from polar.exceptions import DuplicateClassAliasError
-
 
 _logger = logging.getLogger(__name__)
 

@@ -5,14 +5,14 @@
 # - Property tests for polar parser.
 # - Property tests for polar semantics.
 # - External functions / python binding tests of some kind, maybe.
+import os
 from pathlib import Path
 
-import os
 import pytest
 
 from polar.exceptions import PolarRuntimeError
-from .test_polar_externals import Qux, Bar, Foo, MyClass, YourClass, OurClass
 
+from .test_polar_externals import Bar, Foo, MyClass, OurClass, Qux, YourClass
 
 EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
 

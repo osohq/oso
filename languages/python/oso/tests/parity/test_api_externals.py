@@ -1,9 +1,9 @@
 # External class definitions for use in `test_api.py` tests
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
+from typing import List, Optional
 
 from polar import polar_class
-from typing import List, Optional
 
 
 @polar_class

@@ -1,4 +1,4 @@
-from polar import Variable, Expression
+from polar import Expression, Variable
 from polar.partial import dot_path
 
 

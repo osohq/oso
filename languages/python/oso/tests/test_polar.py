@@ -1,20 +1,20 @@
 from datetime import datetime
+from enum import Enum
 from math import inf, isnan, nan
 from pathlib import Path
-from enum import Enum
+
+import pytest
 
 from polar import (
-    polar_class,
-    exceptions,
+    Expression,
+    Pattern,
     Polar,
     Predicate,
     Variable,
-    Expression,
-    Pattern,
+    exceptions,
+    polar_class,
 )
 from polar.partial import TypeConstraint
-
-import pytest
 
 
 def test_anything_works(polar, query):

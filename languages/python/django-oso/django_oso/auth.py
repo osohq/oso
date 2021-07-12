@@ -1,11 +1,10 @@
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q, Model
+from django.db.models import Model, Q
 from polar.exceptions import UnsupportedError
-
-from .oso import Oso, polar_model_name
 from polar.partial import TypeConstraint
 from polar.variable import Variable
 
+from .oso import Oso, polar_model_name
 from .partial import TRUE_FILTER, partial_to_query_filter
 
 

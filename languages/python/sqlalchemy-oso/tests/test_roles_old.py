@@ -1,18 +1,19 @@
 # type: ignore
 
-import pytest
 import datetime
 
+import pytest
+from oso import Oso, Variable
 from sqlalchemy import create_engine
-from sqlalchemy.types import Integer, String, DateTime
-from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.schema import Column, ForeignKey
+from sqlalchemy.types import DateTime, Integer, String
 
-from sqlalchemy_oso import roles_old as oso_roles, register_models
+from sqlalchemy_oso import register_models
+from sqlalchemy_oso import roles_old as oso_roles
 from sqlalchemy_oso.roles_old import enable_roles
 from sqlalchemy_oso.session import set_get_session
-from oso import Oso, Variable
 
 Base = declarative_base(name="RoleBase")
 

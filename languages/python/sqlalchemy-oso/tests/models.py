@@ -1,9 +1,7 @@
+from sqlalchemy import Boolean, Column, Enum, ForeignKey, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Table
-from sqlalchemy.ext.declarative import declarative_base
-
-from sqlalchemy import Column, Integer, String, Enum, Boolean, ForeignKey
-
 
 ModelBase = declarative_base(name="ModelBase")
 

@@ -1,13 +1,14 @@
 from typing import Any, List
 
-from sqlalchemy.types import Integer, String
-from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import relationship, validates, class_mapper
-from sqlalchemy.orm.util import object_mapper
-from sqlalchemy.orm.exc import UnmappedInstanceError, UnmappedClassError
-from sqlalchemy import inspect, UniqueConstraint
+from sqlalchemy import UniqueConstraint, inspect
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import class_mapper, relationship, validates
+from sqlalchemy.orm.exc import UnmappedClassError, UnmappedInstanceError
+from sqlalchemy.orm.util import object_mapper
+from sqlalchemy.schema import Column, ForeignKey
+from sqlalchemy.types import Integer, String
+
 from .session import _OsoSession
 
 # Global list to keep track of role classes as they are created, used to
