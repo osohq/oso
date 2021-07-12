@@ -16,6 +16,7 @@ test: test-requirements
 	pytest
 
 fmt:
+	isort .
 	black .
 
 typecheck:

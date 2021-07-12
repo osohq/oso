@@ -14,6 +14,7 @@ test: test-requirements
 	pytest tests
 
 fmt:
+	isort .
 	black .
 
 lint:
