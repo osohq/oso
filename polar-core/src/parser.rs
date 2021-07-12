@@ -388,7 +388,7 @@ mod tests {
             (
                 // Multi-word infix
                 "x enfrobnicated y on_behalf_of z if x enfrobnicated y on_behalf_of z;",
-                "enfrobnicated_on_behalf_of(x, y, z) if enfrobnicated_on_behalf_of(x, y, z);",
+                "enfrobnicated(x, y, z) if enfrobnicated(x, y, z);",
             ),
         ];
 

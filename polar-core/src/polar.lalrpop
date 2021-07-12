@@ -444,16 +444,13 @@ Exp4<T>: ValueOrLogical = {
 
 // Infix predicates
 InfixExp<T>: Value = {
-    <first_arg:ExpectValue<Exp4<T>>> <mut predicate_args:(<Name> <ExpectValue<Exp5<T>>>)*> <last_predicate:Name> <last_arg:ExpectValue<Exp5<T>>> => {
-        let (mut predicates, mut args): (Vec<_>, Vec<_>) = predicate_args.into_iter().unzip();
-        predicates.push(last_predicate);
-        let mut concatted = predicates.into_iter().fold(String::new(), |acc, word| acc + &word.0 + "_");
-        concatted.pop(); // pop the trailing underscore
-        let name = Symbol(concatted);
+    <first_arg:ExpectValue<Exp4<T>>> <mut name_args:(<Name> <ExpectValue<Exp5<T>>>)*> <last_name:Name> <last_arg:ExpectValue<Exp5<T>>> => {
+        let (mut names, mut args): (Vec<_>, Vec<_>) = name_args.into_iter().unzip();
+        names.push(last_name);
         args.insert(0, first_arg);
         args.push(last_arg);
         let kwargs = None;
-        Value::Call(Call{name, args, kwargs})
+        Value::Call(Call{name: names.into_iter().nth(0).unwrap(), args, kwargs})
     },
 }
 
@@ -630,12 +627,9 @@ RuleHead: (Symbol, Vec<Parameter>) = {
     <first_param:Spanned<Variable>> <mut name_params:(<Name> <Parameter>)*> <last_name:Name> <last_param:Parameter> => {
         let (mut names, mut params): (Vec<_>, Vec<_>) = name_params.into_iter().unzip();
         names.push(last_name);
-        let mut concatted = names.into_iter().fold(String::new(), |acc, name| acc + &name.0 + "_");
-        concatted.pop(); // pop the trailing underscore
-        let name = Symbol(concatted);
         params.insert(0, Parameter{parameter: first_param, specializer: None});
         params.push(last_param);
-        (name, params)
+        (names.into_iter().nth(0).unwrap(), params)
     },
 };
 
