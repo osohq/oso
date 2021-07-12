@@ -49,10 +49,10 @@ jobs:
           python-version: "3.6"
       - name: Install Python formatters
         run: pip install black
-	run: pip install isort
+        run: pip install isort
       - name: Check Python formatting
         run: black --check languages/python
-	run: isort languages/python -c
+        run: isort languages/python -c
 
       ## Check Ruby
       - name: Install Ruby + gems
