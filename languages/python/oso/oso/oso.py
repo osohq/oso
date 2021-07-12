@@ -13,7 +13,6 @@ class Oso(Polar):
     >>> from oso import Oso
     >>> Oso()
     <oso.oso.Oso object at 0x...>
-
     """
 
     def __init__(self):
@@ -34,7 +33,6 @@ class Oso(Polar):
         :param resource: The resource being accessed.
 
         :return: ``True`` if the request is allowed, ``False`` otherwise.
-
         """
         try:
             next(self.query_rule("allow", actor, action, resource))
@@ -49,9 +47,7 @@ class Oso(Polar):
         given combination of actor and resource.
 
         :param actor: The actor for whom to collect allowed actions
-
         :param resource: The resource being accessed
-
         :param allow_wildcard: Flag to determine behavior if the policy \
         includes a wildcard action. E.g., a rule allowing any action: \
         ``allow(_actor, _action, _resource)``. If ``True``, the method will \
