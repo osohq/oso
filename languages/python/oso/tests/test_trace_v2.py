@@ -40,28 +40,40 @@ def test_graph():
     event_map = {
         "ChoicePush": "blue",
         "ExecuteGoal": "yellow",
+        "EvaluateRule": "purple",
         "ExecuteChoice": "orange",
         "Bindings": "purple",
         "Backtrack": "red",
         "Result": "green",
         "Done": "black",
     }
+    hidden = ["Bindings", "ChoicePush", "ExecuteChoice"]
+    node_map = {}
     dot = Digraph(comment="Trace graph")
     with open("trace.json") as f:
         data = json.load(f)
         for node in data:
+            node_map[node["id"]] = node
             event_type = node["event_type"]
             color = event_map[event_type]
             name = str(node["id"])
             label = event_type
             if event_type == "ExecuteGoal":
                 label = node["goal"]["polar"]
-            if event_type != "Bindings":
+            elif event_type == "EvaluateRule":
+                label = node["rule"]
+            elif event_type == "Backtrack":
+                label = node["reason"]
+            if event_type not in hidden:
                 dot.node(name, label=label, color=color)
 
         for node in data:
-            if node["event_type"] != "Bindings":
+            if node["event_type"] not in hidden:
                 parent_id = node["parent_id"]
+                parent_node = node_map[parent_id]
+                while parent_node["event_type"] in hidden:
+                    parent_node = node_map[parent_node["parent_id"]]
+                    parent_id = parent_node["id"]
                 id = node["id"]
                 if parent_id != id:
                     dot.edge(str(parent_id), str(id))
