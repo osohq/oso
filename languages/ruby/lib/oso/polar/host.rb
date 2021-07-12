@@ -114,7 +114,8 @@ module Oso
       # @return [Integer] the instance ID.
       def cache_instance(instance, id: nil)
         id = ffi_polar.new_id if id.nil?
-        instance = PolarClass.new(instance) if instance.is_a? Class
+        # Save the instance as a PolarClass if it is a non-anonymous class
+        instance = PolarClass.new(instance) if instance.is_a?(Class) && !instance.name.nil?
         instances[id] = instance
         id
       end

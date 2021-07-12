@@ -840,5 +840,14 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     it 'uses the up-to-date version of the class for lookups' do
       expect(query(subject, 'Foo.class_version = 2')).to eq([{}])
     end
+
+    it 'works with anonymous classes' do
+      subject.register_class(Class.new do
+        def self.test
+          1
+        end
+      end, name: 'AnonymousClass')
+      expect(query(subject, 'AnonymousClass.test = 1')).to eq([{}])
+    end
   end
 end
