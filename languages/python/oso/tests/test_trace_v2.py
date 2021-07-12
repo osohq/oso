@@ -59,11 +59,16 @@ def test_graph():
             name = str(node["id"])
             label = event_type
             if event_type == "ExecuteGoal":
-                label = node["goal"]["polar"]
+                label = "QUERY: " + node["goal"]["polar"]
             elif event_type == "EvaluateRule":
-                label = node["rule"]
+                label = "RULE: " + node["rule"]
             elif event_type == "Backtrack":
-                label = node["reason"]
+                label = "BACKTRACK: " + node["reason"]
+            elif event_type == "Result":
+                if node["bindings"]:
+                    label = "RESULT: " + str(node["bindings"])
+                else:
+                    label = "SUCCESS"
             if event_type not in hidden:
                 dot.node(name, label=label, color=color)
 
