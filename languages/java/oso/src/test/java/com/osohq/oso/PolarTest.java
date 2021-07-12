@@ -1,5 +1,7 @@
 package com.osohq.oso;
 
+import static com.osohq.oso.Operator.Dot;
+import static com.osohq.oso.Operator.Unify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -614,4 +616,152 @@ public class PolarTest {
             Operator.And, List.of(new Expression(Operator.Gt, List.of(new Variable("_this"), 2)))),
         expr);
   }
+  
+  @Test
+  public void testPartialUnification() throws Exception {
+    // GIVEN
+    p.loadStr("f(x, y) if x = y;");
+    Variable x = new Variable("x");
+    Variable y = new Variable("y");
+    
+    // WHEN
+    List<HashMap<String, Object>> results = p.queryRule("f", x, y).results();
+    
+    // THEN
+    assertEquals(1, results.size());
+    HashMap<String, Object> bindings = results.get(0);
+    assertEquals(bindings.get("x"), y);
+    assertEquals(bindings.get("y"), x);
+  }
+  
+  @Test
+  public void testPartial() {
+    // GIVEN
+    p.loadStr("f(1);");
+    p.loadStr("f(x) if x = 1 and x = 2;");
+
+    // WHEN
+    List<HashMap<String, Object>> results = p.queryRule("f", new Variable("x")).results();
+    assertEquals(1, results.size());
+    assertEquals(1, results.get(0).get("x"));
+    
+    p.loadStr("g(x) if x.bar = 1 and x.baz = 2;");
+
+    results = p.queryRule("g", new Variable("x")).results();
+    assertEquals(1, results.size());
+    Expression expr = (Expression)results.get(0).get("x");
+    List<Object> args = (List<Object>)unwrapAnd(expr);
+    assertEquals(2, args.size());
+    assertEquals(args.get(0), new Expression(
+            Unify, List.of(1, new Expression(Dot, List.of(new Variable("_this"), "bar")))
+    ));
+    assertEquals(args.get(1), new Expression(
+            Unify, List.of(2, new Expression(Dot, List.of(new Variable("_this"), "baz")))
+    ));
+  }
+  private Object unwrapAnd(Expression expression) {
+    assertEquals(expression.getOperator(), Operator.And);
+    if (expression.getArgs().size() == 1) {
+      return expression.getArgs().get(0);
+    } else {
+      return expression.getArgs();
+    }
+  }
+//
+//  public static class User{}
+//  public static class Post{}
+//  
+//  public void testPartialConstraint() {
+//    p.registerClass(User.class);
+//    p.registerClass(Post.class);
+//    p.loadStr("f(x: User) if x.user = 1;");
+//    p.loadStr("f(x: Post) if x.post = 1;");
+//    Variable x = new Variable("x")
+//    p.queryRule(
+//            "f", x, bindings={x: TypeConstraint(x, "User")}, accept_expression=True
+//      )
+//    
+//      first = next(results)["bindings"]["x"]
+//      and_args = unwrap_and(first)
+//    
+//        assert len(and_args) == 2
+//    
+//              assert and_args[0] == Expression("Isa", [Variable("_this"), Pattern("User", {})])
+//    
+//      unify = and_args[1]
+//              assert unify == Expression(
+//            "Unify", [1, Expression("Dot", [Variable("_this"), "user"])]
+//              )
+//    
+//      with pytest.raises(StopIteration):
+//      next(results)           
+//  }
+/*
+
+def test_partial_constraint(polar):
+    class User:
+        pass
+
+    class Post:
+        pass
+
+    polar.register_class(User)
+    polar.register_class(Post)
+
+    polar.load_str("f(x: User) if x.user = 1;")
+    polar.load_str("f(x: Post) if x.post = 1;")
+
+    x = Variable("x")
+    results = polar.query_rule(
+        "f", x, bindings={x: TypeConstraint(x, "User")}, accept_expression=True
+    )
+
+    first = next(results)["bindings"]["x"]
+    and_args = unwrap_and(first)
+
+    assert len(and_args) == 2
+
+    assert and_args[0] == Expression("Isa", [Variable("_this"), Pattern("User", {})])
+
+    unify = and_args[1]
+    assert unify == Expression(
+        "Unify", [1, Expression("Dot", [Variable("_this"), "user"])]
+    )
+
+    with pytest.raises(StopIteration):
+        next(results)
+
+
+def test_partial_rule_filtering(polar):
+    class A:
+        def __init__(self):
+            self.c = C()
+
+    class B:
+        pass
+
+    class C:
+        pass
+
+    class D:
+        pass
+
+    polar.register_class(A)
+    polar.register_class(B)
+    polar.register_class(C)
+    polar.register_class(D)
+
+    polar.load_str(
+        """f(x: A) if g(x.c);
+           g(_: B);
+           g(_: C);
+           g(_: D);"""
+    )
+
+    x = Variable("x")
+    with pytest.raises(exceptions.PolarRuntimeError) as e:
+        next(polar.query_rule("f", x, bindings={x: TypeConstraint(x, "A")}))
+    assert str(e.value).startswith("Cannot generically walk fields of a Python class")
+
+ */
 }
