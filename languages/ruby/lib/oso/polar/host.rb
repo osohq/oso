@@ -102,6 +102,7 @@ module Oso
 
         instance = instances[id]
         return instance.get if instance.is_a? PolarClass
+
         instance
       end
 

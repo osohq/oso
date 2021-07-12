@@ -803,7 +803,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
   end
 
-  context 'Code reloading' do
+  context 'Code reloading' do # rubocop:disable Metrics/BlockLength
     before do
       # Register a class and then simulate it changing due to a code reload
       stub_const('Foo', Class.new do
@@ -838,7 +838,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
 
     it 'uses the up-to-date version of the class for lookups' do
-      expect(query(subject, "Foo.class_version = 2")).to eq([{}])
+      expect(query(subject, 'Foo.class_version = 2')).to eq([{}])
     end
   end
 end
