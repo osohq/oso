@@ -442,13 +442,25 @@ Exp4<T>: ValueOrLogical = {
     <Exp5<T>>,
 }
 
+// Infix predicates
+InfixExp<T>: Value = {
+    <exp4:ExpectValue<Exp4<T>>> <name:Name> <exp5:ExpectValue<Exp5<T>>> => {
+        let args = vec![exp4, exp5];
+        let kwargs = None;
+        Value::Call(Call{name, args, kwargs})
+    },
+}
 
+Exp99<T>: ValueOrLogical = {
+    <IsLogical<InfixExp<T>>>,
+    <Exp4<T>>,
+}
 
  // !
 Not = {"not"};
 NotExp<T>: Value = {
-    Not <exp4:ExpectLogical<Exp4<T>>> => {
-        let args = vec![exp4];
+    Not <exp99:ExpectLogical<Exp99<T>>> => {
+        let args = vec![exp99];
         let op = Operation{operator: Operator::Not, args};
         Value::Expression(op)
     },
@@ -456,7 +468,7 @@ NotExp<T>: Value = {
 
 Exp3<T>: ValueOrLogical = {
     <IsLogical<NotExp<T>>>,
-    <Exp4<T>>,
+    <Exp99<T>>,
 }
 
 
