@@ -626,7 +626,18 @@ RuleHead: (Symbol, Vec<Parameter>) = {
     },
     <name:Name> "(" <params:ParameterList> ")" => {
         (name, params)
-    }
+    },
+:   <first_param:ExpectValue<Exp6<"Term">>> <mut name_params:(<Name> <ExpectValue<Exp6<"Term">>>)*> <last_name:Name> <last_param:ExpectValue<Exp6<"Term">>> => {
+        let (mut names, mut params): (Vec<_>, Vec<_>) = name_params.into_iter().unzip();
+        names.push(last_name);
+        let mut concatted = names.into_iter().fold(String::new(), |acc, name| acc + &name.0 + "_");
+        concatted.pop(); // pop the trailing underscore
+        let name = Symbol(concatted);
+        params.insert(0, first_param);
+        params.push(last_param);
+        let params: Vec<_> = params.into_iter().map(|parameter| Parameter{parameter, specializer: None}).collect();
+        (name, params)
+    },
 };
 
 Define = {"if"};
