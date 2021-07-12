@@ -47,10 +47,12 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: "3.6"
-      - name: Install Python formatter
+      - name: Install Python formatters
         run: pip install black
+	run: pip install isort
       - name: Check Python formatting
         run: black --check languages/python
+	run: isort languages/python -c
 
       ## Check Ruby
       - name: Install Ruby + gems
