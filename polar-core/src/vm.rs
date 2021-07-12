@@ -39,6 +39,9 @@ pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;
 #[allow(clippy::large_enum_variant)]
 pub enum Goal {
     Backtrack,
+    BacktrackFromFailure {
+        reason: String,
+    },
     Cut {
         choice_index: usize, // cuts all choices in range [choice_index..]
     },
@@ -224,6 +227,7 @@ pub struct PolarVirtualMachine {
     pub trace: Vec<Rc<Trace>>,   // Traces for the current level of the trace tree.
 
     trace_recorder: traces_v2::ScopedRecorder,
+    trace_recorder_active: bool,
 
     // Errors from outside the vm.
     pub external_error: Option<String>,
@@ -313,6 +317,7 @@ impl PolarVirtualMachine {
             tracing,
             trace_stack: vec![],
             trace_recorder: traces_v2::ScopedRecorder::default(),
+            trace_recorder_active: false,
             trace: vec![],
             external_error: None,
             debugger: Debugger::default(),
@@ -435,6 +440,13 @@ impl PolarVirtualMachine {
 
         match goal.as_ref() {
             Goal::Backtrack => self.backtrack()?,
+            Goal::BacktrackFromFailure { reason } => {
+                if self.trace_recorder_active {
+                    self.trace_recorder
+                        .push(traces_v2::Event::backtrack(reason.to_owned()));
+                }
+                self.backtrack()?
+            }
             Goal::Cut { choice_index } => self.cut(*choice_index),
             Goal::Debug { message } => return Ok(self.debug(&message)),
             Goal::Halt => return Ok(self.halt()),
@@ -507,16 +519,22 @@ impl PolarVirtualMachine {
                 self.trace.push(Rc::new(trace.clone()));
                 self.maybe_break(DebugEvent::Pop)?;
             }
-            Goal::TraceV2Pop(id) => self.trace_recorder.pop_to(*id),
+            Goal::TraceV2Pop(id) => {
+                if self.trace_recorder_active {
+                    self.trace_recorder.pop_to(*id)
+                }
+            }
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
-                    self.log_with(
-                        || {
-                            let source_str = self.rule_source(&rule);
-                            format!("RULE: {}", source_str)
-                        },
-                        &[],
-                    );
+                    let source_str = self.rule_source(&rule);
+                    if self.trace_recorder_active {
+                        let id = self
+                            .trace_recorder
+                            .push_parent(traces_v2::Event::evaluate_rule(source_str.clone(), None));
+
+                        self.push_choice(vec![vec![Goal::TraceV2Pop(id), Goal::Backtrack]]);
+                    }
+                    self.log_with(|| format!("RULE: {}", source_str), &[]);
                 }
                 self.trace.push(trace.clone());
             }
@@ -610,15 +628,18 @@ impl PolarVirtualMachine {
             self.push_choice(alternatives_iter);
 
             // Add ChoicePush event to tracerecorder
-            let trace_id = self
-                .trace_recorder
-                .push_parent(traces_v2::Event::choice_push());
-            self.choices.last_mut().unwrap().trace_parent_id = Some(trace_id);
+            if self.trace_recorder_active {
+                let trace_id = self
+                    .trace_recorder
+                    .push_parent(traces_v2::Event::choice_push());
+                self.choices.last_mut().unwrap().trace_parent_id = Some(trace_id);
+            }
 
             self.append_goals(alternative)?;
-            let id = self
-                .trace_recorder
-                .push_parent(traces_v2::Event::execute_choice());
+            if self.trace_recorder_active {
+                self.trace_recorder
+                    .push_parent(traces_v2::Event::execute_choice());
+            }
             Ok(())
         } else {
             self.backtrack()
@@ -676,8 +697,10 @@ impl PolarVirtualMachine {
         }
 
         self.binding_manager.bind(var, val).and_then(|r| {
-            self.trace_recorder
-                .push(traces_v2::Event::bindings(self.bindings(true)));
+            if self.trace_recorder_active {
+                self.trace_recorder
+                    .push(traces_v2::Event::bindings(self.bindings(true)));
+            }
             Ok(r)
         })
     }
@@ -930,8 +953,6 @@ impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) -> PolarResult<()> {
-        self.trace_recorder.push(traces_v2::Event::backtrack());
-
         if self.log {
             self.print("⇒ backtrack");
         }
@@ -973,23 +994,25 @@ impl PolarVirtualMachine {
                                 trace_parent_id,
                             })
                         }
-                        if let Some(parent_id) = trace_parent_id {
-                            // if trace_parent_id is already set it means that this is not the first alternative
-                            self.trace_recorder.pop_up_to(parent_id);
-                        } else {
-                            // otherwise, this is the first alternative and we need to add the choice to the tracerecorder
-                            let trace_id = self
-                                .trace_recorder
-                                .push_parent(traces_v2::Event::choice_push());
+                        if self.trace_recorder_active {
+                            if let Some(parent_id) = trace_parent_id {
+                                // if trace_parent_id is already set it means that this is not the first alternative
+                                self.trace_recorder.pop_up_to(parent_id);
+                            } else {
+                                // otherwise, this is the first alternative and we need to add the choice to the tracerecorder
+                                let trace_id = self
+                                    .trace_recorder
+                                    .push_parent(traces_v2::Event::choice_push());
 
-                            // set the trace_parent_id
-                            if !last_alt {
-                                self.choices.last_mut().unwrap().trace_parent_id = Some(trace_id);
+                                // set the trace_parent_id
+                                if !last_alt {
+                                    self.choices.last_mut().unwrap().trace_parent_id =
+                                        Some(trace_id);
+                                }
                             }
+                            self.trace_recorder
+                                .push_parent(traces_v2::Event::execute_choice());
                         }
-                        let id = self
-                            .trace_recorder
-                            .push_parent(traces_v2::Event::execute_choice());
                         self.goals.append(&mut alternative);
                         break;
                     }
@@ -1095,7 +1118,12 @@ impl PolarVirtualMachine {
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
                 if !right_fields.is_subset(&left_fields) {
-                    return self.push_goal(Goal::Backtrack);
+                    return self.push_goal(Goal::BacktrackFromFailure {
+                        reason: format!(
+                            "MATCHES: {:?} is not a subset of {:?}",
+                            right_fields, left_fields
+                        ),
+                    });
                 }
 
                 // For each field on the right, isa its value against the corresponding value on
@@ -1281,7 +1309,12 @@ impl PolarVirtualMachine {
                         right: value.clone(),
                     })?;
                 } else {
-                    self.push_goal(Goal::Backtrack)?;
+                    self.push_goal(Goal::BacktrackFromFailure {
+                        reason: format!(
+                            "LOOKUP: Lookup of dictionary field {} failed.",
+                            field.clone()
+                        ),
+                    })?;
                 }
             }
             v => {
@@ -1487,7 +1520,9 @@ impl PolarVirtualMachine {
             Value::Boolean(value) => {
                 if !value {
                     // Backtrack if the boolean is false.
-                    self.push_goal(Goal::Backtrack)?;
+                    self.push_goal(Goal::BacktrackFromFailure {
+                        reason: format!("FALSE: query for False term."),
+                    })?;
                 }
 
                 return Ok(QueryEvent::None);
@@ -1853,7 +1888,9 @@ impl PolarVirtualMachine {
             }
             _ => {
                 if !compare(*op, left, right)? {
-                    self.push_goal(Goal::Backtrack)?;
+                    self.push_goal(Goal::BacktrackFromFailure {
+                        reason: format!("COMPARE: {} {:?} {} failed", left, *op, right),
+                    })?;
                 }
                 Ok(QueryEvent::None)
             }
@@ -2291,7 +2328,13 @@ impl PolarVirtualMachine {
                     (_, _) => {
                         // At least one variable is unbound. Bind it.
                         if self.bind(l, right.clone()).is_err() {
-                            self.push_goal(Goal::Backtrack)?;
+                            self.push_goal(Goal::BacktrackFromFailure {
+                                reason: format!(
+                                    "UNIFY: failed to bind value {} to variable {}",
+                                    right.clone(),
+                                    l
+                                ),
+                            })?;
                         }
                     }
                 }
@@ -2305,8 +2348,14 @@ impl PolarVirtualMachine {
                         self.push_goal(Goal::Unify { left: value, right })?;
                     }
                     _ => {
-                        if self.bind(var, right).is_err() {
-                            self.push_goal(Goal::Backtrack)?;
+                        if self.bind(var, right.clone()).is_err() {
+                            self.push_goal(Goal::BacktrackFromFailure {
+                                reason: format!(
+                                    "UNIFY: failed to bind value {} to variable {}",
+                                    right.to_polar(),
+                                    var
+                                ),
+                            })?;
                         }
                     }
                 }
@@ -2317,11 +2366,20 @@ impl PolarVirtualMachine {
                 let left = left.clone();
                 match self.variable_state(var) {
                     VariableState::Bound(value) => {
-                        self.push_goal(Goal::Unify { left, right: value })?;
+                        self.push_goal(Goal::Unify {
+                            left: left,
+                            right: value,
+                        })?;
                     }
                     _ => {
-                        if self.bind(var, left).is_err() {
-                            self.push_goal(Goal::Backtrack)?;
+                        if self.bind(var, left.clone()).is_err() {
+                            self.push_goal(Goal::BacktrackFromFailure {
+                                reason: format!(
+                                    "UNIFY: failed to bind value {} to variable {}",
+                                    left.to_polar(),
+                                    var
+                                ),
+                            })?;
                         }
                     }
                 }
@@ -2338,7 +2396,9 @@ impl PolarVirtualMachine {
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
                 if left_fields != right_fields {
-                    self.push_goal(Goal::Backtrack)?;
+                    self.push_goal(Goal::BacktrackFromFailure {
+                        reason: format!("UNIFY: {:?} != {:?}", left_fields, right_fields),
+                    })?;
                     return Ok(());
                 }
 
@@ -2359,21 +2419,27 @@ impl PolarVirtualMachine {
             // Unify integers by value.
             (Value::Number(left), Value::Number(right)) => {
                 if left != right {
-                    self.push_goal(Goal::Backtrack)?;
+                    self.push_goal(Goal::BacktrackFromFailure {
+                        reason: format!("UNIFY: {} != {}", left, right),
+                    })?;
                 }
             }
 
             // Unify strings by value.
             (Value::String(left), Value::String(right)) => {
                 if left != right {
-                    self.push_goal(Goal::Backtrack)?;
+                    self.push_goal(Goal::BacktrackFromFailure {
+                        reason: format!("UNIFY: {} != {}", left, right),
+                    })?;
                 }
             }
 
             // Unify bools by value.
             (Value::Boolean(left), Value::Boolean(right)) => {
                 if left != right {
-                    self.push_goal(Goal::Backtrack)?;
+                    self.push_goal(Goal::BacktrackFromFailure {
+                        reason: format!("UNIFY: {} != {}", left, right),
+                    })?;
                 }
             }
 
@@ -2418,7 +2484,9 @@ impl PolarVirtualMachine {
             }
 
             // Anything else fails.
-            (_, _) => self.push_goal(Goal::Backtrack)?,
+            (_, _) => self.push_goal(Goal::BacktrackFromFailure {
+                reason: "UNIFY: unrecognized unification.".to_owned(),
+            })?,
         }
 
         Ok(())
@@ -2543,9 +2611,20 @@ impl PolarVirtualMachine {
                 inner: 1,
             })
         } else {
+            // Log trace
+            // self.trace_recorder.push(traces_v2::Event::execute_goal(
+            //     Goal::FilterRules {
+            //         args: args.clone(),
+            //         applicable_rules: applicable_rules.clone(),
+            //         unfiltered_rules: unfiltered_rules.clone(),
+            //     },
+            //     None,
+            // ));
             // Check one rule for applicability.
             let mut unfiltered_rules = unfiltered_rules.clone();
             let rule = unfiltered_rules.pop().unwrap();
+
+            // self.push_choice(vec![vec![Goal::TraceV2Pop(id), Goal::Backtrack]]);
 
             let inapplicable = Goal::FilterRules {
                 args: args.clone(),
@@ -2696,6 +2775,7 @@ impl PolarVirtualMachine {
             }
 
             // Choose the first alternative, and push a choice for the rest.
+            self.trace_recorder_active = true;
             self.choose(alternatives)?;
         }
         Ok(())
@@ -2922,6 +3002,7 @@ impl Runnable for PolarVirtualMachine {
         if self.goals.is_empty() {
             if self.choices.is_empty() {
                 self.trace_recorder.push(traces_v2::Event::done());
+                self.trace_recorder_active = false;
                 return Ok(QueryEvent::Done { result: true });
             } else {
                 self.backtrack()?;
@@ -2974,8 +3055,10 @@ impl Runnable for PolarVirtualMachine {
                 .collect();
         }
 
-        self.trace_recorder
-            .push(traces_v2::Event::result(bindings.clone()));
+        if self.trace_recorder_active {
+            self.trace_recorder
+                .push(traces_v2::Event::result(bindings.clone()));
+        }
         Ok(QueryEvent::Result { bindings, trace })
     }
 

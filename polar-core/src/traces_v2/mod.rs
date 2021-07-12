@@ -32,13 +32,21 @@ impl Event {
             event_type: EventDetail::ExecuteGoal { goal, source },
         }
     }
-
-    pub fn backtrack() -> Self {
+    pub fn evaluate_rule(rule: String, source: Option<Source>) -> Self {
         Event {
             timestamp_ms: _timestamp_ms(),
             id: 0,
             parent_id: 0,
-            event_type: EventDetail::Backtrack,
+            event_type: EventDetail::EvaluateRule { rule, source },
+        }
+    }
+
+    pub fn backtrack(reason: String) -> Self {
+        Event {
+            timestamp_ms: _timestamp_ms(),
+            id: 0,
+            parent_id: 0,
+            event_type: EventDetail::Backtrack { reason },
         }
     }
 
@@ -91,7 +99,15 @@ impl Event {
 #[derive(Clone, Serialize)]
 #[serde(tag = "goal_type")]
 pub enum Goal {
-    Query { term: Term, polar: String },
+    Query {
+        term: Term,
+        polar: String,
+    },
+    CheckApplicableRule {
+        rule: crate::rules::Rule,
+        args: Vec<Term>,
+        polar: String,
+    },
 }
 
 impl TryFrom<vm::Goal> for Goal {
@@ -102,6 +118,19 @@ impl TryFrom<vm::Goal> for Goal {
             vm::Goal::Query { term } => {
                 let polar = term.to_polar();
                 Ok(Goal::Query { term, polar })
+            }
+            vm::Goal::FilterRules {
+                args,
+                unfiltered_rules,
+                ..
+            } => {
+                let rule = unfiltered_rules.last().unwrap();
+                let polar = rule.to_polar();
+                Ok(Goal::CheckApplicableRule {
+                    args,
+                    rule: rule.as_ref().clone(),
+                    polar,
+                })
             }
             _ => Err(()),
         }
@@ -117,6 +146,12 @@ pub enum EventDetail {
     /// Emitted when a goal is executed.
     ExecuteGoal { goal: Goal, source: Option<Source> },
 
+    /// Emitted when evaluation of a rule begins
+    EvaluateRule {
+        rule: String,
+        source: Option<Source>,
+    },
+
     /// Emitted when a choice starts executing.
     ExecuteChoice {},
 
@@ -124,7 +159,7 @@ pub enum EventDetail {
     Bindings { bindings: Bindings },
 
     /// Emitted on a backtrack.
-    Backtrack,
+    Backtrack { reason: String },
 
     /// Emitted on a result.
     Result { bindings: Bindings },
