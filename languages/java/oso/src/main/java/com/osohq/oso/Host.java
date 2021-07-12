@@ -303,6 +303,20 @@ public class Host implements Cloneable {
         return new Expression(
             value.getJSONObject(tag).getEnum(Operator.class, "operator"),
             polarListToJava(value.getJSONObject(tag).getJSONArray("args")));
+      case "Pattern":
+        JSONObject pattern = value.getJSONObject("Pattern");
+        String patternTag = pattern.keys().next();
+        JSONObject patternValue = pattern.getJSONObject(patternTag);
+        switch (patternTag) {
+          case "Instance":
+            return new Pattern(
+                patternValue.getString("tag"),
+                polarDictToJava(patternValue.getJSONObject("fields").getJSONObject("fields")));
+          case "Dictionary":
+            return new Pattern(null, polarDictToJava(patternValue));
+          default:
+            throw new Exceptions.UnexpectedPolarTypeError("Pattern: " + patternTag);
+        }
       default:
         throw new Exceptions.UnexpectedPolarTypeError(tag);
     }

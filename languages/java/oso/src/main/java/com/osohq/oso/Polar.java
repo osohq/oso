@@ -3,13 +3,18 @@ package com.osohq.oso;
 import com.osohq.oso.Exceptions.OsoException;
 import com.osohq.oso.Exceptions.ParseError;
 import com.osohq.oso.Exceptions.PolarRuntimeException;
+
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 public class Polar {
   private Ffi.Polar ffiPolar;
@@ -88,15 +93,20 @@ public class Polar {
   }
 
   /** Query for a predicate, parsing it first. */
-  public Query query(String query) throws Exceptions.OsoException {
-    return new Query(ffiPolar.newQueryFromStr(query), host.clone());
+  public Query query(String query) throws OsoException {
+    return query(query, Map.of());
+  }
+
+  /** Query for a predicate, parsing it first and applying bindings */
+  public Query query(String query, Map<String, Object> bindings) throws Exceptions.OsoException {
+    return new Query(ffiPolar.newQueryFromStr(query), host.clone(), bindings);
   }
 
   /** Query for a predicate. */
   public Query query(Predicate query) throws Exceptions.OsoException {
     Host new_host = host.clone();
     String pred = new_host.toPolarTerm(query).toString();
-    return new Query(ffiPolar.newQueryFromTerm(pred), new_host);
+    return new Query(ffiPolar.newQueryFromTerm(pred), new_host, Map.of());
   }
 
   /**
@@ -105,10 +115,21 @@ public class Polar {
    * @param rule Rule name, e.g. "f" for rule "f(x)".
    * @param args Variable list of rule arguments.
    */
-  public Query queryRule(String rule, Object... args) throws Exceptions.OsoException {
+  public Query queryRule(String rule, Object... args) throws OsoException {
+    return queryRule(rule, Map.of(), args);
+  }
+
+  /**
+   * Query for a rule.
+   *
+   * @param rule Rule name, e.g. "f" for rule "f(x)".
+   * @param args Variable list of rule arguments.
+   */
+  public Query queryRule(String rule, Map<String, Object> bindings, Object... args)
+      throws Exceptions.OsoException {
     Host new_host = host.clone();
     String pred = new_host.toPolarTerm(new Predicate(rule, Arrays.asList(args))).toString();
-    return new Query(ffiPolar.newQueryFromTerm(pred), new_host);
+    return new Query(ffiPolar.newQueryFromTerm(pred), new_host, bindings);
   }
 
   /** Start the Polar REPL. */
@@ -144,7 +165,7 @@ public class Polar {
       }
 
       try {
-        query = new Query(ffiQuery, host);
+        query = new Query(ffiQuery, host, Map.of());
       } catch (PolarRuntimeException e) {
         System.out.println(e.toString());
         continue;
@@ -193,7 +214,7 @@ public class Polar {
       throws Exceptions.OsoException, Exceptions.InlineQueryFailedError {
     Ffi.Query nextQuery = ffiPolar.nextInlineQuery();
     while (nextQuery != null) {
-      if (!new Query(nextQuery, host).hasMoreElements()) {
+      if (!new Query(nextQuery, host, Map.of()).hasMoreElements()) {
         String source = nextQuery.source();
         throw new Exceptions.InlineQueryFailedError(source);
       }

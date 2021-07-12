@@ -1,14 +1,15 @@
 package com.osohq.oso;
 
+import jnr.ffi.LibraryLoader;
+import jnr.ffi.Pointer;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import jnr.ffi.LibraryLoader;
-import jnr.ffi.Pointer;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class Ffi {
   // singleton variable
@@ -148,6 +149,10 @@ public class Ffi {
       return source;
     }
 
+    protected int bind(String name, String value) throws Exceptions.OsoException {
+      return checkResult(polarLib.polar_bind(ptr, name, value));
+    }
+
     @Override
     protected void finalize() {
       polarLib.query_free(ptr);
@@ -230,6 +235,8 @@ public class Ffi {
     Pointer polar_next_query_message(Pointer query_ptr);
 
     Pointer polar_query_source_info(Pointer query_ptr);
+
+    int polar_bind(Pointer query_ptr, String name, String value);
   }
 
   protected Ffi() {

@@ -1,18 +1,26 @@
 package com.osohq.oso;
 
+import org.apache.commons.beanutils.MethodUtils;
+import org.apache.commons.collections4.IteratorUtils;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.stream.Collectors;
-import org.apache.commons.beanutils.MethodUtils;
-import org.apache.commons.collections4.IteratorUtils;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class Query implements Enumeration<HashMap<String, Object>> {
   private HashMap<String, Object> next;
@@ -25,11 +33,19 @@ public class Query implements Enumeration<HashMap<String, Object>> {
    *
    * @param queryPtr Pointer to the FFI query instance.
    */
-  public Query(Ffi.Query queryPtr, Host host) throws Exceptions.OsoException {
+  public Query(Ffi.Query queryPtr, Host host, Map<String, Object> bindings)
+      throws Exceptions.OsoException {
     this.ffiQuery = queryPtr;
     this.host = host;
     calls = new HashMap<Long, Enumeration<Object>>();
     next = nextResult();
+    for (Map.Entry<String, Object> binding : bindings.entrySet()) {
+      bind(binding.getKey(), binding.getValue());
+    }
+  }
+
+  private void bind(String name, Object value) {
+    this.ffiQuery.bind(name, this.host.toPolarTerm(value).toString());
   }
 
   @Override
