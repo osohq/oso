@@ -100,7 +100,9 @@ module Oso
       def get_instance(id)
         raise UnregisteredInstanceError, id unless instance? id
 
-        instances[id]
+        instance = instances[id]
+        return instance.get if instance.is_a? PolarClass
+        instance
       end
 
       # Cache a Ruby instance in the {#instances} cache, fetching a new id if
@@ -111,6 +113,7 @@ module Oso
       # @return [Integer] the instance ID.
       def cache_instance(instance, id: nil)
         id = ffi_polar.new_id if id.nil?
+        instance = PolarClass.new(instance) if instance.is_a? Class
         instances[id] = instance
         id
       end

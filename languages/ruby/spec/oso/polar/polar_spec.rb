@@ -802,4 +802,43 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(qvar(subject, 'x = new Bar([1, 2, 3]).sum()', 'x', one: true)).to eq(6)
     end
   end
+
+  context 'Code reloading' do
+    before do
+      # Register a class and then simulate it changing due to a code reload
+      stub_const('Foo', Class.new do
+        def version
+          1
+        end
+
+        def self.class_version
+          1
+        end
+      end)
+      subject.register_class(Foo)
+      stub_const('Foo', Class.new do
+        def version
+          2
+        end
+
+        def self.class_version
+          2
+        end
+      end)
+    end
+
+    it 'uses the up-to-date version of the class to make new instances' do
+      expect(query(subject, 'x = new Foo() and x.version = 2').length).to eq(1)
+      expect(query(subject, 'x = new Foo() and x.version = 1').length).to eq(0)
+    end
+
+    it 'uses the up-to-date version of the class during isa checks' do
+      subject.load_str('is_foo(foo: Foo);')
+      expect(subject.query_rule('is_foo', Foo.new).to_a).to eq([{}])
+    end
+
+    it 'uses the up-to-date version of the class for lookups' do
+      expect(query(subject, "Foo.class_version = 2")).to eq([{}])
+    end
+  end
 end
