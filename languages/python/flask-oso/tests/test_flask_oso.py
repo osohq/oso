@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 from flask import Flask
-from oso import Oso, OsoError
+from flask_oso import FlaskOso, authorize, skip_authorization
 from werkzeug.exceptions import Forbidden
 
-from flask_oso import FlaskOso, authorize, skip_authorization
+from oso import Oso, OsoError
 
 
 @pytest.fixture

@@ -13,10 +13,9 @@
 import os
 import sys
 
+from enchant.tokenize import Filter
 from sphinx.highlighting import lexers
 from sphinxcontrib.spelling.filters import ContractionFilter
-
-from enchant.tokenize import Filter
 
 sys.path.insert(0, os.path.abspath("../django-oso"))
 sys.path.insert(0, os.path.abspath("../flask-oso"))

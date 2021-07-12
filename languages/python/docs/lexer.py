@@ -1,8 +1,9 @@
-from pygments.lexer import Lexer, RegexLexer, bygroups, do_insertions
-from pygments.lexers.jvm import JavaLexer
-from pygments.lexers.javascript import JavascriptLexer
-from pygments import token
 import re
+
+from pygments import token
+from pygments.lexer import Lexer, RegexLexer, bygroups, do_insertions
+from pygments.lexers.javascript import JavascriptLexer
+from pygments.lexers.jvm import JavaLexer
 
 line_re = re.compile(".*?\n")
 

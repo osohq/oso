@@ -1,6 +1,5 @@
 import pytest
 from sqlalchemy.orm import Session
-
 from sqlalchemy_oso.session import AuthorizedSession
 
 from .models import Post, Tag

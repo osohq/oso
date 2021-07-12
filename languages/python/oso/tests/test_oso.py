@@ -3,9 +3,9 @@
 from pathlib import Path
 
 import pytest
+from polar import exceptions
 
 from oso import Oso, polar_class
-from polar import exceptions
 
 # Fake global actor name → company ID map.
 # Should be an external database lookup.

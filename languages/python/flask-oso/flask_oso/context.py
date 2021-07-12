@@ -1,5 +1,6 @@
 """Storage of oso information on app context."""
 from flask import _app_ctx_stack
+
 from oso import OsoError
 
 

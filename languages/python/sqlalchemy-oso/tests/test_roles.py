@@ -5,7 +5,6 @@ import string
 import timeit
 
 import pytest
-from oso import OsoError
 from polar.exceptions import ParserError
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -13,8 +12,9 @@ from sqlalchemy.orm import close_all_sessions, relationship, sessionmaker
 from sqlalchemy.pool import NullPool
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String
-
 from sqlalchemy_oso import SQLAlchemyOso, authorized_sessionmaker
+
+from oso import OsoError
 
 pg_host = os.environ.get("POSTGRES_HOST")
 pg_port = os.environ.get("POSTGRES_PORT")

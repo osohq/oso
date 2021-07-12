@@ -1,15 +1,15 @@
 """SQLAlchemy session classes and factories for oso."""
 from typing import Any, Callable, Dict, Optional, Type
 
-from oso import Oso
 from polar.exceptions import UnsupportedError
 from sqlalchemy import event, inspect, orm
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql import expression as expr
-
 from sqlalchemy_oso.auth import authorize_model
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
+
+from oso import Oso
 
 
 class _OsoSession:

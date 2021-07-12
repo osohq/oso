@@ -2,13 +2,13 @@ from pathlib import Path
 
 import pytest
 from django.core.exceptions import EmptyResultSet, PermissionDenied
-from oso import OsoError
-from polar import Expression, Variable
-from polar.exceptions import UnsupportedError
-
 from django_oso.auth import authorize, authorize_model
 from django_oso.oso import Oso, reset_oso
 from django_oso.partial import TRUE_FILTER
+from polar import Expression, Variable
+from polar.exceptions import UnsupportedError
+
+from oso import OsoError
 
 from .conftest import negated_condition
 
@@ -54,8 +54,9 @@ def test_policy_autoload():
 
 def test_model_registration():
     """Test that models are automatically registered with the policy."""
-    from oso import Variable
     from test_app import models
+
+    from oso import Variable
 
     assert (
         next(Oso.query_rule("models", models.TestRegistration(), Variable("x")))[

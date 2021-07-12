@@ -2,7 +2,6 @@ from collections import defaultdict
 
 from polar.expression import Expression, Pattern
 from polar.variable import Variable
-
 from sqlalchemy_oso.preprocess import preprocess, preprocess_expression
 
 

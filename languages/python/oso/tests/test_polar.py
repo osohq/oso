@@ -4,7 +4,6 @@ from math import inf, isnan, nan
 from pathlib import Path
 
 import pytest
-
 from polar import (
     Expression,
     Pattern,

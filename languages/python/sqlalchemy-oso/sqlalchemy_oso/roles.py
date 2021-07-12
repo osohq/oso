@@ -2,13 +2,14 @@
 from dataclasses import dataclass
 from typing import Any, Dict, List, Set
 
-from oso import OsoError, Variable
 from sqlalchemy import inspect, sql
 from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String
+
+from oso import OsoError, Variable
 
 from .compat import iterate_model_classes
 
