@@ -3,17 +3,17 @@
 from math import inf, isnan, nan
 
 from .exceptions import (
-    PolarRuntimeError,
-    UnregisteredClassError,
-    DuplicateClassAliasError,
-    UnregisteredInstanceError,
-    DuplicateInstanceRegistrationError,
-    UnexpectedPolarTypeError,
     UNEXPECTED_EXPRESSION_MESSAGE,
+    DuplicateClassAliasError,
+    DuplicateInstanceRegistrationError,
+    PolarRuntimeError,
+    UnexpectedPolarTypeError,
+    UnregisteredClassError,
+    UnregisteredInstanceError,
 )
-from .variable import Variable
-from .predicate import Predicate
 from .expression import Expression, Pattern
+from .predicate import Predicate
+from .variable import Variable
 
 
 class Host:

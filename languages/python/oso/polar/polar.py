@@ -1,9 +1,9 @@
 """Communicate with the Polar virtual machine: load rules, make queries, etc."""
 
-from datetime import datetime, timedelta
 import os
-from pathlib import Path
 import sys
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Dict
 
 try:
@@ -14,17 +14,17 @@ except ImportError:
     pass
 
 from .exceptions import (
-    PolarRuntimeError,
     InlineQueryFailedError,
+    InvalidQueryTypeError,
     ParserError,
     PolarFileExtensionError,
     PolarFileNotFoundError,
-    InvalidQueryTypeError,
+    PolarRuntimeError,
 )
 from .ffi import Polar as FfiPolar
 from .host import Host
-from .query import Query
 from .predicate import Predicate
+from .query import Query
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
