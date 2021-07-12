@@ -54,7 +54,7 @@ jobs:
       - name: Check Black formatting
         run: black --check languages/python
       - name: Check isort formatting
-        run: isort languages/python -c
+        run: isort languages/python -c --profile black
 
       ## Check Ruby
       - name: Install Ruby + gems
