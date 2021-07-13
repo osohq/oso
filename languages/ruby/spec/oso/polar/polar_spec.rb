@@ -841,13 +841,23 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(query(subject, 'Foo.class_version = 2')).to eq([{}])
     end
 
-    it 'works with anonymous classes' do
+    it 'can lookup attributes on anonymous classes' do
       subject.register_class(Class.new do
         def self.test
           1
         end
       end, name: 'AnonymousClass')
       expect(query(subject, 'AnonymousClass.test = 1')).to eq([{}])
+    end
+
+    it 'can match against anonymous classes' do
+      anon_class = Class.new do
+        def self.test
+          1
+        end
+      end
+      subject.register_class(anon_class, name: 'AnonymousClass')
+      expect(query(subject, 'new AnonymousClass() matches AnonymousClass')).to eq([{}])
     end
   end
 end

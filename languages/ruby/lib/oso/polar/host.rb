@@ -18,13 +18,18 @@ module Oso
     # look it up using const_get, which will always return the up-to-date
     # version of the class.
     class PolarClass
-      attr_reader :name
+      attr_reader :name, :anon_class
 
       def initialize(klass)
         @name = klass.name
+        # If the class doesn't have a name, it is anonymous, meaning we should
+        # actually store it directly
+        @anon_class = klass if klass.name.nil?
       end
 
       def get
+        return anon_class if anon_class
+
         Object.const_get(name)
       end
     end
@@ -115,7 +120,7 @@ module Oso
       def cache_instance(instance, id: nil)
         id = ffi_polar.new_id if id.nil?
         # Save the instance as a PolarClass if it is a non-anonymous class
-        instance = PolarClass.new(instance) if instance.is_a?(Class) && !instance.name.nil?
+        instance = PolarClass.new(instance) if instance.is_a?(Class)
         instances[id] = instance
         id
       end
