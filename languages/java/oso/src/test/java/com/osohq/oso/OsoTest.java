@@ -1,14 +1,18 @@
 package com.osohq.oso;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.URL;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OsoTest {
   protected Oso o;
@@ -166,5 +170,13 @@ public class OsoTest {
 
     assertEquals(Set.of("*"), o.getAllowedActions(actor, widget, true));
     assertThrows(Exceptions.OsoException.class, () -> o.getAllowedActions(actor, widget, false));
+  }
+
+  @Test
+  public void testNotEqalOperator() {
+    Oso oso = new Oso();
+    oso.registerClass(Actor.class, "Actor");
+    oso.loadStr("allow(actor: Actor, action, resource) if actor != nil;");
+    assertFalse(oso.isAllowed(null, "foo", "foo"));
   }
 }
