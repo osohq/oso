@@ -94,12 +94,25 @@ public class Polar {
 
   /** Query for a predicate, parsing it first. */
   public Query query(String query) throws OsoException {
-    return query(query, Map.of());
+    return query(query, Map.of(), false);
+  }
+
+  /** Query for a predicate, parsing it first and optionally accepting an expression. */
+  public Query query(String query, boolean acceptExpression) throws OsoException {
+    return query(query, Map.of(), acceptExpression);
   }
 
   /** Query for a predicate, parsing it first and applying bindings */
   public Query query(String query, Map<String, Object> bindings) throws Exceptions.OsoException {
-    return new Query(ffiPolar.newQueryFromStr(query), host.clone(), bindings);
+    return query(query, bindings, false);
+  }
+
+  /** Query for a predicate, parsing it first, applying bindings and optionally accepting an
+   * expression. */
+  public Query query(String query, Map<String, Object> bindings, boolean acceptExpression) throws Exceptions.OsoException {
+      Host new_host = host.clone();
+      new_host.setAcceptExpression(acceptExpression);
+    return new Query(ffiPolar.newQueryFromStr(query), new_host, bindings);
   }
 
   /** Query for a predicate. */
@@ -107,6 +120,23 @@ public class Polar {
     Host new_host = host.clone();
     String pred = new_host.toPolarTerm(query).toString();
     return new Query(ffiPolar.newQueryFromTerm(pred), new_host, Map.of());
+  }
+
+  /** Query for a predicate, optionally accepting expressions in the result. */
+  public Query query(Predicate query, boolean acceptExpression) throws Exceptions.OsoException {
+      return query(query, Map.of(), acceptExpression);
+  }
+
+  /** Query for a predicate, applying bindings and optionally accepting the expression type as a
+   * result.
+   *
+   * @param acceptExpression Set to true to accept an Expression as a result from the VM.
+   */
+  public Query query(Predicate query, Map<String, Object> bindings, boolean acceptExpression) throws Exceptions.OsoException {
+    Host new_host = host.clone();
+    new_host.setAcceptExpression(acceptExpression);
+    String pred = new_host.toPolarTerm(query).toString();
+    return new Query(ffiPolar.newQueryFromTerm(pred), new_host, bindings);
   }
 
   /**

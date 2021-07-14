@@ -5,6 +5,13 @@ import org.json.*;
 
 @SuppressWarnings("serial")
 public class Exceptions {
+  public static final String UNEXPECTED_EXPRESSION_MESSAGE =
+      "Recieved Expression from Polar VM. The Expression type is only supported when\n" +
+      "using django-oso or sqlalchemy-oso's data filtering features. Did you perform an " +
+      "operation over an unbound variable in your policy?\n\n" +
+      "To silence this error and receive an Expression result, pass\n" +
+      "accept_expression=True to Oso.queryRule.";
+
   public static OsoException getJavaError(String polarError) {
     String msg, kind, subkind;
     JSONObject jError, body;

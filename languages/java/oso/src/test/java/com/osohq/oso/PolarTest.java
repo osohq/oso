@@ -606,7 +606,7 @@ public class PolarTest {
     // GIVEN
     p.loadStr("f(x) if x > 2;");
     // WHEN
-    List<HashMap<String, Object>> res = p.query("f(x)").results();
+    List<HashMap<String, Object>> res = p.query("f(x)", true).results();
     // THEN
     assertEquals(1, res.size());
     HashMap<String, Object> hm = res.get(0);
@@ -642,13 +642,15 @@ public class PolarTest {
     p.loadStr("f(x) if x = 1 and x = 2;");
 
     // WHEN
-    List<HashMap<String, Object>> results = p.queryRule("f", new Variable("x")).results();
+    Predicate rule = new Predicate("f", List.of(new Variable("x")));
+    List<HashMap<String, Object>> results = p.query(rule, true).results();
     assertEquals(1, results.size());
     assertEquals(1, results.get(0).get("x"));
 
     p.loadStr("g(x) if x.bar = 1 and x.baz = 2;");
 
-    results = p.queryRule("g", new Variable("x")).results();
+    Predicate gRule = new Predicate("g", List.of(new Variable("x")));
+    results = p.query(gRule, true).results();
     assertEquals(1, results.size());
     Expression expr = (Expression) results.get(0).get("x");
     List<Object> args = (List<Object>) unwrapAnd(expr);
@@ -684,8 +686,8 @@ public class PolarTest {
     p.loadStr("f(x: Post) if x.post = 1;");
     Variable x = new Variable("x");
 
-    List<HashMap<String, Object>> results =
-        p.queryRule("f", Map.of("x", new TypeConstraint(x, "User")), x).results();
+    Predicate rule = new Predicate("f", List.of(x));
+    List<HashMap<String, Object>> results = p.query(rule, Map.of("x", new TypeConstraint(x, "User")), true).results();
     assertEquals(2, results.size());
     List<Object> andArgs = (List<Object>) unwrapAnd((Expression) results.get(0).get("x"));
     assertEquals(2, andArgs.size());

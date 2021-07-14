@@ -18,7 +18,11 @@ public class Host implements Cloneable {
   private Map<String, Class<?>> classes;
   private Map<Long, Object> instances;
 
+  // Set to true to accept an expression from the core in toJava.
+  private boolean acceptExpression;
+
   public Host(Ffi.Polar polarPtr) {
+    acceptExpression = false;
     ffiPolar = polarPtr;
     classes = new HashMap<String, Class<?>>();
     instances = new HashMap<Long, Object>();
@@ -29,7 +33,12 @@ public class Host implements Cloneable {
     Host host = new Host(ffiPolar);
     host.classes.putAll(classes);
     host.instances.putAll(instances);
+    host.acceptExpression = acceptExpression;
     return host;
+  }
+
+  protected void setAcceptExpression(boolean acceptExpression) {
+      this.acceptExpression = acceptExpression;
   }
 
   /** Get a registered Java class. */
@@ -300,6 +309,9 @@ public class Host implements Cloneable {
       case "Variable":
         return new Variable(value.getString(tag));
       case "Expression":
+        if (!this.acceptExpression) {
+            throw new Exceptions.UnexpectedPolarTypeError(Exceptions.UNEXPECTED_EXPRESSION_MESSAGE);
+        }
         return new Expression(
             value.getJSONObject(tag).getEnum(Operator.class, "operator"),
             polarListToJava(value.getJSONObject(tag).getJSONArray("args")));
