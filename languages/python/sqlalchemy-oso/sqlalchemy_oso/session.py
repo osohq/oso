@@ -235,7 +235,7 @@ class AuthorizedSessionBase(object):
         if oso._polar_roles_enabled:
             raise UnsupportedError(
                 "Data filtering not yet supported for the Polar roles feature."
-                + "Please use the SQLAlchemy roles feature instead: https://docs.osohq.com/python/new-roles.html"
+                + "Please use the SQLAlchemy roles feature instead: https://docs.osohq.com/python/guides/roles/sqlalchemy.html"
             )
 
         self._oso = oso

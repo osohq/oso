@@ -2612,3 +2612,12 @@ def test_role_config_revalidated_when_loading_rules_after_enabling_roles(init_os
     oso.enable_roles()
     with pytest.raises(RolesValidationError):
         oso.load_str(invalid_policy)
+
+
+def test_validation_with_method_calls(init_oso):
+    oso, _ = init_oso
+    p = """resource(_: Repo, "repo", ["read"], {});
+            actor_has_role_for_resource(actor, role_name, resource) if
+                actor.has_role(role_name, resource);"""
+    oso.load_str(p)
+    oso.enable_roles()

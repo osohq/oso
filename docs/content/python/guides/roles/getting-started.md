@@ -1,6 +1,6 @@
 ---
 title: Getting started
-weight: 2
+weight: 1
 description: >
     Get started with Oso Roles for Python
 ---

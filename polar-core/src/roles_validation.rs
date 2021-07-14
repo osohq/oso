@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use super::bindings::Bindings;
 use super::error::{PolarResult, RolesValidationError};
+use super::rules::GenericRule;
 use super::terms::*;
 
 use serde::{Deserialize, Serialize};
@@ -31,28 +32,40 @@ struct Resource {
 }
 
 pub const VALIDATE_ROLES_CONFIG_RESOURCES: &str = "resource(resource, name, actions, roles)";
-pub const VALIDATE_ROLES_CONFIG_ACTOR_HAS_ROLE_FOR_RESOURCE: &str =
-    "actor_has_role_for_resource(actor, role_name, resource)";
 
-pub fn validate_roles_config(roles_config: Vec<Vec<ResultEvent>>) -> PolarResult<()> {
-    let actor_role = roles_config.first().ok_or_else(|| {
-        // TODO: add link to docs in error message
-        RolesValidationError(
-            "Need to define `actor_has_role_for_resource(actor, role_name, resource)` predicate to use Oso Roles.
-Make sure to load policy before calling Oso.enable_roles()."
-                .to_owned(),
-        )
-    })?;
-    if actor_role.is_empty() {
+pub fn validate_actor_has_role_for_resource(
+    rules: &HashMap<Symbol, GenericRule>,
+) -> PolarResult<()> {
+    if let Some(actor_role) = rules.get(&sym!("actor_has_role_for_resource")) {
+        let args = vec![
+            term!(value!(sym!("actor"))),
+            term!(value!(sym!("action"))),
+            term!(value!(sym!("resource"))),
+        ];
+        let applicable_rules = actor_role.get_applicable_rules(&args);
+        if applicable_rules.is_empty() {
+            return Err(RolesValidationError(
+                "Need to define `actor_has_role_for_resource(actor, role_name, resource)` predicate to use Oso Roles.
+    Make sure to load policy before calling Oso.enable_roles().".to_owned(),
+            )
+            .into());
+        }
+    } else {
         return Err(RolesValidationError(
-            "Need to define `actor_has_role_for_resource(actor, role_name, resource)` predicate to use Oso Roles.
-Make sure to load policy before calling Oso.enable_roles()."
-                .to_owned(),
-        )
-        .into());
+                "Need to define `actor_has_role_for_resource(actor, role_name, resource)` predicate to use Oso Roles.
+    Make sure to load policy before calling Oso.enable_roles().".to_owned(),
+            )
+            .into());
     }
+    Ok(())
+}
 
-    let role_resources = roles_config.get(1).ok_or_else(|| {
+pub fn validate_roles_config(
+    rules: &HashMap<Symbol, GenericRule>,
+    roles_config: Vec<Vec<ResultEvent>>,
+) -> PolarResult<()> {
+    validate_actor_has_role_for_resource(rules)?;
+    let role_resources = roles_config.first().ok_or_else(|| {
         // TODO: add link to docs in error message
         RolesValidationError(
             "Need to define at least one `resource(type, name, actions, roles)` predicate to use Oso Roles.".to_owned(),

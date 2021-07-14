@@ -6,7 +6,7 @@ license = "Apache-2.0"
 name = "oso"
 readme = "README.md"
 
-version = "0.13.0"
+version = "0.13.1"
 
 edition = "2018"
 
@@ -30,8 +30,8 @@ required-features = ["anyhow"]
 [dependencies]
 impl-trait-for-tuples = "0.2.0"
 maplit = "1.0.2"
-oso-derive = {path = "../oso-derive", version = "=0.13.0", optional = true}
-polar-core = {path = "../../../polar-core", version = "=0.13.0"}
+oso-derive = {path = "../oso-derive", version = "=0.13.1", optional = true}
+polar-core = {path = "../../../polar-core", version = "=0.13.1"}
 thiserror = "1.0.23"
 tracing = {version = "0.1.22", features = ["log"]}
 tracing-subscriber = {version = "0.2.15", features = ["fmt"]}
@@ -48,7 +48,7 @@ uuid-07 = {package = "uuid", version = ">=0.7.0, <0.9.0", optional = true}
 [dev-dependencies]
 anyhow = "1.0.38"
 criterion = "0.3.3"
-oso-derive = {path = "../oso-derive", version = "=0.13.0"}
+oso-derive = {path = "../oso-derive", version = "=0.13.1"}
 static_assertions = "1.1.0"
 tempfile = "3.2.0"
 
