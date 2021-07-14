@@ -1,6 +1,6 @@
 ---
 title: With SQLAlchemy
-weight: 1
+weight: 2
 description: >
     Use Oso with SQLAlchemy to handle all roles data management,
     expose roles to end users, and enforce authorization.
