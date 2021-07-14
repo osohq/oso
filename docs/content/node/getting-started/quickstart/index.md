@@ -5,13 +5,20 @@ description: |
 weight: 1
 ---
 
-# Oso Quickstart
+<!--
+
+This guide is not setup to use literalInclude. As a result the
+examples are manually maintained to match the quickstart repository.
+
+This needs to be updated.
+
+-->
+
+# Quickstart
 
 Oso is an open-source, batteries-included library for authorizing actions in your app.
 Out of the box, Oso lets you give your users roles and lets you specify permissions for those roles.
-Roles can be as simple as "user" and "admin", or as complex as a management hierarchy.
-
-![Diagram showing an application hierarchy with site admins, store owners, and customers](/getting-started/quickstart/images/app-hierarchy.png)
+Roles can be as simple as "guest" and "admin", or as complex as a management hierarchy.
 
 Oso isn't restricted to roles, though — you can replace any authorization code in your app with an Oso policy.
 
@@ -22,9 +29,6 @@ Oso's design will guide you to best practices.
 Oso is a library — it runs alongside your app code and doesn't make any calls over the network.
 Your data doesn't leave your server. Oso also doesn't persist user data inside the library, so you stay in control of your data.
 
-Here's how data flows between your app and the Oso library:
-
-![Architecture diagram for Oso library loading a policy file and making authorization decisions. ](/getting-started/quickstart/images/arch-simple.png)
 ## Install the Oso library
 
 {{% exampleGet "installation_new" %}}
@@ -58,20 +62,20 @@ You can tell Oso what requests to accept by providing it with a file full of rul
 
 ## Write an authorization policy
 Here is a typical policy, written in our declarative language, **Polar**.
-It lets any actor with the role `"guest"` read a page, but only actors with the role `"admin"` can write to a page.
+It lets any actor with the role `guest` read a page, but only actors with the role `admin` can write to a page.
 
 We can load our example policy from a file with the extension `.polar`.
 
 {{% exampleGet "load_policy" %}}
 
-Here's the authorization.polar file:
+Here's the `authorization.polar` file:
 
 ```polar
 allow(actor, action, resource) if
-    role_allow(actor, action, resource);
+    role_allows(actor, action, resource);
 
-actor_role(actor, role) if
-    role in actor.{{% exampleGet "getroles" %}}();
+actor_has_role_for_resource(actor, role, resource) if
+    {name: role, resource: resource} in actor.getRoles();
 
 resource(_type: Page, "page", actions, roles) if
     actions = ["read", "write"] and
@@ -87,11 +91,11 @@ resource(_type: Page, "page", actions, roles) if
  ```
 
 The `allow` rule is the top-level rule that we use to say who can do what in our application.
-In this case, we are delegating to Oso's built-in `role_allow` rule which implements all the
-authorization logic for role-based access control based on the data we provide in `actor_role`
+In this case, we are delegating to Oso's built-in `role_allows` rule which implements all the
+authorization logic for role-based access control based on the data we provide in `actor_has_role_for_resource`
 and `resource`.
 
-An `actor_role` rule looks up role objects that are associated with an actor.
+An `actor_has_role_for_resource` rule looks up role objects that are associated with an actor.
 Role objects are of the form `{name: "the-role-name", resource: TheResourceObject}`.
 The Oso builtin roles will look up this rule, so this is required.
 
@@ -109,10 +113,10 @@ There's much more you can do with Oso — we're just scratching the surface here
 You can call properties and methods on your {{% exampleGet "objects" %}} from Polar.
 These will defer control back to your app.
 Oso leaves the decision of how to store role assignments up to you — you might choose to store those role assignments in a database, in memory, or create them dynamically.
-Our `actor_role` rule calls the {{% exampleGet "methods" %}} `{{% exampleGet "getroles" %}}` to get all the roles for our actor.
+Our `actor_has_role_for_resource` rule calls the {{% exampleGet "methods" %}} `{{% exampleGet "getroles" %}}` to get all the roles for our actor.
 
 ```polar
-actor_role(actor, role) if
+actor_has_role_for_resource(actor, role) if
     role in actor.{{% exampleGet "getroles" %}}();
  ```
 
