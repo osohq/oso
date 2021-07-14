@@ -20,11 +20,21 @@ from .expression import Expression, Pattern
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
-    def __init__(self, polar, classes=None, instances=None, get_field=None):
+    def __init__(
+        self,
+        polar,
+        classes=None,
+        instances=None,
+        get_field=None,
+        types=None,
+        fetchers=None,
+    ):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
         self.classes = (classes or {}).copy()
         self.instances = (instances or {}).copy()
+        self.types = (types or {}).copy()
+        self.fetchers = (fetchers or {}).copy()
         self._accept_expression = False  # default, see set_accept_expression
 
         def default_get_field(_obj, _field):
@@ -39,6 +49,8 @@ class Host:
             classes=self.classes,
             instances=self.instances,
             get_field=self.get_field,
+            types=self.types,
+            fetchers=self.fetchers,
         )
 
     def get_class(self, name):

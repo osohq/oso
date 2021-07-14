@@ -7,6 +7,7 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
+from .data_filtering import Relationship
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -94,7 +95,26 @@ class Query:
 
         # Lookup the attribute on the instance.
         try:
-            attr = getattr(instance, attribute)
+            # Check if it's a relationship
+            attr = None
+            cls = instance.__class__
+            if cls in self.host.types:
+                typ = self.host.types[cls]
+                if attribute in typ:
+                    attr_typ = typ[attribute]
+                    if isinstance(attr_typ, Relationship):
+                        rel = attr_typ
+                        # Use the fetcher for the other type to traverse the relationship
+                        assert rel.kind == "many-to-one"
+                        assert rel.other_type in self.host.fetchers
+                        fetcher = self.host.fetchers[rel.other_type]
+                        query = {rel.other_field: getattr(instance, rel.my_field)}
+                        results = fetcher([query])
+                        assert len(results) == 1
+                        assert len(results[0]) == 1
+                        attr = results[0][0]
+            if attr is None:
+                attr = getattr(instance, attribute)
         except AttributeError as e:
             self.ffi_query.application_error(str(e))
             self.ffi_query.call_result(call_id, None)
