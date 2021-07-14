@@ -7,18 +7,35 @@ from graphviz import Digraph
 from oso import Oso, Variable, Predicate
 
 
+class User:
+    def __init__(self, id):
+        self.id = id
+
+
+class Resource:
+    def __init__(self, id, user):
+        self.id = id
+        self.user = user
+
+    def get_user(self):
+        return self.user
+
+
 def build_trace_file():
     oso = Oso()
     oso.load_str("f(1); f(2);")
+    oso.register_class(User)
+    oso.register_class(Resource)
+
+    user = User(1)
+    resource = Resource(2, user)
 
     with tempfile.NamedTemporaryFile(suffix=".polar") as f:
         f.write(
             """
-            f(x, y) if x > 0 and y < 1 and x < 5;
-            f(x, _) if x = 1;
-            f(x, y) if x = 3 and y = 4;
-            f(x, y) if x = 1 and y = 4;
-            f(x, y) if x = 3 or y = 0;
+            allow(actor: User, action, resource: Resource) if actor.id == resource.id;
+            allow(actor: User, action, resource: Resource) if resource.id = 1;
+            allow(actor: User, action, resource: Resource) if resource.get_user() = actor;
         """.encode(
                 "ascii"
             )
@@ -26,13 +43,23 @@ def build_trace_file():
         f.flush()
 
         oso.load_file(f.name)
-        query = oso._query(Predicate("f", (1, 0)))
+        query = oso._query(Predicate("allow", (user, "read", resource)))
 
         results = [r for r in query.run()]
 
         trace = query.trace()
         with open("trace.json", "w") as fw:
             json.dump(trace, fw)
+
+
+def test_construct_d3_data():
+    build_trace_file()
+    d3_map = {}
+    with open("trace.json") as f:
+        data = json.load(f)
+        for node in data:
+            if node["id"] == node["parent_id"]
+            pass
 
 
 def test_graph():
@@ -83,4 +110,4 @@ def test_graph():
                 if parent_id != id:
                     dot.edge(str(parent_id), str(id))
 
-    dot.render("trace.gv", view=True)
+    dot.render("trace.gv", view=True, format="svg")
