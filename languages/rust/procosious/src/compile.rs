@@ -23,8 +23,8 @@ pub fn load_file(input: TokenStream) -> TokenStream {
     eprintln!("{:#?}", std::env::current_dir().unwrap());
     eprintln!("{:#?}", filename);
     let oso = oso::GLOBAL_OSO.lock().unwrap();
-    oso.load_file(format!("languages/rust/oso/examples/{}", filename.clone()))
-        .unwrap();
+    let res = oso.load_file(format!("languages/rust/oso/examples/{}", filename.clone()));
+    eprintln!("{:#?}", res);
 
     let result = quote! {
         #[ctor]

@@ -1,7 +1,9 @@
-allow("sam", "get", resource: Resource) if
-    fib(12, res) and
+allow("sam", "get", resource: Blorg) if
+    fib(10, res) and
     resource.id = res and
-    resource.bar = "abc";
+    resource.blog = "abc";
+
+
 
 fib(1, 1);
 fib(0, 1);
