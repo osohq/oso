@@ -88,11 +88,12 @@ Link to [migration guide]().
 
 #### New features
 
-#### Feature 1
+##### Roles in Ruby
 
-Summary of user-facing changes.
+The ruby library now has
+[built-in support for Role-Based Access Control (RBAC) policies](/guides/roles),
+which you can turn on with `OSO.enable_roles`.
 
-Link to [relevant documentation section]().
 #### Other bugs & improvements
 
 - Oso's ruby library now behaves better with code reloading in development. You
