@@ -2,6 +2,38 @@
 
 module Oso
   module Polar
+    # Ruby code reloaders (i.e. the one used by rails) swap out the value of
+    # a constant on code changes. Because of this, we can't reliably call
+    # `is_a?` on the constant that was passed to `register_class`.
+    #
+    # Example (where Foo is a class defined in foo.rb):
+    #   > klass = Foo
+    #   > Foo.new.is_a? klass
+    #     => true
+    #   > ... user changes foo.rb ...
+    #   > Foo.new.is_a? klass
+    #     => false
+    #
+    # To solve this, when we need to access the class (e.g. during isa), we
+    # look it up using const_get, which will always return the up-to-date
+    # version of the class.
+    class PolarClass
+      attr_reader :name, :anon_class
+
+      def initialize(klass)
+        @name = klass.name
+        # If the class doesn't have a name, it is anonymous, meaning we should
+        # actually store it directly
+        @anon_class = klass if klass.name.nil?
+      end
+
+      def get
+        return anon_class if anon_class
+
+        Object.const_get(name)
+      end
+    end
+
     # Translate between Polar and the host language (Ruby).
     class Host # rubocop:disable Metrics/ClassLength
       protected
@@ -35,7 +67,7 @@ module Oso
       def get_class(name)
         raise UnregisteredClassError, name unless classes.key? name
 
-        classes[name]
+        classes[name].get
       end
 
       # Store a Ruby class in the {#classes} cache.
@@ -48,7 +80,7 @@ module Oso
       def cache_class(cls, name:)
         raise DuplicateClassAliasError.new name: name, old: get_class(name), new: cls if classes.key? name
 
-        classes[name] = cls
+        classes[name] = PolarClass.new(cls)
         name
       end
 
@@ -73,7 +105,10 @@ module Oso
       def get_instance(id)
         raise UnregisteredInstanceError, id unless instance? id
 
-        instances[id]
+        instance = instances[id]
+        return instance.get if instance.is_a? PolarClass
+
+        instance
       end
 
       # Cache a Ruby instance in the {#instances} cache, fetching a new id if
@@ -84,6 +119,8 @@ module Oso
       # @return [Integer] the instance ID.
       def cache_instance(instance, id: nil)
         id = ffi_polar.new_id if id.nil?
+        # Save the instance as a PolarClass if it is a non-anonymous class
+        instance = PolarClass.new(instance) if instance.is_a?(Class)
         instances[id] = instance
         id
       end
