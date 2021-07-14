@@ -1,11 +1,5 @@
 package com.osohq.oso;
 
-import org.apache.commons.beanutils.MethodUtils;
-import org.apache.commons.collections4.IteratorUtils;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -21,6 +15,11 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.apache.commons.beanutils.MethodUtils;
+import org.apache.commons.collections4.IteratorUtils;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class Query implements Enumeration<HashMap<String, Object>> {
   private HashMap<String, Object> next;

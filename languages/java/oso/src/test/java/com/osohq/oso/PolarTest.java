@@ -1,8 +1,12 @@
 package com.osohq.oso;
 
-import org.json.JSONObject;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static com.osohq.oso.Operator.Dot;
+import static com.osohq.oso.Operator.Isa;
+import static com.osohq.oso.Operator.Unify;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -14,14 +18,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import static com.osohq.oso.Operator.Dot;
-import static com.osohq.oso.Operator.Isa;
-import static com.osohq.oso.Operator.Unify;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.json.JSONObject;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class PolarTest {
   protected Polar p;
@@ -687,7 +686,8 @@ public class PolarTest {
     Variable x = new Variable("x");
 
     Predicate rule = new Predicate("f", List.of(x));
-    List<HashMap<String, Object>> results = p.query(rule, Map.of("x", new TypeConstraint(x, "User")), true).results();
+    List<HashMap<String, Object>> results =
+        p.query(rule, Map.of("x", new TypeConstraint(x, "User")), true).results();
     assertEquals(2, results.size());
     List<Object> andArgs = (List<Object>) unwrapAnd((Expression) results.get(0).get("x"));
     assertEquals(2, andArgs.size());

@@ -3,7 +3,6 @@ package com.osohq.oso;
 import com.osohq.oso.Exceptions.OsoException;
 import com.osohq.oso.Exceptions.ParseError;
 import com.osohq.oso.Exceptions.PolarRuntimeException;
-
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -107,11 +106,14 @@ public class Polar {
     return query(query, bindings, false);
   }
 
-  /** Query for a predicate, parsing it first, applying bindings and optionally accepting an
-   * expression. */
-  public Query query(String query, Map<String, Object> bindings, boolean acceptExpression) throws Exceptions.OsoException {
-      Host new_host = host.clone();
-      new_host.setAcceptExpression(acceptExpression);
+  /**
+   * Query for a predicate, parsing it first, applying bindings and optionally accepting an
+   * expression.
+   */
+  public Query query(String query, Map<String, Object> bindings, boolean acceptExpression)
+      throws Exceptions.OsoException {
+    Host new_host = host.clone();
+    new_host.setAcceptExpression(acceptExpression);
     return new Query(ffiPolar.newQueryFromStr(query), new_host, bindings);
   }
 
@@ -124,15 +126,17 @@ public class Polar {
 
   /** Query for a predicate, optionally accepting expressions in the result. */
   public Query query(Predicate query, boolean acceptExpression) throws Exceptions.OsoException {
-      return query(query, Map.of(), acceptExpression);
+    return query(query, Map.of(), acceptExpression);
   }
 
-  /** Query for a predicate, applying bindings and optionally accepting the expression type as a
+  /**
+   * Query for a predicate, applying bindings and optionally accepting the expression type as a
    * result.
    *
    * @param acceptExpression Set to true to accept an Expression as a result from the VM.
    */
-  public Query query(Predicate query, Map<String, Object> bindings, boolean acceptExpression) throws Exceptions.OsoException {
+  public Query query(Predicate query, Map<String, Object> bindings, boolean acceptExpression)
+      throws Exceptions.OsoException {
     Host new_host = host.clone();
     new_host.setAcceptExpression(acceptExpression);
     String pred = new_host.toPolarTerm(query).toString();

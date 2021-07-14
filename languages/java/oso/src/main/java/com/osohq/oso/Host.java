@@ -1,8 +1,5 @@
 package com.osohq.oso;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,6 +9,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class Host implements Cloneable {
   private Ffi.Polar ffiPolar;
@@ -38,7 +37,7 @@ public class Host implements Cloneable {
   }
 
   protected void setAcceptExpression(boolean acceptExpression) {
-      this.acceptExpression = acceptExpression;
+    this.acceptExpression = acceptExpression;
   }
 
   /** Get a registered Java class. */
@@ -310,7 +309,7 @@ public class Host implements Cloneable {
         return new Variable(value.getString(tag));
       case "Expression":
         if (!this.acceptExpression) {
-            throw new Exceptions.UnexpectedPolarTypeError(Exceptions.UNEXPECTED_EXPRESSION_MESSAGE);
+          throw new Exceptions.UnexpectedPolarTypeError(Exceptions.UNEXPECTED_EXPRESSION_MESSAGE);
         }
         return new Expression(
             value.getJSONObject(tag).getEnum(Operator.class, "operator"),

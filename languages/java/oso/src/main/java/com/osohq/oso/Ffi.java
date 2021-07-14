@@ -1,15 +1,14 @@
 package com.osohq.oso;
 
-import jnr.ffi.LibraryLoader;
-import jnr.ffi.Pointer;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import jnr.ffi.LibraryLoader;
+import jnr.ffi.Pointer;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class Ffi {
   // singleton variable
