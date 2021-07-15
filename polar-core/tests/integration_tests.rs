@@ -1369,30 +1369,12 @@ fn test_anonymous_vars() {
 }
 
 #[test]
-fn test_singleton_vars() -> TestResult {
+#[should_panic(expected = "Singleton variable x is unused or undefined")]
+fn test_singleton_vars() {
     let p = Polar::new();
     p.register_constant(sym!("X"), term!(true));
     p.register_constant(sym!("Y"), term!(true));
-    p.load_str("f(x:X,y:Y,z:Z) if z = z;")?;
-    let output = p.next_message().unwrap();
-    assert!(matches!(&output.kind, MessageKind::Warning));
-    assert_eq!(
-        &output.msg,
-        "Singleton variable x is unused or undefined, see <https://docs.osohq.com/using/polar-syntax.html#variables>\n001: f(x:X,y:Y,z:Z) if z = z;\n       ^"
-    );
-    let output = p.next_message().unwrap();
-    assert!(matches!(&output.kind, MessageKind::Warning));
-    assert_eq!(
-        &output.msg,
-        "Singleton variable y is unused or undefined, see <https://docs.osohq.com/using/polar-syntax.html#variables>\n001: f(x:X,y:Y,z:Z) if z = z;\n           ^"
-    );
-    let output = p.next_message().unwrap();
-    assert!(matches!(&output.kind, MessageKind::Warning));
-    assert_eq!(
-        &output.msg,
-        "Unknown specializer Z\n001: f(x:X,y:Y,z:Z) if z = z;\n                 ^"
-    );
-    Ok(())
+    let r = p.load_str("f(x:X,y:Y,z:Z) if z = z;");
 }
 
 #[test]

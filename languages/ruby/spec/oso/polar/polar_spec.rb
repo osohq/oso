@@ -724,7 +724,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   context 'unbound variable' do
     # test_returns_unbound_variable
     it 'returns unbound properly' do
-      subject.load_str 'rule(x, y) if y = 1;'
+      subject.load_str 'rule(_, y) if y = 1;'
 
       results = query(subject, 'rule(x, y)')
       first = results[0]
@@ -833,7 +833,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
 
     it 'uses the up-to-date version of the class during isa checks' do
-      subject.load_str('is_foo(foo: Foo);')
+      subject.load_str('is_foo(_: Foo);')
       expect(subject.query_rule('is_foo', Foo.new).to_a).to eq([{}])
     end
 

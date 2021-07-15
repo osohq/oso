@@ -47,6 +47,19 @@ struct SingletonVisitor<'kb> {
     singletons: HashMap<Symbol, Option<Term>>,
 }
 
+fn warn_str(sym: &Symbol, term: &Term) -> String {
+    if let Value::Pattern(..) = term.value() {
+        let mut msg = format!("Unknown specializer {}", sym);
+        if let Some(t) = common_misspellings(&sym.0) {
+            msg.push_str(&format!(", did you mean {}?", t));
+        }
+        msg
+    } else {
+        panic!("Singleton variable {} is unused or undefined, \
+                see <https://docs.osohq.com/using/polar-syntax.html#variables>", sym)
+    }
+
+}
 impl<'kb> SingletonVisitor<'kb> {
     fn new(kb: &'kb KnowledgeBase) -> Self {
         Self {
@@ -65,19 +78,7 @@ impl<'kb> SingletonVisitor<'kb> {
         singletons
             .iter()
             .map(|(sym, term)| {
-                let mut msg = if let Value::Pattern(..) = term.value() {
-                    let mut msg = format!("Unknown specializer {}", sym);
-                    if let Some(t) = common_misspellings(&sym.0) {
-                        msg.push_str(&format!(", did you mean {}?", t));
-                    }
-                    msg
-                } else {
-                    format!(
-                        "Singleton variable {} is unused or undefined, \
-                         see <https://docs.osohq.com/using/polar-syntax.html#variables>",
-                        sym
-                    )
-                };
+                let mut msg = warn_str(&sym, &term);
                 if let Some(ref source) = term
                     .get_source_id()
                     .and_then(|id| self.kb.sources.get_source(id))
@@ -108,8 +109,9 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
                     }
                 }
             }
-            _ => walk_term(self, t),
+            _ => ()
         }
+        walk_term(self, t);
     }
 }
 
