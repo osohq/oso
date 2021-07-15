@@ -930,55 +930,31 @@ def test_lookup_in_head(polar, is_allowed):
     assert not is_allowed("leina", "write", r)
     assert is_allowed("leina", "read", r)
 
+@pytest.mark.xfail
 def test_grounding_bug(polar, is_allowed):
     policy = """
-actor_has_role_for_resource(user, role, resource) if
-    role_implies(other_role, other_resource, role, resource) and
-    actor_has_role_for_resource(user, other_role, other_resource);
+# Example rule: allow repo if repo belongs to a public org
 
-# THIS ONE WORKS:
-# role_implies("member", org, "reader", repo: Repo) if
-#     repo.org = org and
-#     org matches Org;
-# THIS ONE DOES NOT WORK:
-role_implies("member", org, "reader", repo: Repo) if
-    org matches Org and
-    repo.org = org;
-
-actor_has_role_for_resource(actor, role_name, resource: Org) if
-    role in actor.org_roles and
-    role_name = role.name and
-    resource = role.org;
-
-allow(user, "read", repo: Repo) if
-	actor_has_role_for_resource(user, "reader", repo);
+allow(repo: Repo) if repo_in_org(repo, org) and is_public(org);
+# THIS DOES NOT WORK:
+repo_in_org(repo: Repo, org: Org) if org = repo.org;
+# THIS DOES WORK:
+# repo_in_org(repo: Repo, org) if org = repo.org and org matches Org;
+is_public(org: Org) if org.public = true;
     """
-    class Org:
-        pass
-    class Repo:
-        org: Org
-        def __init__(self, org):
-            self.org = org
-
-    class User:
-        def __init__(self, org_roles):
-            self.org_roles = org_roles
-
-    class OrgRole:
-        org: Org
-        name: str
-        def __init__(self, name, org):
-            self.name = name
-            self.org = org
-
-    org1 = Org()
-    org2 = Org()
-    org2_repo = Repo(org2)
-    org1_user = User([OrgRole("member", org1)])
-
-    [polar.register_class(klass) for klass in [Org, Repo, User]]
+    class Org: pass
+    class Repo: pass
+    polar.register_class(Org)
+    polar.register_class(Repo)
     polar.load_str(policy)
 
-    assert not is_allowed(org1_user, "read", org2_repo)
+    repo = Repo()
+    org = Org()
+
+    repo.org = org
+    org.public = False
+
+    # Because org.public is false, repo should not be allowed
+    assert list(polar.query_rule("allow", repo)) == []
 
 
