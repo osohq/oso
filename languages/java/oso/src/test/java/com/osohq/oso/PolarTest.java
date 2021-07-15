@@ -683,12 +683,15 @@ public class PolarTest {
     p.registerClass(Post.class, "Post");
     p.loadStr("f(x: User) if x.user = 1;");
     p.loadStr("f(x: Post) if x.post = 1;");
-    Variable x = new Variable("x");
 
+    Variable x = new Variable("x");
     Predicate rule = new Predicate("f", List.of(x));
     List<HashMap<String, Object>> results =
         p.query(rule, Map.of("x", new TypeConstraint(x, "User")), true).results();
-    assertEquals(2, results.size());
+
+
+    assertEquals(1, results.size());
+
     List<Object> andArgs = (List<Object>) unwrapAnd((Expression) results.get(0).get("x"));
     assertEquals(2, andArgs.size());
     assertEquals(

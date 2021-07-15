@@ -158,6 +158,15 @@ public class Host implements Cloneable {
     return cls.isInstance(toJava(instance));
   }
 
+  /** Return true if left is a subclass (or the same class) as right. */
+  public boolean isSubclass(String leftTag, String rightTag) {
+    Class<?> leftClass, rightClass;
+    leftClass = getClass(leftTag);
+    rightClass = getClass(rightTag);
+
+    return rightClass.isAssignableFrom(leftClass);
+  }
+
   /** Check if two instances unify. */
   public boolean unify(long leftId, long rightId) throws Exceptions.UnregisteredInstanceError {
     Object left = getInstance(leftId);
@@ -195,7 +204,20 @@ public class Host implements Cloneable {
     } else if (value != null && value instanceof List) {
       jVal.put("List", javaListToPolar((List<Object>) value));
     } else if (value != null && value instanceof Map) {
-      Map<String, JSONObject> jMap = javaMaptoPolar((Map<Object, Object>) value);
+      Map<Object, Object> valueMap = (Map<Object, Object>) value;
+      HashMap<String, Object> stringMap = new HashMap<String, Object>();
+
+      // Polar only supports dictionaries with string keys. Convert a map to a map of
+      // string keys.
+      for (Object objectKey: valueMap.keySet()) {
+        if (!(objectKey instanceof String)) {
+          throw new Exceptions.UnexpectedPolarTypeError("Cannot convert map with non-string keys to Polar");
+        }
+        String key = (String) objectKey;
+        stringMap.put(key, valueMap.get(objectKey));
+      }
+
+      Map<String, JSONObject> jMap = javaMaptoPolar(stringMap);
       jVal.put("Dictionary", new JSONObject().put("fields", jMap));
     } else if (value != null && value instanceof Predicate) {
       Predicate pred = (Predicate) value;
@@ -204,6 +226,29 @@ public class Host implements Cloneable {
           "Call", new JSONObject(Map.of("name", pred.name, "args", javaListToPolar(pred.args))));
     } else if (value != null && value instanceof Variable) {
       jVal.put("Variable", value);
+    } else if (value != null && value instanceof Expression) {
+      Expression expression = (Expression) value;
+      JSONObject expressionJSON = new JSONObject();
+      expressionJSON.put("operator", expression.getOperator().toString());
+      expressionJSON.put("args", javaListToPolar(expression.getArgs()));
+      jVal.put("Expression", expressionJSON);
+    } else if (value != null && value instanceof Pattern) {
+      Pattern pattern = (Pattern) value;
+      if (pattern.getTag() == null) {
+        jVal.put("Pattern", toPolarTerm(pattern.getFields()));
+      } else {
+        JSONObject fieldsJSON = new JSONObject();
+        fieldsJSON.put("fields", javaMaptoPolar(pattern.getFields()));
+
+        JSONObject instanceJSON = new JSONObject();
+        instanceJSON.put("tag", pattern.getTag());
+        instanceJSON.put("fields", fieldsJSON);
+
+        JSONObject patternJSON = new JSONObject();
+        patternJSON.put("Instance", instanceJSON);
+
+        jVal.put("Pattern", patternJSON);
+      }
     } else {
       JSONObject attrs = new JSONObject();
       attrs.put("instance_id", cacheInstance(value, null));
@@ -253,12 +298,12 @@ public class Host implements Cloneable {
   }
 
   /** Convert a Java Map to a JSONified Polar dictionary. */
-  private Map<String, JSONObject> javaMaptoPolar(Map<Object, Object> map)
+  private Map<String, JSONObject> javaMaptoPolar(Map<String, Object> map)
       throws Exceptions.OsoException {
     HashMap<String, JSONObject> polarDict = new HashMap<String, JSONObject>();
-    for (Object key : map.keySet()) {
+    for (String key : map.keySet()) {
       JSONObject val = toPolarTerm(map.get(key));
-      polarDict.put(key.toString(), val);
+      polarDict.put(key, val);
     }
     return polarDict;
   }

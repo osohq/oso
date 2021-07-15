@@ -22,7 +22,18 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class Query implements Enumeration<HashMap<String, Object>> {
+  /** The next result to return from the query.
+   *
+   * Since query implements `Enumeration` we must detect whether
+   * there is another result before `hasMoreElements()` is called.
+   *
+   * To do this, we call `nextResult` before the result is needed by the user, storing
+   * it in `next`.
+   *
+   * If `next` is `null`, there are no more results.
+   */
   private HashMap<String, Object> next;
+
   private Ffi.Query ffiQuery;
   private Host host;
   private Map<Long, Enumeration<Object>> calls;
@@ -37,10 +48,13 @@ public class Query implements Enumeration<HashMap<String, Object>> {
     this.ffiQuery = queryPtr;
     this.host = host;
     calls = new HashMap<Long, Enumeration<Object>>();
-    next = nextResult();
+
     for (Map.Entry<String, Object> binding : bindings.entrySet()) {
       bind(binding.getKey(), binding.getValue());
     }
+
+    // Get the first result of the query. Must run after initialization.
+    next = nextResult();
   }
 
   private void bind(String name, Object value) {
@@ -223,6 +237,11 @@ public class Query implements Enumeration<HashMap<String, Object>> {
           String leftTag = data.getString("left_class_tag");
           String rightTag = data.getString("right_class_tag");
           answer = host.subspecializer(instanceId, leftTag, rightTag) ? 1 : 0;
+          ffiQuery.questionResult(callId, answer);
+          break;
+        case "ExternalIsSubclass":
+          callId = data.getLong("call_id");
+          answer = host.isSubclass(data.getString("left_class_tag"), data.getString("right_class_tag")) ? 1: 0;
           ffiQuery.questionResult(callId, answer);
           break;
         case "ExternalUnify":
