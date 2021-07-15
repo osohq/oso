@@ -1,8 +1,8 @@
+use super::error::*;
 use super::formatting::source_lines;
 use super::kb::*;
 use super::rules::*;
 use super::terms::*;
-use super::error::*;
 use super::visitor::{walk_rule, walk_term, Visitor};
 
 use std::collections::{hash_map::Entry, HashMap};
@@ -56,11 +56,16 @@ fn warn_str(sym: &Symbol, term: &Term) -> PolarResult<String> {
         }
         Ok(msg)
     } else {
-        let perr = error::ParseError::SingletonVariable { loc: term.offset(), name: sym.0.clone() };
-        let err = error::PolarError { kind: error::ErrorKind::Parse(perr), context: None };
+        let perr = error::ParseError::SingletonVariable {
+            loc: term.offset(),
+            name: sym.0.clone(),
+        };
+        let err = error::PolarError {
+            kind: error::ErrorKind::Parse(perr),
+            context: None,
+        };
         Err(err)
     }
-
 }
 
 impl<'kb> SingletonVisitor<'kb> {

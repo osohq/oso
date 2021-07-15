@@ -1370,10 +1370,7 @@ fn test_anonymous_vars() {
 
 #[test]
 fn test_singleton_vars() {
-    qparse!(
-        "f(x,y,z) if y = z;",
-        ParseError::SingletonVariable { .. }
-    );
+    qparse!("f(x,y,z) if y = z;", ParseError::SingletonVariable { .. });
 }
 
 #[test]
