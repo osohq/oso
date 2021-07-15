@@ -18,7 +18,7 @@ allowInner(actor: Actor, "read", resource: PatientData) if
     not resource.private;
 
 # And `exception` to restrict access.
-exception(actor: Actor, "read", resource: Lab) if
+exception(actor: Actor, "read", _resource: Lab) if
     not actor.medical_role = "lab_tech" or actor.medical_role = "doctor";
 
 # Not actually sure if this works... needs some testing. If it doesn't work
