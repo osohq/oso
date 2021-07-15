@@ -189,7 +189,7 @@ pub enum ParseError {
     },
     SingletonVariable {
         loc: usize,
-        name: String
+        name: String,
     },
 }
 
@@ -246,7 +246,7 @@ impl fmt::Display for ParseError {
             Self::DuplicateKey { key, .. } => {
                 write!(f, "Duplicate key: {}", key)
             }
-            Self::SingletonVariable { name, .. }  => {
+            Self::SingletonVariable { name, .. } => {
                 write!(f, "Singleton variable {} is unused or undefined", name)
             }
         }

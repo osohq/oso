@@ -55,11 +55,14 @@ fn warn_str(sym: &Symbol, term: &Term) -> String {
         }
         msg
     } else {
-        panic!("Singleton variable {} is unused or undefined, \
-                see <https://docs.osohq.com/using/polar-syntax.html#variables>", sym)
+        panic!(
+            "Singleton variable {} is unused or undefined, \
+                see <https://docs.osohq.com/using/polar-syntax.html#variables>",
+            sym
+        )
     }
-
 }
+
 impl<'kb> SingletonVisitor<'kb> {
     fn new(kb: &'kb KnowledgeBase) -> Self {
         Self {
@@ -109,7 +112,7 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
                     }
                 }
             }
-            _ => ()
+            _ => (),
         }
         walk_term(self, t);
     }
