@@ -172,7 +172,7 @@ public class OsoTest {
   }
 
   @Test
-  public void testNotEqalOperator() {
+  public void testNotEqualOperator() {
     Oso oso = new Oso();
     oso.registerClass(Actor.class, "Actor");
     oso.loadStr("allow(actor: Actor, action, resource) if actor != nil;");
