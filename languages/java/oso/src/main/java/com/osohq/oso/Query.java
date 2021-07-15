@@ -22,15 +22,16 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class Query implements Enumeration<HashMap<String, Object>> {
-  /** The next result to return from the query.
+  /**
+   * The next result to return from the query.
    *
-   * Since query implements `Enumeration` we must detect whether
-   * there is another result before `hasMoreElements()` is called.
+   * <p>Since query implements `Enumeration` we must detect whether there is another result before
+   * `hasMoreElements()` is called.
    *
-   * To do this, we call `nextResult` before the result is needed by the user, storing
-   * it in `next`.
+   * <p>To do this, we call `nextResult` before the result is needed by the user, storing it in
+   * `next`.
    *
-   * If `next` is `null`, there are no more results.
+   * <p>If `next` is `null`, there are no more results.
    */
   private HashMap<String, Object> next;
 
@@ -241,7 +242,10 @@ public class Query implements Enumeration<HashMap<String, Object>> {
           break;
         case "ExternalIsSubclass":
           callId = data.getLong("call_id");
-          answer = host.isSubclass(data.getString("left_class_tag"), data.getString("right_class_tag")) ? 1: 0;
+          answer =
+              host.isSubclass(data.getString("left_class_tag"), data.getString("right_class_tag"))
+                  ? 1
+                  : 0;
           ffiQuery.questionResult(callId, answer);
           break;
         case "ExternalUnify":

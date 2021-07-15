@@ -689,7 +689,6 @@ public class PolarTest {
     List<HashMap<String, Object>> results =
         p.query(rule, Map.of("x", new TypeConstraint(x, "User")), true).results();
 
-
     assertEquals(1, results.size());
 
     List<Object> andArgs = (List<Object>) unwrapAnd((Expression) results.get(0).get("x"));

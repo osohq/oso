@@ -209,9 +209,10 @@ public class Host implements Cloneable {
 
       // Polar only supports dictionaries with string keys. Convert a map to a map of
       // string keys.
-      for (Object objectKey: valueMap.keySet()) {
+      for (Object objectKey : valueMap.keySet()) {
         if (!(objectKey instanceof String)) {
-          throw new Exceptions.UnexpectedPolarTypeError("Cannot convert map with non-string keys to Polar");
+          throw new Exceptions.UnexpectedPolarTypeError(
+              "Cannot convert map with non-string keys to Polar");
         }
         String key = (String) objectKey;
         stringMap.put(key, valueMap.get(objectKey));
