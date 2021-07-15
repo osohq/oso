@@ -930,15 +930,20 @@ def test_lookup_in_head(polar, is_allowed):
     assert not is_allowed("leina", "write", r)
     assert is_allowed("leina", "read", r)
 
-def test_specializers_in_rule_head(polar, is_allowed):
+def test_grounding_bug(polar, is_allowed):
     policy = """
 actor_has_role_for_resource(user, role, resource) if
     role_implies(other_role, other_resource, role, resource) and
     actor_has_role_for_resource(user, other_role, other_resource);
 
-role_implies("member", org: Org, "reader", repo: Repo) if repo.org = org;
-# Replace the above rule with this one and the test passes:
-# role_implies("member", org, "reader", repo) if repo.org = org and org matches Org and repo matches Repo;
+# THIS ONE WORKS:
+# role_implies("member", org, "reader", repo: Repo) if
+#     repo.org = org and
+#     org matches Org;
+# THIS ONE DOES NOT WORK:
+role_implies("member", org, "reader", repo: Repo) if
+    org matches Org and
+    repo.org = org;
 
 actor_has_role_for_resource(actor, role_name, resource: Org) if
     role in actor.org_roles and
