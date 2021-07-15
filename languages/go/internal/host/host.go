@@ -397,7 +397,7 @@ func (h Host) ToGo(v types.Term) (interface{}, error) {
 		return inner, nil
 	case ValueExpression:
 		return nil, fmt.Errorf(
-			"Recieved Expression from Polar VM. The Expression type is not yet supported in this language.\n" +
+			"Received Expression from Polar VM. The Expression type is not yet supported in this language.\n" +
 				"This may mean you performed an operation in your policy over an unbound variable.")
 	}
 
