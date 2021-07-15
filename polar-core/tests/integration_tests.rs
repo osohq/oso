@@ -1369,12 +1369,11 @@ fn test_anonymous_vars() {
 }
 
 #[test]
-#[should_panic(expected = "Singleton variable x is unused or undefined")]
 fn test_singleton_vars() {
-    let p = Polar::new();
-    p.register_constant(sym!("X"), term!(true));
-    p.register_constant(sym!("Y"), term!(true));
-    let r = p.load_str("f(x:X,y:Y,z:Z) if z = z;");
+    qparse!(
+        "f(x,y,z) if y = z;",
+        ParseError::SingletonVariable { .. }
+    );
 }
 
 #[test]

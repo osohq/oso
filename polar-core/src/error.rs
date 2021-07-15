@@ -55,7 +55,8 @@ impl PolarError {
                 | ParseError::ExtraToken { loc, .. }
                 | ParseError::WrongValueType { loc, .. }
                 | ParseError::ReservedWord { loc, .. }
-                | ParseError::DuplicateKey { loc, .. } => {
+                | ParseError::DuplicateKey { loc, .. } 
+                | ParseError::SingletonVariable { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),

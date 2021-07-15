@@ -217,7 +217,7 @@ impl Polar {
         while let Some(line) = lines.pop() {
             match line {
                 parser::Line::Rule(rule) => {
-                    let mut rule_warnings = check_singletons(&rule, &kb);
+                    let mut rule_warnings = check_singletons(&rule, &kb)?;
                     warnings.append(&mut rule_warnings);
                     let rule = rewrite_rule(rule, &mut kb);
 
