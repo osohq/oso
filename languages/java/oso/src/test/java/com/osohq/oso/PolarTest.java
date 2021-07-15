@@ -702,4 +702,14 @@ public class PolarTest {
             Unify, List.of(1, new Expression(Dot, List.of(new Variable("_this"), "user")))),
         andArgs.get(1));
   }
+
+  @Test
+  public void testUnexpectedExpression() {
+    p.loadStr("f(x) if x > 2;");
+
+    assertThrows(
+        Exceptions.UnexpectedPolarTypeError.class,
+        () -> p.query("f(x)"),
+        "Expected inline query to fail but it didn't.");
+  }
 }
