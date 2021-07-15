@@ -929,3 +929,55 @@ def test_lookup_in_head(polar, is_allowed):
 
     assert not is_allowed("leina", "write", r)
     assert is_allowed("leina", "read", r)
+
+def test_specializers_in_rule_head(polar, is_allowed):
+    policy = """
+actor_has_role_for_resource(user, role, resource) if
+    role_implies(other_role, other_resource, role, resource) and
+    actor_has_role_for_resource(user, other_role, other_resource);
+
+role_can("reader", "read", _: Repo);
+
+role_implies("member", org: Org, "reader", repo: Repo);
+# Replace the above rule with this one and the test passes:
+# role_implies("member", org, "reader", repo) if repo.org = org and org matches Org and repo matches Repo;
+
+
+actor_has_role_for_resource(actor, role_name, resource: Org) if
+    role in actor.org_roles and
+    role_name = role.name and
+    resource = role.org;
+
+allow(user, action, resource) if
+	role_can(role, action, resource) and
+	actor_has_role_for_resource(user, role, resource);
+    """
+    class Org:
+        pass
+    class Repo:
+        org: Org
+        def __init__(self, org):
+            self.org = org
+
+    class User:
+        def __init__(self, org_roles):
+            self.org_roles = org_roles
+
+    class OrgRole:
+        org: Org
+        name: str
+        def __init__(self, name, org):
+            self.name = name
+            self.org = org
+
+    org1 = Org()
+    org2 = Org()
+    org2_repo = Repo(org2)
+    org1_user = User([OrgRole("member", org1)])
+
+    [polar.register_class(klass) for klass in [Org, Repo, User]]
+    polar.load_str(policy)
+
+    assert not is_allowed(org1_user, "read", org2_repo)
+
+
