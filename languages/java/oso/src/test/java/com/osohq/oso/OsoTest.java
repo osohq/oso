@@ -175,7 +175,7 @@ public class OsoTest {
   public void testNotEqualOperator() {
     Oso oso = new Oso();
     oso.registerClass(Actor.class, "Actor");
-    oso.loadStr("allow(actor: Actor, action, resource) if actor != nil;");
+    oso.loadStr("allow(actor: Actor, _action, _resource) if actor != nil;");
     assertFalse(oso.isAllowed(null, "foo", "foo"));
   }
 }
