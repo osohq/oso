@@ -148,6 +148,10 @@ public class Ffi {
       return source;
     }
 
+    protected int bind(String name, String value) throws Exceptions.OsoException {
+      return checkResult(polarLib.polar_bind(ptr, name, value));
+    }
+
     @Override
     protected void finalize() {
       polarLib.query_free(ptr);
@@ -230,6 +234,8 @@ public class Ffi {
     Pointer polar_next_query_message(Pointer query_ptr);
 
     Pointer polar_query_source_info(Pointer query_ptr);
+
+    int polar_bind(Pointer query_ptr, String name, String value);
   }
 
   protected Ffi() {

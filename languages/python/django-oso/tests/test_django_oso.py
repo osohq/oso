@@ -34,7 +34,7 @@ def partial_policy():
 @pytest.fixture
 def oso_with_polar_roles_enabled():
     Oso.load_str(
-        'resource(_: String, "string", ["get"], roles); actor_has_role_for_resource(_,_,_);'
+        'resource(_: String, "string", ["get"], _roles); actor_has_role_for_resource(_,_,_);'
     )
     Oso.enable_roles()
     yield Oso

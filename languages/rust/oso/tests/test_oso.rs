@@ -173,7 +173,7 @@ fn test_get_allowed_actions() -> oso::Result<()> {
     oso.register_class(Widget::get_polar_class()).unwrap();
 
     oso.load_str(
-        r#"allow(actor: Actor{name: "sally"}, action, resource: Widget{id: 1}) if
+        r#"allow(_actor: Actor{name: "sally"}, action, _resource: Widget{id: 1}) if
            action in ["CREATE", "READ"];"#,
     )?;
 
@@ -194,7 +194,7 @@ fn test_get_allowed_actions() -> oso::Result<()> {
     assert!(actions.contains("READ"));
 
     oso.load_str(
-        r#"allow(actor: Actor{name: "fred"}, action, resource: Widget{id: 2}) if
+        r#"allow(_actor: Actor{name: "fred"}, action, _resource: Widget{id: 2}) if
            action in [1, 2, 3, 4];"#,
     )?;
 

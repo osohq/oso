@@ -20,7 +20,7 @@ def test_authorize_model_basic(session, oso, fixture_data):
     """Test that a simple policy with checks on non-relationship attributes is correct."""
     oso.load_str('allow("user", "read", post: Post) if post.access_level = "public";')
     oso.load_str('allow("user", "write", post: Post) if post.access_level = "private";')
-    oso.load_str('allow("admin", "read", post: Post);')
+    oso.load_str('allow("admin", "read", _: Post);')
     oso.load_str(
         'allow("moderator", "read", post: Post) if '
         '(post.access_level = "private" or post.access_level = "public") and '
@@ -69,10 +69,10 @@ def test_authorize_scalar_attribute_eq(session, oso, fixture_data):
         'post.access_level = "private";'
     )
     oso.load_str(
-        'allow(actor: User, "read", post: Post) if ' 'post.access_level = "public";'
+        'allow(_: User, "read", post: Post) if ' 'post.access_level = "public";'
     )
     oso.load_str(
-        'allow(actor: User{is_moderator: true}, "read", post: Post) if '
+        'allow(_: User{is_moderator: true}, "read", post: Post) if '
         'post.access_level = "public";'
     )
 
@@ -102,7 +102,7 @@ def test_authorize_scalar_attribute_condition(session, oso, fixture_data):
     )
 
     oso.load_str(
-        'allow(actor: User, "read", post: Post) if post.created_by.is_banned = false and '
+        'allow(_: User, "read", post: Post) if post.created_by.is_banned = false and '
         'post.access_level = "public";'
     )
 
@@ -193,9 +193,9 @@ def tag_test_fixture(session):
 def test_in_multiple_attribute_relationship(session, oso, tag_test_fixture):
     oso.load_str(
         """
-        allow(user, "read", post: Post) if post.access_level = "public";
+        allow(_user, "read", post: Post) if post.access_level = "public";
         allow(user, "read", post: Post) if post.access_level = "private" and post.created_by = user;
-        allow(user, "read", post: Post) if
+        allow(_user, "read", post: Post) if
             tag in post.tags and
             0 < post.id and
             (tag.is_public = true or tag.name = "foo");

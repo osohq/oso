@@ -24,7 +24,7 @@ def log_queries():
 
 def test_cannot_use_data_filtering_if_polar_roles_enabled(engine, oso):
     oso.load_str(
-        'resource(_: String, "string", ["get"], roles); actor_has_role_for_resource(_, _, _);'
+        'resource(_: String, "string", ["get"], _roles); actor_has_role_for_resource(_, _, _);'
     )
     oso.enable_roles()
     with pytest.raises(UnsupportedError, match="Polar roles"):
@@ -49,7 +49,7 @@ def test_authorize_query_basic(engine, oso, fixture_data, query):
     # TODO: copied from test_authorize_model_basic
     oso.load_str('allow("user", "read", post: Post) if post.access_level = "public";')
     oso.load_str('allow("user", "write", post: Post) if post.access_level = "private";')
-    oso.load_str('allow("admin", "read", post: Post);')
+    oso.load_str('allow("admin", "read", _post: Post);')
     oso.load_str(
         'allow("moderator", "read", post: Post) if '
         '(post.access_level = "private" or post.access_level = "public") and '

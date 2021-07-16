@@ -6,7 +6,14 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.commons.beanutils.MethodUtils;
 import org.apache.commons.collections4.IteratorUtils;
@@ -15,7 +22,19 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class Query implements Enumeration<HashMap<String, Object>> {
+  /**
+   * The next result to return from the query.
+   *
+   * <p>Since query implements `Enumeration` we must detect whether there is another result before
+   * `hasMoreElements()` is called.
+   *
+   * <p>To do this, we call `nextResult` before the result is needed by the user, storing it in
+   * `next`.
+   *
+   * <p>If `next` is `null`, there are no more results.
+   */
   private HashMap<String, Object> next;
+
   private Ffi.Query ffiQuery;
   private Host host;
   private Map<Long, Enumeration<Object>> calls;
@@ -25,11 +44,22 @@ public class Query implements Enumeration<HashMap<String, Object>> {
    *
    * @param queryPtr Pointer to the FFI query instance.
    */
-  public Query(Ffi.Query queryPtr, Host host) throws Exceptions.OsoException {
+  public Query(Ffi.Query queryPtr, Host host, Map<String, Object> bindings)
+      throws Exceptions.OsoException {
     this.ffiQuery = queryPtr;
     this.host = host;
     calls = new HashMap<Long, Enumeration<Object>>();
+
+    for (Map.Entry<String, Object> binding : bindings.entrySet()) {
+      bind(binding.getKey(), binding.getValue());
+    }
+
+    // Get the first result of the query. Must run after initialization.
     next = nextResult();
+  }
+
+  private void bind(String name, Object value) {
+    this.ffiQuery.bind(name, this.host.toPolarTerm(value).toString());
   }
 
   @Override
@@ -208,6 +238,14 @@ public class Query implements Enumeration<HashMap<String, Object>> {
           String leftTag = data.getString("left_class_tag");
           String rightTag = data.getString("right_class_tag");
           answer = host.subspecializer(instanceId, leftTag, rightTag) ? 1 : 0;
+          ffiQuery.questionResult(callId, answer);
+          break;
+        case "ExternalIsSubclass":
+          callId = data.getLong("call_id");
+          answer =
+              host.isSubclass(data.getString("left_class_tag"), data.getString("right_class_tag"))
+                  ? 1
+                  : 0;
           ffiQuery.questionResult(callId, answer);
           break;
         case "ExternalUnify":
