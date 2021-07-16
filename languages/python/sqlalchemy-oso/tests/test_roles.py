@@ -397,7 +397,7 @@ def test_nested_dot_relationship(init_oso):
             }
         };
 
-    resource(_type: Issue, "issue", actions, roles) if
+    resource(_type: Issue, "issue", actions, _roles) if
         actions = [
             "edit"
         ];
@@ -554,7 +554,7 @@ def test_resource_actions(init_oso):
     # only define actions, not roles
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(_type: Organization, "org", actions, _roles) if
         actions = [
             "invite"
         ];
@@ -567,7 +567,7 @@ def test_duplicate_action(init_oso):
     # - duplicate action
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles) if
+    resource(_type: Organization, "org", actions, _roles) if
         actions = [
             "invite",
             "invite"
@@ -662,7 +662,7 @@ def test_role_permission_without_relationship(init_oso):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(_type: Repository, "repo", actions, _roles) if
         actions = [
             "push",
             "pull"
@@ -752,7 +752,7 @@ def test_undefined_resource_arguments(init_oso):
     # - use resource predicate without defining actions/roles
     oso, session = init_oso
     policy = """
-    resource(_type: Organization, "org", actions, roles);
+    resource(_type: Organization, "org", _actions, _roles);
     """
     oso.load_str(policy)
     with pytest.raises(OsoError):
@@ -936,7 +936,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(_type: Repository, "repo", actions, _roles) if
         actions = [
             "push",
             "pull"
@@ -977,7 +977,7 @@ def test_parent_child_role_perm(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(_type: Repository, "repo", actions, _roles) if
         actions = [
             "push",
             "pull"
@@ -1219,7 +1219,7 @@ def test_parent_child_role_implication(init_oso, sample_data):
             }
         };
 
-    resource(_type: Repository, "repo", actions, roles) if
+    resource(_type: Repository, "repo", actions, _roles) if
         actions = [
             "push",
             "pull"
@@ -1981,7 +1981,7 @@ def test_data_filtering_actor_can_assume_role_not(
             }
         };
 
-    allow(actor, action, resource) if
+    allow(actor, _action, resource) if
         not Roles.actor_can_assume_role(actor, "member", resource);
     """
     oso.load_str(policy)
@@ -2035,7 +2035,7 @@ def test_data_filtering_actor_can_assume_role_and(
     parent_child(parent_org: Organization, repo: Repository) if
         repo.org = parent_org;
 
-    allow(actor, action, resource) if
+    allow(actor, _action, resource) if
         Roles.actor_can_assume_role(actor, "member", resource) and
         resource.id = "osohq";
     """
@@ -2158,7 +2158,7 @@ def test_data_filtering_actor_can_assume_role_implicit_or(
             }
         };
 
-    allow(actor, action, resource) if
+    allow(actor, _action, resource) if
         Roles.actor_can_assume_role(actor, "member", resource);
     """
     oso.load_str(policy)

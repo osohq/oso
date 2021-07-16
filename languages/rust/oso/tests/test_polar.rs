@@ -797,7 +797,7 @@ fn test_returns_unbound_variable() -> oso::Result<()> {
     common::setup();
 
     let mut oso = test_oso();
-    oso.load_str("rule(x, y) if y = 1;");
+    oso.load_str("rule(_, y) if y = 1;");
 
     let first = oso.query("rule(x, y)").pop().unwrap();
 
