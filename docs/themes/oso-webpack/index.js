@@ -256,7 +256,7 @@ import('algoliasearch').then(algolia => {
     index
       .search(term, {
         analytics: true,
-        hitsPerPage: 5,
+        hitsPerPage: 20,
         attributesToSnippet: '*:20',
         snippetEllipsisText: '...'
       })
