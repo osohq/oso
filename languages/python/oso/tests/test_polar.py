@@ -655,7 +655,7 @@ def test_register_constants_with_decorator():
         x = 1
 
     p = Polar()
-    p.load_str("foo_rule(x: RegisterDecoratorTest, y) if y = 1;")
+    p.load_str("foo_rule(_: RegisterDecoratorTest, y) if y = 1;")
     p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
     assert (
         next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
@@ -666,7 +666,7 @@ def test_register_constants_with_decorator():
     assert next(p.query_rule("foo_class_attr", Variable("y")))["bindings"]["y"] == 1
 
     p = Polar()
-    p.load_str("foo_rule(x: RegisterDecoratorTest, y) if y = 1;")
+    p.load_str("foo_rule(_: RegisterDecoratorTest, y) if y = 1;")
     p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
     assert (
         next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
@@ -679,7 +679,7 @@ def test_register_constants_with_decorator():
 
 def test_unbound_variable(polar, query):
     """Test that unbound variable is returned."""
-    polar.load_str("rule(x, y) if y = 1;")
+    polar.load_str("rule(_, y) if y = 1;")
 
     first = query("rule(x, y)")[0]
 

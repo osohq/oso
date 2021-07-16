@@ -44,18 +44,29 @@ Link to [relevant documentation section]().
 
 #### Breaking changes
 
-<!-- TODO: remove warning and replace with "None" if no breaking changes. -->
-
 {{% callout "Warning" "orange" %}}
   This release contains breaking changes. Be sure to follow migration steps
   before upgrading.
 {{% /callout %}}
 
-##### Breaking change 1
+##### Singleton variables changed from warnings to errors
 
-Summary of breaking change.
+[Singleton variables](https://docs.osohq.com/reference/polar/polar-syntax.html#singletons) occur only once in a rule.
+Polar now considers them an error unless they're explicitly marked with an underscore.
 
-Link to [migration guide]().
+*Before:*
+
+```polar
+f(x, y, z) if y = z; # issues a warning for x
+```
+
+*After:*
+
+```polar
+# f(x, y, z) if y = z; # would cause a parse error
+
+f(_x, y, z) if y = z; # write this instead!
+```
 
 #### New features
 
