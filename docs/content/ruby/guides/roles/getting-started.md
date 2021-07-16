@@ -2,7 +2,7 @@
 title: Getting started
 weight: 2
 description: >
-    Get started with Oso Roles for Node.js
+    Get started with Oso Roles for Ruby
 ---
 
 # Getting started
@@ -30,26 +30,33 @@ Oso uses the [Polar language](/reference/polar/polar-syntax) to define authoriza
 policies. An authorization policy specifies what requests are allowed and what data a
 user can access. The policy is stored in a Polar file, along with your code.
 
-Load the policy with the `Oso.loadFile()` function.
+Load the policy at application start using the `OSO.load_file` function:
 
-```js {hl_lines=[3]}
-const { Oso } = require('oso');
-const oso = new Oso();
-await oso.loadFile("authorization.polar");
+```ruby
+# During application start
+require 'oso'
+
+OSO = Oso.new
+OSO.register_class(User)
+OSO.register_class(Org)
+OSO.register_class(OrgRole)
+# ... register other classes used by the policy
+OSO.load_file('app/policy/authorization.polar')
 ```
 
 ### Enable Oso Roles
 
 In order to enable the built-in roles features, we call the
-`Oso.enableRoles()` method:
+`OSO.enable_roles` method:
 
-```py
-await oso.enableRoles()
+```ruby
+# ... OSO.load_file, etc ...
+OSO.enable_roles
 ```
 
 {{% callout "Load policies before enabling roles" "blue" %}}
 
-Oso will validate your roles configuration when you call `enableRoles()`.
+Oso will validate your roles configuration when you call `enable_roles`.
 You must load all policy files before enabling roles.
 
 {{% /callout %}}
@@ -79,13 +86,14 @@ resource(_type: Org, "org", actions, roles) if
 
 The rule head has 4 parameters:
 
-- `_type` is the JavaScript class the resource definition is associated with.
+- `_type` is the Ruby class the resource definition is associated with.
+  **NOTE**: you must have registered this class with `OSO.register_class` before
+  loading your policy file.
 - `"org"` is the identifier for this resource type (this can be any string
   you choose).
-- `actions` is a list enumerating all the
-  actions that may be performed on the resource.
-- `roles` is a dictionary defining all the
-  roles for this resource.
+- `actions` is a list enumerating all the actions that may be performed on the
+  resource.
+- `roles` is a dictionary defining all the roles for this resource.
 
 In our rule body, we first define the list of available actions for this
 resource:
@@ -173,31 +181,37 @@ what roles a user has for a particular resource
 through the `actor_has_role_for_resource` rule. As an example, we might
 add a method onto the user that returns a list of roles for that user:
 
-```py
-const ROLES = {
+```ruby
+class User
+  ORGS = [Org.create, Org.create, Org.create]
+
+  ROLES = {
     "alice": [
-        {"name": "member", "resource": Org.orgs[0]},
-        {"name": "owner", "resource": Org.orgs[1]},
+      {"name": "member", "resource": ORGS[0]},
+      {"name": "owner", "resource": ORGS[1]}
     ],
-    "bob": [{"name": "owner", "resource": Org.orgs[2]}],
-}
+    "bob": [
+      {"name": "owner", "resource": ORGS[2]}
+    ]
+  }
 
-class User {
-    constructor(name) {
-        this.name = name;
-    }
+  attr_reader :name
 
-    getRoles() {
-        return ROLES[this.name];
-    }
-}
+  def initialize(name)
+    @name = name
+  end
+
+  def roles
+    ROLES[name]
+  end
+end
 ```
 
 And the `actor_has_role_for_resource` would be implemented as:
 
 ```polar
 actor_has_role_for_resource(actor, role_name, resource) if
-    role in actor.getRoles() and
+    role in actor.roles and
     role_name = role.name and
     resource = role.resource;
 ```
@@ -210,9 +224,9 @@ In the body of the `actor_has_role_for_resource` rule, you
 should unify `role_name` with the name of the actor's role and
 `resource` with the instance the actor has the role for. In
 the example above, Bob has the `"owner"` role for the
-`Org.orgs[2]` resource, so when `role in actor.get_roles()` is
+`ORGS[2]` resource, so when `role in actor.roles` is
 evaluated with Bob as the `actor`, `role.name` will return `"owner"`
-and `role.resource` will return `Org.orgs[2]`.
+and `role.resource` will return `ORGS[2]`.
 
 ### Implying roles
 
