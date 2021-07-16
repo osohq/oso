@@ -1374,6 +1374,19 @@ fn test_singleton_vars() {
 }
 
 #[test]
+fn test_unknown_specializer_warning() -> TestResult {
+    let p = Polar::new();
+    p.load_str("f(_: A);")?;
+    let out = p.next_message().unwrap();
+    assert!(matches!(&out.kind, MessageKind::Warning));
+    assert_eq!(
+        &out.msg,
+        "Unknown specializer A\n001: f(_: A);\n          ^"
+    );
+    Ok(())
+}
+
+#[test]
 fn test_print() -> TestResult {
     // TODO: If POLAR_LOG is on this test will fail.
     let p = Polar::new();
