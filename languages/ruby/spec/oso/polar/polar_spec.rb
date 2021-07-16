@@ -802,4 +802,180 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(qvar(subject, 'x = new Bar([1, 2, 3]).sum()', 'x', one: true)).to eq(6)
     end
   end
+
+  context 'Code reloading' do # rubocop:disable Metrics/BlockLength
+    before do
+      # Register a class and then simulate it changing due to a code reload
+      stub_const('Foo', Class.new do
+        def version
+          1
+        end
+
+        def self.class_version
+          1
+        end
+      end)
+      subject.register_class(Foo)
+      stub_const('Foo', Class.new do
+        def version
+          2
+        end
+
+        def self.class_version
+          2
+        end
+      end)
+    end
+
+    it 'uses the up-to-date version of the class to make new instances' do
+      expect(query(subject, 'x = new Foo() and x.version = 2').length).to eq(1)
+      expect(query(subject, 'x = new Foo() and x.version = 1').length).to eq(0)
+    end
+
+    it 'uses the up-to-date version of the class during isa checks' do
+      subject.load_str('is_foo(foo: Foo);')
+      expect(subject.query_rule('is_foo', Foo.new).to_a).to eq([{}])
+    end
+
+    it 'uses the up-to-date version of the class for lookups' do
+      expect(query(subject, 'Foo.class_version = 2')).to eq([{}])
+    end
+
+    it 'can lookup attributes on anonymous classes' do
+      subject.register_class(Class.new do
+        def self.test
+          1
+        end
+      end, name: 'AnonymousClass')
+      expect(query(subject, 'AnonymousClass.test = 1')).to eq([{}])
+    end
+
+    it 'can match against anonymous classes' do
+      anon_class = Class.new do
+        def self.test
+          1
+        end
+      end
+      subject.register_class(anon_class, name: 'AnonymousClass')
+      expect(query(subject, 'new AnonymousClass() matches AnonymousClass')).to eq([{}])
+    end
+  end
+
+  # test_roles_integration
+  context 'Oso roles' do # rubocop:disable Metrics/BlockLength
+    require_relative './roles_helpers'
+    it 'works' do # rubocop:disable Metrics/BlockLength
+      osohq = RolesHelpers::Org.new('osohq')
+      apple = RolesHelpers::Org.new('apple')
+      oso = RolesHelpers::Repo.new('oso', osohq)
+      ios = RolesHelpers::Repo.new('ios', apple)
+      bug = RolesHelpers::Issue.new('bug', oso)
+      laggy = RolesHelpers::Issue.new('laggy', ios)
+
+      osohq_owner = RolesHelpers::Role.new('owner', osohq)
+      osohq_member = RolesHelpers::Role.new('member', osohq)
+
+      leina = RolesHelpers::User.new('leina', [osohq_owner])
+      steve = RolesHelpers::User.new('steve', [osohq_member])
+
+      policy = <<~POLAR
+        resource(_type: Org, "org", actions, roles) if
+            actions = [
+                "invite",
+                "create_repo"
+            ] and
+            roles = {
+                member: {
+                    permissions: ["create_repo"],
+                    implies: ["repo:reader"]
+                },
+                owner: {
+                    permissions: ["invite"],
+                    implies: ["member", "repo:writer"]
+                }
+            };
+
+        resource(_type: Repo, "repo", actions, roles) if
+            actions = [
+                "push",
+                "pull"
+            ] and
+            roles = {
+                writer: {
+                    permissions: ["push", "issue:edit"],
+                    implies: ["reader"]
+                },
+                reader: {
+                    permissions: ["pull"]
+                }
+            };
+
+        resource(_type: Issue, "issue", actions, {}) if
+            actions = [
+                "edit"
+            ];
+
+        parent_child(parent_org, repo: Repo) if
+            repo.org = parent_org and
+            parent_org matches Org;
+
+        parent_child(parent_repo, issue: Issue) if
+            issue.repo = parent_repo and
+            parent_repo matches Repo;
+
+        actor_has_role_for_resource(actor, role_name, role_resource) if
+            role in actor.roles and
+            role matches {name: role_name, resource: role_resource};
+
+        allow(actor, action, resource) if
+            role_allows(actor, action, resource);
+      POLAR
+
+      subject.register_class(RolesHelpers::Org, name: 'Org')
+      subject.register_class(RolesHelpers::Repo, name: 'Repo')
+      subject.register_class(RolesHelpers::Issue, name: 'Issue')
+      subject.register_class(RolesHelpers::User, name: 'User')
+      subject.load_str(policy)
+      subject.enable_roles
+
+      expect(subject.query_rule('allow', leina, 'invite', osohq).to_a).not_to be_empty
+
+      expect(subject.query_rule('allow', leina, 'create_repo', osohq).to_a).not_to be_empty
+      expect(subject.query_rule('allow', leina, 'push', oso).to_a).not_to be_empty
+      expect(subject.query_rule('allow', leina, 'pull', oso).to_a).not_to be_empty
+      expect(subject.query_rule('allow', leina, 'edit', bug).to_a).not_to be_empty
+
+      expect(subject.query_rule('allow', steve, 'invite', osohq).to_a).to be_empty
+      expect(subject.query_rule('allow', steve, 'create_repo', osohq).to_a).not_to be_empty
+      expect(subject.query_rule('allow', steve, 'push', oso).to_a).to be_empty
+      expect(subject.query_rule('allow', steve, 'pull', oso).to_a).not_to be_empty
+      expect(subject.query_rule('allow', steve, 'edit', bug).to_a).to be_empty
+
+      expect(subject.query_rule('allow', leina, 'edit', laggy).to_a).to be_empty
+      expect(subject.query_rule('allow', steve, 'edit', laggy).to_a).to be_empty
+
+      gabe = RolesHelpers::User.new('gabe', [])
+      expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).to be_empty
+      gabe = RolesHelpers::User.new('gabe', [osohq_member])
+      expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).to be_empty
+      gabe = RolesHelpers::User.new('gabe', [osohq_owner])
+      expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).not_to be_empty
+    end
+
+    it 'roles config is revalidated when loading additional rules after enabling roles' do
+      subject.register_class RolesHelpers::Org, name: 'Org'
+      subject.register_class RolesHelpers::Repo, name: 'Repo'
+      valid = <<~POLAR
+        resource(_: Repo, "repo", ["read"], {});
+        actor_has_role_for_resource(_, _, _);
+      POLAR
+      invalid = <<~POLAR
+        resource(_: Org, "org", [], {});
+        actor_has_role_for_resource(_, _, _);
+      POLAR
+      subject.load_str valid
+      subject.enable_roles
+      expect { subject.load_str invalid }.to raise_error Oso::Polar::RolesValidationError
+    end
+  end
 end

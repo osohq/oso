@@ -12,6 +12,8 @@ module Oso
           ffi_lib FFI::LIB_PATH
 
           attach_function :new, :polar_new, [], FFI::Polar
+          attach_function :enable_roles, :polar_enable_roles, [FFI::Polar], :int32
+          attach_function :validate_roles_config, :polar_validate_roles_config, [FFI::Polar, :string], :int32
           attach_function :load, :polar_load, [FFI::Polar, :string, :string], :int32
           attach_function :clear_rules, :polar_clear_rules, [FFI::Polar], :int32
           attach_function :next_inline_query, :polar_next_inline_query, [FFI::Polar, :uint32], FFI::Query
@@ -31,6 +33,20 @@ module Oso
           raise FFI::Error.get if polar.null?
 
           polar
+        end
+
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def enable_roles
+          result = Rust.enable_roles(self)
+          process_messages
+          raise FFI::Error.get if result.zero?
+        end
+
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def validate_roles_config(config)
+          result = Rust.validate_roles_config(self, JSON.dump(config))
+          process_messages
+          raise FFI::Error.get if result.zero?
         end
 
         # @param src [String]
