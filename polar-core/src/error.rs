@@ -248,7 +248,11 @@ impl fmt::Display for ParseError {
                 write!(f, "Duplicate key: {}", key)
             }
             Self::SingletonVariable { name, .. } => {
-                write!(f, "Singleton variable {} is unused or undefined", name)
+                write!(
+                    f,
+                    "Singleton variable {} is unused or undefined; try renaming to _{} or _",
+                    name, name
+                )
             }
         }
     }
