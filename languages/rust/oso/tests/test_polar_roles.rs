@@ -142,7 +142,7 @@ fn test_polar_roles() {
     };
     let ios = Repo {
         name: "ios".to_string(),
-        org: apple.clone(),
+        org: apple,
     };
     let bug = Issue {
         name: "bug".to_string(),
@@ -150,7 +150,7 @@ fn test_polar_roles() {
     };
     let laggy = Issue {
         name: "laggy".to_string(),
-        repo: ios.clone(),
+        repo: ios,
     };
 
     let osohq_owner = Role {
@@ -172,8 +172,10 @@ fn test_polar_roles() {
     };
 
     fn empty(i: oso::Result<Query>) -> bool {
-        let v = i.unwrap().collect::<oso::Result<Vec<ResultSet>>>().unwrap();
-        v.len() == 0
+        i.unwrap()
+            .collect::<oso::Result<Vec<ResultSet>>>()
+            .unwrap()
+            .is_empty()
     }
 
     assert!(!empty(
@@ -201,17 +203,16 @@ fn test_polar_roles() {
         test.oso
             .query_rule("allow", (gwen.clone(), "invite", osohq.clone()))
     ));
-    assert!(!empty(test.oso.query_rule(
-        "allow",
-        (gwen.clone(), "create_repo", osohq.clone())
-    )));
+    assert!(!empty(
+        test.oso
+            .query_rule("allow", (gwen.clone(), "create_repo", osohq))
+    ));
     assert!(empty(
         test.oso
             .query_rule("allow", (gwen.clone(), "push", oso.clone()))
     ));
     assert!(!empty(
-        test.oso
-            .query_rule("allow", (gwen.clone(), "pull", oso.clone()))
+        test.oso.query_rule("allow", (gwen.clone(), "pull", oso))
     ));
     assert!(empty(
         test.oso
@@ -241,9 +242,7 @@ fn test_polar_roles() {
         name: "gabe".to_string(),
         roles: vec![osohq_owner],
     };
-    assert!(!empty(
-        test.oso.query_rule("allow", (gabe, "edit", bug.clone()))
-    ));
+    assert!(!empty(test.oso.query_rule("allow", (gabe, "edit", bug))));
 }
 
 #[test]
