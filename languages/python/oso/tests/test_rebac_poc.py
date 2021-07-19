@@ -3,30 +3,57 @@ import pytest
 from pathlib import Path
 from oso import Oso, OsoError, Variable
 from polar import Expression, Pattern
+from polar.exceptions import UnsupportedError
 
 
 class User:
-    pass
+    def __init__(self, teams):
+        self.teams = teams
+
+    def has_role(self, role, resource):
+        return True
+
+
+class Team:
+    def has_role(self, role, resource):
+        return True
 
 
 class Org:
     pass
 
 
+class Repo:
+    def __init__(self, org):
+        self.org = org
+
+
 def test_rebac_validation():
     o = Oso()
-    o.register_actor(User)
+    o.register_actor(User, methods=["has_role"], properties=["teams"])
+    o.register_group(Team, methods=["has_role"])
     o.register_resource(Org)
+    o.register_resource(Repo, properties=["org"])
     o.load_file(Path(__file__).parent / "rebac_poc.polar")
-    results = list(
-        o.query_rule(
-            "role",
-            Variable("actor"),
-            Variable("role"),
-            Variable("resource"),
-            accept_expression=True,
+    results = []
+    try:
+        results = list(
+            o.query_rule(
+                "has_role",
+                Variable("actor"),
+                Variable("role"),
+                Variable("resource"),
+                accept_expression=True,
+                method_constraints=True,
+            )
         )
-    )
+    except UnsupportedError as e:
+        if e.message.startswith("Not supported: cannot call method"):
+            method = e.message.replace("Not supported: cannot call method ", "").split(
+                " "
+            )[0]
+        print(e)
+
     for res in results:
         b = res["bindings"]
         actor = b["actor"]

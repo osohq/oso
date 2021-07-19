@@ -27,6 +27,8 @@ class Host:
         self.actors = {}
         self.resources = {}
         self.groups = {}
+        self.methods = {}
+        self.properties = {}
         self._accept_expression = False  # default, see set_accept_expression
 
         def default_get_field(_obj, _field):
@@ -50,7 +52,17 @@ class Host:
         except KeyError:
             raise UnregisteredClassError(name)
 
-    def cache_class(self, cls, *, name=None, resource=False, actor=False, group=False):
+    def cache_class(
+        self,
+        cls,
+        *,
+        name,
+        resource,
+        actor,
+        group,
+        methods,
+        properties,
+    ):
         """Cache Python class by name."""
         name = cls.__name__ if name is None else name
         if name in self.classes.keys():
@@ -64,6 +76,8 @@ class Host:
             print(f"registered actor: {name}")
         elif group:
             self.groups[name] = cls
+        self.methods.setdefault(name, []).append(methods)
+        self.properties.setdefault(name, []).append(properties)
         self.classes[name] = cls
         return name
 
