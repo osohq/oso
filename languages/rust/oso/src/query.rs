@@ -324,7 +324,7 @@ This may mean you performed an operation in your policy over an unbound variable
     }
 
     pub fn into_event(self) -> ResultEvent {
-        ResultEvent::new(self.bindings.clone())
+        ResultEvent::new(self.bindings)
     }
 }
 
