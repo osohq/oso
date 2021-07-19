@@ -140,10 +140,7 @@ impl Oso {
     /// Clear out all files and rules that have been loaded.
     pub fn clear_rules(&mut self) -> crate::Result<()> {
         self.inner.clear_rules();
-        if self.polar_roles_enabled {
-            self.polar_roles_enabled = false;
-            self.inner.enable_roles()?;
-        }
+        self.reinitialize_roles()?;
         check_messages!(self.inner);
         Ok(())
     }
@@ -178,6 +175,15 @@ impl Oso {
         self.check_inline_queries()
     }
 
+    fn reinitialize_roles(&mut self) -> crate::Result<()> {
+        if !self.polar_roles_enabled {
+            return Ok(());
+        }
+        self.polar_roles_enabled = false;
+        self.host.del_class(OSO_INTERNAL_ROLES_HELPER);
+        self.enable_roles()
+    }
+
     /// Load a string of polar source directly.
     /// # Examples
     /// ```ignore
@@ -186,13 +192,7 @@ impl Oso {
     pub fn load_str(&mut self, s: &str) -> crate::Result<()> {
         self.inner.load(s, None)?;
         self.check_inline_queries()?;
-        if self.polar_roles_enabled {
-            self.polar_roles_enabled = false;
-            self.host.del_class(OSO_INTERNAL_ROLES_HELPER);
-            self.enable_roles()
-        } else {
-            Ok(())
-        }
+        self.reinitialize_roles()
     }
 
     /// Query the knowledge base. This can be an allow query or any other polar expression.
