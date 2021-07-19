@@ -113,6 +113,31 @@ a failed authorization will return a \`\`403 Forbidden\`\` response for the curr
 request.** This can be controlled with
 `set_unauthorized_action()`.
 
+If using specializers in the Polar policy, such as with a `User` class:
+
+```polar
+allow(_actor: User, action: "GET", resource: Request{path: "/"})
+```
+
+... an extra step may need to be taken when using a library or authentication framework (like Flask Login)
+that exposes the current user through `LocalProxy` objects (such as `current_user`).
+
+```python
+from flask_login import current_user
+
+def create_app():
+    app = Flask("app")
+
+    flask_oso.init_app(app)
+    flask_oso.require_authorization(app)
+    # Dereference the current_user LocalProxy
+    flask_oso.set_get_actor(lambda: current_user._get_current_object())
+
+    oso.load_file("authorization.polar")
+    oso.register_class(User)
+    return app
+```
+
 ### Requiring authorization
 
 One downside to calling `flask_oso.FlaskOso.authorize()`
