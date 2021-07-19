@@ -149,14 +149,16 @@ pub extern "C" fn polar_new_query_from_term(
     polar_ptr: *mut Polar,
     query_term: *const c_char,
     trace: u32,
+    method_constraints: u32,
 ) -> *mut Query {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let s = unsafe { ffi_string!(query_term) };
         let term = serde_json::from_str(&s);
         let trace = trace != 0;
+        let method_constraints = method_constraints != 0;
         match term {
-            Ok(term) => box_ptr!(polar.new_query_from_term(term, trace)),
+            Ok(term) => box_ptr!(polar.new_query_from_term(term, trace, method_constraints)),
             Err(e) => {
                 set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
                 null_mut()
@@ -170,12 +172,14 @@ pub extern "C" fn polar_new_query(
     polar_ptr: *mut Polar,
     query_str: *const c_char,
     trace: u32,
+    method_constraints: u32,
 ) -> *mut Query {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let s = unsafe { ffi_string!(query_str) };
         let trace = trace != 0;
-        let q = polar.new_query(&s, trace);
+        let method_constraints = method_constraints != 0;
+        let q = polar.new_query(&s, trace, method_constraints);
         match q {
             Ok(q) => box_ptr!(q),
             Err(e) => {

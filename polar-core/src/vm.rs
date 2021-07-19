@@ -223,6 +223,7 @@ pub struct PolarVirtualMachine {
     scope_stack: Vec<Symbol>,
 
     pub tracing: bool,
+    pub method_constraints: bool,
     pub trace_stack: TraceStack, // Stack of traces higher up the tree.
     pub trace: Vec<Rc<Trace>>,   // Traces for the current level of the trace tree.
 
@@ -269,6 +270,7 @@ impl Default for PolarVirtualMachine {
         PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::default())),
             false,
+            false,
             vec![],
             // Messages will not be exposed, only use default() for testing.
             MessageQueue::new(),
@@ -290,6 +292,7 @@ impl PolarVirtualMachine {
     pub fn new(
         kb: Arc<RwLock<KnowledgeBase>>,
         tracing: bool,
+        method_constraints: bool,
         goals: Goals,
         messages: MessageQueue,
     ) -> Self {
@@ -313,6 +316,7 @@ impl PolarVirtualMachine {
             queries: vec![],
             scope_stack: vec![sym!("default")],
             tracing,
+            method_constraints,
             trace_stack: vec![],
             trace: vec![],
             external_error: None,
@@ -375,12 +379,18 @@ impl PolarVirtualMachine {
 
     #[cfg(test)]
     pub fn new_test(kb: Arc<RwLock<KnowledgeBase>>, tracing: bool, goals: Goals) -> Self {
-        PolarVirtualMachine::new(kb, tracing, goals, MessageQueue::new())
+        PolarVirtualMachine::new(kb, tracing, false, goals, MessageQueue::new())
     }
 
     /// Clone self, replacing the goal stack and retaining only the current bindings.
     pub fn clone_with_goals(&self, goals: Goals) -> Self {
-        let mut vm = Self::new(self.kb.clone(), self.tracing, goals, self.messages.clone());
+        let mut vm = Self::new(
+            self.kb.clone(),
+            self.tracing,
+            self.method_constraints,
+            goals,
+            self.messages.clone(),
+        );
         vm.binding_manager.clone_from(&self.binding_manager);
         vm.query_contains_partial = self.query_contains_partial;
         vm.debugger = self.debugger.clone();
@@ -1938,12 +1948,17 @@ impl PolarVirtualMachine {
             }
             Value::Variable(v) => {
                 if let Value::Call(Call { name, .. }) = field.value() {
-                    return Err(self.set_error_context(
-                        object,
-                        error::RuntimeError::Unsupported {
-                            msg: format!("cannot call method {} on unbound variable {}", name, v),
-                        },
-                    ));
+                    if !self.method_constraints {
+                        return Err(self.set_error_context(
+                            object,
+                            error::RuntimeError::Unsupported {
+                                msg: format!(
+                                    "cannot call method {} on unbound variable {}",
+                                    name, v
+                                ),
+                            },
+                        ));
+                    }
                 }
 
                 // Translate `.(object, field, value)` → `value = .(object, field)`.

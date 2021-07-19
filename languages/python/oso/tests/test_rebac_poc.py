@@ -5,6 +5,10 @@ from oso import Oso, OsoError, Variable
 from polar import Expression, Pattern
 from polar.exceptions import UnsupportedError
 
+# TODO: move this into the lib, only here for tests to pass
+class OsoResource:
+    pass
+
 
 class User:
     def __init__(self, teams):
@@ -28,31 +32,31 @@ class Repo:
         self.org = org
 
 
+class Issue:
+    def __init__(self, org):
+        self.repo = repo
+
+
 def test_rebac_validation():
     o = Oso()
+    o.register_class(OsoResource)
     o.register_actor(User, methods=["has_role"], properties=["teams"])
     o.register_group(Team, methods=["has_role"])
     o.register_resource(Org)
     o.register_resource(Repo, properties=["org"])
+    o.register_resource(Issue, properties=["repo"])
     o.load_file(Path(__file__).parent / "rebac_poc.polar")
     results = []
-    try:
-        results = list(
-            o.query_rule(
-                "has_role",
-                Variable("actor"),
-                Variable("role"),
-                Variable("resource"),
-                accept_expression=True,
-                method_constraints=True,
-            )
+    results = list(
+        o.query_rule(
+            "has_role",
+            Variable("actor"),
+            Variable("role"),
+            Variable("resource"),
+            accept_expression=True,
+            method_constraints=True,
         )
-    except UnsupportedError as e:
-        if e.message.startswith("Not supported: cannot call method"):
-            method = e.message.replace("Not supported: cannot call method ", "").split(
-                " "
-            )[0]
-        print(e)
+    )
 
     for res in results:
         b = res["bindings"]
