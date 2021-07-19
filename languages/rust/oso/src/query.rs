@@ -283,7 +283,7 @@ impl ResultSet {
     ) -> crate::Result<Self> {
         // Check for expression.
         for term in bindings.values() {
-            if term.value().as_expression().is_ok() && !host.accepts_expression() {
+            if term.value().as_expression().is_ok() && !host.accept_expression {
                 return Err(OsoError::Custom {
                     message: r#"
 Received Expression from Polar VM. The Expression type is not yet supported in this language.

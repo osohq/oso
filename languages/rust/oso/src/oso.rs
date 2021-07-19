@@ -284,8 +284,9 @@ impl Oso {
 
         while let Some(q) = self.inner.next_inline_query(false) {
             let src = q.source_info();
-            let res =
-                Query::new(q, self.host.with_expressions()).collect::<crate::Result<Vec<_>>>()?;
+            let mut host_ = self.host.clone();
+            host_.accept_expression = true;
+            let res = Query::new(q, host_).collect::<crate::Result<Vec<_>>>()?;
             if res.is_empty() {
                 return Err(OsoError::InlineQueryFailedError { location: src });
             }
