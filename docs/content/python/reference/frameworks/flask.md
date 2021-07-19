@@ -113,14 +113,14 @@ a failed authorization will return a \`\`403 Forbidden\`\` response for the curr
 request.** This can be controlled with
 `set_unauthorized_action()`.
 
-If using specializers in the Polar policy, such as with a `User` class:
+#### Working with `LocalProxy` objects
 
-```polar
-allow(_actor: User, action: "GET", resource: Request{path: "/"})
-```
+When using a library that exposes the current user (or similar
+authorization data) through `LocalProxy` objects, such as [Flask-Login][]'s
+`current_user`, you might need to explicitly dereference the proxy
+to pass the underlying object to Oso:
 
-... an extra step may need to be taken when using a library or authentication framework (like Flask Login)
-that exposes the current user through `LocalProxy` objects (such as `current_user`).
+[Flask-Login]: https://flask-login.readthedocs.io/en/0.4.1/#flask_login.current_user
 
 ```python
 from flask_login import current_user
@@ -137,6 +137,9 @@ def create_app():
     oso.register_class(User)
     return app
 ```
+
+By dereferencing the proxy, Oso will use the underlying object when determining
+authorization instead of the proxy object.
 
 ### Requiring authorization
 
