@@ -73,6 +73,10 @@ impl Host {
             })
     }
 
+    pub fn del_class(&mut self, name: &str) -> Option<Class> {
+        self.classes.remove(name)
+    }
+
     pub fn get_class_by_type_id(&self, id: std::any::TypeId) -> crate::Result<&Class> {
         self.class_names
             .get(&id)
@@ -203,6 +207,7 @@ impl Host {
         other.accept_expression = true;
         other
     }
+
     pub fn accepts_expression(&self) -> bool {
         self.accept_expression
     }

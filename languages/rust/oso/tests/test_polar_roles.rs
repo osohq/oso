@@ -219,13 +219,9 @@ fn test_polar_roles() {
     ));
 
     assert!(empty(
-        test.oso
-            .query_rule("allow", (dave.clone(), "edit", laggy.clone()))
+        test.oso.query_rule("allow", (dave, "edit", laggy.clone()))
     ));
-    assert!(empty(
-        test.oso
-            .query_rule("allow", (gwen.clone(), "edit", laggy.clone()))
-    ));
+    assert!(empty(test.oso.query_rule("allow", (gwen, "edit", laggy))));
 
     let gabe = User {
         name: "gabe".to_string(),
@@ -248,4 +244,18 @@ fn test_polar_roles() {
     assert!(!empty(
         test.oso.query_rule("allow", (gabe, "edit", bug.clone()))
     ));
+}
+
+#[test]
+#[should_panic(
+    expected = "called `Result::unwrap()` on an `Err` value: Polar(PolarError { kind: RolesValidation(RolesValidationError(\"Must define actions or roles.\")), context: None })"
+)]
+fn test_roles_revalidation() {
+    common::setup();
+    let mut test = roles_test_oso();
+    let invalid_pol = r#"
+        resource(_: Org, "org", [], {});
+        resource(_: Repo, "repo", [], {});
+    "#;
+    test.load_str(invalid_pol);
 }

@@ -11,8 +11,7 @@ use std::sync::Arc;
 
 use crate::host::Host;
 use crate::query::Query;
-use crate::OsoError;
-use crate::{FromPolar, PolarValue, ToPolar, ToPolarList};
+use crate::{ClassBuilder, FromPolar, OsoError, PolarValue, ToPolar, ToPolarList};
 
 /// Oso is the main struct you interact with. It is an instance of the Oso authorization library
 /// and contains the polar language knowledge base and query engine.
@@ -48,6 +47,8 @@ impl<T: FromPolar> FromPolar for Action<T> {
         }
     }
 }
+
+static OSO_INTERNAL_ROLES_HELPER: &str = "__oso_internal_roles_helpers__";
 
 impl Oso {
     /// Create a new instance of Oso. Each instance is separate and can have different rules and classes loaded into it.
@@ -137,9 +138,10 @@ impl Oso {
     }
 
     /// Clear out all files and rules that have been loaded.
-    pub fn clear_rules(&self) -> crate::Result<()> {
+    pub fn clear_rules(&mut self) -> crate::Result<()> {
         self.inner.clear_rules();
         if self.polar_roles_enabled {
+            self.polar_roles_enabled = false;
             self.inner.enable_roles()?;
         }
         check_messages!(self.inner);
@@ -186,6 +188,7 @@ impl Oso {
         self.check_inline_queries()?;
         if self.polar_roles_enabled {
             self.polar_roles_enabled = false;
+            self.host.del_class(OSO_INTERNAL_ROLES_HELPER);
             self.enable_roles()
         } else {
             Ok(())
@@ -263,11 +266,21 @@ impl Oso {
             return Ok(());
         }
 
-        if let Err(_) = self.inner.enable_roles() {
-            return Err(OsoError::EnableRolesFailure);
-        }
+        self.inner.enable_roles()?;
 
-        let mut validation_query_results: Vec<Vec<ResultEvent>> = Vec::new();
+        self.register_class(
+            ClassBuilder::<()>::with_default()
+                .name(OSO_INTERNAL_ROLES_HELPER)
+                .add_class_method("join", |sep: String, l: String, r: String| {
+                    let mut s = l.clone();
+                    s.push_str(&sep as &str);
+                    s.push_str(&r as &str);
+                    s
+                })
+                .build(),
+        )?;
+
+        let mut validation_results: Vec<Vec<ResultEvent>> = Vec::new();
 
         while let Some(q) = self.inner.next_inline_query(false) {
             let src = q.source_info();
@@ -276,15 +289,13 @@ impl Oso {
             if res.is_empty() {
                 return Err(OsoError::InlineQueryFailedError { location: src });
             }
-            validation_query_results.push(res.into_iter().map(|rs| rs.into_event()).collect());
+            validation_results.push(res.into_iter().map(|rs| rs.into_event()).collect());
         }
 
-        if let Err(_) = self.inner.validate_roles_config(validation_query_results) {
-            return Err(OsoError::ValidateRolesFailure);
-        }
+        self.inner.validate_roles_config(validation_results)?;
 
-        self.polar_roles_enabled = true;
         check_messages!(self.inner);
+        self.polar_roles_enabled = true;
         Ok(())
     }
 }
