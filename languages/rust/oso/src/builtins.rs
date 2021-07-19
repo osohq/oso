@@ -169,6 +169,6 @@ pub fn classes() -> Vec<Class> {
         dictionary().build(),
         string().build(),
         option().build(),
-        roles_helper().build()
+        roles_helper().build(),
     ]
 }

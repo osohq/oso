@@ -46,7 +46,7 @@ pub struct Host {
     /// class name it is registered as
     class_names: HashMap<std::any::TypeId, String>,
 
-    accept_expression: bool
+    accept_expression: bool,
 }
 
 impl Host {

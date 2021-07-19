@@ -1,7 +1,7 @@
 //! Communicate with the Polar virtual machine: load rules, make queries, etc/
 
-use polar_core::terms::{Call, Symbol, Term, Value};
 use polar_core::roles_validation::ResultEvent;
+use polar_core::terms::{Call, Symbol, Term, Value};
 
 use std::collections::HashSet;
 use std::fs::File;
@@ -55,7 +55,11 @@ impl Oso {
         let inner = Arc::new(polar_core::polar::Polar::new());
         let host = Host::new(inner.clone());
 
-        let mut oso = Self { inner, host, polar_roles_enabled: false };
+        let mut oso = Self {
+            inner,
+            host,
+            polar_roles_enabled: false,
+        };
 
         for class in crate::builtins::classes() {
             oso.register_class(class)
@@ -255,25 +259,28 @@ impl Oso {
     }
 
     pub fn enable_roles(&mut self) -> crate::Result<()> {
-        if self.polar_roles_enabled { return Ok(()) }
+        if self.polar_roles_enabled {
+            return Ok(());
+        }
 
         if let Err(_) = self.inner.enable_roles() {
-            return Err(OsoError::EnableRolesFailure)
+            return Err(OsoError::EnableRolesFailure);
         }
 
         let mut validation_query_results: Vec<Vec<ResultEvent>> = Vec::new();
 
         while let Some(q) = self.inner.next_inline_query(false) {
             let src = q.source_info();
-            let res = Query::new(q, self.host.with_expressions()).collect::<crate::Result<Vec<_>>>()?;
+            let res =
+                Query::new(q, self.host.with_expressions()).collect::<crate::Result<Vec<_>>>()?;
             if res.is_empty() {
-                return Err(OsoError::InlineQueryFailedError { location: src })
+                return Err(OsoError::InlineQueryFailedError { location: src });
             }
             validation_query_results.push(res.into_iter().map(|rs| rs.into_event()).collect());
         }
 
         if let Err(_) = self.inner.validate_roles_config(validation_query_results) {
-            return Err(OsoError::ValidateRolesFailure)
+            return Err(OsoError::ValidateRolesFailure);
         }
 
         self.polar_roles_enabled = true;
