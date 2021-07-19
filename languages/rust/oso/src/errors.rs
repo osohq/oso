@@ -57,6 +57,12 @@ pub enum OsoError {
     #[error("Tried to find an instance that doesn't exist -- internal error")]
     MissingInstanceError,
 
+    #[error("failed to enable roles")]
+    EnableRolesFailure,
+
+    #[error("failed to validate roles")]
+    ValidateRolesFailure,
+
     /// TODO: replace all these with proper variants
     #[error("{message}")]
     Custom { message: String },

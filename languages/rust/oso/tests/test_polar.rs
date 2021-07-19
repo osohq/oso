@@ -82,7 +82,7 @@ fn test_oso() -> OsoTest {
 #[test]
 fn test_anything_works() -> oso::Result<()> {
     common::setup();
-    let oso = Oso::new();
+    let mut oso = Oso::new();
     oso.load_str("f(1);")?;
 
     let mut query = oso.query("f(x)")?;
@@ -291,7 +291,7 @@ fn test_clear_rules() -> oso::Result<()> {
 
     oso.oso.register_class(foo_class)?;
 
-    oso.oso.clear_rules();
+    assert!(matches!(oso.oso.clear_rules(), Ok(())));
 
     oso.qnull("f(x)");
     assert_eq!(oso.query("x = new Foo()").len(), 1);

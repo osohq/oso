@@ -45,6 +45,8 @@ pub struct Host {
     /// This helps us go from a generic type `T` to the
     /// class name it is registered as
     class_names: HashMap<std::any::TypeId, String>,
+
+    accept_expression: bool
 }
 
 impl Host {
@@ -53,6 +55,7 @@ impl Host {
             class_names: HashMap::new(),
             classes: HashMap::new(),
             instances: HashMap::new(),
+            accept_expression: false,
             polar,
         };
         let type_class = metaclass();
@@ -193,5 +196,14 @@ impl Host {
         Err(OsoError::UnimplementedOperation {
             operation: String::from("comparison operators"),
         })
+    }
+
+    pub fn with_expressions(&self) -> Self {
+        let mut other = self.clone();
+        other.accept_expression = true;
+        other
+    }
+    pub fn accepts_expression(&self) -> bool {
+        self.accept_expression
     }
 }
