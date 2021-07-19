@@ -24,6 +24,9 @@ class Host:
         self.ffi_polar = polar  # a "weak" handle, which we do not free
         self.classes = (classes or {}).copy()
         self.instances = (instances or {}).copy()
+        self.actors = {}
+        self.resources = {}
+        self.groups = {}
         self._accept_expression = False  # default, see set_accept_expression
 
         def default_get_field(_obj, _field):
@@ -47,12 +50,20 @@ class Host:
         except KeyError:
             raise UnregisteredClassError(name)
 
-    def cache_class(self, cls, name=None):
+    def cache_class(self, cls, *, name=None, resource=False, actor=False, group=False):
         """Cache Python class by name."""
         name = cls.__name__ if name is None else name
         if name in self.classes.keys():
             raise DuplicateClassAliasError(name, self.get_class(name), cls)
 
+        if resource:
+            self.resources[name] = cls
+            print(f"registered resource: {name}")
+        elif actor:
+            self.actors[name] = cls
+            print(f"registered actor: {name}")
+        elif group:
+            self.groups[name] = cls
         self.classes[name] = cls
         return name
 
