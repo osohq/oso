@@ -50,6 +50,12 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(qvar(subject, 'f(x)', 'x', one: true)).to eq({ 'x' => [1, 'two', true], 'y' => { 'z' => false } })
     end
 
+    it 'converts predicates in both directions' do
+      subject.load_str('f(x) if x = pred(1, 2);')
+      expect(qvar(subject, 'f(x)', 'x')).to eq([Oso::Polar::Predicate.new('pred', args: [1, 2])])
+      expect(subject.query_rule('f', Oso::Polar::Predicate.new('pred', args: [1, 2])).to_a).to eq([{}])
+    end
+
     ## NOTE This is not an integration test - it uses the private API (host should be private).
     it 'converts Ruby instances in both directions' do
       actor = Actor.new('sam')

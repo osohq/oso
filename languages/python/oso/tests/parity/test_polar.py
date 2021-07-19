@@ -133,6 +133,8 @@ def test_defining_things(tell, qeval):
         'apple("orange")',
         'thing("with", "two")',
         'thing("with", "a", "lot", "of", "arguments", 1, 2, 3, 4, 5)',
+        'thing(with("nested"), "stuff")',
+        "dream(within(a(dream(within(a(dream(within(a(_dream)))))))))",
         'embedded("strings")',
     ]
     for f in facts:

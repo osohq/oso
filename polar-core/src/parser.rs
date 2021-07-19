@@ -124,7 +124,11 @@ mod tests {
         let l = parse_term(r#"[foo, bar, baz]"#);
         assert_eq!(l, term!([sym!("foo"), sym!("bar"), sym!("baz")]));
 
-        parse_rules(0, r#"bar(a, c) if foo(a, b(c), "d")"#).expect_err("parse error");
+        let exp = parse_term(r#"foo(a, b(c), "d")"#);
+        assert_eq!(
+            exp,
+            term!(call!("foo", [sym!("a"), call!("b", [sym!("c")]), "d"]))
+        );
 
         let exp2 = parse_term(r#"foo.a(b)"#);
         assert_eq!(
@@ -132,6 +136,31 @@ mod tests {
             term!(op!(Dot, term!(sym!("foo")), term!(call!("a", [sym!("b")])))),
             "{}",
             exp2.to_polar()
+        );
+
+        let exp3 = parse_term(r#"foo.bar(a, b(c.d(e,[f,g])))"#);
+        assert_eq!(
+            exp3,
+            term!(op!(
+                Dot,
+                term!(sym!("foo")),
+                term!(call!(
+                    "bar",
+                    [
+                        sym!("a"),
+                        call!(
+                            "b",
+                            [op!(
+                                Dot,
+                                term!(sym!("c")),
+                                term!(call!("d", [sym!("e"), value!([sym!("f"), sym!("g")])]))
+                            )]
+                        )
+                    ]
+                ))
+            )),
+            "{}",
+            exp3.to_polar()
         );
         let rule = parse_rule(r#"f(x) if g(x);"#);
         assert_eq!(rule, rule!("f", [sym!("x")] => call!("g", [sym!("x")])));
