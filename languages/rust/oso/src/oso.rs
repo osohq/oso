@@ -272,10 +272,10 @@ impl Oso {
             ClassBuilder::<()>::with_default()
                 .name(OSO_INTERNAL_ROLES_HELPER)
                 .add_class_method("join", |sep: String, l: String, r: String| {
-                    let mut s = l.clone();
-                    s.push_str(&sep as &str);
-                    s.push_str(&r as &str);
-                    s
+                    let mut l = l;
+                    l.push_str(&sep as &str);
+                    l.push_str(&r as &str);
+                    l
                 })
                 .build(),
         )?;

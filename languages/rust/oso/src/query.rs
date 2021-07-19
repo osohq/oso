@@ -323,7 +323,7 @@ This may mean you performed an operation in your policy over an unbound variable
             .and_then(T::from_polar)
     }
 
-    pub fn into_event(&self) -> ResultEvent {
+    pub fn into_event(self) -> ResultEvent {
         ResultEvent::new(self.bindings.clone())
     }
 }
