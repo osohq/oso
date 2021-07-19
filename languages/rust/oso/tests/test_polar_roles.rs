@@ -53,6 +53,27 @@ struct User {
 }
 
 fn roles_test_oso() -> OsoTest {
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(Org::get_polar_class_builder().with_equality_check().build())
+        .unwrap();
+    test.oso
+        .register_class(
+            Repo::get_polar_class_builder()
+                .with_equality_check()
+                .build(),
+        )
+        .unwrap();
+    test.oso.register_class(Issue::get_polar_class()).unwrap();
+    test.oso.register_class(User::get_polar_class()).unwrap();
+
+    test
+}
+
+#[test]
+fn test_polar_roles() {
+    common::setup();
+    let mut test = roles_test_oso();
     let pol = r#"
         resource(_type: Org, "org", actions, roles) if
             actions = [
@@ -104,31 +125,11 @@ fn roles_test_oso() -> OsoTest {
 
         allow(actor, action, resource) if
             role_allows(actor, action, resource);
-    
+
     "#;
-    let mut test = OsoTest::new();
-    test.oso
-        .register_class(Org::get_polar_class_builder().with_equality_check().build())
-        .unwrap();
-    test.oso
-        .register_class(
-            Repo::get_polar_class_builder()
-                .with_equality_check()
-                .build(),
-        )
-        .unwrap();
-    test.oso.register_class(Issue::get_polar_class()).unwrap();
-    test.oso.register_class(User::get_polar_class()).unwrap();
 
     test.load_str(pol);
     test.enable_roles();
-    test
-}
-
-#[test]
-fn test_polar_roles() {
-    common::setup();
-    let test = roles_test_oso();
 
     let osohq = Org {
         name: "oso".to_string(),
@@ -252,9 +253,15 @@ fn test_polar_roles() {
 fn test_roles_revalidation() {
     common::setup();
     let mut test = roles_test_oso();
+    let valid_pol = r#"
+        resource(_: Repo, "repo", ["read"], {});
+        actor_has_role_for_resource(_,_,_);
+    "#;
+    test.load_str(valid_pol);
+    test.enable_roles();
     let invalid_pol = r#"
         resource(_: Org, "org", [], {});
-        resource(_: Repo, "repo", [], {});
+        actor_has_role_for_resource(_,_,_);
     "#;
     test.load_str(invalid_pol);
 }
