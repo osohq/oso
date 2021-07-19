@@ -47,7 +47,7 @@ has_permission(u: User, "push", r: Repo) if has_role(u, "writer", r);
 has_permission(u: User, "create_issue", r: Repo) if has_role(u, "writer", r);
 
 # Attribute-based permissions
-has_permission(u: User, "view", r: Repo) if repo.is_public;
+has_permission(_: User, "view", repo: Repo) if repo.is_public;
 
 # Repo role implications (related)
 has_role(u: User, "reader", r: Repo) if has_role(u, "member", r.org);
@@ -62,6 +62,8 @@ has_role(u: User, "writer", r: Repo) if has_role(u, "reader", r);
 # - [ ] Make `OsoResource`, `OsoActor`, `OsoGroup` base classes
 # - [ ] Figure out how roles will be specified/defined
 # - [ ] Figure out how to distinguish between rule head and body when doing validation
+# - [ ] Fake namespaces
+# - [ ] Get method constraints working somehow
 
 # Problems:
 # - [ ] role implications don't reference the user, but writing them this way requires including the user

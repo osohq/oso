@@ -1937,11 +1937,11 @@ impl PolarVirtualMachine {
                 ])?;
             }
             Value::Variable(v) => {
-                if matches!(field.value(), Value::Call(_)) {
+                if let Value::Call(Call { name, .. }) = field.value() {
                     return Err(self.set_error_context(
                         object,
                         error::RuntimeError::Unsupported {
-                            msg: format!("cannot call method on unbound variable {}", v),
+                            msg: format!("cannot call method {} on unbound variable {}", name, v),
                         },
                     ));
                 }
