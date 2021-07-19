@@ -16,7 +16,7 @@ usage with [Flask](https://flask.palletsprojects.com/).
 The Oso Flask integration is available on [PyPI](https://pypi.org/project/flask-oso/) and can be installed using
 `pip`:
 
-```
+```console
 $ pip install flask-oso
 ```
 
@@ -35,7 +35,7 @@ We just released the next version of our roles feature.
 The `FlaskOso` class is the entrypoint to the integration.
 It must be initialized with the Flask app and Oso:
 
-```
+```python
 from flask import Flask
 from oso import Oso
 
@@ -47,7 +47,7 @@ flask_oso = FlaskOso(app=app, oso=oso)
 Alternatively, to support the Flask factory pattern, the
 `init_app()` method can be used:
 
-```
+```python
 from flask import Flask
 
 from oso import Oso
@@ -71,7 +71,7 @@ This factory function can be a useful place for loading policy files, and
 calling configuration functions on `FlaskOso` like
 `flask_oso.FlaskOso.require_authorization()`:
 
-```
+```python
 def create_app():
     app = Flask("app")
 
@@ -97,7 +97,7 @@ the data access layer, depending upon how you want to express authorization.
 
 Here’s a basic example in a route:
 
-```
+```python
 @app.route("/<int:id>", methods=["GET"])
 def get_expense(id):
     expense = Expense.query.get(id)
@@ -126,7 +126,7 @@ Sometimes a route will not need authorization. To prevent this route from
 causing an authorization error, call
 `flask_oso.FlaskOso.skip_authorization()` during request processing:
 
-```
+```python
 oso = Oso()
 flask_oso = FlaskOso()
 
@@ -161,7 +161,7 @@ authorization. It is the decorator version of
 `flask_oso.FlaskOso.authorize()` before the route body is entered. For
 example:
 
-```
+```python
 from flask_oso import authorize
 
 @authorize(resource="get_user")
@@ -178,7 +178,7 @@ body.
 One common usage of `flask_oso.authorize()` is to perform authorization
 based on the Flask request object:
 
-```
+```python
 from flask import request
 
 @flask_oso.authorize(resource=request)
@@ -190,7 +190,7 @@ def route():
 A policy can then be written controlling authorization based on request
 attributes, like the path:
 
-```
+```polar
 # Allow any actor to make a GET request to "/".
 allow(_actor, action: "GET", resource: Request{path: "/"});
 ```
