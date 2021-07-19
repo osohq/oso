@@ -67,10 +67,6 @@ class Polar:
         # TODO(gj): rename to _oso_roles_enabled
         self._polar_roles_enabled = False
 
-        self.resources = {}
-        self.actors = {}
-        self.groups = {}
-
         # Register global constants.
         self.register_constant(None, name="nil")
 
@@ -235,23 +231,19 @@ class Polar:
                 print(False)
 
     def register_resource(self, cls, *, name=None):
-        cls_name = self.host.cache_class(cls, name)
-        self.resources[cls_name] = cls
-        self.register_constant(cls, cls_name)
+        self.register_class(cls, name=name, resource=True)
 
     def register_actor(self, cls, *, name=None):
-        cls_name = self.host.cache_class(cls, name)
-        self.actors[cls_name] = cls
-        self.register_constant(cls, cls_name)
+        self.register_class(cls, name=name, actor=True)
 
     def register_group(self, cls, *, name=None):
-        cls_name = self.host.cache_class(cls, name)
-        self.groups[cls_name] = cls
-        self.register_constant(cls, cls_name)
+        self.register_class(cls, name=name, group=True)
 
-    def register_class(self, cls, *, name=None):
+    def register_class(
+        self, cls, *, name=None, actor=False, resource=False, group=False
+    ):
         """Register `cls` as a class accessible by Polar."""
-        cls_name = self.host.cache_class(cls, name)
+        cls_name = self.host.cache_class(cls, name=name, actor=actor, resource=resource, group=group)
         self.register_constant(cls, cls_name)
 
     def register_constant(self, value, name):
