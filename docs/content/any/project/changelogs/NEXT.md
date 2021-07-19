@@ -35,6 +35,14 @@ Summary of user-facing changes.
 
 Link to [relevant documentation section]().
 
+## `flask-oso` NEW_VERSION
+
+### Other bugs & improvements
+
+- Thanks to [`@arusahni`](https://github.com/arusahni) for surfacing and
+  documenting a potential gotcha when using `flask-oso` with other Flask
+  libraries that rely on `LocalProxy` objects.
+
 #### Other bugs & improvements
 
 - Bulleted list
