@@ -43,15 +43,17 @@ class Polar:
         process_messages(self.next_message)
         check_result(result)
 
-    def new_query_from_str(self, query_str):
-        new_q_ptr = lib.polar_new_query(self.ptr, to_c_str(query_str), 0)
+    def new_query_from_str(self, query_str, method_constraints):
+        new_q_ptr = lib.polar_new_query(
+            self.ptr, to_c_str(query_str), 0, int(method_constraints)
+        )
         process_messages(self.next_message)
         query = check_result(new_q_ptr)
         return Query(query)
 
-    def new_query_from_term(self, query_term):
+    def new_query_from_term(self, query_term, method_constraints):
         new_q_ptr = lib.polar_new_query_from_term(
-            self.ptr, ffi_serialize(query_term), 0
+            self.ptr, ffi_serialize(query_term), 0, int(method_constraints)
         )
         process_messages(self.next_message)
         query = check_result(new_q_ptr)

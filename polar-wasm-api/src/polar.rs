@@ -66,7 +66,7 @@ impl Polar {
     #[wasm_bindgen(js_class = Polar, js_name = newQueryFromStr)]
     pub fn wasm_new_query_from_str(&self, src: &str) -> JsResult<Query> {
         self.0
-            .new_query(src, false)
+            .new_query(src, false, false)
             .map(Query::from)
             .map_err(Error::from)
             .map_err(Error::into)
@@ -75,7 +75,7 @@ impl Polar {
     #[wasm_bindgen(js_class = Polar, js_name = newQueryFromTerm)]
     pub fn wasm_new_query_from_term(&self, value: &str) -> JsResult<Query> {
         serde_json::from_str(value)
-            .map(|term| Query::from(self.0.new_query_from_term(term, false)))
+            .map(|term| Query::from(self.0.new_query_from_term(term, false, false)))
             .map_err(serde_serialization_error)
     }
 

@@ -182,7 +182,7 @@ impl Oso {
     /// oso.query("x = 1 or x = 2");
     /// ```
     pub fn query(&self, s: &str) -> crate::Result<Query> {
-        let query = self.inner.new_query(s, false)?;
+        let query = self.inner.new_query(s, false, false)?;
         check_messages!(self.inner);
         let query = Query::new(query, self.host.clone());
         Ok(query)
@@ -208,7 +208,7 @@ impl Oso {
             kwargs: None,
         });
         let query_term = Term::new_from_ffi(query_value);
-        let query = self.inner.new_query_from_term(query_term, false);
+        let query = self.inner.new_query_from_term(query_term, false, false);
         check_messages!(self.inner);
         let query = Query::new(query, query_host);
         Ok(query)

@@ -340,7 +340,7 @@ mod test {
                f(x) if x = 2;
                f(x) if x.a = 3 or x.b = 4;"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false, false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(2));
         assert_partial_expression!(next_binding(&mut q)?, "x", "3 = _this.a");
@@ -353,10 +353,10 @@ mod test {
     fn test_partial_and() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x, y, z) if x = y and x = z;")?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), 1, 1])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), 1, 1])), false, false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(1));
         assert_query_done!(q);
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), 1, 2])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), 1, 2])), false, false);
         assert_query_done!(q);
         Ok(())
     }
@@ -369,7 +369,7 @@ mod test {
                g(x) if x < 3;
                g(x) if x < 4 or x < 5;"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), 1, 2])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), 1, 2])), false, false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "x", "_this < 1 and _this < 2 and _this < 3");
         let next = next_binding(&mut q)?;
@@ -390,7 +390,7 @@ mod test {
                f(x: Post) if g(x.y);
                g(x: User) if x.z = 1;"#,
         )?;
-        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false, false);
         let mut binding = || loop {
             match q.next_event().unwrap() {
                 QueryEvent::Result { bindings, .. } => return bindings,
@@ -432,24 +432,27 @@ mod test {
             "y" => "x matches _this and _this matches _z_40");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), sym!("y")])), false);
+        let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), sym!("y")])), false, false);
         assert_partial_expressions!(next_binding(&mut q)?,
             "x" => "_this matches _this and y matches _this",
             "y" => "x matches x and _this matches x");
         assert_query_done!(q);
 
-        let mut q =
-            p.new_query_from_term(term!(call!("k", [sym!("x"), sym!("y"), sym!("y")])), false);
+        let mut q = p.new_query_from_term(
+            term!(call!("k", [sym!("x"), sym!("y"), sym!("y")])),
+            false,
+            false,
+        );
         assert_partial_expressions!(next_binding(&mut q)?,
             "x" => "y matches y and y matches _this",
             "y" => "_this matches _this and _this matches x");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("l", [sym!("x"), sym!("x")])), false);
+        let mut q = p.new_query_from_term(term!(call!("l", [sym!("x"), sym!("x")])), false, false);
         assert_partial_expression!(next_binding(&mut q)?, "x", "_this matches _this");
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
+        let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false, false);
         assert_partial_expression!(next_binding(&mut q)?, "x", "_y_54 matches _this");
         assert_query_done!(q);
 

@@ -258,10 +258,15 @@ impl Polar {
 
     pub fn next_inline_query(&self, trace: bool) -> Option<Query> {
         let term = { self.kb.write().unwrap().inline_queries.pop() };
-        term.map(|t| self.new_query_from_term(t, trace))
+        term.map(|t| self.new_query_from_term(t, trace, false))
     }
 
-    pub fn new_query(&self, src: &str, trace: bool) -> PolarResult<Query> {
+    pub fn new_query(
+        &self,
+        src: &str,
+        trace: bool,
+        method_constraints: bool,
+    ) -> PolarResult<Query> {
         let source = Source {
             filename: None,
             src: src.to_owned(),
@@ -274,17 +279,27 @@ impl Polar {
             kb.sources.add_source(source, src_id);
             term
         };
-        Ok(self.new_query_from_term(term, trace))
+        Ok(self.new_query_from_term(term, trace, method_constraints))
     }
 
-    pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
+    pub fn new_query_from_term(
+        &self,
+        mut term: Term,
+        trace: bool,
+        method_constraints: bool,
+    ) -> Query {
         {
             let mut kb = self.kb.write().unwrap();
             term = rewrite_term(term, &mut kb);
         }
         let query = Goal::Query { term: term.clone() };
-        let vm =
-            PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
+        let vm = PolarVirtualMachine::new(
+            self.kb.clone(),
+            trace,
+            method_constraints,
+            vec![query],
+            self.messages.clone(),
+        );
         Query::new(vm, term)
     }
 
@@ -332,7 +347,7 @@ mod tests {
     #[test]
     fn can_load_and_query() {
         let polar = Polar::new();
-        let _query = polar.new_query("1 = 1", false);
+        let _query = polar.new_query("1 = 1", false, false);
         let _ = polar.load_str("f(_);");
     }
 
