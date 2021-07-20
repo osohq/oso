@@ -11,11 +11,11 @@
     # - user.has_role
     # - user.teams
 
-# # User-role mapping to application data
+# User-role mapping to application data
 has_role(user: User, role: String, resource: OsoResource) if
     user.has_role(role, resource);
 
-# # Group-role mapping to application data
+# Group-role mapping to application data
 has_role(group: Team, role: String, resource: OsoResource) if
     group.has_role(role, resource);
 
@@ -70,6 +70,9 @@ has_role(u: User, "writer", r: Repo) if has_role(u, "admin", r);
 # - [ ] Figure out if/how role variants will be specified/defined
 # - [ ] Finish validation checks
 #       - How to check rule bodies?
+#       - asserts -> errors
+# - [ ] Write some validation tests
+# - [ ] Write some policy tests
 
-# Problems:
+# UX issues:
 # - [ ] role implications don't reference the user, but writing them this way requires including the user
