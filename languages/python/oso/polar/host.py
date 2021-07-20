@@ -31,7 +31,16 @@ class Host:
         self.properties = {}
         self._accept_expression = False  # default, see set_accept_expression
 
-        def default_get_field(_obj, _field):
+        def default_get_field(cls, cls_name, field):
+            props = self.properties.get(cls_name)
+            if props:
+                prop_type = props.get(field)
+                if prop_type:
+                    return prop_type
+                else:
+                    raise PolarRuntimeError(
+                        f"Field {field} on class {cls_name} was not registered."
+                    )
             raise PolarRuntimeError("Cannot generically walk fields of a Python class")
 
         self.get_field = get_field or default_get_field
@@ -76,8 +85,8 @@ class Host:
             print(f"registered actor: {name}")
         elif group:
             self.groups[name] = cls
-        self.methods.setdefault(name, []).extend(methods)
-        self.properties.setdefault(name, []).extend(properties)
+        self.methods.setdefault(name, {}).update(methods)
+        self.properties.setdefault(name, {}).update(properties)
         self.classes[name] = cls
         return name
 
@@ -121,7 +130,7 @@ class Host:
         cls = self.get_class(class_tag)
         for field in path:
             field = self.to_python(field)
-            base = self.get_field(base, field)
+            base = self.get_field(base, base_tag, field)
         return issubclass(base, cls)
 
     def is_subclass(self, left_tag, right_tag) -> bool:
