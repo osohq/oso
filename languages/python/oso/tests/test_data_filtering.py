@@ -5,6 +5,9 @@ from dataclasses import dataclass
 from oso import Oso, OsoError
 from polar import Relationship
 
+from polar.expression import Expression, Pattern
+from polar.partial import Variable
+
 from polar.data_filtering import (
     filter_data,
     ground_constraints,
@@ -13,6 +16,7 @@ from polar.data_filtering import (
     Attrib,
     Result,
     FilterPlan,
+    process_constraints
 )
 
 
@@ -124,9 +128,31 @@ def test_data_filtering(oso):
     results = filter_data(oso, plan)
     assert len(results) == 3
 
+    # Test process constraints
+    # This is what comes back from the partial
+    query_results = [
+        {
+            "bindings": {
+                "resource": Expression(
+                    "And",
+                    [
+                        Expression("Isa", [Variable("_this"), Pattern(Foo, {})]),
+                        Expression(
+                            "Unify", [True, Expression("Dot", [Variable("_this"), "is_fooey"])]
+                        ),
+                    ],
+                )
+            },
+            "trace": None,
+        }
+    ]
+
+    processed = process_constraints(oso, Foo, "resource", query_results)
+    assert processed == plan
+
     # Once I add the actual hard part too.
-    # results = list(oso.get_allowed_resources("steve", "get", Foo))
-    # assert len(results) == 1
+    results = list(oso.get_allowed_resources("steve", "get", Foo))
+    assert len(results) == 3
 
     oso.clear_rules()
     #
@@ -134,7 +160,6 @@ def test_data_filtering(oso):
     allow("steve", "get", resource: Foo) if
         resource.bar = bar and
         bar.is_cool = true and
-        bar.is_still_cool = true and
         resource.is_fooey = true;
     """
     oso.load_str(policy)
@@ -143,7 +168,13 @@ def test_data_filtering(oso):
     # The second one would look like this
     plan2 = FilterPlan(
         {
-            1: Constraints(Foo, [Constraint("In", "bar_id", Attrib("id", Result(2))), Constraint("Eq", "is_fooey", True)]),
+            1: Constraints(
+                Foo,
+                [
+                    Constraint("In", "bar_id", Attrib("id", Result(2))),
+                    Constraint("Eq", "is_fooey", True),
+                ],
+            ),
             2: Constraints(Bar, [Constraint("Eq", "is_cool", True)]),
         },
         [2, 1],
@@ -152,9 +183,5 @@ def test_data_filtering(oso):
     results = filter_data(oso, plan2)
     assert len(results) == 2
 
-    #
-    # # results = list(oso.query('allow("steve", "get", foo)', accept_expression=True))
-    # # print(results)
-    #
     # results = list(oso.get_allowed_resources("steve", "get", Foo))
-    # assert len(results) == 1
+    # assert len(results) == 2
