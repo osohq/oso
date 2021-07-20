@@ -1,6 +1,8 @@
 use oso::{PolarClass, PolarValue, Query, ResultSet, ToPolar};
 mod common;
 use common::OsoTest;
+use oso::errors::polar::{ErrorKind, PolarError, RolesValidationError};
+use oso::errors::OsoError;
 
 #[derive(Clone, PolarClass, Eq)]
 struct Org {
@@ -247,9 +249,6 @@ fn test_polar_roles() {
 }
 
 #[test]
-#[should_panic(
-    expected = "called `Result::unwrap()` on an `Err` value: Polar(PolarError { kind: RolesValidation(RolesValidationError(\"Must define actions or roles.\")), context: None })"
-)]
 fn test_roles_revalidation() {
     common::setup();
     let mut test = roles_test_oso();
@@ -263,5 +262,13 @@ fn test_roles_revalidation() {
         resource(_: Org, "org", [], {});
         actor_has_role_for_resource(_,_,_);
     "#;
-    test.load_str(invalid_pol);
+
+    let msg = String::from("Must define actions or roles.");
+    assert!(matches!(
+        test.oso.load_str(invalid_pol).unwrap_err(),
+        OsoError::Polar(PolarError {
+            kind: ErrorKind::RolesValidation(RolesValidationError(x)),
+            context: None
+        }) if x == msg
+    ));
 }

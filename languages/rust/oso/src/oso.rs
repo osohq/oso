@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use crate::host::Host;
 use crate::query::Query;
-use crate::{ClassBuilder, FromPolar, OsoError, PolarValue, ToPolar, ToPolarList};
+use crate::{Class, FromPolar, OsoError, PolarValue, ToPolar, ToPolarList};
 
 /// Oso is the main struct you interact with. It is an instance of the Oso authorization library
 /// and contains the polar language knowledge base and query engine.
@@ -269,10 +269,9 @@ impl Oso {
         self.inner.enable_roles()?;
 
         self.register_class(
-            ClassBuilder::<()>::with_default()
+            Class::builder::<()>()
                 .name(OSO_INTERNAL_ROLES_HELPER)
-                .add_class_method("join", |sep: String, l: String, r: String| {
-                    let mut l = l;
+                .add_class_method("join", |sep: String, mut l: String, r: String| {
                     l.push_str(&sep as &str);
                     l.push_str(&r as &str);
                     l
