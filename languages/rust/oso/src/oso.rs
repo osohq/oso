@@ -159,8 +159,14 @@ impl Oso {
         Ok(())
     }
 
+    fn inner_load(&mut self, pol: &str, filename: Option<String>) -> crate::Result<()> {
+        self.inner.load(pol, filename)?;
+        self.check_inline_queries()?;
+        self.reinitialize_roles()
+    }
+
     /// Load a file containing polar rules. All polar files must end in `.polar`
-    pub fn load_file<P: AsRef<std::path::Path>>(&self, file: P) -> crate::Result<()> {
+    pub fn load_file<P: AsRef<std::path::Path>>(&mut self, file: P) -> crate::Result<()> {
         let file = file.as_ref();
         if !file.extension().map(|ext| ext == "polar").unwrap_or(false) {
             return Err(crate::OsoError::IncorrectFileType {
@@ -170,9 +176,7 @@ impl Oso {
         let mut f = File::open(&file)?;
         let mut policy = String::new();
         f.read_to_string(&mut policy)?;
-        self.inner
-            .load(&policy, Some(file.to_string_lossy().into_owned()))?;
-        self.check_inline_queries()
+        self.inner_load(&policy, Some(file.to_string_lossy().into_owned()))
     }
 
     fn reinitialize_roles(&mut self) -> crate::Result<()> {
@@ -190,9 +194,7 @@ impl Oso {
     /// oso.load_str("allow(a, b, c) if true;");
     /// ```
     pub fn load_str(&mut self, s: &str) -> crate::Result<()> {
-        self.inner.load(s, None)?;
-        self.check_inline_queries()?;
-        self.reinitialize_roles()
+        self.inner_load(s, None)
     }
 
     /// Query the knowledge base. This can be an allow query or any other polar expression.

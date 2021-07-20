@@ -180,7 +180,7 @@ fn test_data_conversions_no_leak() {
 #[test]
 fn test_load_file_error_contains_filename() {
     common::setup();
-    let oso = test_oso();
+    let mut oso = test_oso();
 
     let mut tempfile = tempfile::Builder::new()
         .suffix(".polar")
@@ -209,7 +209,7 @@ fn test_load_file_error_contains_filename() {
 fn test_load_file_extension_check() {
     common::setup();
 
-    let oso = test_oso();
+    let mut oso = test_oso();
 
     let err = oso.oso.load_file("not_polar_file.txt").unwrap_err();
     assert!(
@@ -221,7 +221,7 @@ fn test_load_file_extension_check() {
 fn test_load_file_nonexistent_file() {
     common::setup();
 
-    let oso = test_oso();
+    let mut oso = test_oso();
 
     let err = oso.oso.load_file("not_a_file.polar").unwrap_err();
     assert!(matches!(err, OsoError::Io(_)));
@@ -231,7 +231,7 @@ fn test_load_file_nonexistent_file() {
 fn test_already_loaded_file_error() -> oso::Result<()> {
     common::setup();
 
-    let oso = test_oso();
+    let mut oso = test_oso();
     let path = test_file_path();
 
     oso.oso.load_file(&path)?;
@@ -764,7 +764,7 @@ fn test_predicate_return_list() {
 fn test_variables_as_arguments() -> oso::Result<()> {
     common::setup();
 
-    let oso = test_oso();
+    let mut oso = test_oso();
 
     oso.oso.load_file(test_file_path())?;
 
