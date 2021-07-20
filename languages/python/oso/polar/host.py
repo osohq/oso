@@ -15,6 +15,12 @@ from .variable import Variable
 from .predicate import Predicate
 from .expression import Expression, Pattern
 
+class OsoResource:
+    pass
+class OsoActor:
+    pass
+class OsoGroup:
+    pass
 
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
