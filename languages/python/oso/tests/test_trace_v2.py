@@ -52,14 +52,14 @@ def build_trace_file():
             json.dump(trace, fw)
 
 
-def test_construct_d3_data():
-    build_trace_file()
-    d3_map = {}
-    with open("trace.json") as f:
-        data = json.load(f)
-        for node in data:
-            if node["id"] == node["parent_id"]
-            pass
+# def test_construct_d3_data():
+#     build_trace_file()
+#     d3_map = {}
+#     with open("trace.json") as f:
+#         data = json.load(f)
+#         for node in data:
+#             if node["id"] == node["parent_id"]
+#             pass
 
 
 def test_graph():
