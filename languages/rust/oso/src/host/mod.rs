@@ -73,10 +73,6 @@ impl Host {
             })
     }
 
-    pub fn has_class(&self, name: &str) -> bool {
-        self.classes.contains_key(name)
-    }
-
     pub fn get_class_by_type_id(&self, id: std::any::TypeId) -> crate::Result<&Class> {
         self.class_names
             .get(&id)

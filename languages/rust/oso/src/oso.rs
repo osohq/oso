@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use crate::host::Host;
 use crate::query::Query;
-use crate::{Class, FromPolar, OsoError, PolarValue, ToPolar, ToPolarList};
+use crate::{FromPolar, OsoError, PolarValue, ToPolar, ToPolarList};
 
 /// Oso is the main struct you interact with. It is an instance of the Oso authorization library
 /// and contains the polar language knowledge base and query engine.
@@ -47,8 +47,6 @@ impl<T: FromPolar> FromPolar for Action<T> {
         }
     }
 }
-
-static OSO_INTERNAL_ROLES_HELPER: &str = "__oso_internal_roles_helpers__";
 
 impl Oso {
     /// Create a new instance of Oso. Each instance is separate and can have different rules and classes loaded into it.
@@ -268,19 +266,6 @@ impl Oso {
         }
 
         self.inner.enable_roles()?;
-
-        if !self.host.has_class(OSO_INTERNAL_ROLES_HELPER) {
-            self.register_class(
-                Class::builder::<()>()
-                    .name(OSO_INTERNAL_ROLES_HELPER)
-                    .add_class_method("join", |sep: String, mut l: String, r: String| {
-                        l.push_str(&sep as &str);
-                        l.push_str(&r as &str);
-                        l
-                    })
-                    .build(),
-            )?;
-        }
 
         let mut validation_results: Vec<Vec<ResultEvent>> = Vec::new();
 

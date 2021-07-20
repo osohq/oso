@@ -148,6 +148,16 @@ fn string() -> ClassBuilder<String> {
         .add_method("repeat", |s: &String, n: i64| s.repeat(n as usize))
 }
 
+fn roles_helper() -> ClassBuilder<()> {
+    Class::builder::<()>()
+        .name("__oso_internal_roles_helpers__")
+        .add_class_method("join", |sep: String, mut l: String, r: String| {
+            l.push_str(&sep as &str);
+            l.push_str(&r as &str);
+            l
+        })
+}
+
 /// Returns the builtin types, the name, class, and instance
 pub fn classes() -> Vec<Class> {
     vec![
@@ -158,5 +168,6 @@ pub fn classes() -> Vec<Class> {
         dictionary().build(),
         string().build(),
         option().build(),
+        roles_helper().build(),
     ]
 }
