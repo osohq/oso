@@ -45,7 +45,20 @@ def test_rebac_validation():
     o.register_resource(Repo, properties={"org": Org})
     o.register_resource(Issue, properties={"repo": Repo})
     o.load_file(Path(__file__).parent / "rebac_poc.polar")
-    results = []
+    validate_has_role(o)
+
+
+def test_validate_has_role():
+    # TODO: validate that all constraints described in functional spec are enforced
+    raise ("Unimplemented!")
+
+
+def test_validate_has_permission():
+    # TODO: validate that all constraints described in functional spec are enforced
+    raise ("Unimplemented!")
+
+
+def validate_has_role(o):
     results = list(
         o.query_rule(
             "has_role",
