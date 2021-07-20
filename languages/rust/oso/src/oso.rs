@@ -184,7 +184,6 @@ impl Oso {
             return Ok(());
         }
         self.polar_roles_enabled = false;
-        self.host.del_class(OSO_INTERNAL_ROLES_HELPER);
         self.enable_roles()
     }
 
@@ -270,16 +269,18 @@ impl Oso {
 
         self.inner.enable_roles()?;
 
-        self.register_class(
-            Class::builder::<()>()
-                .name(OSO_INTERNAL_ROLES_HELPER)
-                .add_class_method("join", |sep: String, mut l: String, r: String| {
-                    l.push_str(&sep as &str);
-                    l.push_str(&r as &str);
-                    l
-                })
-                .build(),
-        )?;
+        if !self.host.has_class(OSO_INTERNAL_ROLES_HELPER) {
+            self.register_class(
+                Class::builder::<()>()
+                    .name(OSO_INTERNAL_ROLES_HELPER)
+                    .add_class_method("join", |sep: String, mut l: String, r: String| {
+                        l.push_str(&sep as &str);
+                        l.push_str(&r as &str);
+                        l
+                    })
+                    .build(),
+            )?;
+        }
 
         let mut validation_results: Vec<Vec<ResultEvent>> = Vec::new();
 

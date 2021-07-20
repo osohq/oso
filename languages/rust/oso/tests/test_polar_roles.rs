@@ -248,27 +248,40 @@ fn test_polar_roles() {
     assert!(!empty(test.oso.query_rule("allow", (gabe, "edit", bug))));
 }
 
-#[test]
-fn test_roles_revalidation() {
-    common::setup();
-    let mut test = roles_test_oso();
-    let valid_pol = r#"
-        resource(_: Repo, "repo", ["read"], {});
-        actor_has_role_for_resource(_,_,_);
-    "#;
-    test.load_str(valid_pol);
-    test.enable_roles();
-    let invalid_pol = r#"
-        resource(_: Org, "org", [], {});
-        actor_has_role_for_resource(_,_,_);
-    "#;
-
+fn check_empty_roles_error(err: OsoError) {
     let msg = String::from("Must define actions or roles.");
     assert!(matches!(
-        test.oso.load_str(invalid_pol).unwrap_err(),
+        err,
         OsoError::Polar(PolarError {
             kind: ErrorKind::RolesValidation(RolesValidationError(x)),
             context: None
         }) if x == msg
     ));
+}
+static VALID_POL: &str = r#"
+    resource(_: Repo, "repo", ["read"], {});
+    actor_has_role_for_resource(_,_,_);"#;
+
+#[test]
+fn test_roles_revalidation_str() {
+    common::setup();
+
+    let mut test = roles_test_oso();
+    test.load_str(VALID_POL);
+    test.enable_roles();
+
+    let invalid_pol = r#"
+        resource(_: Org, "org", [], {});
+        actor_has_role_for_resource(_,_,_);"#;
+    check_empty_roles_error(test.oso.load_str(invalid_pol).unwrap_err());
+}
+
+#[test]
+fn test_roles_revalidation_file() {
+    common::setup();
+    let mut test = roles_test_oso();
+    test.load_str(VALID_POL);
+    test.enable_roles();
+
+    check_empty_roles_error(test.load_file(file!(), "invalid_roles.polar").unwrap_err());
 }

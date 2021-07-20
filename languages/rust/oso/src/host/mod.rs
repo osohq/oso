@@ -73,8 +73,8 @@ impl Host {
             })
     }
 
-    pub fn del_class(&mut self, name: &str) -> Option<Class> {
-        self.classes.remove(name)
+    pub fn has_class(&self, name: &str) -> bool {
+        self.classes.contains_key(name)
     }
 
     pub fn get_class_by_type_id(&self, id: std::any::TypeId) -> crate::Result<&Class> {
