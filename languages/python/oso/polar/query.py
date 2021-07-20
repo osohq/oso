@@ -7,7 +7,7 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
-from .data_filtering import Relationship
+from .data_filtering import Relationship, Constraint, Constraints
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -105,14 +105,18 @@ class Query:
                     if isinstance(attr_typ, Relationship):
                         rel = attr_typ
                         # Use the fetcher for the other type to traverse the relationship
-                        assert rel.kind == "many-to-one"
+                        assert rel.kind == "parent"
                         assert rel.other_type in self.host.fetchers
                         fetcher = self.host.fetchers[rel.other_type]
-                        query = {rel.other_field: getattr(instance, rel.my_field)}
-                        results = fetcher([query])
+                        constraint = Constraint(
+                            kind="Eq",
+                            field=rel.other_field,
+                            value=getattr(instance, rel.my_field),
+                        )
+                        constraints = Constraints(rel.other_type, [constraint])
+                        results = fetcher(constraints)
                         assert len(results) == 1
-                        assert len(results[0]) == 1
-                        attr = results[0][0]
+                        attr = results[0]
             if attr is None:
                 attr = getattr(instance, attribute)
         except AttributeError as e:

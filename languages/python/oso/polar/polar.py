@@ -25,6 +25,9 @@ from .ffi import Polar as FfiPolar
 from .host import Host
 from .query import Query
 from .predicate import Predicate
+from .variable import Variable
+from .expression import Expression, Pattern
+from .data_filtering import evaluate
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
@@ -250,6 +253,41 @@ class Polar:
         :raises UnregisteredClassError: If the class is not registered.
         """
         return self.host.get_class(name)
+
+    def get_allowed_resources(self, actor, action, cls) -> list:
+        """
+        Returns all the resources the actor is allowed to perform action on.
+
+        :param actor: The actor for whom to collect allowed resources.
+
+        :param action: The action that user wants to perform.
+
+        :param cls: The type of the resources.
+
+        :return: A list of the unique allowed resources.
+        """
+        # Data filtering.
+        resource = Variable("resource")
+        # Get registered class name somehow
+        class_name = None
+        for name, c in self.host.classes.items():
+            if c == cls:
+                class_name = name
+                break
+        assert class_name
+        constraint = Expression(
+            "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
+        )
+        results = self.query_rule(
+            "allow",
+            actor,
+            action,
+            resource,
+            bindings={"resource": constraint},
+            accept_expression=True,
+        )
+
+        return evaluate(self, cls, "resource", results)
 
 
 def polar_class(_cls=None, *, name=None):
