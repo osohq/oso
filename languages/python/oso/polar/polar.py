@@ -22,7 +22,7 @@ from .exceptions import (
     InvalidQueryTypeError,
 )
 from .ffi import Polar as FfiPolar
-from .host import Host
+from .host import Host, OsoActor, OsoGroup, OsoResource
 from .query import Query
 from .predicate import Predicate
 
@@ -79,6 +79,9 @@ class Polar:
         self.register_class(str, name="String")
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
+        self.register_actor(OsoActor)
+        self.register_group(OsoGroup)
+        self.register_resource(OsoResource)
 
         # Pre-registered classes.
         for name, cls in classes.items():

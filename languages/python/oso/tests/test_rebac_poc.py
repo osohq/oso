@@ -6,8 +6,6 @@ from polar import Expression, Pattern, Predicate
 from polar.exceptions import UnsupportedError
 
 # TODO: move this into the lib, only here for tests to pass
-class OsoResource:
-    pass
 
 
 class User:
@@ -39,7 +37,6 @@ class Issue:
 
 def test_rebac_validation():
     o = Oso()
-    o.register_class(OsoResource)
     # TODO: think about better way of defining these methods/properties--they're
     # just relationships but need to know if one to many or many to many
     o.register_actor(User, methods={"has_role": bool}, properties={"teams": Team})
@@ -62,26 +59,39 @@ def test_rebac_validation():
 
     for res in results:
         b = res["bindings"]
-        actor = b["actor"]
+        actor_constraints = b["actor"]
         # actor type should always be abstract
-        assert type(actor) == Expression
-        lookups = find_pattern(actor, "Dot")
-        actor_class = get_specializer_tag(actor)
-        assert actor_class in o.host.actors.keys()
-        for l in lookups:
-            assert l.args[0] == Variable("_this")
+        assert type(actor_constraints) == Expression
+        actor_cls_name = get_specializer_tag(actor_constraints)
+        assert (actor_cls_name in o.host.actors.keys()) or (
+            actor_cls_name in o.host.groups.keys()
+        )
+        validate_lookups(o, actor_cls_name, actor_constraints)
+
+        role = b["role"]
+        if type(role) == Expression:
+            assert get_specializer_tag(role) == "String"
+        else:
+            assert type(role) == str
+
+        resource_constraints = b["resource"]
+        # resource type should always be abstract
+        assert type(resource_constraints) == Expression
+        resource_cls_name = get_specializer_tag(resource_constraints)
+        assert resource_cls_name in o.host.resources.keys()
+        validate_lookups(o, resource_cls_name, resource_constraints)
+
+
+def validate_lookups(oso, entity_cls_name, constraints):
+    lookups = find_pattern(constraints, "Dot")
+    for l in lookups:
+        if l.args[0] == Variable("_this"):
             if type(l.args[1]) == Predicate:
                 name = l.args[1].name
                 args = l.args[1].args
-                assert name in o.host.methods[actor_class].keys()
-
-        role = b["role"]
-        assert type(role) == str
-
-        resource = b["resource"]
-        # resource type should always be abstract
-        assert type(resource) == Expression
-        assert get_specializer_tag(resource) in o.host.resources.keys()
+                assert name in oso.host.methods[entity_cls_name].keys()
+            elif type(l.args[1]) == str:
+                assert l.args[1] in oso.host.properties[entity_cls_name].keys()
 
 
 def get_specializer_tag(expr):
