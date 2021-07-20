@@ -46,7 +46,7 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
     :param model: The model to authorize, must be a SQLAlchemy model or alias.
     """
 
-    def get_field_type(model, field):
+    def get_field_type(model, model_name, field):
         try:
             field = getattr(model, field)
         except AttributeError:

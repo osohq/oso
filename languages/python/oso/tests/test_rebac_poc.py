@@ -40,11 +40,13 @@ class Issue:
 def test_rebac_validation():
     o = Oso()
     o.register_class(OsoResource)
-    o.register_actor(User, methods=["has_role"], properties=["teams"])
-    o.register_group(Team, methods=["has_role"])
+    # TODO: think about better way of defining these methods/properties--they're
+    # just relationships but need to know if one to many or many to many
+    o.register_actor(User, methods={"has_role": bool}, properties={"teams": Team})
+    o.register_group(Team, methods={"has_role": bool})
     o.register_resource(Org)
-    o.register_resource(Repo, properties=["org"])
-    o.register_resource(Issue, properties=["repo"])
+    o.register_resource(Repo, properties={"org": Org})
+    o.register_resource(Issue, properties={"repo": Repo})
     o.load_file(Path(__file__).parent / "rebac_poc.polar")
     results = []
     results = list(
@@ -71,7 +73,7 @@ def test_rebac_validation():
             if type(l.args[1]) == Predicate:
                 name = l.args[1].name
                 args = l.args[1].args
-                assert name in o.host.methods[actor_class]
+                assert name in o.host.methods[actor_class].keys()
 
         role = b["role"]
         assert type(role) == str
