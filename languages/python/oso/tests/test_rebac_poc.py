@@ -133,3 +133,22 @@ def find_pattern(expr, op, args=None):
 #         return True
 #     for arg in expr.args:
 #         find_pattern(arg, target_parent_op, pattern, last_parent_op=expr.op)
+
+
+def test_bug():
+    oso = Oso()
+    oso.register_class(User)
+    oso.register_class(Org)
+    rule = """has_role(user: User, "owner", org: Org) if org.user = user;"""
+    oso.load_str(rule)
+    bindings = next(
+        oso.query_rule(
+            "has_role",
+            Variable("user"),
+            "owner",
+            Variable("org"),
+            accept_expression=True,
+        )
+    )["bindings"]
+    print(bindings["user"])
+    print(bindings["org"])
