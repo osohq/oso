@@ -76,8 +76,8 @@ class Host:
             print(f"registered actor: {name}")
         elif group:
             self.groups[name] = cls
-        self.methods.setdefault(name, []).append(methods)
-        self.properties.setdefault(name, []).append(properties)
+        self.methods.setdefault(name, []).extend(methods)
+        self.properties.setdefault(name, []).extend(properties)
         self.classes[name] = cls
         return name
 

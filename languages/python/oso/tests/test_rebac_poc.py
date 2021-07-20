@@ -2,7 +2,7 @@ import pytest
 
 from pathlib import Path
 from oso import Oso, OsoError, Variable
-from polar import Expression, Pattern
+from polar import Expression, Pattern, Predicate
 from polar.exceptions import UnsupportedError
 
 # TODO: move this into the lib, only here for tests to pass
@@ -63,7 +63,15 @@ def test_rebac_validation():
         actor = b["actor"]
         # actor type should always be abstract
         assert type(actor) == Expression
-        assert get_specializer_tag(actor) in o.host.actors.keys()
+        lookups = find_pattern(actor, "Dot")
+        actor_class = get_specializer_tag(actor)
+        assert actor_class in o.host.actors.keys()
+        for l in lookups:
+            assert l.args[0] == Variable("_this")
+            if type(l.args[1]) == Predicate:
+                name = l.args[1].name
+                args = l.args[1].args
+                assert name in o.host.methods[actor_class]
 
         role = b["role"]
         assert type(role) == str
@@ -75,9 +83,28 @@ def test_rebac_validation():
 
 
 def get_specializer_tag(expr):
-    if expr.operator == "And" and len(expr.args) == 1:
-        expr = expr.args[0]
-    assert expr.operator == "Isa"
-    spec = expr.args[1]
-    assert type(spec) == Pattern
-    return spec.tag
+    specs = find_pattern(expr, "Isa")
+    for spec in specs:
+        if spec.args[0] == Variable("_this"):
+            assert type(spec.args[1]) == Pattern
+            return spec.args[1].tag
+
+
+def find_pattern(expr, op, args=None):
+    if expr.operator == op:
+        if args:
+            yield args == expr.args
+        else:
+            yield expr
+    for arg in expr.args:
+        if type(arg) == Expression:
+            res = find_pattern(arg, op, args)
+            if res:
+                yield from res
+
+
+# def find_pattern(expr, target_parent_op, pattern, last_parent_op=None):
+#     if expr == pattern and last_parent_op == target_parent_op:
+#         return True
+#     for arg in expr.args:
+#         find_pattern(arg, target_parent_op, pattern, last_parent_op=expr.op)

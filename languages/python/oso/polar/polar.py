@@ -234,14 +234,20 @@ class Polar:
             if not result:
                 print(False)
 
-    def register_resource(self, cls, *, name=None, methods=None, properties=None):
-        self.register_class(cls, name=name, resource=True)
+    def register_resource(self, cls, *, name=None, methods=[], properties=[]):
+        self.register_class(
+            cls, name=name, resource=True, methods=methods, properties=properties
+        )
 
-    def register_actor(self, cls, *, name=None, methods=None, properties=None):
-        self.register_class(cls, name=name, actor=True)
+    def register_actor(self, cls, *, name=None, methods=[], properties=[]):
+        self.register_class(
+            cls, name=name, actor=True, methods=methods, properties=properties
+        )
 
-    def register_group(self, cls, *, name=None, methods=None, properties=None):
-        self.register_class(cls, name=name, group=True)
+    def register_group(self, cls, *, name=None, methods=[], properties=[]):
+        self.register_class(
+            cls, name=name, group=True, methods=methods, properties=properties
+        )
 
     def register_class(
         self,
@@ -251,8 +257,8 @@ class Polar:
         actor=False,
         resource=False,
         group=False,
-        methods=None,
-        properties=None
+        methods=[],
+        properties=[]
     ):
         """Register `cls` as a class accessible by Polar."""
         cls_name = self.host.cache_class(
