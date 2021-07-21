@@ -1,6 +1,4 @@
 ## TODO
-# - user in group (teams)
-# - repo.is_public
 # - to think about:
 #   - distinction between what's a relationship/3 and implications
 #     - between "application data-based relationships" and "abstract relationships"
@@ -19,11 +17,16 @@ allow(actor, action, resource) if
 
 ################################################################################
 
-# (user, role, resource) -- user role assignments
-relationship(user: User, org_role(role), org: Org) if
-  user.has_role_for_resource(role, org);
-relationship(user: User, repo_role(role), repo: Repo) if
-  user.has_role_for_resource(role, repo);
+# (actor, role, resource) -- actor role assignments
+relationship(actor: Actor, org_role(role), org: Org) if
+  actor.has_role_for_resource(name: role, resource: org);
+relationship(actor: Actor, repo_role(role), repo: Repo) if
+  actor.has_role_for_resource(name: role, resource: repo);
+
+relationship(user: User, role, resource) if
+  team in user.teams and
+  team matches Team and
+  relationship(team, role, resource);
 
 # role-permission implications
 implies(org_role("owner"), "invite");
@@ -62,7 +65,7 @@ relationship(repo, "parent", issue: Issue) if
 
 # user-resource attribute relationship (ABURRTAJR)
 relationship(user: User, "owns", issue: Issue) if
-  user = issue.created_by;
+  user = issue.creator;
 relationship(user: User, "owns", org: Org) if
   user = org.owner;
 
@@ -71,3 +74,7 @@ implies("owns", "delete");
 
 # user-resource attribute role implication (ABURRTAJR)
 implies(on("owns", "parent"), repo_role("admin"));
+
+# pure ABAC
+relationship(_: User, "pull", repo: Repo) if
+  repo.is_public;
