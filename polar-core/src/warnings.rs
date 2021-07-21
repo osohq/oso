@@ -2,6 +2,7 @@ use super::error::*;
 use super::formatting::source_lines;
 use super::kb::*;
 use super::rules::*;
+use super::sources::Source;
 use super::terms::*;
 use super::visitor::{walk_rule, walk_term, Visitor};
 
@@ -48,7 +49,7 @@ struct SingletonVisitor<'kb> {
     singletons: HashMap<Symbol, Option<Term>>,
 }
 
-fn warn_str(sym: &Symbol, term: &Term) -> PolarResult<String> {
+fn warn_str(sym: &Symbol, term: &Term, source: &Option<Source>) -> PolarResult<String> {
     if let Value::Pattern(..) = term.value() {
         let mut msg = format!("Unknown specializer {}", sym);
         if let Some(t) = common_misspellings(&sym.0) {
@@ -64,7 +65,13 @@ fn warn_str(sym: &Symbol, term: &Term) -> PolarResult<String> {
             kind: error::ErrorKind::Parse(perr),
             context: None,
         };
-        Err(err)
+
+        let src = if let Some(ref s) = source {
+            Some(s)
+        } else {
+            None
+        };
+        Err(err.set_context(src, Some(term)))
     }
 }
 
@@ -86,11 +93,11 @@ impl<'kb> SingletonVisitor<'kb> {
         singletons
             .iter()
             .map(|(sym, term)| {
-                let mut msg = warn_str(&sym, &term)?;
-                if let Some(ref source) = term
+                let src = term
                     .get_source_id()
-                    .and_then(|id| self.kb.sources.get_source(id))
-                {
+                    .and_then(|id| self.kb.sources.get_source(id));
+                let mut msg = warn_str(&sym, &term, &src)?;
+                if let Some(ref source) = src {
                     msg.push('\n');
                     msg.push_str(&source_lines(source, term.offset(), 0));
                 }

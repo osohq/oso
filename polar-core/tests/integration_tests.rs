@@ -1370,7 +1370,13 @@ fn test_anonymous_vars() {
 
 #[test]
 fn test_singleton_vars() {
-    qparse!("f(x,y,z) if y = z;", ParseError::SingletonVariable { .. });
+    let pol = "f(x,y,z) if y = z;";
+    let err = Polar::new().load_str(pol).unwrap_err();
+    assert!(err.context.is_some());
+    assert!(matches!(
+        err.kind,
+        ErrorKind::Parse(ParseError::SingletonVariable { .. })
+    ))
 }
 
 #[test]
