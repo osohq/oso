@@ -1,5 +1,6 @@
 //! Communicate with the Polar virtual machine: load rules, make queries, etc/
 
+use polar_core::roles_validation::ResultEvent;
 use polar_core::terms::{Call, Symbol, Term, Value};
 
 use std::collections::HashSet;
@@ -10,8 +11,7 @@ use std::sync::Arc;
 
 use crate::host::Host;
 use crate::query::Query;
-use crate::OsoError;
-use crate::{FromPolar, PolarValue, ToPolar, ToPolarList};
+use crate::{FromPolar, OsoError, PolarValue, ToPolar, ToPolarList};
 
 /// Oso is the main struct you interact with. It is an instance of the Oso authorization library
 /// and contains the polar language knowledge base and query engine.
@@ -19,6 +19,7 @@ use crate::{FromPolar, PolarValue, ToPolar, ToPolarList};
 pub struct Oso {
     inner: Arc<polar_core::polar::Polar>,
     host: Host,
+    polar_roles_enabled: bool,
 }
 
 impl Default for Oso {
@@ -53,7 +54,11 @@ impl Oso {
         let inner = Arc::new(polar_core::polar::Polar::new());
         let host = Host::new(inner.clone());
 
-        let mut oso = Self { inner, host };
+        let mut oso = Self {
+            inner,
+            host,
+            polar_roles_enabled: false,
+        };
 
         for class in crate::builtins::classes() {
             oso.register_class(class)
@@ -131,9 +136,11 @@ impl Oso {
     }
 
     /// Clear out all files and rules that have been loaded.
-    pub fn clear_rules(&self) {
+    pub fn clear_rules(&mut self) -> crate::Result<()> {
         self.inner.clear_rules();
+        self.reinitialize_roles()?;
         check_messages!(self.inner);
+        Ok(())
     }
 
     fn check_inline_queries(&self) -> crate::Result<()> {
@@ -150,8 +157,14 @@ impl Oso {
         Ok(())
     }
 
+    fn inner_load(&mut self, pol: &str, filename: Option<String>) -> crate::Result<()> {
+        self.inner.load(pol, filename)?;
+        self.check_inline_queries()?;
+        self.reinitialize_roles()
+    }
+
     /// Load a file containing polar rules. All polar files must end in `.polar`
-    pub fn load_file<P: AsRef<std::path::Path>>(&self, file: P) -> crate::Result<()> {
+    pub fn load_file<P: AsRef<std::path::Path>>(&mut self, file: P) -> crate::Result<()> {
         let file = file.as_ref();
         if !file.extension().map(|ext| ext == "polar").unwrap_or(false) {
             return Err(crate::OsoError::IncorrectFileType {
@@ -161,9 +174,15 @@ impl Oso {
         let mut f = File::open(&file)?;
         let mut policy = String::new();
         f.read_to_string(&mut policy)?;
-        self.inner
-            .load(&policy, Some(file.to_string_lossy().into_owned()))?;
-        self.check_inline_queries()
+        self.inner_load(&policy, Some(file.to_string_lossy().into_owned()))
+    }
+
+    fn reinitialize_roles(&mut self) -> crate::Result<()> {
+        if !self.polar_roles_enabled {
+            return Ok(());
+        }
+        self.polar_roles_enabled = false;
+        self.enable_roles()
     }
 
     /// Load a string of polar source directly.
@@ -171,9 +190,8 @@ impl Oso {
     /// ```ignore
     /// oso.load_str("allow(a, b, c) if true;");
     /// ```
-    pub fn load_str(&self, s: &str) -> crate::Result<()> {
-        self.inner.load(s, None)?;
-        self.check_inline_queries()
+    pub fn load_str(&mut self, s: &str) -> crate::Result<()> {
+        self.inner_load(s, None)
     }
 
     /// Query the knowledge base. This can be an allow query or any other polar expression.
@@ -239,6 +257,33 @@ impl Oso {
             Symbol(name.to_string()),
             value.to_polar().to_term(&mut self.host),
         );
+        Ok(())
+    }
+
+    pub fn enable_roles(&mut self) -> crate::Result<()> {
+        if self.polar_roles_enabled {
+            return Ok(());
+        }
+
+        self.inner.enable_roles()?;
+
+        let mut validation_results: Vec<Vec<ResultEvent>> = Vec::new();
+
+        while let Some(q) = self.inner.next_inline_query(false) {
+            let src = q.source_info();
+            let mut host_ = self.host.clone();
+            host_.accept_expression = true;
+            let res = Query::new(q, host_).collect::<crate::Result<Vec<_>>>()?;
+            if res.is_empty() {
+                return Err(OsoError::InlineQueryFailedError { location: src });
+            }
+            validation_results.push(res.into_iter().map(|rs| rs.into_event()).collect());
+        }
+
+        self.inner.validate_roles_config(validation_results)?;
+
+        check_messages!(self.inner);
+        self.polar_roles_enabled = true;
         Ok(())
     }
 }

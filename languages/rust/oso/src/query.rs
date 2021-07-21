@@ -6,6 +6,7 @@ use crate::host::{Host, Instance, PolarIterator};
 use crate::{FromPolar, PolarValue};
 
 use polar_core::events::*;
+use polar_core::roles_validation::ResultEvent;
 use polar_core::terms::*;
 
 impl Iterator for Query {
@@ -29,6 +30,10 @@ impl Query {
             inner,
             host,
         }
+    }
+
+    pub fn source(&self) -> String {
+        self.inner.source_info()
     }
 
     pub fn next_result(&mut self) -> Option<crate::Result<ResultSet>> {
@@ -278,7 +283,7 @@ impl ResultSet {
     ) -> crate::Result<Self> {
         // Check for expression.
         for term in bindings.values() {
-            if term.value().as_expression().is_ok() {
+            if term.value().as_expression().is_ok() && !host.accept_expression {
                 return Err(OsoError::Custom {
                     message: r#"
 Received Expression from Polar VM. The Expression type is not yet supported in this language.
@@ -316,6 +321,10 @@ This may mean you performed an operation in your policy over an unbound variable
         self.get(name)
             .ok_or(crate::OsoError::FromPolar)
             .and_then(T::from_polar)
+    }
+
+    pub fn into_event(self) -> ResultEvent {
+        ResultEvent::new(self.bindings)
     }
 }
 

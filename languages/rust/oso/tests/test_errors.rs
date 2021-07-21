@@ -99,7 +99,7 @@ fn test_unify_external_not_supported() -> oso::Result<()> {
 fn test_failing_inline_query() {
     common::setup();
 
-    let oso = Oso::new();
+    let mut oso = Oso::new();
 
     let result = oso.load_str("?= 1 == 1;\n?= 1 == 0;");
     match result {

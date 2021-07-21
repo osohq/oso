@@ -88,7 +88,7 @@ fn test_load_function() {
     );
     assert_eq!(test.qvar::<u32>("f(x)", "x"), [1, 2, 3]);
 
-    test.oso.clear_rules();
+    assert!(matches!(test.oso.clear_rules(), Ok(())));
     test.load_file(file!(), "test_file.polar").unwrap();
     test.load_file(file!(), "test_file_gx.polar").unwrap();
     assert_eq!(
@@ -681,7 +681,7 @@ fn test_without_registering() {
         x: u32,
     }
 
-    let test = OsoTest::new();
+    let mut test = OsoTest::new();
     test.oso.load_str("f(foo: Foo) if 1 = foo.x;").unwrap();
     test.oso
         .query_rule("f", (Foo { x: 1 },))

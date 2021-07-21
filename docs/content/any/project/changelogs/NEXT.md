@@ -29,6 +29,12 @@ Link to [migration guide]().
 
 #### New features
 
+##### Roles in Rust
+
+The Rust library now has
+[built-in support for Role-Based Access Control (RBAC) policies](/guides/roles),
+which you can turn on with `.enable_roles()`.
+
 ##### Feature 1
 
 Summary of user-facing changes.
