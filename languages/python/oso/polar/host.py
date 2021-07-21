@@ -76,7 +76,7 @@ class Host:
         cls = self.get_class(name)
         try:
             instance = cls(*args, **kwargs)
-        except TypeError as e:
+        except Exception as e:
             raise PolarRuntimeError(f"Error constructing instance of {name}: {e}")
         return self.cache_instance(instance, id)
 

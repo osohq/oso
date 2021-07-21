@@ -468,7 +468,6 @@ def test_query(load_file, polar, query):
         {"a": 3},
     ]
 
-
 def test_constructor(polar, qvar):
     """Test that class constructor is called correctly with constructor syntax."""
 
@@ -513,6 +512,15 @@ def test_constructor(polar, qvar):
     assert instance.b == 2
     assert instance.bar == 3
     assert instance.baz == 4
+
+def test_constructor_error(polar, query):
+    """Test that external instance constructor errors cause a PolarRuntimeError"""
+    class Foo:
+        def __init__(self):
+            raise RuntimeError("o no")
+    polar.register_class(Foo)
+    with pytest.raises(exceptions.PolarRuntimeError) as e:
+        query("x = new Foo()")
 
 
 def test_instance_cache(polar, qeval, query):
