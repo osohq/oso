@@ -100,7 +100,7 @@ has_permission(u: User, "delete", i: Issue) if owns(u, i);
 
 
 # TODO:
-# - [ ] Make `OsoResource`, `OsoActor`, `OsoGroup` base classes
+# - [x] Make `OsoResource`, `OsoActor`, `OsoGroup` valid specializers
 # - [ ] Divide KB by namespaces
 #       - "prototypes" namespace to query for constraints
 #       - "data" namespace for mapping to app data? (maybe this is just under relationships)
@@ -120,11 +120,11 @@ has_permission(u: User, "delete", i: Issue) if owns(u, i);
 #       the translation is done in the call
 
 # UX issues:
-# - [ ] role implications don't reference the user, but writing them this way requires including the user
+# - role implications don't reference the user, but writing them this way requires including the user
 
 
 # Notes from debugging this policy:
-# - [ ] it's hard to trace from a query that should pass (e.g. permission) to all the things that should allow it
+# - it's hard to trace from a query that should pass (e.g. permission) to all the things that should allow it
 #        - honestly a killer dev tool for policy inspection would really help
 #        with this: if I could see all the relationshps that lead to
 #        has_permission(user, "push", repo) that would be fantastic
