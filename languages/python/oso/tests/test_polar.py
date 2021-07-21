@@ -456,6 +456,12 @@ def test_return_list(polar, query):
     assert query(Predicate(name="allow", args=[User(), "join", "party"]))
 
 
+def test_host_native_unify(polar, query):
+    """Test that unification works across host and native data"""
+    assert query('new Integer(1) = 1')
+    assert query('new String("foo") = "foo"')
+    assert query('new List([1,2,3]) = [1,2,3]')
+
 def test_query(load_file, polar, query):
     """Test that queries work with variable arguments"""
 

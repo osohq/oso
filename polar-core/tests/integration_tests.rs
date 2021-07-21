@@ -127,6 +127,14 @@ where
             QueryEvent::Debug { ref message } => {
                 query.debug_command(&debug_handler(message)).unwrap();
             }
+            QueryEvent::ExternalOp {
+                operator: Operator::Eq,
+                call_id,
+                args,
+                ..
+            } => query
+                .question_result(call_id, args[0] == args[1])
+                .unwrap(),
             _ => {}
         }
     }

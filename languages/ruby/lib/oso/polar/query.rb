@@ -162,7 +162,11 @@ module Oso
             command = JSON.dump(host.to_polar(input))
             ffi_query.debug_command(command)
           when 'ExternalOp'
-            raise UnimplementedOperationError, 'comparison operators'
+            op = event.data['operator']
+            args = event.data['args'].map(&host.method(:to_ruby))
+            answer = host.operator(op, args)
+            question_result(answer, call_id: event.data['call_id'])
+            #raise UnimplementedOperationError, 'comparison operators'
           when 'NextExternal'
             call_id = event.data['call_id']
             iterable = event.data['iterable']

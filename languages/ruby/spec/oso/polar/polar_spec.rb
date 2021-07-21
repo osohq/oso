@@ -755,12 +755,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     expect(query(subject, 'neg_inf < inf')).to eq([{}])
   end
 
-  it 'fails gracefully on ExternalOp events' do
-    stub_const('Foo', Class.new)
-    subject.register_class(Foo)
-    expect { query(subject, 'new Foo() == new Foo()') }.to raise_error do |e|
-      expect(e).to be_an Oso::Polar::UnimplementedOperationError
-    end
+  it 'handles ExternalOp events' do
+    expect(query(subject, 'new String("foo") == new String("foo")')).to eq [{}]
   end
 
   it 'fails when receiving an expression type' do

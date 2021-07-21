@@ -416,11 +416,7 @@ public class PolarTest {
 
   @Test
   public void testExternalOp() throws Exception {
-    p.registerClass(Foo.class, "Foo");
-    assertThrows(
-        Exceptions.UnimplementedOperation.class,
-        () -> p.query("new Foo() == new Foo()"),
-        "Expected error.");
+    assertFalse(p.query("new String(\"foo\") == new String(\"foo\")").results().isEmpty());
   }
 
   /**** TEST PARSING ****/

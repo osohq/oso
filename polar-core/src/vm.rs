@@ -2268,6 +2268,24 @@ impl PolarVirtualMachine {
                 }
             }
 
+            // Unify predicates like unifying heads
+            (Value::Call(left), Value::Call(right)) => {
+                // Handled in the parser.
+                assert!(left.kwargs.is_none());
+                assert!(right.kwargs.is_none());
+                if left.name == right.name && left.args.len() == right.args.len() {
+                    self.append_goals(left.args.iter().zip(right.args.iter()).map(
+                        |(left, right)| Goal::Unify {
+                            left: left.clone(),
+                            right: right.clone(),
+                        },
+                    ))?;
+                } else {
+                    self.push_goal(Goal::Backtrack)?
+                }
+            }
+
+
             // Unify lists by recursively unifying their elements.
             (Value::List(l), Value::List(r)) => self.unify_lists(l, r, |(l, r)| Goal::Unify {
                 left: l.clone(),
@@ -2317,23 +2335,16 @@ impl PolarVirtualMachine {
                     self.push_goal(Goal::Backtrack)?;
                 }
             }
-
-            // Unify predicates like unifying heads
-            (Value::Call(left), Value::Call(right)) => {
-                // Handled in the parser.
-                assert!(left.kwargs.is_none());
-                assert!(right.kwargs.is_none());
-                if left.name == right.name && left.args.len() == right.args.len() {
-                    self.append_goals(left.args.iter().zip(right.args.iter()).map(
-                        |(left, right)| Goal::Unify {
-                            left: left.clone(),
-                            right: right.clone(),
-                        },
-                    ))?;
-                } else {
-                    self.push_goal(Goal::Backtrack)?
-                }
+            (Value::ExternalInstance(_),_) | (_, Value::ExternalInstance(_)) => {
+                self.push_goal(Goal::Query {
+                    term: Term::new_temporary(Value::Expression(Operation {
+                            operator: Operator:: Eq,
+                            args: vec![left.clone(), right.clone()]
+                        })),
+                    })?
             }
+            /*
+
 
             // External instances can unify if they are the same instance, i.e., have the same
             // instance ID. This is necessary for the case where an instance appears multiple times
@@ -2357,6 +2368,7 @@ impl PolarVirtualMachine {
                     })?;
                 }
             }
+            */
 
             // Anything else fails.
             (_, _) => self.push_goal(Goal::Backtrack)?,
@@ -3615,7 +3627,7 @@ mod tests {
                     vm.external_question_result(call_id, class_tag.0 == "a")
                         .unwrap()
                 }
-                QueryEvent::ExternalIsSubSpecializer { .. } | QueryEvent::Result { .. } => (),
+                QueryEvent::ExternalOp { .. } | QueryEvent::ExternalIsSubSpecializer { .. } | QueryEvent::Result { .. } => (),
                 e => panic!("Unexpected event: {:?}", e),
             }
         }
@@ -3694,6 +3706,15 @@ mod tests {
                         .unwrap()
                 }
                 QueryEvent::MakeExternal { .. } => (),
+
+                QueryEvent::ExternalOp {
+                    operator: Operator::Eq,
+                    call_id,
+                    ..
+                } => {
+                    vm.external_question_result(call_id, true).unwrap()
+                }
+
                 QueryEvent::ExternalIsa { call_id, .. } => {
                     // For this test, anything is anything.
                     vm.external_question_result(call_id, true).unwrap()

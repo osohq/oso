@@ -167,6 +167,12 @@ public class Host implements Cloneable {
     return rightClass.isAssignableFrom(leftClass);
   }
 
+  public boolean operator(String op, List<Object> initargs) throws Exceptions.OsoException {
+    Object l = initargs.get(0), r = initargs.get(1);
+    if (op.equals("Eq")) return l == null ? l == r : l.equals(r);
+    throw new Exceptions.UnimplementedOperation(op);
+  }
+
   /** Check if two instances unify. */
   public boolean unify(long leftId, long rightId) throws Exceptions.UnregisteredInstanceError {
     Object left = getInstance(leftId);
