@@ -16,7 +16,7 @@ from polar.data_filtering import (
     Attrib,
     Result,
     FilterPlan,
-    process_constraints
+    process_constraints,
 )
 
 
@@ -138,7 +138,8 @@ def test_data_filtering(oso):
                     [
                         Expression("Isa", [Variable("_this"), Pattern(Foo, {})]),
                         Expression(
-                            "Unify", [True, Expression("Dot", [Variable("_this"), "is_fooey"])]
+                            "Unify",
+                            [True, Expression("Dot", [Variable("_this"), "is_fooey"])],
                         ),
                     ],
                 )
@@ -183,5 +184,39 @@ def test_data_filtering(oso):
     results = filter_data(oso, plan2)
     assert len(results) == 2
 
-    # results = list(oso.get_allowed_resources("steve", "get", Foo))
+    query_results = [
+        {
+            "bindings": {
+                "resource": Expression(
+                    "And",
+                    [
+                        Expression("Isa", [Variable("_this"), Pattern(Foo, {})]),
+                        Expression(
+                            "Unify",
+                            [
+                                True,
+                                Expression(
+                                    "Dot",
+                                    [
+                                        Expression("Dot", [Variable("_this"), "bar"]),
+                                        "is_cool",
+                                    ],
+                                ),
+                            ],
+                        ),
+                        Expression(
+                            "Unify",
+                            [True, Expression("Dot", [Variable("_this"), "is_fooey"])],
+                        ),
+                    ],
+                )
+            },
+            "trace": None,
+        }
+    ]
+
+    processed = process_constraints(oso, Foo, "resource", query_results)
+    assert processed == plan2
+
+    results = list(oso.get_allowed_resources("steve", "get", Foo))
     # assert len(results) == 2
