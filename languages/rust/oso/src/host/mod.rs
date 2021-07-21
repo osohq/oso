@@ -157,14 +157,6 @@ impl Host {
         Ok(())
     }
 
-    pub fn unify(&self, left: u64, right: u64) -> crate::Result<bool> {
-        tracing::trace!("unify {:?}, {:?}", left, right);
-
-        let left = self.get_instance(left).unwrap();
-        let right = self.get_instance(right).unwrap();
-        left.equals(right, &self)
-    }
-
     pub fn isa(&self, value: PolarValue, class_tag: &str) -> crate::Result<bool> {
         let res = match value {
             PolarValue::Instance(instance) => {

@@ -82,10 +82,6 @@ pub enum Goal {
         call_id: u64,
         iterable: Term,
     },
-    UnifyExternal {
-        left_instance_id: u64,
-        right_instance_id: u64,
-    },
     CheckError,
     Noop,
     Query {
@@ -449,10 +445,6 @@ impl PolarVirtualMachine {
                 field,
             } => return self.lookup_external(*call_id, instance, field),
             Goal::IsaExternal { instance, literal } => return self.isa_external(instance, literal),
-            Goal::UnifyExternal {
-                left_instance_id,
-                right_instance_id,
-            } => return self.unify_external(*left_instance_id, *right_instance_id),
             Goal::MakeExternal {
                 constructor,
                 instance_id,
@@ -1333,23 +1325,6 @@ impl PolarVirtualMachine {
         })
     }
 
-    pub fn unify_external(
-        &mut self,
-        left_instance_id: u64,
-        right_instance_id: u64,
-    ) -> PolarResult<QueryEvent> {
-        let (call_id, answer) = self.new_call_var("unify", Value::Boolean(false));
-        self.push_goal(Goal::Unify {
-            left: answer,
-            right: Term::new_temporary(Value::Boolean(true)),
-        })?;
-
-        Ok(QueryEvent::ExternalUnify {
-            call_id,
-            left_instance_id,
-            right_instance_id,
-        })
-    }
 
     pub fn make_external(&self, constructor: &Term, instance_id: u64) -> QueryEvent {
         QueryEvent::MakeExternal {
@@ -2335,6 +2310,10 @@ impl PolarVirtualMachine {
                     self.push_goal(Goal::Backtrack)?;
                 }
             }
+
+            // If either operand is an external instance, let the host
+            // compare them for equality. This handles unification between
+            // "equivalent" host and native types transparently.
             (Value::ExternalInstance(_),_) | (_, Value::ExternalInstance(_)) => {
                 self.push_goal(Goal::Query {
                     term: Term::new_temporary(Value::Expression(Operation {
@@ -2343,32 +2322,6 @@ impl PolarVirtualMachine {
                         })),
                     })?
             }
-            /*
-
-
-            // External instances can unify if they are the same instance, i.e., have the same
-            // instance ID. This is necessary for the case where an instance appears multiple times
-            // in the same rule head. For example, `f(foo, foo) if ...` or `isa(x, y, x: y) if ...`
-            // or `max(x, y, x) if x > y;`.
-            (
-                Value::ExternalInstance(ExternalInstance {
-                    instance_id: left_instance,
-                    ..
-                }),
-                Value::ExternalInstance(ExternalInstance {
-                    instance_id: right_instance,
-                    ..
-                }),
-            ) => {
-                // If IDs match, they're the same _instance_ (not just the same _value_), so unify.
-                if left_instance != right_instance {
-                    self.push_goal(Goal::UnifyExternal {
-                        left_instance_id: *left_instance,
-                        right_instance_id: *right_instance,
-                    })?;
-                }
-            }
-            */
 
             // Anything else fails.
             (_, _) => self.push_goal(Goal::Backtrack)?,
@@ -3792,14 +3745,13 @@ mod tests {
 
         loop {
             vm.push_goal(Goal::Noop).unwrap();
-            vm.push_goal(Goal::UnifyExternal {
-                left_instance_id: 1,
-                right_instance_id: 1,
-            })
-            .unwrap();
+            vm.push_goal(Goal::MakeExternal {
+                constructor: Term::new_temporary(Value::Boolean(true)),
+                instance_id: 1
+            }).unwrap();
             let result = vm.run(None);
             match result {
-                Ok(event) => assert!(matches!(event, QueryEvent::ExternalUnify { .. })),
+                Ok(event) => assert!(matches!(event, QueryEvent::MakeExternal { .. })),
                 Err(err) => {
                     assert!(matches!(
                         err,
