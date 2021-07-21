@@ -215,8 +215,8 @@ def test_data_filtering(oso):
         }
     ]
 
-    processed = process_constraints(oso, Foo, "resource", query_results)
-    assert processed == plan2
+    # processed = process_constraints(oso, Foo, "resource", query_results)
+    # assert processed == plan2
 
     results = list(oso.get_allowed_resources("steve", "get", Foo))
-    # assert len(results) == 2
+    assert len(results) == 2

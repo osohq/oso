@@ -186,8 +186,10 @@ class FilterPlanner:
     def sort_dependencies(self):
         # topologically sort all the dependencies so we have an
         # order we can execute the fetches in
-        return [1]
+        return self.dependencies
 
+    # dot _this foo
+    # dot (dot _this bar) foo
     def walk_dot(self, exp):
         # Return what the unify needs to know to put this constraint
         # on the right fetch.
@@ -199,14 +201,21 @@ class FilterPlanner:
             # TODO: Keeping track of other variables.
             assert var == Variable("_this")
             assert isinstance(field, str)
-            return field
+            return (None, field)
         if isinstance(var, Expression):
+            # For now, this is a hack
+            # I only support 2 levels of nested fields and the first level HAS
+            # to be a relationship.
+            # Obviously that's not always the case and we need to just walk the path
+            # and figure out where the constraint goes.
             assert var.operator == "Dot"
-            inner = self.walk_dot(var)
-            assert False, "Do this tomorrow steve"
-            # Need to create a new fetch when we traverse a relationship
-            # Also need to reuse that when it's the same relationship
-            # _this.foo is always the same subquery thing.
+            assert len(var.args) == 2
+            inner_var = var.args[0]
+            inner_field = var.args[1]
+            assert inner_var == Variable("_this")
+            assert isinstance(inner_field, str)
+
+            return (inner_field, field)
 
     def process_exp(self, exp):
         if exp.operator == "And":
@@ -229,13 +238,40 @@ class FilterPlanner:
                 lhs, rhs = rhs, lhs
             # We are setting a constraint that the variable rhs must be equal to the value lhs
             value = lhs
-            field = self.walk_dot(rhs)
+            relation, field = self.walk_dot(rhs)
 
-            # Put the constraint on the fetcher.
-            # For now it's just always the top one until the next example
-            self.data_sets[self.sid].constraints.append(Constraint("Eq", field, value))
-        else:
-            assert False, f"Unhandled Operation {exp.operator}"
+            if relation is None:
+                # Put the constraint on the fetcher.
+                self.data_sets[self.sid].constraints.append(Constraint("Eq", field, value))
+            else:
+                # Put the constraint on a related fetcher
+
+                # relation must be a relationship on _this (for now)
+                assert self.cls in self.polar.host.types
+                typ = self.polar.host.types[self.cls]
+                assert relation in typ
+                rel = typ[relation]
+                assert isinstance(rel, Relationship)
+                assert rel.kind == "parent"
+                assert rel.other_type in self.polar.host.fetchers
+
+                # Create or get a fetcher for the type. (This is maybe not a global and instead one for
+                # every expression that then get combined (when they're in ANDs) or something like that.
+                id = None
+                if ("_this", relation) not in self.path_sets:
+                    id = self.next_id
+                    self.next_id += 1
+                    self.path_sets[("_this", relation)] = id
+                    self.data_sets[id] = Constraints(rel.other_type, [])
+                else:
+                    id = self.path_sets[("_this", relation)]
+
+                # Put constrant on relation
+                self.data_sets[id].constraints.append(Constraint("Eq", field, value))
+                # Put in constraint on _this
+                self.data_sets[self.sid].constraints.append(Constraint("In", rel.my_field, Attrib(rel.other_field, Result(id))))
+                self.dependencies.insert(0, id)
+
 
     def process_bindings(self, query_results):
         # Making a bunch of assumptions and restrictions for now.
@@ -253,8 +289,9 @@ class FilterPlanner:
     def plan(self, query_results):
         self.next_id = 2
         self.data_sets = {1: Constraints(self.cls, [])}
+        self.path_sets = {("_this",): 1}
         self.sid = 1
-        self.dependencies = []
+        self.dependencies = [1]
 
         self.process_bindings(query_results)
 
