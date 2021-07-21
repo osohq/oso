@@ -15,26 +15,32 @@ from .variable import Variable
 from .predicate import Predicate
 from .expression import Expression, Pattern
 
+
 class OsoResource:
     pass
+
+
 class OsoActor:
     pass
+
+
 class OsoGroup:
     pass
+
 
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
-    def __init__(self, polar, classes=None, instances=None, get_field=None):
+    def __init__(self, polar, **kwargs):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
-        self.classes = (classes or {}).copy()
-        self.instances = (instances or {}).copy()
-        self.actors = {}
-        self.resources = {}
-        self.groups = {}
-        self.methods = {}
-        self.properties = {}
+        self.classes = (kwargs.get("classes") or {}).copy()
+        self.instances = (kwargs.get("instances") or {}).copy()
+        self.actors = (kwargs.get("actors") or {}).copy()
+        self.resources = (kwargs.get("resources") or {}).copy()
+        self.groups = (kwargs.get("groups") or {}).copy()
+        self.methods = (kwargs.get("methods") or {}).copy()
+        self.properties = (kwargs.get("properties") or {}).copy()
         self._accept_expression = False  # default, see set_accept_expression
 
         def default_get_field(cls, cls_name, field):
@@ -49,7 +55,7 @@ class Host:
                     )
             raise PolarRuntimeError("Cannot generically walk fields of a Python class")
 
-        self.get_field = get_field or default_get_field
+        self.get_field = kwargs.get("get_field") or default_get_field
 
     def copy(self):
         """Copy an existing cache."""
@@ -58,6 +64,11 @@ class Host:
             classes=self.classes,
             instances=self.instances,
             get_field=self.get_field,
+            actors=self.actors,
+            resources=self.resources,
+            groups=self.resources,
+            methods=self.methods,
+            properties=self.properties,
         )
 
     def get_class(self, name):
@@ -85,10 +96,8 @@ class Host:
 
         if resource:
             self.resources[name] = cls
-            print(f"registered resource: {name}")
         elif actor:
             self.actors[name] = cls
-            print(f"registered actor: {name}")
         elif group:
             self.groups[name] = cls
         self.methods.setdefault(name, {}).update(methods)
@@ -126,8 +135,44 @@ class Host:
         right = self.get_instance(right_instance_id)
         return left == right
 
+    def instance_is_entity(self, python_instance, entity_tag):
+        if entity_tag == "OsoResource":
+            for resource in self.resources.values():
+                if isinstance(python_instance, resource):
+                    return True
+        elif entity_tag == "OsoActor":
+            for actor in self.actors.values():
+                if isinstance(python_instance, actor):
+                    return True
+        elif entity_tag == "OsoGroup":
+            for group in self.groups.values():
+                if isinstance(python_instance, group):
+                    return True
+        else:
+            raise ("Unreachable")
+        return False
+
+    def class_is_entity(self, python_class, entity_tag):
+        if entity_tag == "OsoResource":
+            for resource in self.resources.values():
+                if issubclass(python_class, resource):
+                    return True
+        elif entity_tag == "OsoActor":
+            for actor in self.actors.values():
+                if issubclass(python_class, actor):
+                    return True
+        elif entity_tag == "OsoGroup":
+            for group in self.groups.values():
+                if issubclass(python_class, group):
+                    return True
+        else:
+            raise ("Unreachable")
+        return False
+
     def isa(self, instance, class_tag) -> bool:
         instance = self.to_python(instance)
+        if class_tag in ["OsoResource", "OsoActor", "OsoGroup"]:
+            return self.instance_is_entity(instance, class_tag)
         cls = self.get_class(class_tag)
         return isinstance(instance, cls)
 
@@ -137,12 +182,16 @@ class Host:
         for field in path:
             field = self.to_python(field)
             base = self.get_field(base, base_tag, field)
+        if class_tag in ["OsoResource", "OsoActor", "OsoGroup"]:
+            return self.class_is_entity(base, class_tag)
         return issubclass(base, cls)
 
     def is_subclass(self, left_tag, right_tag) -> bool:
         """Return true if left is a subclass (or the same class) as right."""
         left = self.get_class(left_tag)
         right = self.get_class(right_tag)
+        if right_tag in ["OsoResource", "OsoActor", "OsoGroup"]:
+            return self.class_is_entity(left, right_tag)
         return issubclass(left, right)
 
     def is_subspecializer(self, instance_id, left_tag, right_tag) -> bool:
@@ -152,6 +201,11 @@ class Host:
             mro = self.get_instance(instance_id).__class__.__mro__
             left = self.get_class(left_tag)
             right = self.get_class(right_tag)
+            # Base entity classes are never more specific
+            if right_tag in ["OsoResource", "OsoActor", "OsoGroup"]:
+                return True
+            elif left_tag in ["OsoResource", "OsoActor", "OsoGroup"]:
+                return False
             return mro.index(left) < mro.index(right)
         except ValueError:
             return False

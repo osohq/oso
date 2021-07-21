@@ -4,35 +4,188 @@ from pathlib import Path
 from oso import Oso, OsoError, Variable
 from polar import Expression, Pattern, Predicate
 from polar.exceptions import UnsupportedError
+from dataclasses import dataclass
+
+from typing import List, Dict, Union
+from dataclasses import dataclass
 
 # TODO: move this into the lib, only here for tests to pass
-
-
-class User:
-    def __init__(self, teams):
-        self.teams = teams
-
-    def has_role(self, role, resource):
-        return True
-
-
-class Team:
-    def has_role(self, role, resource):
-        return True
-
-
 class Org:
-    pass
+    name: str
+    owner: "User"
+    repos: List["Repo"]
+
+    def __init__(self, name: str, owner: "User"):
+        self.name = name
+        self.owner = owner
+        self.repos = []
+
+    def create_repo(self, name: str):
+        repo = Repo(name=name, org=self)
+        self.repos.append(repo)
+        return repo
 
 
 class Repo:
-    def __init__(self, org):
+    name: str
+    org: Org
+    issues: List["Issue"]
+
+    def __init__(self, name: str, org: Org):
+        self.name = name
         self.org = org
+        self.issues = []
+
+    def create_issue(self, name: str, creator: "User"):
+        issue = Issue(name=name, repo=self, created_by=creator)
+        self.issues.append(issue)
+        return issue
 
 
+@dataclass(frozen=True)
 class Issue:
-    def __init__(self, org):
-        self.repo = repo
+    name: str
+    created_by: "User"
+    repo: Repo
+
+
+Resource = Union[Org, Repo, Issue]
+
+
+class User:
+    name: str
+    roles: Dict[Resource, str]
+    teams: List["Team"]
+
+    def __init__(self, name: str, teams=[]):
+        self.name = name
+        self.roles = {}
+        self.teams = teams
+
+    def assign_role(self, resource: Resource, name: str):
+        self.roles[resource] = name
+
+    def has_role(self, name: str, resource: Resource):
+        print("here")
+        return self.roles.get(resource) == name
+
+
+class Team:
+    name: str
+    roles: Dict[Resource, str]
+
+    def __init__(self, name: str):
+        self.name = name
+        self.roles = {}
+
+    def assign_role(self, resource: Resource, name: str):
+        self.roles[resource] = name
+
+    def has_role(self, name: str, resource: Resource):
+        return self.roles.get(resource) == name
+
+
+# class User:
+#     def __init__(self, teams):
+#         self.teams = teams
+
+#     def has_role(self, role, resource):
+#         return True
+
+
+# class Org:
+#     pass
+
+
+# class Repo:
+#     def __init__(self, org):
+#         self.org = org
+
+
+# class Issue:
+#     def __init__(self, org):
+#         self.repo = repo
+
+
+@pytest.fixture()
+def init_oso():
+    o = Oso()
+    o.register_actor(User, methods={"has_role": bool}, properties={"teams": Team})
+    o.register_group(Team, methods={"has_role": bool})
+    o.register_resource(Org)
+    o.register_resource(Repo, properties={"org": Org})
+    o.register_resource(Issue, properties={"repo": Repo})
+    o.load_file(Path(__file__).parent / "rebac_poc.polar")
+
+    return o
+
+
+def test_rebac_policy(init_oso):
+    o = init_oso
+
+    leina = User("leina")
+    gabe = User("gabe")
+    steve = User("steve")
+    dave = User("dave")
+    sam = User("sam")
+    tim = User("tim")
+    shraddha = User("shraddha")
+    stephie = User("stephie")
+    oso_hq = Org("OsoHQ", owner=sam)
+    apple = Org("Apple", owner=tim)
+    oso_repo = Repo(name="oso", org=oso_hq)
+    ios_repo = Repo(name="ios", org=apple)
+    stephie_bug = Issue(name="stephie_bug", repo=oso_repo, created_by=stephie)
+    dave_bug = Issue(name="dave_bug", repo=oso_repo, created_by=dave)
+    laggy = Issue(name="laggy", repo=ios_repo, created_by=shraddha)
+
+    leina.assign_role(oso_hq, "owner")
+    gabe.assign_role(oso_repo, "writer")
+    steve.assign_role(oso_hq, "member")
+
+    # from direct role assignment
+    assert o.is_allowed(leina, "invite", oso_hq)
+    assert not o.is_allowed(leina, "invite", apple)
+    assert not o.is_allowed(steve, "invite", oso_hq)
+    assert not o.is_allowed(steve, "invite", apple)
+
+    # from same-resource implication
+    assert o.is_allowed(leina, "create_repo", oso_hq)
+    assert not o.is_allowed(leina, "create_repo", apple)
+    assert o.is_allowed(steve, "create_repo", oso_hq)
+    assert not o.is_allowed(steve, "create_repo", apple)
+
+    # from child-resource implication
+    assert o.is_allowed(leina, "push", oso_repo)
+    assert not o.is_allowed(leina, "push", ios_repo)
+    assert o.is_allowed(leina, "pull", oso_repo)
+    assert not o.is_allowed(leina, "pull", ios_repo)
+    assert not o.is_allowed(steve, "push", oso_repo)
+    assert not o.is_allowed(steve, "push", ios_repo)
+    assert o.is_allowed(steve, "pull", oso_repo)
+    assert not o.is_allowed(steve, "pull", ios_repo)
+
+    # from cross-resource permission
+    assert o.is_allowed(leina, "edit", stephie_bug)
+    assert not o.is_allowed(leina, "edit", laggy)
+    assert not o.is_allowed(steve, "edit", stephie_bug)
+    assert not o.is_allowed(steve, "edit", laggy)
+
+    # from cross-resource permission over two levels of hierarchy
+    assert o.is_allowed(leina, "delete", stephie_bug)
+    assert not o.is_allowed(leina, "delete", laggy)
+    assert not o.is_allowed(steve, "delete", stephie_bug)
+    assert not o.is_allowed(steve, "delete", laggy)
+
+    # from same-resource implication
+    assert o.is_allowed(gabe, "pull", oso_repo)
+
+    # resource-user relationships
+    assert not o.is_allowed(dave, "delete", stephie_bug)
+    assert o.is_allowed(dave, "delete", dave_bug)
+    assert not o.is_allowed(sam, "delete", laggy)
+    assert o.is_allowed(sam, "delete", stephie_bug)
+    assert o.is_allowed(sam, "delete", dave_bug)
 
 
 def test_rebac_validation():
