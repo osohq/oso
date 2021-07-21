@@ -70,6 +70,7 @@ class FilterPlan:
     Hopefully the thing we can get the core to spit out. It's like the plan
     for how to do the data filtering.
     """
+
     data_sets: Dict[int, Constraints]
     resolve_order: List[int]
     result_set: int
@@ -175,6 +176,7 @@ def filter_data(polar, filter_plan):
 #     1,
 # )
 
+
 class FilterPlanner:
     def __init__(self, polar, cls, variable):
         self.polar = polar
@@ -202,15 +204,18 @@ class FilterPlanner:
             assert var.operator == "Dot"
             inner = self.walk_dot(var)
             assert False, "Do this tomorrow steve"
+            # Need to create a new fetch when we traverse a relationship
+            # Also need to reuse that when it's the same relationship
+            # _this.foo is always the same subquery thing.
 
     def process_exp(self, exp):
-        if exp.operator == 'And':
+        if exp.operator == "And":
             for arg in exp.args:
                 self.process_exp(arg)
-        elif exp.operator == 'Isa':
+        elif exp.operator == "Isa":
             # Ignoring for now, probably shouldn't
             pass
-        elif exp.operator == 'Unify':
+        elif exp.operator == "Unify":
             assert len(exp.args) == 2
             lhs = exp.args[0]
             rhs = exp.args[1]
@@ -238,13 +243,12 @@ class FilterPlanner:
         query_results = list(query_results)
         assert len(query_results) == 1
         assert "bindings" in query_results[0]
-        assert len(query_results[0]["bindings"]) == 1 # Only one variable in bindings.
+        assert len(query_results[0]["bindings"]) == 1  # Only one variable in bindings.
         assert self.variable in query_results[0]["bindings"]
         exp = query_results[0]["bindings"][self.variable]
         assert isinstance(exp, Expression)
         assert exp.operator == "And"
         self.process_exp(exp)
-
 
     def plan(self, query_results):
         self.next_id = 2
