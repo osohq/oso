@@ -22,24 +22,16 @@ allow(actor, action, resource) if has_permission(actor, action, resource);
 
 # User-role mapping to application data
 has_role(user: User, role: String, resource: OsoResource) if
-    res = user.has_role(role, resource) and
-    res = true;
+    user.has_role(role, resource);
 
 # Group-role mapping to application data
 has_role(group: Team, role: String, resource: OsoResource) if
     group.has_role(role, resource);
 
-
-# Role implication from group role to user role
-has_role(u: User, role: String, resource: OsoResource) if
-    # TBD: move this into has_group?
-    team in u.teams and
-    team matches Team and   # DO NOT REMOVE: this check is necessary to avoid infinite recursion
-    has_role(team, role, resource);
-
-# define role by attribute relationship
-has_role(u: User, "owner", org: Org) if
-    u = org.owner;
+# User-group mapping to application data
+in_group(user: User, group: Team) if
+    team in user.teams and
+    team matches Team;   # DO NOT REMOVE: this check is necessary to avoid infinite recursion
 
 # Ownership
 # option 1 (just use role relationships)
@@ -53,6 +45,15 @@ owns(u: User, issue: Issue) if
 #############################
 # Relationship implications #
 #############################
+
+# OsoResource policy #
+######################
+# applies to all resources
+
+# Role implication from group role to user role
+has_role(u: User, role: String, resource: OsoResource) if
+    in_group(u, team) and
+    has_role(team, role, resource);
 
 # Org policy #
 ##############
@@ -110,7 +111,13 @@ has_permission(u: User, "delete", i: Issue) if owns(u, i);
 #       - asserts -> errors
 #       - Validate that `has_role` is only being called with valid roles
 # - [ ] Write some validation tests
-# - [ ] Write some policy tests
+# - [x] Write some policy tests
+# - [ ] How to distinguish between the relationship "definitions" and the "implications"?
+#       - Currently the definitions don't have body restrictions (other than
+#       registered methods/props), and the implications only call other
+#       relationship rules in the body
+#       - But the implication rules can still access parents as attributes, but
+#       the translation is done in the call
 
 # UX issues:
 # - [ ] role implications don't reference the user, but writing them this way requires including the user
