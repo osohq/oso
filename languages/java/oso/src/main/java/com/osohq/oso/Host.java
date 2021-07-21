@@ -173,17 +173,6 @@ public class Host implements Cloneable {
     throw new Exceptions.UnimplementedOperation(op);
   }
 
-  /** Check if two instances unify. */
-  public boolean unify(long leftId, long rightId) throws Exceptions.UnregisteredInstanceError {
-    Object left = getInstance(leftId);
-    Object right = getInstance(rightId);
-    if (left == null) {
-      return right == null;
-    } else {
-      return left.equals(right);
-    }
-  }
-
   /** Convert Java Objects to Polar (JSON) terms. */
   public JSONObject toPolarTerm(Object value) throws Exceptions.OsoException {
     // Build Polar value

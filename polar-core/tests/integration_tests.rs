@@ -132,9 +132,7 @@ where
                 call_id,
                 args,
                 ..
-            } => query
-                .question_result(call_id, args[0] == args[1])
-                .unwrap(),
+            } => query.question_result(call_id, args[0] == args[1]).unwrap(),
             _ => {}
         }
     }

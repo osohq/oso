@@ -146,11 +146,6 @@ module Oso
             class_tag = event.data['class_tag']
             answer = host.isa?(instance, class_tag: class_tag)
             question_result(answer, call_id: event.data['call_id'])
-          when 'ExternalUnify'
-            left_instance_id = event.data['left_instance_id']
-            right_instance_id = event.data['right_instance_id']
-            answer = host.unify?(left_instance_id, right_instance_id)
-            question_result(answer, call_id: event.data['call_id'])
           when 'Debug'
             puts event.data['message'] if event.data['message']
             print 'debug> '

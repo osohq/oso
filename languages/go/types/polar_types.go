@@ -1733,18 +1733,6 @@ type QueryEventExternalIsSubclass struct {
 
 func (QueryEventExternalIsSubclass) isQueryEvent() {}
 
-// QueryEventExternalUnify struct
-type QueryEventExternalUnify struct {
-	// CallId
-	CallId uint64 `json:"call_id"`
-	// LeftInstanceId
-	LeftInstanceId uint64 `json:"left_instance_id"`
-	// RightInstanceId
-	RightInstanceId uint64 `json:"right_instance_id"`
-}
-
-func (QueryEventExternalUnify) isQueryEvent() {}
-
 // QueryEventResult struct
 type QueryEventResult struct {
 	// Bindings
@@ -1897,17 +1885,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		*result = QueryEvent{variant}
 		return nil
 
-	case "ExternalUnify":
-		var variant QueryEventExternalUnify
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = QueryEvent{variant}
-		return nil
-
 	case "Result":
 		var variant QueryEventResult
 		if variantValue != nil {
@@ -1987,11 +1964,6 @@ func (variant QueryEvent) MarshalJSON() ([]byte, error) {
 	case QueryEventExternalIsSubclass:
 		return json.Marshal(map[string]QueryEventExternalIsSubclass{
 			"ExternalIsSubclass": inner,
-		})
-
-	case QueryEventExternalUnify:
-		return json.Marshal(map[string]QueryEventExternalUnify{
-			"ExternalUnify": inner,
 		})
 
 	case QueryEventResult:

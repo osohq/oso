@@ -122,8 +122,6 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			err = q.handleExternalIsSubSpecializer(ev)
 		case QueryEventExternalIsSubclass:
 			err = q.handleExternalIsSubclass(ev)
-		case QueryEventExternalUnify:
-			err = q.handleExternalUnify(ev)
 		case QueryEventExternalOp:
 			err = q.handleExternalOp(ev)
 		case QueryEventNextExternal:
@@ -223,14 +221,6 @@ func (q Query) handleExternalIsSubSpecializer(event types.QueryEventExternalIsSu
 
 func (q Query) handleExternalIsSubclass(event types.QueryEventExternalIsSubclass) error {
 	res, err := q.host.IsSubclass(string(event.LeftClassTag), string(event.RightClassTag))
-	if err != nil {
-		return err
-	}
-	return q.ffiQuery.QuestionResult(event.CallId, res)
-}
-
-func (q Query) handleExternalUnify(event types.QueryEventExternalUnify) error {
-	res, err := q.host.Unify(event.LeftInstanceId, event.RightInstanceId)
 	if err != nil {
 		return err
 	}

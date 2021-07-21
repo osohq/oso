@@ -1325,7 +1325,6 @@ impl PolarVirtualMachine {
         })
     }
 
-
     pub fn make_external(&self, constructor: &Term, instance_id: u64) -> QueryEvent {
         QueryEvent::MakeExternal {
             instance_id,
@@ -2260,7 +2259,6 @@ impl PolarVirtualMachine {
                 }
             }
 
-
             // Unify lists by recursively unifying their elements.
             (Value::List(l), Value::List(r)) => self.unify_lists(l, r, |(l, r)| Goal::Unify {
                 left: l.clone(),
@@ -2314,13 +2312,13 @@ impl PolarVirtualMachine {
             // If either operand is an external instance, let the host
             // compare them for equality. This handles unification between
             // "equivalent" host and native types transparently.
-            (Value::ExternalInstance(_),_) | (_, Value::ExternalInstance(_)) => {
+            (Value::ExternalInstance(_), _) | (_, Value::ExternalInstance(_)) => {
                 self.push_goal(Goal::Query {
                     term: Term::new_temporary(Value::Expression(Operation {
-                            operator: Operator:: Eq,
-                            args: vec![left.clone(), right.clone()]
-                        })),
-                    })?
+                        operator: Operator::Eq,
+                        args: vec![left.clone(), right.clone()],
+                    })),
+                })?
             }
 
             // Anything else fails.
@@ -3580,7 +3578,9 @@ mod tests {
                     vm.external_question_result(call_id, class_tag.0 == "a")
                         .unwrap()
                 }
-                QueryEvent::ExternalOp { .. } | QueryEvent::ExternalIsSubSpecializer { .. } | QueryEvent::Result { .. } => (),
+                QueryEvent::ExternalOp { .. }
+                | QueryEvent::ExternalIsSubSpecializer { .. }
+                | QueryEvent::Result { .. } => (),
                 e => panic!("Unexpected event: {:?}", e),
             }
         }
@@ -3664,9 +3664,7 @@ mod tests {
                     operator: Operator::Eq,
                     call_id,
                     ..
-                } => {
-                    vm.external_question_result(call_id, true).unwrap()
-                }
+                } => vm.external_question_result(call_id, true).unwrap(),
 
                 QueryEvent::ExternalIsa { call_id, .. } => {
                     // For this test, anything is anything.
@@ -3747,8 +3745,9 @@ mod tests {
             vm.push_goal(Goal::Noop).unwrap();
             vm.push_goal(Goal::MakeExternal {
                 constructor: Term::new_temporary(Value::Boolean(true)),
-                instance_id: 1
-            }).unwrap();
+                instance_id: 1,
+            })
+            .unwrap();
             let result = vm.run(None);
             match result {
                 Ok(event) => assert!(matches!(event, QueryEvent::MakeExternal { .. })),

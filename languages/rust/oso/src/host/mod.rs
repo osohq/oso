@@ -13,9 +13,9 @@ mod value;
 
 pub use class::{Class, ClassBuilder, Instance};
 pub use from_polar::{FromPolar, FromPolarList};
+use polar_core::terms::Operator;
 pub use to_polar::{PolarIterator, ToPolar, ToPolarList};
 pub use value::PolarValue;
-use polar_core::terms::Operator;
 
 lazy_static::lazy_static! {
     /// Map of classes that have been globally registered
@@ -179,18 +179,12 @@ impl Host {
         false
     }
 
-    pub fn operator(
-        &self,
-        op: Operator,
-        args: [class::Instance; 2],
-    ) -> crate::Result<bool> {
+    pub fn operator(&self, op: Operator, args: [class::Instance; 2]) -> crate::Result<bool> {
         match op {
-            Operator::Eq =>
-                args[0].equals(&args[1], self),
-            _ =>
-                Err(OsoError::UnimplementedOperation {
-                    operation: String::from("comparison operators"),
-                })
+            Operator::Eq => args[0].equals(&args[1], self),
+            _ => Err(OsoError::UnimplementedOperation {
+                operation: String::from("comparison operators"),
+            }),
         }
         // Operators are not supported
         // TODO (dhatch): Implement.
