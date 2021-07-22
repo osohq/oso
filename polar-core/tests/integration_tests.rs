@@ -1196,12 +1196,12 @@ fn test_debug_temp_var() -> TestResult {
                 "var a"
             }
             1 => {
-                let expected = indoc!("_a_3 = 5");
+                let expected = indoc!("a = 5");
                 assert_eq!(s, expected);
                 "var aa"
             }
             2 => {
-                let expected = indoc!("_aa_4 = 3");
+                let expected = indoc!("aa = 3");
                 assert_eq!(s, expected);
                 "q"
             }
