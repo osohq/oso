@@ -245,32 +245,32 @@ func (q Query) handleExternalOp(event types.QueryEventExternalOp) error {
 	leftCmp, leftOk := left.(interfaces.Comparer)
 	rightCmp, rightOk := right.(interfaces.Comparer)
 
-  if !leftOk || !rightOk {
-    switch event.Operator.OperatorVariant.(type) {
-    case OperatorEq:
-      answer = reflect.DeepEqual(left, right)
-    default:
-      return fmt.Errorf("Unsupported operation: %v", event.Operator.OperatorVariant)
-    }
-  } else {
-    // @TODO: Where are the implementations for these for builtin stuff (numbers mainly)
-    switch event.Operator.OperatorVariant.(type) {
-    case OperatorLt:
-      answer = leftCmp.Lt(rightCmp)
-    case OperatorLeq:
-      answer = leftCmp.Lt(rightCmp) || leftCmp.Equal(rightCmp)
-    case OperatorGt:
-      answer = rightCmp.Lt(leftCmp)
-    case OperatorGeq:
-      answer = !leftCmp.Lt(rightCmp)
-    case OperatorEq:
-      answer = leftCmp.Equal(rightCmp)
-    case OperatorNeq:
-      answer = !leftCmp.Equal(rightCmp)
-    default:
-      return fmt.Errorf("Unsupported operation: %v", event.Operator.OperatorVariant)
-    }
-  }
+	if !leftOk || !rightOk {
+		switch event.Operator.OperatorVariant.(type) {
+		case OperatorEq:
+			answer = reflect.DeepEqual(left, right)
+		default:
+			return fmt.Errorf("Unsupported operation: %v", event.Operator.OperatorVariant)
+		}
+	} else {
+		// @TODO: Where are the implementations for these for builtin stuff (numbers mainly)
+		switch event.Operator.OperatorVariant.(type) {
+		case OperatorLt:
+			answer = leftCmp.Lt(rightCmp)
+		case OperatorLeq:
+			answer = leftCmp.Lt(rightCmp) || leftCmp.Equal(rightCmp)
+		case OperatorGt:
+			answer = rightCmp.Lt(leftCmp)
+		case OperatorGeq:
+			answer = !leftCmp.Lt(rightCmp)
+		case OperatorEq:
+			answer = leftCmp.Equal(rightCmp)
+		case OperatorNeq:
+			answer = !leftCmp.Equal(rightCmp)
+		default:
+			return fmt.Errorf("Unsupported operation: %v", event.Operator.OperatorVariant)
+		}
+	}
 	return q.ffiQuery.QuestionResult(event.CallId, answer)
 }
 

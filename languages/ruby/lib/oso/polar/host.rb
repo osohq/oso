@@ -149,32 +149,29 @@ module Oso
         raise PolarRuntimeError, "Error constructing instance of #{cls_name}: #{e}"
       end
 
+      OPS = {
+        'Lt' => :<,
+        'Gt' => :>,
+        'Eq' => :==,
+        'Geq' => :>=,
+        'Leq' => :<=,
+        'Neq' => :!=
+      }.freeze
+
       # Compare two values
       #
       # @param op [String] operation to perform.
       # @param args [Array<Object>] left and right args to operation.
       # @raise [PolarRuntimeError] if operation fails or is unsupported.
       # @return [Boolean]
-      def operator(op, args)
+      def operator(operation, args)
+        op = OPS[operation]
+        raise PolarRuntimeError, "Unsupported external operation '#{l.class} #{operation} #{r.class}'" if op.nil?
+
         l, r = args
-        case op
-        when 'Lt'
-          l < r
-        when 'Gt'
-          l > r
-        when 'Eq'
-          l == r
-        when 'Leq'
-          l <= r
-        when 'Geq'
-          l >= r
-        when 'Neq'
-          l != r
-        else
-          raise PolarRuntimeError, "Unsupported external operation '#{l.class} #{op} #{r.class}'"
-        end
-      rescue
-        raise PolarRuntimeError, "External operation '#{l.class} #{op} #{r.class}' failed."
+        l.__send__ op, r
+      rescue StandardError
+        raise PolarRuntimeError, "External operation '#{l.class} #{operation} #{r.class}' failed."
       end
 
       # Check if the left class is more specific than the right class

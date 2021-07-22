@@ -19,14 +19,13 @@ var CLASSES = make(map[string]reflect.Type)
 type None struct{}
 
 func (l None) Equal(r interfaces.Comparer) bool {
-  l, ok := r.(None)
-  return ok
+	l, ok := r.(None)
+	return ok
 }
 
 func (l None) Lt(r interfaces.Comparer) bool {
-  panic("unsupported")
+	panic("unsupported")
 }
-
 
 type Host struct {
 	ffiPolar     ffi.PolarFfi
