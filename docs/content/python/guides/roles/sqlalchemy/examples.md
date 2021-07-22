@@ -74,7 +74,8 @@ on our model:
     to="docs: end-repo-model"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
-    hlOpts="hl_lines=9"
+    hlFrom="docs: begin-repo-model-highlight"
+    hlTo="docs: end-repo-model-highlight"
 >}}
 
 Then, we **imply** a role on the child resource from our parent resource
@@ -86,7 +87,8 @@ definition.
     to="docs: end-org-resource"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
-    hlOpts="hl_lines=6"
+    hlFrom="docs: begin-org-resource-highlight"
+    hlTo="docs: end-org-resource-highlight"
     >}}
 
 The `"repo:reader"` entry in `implies: ` for `member` gives organization

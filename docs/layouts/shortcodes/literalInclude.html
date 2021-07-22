@@ -23,14 +23,19 @@
       contain the dynPath key *or* the fallback key, but not both.
   - syntax: haven't had to use this yet and might remove. It's just a way to
       manually override the file extension-based syntax detection.
-  - hlOpts: this is passed directly to the 'highlight' shortcode as its options
-      string. Useful for things like highlighting certain lines of a code
-      snippet.
   - from: this should be a string that identifies a unique line in the file by
       substring match. E.g., "user-class-start". The snippet will start after
       that line.
   - to: this should be a string that identifies a unique line in the file by
       substring match. E.g., "user-class-end". The snippet will end before that line.
+  - hlFrom: similarly to $from, this should be a string that identifies a unique
+      line in the file. This will be used as the starting point for highlighting.
+      It must be within the bounds of the code being displayed. and it will be
+      stripped from the output.
+  - hlTo: similarly to $to, this should be a string that identifies a unique line
+      in the file. It will be used as the ending point for highlighting. It must
+      be withing the bounds of the code being displayed, and it will be stripped
+      from the output.
   - lines: specify this if you want to display noncontiguous segments of a
       file. E.g., `lines="2,5-7,10-15"`. Segments should be comma-separated and
       can be either a single line number or a range of lines (represented as a
@@ -47,7 +52,9 @@
 {{ $syntaxoverride := $.Params.syntax }}
 {{ $id := "" }}
 {{ $file := "" }}
-{{ $hlOpts := $.Params.hlOpts | default "" }}
+{{ $hlFrom := $.Params.hlFrom | default "" }}
+{{ $hlTo := $.Params.hlTo | default "" }}
+{{ $hlOpts := "" }}
 {{ $lines := $.Params.lines }}
 {{ $loc := slice }}
 {{ $gitHub := $.Params.gitHub }}
@@ -163,22 +170,30 @@
 
   {{ with $content }}
     {{ with split . "\n" }}
+      {{ $contentLines := . }}
       {{/* Default the snippet length to the file length. */}}
       {{ $length = len . }}
 
       {{/* Find snippet boundaries if valid values were provided for 'from' and/or 'to'. */}}
       {{ range $index, $line := . }}
         {{ if in $line $from }}
-          {{ $firstLine = add $index 1 }}
+          {{/* This check ensures that we are not accidentally on the $hlFrom line,
+               such as if $from is a substring of $hLFrom */}}
+          {{ if not (and $hlFrom (in $line $hlFrom)) }}
+            {{ $firstLine = add $index 1 }}
+          {{ end }}
         {{ else if in $line $to }}
-          {{ $length = sub $index $firstLine }}
+          {{/* Similarly to above, check if we are on a substring of $hlTo */}}
+          {{ if not (and $hlTo (in $line $hlTo)) }}
+            {{ $length = sub $index $firstLine }}
+          {{ end }}
         {{ end }}
       {{ end }}
 
       {{ $lastLine = add $firstLine $length }}
 
       {{/* Trim snippet to boundaries. */}}
-      {{ with first $length (after $firstLine .) }}
+      {{ with first $length (after $firstLine $contentLines) }}
         {{/* If 'lines' were provided, drop any lines that aren't specified and
              fill gaps between line groups with ellipses. */}}
         {{ if $loc }}
@@ -195,11 +210,38 @@
               {{ end }}
             {{ end }}
           {{ end }}
-          {{ $content = (delimit $temp "\n") }}
+          {{ $contentLines = $temp }}
         {{ else }}
-          {{ $content = (delimit . "\n") }}
+          {{ $contentLines = . }}
         {{ end }}
       {{ end }}
+
+      {{ if and $hlFrom $hlTo }}
+        {{/* calculate hl_lines */}}
+        {{ $hlStart := slice }}
+        {{ $hlEnd := slice }}
+        {{ range $index, $line := $contentLines }}
+          {{ if in $line $hlFrom }}
+            {{ $hlStart = $hlStart | append (add $index 1) }}
+            {{ $contentLines = (first $index $contentLines) | append (after (add $index 1) $contentLines) }}
+          {{ else if in $line $hlTo }}
+            {{ $hlEnd = $hlEnd | append $index }}
+            {{ $contentLines = (first $index $contentLines) | append (after (add $index 1) $contentLines) }}
+          {{ end }}
+        {{ end }}
+        {{ if and $hlStart $hlEnd }}
+          {{ $hlPairs := slice }}
+          {{ range $index, $startLine := $hlStart }}
+            {{ $endLine := index $hlEnd $index }}
+            {{ $hlPairs = $hlPairs | append (printf "%d-%d" $startLine $endLine) }}
+          {{ end }}
+          {{ $hlOpts = printf "hl_lines=%s" (delimit $hlPairs " ") }}
+        {{ else }}
+          {{ $hlOpts = "" }}
+        {{ end }}
+      {{ end }}
+
+      {{ $content = delimit $contentLines "\n" }}
     {{ end }}
   {{ end }}
 {{ else }}
