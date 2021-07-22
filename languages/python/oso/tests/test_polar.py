@@ -458,9 +458,9 @@ def test_return_list(polar, query):
 
 def test_host_native_unify(polar, query):
     """Test that unification works across host and native data"""
-    assert query('new Integer(1) = 1')
+    assert query("new Integer(1) = 1")
     assert query('new String("foo") = "foo"')
-    assert query('new List([1,2,3]) = [1,2,3]')
+    assert query("new List([1,2,3]) = [1,2,3]")
 
 
 def test_query(load_file, polar, query):
@@ -524,9 +524,11 @@ def test_constructor(polar, qvar):
 
 def test_constructor_error(polar, query):
     """Test that external instance constructor errors cause a PolarRuntimeError"""
+
     class Foo:
         def __init__(self):
             raise RuntimeError("o no")
+
     polar.register_class(Foo)
     with pytest.raises(exceptions.PolarRuntimeError):
         query("x = new Foo()")
