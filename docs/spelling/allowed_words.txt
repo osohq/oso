@@ -46,6 +46,7 @@ Postgres
 PyPI
 RBAC
 REPL
+repl
 RESTful
 RubyGems
 Rubying
