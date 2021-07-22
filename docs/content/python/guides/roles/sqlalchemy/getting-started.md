@@ -85,7 +85,6 @@ class as well as a SQLAlchemy `sessionmaker` to the
     to="# Load authorization policy."
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
-    hlOpts="hl_lines=6"
 >}}
 
 ### Loading our policy
@@ -103,7 +102,6 @@ Load the policy with the `Oso.load_file` function.
     to="# Attach SQLAlchemyOso instance to Flask application."
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
-    hlOpts="hl_lines=10-11"
 >}}
 
 
@@ -395,7 +393,8 @@ access, we must assign them to roles.
     to="docs: end-role-assignment"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
-    hlOpts="hl_lines=10"
+    hlFrom="docs: begin-role-assignment-highlight"
+    hlTo="docs: end-role-assignment-highlight"
     >}}
 
 The `assign_role` method assigns a particular role on a resource.
