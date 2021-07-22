@@ -1196,13 +1196,11 @@ fn test_debug_temp_var() -> TestResult {
                 "var a"
             }
             1 => {
-                let expected = indoc!("a = 5");
-                assert_eq!(s, expected);
+                assert_eq!(s, "a@_a_3 = 5");
                 "var aa"
             }
             2 => {
-                let expected = indoc!("aa = 3");
-                assert_eq!(s, expected);
+                assert_eq!(s, "aa@_aa_4 = 3");
                 "q"
             }
             _ => panic!("Too many calls: {}", s),
