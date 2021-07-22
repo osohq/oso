@@ -8,6 +8,7 @@ use super::terms::*;
 use super::traces::*;
 
 use super::bindings::Binding;
+use super::kb::KnowledgeBase;
 use super::vm::*;
 
 impl PolarVirtualMachine {
@@ -296,11 +297,7 @@ impl Debugger {
                             let var = Symbol::new(nom);
                             let bindings = vm.bindings(true);
                             let val = bindings.get(&var).cloned().unwrap_or_else(|| {
-                                let pref = match nom.strip_prefix("_") {
-                                    None => format!("_{}_", nom),
-                                    Some("") => nom.to_string(),
-                                    Some(_) => format!("{}_", nom),
-                                };
+                                let pref = KnowledgeBase::temp_prefix(nom);
                                 bindings.keys()
                                     .filter_map(|k| k.0.strip_prefix(&pref).map(|i|
                                         i.parse::<i64>().map_or(None, |i| Some((k, i)))).flatten())
