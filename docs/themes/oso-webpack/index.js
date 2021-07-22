@@ -1,3 +1,5 @@
+import {postIntegrationRequest} from './backend';
+
 import('monaco-editor-core').then(monaco => {
   // Monokai colors
   const COLOR = {
@@ -306,6 +308,7 @@ import('algoliasearch').then(algolia => {
   };
 });
 
+window.onRequestIntegration = postIntegrationRequest;
 
 function makePromptsUnselectable() {
   const languages = ['bash', 'console'];

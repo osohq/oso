@@ -24,9 +24,6 @@ defaultContentLanguage = "any"
     weight = 1
     [languages.node.params]
       icon = "node-js"
-      frameworks = [
-        ["Express", "Express is a minimal and flexible Node.js web application framework that provides a robust set of features for web and mobile applications."]
-      ]
 
   [languages.python]
     languageName = "Python"
@@ -34,9 +31,6 @@ defaultContentLanguage = "any"
     weight = 2
     [languages.python.params]
       icon = "python"
-      frameworks = [
-        ["foo", "foo is a language"]
-      ]
 
   [languages.go]
     languageName = "Go"
