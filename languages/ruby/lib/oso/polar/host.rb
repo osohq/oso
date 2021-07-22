@@ -169,9 +169,11 @@ module Oso
         raise PolarRuntimeError, "Unsupported external operation '#{l.class} #{operation} #{r.class}'" if op.nil?
 
         l, r = args
-        l.__send__ op, r
-      rescue StandardError
-        raise PolarRuntimeError, "External operation '#{l.class} #{operation} #{r.class}' failed."
+        begin
+          l.__send__ op, r
+        rescue StandardError
+          raise PolarRuntimeError, "External operation '#{l.class} #{operation} #{r.class}' failed."
+        end
       end
 
       # Check if the left class is more specific than the right class
