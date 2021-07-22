@@ -462,6 +462,7 @@ def test_host_native_unify(polar, query):
     assert query('new String("foo") = "foo"')
     assert query('new List([1,2,3]) = [1,2,3]')
 
+
 def test_query(load_file, polar, query):
     """Test that queries work with variable arguments"""
 
@@ -473,6 +474,7 @@ def test_query(load_file, polar, query):
         {"a": 2},
         {"a": 3},
     ]
+
 
 def test_constructor(polar, qvar):
     """Test that class constructor is called correctly with constructor syntax."""
@@ -519,13 +521,14 @@ def test_constructor(polar, qvar):
     assert instance.bar == 3
     assert instance.baz == 4
 
+
 def test_constructor_error(polar, query):
     """Test that external instance constructor errors cause a PolarRuntimeError"""
     class Foo:
         def __init__(self):
             raise RuntimeError("o no")
     polar.register_class(Foo)
-    with pytest.raises(exceptions.PolarRuntimeError) as e:
+    with pytest.raises(exceptions.PolarRuntimeError):
         query("x = new Foo()")
 
 

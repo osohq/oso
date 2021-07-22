@@ -248,7 +248,7 @@ func (q Query) handleExternalOp(event types.QueryEventExternalOp) error {
   if !leftOk || !rightOk {
     switch event.Operator.OperatorVariant.(type) {
     case OperatorEq:
-      answer = left == right
+      answer = reflect.DeepEqual(left, right)
     default:
       return fmt.Errorf("Unsupported operation: %v", event.Operator.OperatorVariant)
     }

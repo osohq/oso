@@ -533,6 +533,11 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         expect(query(subject, 'nope()')).to eq([])
       end
 
+      it 'can unify instances with native types' do
+        expect(query(subject, 'new String("foo") = "foo"')).to eq([{}])
+        expect(query(subject, 'new List() = []')).to eq([{}])
+      end
+
       it 'can specialize on dict fields' do
         subject.load_str <<~POLAR
           what_is(_: {genus: "canis"}, r) if r = "canine";

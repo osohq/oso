@@ -401,6 +401,11 @@ public class PolarTest {
   }
 
   @Test
+  public void testExternalInternalUnify() throws Exception {
+    assertFalse(p.query("new String(\"foo\") = \"foo\"").results().isEmpty());
+  }
+
+  @Test
   public void testReturnListFromCall() throws Exception {
     p.loadStr("test(c: MyClass) if \"hello\" in c.myList();");
     MyClass c = new MyClass("test", 1);
