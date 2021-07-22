@@ -294,10 +294,22 @@ impl Debugger {
                         .iter()
                         .map(|var| {
                             let var = Symbol::new(var);
-                            let value = vm.bindings(true).get(&var).cloned().unwrap_or_else(|| {
+                            let pref = match var.0.strip_prefix("_") {
+                                None => format!("_{}_", var.0),
+                                Some("") => var.0.to_string(),
+                                Some(_) => format!("{}_", var.0),
+                            };
+                            let bindings = vm.bindings(true);
+                            let key = bindings.keys()
+                                .filter_map(|k| k.0.strip_prefix(&pref).map(|i|
+                                    i.parse::<i64>().map_or(None, |i| Some((k, i)))).flatten())
+                                .max_by(|a, b| a.1.cmp(&b.1))
+                                .unwrap_or_else(|| (&var, 0))
+                                .0;
+                            let value = bindings.get(key).cloned().unwrap_or_else(|| {
                                 Term::new_temporary(Value::Variable(Symbol::new("<unbound>")))
                             });
-                            Binding(var, value)
+                            Binding(key.to_owned(), value)
                         })
                         .collect();
                     return Some(show(&vars));
