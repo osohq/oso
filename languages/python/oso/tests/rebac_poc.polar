@@ -77,6 +77,7 @@ has_permission(u: User, "list_issues", r: Repo) if has_role(u, "reader", r);
 has_permission(u: User, "push", r: Repo) if has_role(u, "writer", r);
 has_permission(u: User, "create_issue", r: Repo) if has_role(u, "writer", r);
 
+
 # Attribute-based permissions
 has_permission(_: User, "view", repo: Repo) if repo.is_public;
 
@@ -112,12 +113,16 @@ has_permission(u: User, "delete", i: Issue) if owns(u, i);
 #       - Validate that `has_role` is only being called with valid roles
 # - [ ] Write some validation tests
 # - [x] Write some policy tests
-# - [ ] How to distinguish between the relationship "definitions" and the "implications"?
+
+# Open questions
+# - How to distinguish between the relationship "definitions" and the "implications"?
 #       - Currently the definitions don't have body restrictions (other than
 #       registered methods/props), and the implications only call other
 #       relationship rules in the body
 #       - But the implication rules can still access parents as attributes, but
 #       the translation is done in the call
+# - Do all relationships need to be represented as predicates (e.g., parent
+# relationships are currently dot lookups)
 
 # UX issues:
 # - role implications don't reference the user, but writing them this way requires including the user
