@@ -49,4 +49,4 @@ __oso_internal__role_implies_permitted_role(role, [implied_role, implied_role_re
     __oso_internal__role_implies_permitted_role(role, [name, resource], resource);
 
 __oso_internal__ancestor(child, parent) if parent_child(parent, child);
-__oso_internal__ancestor(child, grandparent) if parent_child(parent, child) and __oso_internal__ancestor(parent, grandparent);
+#__oso_internal__ancestor(child, grandparent) if parent_child(parent, child) and __oso_internal__ancestor(parent, grandparent);

@@ -208,6 +208,16 @@ class FilterPlanner:
             # to be a relationship.
             # Obviously that's not always the case and we need to just walk the path
             # and figure out where the constraint goes.
+
+            # I suppose I can use the type information to understand if the nested thing is a dict or
+            # another embedded type or a relationship. For embedded dicts or other types I guess I'll
+            # just have to treat them as path'd unifies.
+            # foo.bar.baz = 12
+            # Since there's no relationship there's no other way to do it really.
+
+            # So what should walking a dot really do?
+            # Also, what do we do if we get expressions that aren't about _this?
+
             assert var.operator == "Dot"
             assert len(var.args) == 2
             inner_var = var.args[0]

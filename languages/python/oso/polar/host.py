@@ -37,10 +37,26 @@ class Host:
         self.fetchers = (fetchers or {}).copy()
         self._accept_expression = False  # default, see set_accept_expression
 
-        def default_get_field(_obj, _field):
-            raise PolarRuntimeError("Cannot generically walk fields of a Python class")
+        # Check the types.
+        def default_get_field(obj, field):
+            return self.types_get_field(obj, field)
 
         self.get_field = get_field or default_get_field
+
+    # @Q: I'm not really sure what I'm returning here.
+    def types_get_field(self, obj, field):
+        if obj in self.types:
+            obj_type = self.types[obj]
+            if field in obj_type:
+                field_type = obj_type[field]
+                if field_type.kind == "parent":
+                    return field_type.other_type
+                elif field_type.kind == "children":
+                    return list
+            else:
+                raise AttributeError(f"no field {field} on {obj.__name__}")
+        raise PolarRuntimeError(f"No type information for Python class {obj.__name__}")
+
 
     def copy(self):
         """Copy an existing cache."""

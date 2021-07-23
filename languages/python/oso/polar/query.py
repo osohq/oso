@@ -105,7 +105,6 @@ class Query:
                     if isinstance(attr_typ, Relationship):
                         rel = attr_typ
                         # Use the fetcher for the other type to traverse the relationship
-                        assert rel.kind == "parent"
                         assert rel.other_type in self.host.fetchers
                         fetcher = self.host.fetchers[rel.other_type]
                         constraint = Constraint(
@@ -115,8 +114,11 @@ class Query:
                         )
                         constraints = Constraints(rel.other_type, [constraint])
                         results = fetcher(constraints)
-                        assert len(results) == 1
-                        attr = results[0]
+                        if rel.kind == "parent":
+                            assert len(results) == 1
+                            attr = results[0]
+                        elif rel.kind == "children":
+                            attr = results
             if attr is None:
                 attr = getattr(instance, attribute)
         except AttributeError as e:
