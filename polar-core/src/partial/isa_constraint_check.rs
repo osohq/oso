@@ -58,7 +58,7 @@ impl IsaConstraintCheck {
         if constraint.operator != Operator::Isa {
             return (None, None);
         }
-
+        eprintln!("constraint: {:?}, proposed: {:?}", constraint, self.proposed);
         let constraint_path = path(&constraint.args[0]);
         let proposed_path = path(&self.proposed.args[0]);
 
@@ -78,7 +78,8 @@ impl IsaConstraintCheck {
         }
 
         // TODO(gj): why are we popping here?
-        let proposed = self.proposed.args.pop().unwrap();
+        // let proposed = self.proposed.args.pop().unwrap();
+        let proposed = self.proposed.args.last().unwrap();
         let existing = constraint.args.pop().unwrap();
 
         // x matches A{} vs. x matches B{}
