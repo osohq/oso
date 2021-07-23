@@ -2309,6 +2309,15 @@ impl PolarVirtualMachine {
                 }
             }
 
+            (
+                Value::ExternalInstance(ExternalInstance {
+                    instance_id: left, ..
+                }),
+                Value::ExternalInstance(ExternalInstance {
+                    instance_id: right, ..
+                }),
+            ) if left == right => (),
+
             // If either operand is an external instance, let the host
             // compare them for equality. This handles unification between
             // "equivalent" host and native types transparently.

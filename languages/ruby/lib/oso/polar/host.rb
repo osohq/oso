@@ -165,14 +165,14 @@ module Oso
       # @raise [PolarRuntimeError] if operation fails or is unsupported.
       # @return [Boolean]
       def operator(operation, args)
+        left, right = args
         op = OPS[operation]
-        raise PolarRuntimeError, "Unsupported external operation '#{l.class} #{operation} #{r.class}'" if op.nil?
+        raise PolarRuntimeError, "Unsupported external operation '#{left.class} #{operation} #{right.class}'" if op.nil?
 
-        l, r = args
         begin
-          l.__send__ op, r
+          left.__send__ op, right
         rescue StandardError
-          raise PolarRuntimeError, "External operation '#{l.class} #{operation} #{r.class}' failed."
+          raise PolarRuntimeError, "External operation '#{left.class} #{operation} #{right.class}' failed."
         end
       end
 
