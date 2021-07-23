@@ -1121,6 +1121,8 @@ impl PolarVirtualMachine {
                 let (simplified, _) = simplify_partial(var, partial.into_term(), hs, false);
                 let simplified = simplified.value().as_expression()?;
 
+                let mut aliases: Option<HashSet<Symbol>> = None;
+
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
                 // What if the one there is is in a not, or an or, or something
                 let lhs_of_matches = simplified
@@ -1141,16 +1143,98 @@ impl PolarVirtualMachine {
                             None
                         }
                     })
-                    .unwrap_or_else(|| left.clone());
+                    .unwrap_or_else(|| {
+                        // Get the constraints for left.
+                        // Get all the vars it's unified with.
+                        if let Ok(s @ Symbol(_)) = left.value().as_symbol() {
+                            if let Some(bindings) = self.bindings(true).get(s) {
+                                // eprintln!("bindings: {}", bindings.to_polar());
+                                if let Value::Expression(o) = bindings.value() {
+                                    let mut cycles: Vec<HashSet<Symbol>> = vec![];
+                                    let mut unifies: Vec<usize> = o
+                                        .constraints()
+                                        .iter()
+                                        .enumerate()
+                                        .filter(|(_, constraint)| {
+                                            // Collect up unifies to prune out cycles.
+                                            match constraint.operator {
+                                                Operator::Unify | Operator::Eq => {
+                                                    let left = &constraint.args[0];
+                                                    let right = &constraint.args[1];
+                                                    match (left.value(), right.value()) {
+                                                        (Value::Variable(l), Value::Variable(r))
+                                                        | (Value::Variable(l), Value::RestVariable(r))
+                                                        | (Value::RestVariable(l), Value::Variable(r))
+                                                        | (Value::RestVariable(l), Value::RestVariable(r)) => {
+                                                            let mut added = false;
+                                                            for cycle in &mut cycles {
+                                                                if cycle.contains(&l) {
+                                                                    cycle.insert(r.clone());
+                                                                    added = true;
+                                                                    break;
+                                                                }
+                                                                if cycle.contains(&r) {
+                                                                    cycle.insert(l.clone());
+                                                                    added = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if !added {
+                                                                let mut new_cycle = HashSet::new();
+                                                                new_cycle.insert(r.clone());
+                                                                new_cycle.insert(l.clone());
+                                                                cycles.push(new_cycle);
+                                                            }
+                                                            true
+                                                        }
+                                                        _ => false,
+                                                    }
+                                                }
+                                                _ => false,
+                                            }
+                                        })
+                                        .map(|(i, _)| i)
+                                        .collect();
+
+                                    // Combine cycles.
+                                    let mut joined_cycles: Vec<HashSet<Symbol>> = vec![];
+                                    for new_cycle in cycles {
+                                        let mut joined = false;
+                                        for cycle in &mut joined_cycles {
+                                            if !cycle.is_disjoint(&new_cycle) {
+                                                cycle.extend(new_cycle.clone().into_iter());
+                                                joined = true;
+                                                break;
+                                            }
+                                        }
+                                        if !joined {
+                                            joined_cycles.push(new_cycle);
+                                        }
+                                    }
+
+                                    for cycle in joined_cycles {
+                                        if (cycle.contains(s)) {
+                                            aliases = Some(cycle);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        left.clone()
+                    });
+                // eprintln!("aliases: {:?}", aliases);
 
                 // Construct field-less matches operation.
                 let tag_pattern = right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
                 let type_constraint = op!(Isa, left.clone(), tag_pattern);
 
                 let new_matches = op!(Isa, lhs_of_matches, right.clone());
+
                 let runnable = Box::new(IsaConstraintCheck::new(
                     simplified.constraints(),
                     new_matches,
+                    aliases,
                 ));
 
                 // Construct field constraints.

@@ -252,7 +252,9 @@ class FilterPlanner:
 
             if relation is None:
                 # Put the constraint on the fetcher.
-                self.data_sets[self.sid].constraints.append(Constraint("Eq", field, value))
+                self.data_sets[self.sid].constraints.append(
+                    Constraint("Eq", field, value)
+                )
             else:
                 # Put the constraint on a related fetcher
 
@@ -279,9 +281,10 @@ class FilterPlanner:
                 # Put constrant on relation
                 self.data_sets[id].constraints.append(Constraint("Eq", field, value))
                 # Put in constraint on _this
-                self.data_sets[self.sid].constraints.append(Constraint("In", rel.my_field, Attrib(rel.other_field, Result(id))))
+                self.data_sets[self.sid].constraints.append(
+                    Constraint("In", rel.my_field, Attrib(rel.other_field, Result(id)))
+                )
                 self.dependencies.insert(0, id)
-
 
     def process_bindings(self, query_results):
         # Making a bunch of assumptions and restrictions for now.
@@ -319,3 +322,4 @@ def process_constraints(polar, cls, variable, query_results):
 def evaluate(polar, cls, variable, query_results):
     plan = process_constraints(polar, cls, variable, query_results)
     return filter_data(polar, plan)
+
