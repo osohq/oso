@@ -1177,6 +1177,51 @@ fn test_arithmetic() -> TestResult {
 }
 
 #[test]
+fn test_debug_break_on_error() -> TestResult {
+    let p = Polar::new();
+    p.load_str("foo() if debug() and 1 < \"2\" and 1 < 2;")?;
+
+    let mut call_num = 0;
+    let debug_handler = |s: &str| {
+        let rt = match call_num {
+            0 => {
+                let expected = indoc!(
+                    r#"
+                    QUERY: debug(), BINDINGS: {}
+
+                    001: foo() if debug() and 1 < "2" and 1 < 2;
+                                  ^
+                    "#
+                );
+                assert_eq!(s, expected);
+                "error"
+            }
+            1 => {
+                let expected = indoc!(
+                    r#"
+                    QUERY: 1 < "2", BINDINGS: {}
+
+                    001: foo() if debug() and 1 < "2" and 1 < 2;
+                                              ^
+
+                    ERROR: Not supported: 1 < "2"
+                    "#
+                );
+                assert_eq!(s, expected);
+                "c"
+            }
+            _ => panic!("Too many calls!"),
+        };
+        call_num += 1;
+        rt.to_string()
+    };
+
+    let q = p.new_query("foo()", false)?;
+    let results = query_results!(q, no_results, no_externals, debug_handler);
+    assert!(results.is_empty());
+    Ok(())
+}
+#[test]
 fn test_debug() -> TestResult {
     let p = Polar::new();
     p.load_str(indoc!(

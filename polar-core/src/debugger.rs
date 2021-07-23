@@ -27,7 +27,7 @@ impl PolarVirtualMachine {
     pub fn maybe_break(&mut self, event: DebugEvent) -> PolarResult<()> {
         let maybe_goal = self.debugger.maybe_break(event, self);
         if let Some(goal) = maybe_goal {
-            self.push_goal(goal.clone())?;
+            self.push_goal(goal)?;
         }
         Ok(())
     }
@@ -123,7 +123,7 @@ impl Debugger {
                 }
                 (Step::Error, DebugEvent::Error(e)) => match self.break_query(vm) {
                     Some(Goal::Debug { message }) => Some(Goal::Debug {
-                        message: format!("{}\ncaught error: {}\n\n", message, e.to_string()),
+                        message: format!("{}\nERROR: {}\n", message, e.to_string()),
                     }),
                     x => x,
                 },
