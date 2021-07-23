@@ -44,8 +44,10 @@ pub enum Goal {
     Debug {
         message: String,
     },
+    Error {
+        error: PolarError,
+    },
     Halt,
-    Fail,
     Isa {
         left: Term,
         right: Term,
@@ -432,8 +434,8 @@ impl PolarVirtualMachine {
             Goal::Backtrack => self.backtrack()?,
             Goal::Cut { choice_index } => self.cut(*choice_index),
             Goal::Debug { message } => return Ok(self.debug(&message)),
-            Goal::Halt => return Ok(self.halt(true)),
-            Goal::Fail => return Ok(self.halt(false)),
+            Goal::Halt => return Ok(self.halt()),
+            Goal::Error { error } => return Err(error.clone()),
             Goal::Isa { left, right } => self.isa(&left, &right)?,
             Goal::IsMoreSpecific { left, right, args } => {
                 self.is_more_specific(left, right, args)?
@@ -963,12 +965,12 @@ impl PolarVirtualMachine {
     }
 
     /// Halt the VM by clearing all goals and choices.
-    fn halt(&mut self, result: bool) -> QueryEvent {
+    fn halt(&mut self) -> QueryEvent {
         self.log("HALT", &[]);
         self.goals.clear();
         self.choices.clear();
         assert!(self.is_halted());
-        QueryEvent::Done { result }
+        QueryEvent::Done { result: true }
     }
 
     /// Comparison operator that essentially performs partial unification.
@@ -2916,7 +2918,7 @@ impl Runnable for PolarVirtualMachine {
         // if we pushed a debug goal, push an error goal underneath it.
         if self.maybe_break(DebugEvent::Error(error.clone()))? {
             let g = self.goals.pop().unwrap();
-            self.push_goal(Goal::Fail)?;
+            self.push_goal(Goal::Error { error })?;
             self.goals.push(g);
             Ok(QueryEvent::None)
         } else {
