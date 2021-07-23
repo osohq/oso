@@ -299,8 +299,8 @@ impl Debugger {
                             bindings.get(&var).cloned().map_or_else(|| {
                                 let pref = KnowledgeBase::temp_prefix(nom);
                                 bindings.keys()
-                                    .filter_map(|k| k.0.strip_prefix(&pref).map(|i|
-                                        i.parse::<i64>().map_or(None, |i| Some((k, i)))).flatten())
+                                    .filter_map(|k| k.0.strip_prefix(&pref).and_then(|i|
+                                        i.parse::<i64>().map_or(None, |i| Some((k, i)))))
                                     .max_by(|a, b| a.1.cmp(&b.1))
                                     .map_or_else(
                                         || Binding(Symbol::new(nom), Term::new_temporary(Value::Variable(Symbol::new("<unbound>")))),
