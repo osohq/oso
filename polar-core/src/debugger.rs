@@ -1,7 +1,7 @@
 use std::fmt::Write;
 use std::rc::Rc;
 
-use super::error::PolarResult;
+use super::error::{PolarError, PolarResult};
 use super::formatting::{source_lines, ToPolarString};
 use super::sources::*;
 use super::terms::*;
@@ -27,7 +27,7 @@ impl PolarVirtualMachine {
     pub fn maybe_break(&mut self, event: DebugEvent) -> PolarResult<()> {
         let maybe_goal = self.debugger.maybe_break(event, self);
         if let Some(goal) = maybe_goal {
-            self.push_goal((*goal).clone())?;
+            self.push_goal(goal.clone())?;
         }
         Ok(())
     }
@@ -40,12 +40,17 @@ enum Step {
     Goal,
     /// Step **over** the current query. Will break on the next query where the trace stack is at the same
     /// level as the current one.
-    Over { level: usize },
+    Over {
+        level: usize,
+    },
     /// Step **out** of the current query. Will break on the next query where the trace stack is at a lower
     /// level than the current one.
-    Out { level: usize },
+    Out {
+        level: usize,
+    },
     /// Step **in**. Will break on the next query.
     Into,
+    Error,
 }
 
 /// VM breakpoints.
@@ -60,6 +65,7 @@ pub enum DebugEvent {
     Goal(Rc<Goal>),
     Query,
     Pop,
+    Error(PolarError),
 }
 
 /// Tracks internal debugger state.
@@ -100,12 +106,12 @@ impl Debugger {
     ///
     /// - `Some(Goal::Debug { message })` -> Pause evaluation.
     /// - `None` -> Continue evaluation.
-    fn maybe_break(&self, event: DebugEvent, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
+    pub fn maybe_break(&self, event: DebugEvent, vm: &PolarVirtualMachine) -> Option<Goal> {
         if let Some(step) = self.step.as_ref() {
             match (step, event) {
-                (Step::Goal, DebugEvent::Goal(goal)) => Some(Rc::new(Goal::Debug {
+                (Step::Goal, DebugEvent::Goal(goal)) => Some(Goal::Debug {
                     message: goal.to_string(),
-                })),
+                }),
                 (Step::Into, DebugEvent::Query) => self.break_query(vm),
                 (Step::Out { level }, DebugEvent::Query)
                     if vm.trace_stack.is_empty() || vm.trace_stack.len() < *level =>
@@ -115,6 +121,12 @@ impl Debugger {
                 (Step::Over { level }, DebugEvent::Query) if vm.trace_stack.len() == *level => {
                     self.break_query(vm)
                 }
+                (Step::Error, DebugEvent::Error(e)) => match self.break_query(vm) {
+                    Some(Goal::Debug { message }) => Some(Goal::Debug {
+                        message: format!("{}\ncaught error: {}\n\n", message, e.to_string()),
+                    }),
+                    x => x,
+                },
                 _ => None,
             }
         } else {
@@ -124,8 +136,8 @@ impl Debugger {
 
     /// Produce the `Goal::Debug` for breaking on a Query (as opposed to breaking on a Goal).
     /// This is used to implement the `step`, `over`, and `out` debug commands.
-    pub fn break_query(&self, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
-        let message = vm.trace.last().and_then(|trace| {
+    pub fn break_query(&self, vm: &PolarVirtualMachine) -> Option<Goal> {
+        vm.trace.last().and_then(|trace| {
             if let Trace {
                 node: Node::Term(q),
                 ..
@@ -137,15 +149,16 @@ impl Debugger {
                         args,
                     }) if args.len() == 1 => None,
                     _ => {
-                        let source = self.query_source(&q, &vm.kb.read().unwrap().sources, 3);
-                        Some(format!("{}\n\n{}\n", vm.query_summary(q), source))
+                        let source = self.query_source(q, &vm.kb.read().unwrap().sources, 3);
+                        Some(Goal::Debug {
+                            message: format!("{}\n\n{}\n", vm.query_summary(q), source),
+                        })
                     }
                 }
             } else {
                 None
             }
-        });
-        message.map(|message| Rc::new(Goal::Debug { message }))
+        })
     }
 
     /// Process debugging commands from the user.
@@ -187,6 +200,9 @@ impl Debugger {
             }
             "g" | "goal" => {
                 self.step = Some(Step::Goal)
+            }
+            "e" | "error" => {
+                self.step = Some(Step::Error)
             }
             "l" | "line" => {
                 let lines = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
@@ -323,6 +339,7 @@ impl Debugger {
   n[ext] | over           Step to the next query at the same level of the query stack (will not step into rules).
   o[ut]                   Step out of the current query stack level to the next query in the level above.
   g[oal]                  Step to the next goal of the Polar VM.
+  e[rror]                 Step to the next error.
   l[ine] [<n>]            Print the current line and <n> lines of context.
   query [<i>]             Print the current query or the query at level <i> in the query stack.
   stack | trace           Print the current query stack.

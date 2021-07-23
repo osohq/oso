@@ -13,7 +13,7 @@ use super::visitor::{walk_term, Visitor};
 use crate::bindings::{BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState};
 use crate::counter::Counter;
 use crate::debugger::{DebugEvent, Debugger};
-use crate::error::{self, PolarResult};
+use crate::error::{self, PolarError, PolarResult};
 use crate::events::*;
 use crate::folder::Folder;
 use crate::formatting::ToPolarString;
@@ -43,6 +43,9 @@ pub enum Goal {
     },
     Debug {
         message: String,
+    },
+    Error {
+        error: PolarError,
     },
     Halt,
     Isa {
@@ -431,6 +434,7 @@ impl PolarVirtualMachine {
             Goal::Backtrack => self.backtrack()?,
             Goal::Cut { choice_index } => self.cut(*choice_index),
             Goal::Debug { message } => return Ok(self.debug(&message)),
+            Goal::Error { error } => return Err(error.clone()),
             Goal::Halt => return Ok(self.halt()),
             Goal::Isa { left, right } => self.isa(&left, &right)?,
             Goal::IsMoreSpecific { left, right, args } => {
@@ -1571,23 +1575,16 @@ impl PolarVirtualMachine {
             }
 
             Operator::Debug => {
-                let mut message = "".to_string();
-                if !args.is_empty() {
-                    message += &format!(
-                        "debug({})",
-                        args.iter()
-                            .map(|arg| self.deref(arg).to_polar())
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    );
-                }
-                if let Some(debug_goal) = self.debugger.break_query(&self) {
-                    self.goals.push(debug_goal);
-                } else {
-                    self.push_goal(Goal::Debug {
-                        message: "".to_owned(),
-                    })?
-                }
+                self.push_goal(self.debugger.break_query(&self).unwrap_or_else(||
+                        // gw: when will this happen?
+                        Goal::Debug {
+                            message: format!(
+                                "debug({})",
+                                args.iter()
+                                    .map(|arg| self.deref(arg).to_polar())
+                                    .collect::<Vec<String>>()
+                                    .join(", "))
+                        }))?;
             }
             Operator::Print => {
                 self.print(
@@ -2915,6 +2912,19 @@ impl Runnable for PolarVirtualMachine {
         }
 
         Ok(QueryEvent::Result { bindings, trace })
+    }
+
+    fn handle_error(&mut self, error: PolarError) -> PolarResult<QueryEvent> {
+        match self
+            .debugger
+            .maybe_break(DebugEvent::Error(error.clone()), self)
+        {
+            Some(goal) => {
+                self.append_goals(vec![goal, Goal::Error { error }])?;
+                Ok(QueryEvent::None)
+            }
+            _ => Err(error),
+        }
     }
 
     /// Handle response to a predicate posed to the application, e.g., `ExternalIsa`.
