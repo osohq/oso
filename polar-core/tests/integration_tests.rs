@@ -1204,7 +1204,7 @@ fn test_debug_break_on_error() -> TestResult {
                     001: foo() if debug() and 1 < "2" and 1 < 2;
                                               ^
 
-                    ERROR: Not supported: 1 < "2"
+                    CAUGHT ERROR: Not supported: 1 < "2"
                     "#
                 );
                 assert_eq!(s, expected);

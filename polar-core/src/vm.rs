@@ -1573,16 +1573,16 @@ impl PolarVirtualMachine {
             }
 
             Operator::Debug => {
-                self.push_goal(self.debugger.break_query(&self).unwrap_or_else(||
-                        // gw: when will this happen?
-                        Goal::Debug {
-                            message: format!(
-                                "debug({})",
-                                args.iter()
-                                    .map(|arg| self.deref(arg).to_polar())
-                                    .collect::<Vec<String>>()
-                                    .join(", "))
-                        }))?;
+                let message = self.debugger.break_msg(&self).unwrap_or_else(|| {
+                    format!(
+                        "debug({})",
+                        args.iter()
+                            .map(|arg| self.deref(arg).to_polar())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
+                });
+                self.push_goal(Goal::Debug { message })?;
             }
             Operator::Print => {
                 self.print(
@@ -2913,15 +2913,14 @@ impl Runnable for PolarVirtualMachine {
     }
 
     fn handle_error(&mut self, error: PolarError) -> PolarResult<QueryEvent> {
-        match self
-            .debugger
-            .maybe_break(DebugEvent::Error(error.clone()), self)
-        {
-            Some(goal) => {
-                self.append_goals(vec![goal, Goal::Fail])?;
-                Ok(QueryEvent::None)
-            }
-            _ => Err(error),
+        // if we pushed a debug goal, push an error goal underneath it.
+        if self.maybe_break(DebugEvent::Error(error.clone()))? {
+            let g = self.goals.pop().unwrap();
+            self.push_goal(Goal::Fail)?;
+            self.goals.push(g);
+            Ok(QueryEvent::None)
+        } else {
+            Err(error)
         }
     }
 
