@@ -56,7 +56,6 @@ class Host:
                 raise AttributeError(f"no field {field} on {obj.__name__}")
         raise PolarRuntimeError(f"No type information for Python class {obj.__name__}")
 
-
     def copy(self):
         """Copy an existing cache."""
         return type(self)(

@@ -270,7 +270,7 @@ def test_roles_data_filtering(oso):
     roles = [
         Role(user_name="leina", resource_name="osohq", role="owner"),
         Role(user_name="steve", resource_name="osohq", role="member"),
-        Role(user_name="gabe", resource_name="oso", role="writer")
+        Role(user_name="gabe", resource_name="oso", role="writer"),
     ]
 
     def filter_array(array, constraints):
@@ -348,7 +348,10 @@ def test_roles_data_filtering(oso):
         types={
             "name": str,
             "roles": Relationship(
-                kind="children", other_type=Role, my_field="name", other_field="user_name"
+                kind="children",
+                other_type=Role,
+                my_field="name",
+                other_field="user_name",
             ),
         },
         fetcher=get_users,
