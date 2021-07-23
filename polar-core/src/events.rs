@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::kb::*;
+use super::bindings::Bindings;
 use super::runnable::Runnable;
 use super::terms::*;
 use super::traces::*;
@@ -53,6 +53,15 @@ pub enum QueryEvent {
     ExternalIsa {
         call_id: u64,
         instance: Term,
+        class_tag: Symbol,
+    },
+
+    /// Starting from `base_tag`, traverse `path` fields and check if the result is an instance of
+    /// `class_tag`.
+    ExternalIsaWithPath {
+        call_id: u64,
+        base_tag: Symbol,
+        path: TermList,
         class_tag: Symbol,
     },
 

@@ -6,7 +6,7 @@ license = "Apache-2.0"
 homepage = "https://github.com/osohq/oso"
 readme = "README.md"
 
-version = "0.9.0"
+version = "0.14.0"
 
 edition = "2018"
 
@@ -15,8 +15,8 @@ proc-macro = true
 bench = false
 
 [dependencies]
-quote = "1.0.7"
+quote = "1.0.8"
 
 [dependencies.syn]
-version = "1.0.43"
+version = "1.0.58"
 features = ["full"]

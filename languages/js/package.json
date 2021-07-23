@@ -1,9 +1,16 @@
 {
   "name": "oso",
-  "version": "0.9.0",
+  "version": "0.14.0",
   "description": "oso authorization library.",
-  "main": "dist/src/index.js",
   "bin": "bin/repl.js",
+  "main": "dist/src/index.js",
+  "browser": {
+    "fs": false,
+    "readline": false,
+    "repl": false,
+    "./dist/src/polar_wasm_api.js": "./dist/bundler/polar_wasm_api.js",
+    "./dist/src/polar_wasm_api_bg.js": "./dist/bundler/polar_wasm_api_bg.js"
+  },
   "repository": "https://github.com/osohq/oso",
   "collaborators": [
     "Oso Security <support@osohq.com>"
@@ -19,7 +26,7 @@
     "npm": ">=6.4.1"
   },
   "scripts": {
-    "check": "gts check",
+    "lint": "gts lint",
     "clean": "gts clean",
     "fix": "gts fix",
     "fmt": "prettier --write 'src/**/*.[jt]s' 'test/**/*.[jt]s'",
@@ -32,19 +39,15 @@
   },
   "devDependencies": {
     "@types/jest": "^26.0.9",
-    "@types/lodash": "^4.14.158",
-    "@types/node": "^14.0.14",
+    "@types/node": "^15.0.0",
     "chokidar-cli": "^2.1.0",
-    "gts": "^2.0.2",
-    "jest": "^26.3.0",
+    "gts": "^3.1.0",
+    "jest": "^27.0.4",
     "live-server": "^1.2.1",
-    "prettier": "^2.0.5",
-    "rimraf": "^3.0.2",
     "temp-write": "^4.0.0",
-    "ts-jest": "^26.2.0",
+    "ts-jest": "^27.0.3",
     "ts-node": "^8.10.2",
-    "typedoc": "^0.20.4",
-    "typescript": "^3.9.5"
-  },
-  "dependencies": {}
+    "typedoc": "^0.21.0",
+    "typescript": "^4.3.4"
+  }
 }

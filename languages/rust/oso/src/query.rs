@@ -6,6 +6,7 @@ use crate::host::{Host, Instance, PolarIterator};
 use crate::{FromPolar, PolarValue};
 
 use polar_core::events::*;
+use polar_core::roles_validation::ResultEvent;
 use polar_core::terms::*;
 
 impl Iterator for Query {
@@ -31,6 +32,10 @@ impl Query {
         }
     }
 
+    pub fn source(&self) -> String {
+        self.inner.source_info()
+    }
+
     pub fn next_result(&mut self) -> Option<crate::Result<ResultSet>> {
         loop {
             let event = self.inner.next()?;
@@ -44,10 +49,7 @@ impl Query {
                 QueryEvent::None => Ok(()),
                 QueryEvent::Done { .. } => return None,
                 QueryEvent::Result { bindings, .. } => {
-                    return Some(Ok(ResultSet {
-                        bindings,
-                        host: self.host.clone(),
-                    }));
+                    return Some(ResultSet::from_bindings(bindings, self.host.clone()));
                 }
                 QueryEvent::MakeExternal {
                     instance_id,
@@ -260,6 +262,7 @@ impl Query {
         Ok(())
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     fn handle_debug(&mut self, message: String) -> crate::Result<()> {
         eprintln!("TODO: {}", message);
         check_messages!(self.inner);
@@ -274,6 +277,27 @@ pub struct ResultSet {
 }
 
 impl ResultSet {
+    pub fn from_bindings(
+        bindings: polar_core::kb::Bindings,
+        host: crate::host::Host,
+    ) -> crate::Result<Self> {
+        // Check for expression.
+        for term in bindings.values() {
+            if term.value().as_expression().is_ok() && !host.accept_expression {
+                return Err(OsoError::Custom {
+                    message: r#"
+Received Expression from Polar VM. The Expression type is not yet supported in this language.
+
+This may mean you performed an operation in your policy over an unbound variable.
+                    "#
+                    .to_owned(),
+                });
+            }
+        }
+
+        Ok(Self { bindings, host })
+    }
+
     /// Return the keys in bindings.
     pub fn keys(&self) -> Box<dyn std::iter::Iterator<Item = &str> + '_> {
         Box::new(self.bindings.keys().map(|sym| sym.0.as_ref()))
@@ -297,6 +321,10 @@ impl ResultSet {
         self.get(name)
             .ok_or(crate::OsoError::FromPolar)
             .and_then(T::from_polar)
+    }
+
+    pub fn into_event(self) -> ResultEvent {
+        ResultEvent::new(self.bindings)
     }
 }
 

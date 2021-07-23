@@ -45,6 +45,8 @@ pub struct Host {
     /// This helps us go from a generic type `T` to the
     /// class name it is registered as
     class_names: HashMap<std::any::TypeId, String>,
+
+    pub accept_expression: bool,
 }
 
 impl Host {
@@ -53,6 +55,7 @@ impl Host {
             class_names: HashMap::new(),
             classes: HashMap::new(),
             instances: HashMap::new(),
+            accept_expression: false,
             polar,
         };
         let type_class = metaclass();

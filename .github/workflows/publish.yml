@@ -6,6 +6,19 @@ on:
         description: "Version Number"
         required: true
 jobs:
+  go:
+    # Notifies the go-oso repo there's a new release.
+    # CI over there then pulls this tag, commits and pushes their own tag.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.REPO_API_TOKEN }}
+          repository: osohq/go-oso
+          event-type: oso_publish
+          client-payload: '{"version": "${{ github.event.inputs.version }}"}'
+
   java:
     name: Publish java jar to maven repository
     runs-on: ubuntu-latest
@@ -104,10 +117,10 @@ jobs:
         run: |
           mkdir -p oso-js-node-${{ github.event.inputs.version }}
           tar -xzf oso-js-node-${{ github.event.inputs.version }}.tgz -C oso-js-node-${{ github.event.inputs.version }} --strip-components=1
-      - name: Use Node.js 10.14.2
+      - name: Use Node.js 12.20.0
         uses: actions/setup-node@v1
         with:
-          node-version: 10.14.2
+          node-version: 12.20.0
       - name: Set up .npmrc
         working-directory: "oso-js-node-${{ github.event.inputs.version }}"
         run: echo '//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}' > .npmrc
@@ -132,6 +145,8 @@ jobs:
       - name: package oso-derive
         working-directory: languages/rust/oso-derive
         run: cargo publish
-      - name: package oso
+      - name: Sleep so that oso-derive is available.
+        run: sleep 100
+      - name: publish oso
         working-directory: languages/rust/oso
-        run: cargo package
+        run: cargo publish

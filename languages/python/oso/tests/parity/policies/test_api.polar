@@ -21,22 +21,22 @@ allow(actor, "what", _: Http{path: path, query: {param: "foo"}}) if
     new PathMapper("/widget/{id}").map(path) = {id: id} and
     allow(actor, "parameterised_get", new Widget(id: id));
 
-allow(actor, "get", resource: Widget) if resource.frob("Widget") = x;
-allow(actor, "get", resource: DooDad) if resource.frob("DooDad") = x;
+allow(_actor, "get", resource: Widget) if resource.frob("Widget") = _x;
+allow(_actor, "get", resource: DooDad) if resource.frob("DooDad") = _x;
 
 # Frobbing a Widget writes an entry into a global frobbed list,
 # which can then be checked to ensure correct method ordering.
 # See test_allow, test_method_resolution_order, test_cut.
-allow_with_cut(actor, "get", resource: Widget) if cut and resource.frob("Widget") = x;
-allow_with_cut(actor, "get", resource: DooDad) if cut and resource.frob("DooDad") = x;
+allow_with_cut(_actor, "get", resource: Widget) if cut and resource.frob("Widget") = _x;
+allow_with_cut(_actor, "get", resource: DooDad) if cut and resource.frob("DooDad") = _x;
 
-allowRole("admin", "create", resource: Widget);
+allowRole("admin", "create", _resource: Widget);
 
 allow(actor: Actor, "frob", resource: Widget) if
     resource.company() in actor.companies();
 
 # for testing resource mappings with query parameters
-allow(actor, "parameterised_get", resource: Widget) if
+allow(_actor, "parameterised_get", resource: Widget) if
     resource.id = "12";
 
 # When choosing which `checkResource` is more specific, will compare
@@ -45,14 +45,14 @@ allow(actor, "parameterised_get", resource: Widget) if
 #
 # The `is_subspecializer` check compares the application class of `resource`
 # This test checks that works okay.
-allow_two(actor, action, resource) if checkResource(_x, resource);
-checkResource(1, resource: Widget); # two slightly different specs so need to check
-checkResource("1", resource: Widget); # which to prioritise
+allow_two(_actor, _action, resource) if checkResource(_x, resource);
+checkResource(1, _resource: Widget); # two slightly different specs so need to check
+checkResource("1", _resource: Widget); # which to prioritise
 
 ?= allow_two(_actor, _action, new Widget());
 
 # for testing lists
-allow(actor: Actor, "invite", resource: Widget) if
+allow(actor: Actor, "invite", _resource: Widget) if
     "social" in actor.groups;
 
 allow(actor: Actor, "keep", resource: Widget) if

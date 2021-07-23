@@ -33,6 +33,7 @@ pub enum ErrorKind {
     Runtime(RuntimeError),
     Operational(OperationalError),
     Parameter(ParameterError),
+    RolesValidation(RolesValidationError),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,7 +53,10 @@ impl PolarError {
                 | ParseError::UnrecognizedEOF { loc }
                 | ParseError::UnrecognizedToken { loc, .. }
                 | ParseError::ExtraToken { loc, .. }
-                | ParseError::WrongValueType { loc, .. } => {
+                | ParseError::WrongValueType { loc, .. }
+                | ParseError::ReservedWord { loc, .. }
+                | ParseError::DuplicateKey { loc, .. }
+                | ParseError::SingletonVariable { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -112,6 +116,15 @@ impl From<ParameterError> for PolarError {
     }
 }
 
+impl From<RolesValidationError> for PolarError {
+    fn from(err: RolesValidationError) -> Self {
+        Self {
+            kind: ErrorKind::RolesValidation(err),
+            context: None,
+        }
+    }
+}
+
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
 
 impl std::error::Error for PolarError {}
@@ -123,6 +136,7 @@ impl fmt::Display for PolarError {
             ErrorKind::Runtime(e) => write!(f, "{}", e)?,
             ErrorKind::Operational(e) => write!(f, "{}", e)?,
             ErrorKind::Parameter(e) => write!(f, "{}", e)?,
+            ErrorKind::RolesValidation(e) => write!(f, "{}", e)?,
         }
         if let Some(ref context) = self.context {
             write!(f, "{}", context)?;
@@ -145,6 +159,7 @@ pub enum ParseError {
     InvalidToken {
         loc: usize,
     },
+    #[allow(clippy::upper_case_acronyms)]
     UnrecognizedEOF {
         loc: usize,
     },
@@ -168,6 +183,14 @@ pub enum ParseError {
         loc: usize,
         term: Term,
         expected: String,
+    },
+    DuplicateKey {
+        loc: usize,
+        key: String,
+    },
+    SingletonVariable {
+        loc: usize,
+        name: String,
     },
 }
 
@@ -221,6 +244,16 @@ impl fmt::Display for ParseError {
             Self::WrongValueType { term, expected, .. } => {
                 write!(f, "Wrong value type: {}. Expected a {}", term, expected)
             }
+            Self::DuplicateKey { key, .. } => {
+                write!(f, "Duplicate key: {}", key)
+            }
+            Self::SingletonVariable { name, .. } => {
+                write!(
+                    f,
+                    "Singleton variable {} is unused or undefined; try renaming to _{} or _",
+                    name, name
+                )
+            }
         }
     }
 }
@@ -255,6 +288,9 @@ pub enum RuntimeError {
         stack_trace: Option<String>,
     },
     FileLoading {
+        msg: String,
+    },
+    IncompatibleBindings {
         msg: String,
     },
 }
@@ -292,6 +328,9 @@ impl fmt::Display for RuntimeError {
                 write!(f, "Application error: {}", msg)
             }
             Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
+            Self::IncompatibleBindings { msg } => {
+                write!(f, "Attempted binding was incompatible: {}", msg)
+            }
         }
     }
 }
@@ -326,5 +365,14 @@ pub struct ParameterError(pub String);
 impl fmt::Display for ParameterError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Invalid parameter used in FFI function: {}", self.0)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RolesValidationError(pub String);
+
+impl fmt::Display for RolesValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Oso Roles Validation Error: {}", self.0)
     }
 }

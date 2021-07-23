@@ -1,12 +1,11 @@
 EXPENSES = [
-  { :submitted_by => "alice", :amount => 500, :location => "NYC", :project_id => 2 }
-]
+  { submitted_by: 'alice', amount: 500, location: 'NYC', project_id: 2 }
+].freeze
 
 OSO ||= Oso.new
 
 # expense-class-start
 class Expense
-  # expense-class-end
   attr_accessor :amount, :submitted_by, :location, :project_id
   def initialize(amount:, submitted_by:, location:, project_id:)
     @amount = amount
@@ -25,18 +24,19 @@ class Expense
 end
 
 OSO.register_class(Expense)
+# expense-class-end
 
 MANAGERS = {
-  "cora" => ["bhavik"],
-  "bhavik" => ["alice"]
-}
+  'cora' => ['bhavik'],
+  'bhavik' => ['alice']
+}.freeze
 
 # user-class-start
 class User
   attr_accessor :name, :location
   def initialize(name, location = nil)
-    @name = name # user-class-end
-    @location = (location or "NYC")
+    @name = name
+    @location = (location or 'NYC')
   end
 
   def employees
@@ -52,7 +52,7 @@ class User
 end
 
 OSO.register_class(User)
-
+# user-class-end
 
 class Project
   attr_accessor :id, :team_id
@@ -88,7 +88,7 @@ class Organization
   end
 
   def self.id(_id)
-    Organization.new(name: "ACME")
+    Organization.new(name: 'ACME')
   end
 end
 

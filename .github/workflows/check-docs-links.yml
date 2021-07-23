@@ -1,0 +1,19 @@
+name: Check links in docs
+on:
+  schedule:
+    # Run every day at 5:05am UTC
+    - cron:  '05 05 * * *'
+
+jobs:
+  check-links:
+    name: Check links in docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check links in docs
+        id: lychee
+        uses: lycheeverse/lychee-action@v1.0.4
+        with:
+          args: '--verbose --no-progress "./docs/content/**/*.md" --exclude "\w+@\w+\.com" --exclude "localhost|127.0.0.1" --exclude "^sqlite://" --exclude "https://crates.io/crates" --exclude "https://medium.com/"'
+      - name: Fail if there were link errors
+        run: exit ${{ steps.lychee.outputs.exit_code }}

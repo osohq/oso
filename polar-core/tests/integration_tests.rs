@@ -585,7 +585,7 @@ fn test_not() -> TestResult {
     qnull(&mut p, "g(1)");
     qnull(&mut p, "g(2)");
     qeval(&mut p, "g(3)");
-    qnull(&mut p, "g(x) and x=3"); // this should fail because unbound x means g(x) always fails
+    qeval(&mut p, "g(x) and x=3");
     qeval(&mut p, "x=3 and g(x)");
 
     p.load_str("h(x) if not (not (x = 1 or x = 3) or x = 3);")?;
@@ -597,11 +597,11 @@ fn test_not() -> TestResult {
 
     // Negate And with unbound variable.
     p.load_str("i(x,y) if not (y = 2 and x = 1);")?;
-    qvar(&mut p, "i(2,y)", "y", values![sym!("_y_44")]);
+    qvar(&mut p, "i(2,y)", "y", values![sym!("y")]);
 
     // Negate Or with unbound variable.
     p.load_str("j(x,y) if not (y = 2 or x = 1);")?;
-    qnull(&mut p, "j(2, y)");
+    qeval(&mut p, "j(2, y)");
     Ok(())
 }
 
@@ -653,6 +653,17 @@ fn test_retries() -> TestResult {
     qeval(&mut p, "k(2)");
     qvar(&mut p, "k(a)", "a", values![2, 3]);
     qeval(&mut p, "k(3)");
+    Ok(())
+}
+
+#[test]
+fn test_two_rule_bodies() -> TestResult {
+    let mut p = Polar::new();
+    p.load_str(
+        r#"f(x) if x = y and g(y);
+           g(y) if y = 1;"#,
+    )?;
+    qvar(&mut p, "f(x)", "x", values![1]);
     Ok(())
 }
 
@@ -774,17 +785,94 @@ fn test_non_instance_specializers() -> TestResult {
 }
 
 #[test]
+#[allow(clippy::unnecessary_wraps)]
 fn test_bindings() -> TestResult {
     let mut p = Polar::new();
-    qvar(&mut p, "x=1", "x", values![1]);
-    qvar(&mut p, "x=x", "x", values![sym!("x")]);
-    qvar(&mut p, "x=y and y=x", "x", values![sym!("y")]);
 
-    p.load_str(
-        r#"f(x) if x = y and g(y);
-           g(y) if y = 1;"#,
-    )?;
-    qvar(&mut p, "f(x)", "x", values![1]);
+    // 0-cycle, aka ground.
+    qvar(&mut p, "x=1", "x", values![1]);
+
+    // 1-cycle is dropped.
+    qeval(&mut p, "x=x");
+
+    // 2-cycle.
+    qvars(
+        &mut p,
+        "x=y and y=x",
+        &["x", "y"],
+        values![[sym!("y"), sym!("x")]],
+    );
+
+    // 3-cycle, 3 ways.
+    qvars(
+        &mut p,
+        "x=y and y=z",
+        &["x", "y", "z"],
+        values![[sym!("z"), sym!("x"), sym!("y")]],
+    );
+    qvars(
+        &mut p,
+        "x=y and z=x",
+        &["x", "y", "z"],
+        values![[sym!("y"), sym!("z"), sym!("x")]],
+    );
+
+    // 4-cycle, 3 ways.
+    qvars(
+        &mut p,
+        "x=y and y=z and z=w and w=x",
+        &["x", "y", "z", "w"],
+        values![[sym!("w"), sym!("x"), sym!("y"), sym!("z")]],
+    );
+    qvars(
+        &mut p,
+        "x=y and y=z and w=z and w=x",
+        &["x", "y", "z", "w"],
+        values![[sym!("w"), sym!("x"), sym!("y"), sym!("z")]],
+    );
+    qvars(
+        &mut p,
+        "x=y and w=z and z=x",
+        &["x", "y", "z", "w"],
+        values![[sym!("y"), sym!("z"), sym!("w"), sym!("x")]],
+    );
+
+    // Don't create sub-cycles.
+    qvars(
+        &mut p,
+        "x=y and y=z and z=w and w=x and y=x",
+        &["x", "y", "z", "w"],
+        values![[sym!("w"), sym!("x"), sym!("y"), sym!("z")]],
+    );
+
+    // 6-cycle, 2 ways.
+    qvars(
+        &mut p,
+        "x=y and y=z and z=w and w=v and v=u",
+        &["x", "y", "z", "w", "v", "u"],
+        values![[
+            sym!("u"),
+            sym!("x"),
+            sym!("y"),
+            sym!("z"),
+            sym!("w"),
+            sym!("v")
+        ]],
+    );
+    qvars(
+        &mut p,
+        "x=y and y=z and w=v and v=u and u=x",
+        &["x", "y", "z", "w", "v", "u"],
+        values![[
+            sym!("z"),
+            sym!("u"),
+            sym!("y"),
+            sym!("x"),
+            sym!("w"),
+            sym!("v")
+        ]],
+    );
+
     Ok(())
 }
 
@@ -815,20 +903,6 @@ fn test_lookup_derefs() -> TestResult {
     let q = p.new_query("f(2)", false)?;
     let results = query_results!(q, mock_foo);
     assert!(results.is_empty());
-    Ok(())
-}
-
-#[test]
-fn unify_predicates() -> TestResult {
-    let mut p = Polar::new();
-    p.load_str(
-        r#"f(g(_x));
-           k(x) if h(g(x), g(x));
-           h(g(1), g(1));"#,
-    )?;
-    qeval(&mut p, "f(g(1))");
-    qnull(&mut p, "f(1)");
-    qeval(&mut p, "k(1)");
     Ok(())
 }
 
@@ -999,14 +1073,16 @@ fn test_comparisons() -> TestResult {
     qnull(&mut p, "neq(\"aa\", \"aa\")");
     qeval(&mut p, "neq(\"ab\", \"aa\")");
 
-    let mut q = p.new_query("eq(bob, bob)", false)?;
-    q.next_event().expect_err("can't compare unbound variables");
+    qeval(&mut p, "eq(bob, bob)");
 
     qeval(&mut p, "1.0 == 1");
     qeval(&mut p, "0.99 < 1");
     qeval(&mut p, "1.0 <= 1");
     qeval(&mut p, "1 == 1");
     qeval(&mut p, "0.0 == 0");
+
+    qeval(&mut p, "x == y and x = 1 and y = 1");
+    qnull(&mut p, "x == y and x = 1 and y = 2");
     Ok(())
 }
 
@@ -1021,8 +1097,6 @@ fn test_modulo_and_remainder() {
     qeval(&mut p, "0 rem 1 == 0");
     qeval(&mut p, "0 mod -1 == 0");
     qeval(&mut p, "0 rem -1 == 0");
-    qruntime!("1 mod 0 = x", RuntimeError::ArithmeticError { .. });
-    qruntime!("1 rem 0 = x", RuntimeError::ArithmeticError { .. });
     let res = var(&mut p, "1 mod 0.0 = x", "x")[0].clone();
     if let Value::Number(Numeric::Float(x)) = res {
         assert!(x.is_nan());
@@ -1084,8 +1158,14 @@ fn test_arithmetic() -> TestResult {
     qeval(&mut p, "odd(3)");
     qnull(&mut p, "odd(4)");
 
-    qruntime!("9223372036854775807 + 1 > 0", RuntimeError::ArithmeticError { .. });
-    qruntime!("-9223372036854775807 - 2 < 0", RuntimeError::ArithmeticError { .. });
+    qruntime!(
+        "9223372036854775807 + 1 > 0",
+        RuntimeError::ArithmeticError { .. }
+    );
+    qruntime!(
+        "-9223372036854775807 - 2 < 0",
+        RuntimeError::ArithmeticError { .. }
+    );
 
     // x / 0 = ∞
     qvar(&mut p, "x=1/0", "x", values![f64::INFINITY]);
@@ -1289,28 +1369,25 @@ fn test_anonymous_vars() {
 }
 
 #[test]
-fn test_singleton_vars() -> TestResult {
+fn test_singleton_vars() {
+    let pol = "f(x,y,z) if y = z;";
+    let err = Polar::new().load_str(pol).unwrap_err();
+    assert!(err.context.is_some());
+    assert!(matches!(
+        err.kind,
+        ErrorKind::Parse(ParseError::SingletonVariable { .. })
+    ))
+}
+
+#[test]
+fn test_unknown_specializer_warning() -> TestResult {
     let p = Polar::new();
-    p.register_constant(sym!("X"), term!(true));
-    p.register_constant(sym!("Y"), term!(true));
-    p.load_str("f(x:X,y:Y,z:Z) if z = z;")?;
-    let output = p.next_message().unwrap();
-    assert!(matches!(&output.kind, MessageKind::Warning));
+    p.load_str("f(_: A);")?;
+    let out = p.next_message().unwrap();
+    assert!(matches!(&out.kind, MessageKind::Warning));
     assert_eq!(
-        &output.msg,
-        "Singleton variable x is unused or undefined, see <https://docs.osohq.com/using/polar-syntax.html#variables>\n001: f(x:X,y:Y,z:Z) if z = z;\n       ^"
-    );
-    let output = p.next_message().unwrap();
-    assert!(matches!(&output.kind, MessageKind::Warning));
-    assert_eq!(
-        &output.msg,
-        "Singleton variable y is unused or undefined, see <https://docs.osohq.com/using/polar-syntax.html#variables>\n001: f(x:X,y:Y,z:Z) if z = z;\n           ^"
-    );
-    let output = p.next_message().unwrap();
-    assert!(matches!(&output.kind, MessageKind::Warning));
-    assert_eq!(
-        &output.msg,
-        "Unknown specializer Z\n001: f(x:X,y:Y,z:Z) if z = z;\n                 ^"
+        &out.msg,
+        "Unknown specializer A\n001: f(_: A);\n          ^"
     );
     Ok(())
 }
@@ -1370,6 +1447,9 @@ fn test_rest_vars() -> TestResult {
     qeval(&mut p, "append([1,2], [3], [1,2,3])");
     qeval(&mut p, "append([1,2,3], [], [1,2,3])");
     qeval(&mut p, "not append([1,2,3], [4], [1,2,3])");
+
+    let a = &var(&mut p, "[*_] in [*a] and [*b] in [*_] and b = 1", "a")[0];
+    assert!(matches!(a, Value::List(b) if matches!(b[0].value(), Value::RestVariable(_))));
     Ok(())
 }
 
@@ -1448,9 +1528,15 @@ fn test_keyword_bug() {
 #[test]
 fn test_unify_rule_head() -> TestResult {
     qparse!("f(Foo{a: 1});", ParseError::UnrecognizedToken { .. });
-    qparse!("f(new Foo(a: Foo{a: 1}));", ParseError::UnrecognizedToken { .. });
+    qparse!(
+        "f(new Foo(a: Foo{a: 1}));",
+        ParseError::UnrecognizedToken { .. }
+    );
     qparse!("f(x: new Foo(a: 1));", ParseError::ReservedWord { .. });
-    qparse!("f(x: Foo{a: new Foo(a: 1)});", ParseError::ReservedWord { .. });
+    qparse!(
+        "f(x: Foo{a: new Foo(a: 1)});",
+        ParseError::ReservedWord { .. }
+    );
 
     let p = Polar::new();
     p.register_constant(sym!("Foo"), term!(true));
@@ -1522,6 +1608,8 @@ fn test_cut() -> TestResult {
 fn test_forall() -> TestResult {
     let mut p = Polar::new();
     p.load_str("all_ones(l) if forall(item in l, item = 1);")?;
+
+    qnull(&mut p, "all_ones([2])");
 
     qeval(&mut p, "all_ones([1])");
     qeval(&mut p, "all_ones([1, 1, 1])");
@@ -1604,8 +1692,11 @@ fn test_float_parsing() {
 fn test_assignment() {
     let mut p = Polar::new();
     qeval(&mut p, "x := 5 and x == 5");
-    qruntime!("x := 5 and x := 6", RuntimeError::TypeError { msg: s, .. },
-        s == "Can only assign to unbound variables, x is bound to value 5.");
+    qruntime!(
+        "x := 5 and x := 6",
+        RuntimeError::TypeError { msg: s, .. },
+        s == "Can only assign to unbound variables, x is not unbound."
+    );
     qnull(&mut p, "x := 5 and x > 6");
     qeval(&mut p, "x := y and y = 6 and x = 6");
 
@@ -1813,6 +1904,8 @@ fn test_list_matches() {
     qvar(&mut p, "[*xs] matches []", "xs", vec![value!([])]);
     qvar(&mut p, "[*xs] matches [1]", "xs", vec![value!([1])]);
     qvar(&mut p, "[1] matches [*ys]", "ys", vec![value!([1])]);
+    qeval(&mut p, "[xs] matches [*ys]");
+    qeval(&mut p, "[*xs] matches [ys]");
     qeval(&mut p, "[*xs] matches [*ys]");
     qvar(&mut p, "[1,2,3] matches [1,2,*xs]", "xs", vec![value!([3])]);
     qvar(
@@ -1824,15 +1917,13 @@ fn test_list_matches() {
 }
 
 #[test]
+#[allow(clippy::unnecessary_wraps)]
 fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
-    qruntime!("x matches y", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind pattern 'y' to 'x'");
-    let mut p = Polar::new();
-    p.load_str(
-        r#"f(x: y) if x = 1;
-           g(x: {}) if x = 1;"#,
-    )?;
-    qruntime!(&mut p, "f(x)", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind pattern 'y' to '_x_1'");
-    qruntime!(&mut p, "g(x)", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind pattern '{}' to '_x_2'");
+    qruntime!(
+        "x matches y",
+        RuntimeError::TypeError { msg: m, .. },
+        m == "cannot unify patterns directly `x` = `y{}`"
+    );
     Ok(())
 }
 
@@ -1918,4 +2009,24 @@ fn test_scopes() {
     qnull(&mut p, r#"allow("not_allowed")"#);
     qeval(&mut p, r#"allow("allowed")"#);
     qvar(&mut p, r#"allow(v)"#, "v", values!["allowed"]);
+}
+#[test]
+/// Regression test for lookups done in rule head: old behavior was for query to succeed
+/// despite argument not matching lookup result
+fn test_lookup_in_rule_head() -> TestResult {
+    let p = Polar::new();
+    p.register_constant(sym!("Foo"), term!(true));
+    p.load_str(r#"test(foo: Foo, foo.bar());"#)?;
+
+    let good_q = p.new_query("test(new Foo(), 1)", false)?;
+
+    let mock_foo_lookup =
+        |_, _, _, _: Option<Vec<Term>>, _: Option<BTreeMap<Symbol, Term>>| Some(term!(1));
+    let results = query_results!(good_q, mock_foo_lookup);
+    assert_eq!(results.len(), 1);
+
+    let bad_q = p.new_query("test(new Foo(), 2)", false)?;
+    let results = query_results!(bad_q, mock_foo_lookup);
+    assert_eq!(results.len(), 0);
+    Ok(())
 }

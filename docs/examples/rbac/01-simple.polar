@@ -4,6 +4,7 @@
 # - basic allow rules with variables
 # - defining the custom `role` predicate
 
+# roles-start
 role(actor: String, "employee") if
     actor = "alice" or
     actor = "bhavik" or
@@ -18,7 +19,9 @@ role(actor: String, "admin") if
     actor = "greta" or
     actor = "han" or
     actor = "iqbal";
+# roles-end
 
+# allows-start
 # Employees can submit expenses
 allow(actor: String, "submit", "expense") if
     role(actor, "employee");
@@ -30,10 +33,13 @@ allow(actor: String, "view", "expense") if
 # Admins can approve expenses
 allow(actor: String, "approve", "expense") if
     role(actor, "admin");
+# allows-end
 
+# inline-queries-start
 # Deirdre the accountant can view expenses
 ?= allow("deirdre", "view", "expense");
 
 # but cannot submit or approve them
 ?= not allow("deirdre", "submit", "expense");
 ?= not allow("deirdre", "approve", "expense");
+# inline-queries-end

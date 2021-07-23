@@ -102,7 +102,7 @@ impl<'kb> Folder for Rewriter<'kb> {
                 args: terms.into_iter().chain(rewrites).collect(),
             }));
         }
-        Rule { name, body, params }
+        Rule { name, params, body }
     }
 
     /// Rewrite an expression as a temp, and push a rewritten
@@ -157,6 +157,14 @@ impl<'kb> Folder for Rewriter<'kb> {
                     .collect(),
             },
             _ => fold_operation(o, self),
+        }
+    }
+
+    fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
+        if v.0 == "_" {
+            self.kb.gensym("_")
+        } else {
+            v
         }
     }
 

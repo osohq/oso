@@ -6,17 +6,28 @@ import {
 } from './errors';
 import { ancestors, repr } from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
+import { Expression } from './Expression';
+import { Pattern } from './Pattern';
 import { Predicate } from './Predicate';
 import { Variable } from './Variable';
-import type { Class, EqualityFn, obj, PolarTerm } from './types';
+import type {
+  Class,
+  EqualityFn,
+  PolarComparisonOperator,
+  PolarTerm,
+  PolarDictPattern,
+} from './types';
 import {
-  isPolarStr,
-  isPolarNum,
+  Dict,
   isPolarBool,
-  isPolarList,
   isPolarDict,
+  isPolarExpression,
   isPolarInstance,
+  isPolarList,
+  isPolarNum,
+  isPolarPattern,
   isPolarPredicate,
+  isPolarStr,
   isPolarVariable,
 } from './types';
 
@@ -145,7 +156,7 @@ export class Host {
     id: number
   ): Promise<void> {
     const cls = this.getClass(name);
-    const args = await Promise.all(fields.map(async f => await this.toJs(f)));
+    const args = await Promise.all(fields.map(f => this.toJs(f)));
     const instance = new cls(...args);
     this.cacheInstance(instance, id);
   }
@@ -185,6 +196,37 @@ export class Host {
     const instance = await this.toJs(polarInstance);
     const cls = this.getClass(name);
     return instance instanceof cls || instance?.constructor === cls;
+  }
+
+  /**
+   * Check if the given instances conform to the operator.
+   *
+   * @internal
+   */
+  async externalOp(
+    op: PolarComparisonOperator,
+    leftTerm: PolarTerm,
+    rightTerm: PolarTerm
+  ): Promise<boolean> {
+    const left = await this.toJs(leftTerm);
+    const right = await this.toJs(rightTerm);
+    switch (op) {
+      case 'Eq':
+        return this.#equalityFn(left, right);
+      case 'Geq':
+        return left >= right;
+      case 'Gt':
+        return left > right;
+      case 'Leq':
+        return left <= right;
+      case 'Lt':
+        return left < right;
+      case 'Neq':
+        return !this.#equalityFn(left, right);
+      default:
+        const _: never = op;
+        return _;
+    }
   }
 
   /**
@@ -230,6 +272,36 @@ export class Host {
         return { value: { Call: { name: v.name, args } } };
       case v instanceof Variable:
         return { value: { Variable: v.name } };
+      case v instanceof Expression:
+        return {
+          value: {
+            Expression: {
+              operator: v.operator,
+              args: v.args.map((a: unknown) => this.toPolar(a)),
+            },
+          },
+        };
+      case v instanceof Pattern:
+        const dict = this.toPolar(v.fields).value as PolarDictPattern;
+        if (v.tag === undefined) {
+          return { value: { Pattern: dict } };
+        } else {
+          return {
+            value: {
+              Pattern: {
+                Instance: {
+                  tag: v.tag,
+                  fields: dict.Dictionary,
+                },
+              },
+            },
+          };
+        }
+      case v instanceof Dict:
+        const fields = new Map(
+          Object.entries(v).map(([k, v]) => [k, this.toPolar(v)])
+        );
+        return { value: { Dictionary: { fields } } };
       default:
         const instance_id = this.cacheInstance(v);
         return {
@@ -278,29 +350,43 @@ export class Host {
     } else if (isPolarList(t)) {
       return await Promise.all(t.List.map(async el => await this.toJs(el)));
     } else if (isPolarDict(t)) {
+      const valueToJs = ([k, v]: [string, PolarTerm]) =>
+        this.toJs(v).then(v => [k, v]) as Promise<[string, any]>;
       const { fields } = t.Dictionary;
-      let entries =
-        typeof fields.entries === 'function'
-          ? Array.from(fields.entries())
-          : Object.entries(fields);
-      entries = await Promise.all(
-        entries.map(async ([k, v]) => [k, await this.toJs(v)]) as Promise<
-          [string, any]
-        >[]
-      );
-      return entries.reduce((obj: obj, [k, v]) => {
-        obj[k] = v;
-        return obj;
-      }, {});
+      const entries = await Promise.all([...fields.entries()].map(valueToJs));
+      return entries.reduce((dict: Dict, [k, v]) => {
+        dict[k] = v;
+        return dict;
+      }, new Dict());
     } else if (isPolarInstance(t)) {
       const i = this.getInstance(t.ExternalInstance.instance_id);
       return i instanceof Promise ? await i : i;
     } else if (isPolarPredicate(t)) {
       let { name, args } = t.Call;
-      args = await Promise.all(args.map(async a => await this.toJs(a)));
+      args = await Promise.all(args.map(a => this.toJs(a)));
       return new Predicate(name, args);
     } else if (isPolarVariable(t)) {
       return new Variable(t.Variable);
+    } else if (isPolarExpression(t)) {
+      // TODO(gj): Only allow expressions if the flag has been frobbed.
+      const { operator, args: argTerms } = t.Expression;
+      const args = await Promise.all(argTerms.map(a => this.toJs(a)));
+      return new Expression(operator, args);
+    } else if (isPolarPattern(t)) {
+      if ('Dictionary' in t.Pattern) {
+        const fields = await this.toJs({ value: t.Pattern });
+        return new Pattern({ fields });
+      } else {
+        let {
+          tag,
+          fields: { fields },
+        } = t.Pattern.Instance;
+        const dict = await this.toJs({ value: { Dictionary: { fields } } });
+        return new Pattern({ tag, fields: dict });
+      }
+    } else {
+      const _: never = t;
+      return _;
     }
   }
 }

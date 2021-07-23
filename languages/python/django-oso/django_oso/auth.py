@@ -1,10 +1,12 @@
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Model
+from polar.exceptions import UnsupportedError
 
 from .oso import Oso, polar_model_name
-from polar.partial import Partial, TypeConstraint
+from polar.partial import TypeConstraint
+from polar.variable import Variable
 
-from .partial import partial_to_query_filter
+from .partial import TRUE_FILTER, partial_to_query_filter
 
 
 def authorize(request, resource, *, actor=None, action=None):
@@ -44,7 +46,7 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
 
         This feature is currently in preview.
 
-    Partially evaluates the Polar rule ``allow(actor, action, Partial(model))``. If
+    Partially evaluates the Polar rule ``allow(actor, action, Variable(model))``. If
     authorization fails, raises a :py:class:`django.core.exceptions.PermissionDenied`
     exception.
 
@@ -69,6 +71,11 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
     :raises django.core.exceptions.PermissionDenied: If the request is not authorized.
     :returns: A django ``Q`` object representing the authorization filter.
     """
+    if Oso._polar_roles_enabled:
+        raise UnsupportedError(
+            "Data filtering not yet supported with Polar roles enabled."
+        )
+
     if actor is None:
         actor = request.user
 
@@ -76,8 +83,16 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
         action = request.method
 
     assert issubclass(model, Model), f"Expected a model; received: {model}"
-    partial_resource = Partial("resource", TypeConstraint(polar_model_name(model)))
-    results = Oso.query_rule("allow", actor, action, partial_resource)
+    resource = Variable("resource")
+    constraint = TypeConstraint(resource, polar_model_name(model))
+    results = Oso.query_rule(
+        "allow",
+        actor,
+        action,
+        resource,
+        bindings={resource: constraint},
+        accept_expression=True,
+    )
 
     filter = None
     for result in results:
@@ -86,8 +101,8 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
             filter = Q()
 
         next_filter = partial_to_query_filter(resource_partial, model)
-        if next_filter == Q():
-            return next_filter
+        if next_filter == TRUE_FILTER:
+            return TRUE_FILTER
 
         filter |= next_filter
 

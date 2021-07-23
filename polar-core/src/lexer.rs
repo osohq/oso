@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use super::error::ParseError;
 use super::terms::Symbol;
 use std::iter::Peekable;
@@ -171,6 +173,7 @@ impl<'input> Lexer<'input> {
     }
 
     #[inline]
+    #[allow(clippy::unnecessary_wraps)]
     fn scan_symbol(&mut self, i: usize, chr: char) -> Option<Spanned<Token, usize, ParseError>> {
         let start = i;
         let mut last = i;
@@ -260,6 +263,7 @@ impl<'input> Lexer<'input> {
     }
 
     #[inline]
+    #[allow(clippy::unnecessary_wraps)]
     fn scan_string(&mut self, i: usize) -> Option<Spanned<Token, usize, ParseError>> {
         let start = i;
         let last;
@@ -337,6 +341,7 @@ impl<'input> Lexer<'input> {
     }
 
     #[inline]
+    #[allow(clippy::unnecessary_wraps)]
     fn scan_number(&mut self, i: usize, chr: char) -> Option<Spanned<Token, usize, ParseError>> {
         let start = i;
         let mut last = i;
@@ -401,6 +406,7 @@ impl<'input> Lexer<'input> {
 
     /// Scan a one character operator to token.
     #[inline]
+    #[allow(clippy::unnecessary_wraps)]
     fn scan_1c_op(&mut self, i: usize, token: Token) -> Option<Spanned<Token, usize, ParseError>> {
         self.c = self.chars.next();
         Some(Ok((i, token, i + 1)))
@@ -408,6 +414,7 @@ impl<'input> Lexer<'input> {
 
     /// Scan a two character operator to token.
     #[inline]
+    #[allow(clippy::unnecessary_wraps)]
     fn scan_2c_op(
         &mut self,
         i: usize,
@@ -436,6 +443,7 @@ impl<'input> Lexer<'input> {
 
     /// Scan an operator to token unless next_char is the next char in which case scan to next_token.
     #[inline]
+    #[allow(clippy::unnecessary_wraps)]
     fn scan_1c_or_2c_op(
         &mut self,
         i: usize,
@@ -695,7 +703,7 @@ mod tests {
         let mut lexer = Lexer::new(&f);
         assert!(matches!(
             lexer.next(),
-            Some(Err(ParseError::InvalidFloat{ .. }))
+            Some(Err(ParseError::InvalidFloat { .. }))
         ));
 
         let f = "1.1";

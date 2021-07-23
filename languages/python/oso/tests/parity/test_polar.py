@@ -133,8 +133,6 @@ def test_defining_things(tell, qeval):
         'apple("orange")',
         'thing("with", "two")',
         'thing("with", "a", "lot", "of", "arguments", 1, 2, 3, 4, 5)',
-        'thing(with("nested"), "stuff")',
-        "dream(within(a(dream(within(a(dream(within(a(_dream)))))))))",
         'embedded("strings")',
     ]
     for f in facts:
@@ -384,7 +382,7 @@ def test_numbers_from_external_call(polar, qeval, qvar, query):
 
 def test_arities(tell, qeval):
     tell("f(1);")
-    tell("f(x, y);")
+    tell("f(_x, _y);")
     assert qeval("f(1)")
     assert not qeval("f(2)")
     assert qeval("f(2, 3)")

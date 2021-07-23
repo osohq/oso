@@ -1,13 +1,13 @@
 import { inspect } from 'util';
-import { readFile as _readFile } from 'fs';
 
+const _readFile = require('fs')?.readFile;
+
+import { InvalidQueryEventError, KwargsError, PolarError } from './errors';
 import {
-  InvalidQueryEventError,
-  KwargsError,
-  PolarError,
-  UnimplementedOperationError,
-} from './errors';
-import { isPolarTerm, QueryEventKind } from './types';
+  isPolarComparisonOperator,
+  isPolarTerm,
+  QueryEventKind,
+} from './types';
 import type { obj, QueryEvent } from './types';
 
 /**
@@ -70,7 +70,7 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
       case event['Debug'] !== undefined:
         return parseDebug(event['Debug']);
       case event['ExternalOp'] !== undefined:
-        throw new UnimplementedOperationError('comparison operators');
+        return parseExternalOp(event['ExternalOp']);
       default:
         throw new Error();
     }
@@ -218,6 +218,37 @@ function parseExternalIsa({
 
 /**
  * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * an [[`ExternalOp`]].
+ *
+ * @internal
+ */
+function parseExternalOp({ call_id: callId, args, operator }: obj): QueryEvent {
+  if (
+    !Number.isSafeInteger(callId) ||
+    (args !== undefined &&
+      (!Array.isArray(args) ||
+        args.length !== 2 ||
+        args.some((a: unknown) => !isPolarTerm(a))))
+  )
+    throw new Error();
+  if (!isPolarComparisonOperator(operator))
+    throw new PolarError(
+      `Unsupported external operation '${repr(args[0])} ${operator} ${repr(
+        args[1]
+      )}'`
+    );
+  return {
+    kind: QueryEventKind.ExternalOp,
+    data: {
+      args,
+      callId,
+      operator,
+    },
+  };
+}
+
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
  * an [[`ExternalUnify`]].
  *
  * @internal
@@ -268,7 +299,7 @@ function parseDebug({ message }: obj): QueryEvent {
  */
 export function readFile(file: string): Promise<string> {
   return new Promise((res, rej) =>
-    _readFile(file, { encoding: 'utf8' }, (err, contents) =>
+    _readFile!(file, { encoding: 'utf8' }, (err: string, contents: string) =>
       err === null ? res(contents) : rej(err)
     )
   );
@@ -279,9 +310,9 @@ let RESET = '';
 let FG_BLUE = '';
 let FG_RED = '';
 if (
-  typeof process.stdout.getColorDepth === 'function' &&
+  typeof process?.stdout?.getColorDepth === 'function' &&
   process.stdout.getColorDepth() >= 4 &&
-  typeof process.stderr.getColorDepth === 'function' &&
+  typeof process?.stderr?.getColorDepth === 'function' &&
   process.stderr.getColorDepth() >= 4
 ) {
   RESET = '\x1b[0m';
@@ -304,6 +335,7 @@ export function printError(e: Error) {
  */
 export function isConstructor(f: unknown): boolean {
   try {
+    // @ts-ignore
     Reflect.construct(String, [], f);
     return true;
   } catch (e) {

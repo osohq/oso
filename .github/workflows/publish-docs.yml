@@ -19,8 +19,13 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
+      AWS_REGION: "us-east-1"
+      PUBLISH_DOCS: 1
+      ALGOLIA_ADMIN_API_KEY: ${{ secrets.ALGOLIA_ADMIN_API_KEY }}
     steps:
       - uses: actions/checkout@v2
+
+      ### Setup dependencies
       - uses: actions/setup-python@v2
         name: Install Python
         with:
@@ -33,7 +38,33 @@ jobs:
           working-directory: "languages/ruby"
       - name: Install yard
         run: gem install yard
-      - name: Download oso from release
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+
+      # Uncomment this when we want WASM on the docs site again
+      # - name: Install Rust stable toolchain
+      #   uses: actions-rs/toolchain@v1
+      #   with:
+      #     profile: minimal
+      #     toolchain: stable
+      #
+      # ### Build Rust WASM target
+      # - name: Add WebAssembly target
+      #   run: rustup target add wasm32-unknown-unknown
+      # - name: Install wasm-pack
+      #   run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      # - name: Build Rust WASM
+      #   run: make wasm-build
+
+      ### Install release version of Oso libraries
+      - name: Download oso (Node.js) from release
+        run: |
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.oso_version }} | jq -r '.assets[] | select(.name == "oso-js-node-${{ github.event.inputs.oso_version }}.tgz") | .url') --output oso-js-node-${{ github.event.inputs.oso_version }}.tgz
+      - name: Copy WASM types file from release archive to JS lib
+        run: tar -xzf oso-js-node-${{ github.event.inputs.oso_version }}.tgz -C languages/js --strip-components=2 package/dist/src/polar_wasm_api.d.ts package/dist/src/polar_wasm_api.js package/dist/src/polar_wasm_api_bg.wasm package/dist/src/polar_wasm_api_bg.wasm.d.ts
+      - name: Download oso (Python) from release
         run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.oso_version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.oso_version }}.zip") | .url') --output oso-python-${{ github.event.inputs.oso_version }}.zip
       - run: unzip oso-python-${{ github.event.inputs.oso_version }}.zip -d oso-python
@@ -53,10 +84,27 @@ jobs:
         run: pip install django_oso==${{ github.event.inputs.django_oso_version }} -f django-oso-python
       - name: Install sqlalchemy-oso from release
         run: pip install sqlalchemy_oso[flask]==${{ github.event.inputs.sqlalchemy_oso_version }} -f sqlalchemy-oso-python
-      - name: Build docs
-        run: SPHINXOPTS="-W" make -C docs build
+
+
+      ### Build docs
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v2
+        with:
+          hugo-version: '0.79.1'
+      - name: Build Hugo docs (docs-preview.oso.dev)
+        if: github.event.inputs.url == 'docs-preview.oso.dev'
+        run: |
+          make ci-preview-docs
+        working-directory: docs
+      - name: Build Hugo docs (docs.oso.dev)
+        if: github.event.inputs.url == 'docs.oso.dev'
+        run: |
+          make ci-prod-docs
+        working-directory: docs
+
+      ### Push to S3 + invalidate cache
       - name: s3 publish
-        run: aws s3 sync --delete docs/_build/html s3://${{ github.event.inputs.url }}
+        run: aws s3 sync --delete docs/public/ s3://${{ github.event.inputs.url }}
       - name: cloudfront invalidate docs preview
         run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
         if: github.event.inputs.url == 'docs-preview.oso.dev'

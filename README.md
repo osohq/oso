@@ -1,7 +1,8 @@
-# oso
+# Oso
 
 [![Development][badge-ci]][badge-ci-link]
 [![GitHub release (latest SemVer)][badge-release]][badge-release-link]
+[![Go version][badge-go]][badge-go-link]
 [![Maven version][badge-java]][badge-java-link]
 [![NPM version][badge-nodejs]][badge-nodejs-link]
 [![PyPI version][badge-python]][badge-python-link]
@@ -9,43 +10,40 @@
 [![Crates.io version][badge-rust]][badge-rust-link]
 [![Slack][badge-slack]][badge-slack-link]
 
-## What is oso?
+## What is Oso?
 
-oso is an **open source policy engine for authorization** that’s embedded in
-your application. It provides a declarative policy language for expressing
-authorization logic. You define this logic separately from the rest of your
-application code, but it executes inside the application and can call directly
-into it. oso ships as a library with a built-in debugger and REPL.
+Oso is a batteries-included library for building authorization in your application.
 
-oso is ideal for building permissions into user-facing applications, but you
-can check out [Use Cases][use-cases] to learn about other applications for oso.
+Oso gives you a mental model and an authorization system – a set of APIs built on top of a declarative policy language called Polar, plus a debugger and REPL – to define who can do what in your application. You can express common concepts from “users can see their own data” and role-based access control, to others like multi-tenancy, organizations and teams, hierarchies and relationships.
 
-Using oso consists of two parts:
+Oso lets you offload the thinking of how to design authorization and build features fast, while keeping the flexibility to extend and customize as you see fit.
 
-1. Writing oso policies in a declarative policy language called Polar.
-2. Embedding oso in your application using the appropriate language-specific
-   authorization library.
+Developers can typically write a working Oso policy in <5 minutes, add Oso to an app in <30 minutes, and use Oso to solve real authorization problems within a few hours. To get started, you add the library to your application, create a new Oso instance and load an Oso policy. You can mix and match any of Oso’s authorization APIs to implement features like roles with custom policies that you write to suit your application.
 
-oso currently offers libraries for [Java][badge-java-link],
-[Node.js][badge-nodejs-link], [Python][badge-python-link],
-[Ruby][badge-ruby-link], and [Rust][badge-rust-link].
+Oso is ideal for building permissions into user-facing applications, but you
+can check out [Use Cases][use-cases] to learn about other applications for Oso.
+
+Oso currently offers libraries for [Node.js][badge-nodejs-link], [Python][badge-python-link], [Go][badge-go-link], 
+[Rust][badge-rust-link], [Ruby][badge-ruby-link], and [Java][badge-java-link].
 
 ## Getting started
 
-To get up and running with oso, check out the [Getting Started
-guides](https://docs.osohq.com/getting-started/quickstart.html) in the [oso
+To get up and running with Oso, check out the [Getting Started
+guides](https://docs.osohq.com/getting-started/quickstart.html) in the [Oso
 documentation][docs].
+
+If you have questions, need help getting started, or want to discuss anything about the product, your use case, or authorization more generally, [join us on Slack][badge-slack-link].
 
 ## Development
 
 ### Core
 
-oso's Rust [core][core] is developed against [Rust's latest stable
+Oso's Rust [core][core] is developed against [Rust's latest stable
 release][rust].
 
 ### Language libraries
 
-oso's language libraries can be developed without touching the Rust core, but
+Oso's language libraries can be developed without touching the Rust core, but
 you will still need the Rust stable toolchain installed in order to build the
 core.
 
@@ -59,12 +57,13 @@ requirements:
 
 - Java: 10+
   - Maven: 3.6+
-- Node.js: 10.14.2+
+- Node.js: 12.20.0+
   - Yarn 1.22+
 - Python: 3.6+
 - Ruby: 2.4+
   - Bundler 2.1.4+
 - Rust: 1.46+
+- Go: 1.12+
 
 ## Contributing
 
@@ -80,7 +79,8 @@ See: [LICENSE][license].
 [badge-release-link]: https://github.com/osohq/oso/releases
 [badge-slack]: https://img.shields.io/badge/slack-oso--oss-orange
 [badge-slack-link]: https://join-slack.osohq.com/
-
+[badge-go]: https://img.shields.io/github/v/tag/osohq/go-oso?color=7fd5ea&label=go.dev
+[badge-go-link]: https://pkg.go.dev/github.com/osohq/go-oso
 [badge-java]: https://img.shields.io/maven-central/v/com.osohq/oso
 [badge-java-link]: https://search.maven.org/artifact/com.osohq/oso
 [badge-nodejs]: https://badge.fury.io/js/oso.svg
@@ -91,13 +91,7 @@ See: [LICENSE][license].
 [badge-ruby-link]: https://rubygems.org/gems/oso-oso
 [badge-rust]: https://img.shields.io/crates/v/oso
 [badge-rust-link]: https://crates.io/crates/oso
-
-<!-- [languages-java]: https://github.com/osohq/oso/tree/main/languages/java -->
-<!-- [languages-nodejs]: https://github.com/osohq/oso/tree/main/languages/js -->
-<!-- [languages-python]: https://github.com/osohq/oso/tree/main/languages/python -->
-<!-- [languages-ruby]: https://github.com/osohq/oso/tree/main/languages/ruby -->
-<!-- [languages-rust]: https://github.com/osohq/oso/tree/main/languages/rust -->
-
+[go-link]: https://pkg.go.dev/github.com/osohq/go-oso
 [contributing]: https://github.com/osohq/oso/blob/main/CONTRIBUTING.md
 [core]: https://github.com/osohq/oso/tree/main/polar-core
 [docs]: https://docs.osohq.com
@@ -105,3 +99,7 @@ See: [LICENSE][license].
 [rust]: https://www.rust-lang.org/tools/install
 [use-cases]: https://docs.osohq.com/more/use-cases.html
 [wasm-pack]: https://rustwasm.github.io/wasm-pack/installer/
+
+## Share your story
+
+We'd love to hear about your use case and experience with Oso. Share your story on [Twitter](https://twitter.com/osoHQ) or fill out [this form](https://osohq.typeform.com/to/mIFfkN05) for some Oso swag.

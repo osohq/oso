@@ -9,7 +9,6 @@ const EXPENSES = [
 // expense-class-start
 class Expense {
   constructor({ amount, submitted_by, location, project_id }) {
-    // ...
     this.amount = amount;
     this.submitted_by = submitted_by;
     this.location = location;
@@ -23,6 +22,7 @@ class Expense {
 }
 
 oso.registerClass(Expense);
+// expense-class-end
 
 const MANAGERS = {
   cora: ['bhavik'],
@@ -32,7 +32,6 @@ const MANAGERS = {
 // user-class-start
 class User {
   constructor(name, location) {
-    // ...
     this.name = name;
     this.location = location || 'NYC';
   }
@@ -47,6 +46,7 @@ class User {
 }
 
 oso.registerClass(User);
+// user-class-end
 
 class Project {
   constructor(id, teamId) {

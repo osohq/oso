@@ -1,0 +1,89 @@
+name: Publish Docs Preview
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  publish-preview:
+    name: Publish docs preview
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
+      AWS_REGION: "us-east-1"
+      ALGOLIA_ADMIN_API_KEY: ${{ secrets.ALGOLIA_ADMIN_API_KEY }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock') }}
+
+      ### Setup dependencies
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: "3.7"
+      - name: Install Ruby + gems
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 2.4
+          working-directory: "languages/ruby"
+      - name: Install yard
+        run: gem install yard
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+
+      ### Build Rust WASM target
+      - name: Add WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Build Rust WASM
+        run: make wasm-build
+
+      ### Build Python package
+      - name: Build Python
+        run: make python-build
+
+      ### Build docs
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v2
+        with:
+          hugo-version: '0.79.1'
+      - name: Build Hugo docs
+        run: make build
+        working-directory: docs
+      - name: Build docs for CI preview
+        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
+        run: make ci-preview-docs
+        working-directory: docs
+
+
+      ### Push to S3 + invalidate cache
+      - name: s3 preview publish
+        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
+        run: |
+          aws s3 sync --delete docs/public/ s3://docs-preview.oso.dev/
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
+
+      - name: cloudfront invalidate docs preview
+        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
+        run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"

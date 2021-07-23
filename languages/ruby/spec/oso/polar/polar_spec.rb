@@ -50,12 +50,6 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(qvar(subject, 'f(x)', 'x', one: true)).to eq({ 'x' => [1, 'two', true], 'y' => { 'z' => false } })
     end
 
-    it 'converts predicates in both directions' do
-      subject.load_str('f(x) if x = pred(1, 2);')
-      expect(qvar(subject, 'f(x)', 'x')).to eq([Oso::Polar::Predicate.new('pred', args: [1, 2])])
-      expect(subject.query_rule('f', Oso::Polar::Predicate.new('pred', args: [1, 2])).to_a).to eq([{}])
-    end
-
     ## NOTE This is not an integration test - it uses the private API (host should be private).
     it 'converts Ruby instances in both directions' do
       actor = Actor.new('sam')
@@ -482,12 +476,23 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
                      def my_method(one, two, three:, four:)
                        [one, two, three, four]
                      end
+
+                     def self.tv
+                       Thread.current['foo']
+                     end
                    end)
         subject.register_class(TestClass)
       end
 
       it 'accepts positional and keyword args' do
         expect(qvar(subject, 'x = (new TestClass()).my_method(1, 2, four: 4, three: 3)', 'x')).to eq([[1, 2, 3, 4]])
+      end
+
+      it 'has access to the thread context' do
+        Thread.current['foo'] = 'bar'
+        # you need to use load string here or it might not
+        # run on a fiber
+        subject.load_str('?= TestClass.tv = "bar";')
       end
     end
 
@@ -719,7 +724,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   context 'unbound variable' do
     # test_returns_unbound_variable
     it 'returns unbound properly' do
-      subject.load_str 'rule(x, y) if y = 1;'
+      subject.load_str 'rule(_, y) if y = 1;'
 
       results = query(subject, 'rule(x, y)')
       first = results[0]
@@ -758,6 +763,12 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  it 'fails when receiving an expression type' do
+    expect { query(subject, 'x < 3') }.to raise_error(
+      Oso::Polar::UnexpectedPolarTypeError, Oso::Polar::UNEXPECTED_EXPRESSION_MESSAGE
+    )
+  end
+
   context 'when using iterators' do # rubocop:disable Metrics/BlockLength
     before do
       stub_const('Foo', Class.new do
@@ -789,6 +800,182 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     it 'works over custom iterators' do
       expect(qvar(subject, 'x in new Bar([1, 2, 3])', 'x')).to eq([1, 2, 3])
       expect(qvar(subject, 'x = new Bar([1, 2, 3]).sum()', 'x', one: true)).to eq(6)
+    end
+  end
+
+  context 'Code reloading' do # rubocop:disable Metrics/BlockLength
+    before do
+      # Register a class and then simulate it changing due to a code reload
+      stub_const('Foo', Class.new do
+        def version
+          1
+        end
+
+        def self.class_version
+          1
+        end
+      end)
+      subject.register_class(Foo)
+      stub_const('Foo', Class.new do
+        def version
+          2
+        end
+
+        def self.class_version
+          2
+        end
+      end)
+    end
+
+    it 'uses the up-to-date version of the class to make new instances' do
+      expect(query(subject, 'x = new Foo() and x.version = 2').length).to eq(1)
+      expect(query(subject, 'x = new Foo() and x.version = 1').length).to eq(0)
+    end
+
+    it 'uses the up-to-date version of the class during isa checks' do
+      subject.load_str('is_foo(_: Foo);')
+      expect(subject.query_rule('is_foo', Foo.new).to_a).to eq([{}])
+    end
+
+    it 'uses the up-to-date version of the class for lookups' do
+      expect(query(subject, 'Foo.class_version = 2')).to eq([{}])
+    end
+
+    it 'can lookup attributes on anonymous classes' do
+      subject.register_class(Class.new do
+        def self.test
+          1
+        end
+      end, name: 'AnonymousClass')
+      expect(query(subject, 'AnonymousClass.test = 1')).to eq([{}])
+    end
+
+    it 'can match against anonymous classes' do
+      anon_class = Class.new do
+        def self.test
+          1
+        end
+      end
+      subject.register_class(anon_class, name: 'AnonymousClass')
+      expect(query(subject, 'new AnonymousClass() matches AnonymousClass')).to eq([{}])
+    end
+  end
+
+  # test_roles_integration
+  context 'Oso roles' do # rubocop:disable Metrics/BlockLength
+    require_relative './roles_helpers'
+    it 'works' do # rubocop:disable Metrics/BlockLength
+      osohq = RolesHelpers::Org.new('osohq')
+      apple = RolesHelpers::Org.new('apple')
+      oso = RolesHelpers::Repo.new('oso', osohq)
+      ios = RolesHelpers::Repo.new('ios', apple)
+      bug = RolesHelpers::Issue.new('bug', oso)
+      laggy = RolesHelpers::Issue.new('laggy', ios)
+
+      osohq_owner = RolesHelpers::Role.new('owner', osohq)
+      osohq_member = RolesHelpers::Role.new('member', osohq)
+
+      leina = RolesHelpers::User.new('leina', [osohq_owner])
+      steve = RolesHelpers::User.new('steve', [osohq_member])
+
+      policy = <<~POLAR
+        resource(_type: Org, "org", actions, roles) if
+            actions = [
+                "invite",
+                "create_repo"
+            ] and
+            roles = {
+                member: {
+                    permissions: ["create_repo"],
+                    implies: ["repo:reader"]
+                },
+                owner: {
+                    permissions: ["invite"],
+                    implies: ["member", "repo:writer"]
+                }
+            };
+
+        resource(_type: Repo, "repo", actions, roles) if
+            actions = [
+                "push",
+                "pull"
+            ] and
+            roles = {
+                writer: {
+                    permissions: ["push", "issue:edit"],
+                    implies: ["reader"]
+                },
+                reader: {
+                    permissions: ["pull"]
+                }
+            };
+
+        resource(_type: Issue, "issue", actions, {}) if
+            actions = [
+                "edit"
+            ];
+
+        parent_child(parent_org, repo: Repo) if
+            repo.org = parent_org and
+            parent_org matches Org;
+
+        parent_child(parent_repo, issue: Issue) if
+            issue.repo = parent_repo and
+            parent_repo matches Repo;
+
+        actor_has_role_for_resource(actor, role_name, role_resource) if
+            role in actor.roles and
+            role matches {name: role_name, resource: role_resource};
+
+        allow(actor, action, resource) if
+            role_allows(actor, action, resource);
+      POLAR
+
+      subject.register_class(RolesHelpers::Org, name: 'Org')
+      subject.register_class(RolesHelpers::Repo, name: 'Repo')
+      subject.register_class(RolesHelpers::Issue, name: 'Issue')
+      subject.register_class(RolesHelpers::User, name: 'User')
+      subject.load_str(policy)
+      subject.enable_roles
+
+      expect(subject.query_rule('allow', leina, 'invite', osohq).to_a).not_to be_empty
+
+      expect(subject.query_rule('allow', leina, 'create_repo', osohq).to_a).not_to be_empty
+      expect(subject.query_rule('allow', leina, 'push', oso).to_a).not_to be_empty
+      expect(subject.query_rule('allow', leina, 'pull', oso).to_a).not_to be_empty
+      expect(subject.query_rule('allow', leina, 'edit', bug).to_a).not_to be_empty
+
+      expect(subject.query_rule('allow', steve, 'invite', osohq).to_a).to be_empty
+      expect(subject.query_rule('allow', steve, 'create_repo', osohq).to_a).not_to be_empty
+      expect(subject.query_rule('allow', steve, 'push', oso).to_a).to be_empty
+      expect(subject.query_rule('allow', steve, 'pull', oso).to_a).not_to be_empty
+      expect(subject.query_rule('allow', steve, 'edit', bug).to_a).to be_empty
+
+      expect(subject.query_rule('allow', leina, 'edit', laggy).to_a).to be_empty
+      expect(subject.query_rule('allow', steve, 'edit', laggy).to_a).to be_empty
+
+      gabe = RolesHelpers::User.new('gabe', [])
+      expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).to be_empty
+      gabe = RolesHelpers::User.new('gabe', [osohq_member])
+      expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).to be_empty
+      gabe = RolesHelpers::User.new('gabe', [osohq_owner])
+      expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).not_to be_empty
+    end
+
+    it 'roles config is revalidated when loading additional rules after enabling roles' do
+      subject.register_class RolesHelpers::Org, name: 'Org'
+      subject.register_class RolesHelpers::Repo, name: 'Repo'
+      valid = <<~POLAR
+        resource(_: Repo, "repo", ["read"], {});
+        actor_has_role_for_resource(_, _, _);
+      POLAR
+      invalid = <<~POLAR
+        resource(_: Org, "org", [], {});
+        actor_has_role_for_resource(_, _, _);
+      POLAR
+      subject.load_str valid
+      subject.enable_roles
+      expect { subject.load_str invalid }.to raise_error Oso::Polar::RolesValidationError
     end
   end
 end

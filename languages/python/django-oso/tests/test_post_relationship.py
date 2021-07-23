@@ -2,12 +2,15 @@
 
 Tests come from the relationship document & operations laid out there.
 """
+from django_oso.partial import TRUE_FILTER
 import pytest
 from django.core.exceptions import PermissionDenied
 
 from django_oso.models import authorize_model
 from django_oso.oso import Oso, reset_oso
 from test_app2.models import Post, Tag, User
+
+from .conftest import is_true, parenthesize
 
 
 @pytest.fixture(autouse=True)
@@ -68,7 +71,7 @@ def test_authorize_model_basic(post_fixtures):
     """Test that a simple policy with checks on non-relationship attributes is correct."""
     Oso.load_str(
         """
-        allow("user", "read", post: test_app2::Post) if post.access_level = "public";
+        allow(u, "read", post: test_app2::Post) if u in ["admin", "user"] and post.access_level = "public";
         allow("user", "write", post: test_app2::Post) if post.access_level = "private";
         allow("admin", "read", _post: test_app2::Post);
         allow("moderator", "read", post: test_app2::Post) if
@@ -78,36 +81,34 @@ def test_authorize_model_basic(post_fixtures):
     )
 
     authorize_filter = authorize_model(None, Post, actor="user", action="read")
-    assert (
-        str(authorize_filter)
-        == "(AND: (NOT (AND: ('pk__in', []))), ('access_level', 'public'))"
-    )
+    assert str(authorize_filter) == "(AND: ('access_level', 'public'))"
     posts = Post.objects.filter(authorize_filter)
     assert posts.count() == 5
     assert posts.all()[0].contents == "foo public post"
 
     authorize_filter = authorize_model(None, Post, actor="user", action="write")
-    assert (
-        str(authorize_filter)
-        == "(AND: (NOT (AND: ('pk__in', []))), ('access_level', 'private'))"
-    )
+    assert str(authorize_filter) == "(AND: ('access_level', 'private'))"
     posts = Post.objects.filter(authorize_filter)
     assert posts.count() == 4
     assert posts.all()[0].contents == "foo private post"
     assert posts.all()[1].contents == "foo private post 2"
 
     authorize_filter = authorize_model(None, Post, actor="admin", action="read")
-    assert str(authorize_filter) == "(NOT (AND: ('pk__in', [])))"
+    assert str(authorize_filter) == str(TRUE_FILTER)
     posts = Post.objects.filter(authorize_filter)
     assert posts.count() == 9
 
     authorize_filter = authorize_model(None, Post, actor="moderator", action="read")
-    expected = (
-        "(OR: ("
-        + "AND: (NOT (AND: ('pk__in', []))), ('access_level', 'private'), ('needs_moderation', True)), "
-        + "(AND: (NOT (AND: ('pk__in', []))), ('access_level', 'public'), ('needs_moderation', True)))"
-    )
-    assert str(authorize_filter) == expected
+    expected = """
+         (OR:
+            (AND:
+                ('access_level', 'private'),
+                ('needs_moderation', True)),
+            (AND:
+                ('access_level', 'public'),
+                ('needs_moderation', True)))
+    """
+    assert str(authorize_filter) == " ".join(expected.split())
     posts = Post.objects.filter(authorize_filter)
     assert posts.count() == 4
     assert posts.all()[0].contents == "private for moderation"
@@ -362,6 +363,8 @@ def tag_nested_many_many_fixtures():
     other_user = User(username="other_user")
     other_user.save()
 
+    other = Tag(name="other tag")
+    other.save()
     eng = Tag(name="eng")
     eng.save()
     eng.users.set([user])
@@ -393,6 +396,11 @@ def tag_nested_many_many_fixtures():
         access_level="public",
         created_by=user,
     )
+    other_tagged_post = Post(
+        contents="other tagged post",
+        access_level="public",
+        created_by=user,
+    )
 
     posts = {
         "user_eng_post": user_eng_post,
@@ -400,6 +408,7 @@ def tag_nested_many_many_fixtures():
         "random_post": random_post,
         "not_tagged_post": not_tagged_post,
         "all_tagged_post": all_tagged_post,
+        "other_tagged_post": other_tagged_post,
     }
     for post in posts.values():
         post.save()
@@ -407,9 +416,18 @@ def tag_nested_many_many_fixtures():
     user_eng_post.tags.set([eng])
     user_user_post.tags.set([user_posts])
     random_post.tags.set([random])
+    other_tagged_post.tags.set([other])
     all_tagged_post.tags.set([eng, user_posts, random])
 
-    user.posts.set([user_eng_post, user_user_post, not_tagged_post, all_tagged_post])
+    user.posts.set(
+        [
+            user_eng_post,
+            user_user_post,
+            not_tagged_post,
+            all_tagged_post,
+            other_tagged_post,
+        ]
+    )
     other_user.posts.set([random_post])
 
     return posts
@@ -491,6 +509,26 @@ def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
     )
     user = User.objects.get(username="user")
     posts = Post.objects.authorize(None, actor=user, action="read")
+    expected = f"""
+       SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title",
+              "test_app2_post"."access_level",
+              "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
+       FROM "test_app2_post"
+       WHERE "test_app2_post"."id" IN
+           (SELECT W0."id"
+            FROM "test_app2_post" W0
+            WHERE
+                (W0."id" IN
+                    (SELECT V0."id"
+                    FROM "test_app2_post" V0
+                    LEFT OUTER JOIN "test_app2_post_tags" V1 ON (V0."id" = V1."post_id")
+                    WHERE
+                        EXISTS(SELECT U0."id"
+                                FROM "test_app2_tag" U0
+                                WHERE (U0."id" = {parenthesize('V1."tag_id"')} AND U0."name" = eng)){is_true()})
+                        OR W0."access_level" = public))
+    """
+    assert str(posts.query) == " ".join(expected.split())
     # all should be returned with no duplicates
     assert list(posts) == list(tag_nested_many_many_fixtures.values())
 
@@ -498,7 +536,7 @@ def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
 @pytest.mark.django_db
 def test_empty_constraints_in(tag_nested_many_many_fixtures):
     """Test that ``unbound in partial.field`` without any further constraints
-    on unbound translates into a check that COUNT(partial.field) > 0."""
+    on unbound translates into an existence check."""
     Oso.load_str(
         """
             allow(_: test_app2::User, "read", post: test_app2::Post) if
@@ -507,22 +545,22 @@ def test_empty_constraints_in(tag_nested_many_many_fixtures):
     )
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
-    assert str(authorize_filter).startswith(
-        "(AND: (NOT (AND: ('pk__in', []))), ('pk__in', <django.db.models.expressions.Subquery object at "
-    )
-    posts = Post.objects.filter(authorize_filter)
-    assert (
-        str(posts.query)
-        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
-        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
-        + ' FROM "test_app2_post"'
-        + ' WHERE "test_app2_post"."id" IN'
-        + ' (SELECT U0."id"'
-        + ' FROM "test_app2_post" U0 LEFT OUTER JOIN "test_app2_post_tags" U1 ON (U0."id" = U1."post_id")'
-        + ' GROUP BY U0."id", U0."contents", U0."access_level", U0."created_by_id", U0."needs_moderation"'
-        + ' HAVING COUNT(U1."tag_id") > 0)'
-    )
-    assert len(posts) == 4
+    posts = Post.objects.filter(authorize_filter).distinct()
+    expected = f"""
+        SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title",
+                        "test_app2_post"."access_level", "test_app2_post"."created_by_id",
+                        "test_app2_post"."needs_moderation"
+        FROM "test_app2_post"
+        WHERE "test_app2_post"."id" IN
+            (SELECT V0."id"
+             FROM "test_app2_post" V0
+             LEFT OUTER JOIN "test_app2_post_tags" V1 ON (V0."id" = V1."post_id")
+             WHERE EXISTS(SELECT U0."id"
+                          FROM "test_app2_tag" U0
+                          WHERE U0."id" = {parenthesize('V1."tag_id"')}){is_true()})
+    """
+    assert str(posts.query) == " ".join(expected.split())
+    assert len(posts) == 5
     assert tag_nested_many_many_fixtures["not_tagged_post"] not in posts
 
 
@@ -536,23 +574,23 @@ def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtur
         """
     )
     user = User.objects.get(username="user")
-    authorize_filter = authorize_model(None, Post, actor=user, action="read")
-    assert (
-        str(authorize_filter)
-        == "(AND: (NOT (AND: ('pk__in', []))), ('tags__name', 'bloop'))"
-    )
-    posts = Post.objects.filter(authorize_filter)
-    assert (
-        str(posts.query)
-        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
-        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
-        + ' FROM "test_app2_post"'
-        + ' INNER JOIN "test_app2_post_tags"'
-        + ' ON ("test_app2_post"."id" = "test_app2_post_tags"."post_id")'
-        + ' INNER JOIN "test_app2_tag"'
-        + ' ON ("test_app2_post_tags"."tag_id" = "test_app2_tag"."id")'
-        + ' WHERE "test_app2_tag"."name" = bloop'
-    )
+    posts = Post.objects.authorize(None, actor=user, action="read")
+    expected = f"""
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
+               "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
+        FROM "test_app2_post"
+        WHERE "test_app2_post"."id" IN (SELECT W0."id"
+                                        FROM "test_app2_post" W0
+                                        WHERE W0."id" IN
+                                            (SELECT V0."id"
+                                             FROM "test_app2_post" V0
+                                             LEFT OUTER JOIN "test_app2_post_tags" V1 ON (V0."id" = V1."post_id")
+                                             WHERE EXISTS(SELECT U0."id"
+                                                          FROM "test_app2_tag" U0
+                                                          WHERE (U0."id" = {parenthesize('V1."tag_id"')}
+                                                          AND U0."name" = bloop)){is_true()}))
+    """
+    assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 0
 
 
@@ -569,21 +607,216 @@ def test_reverse_many_relationship(tag_nested_many_many_fixtures):
 
     user = User.objects.get(username="user")
     authorize_filter = authorize_model(None, Post, actor=user, action="read")
-    assert (
-        str(authorize_filter)
-        == "(AND: (NOT (AND: ('pk__in', []))), ('users', <User: User object (1)>))"
-    )
+    assert str(authorize_filter) == "(AND: ('users', <User: User object (1)>))"
     posts = Post.objects.filter(authorize_filter)
-    assert (
-        str(posts.query)
-        == 'SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."access_level",'
-        + ' "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"'
-        + ' FROM "test_app2_post"'
-        + ' INNER JOIN "test_app2_user_posts"'
-        + ' ON ("test_app2_post"."id" = "test_app2_user_posts"."post_id")'
-        + ' WHERE "test_app2_user_posts"."user_id" = 1'
+    expected = """
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
+               "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
+        FROM "test_app2_post"
+        INNER JOIN "test_app2_user_posts" ON ("test_app2_post"."id" = "test_app2_user_posts"."post_id")
+        WHERE "test_app2_user_posts"."user_id" = 1
+    """
+    assert str(posts.query) == " ".join(expected.split())
+    assert len(posts) == 5
+
+
+@pytest.mark.xfail(reason="Cannot compare items across subqueries.")
+@pytest.mark.django_db
+def test_deeply_nested_in(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        allow(_, _, post: test_app2::Post) if
+            foo in post.created_by.posts and foo.id > 1 and
+            bar in foo.created_by.posts and bar.id > 2 and
+            baz in bar.created_by.posts and baz.id > 3 and
+            post in baz.created_by.posts and post.id > 4;
+        """
     )
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter).distinct()
+    expected = """
+        SELECT DISTINCT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title",
+                        "test_app2_post"."access_level", "test_app2_post"."created_by_id",
+                        "test_app2_post"."needs_moderation"
+        FROM "test_app2_post"
+        INNER JOIN "test_app2_user" ON ("test_app2_post"."created_by_id" = "test_app2_user"."id")
+        LEFT OUTER JOIN "test_app2_user_posts" ON ("test_app2_user"."id" = "test_app2_user_posts"."user_id")
+        WHERE (EXISTS(SELECT W0."id"
+                      FROM "test_app2_post" W0
+                      INNER JOIN "test_app2_user" W1 ON (W0."created_by_id" = W1."id")
+                      LEFT OUTER JOIN "test_app2_user_posts" W2 ON (W1."id" = W2."user_id")
+                      WHERE (EXISTS(SELECT V0."id"
+                                    FROM "test_app2_post" V0
+                                    INNER JOIN "test_app2_user" V1 ON (V0."created_by_id" = V1."id")
+                                    LEFT OUTER JOIN "test_app2_user_posts" V2 ON (V1."id" = V2."user_id")
+                                    WHERE (EXISTS(SELECT U0."id"
+                                                  FROM "test_app2_post" U0
+                                                  INNER JOIN "test_app2_user" U1 ON (U0."created_by_id" = U1."id")
+                                                  INNER JOIN "test_app2_user_posts" U2 ON (U1."id" = U2."user_id")
+                                                  WHERE (U0."id" = V2."post_id"
+                                                         AND U0."id" > 3
+
+                                                         # This is not the sql that is generated.
+                                                         # Instead U0."id" is the LHS of below.
+                                                         AND "test_app2_post"."id" = U2."post_id"))
+                                           AND V0."id" = W2."post_id"
+                                           AND V0."id" > 2))
+                             AND W0."id" = "test_app2_user_posts"."post_id"
+                             AND W0."id" > 1))
+               AND "test_app2_post"."id" > 4)
+    """
+    assert str(posts.query) == " ".join(expected.split())
+    assert len(posts) == 1
+
+
+@pytest.mark.skip("Don't currently handle this case.")
+@pytest.mark.django_db
+def test_unify_ins(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        allow(_, _, post) if
+            user1 in post.users and
+            user2 in post.users and
+            user1.id = user2.id and
+            user1.id > 1 and
+            user2.id <= 2;
+        """
+    )
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+    expected = """
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
+               "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
+        FROM "test_app2_post"
+        LEFT OUTER JOIN "test_app2_user_posts" ON ("test_app2_post"."id" = "test_app2_user_posts"."post_id")
+        WHERE (EXISTS(SELECT U0."id"
+                      FROM "test_app2_user" U0
+                      INNER JOIN "test_app2_user" V0 ON (U0."id" = V0."id")
+                      WHERE (U0."id" = "test_app2_user_posts"."user_id"
+                             AND V0."id" = "test_app2_user_posts"."user_id"
+                             AND U0."id" <= 2
+                             AND V0."id" > 1)))
+    """
+    assert str(posts.query) == " ".join(expected.split())
+    assert len(posts) == 1
+
+
+@pytest.mark.skip("Don't currently handle this case.")
+@pytest.mark.django_db
+def test_this_in_var(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        # _this in var
+        allow(_, _, post: test_app2::Post) if
+            post in x and
+            x in post.created_by.posts;
+        """
+    )
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+    expected = """
+    """
+    assert str(posts.query) == " ".join(expected.split())
+    assert len(posts) == 5050
+
+
+@pytest.mark.skip("Don't currently handle this case.")
+@pytest.mark.django_db
+def test_var_in_other_var(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        # var in other_var
+        allow(_, _, post: test_app2::Post) if
+            x in y and
+            y in post.created_by.posts
+            and post.id = x.id;
+        """
+    )
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+    expected = """
+    """
+    assert str(posts.query) == " ".join(expected.split())
+    assert len(posts) == 5050
+
+
+@pytest.mark.django_db
+def test_in_intersection(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        allow(_, _, post) if
+            u in post.users and
+            t in post.tags and
+            u in t.users;
+        """
+    )
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+    expected = f"""
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
+               "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
+        FROM "test_app2_post"
+        WHERE "test_app2_post"."id"
+        IN (SELECT X0."id"
+            FROM "test_app2_post" X0
+            LEFT OUTER JOIN "test_app2_user_posts" X1 ON (X0."id" = X1."post_id")
+            LEFT OUTER JOIN "test_app2_post_tags" X3 ON (X0."id" = X3."post_id")
+            WHERE (EXISTS(SELECT U0."id"
+                   FROM "test_app2_user" U0
+                   WHERE U0."id" = {parenthesize('X1."user_id"')}){is_true()}
+                   AND EXISTS(SELECT W0."id"
+                       FROM "test_app2_tag" W0
+                       WHERE (W0."id" = {parenthesize('X3."tag_id"')}
+                       AND W0."id" IN
+                            (SELECT V0."id"
+                             FROM "test_app2_tag" V0
+                             LEFT OUTER JOIN "test_app2_tag_users" V1 ON (V0."id" = V1."tag_id")
+                             WHERE EXISTS(SELECT U0."id"
+                                         FROM "test_app2_user" U0
+                                         WHERE U0."id" = {parenthesize('V1."user_id"')}){is_true()}))){is_true()}))
+    """
+    assert str(posts.query) == " ".join(expected.split())
     assert len(posts) == 4
+
+
+@pytest.mark.django_db
+def test_redundant_in_on_same_field(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+        allow(_, "read", post) if
+            tag1 in post.tags and
+            tag2 in post.tags and
+            tag1.name = "random" and
+            tag2.is_public = true;
+        """
+    )
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+    expected = f"""
+
+        SELECT "test_app2_post"."id", "test_app2_post"."contents", "test_app2_post"."title", "test_app2_post"."access_level",
+               "test_app2_post"."created_by_id", "test_app2_post"."needs_moderation"
+        FROM "test_app2_post"
+        WHERE "test_app2_post"."id" IN (SELECT V0."id"
+                                        FROM "test_app2_post" V0
+                                        LEFT OUTER JOIN "test_app2_post_tags" V1 ON (V0."id" = V1."post_id")
+                                        WHERE (EXISTS(SELECT U0."id"
+                                                      FROM "test_app2_tag" U0
+                                                      WHERE (U0."id" = {parenthesize('V1."tag_id"')}
+                                                      AND U0."name" = random)){is_true()}
+                                                      AND EXISTS(SELECT U0."id"
+                                                                 FROM "test_app2_tag" U0
+                                                                 WHERE (U0."id" = {parenthesize('V1."tag_id"')}
+                                                                 AND U0."is_public"{is_true()})){is_true()}))
+    """
+    assert str(posts.query) == " ".join(expected.split())
+    assert len(posts) == 2
 
 
 # todo test_nested_relationship_single_many

@@ -1,6 +1,7 @@
 from datetime import datetime
 from math import inf, isnan, nan
 from pathlib import Path
+from enum import Enum
 
 from polar import (
     polar_class,
@@ -8,12 +9,10 @@ from polar import (
     Polar,
     Predicate,
     Variable,
-    Partial,
     Expression,
     Pattern,
 )
 from polar.partial import TypeConstraint
-from polar.exceptions import InvalidCallError
 
 import pytest
 
@@ -39,9 +38,9 @@ def test_data_conversions(polar, qvar, query):
     assert qvar("b(x)", "x", one=True) == "two"
     assert qvar("c(x)", "x", one=True)
     assert qvar("d(x)", "x", one=True) == [1, "two", True]
-    y = qvar("x = y", "x", one=True)
-    assert str(y) == "Variable('y')"
-    assert repr(y) == "Variable('y')"
+    x = qvar("x = y", "x", one=True)
+    assert str(x) == "Variable('y')"
+    assert repr(x) == "Variable('y')"
 
 
 def test_load_function(polar, query, qvar):
@@ -51,9 +50,8 @@ def test_load_function(polar, query, qvar):
     polar.load_file(filename)
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         polar.load_file(filename)
-    assert (
-        str(e.value)
-        == f"Problem loading file: File {filename} has already been loaded."
+    assert str(e.value).startswith(
+        f"Problem loading file: File {filename} has already been loaded."
     )
 
     renamed = Path(__file__).parent / "test_file_renamed.polar"
@@ -61,7 +59,7 @@ def test_load_function(polar, query, qvar):
         polar.load_file(renamed)
 
     expected = f"Problem loading file: A file with the same contents as {renamed} named {filename} has already been loaded."
-    assert str(e.value) == expected
+    assert str(e.value).startswith(expected)
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert qvar("f(x)", "x") == [1, 2, 3]
 
@@ -125,7 +123,7 @@ def test_external(polar, qvar, qeval):
     polar.register_class(Foo)
     assert qvar("new Foo().a = x", "x", one=True) == "a"
     with pytest.raises(
-        InvalidCallError, match="tried to call 'a' but it is not callable"
+        exceptions.InvalidCallError, match="tried to call 'a' but it is not callable"
     ):
         assert not qeval("new Foo().a() = x")
     assert not qvar("new Foo().b = x", "x", one=True) == "b"
@@ -363,9 +361,8 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.IntegerOverflow) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value)
-        == "'18446744073709551616' caused an integer overflow at line 2, column 17"
+    assert str(e.value).startswith(
+        "'18446744073709551616' caused an integer overflow at line 2, column 17"
     )
 
     # InvalidTokenCharacter
@@ -375,9 +372,8 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value)
-        == "'\\n' is not a valid character. Found in this is not at line 2, column 29"
+    assert str(e.value).startswith(
+        "'\\n' is not a valid character. Found in this is not at line 2, column 29"
     )
 
     rules = """
@@ -386,9 +382,8 @@ def test_parser_errors(polar):
 
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value)
-        == "'\\u{0}' is not a valid character. Found in this is not allowed at line 2, column 17"
+    assert str(e.value).startswith(
+        "'\\u{0}' is not a valid character. Found in this is not allowed at line 2, column 17"
     )
 
     # InvalidToken -- not sure what causes this
@@ -399,9 +394,8 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.UnrecognizedEOF) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value)
-        == "hit the end of the file unexpectedly. Did you forget a semi-colon at line 2, column 9"
+    assert str(e.value).startswith(
+        "hit the end of the file unexpectedly. Did you forget a semi-colon at line 2, column 9"
     )
 
     # UnrecognizedToken
@@ -410,7 +404,9 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.UnrecognizedToken) as e:
         polar.load_str(rules)
-    assert str(e.value) == "did not expect to find the token '1' at line 2, column 5"
+    assert str(e.value).startswith(
+        "did not expect to find the token '1' at line 2, column 5"
+    )
 
     # ExtraToken -- not sure what causes this
 
@@ -422,14 +418,13 @@ def test_runtime_errors(polar, query):
     polar.load_str(rules)
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         query("foo(1,2)")
-    assert (
-        str(e.value)
-        == """trace (most recent evaluation last):
+    assert """trace (most recent evaluation last):
   in query at line 1, column 1
     foo(1,2)
   in rule foo at line 2, column 17
     a in b
-Type error: can only use `in` on an iterable value, this is Number(Integer(2)) at line 1, column 7"""
+Type error: can only use `in` on an iterable value, this is Number(Integer(2)) at line 1, column 7""" in str(
+        e.value
     )
 
 
@@ -446,14 +441,6 @@ def test_lookup_errors(polar, query):
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         query('new Foo().bar = "bar"') == []
     assert "Application error: 'Foo' object has no attribute 'bar'" in str(e.value)
-
-
-def test_predicate(polar, qvar, query):
-    """Test that predicates can be converted to and from python."""
-    polar.load_str("f(x) if x = pred(1, 2);")
-    assert qvar("f(x)", "x") == [Predicate("pred", [1, 2])]
-
-    assert query(Predicate(name="f", args=[Predicate("pred", [1, 2])])) == [{}]
 
 
 def test_return_list(polar, query):
@@ -668,7 +655,7 @@ def test_register_constants_with_decorator():
         x = 1
 
     p = Polar()
-    p.load_str("foo_rule(x: RegisterDecoratorTest, y) if y = 1;")
+    p.load_str("foo_rule(_: RegisterDecoratorTest, y) if y = 1;")
     p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
     assert (
         next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
@@ -679,7 +666,7 @@ def test_register_constants_with_decorator():
     assert next(p.query_rule("foo_class_attr", Variable("y")))["bindings"]["y"] == 1
 
     p = Polar()
-    p.load_str("foo_rule(x: RegisterDecoratorTest, y) if y = 1;")
+    p.load_str("foo_rule(_: RegisterDecoratorTest, y) if y = 1;")
     p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
     assert (
         next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
@@ -692,7 +679,7 @@ def test_register_constants_with_decorator():
 
 def test_unbound_variable(polar, query):
     """Test that unbound variable is returned."""
-    polar.load_str("rule(x, y) if y = 1;")
+    polar.load_str("rule(_, y) if y = 1;")
 
     first = query("rule(x, y)")[0]
 
@@ -779,37 +766,44 @@ def unwrap_and(x):
         return x.args
 
 
+def test_partial_unification(polar):
+    polar.load_str("f(x, y) if x = y;")
+    x = Variable("x")
+    y = Variable("y")
+    results = polar.query_rule("f", x, y)
+    result = next(results)["bindings"]
+    assert result["x"] == y
+    assert result["y"] == x
+    with pytest.raises(StopIteration):
+        next(results)
+
+
 def test_partial(polar):
     polar.load_str("f(1);")
     polar.load_str("f(x) if x = 1 and x = 2;")
 
-    results = polar.query_rule("f", Partial("x"))
+    results = polar.query_rule("f", Variable("x"), accept_expression=True)
     first = next(results)
 
     x = first["bindings"]["x"]
-    assert Expression("Unify", [Variable("_this"), 1])
+    assert x == 1
 
-    second = next(results)
-    x = second["bindings"]["x"]
-
-    # Top level should be and
-    and_args = unwrap_and(x)
-    assert and_args[0] == Expression("Unify", [Variable("_this"), 1])
-    assert and_args[1] == Expression("Unify", [Variable("_this"), 2])
+    with pytest.raises(StopIteration):
+        next(results)
 
     polar.load_str("g(x) if x.bar = 1 and x.baz = 2;")
 
-    results = polar.query_rule("g", Partial("x"))
+    results = polar.query_rule("g", Variable("x"), accept_expression=True)
     first = next(results)
 
     x = first["bindings"]["x"]
     and_args = unwrap_and(x)
     assert len(and_args) == 2
     assert and_args[0] == Expression(
-        "Unify", [Expression("Dot", [Variable("_this"), "bar"]), 1]
+        "Unify", [1, Expression("Dot", [Variable("_this"), "bar"])]
     )
     assert and_args[1] == Expression(
-        "Unify", [Expression("Dot", [Variable("_this"), "baz"]), 2]
+        "Unify", [2, Expression("Dot", [Variable("_this"), "baz"])]
     )
 
 
@@ -826,8 +820,10 @@ def test_partial_constraint(polar):
     polar.load_str("f(x: User) if x.user = 1;")
     polar.load_str("f(x: Post) if x.post = 1;")
 
-    partial = Partial("x", TypeConstraint("User"))
-    results = polar.query_rule("f", partial)
+    x = Variable("x")
+    results = polar.query_rule(
+        "f", x, bindings={x: TypeConstraint(x, "User")}, accept_expression=True
+    )
 
     first = next(results)["bindings"]["x"]
     and_args = unwrap_and(first)
@@ -838,11 +834,43 @@ def test_partial_constraint(polar):
 
     unify = and_args[1]
     assert unify == Expression(
-        "Unify", [Expression("Dot", [Variable("_this"), "user"]), 1]
+        "Unify", [1, Expression("Dot", [Variable("_this"), "user"])]
     )
 
     with pytest.raises(StopIteration):
         next(results)
+
+
+def test_partial_rule_filtering(polar):
+    class A:
+        def __init__(self):
+            self.c = C()
+
+    class B:
+        pass
+
+    class C:
+        pass
+
+    class D:
+        pass
+
+    polar.register_class(A)
+    polar.register_class(B)
+    polar.register_class(C)
+    polar.register_class(D)
+
+    polar.load_str(
+        """f(x: A) if g(x.c);
+           g(_: B);
+           g(_: C);
+           g(_: D);"""
+    )
+
+    x = Variable("x")
+    with pytest.raises(exceptions.PolarRuntimeError) as e:
+        next(polar.query_rule("f", x, bindings={x: TypeConstraint(x, "A")}))
+    assert str(e.value).startswith("Cannot generically walk fields of a Python class")
 
 
 def test_iterators(polar, qeval, qvar):
@@ -860,3 +888,44 @@ def test_iterators(polar, qeval, qvar):
     polar.register_class(Bar)
     assert qvar("x in new Bar([1, 2, 3])", "x") == [1, 2, 3]
     assert qvar("x = new Bar([1, 2, 3]).sum()", "x", one=True) == 6
+
+
+def test_unexpected_expression(polar):
+    """Ensure expression type raises error from core."""
+    polar.load_str("f(x) if x > 2;")
+
+    with pytest.raises(exceptions.UnexpectedPolarTypeError):
+        next(polar.query_rule("f", Variable("x")))
+
+
+def test_lookup_in_head(polar, is_allowed):
+    # Test with enums
+    class Actions(Enum):
+        READ = 1
+        WRITE = 2
+
+    polar.register_constant(Actions, "Actions")
+    polar.load_str('allow("leina", Actions.READ, "doc");')
+
+    assert not is_allowed("leina", Actions.WRITE, "doc")
+    assert not is_allowed("leina", "READ", "doc")
+    assert not is_allowed("leina", 1, "doc")
+    assert not is_allowed("leina", Actions, "doc")
+    assert is_allowed("leina", Actions.READ, "doc")
+
+    # Test lookup in specializer raises error
+    with pytest.raises(exceptions.UnrecognizedToken):
+        polar.load_str('allow("leina", action: Actions.READ, "doc");')
+
+    # Test with normal class
+    class Resource:
+        def __init__(self, action):
+            self.action = action
+
+    polar.register_class(Resource, name="Resource")
+    polar.load_str('allow("leina", resource.action, resource: Resource);')
+
+    r = Resource("read")
+
+    assert not is_allowed("leina", "write", r)
+    assert is_allowed("leina", "read", r)

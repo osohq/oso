@@ -1,13 +1,13 @@
 use super::sources::SourceInfo;
 pub use super::{error, formatting::ToPolarString};
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 pub use super::numerics::Numeric;
-use super::partial::Partial;
-use super::visitor::{walk_term, Visitor};
+use super::visitor::{walk_operation, walk_term, Visitor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -69,7 +69,7 @@ impl Symbol {
     }
 
     pub fn is_namespaced_var(&self) -> bool {
-        self.0.find("::").is_some()
+        self.0.contains("::")
     }
 
     pub fn is_this_var(&self) -> bool {
@@ -207,7 +207,6 @@ pub enum Value {
     Variable(Symbol),
     RestVariable(Symbol),
     Expression(Operation),
-    Partial(Partial),
 }
 
 impl Value {
@@ -242,16 +241,6 @@ impl Value {
         }
     }
 
-    pub fn as_partial(&self) -> Result<&Partial, error::RuntimeError> {
-        match self {
-            Value::Partial(e) => Ok(e),
-            _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected partial, got: {}", self.to_polar()),
-                stack_trace: None, // @TODO
-            }),
-        }
-    }
-
     pub fn as_call(&self) -> Result<&Call, error::RuntimeError> {
         match self {
             Value::Call(pred) => Ok(pred),
@@ -277,8 +266,7 @@ impl Value {
             Value::Call(_)
             | Value::ExternalInstance(_)
             | Value::Variable(_)
-            | Value::RestVariable(_)
-            | Value::Partial(_) => false,
+            | Value::RestVariable(_) => false,
             Value::Number(_) | Value::String(_) | Value::Boolean(_) => true,
             Value::Pattern(_) => panic!("unexpected value type"),
             Value::Dictionary(Dictionary { fields }) => fields.values().all(|t| t.is_ground()),
@@ -391,6 +379,14 @@ impl Term {
         &self.value
     }
 
+    /// Get a mutable reference to the underlying data.
+    /// This will be a real mut pointer if there is only one
+    /// term with an Arc to the value, otherwise it will be
+    /// a clone.
+    pub fn mut_value(&mut self) -> &mut Value {
+        Arc::make_mut(&mut self.value)
+    }
+
     pub fn is_ground(&self) -> bool {
         self.value().is_ground()
     }
@@ -414,6 +410,46 @@ impl Term {
         }
 
         walk_term(&mut VariableVisitor::new(vars), self);
+    }
+
+    /// Does the given variable occur in this term?
+    /// Should be much faster than accumulating the set and checking.
+    pub fn contains_variable(&self, var: &Symbol) -> bool {
+        struct VariableChecker<'var> {
+            var: &'var Symbol,
+            occurs: bool,
+        }
+
+        impl<'var> VariableChecker<'var> {
+            fn new(var: &'var Symbol) -> Self {
+                Self { var, occurs: false }
+            }
+        }
+
+        impl<'var> Visitor for VariableChecker<'var> {
+            fn visit_variable(&mut self, v: &Symbol) {
+                if !self.occurs && *v == *self.var {
+                    self.occurs = true;
+                }
+            }
+
+            fn visit_operation(&mut self, o: &Operation) {
+                // Don't bother checking sub-operations once we've found an occurrence.
+                if !self.occurs {
+                    walk_operation(self, o);
+                }
+            }
+        }
+
+        let mut visitor = VariableChecker::new(var);
+        walk_term(&mut visitor, self);
+        visitor.occurs
+    }
+
+    pub fn hash_value(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        hasher.finish()
     }
 
     pub fn get_source_id(&self) -> Option<u64> {

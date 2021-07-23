@@ -7,7 +7,6 @@
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::partial::Partial;
 use crate::rules::*;
 use crate::terms::*;
 
@@ -96,6 +95,12 @@ macro_rules! sym {
     };
 }
 
+#[macro_export]
+macro_rules! path {
+    ($arg:expr) => {
+        $crate::macros::TestHelper::<Path>::from($arg).0
+    };
+}
 #[macro_export]
 macro_rules! string {
     ($arg:expr) => {
@@ -213,7 +218,7 @@ impl<T> From<T> for TestHelper<T> {
 
 impl From<Value> for TestHelper<Term> {
     fn from(other: Value) -> Self {
-        Self(Term::new_from_test(other))
+        Self(Term::new_temporary(other))
     }
 }
 
@@ -238,7 +243,7 @@ impl From<Value> for TestHelper<Parameter> {
     /// a specializer.
     fn from(name: Value) -> Self {
         Self(Parameter {
-            parameter: Term::new_from_test(name),
+            parameter: Term::new_temporary(name),
             specializer: None,
         })
     }
@@ -247,6 +252,12 @@ impl From<Value> for TestHelper<Parameter> {
 impl<S: AsRef<str>> From<S> for TestHelper<Symbol> {
     fn from(other: S) -> Self {
         Self(Symbol(other.as_ref().to_string()))
+    }
+}
+
+impl<S: AsRef<str>> From<S> for TestHelper<Path> {
+    fn from(other: S) -> Self {
+        Self(Path::from_symbol(Symbol(other.as_ref().to_string())))
     }
 }
 
@@ -300,11 +311,6 @@ impl From<Operation> for TestHelper<Value> {
         Self(Value::Expression(other))
     }
 }
-impl From<Partial> for TestHelper<Value> {
-    fn from(other: Partial) -> Self {
-        Self(Value::Partial(other))
-    }
-}
 impl From<TermList> for TestHelper<Value> {
     fn from(other: TermList) -> Self {
         Self(Value::List(other))
@@ -338,6 +344,6 @@ impl From<InstanceLiteral> for TestHelper<Pattern> {
 }
 impl From<Pattern> for TestHelper<Term> {
     fn from(other: Pattern) -> Self {
-        Self(Term::new_from_test(value!(other)))
+        Self(Term::new_temporary(value!(other)))
     }
 }

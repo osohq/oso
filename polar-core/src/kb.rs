@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::error::PolarResult;
 use super::rules::*;
@@ -10,7 +11,6 @@ use std::sync::Arc;
 
 /// A map of bindings: variable name → value. The VM uses a stack internally,
 /// but can translate to and from this type.
-pub type Bindings = HashMap<Symbol, Term>;
 
 // pub struct ScopeDefinition {
 //     name: Symbol,
@@ -22,7 +22,7 @@ pub type Bindings = HashMap<Symbol, Term>;
 
 pub struct Scope {
     name: Symbol,
-    constants: Bindings,
+    // constants: Bindings,
     rule_templates: HashMap<Symbol, Vec<Rule>>,
     rules: HashMap<Symbol, GenericRule>,
 }
@@ -31,7 +31,7 @@ impl Scope {
     pub fn new(name: Symbol) -> Self {
         Self {
             name: name,
-            constants: HashMap::new(),
+            // constants: HashMap::new(),
             rule_templates: HashMap::new(),
             rules: HashMap::new(),
         }
@@ -40,6 +40,7 @@ impl Scope {
 
 #[derive(Default)]
 pub struct KnowledgeBase {
+    pub constants: Bindings,
     scopes: HashMap<Symbol, Scope>,
     pub sources: Sources,
     /// For symbols returned from gensym.
@@ -55,6 +56,7 @@ impl KnowledgeBase {
         scopes.insert(sym!("default"), Scope::new(sym!("default")));
         Self {
             scopes: scopes,
+            constants: HashMap::new(),
             sources: Sources::default(),
             id_counter: Counter::default(),
             gensym_counter: Counter::default(),
@@ -88,18 +90,20 @@ impl KnowledgeBase {
 
     /// Define a constant variable. (in the default scope)
     pub fn constant(&mut self, name: Symbol, value: Term) {
-        // All constants are defined on the default scope; if default scope doesn't exist, add it
-        self.scopes
-            .entry(sym!("default"))
-            .or_insert(Scope::new(sym!("default").into()))
-            .constants
-            .insert(name, value);
+        //     // All constants are defined on the default scope; if default scope doesn't exist, add it
+        //     self.scopes
+        //         .entry(sym!("default"))
+        //         .or_insert(Scope::new(sym!("default").into()))
+        //         .constants
+        //         .insert(name, value);
+        self.constants.insert(name, value);
     }
 
     /// Return true if a constant with the given name has been defined.
     pub fn is_constant(&self, symbol: &Symbol) -> bool {
-        self.lookup_constant(Path::with_name(symbol.clone()), &sym!("default"))
-            .is_some()
+        //     self.lookup_constant(Path::with_name(symbol.clone()), &sym!("default"))
+        //         .is_some()
+        self.constants.contains_key(symbol)
     }
 
     pub fn add_scope_definition(
@@ -125,19 +129,19 @@ impl KnowledgeBase {
         Ok(())
     }
 
-    pub fn lookup_constant(&self, const_path: Path, scope: &Symbol) -> Option<&Term> {
-        // lookup scope by path; return `None` if scope doesn't exist
-        self.scopes.get(&scope).and_then(|scope| {
-            match (const_path.scope(), const_path.name()) {
-                // if there is no included scope, get the constant from the current scope
-                (None, const_name) => scope.constants.get(&const_name),
-                // if there is an included scope, check that the scope is included and get the constant from the included scope
-                (Some(included_scope), const_name) => self
-                    .get_included_scope(scope, included_scope)
-                    .and_then(|scope| scope.constants.get(&const_name)),
-            }
-        })
-    }
+    // pub fn lookup_constant(&self, const_path: Path, scope: &Symbol) -> Option<&Term> {
+    //     // lookup scope by path; return `None` if scope doesn't exist
+    //     self.scopes.get(&scope).and_then(|scope| {
+    //         match (const_path.scope(), const_path.name()) {
+    //             // if there is no included scope, get the constant from the current scope
+    //             (None, const_name) => scope.constants.get(&const_name),
+    //             // if there is an included scope, check that the scope is included and get the constant from the included scope
+    //             (Some(included_scope), const_name) => self
+    //                 .get_included_scope(scope, included_scope)
+    //                 .and_then(|scope| scope.constants.get(&const_name)),
+    //         }
+    //     })
+    // }
 
     /// Get `included` scope w.r.t `base`.
     fn get_included_scope(&self, base: &Scope, included: &Symbol) -> Option<&Scope> {
@@ -172,6 +176,9 @@ impl KnowledgeBase {
                     }),
             }
         })
+    }
+    pub fn get_rules(&self, scope: &Symbol) -> Option<&HashMap<Symbol, GenericRule>> {
+        self.scopes.get(&scope).and_then(|scope| Some(&scope.rules))
     }
 
     /// Add `rule` to the rules for `scope`

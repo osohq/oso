@@ -41,7 +41,15 @@ module Oso
     class InvalidIteratorError < PolarRuntimeError; end
     class InvalidQueryTypeError < PolarRuntimeError; end
     class NullByteInPolarFileError < PolarRuntimeError; end
-    class UnexpectedPolarTypeError < PolarRuntimeError; end
+    class UnexpectedPolarTypeError < PolarRuntimeError; # rubocop:disable Style/Documentation
+      def initialize(tag)
+        if tag == 'Expression'
+          super(UNEXPECTED_EXPRESSION_MESSAGE)
+        else
+          super(tag)
+        end
+      end
+    end
     class InlineQueryFailedError < PolarRuntimeError; # rubocop:disable Style/Documentation
       # @param source [String]
       def initialize(source)
@@ -91,5 +99,14 @@ module Oso
     # Generic Polar API exception.
     class ApiError < Error; end
     class ParameterError < ApiError; end
+
+    class ValidationError < Error; end
+    class RolesValidationError < Error; end
+
+    UNEXPECTED_EXPRESSION_MESSAGE = <<~MSG
+      Received Expression from Polar VM. The Expression type is not yet supported in this language.
+
+      This may mean you performed an operation in your policy over an unbound variable.
+    MSG
   end
 end

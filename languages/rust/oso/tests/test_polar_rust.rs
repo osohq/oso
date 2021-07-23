@@ -58,7 +58,6 @@ fn test_data_conversions() {
     test.qvar_one("c(x)", "x", true);
 
     use oso::PolarValue;
-    //use polar_core::terms::Value;
 
     // TODO: do we want to handle hlists better?
     // e.g. https://docs.rs/hlist/0.1.2/hlist/
@@ -67,7 +66,7 @@ fn test_data_conversions() {
     let mut x = first.get_typed::<Vec<PolarValue>>("x").unwrap();
     assert_eq!(i64::try_from(x.remove(0)).unwrap(), 1);
     assert_eq!(String::try_from(x.remove(0)).unwrap(), "two");
-    assert_eq!(bool::try_from(x.remove(0)).unwrap(), true);
+    assert!(bool::try_from(x.remove(0)).unwrap());
 }
 
 // This logic is changing. Updated when fixed
@@ -89,7 +88,7 @@ fn test_load_function() {
     );
     assert_eq!(test.qvar::<u32>("f(x)", "x"), [1, 2, 3]);
 
-    test.oso.clear_rules();
+    assert!(matches!(test.oso.clear_rules(), Ok(())));
     test.load_file(file!(), "test_file.polar").unwrap();
     test.load_file(file!(), "test_file_gx.polar").unwrap();
     assert_eq!(
@@ -108,6 +107,39 @@ fn test_load_function() {
             hashmap! { "x" => 3, },
         ]
     );
+}
+
+#[test]
+fn test_type_mismatch_fails_unification() {
+    common::setup();
+
+    #[derive(Eq, PartialEq, PolarClass, Clone, Default)]
+    struct Foo {}
+    #[derive(Eq, PartialEq, PolarClass, Clone, Default)]
+    struct Bar {}
+
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            ClassBuilder::<Foo>::with_default()
+                .with_equality_check()
+                .build(),
+        )
+        .unwrap();
+
+    test.oso
+        .register_class(
+            ClassBuilder::<Bar>::with_default()
+                .with_equality_check()
+                .build(),
+        )
+        .unwrap();
+
+    test.qnull("new Foo() = new Bar()");
+    test.qnull("new Foo() = nil");
+    let rs = test.query("not new Foo() = nil");
+    assert_eq!(rs.len(), 1, "expected one result");
+    assert!(rs[0].is_empty(), "expected empty result");
 }
 
 #[test]
@@ -338,6 +370,88 @@ fn test_tuple_structs() {
 }
 
 #[test]
+fn test_enums() {
+    common::setup();
+
+    let mut test = OsoTest::new();
+
+    // test an enum with no variants
+    // this should simply not panic
+    #[derive(Clone, PolarClass)]
+    enum Foo {}
+
+    test.oso.register_class(Foo::get_polar_class()).unwrap();
+
+    // test an enum with variants
+    #[derive(Clone, Debug, PartialEq, PolarClass)]
+    enum Role {
+        Admin,
+        Member,
+    }
+
+    test.load_str(
+        r#"
+        is_admin(Role::Admin); 
+        is_member(Role::Member);"#,
+    );
+
+    test.oso
+        .register_class(
+            Role::get_polar_class_builder()
+                .with_equality_check()
+                .build(),
+        )
+        .unwrap();
+
+    test.qvar_one(r#"is_admin(x)"#, "x", Role::Admin);
+    test.qvar_one(r#"is_member(x)"#, "x", Role::Member);
+}
+
+#[test]
+fn test_enums_and_structs() {
+    common::setup();
+
+    let mut test = OsoTest::new();
+    test.load_str("allow(user: User, _action, _resource) if user.role = Role::Admin;");
+
+    #[derive(Clone, Debug, PolarClass)]
+    struct User {
+        name: String,
+        #[polar(attribute)]
+        role: Role,
+    }
+
+    #[derive(Clone, Debug, PartialEq, PolarClass)]
+    enum Role {
+        Admin,
+        Member,
+    }
+
+    test.oso.register_class(User::get_polar_class()).unwrap();
+
+    test.oso
+        .register_class(
+            Role::get_polar_class_builder()
+                .with_equality_check()
+                .build(),
+        )
+        .unwrap();
+
+    let admin = User {
+        name: "sudo".to_string(),
+        role: Role::Admin,
+    };
+
+    let member = User {
+        name: "not sudo".to_string(),
+        role: Role::Member,
+    };
+
+    assert!(test.oso.is_allowed(admin, "read", "resource").unwrap());
+    assert!(!test.oso.is_allowed(member, "read", "resource").unwrap());
+}
+
+#[test]
 fn test_results_and_options() {
     common::setup();
 
@@ -352,19 +466,19 @@ fn test_results_and_options() {
         fn new() -> Self {
             Self
         }
-
+        #[allow(clippy::unnecessary_wraps)]
         fn ok(&self) -> Result<i32, Error> {
             Ok(1)
         }
-
+        #[allow(clippy::unnecessary_wraps)]
         fn err(&self) -> Result<i32, Error> {
             Err(Error)
         }
-
+        #[allow(clippy::unnecessary_wraps)]
         fn some(&self) -> Option<i32> {
             Some(1)
         }
-
+        #[allow(clippy::unnecessary_wraps)]
         fn none(&self) -> Option<i32> {
             None
         }
@@ -407,7 +521,7 @@ fn test_unify_externals() {
         x: i64,
     }
 
-    impl PolarClass for Foo {};
+    impl PolarClass for Foo {}
     impl Foo {
         fn new(x: i64) -> Self {
             Self { x }
@@ -440,7 +554,7 @@ fn test_unify_externals() {
         x: i64,
     }
 
-    impl PolarClass for Bar {};
+    impl PolarClass for Bar {}
     impl Bar {
         fn new(x: i64) -> Self {
             Self { x }
@@ -459,7 +573,7 @@ fn test_unify_externals() {
         x: i64,
     }
 
-    impl PolarClass for Baz {};
+    impl PolarClass for Baz {}
     impl Baz {
         fn new(x: i64) -> Self {
             Self { x }
@@ -584,10 +698,11 @@ fn test_option() {
     struct Foo;
 
     impl Foo {
+        #[allow(clippy::unnecessary_wraps)]
         fn get_some(&self) -> Option<i32> {
             Some(12)
         }
-
+        #[allow(clippy::unnecessary_wraps)]
         fn get_none(&self) -> Option<i32> {
             None
         }

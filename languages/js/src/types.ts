@@ -18,6 +18,18 @@ export function isPolarStr(v: PolarValue): v is PolarStr {
 }
 
 /**
+ * Type guard to test if a string received from across the WebAssembly
+ * boundary is a PolarComparisonOperator.
+ *
+ * @internal
+ */
+export function isPolarComparisonOperator(
+  s: string
+): s is PolarComparisonOperator {
+  return s in comparisonOperators;
+}
+
+/**
  * Polar numeric type.
  *
  * @internal
@@ -100,7 +112,7 @@ export function isPolarList(v: PolarValue): v is PolarList {
  */
 interface PolarDict {
   Dictionary: {
-    fields: Map<string, PolarTerm> | { [key: string]: PolarTerm };
+    fields: Map<string, PolarTerm>;
   };
 }
 
@@ -169,6 +181,46 @@ interface PolarInstance {
 }
 
 /**
+ * Polar expression type.
+ *
+ * @internal
+ */
+interface PolarExpression {
+  Expression: {
+    args: PolarTerm[];
+    operator: PolarOperator;
+  };
+}
+
+/**
+ * Polar instance (tagged dict) pattern variant.
+ *
+ * @internal
+ */
+interface PolarInstancePattern {
+  Instance: {
+    tag?: string;
+    fields: { fields: Map<string, PolarTerm> };
+  };
+}
+
+/**
+ * Polar (untagged) dict pattern variant.
+ *
+ * @internal
+ */
+export type PolarDictPattern = PolarDict;
+
+/**
+ * Polar pattern type.
+ *
+ * @internal
+ */
+interface PolarPattern {
+  Pattern: PolarDictPattern | PolarInstancePattern;
+}
+
+/**
  * Type guard to test if a Polar value received from across the WebAssembly
  * boundary is a Polar application instance.
  *
@@ -176,6 +228,26 @@ interface PolarInstance {
  */
 export function isPolarInstance(v: PolarValue): v is PolarInstance {
   return (v as PolarInstance).ExternalInstance !== undefined;
+}
+
+/**
+ * Type guard to test if a Polar value received from across the WebAssembly
+ * boundary is a Polar expression.
+ *
+ * @internal
+ */
+export function isPolarExpression(v: PolarValue): v is PolarExpression {
+  return (v as PolarExpression).Expression !== undefined;
+}
+
+/**
+ * Type guard to test if a Polar value received from across the WebAssembly
+ * boundary is a Polar pattern.
+ *
+ * @internal
+ */
+export function isPolarPattern(v: PolarValue): v is PolarPattern {
+  return (v as PolarPattern).Pattern !== undefined;
 }
 
 /**
@@ -191,7 +263,9 @@ type PolarValue =
   | PolarDict
   | PolarPredicate
   | PolarVariable
-  | PolarInstance;
+  | PolarInstance
+  | PolarExpression
+  | PolarPattern;
 
 /**
  * Union of Polar value types.
@@ -218,7 +292,9 @@ function isPolarValue(v: any): v is PolarValue {
     isPolarDict(v) ||
     isPolarPredicate(v) ||
     isPolarVariable(v) ||
-    isPolarInstance(v)
+    isPolarInstance(v) ||
+    isPolarExpression(v) ||
+    isPolarPattern(v)
   );
 }
 
@@ -312,21 +388,50 @@ export interface ExternalIsa {
 }
 
 /**
- * Polar operators.
+ * Polar comparison operators.
  *
- * Currently, the only operators supported for external operations are
- * comparison operators.
+ * Currently, these are the only operators supported for external operations.
  *
  * @internal
  */
-enum PolarOperator {
-  Eq,
-  Geq,
-  Gt,
-  Leq,
-  Lt,
-  Neq,
-}
+const comparisonOperators = {
+  Eq: 'Eq',
+  Geq: 'Geq',
+  Gt: 'Gt',
+  Leq: 'Leq',
+  Lt: 'Lt',
+  Neq: 'Neq',
+} as const;
+export type PolarComparisonOperator = keyof typeof comparisonOperators;
+
+/**
+ * Polar operators.
+ *
+ * @internal
+ */
+const operators = {
+  Add: 'Add',
+  And: 'And',
+  Assign: 'Assign',
+  Cut: 'Cut',
+  Debug: 'Debug',
+  Div: 'Div',
+  Dot: 'Dot',
+  ForAll: 'ForAll',
+  In: 'In',
+  Isa: 'Isa',
+  Mod: 'Mod',
+  Mul: 'Mul',
+  New: 'New',
+  Not: 'Not',
+  Or: 'Or',
+  Print: 'Print',
+  Rem: 'Rem',
+  Sub: 'Sub',
+  Unify: 'Unify',
+  ...comparisonOperators,
+} as const;
+export type PolarOperator = keyof typeof operators;
 
 /**
  * The `ExternalOp` [[`QueryEvent`]] is how Polar evaluates an operation
@@ -337,7 +442,7 @@ enum PolarOperator {
 export interface ExternalOp {
   args: PolarTerm[];
   callId: number;
-  operator: PolarOperator;
+  operator: PolarComparisonOperator;
 }
 
 /**
@@ -460,4 +565,20 @@ export function isIterableIterator(x: any): boolean {
  */
 export function isAsyncIterator(x: any): boolean {
   return Symbol.asyncIterator in Object(x);
+}
+
+/**
+ * JS analogue of Polar's Dictionary type.
+ *
+ * Polar dictionaries allow field access via the dot operator, which mirrors
+ * the way JS objects behave. However, if we translate Polar dictionaries into
+ * JS objects, we lose the ability to distinguish between dictionaries and
+ * instances, since all JS instances are objects. By subclassing `Object`, we
+ * can use `instanceof` to determine if a JS value should be serialized as a
+ * Polar dictionary or external instance.
+ *
+ * @internal
+ */
+export class Dict extends Object {
+  [index: string]: any;
 }

@@ -1,4 +1,4 @@
-.PHONY: rust test package
+.PHONY: rust test package repl lint fmt clean
 
 rust:
 	$(MAKE) -C ../.. rust-build
@@ -21,5 +21,10 @@ package: rust
 repl: rust
 	cd oso && mvn $(MVN_FLAGS) exec:java -Dexec.mainClass="com.osohq.oso.Oso" -Dexec.args="$(ARGS)"
 
+lint: fmt
+
 fmt:
-	$(MAKE) -C ../.. java-fmt
+	$(MAKE) -C ../.. fmt-java
+
+clean:
+	cd oso && mvn clean

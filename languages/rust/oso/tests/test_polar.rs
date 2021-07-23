@@ -119,7 +119,7 @@ fn test_data_conversions_polar_values() -> oso::Result<()> {
             String::from_polar(x_vec.get(1).unwrap().to_owned())?,
             String::from("two")
         );
-        assert_eq!(bool::from_polar(x_vec.get(2).unwrap().to_owned())?, true);
+        assert!(bool::from_polar(x_vec.get(2).unwrap().to_owned())?);
     } else {
         panic!("x not list.");
     }
@@ -291,7 +291,7 @@ fn test_clear_rules() -> oso::Result<()> {
 
     oso.oso.register_class(foo_class)?;
 
-    oso.oso.clear_rules();
+    assert!(matches!(oso.oso.clear_rules(), Ok(())));
 
     oso.qnull("f(x)");
     assert_eq!(oso.query("x = new Foo()").len(), 1);
@@ -300,7 +300,7 @@ fn test_clear_rules() -> oso::Result<()> {
 }
 
 #[test]
-fn test_basic_queries() -> oso::Result<()> {
+fn test_basic_queries() {
     common::setup();
 
     let mut oso = test_oso();
@@ -308,15 +308,10 @@ fn test_basic_queries() -> oso::Result<()> {
     let results = oso.query("f(1)");
 
     assert_eq!(results.len(), 1);
-    assert_eq!(
-        results
-            .get(0)
-            .map(|r| r.keys().next().is_none())
-            .unwrap_or_default(),
-        true
-    );
-
-    Ok(())
+    assert!(results
+        .get(0)
+        .map(|r| r.keys().next().is_none())
+        .unwrap_or_default());
 }
 
 // TODO unit test
@@ -403,7 +398,7 @@ fn test_duplicate_register_class() -> oso::Result<()> {
     let mut oso = test_oso();
 
     #[derive(PolarClass, Default, Debug, Clone)]
-    struct Foo {};
+    struct Foo {}
 
     let foo_class = Foo::get_polar_class_builder().name("Foo").build();
 
@@ -789,14 +784,12 @@ fn test_variables_as_arguments() -> oso::Result<()> {
 // TODO ^
 
 #[test]
-fn test_lookup_runtime_error() -> oso::Result<()> {
+fn test_lookup_runtime_error() {
     common::setup();
 
     let mut oso = test_oso();
     oso.query(r#"new Widget(1) = {bar: "bar"}"#);
     oso.query_err(r#"new Widget(1).bar = "bar""#);
-
-    Ok(())
 }
 
 #[test]
@@ -804,7 +797,7 @@ fn test_returns_unbound_variable() -> oso::Result<()> {
     common::setup();
 
     let mut oso = test_oso();
-    oso.load_str("rule(x, y) if y = 1;");
+    oso.load_str("rule(_, y) if y = 1;");
 
     let first = oso.query("rule(x, y)").pop().unwrap();
 
@@ -915,4 +908,15 @@ fn test_nil() {
     );
     oso.qeval("nil.is_none()");
     oso.qnull("x in nil");
+}
+
+#[test]
+fn test_expression_error() {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.load_str("f(x) if x > 2;");
+
+    let err = oso.query_err("f(x)");
+    assert!(err.contains("unbound"));
 }

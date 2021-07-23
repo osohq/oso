@@ -1,5 +1,7 @@
 from oso import Oso
-from polar.partial import Partial, TypeConstraint
+from polar import Variable
+from polar.exceptions import PolarRuntimeError
+from polar.partial import TypeConstraint
 
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
@@ -7,6 +9,9 @@ from sqlalchemy import inspect
 from sqlalchemy.sql import expression as sql
 
 from sqlalchemy_oso.partial import partial_to_filter
+from sqlalchemy_oso import roles
+
+from sqlalchemy_oso.compat import iterate_model_classes
 
 
 def polar_model_name(model) -> str:
@@ -20,13 +25,10 @@ def null_query(session: Session, model) -> Query:
     return session.query(model).filter(sql.false())
 
 
-def register_models(oso: Oso, base):
-    """Register all models in model base class ``base`` with oso as classes."""
-    # TODO (dhatch): Not sure this is legit b/c it uses an internal interface?
-    for name, model in base._decl_class_registry.items():
-        if name == "_sa_module_registry":
-            continue
-
+def register_models(oso: Oso, base_or_registry):
+    """Register all models in registry (SQLAlchemy 1.4) or declarative base
+    class (1.3 and 1.4) ``base_or_registry`` with Oso as classes."""
+    for model in iterate_model_classes(base_or_registry):
         oso.register_class(model)
 
 
@@ -43,15 +45,37 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
     :param session: The SQLAlchemy session.
     :param model: The model to authorize, must be a SQLAlchemy model or alias.
     """
+
+    def get_field_type(model, field):
+        try:
+            field = getattr(model, field)
+        except AttributeError:
+            raise PolarRuntimeError(f"Cannot get property {field} on {model}.")
+
+        try:
+            return field.entity.class_
+        except AttributeError as e:
+            raise PolarRuntimeError(
+                f"Cannot determine type of {field} on {model}."
+            ) from e
+
+    oso.host.get_field = get_field_type
+
     try:
         mapped_class = inspect(model, raiseerr=True).class_
     except AttributeError:
         raise TypeError(f"Expected a model; received: {model}")
 
-    partial_resource = Partial(
-        "resource", TypeConstraint(polar_model_name(mapped_class))
+    resource = Variable("resource")
+    constraint = TypeConstraint(resource, polar_model_name(mapped_class))
+    results = oso.query_rule(
+        "allow",
+        actor,
+        action,
+        resource,
+        bindings={resource: constraint},
+        accept_expression=True,
     )
-    results = oso.query_rule("allow", actor, action, partial_resource)
 
     combined_filter = None
     has_result = False
@@ -59,9 +83,14 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
         has_result = True
 
         resource_partial = result["bindings"]["resource"]
-        filter = partial_to_filter(
+        filter, role_method = partial_to_filter(
             resource_partial, session, model, get_model=oso.get_class
         )
+
+        if role_method is not None:
+            roles_filter = roles._generate_query_filter(oso, role_method, model)
+            filter &= roles_filter
+
         if combined_filter is None:
             combined_filter = filter
         else:

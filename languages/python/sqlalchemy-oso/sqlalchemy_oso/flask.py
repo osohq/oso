@@ -25,22 +25,22 @@ class AuthorizedSQLAlchemy(SQLAlchemy):
 
     :param get_oso: Callable that returns the :py:class:`oso.Oso` instance to use for authorization.
     :param get_user: Callable that returns the user to authorize for the current request.
-    :param get_action: Callable that returns the action to authorize for the current request.
+    :param get_checked_permissions: Callable that returns the permissions to authorize for the current request.
 
     >>> from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
     >>> db = AuthorizedSQLAlchemy(
     ...    get_oso=lambda: flask.current_app.oso,
     ...    get_user=lambda: flask_login.current_user,
-    ...    get_action=lambda: flask.request.method
+    ...    get_checked_permissions=lambda: {Post: flask.request.method}
     ... )
 
     .. _flask_sqlalchemy: https://flask-sqlalchemy.palletsprojects.com/en/2.x/
     """
 
-    def __init__(self, get_oso, get_user, get_action, **kwargs):
+    def __init__(self, get_oso, get_user, get_checked_permissions, **kwargs):
         self._get_oso = get_oso
         self._get_user = get_user
-        self._get_action = get_action
+        self._get_checked_permissions = get_checked_permissions
         super().__init__(**kwargs)
 
     def create_scoped_session(self, options=None):
@@ -51,7 +51,7 @@ class AuthorizedSQLAlchemy(SQLAlchemy):
         return scoped_session(
             get_oso=self._get_oso,
             get_user=self._get_user,
-            get_action=self._get_action,
+            get_checked_permissions=self._get_checked_permissions,
             scopefunc=scopefunc,
             class_=SignallingSession,
             db=self,
@@ -62,7 +62,7 @@ class AuthorizedSQLAlchemy(SQLAlchemy):
         return authorized_sessionmaker(
             get_oso=self._get_oso,
             get_user=self._get_user,
-            get_action=self._get_action,
+            get_checked_permissions=self._get_checked_permissions,
             class_=SignallingSession,
             db=self,
             **options

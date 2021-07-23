@@ -1,6 +1,6 @@
 import type { Query as FfiQuery } from './polar_wasm_api';
 
-import { createInterface } from 'readline';
+const createInterface = require('readline')?.createInterface;
 
 import { parseQueryEvent } from './helpers';
 import {
@@ -14,6 +14,7 @@ import type {
   ExternalCall,
   ExternalIsa,
   ExternalIsSubspecializer,
+  ExternalOp,
   ExternalUnify,
   MakeExternal,
   NextExternal,
@@ -24,6 +25,11 @@ import type {
 } from './types';
 import { processMessage } from './messages';
 import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
+
+function getLogLevelsFromEnv() {
+  if (typeof process?.env === 'undefined') return [undefined, undefined];
+  return [process.env.RUST_LOG, process.env.POLAR_LOG];
+}
 
 /**
  * A single Polar query.
@@ -37,6 +43,7 @@ export class Query {
   results: QueryResult;
 
   constructor(ffiQuery: FfiQuery, host: Host) {
+    ffiQuery.setLoggingOptions(...getLogLevelsFromEnv());
     this.#ffiQuery = ffiQuery;
     this.#calls = new Map();
     this.#host = host;
@@ -193,26 +200,28 @@ export class Query {
             break;
           }
           case QueryEventKind.ExternalCall: {
-            const {
-              attribute,
-              callId,
-              instance,
-              args,
-            } = event.data as ExternalCall;
+            const { attribute, callId, instance, args } =
+              event.data as ExternalCall;
             await this.handleCall(attribute, callId, instance, args);
             break;
           }
           case QueryEventKind.ExternalIsSubspecializer: {
-            const {
-              instanceId,
-              leftTag,
-              rightTag,
-              callId,
-            } = event.data as ExternalIsSubspecializer;
+            const { instanceId, leftTag, rightTag, callId } =
+              event.data as ExternalIsSubspecializer;
             const answer = await this.#host.isSubspecializer(
               instanceId,
               leftTag,
               rightTag
+            );
+            this.questionResult(answer, callId);
+            break;
+          }
+          case QueryEventKind.ExternalOp: {
+            const { args, callId, operator } = event.data as ExternalOp;
+            const answer = await this.#host.externalOp(
+              operator,
+              args[0],
+              args[1]
             );
             this.questionResult(answer, callId);
             break;
@@ -235,6 +244,10 @@ export class Query {
             break;
           }
           case QueryEventKind.Debug:
+            if (createInterface == null) {
+              console.warn('debug events not supported in browser oso');
+              break;
+            }
             const { message } = event.data as Debug;
             if (message) console.log(message);
             createInterface({
@@ -242,7 +255,7 @@ export class Query {
               output: process.stdout,
               prompt: 'debug> ',
               tabSize: 4,
-            }).on('line', line => {
+            }).on('line', (line: string) => {
               const trimmed = line.trim().replace(/;+$/, '');
               const command = this.#host.toPolar(trimmed);
               this.#ffiQuery.debugCommand(JSON.stringify(command));

@@ -7,7 +7,6 @@
 //! `visitor::walk_*` to apply the default traversal algorithm, or prevent deeper traversal by
 //! doing nothing.
 
-use crate::partial::Partial;
 use crate::rules::*;
 use crate::terms::*;
 
@@ -70,9 +69,6 @@ pub trait Visitor: Sized {
     fn visit_param(&mut self, p: &Parameter) {
         walk_param(self, p)
     }
-    fn visit_partial(&mut self, p: &Partial) {
-        walk_partial(self, p)
-    }
 }
 
 macro_rules! walk_elements {
@@ -110,7 +106,6 @@ pub fn walk_term<V: Visitor>(visitor: &mut V, term: &Term) {
         Value::Variable(v) => visitor.visit_variable(v),
         Value::RestVariable(r) => visitor.visit_rest_variable(r),
         Value::Expression(o) => visitor.visit_operation(o),
-        Value::Partial(p) => visitor.visit_partial(p),
     }
 }
 
@@ -162,11 +157,6 @@ pub fn walk_param<V: Visitor>(visitor: &mut V, param: &Parameter) {
     if let Some(ref specializer) = param.specializer {
         visitor.visit_term(specializer);
     }
-}
-
-pub fn walk_partial<V: Visitor>(visitor: &mut V, partial: &Partial) {
-    visitor.visit_symbol(&partial.variable);
-    walk_elements!(visitor, visit_operation, partial.constraints());
 }
 
 #[cfg(test)]
@@ -313,6 +303,4 @@ mod tests {
             ]
         );
     }
-
-    // TODO(gj): Add test for walking a partial.
 }

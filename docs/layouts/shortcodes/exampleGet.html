@@ -1,0 +1,19 @@
+{{- /* exampleGet $key $default */ -}}
+{{- /* Looks for $key in the language-specific data file, or defaults to $default (if set) */ -}}
+{{ $key := (.Get 0) }}
+{{- $default := (.Get 1) -}}
+{{- with $.Page.Resources.GetMatch "data/data.md" -}}
+  {{- with index .Params $key }}
+    {{- . | safeHTML -}}
+  {{- else -}}
+    {{- with $default -}}
+      {{- safeHTML $default -}}
+    {{- else -}}
+    {{- end -}}
+  {{- end -}}
+{{- else -}}
+  {{- with $default -}}
+    {{- safeHTML $default -}}
+  {{- else -}}
+  {{- end -}}
+{{- end -}}

@@ -1,9 +1,10 @@
-import { extname } from 'path';
-import { createInterface } from 'readline';
+const extname = require('path')?.extname;
+const createInterface = require('readline')?.createInterface;
 
 import {
   InlineQueryFailedError,
   InvalidConstructorError,
+  PolarError,
   PolarFileExtensionError,
   PolarFileNotFoundError,
 } from './errors';
@@ -12,7 +13,7 @@ import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
-import type { Class, Options, QueryResult } from './types';
+import type { Class, obj, Options, QueryResult } from './types';
 import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
 
 /** Create and manage an instance of the Polar runtime. */
@@ -30,11 +31,18 @@ export class Polar {
    * @internal
    */
   #host: Host;
+  /**
+   * Flag that tracks if the roles feature is enabled.
+   *
+   * @internal
+   */
+  #rolesEnabled: boolean;
 
   constructor(opts: Options = {}) {
     this.#ffiPolar = new FfiPolar();
     const equalityFn = opts.equalityFn || ((x, y) => x == y);
     this.#host = new Host(this.#ffiPolar, equalityFn);
+    this.#rolesEnabled = false;
 
     // Register global constants.
     this.registerConstant(null, 'nil');
@@ -46,6 +54,21 @@ export class Polar {
     this.registerClass(String);
     this.registerClass(Array, 'List');
     this.registerClass(Object, 'Dictionary');
+  }
+
+  /**
+   * Free the underlying WASM instance.
+   *
+   * Invariant: ensure that you do *not* do anything else with an instance
+   * after calling `free()` on it.
+   *
+   * This should *not* be something you need to do during the course of regular
+   * usage. It's generally only useful for scenarios where large numbers of
+   * instances are spun up and not cleanly reaped by the GC, such as during a
+   * long-running test process in 'watch' mode.
+   */
+  free() {
+    this.#ffiPolar.free();
   }
 
   /**
@@ -71,18 +94,72 @@ export class Polar {
   }
 
   /**
+   * Enable Oso's built-in roles feature.
+   */
+  async enableRoles() {
+    if (!this.#rolesEnabled) {
+      const helpers = {
+        join: (sep: string, l: string, r: string) => [l, r].join(sep),
+      };
+      this.registerConstant(helpers, '__oso_internal_roles_helpers__');
+      this.#ffiPolar.enableRoles();
+      this.processMessages();
+      await this.validateRolesConfig();
+      this.#rolesEnabled = true;
+    }
+  }
+
+  /**
+   * Validate roles config.
+   *
+   * @internal
+   */
+  private async validateRolesConfig() {
+    const validationQueryResults = [];
+    while (true) {
+      const query = this.#ffiPolar.nextInlineQuery();
+      this.processMessages();
+      if (query === undefined) break;
+      const { results } = new Query(query, this.#host);
+      const queryResults = [];
+      for await (const result of results) {
+        queryResults.push(result);
+      }
+      validationQueryResults.push(queryResults);
+    }
+
+    const results = validationQueryResults.map(results =>
+      results.map(result => ({
+        // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
+        // trivially `JSON.stringify()`-able.
+        bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
+          obj[k] = this.#host.toPolar(v);
+          return obj;
+        }, {}),
+      }))
+    );
+
+    this.#ffiPolar.validateRolesConfig(JSON.stringify(results));
+    this.processMessages();
+  }
+
+  /**
    * Clear rules from the Polar KB, but
    * retain all registered classes and constants.
    */
   clearRules() {
     this.#ffiPolar.clearRules();
     this.processMessages();
+    this.#rolesEnabled = false;
   }
 
   /**
    * Load a Polar policy file.
    */
   async loadFile(file: string): Promise<void> {
+    if (!extname) {
+      throw new PolarError('loadFile is not supported in the browser');
+    }
     if (extname(file) !== '.polar') throw new PolarFileExtensionError(file);
     let contents;
     try {
@@ -110,6 +187,11 @@ export class Polar {
       const { done } = await results.next();
       results.return();
       if (done) throw new InlineQueryFailedError(source);
+    }
+
+    if (this.#rolesEnabled) {
+      this.#rolesEnabled = false;
+      await this.enableRoles();
     }
   }
 
@@ -155,6 +237,9 @@ export class Polar {
 
   /** Start a REPL session. */
   async repl(files?: string[]): Promise<void> {
+    if (createInterface == null) {
+      throw new PolarError('REPL is not supported in the browser');
+    }
     try {
       if (files?.length) await Promise.all(files.map(f => this.loadFile(f)));
     } catch (e) {
@@ -183,7 +268,7 @@ export class Polar {
         tabSize: 4,
       });
       rl.prompt();
-      rl.on('line', async line => {
+      rl.on('line', async (line: string) => {
         const result = await this.evalReplInput(line);
         if (result !== undefined) console.log(result);
         rl.prompt();

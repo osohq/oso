@@ -173,6 +173,7 @@ pub mod display {
     use std::sync::Arc;
 
     use super::ToPolarString;
+    use crate::bindings::Binding;
     use crate::numerics::Numeric;
     use crate::rules::Rule;
     use crate::terms::{Operation, Operator, Symbol, Term, Value};
@@ -271,6 +272,7 @@ pub mod display {
                 ),
                 Goal::PopQuery { term } => write!(fmt, "PopQuery({})", term.to_polar()),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
+                Goal::Run { .. } => write!(fmt, "Run(...)"),
                 Goal::FilterRules {
                     applicable_rules,
                     unfiltered_rules,
@@ -491,11 +493,13 @@ pub mod to_polar {
                     ),
                 },
                 // n-ary operators
+                And if self.args.is_empty() => "(true)".to_string(),
                 And => format_args(
                     self.operator,
                     &self.args,
                     &format!(" {} ", self.operator.to_polar()),
                 ),
+                Or if self.args.is_empty() => "(false)".to_string(),
                 Or => format_args(
                     self.operator,
                     &self.args,
@@ -615,11 +619,6 @@ pub mod to_polar {
                 Value::Variable(s) => s.to_polar(),
                 Value::RestVariable(s) => format!("*{}", s.to_polar()),
                 Value::Expression(e) => e.to_polar(),
-                Value::Partial(p) => format!(
-                    "partial({}) {{ {} }}",
-                    p.name().0,
-                    p.clone().into_expression().to_polar()
-                ),
             }
         }
     }

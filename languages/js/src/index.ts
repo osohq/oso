@@ -1,2 +1,3 @@
 import { Oso } from './Oso';
-export { Oso };
+import { Variable } from './Variable';
+export { Oso, Variable };

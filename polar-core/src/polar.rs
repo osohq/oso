@@ -4,6 +4,9 @@ use super::kb::*;
 use super::messages::*;
 use super::parser;
 use super::rewrites::*;
+use super::roles_validation::{
+    validate_roles_config, ResultEvent, VALIDATE_ROLES_CONFIG_RESOURCES,
+};
 use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
@@ -30,6 +33,11 @@ impl Query {
         }
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
+        self.vm.set_logging_options(rust_log, polar_log);
+    }
+
     /// Runnable lifecycle
     ///
     /// 1. Get Runnable A from the top of the Runnable stack, defaulting to the VM.
@@ -41,7 +49,7 @@ impl Query {
         let mut counter = self.vm.id_counter();
         match self.top_runnable().run(Some(&mut counter))? {
             QueryEvent::Run { runnable, call_id } => {
-                self.push_runnable(runnable, call_id)?;
+                self.push_runnable(runnable, call_id);
                 self.next_event()
             }
             QueryEvent::Done { result } => {
@@ -66,9 +74,8 @@ impl Query {
             .unwrap_or(&mut self.vm)
     }
 
-    fn push_runnable(&mut self, runnable: Box<dyn Runnable>, call_id: u64) -> PolarResult<()> {
+    fn push_runnable(&mut self, runnable: Box<dyn Runnable>, call_id: u64) {
         self.runnable_stack.push((runnable, call_id));
-        Ok(())
     }
 
     fn pop_runnable(&mut self) -> Option<(Box<dyn Runnable>, u64)> {
@@ -85,7 +92,7 @@ impl Query {
     }
 
     pub fn application_error(&mut self, message: String) -> PolarResult<()> {
-        self.top_runnable().external_error(message)
+        self.vm.external_error(message)
     }
 
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
@@ -98,6 +105,10 @@ impl Query {
 
     pub fn source_info(&self) -> String {
         self.vm.term_source(&self.term, true)
+    }
+
+    pub fn bind(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
+        self.vm.bind(&name, value)
     }
 }
 
@@ -116,6 +127,8 @@ impl Iterator for Query {
         Some(event)
     }
 }
+
+const ROLES_POLICY: &str = include_str!("roles.polar");
 
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
@@ -203,7 +216,7 @@ impl Polar {
         while let Some(line) = lines.pop() {
             match line {
                 parser::Line::Rule(rule) => {
-                    let mut rule_warnings = check_singletons(&rule, &kb);
+                    let mut rule_warnings = check_singletons(&rule, &kb)?;
                     warnings.append(&mut rule_warnings);
                     let rule = rewrite_rule(rule, &mut kb);
                     kb.add_rule(rule, Symbol(scope.clone()))?;
@@ -253,12 +266,9 @@ impl Polar {
             let term =
                 parser::parse_query(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
             kb.sources.add_source(source, src_id);
-            rewrite_term(term, &mut kb)
+            term
         };
-        let query = Goal::Query { term: term.clone() };
-        let vm =
-            PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
-        Ok(Query::new(vm, term))
+        Ok(self.new_query_from_term(term, trace))
     }
 
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
@@ -285,6 +295,35 @@ impl Polar {
     pub fn next_message(&self) -> Option<Message> {
         self.messages.next()
     }
+
+    /// Load the Polar roles policy idempotently.
+    pub fn enable_roles(&self) -> PolarResult<()> {
+        let result = match self.load(
+            ROLES_POLICY,
+            Some("Built-in Polar Roles Policy".to_owned()),
+            String::from("default"),
+        ) {
+            Err(error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { .. }),
+                ..
+            }) => Ok(()),
+            result => result,
+        };
+
+        // Push inline queries to validate config.
+        let src_id = self.kb.read().unwrap().new_id();
+        let term = parser::parse_query(src_id, VALIDATE_ROLES_CONFIG_RESOURCES)?;
+        self.kb.write().unwrap().inline_queries.push(term);
+
+        result
+    }
+
+    pub fn validate_roles_config(&self, results: Vec<Vec<ResultEvent>>) -> PolarResult<()> {
+        validate_roles_config(
+            &self.kb.read().unwrap().get_rules(&sym!("default")).unwrap(),
+            results,
+        )
+    }
 }
 
 #[cfg(test)]
@@ -296,5 +335,16 @@ mod tests {
         let polar = Polar::new();
         let _query = polar.new_query("1 = 1", false);
         let _ = polar.load_str("f(_);");
+    }
+
+    #[test]
+    fn roles_policy_loads_idempotently() {
+        let polar = Polar::new();
+        assert!(polar.enable_roles().is_ok());
+        assert_eq!(polar.loaded_files.read().unwrap().len(), 1);
+        assert_eq!(polar.loaded_content.read().unwrap().len(), 1);
+        assert!(polar.enable_roles().is_ok());
+        assert_eq!(polar.loaded_files.read().unwrap().len(), 1);
+        assert_eq!(polar.loaded_content.read().unwrap().len(), 1);
     }
 }

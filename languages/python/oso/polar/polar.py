@@ -64,6 +64,8 @@ class Polar:
     def __init__(self, classes=CLASSES):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
+        # TODO(gj): rename to _oso_roles_enabled
+        self._polar_roles_enabled = False
 
         # Register global constants.
         self.register_constant(None, name="nil")
@@ -86,9 +88,44 @@ class Polar:
         del self.host
         del self.ffi_polar
 
-    def load_file(self, policy_file, scope="default"):
-        """Load in polar policies. By default, defers loading of knowledge base
-        until a query is made."""
+    def enable_roles(self):
+        if not self._polar_roles_enabled:
+
+            class InternalRolesHelpers:
+                @staticmethod
+                def join(separator, left, right):
+                    return separator.join([left, right])
+
+            self.register_constant(
+                InternalRolesHelpers, "__oso_internal_roles_helpers__"
+            )
+            self.ffi_polar.enable_roles()
+            self._polar_roles_enabled = True
+
+            # validate config
+            validation_query_results = []
+            while True:
+                query = self.ffi_polar.next_inline_query()
+                if query is None:  # Load is done
+                    break
+                try:
+                    host = self.host.copy()
+                    host.set_accept_expression(True)
+                    validation_query_results.append(list(Query(query, host=host).run()))
+                except StopIteration:
+                    source = query.source()
+                    raise InlineQueryFailedError(source.get())
+
+            # turn bindings back into polar
+            for results in validation_query_results:
+                for result in results:
+                    for k, v in result["bindings"].items():
+                        result["bindings"][k] = host.to_polar(v)
+
+            self.ffi_polar.validate_roles_config(validation_query_results)
+
+    def load_file(self, policy_file):
+        """Load Polar policy from a ".polar" file."""
         policy_file = Path(policy_file)
         extension = policy_file.suffix
         fname = str(policy_file)
@@ -119,10 +156,16 @@ class Polar:
                     source = query.source()
                     raise InlineQueryFailedError(source.get())
 
+        # If roles are enabled, re-validate config when new rules are loaded.
+        if self._polar_roles_enabled:
+            self._polar_roles_enabled = False
+            self.enable_roles()
+
     def clear_rules(self):
         self.ffi_polar.clear_rules()
+        self._polar_roles_enabled = False
 
-    def query(self, query):
+    def query(self, query, *, bindings=None, accept_expression=False):
         """Query for a predicate, parsing it if necessary.
 
         :param query: The predicate to query for.
@@ -130,6 +173,8 @@ class Polar:
         :return: The result of the query.
         """
         host = self.host.copy()
+        host.set_accept_expression(accept_expression)
+
         if isinstance(query, str):
             query = self.ffi_polar.new_query_from_str(query)
         elif isinstance(query, Predicate):
@@ -137,10 +182,10 @@ class Polar:
         else:
             raise InvalidQueryTypeError()
 
-        for res in Query(query, host=host).run():
+        for res in Query(query, host=host, bindings=bindings).run():
             yield res
 
-    def query_rule(self, name, *args):
+    def query_rule(self, name, *args, **kwargs):
         """Query for rule with name ``name`` and arguments ``args``.
 
         :param name: The name of the predicate to query.
@@ -148,7 +193,7 @@ class Polar:
 
         :return: The result of the query.
         """
-        return self.query(Predicate(name=name, args=args))
+        return self.query(Predicate(name=name, args=args), **kwargs)
 
     def repl(self, files=[]):
         """Start an interactive REPL session."""
@@ -166,9 +211,11 @@ class Polar:
                 print_error(e)
                 continue
 
+            host = self.host.copy()
+            host.set_accept_expression(True)
             result = False
             try:
-                query = Query(ffi_query, host=self.host.copy()).run()
+                query = Query(ffi_query, host=host).run()
                 for res in query:
                     result = True
                     bindings = res["bindings"]
