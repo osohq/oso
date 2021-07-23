@@ -29,17 +29,35 @@ Link to [migration guide]().
 
 #### New features
 
-##### Roles in Rust
-
-The Rust library now has
-[built-in support for Role-Based Access Control (RBAC) policies](/guides/roles),
-which you can turn on with `.enable_roles()`.
-
 ##### Feature 1
 
 Summary of user-facing changes.
 
 Link to [relevant documentation section]().
+
+#### Other bugs & improvements
+
+- Bulleted list
+- Of smaller improvements
+- Potentially with doc [links]().
+
+## `oso` NEW_VERSION
+
+### Core
+
+#### Other bugs & improvements
+
+- The debugger can now break on runtime errors.
+
+### Rust
+
+#### New features
+
+##### Roles in Rust
+
+The Rust library now has
+[built-in support for Role-Based Access Control (RBAC) policies](/guides/roles),
+which you can turn on with `.enable_roles()`.
 
 ## `flask-oso` NEW_VERSION
 
@@ -48,9 +66,3 @@ Link to [relevant documentation section]().
 - Thanks to [`@arusahni`](https://github.com/arusahni) for surfacing and
   documenting a potential gotcha when using `flask-oso` with other Flask
   libraries that rely on `LocalProxy` objects.
-
-#### Other bugs & improvements
-
-- Bulleted list
-- Of smaller improvements
-- Potentially with doc [links]().
