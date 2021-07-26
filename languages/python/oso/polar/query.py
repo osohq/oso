@@ -54,7 +54,6 @@ class Query:
                 "ExternalOp": self.handle_external_op,
                 "ExternalIsa": self.handle_external_isa,
                 "ExternalIsaWithPath": self.handle_external_isa_with_path,
-                "ExternalUnify": self.handle_external_unify,
                 "ExternalIsSubSpecializer": self.handle_external_is_subspecializer,
                 "ExternalIsSubclass": self.handle_external_is_subclass,
                 "NextExternal": self.handle_next_external,
@@ -140,12 +139,6 @@ class Query:
             # this error in core.
             self.ffi_query.application_error(str(e))
             self.ffi_query.question_result(data["call_id"], False)
-
-    def handle_external_unify(self, data):
-        left_instance_id = data["left_instance_id"]
-        right_instance_id = data["right_instance_id"]
-        answer = self.host.unify(left_instance_id, right_instance_id)
-        self.ffi_query.question_result(data["call_id"], answer)
 
     def handle_external_is_subspecializer(self, data):
         instance_id = data["instance_id"]

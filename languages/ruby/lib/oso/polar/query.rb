@@ -146,11 +146,6 @@ module Oso
             class_tag = event.data['class_tag']
             answer = host.isa?(instance, class_tag: class_tag)
             question_result(answer, call_id: event.data['call_id'])
-          when 'ExternalUnify'
-            left_instance_id = event.data['left_instance_id']
-            right_instance_id = event.data['right_instance_id']
-            answer = host.unify?(left_instance_id, right_instance_id)
-            question_result(answer, call_id: event.data['call_id'])
           when 'Debug'
             puts event.data['message'] if event.data['message']
             print 'debug> '
@@ -162,7 +157,10 @@ module Oso
             command = JSON.dump(host.to_polar(input))
             ffi_query.debug_command(command)
           when 'ExternalOp'
-            raise UnimplementedOperationError, 'comparison operators'
+            op = event.data['operator']
+            args = event.data['args'].map(&host.method(:to_ruby))
+            answer = host.operator(op, args)
+            question_result(answer, call_id: event.data['call_id'])
           when 'NextExternal'
             call_id = event.data['call_id']
             iterable = event.data['iterable']

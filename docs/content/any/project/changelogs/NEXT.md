@@ -27,8 +27,6 @@ Summary of breaking change.
 
 Link to [migration guide]().
 
-#### New features
-
 ##### Feature 1
 
 Summary of user-facing changes.
@@ -47,9 +45,18 @@ Link to [relevant documentation section]().
 
 #### Other bugs & improvements
 
+- Native types (`Integer`, `String`, `Dictionary`, etc.) and
+  equivalent host objects created with the `new` operator can now
+  be unified transparently.
 - The debugger can now break on runtime errors.
 
-### Rust
+### Ruby
+
+#### Other bugs & improvements
+
+- Comparison operations on Ruby objects are now fully supported.
+
+### Rust 
 
 #### New features
 
