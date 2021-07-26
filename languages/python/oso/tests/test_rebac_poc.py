@@ -20,6 +20,9 @@ class Org:
         self.owner = owner
         self.repos = []
 
+    def __repr__(self):
+        return str(self.__dict__)
+
     def create_repo(self, name: str):
         repo = Repo(name=name, org=self)
         self.repos.append(repo)
@@ -30,11 +33,16 @@ class Repo:
     name: str
     org: Org
     issues: List["Issue"]
+    is_public: bool
 
-    def __init__(self, name: str, org: Org):
+    def __init__(self, name: str, org: Org, is_public: bool = False):
         self.name = name
         self.org = org
         self.issues = []
+        self.is_public = is_public
+
+    def __repr__(self):
+        return str(self.__dict__)
 
     def create_issue(self, name: str, creator: "User"):
         issue = Issue(name=name, repo=self, created_by=creator)
@@ -57,6 +65,9 @@ class User:
     roles: Dict[Resource, str]
     teams: List["Team"]
 
+    def __repr__(self):
+        return str(self.__dict__)
+
     def __init__(self, name: str, teams=[]):
         self.name = name
         self.roles = {}
@@ -66,7 +77,6 @@ class User:
         self.roles[resource] = name
 
     def has_role(self, name: str, resource: Resource):
-        print("here")
         return self.roles.get(resource) == name
 
 
