@@ -27,6 +27,30 @@ Summary of breaking change.
 
 Link to [migration guide]().
 
+##### Feature 1
+
+Summary of user-facing changes.
+
+Link to [relevant documentation section]().
+
+## `oso` NEW_VERSION
+
+### Core
+
+#### Other bugs & improvements
+
+- Native types (`Integer`, `String`, `Dictionary`, etc.) and
+  equivalent host objects created with the `new` operator can now
+  be unified transparently.
+
+### Ruby
+
+#### Other bugs & improvements
+
+- Comparison operations on Ruby objects are now fully supported.
+
+### Rust 
+
 #### New features
 
 ##### Roles in Rust
@@ -34,12 +58,6 @@ Link to [migration guide]().
 The Rust library now has
 [built-in support for Role-Based Access Control (RBAC) policies](/guides/roles),
 which you can turn on with `.enable_roles()`.
-
-##### Feature 1
-
-Summary of user-facing changes.
-
-Link to [relevant documentation section]().
 
 ## `flask-oso` NEW_VERSION
 
