@@ -74,6 +74,7 @@ mod tests {
                 operator: Operator::And,
                 args: vec![dict.clone(), dict.clone(), dict],
             })),
+            source_info: polar_core::sources::SourceInfo::Test,
         };
         eprintln!("{}", rule);
     }
