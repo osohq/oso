@@ -82,10 +82,6 @@ pub enum Goal {
         call_id: u64,
         iterable: Term,
     },
-    UnifyExternal {
-        left_instance_id: u64,
-        right_instance_id: u64,
-    },
     CheckError,
     Noop,
     Query {
@@ -449,10 +445,6 @@ impl PolarVirtualMachine {
                 field,
             } => return self.lookup_external(*call_id, instance, field),
             Goal::IsaExternal { instance, literal } => return self.isa_external(instance, literal),
-            Goal::UnifyExternal {
-                left_instance_id,
-                right_instance_id,
-            } => return self.unify_external(*left_instance_id, *right_instance_id),
             Goal::MakeExternal {
                 constructor,
                 instance_id,
@@ -1330,24 +1322,6 @@ impl PolarVirtualMachine {
         Ok(QueryEvent::NextExternal {
             call_id,
             iterable: iterable.clone(),
-        })
-    }
-
-    pub fn unify_external(
-        &mut self,
-        left_instance_id: u64,
-        right_instance_id: u64,
-    ) -> PolarResult<QueryEvent> {
-        let (call_id, answer) = self.new_call_var("unify", Value::Boolean(false));
-        self.push_goal(Goal::Unify {
-            left: answer,
-            right: Term::new_temporary(Value::Boolean(true)),
-        })?;
-
-        Ok(QueryEvent::ExternalUnify {
-            call_id,
-            left_instance_id,
-            right_instance_id,
         })
     }
 
@@ -2268,6 +2242,23 @@ impl PolarVirtualMachine {
                 }
             }
 
+            // Unify predicates like unifying heads
+            (Value::Call(left), Value::Call(right)) => {
+                // Handled in the parser.
+                assert!(left.kwargs.is_none());
+                assert!(right.kwargs.is_none());
+                if left.name == right.name && left.args.len() == right.args.len() {
+                    self.append_goals(left.args.iter().zip(right.args.iter()).map(
+                        |(left, right)| Goal::Unify {
+                            left: left.clone(),
+                            right: right.clone(),
+                        },
+                    ))?;
+                } else {
+                    self.push_goal(Goal::Backtrack)?
+                }
+            }
+
             // Unify lists by recursively unifying their elements.
             (Value::List(l), Value::List(r)) => self.unify_lists(l, r, |(l, r)| Goal::Unify {
                 left: l.clone(),
@@ -2318,44 +2309,25 @@ impl PolarVirtualMachine {
                 }
             }
 
-            // Unify predicates like unifying heads
-            (Value::Call(left), Value::Call(right)) => {
-                // Handled in the parser.
-                assert!(left.kwargs.is_none());
-                assert!(right.kwargs.is_none());
-                if left.name == right.name && left.args.len() == right.args.len() {
-                    self.append_goals(left.args.iter().zip(right.args.iter()).map(
-                        |(left, right)| Goal::Unify {
-                            left: left.clone(),
-                            right: right.clone(),
-                        },
-                    ))?;
-                } else {
-                    self.push_goal(Goal::Backtrack)?
-                }
-            }
-
-            // External instances can unify if they are the same instance, i.e., have the same
-            // instance ID. This is necessary for the case where an instance appears multiple times
-            // in the same rule head. For example, `f(foo, foo) if ...` or `isa(x, y, x: y) if ...`
-            // or `max(x, y, x) if x > y;`.
             (
                 Value::ExternalInstance(ExternalInstance {
-                    instance_id: left_instance,
-                    ..
+                    instance_id: left, ..
                 }),
                 Value::ExternalInstance(ExternalInstance {
-                    instance_id: right_instance,
-                    ..
+                    instance_id: right, ..
                 }),
-            ) => {
-                // If IDs match, they're the same _instance_ (not just the same _value_), so unify.
-                if left_instance != right_instance {
-                    self.push_goal(Goal::UnifyExternal {
-                        left_instance_id: *left_instance,
-                        right_instance_id: *right_instance,
-                    })?;
-                }
+            ) if left == right => (),
+
+            // If either operand is an external instance, let the host
+            // compare them for equality. This handles unification between
+            // "equivalent" host and native types transparently.
+            (Value::ExternalInstance(_), _) | (_, Value::ExternalInstance(_)) => {
+                self.push_goal(Goal::Query {
+                    term: Term::new_temporary(Value::Expression(Operation {
+                        operator: Operator::Eq,
+                        args: vec![left.clone(), right.clone()],
+                    })),
+                })?
             }
 
             // Anything else fails.
@@ -3615,7 +3587,9 @@ mod tests {
                     vm.external_question_result(call_id, class_tag.0 == "a")
                         .unwrap()
                 }
-                QueryEvent::ExternalIsSubSpecializer { .. } | QueryEvent::Result { .. } => (),
+                QueryEvent::ExternalOp { .. }
+                | QueryEvent::ExternalIsSubSpecializer { .. }
+                | QueryEvent::Result { .. } => (),
                 e => panic!("Unexpected event: {:?}", e),
             }
         }
@@ -3694,6 +3668,13 @@ mod tests {
                         .unwrap()
                 }
                 QueryEvent::MakeExternal { .. } => (),
+
+                QueryEvent::ExternalOp {
+                    operator: Operator::Eq,
+                    call_id,
+                    ..
+                } => vm.external_question_result(call_id, true).unwrap(),
+
                 QueryEvent::ExternalIsa { call_id, .. } => {
                     // For this test, anything is anything.
                     vm.external_question_result(call_id, true).unwrap()
@@ -3771,14 +3752,14 @@ mod tests {
 
         loop {
             vm.push_goal(Goal::Noop).unwrap();
-            vm.push_goal(Goal::UnifyExternal {
-                left_instance_id: 1,
-                right_instance_id: 1,
+            vm.push_goal(Goal::MakeExternal {
+                constructor: Term::new_temporary(Value::Boolean(true)),
+                instance_id: 1,
             })
             .unwrap();
             let result = vm.run(None);
             match result {
-                Ok(event) => assert!(matches!(event, QueryEvent::ExternalUnify { .. })),
+                Ok(event) => assert!(matches!(event, QueryEvent::MakeExternal { .. })),
                 Err(err) => {
                     assert!(matches!(
                         err,

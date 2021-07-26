@@ -75,11 +75,6 @@ impl Query {
                     instance,
                     class_tag,
                 } => self.handle_external_isa(call_id, instance, class_tag),
-                QueryEvent::ExternalUnify {
-                    call_id,
-                    left_instance_id,
-                    right_instance_id,
-                } => self.handle_external_unify(call_id, left_instance_id, right_instance_id),
                 QueryEvent::ExternalIsSubSpecializer {
                     call_id,
                     instance_id,
@@ -233,17 +228,6 @@ impl Query {
         let res = self
             .host
             .isa(PolarValue::from_term(&instance, &self.host)?, &class_tag.0)?;
-        self.question_result(call_id, res)?;
-        Ok(())
-    }
-
-    fn handle_external_unify(
-        &mut self,
-        call_id: u64,
-        left_instance_id: u64,
-        right_instance_id: u64,
-    ) -> crate::Result<()> {
-        let res = self.host.unify(left_instance_id, right_instance_id)?;
         self.question_result(call_id, res)?;
         Ok(())
     }

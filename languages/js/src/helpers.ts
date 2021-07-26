@@ -65,8 +65,6 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
         return parseExternalIsSubspecializer(event['ExternalIsSubSpecializer']);
       case event['ExternalIsa'] !== undefined:
         return parseExternalIsa(event['ExternalIsa']);
-      case event['ExternalUnify'] !== undefined:
-        return parseExternalUnify(event['ExternalUnify']);
       case event['Debug'] !== undefined:
         return parseDebug(event['Debug']);
       case event['ExternalOp'] !== undefined:
@@ -244,29 +242,6 @@ function parseExternalOp({ call_id: callId, args, operator }: obj): QueryEvent {
       callId,
       operator,
     },
-  };
-}
-
-/**
- * Try to parse a JSON payload received from across the WebAssembly boundary as
- * an [[`ExternalUnify`]].
- *
- * @internal
- */
-function parseExternalUnify({
-  call_id: callId,
-  left_instance_id: leftId,
-  right_instance_id: rightId,
-}: obj): QueryEvent {
-  if (
-    !Number.isSafeInteger(callId) ||
-    !Number.isSafeInteger(leftId) ||
-    !Number.isSafeInteger(rightId)
-  )
-    throw new Error();
-  return {
-    kind: QueryEventKind.ExternalUnify,
-    data: { callId, leftId, rightId },
   };
 }
 

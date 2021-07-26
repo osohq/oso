@@ -149,6 +149,33 @@ module Oso
         raise PolarRuntimeError, "Error constructing instance of #{cls_name}: #{e}"
       end
 
+      OPS = {
+        'Lt' => :<,
+        'Gt' => :>,
+        'Eq' => :==,
+        'Geq' => :>=,
+        'Leq' => :<=,
+        'Neq' => :!=
+      }.freeze
+
+      # Compare two values
+      #
+      # @param op [String] operation to perform.
+      # @param args [Array<Object>] left and right args to operation.
+      # @raise [PolarRuntimeError] if operation fails or is unsupported.
+      # @return [Boolean]
+      def operator(operation, args)
+        left, right = args
+        op = OPS[operation]
+        raise PolarRuntimeError, "Unsupported external operation '#{left.class} #{operation} #{right.class}'" if op.nil?
+
+        begin
+          left.__send__ op, right
+        rescue StandardError
+          raise PolarRuntimeError, "External operation '#{left.class} #{operation} #{right.class}' failed."
+        end
+      end
+
       # Check if the left class is more specific than the right class
       # with respect to the given instance.
       #
@@ -172,17 +199,6 @@ module Oso
         instance = to_ruby(instance)
         cls = get_class(class_tag)
         instance.is_a? cls
-      end
-
-      # Check if two instances unify
-      #
-      # @param left_instance_id [Integer]
-      # @param right_instance_id [Integer]
-      # @return [Boolean]
-      def unify?(left_instance_id, right_instance_id)
-        left_instance = get_instance(left_instance_id)
-        right_instance = get_instance(right_instance_id)
-        left_instance == right_instance
       end
 
       # Turn a Ruby value into a Polar term that's ready to be sent across the

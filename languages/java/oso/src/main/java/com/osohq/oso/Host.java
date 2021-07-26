@@ -167,15 +167,13 @@ public class Host implements Cloneable {
     return rightClass.isAssignableFrom(leftClass);
   }
 
-  /** Check if two instances unify. */
-  public boolean unify(long leftId, long rightId) throws Exceptions.UnregisteredInstanceError {
-    Object left = getInstance(leftId);
-    Object right = getInstance(rightId);
-    if (left == null) {
-      return right == null;
-    } else {
-      return left.equals(right);
+  public boolean operator(String op, List<Object> args) throws Exceptions.OsoException {
+    Object left = args.get(0), right = args.get(1);
+    if (op.equals("Eq")) {
+      if (left == null) return left == right;
+      else return left.equals(right);
     }
+    throw new Exceptions.UnimplementedOperation(op);
   }
 
   /** Convert Java Objects to Polar (JSON) terms. */

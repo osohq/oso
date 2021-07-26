@@ -15,7 +15,6 @@ import type {
   ExternalIsa,
   ExternalIsSubspecializer,
   ExternalOp,
-  ExternalUnify,
   MakeExternal,
   NextExternal,
   PolarTerm,
@@ -229,12 +228,6 @@ export class Query {
           case QueryEventKind.ExternalIsa: {
             const { instance, tag, callId } = event.data as ExternalIsa;
             const answer = await this.#host.isa(instance, tag);
-            this.questionResult(answer, callId);
-            break;
-          }
-          case QueryEventKind.ExternalUnify: {
-            const { leftId, rightId, callId } = event.data as ExternalUnify;
-            const answer = await this.#host.unify(leftId, rightId);
             this.questionResult(answer, callId);
             break;
           }
