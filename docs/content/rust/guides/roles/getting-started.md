@@ -210,7 +210,7 @@ pub struct OrgRole {
 }
 
 impl User {
-  pub fn roles(&self) -> Vec[OrgRole] {
+  pub fn roles(&self) -> Vec<OrgRole> {
     // ...
   }
 }
