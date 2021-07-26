@@ -6,29 +6,39 @@ use std::collections::HashMap;
 use crate::{Class, ClassBuilder};
 
 fn boolean() -> ClassBuilder<bool> {
-    ClassBuilder::<bool>::with_default().name("Boolean")
+    ClassBuilder::<bool>::with_default()
+        .with_equality_check()
+        .name("Boolean")
 }
 
 fn integer() -> ClassBuilder<i64> {
-    ClassBuilder::<i64>::with_default().name("Integer")
+    ClassBuilder::<i64>::with_default()
+        .with_equality_check()
+        .name("Integer")
 }
 
 fn float() -> ClassBuilder<f64> {
-    ClassBuilder::<f64>::with_default().name("Float")
+    ClassBuilder::<f64>::with_default()
+        .with_equality_check()
+        .name("Float")
 }
 
 fn list() -> ClassBuilder<Vec<PolarValue>> {
-    ClassBuilder::<Vec<PolarValue>>::with_default().name("List")
+    ClassBuilder::<Vec<PolarValue>>::with_default()
+        .with_equality_check()
+        .name("List")
 }
 
 fn dictionary() -> ClassBuilder<HashMap<String, PolarValue>> {
-    ClassBuilder::<HashMap<String, PolarValue>>::with_default().name("Dictionary")
+    ClassBuilder::<HashMap<String, PolarValue>>::with_default()
+        .with_equality_check()
+        .name("Dictionary")
 }
 
 fn option() -> ClassBuilder<Option<PolarValue>> {
     ClassBuilder::<Option<PolarValue>>::with_default()
-        .name("Option")
         .with_equality_check()
+        .name("Option")
         .add_method("unwrap", |v: &Option<PolarValue>| v.clone().unwrap())
         .add_method("is_none", Option::is_none)
         .add_method("is_some", Option::is_some)
@@ -37,6 +47,7 @@ fn option() -> ClassBuilder<Option<PolarValue>> {
 
 fn string() -> ClassBuilder<String> {
     ClassBuilder::<String>::with_default()
+        .with_equality_check()
         .name("String")
         .add_method("len", |s: &String| s.len() as i64)
         .add_method("is_empty", String::is_empty)

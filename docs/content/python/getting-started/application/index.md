@@ -119,8 +119,10 @@ controller method:
 
 {{< literalInclude
     path="examples/python/getting-started/application/app/expense.py"
-    lines="8,55-58"
-    hlOpts="hl_lines=8" >}}
+    lines="8,55-60"
+    hlFrom="docs: begin-getting-started-app-highlight"
+    hlTo="docs: end-getting-started-app-highlight"
+>}}
 
 Restart the Flask app, and then repeat the same request from earlier. It should
 now result in a `403 Forbidden`:
@@ -152,8 +154,10 @@ earlier:
 
 {{< literalInclude
     path="examples/python/getting-started/application/app/authorization.py"
-    lines="1,9-13"
-    hlOpts="hl_lines=9" >}}
+    lines="1,9-15"
+    hlFrom="docs: begin-authorization-highlight"
+    hlTo="docs: end-authorization-highlight"
+    >}}
 
 At this point, all requests to `get_expense()` will still be denied because our
 policy is empty.

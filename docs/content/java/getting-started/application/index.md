@@ -263,8 +263,11 @@ We would like to do the authorization on the full `Expense` object,
 but before it is persisted to the database, so perhaps before this line:
 
 {{< literalInclude path="examples/java/getting-started/application/expenses-spring-boot/src/main/java/com/example/springboot/Controller.java"
-                   lines="75-85"
-                   hlOpts="hl_lines=6" >}}
+                   from="docs: getting-started-begin"
+                   to="docs: getting-started-end"
+                   hlFrom="docs: getting-started-highlight-begin"
+                   hlTo="docs: getting-started-highlight-end"
+>}}
 
 We could change the highlighted line to:
 
