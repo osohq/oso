@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "polar-analyzer",
     "polar-core",
     "polar-c-api",
     "polar-wasm-api",

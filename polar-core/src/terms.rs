@@ -242,7 +242,7 @@ impl fmt::Display for Value {
 pub struct Term {
     /// Information about where the term was created from
     #[serde(skip, default = "SourceInfo::ffi")]
-    source_info: SourceInfo,
+    pub source_info: SourceInfo,
 
     /// The actual underlying value
     value: Arc<Value>,
