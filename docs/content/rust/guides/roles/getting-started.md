@@ -46,7 +46,7 @@ Rust structs and enums will need
 
 
 ```rust
-  // ... register classes used by the policy (see below)
+  // register classes used by the policy
   oso.register_class(User::get_polar_class());
   oso.register_class(Org::get_polar_class());
   oso.register_class(OrgRole::get_polar_class());
@@ -69,13 +69,6 @@ Load the policy at application start using the `Oso::load_file()` function:
 
 In order to enable the built-in roles features, we call the
 `Oso::enable_roles` function:
-
-{{% callout "Load policies before enabling roles" "blue" %}}
-
-Oso will validate your roles configuration when you call `enable_roles`.
-You must load all policy files before enabling roles.
-
-{{% /callout %}}
 
 ```rust
   oso.enable_roles();

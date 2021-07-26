@@ -54,13 +54,6 @@ In order to enable the built-in roles features, we call the
 OSO.enable_roles
 ```
 
-{{% callout "Load policies before enabling roles" "blue" %}}
-
-Oso will validate your roles configuration when you call `enable_roles`.
-You must load all policy files before enabling roles.
-
-{{% /callout %}}
-
 ## Controlling access with roles
 
 Now, let's write our first rules that use role-based access control. To
