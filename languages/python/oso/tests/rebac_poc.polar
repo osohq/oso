@@ -1,18 +1,24 @@
 
 ## Relationships
 # - `has_role` (predicate)
-# - `has_permission` (predicate)
+# - `has_permission(s)` (predicate)
 # - `has_role` (application method on a user or group)
 # - parent (attribute on resources)
 # - user in group (`teams` attr on user)
 
 # Hook into allow
-allow(actor, action, resource) if has_permission(actor, action, resource);
+# allow(actor, action, resource) if
+#     has_permission(actor, action, resource);
+allow(actor, action, resource) if
+    has_permissions(actor, actions, resource) and
+    action in actions;
 
 
 ############################
 # Relationship definitions #
 ############################
+
+# These rules answer the question: where do relationships come from?
 
 ## Relationships that need to be cleared when registering:
     # - repo.org
@@ -24,12 +30,16 @@ allow(actor, action, resource) if has_permission(actor, action, resource);
 has_role(user: User, role: String, resource: OsoResource) if
     user.has_role(role, resource);
 
+# User-role mapping to application data for specific role
+has_role(user: User, "owner", org: Org) if
+    org.owner = user;
+
 # Group-role mapping to application data
 has_role(group: Team, role: String, resource: OsoResource) if
     group.has_role(role, resource);
 
 # User-group mapping to application data
-in_group(user: User, group: Team) if
+in_group(user: User, team: Team) if
     team in user.teams and
     team matches Team;   # DO NOT REMOVE: this check is necessary to avoid infinite recursion
 
@@ -51,18 +61,16 @@ owns(u: User, issue: Issue) if
 # applies to all resources
 
 # Role implication from group role to user role
-has_role(u: User, role: String, resource: OsoResource) if
-    in_group(u, team) and
-    has_role(team, role, resource);
+# has_role(u: User, role: String, resource: OsoResource) if
+#     in_group(u, team) and
+#     has_role(team, role, resource);
 
 # Org policy #
 ##############
 
 # Role-based permissions
-has_permission(u: User, "invite", o: Org) if has_role(u, "owner", o);
-has_permission(u: User, "delete_repo", o: Org) if has_role(u, "owner", o);
-has_permission(u: User, "create_repo", o: Org) if has_role(u, "member", o);
-has_permission(u: User, "list_repos", o: Org) if has_role(u, "member", o);
+has_permissions(u: User, ["invite", "delete_repo"], o: Org) if has_role(u, "owner", o);
+has_permissions(u: User, ["create_repo", "list_repos"], o: Org) if has_role(u, "member", o);
 
 
 # Org role implications
@@ -72,14 +80,14 @@ has_role(u: User, "member", o: Org) if has_role(u, "owner", o);
 ###############
 
 # Role-based permissions
-has_permission(u: User, "pull", r: Repo) if has_role(u, "reader", r);
-has_permission(u: User, "list_issues", r: Repo) if has_role(u, "reader", r);
-has_permission(u: User, "push", r: Repo) if has_role(u, "writer", r);
-has_permission(u: User, "create_issue", r: Repo) if has_role(u, "writer", r);
+has_permissions(u: User, ["pull", "list_issues"], r: Repo) if has_role(u, "reader", r);
+has_permissions(u: User, ["push", "create_issue"], r: Repo) if has_role(u, "writer", r);
+
+has_permissions(u: User, ["invite"], r: Repo) if has_role(u, "writer", r);
 
 
 # Attribute-based permissions
-has_permission(_: User, "view", repo: Repo) if repo.is_public;
+has_permissions(_: User, ["view"], repo: Repo) if repo.is_public;
 
 # Repo role implications (related)
 has_role(u: User, "reader", r: Repo) if has_role(u, "member", r.org);
@@ -93,10 +101,10 @@ has_role(u: User, "writer", r: Repo) if has_role(u, "admin", r);
 ################
 
 # Issue permissions
-has_permission(u: User, "read", i: Issue) if has_role(u, "reader", i.repo);
-has_permission(u: User, "edit", i: Issue) if has_role(u, "writer", i.repo);
-has_permission(u: User, "delete", i: Issue) if has_role(u, "admin", i.repo);
-has_permission(u: User, "delete", i: Issue) if owns(u, i);
+has_permissions(u: User, ["read"], i: Issue) if has_role(u, "reader", i.repo);
+has_permissions(u: User, ["edit"], i: Issue) if has_role(u, "writer", i.repo);
+has_permissions(u: User, ["delete"], i: Issue) if has_role(u, "admin", i.repo);
+has_permissions(u: User, ["delete"], i: Issue) if owns(u, i);
 
 
 
