@@ -155,3 +155,9 @@ pre code {
   color: rgb(55, 65, 81)!important;
   text-decoration: none!important;
 }
+
+.integration-request:disabled {
+  pointer: default;
+  pointer-events: none;
+  background-color: rgb(167, 243, 208);
+}

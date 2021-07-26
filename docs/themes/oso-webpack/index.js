@@ -1,4 +1,5 @@
 import {postIntegrationRequest} from './backend';
+import {get, set} from './localStorage';
 
 import('monaco-editor-core').then(monaco => {
   // Monokai colors
@@ -182,6 +183,7 @@ window.addEventListener('load', () => {
   const searchInput = document.getElementById('search-input');
   searchInput.addEventListener('input', e => window.searchInputKeyUp(e));
   makePromptsUnselectable();
+  setRequestedIntegrations();
 });
 
 // this handles when the button on the left nav is clicked and it toggles the search box
@@ -308,7 +310,41 @@ import('algoliasearch').then(algolia => {
   };
 });
 
-window.onRequestIntegration = postIntegrationRequest;
+const REQUESTED_INTEGRATIONS_KEY = 'integrations';
+
+function setRequestedIntegrations() {
+  const requestedIntegrations = JSON.parse(get(REQUESTED_INTEGRATIONS_KEY));
+
+  if (!window.location.href.includes('frameworks') || !requestedIntegrations) {
+    return;
+  }
+
+  requestedIntegrations.forEach(ri => {
+    setRequestedIntegration(ri);
+  });
+}
+
+function setRequestedIntegration(integration) {
+  const buttonId = `request-button-${integration}`;
+  const el = document.getElementById(buttonId);
+  el.innerText = "Requested!"
+  el.setAttribute('disabled', '');
+}
+
+window.onRequestIntegration = function(integration) {
+  postIntegrationRequest(integration)
+    .then(() => {
+      let requestedIntegrations = JSON.parse(get(REQUESTED_INTEGRATIONS_KEY));
+      if (requestedIntegrations) {
+        requestedIntegrations.push(integration);
+      } else {
+        requestedIntegrations = [integration];
+      }
+      set(REQUESTED_INTEGRATIONS_KEY, JSON.stringify(requestedIntegrations));
+
+      setRequestedIntegration(integration);
+    });
+}
 
 function makePromptsUnselectable() {
   const languages = ['bash', 'console'];
