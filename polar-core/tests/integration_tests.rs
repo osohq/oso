@@ -1179,7 +1179,7 @@ fn test_arithmetic() -> TestResult {
 #[test]
 fn test_debug_temp_var() -> TestResult {
     let p = Polar::new();
-    p.load_str(indoc!("foo(a, aa) if a < 10 and debug() and aa < a;"))?;
+    p.load_str("foo(a, aa) if a < 10 and debug() and aa < a;")?;
     let mut call_num = 0;
     let debug_handler = |s: &str| {
         let rt = match call_num {
