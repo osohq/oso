@@ -13,6 +13,7 @@ mod value;
 
 pub use class::{Class, ClassBuilder, Instance};
 pub use from_polar::{FromPolar, FromPolarList};
+use polar_core::terms::Operator;
 pub use to_polar::{PolarIterator, ToPolar, ToPolarList};
 pub use value::PolarValue;
 
@@ -156,14 +157,6 @@ impl Host {
         Ok(())
     }
 
-    pub fn unify(&self, left: u64, right: u64) -> crate::Result<bool> {
-        tracing::trace!("unify {:?}, {:?}", left, right);
-
-        let left = self.get_instance(left).unwrap();
-        let right = self.get_instance(right).unwrap();
-        left.equals(right, &self)
-    }
-
     pub fn isa(&self, value: PolarValue, class_tag: &str) -> crate::Result<bool> {
         let res = match value {
             PolarValue::Instance(instance) => {
@@ -186,15 +179,14 @@ impl Host {
         false
     }
 
-    pub fn operator(
-        &self,
-        _op: polar_core::terms::Operator,
-        _args: [class::Instance; 2],
-    ) -> crate::Result<bool> {
+    pub fn operator(&self, op: Operator, args: [class::Instance; 2]) -> crate::Result<bool> {
+        match op {
+            Operator::Eq => args[0].equals(&args[1], self),
+            _ => Err(OsoError::UnimplementedOperation {
+                operation: String::from("comparison operators"),
+            }),
+        }
         // Operators are not supported
         // TODO (dhatch): Implement.
-        Err(OsoError::UnimplementedOperation {
-            operation: String::from("comparison operators"),
-        })
     }
 }

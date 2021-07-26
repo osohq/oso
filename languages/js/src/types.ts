@@ -446,19 +446,6 @@ export interface ExternalOp {
 }
 
 /**
- * The `ExternalUnify` [[`QueryEvent`]] is how Polar determines whether a pair
- * of values unify where at least one of the values is an application instance
- * (and, as such, Polar cannot determine unification internally).
- *
- * @internal
- */
-export interface ExternalUnify {
-  leftId: number;
-  rightId: number;
-  callId: number;
-}
-
-/**
  * The `Debug` [[`QueryEvent`]] is how Polar relays debugging messages to
  * JavaScript from the internal debugger attached to the Polar VM.
  *
@@ -480,7 +467,6 @@ export enum QueryEventKind {
   ExternalIsa,
   ExternalIsSubspecializer,
   ExternalOp,
-  ExternalUnify,
   MakeExternal,
   NextExternal,
   Result,
@@ -499,7 +485,6 @@ export interface QueryEvent {
     | ExternalIsa
     | ExternalIsSubspecializer
     | ExternalOp
-    | ExternalUnify
     | MakeExternal
     | NextExternal
     | Result;

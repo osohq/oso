@@ -248,11 +248,10 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                   : 0;
           ffiQuery.questionResult(callId, answer);
           break;
-        case "ExternalUnify":
-          long leftId = data.getLong("left_instance_id");
-          long rightId = data.getLong("right_instance_id");
+        case "ExternalOp":
           callId = data.getLong("call_id");
-          answer = host.unify(leftId, rightId) ? 1 : 0;
+          JSONArray args = data.getJSONArray("args");
+          answer = host.operator(data.getString("operator"), host.polarListToJava(args)) ? 1 : 0;
           ffiQuery.questionResult(callId, answer);
           break;
         case "NextExternal":
@@ -276,8 +275,6 @@ public class Query implements Enumeration<HashMap<String, Object>> {
             throw new Exceptions.PolarRuntimeException("Caused by: " + e.getMessage());
           }
           break;
-        case "ExternalOp":
-          throw new Exceptions.UnimplementedOperation("comparison operators");
         default:
           throw new Exceptions.PolarRuntimeException("Unhandled event type: " + kind);
       }

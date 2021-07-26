@@ -5,9 +5,9 @@ Interface for values that can be compared.
 */
 type Comparer interface {
 	// Should return `true` when values are equal; `false` when not equal.
-	Equal(other Comparer) bool
+	Equal(other interface{}) bool
 	// Should return `true` when the comparer is less than `other`; `false` when not less than.
-	Lt(other Comparer) bool
+	Lt(other interface{}) bool
 }
 
 /*

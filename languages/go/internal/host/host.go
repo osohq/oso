@@ -8,7 +8,6 @@ import (
 	"reflect"
 
 	"github.com/osohq/go-oso/errors"
-	"github.com/osohq/go-oso/interfaces"
 	"github.com/osohq/go-oso/internal/ffi"
 	"github.com/osohq/go-oso/types"
 	. "github.com/osohq/go-oso/types"
@@ -178,23 +177,6 @@ func (h Host) cacheInstance(instance interface{}, id *uint64) (*uint64, error) {
 	}
 	h.instances[instanceID] = reflect.ValueOf(instance)
 	return &instanceID, nil
-}
-
-func (h Host) Unify(leftID uint64, rightID uint64) (bool, error) {
-	left, err1 := h.getInstance(leftID)
-	right, err2 := h.getInstance(rightID)
-	if err1 != nil {
-		return false, err1
-	}
-	if err2 != nil {
-		return false, err2
-	}
-	if leftEq, ok := left.Interface().(interfaces.Comparer); ok {
-		if rightEq, ok := right.Interface().(interfaces.Comparer); ok {
-			return leftEq.Equal(rightEq), nil
-		}
-	}
-	return reflect.DeepEqual(left, right), nil
 }
 
 func (h Host) Isa(value types.Term, classTag string) (bool, error) {

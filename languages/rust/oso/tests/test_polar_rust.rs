@@ -511,6 +511,19 @@ fn test_results_and_options() {
     assert!(results.is_empty());
 }
 
+// this functionality isn't very useful for rust as long as we
+// only support nullary constructors ...
+#[test]
+fn test_unify_external_internal() {
+    let mut test = OsoTest::new();
+    test.qeval("new List() = []");
+    test.qeval("new Dictionary() = {}");
+    test.qeval("new String() = \"\"");
+    test.qeval("new Integer() = 0");
+    test.qeval("new Float() = 0.0");
+    test.qeval("new Boolean() = false");
+}
+
 // TODO: dhatch see if there is a relevant test to port.
 #[test]
 fn test_unify_externals() {
