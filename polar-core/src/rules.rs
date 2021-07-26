@@ -57,6 +57,13 @@ impl RuleIndex {
         }
     }
 
+    pub fn remove_rule(&mut self, rule_id: u64) {
+        self.rules.remove(&rule_id);
+        self.index
+            .iter_mut()
+            .for_each(|(_, index)| index.remove_rule(rule_id));
+    }
+
     #[allow(clippy::comparison_chain)]
     pub fn get_applicable_rules(&self, args: &[Term], i: usize) -> RuleSet {
         if i < args.len() {
@@ -94,10 +101,10 @@ impl RuleIndex {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct GenericRule {
     pub name: Symbol,
-    rules: HashMap<u64, Arc<Rule>>,
+    pub rules: HashMap<u64, Arc<Rule>>,
     index: RuleIndex,
     next_rule_id: u64,
 }
@@ -126,6 +133,11 @@ impl GenericRule {
             "Rule id already used."
         );
         self.index.index_rule(rule_id, &rule.params[..], 0);
+    }
+
+    pub fn remove_rule(&mut self, rule_id: u64) {
+        self.rules.remove(&rule_id);
+        self.index.remove_rule(rule_id);
     }
 
     #[allow(clippy::ptr_arg)]
