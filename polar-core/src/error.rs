@@ -41,10 +41,23 @@ pub struct ErrorContext {
     pub source: Source,
     pub row: usize,
     pub column: usize,
+    /// error location as an offset in the file
+    pub loc: usize,
 }
 
 impl PolarError {
-    pub fn set_context(mut self, source: Option<&Source>, term: Option<&Term>) -> Self {
+    pub fn set_context_from_offset(mut self, source: Source, loc: usize) -> Self {
+        let (row, column) = crate::lexer::loc_to_pos(&source.src, loc);
+        self.context.replace(ErrorContext {
+            source,
+            row,
+            column,
+            loc,
+        });
+        self
+    }
+
+    pub fn set_context(self, source: Option<&Source>, term: Option<&Term>) -> Self {
         match (&self.kind, source, term) {
             (ErrorKind::Parse(e), Some(source), _) => match e {
                 ParseError::IntegerOverflow { loc, .. }
@@ -57,26 +70,17 @@ impl PolarError {
                 | ParseError::ReservedWord { loc, .. }
                 | ParseError::DuplicateKey { loc, .. }
                 | ParseError::SingletonVariable { loc, .. } => {
-                    let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
-                    self.context.replace(ErrorContext {
-                        source: source.clone(),
-                        row,
-                        column,
-                    });
+                    let loc = *loc;
+                    let source = source.clone();
+                    self.set_context_from_offset(source, loc)
                 }
-                _ => {}
+                _ => self,
             },
             (_, Some(source), Some(term)) => {
-                let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
-                self.context.replace(ErrorContext {
-                    source: source.clone(),
-                    row,
-                    column,
-                });
+                self.set_context_from_offset(source.clone(), term.offset())
             }
-            _ => {}
+            _ => self,
         }
-        self
     }
 }
 
