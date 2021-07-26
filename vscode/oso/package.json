@@ -1,16 +1,22 @@
 {
   "name": "oso",
+  "author": "Oso Security Inc.",
   "publisher": "osohq",
-  "displayName": "oso",
-  "description": "Syntax highlighting for .polar files as used by oso.",
+  "license": "Apache-2.0",
+  "displayName": "Oso",
+  "description": "Support for Oso policies written in Polar.",
   "icon": "oso_logo.png",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "engines": {
     "vscode": "^1.43.0"
   },
   "categories": [
     "Programming Languages"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/osohq/oso"
+  },
   "contributes": {
     "languages": [
       {
@@ -31,6 +37,31 @@
         "scopeName": "source.polar",
         "path": "./syntaxes/polar.tmLanguage.json"
       }
-    ]
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Configuration",
+      "properties": {}
+    }
+  },
+  "activationEvents": [
+    "onLanguage:polar"
+  ],
+  "main": "./client/out/extension",
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
+    "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
+    "test": "sh ./scripts/e2e.sh"
+  },
+  "devDependencies": {
+    "@types/mocha": "^8.2.2",
+    "@types/node": "^12.12.0",
+    "@typescript-eslint/eslint-plugin": "^4.23.0",
+    "@typescript-eslint/parser": "^4.23.0",
+    "eslint": "^7.26.0",
+    "mocha": "^8.3.2",
+    "typescript": "^4.2.3"
   }
 }
