@@ -21,7 +21,8 @@ Roles can be displayed by using the roles read API.
     to="docs: end-org-role-index"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
-    hlOpts="hl_lines=5"
+    hlFrom="docs: begin-org-role-index-highlight"
+    hlTo="docs: end-org-role-index-highlight"
     >}}
 
 ## Assigning users to a role
@@ -34,7 +35,8 @@ Users are assigned to roles using `OsoRoles.assign_role`.
     to="docs: end-role-assignment"
     gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
     linenos=true
-    hlOpts="hl_lines=10"
+    hlFrom="docs: begin-role-assignment-highlight"
+    hlTo="docs: end-role-assignment-highlight"
     >}}
 
 ## Have feedback?

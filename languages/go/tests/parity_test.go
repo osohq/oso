@@ -174,11 +174,42 @@ func (u ImplementsEq) String() string {
 	return fmt.Sprintf("ImplementsEq { %v }", u.Val)
 }
 
-func (left ImplementsEq) Equal(right interfaces.Comparer) bool {
+func (left ImplementsEq) Equal(right interface{}) bool {
 	return left.Val == right.(ImplementsEq).Val
 }
-func (left ImplementsEq) Lt(right interfaces.Comparer) bool {
+
+func (left ImplementsEq) Lt(right interface{}) bool {
 	panic("unsupported")
+}
+
+type Least struct{}
+
+func (e Least) Equal(x interface{}) bool {
+	_, l := x.(Least)
+	return l
+}
+
+func (e Least) Lt(x interface{}) bool {
+	_, l := x.(Least)
+	return !l
+}
+
+func NewLeast() Least {
+	return Least{}
+}
+
+type NaNLike struct{}
+
+func (n NaNLike) Equal(x interface{}) bool {
+	return false
+}
+
+func (n NaNLike) Lt(x interface{}) bool {
+	return false
+}
+
+func NewNaNLike() NaNLike {
+	return NaNLike{}
 }
 
 type Comparable struct {
@@ -193,14 +224,14 @@ func (u Comparable) String() string {
 	return fmt.Sprintf("Comparable { %v }", u.Val)
 }
 
-func (a Comparable) Equal(b interfaces.Comparer) bool {
+func (a Comparable) Equal(b interface{}) bool {
 	if other, ok := b.(Comparable); ok {
 		return a.Val == other.Val
 	}
 	panic(fmt.Sprintf("cannot compare Comparable with %v", b))
 }
 
-func (a Comparable) Lt(b interfaces.Comparer) bool {
+func (a Comparable) Lt(b interface{}) bool {
 	if other, ok := b.(Comparable); ok {
 		return a.Val < other.Val
 	}
@@ -219,6 +250,8 @@ var CLASSES = map[string]reflect.Type{
 	"Animal":          reflect.TypeOf(Animal{}),
 	"ImplementsEq":    reflect.TypeOf(ImplementsEq{}),
 	"Comparable":      reflect.TypeOf(Comparable{}),
+	"Least":           reflect.TypeOf(Least{}),
+	"NaNLike":         reflect.TypeOf(NaNLike{}),
 }
 
 func setStructFields(instance reflect.Value, args []interface{}) error {
@@ -393,6 +426,8 @@ func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
 	var CONSTRUCTORS = map[string]interface{}{
 		"UnitClass":    NewUnitClass,
 		"ValueFactory": NewValueFactory,
+		"Least":        NewLeast,
+		"NaNLike":      NewNaNLike,
 	}
 	for k, v := range CLASSES {
 		c := CONSTRUCTORS[k]

@@ -72,15 +72,19 @@ public class Controller {
     }
   }
 
+  // docs: getting-started-begin
   @PutMapping("/expenses/submit")
   public String submitExpense(@RequestBody Expense expense) {
     try {
       User user = (User) currentUser.get();
       if (expense.userId == 0) expense.userId = user.id;
+      // docs: getting-started-highlight-begin
       expense.save();
+      // docs: getting-started-highlight-end
       return expense.toString();
     } catch (SQLException e) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "failed to save expense", e);
     }
   }
+  // docs: getting-started-end
 }
