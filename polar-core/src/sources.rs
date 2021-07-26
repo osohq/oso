@@ -36,8 +36,8 @@ pub struct Source {
 }
 
 pub struct Sources {
-    /// Map from term ID to `Source`.
-    sources: HashMap<u64, Source>,
+    /// Map from source ID to `Source`.
+    pub sources: HashMap<u64, Source>,
 }
 
 impl Default for Sources {
