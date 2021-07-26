@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::error::PolarResult;
+
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::rules::*;
@@ -12,6 +14,12 @@ use super::terms::*;
 #[derive(Default)]
 pub struct KnowledgeBase {
     pub constants: Bindings,
+
+    /// Map from loaded files to the source ID
+    pub loaded_files: HashMap<String, u64>,
+    /// Map from source code loaded to the filename it was loaded as
+    pub loaded_content: HashMap<String, String>,
+
     pub rules: HashMap<Symbol, GenericRule>,
     pub sources: Sources,
     /// For symbols returned from gensym.
@@ -25,6 +33,8 @@ impl KnowledgeBase {
     pub fn new() -> Self {
         Self {
             constants: HashMap::new(),
+            loaded_files: Default::default(),
+            loaded_content: Default::default(),
             rules: HashMap::new(),
             sources: Sources::default(),
             id_counter: Counter::default(),
@@ -71,5 +81,104 @@ impl KnowledgeBase {
     /// Return true if a constant with the given name has been defined.
     pub fn is_constant(&self, name: &Symbol) -> bool {
         self.constants.contains_key(name)
+    }
+
+    pub fn add_source(&mut self, source: Source) -> PolarResult<u64> {
+        let src_id = self.new_id();
+        if let Some(ref filename) = source.filename {
+            self.check_file(&source.src, &filename)?;
+            self.loaded_content
+                .insert(source.src.clone(), filename.to_string());
+            self.loaded_files.insert(filename.to_string(), src_id);
+        }
+        self.sources.add_source(source, src_id);
+        Ok(src_id)
+    }
+
+    pub fn clear_sources(&mut self) {
+        self.rules.clear();
+        self.sources = Sources::default();
+        self.inline_queries.clear();
+        self.loaded_content.clear();
+        self.loaded_files.clear();
+    }
+
+    pub fn remove_file(&mut self, filename: &str) -> Option<String> {
+        self.loaded_files
+            .get(filename)
+            .cloned()
+            .map(|src_id| self.remove_source(Some(filename.to_string()), src_id))
+    }
+
+    pub fn remove_source(&mut self, filename: Option<String>, source_id: u64) -> String {
+        // remove from rules
+        self.rules.retain(|_, gr| {
+            let to_remove: Vec<u64> = gr.rules.iter().filter_map(|(idx, rule)| {
+                if matches!(rule.source_info, SourceInfo::Parser { src_id, ..} if src_id == source_id) {
+                    Some(*idx)
+                } else {
+                    None
+                }
+            }).collect();
+
+            for idx in to_remove {
+                gr.remove_rule(idx);
+            }
+            !gr.rules.is_empty()
+        });
+
+        // remove from sources
+        let source = self
+            .sources
+            .sources
+            .remove(&source_id)
+            .expect("source doesn't exist in KB");
+
+        assert_eq!(source.filename, filename);
+
+        // remove queries
+        self.inline_queries
+            .retain(|q| q.get_source_id() != Some(source_id));
+
+        // remove from files
+        if let Some(filename) = filename {
+            self.loaded_files.remove(&filename);
+            self.loaded_content.retain(|_, f| f != &filename);
+        }
+        source.src
+    }
+
+    fn check_file(&self, src: &str, filename: &str) -> PolarResult<()> {
+        match (
+            self.loaded_content.get(src),
+            self.loaded_files.get(filename).is_some(),
+        ) {
+            (Some(other_file), true) if other_file == filename => {
+                return Err(error::RuntimeError::FileLoading {
+                    msg: format!("File {} has already been loaded.", filename),
+                }
+                .into())
+            }
+            (_, true) => {
+                return Err(error::RuntimeError::FileLoading {
+                    msg: format!(
+                        "A file with the name {}, but different contents has already been loaded.",
+                        filename
+                    ),
+                }
+                .into());
+            }
+            (Some(other_file), _) => {
+                return Err(error::RuntimeError::FileLoading {
+                    msg: format!(
+                        "A file with the same contents as {} named {} has already been loaded.",
+                        filename, other_file
+                    ),
+                }
+                .into());
+            }
+            _ => {}
+        }
+        Ok(())
     }
 }
