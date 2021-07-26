@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1626988613733,
+  "lastUpdate": 1627319727730,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -68583,6 +68583,240 @@ window.BENCHMARK_DATA = {
             "name": "partial_rule_depth/100",
             "value": 121098402,
             "range": "± 1162982",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gwen@osohq.com",
+            "name": "gw",
+            "username": "gw000"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "492f1f57afb269069b46da71ef27efea397e6371",
+          "message": "Unify across host/native types (#1023)\n\n* handle all normal errors in make_instance\r\n\r\npreviously it only handled TypeErrors. this change makes python\r\nconsistent with the ruby library.\r\n\r\n* host/native unify\r\n\r\n* rm external unify from rust\r\n\r\n* remove external unify\r\n\r\n* add tests\r\n\r\n* changelog entry\r\n\r\n* format python\r\n\r\n* format errything except java ...\r\n\r\n* rm unneeded go interface impl\r\n\r\n* preserve unsupported op error in ruby library\r\n\r\n* better go comparers\r\n\r\n* pr changes",
+          "timestamp": "2021-07-26T13:02:38-04:00",
+          "tree_id": "8f9c6b414822618d0bf92d4c0aaca85f764aa3a9",
+          "url": "https://github.com/osohq/oso/commit/492f1f57afb269069b46da71ef27efea397e6371"
+        },
+        "date": 1627319724161,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 59452,
+            "range": "± 3585",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2890957,
+            "range": "± 10407",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 13857978,
+            "range": "± 50878",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 27628901,
+            "range": "± 274574",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 961,
+            "range": "± 28",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2755,
+            "range": "± 52",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 66814,
+            "range": "± 1673",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 590026,
+            "range": "± 8687",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 23100,
+            "range": "± 783",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 23173,
+            "range": "± 775",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 23124,
+            "range": "± 723",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 23109,
+            "range": "± 733",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 20947,
+            "range": "± 656",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6201,
+            "range": "± 513",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 7250,
+            "range": "± 1456",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 8947,
+            "range": "± 288",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 17726,
+            "range": "± 1996",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 7020,
+            "range": "± 114",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 15671,
+            "range": "± 228",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 9446,
+            "range": "± 212",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "load_policy",
+            "value": 968554,
+            "range": "± 3022",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/1",
+            "value": 29543,
+            "range": "± 1415",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/5",
+            "value": 106799,
+            "range": "± 5026",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/10",
+            "value": 228472,
+            "range": "± 7092",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/20",
+            "value": 566908,
+            "range": "± 9771",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/40",
+            "value": 1622830,
+            "range": "± 3963",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/80",
+            "value": 5005196,
+            "range": "± 15127",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/100",
+            "value": 7373177,
+            "range": "± 21167",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/1",
+            "value": 101516,
+            "range": "± 5192",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/5",
+            "value": 363508,
+            "range": "± 10056",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/10",
+            "value": 867236,
+            "range": "± 17584",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/20",
+            "value": 2736120,
+            "range": "± 7678",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/40",
+            "value": 10259502,
+            "range": "± 106534",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/80",
+            "value": 64679455,
+            "range": "± 672198",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/100",
+            "value": 125010838,
+            "range": "± 1013076",
             "unit": "ns/iter"
           }
         ]
