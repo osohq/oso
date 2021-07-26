@@ -30,7 +30,7 @@
               </div>
               <a
                   href="{{- $referenceUrl | safeURL -}}"
-                  class="no-a inline-block px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors w-1/2"
+                  class="no-a inline-block px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors w-full"
               >
                 {{ $referenceTitle }}
               </a>
@@ -40,7 +40,7 @@
         {{- with $link -}}
           <a
               href="{{- . | safeURL -}}"
-              class="no-a inline-block px-4 py-2 mt-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors w-1/2"
+              class="no-a inline-block px-4 py-2 mt-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors w-full"
           >
             Documentation
           </a>
@@ -77,7 +77,7 @@
               </div>
               <a
                   href="{{- $referenceUrl | safeURL -}}"
-                  class="no-a inline-block px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors w-1/2"
+                  class="no-a inline-block px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors w-full"
               >
                 {{ $referenceTitle }}
               </a>
@@ -87,7 +87,7 @@
         <button
             id="request-button-{{ $requestName }}"
             onclick="onRequestIntegration({{ $requestName }})"
-            class="integration-request no-a w-1/2 block px-4 py-2 mt-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+            class="integration-request no-a w-full block px-4 py-2 mt-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
         >
           Request this integration
         </button>
