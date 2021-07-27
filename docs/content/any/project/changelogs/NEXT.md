@@ -42,7 +42,7 @@ Link to [relevant documentation section]().
 - Native types (`Integer`, `String`, `Dictionary`, etc.) and
   equivalent host objects created with the `new` operator can now
   be unified transparently.
-- The debugger's `var` command  now automatically maps variable
+- The `var` command  in the debugger now automatically maps variable
   names to their temporary bindings.
 
 ### Ruby
