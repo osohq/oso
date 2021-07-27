@@ -49,6 +49,8 @@ Link to [relevant documentation section]().
   equivalent host objects created with the `new` operator can now
   be unified transparently.
 - The debugger can now break on runtime errors.
+- The `var` command  in the debugger now automatically maps variable
+  names to their temporary bindings.
 
 ### Ruby
 
