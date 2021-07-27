@@ -124,7 +124,7 @@ impl Debugger {
             }
             (Step::Error, DebugEvent::Error(error)) => {
                 self.break_msg(vm).map(|message| Goal::Debug {
-                    message: format!("{}\nCAUGHT ERROR: {}\n", message, error.to_string()),
+                    message: format!("{}\nERROR: {}\n", message, error.to_string()),
                 })
             }
             _ => None,
