@@ -36,7 +36,7 @@ fn init_oso() -> Oso {
   oso.register_class(OrgRole::get_polar_class());
 
   // load the policy from a file
-  oso.load_file("app/policy/authorization.polar");
+  oso.load_file("authorization.polar");
 
   // load built-in roles configuration
   oso.enable_roles();
