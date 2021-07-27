@@ -238,10 +238,11 @@ class Polar:
         """Register `cls` as a class accessible by Polar."""
         cls_name = self.host.cache_class(cls, name)
         self.register_constant(cls, cls_name)
+        self.host.cls_names[cls] = cls_name
         if types:
-            self.host.types[cls] = types
+            self.host.types[cls_name] = types
         if fetcher:
-            self.host.fetchers[cls] = fetcher
+            self.host.fetchers[cls_name] = fetcher
 
     def register_constant(self, value, name):
         """Register `value` as a Polar constant variable called `name`."""

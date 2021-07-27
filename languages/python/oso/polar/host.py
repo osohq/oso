@@ -24,6 +24,7 @@ class Host:
         self,
         polar,
         classes=None,
+        cls_names=None,
         instances=None,
         get_field=None,
         types=None,
@@ -32,6 +33,7 @@ class Host:
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
         self.classes = (classes or {}).copy()
+        self.cls_names = (cls_names or {}).copy()
         self.instances = (instances or {}).copy()
         self.types = (types or {}).copy()
         self.fetchers = (fetchers or {}).copy()
@@ -45,12 +47,13 @@ class Host:
 
     # @Q: I'm not really sure what I'm returning here.
     def types_get_field(self, obj, field):
-        if obj in self.types:
-            obj_type = self.types[obj]
-            if field in obj_type:
-                field_type = obj_type[field]
+        obj_type_name = self.cls_names[obj]
+        if obj_type_name in self.types:
+            obj_type_info = self.types[obj_type_name]
+            if field in obj_type_info:
+                field_type = obj_type_info[field]
                 if field_type.kind == "parent":
-                    return field_type.other_type
+                    return self.classes[field_type.other_type]
                 elif field_type.kind == "children":
                     return list
             else:
@@ -62,6 +65,7 @@ class Host:
         return type(self)(
             self.ffi_polar,
             classes=self.classes,
+            cls_names=self.cls_names,
             instances=self.instances,
             get_field=self.get_field,
             types=self.types,

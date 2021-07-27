@@ -292,23 +292,23 @@ def test_roles_data_filtering(oso):
         return results
 
     def get_orgs(constraints):
-        assert constraints.cls == Org
+        assert constraints.cls == 'Org'
         return filter_array(orgs, constraints)
 
     def get_repos(constraints):
-        assert constraints.cls == Repo
+        assert constraints.cls == 'Repo'
         return filter_array(repos, constraints)
 
     def get_issues(constraints):
-        assert constraints.cls == Issue
+        assert constraints.cls == 'Issue'
         return filter_array(issues, constraints)
 
     def get_roles(constraints):
-        assert constraints.cls == Role
+        assert constraints.cls == 'Role'
         return filter_array(roles, constraints)
 
     def get_users(constraints):
-        assert constraints.cls == User
+        assert constraints.cls == 'User'
         return filter_array(users, constraints)
 
     oso.register_class(Org, types={"name": str}, fetcher=get_orgs)
@@ -318,7 +318,7 @@ def test_roles_data_filtering(oso):
             "name": str,
             "org_name": str,
             "org": Relationship(
-                kind="parent", other_type=Org, my_field="org_name", other_field="name"
+                kind="parent", other_type='Org', my_field="org_name", other_field="name"
             ),
         },
         fetcher=get_repos,
@@ -329,7 +329,7 @@ def test_roles_data_filtering(oso):
             "name": str,
             "repo_name": str,
             "repo": Relationship(
-                kind="parent", other_type=Repo, my_field="repo_name", other_field="name"
+                kind="parent", other_type='Repo', my_field="repo_name", other_field="name"
             ),
         },
         fetcher=get_issues,
@@ -349,7 +349,7 @@ def test_roles_data_filtering(oso):
             "name": str,
             "roles": Relationship(
                 kind="children",
-                other_type=Role,
+                other_type='Role',
                 my_field="name",
                 other_field="user_name",
             ),
@@ -369,8 +369,8 @@ def test_roles_data_filtering(oso):
                 implies: ["repo:reader"]
             },
             owner: {
-                # permissions: ["invite"],
-                implies: ["repo:writer"] # member
+                permissions: ["invite"],
+                implies: ["repo:writer", "member"]
             }
         };
 
@@ -415,23 +415,21 @@ def test_roles_data_filtering(oso):
     oso.load_str(policy)
     oso.enable_roles()
 
-    # assert oso.is_allowed(leina, "invite", osohq)
-    # assert oso.is_allowed(leina, "create_repo", osohq)
-    # assert oso.is_allowed(leina, "push", oso_repo)
-    # assert oso.is_allowed(leina, "pull", oso_repo)
-    # assert oso.is_allowed(leina, "edit", oso_bug)
-    #
-    # assert not oso.is_allowed(steve, "invite", osohq)
-    # assert oso.is_allowed(steve, "create_repo", osohq)
-    # assert not oso.is_allowed(steve, "push", oso_repo)
-    # assert oso.is_allowed(steve, "pull", oso_repo)
-    # assert not oso.is_allowed(steve, "edit", oso_bug)
-    #
-    # assert not oso.is_allowed(leina, "edit", ios_laggy)
-    # assert not oso.is_allowed(steve, "edit", ios_laggy)
+    assert oso.is_allowed(leina, "invite", osohq)
+    assert oso.is_allowed(leina, "create_repo", osohq)
+    assert oso.is_allowed(leina, "push", oso_repo)
+    assert oso.is_allowed(leina, "pull", oso_repo)
+    assert oso.is_allowed(leina, "edit", oso_bug)
+
+    assert not oso.is_allowed(steve, "invite", osohq)
+    assert oso.is_allowed(steve, "create_repo", osohq)
+    assert not oso.is_allowed(steve, "push", oso_repo)
+    assert oso.is_allowed(steve, "pull", oso_repo)
+    assert not oso.is_allowed(steve, "edit", oso_bug)
+
+    assert not oso.is_allowed(leina, "edit", ios_laggy)
+    assert not oso.is_allowed(steve, "edit", ios_laggy)
 
     # Ok, now for the magic trick
     results = list(oso.get_allowed_resources(leina, "pull", Repo))
     assert len(results) == 2
-
-    # Implement default_get_field (or really a new get_field) using the type information we have.

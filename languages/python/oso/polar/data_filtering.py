@@ -16,7 +16,7 @@ VALID_KINDS = ["parent"]
 @dataclass
 class Relationship:
     kind: str
-    other_type: Any
+    other_type: str
     my_field: str
     other_field: str
 
@@ -53,14 +53,14 @@ class Attrib:
 
 @dataclass
 class Constraint:
-    kind: str  # ["eq", "in"]
+    kind: str  # ["Eq", "In"]
     field: str
     value: Any  # Value or list of values.
 
 
 @dataclass
 class Constraints:
-    cls: Any
+    cls: str
     constraints: List[Constraint]
 
 
@@ -345,7 +345,7 @@ class FilterPlanner:
         # Making a bunch of assumptions and restrictions for now.
         # Want something that works for simple queries that I can then expand.
         query_results = list(query_results)
-        assert len(query_results) == 1
+        assert len(query_results) == 1, "Steve, next thing to do is handle OR but you are very close!"
         assert "bindings" in query_results[0]
         assert len(query_results[0]["bindings"]) == 1  # Only one variable in bindings.
         assert self.variable in query_results[0]["bindings"]
@@ -484,15 +484,54 @@ class FilterPlanner:
         assert this_id is not None
         return this_id
 
-    def get_constraints(self, var_id):
-        pass
+    def constrain_var(self, var_id, var_type):
+        if var_id in self.var_types:
+            if var_type:
+                assert var_type == self.var_types[var_id]
+            else:
+                var_type = self.var_types[var_id]
+        type_info = None
+        if var_type:
+            for cls, ti in self.polar.host.types.items():
+                if cls == var_type:
+                    type_info = ti
+                    break
+
+        if var_id not in self.data_sets:
+            self.data_sets[var_id] = Constraints(var_type, [])
+            # @TODO: This probably is a bug, dependencies can be more complicated than just pushing
+            # to the front when we find one.
+            self.dependencies.insert(0, var_id)
+        else:
+            assert self.data_sets[var_id].cls == var_type
+
+        for rel_var_id, field, rel_rel_id in self.var_relationships:
+            if rel_var_id == var_id:
+                if field in type_info:
+                    rel = type_info[field]
+                    if isinstance(rel, Relationship):
+                        # Get constraints for the related var.
+                        self.constrain_var(rel_rel_id, rel.other_type)
+                        self.data_sets[var_id].constraints.append(Constraint("In", rel.my_field, Attrib(rel.other_field, Result(rel_rel_id))))
+                        continue
+
+                # Non relationship or unknown type info.
+                # @TODO: Handle "in"
+                assert rel_rel_id in self.var_values
+                value = self.var_values[rel_rel_id]
+                self.data_sets[var_id].constraints.append(Constraint("Eq", field, value))
+
+
+    # Probably pass through the initial type too.
+    def build_constraints(self, var_id):
+        self.constrain_var(var_id, self.cls)
 
     def plan(self, query_results):
         self.next_id = 2
-        self.data_sets = {1: Constraints(self.cls, [])}
-        self.path_sets = {("_this",): 1}
+        self.data_sets = {}
+        self.path_sets = {}
         self.sid = 1
-        self.dependencies = [1]
+        self.dependencies = []
 
         self.var_cycles = []
         self.var_relationships = []
@@ -504,43 +543,15 @@ class FilterPlanner:
 
         this_id = self.this_id()
 
-        constraints = self.get_constraints(this_id)
-
-        # Ok, so now I think we can build the FilterPlan
-        # Probably need to figure out some relationships stuff first I'd think.
-        # Then sorta work out all the constraints for the vars and their dependencies.
-        # We know that what we care about in the end is the constraints for the _this variable.
-        # These might depend on other variables.
-        # I guess I probably start with building the constraints for the _this variable, and then when I
-        # hit a relationship I have to process that variable and then reference it.
-
+        self.build_constraints(this_id)
         var_id = this_id
-        constraints = []
-        # for rel_id, rel, child_id in var_relationships:
-        #     if rel_id == var_id:
-        # If it's a Relationship, then we process the child.
-        # If it's a normal field, we make a constraint for the value.
-
-
-        # def get_constraints(var_id):
-        #     # See if we have a type for the var.
-        #
-        #     for rel_id, rel, child_id in var_relationships:
-        #
-        #
-        #         if rel_id == var_id:
-        #
-        #             # If it's a Relationship, then we process the child.
-        #             # If it's a normal field, we make a constraint for the value.
-
-
         filter_order = self.sort_dependencies()
-
-        return FilterPlan(self.data_sets, filter_order, 1)
+        return FilterPlan(self.data_sets, filter_order, var_id)
 
 
 def process_constraints(polar, cls, variable, query_results):
-    planner = FilterPlanner(polar, cls, variable)
+    cls_name = polar.host.cls_names[cls]
+    planner = FilterPlanner(polar, cls_name, variable)
     plan = planner.plan(query_results)
     return plan
 
@@ -548,7 +559,6 @@ def process_constraints(polar, cls, variable, query_results):
 def evaluate(polar, cls, variable, query_results):
     plan = process_constraints(polar, cls, variable, query_results)
     return filter_data(polar, plan)
-
 
 # [
 #     {
