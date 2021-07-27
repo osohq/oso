@@ -1262,7 +1262,6 @@ fn test_debug_break_on_error() -> TestResult {
     Ok(())
 }
 
-
 #[test]
 fn test_debug_temp_var() -> TestResult {
     let p = Polar::new();
