@@ -1584,7 +1584,8 @@ fn test_circular_data() -> TestResult {
     qeval(&mut p, "y = {y:y}");
     qruntime!(
         "x = [x, y] and y = [y, x] and x = y",
-       RuntimeError::StackOverflow { .. });
+        RuntimeError::StackOverflow { .. }
+    );
     Ok(())
 }
 
