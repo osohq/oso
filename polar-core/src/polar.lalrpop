@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::collections::{HashMap, BTreeMap};
 
 use crate::lexer::{self, Token};
-use crate::parser::{Line, ScopeDef};
+use crate::parser::{Line, ScopeDef, ScopeBody};
 use crate::error;
 use crate::terms::*;
 use crate::rules::*;
@@ -62,8 +62,9 @@ extern {
         "or" => lexer::Token::Or,           // or
         "not" => lexer::Token::Not,         // not
         "matches" => lexer::Token::Matches, // matches
-        "def" => lexer::Token::Def,         // def
+        "def" => lexer::Token::Def,        // def
         "scope" => lexer::Token::Scope,     // scope
+        "type" => lexer::Token::Type,       // type
     }
 }
 
@@ -636,12 +637,23 @@ Rule: Rule = {
     }
 }
 
+RuleTemplate: Rule = {
+    "type" <head:RuleHead> <start:@L> <end:@R> ";" => {
+        let (name, params) = head;
+        let op = Operation{operator: Operator::And, args: vec![]};
+        let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
+        Rule{name, params, body}
+    }
+}
+
 pub(crate) Rules: Vec<Rule> = <Rule*>;
+pub(crate) RuleTemplates: Vec<Rule> = <RuleTemplate*>;
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
-    "def" "scope" <name:Name> "{" <rule_templates:Rules> "}" => Line::ScopeDef(ScopeDef { name, rule_templates }),
+    "def" "scope" <name:Name> "{" <rule_templates:RuleTemplates> "}" => Line::ScopeDef(ScopeDef { name, rule_templates }),
+    "scope" <name:Name> "{" <rules:Rules> "}" => Line::ScopeBody(ScopeBody { name, rules }),
 }
 
 pub Lines: Vec<Line> = <Line*>;

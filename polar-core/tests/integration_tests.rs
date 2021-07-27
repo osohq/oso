@@ -1965,6 +1965,37 @@ fn test_builtin_iterables() {
     qeval(&mut p, r#"forall(x in "abc", x in "abacus")"#);
     qnull(&mut p, r#"forall(x in "abcd", x in "abacus")"#);
 }
+#[test]
+fn test_scopes_rules() {
+    let mut p = Polar::new();
+
+    // load a custom scope def a top-level allow rule
+    p.load(
+        r#"
+        def scope relationships {
+            type has_role(_actor: String, _role_name: String, _resource: String);
+        }
+
+        scope relationships {
+            has_role(_actor: String, role_name: String, _resource: String) if role_name = "owner";
+        }
+        allow(actor, _action, resource) if relationships::has_role(actor, "owner", resource);
+        "#,
+        None,
+    )
+    .unwrap();
+    qeval(&mut p, r#"allow("leina", "read", "org")"#);
+
+    // load a good rule into the custom scope
+    // p.load(
+    //     r#"
+    //     allow("allowed");
+    //     "#,
+    //     None,
+    //     String::from("custom"),
+    // )
+    // .unwrap();
+}
 
 #[test]
 fn test_scopes() {
@@ -1973,7 +2004,7 @@ fn test_scopes() {
     // load a custom scope def a top-level allow rule
     p.load(
         r#"
-        def scope custom {
+        scope custom {
             allow("allowed");
 
         }
@@ -1982,7 +2013,6 @@ fn test_scopes() {
         allow(actor) if custom::allow(actor);
         "#,
         None,
-        String::from("default"),
     )
     .unwrap();
 
@@ -1992,7 +2022,6 @@ fn test_scopes() {
         allow("allowed");
         "#,
         None,
-        String::from("custom"),
     )
     .unwrap();
 
@@ -2002,7 +2031,6 @@ fn test_scopes() {
         allow("bad_rule");
         "#,
         None,
-        String::from("custom"),
     )
     .unwrap_err();
 

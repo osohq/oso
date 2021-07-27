@@ -91,6 +91,7 @@ pub enum Token {
     Matches,   // matches
     Def,       // def
     Scope,     // scope
+    Type,      // type
 }
 
 impl ToString for Token {
@@ -142,6 +143,7 @@ impl ToString for Token {
             Token::Matches => "matches".to_owned(), // matches
             Token::Def => "def".to_owned(),         // def
             Token::Scope => "scope".to_owned(),     // scope
+            Token::Type => "type".to_owned(),       // type
         }
     }
 }
@@ -253,10 +255,12 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Mod, last + 1)))
         } else if &self.buf == "rem" {
             Some(Ok((start, Token::Rem, last + 1)))
-        } else if &self.buf == "def" {
-            Some(Ok((start, Token::Def, last + 1)))
         } else if &self.buf == "scope" {
             Some(Ok((start, Token::Scope, last + 1)))
+        } else if &self.buf == "type" {
+            Some(Ok((start, Token::Type, last + 1)))
+        } else if &self.buf == "def" {
+            Some(Ok((start, Token::Def, last + 1)))
         } else {
             Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
         }

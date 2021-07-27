@@ -158,7 +158,7 @@ impl Oso {
     }
 
     fn inner_load(&mut self, pol: &str, filename: Option<String>) -> crate::Result<()> {
-        self.inner.load(pol, filename, String::from("default"))?;
+        self.inner.load(pol, filename)?;
         self.check_inline_queries()?;
         self.reinitialize_roles()
     }

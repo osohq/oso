@@ -198,7 +198,7 @@ impl Polar {
         Ok(())
     }
 
-    pub fn load(&self, src: &str, filename: Option<String>, scope: String) -> PolarResult<()> {
+    pub fn load(&self, src: &str, filename: Option<String>) -> PolarResult<()> {
         if let Some(ref filename) = filename {
             self.check_file(src, filename)?;
         }
@@ -219,7 +219,7 @@ impl Polar {
                     let mut rule_warnings = check_singletons(&rule, &kb)?;
                     warnings.append(&mut rule_warnings);
                     let rule = rewrite_rule(rule, &mut kb);
-                    kb.add_rule(rule, Symbol(scope.clone()))?;
+                    kb.add_rule(rule, Symbol("default".to_owned()))?;
                 }
                 parser::Line::Query(term) => {
                     kb.inline_queries.push(term);
@@ -228,6 +228,9 @@ impl Polar {
                     name,
                     rule_templates,
                 }) => kb.add_scope_definition(name, rule_templates)?,
+                parser::Line::ScopeBody(parser::ScopeBody { name, rules }) => {
+                    kb.add_scope_body(name, rules)?
+                }
             }
         }
         self.messages.extend(warnings.iter().map(|m| Message {
@@ -240,7 +243,7 @@ impl Polar {
 
     // Used in integration tests
     pub fn load_str(&self, src: &str) -> PolarResult<()> {
-        self.load(src, None, "default".to_string())
+        self.load(src, None)
     }
 
     /// Clear rules from the knowledge base
@@ -298,11 +301,7 @@ impl Polar {
 
     /// Load the Polar roles policy idempotently.
     pub fn enable_roles(&self) -> PolarResult<()> {
-        let result = match self.load(
-            ROLES_POLICY,
-            Some("Built-in Polar Roles Policy".to_owned()),
-            String::from("default"),
-        ) {
+        let result = match self.load(ROLES_POLICY, Some("Built-in Polar Roles Policy".to_owned())) {
             Err(error::PolarError {
                 kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { .. }),
                 ..

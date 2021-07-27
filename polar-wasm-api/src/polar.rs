@@ -19,7 +19,7 @@ impl Polar {
     #[wasm_bindgen(js_class = Polar, js_name = load)]
     pub fn wasm_load(&self, src: &str, filename: Option<String>) -> JsResult<()> {
         self.0
-            .load(src, filename, String::from("default"))
+            .load(src, filename)
             .map_err(Error::from)
             .map_err(Error::into)
     }

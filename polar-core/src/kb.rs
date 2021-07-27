@@ -123,9 +123,27 @@ impl KnowledgeBase {
         self.scopes.insert(scope.name.clone(), scope);
 
         for template in rule_templates {
+            // self.add_rule(template, name.clone())?;
             self.add_rule_template(template, &name)?;
         }
 
+        Ok(())
+    }
+
+    pub fn add_scope_body(&mut self, name: Symbol, rules: Vec<Rule>) -> PolarResult<()> {
+        if self.scopes.contains_key(&name) {
+            for rule in rules {
+                self.add_rule(rule, name.clone())?;
+            }
+        } else {
+            return Err(error::RuntimeError::FileLoading {
+                msg: format!(
+                    "Scope {} must be defined with `def scope {}{{}}`.",
+                    &name, &name
+                ),
+            }
+            .into());
+        }
         Ok(())
     }
 
@@ -182,35 +200,54 @@ impl KnowledgeBase {
     }
 
     /// Add `rule` to the rules for `scope`
-    pub fn add_rule(&mut self, rule: Rule, scope: Symbol) -> Result<(), error::RuntimeError> {
+    pub fn add_rule(&mut self, rule: Rule, scope_name: Symbol) -> Result<(), error::RuntimeError> {
         // lookup scope by path; panic if scope doesn't exist
         let scope = self
             .scopes
-            .entry(scope.clone())
-            .or_insert_with(|| Scope::new(scope));
+            .entry(scope_name.clone())
+            .or_insert_with(|| Scope::new(scope_name.clone()));
 
         // determine if rule matches a rule template in the scope
         let rule_name = rule.name.clone();
         if let Some(rule_templates) = scope.rule_templates.get(&rule_name) {
-            let mut has_template = false;
+            let mut arity_match = false;
             let mut matched_template = false;
             for template in rule_templates {
                 if rule.params.len() == template.params.len() {
                     // a rule has an applicable template if any template exists with the same name and arity
-                    has_template = true;
+                    arity_match = true;
                     // in order for a rule to have matched a template, the rule's parameters must exactly match
                     // the template's parameters
                     matched_template = KnowledgeBase::check_rule_compatibility(&rule, template);
                 }
             }
             // if the rule has at least one applicable template but did not match any, then it is not allowed
-            if has_template && !matched_template {
+            if arity_match && !matched_template {
                 // TODO: warning or return code?
                 return Err(error::RuntimeError::TypeError {
-                    msg: "Rule not allowed in scope".to_owned(),
+                    msg: format!(
+                        "Rule {} with arity {} not allowed in scope because parameter types did not match rule template.",
+                        rule_name,
+                        rule.params.len()
+                    ),
+                    stack_trace: None,
+                });
+            } else if !rule_templates.is_empty() && !arity_match {
+                return Err(error::RuntimeError::TypeError {
+                    msg: format!("Rule {} with arity {} not allowed in scope because arity did not match rule template", rule_name, rule.params.len()),
                     stack_trace: None,
                 });
             }
+        } else if scope_name.0 != "default" {
+            return Err(error::RuntimeError::TypeError {
+                msg: format!(
+                    "No rule template found for rule {} with arity {} in scope {}",
+                    rule_name,
+                    rule.params.len(),
+                    scope_name
+                ),
+                stack_trace: None,
+            });
         }
 
         let generic_rule = scope
