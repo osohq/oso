@@ -42,6 +42,10 @@ fn no_debug(_: &str) -> String {
     "".to_string()
 }
 
+fn no_error_handler(e: PolarError) -> QueryResults {
+    panic!("Query returned error: {}", e.to_string())
+}
+
 fn no_isa(_: Term, _: Symbol) -> bool {
     true
 }
@@ -50,7 +54,8 @@ fn no_is_subspecializer(_: u64, _: Symbol, _: Symbol) -> bool {
     false
 }
 
-fn query_results<F, G, H, I, J, K>(
+#[allow(clippy::too_many_arguments)]
+fn query_results<F, G, H, I, J, K, L>(
     mut query: Query,
     mut external_call_handler: F,
     mut make_external_handler: H,
@@ -58,6 +63,7 @@ fn query_results<F, G, H, I, J, K>(
     mut external_is_subspecializer_handler: J,
     mut debug_handler: G,
     mut message_handler: K,
+    mut error_handler: L,
 ) -> QueryResults
 where
     F: FnMut(u64, Term, Symbol, Option<Vec<Term>>, Option<BTreeMap<Symbol, Term>>) -> Option<Term>,
@@ -66,10 +72,15 @@ where
     I: FnMut(Term, Symbol) -> bool,
     J: FnMut(u64, Symbol, Symbol) -> bool,
     K: FnMut(&Message),
+    L: FnMut(PolarError) -> QueryResults,
 {
     let mut results = vec![];
     loop {
-        let event = query.next_event().unwrap();
+        let event = match query.next_event() {
+            Err(e) => return error_handler(e),
+            Ok(e) => e,
+        };
+
         while let Some(msg) = query.next_message() {
             message_handler(&msg)
         }
@@ -149,6 +160,7 @@ macro_rules! query_results {
             no_is_subspecializer,
             no_debug,
             print_messages,
+            no_error_handler,
         )
     };
     ($query:expr, $external_call_handler:expr, $make_external_handler:expr, $debug_handler:expr) => {
@@ -160,6 +172,7 @@ macro_rules! query_results {
             no_is_subspecializer,
             $debug_handler,
             print_messages,
+            no_error_handler,
         )
     };
     ($query:expr, $external_call_handler:expr) => {
@@ -171,6 +184,7 @@ macro_rules! query_results {
             no_is_subspecializer,
             no_debug,
             print_messages,
+            no_error_handler,
         )
     };
     ($query:expr, @msgs $message_handler:expr) => {
@@ -182,6 +196,19 @@ macro_rules! query_results {
             no_is_subspecializer,
             no_debug,
             $message_handler,
+            no_error_handler,
+        )
+    };
+    ($query:expr, @errs $error_handler:expr) => {
+        query_results(
+            $query,
+            no_results,
+            no_externals,
+            no_isa,
+            no_is_subspecializer,
+            no_debug,
+            print_messages,
+            $error_handler,
         )
     };
 }
@@ -197,6 +224,7 @@ fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
             |a, b, c| mock.borrow_mut().external_is_subspecializer(a, b, c),
             no_debug,
             print_messages,
+            no_error_handler,
         ),
         mock.into_inner(),
     )
@@ -1179,6 +1207,58 @@ fn test_arithmetic() -> TestResult {
     qnull(&mut p, "1/0 < 0");
     qeval(&mut p, "1/0 > 0");
     qeval(&mut p, "1/0 > 1e100");
+    Ok(())
+}
+
+#[test]
+fn test_debug_break_on_error() -> TestResult {
+    let p = Polar::new();
+    p.load_str("foo() if debug() and 1 < \"2\" and 1 < 2;")?;
+    let mut call_num = 0;
+    let debug_handler = |s: &str| {
+        let rt = match call_num {
+            0 => {
+                let expected = indoc!(
+                    r#"
+                    QUERY: debug(), BINDINGS: {}
+
+                    001: foo() if debug() and 1 < "2" and 1 < 2;
+                                  ^
+                    "#
+                );
+                assert_eq!(s, expected);
+                "error"
+            }
+            1 => {
+                let expected = indoc!(
+                    r#"
+                    QUERY: 1 < "2", BINDINGS: {}
+
+                    001: foo() if debug() and 1 < "2" and 1 < 2;
+                                              ^
+
+                    ERROR: Not supported: 1 < "2"
+                    "#
+                );
+                assert_eq!(s, expected);
+                "c"
+            }
+            _ => panic!("Too many calls!"),
+        };
+        call_num += 1;
+        rt.to_string()
+    };
+    let results = query_results(
+        p.new_query("not foo()", false)?,
+        no_results,
+        no_externals,
+        no_isa,
+        no_is_subspecializer,
+        debug_handler,
+        print_messages,
+        |_| Vec::new(),
+    );
+    assert!(results.is_empty());
     Ok(())
 }
 

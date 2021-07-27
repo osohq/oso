@@ -33,6 +33,12 @@ Summary of user-facing changes.
 
 Link to [relevant documentation section]().
 
+#### Other bugs & improvements
+
+- Bulleted list
+- Of smaller improvements
+- Potentially with doc [links]().
+
 ## `oso` NEW_VERSION
 
 ### Core
@@ -42,6 +48,7 @@ Link to [relevant documentation section]().
 - Native types (`Integer`, `String`, `Dictionary`, etc.) and
   equivalent host objects created with the `new` operator can now
   be unified transparently.
+- The debugger can now break on runtime errors.
 - The `var` command  in the debugger now automatically maps variable
   names to their temporary bindings.
 
@@ -68,9 +75,3 @@ which you can turn on with `.enable_roles()`.
 - Thanks to [`@arusahni`](https://github.com/arusahni) for surfacing and
   documenting a potential gotcha when using `flask-oso` with other Flask
   libraries that rely on `LocalProxy` objects.
-
-#### Other bugs & improvements
-
-- Bulleted list
-- Of smaller improvements
-- Potentially with doc [links]().

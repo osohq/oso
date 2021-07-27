@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::bindings::{BindingManager, Bsp, FollowerId, VariableState};
 use crate::counter::Counter;
-use crate::error::PolarResult;
+use crate::error::{PolarError, PolarResult};
 use crate::events::QueryEvent;
 use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
@@ -251,5 +251,9 @@ impl Runnable for Inverter {
 
     fn clone_runnable(&self) -> Box<dyn Runnable> {
         Box::new(self.clone())
+    }
+
+    fn handle_error(&mut self, error: PolarError) -> PolarResult<QueryEvent> {
+        self.vm.handle_error(error)
     }
 }
