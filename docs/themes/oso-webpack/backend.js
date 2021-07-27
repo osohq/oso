@@ -15,4 +15,19 @@ function postIntegrationRequest(integration) {
   });
 }
 
+function recordFeedback(isUp, location) {
+  const url = `${API_BASE}/feedback`;
+
+  return fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      isUp,
+      location: window.location.href,
+    }),
+  })
+}
+
 export {postIntegrationRequest};

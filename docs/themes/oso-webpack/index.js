@@ -356,3 +356,23 @@ function makePromptsUnselectable() {
     });
   })
 };
+
+window.recordFeedback = (isUp) => {
+  recordFeedback(isUp).then(() => {
+    const upEl = document.getElementById('feedback-up');
+    const downEl = document.getElementById('feedback-down');
+    if (isUp) {
+      upEl.classList.add('bg-green-200');
+      downEl.classList.remove('bg-red-200');
+
+      upEl.setAttribute('disabled', '');
+      downEl.removeAttribute('disabled');
+    } else {
+      upEl.classList.remove('bg-green-200');
+      downEl.classList.add('bg-red-200');
+
+      upEl.removeAttribute('disabled');
+      downEl.setAttribute('disabled', '');
+    }
+  });
+}
