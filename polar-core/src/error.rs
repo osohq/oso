@@ -293,6 +293,9 @@ pub enum RuntimeError {
     IncompatibleBindings {
         msg: String,
     },
+    InvalidRule {
+        msg: String,
+    },
 }
 
 impl RuntimeError {
@@ -330,6 +333,9 @@ impl fmt::Display for RuntimeError {
             Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
             Self::IncompatibleBindings { msg } => {
                 write!(f, "Attempted binding was incompatible: {}", msg)
+            }
+            Self::InvalidRule { msg } => {
+                write!(f, "Invalid rule: {}", msg)
             }
         }
     }

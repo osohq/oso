@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
-use super::error::PolarResult;
+use super::error::{PolarError, PolarResult};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
@@ -200,7 +200,7 @@ impl KnowledgeBase {
     }
 
     /// Add `rule` to the rules for `scope`
-    pub fn add_rule(&mut self, rule: Rule, scope_name: Symbol) -> Result<(), error::RuntimeError> {
+    pub fn add_rule(&mut self, rule: Rule, scope_name: Symbol) -> PolarResult<()> {
         // lookup scope by path; panic if scope doesn't exist
         let scope = self
             .scopes
@@ -209,6 +209,7 @@ impl KnowledgeBase {
 
         // determine if rule matches a rule template in the scope
         let rule_name = rule.name.clone();
+        let mut reason: Option<&str> = None;
         if let Some(rule_templates) = scope.rule_templates.get(&rule_name) {
             let mut arity_match = false;
             let mut matched_template = false;
@@ -224,30 +225,25 @@ impl KnowledgeBase {
             // if the rule has at least one applicable template but did not match any, then it is not allowed
             if arity_match && !matched_template {
                 // TODO: warning or return code?
-                return Err(error::RuntimeError::TypeError {
-                    msg: format!(
-                        "Rule {} with arity {} not allowed in scope because parameter types did not match rule template.",
-                        rule_name,
-                        rule.params.len()
-                    ),
-                    stack_trace: None,
-                });
+                reason = Some("parameter types did not match rule template.");
             } else if !rule_templates.is_empty() && !arity_match {
-                return Err(error::RuntimeError::TypeError {
-                    msg: format!("Rule {} with arity {} not allowed in scope because arity did not match rule template", rule_name, rule.params.len()),
-                    stack_trace: None,
-                });
+                reason = Some("arity; did not match rule template");
             }
         } else if scope_name.0 != "default" {
-            return Err(error::RuntimeError::TypeError {
+            reason = Some("no rule template found.");
+        }
+        if let Some(r) = reason {
+            let err: PolarError = error::RuntimeError::InvalidRule {
                 msg: format!(
-                    "No rule template found for rule {} with arity {} in scope {}",
+                    "Rule {} with arity {} not allowed in scope {} because {}",
                     rule_name,
                     rule.params.len(),
-                    scope_name
+                    scope_name,
+                    r
                 ),
-                stack_trace: None,
-            });
+            }
+            .into();
+            return Err(err.set_context(None, Some(&rule.body)));
         }
 
         let generic_rule = scope

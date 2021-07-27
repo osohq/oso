@@ -32,9 +32,8 @@ class Polar:
     def load(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
         string = to_c_str(string)
-        scope = to_c_str(scope)
         filename = to_c_str(str(filename)) if filename else ffi.NULL
-        result = lib.polar_load(self.ptr, string, filename, scope)
+        result = lib.polar_load(self.ptr, string, filename)
         process_messages(self.next_message)
         check_result(result)
 

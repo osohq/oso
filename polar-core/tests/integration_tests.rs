@@ -199,7 +199,7 @@ fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
 #[track_caller]
 #[must_use = "test results need to be asserted"]
 fn eval(p: &mut Polar, query_str: &str) -> bool {
-    let q = p.new_query(query_str, false).unwrap();
+    let q = p.new_query(query_str, false, false).unwrap();
     !query_results!(q).is_empty()
 }
 
@@ -211,7 +211,7 @@ fn qeval(p: &mut Polar, query_str: &str) {
 #[track_caller]
 #[must_use = "test results need to be asserted"]
 fn null(p: &mut Polar, query_str: &str) -> bool {
-    let q = p.new_query(query_str, false).unwrap();
+    let q = p.new_query(query_str, false, false).unwrap();
     query_results!(q).is_empty()
 }
 
@@ -227,7 +227,7 @@ fn qext(p: &mut Polar, query_str: &str, external_results: Vec<Value>, expected_l
         .map(Term::new_from_test)
         .rev()
         .collect();
-    let q = p.new_query(query_str, false).unwrap();
+    let q = p.new_query(query_str, false, false).unwrap();
     assert_eq!(
         query_results!(q, |_, _, _, _, _| external_results.pop()).len(),
         expected_len
@@ -237,7 +237,7 @@ fn qext(p: &mut Polar, query_str: &str, external_results: Vec<Value>, expected_l
 #[track_caller]
 #[must_use = "test results need to be asserted"]
 fn var(p: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
-    let q = p.new_query(query_str, false).unwrap();
+    let q = p.new_query(query_str, false, false).unwrap();
     query_results!(q)
         .iter()
         .map(|(r, _)| &r[&sym!(var)])
@@ -253,7 +253,7 @@ fn qvar(p: &mut Polar, query_str: &str, variable: &str, expected: Vec<Value>) {
 #[track_caller]
 #[must_use = "test results need to be asserted"]
 fn vars(p: &mut Polar, query_str: &str, vars: &[&str]) -> Vec<Vec<Value>> {
-    let q = p.new_query(query_str, false).unwrap();
+    let q = p.new_query(query_str, false, false).unwrap();
     query_results!(q)
         .iter()
         .map(|bindings| {
@@ -271,7 +271,7 @@ fn qvars(p: &mut Polar, query_str: &str, variables: &[&str], expected: Vec<Vec<V
 
 #[track_caller]
 fn _qruntime(p: &mut Polar, query_str: &str) -> ErrorKind {
-    p.new_query(query_str, false)
+    p.new_query(query_str, false, false)
         .unwrap()
         .next_event()
         .unwrap_err()
@@ -327,7 +327,7 @@ fn test_jealous() -> TestResult {
            loves("marcellus", "mia");
            jealous(a, b) if loves(a, c) and loves(b, c);"#,
     )?;
-    let q = p.new_query("jealous(who, of)", false)?;
+    let q = p.new_query("jealous(who, of)", false, false)?;
     let results = query_results!(q);
     let jealous = |who: &str, of: &str| {
         assert!(
@@ -353,7 +353,7 @@ fn test_trace() -> TestResult {
         r#"f(x) if x = 1 and x = 1;
            f(y) if y = 1;"#,
     )?;
-    let q = p.new_query("f(1)", true)?;
+    let q = p.new_query("f(1)", true, false)?;
     let results = query_results!(q);
     let trace = results[0].1.as_ref().unwrap();
     let expected = indoc!(
@@ -883,7 +883,7 @@ fn test_lookup_derefs() -> TestResult {
         r#"f(x) if x = y and g(y);
            g(y) if new Foo().get(y) = y;"#,
     )?;
-    let q = p.new_query("f(1)", false)?;
+    let q = p.new_query("f(1)", false, false)?;
     let mut foo_lookups = vec![term!(1)];
     let mock_foo = |_, _, _, args: Option<Vec<Term>>, _| {
         // check the argument is bound to an integer
@@ -900,7 +900,7 @@ fn test_lookup_derefs() -> TestResult {
         assert!(matches!(args.unwrap()[0].value(), Value::Number(_)));
         foo_lookups.pop()
     };
-    let q = p.new_query("f(2)", false)?;
+    let q = p.new_query("f(2)", false, false)?;
     let results = query_results!(q, mock_foo);
     assert!(results.is_empty());
     Ok(())
@@ -937,7 +937,7 @@ fn test_load_str_with_query() -> TestResult {
 /// Test using a constructor with positional + kwargs.
 #[test]
 fn test_make_external() -> TestResult {
-    let q = Polar::new().new_query("x = new Bar(1, a: 2, b: 3)", false)?;
+    let q = Polar::new().new_query("x = new Bar(1, a: 2, b: 3)", false, false)?;
     let mock_make_bar = |_, constructor: Term| match constructor.value() {
         Value::Call(Call {
             path,
@@ -960,7 +960,7 @@ fn test_external_call() -> TestResult {
     p.register_constant(sym!("Foo"), term!(true));
     let mut foo_lookups = vec![term!(1)];
 
-    let q = p.new_query("(new Foo()).bar(1, a: 2, b: 3) = 1", false)?;
+    let q = p.new_query("(new Foo()).bar(1, a: 2, b: 3) = 1", false, false)?;
 
     let mock_foo_lookup =
         |_, _, _, args: Option<Vec<Term>>, kwargs: Option<BTreeMap<Symbol, Term>>| {
@@ -1270,7 +1270,7 @@ fn test_debug() -> TestResult {
         rt.to_string()
     };
 
-    let q = p.new_query("a()", false)?;
+    let q = p.new_query("a()", false, false)?;
     let _results = query_results!(q, no_results, no_externals, debug_handler);
 
     let p = Polar::new();
@@ -1328,7 +1328,7 @@ fn test_debug() -> TestResult {
         call_num += 1;
         rt.to_string()
     };
-    let q = p.new_query("a()", false)?;
+    let q = p.new_query("a()", false, false)?;
     let _results = query_results!(q, no_results, no_externals, debug_handler);
     Ok(())
 }
@@ -1357,7 +1357,7 @@ fn test_debug_in_inverter() {
         call_num += 1;
         rt.to_string()
     };
-    let query = polar.new_query("a()", false).unwrap();
+    let query = polar.new_query("a()", false, false).unwrap();
     let _results = query_results!(query, no_results, no_externals, debug_handler);
 }
 
@@ -1401,7 +1401,7 @@ fn test_print() -> TestResult {
         assert!(matches!(&output.kind, MessageKind::Print));
         assert_eq!(&output.msg, "1, 2, 3");
     };
-    let q = p.new_query("f(1, 2, 3)", false)?;
+    let q = p.new_query("f(1, 2, 3)", false, false)?;
     let _results = query_results!(q, @msgs message_handler);
     Ok(())
 }
@@ -1465,7 +1465,7 @@ fn test_in_op() -> TestResult {
     qeval(&mut p, "4 in [1,2,3] or 1 in [1,2,3]");
 
     // Make sure we scan the whole list.
-    let q = p.new_query("1 in [1, 2, x, 1]", false)?;
+    let q = p.new_query("1 in [1, 2, x, 1]", false, false)?;
     let results = query_results!(q);
     assert_eq!(results.len(), 3);
     assert!(results[0].0.is_empty());
@@ -1476,7 +1476,7 @@ fn test_in_op() -> TestResult {
     assert!(results[2].0.is_empty());
 
     // This returns 3 results, with 1 binding each.
-    let q = p.new_query("f(1, [x,y,z])", false)?;
+    let q = p.new_query("f(1, [x,y,z])", false, false)?;
     let results = query_results!(q);
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].0[&sym!("x")], value!(1));
@@ -1545,11 +1545,11 @@ fn test_unify_rule_head() -> TestResult {
            g(_: Foo{a: Foo{a: 1}}, x) if x = 1;"#,
     )?;
 
-    let q = p.new_query("f(new Foo(a: 1), x)", false)?;
+    let q = p.new_query("f(new Foo(a: 1), x)", false, false)?;
     let (results, _externals) = query_results_with_externals(q);
     assert_eq!(results[0].0[&sym!("x")], value!(1));
 
-    let q = p.new_query("g(new Foo(a: new Foo(a: 1)), x)", false)?;
+    let q = p.new_query("g(new Foo(a: new Foo(a: 1)), x)", false, false)?;
     let (results, _externals) = query_results_with_externals(q);
     assert_eq!(results[0].0[&sym!("x")], value!(1));
     Ok(())
@@ -1801,11 +1801,11 @@ fn test_external_unify() -> TestResult {
            eq(x, x);"#,
     )?;
 
-    let q = p.new_query("selfEq(new Foo())", false)?;
+    let q = p.new_query("selfEq(new Foo())", false, false)?;
     let (results, _externals) = query_results_with_externals(q);
     assert_eq!(results.len(), 1);
 
-    let q = p.new_query("eq(new Foo(), new Foo())", false)?;
+    let q = p.new_query("eq(new Foo(), new Foo())", false, false)?;
     let (results, _externals) = query_results_with_externals(q);
     assert!(results.is_empty());
     Ok(())
@@ -2046,14 +2046,14 @@ fn test_lookup_in_rule_head() -> TestResult {
     p.register_constant(sym!("Foo"), term!(true));
     p.load_str(r#"test(foo: Foo, foo.bar());"#)?;
 
-    let good_q = p.new_query("test(new Foo(), 1)", false)?;
+    let good_q = p.new_query("test(new Foo(), 1)", false, false)?;
 
     let mock_foo_lookup =
         |_, _, _, _: Option<Vec<Term>>, _: Option<BTreeMap<Symbol, Term>>| Some(term!(1));
     let results = query_results!(good_q, mock_foo_lookup);
     assert_eq!(results.len(), 1);
 
-    let bad_q = p.new_query("test(new Foo(), 2)", false)?;
+    let bad_q = p.new_query("test(new Foo(), 2)", false, false)?;
     let results = query_results!(bad_q, mock_foo_lookup);
     assert_eq!(results.len(), 0);
     Ok(())

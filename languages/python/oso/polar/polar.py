@@ -141,11 +141,11 @@ class Polar:
         except FileNotFoundError:
             raise PolarFileNotFoundError(fname)
 
-        self.load_str(file_data.decode("utf-8"), policy_file, scope)
+        self.load_str(file_data.decode("utf-8"), policy_file)
 
-    def load_str(self, string, filename=None, scope="default"):
+    def load_str(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
-        self.ffi_polar.load(string=string, scope=scope, filename=filename)
+        self.ffi_polar.load(string=string, filename=filename)
 
         # check inline queries
         while True:
