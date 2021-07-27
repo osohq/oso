@@ -426,9 +426,9 @@ debug> line
 001: a() if _x = y and y = z and z = 3 and debug();
                                  ^
 debug> var
-_y_2, _x_1, _z_3
+_y_2, __x_1, _z_3
 debug> var _x z
-_x@_x_1 = 3
+_x@__x_1 = 3
 z@_z_3 = 3
 debug> var foo
 foo = <unbound>
