@@ -293,18 +293,23 @@ impl Debugger {
                 if parts.len() > 1 {
                     let vars: Vec<Binding> = parts[1..]
                         .iter()
-                        .map(|nom| {
-                            let var = Symbol::new(nom);
+                        .map(|name| {
+                            // *** variable name mapping ***
+                            // if the requested variable is bound, then we return that binding.
+                            // otherwise, we look for the matching bound temp variable with the
+                            // highest numeric component in its name, and return that binding
+                            // if we find it. otherwise, show that the variable is unbound.
+                            let var = Symbol::new(name);
                             let bindings = vm.bindings(true);
                             bindings.get(&var).cloned().map_or_else(|| {
-                                let pref = KnowledgeBase::temp_prefix(nom);
+                                let prefix = KnowledgeBase::temp_prefix(name);
                                 bindings.keys()
-                                    .filter_map(|k| k.0.strip_prefix(&pref).and_then(|i|
+                                    .filter_map(|k| k.0.strip_prefix(&prefix).and_then(|i|
                                         i.parse::<i64>().map_or(None, |i| Some((k, i)))))
                                     .max_by(|a, b| a.1.cmp(&b.1))
                                     .map_or_else(
-                                        || Binding(Symbol::new(nom), Term::new_temporary(Value::Variable(Symbol::new("<unbound>")))),
-                                        |b| Binding(Symbol::new(format!("{}@{}", nom, b.0.0).as_str()), bindings.get(b.0).unwrap().clone()))
+                                        || Binding(Symbol::new(name), Term::new_temporary(Value::Variable(Symbol::new("<unbound>")))),
+                                        |b| Binding(Symbol::new(format!("{}@{}", name, b.0.0).as_str()), bindings.get(b.0).unwrap().clone()))
                             },
                             |val| Binding(var, val))
                         })

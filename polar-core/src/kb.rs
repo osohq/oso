@@ -45,11 +45,12 @@ impl KnowledgeBase {
         self.id_counter.clone()
     }
 
-    pub fn temp_prefix(nom: &str) -> String {
-        match nom.strip_prefix("_") {
-            None => format!("_{}_", nom),
-            Some("") => String::from(nom),
-            Some(_) => format!("{}_", nom),
+    /// Generate a temporary variable prefix from a variable name.
+    pub fn temp_prefix(name: &str) -> String {
+        match name.strip_prefix("_") {
+            None => format!("_{}_", name),
+            Some("") => String::from(name),
+            Some(_) => format!("{}_", name),
         }
     }
 
