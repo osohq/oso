@@ -219,7 +219,10 @@ impl KnowledgeBase {
                     arity_match = true;
                     // in order for a rule to have matched a template, the rule's parameters must exactly match
                     // the template's parameters
-                    matched_template = KnowledgeBase::check_rule_compatibility(&rule, template);
+                    if KnowledgeBase::check_rule_compatibility(&rule, template) {
+                        matched_template = true;
+                        break;
+                    }
                 }
             }
             // if the rule has at least one applicable template but did not match any, then it is not allowed
@@ -233,13 +236,14 @@ impl KnowledgeBase {
             reason = Some("no rule template found.");
         }
         if let Some(r) = reason {
+            let mut params = String::new();
+            for param in rule.params {
+                params.push_str(&format!("{}, ", param));
+            }
             let err: PolarError = error::RuntimeError::InvalidRule {
                 msg: format!(
-                    "Rule {} with arity {} not allowed in scope {} because {}",
-                    rule_name,
-                    rule.params.len(),
-                    scope_name,
-                    r
+                    "Rule {}({:#?}) not allowed in scope {} because {}",
+                    rule_name, params, scope_name, r
                 ),
             }
             .into();
@@ -290,6 +294,16 @@ impl KnowledgeBase {
                     }
                 }
                 (Value::Variable(_), Some(_), Value::Variable(_), None) => false,
+                (
+                    Value::Variable(_),
+                    Some(Value::Pattern(Pattern::Instance(template_spec))),
+                    rule_value,
+                    None,
+                ) => {
+                    return rule_value
+                        .to_string()
+                        .contains(&template_spec.tag.to_string());
+                }
                 (Value::Variable(_), Some(_template_spec), _rule_param, None) => {
                     // TODO: can't do this case right now
                     unimplemented!("value match spec not implemented");

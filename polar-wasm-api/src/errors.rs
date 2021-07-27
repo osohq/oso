@@ -45,6 +45,7 @@ fn kind(err: &PolarError) -> String {
         Runtime(TypeError { .. }) => "RuntimeError::TypeError",
         Runtime(UnboundVariable { .. }) => "RuntimeError::UnboundVariable",
         Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
+        Runtime(InvalidRule { .. }) => "RuntimeError::InvalidRule",
         Operational(Unimplemented(..)) => "OperationalError::Unimplemented",
         Operational(Unknown) => "OperationalError::Unknown",
         Operational(InvalidState(..)) => "OperationalError::InvalidState",

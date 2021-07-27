@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
+use std::fmt;
 use std::sync::Arc;
 
 use super::terms::*;
@@ -8,6 +9,20 @@ use super::terms::*;
 pub struct Parameter {
     pub parameter: Term,
     pub specializer: Option<Term>,
+}
+impl fmt::Display for Parameter {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(spec) = &self.specializer {
+            match spec.value() {
+                Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields })) => {
+                    return write!(f, "{:?} : {:?}{:?}", self.parameter.value(), tag, fields);
+                }
+                _ => unreachable!("Specializer should always be instance literal"),
+            }
+        } else {
+            return write!(f, "{:?}", self.parameter.value());
+        }
+    }
 }
 
 impl Parameter {

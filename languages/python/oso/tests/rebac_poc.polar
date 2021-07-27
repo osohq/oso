@@ -31,127 +31,128 @@ def scope relationships {
     type has_role(actor: User, role: String, resource: Repo);
     type has_role(actor: User, role: String, resource: Org);
     type has_role(actor: Team, role: String, resource: Repo);
-    type has_permission(actor: User, role: String, resource: Org);
-    type has_permission(actor: User, role: String, resource: Repo);
-    type has_permission(actor: User, role: String, resource: Issue);
+    type has_role(actor: Team, role: String, resource: OsoResource);
+    type has_permissions(actor: User, actions: List, resource: Org);
+    type has_permissions(actor: User, actions: List, resource: Repo);
+    type has_permissions(actor: User, actions: List, resource: Issue);
     type in_group(actor: User, group: Team);
-    type owns(actor: User, resource: Org);
+    type owns(actor: User, resource: Issue);
 }
+
 scope relationships {
     # User-role mapping to application data
     has_role(user: User, role: String, resource: OsoResource) if
         user.has_role(role, resource);
-}
 
     # User-role mapping to application data for specific role
-    # has_role(user: User, "owner", org: Org) if
-    #     org.owner = user;
+    has_role(user: User, "owner", org: Org) if
+        org.owner = user;
 
-#     # Group-role mapping to application data
-#     has_role(group: Team, role: String, resource: OsoResource) if
-#         group.has_role(role, resource);
+    # Group-role mapping to application data
+    has_role(group: Team, role: String, resource: OsoResource) if
+        group.has_role(role, resource);
 
-#     # User-group mapping to application data
-#     in_group(user: User, team: Team) if
-#         team in user.teams and
-#         team matches Team;   # DO NOT REMOVE: this check is necessary to avoid infinite recursion
+    # User-group mapping to application data
+    in_group(user: User, team: Team) if
+        team in user.teams and
+        team matches Team;   # DO NOT REMOVE: this check is necessary to avoid infinite recursion
 
-#     # Ownership
-#     # option 1 (just use role relationships)
-#     # has_role(u: User, "owner", issue: Issue) if
-#     #     issue.created_by = u;
+    # Ownership
+    # option 1 (just use role relationships)
+    # has_role(u: User, "owner", issue: Issue) if
+    #     issue.created_by = u;
 
-#     # # option 2 (custom relationship)
-#     owns(u: User, issue: Issue) if
-#         issue.created_by = u;
+    # # option 2 (custom relationship)
+    owns(u: User, issue: Issue) if
+        issue.created_by = u;
 
-#     #############################
-#     # Relationship implications #
-#     #############################
+    #############################
+    # Relationship implications #
+    #############################
 
-#     # OsoResource policy #
-#     ######################
-#     # applies to all resources
+    # OsoResource policy #
+    ######################
+    # applies to all resources
 
-#     # Role implication from group role to user role
-#     # has_role(u: User, role: String, resource: OsoResource) if
-#     #     in_group(u, team) and
-#     #     has_role(team, role, resource);
+    # Role implication from group role to user role
+    # has_role(u: User, role: String, resource: OsoResource) if
+    #     in_group(u, team) and
+    #     has_role(team, role, resource);
 
-#     # Org policy #
-#     ##############
+    # Org policy #
+    ##############
 
-#     # Role-based permissions
-#     has_permissions(u: User, ["invite", "delete_repo"], o: Org) if has_role(u, "owner", o);
-#     has_permissions(u: User, ["create_repo", "list_repos"], o: Org) if has_role(u, "member", o);
-
-
-#     # Org role implications
-#     has_role(u: User, "member", o: Org) if has_role(u, "owner", o);
-
-#     # Repo policy #
-#     ###############
-
-#     # Role-based permissions
-#     has_permissions(u: User, ["pull", "list_issues"], r: Repo) if has_role(u, "reader", r);
-#     has_permissions(u: User, ["push", "create_issue"], r: Repo) if has_role(u, "writer", r);
-
-#     has_permissions(u: User, ["invite"], r: Repo) if has_role(u, "writer", r);
+    # Role-based permissions
+    has_permissions(u: User, ["invite", "delete_repo"], o: Org) if has_role(u, "owner", o);
+    has_permissions(u: User, ["create_repo", "list_repos"], o: Org) if has_role(u, "member", o);
 
 
-#     # Attribute-based permissions
-#     has_permissions(_: User, ["view"], repo: Repo) if repo.is_public;
+    # Org role implications
+    has_role(u: User, "member", o: Org) if has_role(u, "owner", o);
 
-#     # Repo role implications (related)
-#     has_role(u: User, "reader", r: Repo) if has_role(u, "member", r.org);
-#     has_role(u: User, "admin", r: Repo) if has_role(u, "owner", r.org);
+    # Repo policy #
+    ###############
 
-#     # Repo role implications (local)
-#     has_role(u: User, "reader", r: Repo) if has_role(u, "writer", r);
-#     has_role(u: User, "writer", r: Repo) if has_role(u, "admin", r);
+    # Role-based permissions
+    has_permissions(u: User, ["pull", "list_issues"], r: Repo) if has_role(u, "reader", r);
+    has_permissions(u: User, ["push", "create_issue"], r: Repo) if has_role(u, "writer", r);
 
-#     # Issue policy #
-#     ################
-
-#     # Issue permissions
-#     has_permissions(u: User, ["read"], i: Issue) if has_role(u, "reader", i.repo);
-#     has_permissions(u: User, ["edit"], i: Issue) if has_role(u, "writer", i.repo);
-#     has_permissions(u: User, ["delete"], i: Issue) if has_role(u, "admin", i.repo);
-#     has_permissions(u: User, ["delete"], i: Issue) if owns(u, i);
-# }
+    has_permissions(u: User, ["invite"], r: Repo) if has_role(u, "writer", r);
 
 
+    # Attribute-based permissions
+    has_permissions(_: User, ["view"], repo: Repo) if repo.is_public;
 
-# # TODO:
-# # - [x] Make `OsoResource`, `OsoActor`, `OsoGroup` valid specializers
-# # - [ ] Divide KB by namespaces
-# #       - "prototypes" namespace to query for constraints
-# #       - "data" namespace for mapping to app data? (maybe this is just under relationships)
-# #       - "relationships" namespace for setting up relationships
-# # - [ ] Figure out if/how role variants will be specified/defined
-# # - [ ] Finish validation checks
-# #       - How to check rule bodies?
-# #       - asserts -> errors
-# #       - Validate that `has_role` is only being called with valid roles
-# # - [ ] Write some validation tests
-# # - [x] Write some policy tests
+    # Repo role implications (related)
+    has_role(u: User, "reader", r: Repo) if has_role(u, "member", r.org);
+    has_role(u: User, "admin", r: Repo) if has_role(u, "owner", r.org);
 
-# # Open questions
-# # - How to distinguish between the relationship "definitions" and the "implications"?
-# #       - Currently the definitions don't have body restrictions (other than
-# #       registered methods/props), and the implications only call other
-# #       relationship rules in the body
-# #       - But the implication rules can still access parents as attributes, but
-# #       the translation is done in the call
-# # - Do all relationships need to be represented as predicates (e.g., parent
-# # relationships are currently dot lookups)
+    # Repo role implications (local)
+    has_role(u: User, "reader", r: Repo) if has_role(u, "writer", r);
+    has_role(u: User, "writer", r: Repo) if has_role(u, "admin", r);
 
-# # UX issues:
-# # - role implications don't reference the user, but writing them this way requires including the user
+    # Issue policy #
+    ################
+
+    # Issue permissions
+    has_permissions(u: User, ["read"], i: Issue) if has_role(u, "reader", i.repo);
+    has_permissions(u: User, ["edit"], i: Issue) if has_role(u, "writer", i.repo);
+    has_permissions(u: User, ["delete"], i: Issue) if has_role(u, "admin", i.repo);
+    has_permissions(u: User, ["delete"], i: Issue) if owns(u, i);
+}
 
 
-# # Notes from debugging this policy:
-# # - it's hard to trace from a query that should pass (e.g. permission) to all the things that should allow it
-# #        - honestly a killer dev tool for policy inspection would really help
-# #        with this: if I could see all the relationshps that lead to
-# #        has_permission(user, "push", repo) that would be fantastic
+
+# TODO:
+# - [x] Make `OsoResource`, `OsoActor`, `OsoGroup` valid specializers
+# - [ ] Divide KB by namespaces
+#       - "prototypes" namespace to query for constraints
+#       - "data" namespace for mapping to app data? (maybe this is just under relationships)
+#       - "relationships" namespace for setting up relationships
+# - [ ] Figure out if/how role variants will be specified/defined
+# - [ ] Finish validation checks
+#       - How to check rule bodies?
+#       - asserts -> errors
+#       - Validate that `has_role` is only being called with valid roles
+# - [ ] Write some validation tests
+# - [x] Write some policy tests
+
+# Open questions
+# - How to distinguish between the relationship "definitions" and the "implications"?
+#       - Currently the definitions don't have body restrictions (other than
+#       registered methods/props), and the implications only call other
+#       relationship rules in the body
+#       - But the implication rules can still access parents as attributes, but
+#       the translation is done in the call
+# - Do all relationships need to be represented as predicates (e.g., parent
+# relationships are currently dot lookups)
+
+# UX issues:
+# - role implications don't reference the user, but writing them this way requires including the user
+
+
+# Notes from debugging this policy:
+# - it's hard to trace from a query that should pass (e.g. permission) to all the things that should allow it
+#        - honestly a killer dev tool for policy inspection would really help
+#        with this: if I could see all the relationshps that lead to
+#        has_permission(user, "push", repo) that would be fantastic

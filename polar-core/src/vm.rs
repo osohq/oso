@@ -1903,6 +1903,9 @@ impl PolarVirtualMachine {
         assert_eq!(*op, Operator::Dot, "expected a dot operation");
 
         let mut args = args.clone();
+        if args.len() != 3 {
+            eprintln!("{:#?}", args)
+        }
         assert_eq!(args.len(), 3);
         let object = &args[0];
         let field = &args[1];
