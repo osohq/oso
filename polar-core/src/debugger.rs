@@ -1,13 +1,14 @@
 use std::fmt::Write;
 use std::rc::Rc;
 
-use super::error::PolarResult;
+use super::error::{PolarError, PolarResult};
 use super::formatting::{source_lines, ToPolarString};
 use super::sources::*;
 use super::terms::*;
 use super::traces::*;
 
 use super::bindings::Binding;
+use super::kb::KnowledgeBase;
 use super::vm::*;
 
 impl PolarVirtualMachine {
@@ -24,12 +25,14 @@ impl PolarVirtualMachine {
 
     /// If the inner [`Debugger`](struct.Debugger.html) returns a [`Goal`](../vm/enum.Goal.html),
     /// push it onto the goal stack.
-    pub fn maybe_break(&mut self, event: DebugEvent) -> PolarResult<()> {
-        let maybe_goal = self.debugger.maybe_break(event, self);
-        if let Some(goal) = maybe_goal {
-            self.push_goal((*goal).clone())?;
-        }
-        Ok(())
+    pub fn maybe_break(&mut self, event: DebugEvent) -> PolarResult<bool> {
+        self.debugger.maybe_break(event, self).map_or_else(
+            || Ok(false),
+            |goal| {
+                self.push_goal(goal)?;
+                Ok(true)
+            },
+        )
     }
 }
 
@@ -40,12 +43,17 @@ enum Step {
     Goal,
     /// Step **over** the current query. Will break on the next query where the trace stack is at the same
     /// level as the current one.
-    Over { level: usize },
+    Over {
+        level: usize,
+    },
     /// Step **out** of the current query. Will break on the next query where the trace stack is at a lower
     /// level than the current one.
-    Out { level: usize },
+    Out {
+        level: usize,
+    },
     /// Step **in**. Will break on the next query.
     Into,
+    Error,
 }
 
 /// VM breakpoints.
@@ -60,6 +68,7 @@ pub enum DebugEvent {
     Goal(Rc<Goal>),
     Query,
     Pop,
+    Error(PolarError),
 }
 
 /// Tracks internal debugger state.
@@ -100,32 +109,31 @@ impl Debugger {
     ///
     /// - `Some(Goal::Debug { message })` -> Pause evaluation.
     /// - `None` -> Continue evaluation.
-    fn maybe_break(&self, event: DebugEvent, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
-        if let Some(step) = self.step.as_ref() {
-            match (step, event) {
-                (Step::Goal, DebugEvent::Goal(goal)) => Some(Rc::new(Goal::Debug {
-                    message: goal.to_string(),
-                })),
-                (Step::Into, DebugEvent::Query) => self.break_query(vm),
-                (Step::Out { level }, DebugEvent::Query)
-                    if vm.trace_stack.is_empty() || vm.trace_stack.len() < *level =>
-                {
-                    self.break_query(vm)
-                }
-                (Step::Over { level }, DebugEvent::Query) if vm.trace_stack.len() == *level => {
-                    self.break_query(vm)
-                }
-                _ => None,
+    fn maybe_break(&self, event: DebugEvent, vm: &PolarVirtualMachine) -> Option<Goal> {
+        self.step.as_ref().and_then(|step| match (step, event) {
+            (Step::Goal, DebugEvent::Goal(goal)) => Some(Goal::Debug {
+                message: goal.to_string(),
+            }),
+            (Step::Into, DebugEvent::Query) => self.break_query(vm),
+            (Step::Out { level }, DebugEvent::Query)
+                if vm.trace_stack.is_empty() || vm.trace_stack.len() < *level =>
+            {
+                self.break_query(vm)
             }
-        } else {
-            None
-        }
+            (Step::Over { level }, DebugEvent::Query) if vm.trace_stack.len() == *level => {
+                self.break_query(vm)
+            }
+            (Step::Error, DebugEvent::Error(error)) => {
+                self.break_msg(vm).map(|message| Goal::Debug {
+                    message: format!("{}\nERROR: {}\n", message, error.to_string()),
+                })
+            }
+            _ => None,
+        })
     }
 
-    /// Produce the `Goal::Debug` for breaking on a Query (as opposed to breaking on a Goal).
-    /// This is used to implement the `step`, `over`, and `out` debug commands.
-    pub fn break_query(&self, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
-        let message = vm.trace.last().and_then(|trace| {
+    pub fn break_msg(&self, vm: &PolarVirtualMachine) -> Option<String> {
+        vm.trace.last().and_then(|trace| {
             if let Trace {
                 node: Node::Term(q),
                 ..
@@ -137,15 +145,20 @@ impl Debugger {
                         args,
                     }) if args.len() == 1 => None,
                     _ => {
-                        let source = self.query_source(&q, &vm.kb.read().unwrap().sources, 3);
+                        let source = self.query_source(q, &vm.kb.read().unwrap().sources, 3);
                         Some(format!("{}\n\n{}\n", vm.query_summary(q), source))
                     }
                 }
             } else {
                 None
             }
-        });
-        message.map(|message| Rc::new(Goal::Debug { message }))
+        })
+    }
+
+    /// Produce the `Goal::Debug` for breaking on a Query (as opposed to breaking on a Goal).
+    /// This is used to implement the `step`, `over`, and `out` debug commands.
+    fn break_query(&self, vm: &PolarVirtualMachine) -> Option<Goal> {
+        self.break_msg(vm).map(|message| Goal::Debug { message })
     }
 
     /// Process debugging commands from the user.
@@ -187,6 +200,9 @@ impl Debugger {
             }
             "g" | "goal" => {
                 self.step = Some(Step::Goal)
+            }
+            "e" | "error" => {
+                self.step = Some(Step::Error)
             }
             "l" | "line" => {
                 let lines = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
@@ -292,12 +308,25 @@ impl Debugger {
                 if parts.len() > 1 {
                     let vars: Vec<Binding> = parts[1..]
                         .iter()
-                        .map(|var| {
-                            let var = Symbol::new(var);
-                            let value = vm.bindings(true).get(&var).cloned().unwrap_or_else(|| {
-                                Term::new_temporary(Value::Variable(Symbol::new("<unbound>")))
-                            });
-                            Binding(var, value)
+                        .map(|name| {
+                            // *** variable name mapping ***
+                            // if the requested variable is bound, then we return that binding.
+                            // otherwise, we look for the matching bound temp variable with the
+                            // highest numeric component in its name, and return that binding
+                            // if we find it. otherwise, show that the variable is unbound.
+                            let var = Symbol::new(name);
+                            let bindings = vm.bindings(true);
+                            bindings.get(&var).cloned().map_or_else(|| {
+                                let prefix = KnowledgeBase::temp_prefix(name);
+                                bindings.keys()
+                                    .filter_map(|k| k.0.strip_prefix(&prefix).and_then(|i|
+                                        i.parse::<i64>().map_or(None, |i| Some((k, i)))))
+                                    .max_by(|a, b| a.1.cmp(&b.1))
+                                    .map_or_else(
+                                        || Binding(Symbol::new(name), Term::new_temporary(Value::Variable(Symbol::new("<unbound>")))),
+                                        |b| Binding(Symbol::new(format!("{}@{}", name, b.0.0).as_str()), bindings.get(b.0).unwrap().clone()))
+                            },
+                            |val| Binding(var, val))
                         })
                         .collect();
                     return Some(show(&vars));
@@ -323,6 +352,7 @@ impl Debugger {
   n[ext] | over           Step to the next query at the same level of the query stack (will not step into rules).
   o[ut]                   Step out of the current query stack level to the next query in the level above.
   g[oal]                  Step to the next goal of the Polar VM.
+  e[rror]                 Step to the next error.
   l[ine] [<n>]            Print the current line and <n> lines of context.
   query [<i>]             Print the current query or the query at level <i> in the query stack.
   stack | trace           Print the current query stack.
