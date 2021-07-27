@@ -719,7 +719,7 @@ impl PolarVirtualMachine {
     /// The exception is for lists, so that we can correctly handle rest variables.
     /// We also support cycle detection, in which case we return the original term.
     fn deref(&self, term: &Term) -> Term {
-        self.binding_manager.deref(term)
+        self.deep_deref(term)
     }
 
     /// Generate a fresh set of variables for a rule.
