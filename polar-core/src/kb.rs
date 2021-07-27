@@ -45,16 +45,19 @@ impl KnowledgeBase {
         self.id_counter.clone()
     }
 
+    /// Generate a temporary variable prefix from a variable name.
+    pub fn temp_prefix(name: &str) -> String {
+        match name.strip_prefix("_") {
+            None => format!("_{}_", name),
+            Some("") => String::from(name),
+            Some(_) => format!("{}_", name),
+        }
+    }
+
     /// Generate a new symbol.
     pub fn gensym(&self, prefix: &str) -> Symbol {
         let next = self.gensym_counter.next();
-        if prefix == "_" {
-            Symbol(format!("_{}", next))
-        } else if prefix.starts_with('_') {
-            Symbol(format!("{}_{}", prefix, next))
-        } else {
-            Symbol(format!("_{}_{}", prefix, next))
-        }
+        Symbol(format!("{}{}", Self::temp_prefix(prefix), next))
     }
 
     /// Add a generic rule to the knowledge base.

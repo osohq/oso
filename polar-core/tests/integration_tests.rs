@@ -1183,6 +1183,44 @@ fn test_arithmetic() -> TestResult {
 }
 
 #[test]
+fn test_debug_temp_var() -> TestResult {
+    let p = Polar::new();
+    p.load_str("foo(a, aa) if a < 10 and debug() and aa < a;")?;
+    let mut call_num = 0;
+    let debug_handler = |s: &str| {
+        let rt = match call_num {
+            0 => {
+                let expected = indoc!(
+                    r#"
+                    QUERY: debug(), BINDINGS: {}
+
+                    001: foo(a, aa) if a < 10 and debug() and aa < a;
+                                                  ^
+                    "#
+                );
+                assert_eq!(s, expected);
+                "var a"
+            }
+            1 => {
+                assert_eq!(s, "a@_a_3 = 5");
+                "var aa"
+            }
+            2 => {
+                assert_eq!(s, "aa@_aa_4 = 3");
+                "q"
+            }
+            _ => panic!("Too many calls: {}", s),
+        };
+        call_num += 1;
+        rt.to_string()
+    };
+
+    let q = p.new_query("foo(5, 3)", false)?;
+    let _results = query_results!(q, no_results, no_externals, debug_handler);
+    Ok(())
+}
+
+#[test]
 fn test_debug() -> TestResult {
     let p = Polar::new();
     p.load_str(indoc!(
