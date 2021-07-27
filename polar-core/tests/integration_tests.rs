@@ -1578,6 +1578,17 @@ fn test_rest_vars() -> TestResult {
 }
 
 #[test]
+fn test_circular_data() -> TestResult {
+    let mut p = Polar::new();
+    qeval(&mut p, "x = [x]");
+    qeval(&mut p, "y = {y:y}");
+    qruntime!(
+        "x = [x, y] and y = [y, x] and x = y",
+       RuntimeError::StackOverflow { .. });
+    Ok(())
+}
+
+#[test]
 fn test_in_op() -> TestResult {
     let mut p = Polar::new();
     p.load_str("f(x, y) if x in y;")?;
