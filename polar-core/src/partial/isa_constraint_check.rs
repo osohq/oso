@@ -75,11 +75,11 @@ impl IsaConstraintCheck {
             Ok(Symbol(x)) if x == "_parent_resource_129" => {
                 match &self.proposed.args[0].value().as_symbol() {
                     Ok(Symbol(x)) if x == "_resource_220" => {
-                        eprintln!(
-                            "constraint: {}, proposed: {}",
-                            constraint.to_polar(),
-                            self.proposed.to_polar()
-                        );
+                        // eprintln!(
+                        //     "constraint: {}, proposed: {}",
+                        //     constraint.to_polar(),
+                        //     self.proposed.to_polar()
+                        // );
                         DEBUGGING = true;
                     }
                     _ => (),
@@ -124,13 +124,13 @@ impl IsaConstraintCheck {
         let proposed = self.proposed.args.last().unwrap();
         let existing = constraint.args.pop().unwrap();
 
-        if DEBUGGING {
-            eprintln!(
-                "existing: {}, proposed: {}",
-                existing.to_polar(),
-                proposed.to_polar()
-            );
-        }
+        // if DEBUGGING {
+        //     eprintln!(
+        //         "existing: {}, proposed: {}",
+        //         existing.to_polar(),
+        //         proposed.to_polar()
+        //     );
+        // }
 
         // x matches A{} vs. x matches B{}
         if constraint_path == proposed_path {

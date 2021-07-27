@@ -360,14 +360,14 @@ def test_roles_data_filtering(oso):
     policy = """
     resource(_type: Org, "org", actions, roles) if
         actions = [
-            # "invite",
-            # "create_repo"
+            "invite",
+            "create_repo"
         ] and
         roles = {
-            # member: {
-            #     permissions: ["create_repo"],
-            #     implies: ["repo:reader"]
-            # },
+            member: {
+                permissions: ["create_repo"],
+                implies: ["repo:reader"]
+            },
             owner: {
                 # permissions: ["invite"],
                 implies: ["repo:writer"] # member
@@ -376,12 +376,12 @@ def test_roles_data_filtering(oso):
 
     resource(_type: Repo, "repo", actions, roles) if
         actions = [
-            #"push",
+            "push",
             "pull"
         ] and
         roles = {
             writer: {
-                #permissions: ["push", "issue:edit"],
+                permissions: ["push", "issue:edit"],
                 implies: ["reader"]
             },
             reader: {
@@ -389,19 +389,19 @@ def test_roles_data_filtering(oso):
             }
         };
 
-    # resource(_type: Issue, "issue", actions, {}) if
-    #     actions = [
-    #         "edit"
-    #     ];
+    resource(_type: Issue, "issue", actions, {}) if
+        actions = [
+            "edit"
+        ];
 
     parent_child(parent_org, repo: Repo) if
         print(repo) and
         repo.org = parent_org and
         parent_org matches Org;
 
-    # parent_child(parent_repo, issue: Issue) if
-    #     issue.repo = parent_repo and
-    #     parent_repo matches Repo;
+    parent_child(parent_repo, issue: Issue) if
+        issue.repo = parent_repo and
+        parent_repo matches Repo;
 
     actor_has_role_for_resource(actor, role_name: String, resource) if
         role in actor.roles and
@@ -411,17 +411,6 @@ def test_roles_data_filtering(oso):
     allow(actor, action, resource) if
         role_allows(actor, action, resource);
     """
-
-    # policy = """
-    # parent(parent_org, repo: Repo) if
-    #     parent_org = repo.org and
-    #     parent_org matches Org;
-    #
-    # allow(_actor, _action, repo: Repo) if
-    #     parent(org, repo) and
-    #     print(org) and
-    #     parent(_nothing, org);
-    # """
 
     oso.load_str(policy)
     oso.enable_roles()
