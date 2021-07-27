@@ -20,22 +20,44 @@ roles feature.
 ## Setting up the Oso instance
 
 First, we'll cover some of the basics of integrating Oso into your
-application.
-
-The `oso::Oso` struct is the entrypoint to using Oso in our application.
-We usually will have a global instance that is created
-during application initialization and shared across requests.
+application. Here's an example function to create and initializes a
+new Oso instance for us:
 
 ```rust
 use oso::Oso;
 
 fn init_oso() -> Oso {
-  let oso = Oso::new();
+  // create the instance
+  let mut oso = Oso::new();
+
+  // register classes used by the policy
+  oso.register_class(User::get_polar_class());
+  oso.register_class(Org::get_polar_class());
+  oso.register_class(OrgRole::get_polar_class());
+
+  // load the policy from a file
+  oso.load_file("app/policy/authorization.polar");
+
+  // load built-in roles configuration
+  oso.enable_roles();
+
+  // all done; return it!
+  oso
+}
 ```
 
-### Using Rust types with Oso
+Let's examine each step in turn.
 
-Next, register any Rust types you'll be using in your policies.
+### Creating a new Oso instance
+
+The `oso::Oso` struct is the entrypoint to using Oso in our application.
+We usually will have a global instance that is created
+during application initialization and shared across requests.
+
+### Registering our classes
+
+Data types referred to in your policies must be registered with Oso
+with using the `Oso::register_class` function.
 
 {{% callout "Rust type configuration" "blue" %}}
 
@@ -44,37 +66,16 @@ Rust structs and enums will need
 
 {{% /callout %}}
 
-
-```rust
-  // register classes used by the policy
-  oso.register_class(User::get_polar_class());
-  oso.register_class(Org::get_polar_class());
-  oso.register_class(OrgRole::get_polar_class());
-```
-
 ### Loading our policy
 
 Oso uses the [Polar language](/reference/polar/polar-syntax) to define authorization
 policies. An authorization policy specifies what requests are allowed and what data a
-user can access. The policy is stored in a Polar file, along with your code.
+user can access. The policy is stored in a Polar file, alongside your code, and is
+loaded with the `Oso::load_file` function.
 
-Load the policy at application start using the `Oso::load_file()` function:
+### Enabling Oso roles
 
-```rust
-  // load the policy from a file
-  oso.load_file('app/policy/authorization.polar');
-```
-
-### Enable Oso Roles
-
-In order to enable the built-in roles features, we call the
-`Oso::enable_roles` function:
-
-```rust
-  oso.enable_roles();
-  oso
-}
-```
+In order to enable the built-in roles features, we call the `Oso::enable_roles` function:
 
 ## Controlling access with roles
 
@@ -102,7 +103,7 @@ resource(_type: Org, "org", actions, roles) if
 The rule head has 4 parameters:
 
 - `_type` is the Rust class the resource definition is associated with.
-  **NOTE**: you must have registered this class with `OSO.register_class` before
+  **NOTE**: you must have registered this class with `Oso::register_class()` before
   loading your policy file.
 - `"org"` is the identifier for this resource type (this can be any string
   you choose).
@@ -213,7 +214,7 @@ And the `actor_has_role_for_resource` would be implemented as:
 
 ```polar
 actor_has_role_for_resource(actor, role_name, resource) if
-    role in actor.roles and
+    role in actor.roles() and
     role_name = role.name and
     resource = role.resource;
 ```
