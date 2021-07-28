@@ -88,34 +88,34 @@ class Query:
             value = ffi.NULL
         else:
             value = ffi_serialize(value)
-        check_result(lib.polar_call_result(self.ptr, call_id, value))
+        check_result(lib.polar_call_result(self.ptr, call_id, value), self._temp_process_message)
 
     def question_result(self, call_id, answer):
         answer = 1 if answer else 0
-        check_result(lib.polar_question_result(self.ptr, call_id, answer))
+        check_result(lib.polar_question_result(self.ptr, call_id, answer), self._temp_process_message)
 
     def application_error(self, message):
         """Pass an error back to polar to get stack trace and other info."""
         message = to_c_str(message)
-        check_result(lib.polar_application_error(self.ptr, message))
+        check_result(lib.polar_application_error(self.ptr, message), self._temp_process_message)
 
     def next_event(self):
         event = lib.polar_next_query_event(self.ptr)
-        process_messages(self.next_message)
-        event = check_result(event)
+        process_messages(self.next_message, self._temp_process_message)
+        event = check_result(event, self._temp_process_message)
         return QueryEvent(event)
 
     def debug_command(self, command):
         result = lib.polar_debug_command(self.ptr, ffi_serialize(command))
-        process_messages(self.next_message)
-        check_result(result)
+        process_messages(self.next_message, self._temp_process_message)
+        check_result(result, self._temp_process_message)
 
     def next_message(self):
         return lib.polar_next_query_message(self.ptr)
 
     def source(self):
         source = lib.polar_query_source_info(self.ptr)
-        source = check_result(source)
+        source = check_result(source, self._temp_process_message)
         return Source(source)
 
     def bind(self, name, value):
@@ -123,8 +123,8 @@ class Query:
         value = ffi_serialize(value)
         result = lib.polar_bind(self.ptr, name, value)
         # TODO(gj): Do we need to process_messages here?
-        process_messages(self.next_message)
-        check_result(result)
+        process_messages(self.next_message, self._temp_process_message)
+        check_result(result, self._temp_process_message)
 
 
 class QueryEvent:
@@ -142,8 +142,8 @@ class Error:
     def __init__(self):
         self.ptr = lib.polar_get_error()
 
-    def get(self):
-        return get_python_error(ffi.string(self.ptr).decode())
+    def get(self, process_message=None):
+        return get_python_error(ffi.string(self.ptr).decode(), process_message)
 
     def __del__(self):
         lib.string_free(self.ptr)
@@ -160,9 +160,9 @@ class Source:
         lib.string_free(self.ptr)
 
 
-def check_result(result):
+def check_result(result, process_error=None):
     if result == 0 or is_null(result):
-        raise Error().get()
+        raise Error().get(process_error)
     return result
 
 
@@ -178,7 +178,7 @@ def ffi_serialize(value):
     return to_c_str(json.dumps(value))
 
 
-def process_messages(next_message_method):
+def process_messages(next_message_method, postprocess=None):
     while True:
         msg_ptr = next_message_method()
         if is_null(msg_ptr):
@@ -189,6 +189,9 @@ def process_messages(next_message_method):
 
         kind = message["kind"]
         msg = message["msg"]
+
+        if postprocess:
+            msg = postprocess(msg)
 
         if kind == "Print":
             print(msg)

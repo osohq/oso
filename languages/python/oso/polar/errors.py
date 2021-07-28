@@ -22,11 +22,13 @@ from polar.exceptions import (
 )
 
 
-def get_python_error(err_str):
+def get_python_error(err_str, process_message=None):
     """Fetch a Polar error and map it into a Python exception."""
     err = json.loads(err_str)
 
     message = err["formatted"]
+    if process_message:
+        message = process_message(message)
     kind, body = next(iter(err["kind"].items()))
 
     try:
@@ -36,6 +38,10 @@ def get_python_error(err_str):
         # TODO (dhatch): This bug may exist in other libraries.
         subkind = None
         details = None
+
+    if details:
+        details["stack_trace"] = process_message(details["stack_trace"])
+        details["msg"] = process_message(details["msg"])
 
     if kind == "Parse":
         return _parse_error(subkind, message, details)

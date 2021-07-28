@@ -139,6 +139,10 @@ class Host:
                 f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
             )
 
+    def process_message(self, message: str):
+        import re
+        return re.sub(r'\^\{id: ([0-9]+)\}', lambda match: repr(self.get_instance(int(match[1]))), message, flags=re.M)
+
     def to_polar(self, v):
         """Convert a Python object to a Polar term."""
         if type(v) == bool:
@@ -193,7 +197,8 @@ class Host:
             val = {
                 "ExternalInstance": {
                     "instance_id": self.cache_instance(v),
-                    "repr": repr(v),
+                    "repr": None,
+                    # "_internal_allow_methods_with_unbound_arguments": v is OsoRoles
                 }
             }
         term = {"value": val}
