@@ -75,9 +75,9 @@ scope relationships {
     # applies to all resources
 
     # Role implication from group role to user role
-    # has_role(u: User, role: String, resource: OsoResource) if
-    #     in_group(u, team) and
-    #     has_role(team, role, resource);
+    has_role(u: User, role: String, resource: OsoResource) if
+        in_group(u, team) and
+        has_role(team, role, resource);
 
     # Org policy #
     ##############

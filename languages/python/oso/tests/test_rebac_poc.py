@@ -95,28 +95,6 @@ class Team:
         return self.roles.get(resource) == name
 
 
-# class User:
-#     def __init__(self, teams):
-#         self.teams = teams
-
-#     def has_role(self, role, resource):
-#         return True
-
-
-# class Org:
-#     pass
-
-
-# class Repo:
-#     def __init__(self, org):
-#         self.org = org
-
-
-# class Issue:
-#     def __init__(self, org):
-#         self.repo = repo
-
-
 @pytest.fixture()
 def init_oso():
     o = Oso()
