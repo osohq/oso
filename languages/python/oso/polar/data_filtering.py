@@ -95,16 +95,22 @@ def ground_constraints(polar, results, filter_plan, constraints):
             constraint.value = [getattr(v, attrib) for v in constraint.value]
 
 
-def filter_data(polar, filter_plan):
-    results = {}
-    for id in filter_plan.resolve_order:
-        constraints = filter_plan.data_sets[id]
-        # Substitute in fetched results.
-        ground_constraints(polar, results, filter_plan, constraints)
-        # Fetch the data.
-        fetcher = polar.host.fetchers[constraints.cls]
-        results[id] = fetcher(constraints)
-    return results[filter_plan.result_set]
+def filter_data(polar, filter_plans):
+    # @TODO: Remove duplicates, this should be a union
+    result_objs = []
+    for plan in filter_plans:
+        results = {}
+        for id in plan.resolve_order:
+            constraints = plan.data_sets[id]
+            # Substitute in fetched results.
+            ground_constraints(polar, results, plan, constraints)
+            # Fetch the data.
+            fetcher = polar.host.fetchers[constraints.cls]
+            results[id] = fetcher(constraints)
+        result_objs.extend(results[plan.result_set])
+    # Not the best way to remove duplicates.
+    return [i for n, i in enumerate(result_objs) if i not in result_objs[:n]]
+
 
 
 # The hardest part of this is taking the expressions in the bindings that come out of the core
@@ -176,6 +182,7 @@ def filter_data(polar, filter_plan):
 #     1,
 # )
 
+
 def var_name(var):
     return super(Variable, var).__str__()
 
@@ -229,8 +236,6 @@ class FilterPlanner:
             assert isinstance(inner_field, str)
 
             return (inner_field, field)
-
-
 
     def process_exp(self, exp):
         if exp.operator == "And":
@@ -292,8 +297,6 @@ class FilterPlanner:
                 # Left side is a variable, right side is a value.
                 self.var_values.append((var_name(lhs), rhs))
 
-
-
             #     # Only handle unification with values for now.
             #     # TODO: stuff like _this.something = this.bar.something_else
             #     # it's sort of like an additional join constraint to the defined relationship
@@ -341,18 +344,9 @@ class FilterPlanner:
             #     )
             #     self.dependencies.insert(0, id)
 
-    def process_bindings(self, query_results):
-        # Making a bunch of assumptions and restrictions for now.
-        # Want something that works for simple queries that I can then expand.
-        query_results = list(query_results)
-        assert len(query_results) == 1, "Steve, next thing to do is handle OR but you are very close!"
-        assert "bindings" in query_results[0]
-        assert len(query_results[0]["bindings"]) == 1  # Only one variable in bindings.
-        assert self.variable in query_results[0]["bindings"]
-        exp = query_results[0]["bindings"][self.variable]
-        assert isinstance(exp, Expression)
-        assert exp.operator == "And"
-        self.process_exp(exp)
+    def process_bindings(self, query_result):
+        self.process_exp(query_result)
+
 
     def collapse_vars(self):
         """
@@ -512,21 +506,29 @@ class FilterPlanner:
                     if isinstance(rel, Relationship):
                         # Get constraints for the related var.
                         self.constrain_var(rel_rel_id, rel.other_type)
-                        self.data_sets[var_id].constraints.append(Constraint("In", rel.my_field, Attrib(rel.other_field, Result(rel_rel_id))))
+                        self.data_sets[var_id].constraints.append(
+                            Constraint(
+                                "In",
+                                rel.my_field,
+                                Attrib(rel.other_field, Result(rel_rel_id)),
+                            )
+                        )
                         continue
 
                 # Non relationship or unknown type info.
                 # @TODO: Handle "in"
                 assert rel_rel_id in self.var_values
                 value = self.var_values[rel_rel_id]
-                self.data_sets[var_id].constraints.append(Constraint("Eq", field, value))
-
+                self.data_sets[var_id].constraints.append(
+                    Constraint("Eq", field, value)
+                )
 
     # Probably pass through the initial type too.
     def build_constraints(self, var_id):
         self.constrain_var(var_id, self.cls)
 
-    def plan(self, query_results):
+    def plan(self, query_result):
+        # @TODO: Do I need all of these?
         self.next_id = 2
         self.data_sets = {}
         self.path_sets = {}
@@ -538,7 +540,7 @@ class FilterPlanner:
         self.var_values = []
         self.var_types = []
 
-        self.process_bindings(query_results)
+        self.process_bindings(query_result)
         self.collapse_vars()
 
         this_id = self.this_id()
@@ -551,6 +553,22 @@ class FilterPlanner:
 
 def process_constraints(polar, cls, variable, query_results):
     cls_name = polar.host.cls_names[cls]
+    query_results = list(query_results)
+    plans = []
+    planner = FilterPlanner(polar, cls_name, variable)
+    for query_result in query_results:
+        # asert len(query_results) == 1, "Steve, next thing to do is handle OR but you are very close!"
+        assert "bindings" in query_result
+        assert len(query_result["bindings"]) == 1  # Only one variable in bindings.
+        assert variable in query_result["bindings"]
+        exp = query_result["bindings"][variable]
+        assert isinstance(exp, Expression)
+        assert exp.operator == "And"
+        plan = planner.plan(exp)
+        plans.append(plan)
+    return plans
+
+
     planner = FilterPlanner(polar, cls_name, variable)
     plan = planner.plan(query_results)
     return plan
@@ -559,6 +577,7 @@ def process_constraints(polar, cls, variable, query_results):
 def evaluate(polar, cls, variable, query_results):
     plan = process_constraints(polar, cls, variable, query_results)
     return filter_data(polar, plan)
+
 
 # [
 #     {
@@ -624,3 +643,24 @@ def evaluate(polar, cls, variable, query_results):
 #   If they are real relationships, I can start to build this filter graph and sub in that
 # it's like a result or something.
 # I think this can work.
+
+
+# FilterPlan(
+#     data_sets={
+#         0: Constraints(
+#             cls="Repo",
+#             constraints=[
+#                 Constraint(
+#                     kind="In",
+#                     field="org_name",
+#                     value=Attrib(key="name", of=Result(id=1)),
+#                 )
+#             ],
+#         ),
+#         1: Constraints(
+#             cls="Org", constraints=[Constraint(kind="Eq", field="name", value="osohq")]
+#         ),
+#     },
+#     resolve_order=[1, 0],
+#     result_set=0,
+# )

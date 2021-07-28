@@ -64,7 +64,7 @@ def test_data_filtering(oso):
 
     def get_bars(constraints):
         results = []
-        assert constraints.cls == Bar
+        assert constraints.cls == 'Bar'
         for bar in bars:
             matches = True
             for constraint in constraints.constraints:
@@ -83,7 +83,7 @@ def test_data_filtering(oso):
 
     def get_foos(constraints):
         results = []
-        assert constraints.cls == Foo
+        assert constraints.cls == 'Foo'
         for foo in foos:
             matches = True
             for constraint in constraints.constraints:
@@ -107,7 +107,7 @@ def test_data_filtering(oso):
             "id": str,
             "bar_id": str,
             "bar": Relationship(
-                kind="parent", other_type=Bar, my_field="bar_id", other_field="id"
+                kind="parent", other_type='Bar', my_field="bar_id", other_field="id"
             ),
         },
         fetcher=get_foos,
@@ -121,37 +121,6 @@ def test_data_filtering(oso):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", another_foo)
 
-    # So, for my first query, I would get something like this.
-    plan = FilterPlan(
-        {1: Constraints(Foo, [Constraint("Eq", "is_fooey", True)])}, [1], 1
-    )
-    results = filter_data(oso, plan)
-    assert len(results) == 3
-
-    # Test process constraints
-    # This is what comes back from the partial
-    query_results = [
-        {
-            "bindings": {
-                "resource": Expression(
-                    "And",
-                    [
-                        Expression("Isa", [Variable("_this"), Pattern(Foo, {})]),
-                        Expression(
-                            "Unify",
-                            [True, Expression("Dot", [Variable("_this"), "is_fooey"])],
-                        ),
-                    ],
-                )
-            },
-            "trace": None,
-        }
-    ]
-
-    processed = process_constraints(oso, Foo, "resource", query_results)
-    assert processed == plan
-
-    # Once I add the actual hard part too.
     results = list(oso.get_allowed_resources("steve", "get", Foo))
     assert len(results) == 3
 
@@ -165,58 +134,6 @@ def test_data_filtering(oso):
     """
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", another_foo)
-
-    # The second one would look like this
-    plan2 = FilterPlan(
-        {
-            1: Constraints(
-                Foo,
-                [
-                    Constraint("In", "bar_id", Attrib("id", Result(2))),
-                    Constraint("Eq", "is_fooey", True),
-                ],
-            ),
-            2: Constraints(Bar, [Constraint("Eq", "is_cool", True)]),
-        },
-        [2, 1],
-        1,
-    )
-    results = filter_data(oso, plan2)
-    assert len(results) == 2
-
-    query_results = [
-        {
-            "bindings": {
-                "resource": Expression(
-                    "And",
-                    [
-                        Expression("Isa", [Variable("_this"), Pattern(Foo, {})]),
-                        Expression(
-                            "Unify",
-                            [
-                                True,
-                                Expression(
-                                    "Dot",
-                                    [
-                                        Expression("Dot", [Variable("_this"), "bar"]),
-                                        "is_cool",
-                                    ],
-                                ),
-                            ],
-                        ),
-                        Expression(
-                            "Unify",
-                            [True, Expression("Dot", [Variable("_this"), "is_fooey"])],
-                        ),
-                    ],
-                )
-            },
-            "trace": None,
-        }
-    ]
-
-    # processed = process_constraints(oso, Foo, "resource", query_results)
-    # assert processed == plan2
 
     results = list(oso.get_allowed_resources("steve", "get", Foo))
     assert len(results) == 2
@@ -292,23 +209,23 @@ def test_roles_data_filtering(oso):
         return results
 
     def get_orgs(constraints):
-        assert constraints.cls == 'Org'
+        assert constraints.cls == "Org"
         return filter_array(orgs, constraints)
 
     def get_repos(constraints):
-        assert constraints.cls == 'Repo'
+        assert constraints.cls == "Repo"
         return filter_array(repos, constraints)
 
     def get_issues(constraints):
-        assert constraints.cls == 'Issue'
+        assert constraints.cls == "Issue"
         return filter_array(issues, constraints)
 
     def get_roles(constraints):
-        assert constraints.cls == 'Role'
+        assert constraints.cls == "Role"
         return filter_array(roles, constraints)
 
     def get_users(constraints):
-        assert constraints.cls == 'User'
+        assert constraints.cls == "User"
         return filter_array(users, constraints)
 
     oso.register_class(Org, types={"name": str}, fetcher=get_orgs)
@@ -318,7 +235,7 @@ def test_roles_data_filtering(oso):
             "name": str,
             "org_name": str,
             "org": Relationship(
-                kind="parent", other_type='Org', my_field="org_name", other_field="name"
+                kind="parent", other_type="Org", my_field="org_name", other_field="name"
             ),
         },
         fetcher=get_repos,
@@ -329,7 +246,10 @@ def test_roles_data_filtering(oso):
             "name": str,
             "repo_name": str,
             "repo": Relationship(
-                kind="parent", other_type='Repo', my_field="repo_name", other_field="name"
+                kind="parent",
+                other_type="Repo",
+                my_field="repo_name",
+                other_field="name",
             ),
         },
         fetcher=get_issues,
@@ -349,7 +269,7 @@ def test_roles_data_filtering(oso):
             "name": str,
             "roles": Relationship(
                 kind="children",
-                other_type='Role',
+                other_type="Role",
                 my_field="name",
                 other_field="user_name",
             ),
@@ -433,3 +353,4 @@ def test_roles_data_filtering(oso):
     # Ok, now for the magic trick
     results = list(oso.get_allowed_resources(leina, "pull", Repo))
     assert len(results) == 2
+
