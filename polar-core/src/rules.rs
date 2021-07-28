@@ -49,6 +49,15 @@ impl Rule {
         }
     }
 
+    pub fn new_from_test(name: Symbol, params: Vec<Parameter>, body: Term) -> Self {
+        Self {
+            name,
+            params,
+            body,
+            source_info: SourceInfo::Test,
+        }
+    }
+
     /// Creates a new term from the parser
     pub fn new_from_parser(
         src_id: u64,

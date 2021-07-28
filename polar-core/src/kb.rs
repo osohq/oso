@@ -132,8 +132,7 @@ impl KnowledgeBase {
         // remove from sources
         let source = self
             .sources
-            .sources
-            .remove(&source_id)
+            .remove_source(source_id)
             .expect("source doesn't exist in KB");
 
         assert_eq!(source.filename, filename);
