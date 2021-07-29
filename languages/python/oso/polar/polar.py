@@ -109,6 +109,7 @@ class Polar:
                 query = self.ffi_polar.next_inline_query()
                 if query is None:  # Load is done
                     break
+                query.set_message_enricher(self.host.enrich_message)
                 try:
                     host = self.host.copy()
                     host.set_accept_expression(True)
@@ -151,6 +152,7 @@ class Polar:
             if query is None:  # Load is done
                 break
             else:
+                query.set_message_enricher(self.host.enrich_message)
                 try:
                     next(Query(query, host=self.host.copy()).run())
                 except StopIteration:
@@ -177,9 +179,11 @@ class Polar:
         host.set_accept_expression(accept_expression)
 
         if isinstance(query, str):
-            query = self.ffi_polar.new_query_from_str(query, host.enrich_message)
+            query = self.ffi_polar.new_query_from_str(query)
+            query.set_message_enricher(host.enrich_message)
         elif isinstance(query, Predicate):
-            query = self.ffi_polar.new_query_from_term(host.to_polar(query), host.enrich_message)
+            query = self.ffi_polar.new_query_from_term(host.to_polar(query))
+            query.set_message_enricher(host.enrich_message)
         else:
             raise InvalidQueryTypeError()
 

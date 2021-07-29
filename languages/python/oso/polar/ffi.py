@@ -50,23 +50,19 @@ class Polar:
         self.process_messages()
         self.check_result(result)
 
-    def new_query_from_str(self, query_str, enrich_message):
+    def new_query_from_str(self, query_str):
         new_q_ptr = lib.polar_new_query(self.ptr, to_c_str(query_str), 0)
         self.process_messages()
         query = self.check_result(new_q_ptr)
-        query = Query(query)
-        query.set_message_enricher(enrich_message)
-        return query
+        return Query(query)
 
-    def new_query_from_term(self, query_term, enrich_message):
+    def new_query_from_term(self, query_term):
         new_q_ptr = lib.polar_new_query_from_term(
             self.ptr, ffi_serialize(query_term), 0
         )
         self.process_messages()
         query = self.check_result(new_q_ptr)
-        query = Query(query)
-        query.set_message_enricher(enrich_message)
-        return query
+        return Query(query)
 
     def next_inline_query(self):
         q = lib.polar_next_inline_query(self.ptr, 0)
