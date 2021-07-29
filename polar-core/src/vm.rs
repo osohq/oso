@@ -2273,11 +2273,7 @@ impl PolarVirtualMachine {
 
                 // For each value, push a unify goal.
                 for (k, v) in left.fields.iter() {
-                    let right = right
-                        .fields
-                        .get(k)
-                        .expect("fields should be equal")
-                        .clone();
+                    let right = right.fields.get(k).expect("fields should be equal").clone();
                     self.push_goal(Goal::Unify {
                         left: v.clone(),
                         right,
