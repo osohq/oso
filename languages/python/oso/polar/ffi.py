@@ -213,7 +213,7 @@ def ffi_serialize(value):
     return to_c_str(json.dumps(value))
 
 
-def process_messages(next_message_method, postprocess=None):
+def process_messages(next_message_method):
     while True:
         msg_ptr = next_message_method()
         if is_null(msg_ptr):
@@ -224,9 +224,6 @@ def process_messages(next_message_method, postprocess=None):
 
         kind = message["kind"]
         msg = message["msg"]
-
-        if postprocess:
-            msg = postprocess(msg)
 
         if kind == "Print":
             yield msg
