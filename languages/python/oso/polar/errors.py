@@ -40,8 +40,10 @@ def get_python_error(err_str, enrich_message=None):
         details = None
 
     if details:
-        details["stack_trace"] = enrich_message(details["stack_trace"])
-        details["msg"] = enrich_message(details["msg"])
+        if "stack_trace" in details:
+            details["stack_trace"] = enrich_message(details["stack_trace"])
+        if "msg" in details:
+            details["msg"] = enrich_message(details["msg"])
 
     if kind == "Parse":
         return _parse_error(subkind, message, details)

@@ -148,6 +148,7 @@ class Host:
         Currently only used to enrich messages with instance reprs. This allows
         us to avoid sending reprs eagerly when an instance is created in polar.
         """
+
         def replace_repr(match: re.Match):
             instance_id = int(match[1])
             try:
