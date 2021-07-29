@@ -140,9 +140,9 @@ class Host:
                 f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
             )
 
-    def process_message(self, message: str):
+    def enrich_message(self, message: str):
         """
-        Process a message from the polar core, such as a log line, debug
+        "Enrich" a message from the polar core, such as a log line, debug
         message, or error trace.
 
         Currently only used to enrich messages with instance reprs. This allows
