@@ -13,7 +13,7 @@ use super::vm::*;
 
 impl PolarVirtualMachine {
     pub fn query_summary(&self, query: &Term) -> String {
-        let relevant_bindings = self.relevant_bindings(&[&query]);
+        let relevant_bindings = self.relevant_bindings(&[query]);
         let bindings_str = relevant_bindings
             .iter()
             .map(|(var, val)| format!("{} = {}", var.0, val.to_polar()))
@@ -209,7 +209,7 @@ impl Debugger {
                 return Some(Goal::Debug {
                     message: vm.queries.last().map_or_else(
                         || "".to_string(),
-                        |query| self.query_source(&query, &vm.kb.read().unwrap().sources, lines),
+                        |query| self.query_source(query, &vm.kb.read().unwrap().sources, lines),
                     ),
                 });
             }
