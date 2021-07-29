@@ -206,7 +206,7 @@ impl BindingManager {
             match self._variable_state(&var) {
                 BindingManagerVariableState::Cycle(c) => {
                     let mut cycle = cycle_constraints(c);
-                    cycle.merge_constraints(op.clone());
+                    cycle.merge_constraints(op);
                     op = cycle;
                 }
                 BindingManagerVariableState::Partial(e) => {
@@ -218,9 +218,12 @@ impl BindingManager {
             }
         }
 
-        for var in op.variables() {
+        let vars = op.variables();
+        let mut varset = vars.iter().collect::<HashSet<_>>();
+        for var in vars.iter() {
             match self._variable_state(&var) {
                 BindingManagerVariableState::Bound(val) => {
+                    varset.remove(&var);
                     match op.ground(var.clone(), val) {
                         None => return Err(RuntimeError::IncompatibleBindings {
                             msg: "Grounding failed".into(),
@@ -232,7 +235,7 @@ impl BindingManager {
             }
         }
 
-        for var in op.variables() {
+        for var in varset {
             self.add_binding(&var, op.clone().into_term())
         }
         Ok(())

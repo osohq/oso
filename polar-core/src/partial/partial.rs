@@ -71,13 +71,6 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
     }
 }
 
-impl Iterator for Operation {
-    type Item = Term;
-    fn next(&mut self) -> Option<Term> {
-        self.args.pop()
-    }
-}
-
 impl Operation {
     /// Construct & return a set of symbols that occur in this operation.
     pub fn variables(&self) -> Vec<Symbol> {
