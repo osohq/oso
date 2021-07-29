@@ -257,7 +257,7 @@ def translate_compare(expression: Expression, session: Session, model, get_model
     Either the left or right argument may contain a path. Paths for both
     arguments (i.e. post.name = post.body) are not supported currently.
 
-    Also handle _this = ? where ? is an instance of the same type as _this.
+    Also handle unification of _this with an instance of the same type as _this. E.g., _this = ? where ? is an instance of the same type as _this.
 
     _this.path.(path1)+.tail OP val => Model.path.(path1)+.has(Target.tail OP val)
     val OP _this.path.(path1)+.tail => Model.path.(path1)+.has(Target.tail OP mirror(OP) val)
