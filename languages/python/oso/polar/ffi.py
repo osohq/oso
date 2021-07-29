@@ -69,7 +69,7 @@ class Polar:
         self.process_messages()
         if is_null(q):
             return None
-        return Query(q, self.host)
+        return Query(q)
 
     def register_constant(self, value, name):
         name = to_c_str(name)
@@ -88,6 +88,7 @@ class Polar:
         return check_result(result, self.enrich_message)
 
     def process_messages(self):
+        assert self.enrich_message, "No message enricher on this instance of FfiPolar. You must call set_message_enricher before using process_messages."
         for msg in process_messages(self.next_message):
             print(self.enrich_message(msg))
 
@@ -101,7 +102,6 @@ class Query:
 
     def __init__(self, ptr):
         self.ptr = ptr
-        self.enrich_message = lambda msg: msg
 
     def __del__(self):
         lib.query_free(self.ptr)
@@ -157,6 +157,7 @@ class Query:
         return check_result(result, lambda msg: self.enrich_message(msg))
 
     def process_messages(self):
+        assert self.enrich_message, "No message enricher on this instance of FfiQuery. You must call set_message_enricher before using process_messages."
         for msg in process_messages(self.next_message):
             print(self.enrich_message(msg))
 
