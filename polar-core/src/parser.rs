@@ -202,13 +202,13 @@ mod tests {
     #[test]
     fn test_parse_line() {
         let kb = r#"f(x) if x = 1;"#;
-        let line = parse_lines(&kb);
+        let line = parse_lines(kb);
         assert_eq!(
             line[0],
             Line::Rule(rule!("f", [sym!("x")] => op!(Unify, term!(sym!("x")), term!(1))))
         );
         let f = r#"?= f(1);"#;
-        let line = parse_lines(&f);
+        let line = parse_lines(f);
 
         assert_eq!(line[0], Line::Query(term!(call!("f", [1]))));
     }
