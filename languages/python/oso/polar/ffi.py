@@ -88,16 +88,23 @@ class Query:
             value = ffi.NULL
         else:
             value = ffi_serialize(value)
-        check_result(lib.polar_call_result(self.ptr, call_id, value), self._temp_process_message)
+        check_result(
+            lib.polar_call_result(self.ptr, call_id, value), self._temp_process_message
+        )
 
     def question_result(self, call_id, answer):
         answer = 1 if answer else 0
-        check_result(lib.polar_question_result(self.ptr, call_id, answer), self._temp_process_message)
+        check_result(
+            lib.polar_question_result(self.ptr, call_id, answer),
+            self._temp_process_message,
+        )
 
     def application_error(self, message):
         """Pass an error back to polar to get stack trace and other info."""
         message = to_c_str(message)
-        check_result(lib.polar_application_error(self.ptr, message), self._temp_process_message)
+        check_result(
+            lib.polar_application_error(self.ptr, message), self._temp_process_message
+        )
 
     def next_event(self):
         event = lib.polar_next_query_event(self.ptr)

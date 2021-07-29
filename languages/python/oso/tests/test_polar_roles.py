@@ -28,6 +28,7 @@ class Org(Base):  # type: ignore
     def __repr__(self):
         # TODO: remove this slowdown?
         import time
+
         time.sleep(0.002)
         return f"Org({self.name})"
 
