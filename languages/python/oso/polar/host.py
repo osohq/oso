@@ -218,7 +218,12 @@ class Host:
             # sqlalchemy_oso.roles.OsoRoles.Roles ONLY
             repr_str = None
             import inspect
-            if inspect.isclass(v) and "OsoRoles" in v.__qualname__ and v.__module__ == "sqlalchemy_oso.roles":
+
+            if (
+                inspect.isclass(v)
+                and "OsoRoles" in v.__qualname__
+                and v.__module__ == "sqlalchemy_oso.roles"
+            ):
                 repr_str = repr(v)
             # END HACK
             val = {
