@@ -64,7 +64,7 @@ class Polar:
     def __init__(self, classes=CLASSES):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
-        self.ffi_polar.host = self.host
+        self.ffi_polar.set_message_enricher(self.host.enrich_message)
         # TODO(gj): rename to _oso_roles_enabled
         self._polar_roles_enabled = False
 
@@ -177,9 +177,9 @@ class Polar:
         host.set_accept_expression(accept_expression)
 
         if isinstance(query, str):
-            query = self.ffi_polar.new_query_from_str(query, host)
+            query = self.ffi_polar.new_query_from_str(query, host.enrich_message)
         elif isinstance(query, Predicate):
-            query = self.ffi_polar.new_query_from_term(host.to_polar(query), host)
+            query = self.ffi_polar.new_query_from_term(host.to_polar(query), host.enrich_message)
         else:
             raise InvalidQueryTypeError()
 
@@ -214,9 +214,10 @@ class Polar:
 
             host = self.host.copy()
             host.set_accept_expression(True)
+            ffi_query.set_message_enricher(host.enrich_message)
             result = False
             try:
-                query = Query(ffi_query, host=host).run()
+                query = Query(ffi_query).run()
                 for res in query:
                     result = True
                     bindings = res["bindings"]

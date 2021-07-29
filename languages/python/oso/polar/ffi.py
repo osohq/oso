@@ -1,13 +1,17 @@
 import json
+from typing import Callable
 
 from _polar_lib import ffi, lib
-from polar.host import Host
 
 from .errors import get_python_error
 
 
 class Polar:
-    host: Host
+    enrich_message: Callable
+    """
+    A method that can be called to enrich a debug, log, or error message from
+    the core.
+    """
 
     def __init__(self):
         self.ptr = lib.polar_new()
@@ -46,19 +50,23 @@ class Polar:
         self.process_messages()
         self.check_result(result)
 
-    def new_query_from_str(self, query_str, host):
+    def new_query_from_str(self, query_str, enrich_message):
         new_q_ptr = lib.polar_new_query(self.ptr, to_c_str(query_str), 0)
         self.process_messages()
         query = self.check_result(new_q_ptr)
-        return Query(query, host)
+        query = Query(query)
+        query.set_message_enricher(enrich_message)
+        return query
 
-    def new_query_from_term(self, query_term, host):
+    def new_query_from_term(self, query_term, enrich_message):
         new_q_ptr = lib.polar_new_query_from_term(
             self.ptr, ffi_serialize(query_term), 0
         )
         self.process_messages()
         query = self.check_result(new_q_ptr)
-        return Query(query, host)
+        query = Query(query)
+        query.set_message_enricher(enrich_message)
+        return query
 
     def next_inline_query(self):
         q = lib.polar_next_inline_query(self.ptr, 0)
@@ -77,18 +85,27 @@ class Polar:
     def next_message(self):
         return lib.polar_next_polar_message(self.ptr)
 
+    def set_message_enricher(self, enrich_message):
+        self.enrich_message = enrich_message
+
     def check_result(self, result):
-        return check_result(result, lambda msg: self.host.enrich_message(msg))
+        return check_result(result, self.enrich_message)
 
     def process_messages(self):
         for msg in process_messages(self.next_message):
-            print(self.host.enrich_message(msg))
+            print(self.enrich_message(msg))
 
 
 class Query:
-    def __init__(self, ptr, host):
+    enrich_message: Callable
+    """
+    A method that can be called to enrich a debug, log, or error message from
+    the core.
+    """
+
+    def __init__(self, ptr):
         self.ptr = ptr
-        self.host = host
+        self.enrich_message = lambda msg: msg
 
     def __del__(self):
         lib.query_free(self.ptr)
@@ -137,12 +154,15 @@ class Query:
         self.process_messages()
         self.check_result(result)
 
+    def set_message_enricher(self, enrich_message):
+        self.enrich_message = enrich_message
+
     def check_result(self, result):
-        return check_result(result, lambda msg: self.host.enrich_message(msg))
+        return check_result(result, lambda msg: self.enrich_message(msg))
 
     def process_messages(self):
         for msg in process_messages(self.next_message):
-            print(self.host.enrich_message(msg))
+            print(self.enrich_message(msg))
 
 
 class QueryEvent:
