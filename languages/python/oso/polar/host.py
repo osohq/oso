@@ -210,11 +210,21 @@ class Host:
                     }
                 }
         else:
+            # BEGIN HACK:
+            # The polar core uses the .repr property to determine whether or not
+            # to allow Roles.role_allows to be called with unbound variables as
+            # arguments (only for sqlalchemy_oso)
+            # Because of this, we need to continue to send the repr for
+            # sqlalchemy_oso.roles.OsoRoles.Roles ONLY
+            repr_str = None
+            import inspect
+            if inspect.isclass(v) and "OsoRoles" in v.__qualname__ and v.__module__ == "sqlalchemy_oso.roles":
+                repr_str = repr(v)
+            # END HACK
             val = {
                 "ExternalInstance": {
                     "instance_id": self.cache_instance(v),
-                    "repr": None,
-                    # "_internal_allow_methods_with_unbound_arguments": v is OsoRoles
+                    "repr": repr_str,
                 }
             }
         term = {"value": val}
