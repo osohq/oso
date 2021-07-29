@@ -206,7 +206,7 @@ def translate_and(expression: Expression, session: Session, model, get_model):
     return expr
 
 def translate_isa(expression: Expression, session: Session, model, get_model):
-    """Translate an Isa operation. (matches keyword)
+    """Translate an Isa operation. (``matches`` keyword)
 
     Check that the field on the left hand side matches the type on the right.
 
