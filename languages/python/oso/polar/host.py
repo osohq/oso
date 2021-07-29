@@ -149,7 +149,7 @@ class Host:
         us to avoid sending reprs eagerly when an instance is created in polar.
         """
 
-        def replace_repr(match: re.Match):
+        def replace_repr(match):
             instance_id = int(match[1])
             try:
                 instance = self.get_instance(instance_id)
