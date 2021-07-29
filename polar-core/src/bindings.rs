@@ -3,6 +3,7 @@
 /// Bindings associate variables in the VM with constraints or values.
 use std::collections::{HashMap, HashSet};
 
+use crate::vm::Goal;
 use crate::error::{PolarResult, RuntimeError};
 use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
@@ -130,35 +131,67 @@ impl BindingManager {
     ///
     /// If a binding between two variables is made, and one is bound and the other unbound, the
     /// unbound variable will take the value of the bound one.
-    pub fn bind(&mut self, var: &Symbol, val: Term) -> PolarResult<()> {
-        if let Ok(symbol) = val.value().as_symbol() {
-            self.bind_variables(var, symbol)?;
-        } else if let BindingManagerVariableState::Partial(p) = self._variable_state(var) {
-            if let Some(grounded) = p.ground(var.clone(), val.clone()) {
-                self.add_binding(var, val.clone());
-                self.constrain(&grounded)?;
-            } else {
-                return Err(RuntimeError::IncompatibleBindings {
-                    msg: "Grounding failed".into(),
-                }
-                .into());
-            }
-        } else {
-            if let BindingManagerVariableState::Bound(_) = self._variable_state(var) {
-                return Err(RuntimeError::IncompatibleBindings {
-                    msg: format!("Cannot rebind {:?}", var),
-                }
-                .into());
-            }
+    fn ground_it(&mut self, partial: &Operation, var: &Symbol, val: Term) -> PolarResult<Goal> {
+        match partial.ground(var.clone(), val.clone()) {
+            None => Err(RuntimeError::IncompatibleBindings {
+                msg: "Grounding failed".into(),
+            }.into()),
+            Some(grounded) => {
+                self.add_binding(var, val);
+//                let grounded = self.rebind(grounded)?;
+                Ok(Goal::Query { term: grounded.into_term() })
+            },
+        }
+    }
 
-            self.add_binding(var, val.clone());
+    /*
+    fn rebind(&mut self, partial: Operation) -> PolarResult<Operation> {
+        println!("rebinding {}", partial.clone().into_term().to_polar());
+        let res = partial.variables().iter().fold(Ok(partial), |out, var| match out {
+            Ok(out) => match self._variable_state(var) {
+                BindingManagerVariableState::Bound(val) => match out.ground(var.clone(), val) {
+                    Some(grounded) => Ok(grounded),
+                    None => Err(RuntimeError::IncompatibleBindings {
+                        msg: "Grounding failed".into(),
+                    }.into()),
+                },
+                _ => Ok(out),
+            },
+            err => err,
+        });
+        if let Ok(ref out) = res {
+            println!("rebound {}", out.clone().into_term().to_polar());
+        }
+        res
+
+    }
+    */
+
+    pub fn bind(&mut self, var: &Symbol, val: Term) -> PolarResult<Option<Goal>> {
+        let mut goal = None;
+        if let Ok(symbol) = val.value().as_symbol() {
+            goal = self.bind_variables(var, symbol)?;
+        } else  {
+            match self._variable_state(var) {
+                BindingManagerVariableState::Partial(p) => {
+                    let p = p.clone();
+                    goal = Some(self.ground_it(&p, var, val.clone())?)
+                },
+
+                BindingManagerVariableState::Bound(_) =>
+                    return Err(RuntimeError::IncompatibleBindings {
+                        msg: format!("Cannot rebind {:?}", var),
+                    }
+                    .into()),
+                _ => self.add_binding(var, val.clone()),
+            }
         }
 
         // If the main binding succeeded, the follower binding must succeed.
-        self.do_followers(|_, follower| follower.bind(var, val.clone()))
+        self.do_followers(|_, follower| { follower.bind(var, val.clone())?; Ok(()) })
             .unwrap();
 
-        Ok(())
+        Ok(goal)
     }
 
     /// Rebind `var` to `val`, regardless of compatibility.
@@ -192,7 +225,8 @@ impl BindingManager {
 
         assert!(term.value().as_expression().is_ok());
         let mut op = op!(And, term.clone());
-        for var in op.variables().iter().rev() {
+        let vars = op.variables();
+        for var in vars.iter().rev() {
             match self._variable_state(&var) {
                 BindingManagerVariableState::Unbound => {}
                 BindingManagerVariableState::Cycle(c) => {
@@ -411,7 +445,8 @@ impl BindingManager {
 // Private impls.
 impl BindingManager {
     /// Bind two variables together.
-    fn bind_variables(&mut self, left: &Symbol, right: &Symbol) -> PolarResult<()> {
+    fn bind_variables(&mut self, left: &Symbol, right: &Symbol) -> PolarResult<Option<Goal>> {
+        let mut goal = None;
         match (self._variable_state(left), self._variable_state(right)) {
             (
                 BindingManagerVariableState::Bound(left_value),
@@ -491,17 +526,18 @@ impl BindingManager {
             }
             (
                 BindingManagerVariableState::Bound(left_value),
-                BindingManagerVariableState::Partial(_),
+                BindingManagerVariableState::Partial(p),
             ) => {
                 // Left is bound, right has constraints.
-                // TODO (dhatch): No unwrap.
-                self.add_constraint(&op!(Unify, left_value, term!(right.clone())).into_term())?;
+                let p = p.clone();
+                goal = Some(self.ground_it(&p, right, left_value)?);
             }
             (
-                BindingManagerVariableState::Partial(_),
+                BindingManagerVariableState::Partial(p),
                 BindingManagerVariableState::Bound(right_value),
             ) => {
-                self.add_constraint(&op!(Unify, term!(left.clone()), right_value).into_term())?;
+                let p = p.clone();
+                goal = Some(self.ground_it(&p, left, right_value)?);
             }
             (BindingManagerVariableState::Partial(_), _)
             | (_, BindingManagerVariableState::Partial(_)) => {
@@ -511,7 +547,7 @@ impl BindingManager {
             }
         }
 
-        Ok(())
+        Ok(goal)
     }
 
     fn add_binding(&mut self, var: &Symbol, val: Term) {
@@ -565,8 +601,8 @@ impl BindingManager {
             match self._variable_state(&var) {
                 // A constraint should not contain a bound variable, it should have been removed in
                 // add_constraint by calling ground.
-                BindingManagerVariableState::Bound(_) => {
-                    panic!("Unexpected bound variable in constraint.")
+                BindingManagerVariableState::Bound(val) => {
+                    panic!("Unexpected bound variable in constraint {} : {} = {}", o.to_polar(), var, val.to_polar())
                 }
                 _ => self.add_binding(&var, o.clone().into_term()),
             }

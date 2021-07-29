@@ -642,8 +642,10 @@ impl PolarVirtualMachine {
         if self.log {
             self.print(&format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()));
         }
-
-        self.binding_manager.bind(var, val)
+        if let Some(goal) = self.binding_manager.bind(var, val)? {
+            self.push_goal(goal)?;
+        }
+        Ok(())
     }
 
     pub fn add_binding_follower(&mut self) -> FollowerId {
