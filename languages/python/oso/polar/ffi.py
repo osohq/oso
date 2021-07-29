@@ -88,9 +88,10 @@ class Polar:
         return check_result(result, self.enrich_message)
 
     def process_messages(self):
-        assert (
-            self.enrich_message
-        ), "No message enricher on this instance of FfiPolar. You must call set_message_enricher before using process_messages."
+        assert self.enrich_message, (
+            "No message enricher on this instance of FfiPolar. You must call "
+            "set_message_enricher before using process_messages."
+        )
         for msg in process_messages(self.next_message):
             print(self.enrich_message(msg))
 
@@ -159,9 +160,10 @@ class Query:
         return check_result(result, lambda msg: self.enrich_message(msg))
 
     def process_messages(self):
-        assert (
-            self.enrich_message
-        ), "No message enricher on this instance of FfiQuery. You must call set_message_enricher before using process_messages."
+        assert self.enrich_message, (
+            "No message enricher on this instance of FfiQuery. You must call "
+            "set_message_enricher before using process_messages."
+        )
         for msg in process_messages(self.next_message):
             print(self.enrich_message(msg))
 
