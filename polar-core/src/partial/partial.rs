@@ -73,45 +73,41 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
 
 impl Operation {
     /// Construct & return a set of symbols that occur in this operation.
-    pub fn variables(&self) -> Vec<Symbol> {
+    pub fn variables(&self) -> HashSet<Symbol> {
         struct VariableVisitor {
             seen: HashSet<Symbol>,
-            vars: Vec<Symbol>,
         }
 
         impl Visitor for VariableVisitor {
             fn visit_variable(&mut self, v: &Symbol) {
-                if self.seen.insert(v.clone()) {
-                    self.vars.push(v.clone());
-                }
+                self.seen.insert(v.clone());
             }
         }
 
         let mut visitor = VariableVisitor {
             seen: HashSet::new(),
-            vars: vec![],
         };
 
         walk_operation(&mut visitor, &self);
-        visitor.vars
+        visitor.seen
     }
 
     /// Replace `var` with a ground (non-variable) value. Checks for
     /// consistent unifications along the way: if everything's fine,
     /// returns `Some(grounded_term)`, but if an inconsistent ground
     /// (anti-)unification is detected, return `None`.
-    pub fn ground(&self, var: Symbol, value: Term) -> Option<Self> {
-        struct Grounder {
-            var: Symbol,
+    pub fn ground(&self, var: &Symbol, value: Term) -> Option<Self> {
+        struct Grounder<'a> {
+            var: &'a Symbol,
             value: Term,
             invert: bool,
             consistent: bool,
         }
 
-        impl Folder for Grounder {
+        impl<'a> Folder for Grounder<'a> {
             fn fold_term(&mut self, t: Term) -> Term {
                 if let Value::Variable(v) = t.value() {
-                    if v == &self.var {
+                    if v == self.var {
                         return self.value.clone();
                     }
                 }

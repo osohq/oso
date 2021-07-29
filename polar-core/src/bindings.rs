@@ -106,7 +106,7 @@ impl BindingManager {
 
     fn ground_it(&mut self, partial: &Operation, var: &Symbol, val: Term) -> PolarResult<Goal> {
         assert!(val.is_ground());
-        match partial.ground(var.clone(), val.clone()) {
+        match partial.ground(var, val.clone()) {
             None => Err(RuntimeError::IncompatibleBindings {
                 msg: "Grounding failed".into(),
             }.into()),
@@ -202,7 +202,7 @@ impl BindingManager {
 
         assert!(term.value().as_expression().is_ok());
         let mut op = op!(And, term.clone());
-        for var in op.variables().iter().rev() {
+        for var in op.variables() {
             match self._variable_state(&var) {
                 BindingManagerVariableState::Cycle(c) => {
                     let mut cycle = cycle_constraints(c);
@@ -221,10 +221,10 @@ impl BindingManager {
         let vars = op.variables();
         let mut varset = vars.iter().collect::<HashSet<_>>();
         for var in vars.iter() {
-            match self._variable_state(&var) {
+            match self._variable_state(var) {
                 BindingManagerVariableState::Bound(val) => {
-                    varset.remove(&var);
-                    match op.ground(var.clone(), val) {
+                    varset.remove(var);
+                    match op.ground(var, val) {
                         None => return Err(RuntimeError::IncompatibleBindings {
                             msg: "Grounding failed".into(),
                         }.into()),
