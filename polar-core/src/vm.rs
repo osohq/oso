@@ -663,8 +663,7 @@ impl PolarVirtualMachine {
         if self.log {
             self.print(&format!("⇒ add_constraint: {}", term.to_polar()));
         }
-
-        self.binding_manager.add_constraint(term)
+        self.binding_manager.add_constraint(&term)
     }
 
     /// Augment the bindings stack with constants from a hash map.
@@ -2170,6 +2169,18 @@ impl PolarVirtualMachine {
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         match (left.value(), right.value()) {
+            (_, Value::Expression(Operation { operator: Operator::Dot, args }))
+                if args.len() == 2 => {
+                    self.push_goal(Goal::Query { term: op!(Dot, args[0].clone(), args[1].clone(), left.clone()).into_term() })?;
+                    return Ok(())
+
+            }
+            (Value::Expression(Operation { operator: Operator::Dot, args }), _)
+                if args.len() == 2 => {
+                    self.push_goal(Goal::Query { term: op!(Dot, args[0].clone(), args[1].clone(), right.clone()).into_term() })?;
+                    return Ok(())
+
+            }
             (Value::Expression(_), _) | (_, Value::Expression(_)) => {
                 return Err(self.type_error(
                     &left,
