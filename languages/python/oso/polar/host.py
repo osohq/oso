@@ -1,6 +1,7 @@
 """Translate between Polar and the host language (Python)."""
 
 from math import inf, isnan, nan
+import re
 
 from .exceptions import (
     PolarRuntimeError,
@@ -140,8 +141,22 @@ class Host:
             )
 
     def process_message(self, message: str):
-        import re
-        return re.sub(r'\^\{id: ([0-9]+)\}', lambda match: repr(self.get_instance(int(match[1]))), message, flags=re.M)
+        """
+        Process a message from the polar core, such as a log line, debug
+        message, or error trace.
+
+        Currently only used to enrich messages with instance reprs. This allows
+        us to avoid sending reprs eagerly when an instance is created in polar.
+        """
+        def replace_repr(match: re.Match):
+            instance_id = int(match[1])
+            try:
+                instance = self.get_instance(instance_id)
+                return repr(instance)
+            except UnregisteredInstanceError:
+                return match[0]
+
+        return re.sub(r"\^\{id: ([0-9]+)\}", replace_repr, message, flags=re.M)
 
     def to_polar(self, v):
         """Convert a Python object to a Polar term."""
