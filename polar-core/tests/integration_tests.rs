@@ -256,14 +256,12 @@ fn qnull(p: &mut Polar, query_str: &str) {
 
 #[track_caller]
 fn qext(p: &mut Polar, query_str: &str, external_results: Vec<Value>, expected_len: usize) {
-    let mut external_results: Vec<Term> = external_results
+    let mut external_results = external_results
         .into_iter()
-        .map(Term::new_from_test)
-        .rev()
-        .collect();
+        .map(Term::new_from_test);
     let q = p.new_query(query_str, false).unwrap();
     assert_eq!(
-        query_results!(q, |_, _, _, _, _| external_results.pop()).len(),
+        query_results!(q, |_, _, _, _, _| external_results.next()).len(),
         expected_len
     );
 }

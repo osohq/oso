@@ -84,7 +84,7 @@ fmt-python:
 	$(MAKE) -C languages/python fmt
 
 clippy:
-	cargo clippy --all-features --all-targets -- -D warnings
+	cargo clippy --all-features --all-targets -- -D warnings -A clippy::needless_borrow
 
 lint-python: python-build python-flask-build python-sqlalchemy-build python-django-build
 	$(MAKE) -C languages/python lint
