@@ -97,7 +97,7 @@ impl KnowledgeBase {
         Ok(src_id)
     }
 
-    pub fn clear_sources(&mut self) {
+    pub fn clear_rules(&mut self) {
         self.rules.clear();
         self.sources = Sources::default();
         self.inline_queries.clear();

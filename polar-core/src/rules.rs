@@ -84,7 +84,7 @@ pub type Rules = Vec<Arc<Rule>>;
 
 type RuleSet = BTreeSet<u64>;
 
-#[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[derive(Clone, Default, Debug)]
 struct RuleIndex {
     rules: RuleSet,
     index: HashMap<Option<Value>, RuleIndex>,
@@ -152,7 +152,7 @@ impl RuleIndex {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone)]
 pub struct GenericRule {
     pub name: Symbol,
     pub rules: HashMap<u64, Arc<Rule>>,

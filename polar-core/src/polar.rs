@@ -228,7 +228,7 @@ impl Polar {
     /// Clear rules from the knowledge base
     pub fn clear_rules(&self) {
         let mut kb = self.kb.write().unwrap();
-        kb.clear_sources();
+        kb.clear_rules();
     }
 
     pub fn next_inline_query(&self, trace: bool) -> Option<Query> {
