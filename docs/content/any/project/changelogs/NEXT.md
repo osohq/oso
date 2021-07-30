@@ -51,6 +51,7 @@ Link to [relevant documentation section]().
 - The debugger can now break on runtime errors.
 - The `var` command  in the debugger now automatically maps variable
   names to their temporary bindings.
+- The VM can now represent circular data without crashing.
 
 ### Ruby
 
@@ -58,7 +59,7 @@ Link to [relevant documentation section]().
 
 - Comparison operations on Ruby objects are now fully supported.
 
-### Rust 
+### Rust
 
 #### New features
 
@@ -67,6 +68,16 @@ Link to [relevant documentation section]().
 The Rust library now has
 [built-in support for Role-Based Access Control (RBAC) policies](/guides/roles),
 which you can turn on with `.enable_roles()`.
+
+### Python
+
+#### Other bugs & improvements
+
+- The python library will no longer call `repr` on every object passed into a
+  query. Instead, instances will be stringified only when needed (during a log,
+  debug, or error event).
+  - This leads to a performance improvement when you have instances with heavy
+    `repr` calls (e.g. when `repr` requires a round-trip to the database).
 
 ## `flask-oso` NEW_VERSION
 
