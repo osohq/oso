@@ -781,6 +781,37 @@ mod test {
     }
 
     #[test]
+    fn old_deref() {
+        let mut bm = BindingManager::default();
+        let value = term!(1);
+        let x = sym!("x");
+        let y = sym!("y");
+        let term_x = term!(x.clone());
+        let term_y = term!(y.clone());
+
+        // unbound var
+        assert_eq!(bm.deep_deref(&term_x), term_x);
+
+        // unbound var -> unbound var
+        bm.bind(&x, term_y.clone()).unwrap();
+        assert_eq!(bm.deep_deref(&term_x), term_x);
+
+        // value
+        assert_eq!(bm.deep_deref(&value), value.clone());
+
+        // unbound var -> value
+        let mut bm = BindingManager::default();
+        bm.bind(&x, value.clone()).unwrap();
+        assert_eq!(bm.deep_deref(&term_x), value);
+
+        // unbound var -> unbound var -> value
+        let mut bm = BindingManager::default();
+        bm.bind(&x, term_y).unwrap();
+        bm.bind(&y, value.clone()).unwrap();
+        assert_eq!(bm.deep_deref(&term_x), value);
+    }
+
+    #[test]
     fn deep_deref() {
         let mut bm = BindingManager::default();
         let one = term!(1);

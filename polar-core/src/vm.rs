@@ -715,13 +715,6 @@ impl PolarVirtualMachine {
         self.binding_manager.deep_deref(term)
     }
 
-    /// Recursively dereference variables, but do not descend into (most) subterms.
-    /// The exception is for lists, so that we can correctly handle rest variables.
-    /// We also support cycle detection, in which case we return the original term.
-    fn deref(&self, term: &Term) -> Term {
-        self.deep_deref(term)
-    }
-
     /// Generate a fresh set of variables for a rule.
     fn rename_rule_vars(&self, rule: &Rule) -> Rule {
         let kb = &*self.kb.read().unwrap();
@@ -1101,7 +1094,7 @@ impl PolarVirtualMachine {
             Value::Pattern(Pattern::Dictionary(fields)) => {
                 // Produce a constraint like left.field = value
                 let to_unify = |(field, value): (&Symbol, &Term)| -> Term {
-                    let value = self.deref(value);
+                    let value = self.deep_deref(value);
                     let field = right.clone_with_value(value!(field.0.as_ref()));
                     let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
                     let unify = op!(Unify, left, value);
@@ -1162,7 +1155,7 @@ impl PolarVirtualMachine {
 
                 // Construct field constraints.
                 let field_constraints = fields.fields.iter().rev().map(|(f, v)| {
-                    let v = self.deref(v);
+                    let v = self.deep_deref(v);
                     let field = right.clone_with_value(value!(f.0.as_ref()));
                     let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
                     op!(Unify, left, v)
@@ -1189,7 +1182,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<()> {
-        let field = self.deref(field);
+        let field = self.deep_deref(field);
         match field.value() {
             Value::Variable(_) => {
                 let mut alternatives = vec![];
@@ -1244,7 +1237,7 @@ impl PolarVirtualMachine {
             Symbol,
             Option<Vec<Term>>,
             Option<BTreeMap<Symbol, Term>>,
-        ) = match self.deref(field).value() {
+        ) = match self.deep_deref(field).value() {
             Value::Call(Call { name, args, kwargs }) => (
                 name.clone(),
                 Some(args.iter().map(|arg| self.deep_deref(arg)).collect()),
@@ -1389,18 +1382,16 @@ impl PolarVirtualMachine {
             Value::Expression(_) => {
                 return self.query_for_operation(term);
             }
-            Value::Variable(_a_symbol) => {
-                let val = self.deref(term);
-
-                if val == *term {
+            Value::Variable(sym) => {
+                if let VariableState::Bound(val) = self.variable_state(sym) {
+                    self.push_goal(Goal::Query { term: val })?;
+                } else {
                     // variable was unbound
                     // apply a constraint to variable that it must be truthy
                     self.push_goal(Goal::Unify {
                         left: term.clone(),
                         right: term!(true),
                     })?;
-                } else {
-                    self.push_goal(Goal::Query { term: val })?;
                 }
             }
             Value::Boolean(value) => {
@@ -1553,7 +1544,7 @@ impl PolarVirtualMachine {
                     format!(
                         "debug({})",
                         args.iter()
-                            .map(|arg| self.deref(arg).to_polar())
+                            .map(|arg| self.deep_deref(arg).to_polar())
                             .collect::<Vec<String>>()
                             .join(", ")
                     )
@@ -1564,7 +1555,7 @@ impl PolarVirtualMachine {
                 self.print(
                     &args
                         .iter()
-                        .map(|arg| self.deref(arg).to_polar())
+                        .map(|arg| self.deep_deref(arg).to_polar())
                         .collect::<Vec<String>>()
                         .join(", "),
                 );
@@ -1913,7 +1904,7 @@ impl PolarVirtualMachine {
     ) -> PolarResult<Option<Term>> {
         // If the lookup is a `Value::Call`, then we need to check for partial args
         let (name, args, maybe_kwargs): (Symbol, Vec<Term>, Option<BTreeMap<Symbol, Term>>) =
-            match self.deref(field).value() {
+            match self.deep_deref(field).value() {
                 Value::Call(Call { name, args, kwargs }) => (
                     name.clone(),
                     args.iter().map(|arg| self.deep_deref(arg)).collect(),
@@ -2664,7 +2655,7 @@ impl PolarVirtualMachine {
         right: &Term,
         arg: &Term,
     ) -> PolarResult<QueryEvent> {
-        let arg = self.deref(arg);
+        let arg = self.deep_deref(arg);
         match (arg.value(), left.value(), right.value()) {
             (
                 Value::ExternalInstance(instance),
@@ -3494,7 +3485,7 @@ mod tests {
         }])
         .unwrap();
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.deref(&term!(x)), one);
+        assert_eq!(vm.deep_deref(&term!(x)), one);
         vm.backtrack().unwrap();
 
         // Left variable bound to value.
@@ -3505,7 +3496,7 @@ mod tests {
         }])
         .unwrap();
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.deref(&term!(z.clone())), one);
+        assert_eq!(vm.deep_deref(&term!(z.clone())), one);
 
         // Left variable bound to value, unify with something else, backtrack.
         vm.append_goals(vec![Goal::Unify {
@@ -3514,7 +3505,7 @@ mod tests {
         }])
         .unwrap();
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.deref(&term!(z)), one);
+        assert_eq!(vm.deep_deref(&term!(z)), one);
     }
 
     #[test]
@@ -3731,7 +3722,7 @@ mod tests {
         }
 
         assert_eq!(
-            vm.deref(&term!(Value::Variable(answer))),
+            vm.deep_deref(&term!(Value::Variable(answer))),
             term!(value!(true))
         );
     }
