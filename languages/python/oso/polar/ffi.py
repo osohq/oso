@@ -157,7 +157,7 @@ class Query:
         self.enrich_message = enrich_message
 
     def check_result(self, result):
-        return check_result(result, lambda msg: self.enrich_message(msg))
+        return check_result(result, self.enrich_message)
 
     def process_messages(self):
         assert self.enrich_message, (
