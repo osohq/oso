@@ -88,7 +88,7 @@ impl KnowledgeBase {
     pub fn add_source(&mut self, source: Source) -> PolarResult<u64> {
         let src_id = self.new_id();
         if let Some(ref filename) = source.filename {
-            self.check_file(&source.src, &filename)?;
+            self.check_file(&source.src, filename)?;
             self.loaded_content
                 .insert(source.src.clone(), filename.to_string());
             self.loaded_files.insert(filename.to_string(), src_id);
