@@ -58,7 +58,7 @@ Link to [relevant documentation section]().
 
 - Comparison operations on Ruby objects are now fully supported.
 
-### Rust 
+### Rust
 
 #### New features
 
@@ -67,6 +67,16 @@ Link to [relevant documentation section]().
 The Rust library now has
 [built-in support for Role-Based Access Control (RBAC) policies](/guides/roles),
 which you can turn on with `.enable_roles()`.
+
+### Python
+
+#### Other bugs & improvements
+
+- The python library will no longer call `repr` on every object passed into a
+  query. Instead, instance reprs will be calculated when needed (during a log,
+  debug, or error event).
+  - This leads to a performance improvement when you have instances with heavy
+    `repr` calls (e.g. when `repr` requires a round-trip to the database).
 
 ## `flask-oso` NEW_VERSION
 
