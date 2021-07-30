@@ -131,7 +131,7 @@ impl GenericRule {
     #[allow(clippy::ptr_arg)]
     pub fn get_applicable_rules(&self, args: &TermList) -> Rules {
         self.index
-            .get_applicable_rules(&args, 0)
+            .get_applicable_rules(args, 0)
             .iter()
             .map(|id| self.rules.get(id).expect("Rule missing"))
             .cloned()

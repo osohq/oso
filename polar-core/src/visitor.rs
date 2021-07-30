@@ -128,8 +128,8 @@ pub fn walk_dictionary<V: Visitor>(visitor: &mut V, dict: &Dictionary) {
 
 pub fn walk_pattern<V: Visitor>(visitor: &mut V, pattern: &Pattern) {
     match pattern {
-        Pattern::Dictionary(dict) => visitor.visit_dictionary(&dict),
-        Pattern::Instance(instance) => visitor.visit_instance_literal(&instance),
+        Pattern::Dictionary(dict) => visitor.visit_dictionary(dict),
+        Pattern::Instance(instance) => visitor.visit_instance_literal(instance),
     }
 }
 
