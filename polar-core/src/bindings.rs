@@ -782,16 +782,14 @@ mod test {
 
         let b2 = b1.remove_follower(&b2_id).unwrap();
 
-        /* FIXME
         if let BindingManagerVariableState::Partial(p) = b1._variable_state(&sym!("x")) {
             assert_eq!(
                 p.to_polar(),
-                "x = y and y = z and y = z and z = x and x > y"
+                "x = y and y = z and z = x and x > y"
             );
         } else {
             panic!("unexpected");
         }
-        */
 
         if let BindingManagerVariableState::Partial(p) = b2._variable_state(&sym!("x")) {
             assert_eq!(p.to_polar(), "x > y");
