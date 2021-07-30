@@ -104,7 +104,7 @@ impl BindingManager {
         Self::default()
     }
 
-    fn ground_it(&mut self, partial: &Operation, var: &Symbol, val: Term) -> PolarResult<Goal> {
+    fn partial_ground(&mut self, partial: Operation, var: &Symbol, val: Term) -> PolarResult<Goal> {
         assert!(val.is_ground());
         match partial.ground(var, val.clone()) {
             None => Err(RuntimeError::IncompatibleBindings {
@@ -117,6 +117,16 @@ impl BindingManager {
                     term: grounded.into_term(),
                 })
             }
+        }
+    }
+
+    fn partial_bind(&mut self, mut partial: Operation, var: &Symbol, val: Term) -> PolarResult<Option<Goal>> {
+        if val.is_ground() {
+            self.partial_ground(partial, var, val).map(Some)
+        } else {
+            partial.add_constraint(op!(And, val));
+            self.add_binding(var, partial.into_term());
+            Ok(None)
         }
     }
 
@@ -154,7 +164,8 @@ impl BindingManager {
             match self._variable_state(var) {
                 BindingManagerVariableState::Partial(p) => {
                     let p = p.clone();
-                    goal = Some(self.ground_it(&p, var, val.clone())?)
+                    let val = val.clone();
+                    goal = self.partial_bind(p, var, val)?
                 }
 
                 BindingManagerVariableState::Bound(_) => {
@@ -519,14 +530,14 @@ impl BindingManager {
             ) => {
                 // Left is bound, right has constraints.
                 let p = p.clone();
-                goal = Some(self.ground_it(&p, right, left_value)?);
+                goal = Some(self.partial_ground(p, right, left_value)?);
             }
             (
                 BindingManagerVariableState::Partial(p),
                 BindingManagerVariableState::Bound(right_value),
             ) => {
                 let p = p.clone();
-                goal = Some(self.ground_it(&p, left, right_value)?);
+                goal = Some(self.partial_ground(p, left, right_value)?);
             }
             (BindingManagerVariableState::Partial(_), _)
             | (_, BindingManagerVariableState::Partial(_)) => {
