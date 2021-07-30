@@ -25,6 +25,7 @@ class Query:
 
     def __init__(self, ffi_query, *, host=None, bindings=None):
         self.ffi_query = ffi_query
+        self.ffi_query.set_message_enricher(host.enrich_message)
         self.host = host
         self.calls = {}
         for (k, v) in (bindings or {}).items():
