@@ -270,24 +270,25 @@ class Polar:
         # Data filtering.
         resource = Variable("resource")
         # Get registered class name somehow
-        class_name = None
-        for name, c in self.host.classes.items():
-            if c == cls:
-                class_name = name
-                break
-        assert class_name
+        class_name = self.host.cls_names[cls]
         constraint = Expression(
             "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
         )
-        results = self.query_rule(
+        results = list(self.query_rule(
             "allow",
             actor,
             action,
             resource,
             bindings={"resource": constraint},
             accept_expression=True,
-        )
+        ))
 
+        for result in results:
+            for k, v in result["bindings"].items():
+                result["bindings"][k] = self.host.to_polar(v)
+                del result["trace"]
+
+        plan = self.ffi_polar.build_filter_plan(self.host.types, results, "resource", class_name)
         return evaluate(self, cls, "resource", results)
 
 

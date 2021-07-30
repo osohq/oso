@@ -3,20 +3,10 @@ use super::bindings::Bindings;
 use super::error::{PolarResult, RolesValidationError};
 use super::rules::GenericRule;
 use super::terms::*;
+use super::events::ResultEvent;
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ResultEvent {
-    bindings: Bindings,
-}
-
-impl ResultEvent {
-    pub fn new(bindings: Bindings) -> Self {
-        Self { bindings }
-    }
-}
 
 struct Action {
     typ: String,

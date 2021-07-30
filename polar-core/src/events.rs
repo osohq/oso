@@ -96,3 +96,16 @@ pub enum QueryEvent {
         iterable: Term,
     },
 }
+
+// A struct for just Result Events. Used to pass data back into
+// the core for validation and data filtering.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ResultEvent {
+    pub bindings: Bindings,
+}
+
+impl ResultEvent {
+    pub fn new(bindings: Bindings) -> Self {
+        Self { bindings }
+    }
+}

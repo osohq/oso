@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from .expression import Expression
 from .partial import Variable, Pattern
 
-VALID_KINDS = ["parent"]
+VALID_KINDS = ["parent", "children"]
 
 # Used so we know what fetchers to call and how to match up constraints.
 @dataclass
@@ -110,7 +110,6 @@ def filter_data(polar, filter_plans):
         result_objs.extend(results[plan.result_set])
     # Not the best way to remove duplicates.
     return [i for n, i in enumerate(result_objs) if i not in result_objs[:n]]
-
 
 
 # The hardest part of this is taking the expressions in the bindings that come out of the core
@@ -347,7 +346,6 @@ class FilterPlanner:
     def process_bindings(self, query_result):
         self.process_exp(query_result)
 
-
     def collapse_vars(self):
         """
         Takes the results from processing bindings and collapses all the vars.
@@ -567,7 +565,6 @@ def process_constraints(polar, cls, variable, query_results):
         plan = planner.plan(exp)
         plans.append(plan)
     return plans
-
 
     planner = FilterPlanner(polar, cls_name, variable)
     plan = planner.plan(query_results)

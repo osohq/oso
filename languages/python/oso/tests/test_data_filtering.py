@@ -64,7 +64,7 @@ def test_data_filtering(oso):
 
     def get_bars(constraints):
         results = []
-        assert constraints.cls == 'Bar'
+        assert constraints.cls == "Bar"
         for bar in bars:
             matches = True
             for constraint in constraints.constraints:
@@ -83,7 +83,7 @@ def test_data_filtering(oso):
 
     def get_foos(constraints):
         results = []
-        assert constraints.cls == 'Foo'
+        assert constraints.cls == "Foo"
         for foo in foos:
             matches = True
             for constraint in constraints.constraints:
@@ -107,7 +107,7 @@ def test_data_filtering(oso):
             "id": str,
             "bar_id": str,
             "bar": Relationship(
-                kind="parent", other_type='Bar', my_field="bar_id", other_field="id"
+                kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
             ),
         },
         fetcher=get_foos,
@@ -137,6 +137,19 @@ def test_data_filtering(oso):
 
     results = list(oso.get_allowed_resources("steve", "get", Foo))
     assert len(results) == 2
+
+    oso.clear_rules()
+    #
+    policy = """
+    allow("steve", "get", resource: Foo) if
+        resource.bar = bar and
+        bar.is_cool in [true, false];
+    """
+    oso.load_str(policy)
+    assert oso.is_allowed("steve", "get", another_foo)
+
+    results = list(oso.get_allowed_resources("steve", "get", Foo))
+    assert len(results) == 4
 
 
 def test_roles_data_filtering(oso):
@@ -315,7 +328,6 @@ def test_roles_data_filtering(oso):
         ];
 
     parent_child(parent_org, repo: Repo) if
-        print(repo) and
         repo.org = parent_org and
         parent_org matches Org;
 
@@ -350,7 +362,13 @@ def test_roles_data_filtering(oso):
     assert not oso.is_allowed(leina, "edit", ios_laggy)
     assert not oso.is_allowed(steve, "edit", ios_laggy)
 
-    # Ok, now for the magic trick
+
     results = list(oso.get_allowed_resources(leina, "pull", Repo))
     assert len(results) == 2
 
+    # Well, it seems like this does an infinite loop or something. Not good.
+    # results = list(oso.get_allowed_resources(leina, "edit", Issue))
+    # assert results == [oso_bug]
+
+    results = list(oso.get_allowed_resources(leina, "invite", Org))
+    assert results == [osohq]
