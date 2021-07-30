@@ -25,6 +25,7 @@ class Query:
 
     def __init__(self, ffi_query, *, host=None, bindings=None):
         self.ffi_query = ffi_query
+        self.ffi_query.set_message_enricher(host.enrich_message)
         self.host = host
         self.calls = {}
         for (k, v) in (bindings or {}).items():
@@ -173,7 +174,7 @@ class Query:
 
     def handle_debug(self, data):
         if data["message"]:
-            print(data["message"])
+            print(self.host.enrich_message(data["message"]))
         try:
             command = input("debug> ").strip(";")
         except EOFError:
