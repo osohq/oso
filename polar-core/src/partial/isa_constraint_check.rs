@@ -156,8 +156,7 @@ impl Runnable for IsaConstraintCheck {
             if let Some(alternative) = self.alternative_check.take() {
                 return Ok(alternative);
             } else if let Some(constraint) = self.existing.pop() {
-                let (maybe_primary, maybe_alternative) =
-                    self.check_constraint(constraint, &counter);
+                let (maybe_primary, maybe_alternative) = self.check_constraint(constraint, counter);
                 if let Some(alternative) = maybe_alternative {
                     self.alternative_check = Some(alternative);
                 }
