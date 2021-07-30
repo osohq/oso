@@ -374,6 +374,9 @@ pub mod to_polar {
             if let Some(ref repr) = self.repr {
                 repr.clone()
             } else {
+                // Print out external instances like ^{id: 123}
+                // NOTE: this format is used by host libraries to enrich output
+                // messages with native representations of the instances.
                 format!("^{{id: {}}}", self.instance_id)
             }
         }
