@@ -15,7 +15,7 @@ function postIntegrationRequest(integration) {
   });
 }
 
-function recordFeedback(isUp, location) {
+function postFeedback(isUp, location) {
   const url = `${API_BASE}/feedback`;
 
   return fetch(url, {
@@ -30,4 +30,4 @@ function recordFeedback(isUp, location) {
   })
 }
 
-export {postIntegrationRequest};
+export {postIntegrationRequest, postFeedback};

@@ -142,6 +142,14 @@ button > * {
   pointer-events: none;
 }
 
+#feedback-up:disabled {
+  background-color: rgb(187, 247, 208);
+}
+
+#feedback-down:disabled {
+  background-color: rgb(254, 202, 202);
+}
+
 code {
   @apply bg-gray-200;
   word-wrap: break-word;
