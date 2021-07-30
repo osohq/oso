@@ -95,7 +95,7 @@ impl Operation {
             vars: vec![],
         };
 
-        walk_operation(&mut visitor, &self);
+        walk_operation(&mut visitor, self);
         visitor.vars
     }
 
