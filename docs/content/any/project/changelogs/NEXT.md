@@ -73,7 +73,7 @@ which you can turn on with `.enable_roles()`.
 #### Other bugs & improvements
 
 - The python library will no longer call `repr` on every object passed into a
-  query. Instead, instance reprs will be calculated when needed (during a log,
+  query. Instead, instances will be stringified only when needed (during a log,
   debug, or error event).
   - This leads to a performance improvement when you have instances with heavy
     `repr` calls (e.g. when `repr` requires a round-trip to the database).
