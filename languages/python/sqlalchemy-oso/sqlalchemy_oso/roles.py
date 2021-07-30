@@ -10,6 +10,7 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy import inspect, sql
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
+from sqlalchemy.orm.util import AliasedClass
 from .compat import iterate_model_classes
 
 
@@ -23,6 +24,8 @@ def isa_type(arg):
 
 
 def get_pk(model):
+    if isinstance(model, AliasedClass):
+        model = inspect(model).class_
     pks = inspect(model).primary_key
     assert (
         len(pks) == 1

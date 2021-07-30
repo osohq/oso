@@ -73,23 +73,30 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
 
 impl Operation {
     /// Construct & return a set of symbols that occur in this operation.
-    pub fn variables(&self) -> HashSet<Symbol> {
+    pub fn variables(&self) -> Vec<Symbol> {
         struct VariableVisitor {
             seen: HashSet<Symbol>,
+            vars: Vec<Symbol>, // FIXME gw
+            // you may be wondering, why keep both a vec and a set? why not just a set? 
+            // it's because there's a ton of sqlalchemy tests that break if the order of
+            // the variables changes :(
         }
 
         impl Visitor for VariableVisitor {
             fn visit_variable(&mut self, v: &Symbol) {
-                self.seen.insert(v.clone());
+                if self.seen.insert(v.clone()) {
+                    self.vars.push(v.clone())
+                }
             }
         }
 
         let mut visitor = VariableVisitor {
             seen: HashSet::new(),
+            vars: vec![],
         };
 
         walk_operation(&mut visitor, &self);
-        visitor.seen
+        visitor.vars
     }
 
     /// Replace `var` with a ground (non-variable) value. Checks for
@@ -1897,6 +1904,269 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("b", [sym!("x")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "x", "true = _this.bar.foo");
         assert_query_done!(q);
+
+        Ok(())
+    }
+
+    // Grounding tests
+    fn test_grounding<T>(rules: &str, query: Term, assert_fns: T) -> TestResult
+    where
+        T: IntoIterator,
+        T::Item: Fn(Bindings) -> TestResult,
+    {
+        let p = Polar::new();
+        p.load_str(rules)?;
+
+        let mut q = p.new_query_from_term(query, false);
+        for assert_fn in assert_fns.into_iter() {
+            let r = next_binding(&mut q)?;
+            assert_fn(r)?;
+        }
+
+        assert_query_done!(q);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_grounding_1() -> TestResult {
+        test_grounding(
+            r#"
+            f(x) if x in y and x > 0 and y = [1, 2, 3] and x = 1;
+        "#,
+            term!(call!("f", [sym!("x")])),
+            &[|r: Bindings| {
+                assert_eq!(r.get(&sym!("x")).unwrap(), &term!(1));
+                Ok(())
+            }],
+        )
+    }
+
+    #[test]
+    fn test_grounding_2() -> TestResult {
+        test_grounding(
+            r#"
+            f(x, y) if x > y and x = 1;
+        "#,
+            term!(call!("f", [sym!("x"), sym!("y")])),
+            &[|r: Bindings| {
+                assert_eq!(r.get(&sym!("x")).unwrap(), &term!(1));
+                assert_partial_expression!(r, "y", "1 > _this");
+                Ok(())
+            }],
+        )
+    }
+
+    #[test]
+    fn test_grounding_not_2() -> TestResult {
+        test_grounding(
+            r#"
+            f(x) if x > 0 and not (x > 5 and x = 3);
+        "#,
+            term!(call!("f", [sym!("x")])),
+            &[|r: Bindings| {
+                // x > 5 and x = 3 is always false so negation always succeeds.
+                assert_partial_expression!(r, "x", "_this > 0");
+                Ok(())
+            }],
+        )
+    }
+
+    #[test]
+    fn test_grounding_not_3() -> TestResult {
+        test_grounding(
+            r#"
+            f(x) if x > 0 and not (x >= 1 and x = 1);
+        "#,
+            term!(call!("f", [sym!("x")])),
+            &[|r: Bindings| {
+                // x >= 1 and x = 1 are compatible, so the negation binds x to 1
+                // if x is 1 the negated query succeeds, failing overall query
+                assert_partial_expression!(r, "x", "_this > 0 and _this != 1");
+                Ok(())
+            }],
+        )
+    }
+
+    // THIS IS the manually rewritten version of test_grounding_not_4.
+    // Considering whether we can just do this rewrite to execute inversion.
+    #[test]
+    fn test_grounding_not_rewrite_4() -> TestResult {
+        test_grounding(
+            r#"
+            f(x, y) if x > 0 and (x < 1 or x != 1 or y <= x);
+        "#,
+            term!(call!("f", [sym!("x"), sym!("y")])),
+            &[
+                |r: Bindings| {
+                    assert_partial_expression!(r, "x", "_this > 0 and _this < 1");
+                    assert_eq!(r.get(&sym!("y")).unwrap(), &term!(sym!("y")));
+                    Ok(())
+                },
+                |r: Bindings| {
+                    assert_partial_expression!(r, "x", "_this > 0 and _this != 1");
+                    assert_eq!(r.get(&sym!("y")).unwrap(), &term!(sym!("y")));
+                    Ok(())
+                },
+                |r: Bindings| {
+                    assert_partial_expressions!(r,
+                        "x" => "_this > 0 and y <= _this",
+                        "y" => "x > 0 and _this <= x"
+                    );
+                    Ok(())
+                },
+            ],
+        )
+    }
+
+    #[test]
+    fn test_grounding_not_5() -> TestResult {
+        test_grounding(
+            r#"
+            f(x, y) if x > 0 and not (x >= 1 and x = 1 and y > x and g(x, y));
+            g(x, _) if x >= 3;
+            g(1, y) if y >= 3 and y > 5;
+        "#,
+            term!(call!("f", [sym!("x"), sym!("y")])),
+            &[|r: Bindings| {
+                assert_partial_expressions!(r,
+                    "x" => "_this > 0 and _this != 1",
+                    // Right now we output "y" => "_this <= 1".
+                    // This constraint is incorrect. If x = 1, then y <= 1
+                    // (we reach the y > x constraint in the
+                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // and y > x is never reached.
+                    "y" => "_this <= 1 or _this < 3 or _this <= 5"
+                );
+                Ok(())
+            }],
+        )
+    }
+
+    /* FIXME
+    #[test]
+    fn test_grounding_not_1() -> TestResult {
+        test_grounding(
+            r#"
+            f(x, y, z) if x > y and not (z < y and z = 1);
+            "#,
+            term!(call!("f", [sym!("x"), sym!("y"), sym!("z")])),
+            &[|r: Bindings| {
+                assert_partial_expression!(r, "x", "_this > y and 1 >= y");
+                // Expected: x > _this and (z >= _this or z != 1)
+                assert_partial_expression!(r, "y", "x > _this and z >= _this"); // 1 has been subsituted for z which is incorrect.
+                                                                                // Expected: z >= _this or z != 1
+                assert_partial_expression!(r, "z", "_this != 1"); // MISSING or z >= y
+                Ok(())
+            }],
+        )
+    }
+
+    #[test]
+    fn test_grounding_not_4() -> TestResult {
+        test_grounding(
+            r#"
+            f(x, y) if x > 0 and not (x >= 1 and x = 1 and y > x);
+        "#,
+            term!(call!("f", [sym!("x"), sym!("y")])),
+            &[|r: Bindings| {
+                assert_partial_expressions!(r,
+                    "x" => "_this > 0 and _this != 1",
+                    // Right now we output "y" => "_this <= 1".
+                    // This constraint is incorrect. If x = 1, then y <= 1
+                    // (we reach the y > x constraint in the
+                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // and y > x is never reached.
+                    "y" => "x != 1 or _this <= 1"
+                );
+                Ok(())
+            }],
+        )
+    }
+
+    #[test]
+    fn test_grounding_not_4_eq() -> TestResult {
+        test_grounding(
+            r#"
+            f(x, y) if x > 0 and not (x >= 1 and x == 1 and y > x);
+        "#,
+            term!(call!("f", [sym!("x"), sym!("y")])),
+            &[|r: Bindings| {
+                assert_partial_expressions!(r,
+                    "x" => "_this > 0",
+                    // Right now we output "y" => "1 < 1 or _this <= 1".
+                    // This constraint is incorrect. If x = 1, then y <= 1
+                    // (we reach the y > x constraint in the
+                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // and y > x is never reached.
+                    "y" => "x != 1 or _this <= 1"
+                );
+                Ok(())
+            }],
+        )
+    }
+
+    #[test]
+    fn test_grounding_not_5_eq() -> TestResult {
+        test_grounding(
+            r#"
+            f(x, y) if x > 0 and not (x >= 1 and x == 1 and y > x and g(x, y));
+            g(x, _) if x >= 3;
+            g(1, y) if y >= 3 and y > 5;
+        "#,
+            term!(call!("f", [sym!("x"), sym!("y")])),
+            &[|r: Bindings| {
+                assert_partial_expressions!(r,
+                    "x" => "_this > 0 and 1 < 1 or _1_11 <= 1 or 1 < 3 and _this != 1",
+                    // Right now we output "y" => "_this <= 1".
+                    // This constraint is incorrect. If x = 1, then y <= 1
+                    // (we reach the y > x constraint in the
+                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // and y > x is never reached.
+                    "y" => "1 < 1 or _this <= 1 or 1 < 3 and _this < 3 or _this <= 5"
+                );
+                Ok(())
+            }],
+        )
+    }
+    */
+
+    #[test]
+    fn test_grounding_not_5_rewrite() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"
+            f(x, y) if x > 0 and not (x >= 1 and x = 1 and y > x and g(x, y));
+            g(x, _) if x >= 3;
+            g(1, y) if y >= 3 and y > 5;
+        "#,
+        )?;
+
+        let p_rewrite = Polar::new();
+        p_rewrite.load_str(
+            r#"
+            # f(x, y) if x > 0 and (x < 1 or x != 1 or y <= x or not g(x, y));
+            f(x, y) if x > 0 and (x < 1 or x != 1 or y <= x or (g_1_not(x, y) and g_2_not(x, y)));
+            g_1_not(x, _) if x < 3;
+            g_2_not(1, y) if y < 3 or y <= 5;
+        "#,
+        )?;
+
+        let xs = (-10..10).collect::<Vec<_>>();
+        let ys = (-10..10).collect::<Vec<_>>();
+
+        for x in xs.iter() {
+            for y in ys.iter() {
+                let mut p_query = p.new_query_from_term(term!(call!("f", [*x, *y])), false);
+                let mut p_rewrite_query =
+                    p_rewrite.new_query_from_term(term!(call!("f", [*x, *y])), false);
+
+                let p_has_next = matches!(p_query.next_event()?, QueryEvent::Result { .. });
+                let p_rewrite_has_next =
+                    matches!(p_rewrite_query.next_event()?, QueryEvent::Result { .. });
+                assert_eq!(p_has_next, p_rewrite_has_next)
+            }
+        }
 
         Ok(())
     }

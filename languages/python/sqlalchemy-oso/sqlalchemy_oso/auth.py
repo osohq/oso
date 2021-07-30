@@ -79,17 +79,22 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
 
     combined_filter = None
     has_result = False
+    pkey = roles.get_pk(model)[0]
     for result in results:
         has_result = True
 
         resource_partial = result["bindings"]["resource"]
-        filter, role_method = partial_to_filter(
-            resource_partial, session, model, get_model=oso.get_class
-        )
+        if isinstance(resource_partial, model):
+            filter = getattr(model, pkey) == getattr(resource_partial, pkey)
 
-        if role_method is not None:
-            roles_filter = roles._generate_query_filter(oso, role_method, model)
-            filter &= roles_filter
+        else:
+            filter, role_method = partial_to_filter(
+                resource_partial, session, model, get_model=oso.get_class
+            )
+
+            if role_method is not None:
+                roles_filter = roles._generate_query_filter(oso, role_method, model)
+                filter &= roles_filter
 
         if combined_filter is None:
             combined_filter = filter

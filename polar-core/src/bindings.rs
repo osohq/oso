@@ -104,8 +104,7 @@ impl BindingManager {
         Self::default()
     }
 
-    fn partial_ground(&mut self, partial: Operation, var: &Symbol, val: Term) -> PolarResult<Goal> {
-        assert!(val.is_ground());
+    fn partial_bind(&mut self, partial: Operation, var: &Symbol, val: Term) -> PolarResult<Goal> {
         match partial.ground(var, val.clone()) {
             None => Err(RuntimeError::IncompatibleBindings {
                 msg: "Grounding failed".into(),
@@ -120,15 +119,6 @@ impl BindingManager {
         }
     }
 
-    fn partial_bind(&mut self, mut partial: Operation, var: &Symbol, val: Term) -> PolarResult<Option<Goal>> {
-        if val.is_ground() {
-            self.partial_ground(partial, var, val).map(Some)
-        } else {
-            partial.add_constraint(op!(And, val));
-            self.add_binding(var, partial.into_term());
-            Ok(None)
-        }
-    }
 
     // **** State Mutation ***
 
@@ -165,7 +155,7 @@ impl BindingManager {
                 BindingManagerVariableState::Partial(p) => {
                     let p = p.clone();
                     let val = val.clone();
-                    goal = self.partial_bind(p, var, val)?
+                    goal = Some(self.partial_bind(p, var, val)?)
                 }
 
                 BindingManagerVariableState::Bound(_) => {
@@ -219,7 +209,7 @@ impl BindingManager {
 
         assert!(term.value().as_expression().is_ok());
         let mut op = op!(And, term.clone());
-        for var in op.variables() {
+        for var in op.variables().iter().rev() {
             match self._variable_state(&var) {
                 BindingManagerVariableState::Cycle(c) => {
                     op = cycle_constraints(c).merge_constraints(op)
@@ -530,14 +520,14 @@ impl BindingManager {
             ) => {
                 // Left is bound, right has constraints.
                 let p = p.clone();
-                goal = Some(self.partial_ground(p, right, left_value)?);
+                goal = Some(self.partial_bind(p, right, left_value)?);
             }
             (
                 BindingManagerVariableState::Partial(p),
                 BindingManagerVariableState::Bound(right_value),
             ) => {
                 let p = p.clone();
-                goal = Some(self.partial_ground(p, left, right_value)?);
+                goal = Some(self.partial_bind(p, left, right_value)?);
             }
             (BindingManagerVariableState::Partial(_), _)
             | (_, BindingManagerVariableState::Partial(_)) => {
