@@ -190,6 +190,7 @@ def translate_expr(expression: Expression, session: Session, model, get_model):
     else:
         raise UnsupportedError(f"Unsupported {expression}")
 
+
 def translate_and(expression: Expression, session: Session, model, get_model):
     """Translate a Polar AND into a SQLAlchemy AND.
 
@@ -204,6 +205,7 @@ def translate_and(expression: Expression, session: Session, model, get_model):
         expr = and_filter(expr, translated)
 
     return expr
+
 
 def translate_isa(expression: Expression, session: Session, model, get_model):
     """Translate an Isa operation. (``matches`` keyword)
@@ -248,6 +250,7 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
     constraint_type = get_model(right.tag)
     model_type = inspect(model, raiseerr=True).class_
     return sql.true() if issubclass(model_type, constraint_type) else sql.false()
+
 
 def translate_compare(expression: Expression, session: Session, model, get_model):
     """Translate a binary comparison operation.

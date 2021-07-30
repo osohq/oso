@@ -16,6 +16,7 @@ class Category(ModelBase):
     tags = relationship("Tag", secondary="category_tags", back_populates="categories")
     users = relationship("User", secondary="category_users")
 
+
 category_users = Table(
     "category_users",
     ModelBase.metadata,
