@@ -37,9 +37,9 @@ class Polar:
         self.check_result(result)
 
     def build_filter_plan(self, types, partial_results, variable, class_tag):
-        """ Get a filterplan for data filtering."""
+        """Get a filterplan for data filtering."""
         # @TODO(Steve): Pass types.
-        typs = ffi_serialize({})
+        typs = ffi_serialize(types)
         prs = ffi_serialize(partial_results)
         var = to_c_str(variable)
         class_tag = to_c_str(class_tag)

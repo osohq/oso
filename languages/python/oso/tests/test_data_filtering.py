@@ -362,7 +362,6 @@ def test_roles_data_filtering(oso):
     assert not oso.is_allowed(leina, "edit", ios_laggy)
     assert not oso.is_allowed(steve, "edit", ios_laggy)
 
-
     results = list(oso.get_allowed_resources(leina, "pull", Repo))
     assert len(results) == 2
 

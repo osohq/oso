@@ -21,6 +21,50 @@ class Relationship:
     other_field: str
 
 
+# @NOTE(Steve): Some of this stuff is very inconsistent right now. Names for fields
+# and stuff need cleaning up. Sort of left a mess from when I was figuring this all
+# out.
+def serialize_types(types, class_names):
+    """
+    Convert types stored in python to what the core expects.
+    """
+
+    x = {
+        "Foo": {
+            "bar_name": {"Base": {"class_tag": "String"}},
+            "bar": {
+                "Relationship": {
+                    "kind": "parent",
+                    "other_class_tag": "Bar",
+                    "my_field": "bar_name",
+                    "other_field": "name",
+                }
+            },
+        }
+    }
+    polar_types = {}
+    for tag, fields in types.items():
+        field_types = {}
+        for k, v in fields.items():
+            if isinstance(v, Relationship):
+                field_types[k] = {
+                    "Relationship": {
+                        "kind": v.kind,
+                        "other_class_tag": v.other_type,
+                        "my_field": v.my_field,
+                        "other_field": v.other_field,
+                    }
+                }
+            else:
+                field_types[k] = {
+                    "Base": {
+                        "class_tag": class_names[v],
+                    }
+                }
+        polar_types[tag] = field_types
+    return polar_types
+
+
 # This is a first pass at what kind of thing I want to operate on.
 # I'm calling it a "FilterPlan" but what it is is basically computes
 # all the constraints into the various collections data has to be fetched from

@@ -1,12 +1,12 @@
 pub use polar_core::polar::{Polar, Query};
 use polar_core::{error, terms};
 
+use polar_core::data_filtering::{PartialResults, Types};
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr::{null, null_mut};
-use polar_core::data_filtering::{PartialResults, Types};
 
 /// Get a reference to an object from a pointer
 macro_rules! ffi_ref {
@@ -445,13 +445,23 @@ pub extern "C" fn polar_build_filter_plan(
 
         let types_str = unsafe { ffi_string!(types) };
         let results_str = unsafe { ffi_string!(results) };
-        let types = match serde_json::from_str(&types_str).map_err(|_| error::RolesValidationError("Invalid types".into()).into()) {
+        let types = match serde_json::from_str(&types_str)
+            .map_err(|e| error::RuntimeError::Serialization { msg: e.to_string() }.into())
+        {
             Ok(types) => types,
-            Err(e) => {set_error(e); return null()}
+            Err(e) => {
+                set_error(e);
+                return null();
+            }
         };
-        let partial_results = match serde_json::from_str(&results_str).map_err(|_| error::RolesValidationError("Invalid results".into()).into()) {
+        let partial_results = match serde_json::from_str(&results_str)
+            .map_err(|e| error::RuntimeError::Serialization { msg: e.to_string() }.into())
+        {
             Ok(partial_results) => partial_results,
-            Err(e) => { set_error(e); return null()}
+            Err(e) => {
+                set_error(e);
+                return null();
+            }
         };
 
         let variable = unsafe { ffi_string!(variable) };
