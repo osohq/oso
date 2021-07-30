@@ -77,9 +77,9 @@ impl Operation {
         struct VariableVisitor {
             seen: HashSet<Symbol>,
             vars: Vec<Symbol>, // FIXME gw
-            // you may be wondering, why keep both a vec and a set? why not just a set? 
-            // it's because there's a ton of sqlalchemy tests that break if the order of
-            // the variables changes :(
+                               // you may be wondering, why keep both a vec and a set? why not just a set?
+                               // it's because there's a ton of sqlalchemy tests that break if the order of
+                               // the variables changes :(
         }
 
         impl Visitor for VariableVisitor {

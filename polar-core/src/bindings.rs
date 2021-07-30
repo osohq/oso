@@ -168,7 +168,6 @@ impl BindingManager {
         }
     }
 
-
     // **** State Mutation ***
 
     /// Bind `var` to `val`.
@@ -776,10 +775,7 @@ mod test {
         let b2 = b1.remove_follower(&b2_id).unwrap();
 
         if let BindingManagerVariableState::Partial(p) = b1._variable_state(&sym!("x")) {
-            assert_eq!(
-                p.to_polar(),
-                "x = y and y = z and z = x and x > y"
-            );
+            assert_eq!(p.to_polar(), "x = y and y = z and z = x and x > y");
         } else {
             panic!("unexpected");
         }
