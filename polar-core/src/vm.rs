@@ -663,7 +663,7 @@ impl PolarVirtualMachine {
         if self.log {
             self.print(&format!("⇒ add_constraint: {}", term.to_polar()));
         }
-        self.binding_manager.add_constraint(&term)
+        self.binding_manager.add_constraint(term)
     }
 
     /// Augment the bindings stack with constants from a hash map.

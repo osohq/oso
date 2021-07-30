@@ -258,7 +258,7 @@ impl BindingManager {
         assert!(term.value().as_expression().is_ok());
         let mut op = op!(And, term.clone());
         for var in op.variables().iter().rev() {
-            match self._variable_state(&var) {
+            match self._variable_state(var) {
                 BindingManagerVariableState::Cycle(c) => {
                     op = cycle_constraints(c).merge_constraints(op)
                 }
@@ -285,7 +285,7 @@ impl BindingManager {
         }
 
         for var in varset {
-            self.add_binding(&var, op.clone().into_term())
+            self.add_binding(var, op.clone().into_term())
         }
         Ok(())
     }
