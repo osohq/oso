@@ -189,7 +189,7 @@ impl Operation {
     }
 
     fn constrain(&mut self, t: Term) {
-        if self.args.iter().find(|p| *p==&t).is_none() {
+        if !self.args.iter().any(|p| *p == t) {
             self.args.push(t);
         }
     }
@@ -203,12 +203,13 @@ impl Operation {
     /// Augment our constraints with those on `other`.
     ///
     /// Invariant: self and other are ANDs
-    pub fn merge_constraints(&mut self, other: Self) {
+    pub fn merge_constraints(mut self, other: Self) -> Self {
         assert_eq!(self.operator, Operator::And);
         assert_eq!(other.operator, Operator::And);
         for t in other.args.into_iter() {
             self.constrain(t);
         }
+        self
     }
 
     // Invert constraints in operation after CSP.
@@ -283,6 +284,13 @@ impl Operation {
     }
 }
 
+impl Iterator for Operation {
+    type Item = Term;
+    fn next(&mut self) -> Option<Term> {
+        self.args.pop()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -306,6 +314,22 @@ mod test {
                     .to_polar(),
                 $right
             )
+        };
+    }
+    macro_rules! assert_partial_binding {
+        ($bindings:expr, $sym:expr, $($args:expr),+) => {
+            assert_eq!(
+                $bindings
+                    .get(&sym!($sym))
+                    .expect(&format!("{} is unbound", $sym))
+                    .value()
+                    .as_expression()
+                    .unwrap()
+                    .clone()
+                    .into_iter()
+                    .collect::<HashSet<Term>>(),
+                    hashset! { $($args),+ })
+
         };
     }
 
@@ -332,8 +356,8 @@ mod test {
                 bindings
             } else {
                 panic!("not bindings, {:?}", &event);
-            }}
-        }
+            }
+        }};
     }
 
     fn next_binding(query: &mut Query) -> Result<Bindings, PolarError> {
@@ -620,10 +644,25 @@ mod test {
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), sym!("y")])), false);
-        assert_partial_expressions!(next_binding(&mut q)?,
-            "x" => "y matches Y{} and y.x matches X{}",
-            "y" => "_this matches Y{} and _this.x matches X{}"
+        let next = next_binding(&mut q)?;
+        assert_partial_binding!(
+            next,
+            "x",
+            opn!(Isa, var!("y"), ptn!(instance!("Y"))),
+            opn!(Isa, opn!(Dot, var!("y"), str!("x")), ptn!(instance!("X")))
         );
+
+        assert_partial_binding!(
+            next,
+            "y",
+            opn!(Isa, var!("_this"), ptn!(instance!("Y"))),
+            opn!(
+                Isa,
+                opn!(Dot, var!("_this"), str!("x")),
+                ptn!(instance!("X"))
+            )
+        );
+
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("j", [1, sym!("y")])), false);
@@ -1713,16 +1752,8 @@ mod test {
                g(_: Bar);"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        assert_partial_expression!(
-            nextb!(&mut q),
-            "x",
-            "not 1 matches Foo{}"
-        );
-        assert_partial_expression!(
-            nextb!(&mut q),
-            "x",
-            "not 1 matches Bar{}"
-        );
+        assert_partial_expression!(nextb!(&mut q), "x", "not 1 matches Foo{}");
+        assert_partial_expression!(nextb!(&mut q), "x", "not 1 matches Bar{}");
         assert_query_done!(q);
         Ok(())
     }

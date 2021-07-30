@@ -3,10 +3,10 @@
 /// Bindings associate variables in the VM with constraints or values.
 use std::collections::{HashMap, HashSet};
 
-use crate::vm::Goal;
 use crate::error::{PolarResult, RuntimeError};
 use crate::folder::{fold_term, Folder};
 use crate::terms::{has_rest_var, Operation, Operator, Symbol, Term, Value};
+use crate::vm::Goal;
 
 #[derive(Clone, Debug)]
 pub struct Binding(pub Symbol, pub Term);
@@ -109,12 +109,14 @@ impl BindingManager {
         match partial.ground(var, val.clone()) {
             None => Err(RuntimeError::IncompatibleBindings {
                 msg: "Grounding failed".into(),
-            }.into()),
+            }
+            .into()),
             Some(grounded) => {
                 self.add_binding(var, val);
-//                let grounded = self.rebind(grounded)?;
-                Ok(Goal::Query { term: grounded.into_term() })
-            },
+                Ok(Goal::Query {
+                    term: grounded.into_term(),
+                })
+            }
         }
     }
 
@@ -148,25 +150,29 @@ impl BindingManager {
         let mut goal = None;
         if let Ok(symbol) = val.value().as_symbol() {
             goal = self.bind_variables(var, symbol)?;
-        } else  {
+        } else {
             match self._variable_state(var) {
                 BindingManagerVariableState::Partial(p) => {
                     let p = p.clone();
                     goal = Some(self.ground_it(&p, var, val.clone())?)
-                },
+                }
 
-                BindingManagerVariableState::Bound(_) =>
+                BindingManagerVariableState::Bound(_) => {
                     return Err(RuntimeError::IncompatibleBindings {
                         msg: format!("Cannot rebind {:?}", var),
                     }
-                    .into()),
+                    .into())
+                }
                 _ => self.add_binding(var, val.clone()),
             }
         }
 
         // If the main binding succeeded, the follower binding must succeed.
-        self.do_followers(|_, follower| { follower.bind(var, val.clone())?; Ok(()) })
-            .unwrap();
+        self.do_followers(|_, follower| {
+            follower.bind(var, val.clone())?;
+            Ok(())
+        })
+        .unwrap();
 
         Ok(goal)
     }
@@ -205,15 +211,9 @@ impl BindingManager {
         for var in op.variables() {
             match self._variable_state(&var) {
                 BindingManagerVariableState::Cycle(c) => {
-                    let mut cycle = cycle_constraints(c);
-                    cycle.merge_constraints(op);
-                    op = cycle;
+                    op = cycle_constraints(c).merge_constraints(op)
                 }
-                BindingManagerVariableState::Partial(e) => {
-                    let mut e = e.clone();
-                    e.merge_constraints(op);
-                    op = e;
-                }
+                BindingManagerVariableState::Partial(e) => op = e.clone().merge_constraints(op),
                 _ => {}
             }
         }
@@ -221,17 +221,17 @@ impl BindingManager {
         let vars = op.variables();
         let mut varset = vars.iter().collect::<HashSet<_>>();
         for var in vars.iter() {
-            match self._variable_state(var) {
-                BindingManagerVariableState::Bound(val) => {
-                    varset.remove(var);
-                    match op.ground(var, val) {
-                        None => return Err(RuntimeError::IncompatibleBindings {
+            if let BindingManagerVariableState::Bound(val) = self._variable_state(var) {
+                varset.remove(var);
+                match op.ground(var, val) {
+                    Some(o) => op = o,
+                    None => {
+                        return Err(RuntimeError::IncompatibleBindings {
                             msg: "Grounding failed".into(),
-                        }.into()),
-                        Some(o) => op = o,
+                        }
+                        .into())
                     }
                 }
-                _ => (),
             }
         }
 
@@ -240,7 +240,6 @@ impl BindingManager {
         }
         Ok(())
     }
-
 
     /// Reset the state of `BindingManager` to what it was at `to`.
     pub fn backtrack(&mut self, to: &Bsp) {

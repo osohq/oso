@@ -1544,6 +1544,21 @@ fn test_unknown_specializer_suggestions() -> TestResult {
 }
 
 #[test]
+fn test_partial_grounding() -> TestResult {
+    let rules = r#"
+        f(x, n) if n > 0 and x.n = n;
+        g(x, n) if x.n = n and n > 0;"#;
+    let mut p = Polar::new();
+    p.load_str(rules)?;
+
+    qvar(&mut p, "f({n:1},x)", "x", vec![value!(1)]);
+    qvar(&mut p, "g({n:1},x)", "x", vec![value!(1)]);
+    qnull(&mut p, "f({n:1},x) and x = 2");
+    qnull(&mut p, "g({n:1},x) and x = 2");
+    Ok(())
+}
+
+#[test]
 fn test_rest_vars() -> TestResult {
     let mut p = Polar::new();
     qvar(&mut p, "[1,2,3] = [*rest]", "rest", vec![value!([1, 2, 3])]);

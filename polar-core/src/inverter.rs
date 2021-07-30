@@ -130,8 +130,7 @@ fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
                 .for_each(|(var, value)| match acc.entry(var.clone()) {
                     Entry::Occupied(mut o) => match (o.get().value(), value.value()) {
                         (Value::Expression(x), Value::Expression(y)) => {
-                            let mut x = x.clone();
-                            x.merge_constraints(y.clone());
+                            let x = x.clone().merge_constraints(y.clone());
                             o.insert(value.clone_with_value(value!(x)));
                         }
                         (existing, new) => panic!(
