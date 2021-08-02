@@ -206,7 +206,7 @@ Forbidden
 ### A more complex example: composing authorization rules
 
 Our example was quick to set up, but we also could have gotten the same result with a 
-Javascript `if` statement. Polar shines when composing more complex rules that would 
+JavaScript `if` statement. Polar shines when composing more complex rules that would 
 otherwise be difficult conditionals. Let's add a twist to our authorization rule.
 
 {{% callout "Our Goal" "green" %}}
