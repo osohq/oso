@@ -339,7 +339,7 @@ bodies:
 
 ```polar
 # A user that is an administrator may read any document.
-allow(user, "read", document) if
+allow(user, "read", _document) if
     user.admin = true;
 
 # A user may read any document that they own.
@@ -384,7 +384,7 @@ the Polar `matches` operator:
 
 ```polar
 # A user that is an administrator may read any document.
-allow(user, "read", document) if
+allow(user, "read", _document) if
     user matches User and
     user.admin = true;
 
@@ -415,7 +415,7 @@ Polar provides a shortcut syntax:
 
 ```polar
 # A user that is an administrator may read any document.
-allow(user: User, "read", document: Document) if
+allow(user: User, "read", _document: Document) if
     user.admin = true;
 
 # A user may read any document that they own.
@@ -445,10 +445,10 @@ above as:
 
 ```polar
 # A user that is an administrator may read any document.
-allow(user: User{admin: true}, "read", document: Document);
+allow(_user: User{admin: true}, "read", _document: Document);
 
 # A user may read any document that they own.
-allow(user: User{id: user_id}, "read", document: Document{owner: document_owner}) if
+allow(_user: User{id: user_id}, "read", _document: Document{owner: document_owner}) if
     user_id = document_owner;
 ```
 
@@ -464,7 +464,7 @@ drop that, too, by using the same variable in both specializers:
 
 ```polar
 # A user may read any document that they own.
-allow(user: User{id: user_id}, "read", document: Document{owner: user_id});
+allow(_user: User{id: user_id}, "read", _document: Document{owner: user_id});
 ```
 
 The first specializer binds `user_id` to `user.id`. Then, since
@@ -500,7 +500,7 @@ with the letter "r". (A silly encoding, perhaps, but illustrative.)
 We could allow all such actions using a rule like this:
 
 ```polar
-allow(actor, action: String, resource) if
+allow(_actor, action: String, _resource) if
     action.startswith("r");
 ```
 

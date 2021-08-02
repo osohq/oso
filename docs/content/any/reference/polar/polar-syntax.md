@@ -228,7 +228,7 @@ operator can be used. For example, the rule…
 ```polar
 oso_user(first, last) if
     user(first, last) and
-    employee(company("Oso"), person(first, last));
+    employee("Oso", first, last);
 ```
 
 …will be satisfied if the named person is a user **and** that person is an
