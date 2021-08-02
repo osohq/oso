@@ -51,6 +51,8 @@ Link to [relevant documentation section]().
 - The debugger can now break on runtime errors.
 - The `var` command  in the debugger now automatically maps variable
   names to their temporary bindings.
+- Constraints on unbound variables no longer prevent the variable from
+  later being bound.
 - The VM can now represent circular data without crashing.
 
 ### Ruby
