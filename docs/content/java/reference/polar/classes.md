@@ -93,7 +93,7 @@ Java Strings are mapped to Polar [strings](polar-syntax#strings). Java’s Strin
 methods may be accessed from policies:
 
 ```polar
-allow(actor, action, resource) if actor.username.endsWith("example.com");
+allow(actor, _action, _resource) if actor.username.endsWith("example.com");
 ```
 
 ```java
@@ -121,7 +121,7 @@ interface are mapped to Polar [lists](polar-syntax#lists). Java’s `List`
 methods may be accessed from policies:
 
 ```polar
-allow(actor, action, resource) if actor.groups.contains("HR");
+allow(actor, _action, _resource) if actor.groups.contains("HR");
 ```
 
 ```java
@@ -149,7 +149,7 @@ have no effect on a list in Polar.
 Likewise, lists constructed in Polar may be passed into Java methods:
 
 ```polar
-allow(actor, action, resource) if actor.has_groups(["HR", "payroll"]);
+allow(actor, _action, _resource) if actor.has_groups(["HR", "payroll"]);
 ```
 
 ```java
@@ -186,7 +186,7 @@ Java objects that implement the
 are mapped to Polar [dictionaries](polar-syntax#dictionaries):
 
 ```polar
-allow(actor, action, resource) if actor.roles.project1 = "admin";
+allow(actor, _action, _resource) if actor.roles.project1 = "admin";
 ```
 
 ```java
@@ -214,7 +214,7 @@ You may iterate over a Java
 `Iterable`) using Polar's [`in` operator](polar-syntax#in-list-membership):
 
 ```polar
-allow(actor, action, resource) if "payroll" in actor.getGroups();
+allow(actor, _action, _resource) if "payroll" in actor.getGroups();
 ```
 
 ```java
@@ -237,7 +237,7 @@ The Java `null` reference is registered as the Polar constant
 `null`, you may want to compare the result to `nil`:
 
 ```polar
-allow(actor, action, resource) if actor.getOptional() != nil;
+allow(actor, _action, _resource) if actor.getOptional() != nil;
 ```
 
 ```java
