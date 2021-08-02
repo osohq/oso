@@ -2,11 +2,7 @@ package com.osohq.oso;
 
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.List;
 import java.util.stream.Collectors;
-import org.json.JSONObject;
 
 public class Oso extends Polar {
   public Oso() {

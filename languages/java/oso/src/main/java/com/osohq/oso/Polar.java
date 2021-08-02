@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.ArrayList;
 import org.json.JSONArray;
+import java.util.stream.Collectors;
 
 public class Polar {
   private Ffi.Polar ffiPolar;
@@ -263,7 +264,7 @@ public class Polar {
     }
   }
 
-  public void reinitializeRoles() {
+  private void reinitializeRoles() {
     if (!polarRolesEnabled) return;
     polarRolesEnabled = false;
     enableRoles();
@@ -287,15 +288,16 @@ public class Polar {
       }
     }
 
-    for (List<HashMap<String, Object>> results : allResults) {
-      for (HashMap<String, Object> result : results) {
-        HashMap<String, Object> bs = new HashMap<String, Object>();
-        result.forEach((k, v) -> {
-          bs.put(k, host.toPolarTerm(v));
-        });
-        result.put("bindings", bs);
-      }
-    }
+    allResults = allResults.stream().map((results) ->
+      results.stream().map((result) -> {
+        HashMap<String, Object>
+          inner = new HashMap<String, Object>(),
+          outer = new HashMap<String, Object>();
+        result.forEach((k, v) -> inner.put(k, host.toPolarTerm(v)));
+        outer.put("bindings", inner);
+        return outer;
+      }).collect(Collectors.toList())
+    ).collect(Collectors.toList());
 
     ffiPolar.validateRolesConfig(new JSONArray(allResults).toString());
     this.polarRolesEnabled = true;
