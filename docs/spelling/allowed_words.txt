@@ -46,7 +46,6 @@ Postgres
 PyPI
 RBAC
 REPL
-repl
 RESTful
 RubyGems
 Rubying
@@ -142,12 +141,14 @@ prefetch
 pseudocode
 quickstart
 registerClass
+repl
 roadmap
 runtime
 specializer
 specializers
 stderr
 stdout
+stringified
 struct
 structs
 subclasses

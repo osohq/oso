@@ -353,7 +353,7 @@ impl PolarVirtualMachine {
 
         let mut visitor = VarVisitor {
             has_partial: false,
-            vm: &self,
+            vm: self,
         };
         self.query_contains_partial = self.goals.iter().any(|goal| {
             if let Goal::Query { term } = goal.as_ref() {
@@ -429,10 +429,10 @@ impl PolarVirtualMachine {
         match goal.as_ref() {
             Goal::Backtrack => self.backtrack()?,
             Goal::Cut { choice_index } => self.cut(*choice_index),
-            Goal::Debug { message } => return Ok(self.debug(&message)),
+            Goal::Debug { message } => return Ok(self.debug(message)),
             Goal::Halt => return Ok(self.halt()),
             Goal::Error { error } => return Err(error.clone()),
-            Goal::Isa { left, right } => self.isa(&left, &right)?,
+            Goal::Isa { left, right } => self.isa(left, right)?,
             Goal::IsMoreSpecific { left, right, args } => {
                 self.is_more_specific(left, right, args)?
             }
@@ -492,7 +492,7 @@ impl PolarVirtualMachine {
                 if let Node::Rule(rule) = &trace.node {
                     self.log_with(
                         || {
-                            let source_str = self.rule_source(&rule);
+                            let source_str = self.rule_source(rule);
                             format!("RULE: {}", source_str)
                         },
                         &[],
@@ -500,8 +500,8 @@ impl PolarVirtualMachine {
                 }
                 self.trace.push(trace.clone());
             }
-            Goal::Unify { left, right } => self.unify(&left, &right)?,
-            Goal::AddConstraint { term } => self.add_constraint(&term)?,
+            Goal::Unify { left, right } => self.unify(left, right)?,
+            Goal::AddConstraint { term } => self.add_constraint(term)?,
             Goal::AddConstraintsBatch { add_constraints } => {
                 add_constraints.borrow_mut().drain().try_for_each(
                     |(_, constraint)| -> PolarResult<()> { self.add_constraint(&constraint) },
@@ -651,7 +651,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn remove_binding_follower(&mut self, follower_id: &FollowerId) -> Option<BindingManager> {
-        self.binding_manager.remove_follower(&follower_id)
+        self.binding_manager.remove_follower(follower_id)
     }
 
     /// Add a single constraint operation to the variables referenced in it.
@@ -715,17 +715,10 @@ impl PolarVirtualMachine {
         self.binding_manager.deep_deref(term)
     }
 
-    /// Recursively dereference variables, but do not descend into (most) subterms.
-    /// The exception is for lists, so that we can correctly handle rest variables.
-    /// We also support cycle detection, in which case we return the original term.
-    fn deref(&self, term: &Term) -> Term {
-        self.binding_manager.deref(term)
-    }
-
     /// Generate a fresh set of variables for a rule.
     fn rename_rule_vars(&self, rule: &Rule) -> Rule {
         let kb = &*self.kb.read().unwrap();
-        let mut renamer = Renamer::new(&kb);
+        let mut renamer = Renamer::new(kb);
         renamer.fold_rule(rule.clone())
     }
 
@@ -1040,7 +1033,7 @@ impl PolarVirtualMachine {
                 for (k, v) in right.fields.iter() {
                     let left = left
                         .fields
-                        .get(&k)
+                        .get(k)
                         .expect("left fields should be a superset of right fields")
                         .clone();
                     self.push_goal(Goal::Isa {
@@ -1101,7 +1094,7 @@ impl PolarVirtualMachine {
             Value::Pattern(Pattern::Dictionary(fields)) => {
                 // Produce a constraint like left.field = value
                 let to_unify = |(field, value): (&Symbol, &Term)| -> Term {
-                    let value = self.deref(value);
+                    let value = self.deep_deref(value);
                     let field = right.clone_with_value(value!(field.0.as_ref()));
                     let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
                     let unify = op!(Unify, left, value);
@@ -1162,7 +1155,7 @@ impl PolarVirtualMachine {
 
                 // Construct field constraints.
                 let field_constraints = fields.fields.iter().rev().map(|(f, v)| {
-                    let v = self.deref(v);
+                    let v = self.deep_deref(v);
                     let field = right.clone_with_value(value!(f.0.as_ref()));
                     let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
                     op!(Unify, left, v)
@@ -1189,7 +1182,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<()> {
-        let field = self.deref(field);
+        let field = self.deep_deref(field);
         match field.value() {
             Value::Variable(_) => {
                 let mut alternatives = vec![];
@@ -1244,7 +1237,7 @@ impl PolarVirtualMachine {
             Symbol,
             Option<Vec<Term>>,
             Option<BTreeMap<Symbol, Term>>,
-        ) = match self.deref(field).value() {
+        ) = match self.deep_deref(field).value() {
             Value::Call(Call { name, args, kwargs }) => (
                 name.clone(),
                 Some(args.iter().map(|arg| self.deep_deref(arg)).collect()),
@@ -1258,7 +1251,7 @@ impl PolarVirtualMachine {
             Value::String(field) => (Symbol(field.clone()), None, None),
             v => {
                 return Err(self.type_error(
-                    &field,
+                    field,
                     format!("cannot look up field {:?} on an external instance", v),
                 ))
             }
@@ -1332,7 +1325,7 @@ impl PolarVirtualMachine {
     pub fn make_external(&self, constructor: &Term, instance_id: u64) -> QueryEvent {
         QueryEvent::MakeExternal {
             instance_id,
-            constructor: self.deep_deref(&constructor),
+            constructor: self.deep_deref(constructor),
         }
     }
 
@@ -1387,20 +1380,18 @@ impl PolarVirtualMachine {
                 self.query_for_predicate(predicate.clone())?;
             }
             Value::Expression(_) => {
-                return self.query_for_operation(&term);
+                return self.query_for_operation(term);
             }
-            Value::Variable(_a_symbol) => {
-                let val = self.deref(term);
-
-                if val == *term {
+            Value::Variable(sym) => {
+                if let VariableState::Bound(val) = self.variable_state(sym) {
+                    self.push_goal(Goal::Query { term: val })?;
+                } else {
                     // variable was unbound
                     // apply a constraint to variable that it must be truthy
                     self.push_goal(Goal::Unify {
                         left: term.clone(),
                         right: term!(true),
                     })?;
-                } else {
-                    self.push_goal(Goal::Query { term: val })?;
                 }
             }
             Value::Boolean(value) => {
@@ -1414,7 +1405,7 @@ impl PolarVirtualMachine {
             _ => {
                 // everything else dies horribly and in pain
                 return Err(self.type_error(
-                    &term,
+                    term,
                     format!(
                         "{} isn't something that is true or false so can't be a condition",
                         term.value().to_polar()
@@ -1549,11 +1540,11 @@ impl PolarVirtualMachine {
             }
 
             Operator::Debug => {
-                let message = self.debugger.break_msg(&self).unwrap_or_else(|| {
+                let message = self.debugger.break_msg(self).unwrap_or_else(|| {
                     format!(
                         "debug({})",
                         args.iter()
-                            .map(|arg| self.deref(arg).to_polar())
+                            .map(|arg| self.deep_deref(arg).to_polar())
                             .collect::<Vec<String>>()
                             .join(", ")
                     )
@@ -1564,7 +1555,7 @@ impl PolarVirtualMachine {
                 self.print(
                     &args
                         .iter()
-                        .map(|arg| self.deref(arg).to_polar())
+                        .map(|arg| self.deep_deref(arg).to_polar())
                         .collect::<Vec<String>>()
                         .join(", "),
                 );
@@ -1602,7 +1593,7 @@ impl PolarVirtualMachine {
             Operator::Cut => {
                 if self.query_contains_partial {
                     return Err(self.set_error_context(
-                        &term,
+                        term,
                         error::RuntimeError::Unsupported {
                             msg: "cannot use cut with partial evaluation".to_string(),
                         },
@@ -1795,7 +1786,7 @@ impl PolarVirtualMachine {
                     Operator::Rem => *left % *right,
                     _ => {
                         return Err(self.set_error_context(
-                            &term,
+                            term,
                             error::RuntimeError::Unsupported {
                                 msg: format!("numeric operation {}", op.to_polar()),
                             },
@@ -1809,7 +1800,7 @@ impl PolarVirtualMachine {
                     Ok(QueryEvent::None)
                 } else {
                     Err(self.set_error_context(
-                        &term,
+                        term,
                         error::RuntimeError::ArithmeticError {
                             msg: term.to_polar(),
                         },
@@ -1817,7 +1808,7 @@ impl PolarVirtualMachine {
                 }
             }
             (_, _) => Err(self.set_error_context(
-                &term,
+                term,
                 error::RuntimeError::Unsupported {
                     msg: format!("unsupported arithmetic operands: {}", term.to_polar()),
                 },
@@ -1890,7 +1881,7 @@ impl PolarVirtualMachine {
             }
             _ => {
                 return Err(self.type_error(
-                    &object,
+                    object,
                     format!(
                         "can only perform lookups on dicts and instances, this is {}",
                         object.to_polar()
@@ -1913,7 +1904,7 @@ impl PolarVirtualMachine {
     ) -> PolarResult<Option<Term>> {
         // If the lookup is a `Value::Call`, then we need to check for partial args
         let (name, args, maybe_kwargs): (Symbol, Vec<Term>, Option<BTreeMap<Symbol, Term>>) =
-            match self.deref(field).value() {
+            match self.deep_deref(field).value() {
                 Value::Call(Call { name, args, kwargs }) => (
                     name.clone(),
                     args.iter().map(|arg| self.deep_deref(arg)).collect(),
@@ -1990,7 +1981,7 @@ impl PolarVirtualMachine {
         }
 
         // TODO: temprorary fix--If there are partial args, they must be called on `role_allows` or `actor_can_assume_role`
-        if let Value::ExternalInstance(external) = self.deep_deref(&object).value() {
+        if let Value::ExternalInstance(external) = self.deep_deref(object).value() {
             if let Some(repr) = external.repr.clone() {
                 if repr.contains("sqlalchemy_oso.roles.OsoRoles")
                     && (name.0 == "role_allows" || name.0 == "actor_can_assume_role")
@@ -2139,7 +2130,7 @@ impl PolarVirtualMachine {
                 self.append_goals(vec![
                     Goal::NextExternal {
                         call_id,
-                        iterable: self.deep_deref(&iterable),
+                        iterable: self.deep_deref(iterable),
                     },
                     Goal::Unify {
                         left: item.clone(),
@@ -2149,7 +2140,7 @@ impl PolarVirtualMachine {
             }
             _ => {
                 return Err(self.type_error(
-                    &iterable,
+                    iterable,
                     format!(
                         "can only use `in` on an iterable value, this is {:?}",
                         iterable.value()
@@ -2170,7 +2161,7 @@ impl PolarVirtualMachine {
         match (left.value(), right.value()) {
             (Value::Expression(_), _) | (_, Value::Expression(_)) => {
                 return Err(self.type_error(
-                    &left,
+                    left,
                     format!(
                         "cannot unify expressions directly `{}` = `{}`",
                         left.to_polar(),
@@ -2180,7 +2171,7 @@ impl PolarVirtualMachine {
             }
             (Value::Pattern(_), _) | (_, Value::Pattern(_)) => {
                 return Err(self.type_error(
-                    &left,
+                    left,
                     format!(
                         "cannot unify patterns directly `{}` = `{}`",
                         left.to_polar(),
@@ -2273,11 +2264,7 @@ impl PolarVirtualMachine {
 
                 // For each value, push a unify goal.
                 for (k, v) in left.fields.iter() {
-                    let right = right
-                        .fields
-                        .get(&k)
-                        .expect("fields should be equal")
-                        .clone();
+                    let right = right.fields.get(k).expect("fields should be equal").clone();
                     self.push_goal(Goal::Unify {
                         left: v.clone(),
                         right,
@@ -2565,7 +2552,7 @@ impl PolarVirtualMachine {
                 || {
                     let mut rule_strs = "APPLICABLE_RULES:".to_owned();
                     for rule in rules {
-                        rule_strs.push_str(&format!("\n  {}", self.rule_source(&rule)));
+                        rule_strs.push_str(&format!("\n  {}", self.rule_source(rule)));
                     }
                     rule_strs
                 },
@@ -2668,14 +2655,14 @@ impl PolarVirtualMachine {
         right: &Term,
         arg: &Term,
     ) -> PolarResult<QueryEvent> {
-        let arg = self.deref(&arg);
+        let arg = self.deep_deref(arg);
         match (arg.value(), left.value(), right.value()) {
             (
                 Value::ExternalInstance(instance),
                 Value::Pattern(Pattern::Instance(left_lit)),
                 Value::Pattern(Pattern::Instance(right_lit)),
             ) => {
-                let call_id = self.new_call_id(&answer);
+                let call_id = self.new_call_id(answer);
                 let instance_id = instance.instance_id;
                 if left_lit.tag == right_lit.tag
                     && !(left_lit.fields.fields.is_empty() && right_lit.fields.fields.is_empty())
@@ -2712,18 +2699,18 @@ impl PolarVirtualMachine {
                 // for applicability.
                 if left_fields.len() != right_fields.len() {
                     self.rebind_external_answer(
-                        &answer,
+                        answer,
                         Term::new_temporary(Value::Boolean(right_fields.len() < left.fields.len())),
                     );
                 }
                 Ok(QueryEvent::None)
             }
             (_, Value::Pattern(Pattern::Instance(_)), Value::Pattern(Pattern::Dictionary(_))) => {
-                self.rebind_external_answer(&answer, Term::new_temporary(Value::Boolean(true)));
+                self.rebind_external_answer(answer, Term::new_temporary(Value::Boolean(true)));
                 Ok(QueryEvent::None)
             }
             _ => {
-                self.rebind_external_answer(&answer, Term::new_temporary(Value::Boolean(false)));
+                self.rebind_external_answer(answer, Term::new_temporary(Value::Boolean(false)));
                 Ok(QueryEvent::None)
             }
         }
@@ -2765,7 +2752,7 @@ impl PolarVirtualMachine {
                 acc += &self.term_source(&p.parameter, false);
                 if let Some(spec) = &p.specializer {
                     acc += ": ";
-                    acc += &self.term_source(&spec, false);
+                    acc += &self.term_source(spec, false);
                 }
                 acc
             })
@@ -2852,7 +2839,7 @@ impl Runnable for PolarVirtualMachine {
             self.print("⇒ result");
             if self.tracing {
                 for t in &self.trace {
-                    self.print(&format!("trace\n{}", t.draw(&self)));
+                    self.print(&format!("trace\n{}", t.draw(self)));
                 }
             }
         }
@@ -2860,7 +2847,7 @@ impl Runnable for PolarVirtualMachine {
         let trace = if self.tracing {
             let trace = self.trace.first().cloned();
             trace.map(|trace| TraceResult {
-                formatted: trace.draw(&self),
+                formatted: trace.draw(self),
                 trace,
             })
         } else {
@@ -3498,7 +3485,7 @@ mod tests {
         }])
         .unwrap();
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.deref(&term!(x)), one);
+        assert_eq!(vm.deep_deref(&term!(x)), one);
         vm.backtrack().unwrap();
 
         // Left variable bound to value.
@@ -3509,7 +3496,7 @@ mod tests {
         }])
         .unwrap();
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.deref(&term!(z.clone())), one);
+        assert_eq!(vm.deep_deref(&term!(z.clone())), one);
 
         // Left variable bound to value, unify with something else, backtrack.
         vm.append_goals(vec![Goal::Unify {
@@ -3518,7 +3505,7 @@ mod tests {
         }])
         .unwrap();
         let _ = vm.run(None).unwrap();
-        assert_eq!(vm.deref(&term!(z)), one);
+        assert_eq!(vm.deep_deref(&term!(z)), one);
     }
 
     #[test]
@@ -3735,7 +3722,7 @@ mod tests {
         }
 
         assert_eq!(
-            vm.deref(&term!(Value::Variable(answer))),
+            vm.deep_deref(&term!(Value::Variable(answer))),
             term!(value!(true))
         );
     }
