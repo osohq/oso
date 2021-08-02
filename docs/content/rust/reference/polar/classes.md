@@ -42,7 +42,7 @@ Rust [Strings][rust-string] are mapped to Polar
 policies:
 
 ```polar
-allow(actor, action, resource) if actor.username.ends_with("example.com");
+allow(actor, _action, _resource) if actor.username.ends_with("example.com");
 ```
 
 ```rust
@@ -73,7 +73,7 @@ but lists are treated as `Vec<T>` when calling methods.
 Currently, no methods on `Vec` are exposed to Polar.
 
 ```polar
-allow(actor, action, resource) if "HR" in actor.groups;
+allow(actor, _action, _resource) if "HR" in actor.groups;
 ```
 
 ```rust
@@ -112,7 +112,7 @@ from Polar dictionaries, but dictionaries are treated as `HashMap` when calling 
 
 
 ```polar
-allow(actor, action, resource) if actor.roles.project1 = "admin";
+allow(actor, _action, _resource) if actor.roles.project1 = "admin";
 ```
 
 ```rust
@@ -139,7 +139,7 @@ You may iterate over a Rust
 operator](polar-syntax#in-list-membership):
 
 ```polar
-allow(actor, action, resource) if "payroll" in actor.get_groups();
+allow(actor, _action, _resource) if "payroll" in actor.get_groups();
 ```
 
 ```rust
@@ -173,7 +173,7 @@ The `Option` variant `None` is registered as the Polar constant
 `None`, you may want to compare the result to `nil`:
 
 ```polar
-allow(actor, action, resource) if
+allow(actor, _action, _resource) if
     "Jimmy" in actor.nickname or
     actor.get_optional() != nil;
 ```

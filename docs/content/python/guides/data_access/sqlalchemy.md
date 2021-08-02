@@ -263,13 +263,13 @@ SQLAlchemy adapter when used **anywhere in the policy**:
 
     ```polar
     # Not supported.
-    allow(actor, action, resource) if
-        not resource matches User;
+    allow(actor, _action, _resource) if
+        not actor matches User;
 
     # Also not supported.
     is_user(user: User);
-    allow(actor, action, resource) if
-        not is_user(resource);
+    allow(actor, _action, _resource) if
+        not is_user(actor);
     ```
 
 Some operations cannot be performed on **resources** in `allow` rules used with
