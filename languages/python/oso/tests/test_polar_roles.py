@@ -2540,6 +2540,7 @@ def test_perf_polar(init_oso, sample_data):
     # parent_org = repo.org and parent_org matches Org;
     # """
     oso.load_str(p)
+    oso.enable_roles()
 
     leina = sample_data["leina"]
     # steve = sample_data["steve"]

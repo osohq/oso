@@ -4,7 +4,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::error::{PolarResult, RuntimeError};
-use crate::folder::{fold_term, Folder};
+use crate::folder::{fold_list, fold_term, Folder};
 use crate::formatting::ToPolarString;
 use crate::terms::{has_rest_var, Operation, Operator, Symbol, Term, Value};
 
@@ -38,6 +38,55 @@ pub enum VariableState {
     Unbound,
     Bound(Term),
     Partial,
+}
+
+struct Derefer<'a> {
+    binding_manager: &'a BindingManager,
+    seen: HashSet<u64>,
+}
+
+impl<'a> Derefer<'a> {
+    fn new(binding_manager: &'a BindingManager) -> Self {
+        Self {
+            binding_manager,
+            seen: HashSet::new(),
+        }
+    }
+}
+
+impl<'a> Folder for Derefer<'a> {
+    fn fold_list(&mut self, list: Vec<Term>) -> Vec<Term> {
+        let has_rest = has_rest_var(&list);
+        let mut list = fold_list(list, self);
+        if has_rest {
+            let last = list.pop().unwrap();
+            if let Value::List(rest) = last.value() {
+                list.append(&mut rest.clone());
+            } else {
+                list.push(last);
+            }
+        }
+        list
+    }
+
+    fn fold_term(&mut self, t: Term) -> Term {
+        match t.value() {
+            Value::Expression(_) => t,
+            Value::Variable(v) | Value::RestVariable(v) => {
+                let hash = t.hash_value();
+                if self.seen.contains(&hash) {
+                    t
+                } else {
+                    self.seen.insert(hash);
+                    let t = self.binding_manager.lookup(v).unwrap_or(t);
+                    let t = fold_term(t, self);
+                    self.seen.remove(&hash);
+                    t
+                }
+            }
+            _ => fold_term(t, self),
+        }
+    }
 }
 
 /// Represent each binding in a cycle as a unification constraint.
@@ -193,7 +242,7 @@ impl BindingManager {
         assert!(term.value().as_expression().is_ok());
         let mut op = op!(And, term.clone());
         for var in op.variables().iter().rev() {
-            match self._variable_state(&var) {
+            match self._variable_state(var) {
                 BindingManagerVariableState::Unbound => {}
                 BindingManagerVariableState::Cycle(c) => {
                     let mut cycle = cycle_constraints(c);
@@ -234,72 +283,9 @@ impl BindingManager {
     }
 
     // *** Binding Inspection ***
-
-    /// If `term` is a variable, return the value bound to that variable.
-    /// If `term` is a list, dereference all items in the list.
-    /// Otherwise, return `term`.
-    pub fn deref(&self, term: &Term) -> Term {
-        match &term.value() {
-            Value::List(list) => {
-                // Deref all elements.
-                let mut derefed: Vec<Term> =
-                    // TODO(gj): reduce recursion here.
-                    list.iter().map(|t| self.deref(t)).collect();
-
-                // If last element was a rest variable, append the list it derefed to.
-                if has_rest_var(list) {
-                    if let Some(last_term) = derefed.pop() {
-                        if let Value::List(terms) = last_term.value() {
-                            derefed.append(&mut terms.clone());
-                        } else {
-                            derefed.push(last_term);
-                        }
-                    }
-                }
-                term.clone_with_value(Value::List(derefed))
-            }
-            Value::Variable(v) => match self.variable_state(v) {
-                VariableState::Bound(value) => value,
-                _ => term.clone(),
-            },
-            Value::RestVariable(v) => match self.variable_state(v) {
-                VariableState::Bound(value) => match value.value() {
-                    Value::List(l) if has_rest_var(l) => self.deref(&value),
-                    _ => value,
-                },
-                _ => term.clone(),
-            },
-            _ => term.clone(),
-        }
-    }
-
     /// Dereference all variables in term, including within nested structures like
     /// lists and dictionaries.
     pub fn deep_deref(&self, term: &Term) -> Term {
-        pub struct Derefer<'a> {
-            binding_manager: &'a BindingManager,
-        }
-
-        impl<'a> Derefer<'a> {
-            pub fn new(binding_manager: &'a BindingManager) -> Self {
-                Self { binding_manager }
-            }
-        }
-
-        impl<'a> Folder for Derefer<'a> {
-            fn fold_term(&mut self, t: Term) -> Term {
-                match t.value() {
-                    Value::Expression(_) => t,
-                    Value::List(_) => fold_term(self.binding_manager.deref(&t), self),
-                    Value::Variable(_) | Value::RestVariable(_) => {
-                        let derefed = self.binding_manager.deref(&t);
-                        fold_term(derefed, self)
-                    }
-                    _ => fold_term(t, self),
-                }
-            }
-        }
-
         Derefer::new(self).fold_term(term.clone())
     }
 
@@ -516,6 +502,13 @@ impl BindingManager {
 
     fn add_binding(&mut self, var: &Symbol, val: Term) {
         self.bindings.push(Binding(var.clone(), val));
+    }
+
+    fn lookup(&self, var: &Symbol) -> Option<Term> {
+        match self.variable_state(var) {
+            VariableState::Bound(val) => Some(val),
+            _ => None,
+        }
     }
 
     /// Look up a variable in the bindings stack and return
@@ -788,7 +781,7 @@ mod test {
     }
 
     #[test]
-    fn deref() {
+    fn old_deref() {
         let mut bm = BindingManager::default();
         let value = term!(1);
         let x = sym!("x");
@@ -797,25 +790,25 @@ mod test {
         let term_y = term!(y.clone());
 
         // unbound var
-        assert_eq!(bm.deref(&term_x), term_x);
+        assert_eq!(bm.deep_deref(&term_x), term_x);
 
         // unbound var -> unbound var
         bm.bind(&x, term_y.clone()).unwrap();
-        assert_eq!(bm.deref(&term_x), term_x);
+        assert_eq!(bm.deep_deref(&term_x), term_x);
 
         // value
-        assert_eq!(bm.deref(&value), value.clone());
+        assert_eq!(bm.deep_deref(&value), value.clone());
 
         // unbound var -> value
         let mut bm = BindingManager::default();
         bm.bind(&x, value.clone()).unwrap();
-        assert_eq!(bm.deref(&term_x), value);
+        assert_eq!(bm.deep_deref(&term_x), value);
 
         // unbound var -> unbound var -> value
         let mut bm = BindingManager::default();
         bm.bind(&x, term_y).unwrap();
         bm.bind(&y, value.clone()).unwrap();
-        assert_eq!(bm.deref(&term_x), value);
+        assert_eq!(bm.deep_deref(&term_x), value);
     }
 
     #[test]

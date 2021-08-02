@@ -154,7 +154,7 @@ fn has_lower_pred(op: Operator, t: &Term) -> bool {
     match t.value() {
         Value::Expression(Operation {
             operator: other, ..
-        }) => precedence(&op) > precedence(&other),
+        }) => precedence(&op) > precedence(other),
         _ => false,
     }
 }
@@ -327,7 +327,7 @@ pub mod display {
                             "{}({}) if {};",
                             self.name.to_polar(),
                             format_params(&self.params, ", "),
-                            format_args(Operator::And, &args, ",\n  "),
+                            format_args(Operator::And, args, ",\n  "),
                         )
                     }
                 }
@@ -374,6 +374,9 @@ pub mod to_polar {
             if let Some(ref repr) = self.repr {
                 repr.clone()
             } else {
+                // Print out external instances like ^{id: 123}
+                // NOTE: this format is used by host libraries to enrich output
+                // messages with native representations of the instances.
                 format!("^{{id: {}}}", self.instance_id)
             }
         }
@@ -560,7 +563,7 @@ pub mod to_polar {
                             "{}({}) if {};",
                             self.name.to_polar(),
                             format_params(&self.params, ", "),
-                            format_args(Operator::And, &args, " and "),
+                            format_args(Operator::And, args, " and "),
                         )
                     }
                 }
