@@ -26,9 +26,9 @@
 	path = docs/examples/quickstart/rust
 	url = https://github.com/osohq/oso-rust-quickstart.git
 	branch = main
-[submodule "docs/examples/gitclub-sqlalchemy-flask-react"]
-	path = docs/examples/gitclub-sqlalchemy-flask-react
-	url = https://github.com/osohq/gitclub-sqlalchemy-flask-react.git
+[submodule "docs/examples/gitclub"]
+	path = docs/examples/gitclub
+	url = https://github.com/osohq/gitclub.git
 	branch = main
 [submodule "docs/examples/python/getting-started/application"]
 	path = docs/examples/python/getting-started/application
