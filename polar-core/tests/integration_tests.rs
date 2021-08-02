@@ -1694,7 +1694,7 @@ fn test_cut() -> TestResult {
     p.load_str(
         r#"a(x) if x = 1 or x = 2;
            b(x) if x = 3 or x = 4;
-           bcut(x) if x = 3 or x = 4 and cut;
+           bcut(x) if (x = 3 or x = 4) and cut;
            c(a, b) if a(a) and b(b) and cut;
            c_no_cut(a, b) if a(a) and b(b);
            c_partial_cut(a, b) if a(a) and bcut(b);

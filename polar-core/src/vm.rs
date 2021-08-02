@@ -2042,42 +2042,33 @@ impl PolarVirtualMachine {
         assert_eq!(args.len(), 2);
         let item = &args[0];
         let iterable = &args[1];
+        let item_is_ground = item.is_ground();
 
-        match (item.value(), iterable.value()) {
-            (_, Value::List(list)) if list.is_empty() => {
-                // Nothing is in an empty list.
-                self.backtrack()?;
-            }
-            (_, Value::String(s)) if s.is_empty() => {
-                // Nothing is in an empty string.
-                self.backtrack()?;
-            }
-            (_, Value::Dictionary(d)) if d.is_empty() => {
-                // Nothing is in an empty dict.
-                self.backtrack()?;
-            }
-
-            (_, Value::List(terms)) => {
+        match iterable.value() {
+            Value::List(terms) => {
                 // Unify item with each element of the list, skipping non-matching ground terms.
-                let item_is_ground = item.is_ground();
                 self.choose(
                     terms
                         .iter()
                         .filter(|term| {
                             !item_is_ground || !term.is_ground() || term.value() == item.value()
                         })
-                        .map(|term| {
-                            vec![Goal::Unify {
-                                left: item.clone(),
-                                right: term.clone(),
-                            }]
+                        .map(|term| match term.value() {
+                            Value::RestVariable(v) => {
+                                let term = op!(In, item.clone(), Term::new_temporary(Value::Variable(v.clone()))).into_term();
+                                vec![Goal::Query { term }]
+                            }
+                            _ =>
+                                vec![Goal::Unify {
+                                    left: item.clone(),
+                                    right: term.clone(),
+                                }],
                         })
                         .collect::<Vec<Goals>>(),
                 )?;
             }
-            (_, Value::Dictionary(dict)) => {
+            Value::Dictionary(dict) => {
                 // Unify item with each (k, v) pair of the dict, skipping non-matching ground terms.
-                let item_is_ground = item.is_ground();
                 self.choose(
                     dict.fields
                         .iter()
@@ -2099,9 +2090,8 @@ impl PolarVirtualMachine {
                         .collect::<Vec<Goals>>(),
                 )?;
             }
-            (_, Value::String(s)) => {
+            Value::String(s) => {
                 // Unify item with each element of the string
-                let item_is_ground = item.is_ground();
                 self.choose(
                     s.chars()
                         .map(|c| c.to_string())
@@ -2117,7 +2107,7 @@ impl PolarVirtualMachine {
                 )?;
             }
             // Push an `ExternalLookup` goal for external instances
-            (_, Value::ExternalInstance(_)) => {
+            Value::ExternalInstance(_) => {
                 // Generate symbol for next result and leave the variable unbound, so that unification with the result does not fail
                 // Unification of the `next_sym` variable with the result of `NextExternal` happens in `fn external_call_result()`
                 // `external_call_result` is the handler for results from both `LookupExternal` and `NextExternal`, so neither can bind the

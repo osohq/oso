@@ -1514,7 +1514,7 @@ mod test {
         p.load_str(
             r#"f(x) if _y in x.values;
                g(x, y) if y in x.values;
-               h(x) if y in x.values and (y.bar = 1 and y.baz = 2) or y.bar = 3;
+               h(x) if y in x.values and (y.bar = 1 and y.baz = 2 or y.bar = 3);
                i() if _x in _y;
                j() if _x in [];
                k(x) if x > 1 and x in [2, 3];
@@ -1616,7 +1616,7 @@ mod test {
     fn test_conditional_cut_with_partial() -> TestResult {
         let p = Polar::new();
         p.load_str(
-            r#"f(x) if x > 1 and cut or x = 2 and x = 3;
+            r#"f(x) if x > 1 and (cut or x = 2) and x = 3;
                g(1) if cut;
                g(2);"#,
         )?;
