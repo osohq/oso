@@ -13,6 +13,7 @@ public class PolarRolesTest {
 
   public static class Org {
     public String name;
+
     public Org(String name) {
       this.name = name;
     }
@@ -21,6 +22,7 @@ public class PolarRolesTest {
   public static class Repo {
     public String name;
     public Org org;
+
     public Repo(String name, Org org) {
       this.name = name;
       this.org = org;
@@ -30,19 +32,21 @@ public class PolarRolesTest {
   public static class Issue {
     public String name;
     public Repo repo;
+
     public Issue(String name, Repo repo) {
       this.name = name;
       this.repo = repo;
     }
   }
 
-  public static abstract class Role {
+  public abstract static class Role {
     public String name;
     public Object resource;
   }
 
   public static class OrgRole extends Role {
     public Org resource;
+
     public OrgRole(String name, Org resource) {
       this.name = name;
       this.resource = resource;
@@ -51,6 +55,7 @@ public class PolarRolesTest {
 
   public static class RepoRole extends Role {
     public Repo resource;
+
     public RepoRole(String name, Repo resource) {
       this.name = name;
       this.resource = resource;
@@ -60,6 +65,7 @@ public class PolarRolesTest {
   public static class User {
     public String name;
     public List<Role> roles;
+
     public User(String name, List<Role> roles) {
       this.name = name;
       this.roles = roles;
@@ -86,21 +92,15 @@ public class PolarRolesTest {
 
   @Test
   public void testPolarRoles() {
-    Org osohq = new Org("osohq"),
-        apple = new Org("apple");
-    Repo oso = new Repo("oso", osohq),
-         ios = new Repo("ios", apple);
-    Issue bug = new Issue("bug", oso),
-          laggy = new Issue("laggy", ios);
-    Role osohqOwner = new OrgRole("owner", osohq),
-         osohqMember = new OrgRole("member", osohq);
+    Org osohq = new Org("osohq"), apple = new Org("apple");
+    Repo oso = new Repo("oso", osohq), ios = new Repo("ios", apple);
+    Issue bug = new Issue("bug", oso), laggy = new Issue("laggy", ios);
+    Role osohqOwner = new OrgRole("owner", osohq), osohqMember = new OrgRole("member", osohq);
 
-    List<Role> osohqOwnerList = new ArrayList(),
-               osohqMemberList = new ArrayList();
+    List<Role> osohqOwnerList = new ArrayList(), osohqMemberList = new ArrayList();
     osohqOwnerList.add(osohqOwner);
     osohqMemberList.add(osohqMember);
-    User leina = new User("leina", osohqOwnerList),
-         steve = new User("steve", osohqMemberList);
+    User leina = new User("leina", osohqOwnerList), steve = new User("steve", osohqMemberList);
 
     assertFalse(p.queryRule("allow", leina, "invite", osohq).results().isEmpty());
     assertFalse(p.queryRule("allow", leina, "create_repo", osohq).results().isEmpty());

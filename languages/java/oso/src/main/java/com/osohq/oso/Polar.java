@@ -9,14 +9,14 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.ArrayList;
-import org.json.JSONArray;
 import java.util.stream.Collectors;
+import org.json.JSONArray;
 
 public class Polar {
   private Ffi.Polar ffiPolar;
@@ -288,16 +288,21 @@ public class Polar {
       }
     }
 
-    allResults = allResults.stream().map((results) ->
-      results.stream().map((result) -> {
-        HashMap<String, Object>
-          inner = new HashMap<String, Object>(),
-          outer = new HashMap<String, Object>();
-        result.forEach((k, v) -> inner.put(k, host.toPolarTerm(v)));
-        outer.put("bindings", inner);
-        return outer;
-      }).collect(Collectors.toList())
-    ).collect(Collectors.toList());
+    allResults =
+        allResults.stream()
+            .map(
+                (results) ->
+                    results.stream()
+                        .map(
+                            (result) -> {
+                              HashMap<String, Object> inner = new HashMap<String, Object>(),
+                                  outer = new HashMap<String, Object>();
+                              result.forEach((k, v) -> inner.put(k, host.toPolarTerm(v)));
+                              outer.put("bindings", inner);
+                              return outer;
+                            })
+                        .collect(Collectors.toList()))
+            .collect(Collectors.toList());
 
     ffiPolar.validateRolesConfig(new JSONArray(allResults).toString());
     this.polarRolesEnabled = true;

@@ -18,7 +18,7 @@ public class Host implements Cloneable {
   private Map<Long, Object> instances;
 
   // Set to true to accept an expression from the core in toJava.
-  protected boolean acceptExpression;
+  private boolean acceptExpression;
 
   public Host(Ffi.Polar polarPtr) {
     acceptExpression = false;
