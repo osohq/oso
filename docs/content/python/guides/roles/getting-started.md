@@ -253,8 +253,7 @@ Here's the full `Org` resource definition from the GitClub example app:
 >}}
 
 Notice the `"repo:reader"` and `"repo:admin"` implications. These are
-roles defined on another resource, `Repo`. In the next guide, we'll
-see how to set up **cross resource implied roles** like these!
+roles defined on another resource, `Repo`.
 
 ## Have feedback?
 
