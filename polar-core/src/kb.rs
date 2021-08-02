@@ -105,14 +105,23 @@ impl KnowledgeBase {
         self.loaded_files.clear();
     }
 
+    /// Removes a file from the knowledge base by finding the associated
+    /// `Source` and removing all rules for that source, and
+    /// removes the file from loaded files.
+    ///
+    /// Optionally return the source for the file, returning `None`
+    /// if the file was not in the loaded files.
     pub fn remove_file(&mut self, filename: &str) -> Option<String> {
         self.loaded_files
             .get(filename)
             .cloned()
-            .map(|src_id| self.remove_source(Some(filename.to_string()), src_id))
+            .map(|src_id| self.remove_source(src_id))
     }
 
-    pub fn remove_source(&mut self, filename: Option<String>, source_id: u64) -> String {
+    /// Removes a source from the knowledge base by finding the associated
+    /// `Source` and removing all rules for that source. Will
+    /// also remove the loaded files if the source was loaded from a file.
+    pub fn remove_source(&mut self, source_id: u64) -> String {
         // remove from rules
         self.rules.retain(|_, gr| {
             let to_remove: Vec<u64> = gr.rules.iter().filter_map(|(idx, rule)| {
@@ -134,8 +143,7 @@ impl KnowledgeBase {
             .sources
             .remove_source(source_id)
             .expect("source doesn't exist in KB");
-
-        assert_eq!(source.filename, filename);
+        let filename = source.filename;
 
         // remove queries
         self.inline_queries

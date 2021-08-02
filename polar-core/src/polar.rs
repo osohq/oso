@@ -210,7 +210,7 @@ impl Polar {
                 Ok(())
             }
             Err(e) => {
-                kb.remove_source(source.filename, source_id);
+                kb.remove_source(source_id);
                 Err(e)
             }
         }
