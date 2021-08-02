@@ -1,0 +1,97 @@
+{{ $pages := .Pages }}
+{{ if .Params.reverse }}{{ $pages = $pages.Reverse }}{{ end }}
+{{ with $pages }}
+  <span class="prose block mb-4">
+    <h2>Integrations</h2>
+  </span>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {{ range . }}
+      {{ $page := . }}
+      {{- $framework := $page.Title -}}
+      {{- $description := $page.Description -}}
+      {{- $link := $page.RelPermalink -}}
+      {{- $referenceLinks := $page.Params.referenceLinks -}}
+      <div class="flex flex-col p-8 inline-block shadow-md hover:shadow-xl focus:shadow-xl transition-shadow">
+        <div class="text-lg">{{- $framework -}}</div>
+        <div class="flex-grow text-gray-500 my-2">{{- $description -}}</div>
+        {{- with $referenceLinks -}}
+          {{ range . }}
+            {{ $referenceUrl := .url }}
+            {{ $referenceDescription := .description }}
+            {{ $referenceTitle := "" }}
+            {{ if eq .type "exampleApp" }}
+              {{ $referenceTitle = "Example app" }}
+            {{ else if eq .type "blogPost" }}
+              {{ $referenceTitle = "Blog post" }}
+            {{ end }}
+            <div class="mt-3">
+              <div>
+                {{ $referenceDescription }}
+              </div>
+              <a
+                  href="{{- $referenceUrl | safeURL -}}"
+                  class="no-a inline-block px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors w-full"
+              >
+                {{ $referenceTitle }}
+              </a>
+            </div>
+          {{ end }}
+        {{- end -}}
+        {{- with $link -}}
+          <a
+              href="{{- . | safeURL -}}"
+              class="no-a inline-block px-4 py-2 mt-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors w-full"
+          >
+            Documentation
+          </a>
+        {{- end -}}
+      </div>
+    {{ end }}
+  </div>
+{{ end }}
+{{ with $.Params.requestedFrameworks }}
+<span class="prose block mt-16 mb-4">
+  <h2>Request integrations</h2>
+</span>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {{ range . }}
+      {{ $requestName := index . "name" }}
+      {{ $requestReferences := index . "references" }}
+      {{ $referenceLinks := index . "referenceLinks" }}
+      <div class="flex flex-col p-8 inline-block shadow-md hover:shadow-xl focus:shadow-xl transition-shadow">
+        <div class="text-lg">{{- $requestName -}}</div>
+        <div class="flex-grow"></div>
+        {{- with $referenceLinks -}}
+          {{ range . }}
+            {{ $referenceUrl := .url }}
+            {{ $referenceDescription := .description }}
+            {{ $referenceTitle := "" }}
+            {{ if eq .type "exampleApp" }}
+              {{ $referenceTitle = "Example app" }}
+            {{ else if eq .type "blogPost" }}
+              {{ $referenceTitle = "Blog post" }}
+            {{ end }}
+            <div class="mt-2">
+              <div>
+                {{ $referenceDescription }}
+              </div>
+              <a
+                  href="{{- $referenceUrl | safeURL -}}"
+                  class="no-a inline-block px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors w-full"
+              >
+                {{ $referenceTitle }}
+              </a>
+            </div>
+          {{ end }}
+        {{ end }}
+        <button
+            id="request-button-{{ $requestName }}"
+            onclick="onRequestIntegration({{ $requestName }})"
+            class="integration-request no-a w-full block px-4 py-2 mt-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+        >
+          Request this integration
+        </button>
+      </div>
+    {{ end }}
+</div>
+{{ end }}

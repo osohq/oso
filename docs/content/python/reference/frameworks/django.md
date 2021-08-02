@@ -4,6 +4,9 @@ title: Django Authorization Library
 aliases:
   - /using/frameworks/django.html
 description: The Oso Django integration provides request middleware and ORM integrations for data filtering.
+referenceLinks:
+    - type: exampleApp
+      url: https://github.com/osohq/oso-github-django
 ---
 
 # Django
