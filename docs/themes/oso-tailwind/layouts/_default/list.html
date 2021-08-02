@@ -4,10 +4,12 @@
     <main id="content-wrapper" class="min-w-0 w-full flex-auto lg:static lg:max-h-full lg:overflow-visible">
       <div class="w-full flex">
         <div class="min-w-0 flex-auto px-4 sm:px-6 xl:px-8 pt-10 pb-24 lg:pb-16">
-          <article class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:mr-64 xl:px-8 pt-10 pb-24 lg:pb-16">
+          <article class="prose max-w-none min-w-0 flex-auto xl:mr-64 pt-10 pb-24 lg:pb-16">
             {{ .Content }}
           </article>
-          {{ if eq $.Kind "page" }}
+          {{ if .Params.frameworksTOC }}
+            {{ partial "integrations.html" . }}
+          {{ else if eq $.Kind "page" }}
             {{ partial "toc.html" $.CurrentSection }}
           {{ else }}
             {{ partial "toc.html" . }}
@@ -22,7 +24,7 @@
           {{ end }}
           <!--/ Post Content-->
           <hr class="max-w-4xl mx-auto text-center border-gray-100 my-12" />
-          <div class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:px-8 pb-24 lg:pb-16">
+          <div class="prose max-w-none min-w-0 flex-auto pb-24 lg:pb-16">
             {{- partial "feedback.html" . -}}
           </div>
         </div>
