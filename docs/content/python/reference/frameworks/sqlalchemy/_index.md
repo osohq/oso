@@ -6,7 +6,7 @@ aliases:
 description: The Oso SQLAlchemy integration enables data filtering and provides built-in models for RBAC.
 referenceLinks:
     - type: exampleApp
-      url: https://github.com/osohq/gitclub-sqlalchemy-flask-react
+      url: https://github.com/osohq/gitclub
 ---
 
 # SQLAlchemy

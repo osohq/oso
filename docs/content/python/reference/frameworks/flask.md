@@ -6,7 +6,7 @@ aliases:
 description: The Oso Flask integration provides request authorization middleware for usage with Flask.
 referenceLinks:
     - type: exampleApp
-      url: https://github.com/osohq/gitclub-sqlalchemy-flask-react
+      url: https://github.com/osohq/gitclub
 ---
 
 # Flask
