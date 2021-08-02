@@ -56,6 +56,7 @@ s[tep] | into           Step to the next query (will step into rules).
 n[ext] | over           Step to the next query at the same level of the query stack (will not step into rules).
 o[ut]                   Step out of the current query stack level to the next query in the level above.
 g[oal]                  Step to the next goal of the Polar VM.
+e[rror]                 Step to the next error.
 l[ine] [<n>]            Print the current line and <n> lines of context.
 query [<i>]             Print the current query or the query at level <i> in the query stack.
 stack | trace           Print the current query stack.
@@ -237,6 +238,64 @@ True
 True
 ```
 
+#### `g[oal]`
+
+Step the the next goal of the Polar VM. A "goal" is an internal object used to direct
+the state of the Polar interpreter, so this is mainly useful for debugging the VM itself.
+
+```
+query> debug() and 1 + 2 = 3
+QUERY: debug(), BINDINGS: {}
+
+001: debug() and 1 + 2 = 3
+     ^
+
+debug> goal
+PopQuery(debug())
+debug> g
+Query(1 + 2 = _op_5 and _op_5 = 3)
+debug> g
+TraceStackPush
+debug> c
+True
+```
+
+#### `e[rror]`
+
+Continue execution until an error condition is detected. The debugger will
+then pause the Polar VM at that point, allowing the stack and bindings to
+be examined.
+
+
+```
+query> x = 1 and y = "2" and debug() and x < y
+QUERY: debug(), BINDINGS: {}
+
+001: x = 1 and y = "2" and debug() and x < y
+                           ^
+
+debug> error
+QUERY: 1 < "2", BINDINGS: {}
+
+001: x = 1 and y = "2" and debug() and x < y
+                                       ^
+
+ERROR: Not supported: 1 < "2"
+
+debug> stack
+1: x = 1 and y = "2" and debug() and x < y
+  in query at line 1, column 1
+0: x < y
+  in query at line 1, column 35
+
+debug> var x y
+x = 1
+y = "2"
+debug> c
+UnsupportedError
+Not supported: 1 < "2"
+```
+
 ### Context
 
 The Polar file used in the following examples looks like this:
@@ -347,7 +406,7 @@ QUERY: b(_x_8), BINDINGS: {_x_8 = 1}
 The Polar file used in the following examples looks like this:
 
 ```
-a() if x = y and y = z and z = 3 and debug();
+a() if _x = y and y = z and z = 3 and debug();
 ```
 
 #### `var [<var> ...]`
@@ -357,20 +416,20 @@ print the value of those variables. If a provided variable does not exist in
 the current scope, print `<unbound>`.
 
 {{% callout "Note" "green" %}}
-  Due to temporaries used inside the engine, variables may not be available
-  under the names used in the Polar file. `var` with no argument will list
-  variable names in the current scope.
+  Due to temporaries used inside the engine, variables may not be bound
+  under the exact names used in the Polar file. The debugger will automatically
+  map supplied variable names to their temporary equivalents.
 {{% /callout %}}
 
 ```
 debug> line
-001: a() if x = y and y = z and z = 3 and debug();
+001: a() if _x = y and y = z and z = 3 and debug();
                                  ^
 debug> var
-_y_22, _x_21, _z_23
-debug> var _x_21 _z_23
-_x_21 = 3
-_z_23 = 3
+_y_2, __x_1, _z_3
+debug> var _x z
+_x@__x_1 = 3
+z@_z_3 = 3
 debug> var foo
 foo = <unbound>
 ```
