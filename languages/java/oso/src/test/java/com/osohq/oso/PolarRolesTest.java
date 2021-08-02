@@ -23,7 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class PolarRolesTest {
-  protected Oso p;
+  protected Polar p;
 
   public static class Org {
     public String name;
@@ -83,7 +83,7 @@ public class PolarRolesTest {
   @BeforeEach
   public void setUp() throws Exception {
     try {
-      p = new Oso();
+      p = new Polar();
       p.registerClass(User.class, "User");
       p.registerClass(Role.class, "Role");
       p.registerClass(Repo.class, "Repo");

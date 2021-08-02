@@ -14,14 +14,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ArrayList;
+import org.json.JSONArray;
 
 public class Polar {
-  protected Ffi.Polar ffiPolar;
+  private Ffi.Polar ffiPolar;
   protected Host host; // visible for tests only
+  private boolean polarRolesEnabled;
 
   public Polar() throws Exceptions.OsoException {
     ffiPolar = Ffi.get().polarNew();
     host = new Host(ffiPolar);
+    polarRolesEnabled = false;
 
     // Register global constants.
     registerConstant(null, "nil");
@@ -43,6 +47,7 @@ public class Polar {
    */
   public void clearRules() throws Exceptions.OsoException {
     ffiPolar.clearRules();
+    reinitializeRoles();
   }
 
   /**
@@ -80,6 +85,7 @@ public class Polar {
   public void loadStr(String str, String filename) throws Exceptions.OsoException {
     ffiPolar.load(str, filename);
     checkInlineQueries();
+    reinitializeRoles();
   }
 
   /**
@@ -255,5 +261,43 @@ public class Polar {
       }
       nextQuery = ffiPolar.nextInlineQuery();
     }
+  }
+
+  public void reinitializeRoles() {
+    if (!polarRolesEnabled) return;
+    polarRolesEnabled = false;
+    enableRoles();
+  }
+
+  public void enableRoles() throws Exceptions.OsoException {
+    if (polarRolesEnabled) return;
+    ffiPolar.enableRoles();
+
+    List<List<HashMap<String, Object>>> allResults = new ArrayList<List<HashMap<String, Object>>>();
+
+    Ffi.Query nextQuery = ffiPolar.nextInlineQuery();
+    for (; nextQuery != null; nextQuery = ffiPolar.nextInlineQuery()) {
+      Host dupHost = host.clone();
+      dupHost.acceptExpression = true;
+      Query query = new Query(nextQuery, dupHost, Map.of());
+      if (!query.hasMoreElements()) {
+        throw new Exceptions.InlineQueryFailedError(nextQuery.source());
+      } else {
+        allResults.add(query.results());
+      }
+    }
+
+    for (List<HashMap<String, Object>> results : allResults) {
+      for (HashMap<String, Object> result : results) {
+        HashMap<String, Object> bs = new HashMap<String, Object>();
+        result.forEach((k, v) -> {
+          bs.put(k, host.toPolarTerm(v));
+        });
+        result.put("bindings", bs);
+      }
+    }
+
+    ffiPolar.validateRolesConfig(new JSONArray(allResults).toString());
+    this.polarRolesEnabled = true;
   }
 }
