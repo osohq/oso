@@ -455,6 +455,13 @@ def test_return_list(polar, query):
     assert query(Predicate(name="allow", args=[User(), "join", "party"]))
 
 
+def test_host_native_unify(polar, query):
+    """Test that unification works across host and native data"""
+    assert query("new Integer(1) = 1")
+    assert query('new String("foo") = "foo"')
+    assert query("new List([1,2,3]) = [1,2,3]")
+
+
 def test_query(load_file, polar, query):
     """Test that queries work with variable arguments"""
 
@@ -512,6 +519,18 @@ def test_constructor(polar, qvar):
     assert instance.b == 2
     assert instance.bar == 3
     assert instance.baz == 4
+
+
+def test_constructor_error(polar, query):
+    """Test that external instance constructor errors cause a PolarRuntimeError"""
+
+    class Foo:
+        def __init__(self):
+            raise RuntimeError("o no")
+
+    polar.register_class(Foo)
+    with pytest.raises(exceptions.PolarRuntimeError):
+        query("x = new Foo()")
 
 
 def test_instance_cache(polar, qeval, query):
@@ -654,7 +673,7 @@ def test_register_constants_with_decorator():
         x = 1
 
     p = Polar()
-    p.load_str("foo_rule(x: RegisterDecoratorTest, y) if y = 1;")
+    p.load_str("foo_rule(_: RegisterDecoratorTest, y) if y = 1;")
     p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
     assert (
         next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
@@ -665,7 +684,7 @@ def test_register_constants_with_decorator():
     assert next(p.query_rule("foo_class_attr", Variable("y")))["bindings"]["y"] == 1
 
     p = Polar()
-    p.load_str("foo_rule(x: RegisterDecoratorTest, y) if y = 1;")
+    p.load_str("foo_rule(_: RegisterDecoratorTest, y) if y = 1;")
     p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
     assert (
         next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
@@ -678,7 +697,7 @@ def test_register_constants_with_decorator():
 
 def test_unbound_variable(polar, query):
     """Test that unbound variable is returned."""
-    polar.load_str("rule(x, y) if y = 1;")
+    polar.load_str("rule(_, y) if y = 1;")
 
     first = query("rule(x, y)")[0]
 

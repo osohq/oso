@@ -48,7 +48,16 @@ impl Query {
     ///    an answer to Runnable A.
     pub fn next_event(&mut self) -> PolarResult<QueryEvent> {
         let mut counter = self.vm.id_counter();
-        match self.top_runnable().run(Some(&mut counter))? {
+        let qe = match self.top_runnable().run(Some(&mut counter)) {
+            Ok(e) => e,
+            Err(e) => self.top_runnable().handle_error(e)?,
+        };
+        self.recv_event(qe)
+    }
+
+    fn recv_event(&mut self, qe: QueryEvent) -> PolarResult<QueryEvent> {
+        match qe {
+            QueryEvent::None => self.next_event(),
             QueryEvent::Run { runnable, call_id } => {
                 self.push_runnable(runnable, call_id);
                 self.next_event()
@@ -217,7 +226,7 @@ impl Polar {
         while let Some(line) = lines.pop() {
             match line {
                 parser::Line::Rule(rule) => {
-                    let mut rule_warnings = check_singletons(&rule, &kb);
+                    let mut rule_warnings = check_singletons(&rule, &kb)?;
                     warnings.append(&mut rule_warnings);
                     let rule = rewrite_rule(rule, &mut kb);
 

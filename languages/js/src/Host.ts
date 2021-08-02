@@ -230,19 +230,6 @@ export class Host {
   }
 
   /**
-   * Check if two instances unify according to the [[`EqualityFn`]].
-   *
-   * @internal
-   */
-  async unify(leftId: number, rightId: number): Promise<boolean> {
-    let left = this.getInstance(leftId);
-    let right = this.getInstance(rightId);
-    left = left instanceof Promise ? await left : left;
-    right = right instanceof Promise ? await right : right;
-    return this.#equalityFn(left, right);
-  }
-
-  /**
    * Turn a JavaScript value into a Polar term that's ready to be sent to the
    * Polar VM.
    *

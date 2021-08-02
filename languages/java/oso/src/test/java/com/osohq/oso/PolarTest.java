@@ -1,5 +1,8 @@
 package com.osohq.oso;
 
+import static com.osohq.oso.Operator.Dot;
+import static com.osohq.oso.Operator.Isa;
+import static com.osohq.oso.Operator.Unify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -7,8 +10,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.util.*;
-import org.json.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -391,6 +401,11 @@ public class PolarTest {
   }
 
   @Test
+  public void testExternalInternalUnify() throws Exception {
+    assertFalse(p.query("new String(\"foo\") = \"foo\"").results().isEmpty());
+  }
+
+  @Test
   public void testReturnListFromCall() throws Exception {
     p.loadStr("test(c: MyClass) if \"hello\" in c.myList();");
     MyClass c = new MyClass("test", 1);
@@ -406,11 +421,7 @@ public class PolarTest {
 
   @Test
   public void testExternalOp() throws Exception {
-    p.registerClass(Foo.class, "Foo");
-    assertThrows(
-        Exceptions.UnimplementedOperation.class,
-        () -> p.query("new Foo() == new Foo()"),
-        "Expected error.");
+    assertFalse(p.query("new String(\"foo\") == new String(\"foo\")").results().isEmpty());
   }
 
   /**** TEST PARSING ****/
@@ -591,11 +602,114 @@ public class PolarTest {
   }
 
   @Test
-  public void testExpressionError() throws Exception {
+  public void testExpressionGt() throws Exception {
+    // GIVEN
+    p.loadStr("f(x) if x > 2;");
+    // WHEN
+    List<HashMap<String, Object>> res = p.query("f(x)", true).results();
+    // THEN
+    assertEquals(1, res.size());
+    HashMap<String, Object> hm = res.get(0);
+    assertEquals(1, hm.size());
+    Object expr = hm.get("x");
+    assertEquals(
+        new Expression(
+            Operator.And, List.of(new Expression(Operator.Gt, List.of(new Variable("_this"), 2)))),
+        expr);
+  }
+
+  @Test
+  public void testPartialUnification() throws Exception {
+    // GIVEN
+    p.loadStr("f(x, y) if x = y;");
+    Variable x = new Variable("x");
+    Variable y = new Variable("y");
+
+    // WHEN
+    List<HashMap<String, Object>> results = p.queryRule("f", x, y).results();
+
+    // THEN
+    assertEquals(1, results.size());
+    HashMap<String, Object> bindings = results.get(0);
+    assertEquals(bindings.get("x"), y);
+    assertEquals(bindings.get("y"), x);
+  }
+
+  @Test
+  public void testPartial() {
+    // GIVEN
+    p.loadStr("f(1);");
+    p.loadStr("f(x) if x = 1 and x = 2;");
+
+    // WHEN
+    Predicate rule = new Predicate("f", List.of(new Variable("x")));
+    List<HashMap<String, Object>> results = p.query(rule, true).results();
+    assertEquals(1, results.size());
+    assertEquals(1, results.get(0).get("x"));
+
+    p.loadStr("g(x) if x.bar = 1 and x.baz = 2;");
+
+    Predicate gRule = new Predicate("g", List.of(new Variable("x")));
+    results = p.query(gRule, true).results();
+    assertEquals(1, results.size());
+    Expression expr = (Expression) results.get(0).get("x");
+    List<Object> args = (List<Object>) unwrapAnd(expr);
+    assertEquals(2, args.size());
+    assertEquals(
+        args.get(0),
+        new Expression(
+            Unify, List.of(1, new Expression(Dot, List.of(new Variable("_this"), "bar")))));
+    assertEquals(
+        args.get(1),
+        new Expression(
+            Unify, List.of(2, new Expression(Dot, List.of(new Variable("_this"), "baz")))));
+  }
+
+  private Object unwrapAnd(Expression expression) {
+    assertEquals(expression.getOperator(), Operator.And);
+    if (expression.getArgs().size() == 1) {
+      return expression.getArgs().get(0);
+    } else {
+      return expression.getArgs();
+    }
+  }
+
+  public static class User {}
+
+  public static class Post {}
+
+  @Test
+  public void testPartialConstraint() {
+    p.registerClass(User.class, "User");
+    p.registerClass(Post.class, "Post");
+    p.loadStr("f(x: User) if x.user = 1;");
+    p.loadStr("f(x: Post) if x.post = 1;");
+
+    Variable x = new Variable("x");
+    Predicate rule = new Predicate("f", List.of(x));
+    List<HashMap<String, Object>> results =
+        p.query(rule, Map.of("x", new TypeConstraint(x, "User")), true).results();
+
+    assertEquals(1, results.size());
+
+    List<Object> andArgs = (List<Object>) unwrapAnd((Expression) results.get(0).get("x"));
+    assertEquals(2, andArgs.size());
+    assertEquals(
+        new Expression(Isa, List.of(new Variable("_this"), new Pattern("User", new HashMap<>()))),
+        andArgs.get(0));
+    assertEquals(
+        new Expression(
+            Unify, List.of(1, new Expression(Dot, List.of(new Variable("_this"), "user")))),
+        andArgs.get(1));
+  }
+
+  @Test
+  public void testUnexpectedExpression() {
     p.loadStr("f(x) if x > 2;");
 
-    Exception exception =
-        assertThrows(Exceptions.UnexpectedPolarTypeError.class, () -> p.query("f(x)").results());
-    assertTrue(exception.getMessage().contains("unbound"));
+    assertThrows(
+        Exceptions.UnexpectedPolarTypeError.class,
+        () -> p.query("f(x)"),
+        "Expected inline query to fail but it didn't.");
   }
 }

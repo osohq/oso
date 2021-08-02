@@ -1,3 +1,6 @@
+import {postIntegrationRequest, postFeedback} from './backend';
+import {get, set} from './localStorage';
+
 import('monaco-editor-core').then(monaco => {
   // Monokai colors
   const COLOR = {
@@ -179,6 +182,8 @@ window.hideSearch = function(_e) {
 window.addEventListener('load', () => {
   const searchInput = document.getElementById('search-input');
   searchInput.addEventListener('input', e => window.searchInputKeyUp(e));
+  makePromptsUnselectable();
+  setRequestedIntegrations();
 });
 
 // this handles when the button on the left nav is clicked and it toggles the search box
@@ -255,7 +260,7 @@ import('algoliasearch').then(algolia => {
     index
       .search(term, {
         analytics: true,
-        hitsPerPage: 5,
+        hitsPerPage: 20,
         attributesToSnippet: '*:20',
         snippetEllipsisText: '...'
       })
@@ -304,3 +309,64 @@ import('algoliasearch').then(algolia => {
     }
   };
 });
+
+const REQUESTED_INTEGRATIONS_KEY = 'integrations';
+
+function setRequestedIntegrations() {
+  const requestedIntegrations = JSON.parse(get(REQUESTED_INTEGRATIONS_KEY));
+
+  if (!window.location.href.includes('frameworks') || !requestedIntegrations) {
+    return;
+  }
+
+  requestedIntegrations.forEach(ri => {
+    setRequestedIntegration(ri);
+  });
+}
+
+function setRequestedIntegration(integration) {
+  const buttonId = `request-button-${integration}`;
+  const el = document.getElementById(buttonId);
+  el.innerText = "Requested!"
+  el.setAttribute('disabled', '');
+}
+
+window.onRequestIntegration = function(integration) {
+  postIntegrationRequest(integration)
+    .then(() => {
+      let requestedIntegrations = JSON.parse(get(REQUESTED_INTEGRATIONS_KEY));
+      if (requestedIntegrations) {
+        requestedIntegrations.push(integration);
+      } else {
+        requestedIntegrations = [integration];
+      }
+      set(REQUESTED_INTEGRATIONS_KEY, JSON.stringify(requestedIntegrations));
+
+      setRequestedIntegration(integration);
+    });
+}
+
+function makePromptsUnselectable() {
+  const languages = ['bash', 'console'];
+  languages.forEach(l => {
+    const els = document.querySelectorAll(`code.language-${l}[data-lang="${l}"]`);
+    els.forEach(el => {
+      const newHtml = el.innerHTML.replace(/^\$ /gm, '<span style="user-select:none">$ </span>');
+      el.innerHTML = newHtml;
+    });
+  })
+};
+
+window.recordFeedback = (isUp) => {
+  postFeedback(isUp).then(() => {
+    const upEl = document.getElementById('feedback-up');
+    const downEl = document.getElementById('feedback-down');
+    if (isUp) {
+      upEl.setAttribute('disabled', '');
+      downEl.removeAttribute('disabled');
+    } else {
+      upEl.removeAttribute('disabled');
+      downEl.setAttribute('disabled', '');
+    }
+  });
+}

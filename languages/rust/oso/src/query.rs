@@ -6,6 +6,7 @@ use crate::host::{Host, Instance, PolarIterator};
 use crate::{FromPolar, PolarValue};
 
 use polar_core::events::*;
+use polar_core::roles_validation::ResultEvent;
 use polar_core::terms::*;
 
 impl Iterator for Query {
@@ -29,6 +30,10 @@ impl Query {
             inner,
             host,
         }
+    }
+
+    pub fn source(&self) -> String {
+        self.inner.source_info()
     }
 
     pub fn next_result(&mut self) -> Option<crate::Result<ResultSet>> {
@@ -70,11 +75,6 @@ impl Query {
                     instance,
                     class_tag,
                 } => self.handle_external_isa(call_id, instance, class_tag),
-                QueryEvent::ExternalUnify {
-                    call_id,
-                    left_instance_id,
-                    right_instance_id,
-                } => self.handle_external_unify(call_id, left_instance_id, right_instance_id),
                 QueryEvent::ExternalIsSubSpecializer {
                     call_id,
                     instance_id,
@@ -232,17 +232,6 @@ impl Query {
         Ok(())
     }
 
-    fn handle_external_unify(
-        &mut self,
-        call_id: u64,
-        left_instance_id: u64,
-        right_instance_id: u64,
-    ) -> crate::Result<()> {
-        let res = self.host.unify(left_instance_id, right_instance_id)?;
-        self.question_result(call_id, res)?;
-        Ok(())
-    }
-
     fn handle_external_is_subspecializer(
         &mut self,
         call_id: u64,
@@ -278,10 +267,10 @@ impl ResultSet {
     ) -> crate::Result<Self> {
         // Check for expression.
         for term in bindings.values() {
-            if term.value().as_expression().is_ok() {
+            if term.value().as_expression().is_ok() && !host.accept_expression {
                 return Err(OsoError::Custom {
                     message: r#"
-Recieved Expression from Polar VM. The Expression type is not yet supported in this language.
+Received Expression from Polar VM. The Expression type is not yet supported in this language.
 
 This may mean you performed an operation in your policy over an unbound variable.
                     "#
@@ -316,6 +305,10 @@ This may mean you performed an operation in your policy over an unbound variable
         self.get(name)
             .ok_or(crate::OsoError::FromPolar)
             .and_then(T::from_polar)
+    }
+
+    pub fn into_event(self) -> ResultEvent {
+        ResultEvent::new(self.bindings)
     }
 }
 

@@ -5,7 +5,7 @@ use tracing::{info, instrument};
 
 #[instrument]
 fn example_zero() -> anyhow::Result<()> {
-    let oso = Oso::new();
+    let mut oso = Oso::new();
 
     oso.load_str("x_is_one(x) if x = 1;")?;
     let mut query = oso.query_rule("x_is_one", (1,))?;

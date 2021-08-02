@@ -573,7 +573,7 @@ def test_enable_roles(
 
     # test basic `role_allow` rule
     role_allow_str = (
-        'role_allow(role: RepositoryRole{name: "READ"}, "READ", repo: Repository);'
+        'role_allow(_: RepositoryRole{name: "READ"}, "READ", _: Repository);'
     )
 
     oso.load_str(role_allow_str)
@@ -582,7 +582,7 @@ def test_enable_roles(
 
     # test `role_allow` rule using nested resource
     nested_role_allow_str = (
-        'role_allow(role: OrganizationRole{name: "MEMBER"}, "READ", repo: Repository);'
+        'role_allow(_: OrganizationRole{name: "MEMBER"}, "READ", _: Repository);'
     )
     oso.load_str(nested_role_allow_str)
     results = list(oso.query_rule("role_allow", org_owner_role, "READ", abbey_road))

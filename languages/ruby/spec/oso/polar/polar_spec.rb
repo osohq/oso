@@ -533,6 +533,11 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         expect(query(subject, 'nope()')).to eq([])
       end
 
+      it 'can unify instances with native types' do
+        expect(query(subject, 'new String("foo") = "foo"')).to eq([{}])
+        expect(query(subject, 'new List() = []')).to eq([{}])
+      end
+
       it 'can specialize on dict fields' do
         subject.load_str <<~POLAR
           what_is(_: {genus: "canis"}, r) if r = "canine";
@@ -724,7 +729,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   context 'unbound variable' do
     # test_returns_unbound_variable
     it 'returns unbound properly' do
-      subject.load_str 'rule(x, y) if y = 1;'
+      subject.load_str 'rule(_, y) if y = 1;'
 
       results = query(subject, 'rule(x, y)')
       first = results[0]
@@ -755,12 +760,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     expect(query(subject, 'neg_inf < inf')).to eq([{}])
   end
 
-  it 'fails gracefully on ExternalOp events' do
-    stub_const('Foo', Class.new)
-    subject.register_class(Foo)
-    expect { query(subject, 'new Foo() == new Foo()') }.to raise_error do |e|
-      expect(e).to be_an Oso::Polar::UnimplementedOperationError
-    end
+  it 'handles ExternalOp events' do
+    expect(query(subject, 'new String("foo") == new String("foo")')).to eq [{}]
   end
 
   it 'fails when receiving an expression type' do
@@ -833,7 +834,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
 
     it 'uses the up-to-date version of the class during isa checks' do
-      subject.load_str('is_foo(foo: Foo);')
+      subject.load_str('is_foo(_: Foo);')
       expect(subject.query_rule('is_foo', Foo.new).to_a).to eq([{}])
     end
 

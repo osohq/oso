@@ -88,7 +88,7 @@ fn test_load_function() {
     );
     assert_eq!(test.qvar::<u32>("f(x)", "x"), [1, 2, 3]);
 
-    test.oso.clear_rules();
+    assert!(matches!(test.oso.clear_rules(), Ok(())));
     test.load_file(file!(), "test_file.polar").unwrap();
     test.load_file(file!(), "test_file_gx.polar").unwrap();
     assert_eq!(
@@ -511,6 +511,19 @@ fn test_results_and_options() {
     assert!(results.is_empty());
 }
 
+// this functionality isn't very useful for rust as long as we
+// only support nullary constructors ...
+#[test]
+fn test_unify_external_internal() {
+    let mut test = OsoTest::new();
+    test.qeval("new List() = []");
+    test.qeval("new Dictionary() = {}");
+    test.qeval("new String() = \"\"");
+    test.qeval("new Integer() = 0");
+    test.qeval("new Float() = 0.0");
+    test.qeval("new Boolean() = false");
+}
+
 // TODO: dhatch see if there is a relevant test to port.
 #[test]
 fn test_unify_externals() {
@@ -681,7 +694,7 @@ fn test_without_registering() {
         x: u32,
     }
 
-    let test = OsoTest::new();
+    let mut test = OsoTest::new();
     test.oso.load_str("f(foo: Foo) if 1 = foo.x;").unwrap();
     test.oso
         .query_rule("f", (Foo { x: 1 },))

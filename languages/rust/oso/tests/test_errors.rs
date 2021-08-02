@@ -99,7 +99,7 @@ fn test_unify_external_not_supported() -> oso::Result<()> {
 fn test_failing_inline_query() {
     common::setup();
 
-    let oso = Oso::new();
+    let mut oso = Oso::new();
 
     let result = oso.load_str("?= 1 == 1;\n?= 1 == 0;");
     match result {
@@ -477,7 +477,7 @@ fn test_wrong_argument_arity() -> oso::Result<()> {
 
     oso.load_str("getmethod_a1(x, val) if val = x.a(val);");
     oso.load_str("getmethod_a2(x, val, val2) if val = x.a(val, val2);");
-    oso.load_str("getmethod_a0(x) if val = x.a();");
+    oso.load_str("getmethod_a0(x) if x.a();");
 
     // Correct number of arguments
     let mut query = oso.oso.query_rule("getmethod_a1", (Foo, 1))?;

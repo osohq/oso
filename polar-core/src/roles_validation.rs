@@ -12,6 +12,12 @@ pub struct ResultEvent {
     bindings: Bindings,
 }
 
+impl ResultEvent {
+    pub fn new(bindings: Bindings) -> Self {
+        Self { bindings }
+    }
+}
+
 struct Action {
     typ: String,
     name: String,

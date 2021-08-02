@@ -15,11 +15,11 @@ role assignments and reading roles data.
 
 In this guide, we'll walk through the basics of starting to use the
 Oso Roles for SQLAlchemy feature, using the
-[GitClub](https://github.com/osohq/gitclub-sqlalchemy-flask-react)
+[GitClub](https://github.com/osohq/gitclub)
 application as an example. GitClub is a SPA (single-page application)
 that uses Flask and SQLAlchemy for the backend, with a React frontend.
 To install **GitClub** to run alongside this tutorial, follow the
-[`README`](https://github.com/osohq/gitclub-sqlalchemy-flask-react#readme).
+[`README`](https://github.com/osohq/gitclub/tree/main/backends/flask-sqlalchemy#readme).
 
 ## Setting up the Oso instance
 
@@ -51,10 +51,10 @@ current application if it needs to be accessed outside of the application
 initialization process.
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/__init__.py"
     from="docs: begin-init-oso"
     to="# Enable roles features."
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 
@@ -80,12 +80,11 @@ class as well as a SQLAlchemy `sessionmaker` to the
 `sqlalchemy_oso.SQLAlchemyOso.enable_roles` method:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/__init__.py"
     from="docs: begin-init-oso"
     to="# Load authorization policy."
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
-    hlOpts="hl_lines=6"
 >}}
 
 ### Loading our policy
@@ -98,12 +97,11 @@ code.
 Load the policy with the `Oso.load_file` function.
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/__init__.py"
     from="docs: begin-init-oso"
     to="# Attach SQLAlchemyOso instance to Flask application."
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
-    hlOpts="hl_lines=10-11"
 >}}
 
 
@@ -118,10 +116,10 @@ We can write simple rules in our policy, like this one which allows all
 users to create new organizations:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
     from="docs: begin-org-create-rule"
     to="docs: end-org-create-rule"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 
@@ -146,10 +144,10 @@ To perform authorization, we use the `Oso.is_allowed` method. Here's an
 example in our Org creation handler:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/routes/orgs.py"
     from="docs: begin-is-allowed"
     to="docs: end-is-allowed"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 
@@ -188,29 +186,29 @@ and what permissions to check.
 In GitClub, we initialize the session on the application
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/__init__.py"
     from="docs: begin-authorized-session"
     to="docs: end-authorized-session"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     >}}
 
 provide a helper decorator to define the permissions to check
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/helpers.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/routes/helpers.py"
     from="docs: begin-session-decorator"
     to="docs: end-session-decorator"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     >}}
 
 and we can then issue regular SQLAlchemy queries to load authorized data in our
 route handlers
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/repos.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/routes/repos.py"
     from="docs: begin-repo-index"
     to="docs: end-repo-index"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
     >}}
 
@@ -220,10 +218,10 @@ We can make queries without any authorization by setting the `checked_permission
 parameter. We pass this through in the `@session` decorator:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/routes/orgs.py"
     from="docs: begin-is-allowed"
     to="docs: end-is-allowed"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
 >}}
 
 In this case, we are still able to use the regular `oso.is_allowed` to authorize
@@ -255,10 +253,10 @@ the policy.
 In our sample app, we call `synchronize_data` in initialization of our app:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/__init__.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/__init__.py"
     from="docs: begin-configure"
     to="docs: end-configure"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
     >}}
 
@@ -374,10 +372,10 @@ To allow access based on roles, we call `Roles.role_allows` in our
 policy:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
     from="docs: begin-role-allow"
     to="docs: end-role-allow"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 
@@ -390,12 +388,13 @@ Now we've configured roles and setup our policy. For users to have
 access, we must assign them to roles.
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/role_assignments.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/routes/role_assignments.py"
     from="docs: begin-role-assignment"
     to="docs: end-role-assignment"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
-    hlOpts="hl_lines=10"
+    hlFrom="docs: begin-role-assignment-highlight"
+    hlTo="docs: end-role-assignment-highlight"
     >}}
 
 The `assign_role` method assigns a particular role on a resource.
@@ -436,10 +435,10 @@ roles.
 Here's the full `Org` resource definition from the GitClub example app:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
     from="docs: begin-org-resource"
     to="docs: end-org-resource"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 

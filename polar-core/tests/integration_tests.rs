@@ -42,6 +42,10 @@ fn no_debug(_: &str) -> String {
     "".to_string()
 }
 
+fn no_error_handler(e: PolarError) -> QueryResults {
+    panic!("Query returned error: {}", e.to_string())
+}
+
 fn no_isa(_: Term, _: Symbol) -> bool {
     true
 }
@@ -50,7 +54,8 @@ fn no_is_subspecializer(_: u64, _: Symbol, _: Symbol) -> bool {
     false
 }
 
-fn query_results<F, G, H, I, J, K>(
+#[allow(clippy::too_many_arguments)]
+fn query_results<F, G, H, I, J, K, L>(
     mut query: Query,
     mut external_call_handler: F,
     mut make_external_handler: H,
@@ -58,6 +63,7 @@ fn query_results<F, G, H, I, J, K>(
     mut external_is_subspecializer_handler: J,
     mut debug_handler: G,
     mut message_handler: K,
+    mut error_handler: L,
 ) -> QueryResults
 where
     F: FnMut(u64, Term, Symbol, Option<Vec<Term>>, Option<BTreeMap<Symbol, Term>>) -> Option<Term>,
@@ -66,10 +72,15 @@ where
     I: FnMut(Term, Symbol) -> bool,
     J: FnMut(u64, Symbol, Symbol) -> bool,
     K: FnMut(&Message),
+    L: FnMut(PolarError) -> QueryResults,
 {
     let mut results = vec![];
     loop {
-        let event = query.next_event().unwrap();
+        let event = match query.next_event() {
+            Err(e) => return error_handler(e),
+            Ok(e) => e,
+        };
+
         while let Some(msg) = query.next_message() {
             message_handler(&msg)
         }
@@ -127,6 +138,12 @@ where
             QueryEvent::Debug { ref message } => {
                 query.debug_command(&debug_handler(message)).unwrap();
             }
+            QueryEvent::ExternalOp {
+                operator: Operator::Eq,
+                call_id,
+                args,
+                ..
+            } => query.question_result(call_id, args[0] == args[1]).unwrap(),
             _ => {}
         }
     }
@@ -143,6 +160,7 @@ macro_rules! query_results {
             no_is_subspecializer,
             no_debug,
             print_messages,
+            no_error_handler,
         )
     };
     ($query:expr, $external_call_handler:expr, $make_external_handler:expr, $debug_handler:expr) => {
@@ -154,6 +172,7 @@ macro_rules! query_results {
             no_is_subspecializer,
             $debug_handler,
             print_messages,
+            no_error_handler,
         )
     };
     ($query:expr, $external_call_handler:expr) => {
@@ -165,6 +184,7 @@ macro_rules! query_results {
             no_is_subspecializer,
             no_debug,
             print_messages,
+            no_error_handler,
         )
     };
     ($query:expr, @msgs $message_handler:expr) => {
@@ -176,6 +196,19 @@ macro_rules! query_results {
             no_is_subspecializer,
             no_debug,
             $message_handler,
+            no_error_handler,
+        )
+    };
+    ($query:expr, @errs $error_handler:expr) => {
+        query_results(
+            $query,
+            no_results,
+            no_externals,
+            no_isa,
+            no_is_subspecializer,
+            no_debug,
+            print_messages,
+            $error_handler,
         )
     };
 }
@@ -191,6 +224,7 @@ fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
             |a, b, c| mock.borrow_mut().external_is_subspecializer(a, b, c),
             no_debug,
             print_messages,
+            no_error_handler,
         ),
         mock.into_inner(),
     )
@@ -222,14 +256,10 @@ fn qnull(p: &mut Polar, query_str: &str) {
 
 #[track_caller]
 fn qext(p: &mut Polar, query_str: &str, external_results: Vec<Value>, expected_len: usize) {
-    let mut external_results: Vec<Term> = external_results
-        .into_iter()
-        .map(Term::new_from_test)
-        .rev()
-        .collect();
+    let mut external_results = external_results.into_iter().map(Term::new_from_test);
     let q = p.new_query(query_str, false).unwrap();
     assert_eq!(
-        query_results!(q, |_, _, _, _, _| external_results.pop()).len(),
+        query_results!(q, |_, _, _, _, _| external_results.next()).len(),
         expected_len
     );
 }
@@ -1177,6 +1207,96 @@ fn test_arithmetic() -> TestResult {
 }
 
 #[test]
+fn test_debug_break_on_error() -> TestResult {
+    let p = Polar::new();
+    p.load_str("foo() if debug() and 1 < \"2\" and 1 < 2;")?;
+    let mut call_num = 0;
+    let debug_handler = |s: &str| {
+        let rt = match call_num {
+            0 => {
+                let expected = indoc!(
+                    r#"
+                    QUERY: debug(), BINDINGS: {}
+
+                    001: foo() if debug() and 1 < "2" and 1 < 2;
+                                  ^
+                    "#
+                );
+                assert_eq!(s, expected);
+                "error"
+            }
+            1 => {
+                let expected = indoc!(
+                    r#"
+                    QUERY: 1 < "2", BINDINGS: {}
+
+                    001: foo() if debug() and 1 < "2" and 1 < 2;
+                                              ^
+
+                    ERROR: Not supported: 1 < "2"
+                    "#
+                );
+                assert_eq!(s, expected);
+                "c"
+            }
+            _ => panic!("Too many calls!"),
+        };
+        call_num += 1;
+        rt.to_string()
+    };
+    let results = query_results(
+        p.new_query("not foo()", false)?,
+        no_results,
+        no_externals,
+        no_isa,
+        no_is_subspecializer,
+        debug_handler,
+        print_messages,
+        |_| Vec::new(),
+    );
+    assert!(results.is_empty());
+    Ok(())
+}
+
+#[test]
+fn test_debug_temp_var() -> TestResult {
+    let p = Polar::new();
+    p.load_str("foo(a, aa) if a < 10 and debug() and aa < a;")?;
+    let mut call_num = 0;
+    let debug_handler = |s: &str| {
+        let rt = match call_num {
+            0 => {
+                let expected = indoc!(
+                    r#"
+                    QUERY: debug(), BINDINGS: {}
+
+                    001: foo(a, aa) if a < 10 and debug() and aa < a;
+                                                  ^
+                    "#
+                );
+                assert_eq!(s, expected);
+                "var a"
+            }
+            1 => {
+                assert_eq!(s, "a@_a_3 = 5");
+                "var aa"
+            }
+            2 => {
+                assert_eq!(s, "aa@_aa_4 = 3");
+                "q"
+            }
+            _ => panic!("Too many calls: {}", s),
+        };
+        call_num += 1;
+        rt.to_string()
+    };
+
+    let q = p.new_query("foo(5, 3)", false)?;
+    let _results = query_results!(q, no_results, no_externals, debug_handler);
+    Ok(())
+}
+
+#[test]
 fn test_debug() -> TestResult {
     let p = Polar::new();
     p.load_str(indoc!(
@@ -1369,28 +1489,25 @@ fn test_anonymous_vars() {
 }
 
 #[test]
-fn test_singleton_vars() -> TestResult {
+fn test_singleton_vars() {
+    let pol = "f(x,y,z) if y = z;";
+    let err = Polar::new().load_str(pol).unwrap_err();
+    assert!(err.context.is_some());
+    assert!(matches!(
+        err.kind,
+        ErrorKind::Parse(ParseError::SingletonVariable { .. })
+    ))
+}
+
+#[test]
+fn test_unknown_specializer_warning() -> TestResult {
     let p = Polar::new();
-    p.register_constant(sym!("X"), term!(true));
-    p.register_constant(sym!("Y"), term!(true));
-    p.load_str("f(x:X,y:Y,z:Z) if z = z;")?;
-    let output = p.next_message().unwrap();
-    assert!(matches!(&output.kind, MessageKind::Warning));
+    p.load_str("f(_: A);")?;
+    let out = p.next_message().unwrap();
+    assert!(matches!(&out.kind, MessageKind::Warning));
     assert_eq!(
-        &output.msg,
-        "Singleton variable x is unused or undefined, see <https://docs.osohq.com/using/polar-syntax.html#variables>\n001: f(x:X,y:Y,z:Z) if z = z;\n       ^"
-    );
-    let output = p.next_message().unwrap();
-    assert!(matches!(&output.kind, MessageKind::Warning));
-    assert_eq!(
-        &output.msg,
-        "Singleton variable y is unused or undefined, see <https://docs.osohq.com/using/polar-syntax.html#variables>\n001: f(x:X,y:Y,z:Z) if z = z;\n           ^"
-    );
-    let output = p.next_message().unwrap();
-    assert!(matches!(&output.kind, MessageKind::Warning));
-    assert_eq!(
-        &output.msg,
-        "Unknown specializer Z\n001: f(x:X,y:Y,z:Z) if z = z;\n                 ^"
+        &out.msg,
+        "Unknown specializer A\n001: f(_: A);\n          ^"
     );
     Ok(())
 }
@@ -1453,6 +1570,18 @@ fn test_rest_vars() -> TestResult {
 
     let a = &var(&mut p, "[*_] in [*a] and [*b] in [*_] and b = 1", "a")[0];
     assert!(matches!(a, Value::List(b) if matches!(b[0].value(), Value::RestVariable(_))));
+    Ok(())
+}
+
+#[test]
+fn test_circular_data() -> TestResult {
+    let mut p = Polar::new();
+    qeval(&mut p, "x = [x]");
+    qeval(&mut p, "y = {y:y}");
+    qruntime!(
+        "x = [x, y] and y = [y, x] and x = y",
+        RuntimeError::StackOverflow { .. }
+    );
     Ok(())
 }
 
