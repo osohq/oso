@@ -132,6 +132,24 @@ button > * {
     @apply border-gray-500 bg-gray-800 bg-opacity-10;
 }
 
+#feedback-up, #feedback-down {
+  height: 50px;
+  width: 50px;
+}
+
+#feedback-up:disabled, #feedback-down:disabled {
+  pointer: default;
+  pointer-events: none;
+}
+
+#feedback-up:disabled {
+  background-color: rgb(187, 247, 208);
+}
+
+#feedback-down:disabled {
+  background-color: rgb(254, 202, 202);
+}
+
 code {
   @apply bg-gray-200;
   word-wrap: break-word;

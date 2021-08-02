@@ -1,4 +1,4 @@
-import {postIntegrationRequest} from './backend';
+import {postIntegrationRequest, postFeedback} from './backend';
 import {get, set} from './localStorage';
 
 import('monaco-editor-core').then(monaco => {
@@ -356,3 +356,17 @@ function makePromptsUnselectable() {
     });
   })
 };
+
+window.recordFeedback = (isUp) => {
+  postFeedback(isUp).then(() => {
+    const upEl = document.getElementById('feedback-up');
+    const downEl = document.getElementById('feedback-down');
+    if (isUp) {
+      upEl.setAttribute('disabled', '');
+      downEl.removeAttribute('disabled');
+    } else {
+      upEl.removeAttribute('disabled');
+      downEl.setAttribute('disabled', '');
+    }
+  });
+}
