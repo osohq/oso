@@ -1,6 +1,7 @@
 """Translate between Polar and the host language (Python)."""
 
 from math import inf, isnan, nan
+import re
 
 from .exceptions import (
     PolarRuntimeError,
@@ -76,7 +77,7 @@ class Host:
         cls = self.get_class(name)
         try:
             instance = cls(*args, **kwargs)
-        except TypeError as e:
+        except Exception as e:
             raise PolarRuntimeError(f"Error constructing instance of {name}: {e}")
         return self.cache_instance(instance, id)
 
@@ -139,6 +140,25 @@ class Host:
                 f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
             )
 
+    def enrich_message(self, message: str):
+        """
+        "Enrich" a message from the polar core, such as a log line, debug
+        message, or error trace.
+
+        Currently only used to enrich messages with instance reprs. This allows
+        us to avoid sending reprs eagerly when an instance is created in polar.
+        """
+
+        def replace_repr(match):
+            instance_id = int(match[1])
+            try:
+                instance = self.get_instance(instance_id)
+                return repr(instance)
+            except UnregisteredInstanceError:
+                return match[0]
+
+        return re.sub(r"\^\{id: ([0-9]+)\}", replace_repr, message, flags=re.M)
+
     def to_polar(self, v):
         """Convert a Python object to a Polar term."""
         if type(v) == bool:
@@ -190,10 +210,26 @@ class Host:
                     }
                 }
         else:
+            # BEGIN HACK:
+            # The polar core uses the .repr property to determine whether or not
+            # to allow Roles.role_allows to be called with unbound variables as
+            # arguments (only for sqlalchemy_oso)
+            # Because of this, we need to continue to send the repr for
+            # sqlalchemy_oso.roles.OsoRoles.Roles ONLY
+            repr_str = None
+            import inspect
+
+            if (
+                inspect.isclass(v)
+                and "OsoRoles" in v.__qualname__
+                and v.__module__ == "sqlalchemy_oso.roles"
+            ):
+                repr_str = repr(v)
+            # END HACK
             val = {
                 "ExternalInstance": {
                     "instance_id": self.cache_instance(v),
-                    "repr": repr(v),
+                    "repr": repr_str,
                 }
             }
         term = {"value": val}

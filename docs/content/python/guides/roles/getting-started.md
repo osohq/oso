@@ -1,6 +1,6 @@
 ---
 title: Getting started
-weight: 2
+weight: 1
 description: >
     Get started with Oso Roles for Python
 ---
@@ -184,10 +184,10 @@ add a method onto the user that returns a list of roles for that user:
 ```py
 ROLES = {
     "alice": [
-        {"name": "user", "resource": Page.pages[0]},
-        {"name": "admin", "resource": Page.pages[1]},
+        {"name": "member", "resource": Org.orgs[0]},
+        {"name": "owner", "resource": Org.orgs[1]},
     ],
-    "bob": [{"name": "admin", "resource": Page.pages[2]}],
+    "bob": [{"name": "owner", "resource": Org.orgs[2]}],
 }
 
 
@@ -217,10 +217,10 @@ that you call the `allow` rule with, typically an instance of some `User` model.
 In the body of the `actor_has_role_for_resource` rule, you
 should unify `role_name` with the name of the actor's role and
 `resource` with the instance the actor has the role for. In
-the example above, Bob has the `"admin"` role for the
-`Page.pages[2]` resource, so when `role in actor.get_roles()` is
-evaluated with Bob as the `actor`, `role.name` will return `"admin"`
-and `role.resource` will return `Page.pages[2]`.
+the example above, Bob has the `"owner"` role for the
+`Org.orgs[2]` resource, so when `role in actor.get_roles()` is
+evaluated with Bob as the `actor`, `role.name` will return `"owner"`
+and `role.resource` will return `Org.orgs[2]`.
 
 ### Implying roles
 
@@ -252,10 +252,12 @@ roles.
 Here's the full `Org` resource definition from the GitClub example app:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
     from="docs: begin-org-resource"
     to="docs: end-org-resource"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    hlFrom="docs: begin-org-resource-highlight"
+    hlTo="docs: end-org-resource-highlight"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 

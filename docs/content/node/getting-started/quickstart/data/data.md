@@ -19,4 +19,47 @@ endswithURL: >
 expensesPath1: examples/quickstart/polar/expenses-01-nodejs.polar
 expensesPath2: examples/quickstart/polar/expenses-02-nodejs.polar
 isAllowed: isAllowed
+installation_new: |
+    ```bash
+    npm install --save oso
+    ```
+    Or find the Oso package on [NPM](https://www.npmjs.com/package/oso).
+import: import
+import_code: |
+    ```js
+    const { Oso } = require('oso')
+    oso = Oso()
+    oso.enableRoles()
+    ```
+example_app: an Express
+load_policy: |
+    ```js
+    oso.loadFile("authorization.polar")
+    ```
+getroles: getRoles
+classes: JavaScript classes
+objects: JavaScript objects
+methods: JavaScript methods
+register_classes: |
+    ```js
+    oso.registerClass(Page)
+    oso.registerClass(User)
+    ```
+app_code: |
+    ```js
+    const app = express()
+    const port = 3000
+
+    app.get('/page/:pageNum', async (req, res) => {
+        const pageNum = req.params.pageNum
+        const page = Page.getPage(pageNum)
+        const user = User.getCurrentUser()
+        if (await oso.isAllowed(user, "read", page)) {
+            res.send(`<h1>A Page</h1><p>this is page ${page.pagenum}</p>`)
+        } else {
+            res.status(403)
+            res.send('<h1>Sorry</h1><p>You are not allowed to see this page</p>')
+        }
+    })
+    ```
 ---

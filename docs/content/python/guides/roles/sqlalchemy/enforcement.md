@@ -22,10 +22,10 @@ user's role for a particular organization.
 a single resource. Here's how that looks for the `POST /orgs` endpoint:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/routes/orgs.py"
     from="docs: begin-is-allowed"
     to="docs: end-is-allowed"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 
@@ -40,10 +40,10 @@ enforcing authorization on a list endpoint. Here's how that looks for the `GET
 /orgs` endpoint:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/routes/orgs.py"
     from="docs: begin-org-index"
     to="docs: end-org-index"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 
@@ -68,10 +68,10 @@ user is allowed to create a new organization, so we have a Polar rule that
 indicates exactly that:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
-    from="docs: org-create-rule"
-    to="end: org-create-rule"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
+    from="docs: begin-org-create-rule"
+    to="docs: end-org-create-rule"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 
@@ -79,10 +79,10 @@ In the `POST /orgs` route handler, we pass `g.current_user` to
 `Oso.is_allowed()` as the actor:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/orgs.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/routes/orgs.py"
     from="docs: begin-is-allowed"
     to="docs: end-is-allowed"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 

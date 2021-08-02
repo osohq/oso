@@ -447,7 +447,7 @@ def test_duplicate_action(init_oso):
     # - duplicate action
     oso, _ = init_oso
     policy = """
-    resource(_type: Org, "org", actions, roles) if
+    resource(_type: Org, "org", actions, _roles) if
         actions = [
             "invite",
             "invite"
@@ -673,7 +673,7 @@ def test_undefined_resource_arguments(init_oso):
     # - use resource predicate without defining actions/roles
     oso, _ = init_oso
     policy = """
-    resource(_type: Org, "org", actions, roles);
+    resource(_type: Org, "org", _actions, _roles);
 
     actor_has_role_for_resource(_, _, _);
     """
@@ -1856,7 +1856,7 @@ def test_data_filtering_actor_can_assume_role_not(init_oso, sample_data):
             }
         };
 
-    allow(actor, action, resource) if
+    allow(actor, _action, resource) if
         not actor_can_assume_role(actor, "member", resource);
 
     actor_has_role_for_resource(actor, role_name: String, role_resource: Repo) if
@@ -1918,7 +1918,7 @@ def test_data_filtering_actor_can_assume_role_and(init_oso, sample_data):
         repo.org = parent_org and
         parent_org matches Org;
 
-    allow(actor, action, resource) if
+    allow(actor, _action, resource) if
         actor_can_assume_role(actor, "member", resource) and
         resource.name = "osohq";
 
@@ -2540,6 +2540,7 @@ def test_perf_polar(init_oso, sample_data):
     # parent_org = repo.org and parent_org matches Org;
     # """
     oso.load_str(p)
+    oso.enable_roles()
 
     leina = sample_data["leina"]
     # steve = sample_data["steve"]
@@ -2612,3 +2613,12 @@ def test_role_config_revalidated_when_loading_rules_after_enabling_roles(init_os
     oso.enable_roles()
     with pytest.raises(RolesValidationError):
         oso.load_str(invalid_policy)
+
+
+def test_validation_with_method_calls(init_oso):
+    oso, _ = init_oso
+    p = """resource(_: Repo, "repo", ["read"], {});
+            actor_has_role_for_resource(actor, role_name, resource) if
+                actor.has_role(role_name, resource);"""
+    oso.load_str(p)
+    oso.enable_roles()

@@ -16,12 +16,13 @@ management API to allow end users to build authorization.
 Roles can be displayed by using the roles read API.
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/role_assignments.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/routes/role_assignments.py"
     from="docs: begin-org-role-index"
     to="docs: end-org-role-index"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
-    hlOpts="hl_lines=5"
+    hlFrom="docs: begin-org-role-index-highlight"
+    hlTo="docs: end-org-role-index-highlight"
     >}}
 
 ## Assigning users to a role
@@ -29,12 +30,13 @@ Roles can be displayed by using the roles read API.
 Users are assigned to roles using `OsoRoles.assign_role`.
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/routes/role_assignments.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/routes/role_assignments.py"
     from="docs: begin-role-assignment"
     to="docs: end-role-assignment"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
-    hlOpts="hl_lines=10"
+    hlFrom="docs: begin-role-assignment-highlight"
+    hlTo="docs: end-role-assignment-highlight"
     >}}
 
 ## Have feedback?

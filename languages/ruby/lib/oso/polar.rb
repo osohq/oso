@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require 'oso/polar/errors'
+require 'oso/polar/expression'
 require 'oso/polar/ffi'
 require 'oso/polar/host'
+require 'oso/polar/pattern'
 require 'oso/polar/polar'
 require 'oso/polar/predicate'
 require 'oso/polar/query'

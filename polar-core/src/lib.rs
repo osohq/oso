@@ -23,7 +23,7 @@ pub mod parser;
 mod partial;
 pub mod polar;
 mod rewrites;
-mod roles_validation;
+pub mod roles_validation;
 pub mod rules;
 mod runnable;
 mod sources;

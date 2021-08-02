@@ -203,7 +203,7 @@ class RolesValidationError(PolarApiError):
 
 UNEXPECTED_EXPRESSION_MESSAGE = dedent(
     """\
-Recieved Expression from Polar VM. The Expression type is only supported when
+Received Expression from Polar VM. The Expression type is only supported when
 using django-oso or sqlalchemy-oso's data filtering features. Did you perform an
 operation over an unbound variable in your policy?
 

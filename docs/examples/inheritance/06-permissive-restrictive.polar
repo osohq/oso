@@ -7,7 +7,7 @@
 # sure the hospital is charging correctly for each service provided.  This would
 # be a more permissive policy (a rule that adds access on top of others).
 
-allow(actor: Actor, "read", resource: Order) if
+allow(actor: Actor, "read", _resource: Order) if
     actor.role = "billing";
 
 # Now, billing dept members can read orders! This rule combines with the other

@@ -16,7 +16,7 @@ usage with [Flask](https://flask.palletsprojects.com/).
 The Oso Flask integration is available on [PyPI](https://pypi.org/project/flask-oso/) and can be installed using
 `pip`:
 
-```
+```console
 $ pip install flask-oso
 ```
 
@@ -35,7 +35,7 @@ We just released the next version of our roles feature.
 The `FlaskOso` class is the entrypoint to the integration.
 It must be initialized with the Flask app and Oso:
 
-```
+```python
 from flask import Flask
 from oso import Oso
 
@@ -47,7 +47,7 @@ flask_oso = FlaskOso(app=app, oso=oso)
 Alternatively, to support the Flask factory pattern, the
 `init_app()` method can be used:
 
-```
+```python
 from flask import Flask
 
 from oso import Oso
@@ -71,7 +71,7 @@ This factory function can be a useful place for loading policy files, and
 calling configuration functions on `FlaskOso` like
 `flask_oso.FlaskOso.require_authorization()`:
 
-```
+```python
 def create_app():
     app = Flask("app")
 
@@ -97,7 +97,7 @@ the data access layer, depending upon how you want to express authorization.
 
 Here’s a basic example in a route:
 
-```
+```python
 @app.route("/<int:id>", methods=["GET"])
 def get_expense(id):
     expense = Expense.query.get(id)
@@ -113,6 +113,34 @@ a failed authorization will return a \`\`403 Forbidden\`\` response for the curr
 request.** This can be controlled with
 `set_unauthorized_action()`.
 
+#### Working with `LocalProxy` objects
+
+When using a library that exposes the current user (or similar
+authorization data) through `LocalProxy` objects, such as [Flask-Login][]'s
+`current_user`, you might need to explicitly dereference the proxy
+to pass the underlying object to Oso:
+
+[Flask-Login]: https://flask-login.readthedocs.io/en/0.4.1/#flask_login.current_user
+
+```python
+from flask_login import current_user
+
+def create_app():
+    app = Flask("app")
+
+    flask_oso.init_app(app)
+    flask_oso.require_authorization(app)
+    # Dereference the current_user LocalProxy
+    flask_oso.set_get_actor(lambda: current_user._get_current_object())
+
+    oso.load_file("authorization.polar")
+    oso.register_class(User)
+    return app
+```
+
+By dereferencing the proxy, Oso will use the underlying object when determining
+authorization instead of the proxy object.
+
 ### Requiring authorization
 
 One downside to calling `flask_oso.FlaskOso.authorize()`
@@ -126,7 +154,7 @@ Sometimes a route will not need authorization. To prevent this route from
 causing an authorization error, call
 `flask_oso.FlaskOso.skip_authorization()` during request processing:
 
-```
+```python
 oso = Oso()
 flask_oso = FlaskOso()
 
@@ -161,7 +189,7 @@ authorization. It is the decorator version of
 `flask_oso.FlaskOso.authorize()` before the route body is entered. For
 example:
 
-```
+```python
 from flask_oso import authorize
 
 @authorize(resource="get_user")
@@ -178,7 +206,7 @@ body.
 One common usage of `flask_oso.authorize()` is to perform authorization
 based on the Flask request object:
 
-```
+```python
 from flask import request
 
 @flask_oso.authorize(resource=request)
@@ -190,7 +218,7 @@ def route():
 A policy can then be written controlling authorization based on request
 attributes, like the path:
 
-```
+```polar
 # Allow any actor to make a GET request to "/".
 allow(_actor, action: "GET", resource: Request{path: "/"});
 ```

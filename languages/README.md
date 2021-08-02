@@ -10,9 +10,10 @@ added, modified, etc. Names marked as `code` are literal, and should agree
 
 Top-level authorization API.
 
-| Method       | Python | Ruby | Java | Node.js | Rust |
-| ------------ | ------ | ---- | ---- | ------- | ---- |
-| `is_allowed` | x      | x    | x    | x       | x    |
+| Method                | Python | Ruby | Java | Node.js | Rust |
+| --------------------- | ------ | ---- | ---- | ------- | ---- |
+| `is_allowed`          | x      | x    | x    | x       | x    |
+| `get_allowed_actions` | x      |      | x    |         | x    |
 
 - `Polar` methods
 
@@ -63,7 +64,7 @@ Execute a Polar query through the FFI event interface.
 | `ExternalCall`             | x      | x    | x    | x       | x    |
 | `ExternalIsa`              | x      | x    | x    | x       | x    |
 | `ExternalIsSubSpecializer` | x      | x    | x    | x       |      |
-| `ExternalOp`               | x      |      |      | x       |      |
+| `ExternalOp`               | x      | x    |      | x       |      |
 | `ExternalUnify`            | x      | x    |      | x       |      |
 | `MakeExternal`             | x      | x    | x    | x       | x    |
 | `NextExternal`             | x      | x    | x    | x       |      |

@@ -82,7 +82,7 @@ fn test_oso() -> OsoTest {
 #[test]
 fn test_anything_works() -> oso::Result<()> {
     common::setup();
-    let oso = Oso::new();
+    let mut oso = Oso::new();
     oso.load_str("f(1);")?;
 
     let mut query = oso.query("f(x)")?;
@@ -180,7 +180,7 @@ fn test_data_conversions_no_leak() {
 #[test]
 fn test_load_file_error_contains_filename() {
     common::setup();
-    let oso = test_oso();
+    let mut oso = test_oso();
 
     let mut tempfile = tempfile::Builder::new()
         .suffix(".polar")
@@ -209,7 +209,7 @@ fn test_load_file_error_contains_filename() {
 fn test_load_file_extension_check() {
     common::setup();
 
-    let oso = test_oso();
+    let mut oso = test_oso();
 
     let err = oso.oso.load_file("not_polar_file.txt").unwrap_err();
     assert!(
@@ -221,7 +221,7 @@ fn test_load_file_extension_check() {
 fn test_load_file_nonexistent_file() {
     common::setup();
 
-    let oso = test_oso();
+    let mut oso = test_oso();
 
     let err = oso.oso.load_file("not_a_file.polar").unwrap_err();
     assert!(matches!(err, OsoError::Io(_)));
@@ -231,7 +231,7 @@ fn test_load_file_nonexistent_file() {
 fn test_already_loaded_file_error() -> oso::Result<()> {
     common::setup();
 
-    let oso = test_oso();
+    let mut oso = test_oso();
     let path = test_file_path();
 
     oso.oso.load_file(&path)?;
@@ -291,7 +291,7 @@ fn test_clear_rules() -> oso::Result<()> {
 
     oso.oso.register_class(foo_class)?;
 
-    oso.oso.clear_rules();
+    assert!(matches!(oso.oso.clear_rules(), Ok(())));
 
     oso.qnull("f(x)");
     assert_eq!(oso.query("x = new Foo()").len(), 1);
@@ -764,7 +764,7 @@ fn test_predicate_return_list() {
 fn test_variables_as_arguments() -> oso::Result<()> {
     common::setup();
 
-    let oso = test_oso();
+    let mut oso = test_oso();
 
     oso.oso.load_file(test_file_path())?;
 
@@ -797,7 +797,7 @@ fn test_returns_unbound_variable() -> oso::Result<()> {
     common::setup();
 
     let mut oso = test_oso();
-    oso.load_str("rule(x, y) if y = 1;");
+    oso.load_str("rule(_, y) if y = 1;");
 
     let first = oso.query("rule(x, y)").pop().unwrap();
 

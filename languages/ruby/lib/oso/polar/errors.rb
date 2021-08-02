@@ -100,8 +100,11 @@ module Oso
     class ApiError < Error; end
     class ParameterError < ApiError; end
 
+    class ValidationError < Error; end
+    class RolesValidationError < Error; end
+
     UNEXPECTED_EXPRESSION_MESSAGE = <<~MSG
-      Recieved Expression from Polar VM. The Expression type is not yet supported in this language.
+      Received Expression from Polar VM. The Expression type is not yet supported in this language.
 
       This may mean you performed an operation in your policy over an unbound variable.
     MSG

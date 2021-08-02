@@ -105,6 +105,14 @@
     margin-right: auto;
     overflow: hidden;
     max-width: 550px;
+    height: calc(100vh - 7rem - 2rem);
+    display: flex;
+    flex-direction: column;
+}
+
+.searching-inner > .results {
+    flex-grow: 1;
+    overflow: auto;
 }
 
 @media (min-width: 768px) {

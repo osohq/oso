@@ -142,8 +142,7 @@ role assignments with `sqlalchemy_oso.roles_old.add_user_role()` and
 `sqlalchemy_oso.roles_old.reassign_user_role()`:
 
 {{< literalInclude path="examples/roles/sqlalchemy/basic/app/routes.py"
-                   lines="30-47"
-                   hlOpts="hl_lines=4 13 16" >}}
+                   lines="30-47" >}}
 
 ### Configure permissions for role assignments
 
