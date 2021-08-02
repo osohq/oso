@@ -43,6 +43,27 @@ Link to [relevant documentation section]().
 
 ### Core
 
+#### Breaking changes
+
+{{% callout "Warning" "orange" %}}
+  This release contains breaking changes. Be sure to follow migration steps
+  before upgrading.
+{{% /callout %}}
+
+The `or` operator has had its precedence lowered to be consistent with other
+programming languages. Existing policies using `or` should be updated where
+necessary to group `or` operations using parentheses:
+
+```polar
+foo(a, b, c) if a and b or c;
+```
+
+becomes
+
+```polar
+foo(a, b, c) if a and (b or c);
+```
+
 #### Other bugs & improvements
 
 - Native types (`Integer`, `String`, `Dictionary`, etc.) and
@@ -52,6 +73,7 @@ Link to [relevant documentation section]().
 - The `var` command  in the debugger now automatically maps variable
   names to their temporary bindings.
 - The VM can now represent circular data without crashing.
+- The `in` operator now correctly handles rest variables.
 
 ### Ruby
 
