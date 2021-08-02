@@ -142,7 +142,7 @@ pub fn main() -> anyhow::Result<()> {
             }
             continue;
         }
-        let mut query = match oso.query(&input) {
+        let query = match oso.query(&input) {
             Err(e) => {
                 println!("{}", e);
                 continue;
@@ -150,7 +150,7 @@ pub fn main() -> anyhow::Result<()> {
             Ok(q) => q,
         };
         let mut has_result = false;
-        while let Some(res) = query.next() {
+        for res in query {
             has_result = true;
             if let Ok(res) = res {
                 if res.is_empty() {

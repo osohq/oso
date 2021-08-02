@@ -393,7 +393,7 @@ impl Instance {
                 c.attributes.get(name).ok_or_else(|| {
                     InvalidCallError::AttributeNotFound {
                         attribute_name: name.to_owned(),
-                        type_name: self.name(&host).to_owned(),
+                        type_name: self.name(host).to_owned(),
                     }
                     .into()
                 })
@@ -416,7 +416,7 @@ impl Instance {
             c.get_method(name).ok_or_else(|| {
                 InvalidCallError::MethodNotFound {
                     method_name: name.to_owned(),
-                    type_name: self.name(&host).to_owned(),
+                    type_name: self.name(host).to_owned(),
                 }
                 .into()
             })
@@ -432,7 +432,7 @@ impl Instance {
     pub fn equals(&self, other: &Self, host: &Host) -> crate::Result<bool> {
         tracing::trace!("equals");
         self.class(host)
-            .and_then(|class| class.equals(host, &self, other))
+            .and_then(|class| class.equals(host, self, other))
     }
 
     /// Attempt to downcast the inner type of the instance to a reference to the type `T`

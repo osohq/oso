@@ -23,7 +23,7 @@ installation_new: |
     ```bash
     npm install --save oso
     ```
-    Or find the Oso package at [http://pypi.python.org/pypi/oso/](http://pypi.python.org/pypi/oso/).
+    Or find the Oso package on [NPM](https://www.npmjs.com/package/oso).
 import: import
 import_code: |
     ```js

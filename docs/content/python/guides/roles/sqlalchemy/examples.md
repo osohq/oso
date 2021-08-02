@@ -8,7 +8,7 @@ description: >
 # Role modeling by example
 
 In this guide, we'll cover a few different role models in the context of
-the [GitClub example application](https://github.com/osohq/gitclub-sqlalchemy-flask-react).
+the [GitClub example application](https://github.com/osohq/gitclub).
 
 {{% callout "Read first" "blue" %}}
  - [Getting started](getting-started)
@@ -27,10 +27,10 @@ To define a role for another resource type, we add another `resource`
 rule to our policy.
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
     from="docs: begin-repo-resource"
     to="docs: end-repo-resource"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 
@@ -38,8 +38,9 @@ This defines two roles on repository, `"reader"` and `"writer"`.
 This allows us to assign users directly to repositories without
 giving them a role in the entire organization.
 
-Now, we can use `OsoRoles.assign_role` to assign role on
-repositories in addition to organizations.
+Now, we can use
+{{% apiDeepLink module="sqlalchemy_oso.roles" pythonFramework="sqlalchemy" label="OsoRoles.assign_role" %}}{{% /apiDeepLink %}}
+to assign role on repositories in addition to organizations.
 
 ## Grant access to child resources with implied roles
 
@@ -53,10 +54,10 @@ roles**.
 First, we'll define how organizations and repositories are related.
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
     from="docs: begin-repo-parent"
     to="docs: end-repo-parent"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 
@@ -68,10 +69,10 @@ When Oso evaluates the policy, it uses the `org` relationship defined
 on our model:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/models.py"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/models.py"
     from="docs: begin-repo-model"
     to="docs: end-repo-model"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
     hlFrom="docs: begin-repo-model-highlight"
     hlTo="docs: end-repo-model-highlight"
@@ -81,10 +82,10 @@ Then, we **imply** a role on the child resource from our parent resource
 definition.
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
     from="docs: begin-org-resource"
     to="docs: end-org-resource"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
     hlFrom="docs: begin-org-resource-highlight"
     hlTo="docs: end-org-resource-highlight"
@@ -124,10 +125,10 @@ First, we define the issue resource in our policy. Even though an issue
 doesn't have roles, we still define an issue resource to declare the actions users can take on issues.
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
     from="docs: begin-issue-resource"
     to="docs: end-issue-resource"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
     >}}
 
@@ -137,10 +138,10 @@ indicates it is unused.
 Now, we can assign the issue action to a repository role. Notice the `"issue:read"` permission for `writer` below:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
     from="docs: begin-repo-resource"
     to="docs: end-repo-resource"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 

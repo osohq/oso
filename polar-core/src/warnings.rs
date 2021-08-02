@@ -96,7 +96,7 @@ impl<'kb> SingletonVisitor<'kb> {
                 let src = term
                     .get_source_id()
                     .and_then(|id| self.kb.sources.get_source(id));
-                let mut msg = warn_str(&sym, &term, &src)?;
+                let mut msg = warn_str(sym, term, &src)?;
                 if let Some(ref source) = src {
                     msg.push('\n');
                     msg.push_str(&source_lines(source, term.offset(), 0));

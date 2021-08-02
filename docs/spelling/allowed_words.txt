@@ -141,12 +141,14 @@ prefetch
 pseudocode
 quickstart
 registerClass
+repl
 roadmap
 runtime
 specializer
 specializers
 stderr
 stdout
+stringified
 struct
 structs
 subclasses
