@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public class Polar {
-  private Ffi.Polar ffiPolar;
+  protected Ffi.Polar ffiPolar;
   protected Host host; // visible for tests only
 
   public Polar() throws Exceptions.OsoException {
@@ -33,6 +33,7 @@ public class Polar {
     registerClass(List.class, "List");
     registerClass(Map.class, "Dictionary");
     registerClass(String.class, "String");
+    registerClass(RolesHelper.class, "__oso_internal_roles_helpers__");
   }
 
   /**
