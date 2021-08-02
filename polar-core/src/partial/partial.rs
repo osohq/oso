@@ -1240,7 +1240,7 @@ mod test {
         p.load_str(r#"f(x) if not (x.y = 1 and x.b = 2);"#)?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.y or 2 != _this.b");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "(1 != _this.y or 2 != _this.b)");
         assert_query_done!(q);
 
         Ok(())
@@ -1333,7 +1333,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "_this > 0 and _this > 1 and _this > 2 and _this > 3 or _this > 4 or _this > 5"
+            "_this > 0 and _this > 1 and _this > 2 and (_this > 3 or _this > 4 or _this > 5)"
         );
         assert_query_done!(q);
 
