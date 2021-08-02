@@ -28,20 +28,6 @@ def serialize_types(types, class_names):
     """
     Convert types stored in python to what the core expects.
     """
-
-    x = {
-        "Foo": {
-            "bar_name": {"Base": {"class_tag": "String"}},
-            "bar": {
-                "Relationship": {
-                    "kind": "parent",
-                    "other_class_tag": "Bar",
-                    "my_field": "bar_name",
-                    "other_field": "name",
-                }
-            },
-        }
-    }
     polar_types = {}
     for tag, fields in types.items():
         field_types = {}
@@ -63,6 +49,62 @@ def serialize_types(types, class_names):
                 }
         polar_types[tag] = field_types
     return polar_types
+
+
+@dataclass
+class Constraint:
+    kind: str  # ["Eq", "In"]
+    field: str
+    value: Any  # Value or list of values.
+
+
+def parse_constraint(polar, constraint):
+    kind = next(iter(constraint))
+    assert kind in ["Eq", "In"]
+    field = constraint[kind]["field"]
+    value = constraint[kind]["value"]
+    return Constraint(kind=kind, field=field, value=polar.host.to_python(value))
+
+
+def ground_constraints(polar, results, filter_plan, constraints):
+    pass
+
+
+# @NOTE(Steve): This is just operating on the json. Could still have a step to parse this into a python data structure
+# first. Probably more important later when make implementing a resolver nice.
+def builtin_filter_plan_resolver(polar, filter_plan):
+    result_sets = filter_plan["result_sets"]
+    results = []
+    for rs in result_sets:
+        set_results = {}
+
+        requests = rs["requests"]
+        resolve_order = rs["resolve_order"]
+        result_id = rs["result_id"]
+
+        for i in resolve_order:
+            req = requests[i]
+            class_name = req["class_tag"]
+            constraints = req["constraints"]
+
+            # Substitute in results from previous requests.
+            ground_constraints(polar, set_results, filter_plan, constraints)
+
+            constraints = [parse_constraint(polar, c) for c in constraints]
+            fetcher = polar.host.fetchers[class_name]
+            set_results[i] = fetcher(constraints)
+
+        results.extend(set_results[result_id])
+
+    # NOTE(steve): Not the best way to remove duplicates.
+    return [i for n, i in enumerate(results) if i not in results[:n]]
+
+
+def filter_data(polar, filter_plan, filter_plan_resolver=None):
+    if filter_plan_resolver is None:
+        return builtin_filter_plan_resolver(polar, filter_plan)
+    else:
+        return filter_plan_resolver(polar, filter_plan)
 
 
 # This is a first pass at what kind of thing I want to operate on.
@@ -96,13 +138,6 @@ class Attrib:
 
 
 @dataclass
-class Constraint:
-    kind: str  # ["Eq", "In"]
-    field: str
-    value: Any  # Value or list of values.
-
-
-@dataclass
 class Constraints:
     cls: str
     constraints: List[Constraint]
@@ -125,35 +160,35 @@ class FilterPlan:
 # This is fine because I know the dependency order so the way to evaluate this is you start with the first
 # collection, save it's results, and then for each other collection you can substitute in the results
 # before you call the fetching function.
-def ground_constraints(polar, results, filter_plan, constraints):
-    # Walk the constraints substituting in any results
-    # Since we walk in a dependency order we should have any results mentioned already
-    for constraint in constraints.constraints:
-        attrib = None
-        if isinstance(constraint.value, Attrib):
-            attrib = constraint.value.key
-            constraint.value = constraint.value.of
-        if isinstance(constraint.value, Result):
-            constraint.value = results[constraint.value.id]
-        if attrib is not None:
-            constraint.value = [getattr(v, attrib) for v in constraint.value]
-
-
-def filter_data(polar, filter_plans):
-    # @TODO: Remove duplicates, this should be a union
-    result_objs = []
-    for plan in filter_plans:
-        results = {}
-        for id in plan.resolve_order:
-            constraints = plan.data_sets[id]
-            # Substitute in fetched results.
-            ground_constraints(polar, results, plan, constraints)
-            # Fetch the data.
-            fetcher = polar.host.fetchers[constraints.cls]
-            results[id] = fetcher(constraints)
-        result_objs.extend(results[plan.result_set])
-    # Not the best way to remove duplicates.
-    return [i for n, i in enumerate(result_objs) if i not in result_objs[:n]]
+# def ground_constraints(polar, results, filter_plan, constraints):
+#     # Walk the constraints substituting in any results
+#     # Since we walk in a dependency order we should have any results mentioned already
+#     for constraint in constraints.constraints:
+#         attrib = None
+#         if isinstance(constraint.value, Attrib):
+#             attrib = constraint.value.key
+#             constraint.value = constraint.value.of
+#         if isinstance(constraint.value, Result):
+#             constraint.value = results[constraint.value.id]
+#         if attrib is not None:
+#             constraint.value = [getattr(v, attrib) for v in constraint.value]
+#
+#
+# def filter_data(polar, filter_plans):
+#     # @TODO: Remove duplicates, this should be a union
+#     result_objs = []
+#     for plan in filter_plans:
+#         results = {}
+#         for id in plan.resolve_order:
+#             constraints = plan.data_sets[id]
+#             # Substitute in fetched results.
+#             ground_constraints(polar, results, plan, constraints)
+#             # Fetch the data.
+#             fetcher = polar.host.fetchers[constraints.cls]
+#             results[id] = fetcher(constraints)
+#         result_objs.extend(results[plan.result_set])
+#     # Not the best way to remove duplicates.
+#     return [i for n, i in enumerate(result_objs) if i not in result_objs[:n]]
 
 
 # The hardest part of this is taking the expressions in the bindings that come out of the core

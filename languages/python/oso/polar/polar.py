@@ -27,7 +27,7 @@ from .query import Query
 from .predicate import Predicate
 from .variable import Variable
 from .expression import Expression, Pattern
-from .data_filtering import evaluate, serialize_types, process_constraints
+from .data_filtering import evaluate, serialize_types, filter_data
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
@@ -285,8 +285,6 @@ class Polar:
             )
         )
 
-        python_plan = process_constraints(self, cls, "resource", results)
-
         for result in results:
             for k, v in result["bindings"].items():
                 result["bindings"][k] = self.host.to_polar(v)
@@ -294,7 +292,7 @@ class Polar:
 
         types = serialize_types(self.host.types, self.host.cls_names)
         plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
-        return evaluate(self, cls, "resource", results)
+        return filter_data(self, plan)
 
 
 def polar_class(_cls=None, *, name=None):
