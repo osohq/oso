@@ -153,6 +153,10 @@ impl BindingManager {
         Self::default()
     }
 
+    /// Bind `var` to `val` in the expression `partial`.
+    ///
+    /// If the binding succeeds, the new expression is returned as a goal. Otherwise,
+    /// an error is returned.
     fn partial_bind(&mut self, partial: Operation, var: &Symbol, val: Term) -> PolarResult<Goal> {
         match partial.ground(var, val.clone()) {
             None => Err(RuntimeError::IncompatibleBindings {
@@ -180,10 +184,10 @@ impl BindingManager {
     /// 1. `var` is already bound to some value (rebindings are not allowed, even if the
     ///    rebinding is to the same value).
     /// 2. `var` is constrained, and the new binding of `val` is not compatible with those
-    ///    constraints.
+    ///    constraints (as determined by `Operation::ground()`)
     ///
     /// If a binding is compatible, it is recorded. If the binding was to a ground value,
-    /// subsequent calls to `variable_state` or `deref` will return that value.
+    /// subsequent calls to `variable_state` or `deep_deref` will return that value.
     ///
     /// If the binding was between two variables, the two will always have the same value
     /// or constraints going forward. Further, a unification constraint is recorded between
@@ -250,13 +254,13 @@ impl BindingManager {
     /// `term` must be an expression`.
     ///
     /// An error is returned if the constraint is incompatible with existing constraints.
-    ///
-    /// (Currently all constraints are considered compatible).
     pub fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
         self.do_followers(|_, follower| follower.add_constraint(term))?;
 
         assert!(term.value().as_expression().is_ok());
         let mut op = op!(And, term.clone());
+
+        // include all constraints applying to any of its variables.
         for var in op.variables().iter().rev() {
             match self._variable_state(var) {
                 BindingManagerVariableState::Cycle(c) => {
@@ -269,6 +273,8 @@ impl BindingManager {
 
         let vars = op.variables();
         let mut varset = vars.iter().collect::<HashSet<_>>();
+
+        // replace any bound variables with their values.
         for var in vars.iter() {
             if let BindingManagerVariableState::Bound(val) = self._variable_state(var) {
                 varset.remove(var);
@@ -284,6 +290,7 @@ impl BindingManager {
             }
         }
 
+        // apply the new constraint to every remaining variable.
         for var in varset {
             self.add_binding(var, op.clone().into_term())
         }
