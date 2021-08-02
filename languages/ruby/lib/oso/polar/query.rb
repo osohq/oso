@@ -13,6 +13,7 @@ module Oso
       def initialize(ffi_query, host:)
         @calls = {}
         @ffi_query = ffi_query
+        ffi_query.set_message_enricher { |msg| host.enrich_message(msg) }
         @host = host
       end
 
@@ -147,7 +148,11 @@ module Oso
             answer = host.isa?(instance, class_tag: class_tag)
             question_result(answer, call_id: event.data['call_id'])
           when 'Debug'
-            puts event.data['message'] if event.data['message']
+            msg = event.data['message']
+            if msg
+              msg = self.enrich_message.call(msg) if msg
+              puts msg
+            end
             print 'debug> '
             begin
               input = $stdin.readline.chomp.chomp(';')

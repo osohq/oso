@@ -308,6 +308,11 @@ module Oso
           raise UnexpectedPolarTypeError, tag
         end
       end
+
+      def enrich_message(msg)
+        # TODO
+        msg
+      end
     end
   end
 end
