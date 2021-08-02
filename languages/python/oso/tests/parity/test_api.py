@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
+
 from polar import Predicate
 from polar.exceptions import (
     InvalidIteratorError,

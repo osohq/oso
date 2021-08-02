@@ -1,6 +1,7 @@
 """Django model helpers for authorization."""
 from django.core.exceptions import PermissionDenied
 from django.db import models
+
 from django_oso.auth import authorize_model
 from django_oso.partial import TRUE_FILTER
 

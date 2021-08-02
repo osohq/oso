@@ -1,7 +1,7 @@
 """Translate between Polar and the host language (Python)."""
 
-from math import inf, isnan, nan
 import re
+from math import inf, isnan, nan
 
 from .exceptions import (
     UNEXPECTED_EXPRESSION_MESSAGE,

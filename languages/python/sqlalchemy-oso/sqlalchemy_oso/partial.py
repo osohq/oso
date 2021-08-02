@@ -11,6 +11,7 @@ from sqlalchemy.orm import RelationshipProperty
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql import expression as sql
 from sqlalchemy.sql.elements import True_
+
 from sqlalchemy_oso.preprocess import preprocess
 
 # TODO (dhatch) Better types here, first any is model, second any is a sqlalchemy expr.

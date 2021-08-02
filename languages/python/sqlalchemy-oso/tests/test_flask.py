@@ -1,6 +1,7 @@
 import pytest
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import Session
+
 from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
 from sqlalchemy_oso.session import Permissions
 

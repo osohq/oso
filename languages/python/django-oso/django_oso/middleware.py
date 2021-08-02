@@ -1,8 +1,8 @@
 """Middleware"""
 from django.conf import settings
-from django_oso.oso import reset_oso
-
 from oso import OsoError
+
+from django_oso.oso import reset_oso
 
 from .auth import authorize, request_authorized
 

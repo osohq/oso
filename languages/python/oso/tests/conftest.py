@@ -2,6 +2,7 @@
 from typing import Dict
 
 import pytest
+
 from polar import Polar
 
 

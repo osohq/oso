@@ -4,6 +4,7 @@ Tests come from the relationship document & operations laid out there
 https://www.notion.so/osohq/Relationships-621b884edbc6423f93d29e6066e58d16.
 """
 import pytest
+
 from sqlalchemy_oso.auth import authorize_model
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 

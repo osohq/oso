@@ -2,7 +2,6 @@ import os
 import timeit
 
 import pytest
-from polar.exceptions import RolesValidationError
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -10,6 +9,7 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import String
 
 from oso import Oso, OsoError
+from polar.exceptions import RolesValidationError
 
 from .polar_roles_sqlalchemy_helpers import (
     assign_role,

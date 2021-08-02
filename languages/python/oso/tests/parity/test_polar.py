@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 
 import pytest
+
 from polar.exceptions import PolarRuntimeError
 
 from .test_polar_externals import Bar, Foo, MyClass, OurClass, Qux, YourClass
