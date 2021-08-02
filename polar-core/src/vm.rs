@@ -2055,14 +2055,18 @@ impl PolarVirtualMachine {
                         })
                         .map(|term| match term.value() {
                             Value::RestVariable(v) => {
-                                let term = op!(In, item.clone(), Term::new_temporary(Value::Variable(v.clone()))).into_term();
+                                let term = op!(
+                                    In,
+                                    item.clone(),
+                                    Term::new_temporary(Value::Variable(v.clone()))
+                                )
+                                .into_term();
                                 vec![Goal::Query { term }]
                             }
-                            _ =>
-                                vec![Goal::Unify {
-                                    left: item.clone(),
-                                    right: term.clone(),
-                                }],
+                            _ => vec![Goal::Unify {
+                                left: item.clone(),
+                                right: term.clone(),
+                            }],
                         })
                         .collect::<Vec<Goals>>(),
                 )?;

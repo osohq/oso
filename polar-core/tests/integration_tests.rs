@@ -1568,8 +1568,18 @@ fn test_rest_vars() -> TestResult {
     qeval(&mut p, "append([1,2,3], [], [1,2,3])");
     qeval(&mut p, "not append([1,2,3], [4], [1,2,3])");
 
+    qeval(
+        &mut p,
+        "a = [1, *b] and b = [2, *c] and c=[3] and 1 in a and 2 in a and 3 in a",
+    );
+
     let a = &var(&mut p, "[*_] in [*a] and [*b] in [*_] and b = 1", "a")[0];
-    assert!(matches!(a, Value::List(b) if matches!(b[0].value(), Value::RestVariable(_))));
+    assert!(matches!(a,
+        Value::Expression(Operation { operator: Operator::And , args }) if args.len() == 1
+            && matches!(args[0].value(),
+                Value::Expression(Operation { operator: Operator::In, args }) if args.len() == 2
+                    && matches!(args[0].value(), Value::List(l) if l.len() == 1 && matches!(l[0].value(), Value::RestVariable(_)))
+                    && matches!(args[1].value(), Value::Variable(Symbol(this)) if this as &str == "_this")))); // wow ...
     Ok(())
 }
 
