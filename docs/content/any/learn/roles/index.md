@@ -85,8 +85,8 @@ represented by any object, including a simple string.
 
 ```polar
 # Defining roles for users
-user_in_role(user: User{username: "steve"}, "admin");
-user_in_role(user: User{username: "leina"}, "admin");
+user_in_role(_user: User{username: "steve"}, "admin");
+user_in_role(_user: User{username: "leina"}, "admin");
 
 # Assigning groups of users to the same role
 user_in_role(user: User, "admin") if
@@ -168,12 +168,12 @@ that is required to scope roles to single tenants is to check tenancy in the
 
 ```polar
 # User-role mappings
-user_in_role(User{username: "steve"}, "admin");
-user_in_role(User{username: "leina"}, "admin");
+user_in_role(_user: User{username: "steve"}, "admin");
+user_in_role(_user: User{username: "leina"}, "admin");
 
 # Role-permission mappings
 # Admin can perform any action on any resource.
-role_allow(role: "admin", _action, _resource);
+role_allow("admin", _action, _resource);
 
 # Allow rule to enable role checking with tenant scoping
 allow(actor: User, action, resource) if
@@ -203,9 +203,9 @@ for all users.
 
 ```polar
 # Per-tenant user-role mappings
-user_in_role_for_tenant(user: User{name: "leina"}, "admin", tenant_id: 1);
-user_in_role_for_tenant(user: User{name: "leina"}, "member", tenant_id: 2);
-user_in_role_for_tenant(user: User{name: "steve"}, "admin", tenant_id: 2);
+user_in_role_for_tenant(_user: User{name: "leina"}, "admin", 1);
+user_in_role_for_tenant(_user: User{name: "leina"}, "member", 2);
+user_in_role_for_tenant(_user: User{name: "steve"}, "admin", 2);
 ```
 
 To avoid hardcoding role assignments for users, the user-role-tenant
@@ -235,10 +235,10 @@ rule can be modified to take the tenant as an argument:
 
 ```polar
 # Allow the admin role for tenant 1 to take any action on Foo resources
-role_allow_for_tenant("admin", _action, _resource: Foo, tenant_id: 1);
+role_allow_for_tenant("admin", _action, _resource: Foo, 1);
 
 # Allow the admin role for tenant 2 to take any action on Bar resources
-role_allow_for_tenant("admin", _action, _resource: Bar, tenant_id: 2);
+role_allow_for_tenant("admin", _action, _resource: Bar, 2);
 ```
 
 #### Enabling roles
@@ -335,7 +335,7 @@ with the following top-level `allow` rule:
 ```polar
 allow(user, action, resource) if
     user_in_role_for_resource(user, role, resource) and
-    role_allow(role, resource);
+    role_allow(role, action, resource);
 ```
 
 ### User-role mappings
@@ -349,9 +349,9 @@ user-role-resource assignments:
 ```polar
 # Assign leina the "member" role for Project 1
 user_in_role_for_resource(
-    user: User{name: "leina"},
-    role: "member",
-    project: Project{id: 1});
+    _user: User{name: "leina"},
+    "member",
+    _project: Project{id: 1});
 ```
 
 To avoid hardcoding the user-role-resource assignments, the assignments can be
@@ -429,9 +429,9 @@ user_in_group(user, group) if
 
 # Assign a role to a group
 group_in_role_for_resource(
-    group: Team{name: "backend_team"},
-    role: "owner",
-    resource: Repository{name: "backend_repo"});
+    _group: Team{name: "backend_team"},
+    "owner",
+    _resource: Repository{name: "backend_repo"});
 
 # Users inherit roles from their groups
 user_in_role_for_resource(user, role, resource) if

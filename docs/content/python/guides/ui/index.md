@@ -149,7 +149,7 @@ resource(_type: Organization, "org", actions, roles) if
     },
   };
 
-resource(_type: Repository, "repo", actions, {}) if
+resource(_type: Repository, "repo", actions, roles) if
   actions = ["CREATE", "READ", "UPDATE", "DELETE", "LIST_ISSUES", "LIST_ROLES"] and
   roles = {
     reader: {
@@ -159,7 +159,7 @@ resource(_type: Repository, "repo", actions, {}) if
       permissions: ["LIST_ROLES", "DELETE"],
       implies: ["reader"]
     }
-  }
+  };
 ```
 
 Now the users' allowed actions depend on their assigned roles for both
