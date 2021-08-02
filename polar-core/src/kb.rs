@@ -47,10 +47,9 @@ impl KnowledgeBase {
 
     /// Generate a temporary variable prefix from a variable name.
     pub fn temp_prefix(name: &str) -> String {
-        match name.strip_prefix('_') {
-            None => format!("_{}_", name),
-            Some("") => String::from(name),
-            Some(_) => format!("{}_", name),
+        match name {
+            "_" => String::from(name),
+            _ => format!("_{}_", name),
         }
     }
 
