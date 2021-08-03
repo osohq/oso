@@ -62,6 +62,7 @@ extern {
         "or" => lexer::Token::Or,           // or
         "not" => lexer::Token::Not,         // not
         "matches" => lexer::Token::Matches, // matches
+        "type" => lexer::Token::Type        // type
     }
 }
 
@@ -254,7 +255,7 @@ LogExp: Term = {
     <ExpectLogical<Exp1<"Term">>>
 }
 
-// `ValueOrLogic` is used to do some simple parse-time 
+// `ValueOrLogic` is used to do some simple parse-time
 // checks for correctly formed expressions. For example,
 // `x in y` is a logical expression, so it does
 // not make sense to compare the result with a value.
@@ -635,10 +636,20 @@ Rule: Rule = {
     }
 }
 
+RuleTemplate: Rule = {
+    "type" <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
+        let (name, params) = head;
+        let op = Operation{operator: Operator::And, args: vec![]};
+        let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
+        Rule::new_from_parser(src_id, start_head, start, name, params, body)
+    }
+}
+
 pub(crate) Rules: Vec<Rule> = <Rule*>;
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
+    <RuleTemplate> => Line::RuleTemplate(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
 }
 
