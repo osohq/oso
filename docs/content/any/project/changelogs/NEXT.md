@@ -52,6 +52,7 @@ Link to [relevant documentation section]().
 - The `var` command  in the debugger now automatically maps variable
   names to their temporary bindings.
 - The VM can now represent circular data without crashing.
+- The `in` operator now correctly handles rest variables.
 
 ### Ruby
 
