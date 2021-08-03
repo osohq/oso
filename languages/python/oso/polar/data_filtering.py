@@ -41,14 +41,17 @@ def serialize_types(types, class_names):
         polar_types[tag] = field_types
     return polar_types
 
+
 @dataclass
 class FetchResult:
     id: str
+
 
 @dataclass
 class Attrib:
     field: str
     of: FetchResult
+
 
 @dataclass
 class Constraint:
@@ -56,17 +59,18 @@ class Constraint:
     field: str
     value: Any  # Value or list of values.
 
+
 def parse_constraint(polar, constraint):
     kind = next(iter(constraint))
     assert kind in ["Eq", "In"]
     field = constraint[kind]["field"]
     value = constraint[kind]["value"]
     # @TODO(steve): This is not the best way to distinguish these...
-    if 'field' in value:
-        fetch_result = FetchResult(id=value['of']['id'])
-        attrib = Attrib(field=value['field'], of=fetch_result)
+    if "field" in value:
+        fetch_result = FetchResult(id=value["of"]["id"])
+        attrib = Attrib(field=value["field"], of=fetch_result)
         value = attrib
-    elif 'value' in value:
+    elif "value" in value:
         value = polar.host.to_python(value)
     else:
         assert False, "Unknown constraint kind"

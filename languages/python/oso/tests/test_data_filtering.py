@@ -344,7 +344,7 @@ def test_roles_data_filtering(oso):
     results = list(oso.get_allowed_resources(leina, "pull", Repo))
     assert len(results) == 2
 
-    # Well, it seems like this does an infinite loop or something. Not good.
+    # TODO(steve): This used to infiniate loop but now hits some Unhandled event error.
     # results = list(oso.get_allowed_resources(leina, "edit", Issue))
     # assert results == [oso_bug]
 

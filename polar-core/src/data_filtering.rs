@@ -207,7 +207,7 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
     let mut get_id = move || {
         let id = next_id;
         next_id += 1;
-        format!("{}", next_id)
+        format!("{}", id)
     };
 
     // Give each cycle an id
@@ -400,20 +400,25 @@ fn constrain_var(
                     other_class_tag,
                     my_field,
                     other_field,
-                } = typ {
+                } = typ
+                {
                     constrain_var(result_set, types, vars, child, other_class_tag);
                     request.constraints.push(Constraint::In {
                         field: my_field.clone(),
-                        value: Attrib{field: other_field.clone(), of: FetchResult{id: child.clone()}}
+                        value: Attrib {
+                            field: other_field.clone(),
+                            of: FetchResult { id: child.clone() },
+                        },
                     });
-                    continue
+                    continue;
                 }
             }
             // Non relationship or unknown type info.
             // @TODO: Handle "in"
             if let Some(value) = vars.values.get(child) {
-                request.constraints.push(Constraint::Eq{
-                    field: field.clone(), value: value.clone()
+                request.constraints.push(Constraint::Eq {
+                    field: field.clone(),
+                    value: value.clone(),
                 });
             } else {
                 panic!("why?")
