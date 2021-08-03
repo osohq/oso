@@ -2152,8 +2152,8 @@ impl PolarVirtualMachine {
             (Value::Expression(op), other) | (other, Value::Expression(op)) => {
                 match op {
                     // this branch handles dot ops that were rewritten for inclusion
-                    // in a partial, but then queried again after the partial was bound;
-                    // cf. Vm::dot_op_helper(), Vm::bind()
+                    // in a partial by Vm::dot_op_helper(), but then queried again after
+                    // the partial was bound by Vm::bind().
                     Operation {
                         operator: Operator::Dot,
                         args,

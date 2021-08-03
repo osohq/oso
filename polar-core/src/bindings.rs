@@ -176,10 +176,12 @@ impl BindingManager {
 
     /// Bind `var` to `val`.
     ///
-    /// If the binding succeeds, Ok is returned. If the binding is *incompatible*
-    /// an error is returned.
+    /// If the binding succeeds, Ok with an optional goal is returned. The goal will be
+    /// present if the binding replaces a partial, which then needs to be reevaluated
+    /// to ensure compatibility.
     ///
-    /// A binding is considered *incompatible* if either:
+    /// If the binding is *incompatible* an error is returned. A binding is considered
+    /// *incompatible* if either:
     ///
     /// 1. `var` is already bound to some value (rebindings are not allowed, even if the
     ///    rebinding is to the same value).
