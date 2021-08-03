@@ -210,15 +210,10 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
         format!("{}", next_id)
     };
 
-    let mut this_id = String::new();
-
     // Give each cycle an id
     let mut variables: HashMap<String, HashSet<Symbol>> = HashMap::new();
     for joined_cycle in joined_cycles {
         let id = get_id();
-        if joined_cycle.contains(&Symbol::new("_this")) {
-            this_id = id.clone();
-        }
         variables.insert(id, joined_cycle);
     }
 
@@ -345,6 +340,13 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
         types.insert(new_id, typ);
     }
 
+    let mut this_id = String::new();
+    for (id, set) in &variables {
+        if set.contains(&Symbol::new("_this")) {
+            this_id = id.clone()
+        }
+    }
+
     Vars {
         variables,
         relationships,
@@ -459,13 +461,6 @@ pub fn build_filter_plan(
         let term = result.bindings.get(&Symbol::new(variable)).unwrap();
         let exp = term.value().as_expression()?;
         assert_eq!(exp.operator, Operator::And);
-
-        let mut var_info = VarInfo {
-            cycles: vec![],
-            types: vec![],
-            values: vec![],
-            relationships: vec![],
-        };
 
         let var_info = process_result(exp);
         let vars = collapse_vars(var_info);

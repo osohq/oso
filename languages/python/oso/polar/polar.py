@@ -27,7 +27,7 @@ from .query import Query
 from .predicate import Predicate
 from .variable import Variable
 from .expression import Expression, Pattern
-from .data_filtering import evaluate, serialize_types, filter_data
+from .data_filtering import serialize_types, filter_data
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py

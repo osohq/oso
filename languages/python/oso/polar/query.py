@@ -7,7 +7,7 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
-from .data_filtering import Relationship, Constraint, Constraints
+from .data_filtering import Relationship, Constraint
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -114,7 +114,7 @@ class Query:
                                 field=rel.other_field,
                                 value=getattr(instance, rel.my_field),
                             )
-                            constraints = Constraints(rel.other_type, [constraint])
+                            constraints = [constraint]
                             results = fetcher(constraints)
                             if rel.kind == "parent":
                                 assert len(results) == 1

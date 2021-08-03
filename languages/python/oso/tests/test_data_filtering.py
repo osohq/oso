@@ -108,32 +108,32 @@ def test_data_filtering(oso):
     results = list(oso.get_allowed_resources("steve", "get", Foo))
     assert len(results) == 3
 
-    # oso.clear_rules()
-    # #
-    # policy = """
-    # allow("steve", "get", resource: Foo) if
-    #     resource.bar = bar and
-    #     bar.is_cool = true and
-    #     resource.is_fooey = true;
-    # """
-    # oso.load_str(policy)
-    # assert oso.is_allowed("steve", "get", another_foo)
+    oso.clear_rules()
     #
-    # results = list(oso.get_allowed_resources("steve", "get", Foo))
-    # assert len(results) == 2
+    policy = """
+    allow("steve", "get", resource: Foo) if
+        resource.bar = bar and
+        bar.is_cool = true and
+        resource.is_fooey = true;
+    """
+    oso.load_str(policy)
+    assert oso.is_allowed("steve", "get", another_foo)
+
+    results = list(oso.get_allowed_resources("steve", "get", Foo))
+    assert len(results) == 2
+
+    oso.clear_rules()
     #
-    # oso.clear_rules()
-    # #
-    # policy = """
-    # allow("steve", "get", resource: Foo) if
-    #     resource.bar = bar and
-    #     bar.is_cool in [true, false];
-    # """
-    # oso.load_str(policy)
-    # assert oso.is_allowed("steve", "get", another_foo)
-    #
-    # results = list(oso.get_allowed_resources("steve", "get", Foo))
-    # assert len(results) == 4
+    policy = """
+    allow("steve", "get", resource: Foo) if
+        resource.bar = bar and
+        bar.is_cool in [true, false];
+    """
+    oso.load_str(policy)
+    assert oso.is_allowed("steve", "get", another_foo)
+
+    results = list(oso.get_allowed_resources("steve", "get", Foo))
+    assert len(results) == 4
 
 
 def test_roles_data_filtering(oso):
@@ -191,7 +191,7 @@ def test_roles_data_filtering(oso):
         results = []
         for elem in array:
             matches = True
-            for constraint in constraints.constraints:
+            for constraint in constraints:
                 val = getattr(elem, constraint.field)
                 if constraint.kind == "Eq":
                     if val != constraint.value:
@@ -206,23 +206,18 @@ def test_roles_data_filtering(oso):
         return results
 
     def get_orgs(constraints):
-        assert constraints.cls == "Org"
         return filter_array(orgs, constraints)
 
     def get_repos(constraints):
-        assert constraints.cls == "Repo"
         return filter_array(repos, constraints)
 
     def get_issues(constraints):
-        assert constraints.cls == "Issue"
         return filter_array(issues, constraints)
 
     def get_roles(constraints):
-        assert constraints.cls == "Role"
         return filter_array(roles, constraints)
 
     def get_users(constraints):
-        assert constraints.cls == "User"
         return filter_array(users, constraints)
 
     oso.register_class(Org, types={"name": str}, fetcher=get_orgs)
