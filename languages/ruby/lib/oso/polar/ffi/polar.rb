@@ -7,6 +7,8 @@ module Oso
     module FFI
       # Wrapper class for Polar FFI pointer + operations.
       class Polar < ::FFI::AutoPointer
+        attr_reader :enrich_message
+
         Rust = Module.new do
           extend ::FFI::Library
           ffi_lib FFI::LIB_PATH
@@ -30,7 +32,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def self.create
           polar = Rust.new
-          raise FFI::Error.get if polar.null?
+          handle_error if polar.null?
 
           polar
         end
@@ -39,14 +41,14 @@ module Oso
         def enable_roles
           result = Rust.enable_roles(self)
           process_messages
-          raise FFI::Error.get if result.zero?
+          handle_error if result.zero?
         end
 
         # @raise [FFI::Error] if the FFI call returns an error.
         def validate_roles_config(config)
           result = Rust.validate_roles_config(self, JSON.dump(config))
           process_messages
-          raise FFI::Error.get if result.zero?
+          handle_error if result.zero?
         end
 
         # @param src [String]
@@ -55,14 +57,14 @@ module Oso
         def load(src, filename: nil)
           loaded = Rust.load(self, src, filename)
           process_messages
-          raise FFI::Error.get if loaded.zero?
+          handle_error if loaded.zero?
         end
 
         # @raise [FFI::Error] if the FFI call returns an error.
         def clear_rules
           cleared = Rust.clear_rules(self)
           process_messages
-          raise FFI::Error.get if cleared.zero?
+          handle_error if cleared.zero?
         end
 
         # @return [FFI::Query] if there are remaining inline queries.
@@ -80,7 +82,7 @@ module Oso
           id = Rust.new_id(self)
           # TODO(gj): I don't think this error check is correct. If getting a new ID fails on the
           # Rust side, it'll probably surface as a panic (e.g., the KB lock is poisoned).
-          raise FFI::Error.get if id.zero?
+          handle_error if id.zero?
 
           id
         end
@@ -91,7 +93,7 @@ module Oso
         def new_query_from_str(str)
           query = Rust.new_query_from_str(self, str, 0)
           process_messages
-          raise FFI::Error.get if query.null?
+          handle_error if query.null?
 
           query
         end
@@ -102,7 +104,7 @@ module Oso
         def new_query_from_term(term)
           query = Rust.new_query_from_term(self, JSON.dump(term), 0)
           process_messages
-          raise FFI::Error.get if query.null?
+          handle_error if query.null?
 
           query
         end
@@ -112,7 +114,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def register_constant(value, name:)
           registered = Rust.register_constant(self, name, JSON.dump(value))
-          raise FFI::Error.get if registered.zero?
+          handle_error if registered.zero?
         end
 
         def next_message
@@ -124,8 +126,16 @@ module Oso
             message = next_message
             break if message.null?
 
-            message.process
+            message.process(self.enrich_message)
           end
+        end
+
+        def handle_error
+          raise FFI::Error.get(self.enrich_message)
+        end
+
+        def set_message_enricher(&block)
+          @enrich_message = block
         end
       end
     end

@@ -37,7 +37,7 @@ module Oso
       def initialize
         @ffi_polar = FFI::Polar.create
         @host = Host.new(ffi_polar)
-        # @ffi_polar.set_message_enricher { |msg| @host.enrich_message(msg) }
+        @ffi_polar.set_message_enricher { |msg| @host.enrich_message(msg) }
         @polar_roles_enabled = false
 
         # Register global constants.
