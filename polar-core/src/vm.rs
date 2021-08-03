@@ -3520,6 +3520,7 @@ mod tests {
                     ))])),
                 ],
             })),
+            source_info: SourceInfo::Test,
         };
 
         let renamed_rule = vm.rename_rule_vars(&rule);
