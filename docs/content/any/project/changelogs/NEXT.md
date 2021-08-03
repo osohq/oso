@@ -54,6 +54,7 @@ Link to [relevant documentation section]().
 - Constraints on unbound variables no longer prevent the variable from
   later being bound.
 - The VM can now represent circular data without crashing.
+- The `in` operator now correctly handles rest variables.
 
 ### Ruby
 
@@ -70,6 +71,15 @@ Link to [relevant documentation section]().
 The Rust library now has
 [built-in support for Role-Based Access Control (RBAC) policies](/guides/roles),
 which you can turn on with `.enable_roles()`.
+
+### Java
+
+#### New features
+
+##### Roles in Java
+
+The Java library now has built-in support for Role-Based Access Control (RBAC)
+policies, which you can turn on with `.enable_roles()`.
 
 ### Python
 
