@@ -310,8 +310,9 @@ module Oso
       end
 
       def enrich_message(msg)
-        # TODO
-        msg
+        msg.gsub(/\^\{id: ([0-9]+)\}/) do |match|
+          get_instance($1.to_i).to_s
+        end
       end
     end
   end
