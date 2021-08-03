@@ -150,7 +150,7 @@ module Oso
           when 'Debug'
             msg = event.data['message']
             if msg
-              msg = self.enrich_message.call(msg) if msg
+              msg = self.host.enrich_message(msg) if msg
               puts msg
             end
             print 'debug> '
