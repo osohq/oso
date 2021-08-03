@@ -242,7 +242,7 @@ module Oso
                     { 'Pattern' => { 'Instance' => { 'tag' => value.tag, 'fields' => dict['Dictionary'] } } }
                   end
                 else
-                  { 'ExternalInstance' => { 'instance_id' => cache_instance(value), 'repr' => value.to_s } }
+                  { 'ExternalInstance' => { 'instance_id' => cache_instance(value), 'repr' => nil } }
                 end
         { 'value' => value }
       end
