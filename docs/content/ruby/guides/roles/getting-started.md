@@ -258,16 +258,15 @@ roles.
 Here's the full `Org` resource definition from the GitClub example app:
 
 {{< literalInclude
-    path="examples/gitclub-sqlalchemy-flask-react/backend/app/authorization.polar"
+    path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
     from="docs: begin-org-resource"
     to="docs: end-org-resource"
-    gitHub="https://github.com/osohq/gitclub-sqlalchemy-flask-react"
+    gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
 
 Notice the `"repo:reader"` and `"repo:admin"` implications. These are
-roles defined on another resource, `Repo`. In the next guide, we'll
-see how to set up **cross resource implied roles** like these!
+roles defined on another resource, `Repo`.
 
 ## Have feedback?
 

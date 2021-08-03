@@ -4,6 +4,9 @@ title: Flask Authorization Library
 aliases:
   - /using/frameworks/flask.html
 description: The Oso Flask integration provides request authorization middleware for usage with Flask.
+referenceLinks:
+    - type: exampleApp
+      url: https://github.com/osohq/gitclub
 ---
 
 # Flask
@@ -220,7 +223,7 @@ attributes, like the path:
 
 ```polar
 # Allow any actor to make a GET request to "/".
-allow(_actor, action: "GET", resource: Request{path: "/"});
+allow(_actor, "GET", _resource: Request{path: "/"});
 ```
 
 To enforce route authorization on all requests (the equivalent of decorating

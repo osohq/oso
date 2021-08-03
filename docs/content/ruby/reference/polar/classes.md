@@ -42,7 +42,7 @@ Ruby strings are mapped to Polar [strings](polar-syntax#strings). Ruby’s strin
 methods may be called in policies:
 
 ```polar
-allow(actor, action, resource) if actor.username.end_with?("example.com");
+allow(actor, _action, _resource) if actor.username.end_with?("example.com");
 ```
 
 ```ruby
@@ -68,7 +68,7 @@ Ruby [Arrays][rb-array] are mapped to Polar [lists](polar-syntax#lists). Ruby’
 Array methods may be called in policies:
 
 ```polar
-allow(actor, action, resource) if actor.groups.include?("HR");
+allow(actor, _action, _resource) if actor.groups.include?("HR");
 ```
 
 ```ruby
@@ -92,7 +92,7 @@ also returned from the method.
 Likewise, lists constructed in Polar may be passed into Ruby methods:
 
 ```polar
-allow(actor, action, resource) if actor.has_groups?(["HR", "payroll"]);
+allow(actor, _action, _resource) if actor.has_groups?(["HR", "payroll"]);
 ```
 
 ```ruby
@@ -124,7 +124,7 @@ matching](polar-syntax#patterns-and-matching).
 Ruby hashes are mapped to Polar [dictionaries](polar-syntax#dictionaries):
 
 ```polar
-allow(actor, action, resource) if actor.roles.project1 = "admin";
+allow(actor, _action, _resource) if actor.roles.project1 = "admin";
 ```
 
 ```ruby
@@ -148,7 +148,7 @@ You may iterate over any Ruby [enumerable][rb-enumerable] using Polar's [`in`
 operator](polar-syntax#in-list-membership):
 
 ```polar
-allow(actor, action, resource) if "payroll" in actor.get_groups();
+allow(actor, _action, _resource) if "payroll" in actor.get_groups();
 ```
 
 ```ruby
@@ -168,7 +168,7 @@ The Ruby value `nil` is registered as the Polar constant
 `nil`, you may want to compare the result to Polar's `nil` in your policy:
 
 ```polar
-allow(actor, action, resource) if actor.get_optional != nil;
+allow(actor, _action, _resource) if actor.get_optional != nil;
 ```
 
 ```ruby
