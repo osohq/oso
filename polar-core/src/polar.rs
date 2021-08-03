@@ -14,7 +14,6 @@ use super::terms::*;
 use super::vm::*;
 use super::warnings::check_singletons;
 
-use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
 pub struct Query {
@@ -143,10 +142,6 @@ const ROLES_POLICY: &str = include_str!("roles.polar");
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
     messages: MessageQueue,
-    /// Set of filenames already loaded
-    loaded_files: Arc<RwLock<HashSet<String>>>,
-    /// Map from source code loaded to the filename it was loaded as
-    loaded_content: Arc<RwLock<HashMap<String, String>>>,
 }
 
 impl Default for Polar {
@@ -160,94 +155,65 @@ impl Polar {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
             messages: MessageQueue::new(),
-            loaded_content: Arc::new(RwLock::new(HashMap::new())), // file content -> file name
-            loaded_files: Arc::new(RwLock::new(HashSet::new())),   // set of file names
         }
-    }
-
-    fn check_file(&self, src: &str, filename: &str) -> PolarResult<()> {
-        match (
-            self.loaded_content.read().unwrap().get(src),
-            self.loaded_files.read().unwrap().contains(filename),
-        ) {
-            (Some(other_file), true) if other_file == filename => {
-                return Err(error::RuntimeError::FileLoading {
-                    msg: format!("File {} has already been loaded.", filename),
-                }
-                .into())
-            }
-            (_, true) => {
-                return Err(error::RuntimeError::FileLoading {
-                    msg: format!(
-                        "A file with the name {}, but different contents has already been loaded.",
-                        filename
-                    ),
-                }
-                .into());
-            }
-            (Some(other_file), _) => {
-                return Err(error::RuntimeError::FileLoading {
-                    msg: format!(
-                        "A file with the same contents as {} named {} has already been loaded.",
-                        filename, other_file
-                    ),
-                }
-                .into());
-            }
-            _ => {}
-        }
-        self.loaded_content
-            .write()
-            .unwrap()
-            .insert(src.to_string(), filename.to_string());
-        self.loaded_files
-            .write()
-            .unwrap()
-            .insert(filename.to_string());
-
-        Ok(())
     }
 
     pub fn load(&self, src: &str, filename: Option<String>) -> PolarResult<()> {
-        if let Some(ref filename) = filename {
-            self.check_file(src, filename)?;
-        }
         let source = Source {
             filename,
             src: src.to_owned(),
         };
         let mut kb = self.kb.write().unwrap();
-        let src_id = kb.new_id();
-        let mut lines =
-            parser::parse_lines(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
-        lines.reverse();
-        kb.sources.add_source(source, src_id);
-        let mut warnings = vec![];
-        while let Some(line) = lines.pop() {
-            match line {
-                parser::Line::Rule(rule) => {
-                    let mut rule_warnings = check_singletons(&rule, &kb)?;
-                    warnings.append(&mut rule_warnings);
-                    let rule = rewrite_rule(rule, &mut kb);
+        let source_id = kb.add_source(source.clone())?;
 
-                    let name = rule.name.clone();
-                    let generic_rule = kb
-                        .rules
-                        .entry(name.clone())
-                        .or_insert_with(|| GenericRule::new(name, vec![]));
-                    generic_rule.add_rule(Arc::new(rule));
-                }
-                parser::Line::Query(term) => {
-                    kb.inline_queries.push(term);
+        // we extract this into a seperate function
+        // so that any errors returned with `?` are captured
+        fn load_source(
+            source_id: u64,
+            source: &Source,
+            kb: &mut KnowledgeBase,
+        ) -> PolarResult<Vec<String>> {
+            let mut lines = parser::parse_lines(source_id, &source.src)
+                .map_err(|e| e.set_context(Some(source), None))?;
+            lines.reverse();
+            let mut warnings = vec![];
+            while let Some(line) = lines.pop() {
+                match line {
+                    parser::Line::Rule(rule) => {
+                        let mut rule_warnings = check_singletons(&rule, &*kb)?;
+                        warnings.append(&mut rule_warnings);
+                        let rule = rewrite_rule(rule, kb);
+
+                        let name = rule.name.clone();
+                        let generic_rule = kb
+                            .rules
+                            .entry(name.clone())
+                            .or_insert_with(|| GenericRule::new(name, vec![]));
+                        generic_rule.add_rule(Arc::new(rule));
+                    }
+                    parser::Line::Query(term) => {
+                        kb.inline_queries.push(term);
+                    }
                 }
             }
+            Ok(warnings)
         }
-        self.messages.extend(warnings.iter().map(|m| Message {
-            kind: MessageKind::Warning,
-            msg: m.to_owned(),
-        }));
 
-        Ok(())
+        // if any of the lines fail to load, we need to remove the source from
+        // the knowledge base
+        match load_source(source_id, &source, &mut kb) {
+            Ok(warnings) => {
+                self.messages.extend(warnings.iter().map(|m| Message {
+                    kind: MessageKind::Warning,
+                    msg: m.to_owned(),
+                }));
+                Ok(())
+            }
+            Err(e) => {
+                kb.remove_source(source_id);
+                Err(e)
+            }
+        }
     }
 
     // Used in integration tests
@@ -255,14 +221,15 @@ impl Polar {
         self.load(src, None)
     }
 
+    pub fn remove_file(&self, filename: &str) -> Option<String> {
+        let mut kb = self.kb.write().unwrap();
+        kb.remove_file(filename)
+    }
+
     /// Clear rules from the knowledge base
     pub fn clear_rules(&self) {
         let mut kb = self.kb.write().unwrap();
-        kb.rules.clear();
-        kb.sources = Sources::default();
-        kb.inline_queries.clear();
-        self.loaded_content.write().unwrap().clear();
-        self.loaded_files.write().unwrap().clear();
+        kb.clear_rules();
     }
 
     pub fn next_inline_query(&self, trace: bool) -> Option<Query> {
@@ -349,10 +316,40 @@ mod tests {
     fn roles_policy_loads_idempotently() {
         let polar = Polar::new();
         assert!(polar.enable_roles().is_ok());
-        assert_eq!(polar.loaded_files.read().unwrap().len(), 1);
-        assert_eq!(polar.loaded_content.read().unwrap().len(), 1);
+        {
+            let kb = polar.kb.read().unwrap();
+            assert_eq!(kb.loaded_files.len(), 1);
+            assert_eq!(kb.loaded_content.len(), 1);
+        }
         assert!(polar.enable_roles().is_ok());
-        assert_eq!(polar.loaded_files.read().unwrap().len(), 1);
-        assert_eq!(polar.loaded_content.read().unwrap().len(), 1);
+        {
+            let kb = polar.kb.read().unwrap();
+            assert_eq!(kb.loaded_files.len(), 1);
+            assert_eq!(kb.loaded_content.len(), 1);
+        }
+    }
+
+    #[test]
+    fn load_remove_files() {
+        let polar = Polar::new();
+        polar
+            .load("f(x) if x = 1;", Some("test.polar".to_string()))
+            .unwrap();
+        polar.remove_file("test.polar");
+        // loading works after removing
+        polar
+            .load("f(x) if x = 1;", Some("test.polar".to_string()))
+            .unwrap();
+        polar.remove_file("test.polar");
+
+        // load a broken file
+        polar
+            .load("f(x) if x", Some("test.polar".to_string()))
+            .unwrap_err();
+
+        // can still load files again
+        polar
+            .load("f(x) if x = 1;", Some("test.polar".to_string()))
+            .unwrap();
     }
 }
