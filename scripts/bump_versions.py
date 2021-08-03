@@ -1,3 +1,10 @@
+"""Bump versions in files for release.
+
+Requirements:
+
+    - tomlkit: Format preserving TOML parser.
+"""
+
 import pathlib
 import sys
 import re
