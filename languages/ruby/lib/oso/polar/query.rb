@@ -13,7 +13,7 @@ module Oso
       def initialize(ffi_query, host:)
         @calls = {}
         @ffi_query = ffi_query
-        ffi_query.set_message_enricher { |msg| host.enrich_message(msg) }
+        ffi_query.enrich_message = host.method(:enrich_message)
         @host = host
       end
 
@@ -150,7 +150,7 @@ module Oso
           when 'Debug'
             msg = event.data['message']
             if msg
-              msg = self.host.enrich_message(msg) if msg
+              msg = host.enrich_message(msg) if msg
               puts msg
             end
             print 'debug> '

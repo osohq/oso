@@ -7,7 +7,7 @@ module Oso
     module FFI
       # Wrapper class for Query FFI pointer + operations.
       class Query < ::FFI::AutoPointer
-        attr_reader :enrich_message
+        attr_accessor :enrich_message
 
         Rust = Module.new do
           extend ::FFI::Library
@@ -76,7 +76,7 @@ module Oso
             message = next_message
             break if message.null?
 
-            message.process(self.enrich_message)
+            message.process(enrich_message)
           end
         end
 
@@ -90,11 +90,7 @@ module Oso
         end
 
         def handle_error
-          raise FFI::Error.get(self.enrich_message)
-        end
-
-        def set_message_enricher(&block)
-          @enrich_message = block
+          raise FFI::Error.get(enrich_message)
         end
       end
     end
