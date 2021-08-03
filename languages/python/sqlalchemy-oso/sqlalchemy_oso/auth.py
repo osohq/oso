@@ -86,7 +86,10 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
 
         resource_partial = result["bindings"]["resource"]
         if isinstance(resource_partial, model):
-            f = lambda pk: getattr(model, pk) == getattr(resource_partial, pk)
+
+            def f(pk):
+                return getattr(model, pk) == getattr(resource_partial, pk)
+
             filters = [f(pk.name) for pk in inspect(model).primary_key]
             filter = reduce(lambda a, b: a & b, filters)
 
