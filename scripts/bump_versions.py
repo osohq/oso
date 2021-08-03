@@ -3,7 +3,6 @@
 Requirements:
 
     - tomlkit: Format preserving TOML parser.
-    - ruamel.yaml: Format preserving YAML parser.
 """
 
 import pathlib
@@ -14,7 +13,6 @@ import fileinput
 
 from packaging.version import parse as parse_version
 import tomlkit
-import ruamel.yaml
 
 """The base oso directory."""
 BASE = pathlib.Path(__file__).parent.parent
@@ -85,30 +83,6 @@ def replace_version_toml(filename, mutations):
         f.write(write_str)
 
 
-def replace_version_yaml(filename, mutations):
-    """Apply ``mutations`` to YAML formatted ``filename``.
-
-    :param mutations: Mutations is a dictionary describing keys and values
-                      in the YAML file to update. Keys are specified as a ``.``
-                      separated path.
-    """
-    with open(filename, "r") as f:
-        contents_str = f.read()
-        contents = ruamel.yaml.loads(contents_str)
-
-    for (path, update) in mutations.items():
-        parts = path.split(".")
-        o = contents
-        for part in parts[:-1]:
-            o = o[part]
-
-        log(f"{filename}: {path} => {update}")
-        o[parts[-1]] = update
-
-    with open(filename, "w") as f:
-        contents.dump(f)
-
-
 def bump_oso_version(version):
     replace_version(version, BASE / "VERSION")
     replace_version(version,
@@ -160,10 +134,9 @@ def bump_oso_version(version):
                              "package.version": version,
                              "dependencies.polar-core.version": f"={version}",
                          })
-    replace_version_yaml(BASE / ".github/workflows/publish-docs.yml",
-                         {
-                             "on.workflow_dispatch.inputs.oso_version.default": version
-                         })
+    replace_version(version,
+                    BASE / ".github/workflows/publish-docs.yml",
+                    fr'default: "({VERSION_RE})" # oso_version')
 
 
 def oso_python_dependency_version(version):
@@ -182,10 +155,9 @@ def bump_sqlalchemy_version(version, oso_version):
     replace_version(oso_python_dependency_version(oso_version),
                     BASE / "languages/python/sqlalchemy-oso/requirements.txt",
                     fr'oso~=({VERSION_RE})')
-    replace_version_yaml(BASE / ".github/workflows/publish-docs.yml",
-                         {
-                             "on.workflow_dispatch.inputs.sqlalchemy_oso_version.default": version
-                         })
+    replace_version(version,
+                    BASE / ".github/workflows/publish-docs.yml",
+                    fr'default: "({VERSION_RE})" # sqlalchemy_oso_version')
 
 
 def bump_flask_version(version, oso_version):
@@ -195,10 +167,9 @@ def bump_flask_version(version, oso_version):
     replace_version(oso_python_dependency_version(oso_version),
                     BASE / "languages/python/flask-oso/requirements.txt",
                     fr'oso~=({VERSION_RE})')
-    replace_version_yaml(BASE / ".github/workflows/publish-docs.yml",
-                         {
-                             "on.workflow_dispatch.inputs.flask_oso_version.default": version
-                         })
+    replace_version(version,
+                    BASE / ".github/workflows/publish-docs.yml",
+                    fr'default: "({VERSION_RE})" # flask_oso_version')
 
 
 def bump_django_version(version, oso_version):
@@ -208,10 +179,9 @@ def bump_django_version(version, oso_version):
     replace_version(oso_python_dependency_version(oso_version),
                     BASE / "languages/python/django-oso/requirements.txt",
                     fr'oso~=({VERSION_RE})')
-    replace_version_yaml(BASE / ".github/workflows/publish-docs.yml",
-                         {
-                             "on.workflow_dispatch.inputs.django_oso_version.default": version
-                         })
+    replace_version(version,
+                    BASE / ".github/workflows/publish-docs.yml",
+                    fr'default: "({VERSION_RE})" # django_oso_version')
 
 
 
