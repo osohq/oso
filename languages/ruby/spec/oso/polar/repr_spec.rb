@@ -36,7 +36,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
     it 'test_repr_when_debugging' do
       subject.load_str('f(_foo: Foo) if debug() and 1 = 1;')
-      input = StringIO.new('bindings\n')
+      input = StringIO.new("bindings\n")
       $stdin = input
       expect do
         subject.query_rule('f', Foo.new).to_a
