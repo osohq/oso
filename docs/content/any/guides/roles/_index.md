@@ -61,6 +61,7 @@ add Oso Roles to a Node.js application.
 {{% ifLang not="node" %}}
 {{% ifLang not="python" %}}
 {{% ifLang not="ruby" %}}
+{{% ifLang not="rust" %}}
 
 ## Get started
 
