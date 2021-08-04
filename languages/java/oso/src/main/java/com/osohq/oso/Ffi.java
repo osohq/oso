@@ -27,6 +27,16 @@ public class Ffi {
       return ptr;
     }
 
+    protected int enableRoles() throws Exceptions.OsoException {
+      int result = polarLib.polar_enable_roles(ptr);
+      return checkResult(result);
+    }
+
+    protected int validateRolesConfig(String results) throws Exceptions.OsoException {
+      int result = polarLib.polar_validate_roles_config(ptr, results);
+      return checkResult(result);
+    }
+
     protected long newId() throws Exceptions.OsoException {
       return checkResult(polarLib.polar_get_external_id(ptr));
     }
@@ -236,6 +246,10 @@ public class Ffi {
     Pointer polar_query_source_info(Pointer query_ptr);
 
     int polar_bind(Pointer query_ptr, String name, String value);
+
+    int polar_enable_roles(Pointer polar_ptr);
+
+    int polar_validate_roles_config(Pointer polar_ptr, String results);
   }
 
   protected Ffi() {
