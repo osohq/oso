@@ -48,6 +48,12 @@ macro_rules! pattern {
         $crate::macros::TestHelper::<Pattern>::from($arg).0
     };
 }
+#[macro_export]
+macro_rules! ptn {
+    ($arg:expr) => {
+        $crate::macros::TestHelper::<Term>::from(pattern!($arg)).0
+    };
+}
 
 #[macro_export]
 macro_rules! param {
@@ -96,9 +102,26 @@ macro_rules! sym {
 }
 
 #[macro_export]
+macro_rules! var {
+    ($arg:expr) => {
+        $crate::macros::TestHelper::<Term>::from(
+            $crate::macros::TestHelper::<Value>::from(sym!($arg)).0,
+        )
+        .0
+    };
+}
+
+#[macro_export]
 macro_rules! string {
     ($arg:expr) => {
         Value::String($arg.into())
+    };
+}
+
+#[macro_export]
+macro_rules! str {
+    ($arg:expr) => {
+        $crate::macros::TestHelper::<Term>::from(string!($arg)).0
     };
 }
 
@@ -145,6 +168,16 @@ macro_rules! op {
             operator: Operator::$op_type,
             args: vec![]
         }
+    };
+}
+
+#[macro_export]
+macro_rules! opn {
+    ($op_type:ident, $($args:expr),+) => {
+        op!($op_type, $($args),+).into_term()
+    };
+    ($op_type:ident) => {
+        op!($op_type).into_term()
     };
 }
 

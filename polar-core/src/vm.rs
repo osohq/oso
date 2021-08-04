@@ -642,8 +642,10 @@ impl PolarVirtualMachine {
         if self.log {
             self.print(&format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()));
         }
-
-        self.binding_manager.bind(var, val)
+        if let Some(goal) = self.binding_manager.bind(var, val)? {
+            self.push_goal(goal)?;
+        }
+        Ok(())
     }
 
     pub fn add_binding_follower(&mut self) -> FollowerId {
@@ -661,7 +663,6 @@ impl PolarVirtualMachine {
         if self.log {
             self.print(&format!("⇒ add_constraint: {}", term.to_polar()));
         }
-
         self.binding_manager.add_constraint(term)
     }
 
@@ -2232,15 +2233,36 @@ impl PolarVirtualMachine {
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         match (left.value(), right.value()) {
-            (Value::Expression(_), _) | (_, Value::Expression(_)) => {
-                return Err(self.type_error(
-                    left,
-                    format!(
-                        "cannot unify expressions directly `{}` = `{}`",
-                        left.to_polar(),
-                        right.to_polar()
-                    ),
-                ));
+            (Value::Expression(op), other) | (other, Value::Expression(op)) => {
+                match op {
+                    // this branch handles dot ops that were rewritten for inclusion
+                    // in a partial by Vm::dot_op_helper(), but then queried again after
+                    // the partial was bound by Vm::bind().
+                    Operation {
+                        operator: Operator::Dot,
+                        args,
+                    } if args.len() == 2 => {
+                        let term = op!(
+                            Dot,
+                            args[0].clone(),
+                            args[1].clone(),
+                            Term::from(other.clone())
+                        )
+                        .into_term();
+                        self.push_goal(Goal::Query { term })?
+                    }
+                    // otherwise this should never happen.
+                    _ => {
+                        return Err(self.type_error(
+                            left,
+                            format!(
+                                "cannot unify expressions directly `{}` = `{}`",
+                                left.to_polar(),
+                                right.to_polar()
+                            ),
+                        ))
+                    }
+                }
             }
             (Value::Pattern(_), _) | (_, Value::Pattern(_)) => {
                 return Err(self.type_error(
@@ -2352,7 +2374,6 @@ impl PolarVirtualMachine {
                 }
             }
 
-            // Unify strings by value.
             (Value::String(left), Value::String(right)) => {
                 if left != right {
                     self.push_goal(Goal::Backtrack)?;
