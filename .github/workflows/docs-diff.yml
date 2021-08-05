@@ -20,7 +20,7 @@ jobs:
     needs: [check-label]
     outputs:
       no_diff: ${{ steps.diff.outcome != 'failure' }}
-    if: ${{ !needs.check-id.outputs.hadLabel }}
+    if: ${{ needs.check-id.outputs.hadLabel == "false" }}
     runs-on: ubuntu-latest
     steps:
       - name: Diff
