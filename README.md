@@ -34,7 +34,7 @@ documentation][docs].
 
 If you have questions or need help getting started come chat with our engineering team & community members:
 
-![Button][join-slack-link]
+[![Button][join-slack-link]][badge-slack-link]
 
 ## Development
 
