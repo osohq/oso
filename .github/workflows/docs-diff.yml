@@ -2,11 +2,24 @@
 name: Docs Diff
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 jobs:
+  check-label:
+    name: Check for "Docs" label
+    runs-on: ubuntu-latest
+    outputs:
+      hadLabel: ${{ steps.label.outcome == "skipped" }}
+    steps:
+      - id: label
+        name: Check for "Docs" label
+        run: exit 1 # Fail the job!
+        if: "!contains(github.event.pull_request.labels.*.name, 'Docs')"
+        continue-on-error: true
   build-head:
     name: Build docs on HEAD.
     runs-on: ubuntu-latest
+    needs: check-label
+    if: ${{ !needs.check-id.outputs.hadLabel }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
@@ -64,6 +77,8 @@ jobs:
   build-base:
     name: Build docs on base.
     runs-on: ubuntu-latest
+    needs: check-label
+    if: ${{ !needs.check-id.outputs.hadLabel }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -122,7 +137,8 @@ jobs:
           path: docs/public
   diff:
     name: Diff
-    needs: [build-head, build-base]
+    needs: [check-label, build-head, build-base]
+    if: ${{ !needs.check-id.outputs.hadLabel }}
     runs-on: ubuntu-latest
     steps:
       - name: Pull old build of docs.
@@ -147,9 +163,10 @@ jobs:
       - id: get-comment-body
         run: |
           body=$(cat <<EOF
-            This PR contains docs changes. Comment "Docs changes ok" and rerun the job
-            if you expected this, and review the changes by running the docs locally,
-            checking for out of date code snippets.
+            This PR contains docs changes.
+
+            Add the "Docs" label to the PR if you expected this. Otherwise,
+            you should review the changes and determine if they are correct.
 
             Diff:
 
@@ -161,14 +178,6 @@ jobs:
           body="${body//$'\r'/'%0D'}"
           echo "::set-output name=body::$body"
         if: ${{ steps.diff.outcome == 'failure' }}
-      - name: Look for bot comment.
-        id: comment-bot-check
-        uses: peter-evans/find-comment@v1
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body-includes: "Docs changes ok"
-          comment-author: "github-actions[bot]"
-        if: ${{ steps.diff.outcome == 'failure' }}
       - name: Comment
         uses: peter-evans/create-or-update-comment@v1
         with:
@@ -176,15 +185,4 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           body: ${{ steps.get-comment-body.outputs.body }}
           edit-mode: replace
-        if: ${{ steps.diff.outcome == 'failure' }}
-      - name: Look for resolving comment.
-        id: comment-check
-        uses: peter-evans/find-comment@v1
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body-includes: "Docs changes ok"
-          comment-author: ${{ github.event.pull_request.user.login }}
-        if: ${{ steps.diff.outcome == 'failure' }}
-      - name: Make sure comment exists.
-        run: test ${{ steps.comment-check.outputs.comment-id }} -gt 0
         if: ${{ steps.diff.outcome == 'failure' }}
