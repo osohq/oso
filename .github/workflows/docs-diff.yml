@@ -138,6 +138,8 @@ jobs:
   diff:
     name: Diff
     needs: [check-label, build-head, build-base]
+    outputs:
+      no_diff: ${{ steps.diff.outcome != 'failure' }}
     if: ${{ !needs.check-id.outputs.hadLabel }}
     runs-on: ubuntu-latest
     steps:
@@ -186,3 +188,14 @@ jobs:
           body: ${{ steps.get-comment-body.outputs.body }}
           edit-mode: replace
         if: ${{ steps.diff.outcome == 'failure' }}
+    # Job that succeeds or fails depending upon the entire workflow.
+    # Used as a required check.
+    decide_if_pr_okay:
+      name: PR docs changes okay
+      if: always()
+      needs: [check-label, diff]
+      steps:
+        - run: echo "Okay because label added."
+          if: needs.diff.result == 'skipped'
+        - run: echo "Not okay because no label, and diff failed." && exit 1
+          if: needs.diff.result != 'skipped' && needs.diff.outputs.no_diff == false
