@@ -61,6 +61,7 @@ add Oso Roles to a Node.js application.
 {{% ifLang not="node" %}}
 {{% ifLang not="python" %}}
 {{% ifLang not="ruby" %}}
+{{% ifLang not="rust" %}}
 
 ## Get started
 
@@ -74,6 +75,7 @@ If you want to get roles working in your app now or just want to
 register your interest for the Oso Roles feature in {{< lang >}} [drop into our Slack](http://join-slack.osohq.com) or
 <a href="mailto:engineering@osohq.com?subject=Roles%20support%20for%20{{< currentLanguage >}}&body=I%27m%20interested%20in%20Oso%20roles%20support%20for%20{{< currentLanguage >}}">send an email</a>
 to our engineering team and we'll unblock you.
+{{% /ifLang %}}
 {{% /ifLang %}}
 {{% /ifLang %}}
 {{% /ifLang %}}
