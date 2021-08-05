@@ -10,5 +10,3 @@ Oso gives you a mental model and an authorization system – a set of APIs built
 Oso lets you offload the thinking of how to design authorization and build features fast, while keeping the flexibility to extend and customize as you see fit.
 
 Developers can typically write a working Oso policy in <5 minutes, add Oso to an app in <30 minutes, and use Oso to solve real authorization problems within a few hours. To get started, you add the library to your application, create a new Oso instance and load an Oso policy. You can mix and match any of Oso's authorization APIs to implement features like roles with custom policies that you write to suit your application.
-
-Test....
