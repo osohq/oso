@@ -35,7 +35,7 @@ jobs:
     needs: [check-label, diff]
     runs-on: ubuntu-latest
     steps:
-      - run: echo ${{ toJSON(needs) }}
+      - run: echo "${{ toJSON(needs) }}"
       - run: echo "Okay because label added."
         if: needs.diff.result == 'skipped'
       - run: echo "Not okay because no label, and diff failed." && exit 1
