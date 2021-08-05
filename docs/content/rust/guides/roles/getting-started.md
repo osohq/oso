@@ -1,9 +1,11 @@
 ---
 title: Getting started
-weight: 1
+weight: 2
 description: >
-    Get started with Oso Roles for Python
+    Get started with Oso Roles for Rust
 ---
+
+[rust-polar-classes]: reference/polar/classes.html
 
 # Getting started
 
@@ -18,32 +20,62 @@ roles feature.
 ## Setting up the Oso instance
 
 First, we'll cover some of the basics of integrating Oso into your
-application.
+application. Here's an example function to create and initializes a
+new Oso instance for us:
 
-The `oso.Oso` class is the entrypoint to using Oso in our application.
+```rust
+use oso::Oso;
+
+fn init_oso() -> Oso {
+  // create the instance
+  let mut oso = Oso::new();
+
+  // register classes used by the policy
+  oso.register_class(User::get_polar_class());
+  oso.register_class(Org::get_polar_class());
+  oso.register_class(OrgRole::get_polar_class());
+
+  // load the policy from a file
+  oso.load_file("authorization.polar");
+
+  // load built-in roles configuration
+  oso.enable_roles();
+
+  // all done; return it!
+  oso
+}
+```
+
+Let's examine each step in turn.
+
+### Creating a new Oso instance
+
+The `oso::Oso` struct is the entrypoint to using Oso in our application.
 We usually will have a global instance that is created
 during application initialization and shared across requests.
+
+### Registering our classes
+
+Data types referred to in your policies must be registered with Oso
+with using the `Oso::register_class` function.
+
+{{% callout "Rust type configuration" "blue" %}}
+
+Rust structs and enums will need
+[some extra configuration][rust-polar-classes] to work with Oso.
+
+{{% /callout %}}
 
 ### Loading our policy
 
 Oso uses the [Polar language](/reference/polar/polar-syntax) to define authorization
 policies. An authorization policy specifies what requests are allowed and what data a
-user can access. The policy is stored in a Polar file, along with your code.
+user can access. The policy is stored in a Polar file, alongside your code, and is
+loaded with the `Oso::load_file` function.
 
-Load the policy with the `Oso.load_file` function.
+### Enabling Oso roles
 
-```py
-oso.load_file("authorization.polar")
-```
-
-### Enable Oso Roles
-
-In order to enable the built-in roles features, we call the
-`oso.Oso.enable_roles` method:
-
-```py
-oso.enable_roles()
-```
+In order to enable the built-in roles features, we call the `Oso::enable_roles` function:
 
 {{% callout "Load policies before enabling roles" "blue" %}}
 
@@ -77,13 +109,14 @@ resource(_type: Org, "org", actions, roles) if
 
 The rule head has 4 parameters:
 
-- `_type` is the Python class the resource definition is associated with.
+- `_type` is the Rust class the resource definition is associated with.
+  **NOTE**: you must have registered this class with `Oso::register_class()` before
+  loading your policy file.
 - `"org"` is the identifier for this resource type (this can be any string
   you choose).
-- `actions` is a list enumerating all the
-  actions that may be performed on the resource.
-- `roles` is a dictionary defining all the
-  roles for this resource.
+- `actions` is a list enumerating all the actions that may be performed on the
+  resource.
+- `roles` is a dictionary defining all the roles for this resource.
 
 In our rule body, we first define the list of available actions for this
 resource:
@@ -154,6 +187,7 @@ To allow access based on roles, we add the following `allow` rule
 
 ```polar
 allow(actor, action, resource) if
+    # add other conditions can be added here if needed
     role_allows(actor, action, resource);
 ```
 
@@ -162,50 +196,32 @@ role definitions.
 
 ### Assigning roles to users
 
-Now we've configured roles and set
-up our policy. For users to have
+Now we've configured roles and set up our policy. For users to have
 access, we must assign them roles.
 
-{{% callout "Managing roles with SQLAlchemy" "green" %}}
-
-If you're using SQLAlchemy, there's nothing to do here!
-Oso already manages role data as part of the `sqlalchemy-oso`
-integration.
-
-[Check it out here.](./sqlalchemy/getting-started)
-
-{{% /callout %}}
-
 You can use your own data models for roles with Oso. You just need to tell us
-what roles a user has for a particular resource
-through the `actor_has_role_for_resource` rule. As an example, we might
-add a method onto the user that returns a list of roles for that user:
+what roles a user has for a particular resource through the
+`actor_has_role_for_resource` rule. As an example, our types might have an
+interface like this:
 
-```py
-ROLES = {
-    "alice": [
-        {"name": "member", "resource": Org.orgs[0]},
-        {"name": "owner", "resource": Org.orgs[1]},
-    ],
-    "bob": [{"name": "owner", "resource": Org.orgs[2]}],
+```rust
+pub struct OrgRole {
+  pub name: String,
+  pub resource: Org,
 }
 
-
-class User:
-    def __init__(self, name):
-        self.name = name
-
-    # Get all the roles for this user
-    def get_roles(self):
-        global ROLES
-        return ROLES[self.name]
+impl User {
+  pub fn roles(&self) -> Vec<OrgRole> {
+    // ...
+  }
+}
 ```
 
 And the `actor_has_role_for_resource` would be implemented as:
 
 ```polar
 actor_has_role_for_resource(actor, role_name, resource) if
-    role in actor.get_roles() and
+    role in actor.roles() and
     role_name = role.name and
     resource = role.resource;
 ```
@@ -216,11 +232,7 @@ that you call the `allow` rule with, typically an instance of some `User` model.
 `role_name` and `resource` are "output parameters".
 In the body of the `actor_has_role_for_resource` rule, you
 should unify `role_name` with the name of the actor's role and
-`resource` with the instance the actor has the role for. In
-the example above, Bob has the `"owner"` role for the
-`Org.orgs[2]` resource, so when `role in actor.get_roles()` is
-evaluated with Bob as the `actor`, `role.name` will return `"owner"`
-and `role.resource` will return `Org.orgs[2]`.
+`resource` with the instance the actor has the role for.
 
 ### Implying roles
 

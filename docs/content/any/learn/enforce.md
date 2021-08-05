@@ -185,7 +185,7 @@ In contrast to record level access control, field level access control
 determines what portions of a given record can be accessed.
 
 ```polar
-allow_field(actor, "view", _: Expense, "submitted_by");
+allow_field(_actor, "view", _: Expense, "submitted_by");
 allow_field(actor, "view", expense: Expense, "amount") if
     actor = expense.submitted_by;
 allow_field(actor, "view", _: Expense, "amount") if
@@ -357,7 +357,7 @@ For the above example, we add the following to our policy:
 
 ```polar
 # Accountants can list expenses
-allow(actor: User, "list", resource: Expense) if
+allow(actor: User, "list", _: Expense) if
     role(actor, "accountant");
 ```
 
@@ -406,7 +406,7 @@ To support this structure, our policy would look something like:
 
 ```polar
 # Accountants can list expenses
-allow(actor: User, "list", resource: Expense) if
+allow(actor: User, "list", _: Expense) if
     role(actor, "accountant");
 
 # A set of filters is allowed for a view request as long as it

@@ -24,7 +24,7 @@ module Oso
         #
         # @return [::Oso::Polar::Error] if there's an FFI error.
         # @return [::Oso::Polar::FFIErrorNotFound] if there isn't one.
-        def self.get # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
+        def self.get(enrich_message) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
           error = Rust.get
           return ::Oso::Polar::FFIErrorNotFound if error.null?
 
@@ -38,6 +38,13 @@ module Oso
             subkind, details = body.first
           else
             subkind, details = nil
+          end
+
+          # Enrich error message and stack trace
+          msg = enrich_message.call(msg) if msg
+          if details
+            details['stack_trace'] = enrich_message.call(details['stack_trace']) if details['stack_trace']
+            details['msg'] = enrich_message.call(details['msg']) if details['msg']
           end
 
           case kind

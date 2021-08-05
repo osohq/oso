@@ -47,7 +47,7 @@ JavaScript strings are mapped to Polar [strings](polar-syntax#strings).
 JavaScript’s string methods may be called in policies:
 
 ```polar
-allow(actor, action, resource) if actor.username.endsWith("example.com");
+allow(actor, _action, _resource) if actor.username.endsWith("example.com");
 ```
 
 ```js
@@ -71,7 +71,7 @@ JavaScript [Arrays][mdn-array] are mapped to Polar [lists](polar-syntax#lists).
 JavaScript’s Array methods may be called in policies:
 
 ```polar
-allow(actor, action, resource) if actor.groups.includes("HR");
+allow(actor, _action, _resource) if actor.groups.includes("HR");
 ```
 
 ```js
@@ -93,7 +93,7 @@ also returned from the method.
 Likewise, lists constructed in Polar may be passed into JavaScript methods:
 
 ```polar
-allow(actor, action, resource) if actor.hasGroups(["HR", "payroll"]);
+allow(actor, _action, _resource) if actor.hasGroups(["HR", "payroll"]);
 ```
 
 ```js
@@ -124,7 +124,7 @@ You may iterate over any [synchronous][mdn-iterator] or
 operator](polar-syntax#in-list-membership):
 
 ```polar
-allow(actor, action, resource) if "payroll" in actor.getGroups();
+allow(actor, _action, _resource) if "payroll" in actor.getGroups();
 ```
 
 ```js
@@ -150,7 +150,7 @@ The JavaScript `null` value is registered as the Polar constant
 return `null`, you may want to compare the result to `nil`:
 
 ```polar
-allow(actor, action, resource) if actor.getOptional() != nil;
+allow(actor, _action, _resource) if actor.getOptional() != nil;
 ```
 
 ```js

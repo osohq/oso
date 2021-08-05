@@ -247,6 +247,8 @@ Here's the full `Org` resource definition from the GitClub example app:
     path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
     from="docs: begin-org-resource"
     to="docs: end-org-resource"
+    hlFrom="docs: begin-org-resource-highlight"
+    hlTo="docs: end-org-resource-highlight"
     gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}

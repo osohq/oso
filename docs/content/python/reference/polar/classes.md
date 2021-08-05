@@ -41,7 +41,7 @@ Python strings are mapped to Polar [strings](polar-syntax#strings). Python’s
 string methods may be accessed from policies:
 
 ```polar
-allow(actor, action, resource) if actor.username.endswith("example.com");
+allow(actor, _action, _resource) if actor.username.endswith("example.com");
 ```
 
 ```python
@@ -61,7 +61,7 @@ Python lists are mapped to Polar [lists](polar-syntax#lists). Python’s list
 methods may be accessed from policies:
 
 ```polar
-allow(actor, action, resource) if actor.groups.index("HR") == 0;
+allow(actor, _action, _resource) if actor.groups.index("HR") == 0;
 ```
 
 ```python
@@ -78,7 +78,7 @@ will have no effect on a list in Polar.
 Likewise, lists constructed in Polar may be passed into Python methods:
 
 ```polar
-allow(actor, action, resource) if actor.has_groups(["HR", "payroll"]);
+allow(actor, _action, _resource) if actor.has_groups(["HR", "payroll"]);
 ```
 
 ```python
@@ -107,7 +107,7 @@ Python dictionaries are mapped to Polar
 [dictionaries](polar-syntax#dictionaries):
 
 ```polar
-allow(actor, action, resource) if actor.roles.project1 = "admin";
+allow(actor, _action, _resource) if actor.roles.project1 = "admin";
 ```
 
 ```python
@@ -127,7 +127,7 @@ those yielded by a
 Polar's [`in` operator](polar-syntax#in-list-membership):
 
 ```polar
-allow(actor, action, resource) if "payroll" in actor.get_groups();
+allow(actor, _action, _resource) if "payroll" in actor.get_groups();
 ```
 
 ```python
@@ -146,7 +146,7 @@ The Python value `None` is registered as the Polar constant nil. If a Python
 method can return `None`, you may want to compare the result to `nil`:
 
 ```polar
-allow(actor, action, resource) if actor.get_optional() != nil;
+allow(actor, _action, _resource) if actor.get_optional() != nil;
 ```
 
 ```python
