@@ -19,7 +19,7 @@ jobs:
     name: Build docs on HEAD.
     runs-on: ubuntu-latest
     needs: check-label
-    if: ${{ needs.check-id.outputs.hadLabel == 'false' }}
+    if: ${{ needs.check-label.outputs.hadLabel == 'false' }}
     steps:
       - uses: actions/cache@v2
         id: cache
@@ -97,7 +97,7 @@ jobs:
     name: Build docs on base.
     runs-on: ubuntu-latest
     needs: check-label
-    if: ${{ needs.check-id.outputs.hadLabel == 'false' }}
+    if: ${{ needs.check-label.outputs.hadLabel == 'false' }}
     steps:
       - uses: actions/cache@v2
         id: cache
@@ -177,7 +177,7 @@ jobs:
     needs: [check-label, build-base, build-head]
     outputs:
       no_diff: ${{ steps.diff.outcome != 'failure' }}
-    if: ${{ needs.check-id.outputs.hadLabel == 'false' }}
+    if: ${{ needs.check-label.outputs.hadLabel == 'false' }}
     runs-on: ubuntu-latest
     steps:
       - name: Pull old build of docs.
