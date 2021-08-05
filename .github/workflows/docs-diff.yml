@@ -194,6 +194,7 @@ jobs:
     name: PR docs changes okay
     if: always()
     needs: [check-label, diff]
+    runs-on: ubuntu-latest
     steps:
       - run: echo "Okay because label added."
         if: needs.diff.result == 'skipped'
