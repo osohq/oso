@@ -8,7 +8,7 @@ jobs:
     name: Check for "Docs" label
     runs-on: ubuntu-latest
     outputs:
-      hadLabel: ${{ steps.label.outcome == "skipped" }}
+      hadLabel: ${{ steps.label.outcome == 'skipped' }}
     steps:
       - id: label
         name: Check for "Docs" label
