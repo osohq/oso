@@ -32,7 +32,9 @@ To get up and running with Oso, check out the [Getting Started
 guides](https://docs.osohq.com/getting-started/quickstart.html) in the [Oso
 documentation][docs].
 
-If you have questions, need help getting started, or want to discuss anything about the product, your use case, or authorization more generally, [join us on Slack][badge-slack-link].
+If you have questions or need help getting started come chat with our engineering team & community members:
+
+![Button][join-slack-link]
 
 ## Development
 
@@ -73,6 +75,7 @@ See: [CONTRIBUTING.md][contributing].
 
 See: [LICENSE][license].
 
+[join-slack-link]: https://user-images.githubusercontent.com/282595/128394344-1bd9e5b2-e83d-4666-b446-2e4f431ffcea.png
 [badge-ci]: https://github.com/osohq/oso/workflows/Development/badge.svg
 [badge-ci-link]: https://github.com/osohq/oso/actions?query=branch%3Amain+workflow%3ADevelopment
 [badge-release]: https://img.shields.io/github/v/release/osohq/oso?color=005b96&logo=github&sort=semver
