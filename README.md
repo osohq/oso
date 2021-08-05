@@ -32,7 +32,7 @@ To get up and running with Oso, check out the [Getting Started
 guides](https://docs.osohq.com/getting-started/quickstart.html) in the [Oso
 documentation][docs].
 
-If you have questions or need help getting started come chat with our engineering team & community members:
+If you have questions or need help getting started come chat with our engineering team & hundreds of other developers using Oso:
 
 [![Button][join-slack-link]][badge-slack-link]
 
