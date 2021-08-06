@@ -75,6 +75,7 @@ pub struct FilterPlan {
 pub type Types = HashMap<String, HashMap<String, Type>>;
 pub type PartialResults = Vec<ResultEvent>;
 
+#[derive(Debug)]
 struct VarInfo {
     cycles: Vec<(Symbol, Symbol)>,
     types: Vec<(Symbol, String)>,
@@ -176,6 +177,7 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
     None
 }
 
+#[derive(Debug)]
 struct Vars {
     variables: HashMap<String, HashSet<Symbol>>,
     relationships: Vec<(String, String, String)>,
@@ -436,25 +438,6 @@ pub fn build_filter_plan(
     variable: &str,
     class_tag: &str,
 ) -> PolarResult<FilterPlan> {
-    // let polar_version = partial_results[0]
-    //     .bindings
-    //     .get(&Symbol::new("resource"))
-    //     .unwrap()
-    //     .to_polar();
-    // eprintln!("{}", polar_version);
-    //
-    // let mut requests = HashMap::new();
-    // requests.insert(
-    //     "0".to_string(),
-    //     FetchRequest {
-    //         class_tag: "Foo".to_string(),
-    //         constraints: vec![Constraint::Eq {
-    //             field: "is_fooey".to_string(),
-    //             value: Term::new_temporary(Value::Boolean(true)),
-    //         }],
-    //     },
-    // );
-
     let mut filter_plan = FilterPlan {
         result_sets: vec![],
     };
@@ -476,18 +459,6 @@ pub fn build_filter_plan(
     Ok(filter_plan)
 }
 
-// [
-// FilterPlan(
-// data_sets={
-// 0: Constraints(
-// cls="Foo",
-// constraints=[Constraint(kind="Eq", field="is_fooey", value=True)],
-// )
-// },
-// resolve_order=[0],
-// result_set=0,
-// )
-// ]
 
 mod tests {
     use super::*;
