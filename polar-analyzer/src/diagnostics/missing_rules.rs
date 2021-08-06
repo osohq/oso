@@ -9,8 +9,16 @@ use polar_core::{
 
 pub type UnusedRule = (String, usize, usize);
 
-pub fn find_missing_rules(kb: &KnowledgeBase, src: &str) -> Vec<UnusedRule> {
-    let parse_result = polar_core::parser::parse_lines(0, src);
+pub fn find_missing_rules(kb: &KnowledgeBase, filename: &str) -> Vec<UnusedRule> {
+    let parse_result = if let Some(src_id) = kb.loaded_files.get(filename) {
+        if let Some(source) = kb.sources.get_source(*src_id) {
+            polar_core::parser::parse_lines(*src_id, &source.src)
+        } else {
+            return vec![];
+        }
+    } else {
+        return vec![];
+    };
 
     let mut visitor = UnusedRuleVisitor {
         kb,
@@ -48,12 +56,12 @@ impl<'kb> Visitor for UnusedRuleVisitor<'kb> {
             Value::Call(c) => {
                 if let Some(rules) = self.kb.rules.get(&c.name) {
                     if rules.get_applicable_rules(&c.args).is_empty() {
-                        let (left, right) = t.span().unwrap_or((0, 0));
+                        let (left, right) = t.span().unwrap();
                         let message = formatdoc!(
                             r#"There are no rules matching the format:
-                            {}
+                              {}
                             Found:
-                            {}
+                              {}
                             "#,
                             c.to_polar(),
                             rules
@@ -66,7 +74,7 @@ impl<'kb> Visitor for UnusedRuleVisitor<'kb> {
                         self.missing_rules.push((message, left, right));
                     }
                 } else {
-                    let (left, right) = t.span().unwrap_or((0, 0));
+                    let (left, right) = t.span().unwrap();
                     let message = format!("There are no rules with the name \"{}\"", c.name);
                     self.missing_rules.push((message, left, right));
                 }
@@ -84,7 +92,7 @@ mod test {
 
     #[test]
     fn finds_missing_rules() {
-        let p = Polar::wasm_new();
+        let p = Polar::new();
         p.load(
             r#"
             f(1);
@@ -95,16 +103,18 @@ mod test {
         )
         .unwrap();
 
-        let target_policy = r#"
-        h(x) if f(x); # should be fine
-        h(x) if g(x); # should be fine
-        h(_x) if f(3); # missing
-    "#;
+        let broken = r#"
+            h(x) if f(x); # should be fine
+            h(x) if g(x); # should be fine
+            h(_x) if f(3); # missing
+        "#;
 
-        let missing_rules = p.with_kb(|kb| find_missing_rules(kb, target_policy));
+        p.load(broken, "broken.policy").unwrap();
+
+        let missing_rules = p.with_kb(|kb| find_missing_rules(kb, "broken.policy"));
 
         assert_eq!(missing_rules.len(), 1);
-        let missing_rule = &target_policy[missing_rules[0].1..missing_rules[0].2];
+        let missing_rule = &broken[missing_rules[0].1..missing_rules[0].2];
         assert_eq!(missing_rule, "f(3)");
     }
 }

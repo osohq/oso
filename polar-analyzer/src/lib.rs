@@ -1,49 +1,30 @@
 mod database;
 mod diagnostics;
 mod inspect;
+pub mod server;
 
 use database::SourceMap;
-use polar_core::polar;
-use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
-
-/// Equivalent to polar_core::error::Error
-/// that additionally includes the kind and context fields
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct PolarError {
-    pub message: String,
-    pub kind: polar_core::error::ErrorKind,
-    pub context: Option<polar_core::error::ErrorContext>,
-}
-
-impl From<polar_core::error::PolarError> for PolarError {
-    fn from(other: polar_core::error::PolarError) -> Self {
-        Self {
-            message: other.to_string(),
-            kind: other.kind,
-            context: other.context,
-        }
-    }
-}
-
-/// Converts a Rust value into a [`JsValue`].
-fn to_value<T: Serialize>(value: &T) -> JsValue {
-    serde_wasm_bindgen::to_value(value).unwrap_or_else(|_| "serialization error".into())
-}
+use diagnostics::UnusedRule;
+use inspect::{RuleInfo, TermInfo};
+use polar_core::{error::PolarError, polar};
 
 /// Wrapper for the `polar_core::Polar` type.
 /// Used as the API interface for all the analytics
-#[wasm_bindgen]
 pub struct Polar {
     inner: polar::Polar,
     source_map: SourceMap,
 }
 
-#[wasm_bindgen]
+pub use anyhow::Result;
+
+impl Default for Polar {
+    fn default() -> Self {
+        Polar::new()
+    }
+}
+
 impl Polar {
-    #[wasm_bindgen(constructor)]
-    pub fn wasm_new() -> Self {
-        console_error_panic_hook::set_once();
+    pub fn new() -> Self {
         let inner = polar::Polar::new();
         // let _ = inner.enable_roles();
         Self {
@@ -52,7 +33,6 @@ impl Polar {
         }
     }
 
-    #[wasm_bindgen(js_class = Polar, js_name = enableRoles)]
     pub fn enable_roles(&self) {
         // swallowing errors for now since we can't actually validate
         // anything works yet
@@ -63,8 +43,7 @@ impl Polar {
     ///
     /// In comparison to the `Polar` in the core, this
     /// will first remove the file.
-    #[wasm_bindgen(js_class = Polar, js_name = load)]
-    pub fn load(&self, src: &str, filename: &str) -> Result<(), JsValue> {
+    pub fn load(&self, src: &str, filename: &str) -> Result<(), PolarError> {
         let old = self.inner.remove_file(filename);
         self.inner
             .load(src, Some(filename.to_string()))
@@ -74,15 +53,14 @@ impl Polar {
                         .load(&old_src, Some(filename.to_string()))
                         .expect("failed to reload old policy after new policy loading failed");
                 }
-                to_value(&PolarError::from(e))
+                e
             })?;
         let kb = self.inner.kb.read().unwrap();
-        self.source_map.refresh(&kb, vec![filename]);
+        self.source_map.refresh(&kb, vec![(filename, src)]);
         Ok(())
     }
 
-    #[wasm_bindgen(js_class = Polar, js_name = rename)]
-    pub fn rename(&self, old_filename: &str, new_filename: &str) -> Result<(), JsValue> {
+    pub fn rename(&self, old_filename: &str, new_filename: &str) -> Result<(), PolarError> {
         if let Some(old) = self.inner.remove_file(old_filename) {
             self.source_map.remove_file(old_filename);
             self.load(&old, new_filename)
@@ -91,36 +69,30 @@ impl Polar {
         }
     }
 
-    #[wasm_bindgen(js_class = Polar, js_name = delete)]
     pub fn delete(&self, filename: &str) {
         self.source_map.remove_file(filename);
         let _old = self.inner.remove_file(filename);
     }
 
-    #[wasm_bindgen(js_class = Polar, js_name = clearRules)]
     pub fn clear_rules(&self) {
         self.inner.clear_rules()
     }
 
-    #[wasm_bindgen(js_class = Polar, js_name = getRuleInfo)]
-    pub fn get_rule_info(&self, filename: &str) -> JsValue {
-        to_value(&self.source_map.get_rule_info(filename))
+    pub fn get_rule_info(&self, filename: &str) -> Vec<RuleInfo> {
+        self.source_map.get_rule_info(filename).unwrap_or_default()
     }
 
-    #[wasm_bindgen(js_class = Polar, js_name = getTermInfo)]
-    pub fn get_term_info(&self, filename: &str) -> JsValue {
-        to_value(&self.source_map.get_term_info(filename))
+    pub fn get_term_info(&self, filename: &str) -> Vec<TermInfo> {
+        self.source_map.get_term_info(filename).unwrap_or_default()
     }
 
-    #[wasm_bindgen(js_class = Polar, js_name = getUnusedRules)]
-    pub fn get_unused_rules(&self, src: &str) -> JsValue {
+    pub fn get_unused_rules(&self, filename: &str) -> Vec<UnusedRule> {
         let kb = self.inner.kb.read().unwrap();
-        to_value(&diagnostics::find_missing_rules(&kb, src))
+        diagnostics::find_missing_rules(&kb, filename)
     }
 
-    #[wasm_bindgen(js_class = Polar, js_name = getSymbolAt)]
-    pub fn get_symbol_at(&self, filename: &str, location: usize) -> JsValue {
-        to_value(&self.source_map.get_symbol_at(filename, location))
+    pub fn get_symbol_at(&self, filename: &str, location: usize) -> Option<TermInfo> {
+        self.source_map.get_symbol_at(filename, location)
     }
 
     #[cfg(test)]
@@ -131,4 +103,30 @@ impl Polar {
         let kb = self.inner.kb.read().unwrap();
         f(&kb)
     }
+}
+
+pub fn run_polar_analyzer(inner: polar::Polar, port: u32) {
+    let source_map = SourceMap::default();
+    {
+        let kb = inner.kb.read().unwrap();
+        let files = kb
+            .sources
+            .sources
+            .iter()
+            .filter_map(|(_, source)| {
+                source
+                    .filename
+                    .as_ref()
+                    .map(|f| (f.as_str(), source.src.as_str()))
+            })
+            .collect();
+        source_map.refresh(&kb, files);
+    }
+
+    let polar = Polar { inner, source_map };
+    let _res = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(server::run_tcp_server(Some(polar), port));
 }

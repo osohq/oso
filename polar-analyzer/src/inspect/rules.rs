@@ -75,7 +75,7 @@ mod test {
 
     #[test]
     fn finds_rules() {
-        let p = Polar::wasm_new();
+        let p = Polar::new();
         p.load(
             r#"
             f(x) if x = 1;

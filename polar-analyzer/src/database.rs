@@ -1,8 +1,10 @@
 use std::{
+    cmp::Ordering,
     collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
 };
 
+use lsp_types::{Position, Range};
 use polar_core::kb::KnowledgeBase;
 
 use crate::inspect::{get_rule_information, get_term_information, RuleInfo, TermInfo};
@@ -11,18 +13,19 @@ use crate::inspect::{get_rule_information, get_term_information, RuleInfo, TermI
 
 #[derive(Debug, Default)]
 pub struct SourceMap {
-    /// File -> Source map
+    /// Filename -> Source map
     sources: Arc<RwLock<HashMap<String, Source>>>,
 }
 
 impl SourceMap {
-    pub fn refresh(&self, kb: &KnowledgeBase, files: Vec<&str>) {
+    pub fn refresh(&self, kb: &KnowledgeBase, files: Vec<(&str, &str)>) {
         let mut sources = self.sources.write().unwrap();
         let updated_files: HashSet<&str> = files
             .into_iter()
-            .inspect(|f| {
+            .map(|(filename, src)| {
                 // clear out each source to the default
-                sources.insert(f.to_string(), Source::default());
+                sources.insert(filename.to_string(), Source::new(src));
+                filename
             })
             .collect();
 
@@ -47,22 +50,48 @@ impl SourceMap {
         self.sources.write().unwrap().remove(filename);
     }
 
-    pub fn get_term_info(&self, filename: &str) -> Vec<TermInfo> {
+    pub fn get_term_info(&self, filename: &str) -> Option<Vec<TermInfo>> {
         self.sources
             .read()
             .unwrap()
             .get(filename)
             .map(|source| source.terms.clone())
-            .unwrap_or_default()
     }
 
-    pub fn get_rule_info(&self, filename: &str) -> Vec<RuleInfo> {
+    pub fn get_rule_info(&self, filename: &str) -> Option<Vec<RuleInfo>> {
         self.sources
             .read()
             .unwrap()
             .get(filename)
             .map(|source| source.rules.clone())
-            .unwrap_or_default()
+    }
+
+    pub fn location_to_range(&self, filename: &str, start: usize, end: usize) -> Option<Range> {
+        self.sources
+            .read()
+            .unwrap()
+            .get(filename)
+            .map(|source| Range {
+                start: source.offset_to_position(start),
+                end: source.offset_to_position(end),
+            })
+    }
+
+    #[allow(unused)]
+    pub fn offset_to_position(&self, filename: &str, offset: usize) -> Option<Position> {
+        self.sources
+            .read()
+            .unwrap()
+            .get(filename)
+            .map(|source| source.offset_to_position(offset))
+    }
+
+    pub fn position_to_offset(&self, filename: &str, position: Position) -> Option<usize> {
+        self.sources
+            .read()
+            .unwrap()
+            .get(filename)
+            .map(|source| source.position_to_offset(position))
     }
 
     pub fn get_symbol_at(&self, filename: &str, location: usize) -> Option<TermInfo> {
@@ -74,15 +103,68 @@ impl SourceMap {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Source {
-    // List of rules
+    /// List of line lengths.
+    /// Used to convert an LSP `Position` (line/row) into
+    /// an offset (as used inside Polar)
+    line_lengths: Vec<(usize, usize)>,
+    /// List of rules
     rules: Vec<RuleInfo>,
-    // List of terms
+    /// List of terms
     terms: Vec<TermInfo>,
 }
 
 impl Source {
+    fn new(source: &str) -> Self {
+        let mut offset = 0;
+        Self {
+            rules: Default::default(),
+            terms: Default::default(),
+            line_lengths: source
+                .split('\n')
+                .map(str::len)
+                .map(|len| {
+                    // the offsets of this line are captured as (current_offset, current_offset + len)
+                    let start = offset;
+                    let end = offset + len;
+                    offset = end + 1; // add one for the newline character
+                    (start, end)
+                })
+                .collect(),
+        }
+    }
+
+    fn position_to_offset(&self, position: Position) -> usize {
+        self.line_lengths
+            .get(position.line as usize)
+            .map(|(start, end)| std::cmp::min(*end, start + position.character as usize))
+            .unwrap_or_else(|| self.line_lengths.last().unwrap().1) // we're past the end of the file, take the last offset
+    }
+
+    fn offset_to_position(&self, offset: usize) -> Position {
+        self.line_lengths
+            .binary_search_by(|(start, end)| {
+                if offset < *start {
+                    Ordering::Greater
+                } else if offset > *end {
+                    Ordering::Less
+                } else {
+                    Ordering::Equal
+                }
+            })
+            .map(|idx| Position {
+                line: idx as u32,
+                character: (offset - self.line_lengths[idx].0) as u32,
+            })
+            .unwrap_or_else(|_| {
+                panic!(
+                    "Offset: {} is not found in the document: lines={:#?}",
+                    offset, self.line_lengths
+                )
+            })
+    }
+
     fn get_symbols_at(&self, location: usize) -> Option<TermInfo> {
         let mut symbol = None;
         let mut length = usize::MAX;
@@ -96,5 +178,36 @@ impl Source {
         }
 
         symbol
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use indoc::indoc;
+
+    #[test]
+    fn offset_position_round_trip() {
+        let source = Source::new(indoc! {r#"
+            f(x) if g(x);
+
+            g(x) if h(x);
+        "#});
+
+        let offset_positions = vec![(0, (0, 0)), (8, (0, 8)), (15, (2, 0)), (28, (2, 13))];
+        for (offset, (line, char)) in offset_positions {
+            let pos = Position::new(line, char);
+            assert_eq!(
+                offset,
+                source.position_to_offset(pos),
+                "{:?} -> offset",
+                pos
+            );
+            assert_eq!(pos, source.offset_to_position(offset), "{} -> pos", offset);
+            assert_eq!(
+                offset,
+                source.position_to_offset(source.offset_to_position(offset))
+            );
+        }
     }
 }

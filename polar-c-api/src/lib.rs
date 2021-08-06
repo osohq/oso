@@ -504,3 +504,12 @@ pub extern "C" fn polar_build_filter_plan(
         }
     })
 }
+
+/// # Safety
+/// YOLO
+#[no_mangle]
+pub unsafe extern "C" fn polar_run_analyzer(polar_ptr: *mut Polar, port: u32) -> i32 {
+    let polar = Box::from_raw(polar_ptr);
+    polar_analyzer::run_polar_analyzer(*polar, port);
+    POLAR_SUCCESS
+}

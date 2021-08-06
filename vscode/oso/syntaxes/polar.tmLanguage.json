@@ -2,43 +2,82 @@
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "polar",
   "patterns": [
-    { "include": "#inline-query" },
-    { "include": "#rule-def-head" },
-    { "include": "#rule-def-body" },
-    { "include": "#comment" }
+    {
+      "include": "#inline-query"
+    },
+    {
+      "include": "#rule-def-head"
+    },
+    {
+      "include": "#rule-def-body"
+    },
+    {
+      "include": "#comment"
+    }
   ],
   "repository": {
     "inline-query": {
       "begin": "(\\?=)",
       "end": "(;)",
       "beginCaptures": {
-        "1": { "name": "keyword.control" }
+        "1": {
+          "name": "keyword.control"
+        }
       },
-      "patterns": [{ "include": "#expression" }]
+      "patterns": [
+        {
+          "include": "#expression"
+        }
+      ]
     },
     "rule-def-head": {
       "begin": "[\\s]*([\\w][\\w-]*)(\\()",
       "end": "(\\))",
       "beginCaptures": {
-        "1": { "name": "support.function" }
+        "1": {
+          "name": "support.function"
+        }
       },
-      "patterns": [{ "include": "#string" }, { "include": "#number" }]
+      "patterns": [
+        {
+          "include": "#string"
+        },
+        {
+          "include": "#number"
+        }
+      ]
     },
     "rule-def-body": {
       "begin": "(if)",
       "end": "(;)",
       "beginCaptures": {
-        "1": { "name": "keyword.control" }
+        "1": {
+          "name": "keyword.control"
+        }
       },
-      "patterns": [{ "include": "#expression" }]
+      "patterns": [
+        {
+          "include": "#expression"
+        }
+      ]
     },
     "expression": {
       "patterns": [
-        { "include": "#comment" },
-        { "include": "#string" },
-        { "include": "#number" },
-        { "include": "#keyword" },
-        { "include": "#operator" }
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#string"
+        },
+        {
+          "include": "#number"
+        },
+        {
+          "include": "#keyword"
+        },
+        {
+          "include": "#operator"
+        }
       ]
     },
     "comment": {
@@ -62,90 +101,88 @@
     },
     "keyword": {
       "patterns": [
-        { "include": "#and" },
-        { "include": "#or" },
-        { "include": "#not" },
-        { "include": "#new" },
-        { "include": "#unify" },
-        { "include": "#in" },
-        { "include": "#matches" },
-        { "include": "#forall" },
-        { "include": "#debug" },
-        { "include": "#print" },
-        { "include": "#cut" }
+        {
+          "include": "#and"
+        },
+        {
+          "include": "#or"
+        },
+        {
+          "include": "#not"
+        },
+        {
+          "include": "#new"
+        },
+        {
+          "include": "#unify"
+        },
+        {
+          "include": "#in"
+        },
+        {
+          "include": "#matches"
+        },
+        {
+          "include": "#forall"
+        },
+        {
+          "include": "#debug"
+        },
+        {
+          "include": "#print"
+        },
+        {
+          "include": "#cut"
+        }
       ]
     },
     "and": {
-      "match": "(\\s?)(and)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
+      "match": "\\band\\b",
+      "name": "constant.character"
     },
     "or": {
-      "match": "(\\s?)(or)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
+      "match": "\\bor\\b",
+      "name": "constant.character"
     },
     "not": {
-      "match": "(\\s?)(not)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
+      "match": "\\bnot\\b",
+      "name": "constant.character"
     },
     "new": {
-      "match": "(\\s?)(new)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
+      "match": "\\bnew\\b",
+      "name": "constant.character"
     },
     "unify": {
-      "match": "(\\s?)(unify)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
+      "match": "\\bunify\\b",
+      "name": "constant.character"
     },
     "in": {
-      "match": "(\\s?)(in)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
+      "match": "\\bin\\b",
+      "name": "constant.character"
     },
     "matches": {
-      "match": "(\\s?)(matches)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
+      "match": "\\bmatches\\b",
+      "name": "constant.character"
     },
     "forall": {
-      "match": "(\\s?)(forall)(\\s|\\()",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
+      "match": "\\bforall\\b",
+      "name": "constant.character"
     },
     "debug": {
-      "match": "(\\s?)(debug)(\\s|\\()",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
+      "match": "\\bdebug\\b",
+      "name": "constant.character"
     },
     "print": {
-      "match": "(\\s?)(print)(\\s|\\()",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
+      "match": "\\bprint\\b",
+      "name": "constant.character"
     },
     "cut": {
-      "match": "(\\s?)(cut)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
+      "match": "\\bcut\\b",
+      "name": "constant.character"
     },
     "operator": {
       "match": "(\\+|-|\\*|\\/|<|>|=|!)",
-      "captures": {
-        "1": { "name": "keyword.control" }
-      }
+      "name": "keyword.control"
     }
   },
   "scopeName": "source.polar"

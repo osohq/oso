@@ -320,6 +320,28 @@ class Polar:
         complete += filter_data(self, plan)
         return complete
 
+    def run_analyzer(self):
+        import signal
+        import threading
+
+        # Daemonize the thread so that we can
+        # use Python's signal handling to kill the process
+        thread = threading.Thread(target=self.ffi_polar.run_analyzer, args=())
+        thread.daemon = True
+        thread.start()
+
+        def signal_handler(sig, frame):
+            print("Shutting down")
+            sys.exit(0)
+
+        signal.signal(signal.SIGINT, signal_handler)
+        print("running polar-analyzer. Hit CTRL+C to stop")
+        signal.pause()
+
+        # We've got to exit aftewards, since we're consuming the `ffi_polar` pointer
+        # when we run polar-analyzer
+        exit(0)
+
 
 def polar_class(_cls=None, *, name=None):
     """Decorator to register a Python class with Polar.

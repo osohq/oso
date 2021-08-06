@@ -11,6 +11,7 @@ bench = false
 
 [dependencies]
 polar-core = { path = "../polar-core", version = "=0.20.0-beta" }
+polar-analyzer = { path = "../polar-analyzer", version = "*" }
 serde_json = "1.0.61"
 
 [build_dependencies]

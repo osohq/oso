@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 
 use crate::sources::SourceInfo;
@@ -155,7 +155,7 @@ impl RuleIndex {
 #[derive(Clone)]
 pub struct GenericRule {
     pub name: Symbol,
-    pub rules: HashMap<u64, Arc<Rule>>,
+    pub rules: BTreeMap<u64, Arc<Rule>>,
     index: RuleIndex,
     next_rule_id: u64,
 }
