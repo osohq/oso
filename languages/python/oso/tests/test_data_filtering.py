@@ -26,6 +26,12 @@ def test_data_filtering(oso):
         bar_id: str
         is_fooey: bool
 
+    @dataclass
+    class FooLogRecord:
+        id: str
+        foo_id: str
+        data: str
+
     hello_bar = Bar(id="hello", is_cool=True, is_still_cool=True)
     goodbye_bar = Bar(id="goodbye", is_cool=False, is_still_cool=True)
     something_foo = Foo(id="something", bar_id="hello", is_fooey=False)
@@ -33,8 +39,12 @@ def test_data_filtering(oso):
     third_foo = Foo(id="third", bar_id="hello", is_fooey=True)
     forth_foo = Foo(id="fourth", bar_id="goodbye", is_fooey=True)
 
+    forth_log_a = FooLogRecord(id="a", foo_id="fourth", data="hello")
+    forth_log_b = FooLogRecord(id="b", foo_id="fourth", data="world")
+
     bars = [hello_bar, goodbye_bar]
     foos = [something_foo, another_foo, third_foo, forth_foo]
+    foo_logs = [forth_log_a, forth_log_b]
 
     def matches_fields(fields, obj):
         for k, v in fields.items():
@@ -84,6 +94,24 @@ def test_data_filtering(oso):
                 results.append(foo)
         return results
 
+    def get_foo_logs(constraints):
+        results = []
+        for fl in foo_logs:
+            matches = True
+            for constraint in constraints:
+                val = getattr(fl, constraint.field)
+                if constraint.kind == "Eq":
+                    if val != constraint.value:
+                        matches = False
+                        break
+                if constraint.kind == "In":
+                    if val not in constraint.value:
+                        matches = False
+                        break
+            if matches:
+                results.append(fl)
+        return results
+
     oso.register_class(Bar, types={"id": str, "is_cool": bool}, fetcher=get_bars)
     oso.register_class(
         Foo,
@@ -93,8 +121,23 @@ def test_data_filtering(oso):
             "bar": Relationship(
                 kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
             ),
+            "logs": Relationship(
+                kind="children", other_type="FooLogRecord", my_field="id", other_field="foo_id"
+            ),
         },
         fetcher=get_foos,
+    )
+    oso.register_class(
+        FooLogRecord,
+        types={
+            "id": str,
+            "foo_id": str,
+            "data": str,
+            # "bar": Relationship(
+            #     kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
+            # ),
+        },
+        fetcher=get_foo_logs,
     )
 
     # Write a policy
@@ -134,6 +177,45 @@ def test_data_filtering(oso):
 
     results = list(oso.get_allowed_resources("steve", "get", Foo))
     assert len(results) == 4
+    #
+    # oso.clear_rules()
+    #
+
+    # var in var
+    # policy = """
+    # allow("steve", "get", resource: Foo) if
+    #     log in resource.logs and
+    #     log.data = "hello";
+    # """
+    # oso.load_str(policy)
+    # assert oso.is_allowed("steve", "get", forth_foo)
+    #
+    # results = list(oso.get_allowed_resources("steve", "get", Foo))
+    # assert len(results) == 1
+
+    # # value in var
+    # oso.clear_rules()
+    # policy = """
+    # allow("steve", "get", resource: Foo) if
+    #     new FooLogRecord("a", "fourth", "hello") in resource.logs;
+    # """
+    # oso.load_str(policy)
+    # assert oso.is_allowed("steve", "get", forth_foo)
+    #
+    # results = list(oso.get_allowed_resources("steve", "get", Foo))
+    # assert len(results) == 1
+    #
+    # # var in value
+    # oso.clear_rules()
+    # policy = """
+    # allow("steve", "get", resource: FooLogRecord) if
+    #     resource in [new FooLogRecord("a", "fourth", "hello")];
+    # """
+    # oso.load_str(policy)
+    # assert oso.is_allowed("steve", "get", forth_foo)
+
+    # results = list(oso.get_allowed_resources("steve", "get", Foo))
+    # assert len(results) == 4
 
 
 def test_roles_data_filtering(oso):
