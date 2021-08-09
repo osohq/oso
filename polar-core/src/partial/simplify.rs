@@ -290,6 +290,7 @@ impl PerfCounters {
 pub struct Simplifier {
     bindings: Bindings,
     output_vars: HashSet<Symbol>,
+    seen: HashSet<Term>,
 
     counters: PerfCounters,
 }
@@ -301,6 +302,7 @@ impl Simplifier {
         Self {
             bindings: Bindings::new(),
             output_vars,
+            seen: HashSet::new(),
             counters: PerfCounters::new(track_performance),
         }
     }
@@ -599,7 +601,18 @@ impl Simplifier {
     where
         F: Fn(&mut Self, &mut Operation, &TermSimplifier) + 'static + Clone,
     {
-        *term = self.deref(term);
+        if self.seen.contains(term) {
+//            println!("seen {}", term.to_polar());
+            return
+        }
+        let orig = term.clone();
+        let k = term.clone();
+        self.seen.insert(term.clone());
+
+//        println!("simplify_term pre {}", term.to_polar());
+        let de = self.deref(term);
+        *term = de;
+//        println!("simplify_term ref {}", term.to_polar());
 
         match term.mut_value() {
             Value::Dictionary(dict) => {
@@ -631,6 +644,13 @@ impl Simplifier {
             }
             _ => (),
         }
+
+        if let Ok(sym) = orig.value().as_symbol() {
+            if term.contains_variable(sym) {
+                *term = orig.clone()
+            }
+        }
+        self.seen.remove(&orig);
     }
 
     /// Simplify a partial until quiescence.

@@ -95,6 +95,20 @@ fn process_result(exp: &Operation) -> VarInfo {
     var_info
 }
 
+fn dot_var(var_info: &mut VarInfo, var: Term, field: &Term) -> Symbol {
+            // TODO(steve): There's a potential name clash here which would be bad. Works for now.
+            // but should probably generate this var better.
+            let sym = var.value().as_symbol().unwrap();
+            let field_str = field.value().as_string().unwrap();
+            let new_var = Symbol::new(&format!("{}_dot_{}", sym.0, field_str));
+
+            // Record the relationship between the vars.
+            var_info
+                .relationships
+                .push((sym.clone(), field_str.to_string(), new_var.clone()));
+            new_var
+
+}
 fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
     match exp.operator {
         Operator::And => {
@@ -108,22 +122,12 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
             // We create a new var to represent the result of the operation.
             assert_eq!(exp.args.len(), 2);
             let mut var = exp.args[0].clone();
-            let field = &exp.args[1];
             if let Ok(inner_exp) = var.value().as_expression() {
                 assert_eq!(inner_exp.operator, Operator::Dot);
                 var = process_exp(var_info, inner_exp).unwrap();
             }
-            // TODO(steve): There's a potential name clash here which would be bad. Works for now.
-            // but should probably generate this var better.
-            let sym = var.value().as_symbol().unwrap();
-            let field_str = field.value().as_string().unwrap();
-            let new_var = Symbol::new(&format!("{}_dot_{}", sym.0, field_str));
-
-            // Record the relationship between the vars.
-            var_info
-                .relationships
-                .push((sym.clone(), field_str.to_string(), new_var.clone()));
-
+            let field = &exp.args[1];
+            let new_var = dot_var(var_info, var, field);
             // Return the var so we can unify with it.
             return Some(Term::new_temporary(Value::Variable(new_var)));
         }
@@ -131,12 +135,21 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
             assert_eq!(exp.args.len(), 2);
             let lhs = &exp.args[0];
             let rhs = &exp.args[1];
-            let var = lhs.value().as_symbol().unwrap();
-            let pattern = rhs.value().as_pattern().unwrap();
-            if let Pattern::Instance(InstanceLiteral { tag, fields }) = pattern {
+//            println!("dfisa {:?} {:?}", lhs, rhs);
+//            let var = lhs.value().as_symbol().unwrap();
+//            let pattern = rhs.value().as_pattern().unwrap();
+            if let Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields })) = rhs.value() {
                 // @TODO(steve): Handle specializer fields.
                 assert!(fields.fields.is_empty());
-                var_info.types.push((var.clone(), tag.clone().0))
+                let var = match lhs.value() {
+//                    Value::Expression(Operation { operator: Operator::Dot, args }) =>
+
+                    Value::Variable(var) | Value::RestVariable(var) => var.clone(),
+                    Value::Expression(op) if op.operator == Operator::Dot => dot_var(var_info, op.args[0].clone(), &op.args[1]),
+                    _ => todo!(),
+                };
+                var_info.types.push((var, tag.clone().0))
+
             } else {
                 todo!()
             }
@@ -275,10 +288,13 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
     // If we're turning 0 into 1 and then 0 into 2 it'll just blow up
     // not correctly turn 0 and 1 into 2. Needs some tests.
     for (x, y) in &new_unifies {
-        let mut xs = variables.remove(x).unwrap();
-        let ys = variables.remove(y).unwrap();
-        xs.extend(ys);
-        variables.insert(x.clone(), xs);
+        if (x != y) {
+            println!("{} ({}, {})", line!(), x, y);
+            let mut xs = variables.remove(x).unwrap();
+            let ys = variables.remove(y).unwrap();
+            xs.extend(ys);
+            variables.insert(x.clone(), xs);
+        }
     }
 
     // Substitute in relationship ids.
@@ -464,6 +480,7 @@ pub fn build_filter_plan(
     // I suspect this structure will change a little bit once we introduce OR.
     for result in partial_results {
         let term = result.bindings.get(&Symbol::new(variable)).unwrap();
+//        println!("BFP {}", term.to_polar());
         let exp = term.value().as_expression()?;
         assert_eq!(exp.operator, Operator::And);
 
