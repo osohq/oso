@@ -119,7 +119,7 @@ struct VarInfo {
     cycles: Vec<(Symbol, Symbol)>,  // x = y
     types: Vec<(Symbol, String)>,   // x matches XClass
     eq_values: Vec<(Symbol, Term)>, // x = 1;
-    in_values: Vec<(Symbol, Term)>, // x in [1,2,3]
+    // in_values: Vec<(Symbol, Term)>, // x in [1,2,3]
     contained_values: Vec<(Term, Symbol)>, // 1 in x
     field_relationships: Vec<(Symbol, String, Symbol)>, // x.a = y
     in_relationships: Vec<(Symbol, Symbol)>,            // x in y
@@ -132,7 +132,7 @@ fn process_result(exp: &Operation) -> VarInfo {
         cycles: vec![],
         types: vec![],
         eq_values: vec![],
-        in_values: vec![],
+        // in_values: vec![],
         contained_values: vec![],
         field_relationships: vec![],
         in_relationships: vec![]
@@ -245,7 +245,7 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
                     // @Q(steve): Should I make sure this value is a list?
                     // @Q(steve): Does this ever actually come through the simplifier?
                     unimplemented!();
-                    var_info.in_values.push((var.clone(), Term::new_temporary(val.clone())));
+                    // var_info.in_values.push((var.clone(), Term::new_temporary(val.clone())));
                 },
                 // 123 in var
                 (val, Value::Variable(var)) => {

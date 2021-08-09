@@ -168,7 +168,6 @@ def test_data_filtering(oso):
     results = list(oso.get_allowed_resources("steve", "get", Foo))
     assert len(results) == 1
 
-
     # @TODO(steve): There is maybe a way to optimize the filter plan where if we are doing
     # two different of the same fetch with different fields we can combine them into an `in`.
 
@@ -178,15 +177,13 @@ def test_data_filtering(oso):
     oso.clear_rules()
     policy = """
     allow("steve", "get", resource: FooLogRecord) if
-        resource in [new FooLogRecord("a", "fourth", "hello"), new FooLogRecord("a", "welp", "no")];
+        resource.data in ["hello", "world"];
     """
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", forth_log_a)
 
-    # @BUG(steve): If _this has a value, you don't have to call the fetcher you just return it.
-    # Probably a bug in other cases too.
-    # results = list(oso.get_allowed_resources("steve", "get", FooLogRecord))
-    # assert len(results) == 1
+    results = list(oso.get_allowed_resources("steve", "get", FooLogRecord))
+    assert len(results) == 1
 
 
 def test_roles_data_filtering(oso):
