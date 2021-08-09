@@ -1,6 +1,10 @@
 ---
 title: Use Cases
-aliases: 
+# Took this page down due to the Use Cases page on .com
+href: https://www.osohq.com/use-cases
+_build:
+  render: never
+aliases:
     - ../more/use-cases.html
 ---
 
