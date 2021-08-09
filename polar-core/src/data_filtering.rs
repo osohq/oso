@@ -8,6 +8,8 @@ use crate::events::ResultEvent;
 use crate::kb::Bindings;
 use crate::terms::*;
 
+use std::env;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Type {
     Base {
@@ -33,6 +35,7 @@ pub struct Attrib {
 }
 
 // @NOTE(steve): Constraint is sort of an overloaded word.
+// @TODO: in's aren't always attrib and eq isn't always value.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Constraint {
     Eq {
@@ -72,14 +75,46 @@ pub struct FilterPlan {
     result_sets: Vec<ResultSet>,
 }
 
+impl FilterPlan {
+    pub fn explain(&self) {
+        eprintln!("==Filter Plan==");
+        // For now each result set is union'd. This is a top level OR.
+        // After I actually implement OR this will change.
+        eprintln!("UNION");
+        for (i, result_set) in self.result_sets.iter().enumerate() {
+            eprintln!("  =Result Set: {}=", i);
+            for id in &result_set.resolve_order {
+                let fetch_request = result_set.requests.get(id).unwrap();
+                eprintln!("    {}: Fetch {}", id, fetch_request.class_tag);
+                for constraint in &fetch_request.constraints {
+                    match constraint {
+                        Constraint::Eq {field, value} => {
+                            eprintln!("          {} = {}", field, value.to_polar());
+                        }
+                        Constraint::In {field, value} => {
+                            eprintln!("          {} in REF(field {} of result {})", field, value.field, value.of.id);
+                        }
+                    }
+
+                }
+            }
+        }
+
+    }
+}
+
 pub type Types = HashMap<String, HashMap<String, Type>>;
 pub type PartialResults = Vec<ResultEvent>;
 
+#[derive(Debug)]
 struct VarInfo {
-    cycles: Vec<(Symbol, Symbol)>,
-    types: Vec<(Symbol, String)>,
-    values: Vec<(Symbol, Term)>,
-    relationships: Vec<(Symbol, String, Symbol)>,
+    cycles: Vec<(Symbol, Symbol)>,  // x = y
+    types: Vec<(Symbol, String)>,   // x matches XClass
+    eq_values: Vec<(Symbol, Term)>, // x = 1;
+    in_values: Vec<(Symbol, Term)>, // x in [1,2,3]
+    values_in: Vec<(Term, Symbol)>, // 1 in x
+    field_relationships: Vec<(Symbol, String, Symbol)>, // x.a = y
+    in_relationships: Vec<(Symbol, Symbol)>,            // x in y
 }
 
 // @TODO(steve): Better way to handle these checks than just unwraps and asserts.
@@ -88,26 +123,28 @@ fn process_result(exp: &Operation) -> VarInfo {
     let mut var_info = VarInfo {
         cycles: vec![],
         types: vec![],
-        values: vec![],
-        relationships: vec![],
+        eq_values: vec![],
+        in_values: vec![],
+        values_in: vec![],
+        field_relationships: vec![],
+        in_relationships: vec![]
     };
     process_exp(&mut var_info, exp);
     var_info
 }
 
 fn dot_var(var_info: &mut VarInfo, var: Term, field: &Term) -> Symbol {
-            // TODO(steve): There's a potential name clash here which would be bad. Works for now.
-            // but should probably generate this var better.
-            let sym = var.value().as_symbol().unwrap();
-            let field_str = field.value().as_string().unwrap();
-            let new_var = Symbol::new(&format!("{}_dot_{}", sym.0, field_str));
+        // TODO(steve): There's a potential name clash here which would be bad. Works for now.
+        // but should probably generate this var better.
+        let sym = var.value().as_symbol().unwrap();
+        let field_str = field.value().as_string().unwrap();
+        let new_var = Symbol::new(&format!("{}_dot_{}", sym.0, field_str));
 
-            // Record the relationship between the vars.
-            var_info
-                .relationships
-                .push((sym.clone(), field_str.to_string(), new_var.clone()));
-            new_var
-
+        // Record the relationship between the vars.
+        var_info
+            .field_relationships
+            .push((sym.clone(), field_str.to_string(), new_var.clone()));
+        new_var
 }
 fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
     match exp.operator {
@@ -174,7 +211,7 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
                 }
                 // Unifying a variable with a value
                 (Value::Variable(var), val) | (val, Value::Variable(var)) => var_info
-                    .values
+                    .eq_values
                     .push((var.clone(), Term::new_temporary(val.clone()))),
                 // Unifying something else, I think would be an error in most cases???
                 // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
@@ -184,15 +221,55 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
                 }
             };
         }
-        _ => todo!("need a few more of these"),
+        Operator::In => {
+            // So in is similar to unify, but is just talking about multiple values.
+            // We *could* treat it as an `or`, but I think we probably don't want to do that.
+            // variable in variable is a relationship between vars.
+            // variable in list of values is a value relationship, and can probably directly translate to an in constraint.
+            // what does value in variable mean? It's like a thing we'll have to check in the resolver?
+            assert_eq!(exp.args.len(), 2);
+
+            let mut lhs = exp.args[0].clone();
+            if let Value::Expression(op) = lhs.value() {
+                lhs = process_exp(var_info, op).unwrap();
+            };
+
+            let mut rhs = exp.args[1].clone();
+            if let Value::Expression(op) = rhs.value() {
+                rhs = process_exp(var_info, op).unwrap();
+            };
+
+            match (lhs.value(), rhs.value()) {
+                // l in r
+                (Value::Variable(l), Value::Variable(r)) => {
+                    var_info.in_relationships.push((l.clone(), r.clone()));
+                }
+                // var in [1, 2, 3]
+                (Value::Variable(var), val) => {
+                    // @Q(steve): Should I make sure this value is a list?
+                    var_info.in_values.push((var.clone(), Term::new_temporary(val.clone())));
+                },
+                // 123 in var
+                (val, Value::Variable(var)) => {
+                    var_info.values_in.push((Term::new_temporary(val.clone()), var.clone()));
+                }
+                (a, b) => {
+                    eprintln!("Bad in: {} in {}", a.to_polar(), b.to_polar());
+                    todo!()
+                }
+            };
+
+        }
+        op => todo!("Unhandled Operation: {}", op.to_polar()),
     }
     None
 }
 
+#[derive(Debug)]
 struct Vars {
     variables: HashMap<String, HashSet<Symbol>>,
-    relationships: Vec<(String, String, String)>,
-    values: HashMap<String, Term>,
+    field_relationships: Vec<(String, String, String)>,
+    eq_values: HashMap<String, Term>,
     types: HashMap<String, String>,
     this_id: String,
 }
@@ -232,7 +309,7 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
 
     // Substitute in relationships
     let mut parent_ids = vec![];
-    'relationships: for (parent, _, _) in &var_info.relationships {
+    'relationships: for (parent, _, _) in &var_info.field_relationships {
         for (id, set) in &mut variables {
             if set.contains(parent) {
                 parent_ids.push(id.clone());
@@ -247,7 +324,7 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
         parent_ids.push(new_id);
     }
     let mut child_ids = vec![];
-    'relationships: for (_, _, child) in &var_info.relationships {
+    'relationships: for (_, _, child) in &var_info.field_relationships {
         for (id, set) in &mut variables {
             if set.contains(child) {
                 child_ids.push(id.clone());
@@ -264,17 +341,17 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
 
     // If a.b = c and a.b = d, that means c = d.
     // @Sorry(steve): Wow, what a loop.
-    let mut new_unifies = vec![];
+    let mut new_unifies: Vec<(String, String)> = vec![];
     for (i, ((parent_id1, child_id1), (_, field1, _))) in parent_ids
         .iter()
         .zip(child_ids.iter())
-        .zip(var_info.relationships.iter())
+        .zip(var_info.field_relationships.iter())
         .enumerate()
     {
         for (j, ((parent_id2, child_id2), (_, field2, _))) in parent_ids
             .iter()
             .zip(child_ids.iter())
-            .zip(var_info.relationships.iter())
+            .zip(var_info.field_relationships.iter())
             .enumerate()
         {
             if i != j && parent_id1 == parent_id2 && field1 == field2 {
@@ -299,8 +376,8 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
 
     // Substitute in relationship ids.
     // @Sorry(steve): This is a real mess too.
-    let mut relationships = vec![];
-    for (parent, field, child) in &var_info.relationships {
+    let mut field_relationships = vec![];
+    for (parent, field, child) in &var_info.field_relationships {
         let mut parent_id = String::new();
         let mut child_id = String::new();
         for (id, set) in &mut variables {
@@ -313,20 +390,20 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
         }
         assert_ne!(parent_id, String::new());
         assert_ne!(child_id, String::new());
-        relationships.push((parent_id, field.clone(), child_id));
+        field_relationships.push((parent_id, field.clone(), child_id));
     }
 
     // I think a var can only have one value since we make sure there's a var for the dot lookup,
     // and if they had aliases they'd be collapsed by now, so it should be an error
     // if foo.name = "steve" and foo.name = "gabe".
     // TODO(steve): How are we going to handle "in"
-    let mut values = HashMap::new();
-    'values: for (var, value) in var_info.values {
+    let mut eq_values = HashMap::new();
+    'values: for (var, value) in var_info.eq_values {
         for (id, set) in &mut variables {
             if set.contains(&var) {
                 // @TODO(steve): If we already have a value for it make sure they match don't just
                 // overwrite it.
-                values.insert(id.clone(), value);
+                eq_values.insert(id.clone(), value);
                 continue 'values;
             }
         }
@@ -335,7 +412,7 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
         let mut new_set = HashSet::new();
         new_set.insert(var.clone());
         variables.insert(new_id.clone(), new_set);
-        values.insert(new_id, value);
+        eq_values.insert(new_id, value);
     }
 
     let mut types = HashMap::new();
@@ -365,8 +442,8 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
 
     Vars {
         variables,
-        relationships,
-        values,
+        field_relationships,
+        eq_values,
         types,
         this_id,
     }
@@ -408,7 +485,7 @@ fn constrain_var(
         }
     };
 
-    for (parent, field, child) in &vars.relationships {
+    for (parent, field, child) in &vars.field_relationships {
         if parent == var_id {
             if let Some(typ) = type_def.get(field) {
                 if let Type::Relationship {
@@ -431,7 +508,7 @@ fn constrain_var(
             }
             // Non relationship or unknown type info.
             // @TODO: Handle "in"
-            if let Some(value) = vars.values.get(child) {
+            if let Some(value) = vars.eq_values.get(child) {
                 request.constraints.push(Constraint::Eq {
                     field: field.clone(),
                     value: value.clone(),
@@ -452,59 +529,89 @@ pub fn build_filter_plan(
     variable: &str,
     class_tag: &str,
 ) -> PolarResult<FilterPlan> {
-    // let polar_version = partial_results[0]
-    //     .bindings
-    //     .get(&Symbol::new("resource"))
-    //     .unwrap()
-    //     .to_polar();
-    // eprintln!("{}", polar_version);
-    //
-    // let mut requests = HashMap::new();
-    // requests.insert(
-    //     "0".to_string(),
-    //     FetchRequest {
-    //         class_tag: "Foo".to_string(),
-    //         constraints: vec![Constraint::Eq {
-    //             field: "is_fooey".to_string(),
-    //             value: Term::new_temporary(Value::Boolean(true)),
-    //         }],
-    //     },
-    // );
-
     let mut filter_plan = FilterPlan {
         result_sets: vec![],
     };
+    // @NOTE(steve): Just reading an env var here sucks (see all the stuff we had to do
+    // to get POLAR_LOG to work in all libs, wasm etc...) but that's what I'm doing today.
+    // At some point surface this info better.
+    let explain = match std::env::var("POLAR_EXPLAIN") {
+        Ok(_) => true,
+        Err(_) => false
+    };
+
+    if explain {
+        eprintln!("===Data Filtering Query===");
+        eprintln!("==Bindings==")
+    }
 
     // @NOTE(steve): For now we build a ResultSet for each result. Then we put them into a filterplan
     // which effectively means the results should all be UNION'd together.
     // I suspect this structure will change a little bit once we introduce OR.
-    for result in partial_results {
+    for (i, result) in partial_results.iter().enumerate() {
         let term = result.bindings.get(&Symbol::new(variable)).unwrap();
 //        println!("BFP {}", term.to_polar());
         let exp = term.value().as_expression()?;
         assert_eq!(exp.operator, Operator::And);
 
+        if explain {
+            eprintln!("  {}: {}", i, term.to_polar());
+        }
+
         let var_info = process_result(exp);
         let vars = collapse_vars(var_info);
+
+        if explain {
+            eprintln!("    variables");
+            for (id, set) in &vars.variables {
+                let values = set.clone().into_iter().map(|sym|{sym.0.to_owned()}).collect::<Vec<String>>().join(", ");
+                eprintln!("      {}:  vars: {{{}}}", id, values);
+                let type_tag = if let Some(tag) = vars.types.get(id) {
+                    tag.clone()
+                } else if let Some(val) = vars.eq_values.get(id) {
+                    match val.value() {
+                        Value::Boolean(_) => {
+                            "Bool".to_owned()
+                        },
+                        Value::String(_) => {
+                            "String".to_owned()
+                        },
+                        Value::Number(_) => {
+                            "Number".to_owned()
+                        },
+                        Value::List(_) => {
+                            "List".to_owned()
+                        }
+                        Value::Dictionary(_) => {
+                            "Dictionary".to_owned()
+                        },
+                        _ => todo!()
+                    }
+                } else {
+                    "unknown".to_owned()
+                };
+                eprintln!("          type: {}", type_tag);
+                if let Some(val) = vars.eq_values.get(id) {
+                    eprintln!("          value: {}", val.to_polar());
+                }
+            }
+        }
+        eprintln!("    field relationships");
+        for (x,field,y) in &vars.field_relationships {
+            eprintln!("      {}.{} = {}", x, field, y);
+        }
+
         let result_set = constrain_vars(&types, &vars, class_tag);
         filter_plan.result_sets.push(result_set);
+    }
+
+    if explain {
+        filter_plan.explain()
     }
 
     Ok(filter_plan)
 }
 
-// [
-// FilterPlan(
-// data_sets={
-// 0: Constraints(
-// cls="Foo",
-// constraints=[Constraint(kind="Eq", field="is_fooey", value=True)],
-// )
-// },
-// resolve_order=[0],
-// result_set=0,
-// )
-// ]
 
 mod tests {
     use super::*;
