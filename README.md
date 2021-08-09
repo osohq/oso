@@ -14,17 +14,31 @@
 
 Oso is a batteries-included library for building authorization in your application.
 
-Oso gives you a mental model and an authorization system – a set of APIs built on top of a declarative policy language called Polar, plus a debugger and REPL – to define who can do what in your application. You can express common concepts from “users can see their own data” and role-based access control, to others like multi-tenancy, organizations and teams, hierarchies and relationships.
+Oso gives you a mental model and an authorization system – a set of APIs
+built on top of a declarative policy language called Polar, plus a
+debugger and REPL – to define who can do what in your application. You
+can express common concepts from “users can see their own data” and
+role-based access control, to others like multi-tenancy, organizations
+and teams, hierarchies and relationships.
 
-Oso lets you offload the thinking of how to design authorization and build features fast, while keeping the flexibility to extend and customize as you see fit.
+Oso lets you offload the thinking of how to design authorization and
+build features fast, while keeping the flexibility to extend and
+customize as you see fit.
 
-Developers can typically write a working Oso policy in <5 minutes, add Oso to an app in <30 minutes, and use Oso to solve real authorization problems within a few hours. To get started, you add the library to your application, create a new Oso instance and load an Oso policy. You can mix and match any of Oso’s authorization APIs to implement features like roles with custom policies that you write to suit your application.
+Developers can typically write a working Oso policy in <5 minutes, add
+Oso to an app in <30 minutes, and use Oso to solve real authorization
+problems within a few hours. To get started, you add the library to your
+application, create a new Oso instance and load an Oso policy. You can
+mix and match any of Oso’s authorization APIs to implement features like
+roles with custom policies that you write to suit your application.
 
-Oso is ideal for building permissions into user-facing applications, but you
-can check out [Use Cases][use-cases] to learn about other applications for Oso.
+Check out [Use Cases][use-cases] to learn more about how teams are using
+Oso to build authorization.
 
-Oso currently offers libraries for [Node.js][badge-nodejs-link], [Python][badge-python-link], [Go][badge-go-link], 
-[Rust][badge-rust-link], [Ruby][badge-ruby-link], and [Java][badge-java-link].
+Oso currently offers libraries for [Node.js][badge-nodejs-link],
+[Python][badge-python-link], [Go][badge-go-link],
+[Rust][badge-rust-link], [Ruby][badge-ruby-link], and
+[Java][badge-java-link].
 
 ## Getting started
 
@@ -97,7 +111,7 @@ See: [LICENSE][license].
 [docs]: https://docs.osohq.com
 [license]: https://github.com/osohq/oso/blob/main/LICENSE
 [rust]: https://www.rust-lang.org/tools/install
-[use-cases]: https://docs.osohq.com/more/use-cases.html
+[use-cases]: https://www.osohq.com/use-cases
 [wasm-pack]: https://rustwasm.github.io/wasm-pack/installer/
 
 ## Share your story
