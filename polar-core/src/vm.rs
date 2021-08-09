@@ -3718,18 +3718,15 @@ mod tests {
     }
 
     #[test]
-    fn test_timeout_configuration() {
+    fn test_timeout() {
         let vm = PolarVirtualMachine::default();
         assert!(vm.query_timeout_ms == DEFAULT_TIMEOUT_MS);
 
         std::env::set_var("POLAR_TIMEOUT_MS", "0");
         let vm = PolarVirtualMachine::default();
         std::env::remove_var("POLAR_TIMEOUT_MS");
-        assert!(vm.is_query_timeout_disabled())
-    }
+        assert!(vm.is_query_timeout_disabled());
 
-    #[test]
-    fn test_timeout() {
         std::env::set_var("POLAR_TIMEOUT_MS", "500");
         let mut vm = PolarVirtualMachine::default();
         std::env::remove_var("POLAR_TIMEOUT_MS");
