@@ -23,6 +23,7 @@ Gradle
 GraphQL
 Graphene
 Halbert
+hotfixes
 IAM
 IDEs
 JARs
@@ -49,6 +50,7 @@ REPL
 RESTful
 RubyGems
 Rubying
+SLA
 SQLAlchemy
 SQLAlchemy's
 SQLite

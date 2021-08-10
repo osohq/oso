@@ -242,7 +242,7 @@ module Oso
                     { 'Pattern' => { 'Instance' => { 'tag' => value.tag, 'fields' => dict['Dictionary'] } } }
                   end
                 else
-                  { 'ExternalInstance' => { 'instance_id' => cache_instance(value), 'repr' => value.to_s } }
+                  { 'ExternalInstance' => { 'instance_id' => cache_instance(value), 'repr' => nil } }
                 end
         { 'value' => value }
       end
@@ -306,6 +306,12 @@ module Oso
           end
         else
           raise UnexpectedPolarTypeError, tag
+        end
+      end
+
+      def enrich_message(msg)
+        msg.gsub(/\^\{id: ([0-9]+)\}/) do
+          get_instance(Regexp.last_match[1].to_i).to_s
         end
       end
     end
