@@ -61,6 +61,7 @@ impl IsaConstraintCheck {
 
         let constraint_path = path(&constraint.args[0]);
         let proposed_path = path(&self.proposed.args[0]);
+    //                println!("EXISC {:?} :: {:?} {:?}", self.proposed.operator, proposed_path, constraint_path);
 
         // Not comparable b/c one of the matches statements has a LHS that isn't a variable or dot
         // op.
@@ -146,6 +147,7 @@ impl Runnable for IsaConstraintCheck {
                 self.alternative_check = None;
             } else if self.alternative_check.is_none() {
                 // If both checks fail, we fail.
+                //
                 return Ok(QueryEvent::Done { result: false });
             }
         }

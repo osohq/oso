@@ -54,6 +54,7 @@ enum Step {
     /// Step **in**. Will break on the next query.
     Into,
     Error,
+    Rule,
 }
 
 /// VM breakpoints.
@@ -69,6 +70,7 @@ pub enum DebugEvent {
     Query,
     Pop,
     Error(PolarError),
+    Rule,
 }
 
 /// Tracks internal debugger state.
@@ -80,6 +82,7 @@ pub struct Debugger {
     /// - `Some(step)`: View the stopping logic in
     ///   [`maybe_break`](struct.Debugger.html#method.maybe_break).
     step: Option<Step>,
+    last: Option<String>,
 }
 
 impl Debugger {
@@ -128,17 +131,16 @@ impl Debugger {
                     message: format!("{}\nERROR: {}\n", message, error.to_string()),
                 })
             }
+            (Step::Rule, DebugEvent::Rule) => {
+                self.break_query(vm)
+            }
             _ => None,
         })
     }
 
     pub fn break_msg(&self, vm: &PolarVirtualMachine) -> Option<String> {
-        vm.trace.last().and_then(|trace| {
-            if let Trace {
-                node: Node::Term(q),
-                ..
-            } = &**trace
-            {
+        vm.trace.last().and_then(|ref trace| match trace.node {
+            Node::Term(ref q) => {
                 match q.value() {
                     Value::Expression(Operation {
                         operator: Operator::And,
@@ -149,9 +151,9 @@ impl Debugger {
                         Some(format!("{}\n\n{}\n", vm.query_summary(q), source))
                     }
                 }
-            } else {
-                None
             }
+            Node::Rule(ref r) =>
+                Some(vm.rule_source(r)),
         })
     }
 
@@ -186,7 +188,13 @@ impl Debugger {
             }
         }
         let parts: Vec<&str> = command.split_whitespace().collect();
-        match *parts.get(0).unwrap_or(&"help") {
+        let dflt = match self.last.take() {
+            Some(s) => s,
+            _ => "help".to_owned(),
+        };
+        let fst = *parts.get(0).unwrap_or(&&dflt[..]);
+        self.last = Some(String::from(fst));
+        match fst {
             "c" | "continue" | "q" | "quit" => self.step = None,
 
             "n" | "next" | "over" => {
@@ -203,6 +211,9 @@ impl Debugger {
             }
             "e" | "error" => {
                 self.step = Some(Step::Error)
+            }
+            "r" | "rule" => {
+                self.step = Some(Step::Rule)
             }
             "l" | "line" => {
                 let lines = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
@@ -353,6 +364,7 @@ impl Debugger {
   o[ut]                   Step out of the current query stack level to the next query in the level above.
   g[oal]                  Step to the next goal of the Polar VM.
   e[rror]                 Step to the next error.
+  r[ule]                  Step to the next rule.
   l[ine] [<n>]            Print the current line and <n> lines of context.
   query [<i>]             Print the current query or the query at level <i> in the query stack.
   stack | trace           Print the current query stack.

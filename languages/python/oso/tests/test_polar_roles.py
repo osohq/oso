@@ -328,7 +328,7 @@ def test_relationship_without_specializer(init_oso):
             "pull"
         ];
 
-    parent_child(parent_org: Org, repo) if
+    parent_child(parent_org: Org, repo: Repo) if
         repo.org = parent_org;
 
     actor_has_role_for_resource(_, _, _);

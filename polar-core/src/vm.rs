@@ -499,6 +499,7 @@ impl PolarVirtualMachine {
                     );
                 }
                 self.trace.push(trace.clone());
+                self.maybe_break(DebugEvent::Rule)?;
             }
             Goal::Unify { left, right } => self.unify(left, right)?,
             Goal::AddConstraint { term } => self.add_constraint(term)?,
