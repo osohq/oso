@@ -2,13 +2,10 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::counter::Counter;
-use crate::error::{PolarError, PolarResult};
+use crate::error::PolarResult;
 use crate::events::ResultEvent;
-use crate::kb::Bindings;
-use crate::terms::*;
 
-use std::env;
+use crate::terms::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Type {
@@ -239,7 +236,7 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
                     var_info.in_relationships.push((l.clone(), r.clone()));
                 }
                 // var in [1, 2, 3]
-                (Value::Variable(var), val) => {
+                (Value::Variable(_var), _val) => {
                     // @Q(steve): Does this ever actually come through the simplifier?
                     // @Note(steve): MikeD wishes this came through as an in instead of or-expanded.
                     // That way we could turn it into an `in` in sql.
@@ -252,7 +249,7 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
                         .contained_values
                         .push((Term::new_temporary(val.clone()), var.clone()));
                 }
-                (a, b) => {
+                (_a, _b) => {
                     // @NOTE: This is probably just a bug if we hit it. Shouldn't get any other `in` cases.
                     unimplemented!(
                         "Unknown `in` constraint that is not yet supported for data filtering."
@@ -560,7 +557,7 @@ fn constrain_var(
         if parent == var_id {
             if let Some(typ) = type_def.get(field) {
                 if let Type::Relationship {
-                    kind,
+                    kind: _,
                     other_class_tag,
                     my_field,
                     other_field,
@@ -654,7 +651,7 @@ pub fn optimize(mut filter_plan: FilterPlan, explain: bool) -> FilterPlan {
     if explain {
         eprintln!("\nOptimizing...")
     }
-    while (opt_pass(&mut filter_plan, explain)) {}
+    while opt_pass(&mut filter_plan, explain) {}
     if explain {
         eprintln!("Done\n")
     }
@@ -755,39 +752,4 @@ pub fn build_filter_plan(
     }
 
     Ok(opt_filter_plan)
-}
-
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_serialize() {
-        let mut types = HashMap::new();
-
-        let mut foo_types = HashMap::new();
-        foo_types.insert(
-            "bar_name",
-            Type::Base {
-                class_tag: "String".to_owned(),
-            },
-        );
-        foo_types.insert(
-            "bar",
-            Type::Relationship {
-                kind: "parent".to_owned(),
-                other_class_tag: "Bar".to_owned(),
-                my_field: "bar_name".to_owned(),
-                other_field: "name".to_owned(),
-            },
-        );
-        types.insert("Foo", foo_types);
-
-        println!("{}", serde_json::to_string(&types).unwrap());
-
-        let r = Ref {
-            field: None,
-            result_id: "123".to_string(),
-        };
-        println!("{}", serde_json::to_string(&r).unwrap());
-    }
 }

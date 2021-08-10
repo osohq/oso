@@ -1151,7 +1151,7 @@ impl PolarVirtualMachine {
                                 // eprintln!("bindings: {}", bindings.to_polar());
                                 if let Value::Expression(o) = bindings.value() {
                                     let mut cycles: Vec<HashSet<Symbol>> = vec![];
-                                    let mut unifies: Vec<usize> = o
+                                    let _unifies: Vec<usize> = o
                                         .constraints()
                                         .iter()
                                         .enumerate()
@@ -1213,7 +1213,7 @@ impl PolarVirtualMachine {
                                     }
 
                                     for cycle in joined_cycles {
-                                        if (cycle.contains(s)) {
+                                        if cycle.contains(s) {
                                             aliases = Some(cycle);
                                             break;
                                         }

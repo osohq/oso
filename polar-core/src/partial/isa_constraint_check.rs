@@ -1,11 +1,9 @@
 use crate::counter::Counter;
 use crate::error::{OperationalError, PolarResult};
 use crate::events::QueryEvent;
-use crate::formatting::ToPolarString;
+
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
-
-use crate::kb::Bindings;
 
 use std::collections::HashSet;
 
@@ -189,7 +187,7 @@ impl IsaConstraintCheck {
                 && matches!(&self.proposed.args[0].value().as_symbol(), Ok(Symbol(_)))
             {
                 let existing_sym = constraint.args[0].value().as_symbol().unwrap();
-                let proposed_sym = self.proposed.args[0].value().as_symbol().unwrap();
+                let _proposed_sym = self.proposed.args[0].value().as_symbol().unwrap();
                 if let Some(aliases) = &self.proposed_aliases {
                     if !aliases.contains(existing_sym) {
                         return (None, None);
