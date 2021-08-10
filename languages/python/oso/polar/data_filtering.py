@@ -41,10 +41,12 @@ def serialize_types(types, class_names):
         polar_types[tag] = field_types
     return polar_types
 
+
 @dataclass
 class Ref:
     field: Optional[str]
     result_id: str
+
 
 @dataclass
 class Constraint:
@@ -65,8 +67,8 @@ def parse_constraint(polar, constraint):
     if value_kind == "Term":
         value = polar.host.to_python(value)
     elif value_kind == "Ref":
-        child_field = value['field']
-        result_id = value['result_id']
+        child_field = value["field"]
+        result_id = value["result_id"]
         value = Ref(field=child_field, result_id=result_id)
     else:
         assert False, "Unknown value kind"
