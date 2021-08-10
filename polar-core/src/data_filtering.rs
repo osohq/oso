@@ -328,11 +328,11 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
 
     // Substitute in relationships
     let mut parent_ids = vec![];
-    'relationships: for (parent, _, _) in &var_info.field_relationships {
+    'parent_relationships: for (parent, _, _) in &var_info.field_relationships {
         for (id, set) in &mut variables {
             if set.contains(parent) {
                 parent_ids.push(id.clone());
-                continue 'relationships;
+                continue 'parent_relationships;
             }
         }
         // Create a new set if we didn't find one.
@@ -343,11 +343,11 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
         parent_ids.push(new_id);
     }
     let mut child_ids = vec![];
-    'relationships: for (_, _, child) in &var_info.field_relationships {
+    'child_relationships: for (_, _, child) in &var_info.field_relationships {
         for (id, set) in &mut variables {
             if set.contains(child) {
                 child_ids.push(id.clone());
-                continue 'relationships;
+                continue 'child_relationships;
             }
         }
         // Create a new set if we didn't find one.
