@@ -606,7 +606,6 @@ impl Simplifier {
             return;
         }
         let orig = term.clone();
-        let k = term.clone();
         self.seen.insert(term.clone());
 
         //        println!("simplify_term pre {}", term.to_polar());

@@ -13,6 +13,27 @@ def oso():
     oso = Oso()
     return oso
 
+def filter_array(array, constraints):
+    results = []
+    for elem in array:
+        matches = True
+        for constraint in constraints:
+            val = getattr(elem, constraint.field)
+            if constraint.kind == "Eq":
+                if val != constraint.value:
+                    matches = False
+                    break
+            if constraint.kind == "In":
+                if val not in constraint.value:
+                    matches = False
+                    break
+            if constraint.kind == "Contains":
+                if constraint.value not in val:
+                    matches = False
+                    break
+        if matches:
+            results.append(elem)
+    return results
 
 def test_data_filtering(oso):
     # Register some types and callbacks
@@ -27,6 +48,7 @@ def test_data_filtering(oso):
         id: str
         bar_id: str
         is_fooey: bool
+        numbers: list
 
     @dataclass
     class FooLogRecord:
@@ -36,83 +58,26 @@ def test_data_filtering(oso):
 
     hello_bar = Bar(id="hello", is_cool=True, is_still_cool=True)
     goodbye_bar = Bar(id="goodbye", is_cool=False, is_still_cool=True)
-    something_foo = Foo(id="something", bar_id="hello", is_fooey=False)
-    another_foo = Foo(id="another", bar_id="hello", is_fooey=True)
-    third_foo = Foo(id="third", bar_id="hello", is_fooey=True)
-    forth_foo = Foo(id="fourth", bar_id="goodbye", is_fooey=True)
+    something_foo = Foo(id="something", bar_id="hello", is_fooey=False, numbers=[])
+    another_foo = Foo(id="another", bar_id="hello", is_fooey=True, numbers=[1])
+    third_foo = Foo(id="third", bar_id="hello", is_fooey=True, numbers=[2])
+    forth_foo = Foo(id="fourth", bar_id="goodbye", is_fooey=True, numbers=[2,1])
 
     forth_log_a = FooLogRecord(id="a", foo_id="fourth", data="hello")
-    forth_log_b = FooLogRecord(id="b", foo_id="fourth", data="world")
+    third_log_b = FooLogRecord(id="b", foo_id="third", data="world")
 
     bars = [hello_bar, goodbye_bar]
     foos = [something_foo, another_foo, third_foo, forth_foo]
-    foo_logs = [forth_log_a, forth_log_b]
-
-    def matches_fields(fields, obj):
-        for k, v in fields.items():
-            if getattr(obj, k) != v:
-                return False
-            return True
-
-    def field_matcher(fields):
-        def matcher(obj):
-            return matches_fields(fields, obj)
-
-        return matcher
+    foo_logs = [forth_log_a, third_log_b]
 
     def get_bars(constraints):
-        results = []
-        for bar in bars:
-            matches = True
-            for constraint in constraints:
-                val = getattr(bar, constraint.field)
-                if constraint.kind == "Eq":
-                    if val != constraint.value:
-                        matches = False
-                        break
-                if constraint.kind == "In":
-                    if val not in constraint.value:
-                        matches = False
-                        break
-            if matches:
-                results.append(bar)
-        return results
+        return filter_array(bars, constraints)
 
     def get_foos(constraints):
-        results = []
-        for foo in foos:
-            matches = True
-            for constraint in constraints:
-                val = getattr(foo, constraint.field)
-                if constraint.kind == "Eq":
-                    if val != constraint.value:
-                        matches = False
-                        break
-                if constraint.kind == "In":
-                    if val not in constraint.value:
-                        matches = False
-                        break
-            if matches:
-                results.append(foo)
-        return results
+        return filter_array(foos, constraints)
 
     def get_foo_logs(constraints):
-        results = []
-        for fl in foo_logs:
-            matches = True
-            for constraint in constraints:
-                val = getattr(fl, constraint.field)
-                if constraint.kind == "Eq":
-                    if val != constraint.value:
-                        matches = False
-                        break
-                if constraint.kind == "In":
-                    if val not in constraint.value:
-                        matches = False
-                        break
-            if matches:
-                results.append(fl)
-        return results
+        return filter_array(foo_logs, constraints)
 
     oso.register_class(Bar, types={"id": str, "is_cool": bool}, fetcher=get_bars)
     oso.register_class(
@@ -179,45 +144,48 @@ def test_data_filtering(oso):
 
     results = list(oso.get_allowed_resources("steve", "get", Foo))
     assert len(results) == 4
-    #
-    # oso.clear_rules()
-    #
 
     # var in var
-    # policy = """
-    # allow("steve", "get", resource: Foo) if
-    #     log in resource.logs and
-    #     log.data = "hello";
-    # """
-    # oso.load_str(policy)
-    # assert oso.is_allowed("steve", "get", forth_foo)
-    #
-    # results = list(oso.get_allowed_resources("steve", "get", Foo))
-    # assert len(results) == 1
+    oso.clear_rules()
+    policy = """
+    allow("steve", "get", resource: Foo) if
+        log in resource.logs and
+        log.data = "hello";
+    """
+    oso.load_str(policy)
+    assert oso.is_allowed("steve", "get", forth_foo)
 
-    # # value in var
-    # oso.clear_rules()
-    # policy = """
-    # allow("steve", "get", resource: Foo) if
-    #     new FooLogRecord("a", "fourth", "hello") in resource.logs;
-    # """
-    # oso.load_str(policy)
-    # assert oso.is_allowed("steve", "get", forth_foo)
-    #
-    # results = list(oso.get_allowed_resources("steve", "get", Foo))
-    # assert len(results) == 1
-    #
-    # # var in value
-    # oso.clear_rules()
-    # policy = """
-    # allow("steve", "get", resource: FooLogRecord) if
-    #     resource in [new FooLogRecord("a", "fourth", "hello")];
-    # """
-    # oso.load_str(policy)
-    # assert oso.is_allowed("steve", "get", forth_foo)
+    results = list(oso.get_allowed_resources("steve", "get", Foo))
+    assert len(results) == 1
 
-    # results = list(oso.get_allowed_resources("steve", "get", Foo))
-    # assert len(results) == 4
+    # value in var
+    oso.clear_rules()
+    policy = """
+    allow("steve", "get", resource: Foo) if
+        1 in resource.numbers and 2 in resource.numbers;
+    """
+    oso.load_str(policy)
+    assert oso.is_allowed("steve", "get", forth_foo)
+
+    results = list(oso.get_allowed_resources("steve", "get", Foo))
+    assert len(results) == 1
+
+    # @TODO(steve): There is maybe a way to optimize the filter plan where if we are doing
+    # two different of the same fetch with different fields we can combine them into an `in`.
+
+    # var in value, This currently doesn't come through as an `in`
+    # This is I think the thing that MikeD wants though, for this to come through
+    # as an in so the SQL can do an IN.
+    oso.clear_rules()
+    policy = """
+    allow("steve", "get", resource: FooLogRecord) if
+        resource.data in ["hello", "world"];
+    """
+    oso.load_str(policy)
+    assert oso.is_allowed("steve", "get", forth_log_a)
+
+    results = list(oso.get_allowed_resources("steve", "get", FooLogRecord))
+    assert len(results) == 1
 
 
 def test_roles_data_filtering(oso):

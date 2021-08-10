@@ -24,30 +24,30 @@ pub enum Type {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct FetchResult {
-    id: String,
+pub struct Ref {
+    field: Option<String>, // An optional field to map over the result objects with.
+    result_id: String,     // Id of the FetchResult that should be an input.
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct Attrib {
-    field: String,
-    of: FetchResult,
+pub enum ConstraintValue {
+    Term(Term), // An actual value
+    Ref(Ref)    // A reference to a different result.
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub enum ConstraintKind {
+    Eq,        // The field is equal to a value.
+    In,        // The field is equal to one of the values.
+    Contains,  // The field is a collection that contains the value.
 }
 
 // @NOTE(steve): Constraint is sort of an overloaded word.
-// @TODO: in's aren't always attrib and eq isn't always value.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub enum Constraint {
-    Eq {
-        field: String,
-        // @NOTE:(steve) I don't really want this to be Term. I want to make sure it's not a constraint
-        // or a variable but just a ground value. Wish we had a type for that.
-        value: Term,
-    },
-    In {
-        field: String,
-        value: Attrib,
-    },
+pub struct Constraint {
+    kind: ConstraintKind,
+    field: String,
+    value: ConstraintValue
 }
 
 // The list of constraints passed to a fetching function.
@@ -87,17 +87,24 @@ impl FilterPlan {
                 let fetch_request = result_set.requests.get(id).unwrap();
                 eprintln!("    {}: Fetch {}", id, fetch_request.class_tag);
                 for constraint in &fetch_request.constraints {
-                    match constraint {
-                        Constraint::Eq { field, value } => {
-                            eprintln!("          {} = {}", field, value.to_polar());
+                    let op = match constraint.kind {
+                        ConstraintKind::Eq => "=".to_owned(),
+                        ConstraintKind::In => "in".to_owned(),
+                        ConstraintKind::Contains => "contains".to_owned(),
+                    };
+                    let field = constraint.field.clone();
+                    let value = match &constraint.value {
+                        ConstraintValue::Term(t) => t.to_polar(),
+                        ConstraintValue::Ref(r) => {
+                            let mut s = "REF(".to_owned();
+                            if let Some(field) = &r.field {
+                                s.push_str(&format!("field {} of ", field));
+                            }
+                            s.push_str(&format!("result {}", r.result_id));
+                            s
                         }
-                        Constraint::In { field, value } => {
-                            eprintln!(
-                                "          {} in REF(field {} of result {})",
-                                field, value.field, value.of.id
-                            );
-                        }
-                    }
+                    };
+                    eprintln!("          {} {} {}", field, op, value);
                 }
             }
         }
@@ -109,11 +116,11 @@ pub type PartialResults = Vec<ResultEvent>;
 
 #[derive(Debug)]
 struct VarInfo {
-    cycles: Vec<(Symbol, Symbol)>,                      // x = y
-    types: Vec<(Symbol, String)>,                       // x matches XClass
-    eq_values: Vec<(Symbol, Term)>,                     // x = 1;
-    in_values: Vec<(Symbol, Term)>,                     // x in [1,2,3]
-    values_in: Vec<(Term, Symbol)>,                     // 1 in x
+    cycles: Vec<(Symbol, Symbol)>,  // x = y
+    types: Vec<(Symbol, String)>,   // x matches XClass
+    eq_values: Vec<(Symbol, Term)>, // x = 1;
+    // in_values: Vec<(Symbol, Term)>, // x in [1,2,3]
+    contained_values: Vec<(Term, Symbol)>, // 1 in x
     field_relationships: Vec<(Symbol, String, Symbol)>, // x.a = y
     in_relationships: Vec<(Symbol, Symbol)>,            // x in y
 }
@@ -125,8 +132,8 @@ fn process_result(exp: &Operation) -> VarInfo {
         cycles: vec![],
         types: vec![],
         eq_values: vec![],
-        in_values: vec![],
-        values_in: vec![],
+        // in_values: vec![],
+        contained_values: vec![],
         field_relationships: vec![],
         in_relationships: vec![],
     };
@@ -246,15 +253,13 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
                 // var in [1, 2, 3]
                 (Value::Variable(var), val) => {
                     // @Q(steve): Should I make sure this value is a list?
-                    var_info
-                        .in_values
-                        .push((var.clone(), Term::new_temporary(val.clone())));
-                }
+                    // @Q(steve): Does this ever actually come through the simplifier?
+                    unimplemented!();
+                    // var_info.in_values.push((var.clone(), Term::new_temporary(val.clone())));
+                },
                 // 123 in var
                 (val, Value::Variable(var)) => {
-                    var_info
-                        .values_in
-                        .push((Term::new_temporary(val.clone()), var.clone()));
+                    var_info.contained_values.push((Term::new_temporary(val.clone()), var.clone()));
                 }
                 (a, b) => {
                     eprintln!("Bad in: {} in {}", a.to_polar(), b.to_polar());
@@ -271,7 +276,9 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
 struct Vars {
     variables: HashMap<String, HashSet<Symbol>>,
     field_relationships: Vec<(String, String, String)>,
+    in_relationships: Vec<(String, String)>,
     eq_values: HashMap<String, Term>,
+    contained_values: HashMap<String, HashSet<Term>>,
     types: HashMap<String, String>,
     this_id: String,
 }
@@ -356,9 +363,9 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
             .zip(var_info.field_relationships.iter())
             .enumerate()
         {
-            if i != j && parent_id1 == parent_id2 && field1 == field2 {
+            if i != j && parent_id1 == parent_id2 && field1 == field2 && child_id1 != child_id2 {
                 // Unify children
-                new_unifies.push((parent_id1.clone(), parent_id2.clone()));
+                new_unifies.push((child_id1.clone(), child_id2.clone()));
             }
         }
     }
@@ -367,8 +374,8 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
     // If we're turning 0 into 1 and then 0 into 2 it'll just blow up
     // not correctly turn 0 and 1 into 2. Needs some tests.
     for (x, y) in &new_unifies {
-        if (x != y) {
-            println!("{} ({}, {})", line!(), x, y);
+        if x != y {
+            eprint!("{} into {}", x, y);
             let mut xs = variables.remove(x).unwrap();
             let ys = variables.remove(y).unwrap();
             xs.extend(ys);
@@ -395,6 +402,37 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
         field_relationships.push((parent_id, field.clone(), child_id));
     }
 
+    // @TODO(steve): If we have duplicates in field_relationships, we can remove them. We already know.
+    // Could use a set I suppose to handle that.
+
+    // In relationships
+    let mut in_relationships = vec![];
+    for (lhs, rhs) in &var_info.in_relationships {
+        let mut lhs_id = String::new();
+        let mut rhs_id = String::new();
+        for (id, set) in &mut variables {
+            if set.contains(lhs) {
+                lhs_id = id.clone();
+            }
+            if set.contains(rhs) {
+                rhs_id = id.clone();
+            }
+        }
+        if lhs_id == String::new() {
+            let new_id = get_id();
+            let mut new_set = HashSet::new();
+            new_set.insert(lhs.clone());
+            variables.insert(new_id.clone(), new_set);
+        }
+        if rhs_id == String::new() {
+            let new_id = get_id();
+            let mut new_set = HashSet::new();
+            new_set.insert(rhs.clone());
+            variables.insert(new_id.clone(), new_set);
+        }
+        in_relationships.push((lhs_id, rhs_id));
+    }
+
     // I think a var can only have one value since we make sure there's a var for the dot lookup,
     // and if they had aliases they'd be collapsed by now, so it should be an error
     // if foo.name = "steve" and foo.name = "gabe".
@@ -415,6 +453,24 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
         new_set.insert(var.clone());
         variables.insert(new_id.clone(), new_set);
         eq_values.insert(new_id, value);
+    }
+
+    let mut contained_values = HashMap::new();
+    'contained_values: for (value, var) in var_info.contained_values {
+        for (id, set) in &mut variables {
+            if set.contains(&var) {
+                contained_values.entry(id.clone()).or_insert(HashSet::new()).insert(value);
+                continue 'contained_values;
+            }
+        }
+        // Create new variable if we didn't find one.
+        let new_id = get_id();
+        let mut new_set = HashSet::new();
+        new_set.insert(var.clone());
+        variables.insert(new_id.clone(), new_set);
+        let mut new_val_set = HashSet::new();
+        new_val_set.insert(value);
+        contained_values.insert(new_id, new_val_set);
     }
 
     let mut types = HashMap::new();
@@ -445,7 +501,9 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
     Vars {
         variables,
         field_relationships,
+        in_relationships,
         eq_values,
+        contained_values,
         types,
         this_id,
     }
@@ -469,7 +527,6 @@ fn constrain_var(
     var_type: &str,
 ) {
     // @TODO(steve): Probably should check the type against the var types. I think???
-
     let mut type_def = HashMap::new();
     for (cls, cls_type_def) in types {
         if cls == var_type {
@@ -498,26 +555,59 @@ fn constrain_var(
                 } = typ
                 {
                     constrain_var(result_set, types, vars, child, other_class_tag);
-                    request.constraints.push(Constraint::In {
-                        field: my_field.clone(),
-                        value: Attrib {
-                            field: other_field.clone(),
-                            of: FetchResult { id: child.clone() },
-                        },
-                    });
+
+                    request.constraints.push(
+                        Constraint{
+                            kind: ConstraintKind::In,
+                            field: my_field.clone(),
+                            value: ConstraintValue::Ref(Ref{
+                                field: Some(other_field.clone()),
+                                result_id: child.clone()
+                            })
+                        }
+                    );
                     continue;
                 }
             }
             // Non relationship or unknown type info.
-            // @TODO: Handle "in"
+            let mut contributed_constraints = false;
             if let Some(value) = vars.eq_values.get(child) {
-                request.constraints.push(Constraint::Eq {
-                    field: field.clone(),
-                    value: value.clone(),
-                });
-            } else {
-                panic!("why?")
+                request.constraints.push(
+                    Constraint{
+                        kind: ConstraintKind::Eq,
+                        field: field.clone(),
+                        value: ConstraintValue::Term(value.clone())
+                    }
+                );
+                contributed_constraints = true;
             }
+            if let Some(values) = vars.contained_values.get(child) {
+                for value in values {
+                    request.constraints.push(
+                        Constraint{
+                            kind: ConstraintKind::Contains,
+                            field: field.clone(),
+                            value: ConstraintValue::Term(value.clone())
+                        }
+                    );
+                }
+                contributed_constraints = true;
+            }
+            assert!(contributed_constraints);
+        }
+    }
+
+    // Constrain any vars that are `in` this var.
+    // Add their constraints to this one.
+    // @NOTE(steve): I think this is right, but I'm not totally sure.
+    // This might assume that the current var is a relationship of a different type that
+    // is of type "children".
+    for (lhs, rhs) in &vars.in_relationships {
+        if rhs == var_id {
+            constrain_var(result_set, types, vars, lhs, var_type);
+            let in_result_set = result_set.requests.remove(lhs).unwrap();
+            assert_eq!(result_set.resolve_order.pop(), Some(lhs.to_string()));
+            request.constraints.extend(in_result_set.constraints);
         }
     }
 
@@ -591,11 +681,20 @@ pub fn build_filter_plan(
                 if let Some(val) = vars.eq_values.get(id) {
                     eprintln!("          value: {}", val.to_polar());
                 }
+                if let Some(values) = vars.contained_values.get(id) {
+                    for val in values {
+                        eprintln!("          value contains: {}", val.to_polar());
+                    }
+                }
             }
         }
         eprintln!("    field relationships");
         for (x, field, y) in &vars.field_relationships {
             eprintln!("      {}.{} = {}", x, field, y);
+        }
+        eprintln!("    in relationships");
+        for (x,y) in &vars.in_relationships {
+            eprintln!("      {} in {}", x, y);
         }
 
         let result_set = constrain_vars(&types, &vars, class_tag);
@@ -634,6 +733,9 @@ mod tests {
         );
         types.insert("Foo", foo_types);
 
-        println!("{}", serde_json::to_string(&types).unwrap())
+        println!("{}", serde_json::to_string(&types).unwrap());
+
+        let r = Ref{field: None, result_id: "123".to_string() };
+        println!("{}", serde_json::to_string(&r).unwrap());
     }
 }
