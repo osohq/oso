@@ -1,7 +1,6 @@
 pub use polar_core::polar::{Polar, Query};
 use polar_core::{error, terms};
 
-use polar_core::data_filtering::{PartialResults, Types};
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
