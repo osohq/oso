@@ -36,6 +36,202 @@ def filter_array(array, constraints):
             results.append(elem)
     return results
 
+def unord_eq(a, b):
+    for x in a:
+        try:
+            b.remove(x)
+        except ValueError:
+            return False
+    return not b
+
+
+@pytest.fixture
+def roles(oso):
+    # Register some types and callbacks
+    @dataclass
+    class User:
+        name: str
+
+    @dataclass
+    class Org:
+        name: str
+
+    @dataclass
+    class Repo:
+        name: str
+        org_name: str
+
+    @dataclass
+    class Issue:
+        name: str
+        repo_name: str
+
+    @dataclass
+    class Role:
+        user_name: str
+        resource_name: str
+        role: str
+
+    apple = Org(name="apple")
+    osohq = Org(name="osohq")
+
+    ios_repo = Repo(name="ios", org_name="apple")
+    oso_repo = Repo(name="oso", org_name="osohq")
+    demo_repo = Repo(name="demo", org_name="osohq")
+
+    ios_laggy = Issue(name="laggy", repo_name="ios")
+    oso_bug = Issue(name="bug", repo_name="oso")
+
+    leina = User(name="leina")
+    steve = User(name="steve")
+    gabe = User(name="gabe")
+
+    users = [leina, steve, gabe]
+    orgs = [apple, osohq]
+    repos = [ios_repo, oso_repo, demo_repo]
+    issues = [ios_laggy, oso_bug]
+
+    roles = [
+        Role(user_name="leina", resource_name="osohq", role="owner"),
+        Role(user_name="steve", resource_name="osohq", role="member"),
+        Role(user_name="gabe", resource_name="oso", role="writer"),
+    ]
+
+    def get_orgs(constraints):
+        return filter_array(orgs, constraints)
+
+    def get_repos(constraints):
+        return filter_array(repos, constraints)
+
+    def get_issues(constraints):
+        return filter_array(issues, constraints)
+
+    def get_roles(constraints):
+        return filter_array(roles, constraints)
+
+    def get_users(constraints):
+        return filter_array(users, constraints)
+
+    oso.register_class(Org, types={"name": str}, fetcher=get_orgs)
+    oso.register_class(
+        Repo,
+        types={
+            "name": str,
+            "org_name": str,
+            "org": Relationship(
+                kind="parent", other_type="Org", my_field="org_name", other_field="name"
+            ),
+        },
+        fetcher=get_repos,
+    )
+    oso.register_class(
+        Issue,
+        types={
+            "name": str,
+            "repo_name": str,
+            "repo": Relationship(
+                kind="parent",
+                other_type="Repo",
+                my_field="repo_name",
+                other_field="name",
+            ),
+        },
+        fetcher=get_issues,
+    )
+    oso.register_class(
+        Role,
+        types={
+            "user_name": str,
+            "resource_name": str,
+            "role": str,
+        },
+        fetcher=get_roles,
+    )
+    oso.register_class(
+        User,
+        types={
+            "name": str,
+            "roles": Relationship(
+                kind="children",
+                other_type="Role",
+                my_field="name",
+                other_field="user_name",
+            ),
+        },
+        fetcher=get_users,
+    )
+
+    policy = """
+    resource(_type: Org, "org", actions, roles) if
+        actions = [
+            "invite",
+            "create_repo"
+        ] and
+        roles = {
+            member: {
+                permissions: ["create_repo"],
+                implies: ["repo:reader"]
+            },
+            owner: {
+                permissions: ["invite"],
+                implies: ["repo:writer", "member"]
+            }
+        };
+
+    resource(_type: Repo, "repo", actions, roles) if
+        actions = [
+            "push",
+            "pull"
+        ] and
+        roles = {
+            writer: {
+                permissions: ["push", "issue:edit"],
+                implies: ["reader"]
+            },
+            reader: {
+                permissions: ["pull"]
+            }
+        };
+
+    resource(_type: Issue, "issue", actions, {}) if
+        actions = [
+            "edit"
+        ];
+
+    parent_child(parent_org: Org, repo: Repo) if
+        repo.org = parent_org;
+
+    parent_child(parent_repo: Repo, issue: Issue) if
+        issue.repo = parent_repo;
+
+    actor_has_role_for_resource(actor, role_name: String, resource) if
+        role in actor.roles and
+        role.resource_name = resource.name and
+        role.role = role_name;
+
+    allow(actor, action, resource) if
+        role_allows(actor, action, resource);
+    """
+
+    oso.load_str(policy)
+    oso.enable_roles()
+    return {
+        'apple': apple,
+        'osohq': osohq,
+        'steve': steve,
+        'leina': leina,
+        'gabe': gabe,
+        'oso': oso_repo,
+        'ios': ios_repo,
+        'demo': demo_repo,
+        'bug': oso_bug,
+        'laggy': ios_laggy,
+        'Role': Role,
+        'Repo': Repo,
+        'Issue': Issue,
+        'Org': Org,
+        'User': User,
+    }
 
 # Shared test setup.
 @pytest.fixture
@@ -226,223 +422,44 @@ def test_or(oso, t):
     assert len(results) == 2
 
 
-def test_roles_data_filtering(oso):
-    # Register some types and callbacks
-    @dataclass
-    class User:
-        name: str
+def test_roles_data_filtering_owner(oso, roles):
+    leina = roles['leina']
+    osohq = roles['osohq']
+    oso_repo = roles['oso']
+    demo_repo = roles['demo']
+    oso_bug = roles['bug']
+    Org = roles['Org']
+    Repo = roles['Repo']
+    Issue = roles['Issue']
 
-    @dataclass
-    class Org:
-        name: str
+    assert list(oso.get_allowed_resources(leina, "invite", Org)) == [osohq]
 
-    @dataclass
-    class Repo:
-        name: str
-        org_name: str
+    pulls = list(oso.get_allowed_resources(leina, "pull", Repo))
+    assert unord_eq(pulls, [oso_repo, demo_repo])
 
-    @dataclass
-    class Issue:
-        name: str
-        repo_name: str
+    pushes = list(oso.get_allowed_resources(leina, "push", Repo))
+    assert unord_eq(pushes, pulls)
 
-    @dataclass
-    class Role:
-        user_name: str
-        resource_name: str
-        role: str
+    assert list(oso.get_allowed_resources(leina, "edit", Issue)) == [oso_bug]
 
-    apple = Org(name="apple")
-    osohq = Org(name="osohq")
+def test_roles_data_filtering_member(oso, roles):
+    steve = roles['steve']
+    oso_repo = roles['oso']
+    demo_repo = roles['demo']
+    Repo = roles['Repo']
 
-    ios = Repo(name="ios", org_name="apple")
-    oso_repo = Repo(name="oso", org_name="osohq")
-    demo_repo = Repo(name="demo", org_name="osohq")
+    pulls = list(oso.get_allowed_resources(steve, "pull", Repo))
+    assert unord_eq(pulls, [oso_repo, demo_repo])
 
-    ios_laggy = Issue(name="laggy", repo_name="ios")
-    oso_bug = Issue(name="bug", repo_name="oso")
+def test_roles_data_filtering_writer(oso, roles):
+    gabe = roles['gabe']
+    Issue = roles['Issue']
+    Repo = roles['Repo']
+    oso_bug = roles['bug']
+    oso_repo = roles['oso']
 
-    leina = User(name="leina")
-    steve = User(name="steve")
-    gabe = User(name="gabe")
+    pulls = list(oso.get_allowed_resources(gabe, "pull", Repo))
+    pushes = list(oso.get_allowed_resources(gabe, "push", Repo))
+    assert pulls == pushes == [oso_repo]
 
-    users = [leina, steve, gabe]
-    orgs = [apple, osohq]
-    repos = [ios, oso_repo, demo_repo]
-    issues = [ios_laggy, oso_bug]
-
-    roles = [
-        Role(user_name="leina", resource_name="osohq", role="owner"),
-        Role(user_name="steve", resource_name="osohq", role="member"),
-        Role(user_name="gabe", resource_name="oso", role="writer"),
-    ]
-
-    def cons2pred(constraints):
-        def pred(c):
-            cons = {
-                'Eq': lambda f, v: lambda x: getattr(x, f) == v,
-                'In': lambda f, v: lambda x: getattr(x, f) in v,
-            }
-            return cons[c.kind](c.field, c.value)
-        def conj(a, b):
-            return lambda x: a(x) and b(x)
-        return reduce(conj, map(pred, constraints), lambda _: True)
-
-    def unord_eq(a, b):
-        for x in a:
-            try:
-                b.remove(x)
-            except ValueError:
-                return False
-        return not b
-
-
-    def filter_array(array, constraints):
-        return list(filter(cons2pred(constraints), array))
-
-    def get_orgs(constraints):
-        return filter_array(orgs, constraints)
-
-    def get_repos(constraints):
-        return filter_array(repos, constraints)
-
-    def get_issues(constraints):
-        return filter_array(issues, constraints)
-
-    def get_roles(constraints):
-        return filter_array(roles, constraints)
-
-    def get_users(constraints):
-        return filter_array(users, constraints)
-
-    oso.register_class(Org, types={"name": str}, fetcher=get_orgs)
-    oso.register_class(
-        Repo,
-        types={
-            "name": str,
-            "org_name": str,
-            "org": Relationship(
-                kind="parent", other_type="Org", my_field="org_name", other_field="name"
-            ),
-        },
-        fetcher=get_repos,
-    )
-    oso.register_class(
-        Issue,
-        types={
-            "name": str,
-            "repo_name": str,
-            "repo": Relationship(
-                kind="parent",
-                other_type="Repo",
-                my_field="repo_name",
-                other_field="name",
-            ),
-        },
-        fetcher=get_issues,
-    )
-    oso.register_class(
-        Role,
-        types={
-            "user_name": str,
-            "resource_name": str,
-            "role": str,
-        },
-        fetcher=get_roles,
-    )
-    oso.register_class(
-        User,
-        types={
-            "name": str,
-            "roles": Relationship(
-                kind="children",
-                other_type="Role",
-                my_field="name",
-                other_field="user_name",
-            ),
-        },
-        fetcher=get_users,
-    )
-
-    policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = [
-            "invite",
-            "create_repo"
-        ] and
-        roles = {
-            member: {
-                permissions: ["create_repo"],
-                implies: ["repo:reader"]
-            },
-            owner: {
-                permissions: ["invite"],
-                implies: ["repo:writer", "member"]
-            }
-        };
-
-    resource(_type: Repo, "repo", actions, roles) if
-        actions = [
-            "push",
-            "pull"
-        ] and
-        roles = {
-            writer: {
-                permissions: ["push", "issue:edit"],
-                implies: ["reader"]
-            },
-            reader: {
-                permissions: ["pull"]
-            }
-        };
-
-    resource(_type: Issue, "issue", actions, {}) if
-        actions = [
-            "edit"
-        ];
-
-    parent_child(parent_org: Org, repo: Repo) if
-        repo.org = parent_org;
-
-    parent_child(parent_repo: Repo, issue: Issue) if
-        issue.repo = parent_repo;
-
-    actor_has_role_for_resource(actor, role_name: String, resource) if
-        role in actor.roles and
-        role.resource_name = resource.name and
-        role.role = role_name;
-
-    allow(actor, action, resource) if
-        role_allows(actor, action, resource);
-    """
-
-    oso.load_str(policy)
-    oso.enable_roles()
-
-    assert oso.is_allowed(leina, "invite", osohq)
-    assert oso.is_allowed(leina, "create_repo", osohq)
-    assert oso.is_allowed(leina, "push", oso_repo)
-    assert oso.is_allowed(leina, "pull", oso_repo)
-    assert oso.is_allowed(leina, "edit", oso_bug)
-
-    assert not oso.is_allowed(steve, "invite", osohq)
-    assert oso.is_allowed(steve, "create_repo", osohq)
-    assert not oso.is_allowed(steve, "push", oso_repo)
-    assert oso.is_allowed(steve, "pull", oso_repo)
-    assert not oso.is_allowed(steve, "edit", oso_bug)
-
-    assert not oso.is_allowed(leina, "edit", ios_laggy)
-    assert not oso.is_allowed(steve, "edit", ios_laggy)
-
-    results = list(oso.get_allowed_resources(leina, "invite", Org))
-    assert results == [osohq]
-
-    results = list(oso.get_allowed_resources(leina, "pull", Repo))
-    assert unord_eq(results, [oso_repo, demo_repo])
-
-    results = list(oso.get_allowed_resources(gabe, "push", Repo))
-    assert results == [oso_repo]
-
-    gabe_issues = list(oso.get_allowed_resources(gabe, "edit", Issue))
-    leina_issues = list(oso.get_allowed_resources(leina, "edit", Issue))
-    assert gabe_issues == leina_issues == [oso_bug]
+    assert list(oso.get_allowed_resources(gabe, "edit", Issue)) == [oso_bug]
