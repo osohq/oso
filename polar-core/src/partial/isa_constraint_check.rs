@@ -29,10 +29,7 @@ pub struct IsaConstraintCheck {
 }
 
 impl IsaConstraintCheck {
-    pub fn new(
-        existing: Vec<Operation>,
-        proposed: Operation,
-    ) -> Self {
+    pub fn new(existing: Vec<Operation>, proposed: Operation) -> Self {
         Self {
             existing,
             proposed,
@@ -69,23 +66,12 @@ impl IsaConstraintCheck {
 
         let constraint_path = path(&constraint.args[0]);
         let proposed_path = path(&self.proposed.args[0]);
-    //                println!("EXISC {:?} :: {:?} {:?}", self.proposed.operator, proposed_path, constraint_path);
 
         // Not comparable b/c one of the matches statements has a LHS that isn't a variable or dot
         // op.
-        if constraint_path.is_empty() || proposed_path.is_empty() {
-            return (None, None);
-        }
-
-        if constraint_path.len() == 1
-            && proposed_path.len() == 1
-            && matches!(&constraint.args[0].value().as_symbol(), Ok(Symbol(_)))
-            && matches!(&self.proposed.args[0].value().as_symbol(), Ok(Symbol(_)))
-        {
-            let sym = constraint.args[0].value().as_symbol().unwrap();
-            let proposed = self.proposed.args[0].value().as_symbol().unwrap();
-        } else if constraint_path
+        if constraint_path.is_empty() || proposed_path.is_empty() ||
             // a.b.c vs. d
+        constraint_path
             .iter()
             .zip(proposed_path.iter())
             .any(|(a, b)| a != b)
@@ -93,8 +79,6 @@ impl IsaConstraintCheck {
             return (None, None);
         }
 
-        // TODO(gj): why are we popping here?
-        // let proposed = self.proposed.args.pop().unwrap();
         let proposed = self.proposed.args.last().unwrap();
         let existing = constraint.args.last().unwrap();
 

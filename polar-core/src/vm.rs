@@ -490,7 +490,6 @@ impl PolarVirtualMachine {
             }
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
-                  //  println!("CALL RULE {}", self.rule_source(rule));
                     self.log_with(
                         || {
                             let source_str = self.rule_source(rule);
@@ -1122,9 +1121,8 @@ impl PolarVirtualMachine {
                 hs.insert(var.clone());
 
                 let partial = partial.into_term();
-//                println!("simp in {}", partial.to_polar());
                 let (simplified, _) = simplify_partial(var, partial, hs, false);
-//                println!("simp out {}", simplified.to_polar());
+
                 let simplified = simplified.value().as_expression()?;
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?

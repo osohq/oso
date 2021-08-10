@@ -131,29 +131,24 @@ impl Debugger {
                     message: format!("{}\nERROR: {}\n", message, error.to_string()),
                 })
             }
-            (Step::Rule, DebugEvent::Rule) => {
-                self.break_query(vm)
-            }
+            (Step::Rule, DebugEvent::Rule) => self.break_query(vm),
             _ => None,
         })
     }
 
     pub fn break_msg(&self, vm: &PolarVirtualMachine) -> Option<String> {
         vm.trace.last().and_then(|ref trace| match trace.node {
-            Node::Term(ref q) => {
-                match q.value() {
-                    Value::Expression(Operation {
-                        operator: Operator::And,
-                        args,
-                    }) if args.len() == 1 => None,
-                    _ => {
-                        let source = self.query_source(q, &vm.kb.read().unwrap().sources, 3);
-                        Some(format!("{}\n\n{}\n", vm.query_summary(q), source))
-                    }
+            Node::Term(ref q) => match q.value() {
+                Value::Expression(Operation {
+                    operator: Operator::And,
+                    args,
+                }) if args.len() == 1 => None,
+                _ => {
+                    let source = self.query_source(q, &vm.kb.read().unwrap().sources, 3);
+                    Some(format!("{}\n\n{}\n", vm.query_summary(q), source))
                 }
-            }
-            Node::Rule(ref r) =>
-                Some(vm.rule_source(r)),
+            },
+            Node::Rule(ref r) => Some(vm.rule_source(r)),
         })
     }
 

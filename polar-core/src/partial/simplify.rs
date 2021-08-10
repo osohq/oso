@@ -602,17 +602,17 @@ impl Simplifier {
         F: Fn(&mut Self, &mut Operation, &TermSimplifier) + 'static + Clone,
     {
         if self.seen.contains(term) {
-//            println!("seen {}", term.to_polar());
-            return
+            //            println!("seen {}", term.to_polar());
+            return;
         }
         let orig = term.clone();
         let k = term.clone();
         self.seen.insert(term.clone());
 
-//        println!("simplify_term pre {}", term.to_polar());
+        //        println!("simplify_term pre {}", term.to_polar());
         let de = self.deref(term);
         *term = de;
-//        println!("simplify_term ref {}", term.to_polar());
+        //        println!("simplify_term ref {}", term.to_polar());
 
         match term.mut_value() {
             Value::Dictionary(dict) => {

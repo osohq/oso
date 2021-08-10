@@ -88,18 +88,19 @@ impl FilterPlan {
                 eprintln!("    {}: Fetch {}", id, fetch_request.class_tag);
                 for constraint in &fetch_request.constraints {
                     match constraint {
-                        Constraint::Eq {field, value} => {
+                        Constraint::Eq { field, value } => {
                             eprintln!("          {} = {}", field, value.to_polar());
                         }
-                        Constraint::In {field, value} => {
-                            eprintln!("          {} in REF(field {} of result {})", field, value.field, value.of.id);
+                        Constraint::In { field, value } => {
+                            eprintln!(
+                                "          {} in REF(field {} of result {})",
+                                field, value.field, value.of.id
+                            );
                         }
                     }
-
                 }
             }
         }
-
     }
 }
 
@@ -108,11 +109,11 @@ pub type PartialResults = Vec<ResultEvent>;
 
 #[derive(Debug)]
 struct VarInfo {
-    cycles: Vec<(Symbol, Symbol)>,  // x = y
-    types: Vec<(Symbol, String)>,   // x matches XClass
-    eq_values: Vec<(Symbol, Term)>, // x = 1;
-    in_values: Vec<(Symbol, Term)>, // x in [1,2,3]
-    values_in: Vec<(Term, Symbol)>, // 1 in x
+    cycles: Vec<(Symbol, Symbol)>,                      // x = y
+    types: Vec<(Symbol, String)>,                       // x matches XClass
+    eq_values: Vec<(Symbol, Term)>,                     // x = 1;
+    in_values: Vec<(Symbol, Term)>,                     // x in [1,2,3]
+    values_in: Vec<(Term, Symbol)>,                     // 1 in x
     field_relationships: Vec<(Symbol, String, Symbol)>, // x.a = y
     in_relationships: Vec<(Symbol, Symbol)>,            // x in y
 }
@@ -127,24 +128,24 @@ fn process_result(exp: &Operation) -> VarInfo {
         in_values: vec![],
         values_in: vec![],
         field_relationships: vec![],
-        in_relationships: vec![]
+        in_relationships: vec![],
     };
     process_exp(&mut var_info, exp);
     var_info
 }
 
 fn dot_var(var_info: &mut VarInfo, var: Term, field: &Term) -> Symbol {
-        // TODO(steve): There's a potential name clash here which would be bad. Works for now.
-        // but should probably generate this var better.
-        let sym = var.value().as_symbol().unwrap();
-        let field_str = field.value().as_string().unwrap();
-        let new_var = Symbol::new(&format!("{}_dot_{}", sym.0, field_str));
+    // TODO(steve): There's a potential name clash here which would be bad. Works for now.
+    // but should probably generate this var better.
+    let sym = var.value().as_symbol().unwrap();
+    let field_str = field.value().as_string().unwrap();
+    let new_var = Symbol::new(&format!("{}_dot_{}", sym.0, field_str));
 
-        // Record the relationship between the vars.
-        var_info
-            .field_relationships
-            .push((sym.clone(), field_str.to_string(), new_var.clone()));
-        new_var
+    // Record the relationship between the vars.
+    var_info
+        .field_relationships
+        .push((sym.clone(), field_str.to_string(), new_var.clone()));
+    new_var
 }
 
 fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
@@ -173,17 +174,18 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
             assert_eq!(exp.args.len(), 2);
             let lhs = &exp.args[0];
             let rhs = &exp.args[1];
-            if let Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields })) = rhs.value() {
+            if let Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields })) = rhs.value()
+            {
                 // @TODO(steve): Handle specializer fields.
                 assert!(fields.fields.is_empty());
                 let var = match lhs.value() {
                     Value::Variable(var) | Value::RestVariable(var) => var.clone(),
-                    Value::Expression(op) if op.operator == Operator::Dot =>
-                        dot_var(var_info, op.args[0].clone(), &op.args[1]),
+                    Value::Expression(op) if op.operator == Operator::Dot => {
+                        dot_var(var_info, op.args[0].clone(), &op.args[1])
+                    }
                     _ => todo!(),
                 };
                 var_info.types.push((var, tag.clone().0))
-
             } else {
                 todo!()
             }
@@ -244,18 +246,21 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
                 // var in [1, 2, 3]
                 (Value::Variable(var), val) => {
                     // @Q(steve): Should I make sure this value is a list?
-                    var_info.in_values.push((var.clone(), Term::new_temporary(val.clone())));
-                },
+                    var_info
+                        .in_values
+                        .push((var.clone(), Term::new_temporary(val.clone())));
+                }
                 // 123 in var
                 (val, Value::Variable(var)) => {
-                    var_info.values_in.push((Term::new_temporary(val.clone()), var.clone()));
+                    var_info
+                        .values_in
+                        .push((Term::new_temporary(val.clone()), var.clone()));
                 }
                 (a, b) => {
                     eprintln!("Bad in: {} in {}", a.to_polar(), b.to_polar());
                     todo!()
                 }
             };
-
         }
         op => todo!("Unhandled Operation: {}", op.to_polar()),
     }
@@ -534,7 +539,7 @@ pub fn build_filter_plan(
     // At some point surface this info better.
     let explain = match std::env::var("POLAR_EXPLAIN") {
         Ok(_) => true,
-        Err(_) => false
+        Err(_) => false,
     };
 
     if explain {
@@ -547,7 +552,7 @@ pub fn build_filter_plan(
     // I suspect this structure will change a little bit once we introduce OR.
     for (i, result) in partial_results.iter().enumerate() {
         let term = result.bindings.get(&Symbol::new(variable)).unwrap();
-//        println!("BFP {}", term.to_polar());
+        //        println!("BFP {}", term.to_polar());
         let exp = term.value().as_expression()?;
         assert_eq!(exp.operator, Operator::And);
 
@@ -561,28 +566,23 @@ pub fn build_filter_plan(
         if explain {
             eprintln!("    variables");
             for (id, set) in &vars.variables {
-                let values = set.clone().into_iter().map(|sym|{sym.0.to_owned()}).collect::<Vec<String>>().join(", ");
+                let values = set
+                    .clone()
+                    .into_iter()
+                    .map(|sym| sym.0.to_owned())
+                    .collect::<Vec<String>>()
+                    .join(", ");
                 eprintln!("      {}:  vars: {{{}}}", id, values);
                 let type_tag = if let Some(tag) = vars.types.get(id) {
                     tag.clone()
                 } else if let Some(val) = vars.eq_values.get(id) {
                     match val.value() {
-                        Value::Boolean(_) => {
-                            "Bool".to_owned()
-                        },
-                        Value::String(_) => {
-                            "String".to_owned()
-                        },
-                        Value::Number(_) => {
-                            "Number".to_owned()
-                        },
-                        Value::List(_) => {
-                            "List".to_owned()
-                        }
-                        Value::Dictionary(_) => {
-                            "Dictionary".to_owned()
-                        },
-                        _ => todo!()
+                        Value::Boolean(_) => "Bool".to_owned(),
+                        Value::String(_) => "String".to_owned(),
+                        Value::Number(_) => "Number".to_owned(),
+                        Value::List(_) => "List".to_owned(),
+                        Value::Dictionary(_) => "Dictionary".to_owned(),
+                        _ => todo!(),
                     }
                 } else {
                     "unknown".to_owned()
@@ -594,7 +594,7 @@ pub fn build_filter_plan(
             }
         }
         eprintln!("    field relationships");
-        for (x,field,y) in &vars.field_relationships {
+        for (x, field, y) in &vars.field_relationships {
             eprintln!("      {}.{} = {}", x, field, y);
         }
 
@@ -608,7 +608,6 @@ pub fn build_filter_plan(
 
     Ok(filter_plan)
 }
-
 
 mod tests {
     use super::*;
