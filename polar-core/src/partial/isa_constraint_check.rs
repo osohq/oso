@@ -99,14 +99,6 @@ impl IsaConstraintCheck {
         let proposed = self.proposed.args.last().unwrap();
         let existing = constraint.args.last().unwrap();
 
-        // if debugging {
-        //     eprintln!(
-        //         "existing: {:?} {}, proposed: {:?} {}, ",
-        //         constraint_path, existing.to_polar(),
-        //         proposed_path, proposed.to_polar()
-        //     );
-        // }
-
         // x matches A{} vs. x matches B{}
         if constraint_path == proposed_path {
             match (proposed.value(), existing.value()) {

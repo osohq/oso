@@ -135,7 +135,7 @@ doesn't have roles, we still define an issue resource to declare the actions use
 Notice the last argument to `resource` is `_` instead of `roles`. This
 indicates it is unused.
 
-Now, we can assign the issue action to a repository role. Notice the `"issue:read"` permission for `writer` below:
+Now, we can assign the issue action to a repository role. Notice the `"issue:read"` permission for `reader` below:
 
 {{< literalInclude
     path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"

@@ -192,7 +192,7 @@ allow(actor, action, resource) if
 ```
 
 Oso will now allow access to any resource that is allowed based on the
-role definitions. 
+role definitions.
 
 ### Assigning roles to users
 
@@ -267,8 +267,8 @@ Here's the full `Org` resource definition from the GitClub example app:
     path="examples/gitclub/backends/flask-sqlalchemy/app/authorization.polar"
     from="docs: begin-org-resource"
     to="docs: end-org-resource"
-    h1From="docs: begin-org-resource-highlight"
-    h1To="docs: end-org-resource-highlight"
+    hlFrom="docs: begin-org-resource-highlight"
+    hlTo="docs: end-org-resource-highlight"
     gitHub="https://github.com/osohq/gitclub"
     linenos=true
 >}}
