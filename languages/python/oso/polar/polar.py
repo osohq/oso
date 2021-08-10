@@ -196,6 +196,20 @@ class Polar:
         """
         return self.query(Predicate(name=name, args=args), **kwargs)
 
+    def query_rule_once(self, name, *args, **kwargs):
+        """Check a rule with name ``name`` and arguments ``args``.
+
+        :param name: The name of the predicate to query.
+        :param args: Arguments for the predicate.
+
+        :return: True if the query has any results, False otherwise.
+        """
+        try:
+            next(self.query(Predicate(name=name, args=args), **kwargs))
+            return True
+        except StopIteration:
+            return False
+
     def repl(self, files=[]):
         """Start an interactive REPL session."""
         for f in files:

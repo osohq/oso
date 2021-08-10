@@ -4,6 +4,7 @@ __version__ = "0.14.1"
 
 import os
 from polar import Polar, Variable, exceptions
+from .exceptions import NotFoundError, ForbiddenError
 
 
 class Oso(Polar):
@@ -16,10 +17,22 @@ class Oso(Polar):
 
     """
 
-    def __init__(self):
+    read_action = "read"
+
+    def __init__(self, *, get_error=None, read_action=None):
         """Create an oso object."""
         self._print_polar_log_message()
+        if get_error is None:
+            self._get_error = self._default_get_error
+        else:
+            self._get_error = get_error
+        if read_action is not None:
+            self.read_action = read_action
         super().__init__()
+
+    def _default_get_error(self, is_not_found, actor, action, resource):
+        err_class = NotFoundError if is_not_found else ForbiddenError
+        return err_class(actor, action, resource)
 
     def is_allowed(self, actor, action, resource) -> bool:
         """Evaluate whether ``actor`` is allowed to perform ``action`` on ``resource``.
@@ -79,6 +92,15 @@ class Oso(Polar):
             actions.add(action)
 
         return list(actions)
+
+    def authorize(self, actor, action, resource, *, check_read=True):
+        if not self.query_rule_once("allow", actor, action, resource):
+            is_not_found = False
+            if (action == self.read_action):
+                is_not_found = True
+            elif check_read and not self.query_rule_once("allow", actor, self.read_action, resource):
+                is_not_found = True
+            raise self._get_error(is_not_found, actor, action, resource)
 
     def _print_polar_log_message(self):
         if os.environ.get("POLAR_LOG", None):

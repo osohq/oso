@@ -1,5 +1,6 @@
 """Tests the Polar API as an external consumer"""
 
+from oso.exceptions import ForbiddenError, NotFoundError
 from pathlib import Path
 import pytest
 
@@ -27,7 +28,7 @@ class Widget:
     id: str = ""
 
     # Class variables.
-    actions = ("get", "create")
+    actions = ("read", "create")
 
     def __init__(self, id):
         self.id = id
@@ -89,7 +90,7 @@ class BarDecorated(FooDecorated):
 def test_is_allowed(test_oso):
     actor = Actor(name="guest")
     resource = Widget(id="1")
-    action = "get"
+    action = "read"
     assert test_oso.is_allowed(actor, action, resource)
     assert test_oso.is_allowed({"username": "guest"}, action, resource)
     assert test_oso.is_allowed("guest", action, resource)
@@ -101,10 +102,25 @@ def test_is_allowed(test_oso):
     assert test_oso.is_allowed({"username": "president"}, action, resource)
 
 
+def test_authorize(test_oso):
+    actor = Actor(name="guest")
+    resource = Widget(id="1")
+    action = "read"
+    test_oso.authorize(actor, action, resource)
+    test_oso.authorize({"username": "guest"}, action, resource)
+    test_oso.authorize("guest", action, resource)
+
+    actor = Actor(name="president")
+    action = "create"
+    resource = Company(id="1")
+    test_oso.authorize(actor, action, resource)
+    test_oso.authorize({"username": "president"}, action, resource)
+
+
 def test_query_rule(test_oso):
     actor = Actor(name="guest")
     resource = Widget(id="1")
-    action = "get"
+    action = "read"
     assert list(test_oso.query_rule("allow", actor, action, resource))
 
 
@@ -114,6 +130,21 @@ def test_fail(test_oso):
     action = "not_allowed"
     assert not test_oso.is_allowed(actor, action, resource)
     assert not test_oso.is_allowed({"username": "guest"}, action, resource)
+
+
+def test_fail_authorize(test_oso):
+    actor = Actor(name="guest")
+    resource = Widget(id="1")
+    action = "not_allowed"
+    # ForbiddenError is expected because actor can "read" resource
+    with pytest.raises(ForbiddenError):
+        test_oso.authorize(actor, action, resource)
+    with pytest.raises(ForbiddenError):
+        test_oso.authorize({"username": "guest"}, action, resource)
+    # NotFoundError is expected because actor can NOT "read" resource
+    resource = Company(id="1")
+    with pytest.raises(NotFoundError):
+        test_oso.authorize({"username": "guest"}, action, resource)
 
 
 def test_instance_from_external_call(test_oso):
@@ -138,7 +169,7 @@ def test_get_allowed_actions(test_oso):
     user = Actor(name="Sally")
     resource = Widget(id="1")
     assert set(test_oso.get_allowed_actions(user, resource)) == set(
-        ["get", "CREATE", "READ"]
+        ["read", "CREATE", "READ"]
     )
 
     rule = """allow(_actor: test_oso::Actor{name: "John"}, _action, _resource: test_oso::Widget{id: "1"});"""
