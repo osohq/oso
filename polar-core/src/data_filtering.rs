@@ -2,13 +2,10 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::counter::Counter;
-use crate::error::{PolarError, PolarResult};
+use crate::error::PolarResult;
 use crate::events::ResultEvent;
-use crate::kb::Bindings;
-use crate::terms::*;
 
-use std::env;
+use crate::terms::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Type {
@@ -32,25 +29,27 @@ pub struct Ref {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum ConstraintValue {
     Term(Term), // An actual value
-    Ref(Ref)    // A reference to a different result.
+    Ref(Ref),   // A reference to a different result.
 }
 
+// @TODO(steve): These are all constraints on a field. If we need to add constraints
+// on the value itself. eg `value in [Foo{id: "blah}]` then we should probably call
+// these FieldEq, FieldIn, FieldContains
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum ConstraintKind {
-    Eq,        // The field is equal to a value.
-    In,        // The field is equal to one of the values.
-    Contains,  // The field is a collection that contains the value.
+    Eq,       // The field is equal to a value.
+    In,       // The field is equal to one of the values.
+    Contains, // The field is a collection that contains the value.
 }
 
-// @NOTE(steve): Constraint is sort of an overloaded word.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Constraint {
     kind: ConstraintKind,
     field: String,
-    value: ConstraintValue
+    value: ConstraintValue,
 }
 
-// The list of constraints passed to a fetching function.
+// The list of constraints passed to a fetching function for a particular type.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct FetchRequest {
     class_tag: String,
@@ -68,8 +67,6 @@ pub struct ResultSet {
     result_id: String,
 }
 
-// @TODO(steve): There is probably more structure than just a union of ResultSets
-// I think when we add OR constraints that this will be more of a tree.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct FilterPlan {
     result_sets: Vec<ResultSet>,
@@ -77,9 +74,6 @@ pub struct FilterPlan {
 
 impl FilterPlan {
     pub fn explain(&self) {
-        eprintln!("==Filter Plan==");
-        // For now each result set is union'd. This is a top level OR.
-        // After I actually implement OR this will change.
         eprintln!("UNION");
         for (i, result_set) in self.result_sets.iter().enumerate() {
             eprintln!("  =Result Set: {}=", i);
@@ -100,7 +94,7 @@ impl FilterPlan {
                             if let Some(field) = &r.field {
                                 s.push_str(&format!("field {} of ", field));
                             }
-                            s.push_str(&format!("result {}", r.result_id));
+                            s.push_str(&format!("result {})", r.result_id));
                             s
                         }
                     };
@@ -116,11 +110,10 @@ pub type PartialResults = Vec<ResultEvent>;
 
 #[derive(Debug)]
 struct VarInfo {
-    cycles: Vec<(Symbol, Symbol)>,  // x = y
-    types: Vec<(Symbol, String)>,   // x matches XClass
-    eq_values: Vec<(Symbol, Term)>, // x = 1;
-    // in_values: Vec<(Symbol, Term)>, // x in [1,2,3]
-    contained_values: Vec<(Term, Symbol)>, // 1 in x
+    cycles: Vec<(Symbol, Symbol)>,                      // x = y
+    types: Vec<(Symbol, String)>,                       // x matches XClass
+    eq_values: Vec<(Symbol, Term)>,                     // x = 1;
+    contained_values: Vec<(Term, Symbol)>,              // 1 in x
     field_relationships: Vec<(Symbol, String, Symbol)>, // x.a = y
     in_relationships: Vec<(Symbol, Symbol)>,            // x in y
 }
@@ -132,7 +125,6 @@ fn process_result(exp: &Operation) -> VarInfo {
         cycles: vec![],
         types: vec![],
         eq_values: vec![],
-        // in_values: vec![],
         contained_values: vec![],
         field_relationships: vec![],
         in_relationships: vec![],
@@ -173,7 +165,9 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
             assert_eq!(exp.args.len(), 2);
             let mut var = exp.args[0].clone();
             if let Ok(inner_exp) = var.value().as_expression() {
-                assert_eq!(inner_exp.operator, Operator::Dot);
+                if inner_exp.operator != Operator::Dot {
+                    unimplemented!("Operations other than dot nested within a dot are not yet supported for data filtering.")
+                }
                 var = process_exp(var_info, inner_exp).unwrap();
             }
             let field = &exp.args[1];
@@ -187,7 +181,9 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
             let rhs = &exp.args[1];
             if let Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields })) = rhs.value()
             {
-                // @TODO(steve): Handle specializer fields.
+                if !fields.fields.is_empty() {
+                    unimplemented!("Specializer fields are not yet supported for data filtering.")
+                }
                 assert!(fields.fields.is_empty());
                 let var = match lhs.value() {
                     Value::Variable(var) | Value::RestVariable(var) => var.clone(),
@@ -198,10 +194,10 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
                 };
                 var_info.types.push((var, tag.clone().0))
             } else {
-                todo!()
+                unimplemented!("Non pattern specializers are not yet supported for data filtering.")
             }
         }
-        Operator::Unify => {
+        Operator::Unify | Operator::Eq | Operator::Assign => {
             assert_eq!(exp.args.len(), 2);
 
             let mut lhs = exp.args[0].clone();
@@ -223,20 +219,18 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
                 (Value::Variable(var), val) | (val, Value::Variable(var)) => var_info
                     .eq_values
                     .push((var.clone(), Term::new_temporary(val.clone()))),
-                // Unifying something else, I think would be an error in most cases???
+                // Unifying something else.
                 // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
-                (a, b) => {
-                    eprintln!("Bad unify: {} = {}", a.to_polar(), b.to_polar());
-                    todo!()
+                // @NOTE(steve): Going with the same not yet supported message but if this is
+                // coming through it's probably a bug in the simplifier.
+                (_a, _b) => {
+                    unimplemented!(
+                        "Unification of values is not yet supported for data filtering."
+                    );
                 }
             };
         }
         Operator::In => {
-            // So in is similar to unify, but is just talking about multiple values.
-            // We *could* treat it as an `or`, but I think we probably don't want to do that.
-            // variable in variable is a relationship between vars.
-            // variable in list of values is a value relationship, and can probably directly translate to an in constraint.
-            // what does value in variable mean? It's like a thing we'll have to check in the resolver?
             assert_eq!(exp.args.len(), 2);
 
             let mut lhs = exp.args[0].clone();
@@ -255,23 +249,46 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
                     var_info.in_relationships.push((l.clone(), r.clone()));
                 }
                 // var in [1, 2, 3]
-                (Value::Variable(var), val) => {
-                    // @Q(steve): Should I make sure this value is a list?
+                (Value::Variable(_var), _val) => {
                     // @Q(steve): Does this ever actually come through the simplifier?
-                    unimplemented!();
+                    // @Note(steve): MikeD wishes this came through as an in instead of or-expanded.
+                    // That way we could turn it into an `in` in sql.
+                    unimplemented!("var in list of values constraints are not yet supported for data filtering.");
                     // var_info.in_values.push((var.clone(), Term::new_temporary(val.clone())));
-                },
+                }
                 // 123 in var
                 (val, Value::Variable(var)) => {
-                    var_info.contained_values.push((Term::new_temporary(val.clone()), var.clone()));
+                    var_info
+                        .contained_values
+                        .push((Term::new_temporary(val.clone()), var.clone()));
                 }
-                (a, b) => {
-                    eprintln!("Bad in: {} in {}", a.to_polar(), b.to_polar());
-                    todo!()
+                (_a, _b) => {
+                    // @NOTE: This is probably just a bug if we hit it. Shouldn't get any other `in` cases.
+                    unimplemented!(
+                        "Unknown `in` constraint that is not yet supported for data filtering."
+                    );
                 }
             };
         }
-        op => todo!("Unhandled Operation: {}", op.to_polar()),
+        Operator::Debug => unimplemented!("debug() is not supported for data filtering."),
+        Operator::Print => (),
+        Operator::Cut => unimplemented!("`cut` is not supported for data filtering."),
+        Operator::New => panic!("`new` operation in expression"),
+        Operator::Not => panic!("`not` operation in expression"),
+        Operator::Mul => unimplemented!("multiplication is not supported for data filtering."),
+        Operator::Div => unimplemented!("division is not supported for data filtering."),
+        Operator::Mod => unimplemented!("`mod` is not supported for data filtering."),
+        Operator::Rem => unimplemented!("`rem` is not supported for data filtering."),
+        Operator::Add => unimplemented!("addition is not supported for data filtering."),
+        Operator::Sub => unimplemented!("subtraction is not supported for data filtering."),
+        Operator::Geq => unimplemented!("`>=` is not supported for data filtering."),
+        Operator::Leq => unimplemented!("`<=` is not supported for data filtering."),
+        Operator::Neq => unimplemented!("`!=` is not supported for data filtering."),
+        Operator::Gt => unimplemented!("`>` is not supported for data filtering."),
+        Operator::Lt => unimplemented!("`<` is not supported for data filtering."),
+        // @TODO(steve): Expand or expressions to multiple bindings in the simplifier.
+        Operator::Or => unimplemented!("`or` is not supported for data filtering."),
+        Operator::ForAll => unimplemented!("`forall` is not supported for data filtering."),
     }
     None
 }
@@ -287,6 +304,8 @@ struct Vars {
     this_id: String,
 }
 
+/// Collapses the var info that we obtained from walking the expressions.
+/// Track equivalence classes of variables and assign each one an id.
 fn collapse_vars(var_info: VarInfo) -> Vars {
     // Merge variable cycles.
     let mut joined_cycles: Vec<HashSet<Symbol>> = vec![];
@@ -322,11 +341,11 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
 
     // Substitute in relationships
     let mut parent_ids = vec![];
-    'relationships: for (parent, _, _) in &var_info.field_relationships {
+    'parent_relationships: for (parent, _, _) in &var_info.field_relationships {
         for (id, set) in &mut variables {
             if set.contains(parent) {
                 parent_ids.push(id.clone());
-                continue 'relationships;
+                continue 'parent_relationships;
             }
         }
         // Create a new set if we didn't find one.
@@ -337,11 +356,11 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
         parent_ids.push(new_id);
     }
     let mut child_ids = vec![];
-    'relationships: for (_, _, child) in &var_info.field_relationships {
+    'child_relationships: for (_, _, child) in &var_info.field_relationships {
         for (id, set) in &mut variables {
             if set.contains(child) {
                 child_ids.push(id.clone());
-                continue 'relationships;
+                continue 'child_relationships;
             }
         }
         // Create a new set if we didn't find one.
@@ -353,7 +372,7 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
     }
 
     // If a.b = c and a.b = d, that means c = d.
-    // @Sorry(steve): Wow, what a loop.
+    // @Sorry(steve): Wow, what a loop. Maybe just loop over indexes instead.
     let mut new_unifies: Vec<(String, String)> = vec![];
     for (i, ((parent_id1, child_id1), (_, field1, _))) in parent_ids
         .iter()
@@ -379,7 +398,6 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
     // not correctly turn 0 and 1 into 2. Needs some tests.
     for (x, y) in &new_unifies {
         if x != y {
-            eprint!("{} into {}", x, y);
             let mut xs = variables.remove(x).unwrap();
             let ys = variables.remove(y).unwrap();
             xs.extend(ys);
@@ -440,7 +458,6 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
     // I think a var can only have one value since we make sure there's a var for the dot lookup,
     // and if they had aliases they'd be collapsed by now, so it should be an error
     // if foo.name = "steve" and foo.name = "gabe".
-    // TODO(steve): How are we going to handle "in"
     let mut eq_values = HashMap::new();
     'values: for (var, value) in var_info.eq_values {
         for (id, set) in &mut variables {
@@ -463,7 +480,10 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
     'contained_values: for (value, var) in var_info.contained_values {
         for (id, set) in &mut variables {
             if set.contains(&var) {
-                contained_values.entry(id.clone()).or_insert(HashSet::new()).insert(value);
+                contained_values
+                    .entry(id.clone())
+                    .or_insert(HashSet::new())
+                    .insert(value);
                 continue 'contained_values;
             }
         }
@@ -552,7 +572,7 @@ fn constrain_var(
         if parent == var_id {
             if let Some(typ) = type_def.get(field) {
                 if let Type::Relationship {
-                    kind,
+                    kind: _,
                     other_class_tag,
                     my_field,
                     other_field,
@@ -560,40 +580,34 @@ fn constrain_var(
                 {
                     constrain_var(result_set, types, vars, child, other_class_tag);
 
-                    request.constraints.push(
-                        Constraint{
-                            kind: ConstraintKind::In,
-                            field: my_field.clone(),
-                            value: ConstraintValue::Ref(Ref{
-                                field: Some(other_field.clone()),
-                                result_id: child.clone()
-                            })
-                        }
-                    );
+                    request.constraints.push(Constraint {
+                        kind: ConstraintKind::In,
+                        field: my_field.clone(),
+                        value: ConstraintValue::Ref(Ref {
+                            field: Some(other_field.clone()),
+                            result_id: child.clone(),
+                        }),
+                    });
                     continue;
                 }
             }
             // Non relationship or unknown type info.
             let mut contributed_constraints = false;
             if let Some(value) = vars.eq_values.get(child) {
-                request.constraints.push(
-                    Constraint{
-                        kind: ConstraintKind::Eq,
-                        field: field.clone(),
-                        value: ConstraintValue::Term(value.clone())
-                    }
-                );
+                request.constraints.push(Constraint {
+                    kind: ConstraintKind::Eq,
+                    field: field.clone(),
+                    value: ConstraintValue::Term(value.clone()),
+                });
                 contributed_constraints = true;
             }
             if let Some(values) = vars.contained_values.get(child) {
                 for value in values {
-                    request.constraints.push(
-                        Constraint{
-                            kind: ConstraintKind::Contains,
-                            field: field.clone(),
-                            value: ConstraintValue::Term(value.clone())
-                        }
-                    );
+                    request.constraints.push(Constraint {
+                        kind: ConstraintKind::Contains,
+                        field: field.clone(),
+                        value: ConstraintValue::Term(value.clone()),
+                    });
                 }
                 contributed_constraints = true;
             }
@@ -604,8 +618,7 @@ fn constrain_var(
     // Constrain any vars that are `in` this var.
     // Add their constraints to this one.
     // @NOTE(steve): I think this is right, but I'm not totally sure.
-    // This might assume that the current var is a relationship of a different type that
-    // is of type "children".
+    // This might assume that the current var is a relationship of kind "children".
     for (lhs, rhs) in &vars.in_relationships {
         if rhs == var_id {
             constrain_var(result_set, types, vars, lhs, var_type);
@@ -617,6 +630,47 @@ fn constrain_var(
 
     result_set.requests.insert(var_id.to_string(), request);
     result_set.resolve_order.push(var_id.to_string());
+}
+
+pub fn opt_pass(filter_plan: &mut FilterPlan, explain: bool) -> bool {
+    let mut optimized = false;
+
+    // Remove duplicate result set in a union.
+    let mut drop_plan = None;
+    'plans: for (i, result_set_a) in filter_plan.result_sets.iter().enumerate() {
+        for (j, result_set_b) in filter_plan.result_sets.iter().enumerate() {
+            if i != j && result_set_a == result_set_b {
+                drop_plan = Some(j);
+                break 'plans;
+            }
+        }
+    }
+    if let Some(plan_id) = drop_plan {
+        if explain {
+            eprintln!("* Removed duplicate result set.")
+        }
+        filter_plan.result_sets.remove(plan_id);
+        optimized = true;
+    }
+
+    // Possible future optimization ideas.
+    // * If two result sets are almost the same except for a single fetch
+    //   that only has a single field check and the field is different, we
+    //   can merge the two result sets and turn the field check into an `in`.
+    //   This is basically "un-expanding" either an `in` or and `or` from the policy.
+    //   This could be hard to find.
+    optimized
+}
+
+pub fn optimize(mut filter_plan: FilterPlan, explain: bool) -> FilterPlan {
+    if explain {
+        eprintln!("\nOptimizing...")
+    }
+    while opt_pass(&mut filter_plan, explain) {}
+    if explain {
+        eprintln!("Done\n")
+    }
+    filter_plan
 }
 
 pub fn build_filter_plan(
@@ -637,13 +691,10 @@ pub fn build_filter_plan(
     };
 
     if explain {
-        eprintln!("===Data Filtering Query===");
-        eprintln!("==Bindings==")
+        eprintln!("\n===Data Filtering Query===");
+        eprintln!("\n==Bindings==")
     }
 
-    // @NOTE(steve): For now we build a ResultSet for each result. Then we put them into a filterplan
-    // which effectively means the results should all be UNION'd together.
-    // I suspect this structure will change a little bit once we introduce OR.
     for (i, result) in partial_results.iter().enumerate() {
         let term = result.bindings.get(&Symbol::new(variable)).unwrap();
         let exp = term.value().as_expression()?;
@@ -690,14 +741,14 @@ pub fn build_filter_plan(
                     }
                 }
             }
-        }
-        eprintln!("    field relationships");
-        for (x, field, y) in &vars.field_relationships {
-            eprintln!("      {}.{} = {}", x, field, y);
-        }
-        eprintln!("    in relationships");
-        for (x,y) in &vars.in_relationships {
-            eprintln!("      {} in {}", x, y);
+            eprintln!("    field relationships");
+            for (x, field, y) in &vars.field_relationships {
+                eprintln!("      {}.{} = {}", x, field, y);
+            }
+            eprintln!("    in relationships");
+            for (x, y) in &vars.in_relationships {
+                eprintln!("      {} in {}", x, y);
+            }
         }
 
         let result_set = constrain_vars(&types, &vars, class_tag);
@@ -705,40 +756,15 @@ pub fn build_filter_plan(
     }
 
     if explain {
+        eprintln!("== Raw Filter Plan ==");
         filter_plan.explain()
     }
 
-    Ok(filter_plan)
-}
-
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_serialize() {
-        let mut types = HashMap::new();
-
-        let mut foo_types = HashMap::new();
-        foo_types.insert(
-            "bar_name",
-            Type::Base {
-                class_tag: "String".to_owned(),
-            },
-        );
-        foo_types.insert(
-            "bar",
-            Type::Relationship {
-                kind: "parent".to_owned(),
-                other_class_tag: "Bar".to_owned(),
-                my_field: "bar_name".to_owned(),
-                other_field: "name".to_owned(),
-            },
-        );
-        types.insert("Foo", foo_types);
-
-        println!("{}", serde_json::to_string(&types).unwrap());
-
-        let r = Ref{field: None, result_id: "123".to_string() };
-        println!("{}", serde_json::to_string(&r).unwrap());
+    let opt_filter_plan = optimize(filter_plan, explain);
+    if explain {
+        eprintln!("== Optimized Filter Plan ==");
+        opt_filter_plan.explain()
     }
+
+    Ok(opt_filter_plan)
 }

@@ -1,11 +1,10 @@
 #![allow(dead_code)]
-use super::bindings::Bindings;
+
 use super::error::{PolarResult, RolesValidationError};
 use super::events::ResultEvent;
 use super::rules::GenericRule;
 use super::terms::*;
 
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 struct Action {

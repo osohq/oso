@@ -85,7 +85,7 @@ macro_rules! partial {
     };
     ($arg:expr, [$($args:expr),*]) => {
         {
-            let mut constraint = Partial::new(sym!($arg));
+            let constraint = Partial::new(sym!($arg));
             $(
                 constraint.add_constraint($args);
             )*

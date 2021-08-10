@@ -13,6 +13,7 @@ def oso():
     oso = Oso()
     return oso
 
+
 def filter_array(array, constraints):
     results = []
     for elem in array:
@@ -35,7 +36,10 @@ def filter_array(array, constraints):
             results.append(elem)
     return results
 
-def test_data_filtering(oso):
+
+# Shared test setup.
+@pytest.fixture
+def t(oso):
     # Register some types and callbacks
     @dataclass
     class Bar:
@@ -61,14 +65,15 @@ def test_data_filtering(oso):
     something_foo = Foo(id="something", bar_id="hello", is_fooey=False, numbers=[])
     another_foo = Foo(id="another", bar_id="hello", is_fooey=True, numbers=[1])
     third_foo = Foo(id="third", bar_id="hello", is_fooey=True, numbers=[2])
-    forth_foo = Foo(id="fourth", bar_id="goodbye", is_fooey=True, numbers=[2,1])
+    forth_foo = Foo(id="fourth", bar_id="goodbye", is_fooey=True, numbers=[2, 1])
 
     forth_log_a = FooLogRecord(id="a", foo_id="fourth", data="hello")
     third_log_b = FooLogRecord(id="b", foo_id="third", data="world")
+    another_log_c = FooLogRecord(id="c", foo_id="another", data="steve")
 
     bars = [hello_bar, goodbye_bar]
     foos = [something_foo, another_foo, third_foo, forth_foo]
-    foo_logs = [forth_log_a, third_log_b]
+    foo_logs = [forth_log_a, third_log_b, another_log_c]
 
     def get_bars(constraints):
         return filter_array(bars, constraints)
@@ -89,7 +94,10 @@ def test_data_filtering(oso):
                 kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
             ),
             "logs": Relationship(
-                kind="children", other_type="FooLogRecord", my_field="id", other_field="foo_id"
+                kind="children",
+                other_type="FooLogRecord",
+                my_field="id",
+                other_field="foo_id",
             ),
         },
         fetcher=get_foos,
@@ -106,20 +114,30 @@ def test_data_filtering(oso):
         },
         fetcher=get_foo_logs,
     )
+    # Sorta hacky, just return anything you want to use in a test.
+    return {
+        "Foo": Foo,
+        "FooLogRecord": FooLogRecord,
+        "another_foo": another_foo,
+        "forth_foo": forth_foo,
+        "forth_log_a": forth_log_a,
+    }
 
+
+def test_no_relationships(oso, t):
     # Write a policy
     policy = """
     allow("steve", "get", resource: Foo) if
         resource.is_fooey = true;
     """
     oso.load_str(policy)
-    assert oso.is_allowed("steve", "get", another_foo)
+    assert oso.is_allowed("steve", "get", t["another_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", Foo))
+    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
     assert len(results) == 3
 
-    oso.clear_rules()
-    #
+
+def test_relationship(oso, t):
     policy = """
     allow("steve", "get", resource: Foo) if
         resource.bar = bar and
@@ -127,37 +145,39 @@ def test_data_filtering(oso):
         resource.is_fooey = true;
     """
     oso.load_str(policy)
-    assert oso.is_allowed("steve", "get", another_foo)
+    assert oso.is_allowed("steve", "get", t["another_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", Foo))
+    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
     assert len(results) == 2
 
-    oso.clear_rules()
-    #
+
+def test_var_in_values(oso, t):
     policy = """
     allow("steve", "get", resource: Foo) if
         resource.bar = bar and
         bar.is_cool in [true, false];
     """
     oso.load_str(policy)
-    assert oso.is_allowed("steve", "get", another_foo)
+    assert oso.is_allowed("steve", "get", t["another_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", Foo))
+    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
     assert len(results) == 4
 
-    # var in var
-    oso.clear_rules()
+
+def test_var_in_var(oso, t):
     policy = """
     allow("steve", "get", resource: Foo) if
         log in resource.logs and
         log.data = "hello";
     """
     oso.load_str(policy)
-    assert oso.is_allowed("steve", "get", forth_foo)
+    assert oso.is_allowed("steve", "get", t["forth_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", Foo))
+    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
     assert len(results) == 1
 
+
+def test_val_in_var(oso, t):
     # value in var
     oso.clear_rules()
     policy = """
@@ -165,27 +185,45 @@ def test_data_filtering(oso):
         1 in resource.numbers and 2 in resource.numbers;
     """
     oso.load_str(policy)
-    assert oso.is_allowed("steve", "get", forth_foo)
+    assert oso.is_allowed("steve", "get", t["forth_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", Foo))
+    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
     assert len(results) == 1
 
+
+def test_var_in_value(oso, t):
     # @TODO(steve): There is maybe a way to optimize the filter plan where if we are doing
     # two different of the same fetch with different fields we can combine them into an `in`.
 
     # var in value, This currently doesn't come through as an `in`
     # This is I think the thing that MikeD wants though, for this to come through
     # as an in so the SQL can do an IN.
-    oso.clear_rules()
     policy = """
     allow("steve", "get", resource: FooLogRecord) if
         resource.data in ["hello", "world"];
     """
     oso.load_str(policy)
-    assert oso.is_allowed("steve", "get", forth_log_a)
+    assert oso.is_allowed("steve", "get", t["forth_log_a"])
 
-    results = list(oso.get_allowed_resources("steve", "get", FooLogRecord))
-    assert len(results) == 1
+    results = list(oso.get_allowed_resources("steve", "get", t["FooLogRecord"]))
+    assert len(results) == 2
+
+
+@pytest.mark.skip(
+    """
+    `or` constraints come from `not` negations and should instead be expanded in the
+    simplifier"""
+)
+def test_or(oso, t):
+    policy = """
+    allow("steve", "get", r: Foo) if
+        not (r.id = "something" and r.bar_id = "hello");
+    """
+    oso.load_str(policy)
+    # assert oso.is_allowed("steve", "get", t['forth_log_a'])
+
+    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    assert len(results) == 2
 
 
 def test_roles_data_filtering(oso):

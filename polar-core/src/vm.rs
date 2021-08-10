@@ -1098,11 +1098,10 @@ impl PolarVirtualMachine {
                 // eprintln!("bindings: {}", bindings.to_polar());
                 if let Value::Expression(o) = bindings.value() {
                     let mut cycles: Vec<HashSet<Symbol>> = vec![];
-                    let mut unifies: Vec<usize> = o
+                    o
                         .constraints()
                         .iter()
-                        .enumerate()
-                        .filter(|(_, constraint)| {
+                        .for_each(|constraint| {
                             // Collect up unifies to prune out cycles.
                             match constraint.operator {
                                 Operator::Unify | Operator::Eq => {
@@ -1132,16 +1131,13 @@ impl PolarVirtualMachine {
                                                 new_cycle.insert(l.clone());
                                                 cycles.push(new_cycle);
                                             }
-                                            true
                                         }
-                                        _ => false,
+                                        _ => (),
                                     }
                                 }
-                                _ => false,
+                                _ => (),
                             }
-                        })
-                        .map(|(i, _)| i)
-                        .collect();
+                        });
 
                     // Combine cycles.
                     let mut joined_cycles: Vec<HashSet<Symbol>> = vec![];
@@ -1160,7 +1156,7 @@ impl PolarVirtualMachine {
                     }
 
                     for cycle in joined_cycles {
-                        if (cycle.contains(s)) {
+                        if cycle.contains(s) {
                             aliases = Some(cycle);
                             break;
                         }
