@@ -3,10 +3,10 @@ use std::rc::Rc;
 
 use super::error::{PolarError, PolarResult};
 use super::formatting::{source_lines, ToPolarString};
+use super::partial::simplify_bindings;
 use super::sources::*;
 use super::terms::*;
 use super::traces::*;
-use super::partial::simplify_bindings;
 
 use super::bindings::Binding;
 use super::kb::KnowledgeBase;
@@ -138,7 +138,7 @@ impl Debugger {
     }
 
     pub fn break_msg(&self, vm: &PolarVirtualMachine) -> Option<String> {
-        vm.trace.last().and_then(|ref trace| match trace.node {
+        vm.trace.last().and_then(|trace| match trace.node {
             Node::Term(ref q) => match q.value() {
                 Value::Expression(Operation {
                     operator: Operator::And,

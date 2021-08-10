@@ -135,8 +135,16 @@ fn process_result(exp: &Operation) -> VarInfo {
 
 fn dot_var(var_info: &mut VarInfo, var: Term, field: &Term) -> Symbol {
     let mut var = var;
-    while let Ok(Operation { operator: Operator::Dot, args }) = var.value().as_expression() {
-        var = Term::new_temporary(Value::Variable(dot_var(var_info, args[0].clone(), &args[1])))
+    while let Ok(Operation {
+        operator: Operator::Dot,
+        args,
+    }) = var.value().as_expression()
+    {
+        var = Term::new_temporary(Value::Variable(dot_var(
+            var_info,
+            args[0].clone(),
+            &args[1],
+        )))
     }
     // TODO(steve): There's a potential name clash here which would be bad. Works for now.
     // but should probably generate this var better.
@@ -482,7 +490,7 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
             if set.contains(&var) {
                 contained_values
                     .entry(id.clone())
-                    .or_insert(HashSet::new())
+                    .or_insert_with(HashSet::new)
                     .insert(value);
                 continue 'contained_values;
             }
@@ -539,7 +547,7 @@ fn constrain_vars(types: &Types, vars: &Vars, this_type: &str) -> ResultSet {
         resolve_order: vec![],
         result_id: vars.this_id.clone(),
     };
-    constrain_var(&mut result_set, &types, &vars, &vars.this_id, this_type);
+    constrain_var(&mut result_set, types, vars, &vars.this_id, this_type);
     result_set
 }
 
@@ -570,26 +578,24 @@ fn constrain_var(
 
     for (parent, field, child) in &vars.field_relationships {
         if parent == var_id {
-            if let Some(typ) = type_def.get(field) {
-                if let Type::Relationship {
-                    kind: _,
-                    other_class_tag,
-                    my_field,
-                    other_field,
-                } = typ
-                {
-                    constrain_var(result_set, types, vars, child, other_class_tag);
+            if let Some(Type::Relationship {
+                kind: _,
+                other_class_tag,
+                my_field,
+                other_field,
+            }) = type_def.get(field)
+            {
+                constrain_var(result_set, types, vars, child, other_class_tag);
 
-                    request.constraints.push(Constraint {
-                        kind: ConstraintKind::In,
-                        field: my_field.clone(),
-                        value: ConstraintValue::Ref(Ref {
-                            field: Some(other_field.clone()),
-                            result_id: child.clone(),
-                        }),
-                    });
-                    continue;
-                }
+                request.constraints.push(Constraint {
+                    kind: ConstraintKind::In,
+                    field: my_field.clone(),
+                    value: ConstraintValue::Ref(Ref {
+                        field: Some(other_field.clone()),
+                        result_id: child.clone(),
+                    }),
+                });
+                continue;
             }
             // Non relationship or unknown type info.
             let mut contributed_constraints = false;
@@ -685,10 +691,7 @@ pub fn build_filter_plan(
     // @NOTE(steve): Just reading an env var here sucks (see all the stuff we had to do
     // to get POLAR_LOG to work in all libs, wasm etc...) but that's what I'm doing today.
     // At some point surface this info better.
-    let explain = match std::env::var("POLAR_EXPLAIN") {
-        Ok(_) => true,
-        Err(_) => false,
-    };
+    let explain = std::env::var("POLAR_EXPLAIN").is_ok();
 
     if explain {
         eprintln!("\n===Data Filtering Query===");
@@ -713,7 +716,7 @@ pub fn build_filter_plan(
                 let values = set
                     .clone()
                     .into_iter()
-                    .map(|sym| sym.0.to_owned())
+                    .map(|sym| sym.0)
                     .collect::<Vec<String>>()
                     .join(", ");
                 eprintln!("      {}:  vars: {{{}}}", id, values);

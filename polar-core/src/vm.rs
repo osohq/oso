@@ -1098,46 +1098,43 @@ impl PolarVirtualMachine {
                 // eprintln!("bindings: {}", bindings.to_polar());
                 if let Value::Expression(o) = bindings.value() {
                     let mut cycles: Vec<HashSet<Symbol>> = vec![];
-                    o
-                        .constraints()
-                        .iter()
-                        .for_each(|constraint| {
-                            // Collect up unifies to prune out cycles.
-                            match constraint.operator {
-                                Operator::Unify | Operator::Eq => {
-                                    let left = &constraint.args[0];
-                                    let right = &constraint.args[1];
-                                    match (left.value(), right.value()) {
-                                        (Value::Variable(l), Value::Variable(r))
-                                        | (Value::Variable(l), Value::RestVariable(r))
-                                        | (Value::RestVariable(l), Value::Variable(r))
-                                        | (Value::RestVariable(l), Value::RestVariable(r)) => {
-                                            let mut added = false;
-                                            for cycle in &mut cycles {
-                                                if cycle.contains(&l) {
-                                                    cycle.insert(r.clone());
-                                                    added = true;
-                                                    break;
-                                                }
-                                                if cycle.contains(&r) {
-                                                    cycle.insert(l.clone());
-                                                    added = true;
-                                                    break;
-                                                }
+                    o.constraints().iter().for_each(|constraint| {
+                        // Collect up unifies to prune out cycles.
+                        match constraint.operator {
+                            Operator::Unify | Operator::Eq => {
+                                let left = &constraint.args[0];
+                                let right = &constraint.args[1];
+                                match (left.value(), right.value()) {
+                                    (Value::Variable(l), Value::Variable(r))
+                                    | (Value::Variable(l), Value::RestVariable(r))
+                                    | (Value::RestVariable(l), Value::Variable(r))
+                                    | (Value::RestVariable(l), Value::RestVariable(r)) => {
+                                        let mut added = false;
+                                        for cycle in &mut cycles {
+                                            if cycle.contains(l) {
+                                                cycle.insert(r.clone());
+                                                added = true;
+                                                break;
                                             }
-                                            if !added {
-                                                let mut new_cycle = HashSet::new();
-                                                new_cycle.insert(r.clone());
-                                                new_cycle.insert(l.clone());
-                                                cycles.push(new_cycle);
+                                            if cycle.contains(r) {
+                                                cycle.insert(l.clone());
+                                                added = true;
+                                                break;
                                             }
                                         }
-                                        _ => (),
+                                        if !added {
+                                            let mut new_cycle = HashSet::new();
+                                            new_cycle.insert(r.clone());
+                                            new_cycle.insert(l.clone());
+                                            cycles.push(new_cycle);
+                                        }
                                     }
+                                    _ => (),
                                 }
-                                _ => (),
                             }
-                        });
+                            _ => (),
+                        }
+                    });
 
                     // Combine cycles.
                     let mut joined_cycles: Vec<HashSet<Symbol>> = vec![];
@@ -1205,9 +1202,8 @@ impl PolarVirtualMachine {
                 let partial = partial.into_term();
                 let (simplified, _) = simplify_partial(var, partial, hs, false);
 
-//                println!("isa/cc for {} matches {}, existing : {}", var, tag, simplified.to_polar());
+                //                println!("isa/cc for {} matches {}, existing : {}", var, tag, simplified.to_polar());
                 let simplified = simplified.value().as_expression()?;
-
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
                 // What if the one there is is in a not, or an or, or something

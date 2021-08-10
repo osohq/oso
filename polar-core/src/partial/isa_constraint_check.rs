@@ -28,7 +28,11 @@ pub struct IsaConstraintCheck {
 }
 
 impl IsaConstraintCheck {
-    pub fn new(existing: Vec<Operation>, proposed: Operation, proposed_aliases: Option<HashSet<Symbol>>) -> Self {
+    pub fn new(
+        existing: Vec<Operation>,
+        proposed: Operation,
+        proposed_aliases: Option<HashSet<Symbol>>,
+    ) -> Self {
         Self {
             existing,
             proposed,
@@ -55,7 +59,7 @@ impl IsaConstraintCheck {
     /// locally.
     fn check_constraint(
         &mut self,
-        mut constraint: Operation,
+        constraint: Operation,
         counter: &Counter,
     ) -> (Option<QueryEvent>, Option<QueryEvent>) {
         // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
@@ -72,7 +76,6 @@ impl IsaConstraintCheck {
         if constraint_path.is_empty() || proposed_path.is_empty() {
             return (None, None);
         }
-
 
         if constraint_path.len() == 1
             && proposed_path.len() == 1
