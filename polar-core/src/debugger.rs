@@ -6,6 +6,7 @@ use super::formatting::{source_lines, ToPolarString};
 use super::sources::*;
 use super::terms::*;
 use super::traces::*;
+use super::partial::simplify_bindings;
 
 use super::bindings::Binding;
 use super::kb::KnowledgeBase;
@@ -321,7 +322,7 @@ impl Debugger {
                             // highest numeric component in its name, and return that binding
                             // if we find it. otherwise, show that the variable is unbound.
                             let var = Symbol::new(name);
-                            let bindings = vm.bindings(true);
+                            let bindings = simplify_bindings(vm.bindings(true), true).unwrap();
                             bindings.get(&var).cloned().map_or_else(|| {
                                 let prefix = KnowledgeBase::temp_prefix(name);
                                 bindings.keys()

@@ -405,7 +405,6 @@ def test_roles_data_filtering(oso):
     results = list(oso.get_allowed_resources(gabe, "push", Repo))
     assert results == [oso_repo]
 
-    # TODO(steve): infinite loop!
-    #r0 = list(oso.get_allowed_resources(gabe, "edit", Issue))
-    #r1 = list(oso.get_allowed_resources(leina, "edit", Issue))
-    #assert r0 == r1 == [oso_bug]
+    gabe_issues = list(oso.get_allowed_resources(gabe, "edit", Issue))
+    leina_issues = list(oso.get_allowed_resources(leina, "edit", Issue))
+    assert gabe_issues == leina_issues == [oso_bug]

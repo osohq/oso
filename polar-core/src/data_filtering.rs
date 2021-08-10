@@ -142,6 +142,10 @@ fn process_result(exp: &Operation) -> VarInfo {
 }
 
 fn dot_var(var_info: &mut VarInfo, var: Term, field: &Term) -> Symbol {
+    let mut var = var;
+    while let Ok(Operation { operator: Operator::Dot, args }) = var.value().as_expression() {
+        var = Term::new_temporary(Value::Variable(dot_var(var_info, args[0].clone(), &args[1])))
+    }
     // TODO(steve): There's a potential name clash here which would be bad. Works for now.
     // but should probably generate this var better.
     let sym = var.value().as_symbol().unwrap();
@@ -642,7 +646,6 @@ pub fn build_filter_plan(
     // I suspect this structure will change a little bit once we introduce OR.
     for (i, result) in partial_results.iter().enumerate() {
         let term = result.bindings.get(&Symbol::new(variable)).unwrap();
-        //        println!("BFP {}", term.to_polar());
         let exp = term.value().as_expression()?;
         assert_eq!(exp.operator, Operator::And);
 

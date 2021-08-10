@@ -37,7 +37,7 @@ __oso_internal__role_implies_permitted_role(role, [implied_role, resource], reso
 
 # checking non-local implications
 __oso_internal__role_implies_permitted_role(role, [implied_role, implied_role_resource], resource) if
-    __oso_internal__ancestor(implied_role_resource, resource) and
+    parent_child(resource, implied_role_resource) and
     resource(resource, _, _, roles) and
     resource(implied_role_resource, implied_role_namespace, _, _) and
     [name, config] in roles and

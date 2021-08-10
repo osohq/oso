@@ -26,16 +26,18 @@ pub struct IsaConstraintCheck {
     result: Option<bool>,
     alternative_check: Option<QueryEvent>,
     last_call_id: u64,
+    proposed_aliases: Option<HashSet<Symbol>>,
 }
 
 impl IsaConstraintCheck {
-    pub fn new(existing: Vec<Operation>, proposed: Operation) -> Self {
+    pub fn new(existing: Vec<Operation>, proposed: Operation, proposed_aliases: Option<HashSet<Symbol>>) -> Self {
         Self {
             existing,
             proposed,
             result: None,
             alternative_check: None,
             last_call_id: 0,
+            proposed_aliases,
         }
     }
 
@@ -69,9 +71,26 @@ impl IsaConstraintCheck {
 
         // Not comparable b/c one of the matches statements has a LHS that isn't a variable or dot
         // op.
-        if constraint_path.is_empty() || proposed_path.is_empty() ||
+        if constraint_path.is_empty() || proposed_path.is_empty() {
+            return (None, None);
+        }
+
+
+        if constraint_path.len() == 1
+            && proposed_path.len() == 1
+            && matches!(&constraint.args[0].value().as_symbol(), Ok(Symbol(_)))
+            && matches!(&self.proposed.args[0].value().as_symbol(), Ok(Symbol(_)))
+        {
+            let sym = constraint.args[0].value().as_symbol().unwrap();
+            let proposed = self.proposed.args[0].value().as_symbol().unwrap();
+            if sym == proposed {
+            } else if let Some(aliases) = &self.proposed_aliases {
+                if !aliases.contains(sym) {
+                    return (None, None);
+                }
+            }
+        } else if constraint_path
             // a.b.c vs. d
-        constraint_path
             .iter()
             .zip(proposed_path.iter())
             .any(|(a, b)| a != b)
@@ -141,6 +160,43 @@ impl IsaConstraintCheck {
                 _ => (None, None),
             }
         } else {
+            if constraint_path.len() == 1
+                && proposed_path.len() == 1
+                && matches!(&constraint.args[0].value().as_symbol(), Ok(Symbol(_)))
+                && matches!(&self.proposed.args[0].value().as_symbol(), Ok(Symbol(_)))
+            {
+                let existing_sym = constraint.args[0].value().as_symbol().unwrap();
+                let proposed_sym = self.proposed.args[0].value().as_symbol().unwrap();
+                if let Some(aliases) = &self.proposed_aliases {
+                    if !aliases.contains(existing_sym) {
+                        return (None, None);
+                    } else {
+                        return match (proposed.value(), existing.value()) {
+                            (
+                                Value::Pattern(Pattern::Instance(proposed)),
+                                Value::Pattern(Pattern::Instance(existing)),
+                            ) if proposed.tag != existing.tag => {
+                                let call_id = counter.next();
+                                self.last_call_id = call_id;
+
+                                (
+                                    Some(QueryEvent::ExternalIsSubclass {
+                                        call_id,
+                                        left_class_tag: proposed.tag.clone(),
+                                        right_class_tag: existing.tag.clone(),
+                                    }),
+                                    Some(QueryEvent::ExternalIsSubclass {
+                                        call_id,
+                                        left_class_tag: existing.tag.clone(),
+                                        right_class_tag: proposed.tag.clone(),
+                                    }),
+                                )
+                            }
+                            _ => (None, None),
+                        };
+                    }
+                }
+            }
             // Comparing existing `x.a.b matches B{}` vs. `proposed x.a matches A{}`.
             (None, None)
         }
