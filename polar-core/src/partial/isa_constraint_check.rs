@@ -68,24 +68,6 @@ impl IsaConstraintCheck {
             return (None, None);
         }
 
-        let mut debugging = false;
-        match &constraint.args[0].value().as_symbol() {
-            Ok(Symbol(x)) if x == "_parent_resource_129" => {
-                match &self.proposed.args[0].value().as_symbol() {
-                    Ok(Symbol(x)) if x == "_resource_220" => {
-                        // eprintln!(
-                        //     "constraint: {}, proposed: {}",
-                        //     constraint.to_polar(),
-                        //     self.proposed.to_polar()
-                        // );
-                        debugging = true;
-                    }
-                    _ => (),
-                }
-            }
-            _ => (),
-        }
-
         let constraint_path = path(&constraint.args[0]);
         let proposed_path = path(&self.proposed.args[0]);
 
@@ -121,14 +103,6 @@ impl IsaConstraintCheck {
         // let proposed = self.proposed.args.pop().unwrap();
         let proposed = self.proposed.args.last().unwrap();
         let existing = constraint.args.pop().unwrap();
-
-        // if debugging {
-        //     eprintln!(
-        //         "existing: {}, proposed: {}",
-        //         existing.to_polar(),
-        //         proposed.to_polar()
-        //     );
-        // }
 
         // x matches A{} vs. x matches B{}
         if constraint_path == proposed_path {
