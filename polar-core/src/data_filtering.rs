@@ -146,6 +146,7 @@ fn dot_var(var_info: &mut VarInfo, var: Term, field: &Term) -> Symbol {
             .push((sym.clone(), field_str.to_string(), new_var.clone()));
         new_var
 }
+
 fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
     match exp.operator {
         Operator::And => {
@@ -172,17 +173,13 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
             assert_eq!(exp.args.len(), 2);
             let lhs = &exp.args[0];
             let rhs = &exp.args[1];
-//            println!("dfisa {:?} {:?}", lhs, rhs);
-//            let var = lhs.value().as_symbol().unwrap();
-//            let pattern = rhs.value().as_pattern().unwrap();
             if let Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields })) = rhs.value() {
                 // @TODO(steve): Handle specializer fields.
                 assert!(fields.fields.is_empty());
                 let var = match lhs.value() {
-//                    Value::Expression(Operation { operator: Operator::Dot, args }) =>
-
                     Value::Variable(var) | Value::RestVariable(var) => var.clone(),
-                    Value::Expression(op) if op.operator == Operator::Dot => dot_var(var_info, op.args[0].clone(), &op.args[1]),
+                    Value::Expression(op) if op.operator == Operator::Dot =>
+                        dot_var(var_info, op.args[0].clone(), &op.args[1]),
                     _ => todo!(),
                 };
                 var_info.types.push((var, tag.clone().0))

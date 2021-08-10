@@ -490,7 +490,7 @@ impl PolarVirtualMachine {
             }
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
-//                    println!("CALL RULE {}", rule.name);
+                  //  println!("CALL RULE {}", self.rule_source(rule));
                     self.log_with(
                         || {
                             let source_str = self.rule_source(rule);
@@ -500,6 +500,7 @@ impl PolarVirtualMachine {
                     );
                 }
                 self.trace.push(trace.clone());
+                self.maybe_break(DebugEvent::Rule)?;
             }
             Goal::Unify { left, right } => self.unify(left, right)?,
             Goal::AddConstraint { term } => self.add_constraint(term)?,
@@ -1126,8 +1127,6 @@ impl PolarVirtualMachine {
 //                println!("simp out {}", simplified.to_polar());
                 let simplified = simplified.value().as_expression()?;
 
-                let mut aliases: Option<HashSet<Symbol>> = None;
-
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
                 // What if the one there is is in a not, or an or, or something
                 let lhs_of_matches = simplified
@@ -1149,7 +1148,6 @@ impl PolarVirtualMachine {
                         }
                     })
                     .unwrap_or_else(|| left.clone());
-                // eprintln!("aliases: {:?}", aliases);
 
                 // Construct field-less matches operation.
                 let tag_pattern = right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
@@ -1160,7 +1158,6 @@ impl PolarVirtualMachine {
                 let runnable = Box::new(IsaConstraintCheck::new(
                     simplified.constraints(),
                     new_matches,
-                    aliases,
                 ));
 
                 // Construct field constraints.

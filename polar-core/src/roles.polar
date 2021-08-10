@@ -42,7 +42,8 @@ __oso_internal__role_implies_permitted_role(role, [implied_role, implied_role_re
     resource(implied_role_resource, implied_role_namespace, _, _) and
     [name, config] in roles and
     __oso_internal_roles_helpers__.join(":", implied_role_namespace, implied_role) in config.implies and
-    __oso_internal__role_implies_permitted_role(role, [name, resource], resource);
+    __oso_internal__role_implies_permitted_role(role, [name, resource], resource)
+    ;
 
 __oso_internal__role_implies_permitted_role(role, implied_role, resource) if
     parent_child(parent_resource, resource) and

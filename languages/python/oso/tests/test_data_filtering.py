@@ -4,6 +4,8 @@ from typing import Any, ClassVar
 from dataclasses import dataclass
 from oso import Oso, OsoError
 from polar import Relationship
+from functools import reduce
+from collections import Counter
 
 
 @pytest.fixture
@@ -269,23 +271,28 @@ def test_roles_data_filtering(oso):
         Role(user_name="gabe", resource_name="oso", role="writer"),
     ]
 
+    def cons2pred(constraints):
+        def pred(c):
+            cons = {
+                'Eq': lambda f, v: lambda x: getattr(x, f) == v,
+                'In': lambda f, v: lambda x: getattr(x, f) in v,
+            }
+            return cons[c.kind](c.field, c.value)
+        def conj(a, b):
+            return lambda x: a(x) and b(x)
+        return reduce(conj, map(pred, constraints), lambda _: True)
+
+    def unord_eq(a, b):
+        for x in a:
+            try:
+                b.remove(x)
+            except ValueError:
+                return False
+        return not b
+
+
     def filter_array(array, constraints):
-        results = []
-        for elem in array:
-            matches = True
-            for constraint in constraints:
-                val = getattr(elem, constraint.field)
-                if constraint.kind == "Eq":
-                    if val != constraint.value:
-                        matches = False
-                        break
-                if constraint.kind == "In":
-                    if val not in constraint.value:
-                        matches = False
-                        break
-            if matches:
-                results.append(elem)
-        return results
+        return list(filter(cons2pred(constraints), array))
 
     def get_orgs(constraints):
         return filter_array(orgs, constraints)
@@ -388,13 +395,11 @@ def test_roles_data_filtering(oso):
             "edit"
         ];
 
-    parent_child(parent_org, repo: Repo) if
-        repo.org = parent_org and
-        parent_org matches Org;
+    parent_child(parent_org: Org, repo: Repo) if
+        repo.org = parent_org;
 
-    parent_child(parent_repo, issue: Issue) if
-        issue.repo = parent_repo and
-        parent_repo matches Repo;
+    parent_child(parent_repo: Repo, issue: Issue) if
+        issue.repo = parent_repo;
 
     actor_has_role_for_resource(actor, role_name: String, resource) if
         role in actor.roles and
@@ -423,12 +428,16 @@ def test_roles_data_filtering(oso):
     assert not oso.is_allowed(leina, "edit", ios_laggy)
     assert not oso.is_allowed(steve, "edit", ios_laggy)
 
-    results = list(oso.get_allowed_resources(leina, "pull", Repo))
-    assert len(results) == 2
-
-    # TODO(steve): infinite loop!
-    # results = list(oso.get_allowed_resources(leina, "edit", Issue))
-    # assert results == [oso_bug]
-
     results = list(oso.get_allowed_resources(leina, "invite", Org))
     assert results == [osohq]
+
+    results = list(oso.get_allowed_resources(leina, "pull", Repo))
+    assert unord_eq(results, [oso_repo, demo_repo])
+
+    results = list(oso.get_allowed_resources(gabe, "push", Repo))
+    assert results == [oso_repo]
+
+    # TODO(steve): infinite loop!
+    r0 = list(oso.get_allowed_resources(gabe, "edit", Issue))
+    r1 = list(oso.get_allowed_resources(leina, "edit", Issue))
+    assert r0 == r1 == [oso_bug]

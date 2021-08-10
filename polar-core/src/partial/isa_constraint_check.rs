@@ -26,14 +26,12 @@ pub struct IsaConstraintCheck {
     result: Option<bool>,
     alternative_check: Option<QueryEvent>,
     last_call_id: u64,
-    proposed_aliases: Option<HashSet<Symbol>>,
 }
 
 impl IsaConstraintCheck {
     pub fn new(
         existing: Vec<Operation>,
         proposed: Operation,
-        proposed_aliases: Option<HashSet<Symbol>>,
     ) -> Self {
         Self {
             existing,
@@ -41,7 +39,6 @@ impl IsaConstraintCheck {
             result: None,
             alternative_check: None,
             last_call_id: 0,
-            proposed_aliases,
         }
     }
 
@@ -72,6 +69,7 @@ impl IsaConstraintCheck {
 
         let constraint_path = path(&constraint.args[0]);
         let proposed_path = path(&self.proposed.args[0]);
+    //                println!("EXISC {:?} :: {:?} {:?}", self.proposed.operator, proposed_path, constraint_path);
 
         // Not comparable b/c one of the matches statements has a LHS that isn't a variable or dot
         // op.
@@ -86,12 +84,6 @@ impl IsaConstraintCheck {
         {
             let sym = constraint.args[0].value().as_symbol().unwrap();
             let proposed = self.proposed.args[0].value().as_symbol().unwrap();
-            if sym == proposed {
-            } else if let Some(aliases) = &self.proposed_aliases {
-                if !aliases.contains(sym) {
-                    return (None, None);
-                }
-            }
         } else if constraint_path
             // a.b.c vs. d
             .iter()
@@ -104,13 +96,13 @@ impl IsaConstraintCheck {
         // TODO(gj): why are we popping here?
         // let proposed = self.proposed.args.pop().unwrap();
         let proposed = self.proposed.args.last().unwrap();
-        let existing = constraint.args.pop().unwrap();
+        let existing = constraint.args.last().unwrap();
 
         // if DEBUGGING {
         //     eprintln!(
-        //         "existing: {}, proposed: {}",
-        //         existing.to_polar(),
-        //         proposed.to_polar()
+        //         "existing: {:?} {}, proposed: {:?} {}, ",
+        //         constraint_path, existing.to_polar(),
+        //         proposed_path, proposed.to_polar()
         //     );
         // }
 
@@ -165,44 +157,6 @@ impl IsaConstraintCheck {
                 _ => (None, None),
             }
         } else {
-            if constraint_path.len() == 1
-                && proposed_path.len() == 1
-                && matches!(&constraint.args[0].value().as_symbol(), Ok(Symbol(_)))
-                && matches!(&self.proposed.args[0].value().as_symbol(), Ok(Symbol(_)))
-            {
-                let existing_sym = constraint.args[0].value().as_symbol().unwrap();
-                let proposed_sym = self.proposed.args[0].value().as_symbol().unwrap();
-                if let Some(aliases) = &self.proposed_aliases {
-                    if !aliases.contains(existing_sym) {
-                        return (None, None);
-                    } else {
-                        return match (proposed.value(), existing.value()) {
-                            (
-                                Value::Pattern(Pattern::Instance(proposed)),
-                                Value::Pattern(Pattern::Instance(existing)),
-                            ) if proposed.tag != existing.tag => {
-                                let call_id = counter.next();
-                                self.last_call_id = call_id;
-
-                                (
-                                    Some(QueryEvent::ExternalIsSubclass {
-                                        call_id,
-                                        left_class_tag: proposed.tag.clone(),
-                                        right_class_tag: existing.tag.clone(),
-                                    }),
-                                    Some(QueryEvent::ExternalIsSubclass {
-                                        call_id,
-                                        left_class_tag: existing.tag.clone(),
-                                        right_class_tag: proposed.tag.clone(),
-                                    }),
-                                )
-                            }
-                            _ => (None, None),
-                        };
-                    }
-                }
-            }
-
             // Comparing existing `x.a.b matches B{}` vs. `proposed x.a matches A{}`.
             (None, None)
         }
@@ -217,6 +171,7 @@ impl Runnable for IsaConstraintCheck {
                 self.alternative_check = None;
             } else if self.alternative_check.is_none() {
                 // If both checks fail, we fail.
+                //
                 return Ok(QueryEvent::Done { result: false });
             }
         }
