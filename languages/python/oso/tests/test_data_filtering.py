@@ -43,6 +43,247 @@ def unord_eq(a, b):
     return not b
 
 
+# Shared test setup.
+@pytest.fixture
+def t(oso):
+    # Register some types and callbacks
+    @dataclass
+    class Bar:
+        id: str
+        is_cool: bool
+        is_still_cool: bool
+
+    @dataclass
+    class Foo:
+        id: str
+        bar_id: str
+        is_fooey: bool
+        numbers: list
+
+    @dataclass
+    class FooLogRecord:
+        id: str
+        foo_id: str
+        data: str
+
+    hello_bar = Bar(id="hello", is_cool=True, is_still_cool=True)
+    goodbye_bar = Bar(id="goodbye", is_cool=False, is_still_cool=True)
+    hershey_bar = Bar(id="hershey", is_cool=False, is_still_cool=False)
+    something_foo = Foo(id="something", bar_id="hello", is_fooey=False, numbers=[])
+    another_foo = Foo(id="another", bar_id="hello", is_fooey=True, numbers=[1])
+    third_foo = Foo(id="third", bar_id="hello", is_fooey=True, numbers=[2])
+    fourth_foo = Foo(id="fourth", bar_id="goodbye", is_fooey=True, numbers=[2, 1])
+
+    fourth_log_a = FooLogRecord(id="a", foo_id="fourth", data="hello")
+    third_log_b = FooLogRecord(id="b", foo_id="third", data="world")
+    another_log_c = FooLogRecord(id="c", foo_id="another", data="steve")
+
+    bars = [hello_bar, goodbye_bar, hershey_bar]
+    foos = [something_foo, another_foo, third_foo, fourth_foo]
+    foo_logs = [fourth_log_a, third_log_b, another_log_c]
+
+    def get_bars(constraints):
+        return filter_array(bars, constraints)
+
+    def get_foos(constraints):
+        return filter_array(foos, constraints)
+
+    def get_foo_logs(constraints):
+        return filter_array(foo_logs, constraints)
+
+    oso.register_class(Bar, types={"id": str, "is_cool": bool}, fetcher=get_bars)
+    oso.register_class(
+        Foo,
+        types={
+            "id": str,
+            "bar_id": str,
+            "bar": Relationship(
+                kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
+            ),
+            "logs": Relationship(
+                kind="children",
+                other_type="FooLogRecord",
+                my_field="id",
+                other_field="foo_id",
+            ),
+        },
+        fetcher=get_foos,
+    )
+    oso.register_class(
+        FooLogRecord,
+        types={
+            "id": str,
+            "foo_id": str,
+            "data": str,
+            # "bar": Relationship(
+            #     kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
+            # ),
+        },
+        fetcher=get_foo_logs,
+    )
+    # Sorta hacky, just return anything you want to use in a test.
+    return {
+        "Foo": Foo,
+        "Bar": Bar,
+        "FooLogRecord": FooLogRecord,
+        "another_foo": another_foo,
+        "fourth_foo": fourth_foo,
+        "fourth_log_a": fourth_log_a,
+        "third_log_b": third_log_b,
+        "another_log_c": another_log_c,
+        "bars": bars,
+        "foos": foos,
+    }
+
+
+def test_no_relationships(oso, t):
+    # Write a policy
+    policy = """
+    allow("steve", "get", resource: Foo) if
+        resource.is_fooey = true;
+    """
+    oso.load_str(policy)
+    assert oso.is_allowed("steve", "get", t["another_foo"])
+
+    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    assert len(results) == 3
+
+
+def test_relationship(oso, t):
+    policy = """
+    allow("steve", "get", resource: Foo) if
+        resource.bar = bar and
+        bar.is_cool = true and
+        resource.is_fooey = true;
+    """
+    oso.load_str(policy)
+    assert oso.is_allowed("steve", "get", t["another_foo"])
+
+    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    assert len(results) == 2
+
+
+def test_var_in_values(oso, t):
+    policy = """
+    allow("steve", "get", resource: Foo) if
+        resource.bar = bar and
+        bar.is_cool in [true, false];
+    """
+    oso.load_str(policy)
+    assert oso.is_allowed("steve", "get", t["another_foo"])
+
+    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    assert len(results) == 4
+
+
+def test_var_in_var(oso, t):
+    policy = """
+    allow("steve", "get", resource: Foo) if
+        log in resource.logs and
+        log.data = "hello";
+    """
+    oso.load_str(policy)
+    assert oso.is_allowed("steve", "get", t["fourth_foo"])
+
+    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    assert len(results) == 1
+
+
+def test_val_in_var(oso, t):
+    # value in var
+    oso.clear_rules()
+    policy = """
+    allow("steve", "get", resource: Foo) if
+        1 in resource.numbers and 2 in resource.numbers;
+    """
+    oso.load_str(policy)
+    assert oso.is_allowed("steve", "get", t["fourth_foo"])
+
+    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    assert results == [t["fourth_foo"]]
+
+
+def test_var_in_value(oso, t):
+    # @TODO(steve): There is maybe a way to optimize the filter plan where if we are doing
+    # two different of the same fetch with different fields we can combine them into an `in`.
+
+    # var in value, This currently doesn't come through as an `in`
+    # This is I think the thing that MikeD wants though, for this to come through
+    # as an in so the SQL can do an IN.
+    policy = """
+    allow("steve", "get", resource: FooLogRecord) if
+        resource.data in ["hello", "world"];
+    """
+    oso.load_str(policy)
+    assert oso.is_allowed("steve", "get", t["fourth_log_a"])
+
+    results = list(oso.get_allowed_resources("steve", "get", t["FooLogRecord"]))
+    assert unord_eq(results, [t["fourth_log_a"], t["third_log_b"]])
+
+
+@pytest.mark.skip(
+    """
+    `or` constraints come from `not` negations and should instead be expanded in the
+    simplifier"""
+)
+def test_or(oso, t):
+    policy = """
+    allow("steve", "get", r: Foo) if
+        not (r.id = "something" and r.bar_id = "hello");
+    """
+    oso.load_str(policy)
+    # assert oso.is_allowed("steve", "get", t['fourth_log_a'])
+
+    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    assert len(results) == 2
+
+
+@pytest.mark.xfail(reason="unsupported")
+def test_field_cmp_field(oso, t):
+    policy = """
+    allow(_, _, bar: Bar) if
+        bar.is_cool = bar.is_still_cool;
+    """
+    oso.load_str(policy)
+    expected = list(filter(lambda b: b.is_cool == b.is_still_cool, t["bars"]))
+    check_authz(oso, "steve", "eat", t["Bar"], expected)
+
+
+def test_const_in_coll(oso, t):
+    magic = 1
+    oso.register_constant(magic, "magic")
+    policy = """
+    allow(_, _, foo: Foo) if
+        magic in foo.numbers;
+    """
+    oso.load_str(policy)
+    expected = list(filter(lambda f: magic in f.numbers, t["foos"]))
+    check_authz(oso, "gwen", "eat", t["Foo"], expected)
+
+
+@pytest.mark.xfail(reason="negation unsupported")
+def test_const_not_in_coll(oso, t):
+    magic = 1
+    oso.register_constant(magic, "magic")
+    policy = """
+    allow(_, _, foo: Foo) if
+        not (magic in foo.numbers);
+    """
+    oso.load_str(policy)
+    expected = list(filter(lambda f: magic not in f.numbers, t["foos"]))
+    check_authz(oso, "gwen", "eat", t["Foo"], expected)
+
+
+def test_param_field(oso, t):
+    policy = """
+    allow(actor, action, resource: FooLogRecord) if
+        actor = resource.data and
+        action = resource.id;
+    """
+    oso.load_str(policy)
+    check_authz(oso, "steve", "c", t["FooLogRecord"], [t["another_log_c"]])
+
+
 @pytest.fixture
 def roles(oso):
     # Register some types and callbacks
@@ -232,193 +473,10 @@ def roles(oso):
     }
 
 
-# Shared test setup.
-@pytest.fixture
-def t(oso):
-    # Register some types and callbacks
-    @dataclass
-    class Bar:
-        id: str
-        is_cool: bool
-        is_still_cool: bool
-
-    @dataclass
-    class Foo:
-        id: str
-        bar_id: str
-        is_fooey: bool
-        numbers: list
-
-    @dataclass
-    class FooLogRecord:
-        id: str
-        foo_id: str
-        data: str
-
-    hello_bar = Bar(id="hello", is_cool=True, is_still_cool=True)
-    goodbye_bar = Bar(id="goodbye", is_cool=False, is_still_cool=True)
-    something_foo = Foo(id="something", bar_id="hello", is_fooey=False, numbers=[])
-    another_foo = Foo(id="another", bar_id="hello", is_fooey=True, numbers=[1])
-    third_foo = Foo(id="third", bar_id="hello", is_fooey=True, numbers=[2])
-    forth_foo = Foo(id="fourth", bar_id="goodbye", is_fooey=True, numbers=[2, 1])
-
-    forth_log_a = FooLogRecord(id="a", foo_id="fourth", data="hello")
-    third_log_b = FooLogRecord(id="b", foo_id="third", data="world")
-    another_log_c = FooLogRecord(id="c", foo_id="another", data="steve")
-
-    bars = [hello_bar, goodbye_bar]
-    foos = [something_foo, another_foo, third_foo, forth_foo]
-    foo_logs = [forth_log_a, third_log_b, another_log_c]
-
-    def get_bars(constraints):
-        return filter_array(bars, constraints)
-
-    def get_foos(constraints):
-        return filter_array(foos, constraints)
-
-    def get_foo_logs(constraints):
-        return filter_array(foo_logs, constraints)
-
-    oso.register_class(Bar, types={"id": str, "is_cool": bool}, fetcher=get_bars)
-    oso.register_class(
-        Foo,
-        types={
-            "id": str,
-            "bar_id": str,
-            "bar": Relationship(
-                kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
-            ),
-            "logs": Relationship(
-                kind="children",
-                other_type="FooLogRecord",
-                my_field="id",
-                other_field="foo_id",
-            ),
-        },
-        fetcher=get_foos,
-    )
-    oso.register_class(
-        FooLogRecord,
-        types={
-            "id": str,
-            "foo_id": str,
-            "data": str,
-            # "bar": Relationship(
-            #     kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
-            # ),
-        },
-        fetcher=get_foo_logs,
-    )
-    # Sorta hacky, just return anything you want to use in a test.
-    return {
-        "Foo": Foo,
-        "FooLogRecord": FooLogRecord,
-        "another_foo": another_foo,
-        "forth_foo": forth_foo,
-        "forth_log_a": forth_log_a,
-    }
-
-
-def test_no_relationships(oso, t):
-    # Write a policy
-    policy = """
-    allow("steve", "get", resource: Foo) if
-        resource.is_fooey = true;
-    """
-    oso.load_str(policy)
-    assert oso.is_allowed("steve", "get", t["another_foo"])
-
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    assert len(results) == 3
-
-
-def test_relationship(oso, t):
-    policy = """
-    allow("steve", "get", resource: Foo) if
-        resource.bar = bar and
-        bar.is_cool = true and
-        resource.is_fooey = true;
-    """
-    oso.load_str(policy)
-    assert oso.is_allowed("steve", "get", t["another_foo"])
-
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    assert len(results) == 2
-
-
-def test_var_in_values(oso, t):
-    policy = """
-    allow("steve", "get", resource: Foo) if
-        resource.bar = bar and
-        bar.is_cool in [true, false];
-    """
-    oso.load_str(policy)
-    assert oso.is_allowed("steve", "get", t["another_foo"])
-
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    assert len(results) == 4
-
-
-def test_var_in_var(oso, t):
-    policy = """
-    allow("steve", "get", resource: Foo) if
-        log in resource.logs and
-        log.data = "hello";
-    """
-    oso.load_str(policy)
-    assert oso.is_allowed("steve", "get", t["forth_foo"])
-
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    assert len(results) == 1
-
-
-def test_val_in_var(oso, t):
-    # value in var
-    oso.clear_rules()
-    policy = """
-    allow("steve", "get", resource: Foo) if
-        1 in resource.numbers and 2 in resource.numbers;
-    """
-    oso.load_str(policy)
-    assert oso.is_allowed("steve", "get", t["forth_foo"])
-
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    assert len(results) == 1
-
-
-def test_var_in_value(oso, t):
-    # @TODO(steve): There is maybe a way to optimize the filter plan where if we are doing
-    # two different of the same fetch with different fields we can combine them into an `in`.
-
-    # var in value, This currently doesn't come through as an `in`
-    # This is I think the thing that MikeD wants though, for this to come through
-    # as an in so the SQL can do an IN.
-    policy = """
-    allow("steve", "get", resource: FooLogRecord) if
-        resource.data in ["hello", "world"];
-    """
-    oso.load_str(policy)
-    assert oso.is_allowed("steve", "get", t["forth_log_a"])
-
-    results = list(oso.get_allowed_resources("steve", "get", t["FooLogRecord"]))
-    assert len(results) == 2
-
-
-@pytest.mark.skip(
-    """
-    `or` constraints come from `not` negations and should instead be expanded in the
-    simplifier"""
-)
-def test_or(oso, t):
-    policy = """
-    allow("steve", "get", r: Foo) if
-        not (r.id = "something" and r.bar_id = "hello");
-    """
-    oso.load_str(policy)
-    # assert oso.is_allowed("steve", "get", t['forth_log_a'])
-
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    assert len(results) == 2
+def check_authz(oso, actor, action, resource, expected):
+    assert unord_eq(oso.get_allowed_resources(actor, action, resource), expected)
+    for re in expected:
+        assert oso.is_allowed(actor, action, re)
 
 
 def test_roles_data_filtering_owner(oso, roles):
@@ -431,15 +489,10 @@ def test_roles_data_filtering_owner(oso, roles):
     Repo = roles["Repo"]
     Issue = roles["Issue"]
 
-    assert list(oso.get_allowed_resources(leina, "invite", Org)) == [osohq]
-
-    pulls = list(oso.get_allowed_resources(leina, "pull", Repo))
-    assert unord_eq(pulls, [oso_repo, demo_repo])
-
-    pushes = list(oso.get_allowed_resources(leina, "push", Repo))
-    assert unord_eq(pushes, pulls)
-
-    assert list(oso.get_allowed_resources(leina, "edit", Issue)) == [oso_bug]
+    check_authz(oso, leina, "invite", Org, [osohq])
+    check_authz(oso, leina, "pull", Repo, [oso_repo, demo_repo])
+    check_authz(oso, leina, "push", Repo, [oso_repo, demo_repo])
+    check_authz(oso, leina, "edit", Issue, [oso_bug])
 
 
 def test_roles_data_filtering_member(oso, roles):
@@ -447,20 +500,24 @@ def test_roles_data_filtering_member(oso, roles):
     oso_repo = roles["oso"]
     demo_repo = roles["demo"]
     Repo = roles["Repo"]
+    Issue = roles["Issue"]
+    Org = roles["Org"]
 
-    pulls = list(oso.get_allowed_resources(steve, "pull", Repo))
-    assert unord_eq(pulls, [oso_repo, demo_repo])
+    check_authz(oso, steve, "pull", Repo, [oso_repo, demo_repo])
+    check_authz(oso, steve, "push", Repo, [])
+    check_authz(oso, steve, "invite", Org, [])
+    check_authz(oso, steve, "edit", Issue, [])
 
 
 def test_roles_data_filtering_writer(oso, roles):
     gabe = roles["gabe"]
     Issue = roles["Issue"]
+    Org = roles["Org"]
     Repo = roles["Repo"]
     oso_bug = roles["bug"]
     oso_repo = roles["oso"]
 
-    pulls = list(oso.get_allowed_resources(gabe, "pull", Repo))
-    pushes = list(oso.get_allowed_resources(gabe, "push", Repo))
-    assert pulls == pushes == [oso_repo]
-
-    assert list(oso.get_allowed_resources(gabe, "edit", Issue)) == [oso_bug]
+    check_authz(oso, gabe, "invite", Org, [])
+    check_authz(oso, gabe, "pull", Repo, [oso_repo])
+    check_authz(oso, gabe, "push", Repo, [oso_repo])
+    check_authz(oso, gabe, "edit", Issue, [oso_bug])
