@@ -59,13 +59,9 @@ impl IsaConstraintCheck {
     /// constraints are compatible. The constraints are compatible if either of their types is a
     /// subclass of the other's.
     ///
-    /// Returns: 
+    /// Returns:
     /// Zero, one or two query events.
-    fn check_constraint(
-        &mut self,
-        constraint: Operation,
-        counter: &Counter,
-    ) -> Check {
+    fn check_constraint(&mut self, constraint: Operation, counter: &Counter) -> Check {
         // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
         // partial, Integer)`.
         if constraint.operator != Operator::Isa {
@@ -124,7 +120,8 @@ impl IsaConstraintCheck {
                             call_id,
                             left_class_tag: existing.tag.clone(),
                             right_class_tag: proposed.tag.clone(),
-                        })
+                        },
+                    )
                 }
                 _ => Check::None,
             }
@@ -141,13 +138,12 @@ impl IsaConstraintCheck {
                 ) => {
                     let call_id = counter.next();
                     self.last_call_id = call_id;
-                    Check::One(
-                        QueryEvent::ExternalIsaWithPath {
-                            call_id,
-                            base_tag: existing.tag.clone(),
-                            path: proposed_path[constraint_path.len()..].to_vec(),
-                            class_tag: proposed.tag.clone(),
-                        })
+                    Check::One(QueryEvent::ExternalIsaWithPath {
+                        call_id,
+                        base_tag: existing.tag.clone(),
+                        path: proposed_path[constraint_path.len()..].to_vec(),
+                        class_tag: proposed.tag.clone(),
+                    })
                 }
                 _ => Check::None,
             }
@@ -180,7 +176,8 @@ impl IsaConstraintCheck {
                                 call_id,
                                 left_class_tag: existing.tag.clone(),
                                 right_class_tag: proposed.tag.clone(),
-                            })
+                            },
+                        )
                     }
                     _ => Check::None,
                 };
@@ -219,7 +216,7 @@ impl Runnable for IsaConstraintCheck {
                         self.alternative_check = Some(b);
                         return Ok(a);
                     }
-                }
+                },
             }
         }
     }
