@@ -50,31 +50,31 @@ pub enum Token {
     String(String),
     Boolean(bool),
     Symbol(Symbol),
-    Colon, // :
-    Comma, // ,
-    LB,    // [
-    RB,    // ]
-    LP,    // (
-    RP,    // )
-    LCB,   // {
-    RCB,   // }
-    Dot,   // .
-    New,   // new
-    Bang,  // !
-    Mul,   // *
-    Div,   // /
-    Mod,   // mod
-    Rem,   // rem
-    Add,   // +
-    Sub,   // -
-    Eq,    // ==
-    Neq,   // !=
-    Leq,   // <=
-    Geq,   // >=
-    Lt,    // <
-    Gt,    // >
-    Unify, // =
-    Assign,
+    Colon,     // :
+    Comma,     // ,
+    LB,        // [
+    RB,        // ]
+    LP,        // (
+    RP,        // )
+    LCB,       // {
+    RCB,       // }
+    Dot,       // .
+    New,       // new
+    Bang,      // !
+    Mul,       // *
+    Div,       // /
+    Mod,       // mod
+    Rem,       // rem
+    Add,       // +
+    Sub,       // -
+    Eq,        // ==
+    Neq,       // !=
+    Leq,       // <=
+    Geq,       // >=
+    Lt,        // <
+    Gt,        // >
+    Unify,     // =
+    Assign,    // :=
     Pipe,      // |
     SemiColon, // ;
     Query,     // ?=
