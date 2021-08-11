@@ -166,6 +166,21 @@ impl<'kb> Folder for Rewriter<'kb> {
                         let mut arg = self.fold_term(arg);
                         let mut rewrites = self.stack.pop().unwrap();
                         // Decide whether to prepend, or append
+                        // If the current operator is unify and rewrites are only
+                        // dot operations we append the rewrites after the temporary variable.
+                        // This ensures that grounding does not occur when performing dot
+                        // operations on a partial.
+                        //
+                        // Append:
+                        // - x.foo.bar = 1 => _value_1 = 1 and x.foo = _value_2 and _value_2.bar = _value_1
+                        //
+                        // Prepend:
+                        //
+                        // - x = new Foo(x: new Bar(x: 1)) =>
+                        //   _instance_2 = new Bar(x: 1) and _instance_1 = new Foo(x: _instance_2) and x = _instance_1
+                        //
+                        // We prepend when the rewritten variable needs to be bound before it is
+                        // used.
                         if only_dots(&rewrites)
                             && arg_operator.map_or(false, |o| o == Operator::Unify)
                         {
