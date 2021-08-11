@@ -166,7 +166,7 @@ impl Polar {
         let mut kb = self.kb.write().unwrap();
         let source_id = kb.add_source(source.clone())?;
 
-        // we extract this into a seperate function
+        // we extract this into a separate function
         // so that any errors returned with `?` are captured
         fn load_source(
             source_id: u64,
