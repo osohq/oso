@@ -19,9 +19,20 @@ use super::rules::*;
 use super::terms::*;
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct ResourceNamespace {
+    pub name: Symbol,
+    // TODO(gj): capture source info
+    // TODO(gj): maybe HashSet instead of Vec so we can easily catch duplicates?
+    pub roles: Option<Vec<String>>,
+    pub permissions: Option<Vec<String>>,
+    pub implications: Option<Vec<(String, String)>>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Line {
     Rule(Rule),
     Query(Term),
+    ResourceNamespace(ResourceNamespace),
 }
 
 fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
@@ -261,6 +272,197 @@ mod tests {
         let term = parse_query("{} matches {}");
         assert_eq!(term.to_polar(), r#"{} matches {}"#);
         let _term = parse_query("{x: 1} matches {}");
+    }
+
+    #[test]
+    fn test_parse_namespace_with_no_declarations() {
+        assert!(matches!(
+            super::parse_lines(0, "Org{}").unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+            } if token == "Org: must declare roles and/or permissions"
+        ));
+    }
+
+    #[test]
+    fn test_parse_namespace_with_empty_declarations() {
+        assert!(matches!(
+            super::parse_lines(0, "Org{roles=[];}").unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+            } if token == "must declare at least one role"
+        ));
+        assert!(matches!(
+            super::parse_lines(0, "Org{permissions=[];}").unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+            } if token == "must declare at least one permission"
+        ));
+    }
+
+    #[test]
+    fn test_parse_namespace_with_only_roles() {
+        assert_eq!(
+            parse_lines(r#"Org{roles=["owner",];}"#)[0],
+            Line::ResourceNamespace(ResourceNamespace {
+                name: sym!("Org"),
+                roles: Some(vec!["owner".to_owned()]),
+                permissions: None,
+                implications: None,
+            })
+        );
+        assert_eq!(
+            parse_lines(r#"Org{roles=["owner","member",];}"#)[0],
+            Line::ResourceNamespace(ResourceNamespace {
+                name: sym!("Org"),
+                roles: Some(vec!["owner".to_owned(), "member".to_owned()]),
+                permissions: None,
+                implications: None,
+            })
+        );
+    }
+
+    #[test]
+    fn test_parse_namespace_with_only_implications() {
+        assert!(matches!(
+            super::parse_lines(0, r#"Org{"member" if "owner";}"#).unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+            } if token == "Org: cannot declare implications without roles and/or permissions"
+        ));
+    }
+
+    #[test]
+    fn test_parse_namespace_with_implications_above_declarations() {
+        assert!(matches!(
+            super::parse_lines(0, r#"Org {
+                     "member" if "owner";
+                     roles=["owner","member"];
+                }"#).unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+            } if token == "Org: move declarations (roles and permissions) above implications"
+        ));
+
+        assert!(matches!(
+            super::parse_lines(0, r#"Org {
+                     "create_repo" if "invite";
+                     permissions=["invite","create_repo"];
+                }"#).unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+            } if token == "Org: move declarations (roles and permissions) above implications"
+        ));
+    }
+
+    #[test]
+    fn test_parse_namespace_with_roles_and_role_implications() {
+        assert_eq!(
+            parse_lines(
+                r#"Org {
+                     roles=["owner","member"];
+                     "member" if "owner";
+                }"#
+            )[0],
+            Line::ResourceNamespace(ResourceNamespace {
+                name: sym!("Org"),
+                roles: Some(vec!["owner".to_owned(), "member".to_owned()]),
+                permissions: None,
+                implications: Some(vec![("member".to_owned(), "owner".to_owned())]),
+            })
+        );
+    }
+
+    #[test]
+    fn test_parse_namespace_with_permissions_but_no_implications() {
+        assert!(matches!(
+            super::parse_lines(0, r#"Org{permissions=["invite","create_repo"];}"#).unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+            } if token == r#"Org: declared "invite" permission must be involved in at least one implication"#
+        ));
+    }
+
+    #[test]
+    fn test_parse_namespace_with_permission_not_involved_in_implication() {
+        assert!(matches!(
+            super::parse_lines(0, r#"Org {
+                permissions=["invite","create_repo","ban"];
+                "invite" if "ban";
+            }"#).unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+            } if token == r#"Org: declared "create_repo" permission must be involved in at least one implication"#
+        ));
+    }
+
+    #[test]
+    fn test_parse_namespace_with_implied_term_not_declared_locally() {
+        assert!(matches!(
+            super::parse_lines(0, r#"Org {
+                roles=["owner"];
+                "member" if "owner";
+            }"#).unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+            } if token == r#"Org: implied term "member" must be declared as a permission or role"#
+        ));
+    }
+
+    #[test]
+    fn test_parse_namespace_with_implier_term_not_declared_locally() {
+        assert!(matches!(
+            super::parse_lines(0, r#"Org {
+                roles=["member"];
+                "member" if "owner";
+            }"#).unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+                    // TODO(gj): make this error more visual; something like
+                    //           my_file.polar:37 "member" if "owner";
+                    //                                        ^^^^^^^ "owner" must be declared as a permission or role
+            } if token == r#"Org: implier term "owner" must be declared as a permission or role"#
+        ));
     }
 
     #[test]

@@ -194,6 +194,17 @@ impl Polar {
                     parser::Line::Query(term) => {
                         kb.inline_queries.push(term);
                     }
+                    parser::Line::ResourceNamespace(parser::ResourceNamespace {
+                        name,
+                        roles,
+                        permissions,
+                        implications,
+                    }) => {
+                        eprintln!("name: {:#?}", name);
+                        eprintln!("roles: {:#?}", roles);
+                        eprintln!("permissions: {:#?}", permissions);
+                        eprintln!("implications: {:#?}", implications);
+                    }
                 }
             }
             Ok(warnings)

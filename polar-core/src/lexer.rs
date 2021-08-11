@@ -89,6 +89,9 @@ pub enum Token {
     Or,        // or
     Not,       // not
     Matches,   // matches
+
+    Roles,       // roles
+    Permissions, // permissions
 }
 
 impl ToString for Token {
@@ -138,6 +141,9 @@ impl ToString for Token {
             Token::Or => "or".to_owned(),           // or
             Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
+
+            Token::Roles => "roles".to_owned(),             // roles
+            Token::Permissions => "permissions".to_owned(), // permissions
         }
     }
 }
@@ -249,6 +255,10 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Mod, last + 1)))
         } else if &self.buf == "rem" {
             Some(Ok((start, Token::Rem, last + 1)))
+        } else if &self.buf == "roles" {
+            Some(Ok((start, Token::Roles, last + 1)))
+        } else if &self.buf == "permissions" {
+            Some(Ok((start, Token::Permissions, last + 1)))
         } else {
             Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
         }
