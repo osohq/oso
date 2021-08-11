@@ -419,9 +419,9 @@ def read_config(oso):
         try:
             constraints = result["bindings"]["resource"]
             assert len(constraints.args) == 2
-            type_check = constraints.args[0]
+            type_check = constraints.args[1]
             child_type = isa_type(type_check)
-            get_parent = constraints.args[1]
+            get_parent = constraints.args[0]
             assert get_parent.operator == "Isa"
             assert len(get_parent.args) == 2
             getter = get_parent.args[0]

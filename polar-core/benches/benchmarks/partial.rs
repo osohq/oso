@@ -61,7 +61,7 @@ pub fn partial_and(c: &mut Criterion) {
 /// a partial that calls 5 rules and does 5 field comparisons.
 pub fn partial_rule_depth(c: &mut Criterion) {
     let mut group = c.benchmark_group("partial_rule_depth");
-    for n in &[1, 5, 10, 20, 40] {
+    for n in &[1, 5, 10, 20, 40, 80, 100] {
         group.bench_function(BenchmarkId::from_parameter(format!("{}", n)), |b| {
             b.iter_batched_ref(
                 || {
