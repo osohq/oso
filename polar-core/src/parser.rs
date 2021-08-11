@@ -276,7 +276,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_namespace_with_no_declarations() {
+    fn test_resource_namespace_parse_with_no_declarations() {
         assert!(matches!(
             super::parse_lines(0, "Org{}").unwrap_err(),
             error::PolarError {
@@ -290,7 +290,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_namespace_with_empty_declarations() {
+    fn test_resource_namespace_parse_with_empty_declarations() {
         assert!(matches!(
             super::parse_lines(0, "Org{roles=[];}").unwrap_err(),
             error::PolarError {
@@ -314,7 +314,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_namespace_with_only_roles() {
+    fn test_resource_namespace_parse_with_only_roles() {
         assert_eq!(
             parse_lines(r#"Org{roles=["owner",];}"#)[0],
             Line::ResourceNamespace(ResourceNamespace {
@@ -336,7 +336,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_namespace_with_only_implications() {
+    fn test_resource_namespace_parse_with_only_implications() {
         assert!(matches!(
             super::parse_lines(0, r#"Org{"member" if "owner";}"#).unwrap_err(),
             error::PolarError {
@@ -350,7 +350,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_namespace_with_implications_above_declarations() {
+    fn test_resource_namespace_parse_with_implications_above_declarations() {
         assert!(matches!(
             super::parse_lines(0, r#"Org {
                      "member" if "owner";
@@ -381,7 +381,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_namespace_with_roles_and_role_implications() {
+    fn test_resource_namespace_parse_with_roles_and_role_implications() {
         assert_eq!(
             parse_lines(
                 r#"Org {
@@ -399,7 +399,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_namespace_with_permissions_but_no_implications() {
+    fn test_resource_namespace_parse_with_permissions_but_no_implications() {
         assert!(matches!(
             super::parse_lines(0, r#"Org{permissions=["invite","create_repo"];}"#).unwrap_err(),
             error::PolarError {
@@ -413,7 +413,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_namespace_with_permission_not_involved_in_implication() {
+    fn test_resource_namespace_parse_with_permission_not_involved_in_implication() {
         assert!(matches!(
             super::parse_lines(0, r#"Org {
                 permissions=["invite","create_repo","ban"];
@@ -430,7 +430,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_namespace_with_implied_term_not_declared_locally() {
+    fn test_resource_namespace_parse_with_implied_term_not_declared_locally() {
         assert!(matches!(
             super::parse_lines(0, r#"Org {
                 roles=["owner"];
@@ -447,7 +447,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_namespace_with_implier_term_not_declared_locally() {
+    fn test_resource_namespace_parse_with_implier_term_not_declared_locally() {
         assert!(matches!(
             super::parse_lines(0, r#"Org {
                 roles=["member"];
