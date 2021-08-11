@@ -1,11 +1,8 @@
 import pytest
 
-from typing import Any, ClassVar
 from dataclasses import dataclass
-from oso import Oso, OsoError
+from oso import Oso
 from polar import Relationship
-from functools import reduce
-from collections import Counter
 
 
 @pytest.fixture

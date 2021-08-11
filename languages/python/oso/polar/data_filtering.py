@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 VALID_KINDS = ["parent", "children"]
 
+
 # Used so we know what fetchers to call and how to match up constraints.
 @dataclass
 class Relationship:
