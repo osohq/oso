@@ -49,3 +49,12 @@ Link to [relevant documentation section]().
 
 - Constraints on unbound variables no longer prevent the variable from
   later being bound.
+
+### Ruby
+
+#### Other bugs & improvements
+
+- The ruby host library now only calls `to_s` on external instances when the
+  instance needs to be serialized for a log line, debug message, or error. This
+  improves performance in cases where `to_s` is slow (i.e. requires a round-trip
+  to the database).
