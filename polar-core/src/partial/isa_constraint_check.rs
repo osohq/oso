@@ -77,15 +77,15 @@ impl IsaConstraintCheck {
             return Check::None;
         }
 
-        if constraint_path.len() == 1
+        let just_vars = constraint_path.len() == 1
             && proposed_path.len() == 1
             && matches!(&constraint.args[0].value().as_symbol(), Ok(Symbol(_)))
-            && matches!(&self.proposed.args[0].value().as_symbol(), Ok(Symbol(_)))
-        {
+            && matches!(&self.proposed.args[0].value().as_symbol(), Ok(Symbol(_)));
+
+        // FIXME(gw): this logic is hard to follow!
+        if just_vars {
             let sym = constraint.args[0].value().as_symbol().unwrap();
-            let proposed = self.proposed.args[0].value().as_symbol().unwrap();
-            if sym == proposed {
-            } else if !self.proposed_names.contains(sym) {
+            if !self.proposed_names.contains(sym) {
                 return Check::None;
             }
         } else if constraint_path
@@ -93,97 +93,79 @@ impl IsaConstraintCheck {
             .iter()
             .zip(proposed_path.iter())
             .any(|(a, b)| a != b)
+        // FIXME(gw): is this right? what if the first elements are aliases?
         {
             return Check::None;
         }
 
-        let proposed = self.proposed.args.last().unwrap();
         let existing = constraint.args.last().unwrap();
 
-        // x matches A{} vs. x matches B{}
         if constraint_path == proposed_path {
-            match (proposed.value(), existing.value()) {
-                (
-                    Value::Pattern(Pattern::Instance(proposed)),
-                    Value::Pattern(Pattern::Instance(existing)),
-                ) if proposed.tag != existing.tag => {
-                    let call_id = counter.next();
-                    self.last_call_id = call_id;
-
-                    Check::Two(
-                        QueryEvent::ExternalIsSubclass {
-                            call_id,
-                            left_class_tag: proposed.tag.clone(),
-                            right_class_tag: existing.tag.clone(),
-                        },
-                        QueryEvent::ExternalIsSubclass {
-                            call_id,
-                            left_class_tag: existing.tag.clone(),
-                            right_class_tag: proposed.tag.clone(),
-                        },
-                    )
-                }
-                _ => Check::None,
-            }
+            // x matches A{} vs. x matches B{}
+            self.subclass_compare(existing, counter)
         } else if constraint_path.len() < proposed_path.len() {
-            // Proposed path is a superset of existing path. Take the existing tag, the additional
-            // path segments from the proposed path, and the proposed tag.
-            //
-            // E.g., given `a.b matches B{}` and `a.b.c.d matches D{}`, we want to assemble an
-            // `ExternalIsaWithPath` of `B`, [c, d], and `D`.
-            match (proposed.value(), existing.value()) {
-                (
-                    Value::Pattern(Pattern::Instance(proposed)),
-                    Value::Pattern(Pattern::Instance(existing)),
-                ) => {
-                    let call_id = counter.next();
-                    self.last_call_id = call_id;
-                    Check::One(QueryEvent::ExternalIsaWithPath {
-                        call_id,
-                        base_tag: existing.tag.clone(),
-                        path: proposed_path[constraint_path.len()..].to_vec(),
-                        class_tag: proposed.tag.clone(),
-                    })
-                }
-                _ => Check::None,
-            }
+            // Proposed path is a superset of existing path.
+            self.path_compare(proposed_path, constraint_path, existing, counter)
+        } else if just_vars {
+            self.subclass_compare(existing, counter)
         } else {
-            if constraint_path.len() == 1
-                && proposed_path.len() == 1
-                && matches!(&constraint.args[0].value().as_symbol(), Ok(Symbol(_)))
-                && matches!(&self.proposed.args[0].value().as_symbol(), Ok(Symbol(_)))
-            {
-                let existing_sym = constraint.args[0].value().as_symbol().unwrap();
-                let _proposed_sym = self.proposed.args[0].value().as_symbol().unwrap();
-                if !self.proposed_names.contains(existing_sym) {
-                    return Check::None;
-                }
-                return match (proposed.value(), existing.value()) {
-                    (
-                        Value::Pattern(Pattern::Instance(proposed)),
-                        Value::Pattern(Pattern::Instance(existing)),
-                    ) if proposed.tag != existing.tag => {
-                        let call_id = counter.next();
-                        self.last_call_id = call_id;
-
-                        Check::Two(
-                            QueryEvent::ExternalIsSubclass {
-                                call_id,
-                                left_class_tag: proposed.tag.clone(),
-                                right_class_tag: existing.tag.clone(),
-                            },
-                            QueryEvent::ExternalIsSubclass {
-                                call_id,
-                                left_class_tag: existing.tag.clone(),
-                                right_class_tag: proposed.tag.clone(),
-                            },
-                        )
-                    }
-                    _ => Check::None,
-                };
-            }
             // Comparing existing `x.a.b matches B{}` vs. `proposed x.a matches A{}`.
             Check::None
+        }
+    }
+
+    fn subclass_compare(&mut self, existing: &Term, counter: &Counter) -> Check {
+        let proposed = self.proposed.args.last().unwrap();
+        match (proposed.value(), existing.value()) {
+            (
+                Value::Pattern(Pattern::Instance(proposed)),
+                Value::Pattern(Pattern::Instance(existing)),
+            ) if proposed.tag != existing.tag => {
+                let call_id = counter.next();
+                self.last_call_id = call_id;
+
+                Check::Two(
+                    QueryEvent::ExternalIsSubclass {
+                        call_id,
+                        left_class_tag: proposed.tag.clone(),
+                        right_class_tag: existing.tag.clone(),
+                    },
+                    QueryEvent::ExternalIsSubclass {
+                        call_id,
+                        left_class_tag: existing.tag.clone(),
+                        right_class_tag: proposed.tag.clone(),
+                    },
+                )
+            }
+            _ => Check::None,
+        }
+    }
+
+    fn path_compare(
+        &mut self,
+        proposed_path: Vec<Term>,
+        constraint_path: Vec<Term>,
+        existing: &Term,
+        counter: &Counter,
+    ) -> Check {
+        // given `a.b matches B{}` and `a.b.c.d matches D{}`, we want to assemble an
+        // `ExternalIsaWithPath` of `B`, [c, d], and `D`.
+        let proposed = self.proposed.args.last().unwrap();
+        match (proposed.value(), existing.value()) {
+            (
+                Value::Pattern(Pattern::Instance(proposed)),
+                Value::Pattern(Pattern::Instance(existing)),
+            ) => {
+                let call_id = counter.next();
+                self.last_call_id = call_id;
+                Check::One(QueryEvent::ExternalIsaWithPath {
+                    call_id,
+                    base_tag: existing.tag.clone(),
+                    path: proposed_path[constraint_path.len()..].to_vec(),
+                    class_tag: proposed.tag.clone(),
+                })
+            }
+            _ => Check::None,
         }
     }
 }
