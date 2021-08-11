@@ -254,7 +254,7 @@ LogExp: Term = {
     <ExpectLogical<Exp1<"Term">>>
 }
 
-// `ValueOrLogic` is used to do some simple parse-time 
+// `ValueOrLogic` is used to do some simple parse-time
 // checks for correctly formed expressions. For example,
 // `x in y` is a logical expression, so it does
 // not make sense to compare the result with a value.
