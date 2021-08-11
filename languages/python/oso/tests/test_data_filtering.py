@@ -36,6 +36,7 @@ def filter_array(array, constraints):
             results.append(elem)
     return results
 
+
 def unord_eq(a, b):
     for x in a:
         try:
@@ -216,22 +217,23 @@ def roles(oso):
     oso.load_str(policy)
     oso.enable_roles()
     return {
-        'apple': apple,
-        'osohq': osohq,
-        'steve': steve,
-        'leina': leina,
-        'gabe': gabe,
-        'oso': oso_repo,
-        'ios': ios_repo,
-        'demo': demo_repo,
-        'bug': oso_bug,
-        'laggy': ios_laggy,
-        'Role': Role,
-        'Repo': Repo,
-        'Issue': Issue,
-        'Org': Org,
-        'User': User,
+        "apple": apple,
+        "osohq": osohq,
+        "steve": steve,
+        "leina": leina,
+        "gabe": gabe,
+        "oso": oso_repo,
+        "ios": ios_repo,
+        "demo": demo_repo,
+        "bug": oso_bug,
+        "laggy": ios_laggy,
+        "Role": Role,
+        "Repo": Repo,
+        "Issue": Issue,
+        "Org": Org,
+        "User": User,
     }
+
 
 # Shared test setup.
 @pytest.fixture
@@ -423,14 +425,14 @@ def test_or(oso, t):
 
 
 def test_roles_data_filtering_owner(oso, roles):
-    leina = roles['leina']
-    osohq = roles['osohq']
-    oso_repo = roles['oso']
-    demo_repo = roles['demo']
-    oso_bug = roles['bug']
-    Org = roles['Org']
-    Repo = roles['Repo']
-    Issue = roles['Issue']
+    leina = roles["leina"]
+    osohq = roles["osohq"]
+    oso_repo = roles["oso"]
+    demo_repo = roles["demo"]
+    oso_bug = roles["bug"]
+    Org = roles["Org"]
+    Repo = roles["Repo"]
+    Issue = roles["Issue"]
 
     assert list(oso.get_allowed_resources(leina, "invite", Org)) == [osohq]
 
@@ -442,21 +444,23 @@ def test_roles_data_filtering_owner(oso, roles):
 
     assert list(oso.get_allowed_resources(leina, "edit", Issue)) == [oso_bug]
 
+
 def test_roles_data_filtering_member(oso, roles):
-    steve = roles['steve']
-    oso_repo = roles['oso']
-    demo_repo = roles['demo']
-    Repo = roles['Repo']
+    steve = roles["steve"]
+    oso_repo = roles["oso"]
+    demo_repo = roles["demo"]
+    Repo = roles["Repo"]
 
     pulls = list(oso.get_allowed_resources(steve, "pull", Repo))
     assert unord_eq(pulls, [oso_repo, demo_repo])
 
+
 def test_roles_data_filtering_writer(oso, roles):
-    gabe = roles['gabe']
-    Issue = roles['Issue']
-    Repo = roles['Repo']
-    oso_bug = roles['bug']
-    oso_repo = roles['oso']
+    gabe = roles["gabe"]
+    Issue = roles["Issue"]
+    Repo = roles["Repo"]
+    oso_bug = roles["bug"]
+    oso_repo = roles["oso"]
 
     pulls = list(oso.get_allowed_resources(gabe, "pull", Repo))
     pushes = list(oso.get_allowed_resources(gabe, "push", Repo))
