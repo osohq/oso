@@ -128,10 +128,7 @@ class Host:
         cls = self.get_class(class_tag)
         for field in path:
             field = self.to_python(field)
-            try:
-                base = self.get_field(base, field)
-            except AttributeError:
-                return False
+            base = self.get_field(base, field)
         return issubclass(base, cls)
 
     def is_subclass(self, left_tag, right_tag) -> bool:

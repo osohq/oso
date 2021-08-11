@@ -24,14 +24,20 @@ pub struct IsaConstraintCheck {
     result: Option<bool>,
     alternative_check: Option<QueryEvent>,
     last_call_id: u64,
-    proposed_aliases: Option<HashSet<Symbol>>,
+    proposed_names: HashSet<Symbol>,
+}
+
+enum Check {
+    None,
+    One(QueryEvent),
+    Two(QueryEvent, QueryEvent),
 }
 
 impl IsaConstraintCheck {
     pub fn new(
         existing: Vec<Operation>,
         proposed: Operation,
-        proposed_aliases: Option<HashSet<Symbol>>,
+        proposed_names: HashSet<Symbol>,
     ) -> Self {
         Self {
             existing,
@@ -39,7 +45,7 @@ impl IsaConstraintCheck {
             result: None,
             alternative_check: None,
             last_call_id: 0,
-            proposed_aliases,
+            proposed_names,
         }
     }
 
@@ -49,23 +55,21 @@ impl IsaConstraintCheck {
     /// constraints for the same type, there's no external check required, and we return `None` to
     /// indicate compatibility.
     ///
-    /// Otherwise, we return a pair of `QueryEvent::ExternalIsSubclass`es to check whether the type
+    /// Otherwise, we return a collection of `QueryEvent`s to check whether the type
     /// constraints are compatible. The constraints are compatible if either of their types is a
     /// subclass of the other's.
     ///
-    /// Returns:
-    /// - `None` if compatible.
-    /// - A pair of `QueryEvent::ExternalIsSubclass` checks if compatibility cannot be determined
-    /// locally.
+    /// Returns: 
+    /// Zero, one or two query events.
     fn check_constraint(
         &mut self,
         constraint: Operation,
         counter: &Counter,
-    ) -> (Option<QueryEvent>, Option<QueryEvent>) {
+    ) -> Check {
         // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
         // partial, Integer)`.
         if constraint.operator != Operator::Isa {
-            return (None, None);
+            return Check::None;
         }
 
         let constraint_path = path(&constraint.args[0]);
@@ -74,7 +78,7 @@ impl IsaConstraintCheck {
         // Not comparable b/c one of the matches statements has a LHS that isn't a variable or dot
         // op.
         if constraint_path.is_empty() || proposed_path.is_empty() {
-            return (None, None);
+            return Check::None;
         }
 
         if constraint_path.len() == 1
@@ -85,10 +89,8 @@ impl IsaConstraintCheck {
             let sym = constraint.args[0].value().as_symbol().unwrap();
             let proposed = self.proposed.args[0].value().as_symbol().unwrap();
             if sym == proposed {
-            } else if let Some(aliases) = &self.proposed_aliases {
-                if !aliases.contains(sym) {
-                    return (None, None);
-                }
+            } else if !self.proposed_names.contains(sym) {
+                return Check::None;
             }
         } else if constraint_path
             // a.b.c vs. d
@@ -96,7 +98,7 @@ impl IsaConstraintCheck {
             .zip(proposed_path.iter())
             .any(|(a, b)| a != b)
         {
-            return (None, None);
+            return Check::None;
         }
 
         let proposed = self.proposed.args.last().unwrap();
@@ -112,20 +114,19 @@ impl IsaConstraintCheck {
                     let call_id = counter.next();
                     self.last_call_id = call_id;
 
-                    (
-                        Some(QueryEvent::ExternalIsSubclass {
+                    Check::Two(
+                        QueryEvent::ExternalIsSubclass {
                             call_id,
                             left_class_tag: proposed.tag.clone(),
                             right_class_tag: existing.tag.clone(),
-                        }),
-                        Some(QueryEvent::ExternalIsSubclass {
+                        },
+                        QueryEvent::ExternalIsSubclass {
                             call_id,
                             left_class_tag: existing.tag.clone(),
                             right_class_tag: proposed.tag.clone(),
-                        }),
-                    )
+                        })
                 }
-                _ => (None, None),
+                _ => Check::None,
             }
         } else if constraint_path.len() < proposed_path.len() {
             // Proposed path is a superset of existing path. Take the existing tag, the additional
@@ -140,17 +141,15 @@ impl IsaConstraintCheck {
                 ) => {
                     let call_id = counter.next();
                     self.last_call_id = call_id;
-                    (
-                        Some(QueryEvent::ExternalIsaWithPath {
+                    Check::One(
+                        QueryEvent::ExternalIsaWithPath {
                             call_id,
                             base_tag: existing.tag.clone(),
                             path: proposed_path[constraint_path.len()..].to_vec(),
                             class_tag: proposed.tag.clone(),
-                        }),
-                        None,
-                    )
+                        })
                 }
-                _ => (None, None),
+                _ => Check::None,
             }
         } else {
             if constraint_path.len() == 1
@@ -160,38 +159,34 @@ impl IsaConstraintCheck {
             {
                 let existing_sym = constraint.args[0].value().as_symbol().unwrap();
                 let _proposed_sym = self.proposed.args[0].value().as_symbol().unwrap();
-                if let Some(aliases) = &self.proposed_aliases {
-                    if !aliases.contains(existing_sym) {
-                        return (None, None);
-                    } else {
-                        return match (proposed.value(), existing.value()) {
-                            (
-                                Value::Pattern(Pattern::Instance(proposed)),
-                                Value::Pattern(Pattern::Instance(existing)),
-                            ) if proposed.tag != existing.tag => {
-                                let call_id = counter.next();
-                                self.last_call_id = call_id;
-
-                                (
-                                    Some(QueryEvent::ExternalIsSubclass {
-                                        call_id,
-                                        left_class_tag: proposed.tag.clone(),
-                                        right_class_tag: existing.tag.clone(),
-                                    }),
-                                    Some(QueryEvent::ExternalIsSubclass {
-                                        call_id,
-                                        left_class_tag: existing.tag.clone(),
-                                        right_class_tag: proposed.tag.clone(),
-                                    }),
-                                )
-                            }
-                            _ => (None, None),
-                        };
-                    }
+                if !self.proposed_names.contains(existing_sym) {
+                    return Check::None;
                 }
+                return match (proposed.value(), existing.value()) {
+                    (
+                        Value::Pattern(Pattern::Instance(proposed)),
+                        Value::Pattern(Pattern::Instance(existing)),
+                    ) if proposed.tag != existing.tag => {
+                        let call_id = counter.next();
+                        self.last_call_id = call_id;
+
+                        Check::Two(
+                            QueryEvent::ExternalIsSubclass {
+                                call_id,
+                                left_class_tag: proposed.tag.clone(),
+                                right_class_tag: existing.tag.clone(),
+                            },
+                            QueryEvent::ExternalIsSubclass {
+                                call_id,
+                                left_class_tag: existing.tag.clone(),
+                                right_class_tag: proposed.tag.clone(),
+                            })
+                    }
+                    _ => Check::None,
+                };
             }
             // Comparing existing `x.a.b matches B{}` vs. `proposed x.a matches A{}`.
-            (None, None)
+            Check::None
         }
     }
 }
@@ -204,26 +199,27 @@ impl Runnable for IsaConstraintCheck {
                 self.alternative_check = None;
             } else if self.alternative_check.is_none() {
                 // If both checks fail, we fail.
-                //
                 return Ok(QueryEvent::Done { result: false });
             }
         }
 
+        // If there's an alternative waiting to be checked, check it.
+        if let Some(alternative) = self.alternative_check.take() {
+            return Ok(alternative);
+        }
+
         let counter = counter.expect("IsaConstraintCheck requires a Counter");
         loop {
-            // If there's an alternative waiting to be checked, check it.
-            if let Some(alternative) = self.alternative_check.take() {
-                return Ok(alternative);
-            } else if let Some(constraint) = self.existing.pop() {
-                let (maybe_primary, maybe_alternative) = self.check_constraint(constraint, counter);
-                if let Some(alternative) = maybe_alternative {
-                    self.alternative_check = Some(alternative);
+            match self.existing.pop() {
+                None => return Ok(QueryEvent::Done { result: true }),
+                Some(constraint) => match self.check_constraint(constraint, counter) {
+                    Check::None => (),
+                    Check::One(a) => return Ok(a),
+                    Check::Two(a, b) => {
+                        self.alternative_check = Some(b);
+                        return Ok(a);
+                    }
                 }
-                if let Some(primary) = maybe_primary {
-                    return Ok(primary);
-                }
-            } else {
-                return Ok(QueryEvent::Done { result: true });
             }
         }
     }
