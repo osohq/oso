@@ -8,6 +8,11 @@ use super::rules::*;
 use super::sources::*;
 use super::terms::*;
 
+pub enum Declaration {
+    Role,
+    Permission,
+}
+
 /// A map of bindings: variable name → value. The VM uses a stack internally,
 /// but can translate to and from this type.
 
@@ -27,6 +32,9 @@ pub struct KnowledgeBase {
     /// For call IDs, instance IDs, symbols, etc.
     id_counter: Counter,
     pub inline_queries: Vec<Term>,
+
+    /// Resource Namespace Bookkeeping
+    pub resource_namespaces: HashMap<Symbol, HashMap<String, Declaration>>,
 }
 
 impl KnowledgeBase {
@@ -40,6 +48,7 @@ impl KnowledgeBase {
             id_counter: Counter::default(),
             gensym_counter: Counter::default(),
             inline_queries: vec![],
+            resource_namespaces: HashMap::new(),
         }
     }
 
