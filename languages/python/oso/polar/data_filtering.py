@@ -87,6 +87,7 @@ def ground_constraints(polar, results, filter_plan, constraints):
 
 # @NOTE(Steve): This is just operating on the json. Could still have a step to parse this into a python data structure
 # first. Probably more important later when make implementing a resolver nice.
+
 def builtin_filter_plan_resolver(polar, filter_plan):
     result_sets = filter_plan["result_sets"]
     results = []
