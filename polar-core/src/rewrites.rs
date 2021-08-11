@@ -128,8 +128,9 @@ impl<'kb> Folder for Rewriter<'kb> {
                 let mut new = self.fold_term(t);
                 let mut rewrites = self.stack.pop().unwrap();
                 for rewrite in rewrites.drain(..).rev() {
-                    and_wrap(&mut new, rewrite);
+                    and_prepend(&mut new, rewrite);
                 }
+
                 new
             }
             Value::Expression(o) if self.needs_rewrite(o) => {
@@ -159,11 +160,20 @@ impl<'kb> Folder for Rewriter<'kb> {
                     .args
                     .into_iter()
                     .map(|arg| {
+                        let arg_operator = arg.value().as_expression().map(|e| e.operator).ok();
+
                         self.stack.push(vec![]);
                         let mut arg = self.fold_term(arg);
                         let mut rewrites = self.stack.pop().unwrap();
-                        for rewrite in rewrites.drain(..).rev() {
-                            and_wrap(&mut arg, rewrite);
+                        // Decide whether to prepend, or append
+                        if only_dots(&rewrites) && arg_operator.map_or(false, |o| o == Operator::Unify) {
+                            for rewrite in rewrites {
+                                and_append(&mut arg, rewrite);
+                            }
+                        } else {
+                            for rewrite in rewrites.drain(..).rev() {
+                                and_prepend(&mut arg, rewrite);
+                            }
                         }
                         arg
                     })
@@ -190,11 +200,26 @@ impl<'kb> Folder for Rewriter<'kb> {
     }
 }
 
+fn only_dots(rewrites: &Vec<Term>) -> bool {
+    rewrites.into_iter().all(|t| {
+        t.value().as_expression().map_or(false, |op| op.operator == Operator::Dot)
+    })
+}
+
 /// Replace the left value with And(right, left).
-fn and_wrap(left: &mut Term, right: Term) {
+fn and_prepend(left: &mut Term, right: Term) {
     let new_value = Value::Expression(Operation {
         operator: Operator::And,
         args: vec![right, left.clone()],
+    });
+    left.replace_value(new_value);
+}
+
+/// Replace the left value with And(left, right).
+fn and_append(left: &mut Term, right: Term) {
+    let new_value = Value::Expression(Operation {
+        operator: Operator::And,
+        args: vec![left.clone(), right],
     });
     left.replace_value(new_value);
 }

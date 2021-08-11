@@ -1878,7 +1878,8 @@ impl PolarVirtualMachine {
 
                 // Translate `.(object, field, value)` → `value = .(object, field)`.
                 let dot2 = op!(Dot, object.clone(), field.clone());
-                self.add_constraint(&op!(Unify, value.clone(), dot2.into_term()).into_term())?;
+                let value = self.deep_deref(value);
+                self.add_constraint(&op!(Unify, value, dot2.into_term()).into_term())?;
             }
             _ => {
                 return Err(self.type_error(
