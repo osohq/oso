@@ -96,9 +96,11 @@ class Oso(Polar):
     def authorize(self, actor, action, resource, *, check_read=True):
         if not self.query_rule_once("allow", actor, action, resource):
             is_not_found = False
-            if (action == self.read_action):
+            if action == self.read_action:
                 is_not_found = True
-            elif check_read and not self.query_rule_once("allow", actor, self.read_action, resource):
+            elif check_read and not self.query_rule_once(
+                "allow", actor, self.read_action, resource
+            ):
                 is_not_found = True
             raise self._get_error(is_not_found, actor, action, resource)
 
