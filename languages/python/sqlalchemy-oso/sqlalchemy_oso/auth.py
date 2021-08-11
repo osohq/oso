@@ -13,6 +13,8 @@ from sqlalchemy_oso import roles
 
 from sqlalchemy_oso.compat import iterate_model_classes
 
+from functools import reduce
+
 
 def polar_model_name(model) -> str:
     """Return polar class name for SQLAlchemy model."""
@@ -83,13 +85,22 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
         has_result = True
 
         resource_partial = result["bindings"]["resource"]
-        filter, role_method = partial_to_filter(
-            resource_partial, session, model, get_model=oso.get_class
-        )
+        if isinstance(resource_partial, model):
 
-        if role_method is not None:
-            roles_filter = roles._generate_query_filter(oso, role_method, model)
-            filter &= roles_filter
+            def f(pk):
+                return getattr(model, pk) == getattr(resource_partial, pk)
+
+            filters = [f(pk.name) for pk in inspect(model).primary_key]
+            filter = reduce(lambda a, b: a & b, filters)
+
+        else:
+            filter, role_method = partial_to_filter(
+                resource_partial, session, model, get_model=oso.get_class
+            )
+
+            if role_method is not None:
+                roles_filter = roles._generate_query_filter(oso, role_method, model)
+                filter &= roles_filter
 
         if combined_filter is None:
             combined_filter = filter

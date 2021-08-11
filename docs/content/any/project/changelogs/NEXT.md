@@ -41,6 +41,15 @@ Link to [relevant documentation section]().
 - Of smaller improvements
 - Potentially with doc [links]().
 
+## `oso` NEW_VERSION
+
+### Core
+
+#### Other bugs & improvements
+
+- Constraints on unbound variables no longer prevent the variable from
+  later being bound.
+
 ### Ruby
 
 #### Other bugs & improvements
