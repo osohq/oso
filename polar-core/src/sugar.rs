@@ -39,11 +39,11 @@ fn transform_declarations(
 fn rewrite_implication(
     implied: String,
     implier: String,
-    resource: Symbol,
+    resource: String,
     declarations: HashMap<String, Declaration>,
 ) -> Rule {
     let actor_var = term!(sym!("actor"));
-    let resource_var = term!(sym!(resource.0.to_lowercase()));
+    let resource_var = term!(sym!(resource.to_lowercase()));
     let body_call = match declarations[&implier] {
         Declaration::Role => sym!("role"),
         Declaration::Permission => sym!("permission"),
@@ -87,7 +87,7 @@ fn rewrite_implication(
         },
         Parameter {
             parameter: resource_var,
-            specializer: Some(term!(resource)),
+            specializer: Some(term!(pattern!(instance!(resource)))),
         },
     ];
     Rule::new_from_parser(0, 0, 0, rule_name, params, body)
@@ -140,7 +140,7 @@ impl KnowledgeBase {
         if let Some(implications) = implications {
             for (implied, implier) in implications {
                 let rule =
-                    rewrite_implication(implied, implier, name.clone(), declarations.clone());
+                    rewrite_implication(implied, implier, name.0.clone(), declarations.clone());
                 let generic_rule = self
                     .rules
                     .entry(rule.name.clone())
@@ -165,34 +165,34 @@ mod tests {
         let rewritten_role_role = rewrite_implication(
             "member".to_owned(),
             "owner".to_owned(),
-            sym!("Org"),
+            "Org".to_owned(),
             declarations.clone(),
         );
         assert_eq!(
             rewritten_role_role.to_polar(),
-            r#"role(actor, "member", org: Org) if role(actor, "owner", org);"#
+            r#"role(actor, "member", org: Org{}) if role(actor, "owner", org);"#
         );
 
         let rewritten_permission_role = rewrite_implication(
             "invite".to_owned(),
             "owner".to_owned(),
-            sym!("Org"),
+            "Org".to_owned(),
             declarations.clone(),
         );
         assert_eq!(
             rewritten_permission_role.to_polar(),
-            r#"permission(actor, "invite", org: Org) if role(actor, "owner", org);"#
+            r#"permission(actor, "invite", org: Org{}) if role(actor, "owner", org);"#
         );
 
         let rewritten_permission_permission = rewrite_implication(
             "create_repo".to_owned(),
             "invite".to_owned(),
-            sym!("Org"),
+            "Org".to_owned(),
             declarations,
         );
         assert_eq!(
             rewritten_permission_permission.to_polar(),
-            r#"permission(actor, "create_repo", org: Org) if permission(actor, "invite", org);"#
+            r#"permission(actor, "create_repo", org: Org{}) if permission(actor, "invite", org);"#
         );
     }
 }
