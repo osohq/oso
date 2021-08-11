@@ -14,7 +14,6 @@ use super::terms::*;
 use super::vm::*;
 use super::warnings::check_singletons;
 
-use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 pub struct Query {
@@ -195,63 +194,8 @@ impl Polar {
                     parser::Line::Query(term) => {
                         kb.inline_queries.push(term);
                     }
-                    parser::Line::ResourceNamespace(parser::ResourceNamespace {
-                        name,
-                        roles,
-                        permissions,
-                        implications,
-                    }) => {
-                        // TODO(gj): no way to know in the core if `name` was registered as a class
-                        // or a constant.
-                        if !kb.is_constant(&name) {
-                            return Err(error::ParseError::IntegerOverflow {
-                                loc: 0, // TODO(gj): loc info
-                                // TODO(gj): better error message
-                                token: format!("namespace {} must be registered as a class", name),
-                            }
-                            .into());
-                        }
-
-                        // Fold Vec<role> => HashMap<role, Declaration>
-                        let declarations =
-                            roles
-                                .into_iter()
-                                .flatten()
-                                .fold(HashMap::new(), |mut acc, role| {
-                                    acc.insert(role, Declaration::Role);
-                                    acc
-                                });
-
-                        // Fold Vec<permission> => HashMap<permission_or_role, Declaration>
-                        let declarations = permissions.into_iter().flatten().fold(
-                            declarations,
-                            |mut acc, permission| {
-                                acc.insert(permission, Declaration::Permission);
-                                acc
-                            },
-                        );
-
-                        // TODO(gj): what to do for `on "parent_org"` if Org{} namespace hasn't
-                        // been processed yet? Whether w/ multiple load_file calls or some future
-                        // `import` feature, we probably don't want to force a specific load order
-                        // on folks if we don't have to. Maybe add as-of-yet uncheckable
-                        // implications into a queue that we check once all files are loaded /
-                        // imported? That might work for the future import case, but how would we
-                        // know when the final load_file call has been made? Answer: hax.
-
-                        // Check for duplicate resource namespace definitions.
-                        if kb.resource_namespaces.contains_key(&name) {
-                            return Err(error::ParseError::IntegerOverflow {
-                                loc: 0, // TODO(gj): loc info
-                                // TODO(gj): better error message, e.g.:
-                                //               duplicate namespace declaration: Org { ... } defined on line XX of file YY
-                                //                                                previously defined on line AA of file BB
-                                token: format!("duplicate declaration of {} namespace", name),
-                            }
-                            .into());
-                        }
-                        kb.resource_namespaces.insert(name, declarations);
-                        eprintln!("implications: {:#?}", implications);
+                    parser::Line::ResourceNamespace(namespace) => {
+                        kb.add_resource_namespace(namespace)?;
                     }
                 }
             }

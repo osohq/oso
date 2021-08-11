@@ -142,7 +142,8 @@ impl ToString for Token {
             Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
 
-            Token::Roles => "roles".to_owned(),             // roles
+            // TODO(gj): should be `role` and `permission` (singular)
+            Token::Roles => "roles".to_owned(), // roles
             Token::Permissions => "permissions".to_owned(), // permissions
         }
     }
