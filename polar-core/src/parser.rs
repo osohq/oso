@@ -270,8 +270,9 @@ mod tests {
     #[test]
     fn test_parse_matches() {
         let term = parse_query("{} matches {}");
-        assert_eq!(term.to_polar(), r#"{} matches {}"#);
-        let _term = parse_query("{x: 1} matches {}");
+        assert_eq!(term.to_polar(), "{} matches {}");
+        let term = parse_query("{x: 1} matches {}");
+        assert_eq!(term.to_polar(), "{x: 1} matches {}");
     }
 
     #[test]
