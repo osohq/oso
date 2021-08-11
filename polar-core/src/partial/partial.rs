@@ -469,13 +469,13 @@ mod test {
                n(x: (x)) if [_y] matches [x];"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this matches __y_38");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "_this matches __y_34");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("i", [sym!("x"), sym!("y")])), false);
         assert_partial_expressions!(next_binding(&mut q)?,
-            "x" => "_this matches y and y matches __z_44",
-            "y" => "x matches _this and _this matches __z_44");
+            "x" => "_this matches y and y matches __z_40",
+            "y" => "x matches _this and _this matches __z_40");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), sym!("y")])), false);
@@ -496,14 +496,14 @@ mod test {
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "__y_58 matches _this");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "__y_54 matches _this");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("n", [sym!("x")])), false);
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "_this matches _this and __y_62 matches _this"
+            "_this matches _this and __y_58 matches _this"
         );
         assert_query_done!(q);
 
@@ -1460,15 +1460,24 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_eq!(
             next_binding(&mut q)?.get(&sym!("x")).unwrap(),
-            &term!(sym!("x"))
+            &opn!(
+                And,
+                opn!(Neq, var!("__y_9"), opn!(Dot, var!("_this"), str!("foo")))
+            )
         );
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
-        // This is unbound because 'y' is unbound.
         assert_eq!(
             next_binding(&mut q)?.get(&sym!("x")).unwrap(),
-            &term!(sym!("x"))
+            &opn!(
+                And,
+                opn!(
+                    Neq,
+                    var!("__y_17"),
+                    opn!(Dot, opn!(Dot, var!("_this"), str!("foo")), str!("bar"))
+                )
+            )
         );
         assert_query_done!(q);
         Ok(())

@@ -166,7 +166,9 @@ impl<'kb> Folder for Rewriter<'kb> {
                         let mut arg = self.fold_term(arg);
                         let mut rewrites = self.stack.pop().unwrap();
                         // Decide whether to prepend, or append
-                        if only_dots(&rewrites) && arg_operator.map_or(false, |o| o == Operator::Unify) {
+                        if only_dots(&rewrites)
+                            && arg_operator.map_or(false, |o| o == Operator::Unify)
+                        {
                             for rewrite in rewrites {
                                 and_append(&mut arg, rewrite);
                             }
@@ -200,9 +202,11 @@ impl<'kb> Folder for Rewriter<'kb> {
     }
 }
 
-fn only_dots(rewrites: &Vec<Term>) -> bool {
-    rewrites.into_iter().all(|t| {
-        t.value().as_expression().map_or(false, |op| op.operator == Operator::Dot)
+fn only_dots(rewrites: &[Term]) -> bool {
+    rewrites.iter().all(|t| {
+        t.value()
+            .as_expression()
+            .map_or(false, |op| op.operator == Operator::Dot)
     })
 }
 
@@ -443,7 +447,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             rewrite_term(term, &mut kb).to_polar(),
-            "not (foo.x = _value_1 and _value_1 = 1)"
+            "not (_value_1 = 1 and foo.x = _value_1)"
         )
     }
 }
