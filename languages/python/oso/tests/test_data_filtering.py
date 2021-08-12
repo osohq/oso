@@ -261,10 +261,7 @@ def test_or(oso, t):
 
 
 def test_field_cmp_field(oso, t):
-    policy = """
-    allow(_, _, bar: Bar) if
-        bar.is_cool = bar.is_still_cool;
-    """
+    policy = "allow(_, _, bar: Bar) if bar.is_cool = bar.is_still_cool;"
     oso.load_str(policy)
     expected = [b for b in t["bars"] if b.is_cool == b.is_still_cool]
     check_authz(oso, "gwen", "eat", t["Bar"], expected)
@@ -272,10 +269,7 @@ def test_field_cmp_field(oso, t):
 
 @pytest.mark.xfail(reason="doesn't work yet!")
 def test_field_cmp_rel_field(oso, t):
-    policy = """
-    allow(_, _, foo: Foo) if
-        foo.bar.is_cool = foo.is_fooey;
-    """
+    policy = "allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;"
     oso.load_str(policy)
     expected = [t["another_foo"], t["third_foo"]]
     check_authz(oso, "gwen", "get", t["Foo"], expected)
@@ -285,10 +279,7 @@ def test_rel_field_cmp_rel_field(oso, t):
     def rly_cool(bar):
         return bar.is_cool == bar.is_still_cool
 
-    policy = """
-    allow(_, _, foo: Foo) if
-        foo.bar.is_cool = foo.bar.is_still_cool;
-    """
+    policy = "allow(_, _, foo: Foo) if foo.bar.is_cool = foo.bar.is_still_cool;"
     oso.load_str(policy)
     expected = [f for f in t['foos'] if rly_cool(f.bar())]
     check_authz(oso, "gwen", "get", t["Foo"], expected)
@@ -297,10 +288,7 @@ def test_rel_field_cmp_rel_field(oso, t):
 def test_const_in_coll(oso, t):
     magic = 1
     oso.register_constant(magic, "magic")
-    policy = """
-    allow(_, _, foo: Foo) if
-        magic in foo.numbers;
-    """
+    policy = "allow(_, _, foo: Foo) if magic in foo.numbers;"
     oso.load_str(policy)
     expected = [f for f in t["foos"] if magic in f.numbers]
     check_authz(oso, "gwen", "eat", t["Foo"], expected)
@@ -310,10 +298,7 @@ def test_const_in_coll(oso, t):
 def test_const_not_in_coll(oso, t):
     magic = 1
     oso.register_constant(magic, "magic")
-    policy = """
-    allow(_, _, foo: Foo) if
-        not (magic in foo.numbers);
-    """
+    policy = "allow(_, _, foo: Foo) if not (magic in foo.numbers);"
     oso.load_str(policy)
     expected = [f for f in t["foos"] if magic not in f.numbers]
     check_authz(oso, "gwen", "eat", t["Foo"], expected)
