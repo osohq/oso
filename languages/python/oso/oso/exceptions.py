@@ -1,6 +1,7 @@
 class AuthorizationError(Exception):
     pass
 
+
 class NotFoundError(AuthorizationError):
     pass
 
