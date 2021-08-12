@@ -31,6 +31,8 @@ class Oso:
 
         self.policy = policy
 
+        # Note: these are for backwards-compatibility. They allow `Oso`
+        # instances to be treated like `Polar` instances.
         self.query_rule = self.policy.query_rule
         self.load_str = self.policy.load_str
         self.load_file = self.policy.load_file
