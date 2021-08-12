@@ -5,7 +5,7 @@ from oso import Enforcer
 from pathlib import Path
 import pytest
 
-from oso import Oso, polar_class
+from oso import Policy
 from polar import exceptions
 
 # Fake global actor name → company ID map.
@@ -58,13 +58,13 @@ class Company:
 
 @pytest.fixture
 def test_enforcer():
-    oso = Oso()
-    oso.register_class(Actor, name="test_oso::Actor")
-    oso.register_class(Widget, name="test_oso::Widget")
-    oso.register_class(Company, name="test_oso::Company")
-    oso.load_file(Path(__file__).parent / "test_oso.polar")
+    policy = Policy()
+    policy.register_class(Actor, name="test_oso::Actor")
+    policy.register_class(Widget, name="test_oso::Widget")
+    policy.register_class(Company, name="test_oso::Company")
+    policy.load_file(Path(__file__).parent / "test_oso.polar")
 
-    return Enforcer(oso)
+    return Enforcer(policy)
 
 
 def test_authorize(test_enforcer):
@@ -101,7 +101,7 @@ def test_authorized_actions(test_enforcer):
     rule = """allow(_actor: test_oso::Actor{name: "Sally"}, action, _resource: test_oso::Widget{id: "1"}) if
         action in ["CREATE", "READ"];"""
 
-    test_enforcer.oso.load_str(rule)
+    test_enforcer.policy.load_str(rule)
     user = Actor(name="Sally")
     resource = Widget(id="1")
     assert set(test_enforcer.authorized_actions(user, resource)) == set(
@@ -109,7 +109,7 @@ def test_authorized_actions(test_enforcer):
     )
 
     rule = """allow(_actor: test_oso::Actor{name: "John"}, _action, _resource: test_oso::Widget{id: "1"});"""
-    test_enforcer.oso.load_str(rule)
+    test_enforcer.policy.load_str(rule)
     user = Actor(name="John")
     with pytest.raises(exceptions.OsoError):
         test_enforcer.authorized_actions(user, resource)
@@ -136,8 +136,8 @@ def test_authorize_request(test_enforcer):
     verified = Actor("verified")
     verified.verified = True
 
-    test_enforcer.oso.register_class(Request)
-    test_enforcer.oso.load_str(policy)
+    test_enforcer.policy.register_class(Request)
+    test_enforcer.policy.load_str(policy)
 
     test_enforcer.authorize_request("graham", Request("GET", "/repos/1"))
     with pytest.raises(ForbiddenError):
@@ -153,22 +153,22 @@ def test_custom_errors():
         def __init__(self, *args):
             self.args = args
 
-    oso = Oso()
-    enforcer = Enforcer(oso, get_error=lambda *args: TestException(*args))
+    policy = Policy()
+    enforcer = Enforcer(policy, get_error=lambda *args: TestException(*args))
     with pytest.raises(TestException) as excinfo:
         enforcer.authorize("graham", "frob", "bar")
     assert excinfo.value.args == (True, "graham", "frob", "bar")
 
 
 def test_custom_read_action():
-    oso = Oso()
-    enforcer = Enforcer(oso, read_action="fetch")
+    policy = Policy()
+    enforcer = Enforcer(policy, read_action="fetch")
     with pytest.raises(AuthorizationError) as excinfo:
         enforcer.authorize("graham", "frob", "bar")
     assert excinfo.type == NotFoundError
 
     # Allow user to "fetch" bar
-    oso.load_str("""allow("graham", "fetch", "bar");""")
+    policy.load_str("""allow("graham", "fetch", "bar");""")
     with pytest.raises(AuthorizationError) as excinfo:
         enforcer.authorize("graham", "frob", "bar")
     assert excinfo.type == ForbiddenError

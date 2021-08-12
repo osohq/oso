@@ -1,5 +1,6 @@
 from polar import Variable, exceptions
 from .exceptions import NotFoundError, ForbiddenError
+from .oso import Policy
 
 
 class Enforcer:
@@ -8,7 +9,7 @@ class Enforcer:
     resource-, request-, and query-level authorization.
     """
 
-    def __init__(self, oso, *, get_error=None, read_action="read"):
+    def __init__(self, policy: Policy, *, get_error=None, read_action="read"):
         """Create an Enforcer, which is used to enforce an Oso policy in an app.
 
         :param get_error: Optionally override the method used to build errors
@@ -20,7 +21,7 @@ class Enforcer:
                             determine whether an authorization failure should
                             raise a ``NotFoundError`` or a ``ForbiddenError``
         """
-        self.oso = oso
+        self.policy = policy
         if get_error is None:
             self._get_error = self._default_get_error
         else:
@@ -56,11 +57,11 @@ class Enforcer:
         :type check_read: bool
 
         """
-        if not self.oso.query_rule_once("allow", actor, action, resource):
+        if not self.policy.query_rule_once("allow", actor, action, resource):
             is_not_found = False
             if action == self.read_action:
                 is_not_found = True
-            elif check_read and not self.oso.query_rule_once(
+            elif check_read and not self.policy.query_rule_once(
                 "allow", actor, self.read_action, resource
             ):
                 is_not_found = True
@@ -77,7 +78,7 @@ class Enforcer:
         :param request: The request that was sent by the user. Can be a string
         path, or an object with information about the request.
         """
-        if not self.oso.query_rule_once("allow_request", actor, request):
+        if not self.policy.query_rule_once("allow_request", actor, request):
             raise self._get_error(False, actor, "request", request)
 
     def authorized_actions(self, actor, resource, allow_wildcard=False) -> list:
@@ -101,7 +102,7 @@ class Enforcer:
 
         :return: A list of the unique allowed actions.
         """
-        results = self.oso.query_rule("allow", actor, Variable("action"), resource)
+        results = self.policy.query_rule("allow", actor, Variable("action"), resource)
         actions = set()
         for result in results:
             action = result.get("bindings").get("action")
