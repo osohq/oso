@@ -7,7 +7,7 @@ from polar import Polar, Variable, exceptions
 from .exceptions import NotFoundError, ForbiddenError
 
 
-class Oso(Polar):
+class Oso:
     """The central object to manage application policy state, e.g.
     the policy data, and verify requests.
 
@@ -17,18 +17,33 @@ class Oso(Polar):
 
     """
 
-    read_action = "read"
-
-    def __init__(self, *, get_error=None, read_action=None):
+    def __init__(self, policy=None, *, get_error=None, read_action="read"):
         """Create an oso object."""
         self._print_polar_log_message()
         if get_error is None:
             self._get_error = self._default_get_error
         else:
             self._get_error = get_error
-        if read_action is not None:
-            self.read_action = read_action
+        self.read_action = read_action
+
+        if policy is None:
+            policy = Polar()
+
+        self.policy = policy
+
+        self.query_rule = self.policy.query_rule
+        self.load_str = self.policy.load_str
+        self.load_file = self.policy.load_file
+        self.register_class = self.policy.register_class
+        self.register_constant = self.policy.register_constant
+        self.enable_roles = self.policy.enable_roles
+        self.clear_rules = self.policy.clear_rules
+        self.repl = self.policy.repl
+
         super().__init__()
+
+    def __del__(self):
+        del self.policy
 
     def _default_get_error(self, is_not_found, actor, action, resource):
         err_class = NotFoundError if is_not_found else ForbiddenError
@@ -94,11 +109,11 @@ class Oso(Polar):
         return list(actions)
 
     def authorize(self, actor, action, resource, *, check_read=True):
-        if not self.query_rule_once("allow", actor, action, resource):
+        if not self.policy.query_rule_once("allow", actor, action, resource):
             is_not_found = False
             if action == self.read_action:
                 is_not_found = True
-            elif check_read and not self.query_rule_once(
+            elif check_read and not self.policy.query_rule_once(
                 "allow", actor, self.read_action, resource
             ):
                 is_not_found = True
