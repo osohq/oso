@@ -58,7 +58,6 @@ class Constraint:
     def to_predicate(self):
         def known_value(x):
             return self.value
-
         def field_value(x):
             return getattr(x, self.other_field)
         def rel_value(x):
@@ -142,8 +141,5 @@ def builtin_filter_plan_resolver(polar, filter_plan):
     return [i for n, i in enumerate(results) if i not in results[:n]]
 
 
-def filter_data(polar, filter_plan, filter_plan_resolver=None):
-    if filter_plan_resolver is None:
-        return builtin_filter_plan_resolver(polar, filter_plan)
-    else:
-        return filter_plan_resolver(polar, filter_plan)
+def filter_data(polar, filter_plan, filter_plan_resolver=builtin_filter_plan_resolver):
+    return filter_plan_resolver(polar, filter_plan)

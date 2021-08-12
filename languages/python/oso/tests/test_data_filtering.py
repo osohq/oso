@@ -34,6 +34,17 @@ def unord_eq(a, b):
     return not b
 
 
+def exists(pred, coll):
+    try:
+        first_where(pred, coll)
+        return True
+    except StopIteration:
+        return False
+
+
+def first_where(pred, coll):
+    return next(filter(pred, coll))
+
 # Shared test setup.
 @pytest.fixture
 def t(oso):
@@ -51,6 +62,12 @@ def t(oso):
         is_fooey: bool
         numbers: list
 
+        def bar(self):
+            return first_where(lambda b: b.id == self.bar_id, bars)
+
+        def logs(self):
+            return list(filter(lambda l: l.foo_id == self.id, foo_logs))
+
     @dataclass
     class FooLogRecord:
         id: str
@@ -64,13 +81,14 @@ def t(oso):
     another_foo = Foo(id="another", bar_id="hello", is_fooey=True, numbers=[1])
     third_foo = Foo(id="third", bar_id="hello", is_fooey=True, numbers=[2])
     fourth_foo = Foo(id="fourth", bar_id="goodbye", is_fooey=True, numbers=[2, 1])
+    fifth_foo = Foo(id="fifth", bar_id="hershey", is_fooey=False, numbers=[3, 2, 1])
 
     fourth_log_a = FooLogRecord(id="a", foo_id="fourth", data="hello")
     third_log_b = FooLogRecord(id="b", foo_id="third", data="world")
     another_log_c = FooLogRecord(id="c", foo_id="another", data="steve")
 
     bars = [hello_bar, goodbye_bar, hershey_bar]
-    foos = [something_foo, another_foo, third_foo, fourth_foo]
+    foos = [something_foo, another_foo, third_foo, fourth_foo, fifth_foo]
     foo_logs = [fourth_log_a, third_log_b, another_log_c]
 
     def get_bars(constraints):
@@ -124,11 +142,13 @@ def t(oso):
         "another_foo": another_foo,
         "third_foo": third_foo,
         "fourth_foo": fourth_foo,
+        "fifth_foo": fifth_foo,
         "fourth_log_a": fourth_log_a,
         "third_log_b": third_log_b,
         "another_log_c": another_log_c,
         "bars": bars,
         "foos": foos,
+        "logs": foo_logs,
     }
 
 
@@ -142,7 +162,8 @@ def test_no_relationships(oso, t):
     assert oso.is_allowed("steve", "get", t["another_foo"])
 
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    assert len(results) == 3
+    expected = [f for f in t['foos'] if f.is_fooey]
+    assert unord_eq(results, expected)
 
 
 def test_relationship(oso, t):
@@ -156,7 +177,8 @@ def test_relationship(oso, t):
     assert oso.is_allowed("steve", "get", t["another_foo"])
 
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    assert len(results) == 2
+    expected = [f for f in t['foos'] if f.bar().is_cool and f.is_fooey]
+    assert unord_eq(results, expected)
 
 
 def test_var_in_values(oso, t):
@@ -168,8 +190,9 @@ def test_var_in_values(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["another_foo"])
 
+    expected = [f for f in t['foos'] if f.bar().is_cool or not f.bar().is_cool]
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    assert len(results) == 4
+    assert unord_eq(results, expected)
 
 
 def test_var_in_var(oso, t):
@@ -182,7 +205,8 @@ def test_var_in_var(oso, t):
     assert oso.is_allowed("steve", "get", t["fourth_foo"])
 
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    assert len(results) == 1
+    expected = [f for f in t['foos'] if exists(lambda l: l.data == 'hello', f.logs())]
+    assert unord_eq(results, expected)
 
 
 def test_val_in_var(oso, t):
@@ -195,8 +219,9 @@ def test_val_in_var(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["fourth_foo"])
 
+    expected = [f for f in t['foos'] if 1 in f.numbers and 2 in f.numbers]
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    assert results == [t["fourth_foo"]]
+    assert unord_eq(results, expected)
 
 
 def test_var_in_value(oso, t):
@@ -214,7 +239,8 @@ def test_var_in_value(oso, t):
     assert oso.is_allowed("steve", "get", t["fourth_log_a"])
 
     results = list(oso.get_allowed_resources("steve", "get", t["FooLogRecord"]))
-    assert unord_eq(results, [t["fourth_log_a"], t["third_log_b"]])
+    expected = [l for l in t['logs'] if l.data in ['hello', 'world']]
+    assert unord_eq(results, expected)
 
 
 @pytest.mark.skip(
@@ -255,6 +281,19 @@ def test_field_cmp_rel_field(oso, t):
     check_authz(oso, "gwen", "get", t["Foo"], expected)
 
 
+def test_rel_field_cmp_rel_field(oso, t):
+    def rly_cool(bar):
+        return bar.is_cool == bar.is_still_cool
+
+    policy = """
+    allow(_, _, foo: Foo) if
+        foo.bar.is_cool = foo.bar.is_still_cool;
+    """
+    oso.load_str(policy)
+    expected = [f for f in t['foos'] if rly_cool(f.bar())]
+    check_authz(oso, "gwen", "get", t["Foo"], expected)
+
+
 def test_const_in_coll(oso, t):
     magic = 1
     oso.register_constant(magic, "magic")
@@ -287,7 +326,10 @@ def test_param_field(oso, t):
         action = resource.id;
     """
     oso.load_str(policy)
-    check_authz(oso, "steve", "c", t["FooLogRecord"], [t["another_log_c"]])
+    actor = 'steve'
+    action = 'c'
+    expected = [l for l in t['logs'] if l.data == actor and l.id == action]
+    check_authz(oso, actor, action, t["FooLogRecord"], expected)
 
 
 @pytest.fixture
