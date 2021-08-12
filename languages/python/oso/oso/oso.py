@@ -119,6 +119,10 @@ class Oso:
                 is_not_found = True
             raise self._get_error(is_not_found, actor, action, resource)
 
+    def authorize_request(self, actor, request):
+        if not self.policy.query_rule_once("allow_request", actor, request):
+            raise self._get_error(False, actor, "request", request)
+
     def _print_polar_log_message(self):
         if os.environ.get("POLAR_LOG", None):
             print(

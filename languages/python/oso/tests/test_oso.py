@@ -182,5 +182,35 @@ def test_get_allowed_actions(test_oso):
     ) == set(["*"])
 
 
+def test_authorize_request(test_oso):
+    class Request:
+        def __init__(self, method, path) -> None:
+            self.method = method
+            self.path = path
+    policy = """
+    allow_request("graham", request: Request) if
+        request.path.startswith("/repos");
+
+    allow_request(user: test_oso::Actor, request: Request) if
+        request.path.startswith("/account")
+        and user.verified;
+    """
+
+    verified = Actor("verified")
+    verified.verified = True
+
+    test_oso.register_class(Request)
+    test_oso.load_str(policy)
+
+    test_oso.authorize_request("graham", Request("GET", "/repos/1"))
+    with pytest.raises(ForbiddenError):
+        test_oso.authorize_request("sam", Request("GET", "/repos/1"))
+
+    test_oso.authorize_request(verified, Request("GET", "/account"))
+    with pytest.raises(ForbiddenError):
+        test_oso.authorize_request("graham", Request("GET", "/account"))
+
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
