@@ -44,6 +44,8 @@ class Oso:
         self.clear_rules = self.policy.clear_rules
         self.repl = self.policy.repl
 
+        self.host = self.policy.host
+
         super().__init__()
 
     def __del__(self):
