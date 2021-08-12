@@ -28,8 +28,9 @@ pub struct Ref {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum ConstraintValue {
-    Term(Term), // An actual value
-    Ref(Ref),   // A reference to a different result.
+    Term(Term),    // An actual value
+    Ref(Ref),      // A reference to a different result.
+    Field(String), // Another field on the same result
 }
 
 // @TODO(steve): These are all constraints on a field. If we need to add constraints
@@ -89,6 +90,7 @@ impl FilterPlan {
                     let field = constraint.field.clone();
                     let value = match &constraint.value {
                         ConstraintValue::Term(t) => t.to_polar(),
+                        ConstraintValue::Field(f) => format!("FIELD({})", f),
                         ConstraintValue::Ref(r) => {
                             let mut s = "REF(".to_owned();
                             if let Some(field) = &r.field {
@@ -559,13 +561,11 @@ fn constrain_var(
     var_type: &str,
 ) {
     // @TODO(steve): Probably should check the type against the var types. I think???
-    let mut type_def = HashMap::new();
-    for (cls, cls_type_def) in types {
-        if cls == var_type {
-            type_def = cls_type_def.clone();
-            break;
-        }
-    }
+    let type_def = types
+        .iter()
+        .find(|r| r.0 == var_type)
+        .map(|r| r.1.clone())
+        .unwrap_or_else(HashMap::new);
 
     let mut request = if result_set.requests.contains_key(var_id) {
         result_set.requests.remove(var_id).unwrap()
@@ -578,12 +578,17 @@ fn constrain_var(
 
     for (parent, field, child) in &vars.field_relationships {
         if parent == var_id {
-            if let Some(Type::Relationship {
-                kind: _,
+            let typ = match type_def.get(field) {
+                None => panic!("unknown field {}", field),
+                Some(t) => t,
+            };
+
+            if let Type::Relationship {
                 other_class_tag,
                 my_field,
                 other_field,
-            }) = type_def.get(field)
+                ..
+            } = typ
             {
                 constrain_var(result_set, types, vars, child, other_class_tag);
 
@@ -615,6 +620,18 @@ fn constrain_var(
                         value: ConstraintValue::Term(value.clone()),
                     });
                 }
+                contributed_constraints = true;
+            }
+            for eqf in vars
+                .field_relationships
+                .iter()
+                .filter(|r| r.0 == *parent && r.1 != *field && r.2 == *child)
+            {
+                request.constraints.push(Constraint {
+                    kind: ConstraintKind::Eq,
+                    field: field.clone(),
+                    value: ConstraintValue::Field(eqf.1.clone()),
+                });
                 contributed_constraints = true;
             }
             assert!(contributed_constraints);

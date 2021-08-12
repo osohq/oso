@@ -44,6 +44,11 @@ def serialize_types(types, class_names):
 
 
 @dataclass
+class Field:
+    field: str
+
+
+@dataclass
 class Ref:
     field: Optional[str]
     result_id: str
@@ -54,6 +59,17 @@ class Constraint:
     kind: str  # ["Eq", "In", "Contains"]
     field: str
     value: Any
+
+    def to_predicate(self):
+        if self.kind == "Eq":
+            if isinstance(self.value, Field):
+                return lambda x: getattr(x, self.field) == getattr(x, self.value.field)
+            return lambda x: getattr(x, self.field) == self.value
+        if self.kind == "In":
+            return lambda x: getattr(x, self.field) in self.value
+        if self.kind == "Contains":
+            return lambda x: self.value in getattr(x, self.field)
+        assert False, "unknown constraint kind"
 
 
 def parse_constraint(polar, constraint):
@@ -71,6 +87,8 @@ def parse_constraint(polar, constraint):
         child_field = value["field"]
         result_id = value["result_id"]
         value = Ref(field=child_field, result_id=result_id)
+    elif value_kind == "Field":
+        value = Field(field=value)
     else:
         assert False, "Unknown value kind"
 
@@ -81,6 +99,7 @@ def ground_constraints(polar, results, filter_plan, constraints):
     for constraint in constraints:
         if isinstance(constraint.value, Ref):
             ref = constraint.value
+            print(results)
             constraint.value = results[ref.result_id]
             if ref.field is not None:
                 constraint.value = [getattr(v, ref.field) for v in constraint.value]

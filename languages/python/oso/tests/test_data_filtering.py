@@ -3,6 +3,7 @@ import pytest
 from dataclasses import dataclass
 from oso import Oso
 from polar import Relationship
+from functools import reduce
 
 
 @pytest.fixture
@@ -12,26 +13,9 @@ def oso():
 
 
 def filter_array(array, constraints):
-    results = []
-    for elem in array:
-        matches = True
-        for constraint in constraints:
-            val = getattr(elem, constraint.field)
-            if constraint.kind == "Eq":
-                if val != constraint.value:
-                    matches = False
-                    break
-            if constraint.kind == "In":
-                if val not in constraint.value:
-                    matches = False
-                    break
-            if constraint.kind == "Contains":
-                if constraint.value not in val:
-                    matches = False
-                    break
-        if matches:
-            results.append(elem)
-    return results
+    checks = [c.to_predicate() for c in constraints]
+    check = reduce(lambda f, g: lambda x: f(x) and g(x), checks, lambda _: True)
+    return [x for x in array if check(x)]
 
 
 def unord_eq(a, b):
@@ -91,12 +75,16 @@ def t(oso):
     def get_foo_logs(constraints):
         return filter_array(foo_logs, constraints)
 
-    oso.register_class(Bar, types={"id": str, "is_cool": bool}, fetcher=get_bars)
+    oso.register_class(
+        Bar, types={"id": str, "is_cool": bool, "is_still_cool": bool}, fetcher=get_bars
+    )
     oso.register_class(
         Foo,
         types={
             "id": str,
             "bar_id": str,
+            "is_fooey": bool,
+            "numbers": list,
             "bar": Relationship(
                 kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
             ),
@@ -238,7 +226,6 @@ def test_or(oso, t):
     assert len(results) == 2
 
 
-@pytest.mark.xfail(reason="unsupported")
 def test_field_cmp_field(oso, t):
     policy = """
     allow(_, _, bar: Bar) if
