@@ -305,8 +305,8 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
 #[derive(Debug)]
 struct Vars {
     variables: HashMap<String, HashSet<Symbol>>,
-    field_relationships: Vec<(String, String, String)>,
-    in_relationships: Vec<(String, String)>,
+    field_relationships: HashSet<(String, String, String)>,
+    in_relationships: HashSet<(String, String)>,
     eq_values: HashMap<String, Term>,
     contained_values: HashMap<String, HashSet<Term>>,
     types: HashMap<String, String>,
@@ -416,7 +416,7 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
 
     // Substitute in relationship ids.
     // @Sorry(steve): This is a real mess too.
-    let mut field_relationships = vec![];
+    let mut field_relationships = HashSet::new();
     for (parent, field, child) in &var_info.field_relationships {
         let mut parent_id = String::new();
         let mut child_id = String::new();
@@ -430,14 +430,11 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
         }
         assert_ne!(parent_id, String::new());
         assert_ne!(child_id, String::new());
-        field_relationships.push((parent_id, field.clone(), child_id));
+        field_relationships.insert((parent_id, field.clone(), child_id));
     }
 
-    // @TODO(steve): If we have duplicates in field_relationships, we can remove them. We already know.
-    // Could use a set I suppose to handle that.
-
     // In relationships
-    let mut in_relationships = vec![];
+    let mut in_relationships = HashSet::new();
     for (lhs, rhs) in &var_info.in_relationships {
         let mut lhs_id = String::new();
         let mut rhs_id = String::new();
@@ -461,7 +458,7 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
             new_set.insert(rhs.clone());
             variables.insert(new_id.clone(), new_set);
         }
-        in_relationships.push((lhs_id, rhs_id));
+        in_relationships.insert((lhs_id, rhs_id));
     }
 
     // I think a var can only have one value since we make sure there's a var for the dot lookup,
@@ -591,14 +588,26 @@ fn constrain_var(
             {
                 constrain_var(result_set, types, vars, child, other_class_tag);
 
-                request.constraints.push(Constraint {
-                    kind: ConstraintKind::In,
-                    field: my_field.clone(),
-                    other_field: Some(other_field.clone()),
-                    value: Some(ConstraintValue::Ref(Ref {
-                        result_id: child.clone(),
-                    })),
-                });
+                // If the constrained child var doesn't have any constraints on it, we don't need to
+                // constrain this var. Otherwise we're just saying field foo in all Foos which
+                // would fetch all Foos and not be good.
+                if let Some(child_result) = result_set.requests.remove(child) {
+                    if !child_result.constraints.is_empty() {
+                        result_set.requests.insert(child.to_owned(), child_result);
+                        request.constraints.push(Constraint {
+                            kind: ConstraintKind::In,
+                            field: my_field.clone(),
+                            other_field: Some(other_field.clone()),
+                            value: Some(ConstraintValue::Ref(Ref {
+                                result_id: child.clone(),
+                            })),
+                        });
+                    } else {
+                        // Remove the id from the resolve_order too.
+                        result_set.resolve_order.pop();
+                    }
+                }
+
                 continue;
             }
             // Non relationship or unknown type info.

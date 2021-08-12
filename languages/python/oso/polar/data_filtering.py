@@ -58,6 +58,7 @@ class Constraint:
     def to_predicate(self):
         def known_value(x):
             return self.value
+
         def field_value(x):
             return getattr(x, self.other_field)
         def rel_value(x):

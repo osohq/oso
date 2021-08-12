@@ -251,8 +251,8 @@ def test_field_cmp_rel_field(oso, t):
         foo.bar.is_cool = foo.is_fooey;
     """
     oso.load_str(policy)
-    expected = [t['another_foo'], t['third_foo']]
-    check_authz(oso, 'gwen', 'get', t['Foo'], expected)
+    expected = [t["another_foo"], t["third_foo"]]
+    check_authz(oso, "gwen", "get", t["Foo"], expected)
 
 
 def test_const_in_coll(oso, t):
