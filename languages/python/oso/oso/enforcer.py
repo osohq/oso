@@ -80,7 +80,6 @@ class Enforcer:
         if not self.oso.query_rule_once("allow_request", actor, request):
             raise self._get_error(False, actor, "request", request)
 
-
     def authorized_actions(self, actor, resource, allow_wildcard=False) -> list:
         """Determine the actions ``actor`` is allowed to take on ``resource``.
 

@@ -152,6 +152,7 @@ def test_custom_errors():
     class TestException(Exception):
         def __init__(self, *args):
             self.args = args
+
     oso = Oso()
     enforcer = Enforcer(oso, get_error=lambda *args: TestException(*args))
     with pytest.raises(TestException) as excinfo:
