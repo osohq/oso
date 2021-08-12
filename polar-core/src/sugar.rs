@@ -14,9 +14,9 @@ pub enum Declaration {
 }
 
 fn transform_declarations(
-    roles: Option<Vec<String>>,
-    permissions: Option<Vec<String>>,
-) -> HashMap<String, Declaration> {
+    roles: Option<Vec<Term>>,
+    permissions: Option<Vec<Term>>,
+) -> HashMap<Term, Declaration> {
     // Fold Vec<role> => HashMap<role, Declaration>
     let declarations = roles
         .into_iter()
@@ -37,40 +37,27 @@ fn transform_declarations(
 }
 
 fn rewrite_implication(
-    implied: String,
-    implier: String,
-    resource: String,
-    declarations: HashMap<String, Declaration>,
+    implied: Term,
+    implier: Term,
+    resource: Term,
+    declarations: HashMap<Term, Declaration>,
 ) -> Rule {
-    let actor_var = term!(sym!("actor"));
-    let resource_var = term!(sym!(resource.to_lowercase()));
-    let body_call = match declarations[&implier] {
+    let resource_name = &resource.value().as_symbol().unwrap().0;
+    let implier_resource = implier.clone_with_value(value!(sym!(resource_name.to_lowercase())));
+    let implier_actor = implier.clone_with_value(value!(sym!("actor")));
+    let implier_predicate = match declarations[&implier] {
         Declaration::Role => sym!("role"),
         Declaration::Permission => sym!("permission"),
     };
-    // TODO(gj): loc info
-    let body = Term::new_from_parser(
-        0,
-        0,
-        0,
-        value!(op!(
-            And,
-            Term::new_from_parser(
-                0,
-                0,
-                0,
-                value!(Call {
-                    name: body_call,
-                    args: vec![
-                        actor_var.clone(),
-                        term!(implier.as_str()),
-                        resource_var.clone(),
-                    ],
-                    kwargs: None
-                })
-            )
-        )),
-    );
+    let args = vec![implier_actor, implier.clone(), implier_resource];
+    let body = implier.clone_with_value(value!(op!(
+        And,
+        implier.clone_with_value(value!(Call {
+            name: implier_predicate,
+            args,
+            kwargs: None
+        }))
+    )));
 
     let rule_name = match declarations[&implied] {
         Declaration::Role => sym!("role"),
@@ -78,16 +65,18 @@ fn rewrite_implication(
     };
     let params = vec![
         Parameter {
-            parameter: actor_var,
+            parameter: implied.clone_with_value(value!(sym!("actor"))),
             specializer: None,
         },
         Parameter {
-            parameter: term!(implied.as_str()),
+            parameter: implied.clone(),
             specializer: None,
         },
         Parameter {
-            parameter: resource_var,
-            specializer: Some(term!(pattern!(instance!(resource)))),
+            parameter: implied.clone_with_value(value!(sym!(resource_name.to_lowercase()))),
+            specializer: Some(
+                resource.clone_with_value(value!(pattern!(instance!(resource_name)))),
+            ),
         },
     ];
     Rule::new_from_parser(0, 0, 0, rule_name, params, body)
@@ -96,38 +85,41 @@ fn rewrite_implication(
 impl KnowledgeBase {
     pub fn add_resource_namespace(&mut self, namespace: ResourceNamespace) -> PolarResult<()> {
         let ResourceNamespace {
-            name,
+            resource,
             roles,
             permissions,
             implications,
         } = namespace;
 
-        // TODO(gj): no way to know in the core if `name` was registered as a class
+        // TODO(gj): no way to know in the core if `resource` was registered as a class
         // or a constant.
-        if !self.is_constant(&name) {
+        if !self.is_constant(resource.value().as_symbol()?) {
             return Err(ParseError::IntegerOverflow {
-                loc: 0, // TODO(gj): loc info
+                loc: resource.offset(),
                 // TODO(gj): better error message
-                token: format!("namespace {} must be registered as a class", name),
+                token: format!(
+                    "namespace {} must be registered as a class",
+                    resource.to_polar()
+                ),
             }
             .into());
         }
 
         // Check for duplicate resource namespace definitions.
-        if self.resource_namespaces.contains_key(&name) {
+        if self.resource_namespaces.contains_key(&resource) {
             return Err(ParseError::IntegerOverflow {
-                loc: 0, // TODO(gj): loc info
+                loc: resource.offset(),
                 // TODO(gj): better error message, e.g.:
                 //               duplicate namespace declaration: Org { ... } defined on line XX of file YY
                 //                                                previously defined on line AA of file BB
-                token: format!("duplicate declaration of {} namespace", name),
+                token: format!("duplicate declaration of {} namespace", resource),
             }
             .into());
         }
 
         let declarations = transform_declarations(roles, permissions);
         self.resource_namespaces
-            .insert(name.clone(), declarations.clone());
+            .insert(resource.clone(), declarations.clone());
 
         // TODO(gj): what to do for `on "parent_org"` if Org{} namespace hasn't
         // been processed yet? Whether w/ multiple load_file calls or some future
@@ -140,7 +132,7 @@ impl KnowledgeBase {
         if let Some(implications) = implications {
             for (implied, implier) in implications {
                 let rule =
-                    rewrite_implication(implied, implier, name.0.clone(), declarations.clone());
+                    rewrite_implication(implied, implier, resource.clone(), declarations.clone());
                 let generic_rule = self
                     .rules
                     .entry(rule.name.clone())
@@ -159,13 +151,13 @@ mod tests {
 
     #[test]
     fn test_resource_namespace_rewrite_implications() {
-        let roles = vec!["owner".to_owned(), "member".to_owned()];
-        let permissions = vec!["invite".to_owned(), "create_repo".to_owned()];
+        let roles = vec![term!("owner"), term!("member")];
+        let permissions = vec![term!("invite"), term!("create_repo")];
         let declarations = transform_declarations(Some(roles), Some(permissions));
         let rewritten_role_role = rewrite_implication(
-            "member".to_owned(),
-            "owner".to_owned(),
-            "Org".to_owned(),
+            term!("member"),
+            term!("owner"),
+            term!(sym!("Org")),
             declarations.clone(),
         );
         assert_eq!(
@@ -174,9 +166,9 @@ mod tests {
         );
 
         let rewritten_permission_role = rewrite_implication(
-            "invite".to_owned(),
-            "owner".to_owned(),
-            "Org".to_owned(),
+            term!("invite"),
+            term!("owner"),
+            term!(sym!("Org")),
             declarations.clone(),
         );
         assert_eq!(
@@ -185,9 +177,9 @@ mod tests {
         );
 
         let rewritten_permission_permission = rewrite_implication(
-            "create_repo".to_owned(),
-            "invite".to_owned(),
-            "Org".to_owned(),
+            term!("create_repo"),
+            term!("invite"),
+            term!(sym!("Org")),
             declarations,
         );
         assert_eq!(

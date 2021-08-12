@@ -20,12 +20,11 @@ use super::terms::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ResourceNamespace {
-    pub name: Symbol,
-    // TODO(gj): capture source info
+    pub resource: Term,
     // TODO(gj): maybe HashSet instead of Vec so we can easily catch duplicates?
-    pub roles: Option<Vec<String>>,
-    pub permissions: Option<Vec<String>>,
-    pub implications: Option<Vec<(String, String)>>,
+    pub roles: Option<Vec<Term>>,
+    pub permissions: Option<Vec<Term>>,
+    pub implications: Option<Vec<(Term, Term)>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -318,8 +317,8 @@ mod tests {
         assert_eq!(
             parse_lines(r#"Org{roles=["owner",];}"#)[0],
             Line::ResourceNamespace(ResourceNamespace {
-                name: sym!("Org"),
-                roles: Some(vec!["owner".to_owned()]),
+                resource: term!(sym!("Org")),
+                roles: Some(vec![term!("owner")]),
                 permissions: None,
                 implications: None,
             })
@@ -327,8 +326,8 @@ mod tests {
         assert_eq!(
             parse_lines(r#"Org{roles=["owner","member",];}"#)[0],
             Line::ResourceNamespace(ResourceNamespace {
-                name: sym!("Org"),
-                roles: Some(vec!["owner".to_owned(), "member".to_owned()]),
+                resource: term!(sym!("Org")),
+                roles: Some(vec![term!("owner"), term!("member")]),
                 permissions: None,
                 implications: None,
             })
@@ -390,10 +389,10 @@ mod tests {
                 }"#
             )[0],
             Line::ResourceNamespace(ResourceNamespace {
-                name: sym!("Org"),
-                roles: Some(vec!["owner".to_owned(), "member".to_owned()]),
+                resource: term!(sym!("Org")),
+                roles: Some(vec![term!("owner"), term!("member")]),
                 permissions: None,
-                implications: Some(vec![("member".to_owned(), "owner".to_owned())]),
+                implications: Some(vec![(term!("member"), term!("owner"))]),
             })
         );
     }

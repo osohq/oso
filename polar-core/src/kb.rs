@@ -30,7 +30,7 @@ pub struct KnowledgeBase {
     pub inline_queries: Vec<Term>,
 
     /// Resource Namespace Bookkeeping
-    pub resource_namespaces: HashMap<Symbol, HashMap<String, Declaration>>,
+    pub resource_namespaces: HashMap<Term, HashMap<Term, Declaration>>,
 }
 
 impl KnowledgeBase {
