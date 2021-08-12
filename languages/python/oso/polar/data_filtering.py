@@ -94,8 +94,7 @@ def parse_constraint(polar, constraint):
         if value_kind == "Term":
             value = polar.host.to_python(value)
         elif value_kind == "Ref":
-            result_id = value["result_id"]
-            value = Ref(result_id=result_id)
+            value = Ref(result_id=value)
         elif value_kind == "Field":
             value = Field(field=value)
         else:

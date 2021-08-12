@@ -21,14 +21,9 @@ pub enum Type {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct Ref {
-    result_id: String,     // Id of the FetchResult that should be an input.
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum ConstraintValue {
     Term(Term),    // An actual value
-    Ref(Ref),      // A reference to a different result.
+    Ref(String),      // A reference to a different result.
 }
 
 // @TODO(steve): These are all constraints on a field. If we need to add constraints
@@ -95,7 +90,7 @@ impl FilterPlan {
                             if let Some(field) = &constraint.other_field.as_ref() {
                                 s.push_str(&format!("field {} of ", field));
                             }
-                            s.push_str(&format!("result {})", r.result_id));
+                            s.push_str(&format!("result {})", r));
                             s
                         }
                     };
@@ -598,9 +593,7 @@ fn constrain_var(
                             kind: ConstraintKind::In,
                             field: my_field.clone(),
                             other_field: Some(other_field.clone()),
-                            value: Some(ConstraintValue::Ref(Ref {
-                                result_id: child.clone(),
-                            })),
+                            value: Some(ConstraintValue::Ref(child.clone())),
                         });
                     } else {
                         // Remove the id from the resolve_order too.
