@@ -122,6 +122,7 @@ def t(oso):
         "Bar": Bar,
         "FooLogRecord": FooLogRecord,
         "another_foo": another_foo,
+        "third_foo": third_foo,
         "fourth_foo": fourth_foo,
         "fourth_log_a": fourth_log_a,
         "third_log_b": third_log_b,
@@ -240,7 +241,18 @@ def test_field_cmp_field(oso, t):
     """
     oso.load_str(policy)
     expected = [b for b in t["bars"] if b.is_cool == b.is_still_cool]
-    check_authz(oso, "steve", "eat", t["Bar"], expected)
+    check_authz(oso, "gwen", "eat", t["Bar"], expected)
+
+
+@pytest.mark.xfail(reason="doesn't work yet!")
+def test_field_cmp_rel_field(oso, t):
+    policy = """
+    allow(_, _, foo: Foo) if
+        foo.bar.is_cool = foo.is_fooey;
+    """
+    oso.load_str(policy)
+    expected = [t['another_foo'], t['third_foo']]
+    check_authz(oso, 'gwen', 'get', t['Foo'], expected)
 
 
 def test_const_in_coll(oso, t):
