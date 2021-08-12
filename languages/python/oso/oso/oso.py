@@ -109,6 +109,28 @@ class Oso:
         return list(actions)
 
     def authorize(self, actor, action, resource, *, check_read=True):
+        """Ensure that ``actor`` is allowed to perform ``action`` on
+        ``resource``.
+
+        If the action is permitted with an ``allow`` rule in the policy, then
+        this method returns ``None``. If the action is not permitted by the
+        policy, this method will raise an error.
+
+        The error raised by this method depends on whether the user can perform
+        the ``"read"`` action on the resource. If they cannot read the resource,
+        then a ``NotFound`` error is raised. Otherwise, a ``ForbiddenError`` is
+        raised.
+
+        :param actor: The actor performing the request.
+        :param action: The action the actor is attempting to perform.
+        :param resource: The resource being accessed.
+
+        :param check_read: If set to ``False``, a ``ForbiddenError`` is always
+        thrown on authorization failures, regardless of whether the user can
+        read the resource. Default is ``True``.
+        :type check_read: bool
+
+        """
         if not self.policy.query_rule_once("allow", actor, action, resource):
             is_not_found = False
             if action == self.read_action:
@@ -120,6 +142,16 @@ class Oso:
             raise self._get_error(is_not_found, actor, action, resource)
 
     def authorize_request(self, actor, request):
+        """Ensure that ``actor`` is allowed to send ``request`` to the server.
+
+        If there is a matching ``allow_request(user, request)`` rule in the
+        policy, then this method returns ``None``. Otherwise, this method raises
+        a ``ForbiddenError``.
+
+        :param actor: The actor performing the request.
+        :param request: The request that was sent by the user. Can be a string
+        path, or an object with information about the request.
+        """
         if not self.policy.query_rule_once("allow_request", actor, request):
             raise self._get_error(False, actor, "request", request)
 
