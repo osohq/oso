@@ -14,9 +14,8 @@ class Enforcer:
 
         :param get_error: Optionally override the method used to build errors
                           raised by the ``authorize`` and ``authorize_request``
-                          methods. Should be a callable that takes four
-                          arguments: ``is_not_found``, ``actor``, ``action``,
-                          and ``resource``
+                          methods. Should be a callable that takes one argument
+                          ``is_not_found`` and returns an exception.
         :param read_action: The action used by the ``authorize`` method to
                             determine whether an authorization failure should
                             raise a ``NotFoundError`` or a ``ForbiddenError``
@@ -30,9 +29,8 @@ class Enforcer:
 
         super().__init__()
 
-    def _default_get_error(self, is_not_found, actor, action, resource):
-        err_class = NotFoundError if is_not_found else ForbiddenError
-        return err_class(actor, action, resource)
+    def _default_get_error(self, is_not_found):
+        return NotFoundError() if is_not_found else ForbiddenError()
 
     def authorize(self, actor, action, resource, *, check_read=True):
         """Ensure that ``actor`` is allowed to perform ``action`` on
@@ -42,7 +40,7 @@ class Enforcer:
         this method returns ``None``. If the action is not permitted by the
         policy, this method will raise an error.
 
-        The error raised by this method depends on whether the user can perform
+        The error raised by this method depends on whether the actor can perform
         the ``"read"`` action on the resource. If they cannot read the resource,
         then a ``NotFound`` error is raised. Otherwise, a ``ForbiddenError`` is
         raised.
@@ -52,7 +50,7 @@ class Enforcer:
         :param resource: The resource being accessed.
 
         :param check_read: If set to ``False``, a ``ForbiddenError`` is always
-        thrown on authorization failures, regardless of whether the user can
+        thrown on authorization failures, regardless of whether the actor can
         read the resource. Default is ``True``.
         :type check_read: bool
 
@@ -70,13 +68,15 @@ class Enforcer:
     def authorize_request(self, actor, request):
         """Ensure that ``actor`` is allowed to send ``request`` to the server.
 
-        If there is a matching ``allow_request(user, request)`` rule in the
+        Checks the ``allow_request`` rule of a policy.
+
+        If the request is permitted with an ``allow_request`` rule in the
         policy, then this method returns ``None``. Otherwise, this method raises
         a ``ForbiddenError``.
 
         :param actor: The actor performing the request.
-        :param request: The request that was sent by the user. Can be a string
-        path, or an object with information about the request.
+        :param request: An object representing the request that was sent by the
+        actor.
         """
         if not self.policy.query_rule_once("allow_request", actor, request):
             raise self._get_error(False, actor, "request", request)
