@@ -63,8 +63,10 @@ class Constraint:
     def to_predicate(self):
         def known_value(x):
             return self.value
+
         def field_value(x):
             return getattr(x, self.value.field)
+
         get_value = field_value if isinstance(self.value, Field) else known_value
         if self.kind == "Eq":
             return lambda x: getattr(x, self.field) == get_value(x)
