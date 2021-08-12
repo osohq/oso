@@ -589,14 +589,26 @@ fn constrain_var(
             {
                 constrain_var(result_set, types, vars, child, other_class_tag);
 
-                request.constraints.push(Constraint {
-                    kind: ConstraintKind::In,
-                    field: my_field.clone(),
-                    value: ConstraintValue::Ref(Ref {
-                        field: Some(other_field.clone()),
-                        result_id: child.clone(),
-                    }),
-                });
+                // If the constrained child var doesn't have any constraints on it, we don't need to
+                // constrain this var. Otherwise we're just saying field foo in all Foos which
+                // would fetch all Foos and not be good.
+                if let Some(child_result) = result_set.requests.remove(child) {
+                    if !child_result.constraints.is_empty() {
+                        result_set.requests.insert(child.to_owned(), child_result);
+                        request.constraints.push(Constraint {
+                            kind: ConstraintKind::In,
+                            field: my_field.clone(),
+                            value: ConstraintValue::Ref(Ref {
+                                field: Some(other_field.clone()),
+                                result_id: child.clone(),
+                            }),
+                        });
+                    } else {
+                        // Remove the id from the resolve_order too.
+                        result_set.resolve_order.pop();
+                    }
+                }
+
                 continue;
             }
             // Non relationship or unknown type info.
