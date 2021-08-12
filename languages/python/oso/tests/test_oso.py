@@ -1,6 +1,5 @@
 """Tests the Polar API as an external consumer"""
 
-from oso.exceptions import ForbiddenError, NotFoundError
 from pathlib import Path
 import pytest
 
@@ -102,21 +101,6 @@ def test_is_allowed(test_oso):
     assert test_oso.is_allowed({"username": "president"}, action, resource)
 
 
-def test_authorize(test_oso):
-    actor = Actor(name="guest")
-    resource = Widget(id="1")
-    action = "read"
-    test_oso.authorize(actor, action, resource)
-    test_oso.authorize({"username": "guest"}, action, resource)
-    test_oso.authorize("guest", action, resource)
-
-    actor = Actor(name="president")
-    action = "create"
-    resource = Company(id="1")
-    test_oso.authorize(actor, action, resource)
-    test_oso.authorize({"username": "president"}, action, resource)
-
-
 def test_query_rule(test_oso):
     actor = Actor(name="guest")
     resource = Widget(id="1")
@@ -130,21 +114,6 @@ def test_fail(test_oso):
     action = "not_allowed"
     assert not test_oso.is_allowed(actor, action, resource)
     assert not test_oso.is_allowed({"username": "guest"}, action, resource)
-
-
-def test_fail_authorize(test_oso):
-    actor = Actor(name="guest")
-    resource = Widget(id="1")
-    action = "not_allowed"
-    # ForbiddenError is expected because actor can "read" resource
-    with pytest.raises(ForbiddenError):
-        test_oso.authorize(actor, action, resource)
-    with pytest.raises(ForbiddenError):
-        test_oso.authorize({"username": "guest"}, action, resource)
-    # NotFoundError is expected because actor can NOT "read" resource
-    resource = Company(id="1")
-    with pytest.raises(NotFoundError):
-        test_oso.authorize({"username": "guest"}, action, resource)
 
 
 def test_instance_from_external_call(test_oso):
@@ -180,36 +149,6 @@ def test_get_allowed_actions(test_oso):
     assert set(
         test_oso.get_allowed_actions(user, resource, allow_wildcard=True)
     ) == set(["*"])
-
-
-def test_authorize_request(test_oso):
-    class Request:
-        def __init__(self, method, path) -> None:
-            self.method = method
-            self.path = path
-
-    policy = """
-    allow_request("graham", request: Request) if
-        request.path.startswith("/repos");
-
-    allow_request(user: test_oso::Actor, request: Request) if
-        request.path.startswith("/account")
-        and user.verified;
-    """
-
-    verified = Actor("verified")
-    verified.verified = True
-
-    test_oso.register_class(Request)
-    test_oso.load_str(policy)
-
-    test_oso.authorize_request("graham", Request("GET", "/repos/1"))
-    with pytest.raises(ForbiddenError):
-        test_oso.authorize_request("sam", Request("GET", "/repos/1"))
-
-    test_oso.authorize_request(verified, Request("GET", "/account"))
-    with pytest.raises(ForbiddenError):
-        test_oso.authorize_request("graham", Request("GET", "/account"))
 
 
 if __name__ == "__main__":

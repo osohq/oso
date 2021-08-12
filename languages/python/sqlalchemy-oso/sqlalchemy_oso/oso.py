@@ -20,8 +20,8 @@ class SQLAlchemyOso(Oso):
 
     """
 
-    def __init__(self, sqlalchemy_base, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, sqlalchemy_base):
+        super().__init__()
 
         # Register all sqlalchemy models on sqlalchemy_base
         # TODO (dhatch): Not sure this is legit b/c it uses an internal interface?
