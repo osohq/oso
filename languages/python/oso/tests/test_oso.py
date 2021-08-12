@@ -187,6 +187,7 @@ def test_authorize_request(test_oso):
         def __init__(self, method, path) -> None:
             self.method = method
             self.path = path
+
     policy = """
     allow_request("graham", request: Request) if
         request.path.startswith("/repos");
@@ -209,7 +210,6 @@ def test_authorize_request(test_oso):
     test_oso.authorize_request(verified, Request("GET", "/account"))
     with pytest.raises(ForbiddenError):
         test_oso.authorize_request("graham", Request("GET", "/account"))
-
 
 
 if __name__ == "__main__":
