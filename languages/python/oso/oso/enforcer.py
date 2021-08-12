@@ -1,13 +1,11 @@
-"""Core oso functionality"""
-
-__version__ = "0.14.1"
-
 from polar import Variable, exceptions
 from .exceptions import NotFoundError, ForbiddenError
 
 
 class Enforcer:
-    """Uses Oso
+    """
+    Exposes high-level enforcement APIs which can be used by apps to perform
+    resource-, request-, and query-level authorization.
     """
 
     def __init__(self, oso, *, get_error=None, read_action="read"):
