@@ -306,8 +306,8 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
 #[derive(Debug)]
 struct Vars {
     variables: HashMap<String, HashSet<Symbol>>,
-    field_relationships: Vec<(String, String, String)>,
-    in_relationships: Vec<(String, String)>,
+    field_relationships: HashSet<(String, String, String)>,
+    in_relationships: HashSet<(String, String)>,
     eq_values: HashMap<String, Term>,
     contained_values: HashMap<String, HashSet<Term>>,
     types: HashMap<String, String>,
@@ -417,7 +417,7 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
 
     // Substitute in relationship ids.
     // @Sorry(steve): This is a real mess too.
-    let mut field_relationships = vec![];
+    let mut field_relationships = HashSet::new();
     for (parent, field, child) in &var_info.field_relationships {
         let mut parent_id = String::new();
         let mut child_id = String::new();
@@ -431,14 +431,11 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
         }
         assert_ne!(parent_id, String::new());
         assert_ne!(child_id, String::new());
-        field_relationships.push((parent_id, field.clone(), child_id));
+        field_relationships.insert((parent_id, field.clone(), child_id));
     }
 
-    // @TODO(steve): If we have duplicates in field_relationships, we can remove them. We already know.
-    // Could use a set I suppose to handle that.
-
     // In relationships
-    let mut in_relationships = vec![];
+    let mut in_relationships = HashSet::new();
     for (lhs, rhs) in &var_info.in_relationships {
         let mut lhs_id = String::new();
         let mut rhs_id = String::new();
@@ -462,7 +459,7 @@ fn collapse_vars(var_info: VarInfo) -> Vars {
             new_set.insert(rhs.clone());
             variables.insert(new_id.clone(), new_set);
         }
-        in_relationships.push((lhs_id, rhs_id));
+        in_relationships.insert((lhs_id, rhs_id));
     }
 
     // I think a var can only have one value since we make sure there's a var for the dot lookup,
