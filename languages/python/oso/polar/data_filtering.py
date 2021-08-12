@@ -44,13 +44,7 @@ def serialize_types(types, class_names):
 
 
 @dataclass
-class Field:
-    field: str
-
-
-@dataclass
 class Ref:
-    field: Optional[str]
     result_id: str
 
 
@@ -58,14 +52,24 @@ class Ref:
 class Constraint:
     kind: str  # ["Eq", "In", "Contains"]
     field: str
+    other_field: Optional[str]
     value: Any
 
     def to_predicate(self):
         def known_value(x):
             return self.value
         def field_value(x):
-            return getattr(x, self.value.field)
-        get_value = field_value if isinstance(self.value, Field) else known_value
+            return getattr(x, self.other_field)
+        def rel_value(x):
+            return [getattr(y, self.other_field) for y in self.value]
+
+        if self.value is None:
+            get_value = field_value
+        elif self.other_field is None:
+            get_value = known_value
+        else:
+            get_value = rel_value
+
         if self.kind == "Eq":
             return lambda x: getattr(x, self.field) == get_value(x)
         if self.kind == "In":
@@ -80,22 +84,23 @@ def parse_constraint(polar, constraint):
     assert kind in ["Eq", "In", "Contains"]
     field = constraint["field"]
     value = constraint["value"]
+    other_field = constraint["other_field"]
 
-    value_kind = next(iter(value))
-    value = value[value_kind]
+    if value is not None:
+        value_kind = next(iter(value))
+        value = value[value_kind]
 
-    if value_kind == "Term":
-        value = polar.host.to_python(value)
-    elif value_kind == "Ref":
-        child_field = value["field"]
-        result_id = value["result_id"]
-        value = Ref(field=child_field, result_id=result_id)
-    elif value_kind == "Field":
-        value = Field(field=value)
-    else:
-        assert False, "Unknown value kind"
+        if value_kind == "Term":
+            value = polar.host.to_python(value)
+        elif value_kind == "Ref":
+            result_id = value["result_id"]
+            value = Ref(result_id=result_id)
+        elif value_kind == "Field":
+            value = Field(field=value)
+        else:
+            assert False, "Unknown value kind"
 
-    return Constraint(kind=kind, field=field, value=value)
+    return Constraint(kind=kind, field=field, value=value, other_field=other_field)
 
 
 def ground_constraints(polar, results, filter_plan, constraints):
@@ -103,8 +108,8 @@ def ground_constraints(polar, results, filter_plan, constraints):
         if isinstance(constraint.value, Ref):
             ref = constraint.value
             constraint.value = results[ref.result_id]
-            if ref.field is not None:
-                constraint.value = [getattr(v, ref.field) for v in constraint.value]
+#            if constraint.other_field is not None:
+#                constraint.value = [getattr(v, constraint.other_field) for v in constraint.value]
 
 
 # @NOTE(Steve): This is just operating on the json. Could still have a step to parse this into a python data structure
