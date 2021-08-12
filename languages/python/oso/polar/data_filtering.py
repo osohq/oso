@@ -61,14 +61,17 @@ class Constraint:
     value: Any
 
     def to_predicate(self):
+        def known_value(x):
+            return self.value
+        def field_value(x):
+            return getattr(x, self.value.field)
+        get_value = field_value if isinstance(self.value, Field) else known_value
         if self.kind == "Eq":
-            if isinstance(self.value, Field):
-                return lambda x: getattr(x, self.field) == getattr(x, self.value.field)
-            return lambda x: getattr(x, self.field) == self.value
+            return lambda x: getattr(x, self.field) == get_value(x)
         if self.kind == "In":
-            return lambda x: getattr(x, self.field) in self.value
+            return lambda x: getattr(x, self.field) in get_value(x)
         if self.kind == "Contains":
-            return lambda x: self.value in getattr(x, self.field)
+            return lambda x: get_value(x) in getattr(x, self.field)
         assert False, "unknown constraint kind"
 
 
