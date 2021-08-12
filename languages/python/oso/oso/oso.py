@@ -15,6 +15,7 @@ class Oso:
     >>> Oso()
     <oso.oso.Oso object at 0x...>
 
+    :param policy: The policy
     """
 
     def __init__(self, policy=None, *, get_error=None, read_action="read"):
@@ -34,6 +35,7 @@ class Oso:
         # Note: these are for backwards-compatibility. They allow `Oso`
         # instances to be treated like `Polar` instances.
         self.query_rule = self.policy.query_rule
+        self.query = self.policy.query
         self.load_str = self.policy.load_str
         self.load_file = self.policy.load_file
         self.register_class = self.policy.register_class
