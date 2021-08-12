@@ -99,7 +99,6 @@ def ground_constraints(polar, results, filter_plan, constraints):
     for constraint in constraints:
         if isinstance(constraint.value, Ref):
             ref = constraint.value
-            print(results)
             constraint.value = results[ref.result_id]
             if ref.field is not None:
                 constraint.value = [getattr(v, ref.field) for v in constraint.value]

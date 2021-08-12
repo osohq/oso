@@ -12,9 +12,16 @@ def oso():
     return oso
 
 
+def fold_constraints(constraints):
+    return reduce(
+        lambda f, g: lambda x: f(x) and g(x),
+        [c.to_predicate() for c in constraints],
+        lambda _: True,
+    )
+
+
 def filter_array(array, constraints):
-    checks = [c.to_predicate() for c in constraints]
-    check = reduce(lambda f, g: lambda x: f(x) and g(x), checks, lambda _: True)
+    check = fold_constraints(constraints)
     return [x for x in array if check(x)]
 
 
@@ -232,7 +239,7 @@ def test_field_cmp_field(oso, t):
         bar.is_cool = bar.is_still_cool;
     """
     oso.load_str(policy)
-    expected = list(filter(lambda b: b.is_cool == b.is_still_cool, t["bars"]))
+    expected = [b for b in t["bars"] if b.is_cool == b.is_still_cool]
     check_authz(oso, "steve", "eat", t["Bar"], expected)
 
 
@@ -244,7 +251,7 @@ def test_const_in_coll(oso, t):
         magic in foo.numbers;
     """
     oso.load_str(policy)
-    expected = list(filter(lambda f: magic in f.numbers, t["foos"]))
+    expected = [f for f in t["foos"] if magic in f.numbers]
     check_authz(oso, "gwen", "eat", t["Foo"], expected)
 
 
@@ -257,7 +264,7 @@ def test_const_not_in_coll(oso, t):
         not (magic in foo.numbers);
     """
     oso.load_str(policy)
-    expected = list(filter(lambda f: magic not in f.numbers, t["foos"]))
+    expected = [f for f in t["foos"] if magic not in f.numbers]
     check_authz(oso, "gwen", "eat", t["Foo"], expected)
 
 
