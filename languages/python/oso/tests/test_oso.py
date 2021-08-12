@@ -132,13 +132,13 @@ def test_allow_model(test_oso):
 
 def test_get_allowed_actions(test_oso):
     rule = """allow(_actor: test_oso::Actor{name: "Sally"}, action, _resource: test_oso::Widget{id: "1"}) if
-        action in ["CREATE", "READ"];"""
+        action in ["CREATE", "UPDATE"];"""
 
     test_oso.load_str(rule)
     user = Actor(name="Sally")
     resource = Widget(id="1")
     assert set(test_oso.get_allowed_actions(user, resource)) == set(
-        ["read", "CREATE", "READ"]
+        ["read", "CREATE", "UPDATE"]
     )
 
     rule = """allow(_actor: test_oso::Actor{name: "John"}, _action, _resource: test_oso::Widget{id: "1"});"""

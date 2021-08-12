@@ -99,13 +99,13 @@ def test_fail_authorize(test_enforcer):
 
 def test_authorized_actions(test_enforcer):
     rule = """allow(_actor: test_oso::Actor{name: "Sally"}, action, _resource: test_oso::Widget{id: "1"}) if
-        action in ["CREATE", "READ"];"""
+        action in ["CREATE", "UPDATE"];"""
 
     test_enforcer.policy.load_str(rule)
     user = Actor(name="Sally")
     resource = Widget(id="1")
     assert set(test_enforcer.authorized_actions(user, resource)) == set(
-        ["read", "CREATE", "READ"]
+        ["read", "CREATE", "UPDATE"]
     )
 
     rule = """allow(_actor: test_oso::Actor{name: "John"}, _action, _resource: test_oso::Widget{id: "1"});"""
