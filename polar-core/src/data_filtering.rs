@@ -567,79 +567,84 @@ fn constrain_var(
         }
     };
 
-    for (parent, field, child) in &vars.field_relationships {
-        if parent == var_id {
-            let typ = match type_def.get(field) {
-                None => panic!("unknown field {}", field),
-                Some(t) => t,
-            };
+    let mut nrels = vec![];
 
-            if let Type::Relationship {
-                other_class_tag,
-                my_field,
-                other_field,
-                ..
-            } = typ
-            {
-                constrain_var(result_set, types, vars, child, other_class_tag);
+    for tup in vars.field_relationships.iter().filter(|r| r.0 == var_id) {
+        let (_, field, child) = tup;
+        let typ = match type_def.get(field) {
+            None => panic!("unknown field {}", field),
+            Some(t) => t,
+        };
 
-                // If the constrained child var doesn't have any constraints on it, we don't need to
-                // constrain this var. Otherwise we're just saying field foo in all Foos which
-                // would fetch all Foos and not be good.
-                if let Some(child_result) = result_set.requests.remove(child) {
-                    if !child_result.constraints.is_empty() {
-                        result_set.requests.insert(child.to_owned(), child_result);
-                        request.constraints.push(Constraint {
-                            kind: ConstraintKind::In,
-                            field: my_field.clone(),
-                            other_field: Some(other_field.clone()),
-                            value: Some(ConstraintValue::Ref(child.clone())),
-                        });
-                    } else {
-                        // Remove the id from the resolve_order too.
-                        result_set.resolve_order.pop();
-                    }
+        if let Type::Relationship {
+            other_class_tag,
+            my_field,
+            other_field,
+            ..
+        } = typ
+        {
+            constrain_var(result_set, types, vars, child, other_class_tag);
+
+            // If the constrained child var doesn't have any constraints on it, we don't need to
+            // constrain this var. Otherwise we're just saying field foo in all Foos which
+            // would fetch all Foos and not be good.
+            if let Some(child_result) = result_set.requests.remove(child) {
+                if !child_result.constraints.is_empty() {
+                    result_set.requests.insert(child.to_owned(), child_result);
+                    request.constraints.push(Constraint {
+                        kind: ConstraintKind::In,
+                        field: my_field.clone(),
+                        other_field: Some(other_field.clone()),
+                        value: Some(ConstraintValue::Ref(child.to_string())),
+                    });
+                } else {
+                    // Remove the id from the resolve_order too.
+                    result_set.resolve_order.pop();
                 }
-
-                continue;
             }
-            // Non relationship or unknown type info.
-            let mut contributed_constraints = false;
-            if let Some(value) = vars.eq_values.get(child) {
+
+        } else {
+            nrels.push(tup);
+        }
+    }
+
+    for (parent, field, child) in nrels {
+        // Non relationship or unknown type info.
+        let mut contributed_constraints = false;
+        if let Some(value) = vars.eq_values.get(child) {
+            request.constraints.push(Constraint {
+                kind: ConstraintKind::Eq,
+                field: field.clone(),
+                value: Some(ConstraintValue::Term(value.clone())),
+                other_field: None,
+            });
+            contributed_constraints = true;
+        }
+        if let Some(values) = vars.contained_values.get(child) {
+            for value in values {
                 request.constraints.push(Constraint {
-                    kind: ConstraintKind::Eq,
+                    kind: ConstraintKind::Contains,
                     field: field.clone(),
                     value: Some(ConstraintValue::Term(value.clone())),
                     other_field: None,
                 });
-                contributed_constraints = true;
             }
-            if let Some(values) = vars.contained_values.get(child) {
-                for value in values {
-                    request.constraints.push(Constraint {
-                        kind: ConstraintKind::Contains,
-                        field: field.clone(),
-                        value: Some(ConstraintValue::Term(value.clone())),
-                        other_field: None,
-                    });
-                }
-                contributed_constraints = true;
-            }
-            for eqf in vars
-                .field_relationships
-                .iter()
-                .filter(|r| r.0 == *parent && r.1 != *field && r.2 == *child)
-            {
-                request.constraints.push(Constraint {
-                    kind: ConstraintKind::Eq,
-                    field: field.clone(),
-                    value: None,
-                    other_field: Some(eqf.1.clone()),
-                });
-                contributed_constraints = true;
-            }
-            assert!(contributed_constraints);
+            contributed_constraints = true;
         }
+        for eqf in vars
+            .field_relationships
+            .iter()
+            .filter(|r| r.0 == *parent && r.1 != *field && r.2 == *child)
+        {
+            request.constraints.push(Constraint {
+                kind: ConstraintKind::Eq,
+                field: field.clone(),
+                value: None,
+                other_field: Some(eqf.1.clone()),
+            });
+            contributed_constraints = true;
+        }
+        assert!(contributed_constraints);
     }
 
     // Constrain any vars that are `in` this var.

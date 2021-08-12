@@ -95,8 +95,6 @@ def parse_constraint(polar, constraint):
             value = polar.host.to_python(value)
         elif value_kind == "Ref":
             value = Ref(result_id=value)
-        elif value_kind == "Field":
-            value = Field(field=value)
         else:
             assert False, "Unknown value kind"
 
