@@ -58,8 +58,10 @@ class Constraint:
     def to_predicate(self):
         def known_value(x):
             return self.value
+
         def field_value(x):
             return getattr(x, self.other_field)
+
         def rel_value(x):
             return [getattr(y, self.other_field) for y in self.value]
 
@@ -105,6 +107,8 @@ def ground_constraints(polar, results, filter_plan, constraints):
         if isinstance(constraint.value, Ref):
             ref = constraint.value
             constraint.value = results[ref.result_id]
+
+
 #            if constraint.other_field is not None:
 #                constraint.value = [getattr(v, constraint.other_field) for v in constraint.value]
 

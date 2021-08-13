@@ -255,6 +255,25 @@ class Polar:
         """
         return self.host.get_class(name)
 
+    def _satisfies(self, partial, value):
+        partial = partial["bindings"]["resource"]
+        query = self.ffi_polar.new_query_from_term(partial)
+        query = Query(query, host=self.host, bindings={"_this": value})
+        return len(list(query.run()))
+
+    def _fallback(self, parts, vals):
+        results = []
+
+        def check(val):
+            for part in parts:
+                if self._satisfies(part, val):
+                    results.append(val)
+                    return
+
+        for val in vals:
+            check(val)
+        return results
+
     def get_allowed_resources(self, actor, action, cls) -> list:
         """
         Returns all the resources the actor is allowed to perform action on.
@@ -290,9 +309,15 @@ class Polar:
                 result["bindings"][k] = self.host.to_polar(v)
                 del result["trace"]
 
-        types = serialize_types(self.host.types, self.host.cls_names)
-        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
-        return filter_data(self, plan)
+        try:
+            types = serialize_types(self.host.types, self.host.cls_names)
+            plan = self.ffi_polar.build_filter_plan(
+                types, results, "resource", class_name
+            )
+            return filter_data(self, plan)
+        except Exception:
+            opts = self.host.fetchers[class_name]([])
+            return self._fallback(results, opts)
 
 
 def polar_class(_cls=None, *, name=None):

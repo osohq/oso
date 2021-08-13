@@ -45,6 +45,7 @@ def exists(pred, coll):
 def first_where(pred, coll):
     return next(filter(pred, coll))
 
+
 # Shared test setup.
 @pytest.fixture
 def t(oso):
@@ -54,6 +55,7 @@ def t(oso):
         id: str
         is_cool: bool
         is_still_cool: bool
+        count: int
 
     @dataclass
     class Foo:
@@ -74,9 +76,9 @@ def t(oso):
         foo_id: str
         data: str
 
-    hello_bar = Bar(id="hello", is_cool=True, is_still_cool=True)
-    goodbye_bar = Bar(id="goodbye", is_cool=False, is_still_cool=True)
-    hershey_bar = Bar(id="hershey", is_cool=False, is_still_cool=False)
+    hello_bar = Bar(id="hello", is_cool=True, is_still_cool=True, count=3)
+    goodbye_bar = Bar(id="goodbye", is_cool=False, is_still_cool=True, count=4)
+    hershey_bar = Bar(id="hershey", is_cool=False, is_still_cool=False, count=5)
     something_foo = Foo(id="something", bar_id="hello", is_fooey=False, numbers=[])
     another_foo = Foo(id="another", bar_id="hello", is_fooey=True, numbers=[1])
     third_foo = Foo(id="third", bar_id="hello", is_fooey=True, numbers=[2])
@@ -101,7 +103,9 @@ def t(oso):
         return filter_array(foo_logs, constraints)
 
     oso.register_class(
-        Bar, types={"id": str, "is_cool": bool, "is_still_cool": bool}, fetcher=get_bars
+        Bar,
+        types={"id": str, "is_cool": bool, "is_still_cool": bool, "count": int},
+        fetcher=get_bars,
     )
     oso.register_class(
         Foo,
@@ -162,7 +166,7 @@ def test_no_relationships(oso, t):
     assert oso.is_allowed("steve", "get", t["another_foo"])
 
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    expected = [f for f in t['foos'] if f.is_fooey]
+    expected = [f for f in t["foos"] if f.is_fooey]
     assert unord_eq(results, expected)
 
 
@@ -177,7 +181,7 @@ def test_relationship(oso, t):
     assert oso.is_allowed("steve", "get", t["another_foo"])
 
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    expected = [f for f in t['foos'] if f.bar().is_cool and f.is_fooey]
+    expected = [f for f in t["foos"] if f.bar().is_cool and f.is_fooey]
     assert unord_eq(results, expected)
 
 
@@ -190,7 +194,7 @@ def test_var_in_values(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["another_foo"])
 
-    expected = [f for f in t['foos'] if f.bar().is_cool or not f.bar().is_cool]
+    expected = [f for f in t["foos"] if f.bar().is_cool or not f.bar().is_cool]
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
     assert unord_eq(results, expected)
 
@@ -205,7 +209,7 @@ def test_var_in_var(oso, t):
     assert oso.is_allowed("steve", "get", t["fourth_foo"])
 
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
-    expected = [f for f in t['foos'] if exists(lambda l: l.data == 'hello', f.logs())]
+    expected = [f for f in t["foos"] if exists(lambda l: l.data == "hello", f.logs())]
     assert unord_eq(results, expected)
 
 
@@ -219,7 +223,7 @@ def test_val_in_var(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["fourth_foo"])
 
-    expected = [f for f in t['foos'] if 1 in f.numbers and 2 in f.numbers]
+    expected = [f for f in t["foos"] if 1 in f.numbers and 2 in f.numbers]
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
     assert unord_eq(results, expected)
 
@@ -239,7 +243,7 @@ def test_var_in_value(oso, t):
     assert oso.is_allowed("steve", "get", t["fourth_log_a"])
 
     results = list(oso.get_allowed_resources("steve", "get", t["FooLogRecord"]))
-    expected = [l for l in t['logs'] if l.data in ['hello', 'world']]
+    expected = [log for log in t["logs"] if log.data in ["hello", "world"]]
     assert unord_eq(results, expected)
 
 
@@ -267,11 +271,10 @@ def test_field_cmp_field(oso, t):
     check_authz(oso, "gwen", "eat", t["Bar"], expected)
 
 
-@pytest.mark.xfail(reason="doesn't work yet!")
 def test_field_cmp_rel_field(oso, t):
     policy = "allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;"
     oso.load_str(policy)
-    expected = [t["another_foo"], t["third_foo"]]
+    expected = [t["another_foo"], t["third_foo"], t["fifth_foo"]]
     check_authz(oso, "gwen", "get", t["Foo"], expected)
 
 
@@ -281,7 +284,7 @@ def test_rel_field_cmp_rel_field(oso, t):
 
     policy = "allow(_, _, foo: Foo) if foo.bar.is_cool = foo.bar.is_still_cool;"
     oso.load_str(policy)
-    expected = [f for f in t['foos'] if rly_cool(f.bar())]
+    expected = [f for f in t["foos"] if rly_cool(f.bar())]
     check_authz(oso, "gwen", "get", t["Foo"], expected)
 
 
@@ -294,7 +297,7 @@ def test_const_in_coll(oso, t):
     check_authz(oso, "gwen", "eat", t["Foo"], expected)
 
 
-@pytest.mark.xfail(reason="negation unsupported")
+@pytest.mark.xfail(reason="in negation unsupported")
 def test_const_not_in_coll(oso, t):
     magic = 1
     oso.register_constant(magic, "magic")
@@ -311,10 +314,17 @@ def test_param_field(oso, t):
         action = resource.id;
     """
     oso.load_str(policy)
-    actor = 'steve'
-    action = 'c'
-    expected = [l for l in t['logs'] if l.data == actor and l.id == action]
+    actor = "steve"
+    action = "c"
+    expected = [log for log in t["logs"] if log.data == actor and log.id == action]
     check_authz(oso, actor, action, t["FooLogRecord"], expected)
+
+
+def test_fallback(oso, t):
+    policy = "allow(_, _, bar: Bar) if bar.count mod 2 > 0;"
+    oso.load_str(policy)
+    expected = [bar for bar in t["bars"] if bar.count % 2]
+    check_authz(oso, "gwen", "put", t["Bar"], expected)
 
 
 @pytest.fixture
