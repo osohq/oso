@@ -157,7 +157,7 @@ def test_custom_errors():
     enforcer = Enforcer(policy, get_error=lambda *args: TestException(*args))
     with pytest.raises(TestException) as excinfo:
         enforcer.authorize("graham", "frob", "bar")
-    assert excinfo.value.is_not_found == True
+    assert excinfo.value.is_not_found
 
 
 def test_custom_read_action():
