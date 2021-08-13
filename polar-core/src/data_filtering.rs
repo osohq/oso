@@ -22,8 +22,8 @@ pub enum Type {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum ConstraintValue {
-    Term(Term),    // An actual value
-    Ref(String),      // A reference to a different result.
+    Term(Term),  // An actual value
+    Ref(String), // A reference to a different result.
 }
 
 // @TODO(steve): These are all constraints on a field. If we need to add constraints
@@ -602,7 +602,6 @@ fn constrain_var(
                     result_set.resolve_order.pop();
                 }
             }
-
         } else {
             nrels.push(tup);
         }

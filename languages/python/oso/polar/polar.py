@@ -274,7 +274,7 @@ class Polar:
             check(val)
         return results
 
-    def get_allowed_resources(self, actor, action, cls) -> list:
+    def get_allowed_resources(self, actor, action, cls, fallback=False) -> list:
         """
         Returns all the resources the actor is allowed to perform action on.
 
@@ -315,9 +315,11 @@ class Polar:
                 types, results, "resource", class_name
             )
             return filter_data(self, plan)
-        except Exception:
-            opts = self.host.fetchers[class_name]([])
-            return self._fallback(results, opts)
+        except Exception as e:
+            if fallback:
+                opts = self.host.fetchers[class_name]([])
+                return self._fallback(results, opts)
+            raise e
 
 
 def polar_class(_cls=None, *, name=None):

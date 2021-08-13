@@ -271,6 +271,7 @@ def test_field_cmp_field(oso, t):
     check_authz(oso, "gwen", "eat", t["Bar"], expected)
 
 
+@pytest.mark.xfail(reason="not supported yet")
 def test_field_cmp_rel_field(oso, t):
     policy = "allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;"
     oso.load_str(policy)
@@ -324,7 +325,7 @@ def test_fallback(oso, t):
     policy = "allow(_, _, bar: Bar) if bar.count mod 2 > 0;"
     oso.load_str(policy)
     expected = [bar for bar in t["bars"] if bar.count % 2]
-    check_authz(oso, "gwen", "put", t["Bar"], expected)
+    check_authz(oso, "gwen", "put", t["Bar"], expected, fallback=True)
 
 
 @pytest.fixture
@@ -516,8 +517,10 @@ def roles(oso):
     }
 
 
-def check_authz(oso, actor, action, resource, expected):
-    assert unord_eq(oso.get_allowed_resources(actor, action, resource), expected)
+def check_authz(oso, actor, action, resource, expected, fallback=False):
+    assert unord_eq(
+        oso.get_allowed_resources(actor, action, resource, fallback=fallback), expected
+    )
     for re in expected:
         assert oso.is_allowed(actor, action, re)
 
