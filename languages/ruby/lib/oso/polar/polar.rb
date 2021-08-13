@@ -34,9 +34,10 @@ module Oso
       # @return [Host]
       attr_reader :host
 
-      def initialize
+      def initialize # rubocop:disable Metrics/MethodLength
         @ffi_polar = FFI::Polar.create
         @host = Host.new(ffi_polar)
+        @ffi_polar.enrich_message = @host.method(:enrich_message)
         @polar_roles_enabled = false
 
         # Register global constants.

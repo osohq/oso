@@ -499,6 +499,7 @@ impl PolarVirtualMachine {
                     );
                 }
                 self.trace.push(trace.clone());
+                self.maybe_break(DebugEvent::Rule)?;
             }
             Goal::Unify { left, right } => self.unify(left, right)?,
             Goal::AddConstraint { term } => self.add_constraint(term)?,
@@ -642,8 +643,10 @@ impl PolarVirtualMachine {
         if self.log {
             self.print(&format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()));
         }
-
-        self.binding_manager.bind(var, val)
+        if let Some(goal) = self.binding_manager.bind(var, val)? {
+            self.push_goal(goal)?;
+        }
+        Ok(())
     }
 
     pub fn add_binding_follower(&mut self) -> FollowerId {
@@ -661,7 +664,6 @@ impl PolarVirtualMachine {
         if self.log {
             self.print(&format!("⇒ add_constraint: {}", term.to_polar()));
         }
-
         self.binding_manager.add_constraint(term)
     }
 
@@ -1089,6 +1091,56 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
+    fn get_names(&self, s: &Symbol) -> HashSet<Symbol> {
+        let mut cycles: Vec<HashSet<Symbol>> = vec![];
+        self.binding_manager
+            .get_constraints(s)
+            .constraints()
+            .into_iter()
+            .for_each(|con| match con.operator {
+                Operator::Unify | Operator::Eq => {
+                    if let (Ok(l), Ok(r)) = (
+                        con.args[0].value().as_symbol(),
+                        con.args[1].value().as_symbol(),
+                    ) {
+                        let check = |cycles: &mut Vec<HashSet<Symbol>>, l: &Symbol, r: &Symbol| {
+                            cycles
+                                .iter_mut()
+                                .find(|c| c.contains(r))
+                                .map(|c| c.insert(l.clone()))
+                        };
+                        if check(&mut cycles, l, r)
+                            .or_else(|| check(&mut cycles, r, l))
+                            .is_none()
+                        {
+                            let mut new = HashSet::new();
+                            new.insert(r.clone());
+                            new.insert(l.clone());
+                            cycles.push(new);
+                        }
+                    }
+                }
+                _ => (),
+            });
+
+        let mut joined: Vec<HashSet<Symbol>> = vec![];
+        cycles.into_iter().for_each(|cycle| {
+            match joined.iter_mut().find(|c| !c.is_disjoint(&cycle)) {
+                Some(c) => c.extend(cycle.into_iter()),
+                None => joined.push(cycle),
+            }
+        });
+
+        joined
+            .into_iter()
+            .find(|c| c.contains(s))
+            .unwrap_or_else(|| {
+                let mut hs = HashSet::with_capacity(1);
+                hs.insert(s.clone());
+                hs
+            })
+    }
+
     fn isa_expr(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         match right.value() {
             Value::Pattern(Pattern::Dictionary(fields)) => {
@@ -1115,10 +1167,13 @@ impl PolarVirtualMachine {
                 // Get the existing partial on the LHS variable.
                 let partial = self.binding_manager.get_constraints(var);
 
-                let mut hs = HashSet::with_capacity(1);
-                hs.insert(var.clone());
+                let names = self.get_names(var);
+                let output = names.clone();
 
-                let (simplified, _) = simplify_partial(var, partial.into_term(), hs, false);
+                let partial = partial.into_term();
+                let (simplified, _) = simplify_partial(var, partial, output, false);
+
+                //                println!("isa/cc for {} matches {}, existing : {}", var, tag, simplified.to_polar());
                 let simplified = simplified.value().as_expression()?;
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
@@ -1148,9 +1203,11 @@ impl PolarVirtualMachine {
                 let type_constraint = op!(Isa, left.clone(), tag_pattern);
 
                 let new_matches = op!(Isa, lhs_of_matches, right.clone());
+
                 let runnable = Box::new(IsaConstraintCheck::new(
                     simplified.constraints(),
                     new_matches,
+                    names,
                 ));
 
                 // Construct field constraints.
@@ -1877,7 +1934,8 @@ impl PolarVirtualMachine {
 
                 // Translate `.(object, field, value)` → `value = .(object, field)`.
                 let dot2 = op!(Dot, object.clone(), field.clone());
-                self.add_constraint(&op!(Unify, value.clone(), dot2.into_term()).into_term())?;
+                let value = self.deep_deref(value);
+                self.add_constraint(&op!(Unify, value, dot2.into_term()).into_term())?;
             }
             _ => {
                 return Err(self.type_error(
@@ -2148,15 +2206,36 @@ impl PolarVirtualMachine {
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         match (left.value(), right.value()) {
-            (Value::Expression(_), _) | (_, Value::Expression(_)) => {
-                return Err(self.type_error(
-                    left,
-                    format!(
-                        "cannot unify expressions directly `{}` = `{}`",
-                        left.to_polar(),
-                        right.to_polar()
-                    ),
-                ));
+            (Value::Expression(op), other) | (other, Value::Expression(op)) => {
+                match op {
+                    // this branch handles dot ops that were rewritten for inclusion
+                    // in a partial by Vm::dot_op_helper(), but then queried again after
+                    // the partial was bound by Vm::bind().
+                    Operation {
+                        operator: Operator::Dot,
+                        args,
+                    } if args.len() == 2 => {
+                        let term = op!(
+                            Dot,
+                            args[0].clone(),
+                            args[1].clone(),
+                            Term::from(other.clone())
+                        )
+                        .into_term();
+                        self.push_goal(Goal::Query { term })?
+                    }
+                    // otherwise this should never happen.
+                    _ => {
+                        return Err(self.type_error(
+                            left,
+                            format!(
+                                "cannot unify expressions directly `{}` = `{}`",
+                                left.to_polar(),
+                                right.to_polar()
+                            ),
+                        ))
+                    }
+                }
             }
             (Value::Pattern(_), _) | (_, Value::Pattern(_)) => {
                 return Err(self.type_error(
@@ -2268,7 +2347,6 @@ impl PolarVirtualMachine {
                 }
             }
 
-            // Unify strings by value.
             (Value::String(left), Value::String(right)) => {
                 if left != right {
                     self.push_goal(Goal::Backtrack)?;
@@ -3718,18 +3796,15 @@ mod tests {
     }
 
     #[test]
-    fn test_timeout_configuration() {
+    fn test_timeout() {
         let vm = PolarVirtualMachine::default();
         assert!(vm.query_timeout_ms == DEFAULT_TIMEOUT_MS);
 
         std::env::set_var("POLAR_TIMEOUT_MS", "0");
         let vm = PolarVirtualMachine::default();
         std::env::remove_var("POLAR_TIMEOUT_MS");
-        assert!(vm.is_query_timeout_disabled())
-    }
+        assert!(vm.is_query_timeout_disabled());
 
-    #[test]
-    fn test_timeout() {
         std::env::set_var("POLAR_TIMEOUT_MS", "500");
         let mut vm = PolarVirtualMachine::default();
         std::env::remove_var("POLAR_TIMEOUT_MS");

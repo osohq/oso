@@ -239,6 +239,12 @@ impl Hash for Term {
     }
 }
 
+impl From<Value> for Term {
+    fn from(other: Value) -> Self {
+        Self::new_temporary(other)
+    }
+}
+
 impl Term {
     /// Creates a new term for a temporary variable
     pub fn new_temporary(value: Value) -> Self {

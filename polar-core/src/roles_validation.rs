@@ -1,22 +1,11 @@
 #![allow(dead_code)]
-use super::bindings::Bindings;
+
 use super::error::{PolarResult, RolesValidationError};
+use super::events::ResultEvent;
 use super::rules::GenericRule;
 use super::terms::*;
 
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ResultEvent {
-    bindings: Bindings,
-}
-
-impl ResultEvent {
-    pub fn new(bindings: Bindings) -> Self {
-        Self { bindings }
-    }
-}
 
 struct Action {
     typ: String,

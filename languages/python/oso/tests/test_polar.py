@@ -889,7 +889,7 @@ def test_partial_rule_filtering(polar):
     x = Variable("x")
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         next(polar.query_rule("f", x, bindings={x: TypeConstraint(x, "A")}))
-    assert str(e.value).startswith("Cannot generically walk fields of a Python class")
+    assert str(e.value).startswith("No type information for Python class A")
 
 
 def test_iterators(polar, qeval, qvar):

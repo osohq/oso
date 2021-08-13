@@ -1,12 +1,11 @@
+use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::error::PolarResult;
 use super::events::*;
 use super::kb::*;
 use super::messages::*;
 use super::parser;
 use super::rewrites::*;
-use super::roles_validation::{
-    validate_roles_config, ResultEvent, VALIDATE_ROLES_CONFIG_RESOURCES,
-};
+use super::roles_validation::{validate_roles_config, VALIDATE_ROLES_CONFIG_RESOURCES};
 use super::rules::*;
 use super::runnable::Runnable;
 use super::sources::*;
@@ -298,6 +297,16 @@ impl Polar {
 
     pub fn validate_roles_config(&self, results: Vec<Vec<ResultEvent>>) -> PolarResult<()> {
         validate_roles_config(&self.kb.read().unwrap().rules, results)
+    }
+
+    pub fn build_filter_plan(
+        &self,
+        types: Types,
+        partial_results: PartialResults,
+        variable: &str,
+        class_tag: &str,
+    ) -> PolarResult<FilterPlan> {
+        build_filter_plan(types, partial_results, variable, class_tag)
     }
 }
 
