@@ -40,3 +40,11 @@ Link to [relevant documentation section]().
 - Bulleted list
 - Of smaller improvements
 - Potentially with doc [links]().
+
+## `oso` NEW_VERSION
+
+### Core
+
+#### Other bugs & improvements
+
+- The debugger can now break on rule matches.
