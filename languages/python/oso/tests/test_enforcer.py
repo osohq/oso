@@ -150,14 +150,14 @@ def test_authorize_request(test_enforcer):
 
 def test_custom_errors():
     class TestException(Exception):
-        def __init__(self, *args):
-            self.args = args
+        def __init__(self, is_not_found):
+            self.is_not_found = is_not_found
 
     policy = Policy()
     enforcer = Enforcer(policy, get_error=lambda *args: TestException(*args))
     with pytest.raises(TestException) as excinfo:
         enforcer.authorize("graham", "frob", "bar")
-    assert excinfo.value.args == (True, "graham", "frob", "bar")
+    assert excinfo.value.is_not_found == True
 
 
 def test_custom_read_action():

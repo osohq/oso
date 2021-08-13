@@ -63,7 +63,7 @@ class Enforcer:
                 "allow", actor, self.read_action, resource
             ):
                 is_not_found = True
-            raise self._get_error(is_not_found, actor, action, resource)
+            raise self._get_error(is_not_found)
 
     def authorize_request(self, actor, request):
         """Ensure that ``actor`` is allowed to send ``request`` to the server.
@@ -79,7 +79,7 @@ class Enforcer:
         actor.
         """
         if not self.policy.query_rule_once("allow_request", actor, request):
-            raise self._get_error(False, actor, "request", request)
+            raise self._get_error(False)
 
     def authorized_actions(self, actor, resource, allow_wildcard=False) -> list:
         """Determine the actions ``actor`` is allowed to take on ``resource``.
