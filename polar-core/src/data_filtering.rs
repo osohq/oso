@@ -630,19 +630,30 @@ fn constrain_var(
             }
             contributed_constraints = true;
         }
-        for eqf in vars
+        for (other_parent, other_field, _) in vars
             .field_relationships
             .iter()
-            .filter(|r| r.0 == *parent && r.1 != *field && r.2 == *child)
+            .filter(|r| (r.0 != *parent || r.1 != *field) && r.2 == *child)
         {
-            request.constraints.push(Constraint {
-                kind: ConstraintKind::Eq,
-                field: field.clone(),
-                value: ConstraintValue::Ref(Loc {
-                    result_id: None,
-                    field: eqf.1.clone(),
-                }),
-            });
+            if other_parent == parent {
+                request.constraints.push(Constraint {
+                    kind: ConstraintKind::Eq,
+                    field: field.clone(),
+                    value: ConstraintValue::Ref(Loc {
+                        result_id: None,
+                        field: other_field.clone(),
+                    }),
+                });
+            } else {
+                request.constraints.push(Constraint {
+                    kind: ConstraintKind::In,
+                    field: field.clone(),
+                    value: ConstraintValue::Ref(Loc {
+                        result_id: Some(other_parent.clone()),
+                        field: other_field.clone(),
+                    }),
+                });
+            }
             contributed_constraints = true;
         }
         assert!(contributed_constraints);
@@ -665,6 +676,19 @@ fn constrain_var(
     result_set.resolve_order.push(var_id.to_string());
 }
 
+fn idx<T: PartialEq>(vec: &Vec<T>, item: &T) -> Option<usize> {
+    for (i, x) in vec.iter().enumerate() {
+        if item == x {
+            return Some(i)
+        }
+    }
+    None
+}
+
+fn compl_con(cons: &Vec<Constraint>, id: &String, other_field: &String, my_field: &String) -> bool {
+    cons.iter().find(|c| matches!(c, Constraint { field, value, ..} if field == my_field && matches!(value, ConstraintValue::Ref(Loc { field, result_id: Some(ref rid) }) if rid == id && field == other_field))).is_some()
+}
+
 pub fn opt_pass(filter_plan: &mut FilterPlan, explain: bool) -> bool {
     let mut optimized = false;
 
@@ -684,6 +708,23 @@ pub fn opt_pass(filter_plan: &mut FilterPlan, explain: bool) -> bool {
         }
         filter_plan.result_sets.remove(plan_id);
         optimized = true;
+    }
+
+    for rset in filter_plan.result_sets.iter_mut() {
+        let ro = &rset.resolve_order;
+        for (i, id) in ro.iter().enumerate() {
+            let rq = &mut rset.requests;
+            let (id, mut req) = rq.remove_entry(id).unwrap();
+            req.constraints.retain(|con| match &con.value {
+                ConstraintValue::Ref(Loc { result_id: Some(rid), field }) =>
+                    match idx(ro, &rid) {
+                        Some(j) if j > i && compl_con(&rq.get(rid).unwrap().constraints, &id, &con.field, &field) => false,
+                        _ => true,
+                    },
+                _ => true
+            });
+            rset.requests.insert(id, req);
+        }
     }
 
     // Possible future optimization ideas.

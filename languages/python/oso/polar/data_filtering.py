@@ -71,6 +71,8 @@ class Constraint:
             return lambda x: getattr(x, self.field) == get_value(x)
         if self.kind == "In":
             return lambda x: getattr(x, self.field) in get_value(x)
+        if self.kind == "Ins":
+            return lambda x: [getattr(x, field) for field in self.field] in get_value(x)
         if self.kind == "Contains":
             return lambda x: get_value(x) in getattr(x, self.field)
         assert False, "unknown constraint kind"
@@ -95,12 +97,28 @@ def parse_constraint(polar, constraint):
 
     return Constraint(kind=kind, field=field, value=value)
 
+def partition(coll, pred):
+    yes, no = [], []
+    for x in coll:
+        (yes if pred(x) else no).append(x)
+    return (yes, no)
+
+def group_refs(cons):
+    res = {}
+    for con in cons:
+        grp = res.get(con.value.result_id)
+        if grp is None:
+            grp = []
+            res[con.value.result_id] = grp
+        grp.append(con)
+    return res
 
 def ground_constraints(polar, results, filter_plan, constraints):
-    for constraint in constraints:
-        if isinstance(constraint.value, Ref) and constraint.value.result_id is not None:
-            ref = constraint.value
-            constraint.value = [getattr(result, ref.field) for result in results[ref.result_id]]
+    refs, rest = partition(constraints, lambda c: isinstance(c.value, Ref) and c.value.result_id is not None)
+    for rid, cons in group_refs(refs).items():
+        fields = [[getattr(r, c.value.field) for c in cons] for r in results[rid]]
+        rest.append(Constraint(value=fields, kind='Ins', field=[c.field for c in cons]))
+    return rest
 
 
 # @NOTE(Steve): This is just operating on the json. Could still have a step to parse this into a python data structure
@@ -125,7 +143,7 @@ def builtin_filter_plan_resolver(polar, filter_plan):
             constraints = [parse_constraint(polar, c) for c in constraints]
 
             # Substitute in results from previous requests.
-            ground_constraints(polar, set_results, filter_plan, constraints)
+            constraints = ground_constraints(polar, set_results, filter_plan, constraints)
             fetcher = polar.host.fetchers[class_name]
             set_results[i] = fetcher(constraints)
 
