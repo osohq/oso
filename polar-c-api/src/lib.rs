@@ -424,7 +424,9 @@ pub extern "C" fn polar_validate_roles_config(
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let validation_query_results = unsafe { ffi_string!(validation_query_results) };
         serde_json::from_str(&validation_query_results)
-            .map_err(|_| error::RolesValidationError("Invalid config query result".into()).into())
+            .map_err(|e| {
+                error::RolesValidationError(format!("Invalid config query result : {}", e)).into()
+            })
             .and_then(|results| polar.validate_roles_config(results))
             .err()
             .map_or(POLAR_SUCCESS, set_error)
