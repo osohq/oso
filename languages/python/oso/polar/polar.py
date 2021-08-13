@@ -25,6 +25,9 @@ from .ffi import Polar as FfiPolar
 from .host import Host
 from .query import Query
 from .predicate import Predicate
+from .variable import Variable
+from .expression import Expression, Pattern
+from .data_filtering import serialize_types, filter_data
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
@@ -231,10 +234,15 @@ class Polar:
             if not result:
                 print(False)
 
-    def register_class(self, cls, *, name=None):
+    def register_class(self, cls, *, name=None, types=None, fetcher=None):
         """Register `cls` as a class accessible by Polar."""
         cls_name = self.host.cache_class(cls, name)
         self.register_constant(cls, cls_name)
+        self.host.cls_names[cls] = cls_name
+        if types:
+            self.host.types[cls_name] = types
+        if fetcher:
+            self.host.fetchers[cls_name] = fetcher
 
     def register_constant(self, value, name):
         """Register `value` as a Polar constant variable called `name`."""
@@ -246,6 +254,45 @@ class Polar:
         :raises UnregisteredClassError: If the class is not registered.
         """
         return self.host.get_class(name)
+
+    def get_allowed_resources(self, actor, action, cls) -> list:
+        """
+        Returns all the resources the actor is allowed to perform action on.
+
+        :param actor: The actor for whom to collect allowed resources.
+
+        :param action: The action that user wants to perform.
+
+        :param cls: The type of the resources.
+
+        :return: A list of the unique allowed resources.
+        """
+        # Data filtering.
+        resource = Variable("resource")
+        # Get registered class name somehow
+        class_name = self.host.cls_names[cls]
+        constraint = Expression(
+            "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
+        )
+        results = list(
+            self.query_rule(
+                "allow",
+                actor,
+                action,
+                resource,
+                bindings={"resource": constraint},
+                accept_expression=True,
+            )
+        )
+
+        for result in results:
+            for k, v in result["bindings"].items():
+                result["bindings"][k] = self.host.to_polar(v)
+                del result["trace"]
+
+        types = serialize_types(self.host.types, self.host.cls_names)
+        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
+        return filter_data(self, plan)
 
 
 def polar_class(_cls=None, *, name=None):
