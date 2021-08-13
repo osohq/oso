@@ -40,7 +40,8 @@ role-based access control.
 
 {{% exampleGet "import_code" %}}
 
-To refer to your {{% exampleGet "classes" %}} in Polar, you must _register_ them with Oso.
+To refer to your {{% exampleGet "classes" %}} as _types_ in Polar, you must _register_ them with Oso.
+(Even if you don't register a class, you'll still have access to its properties; that's why we haven't registered `User` here.)
 
 {{% exampleGet "register_classes" %}}
 
@@ -51,10 +52,10 @@ Oso needs three pieces of information to make an authorization decision:
 - What are they trying to do? (the "action")
 - What are they doing it to? (the "resource")
 
-You'll pass these pieces of information are to Oso's `{{% exampleGet "isAllowed" %}}` method: `{{% exampleGet "isAllowed" %}}(actor, action, resource)`.
+You'll pass these pieces of information into to Oso's `{{% exampleGet "isAllowed" %}}` method: `{{% exampleGet "isAllowed" %}}(actor, action, resource)`.
 `{{% exampleGet "isAllowed" %}}` will return `True` or `False`, and your application can choose how to enforce that decision.
 
-Here's a program that only allows access to a page if the current user has a role that is allowed to read it.
+Here's a program that only allows access to a page if the current user has a role that is allowed to read it. (More precisely, this is a program that allows access if the policy allows it, and the policy allows access to users with the correct role — note the distinction between "policy" and "program".)
 
 {{% exampleGet "app_code" %}}
 
@@ -91,15 +92,21 @@ resource(_type: Page, "page", actions, roles) if
  ```
 
 The `allow` rule is what's queried by `is_allowed()` in your application.
-In this case, we are delegating to Oso's built-in `role_allows` rule.
-`role_allows` will use the data we provide in `actor_has_role_for_resource`.
+In this case, we are calling Oso's built-in `role_allows` rule.
+To use `role_allows` you must define `actor_has_role_for_resource` and `resource` rules.
+
+An `actor_has_role_for_resource` rule accesses the `role` property from the `actor` you passed to `is_allowed`.
 
 A `resource` rule governs access to a specific resource in your app.
 In the above configuration for `Page`, there are two possible actions: `"read"` and `"write"`.
 Guests can read, but not write, to a `Page`.
 Admins are allowed to write to a `Page`.
 
-There's much more you can do with Oso — we're just scratching the surface here. Polar is a very expressive language, and you can encode authorization logic far beyond what we've shown in this guide.
+There's much more you can do with Oso — we're just scratching the surface here.
+Polar is a very expressive language, and you can encode authorization logic far beyond what we've shown in this guide.
+For instance: you can define multiple resource rules, one for each resource type in your application that requires authorization.
+Resources can each have their own roles, or can inherit role & permission assignments from parent resources.
+For a good place to get started with more complex authorization logic, check out our guide on [getting started with roles](https://docs.osohq.com/learn/roles.html).
 
 ## Want to talk it through?
 

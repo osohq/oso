@@ -42,23 +42,33 @@ methods: Python methods
 register_classes: |
     ```python
     class Page:
-      content = "A readable page"
-    
+      def __init__(self, contents):
+          self.contents = contents
+
     class User:
-      role = "guest"
+        def __init__(self, role):
+            self.role = role
 
     oso.register_class(Page)
     ```
 
 app_code: |
     ```python
+    page = Page("a readable page")
     if oso.is_allowed(
         User(),  # the user doing the request
         "read",  # the action we want to do
-        Page(),  # the resource we want to do it to
+        page,  # the resource we want to do it to
     ):
-      print(page.content)
+        print(page.content)
     else:
-      raise Exception("Forbidden")
+        raise Exception("Forbidden")
+    ```
+
+assert_code: |
+    ```python
+    assert oso.is_allowed(User(role="guest"), "read", Page("readable page"))
+    assert not oso.is_allowed(User(role="guest", "write", Page("readable page"))
+    assert oso.is_allowed(User(role="admin", "write", Page("readable page"))
     ```
 ---
