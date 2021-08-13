@@ -21,9 +21,15 @@ pub enum Type {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub struct Loc {
+    result_id: Option<String>,
+    field: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum ConstraintValue {
     Term(Term),  // An actual value
-    Ref(String), // A reference to a different result.
+    Ref(Loc), // A reference to a different result.
 }
 
 // @TODO(steve): These are all constraints on a field. If we need to add constraints
@@ -40,8 +46,7 @@ pub enum ConstraintKind {
 pub struct Constraint {
     kind: ConstraintKind,
     field: String,
-    value: Option<ConstraintValue>,
-    other_field: Option<String>,
+    value: ConstraintValue,
 }
 
 // The list of constraints passed to a fetching function for a particular type.
@@ -83,15 +88,10 @@ impl FilterPlan {
                     };
                     let field = constraint.field.clone();
                     let value = match &constraint.value {
-                        Some(ConstraintValue::Term(t)) => t.to_polar(),
-                        None => format!("FIELD({})", constraint.other_field.as_ref().unwrap()),
-                        Some(ConstraintValue::Ref(r)) => {
-                            let mut s = "REF(".to_owned();
-                            if let Some(field) = &constraint.other_field.as_ref() {
-                                s.push_str(&format!("field {} of ", field));
-                            }
-                            s.push_str(&format!("result {})", r));
-                            s
+                        ConstraintValue::Term(t) => t.to_polar(),
+                        ConstraintValue::Ref(Loc { field, result_id }) => match result_id.as_ref() {
+                            None => format!("FIELD({})", field),
+                            Some(rid) => format!("REF({}.{})", rid, field),
                         }
                     };
                     eprintln!("          {} {} {}", field, op, value);
@@ -594,8 +594,10 @@ fn constrain_var(
                     request.constraints.push(Constraint {
                         kind: ConstraintKind::In,
                         field: my_field.clone(),
-                        other_field: Some(other_field.clone()),
-                        value: Some(ConstraintValue::Ref(child.to_string())),
+                        value: ConstraintValue::Ref(Loc {
+                            result_id: Some(child.to_string()),
+                            field: other_field.clone(),
+                        }),
                     });
                 } else {
                     // Remove the id from the resolve_order too.
@@ -614,8 +616,7 @@ fn constrain_var(
             request.constraints.push(Constraint {
                 kind: ConstraintKind::Eq,
                 field: field.clone(),
-                value: Some(ConstraintValue::Term(value.clone())),
-                other_field: None,
+                value: ConstraintValue::Term(value.clone()),
             });
             contributed_constraints = true;
         }
@@ -624,8 +625,7 @@ fn constrain_var(
                 request.constraints.push(Constraint {
                     kind: ConstraintKind::Contains,
                     field: field.clone(),
-                    value: Some(ConstraintValue::Term(value.clone())),
-                    other_field: None,
+                    value: ConstraintValue::Term(value.clone()),
                 });
             }
             contributed_constraints = true;
@@ -638,8 +638,10 @@ fn constrain_var(
             request.constraints.push(Constraint {
                 kind: ConstraintKind::Eq,
                 field: field.clone(),
-                value: None,
-                other_field: Some(eqf.1.clone()),
+                value: ConstraintValue::Ref(Loc {
+                    result_id: None,
+                    field: eqf.1.clone(),
+                }),
             });
             contributed_constraints = true;
         }
