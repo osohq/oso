@@ -2045,7 +2045,7 @@ mod test {
                     // (we reach the y > x constraint in the
                     // negation). Otherwise, the query suceeds because x = 1 fails
                     // and y > x is never reached.
-                    "y" => "_this <= 1 or _this < 3 or _this <= 5"
+                    "y" => "(_this <= 1 or _this < 3 or _this <= 5)"
                 );
                 Ok(())
             }],
