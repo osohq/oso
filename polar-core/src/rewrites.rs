@@ -166,6 +166,7 @@ impl<'kb> Folder for Rewriter<'kb> {
                         let mut arg = self.fold_term(arg);
                         let mut rewrites = self.stack.pop().unwrap();
                         // Decide whether to prepend, or append
+
                         // If the current operator is unify and rewrites are only
                         // dot operations we append the rewrites after the temporary variable.
                         // This ensures that grounding does not occur when performing dot

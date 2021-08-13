@@ -499,6 +499,7 @@ impl PolarVirtualMachine {
                     );
                 }
                 self.trace.push(trace.clone());
+                self.maybe_break(DebugEvent::Rule)?;
             }
             Goal::Unify { left, right } => self.unify(left, right)?,
             Goal::AddConstraint { term } => self.add_constraint(term)?,
@@ -1090,6 +1091,56 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
+    fn get_names(&self, s: &Symbol) -> HashSet<Symbol> {
+        let mut cycles: Vec<HashSet<Symbol>> = vec![];
+        self.binding_manager
+            .get_constraints(s)
+            .constraints()
+            .into_iter()
+            .for_each(|con| match con.operator {
+                Operator::Unify | Operator::Eq => {
+                    if let (Ok(l), Ok(r)) = (
+                        con.args[0].value().as_symbol(),
+                        con.args[1].value().as_symbol(),
+                    ) {
+                        let check = |cycles: &mut Vec<HashSet<Symbol>>, l: &Symbol, r: &Symbol| {
+                            cycles
+                                .iter_mut()
+                                .find(|c| c.contains(r))
+                                .map(|c| c.insert(l.clone()))
+                        };
+                        if check(&mut cycles, l, r)
+                            .or_else(|| check(&mut cycles, r, l))
+                            .is_none()
+                        {
+                            let mut new = HashSet::new();
+                            new.insert(r.clone());
+                            new.insert(l.clone());
+                            cycles.push(new);
+                        }
+                    }
+                }
+                _ => (),
+            });
+
+        let mut joined: Vec<HashSet<Symbol>> = vec![];
+        cycles.into_iter().for_each(|cycle| {
+            match joined.iter_mut().find(|c| !c.is_disjoint(&cycle)) {
+                Some(c) => c.extend(cycle.into_iter()),
+                None => joined.push(cycle),
+            }
+        });
+
+        joined
+            .into_iter()
+            .find(|c| c.contains(s))
+            .unwrap_or_else(|| {
+                let mut hs = HashSet::with_capacity(1);
+                hs.insert(s.clone());
+                hs
+            })
+    }
+
     fn isa_expr(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         match right.value() {
             Value::Pattern(Pattern::Dictionary(fields)) => {
@@ -1116,10 +1167,13 @@ impl PolarVirtualMachine {
                 // Get the existing partial on the LHS variable.
                 let partial = self.binding_manager.get_constraints(var);
 
-                let mut hs = HashSet::with_capacity(1);
-                hs.insert(var.clone());
+                let names = self.get_names(var);
+                let output = names.clone();
 
-                let (simplified, _) = simplify_partial(var, partial.into_term(), hs, false);
+                let partial = partial.into_term();
+                let (simplified, _) = simplify_partial(var, partial, output, false);
+
+                //                println!("isa/cc for {} matches {}, existing : {}", var, tag, simplified.to_polar());
                 let simplified = simplified.value().as_expression()?;
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
@@ -1149,9 +1203,11 @@ impl PolarVirtualMachine {
                 let type_constraint = op!(Isa, left.clone(), tag_pattern);
 
                 let new_matches = op!(Isa, lhs_of_matches, right.clone());
+
                 let runnable = Box::new(IsaConstraintCheck::new(
                     simplified.constraints(),
                     new_matches,
+                    names,
                 ));
 
                 // Construct field constraints.
