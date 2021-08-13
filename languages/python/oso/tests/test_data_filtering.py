@@ -271,7 +271,6 @@ def test_field_cmp_field(oso, t):
     check_authz(oso, "gwen", "eat", t["Bar"], expected)
 
 
-@pytest.mark.xfail(reason="not supported yet")
 def test_field_cmp_rel_field(oso, t):
     policy = "allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;"
     oso.load_str(policy)

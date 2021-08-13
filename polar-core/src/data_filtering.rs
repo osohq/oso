@@ -28,8 +28,8 @@ pub struct Loc {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum ConstraintValue {
-    Term(Term),  // An actual value
-    Ref(Loc), // A reference to a different result.
+    Term(Term), // An actual value
+    Ref(Loc),   // A reference to a different result.
 }
 
 // @TODO(steve): These are all constraints on a field. If we need to add constraints
@@ -89,9 +89,11 @@ impl FilterPlan {
                     let field = constraint.field.clone();
                     let value = match &constraint.value {
                         ConstraintValue::Term(t) => t.to_polar(),
-                        ConstraintValue::Ref(Loc { field, result_id }) => match result_id.as_ref() {
-                            None => format!("FIELD({})", field),
-                            Some(rid) => format!("REF({}.{})", rid, field),
+                        ConstraintValue::Ref(Loc { field, result_id }) => {
+                            match result_id.as_ref() {
+                                None => format!("FIELD({})", field),
+                                Some(rid) => format!("REF({}.{})", rid, field),
+                            }
                         }
                     };
                     eprintln!("          {} {} {}", field, op, value);
@@ -679,7 +681,7 @@ fn constrain_var(
 fn idx<T: PartialEq>(vec: &Vec<T>, item: &T) -> Option<usize> {
     for (i, x) in vec.iter().enumerate() {
         if item == x {
-            return Some(i)
+            return Some(i);
         }
     }
     None
@@ -716,12 +718,25 @@ pub fn opt_pass(filter_plan: &mut FilterPlan, explain: bool) -> bool {
             let rq = &mut rset.requests;
             let (id, mut req) = rq.remove_entry(id).unwrap();
             req.constraints.retain(|con| match &con.value {
-                ConstraintValue::Ref(Loc { result_id: Some(rid), field }) =>
-                    match idx(ro, &rid) {
-                        Some(j) if j > i && compl_con(&rq.get(rid).unwrap().constraints, &id, &con.field, &field) => false,
-                        _ => true,
-                    },
-                _ => true
+                ConstraintValue::Ref(Loc {
+                    result_id: Some(rid),
+                    field,
+                }) => match idx(ro, &rid) {
+                    Some(j)
+                        if j > i
+                            && compl_con(
+                                &rq.get(rid).unwrap().constraints,
+                                &id,
+                                &con.field,
+                                &field,
+                            ) =>
+                    {
+                        optimized = true;
+                        false
+                    }
+                    _ => true,
+                },
+                _ => true,
             });
             rset.requests.insert(id, req);
         }
