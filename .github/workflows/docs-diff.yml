@@ -200,9 +200,9 @@ jobs:
         id: diff
         run: set -o pipefail && diff -q --recursive base head | tee diff.txt
         continue-on-error: true
-      - id: get-comment-body
+      - id: Print docs changes
         run: |
-          body=$(cat <<EOF
+          cat <<EOF
             This PR contains docs changes.
 
             Add the "Docs" label to the PR if you expected this. Otherwise,
@@ -211,20 +211,6 @@ jobs:
             Diff:
 
           EOF
-          )
-          body=$(cat <(echo $body) diff.txt)
-          body="${body//'%'/'%25'}"
-          body="${body//$'\n'/'%0A'}"
-          body="${body//$'\r'/'%0D'}"
-          echo "::set-output name=body::$body"
-        if: ${{ steps.diff.outcome == 'failure' }}
-      - name: Comment
-        uses: peter-evans/create-or-update-comment@v1
-        with:
-          comment-id: ${{ steps.comment-bot-check.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: ${{ steps.get-comment-body.outputs.body }}
-          edit-mode: replace
         if: ${{ steps.diff.outcome == 'failure' }}
   # Job that succeeds or fails depending upon the entire workflow.
   # Used as a required check.
