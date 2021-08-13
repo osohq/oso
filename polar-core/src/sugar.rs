@@ -7,7 +7,10 @@ use super::parser::ResourceNamespace;
 use super::rules::*;
 use super::terms::*;
 
-#[derive(Clone)]
+// TODO(gj): disallow same string to be declared as a perm/role and a relation.
+// This'll come into play for "owner"-style actor relationships.
+
+#[derive(Clone, Debug)]
 pub enum Declaration {
     Role,
     Permission,
@@ -15,34 +18,37 @@ pub enum Declaration {
 }
 
 fn transform_declarations(
-    roles: Option<Vec<Term>>,
-    permissions: Option<Vec<Term>>,
-    relations: Option<Vec<(Term, Term)>>,
+    roles: Option<Term>,
+    permissions: Option<Term>,
+    relations: Option<Term>,
 ) -> HashMap<Term, Declaration> {
-    // Fold Vec<role> => HashMap<role, Declaration>
+    // Fold List<role> => HashMap<role, Declaration>
     let declarations = roles
         .into_iter()
-        .flatten()
+        .flat_map(|inner| inner.value().as_list().unwrap().clone())
         .fold(HashMap::new(), |mut acc, role| {
             acc.insert(role, Declaration::Role);
             acc
         });
 
-    // Fold Vec<permission> => HashMap<permission_or_role, Declaration>
-    let declarations =
-        permissions
-            .into_iter()
-            .flatten()
-            .fold(declarations, |mut acc, permission| {
-                acc.insert(permission, Declaration::Permission);
-                acc
-            });
+    // Fold List<permission> => HashMap<permission_or_role, Declaration>
+    let declarations = permissions
+        .into_iter()
+        .flat_map(|inner| inner.value().as_list().unwrap().clone())
+        .fold(declarations, |mut acc, permission| {
+            acc.insert(permission, Declaration::Permission);
+            acc
+        });
 
+    // Fold Dict<relation, resource> => HashMap<permission_or_role_or_relation, Declaration>
     relations
         .into_iter()
-        .flatten()
+        .flat_map(|inner| inner.value().as_dict().unwrap().fields.clone())
         .fold(declarations, |mut acc, (relation, resource)| {
-            acc.insert(relation, Declaration::Relation(resource));
+            acc.insert(
+                resource.clone_with_value(value!(relation.0.as_str())),
+                Declaration::Relation(resource),
+            );
             acc
         })
 }
@@ -57,10 +63,8 @@ fn rewrite_implication(
         let resource_name = &resource.value().as_symbol().unwrap().0;
         let implier_resource = implier.clone_with_value(value!(sym!(resource_name.to_lowercase())));
         let implier_actor = implier.clone_with_value(value!(sym!("actor")));
-        eprintln!("RELATION: {}", relation.to_polar());
         let related_resource = &namespaces[&resource][&relation];
         let (implier_predicate, xxx) = if let Declaration::Relation(relation) = related_resource {
-            eprintln!("RELATION2: {}", relation.to_polar());
             match namespaces[relation][&implier] {
                 Declaration::Role => (sym!("role"), relation),
                 Declaration::Permission => (sym!("permission"), relation),
@@ -208,8 +212,8 @@ mod tests {
 
     #[test]
     fn test_resource_namespace_local_rewrite_implications() {
-        let roles = vec![term!("owner"), term!("member")];
-        let permissions = vec![term!("invite"), term!("create_repo")];
+        let roles = term!(["owner", "member"]);
+        let permissions = term!(["invite", "create_repo"]);
         let declarations = transform_declarations(Some(roles), Some(permissions), None);
         let mut namespaces = HashMap::new();
         namespaces.insert(term!(sym!("Org")), declarations);
@@ -246,11 +250,11 @@ mod tests {
 
     #[test]
     fn test_resource_namespace_nonlocal_rewrite_implications() {
-        let repo_roles = vec![term!("reader")];
-        let repo_relations = vec![(term!("parent"), term!(sym!("Org")))];
+        let repo_roles = term!(["reader"]);
+        let repo_relations = term!(btreemap! { sym!("parent") => term!(sym!("Org")) });
         let repo_declarations =
             transform_declarations(Some(repo_roles), None, Some(repo_relations));
-        let org_roles = vec![term!("member")];
+        let org_roles = term!(["member"]);
         let org_declarations = transform_declarations(Some(org_roles), None, None);
         let mut namespaces = HashMap::new();
         namespaces.insert(term!(sym!("Repo")), repo_declarations);

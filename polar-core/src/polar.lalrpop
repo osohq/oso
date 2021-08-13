@@ -66,6 +66,7 @@ extern {
 
         "permissions" => lexer::Token::Permissions, // permissions
         "roles" => lexer::Token::Roles,             // roles
+        "relations" => lexer::Token::Relations,     // relations
         "on" => lexer::Token::On,                   // on
     }
 }
@@ -536,6 +537,10 @@ List<T>: Value = {
     }
 }
 
+NonVariableList<T>: Value = {
+    "[" "]" => Value::List(vec![]),
+    "[" <ListTerms<T>> "]" => Value::List(<>),
+}
 
 Pattern: Value = {
     <Number>,
@@ -643,34 +648,9 @@ Rule: Rule = {
 
 pub(crate) Rules: Vec<Rule> = <Rule*>;
 
-// Non-empty string list allowing trailing commas.
-StringList: Vec<Term> = {
-    <string:Spanned<PolarString>> => vec![string],
-    <mut list:StringList> "," <string:Spanned<PolarString>?> => {
-        if let Some(s) = string {
-            list.push(s);
-        }
-        list
-    },
-};
-
-Roles: Vec<Term> = {
-    <loc:@L> "roles" "=" "[" "]" ";" =>? Err(ParseError::User {
-        error: error::ParseError::IntegerOverflow { loc, token: "must declare at least one role".to_owned() }
-    }),
-
-    "roles" "=" "[" <roles:StringList> "]" ";" => roles,
-};
-
-Permissions: Vec<Term> = {
-    <loc:@L> "permissions" "=" "[" "]" ";" =>? Err(ParseError::User {
-        error: error::ParseError::IntegerOverflow { loc, token: "must declare at least one permission".to_owned() }
-    }),
-
-    "permissions" "=" "[" <permissions:StringList> "]" ";" => permissions,
-};
-
-ResourceRelation: (Term, Term) = <relation:Spanned<PolarString>> ":" <resource:Spanned<Variable>> ";" => (relation, resource);
+Roles: Value = "roles" "=" "[" <NonVariableList<"String">> "]" ";" => <>;
+Permissions: Value = "permissions" "=" "[" <NonVariableList<"String">> "]" ";" => <>;
+Relations: Value = "relations" "=" <Object<Spanned<Variable>>> ";" => Value::Dictionary(<>);
 
 OnRelation: Term = "on" <relation:Spanned<PolarString>> => relation;
 
@@ -688,75 +668,75 @@ NonEmptyList<T>: Vec<T> = {
 
 Implications = NonEmptyList<Implication>;
 
-ResourceRelations = NonEmptyList<ResourceRelation>;
+// optionally have any combination of {perm, role, relation} in LALRPOP & then
+// validate that we have the correct combinations (e.g., can't have permissions
+// w/ no implications) in Rust
 
-Declarations: (Option<Vec<Term>>, Option<Vec<Term>>, Option<Vec<(Term, Term)>>) = {
-    <relations:ResourceRelations?> <roles:Roles> <permissions:Permissions> => (Some(roles), Some(permissions), relations),
-    <relations:ResourceRelations?> <permissions:Permissions> => (None, Some(permissions), relations),
-    <relations:ResourceRelations?> <roles:Roles> => (Some(roles), None, relations),
+Declarations: (Option<Term>, Option<Term>, Option<Term>) = {
+    <roles:Spanned<Roles>?> <permissions:Spanned<Permissions>?> <relations:Spanned<Relations>?> => (roles, permissions, relations),
 };
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
 
-    <loc:@L> <resource:Name> "{" "}" =>? Err(ParseError::User {
-        error: error::ParseError::IntegerOverflow { loc, token: format!("{}: must declare roles and/or permissions", resource) }
-    }),
+    // <loc:@L> <resource:Name> "{" "}" =>? Err(ParseError::User {
+    //     error: error::ParseError::IntegerOverflow { loc, token: format!("{}: must declare roles and/or permissions", resource) }
+    // }),
 
-    <loc:@L> <resource:Name> "{" Implications "}" =>? Err(ParseError::User {
-        error: error::ParseError::IntegerOverflow { loc, token: format!("{}: cannot declare implications without roles and/or permissions", resource) }
-    }),
+    // <loc:@L> <resource:Name> "{" Implications "}" =>? Err(ParseError::User {
+    //     error: error::ParseError::IntegerOverflow { loc, token: format!("{}: cannot declare implications without roles and/or permissions", resource) }
+    // }),
 
     // <loc:@L> <resource:Name> "{" Implications Declarations "}" =>? Err(ParseError::User {
     //     error: error::ParseError::IntegerOverflow { loc, token: format!("{}: move declarations (roles and permissions) above implications", resource) }
     // }),
 
-    // TODO(gj): collect errors & surface all instead of bombing out after the
-    // first one. This will be a much better experience once we get dev tooling
-    // set up.
-    <loc:@L> <resource:Name> "{" <permissions:Permissions> "}" =>? Err(ParseError::User {
-        error: error::ParseError::IntegerOverflow { loc, token: format!("{}: declared {} permission must be involved in at least one implication", resource, permissions[0].to_polar()) }
-    }),
+    // // TODO(gj): collect errors & surface all instead of bombing out after the
+    // // first one. This will be a much better experience once we get dev tooling
+    // // set up.
+    // <loc:@L> <resource:Name> "{" <permissions:Permissions> "}" =>? Err(ParseError::User {
+    //     error: error::ParseError::IntegerOverflow { loc, token: format!("{}: declared {} permission must be involved in at least one implication", resource, permissions[0].to_polar()) }
+    // }),
 
-    // roles with no permissions or implications
-    <start:@L> <resource:Variable> "{" <roles:Roles> "}" <end:@R> => Line::ResourceNamespace(ResourceNamespace {
-        resource: Term::new_from_parser(src_id, start, end, resource),
-        roles: Some(roles),
-        permissions: None,
-        relations: None,
-        implications: None
-    }),
+    // // roles with no permissions or implications
+    // <start:@L> <resource:Variable> "{" <roles:Roles> "}" <end:@R> => Line::ResourceNamespace(ResourceNamespace {
+    //     resource: Term::new_from_parser(src_id, start, end, resource),
+    //     roles: Some(roles),
+    //     permissions: None,
+    //     relations: None,
+    //     implications: None
+    // }),
 
     // roles and/or permissions with implications
-    <start:@L> <resource:Variable> "{" <declarations:Declarations> <implications:Implications> "}" <end:@R> =>? {
+    <start:@L> <resource:Variable> "{" <declarations:Declarations> <implications:Implications?> "}" <end:@R> =>? {
         let (roles, permissions, relations) = declarations;
 
-        // Make sure all declared permissions are referenced in at least one implication.
-        // TODO(gj): could do this more performantly, but doesn't really matter
-        if let Some(ref permissions) = permissions {
-            for permission in permissions.iter() {
-                // TODO(gj): account for identically named permissions on
-                // related resources; not okay if the only reference of a
-                // locally declared permission is in an `on "relation"`-qualified
-                // implier.
-                if implications.iter().all(|(implied, implier, _)| permission != implied && permission != implier) {
-                    return Err(ParseError::User {
-                        error: error::ParseError::IntegerOverflow { loc: start, token: format!("{}: declared {} permission must be involved in at least one implication", resource.to_polar(), permission.to_polar()) }
-                    });
-                }
-            }
-        }
+        // // Make sure all declared permissions are referenced in at least one implication.
+        // // TODO(gj): could do this more performantly, but doesn't really matter
+        // if let Some(ref permissions) = permissions {
+        //     for permission in permissions.iter() {
+        //         // TODO(gj): account for identically named permissions on
+        //         // related resources; not okay if the only reference of a
+        //         // locally declared permission is in an `on "relation"`-qualified
+        //         // implier.
+        //         if implications.iter().all(|(implied, implier, _)| permission != implied && permission != implier) {
+        //             return Err(ParseError::User {
+        //                 error: error::ParseError::IntegerOverflow { loc: start, token: format!("{}: declared {} permission must be involved in at least one implication", resource.to_polar(), permission.to_polar()) }
+        //             });
+        //         }
+        //     }
+        // }
 
-        // TODO(gj): levenshtein-y suggestions
-        // Make sure all implied roles & permissions are declared locally.
-        for (ref implied, _, _) in implications.iter() {
-            if roles.iter().chain(permissions.iter()).flatten().all(|declaration| declaration != implied) {
-                return Err(ParseError::User {
-                    error: error::ParseError::IntegerOverflow { loc: start, token: format!("{}: implied term {} must be declared as a permission or role", resource.to_polar(), implied.to_polar()) }
-                });
-            }
-        }
+        // // TODO(gj): levenshtein-y suggestions
+        // // Make sure all implied roles & permissions are declared locally.
+        // for (ref implied, _, _) in implications.iter() {
+        //     if roles.iter().chain(permissions.iter()).flatten().all(|declaration| declaration != implied) {
+        //         return Err(ParseError::User {
+        //             error: error::ParseError::IntegerOverflow { loc: start, token: format!("{}: implied term {} must be declared as a permission or role", resource.to_polar(), implied.to_polar()) }
+        //         });
+        //     }
+        // }
 
         // // Make sure all local implier roles & permissions are declared locally.
         // for (_, ref implier, relation) in implications.iter() {
@@ -772,7 +752,7 @@ Line: Line = {
             roles,
             permissions,
             relations,
-            implications: Some(implications)
+            implications,
         }))
     }
 }

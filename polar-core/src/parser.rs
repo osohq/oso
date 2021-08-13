@@ -22,9 +22,9 @@ use super::terms::*;
 pub struct ResourceNamespace {
     pub resource: Term,
     // TODO(gj): maybe HashSet instead of Vec so we can easily catch duplicates?
-    pub roles: Option<Vec<Term>>,
-    pub permissions: Option<Vec<Term>>,
-    pub relations: Option<Vec<(Term, Term)>>,
+    pub roles: Option<Term>,
+    pub permissions: Option<Term>,
+    pub relations: Option<Term>,
     pub implications: Option<Vec<(Term, Term, Option<Term>)>>,
 }
 
@@ -319,7 +319,7 @@ mod tests {
             parse_lines(r#"Org{roles=["owner",];}"#)[0],
             Line::ResourceNamespace(ResourceNamespace {
                 resource: term!(sym!("Org")),
-                roles: Some(vec![term!("owner")]),
+                roles: Some(term!(["owner"])),
                 permissions: None,
                 relations: None,
                 implications: None,
@@ -329,7 +329,7 @@ mod tests {
             parse_lines(r#"Org{roles=["owner","member",];}"#)[0],
             Line::ResourceNamespace(ResourceNamespace {
                 resource: term!(sym!("Org")),
-                roles: Some(vec![term!("owner"), term!("member")]),
+                roles: Some(term!(["owner", "member"])),
                 permissions: None,
                 relations: None,
                 implications: None,
@@ -393,7 +393,7 @@ mod tests {
             )[0],
             Line::ResourceNamespace(ResourceNamespace {
                 resource: term!(sym!("Org")),
-                roles: Some(vec![term!("owner"), term!("member")]),
+                roles: Some(term!(["owner", "member"])),
                 permissions: None,
                 relations: None,
                 implications: Some(vec![(term!("member"), term!("owner"), None)]),

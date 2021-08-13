@@ -193,6 +193,26 @@ impl Value {
         }
     }
 
+    pub fn as_list(&self) -> Result<&TermList, error::RuntimeError> {
+        match self {
+            Value::List(l) => Ok(l),
+            _ => Err(error::RuntimeError::TypeError {
+                msg: format!("Expected list, got: {}", self.to_polar()),
+                stack_trace: None, // @TODO
+            }),
+        }
+    }
+
+    pub fn as_dict(&self) -> Result<&Dictionary, error::RuntimeError> {
+        match self {
+            Value::Dictionary(d) => Ok(d),
+            _ => Err(error::RuntimeError::TypeError {
+                msg: format!("Expected dictionary, got: {}", self.to_polar()),
+                stack_trace: None, // @TODO
+            }),
+        }
+    }
+
     pub fn is_ground(&self) -> bool {
         match self {
             Value::Call(_)

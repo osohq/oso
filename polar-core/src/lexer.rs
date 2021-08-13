@@ -92,6 +92,7 @@ pub enum Token {
 
     Permissions, // permissions
     Roles,       // roles
+    Relations,   // relations
     On,          // on
 }
 
@@ -146,6 +147,7 @@ impl ToString for Token {
             // TODO(gj): should be `role` and `permission` (singular)
             Token::Permissions => "permissions".to_owned(), // permissions
             Token::Roles => "roles".to_owned(),             // roles
+            Token::Relations => "relations".to_owned(),     // relations
             Token::On => "on".to_owned(),                   // on
         }
     }
@@ -262,6 +264,8 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Permissions, last + 1)))
         } else if &self.buf == "roles" {
             Some(Ok((start, Token::Roles, last + 1)))
+        } else if &self.buf == "relations" {
+            Some(Ok((start, Token::Relations, last + 1)))
         } else if &self.buf == "on" {
             Some(Ok((start, Token::On, last + 1)))
         } else {
