@@ -45,14 +45,14 @@ def serialize_types(types, class_names):
 
 @dataclass
 class Ref:
-    result_id: str
+    result_id: Optional[str]
+    field: str
 
 
 @dataclass
 class Constraint:
     kind: str  # ["Eq", "In", "Contains"]
     field: str
-    other_field: Optional[str]
     value: Any
 
     def to_predicate(self):
@@ -60,17 +60,12 @@ class Constraint:
             return self.value
 
         def field_value(x):
-            return getattr(x, self.other_field)
+            return getattr(x, self.value.field)
 
-        def rel_value(x):
-            return [getattr(y, self.other_field) for y in self.value]
-
-        if self.value is None:
+        if isinstance(self.value, Ref):
             get_value = field_value
-        elif self.other_field is None:
-            get_value = known_value
         else:
-            get_value = rel_value
+            get_value = known_value
 
         if self.kind == "Eq":
             return lambda x: getattr(x, self.field) == get_value(x)
@@ -86,7 +81,6 @@ def parse_constraint(polar, constraint):
     assert kind in ["Eq", "In", "Contains"]
     field = constraint["field"]
     value = constraint["value"]
-    other_field = constraint["other_field"]
 
     if value is not None:
         value_kind = next(iter(value))
@@ -95,22 +89,18 @@ def parse_constraint(polar, constraint):
         if value_kind == "Term":
             value = polar.host.to_python(value)
         elif value_kind == "Ref":
-            value = Ref(result_id=value)
+            value = Ref(result_id=value['result_id'], field=value['field'])
         else:
             assert False, "Unknown value kind"
 
-    return Constraint(kind=kind, field=field, value=value, other_field=other_field)
+    return Constraint(kind=kind, field=field, value=value)
 
 
 def ground_constraints(polar, results, filter_plan, constraints):
     for constraint in constraints:
-        if isinstance(constraint.value, Ref):
+        if isinstance(constraint.value, Ref) and constraint.value.result_id is not None:
             ref = constraint.value
-            constraint.value = results[ref.result_id]
-
-
-#            if constraint.other_field is not None:
-#                constraint.value = [getattr(v, constraint.other_field) for v in constraint.value]
+            constraint.value = [getattr(result, ref.field) for result in results[ref.result_id]]
 
 
 # @NOTE(Steve): This is just operating on the json. Could still have a step to parse this into a python data structure

@@ -113,7 +113,6 @@ class Query:
                                 kind="Eq",
                                 field=rel.other_field,
                                 value=getattr(instance, rel.my_field),
-                                other_field=None,
                             )
                             constraints = [constraint]
                             results = fetcher(constraints)
