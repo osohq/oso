@@ -8,6 +8,17 @@ description: >-
 draft: true
 ---
 
+## `oso` NEW_VERSION
+
+### Go
+
+#### New Features
+
+##### Roles in Go
+
+The Go library you has [built-in support for Role-Based Access Control (RBAC) policies](/guides/roles),
+which you can turn on with `.EnableRoles()`.
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
