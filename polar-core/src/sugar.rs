@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use super::error::{ParseError, PolarResult};
 use super::kb::KnowledgeBase;
-use super::parser::ResourceNamespace;
+use super::parser::Namespace;
 use super::rules::*;
 use super::terms::*;
 
@@ -140,8 +140,8 @@ fn rewrite_implication(
 }
 
 impl KnowledgeBase {
-    pub fn add_resource_namespace(&mut self, namespace: ResourceNamespace) -> PolarResult<()> {
-        let ResourceNamespace {
+    pub fn add_namespace(&mut self, namespace: Namespace) -> PolarResult<()> {
+        let Namespace {
             resource,
             roles,
             permissions,
@@ -163,8 +163,8 @@ impl KnowledgeBase {
             .into());
         }
 
-        // Check for duplicate resource namespace definitions.
-        if self.resource_namespaces.contains_key(&resource) {
+        // Check for duplicate namespace definitions.
+        if self.namespaces.contains_key(&resource) {
             return Err(ParseError::IntegerOverflow {
                 loc: resource.offset(),
                 // TODO(gj): better error message, e.g.:
@@ -176,8 +176,7 @@ impl KnowledgeBase {
         }
 
         let declarations = transform_declarations(roles, permissions, relations);
-        self.resource_namespaces
-            .insert(resource.clone(), declarations);
+        self.namespaces.insert(resource.clone(), declarations);
 
         // TODO(gj): what to do for `on "parent_org"` if Org{} namespace hasn't
         // been processed yet? Whether w/ multiple load_file calls or some future
@@ -189,11 +188,8 @@ impl KnowledgeBase {
 
         if let Some(implications) = implications {
             for implication in implications {
-                let rule = rewrite_implication(
-                    implication,
-                    resource.clone(),
-                    self.resource_namespaces.clone(),
-                );
+                let rule =
+                    rewrite_implication(implication, resource.clone(), self.namespaces.clone());
                 let generic_rule = self
                     .rules
                     .entry(rule.name.clone())
@@ -211,7 +207,7 @@ mod tests {
     use crate::formatting::ToPolarString;
 
     #[test]
-    fn test_resource_namespace_local_rewrite_implications() {
+    fn test_namespace_local_rewrite_implications() {
         let roles = term!(["owner", "member"]);
         let permissions = term!(["invite", "create_repo"]);
         let declarations = transform_declarations(Some(roles), Some(permissions), None);
@@ -249,7 +245,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_namespace_nonlocal_rewrite_implications() {
+    fn test_namespace_nonlocal_rewrite_implications() {
         let repo_roles = term!(["reader"]);
         let repo_relations = term!(btreemap! { sym!("parent") => term!(sym!("Org")) });
         let repo_declarations =

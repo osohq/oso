@@ -29,8 +29,8 @@ pub struct KnowledgeBase {
     id_counter: Counter,
     pub inline_queries: Vec<Term>,
 
-    /// Resource Namespace Bookkeeping
-    pub resource_namespaces: HashMap<Term, HashMap<Term, Declaration>>,
+    /// Namespace Bookkeeping
+    pub namespaces: HashMap<Term, HashMap<Term, Declaration>>,
 }
 
 impl KnowledgeBase {
@@ -44,7 +44,7 @@ impl KnowledgeBase {
             id_counter: Counter::default(),
             gensym_counter: Counter::default(),
             inline_queries: vec![],
-            resource_namespaces: HashMap::new(),
+            namespaces: HashMap::new(),
         }
     }
 

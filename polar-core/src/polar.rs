@@ -194,8 +194,8 @@ impl Polar {
                     parser::Line::Query(term) => {
                         kb.inline_queries.push(term);
                     }
-                    parser::Line::ResourceNamespace(namespace) => {
-                        kb.add_resource_namespace(namespace)?;
+                    parser::Line::Namespace(namespace) => {
+                        kb.add_namespace(namespace)?;
                     }
                 }
             }
@@ -357,7 +357,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_namespace_must_be_registered() {
+    fn test_namespace_must_be_registered() {
         let p = Polar::new();
         let valid_policy = r#"Org{roles=["owner"];}"#;
         assert!(matches!(
@@ -375,7 +375,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_namespace_duplicate_namespaces() {
+    fn test_namespace_duplicate_namespaces() {
         let p = Polar::new();
         let invalid_policy = r#"
             Org { roles=["owner"]; }

@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::collections::BTreeMap;
 
 use crate::lexer::{self, Token};
-use crate::parser::{Line, ResourceNamespace};
+use crate::parser::{Line, Namespace};
 use crate::error;
 use crate::terms::*;
 use crate::rules::*;
@@ -700,7 +700,7 @@ Line: Line = {
     // }),
 
     // // roles with no permissions or implications
-    // <start:@L> <resource:Variable> "{" <roles:Roles> "}" <end:@R> => Line::ResourceNamespace(ResourceNamespace {
+    // <start:@L> <resource:Variable> "{" <roles:Roles> "}" <end:@R> => Line::Namespace(Namespace {
     //     resource: Term::new_from_parser(src_id, start, end, resource),
     //     roles: Some(roles),
     //     permissions: None,
@@ -747,7 +747,7 @@ Line: Line = {
         //     }
         // }
 
-        Ok(Line::ResourceNamespace(ResourceNamespace {
+        Ok(Line::Namespace(Namespace {
             resource: Term::new_from_parser(src_id, start, end, resource),
             roles,
             permissions,
