@@ -69,7 +69,8 @@ fmt.jar:
 
 fmt-java: fmt.jar
 	$(eval FILES := $(shell git ls-files '*.java'))
-	java -jar fmt.jar --replace $(FILES)
+	$(eval OPENS := $(shell echo "--add-opens jdk.compiler/com.sun.tools.javac."{api,tree,file,util,parser}"=ALL-UNNAMED"))
+	java $(OPENS) -jar fmt.jar --replace $(FILES)
 
 fmt-rust:
 	cargo fmt

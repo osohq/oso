@@ -8,37 +8,6 @@ description: >-
 draft: true
 ---
 
-## `RELEASED_PACKAGE_1` NEW_VERSION
-
-### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
-
-#### Breaking changes
-
-<!-- TODO: remove warning and replace with "None" if no breaking changes. -->
-
-{{% callout "Warning" "orange" %}}
-  This release contains breaking changes. Be sure to follow migration steps
-  before upgrading.
-{{% /callout %}}
-
-##### Breaking change 1
-
-Summary of breaking change.
-
-Link to [migration guide]().
-
-##### Feature 1
-
-Summary of user-facing changes.
-
-Link to [relevant documentation section]().
-
-#### Other bugs & improvements
-
-- Bulleted list
-- Of smaller improvements
-- Potentially with doc [links]().
-
 ## `oso` NEW_VERSION
 
 ### Core
@@ -64,47 +33,35 @@ becomes
 foo(a, b, c) if a and (b or c);
 ```
 
-#### Other bugs & improvements
+## `RELEASED_PACKAGE_1` NEW_VERSION
 
-- Native types (`Integer`, `String`, `Dictionary`, etc.) and
-  equivalent host objects created with the `new` operator can now
-  be unified transparently.
-- The debugger can now break on runtime errors.
-- The `var` command  in the debugger now automatically maps variable
-  names to their temporary bindings.
-- The VM can now represent circular data without crashing.
-- The `in` operator now correctly handles rest variables.
+### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
-### Ruby
+#### Breaking changes
 
-#### Other bugs & improvements
+<!-- TODO: remove warning and replace with "None" if no breaking changes. -->
 
-- Comparison operations on Ruby objects are now fully supported.
+{{% callout "Warning" "orange" %}}
+  This release contains breaking changes. Be sure to follow migration steps
+  before upgrading.
+{{% /callout %}}
 
-### Rust
+##### Breaking change 1
+
+Summary of breaking change.
+
+Link to [migration guide]().
 
 #### New features
 
-##### Roles in Rust
+##### Feature 1
 
-The Rust library now has
-[built-in support for Role-Based Access Control (RBAC) policies](/guides/roles),
-which you can turn on with `.enable_roles()`.
+Summary of user-facing changes.
 
-### Python
+Link to [relevant documentation section]().
 
 #### Other bugs & improvements
 
-- The python library will no longer call `repr` on every object passed into a
-  query. Instead, instances will be stringified only when needed (during a log,
-  debug, or error event).
-  - This leads to a performance improvement when you have instances with heavy
-    `repr` calls (e.g. when `repr` requires a round-trip to the database).
-
-## `flask-oso` NEW_VERSION
-
-### Other bugs & improvements
-
-- Thanks to [`@arusahni`](https://github.com/arusahni) for surfacing and
-  documenting a potential gotcha when using `flask-oso` with other Flask
-  libraries that rely on `LocalProxy` objects.
+- Bulleted list
+- Of smaller improvements
+- Potentially with doc [links]().

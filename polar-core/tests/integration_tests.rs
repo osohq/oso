@@ -1540,6 +1540,21 @@ fn test_unknown_specializer_suggestions() -> TestResult {
 }
 
 #[test]
+fn test_partial_grounding() -> TestResult {
+    let rules = r#"
+        f(x, n) if n > 0 and x.n = n;
+        g(x, n) if x.n = n and n > 0;"#;
+    let mut p = Polar::new();
+    p.load_str(rules)?;
+
+    qvar(&mut p, "f({n:1},x)", "x", vec![value!(1)]);
+    qvar(&mut p, "g({n:1},x)", "x", vec![value!(1)]);
+    qnull(&mut p, "f({n:1},x) and x = 2");
+    qnull(&mut p, "g({n:1},x) and x = 2");
+    Ok(())
+}
+
+#[test]
 fn test_rest_vars() -> TestResult {
     let mut p = Polar::new();
     qvar(&mut p, "[1,2,3] = [*rest]", "rest", vec![value!([1, 2, 3])]);
@@ -1574,12 +1589,8 @@ fn test_rest_vars() -> TestResult {
     );
 
     let a = &var(&mut p, "[*_] in [*a] and [*b] in [*_] and b = 1", "a")[0];
-    assert!(matches!(a,
-        Value::Expression(Operation { operator: Operator::And , args }) if args.len() == 1
-            && matches!(args[0].value(),
-                Value::Expression(Operation { operator: Operator::In, args }) if args.len() == 2
-                    && matches!(args[0].value(), Value::List(l) if l.len() == 1 && matches!(l[0].value(), Value::RestVariable(_)))
-                    && matches!(args[1].value(), Value::Variable(Symbol(this)) if this as &str == "_this")))); // wow ...
+    // check that a isn't bound to [b]
+    assert!(!matches!(a, Value::List(b) if matches!(b[0].value(), Value::Number(_))));
     Ok(())
 }
 
@@ -1642,6 +1653,12 @@ fn test_in_op() -> TestResult {
     qeval(&mut p, "not 1 in []");
     qeval(&mut p, "not \"foo\" in []");
     qeval(&mut p, "not [] in []");
+
+    // test on rest variables
+    qeval(
+        &mut p,
+        "a = [1, *b] and b = [2, *c] and c = [3] and 1 in a and 2 in a and 3 in a",
+    );
     Ok(())
 }
 

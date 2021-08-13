@@ -1,6 +1,5 @@
 //! Communicate with the Polar virtual machine: load rules, make queries, etc/
-
-use polar_core::roles_validation::ResultEvent;
+use polar_core::events::ResultEvent;
 use polar_core::terms::{Call, Symbol, Term, Value};
 
 use std::collections::HashSet;
