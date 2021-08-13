@@ -1,42 +1,35 @@
 ---
-title: Release YYYY-MM-DD
-menuTitle: YYYY-MM-DD
+title: Release 2021-08-13
+menuTitle: 2021-08-13
 any: true
 description: >-
-  Changelog for Release YYYY-MM-DD (RELEASED_VERSIONS) containing new features,
+  Changelog for Release 2021-08-13 (sqlalchemy-oso 0.11.0, django-oso 0.11.0, oso 0.15.0) containing new features,
   bug fixes, and more.
-draft: true
+draft: false
 ---
 
-## `RELEASED_PACKAGE_1` NEW_VERSION
+## `oso` 0.15.0
 
-### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
+### Core
 
 #### Breaking changes
-
-<!-- TODO: remove warning and replace with "None" if no breaking changes. -->
 
 {{% callout "Warning" "orange" %}}
   This release contains breaking changes. Be sure to follow migration steps
   before upgrading.
 {{% /callout %}}
 
-##### Breaking change 1
+- Changes to the query format affect the Django and Sqlalchemy integrations. If
+  you use either of those packages, be sure to update them as well.
 
-Summary of breaking change.
-
-Link to [migration guide]().
-
-#### New features
-
-##### Feature 1
-
-Summary of user-facing changes.
-
-Link to [relevant documentation section]().
+## `django-oso` 0.11.0
 
 #### Other bugs & improvements
 
-- Bulleted list
-- Of smaller improvements
-- Potentially with doc [links]().
+- Minor updates to maintain compatibility with the core.
+
+## `sqlalchemy-oso` 0.11.0
+
+#### Other bugs & improvements
+
+- Minor updates to maintain compatibility with the core.
