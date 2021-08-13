@@ -54,3 +54,5 @@ class SQLAlchemyOso(Oso):
                 "Cannot access 'roles' on 'SQLAlchemyOso' before calling 'enable_roles()'"
             )
         return self._roles
+
+SQLAlchemyPolicy = SQLAlchemyOso
