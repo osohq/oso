@@ -188,13 +188,13 @@ impl Debugger {
             }
         }
         let parts: Vec<&str> = command.split_whitespace().collect();
-        let dflt = match self.last.take() {
+        let default_command = match self.last.take() {
             Some(s) => s,
             _ => "help".to_owned(),
         };
-        let fst = *parts.get(0).unwrap_or(&&dflt[..]);
-        self.last = Some(String::from(fst));
-        match fst {
+        let command = *parts.get(0).unwrap_or(&&default_command[..]);
+        self.last = Some(String::from(command));
+        match command {
             "c" | "continue" | "q" | "quit" => self.step = None,
 
             "n" | "next" | "over" => {

@@ -57,6 +57,7 @@ n[ext] | over           Step to the next query at the same level of the query st
 o[ut]                   Step out of the current query stack level to the next query in the level above.
 g[oal]                  Step to the next goal of the Polar VM.
 e[rror]                 Step to the next error.
+r[ule]                  Step to the next rule.
 l[ine] [<n>]            Print the current line and <n> lines of context.
 query [<i>]             Print the current query or the query at level <i> in the query stack.
 stack | trace           Print the current query stack.
@@ -294,6 +295,36 @@ y = "2"
 debug> c
 UnsupportedError
 Not supported: 1 < "2"
+```
+
+#### `r[ule]`
+
+Step to the next rule invocation. This can be used to debug rule matching order.
+
+
+```
+QUERY: debug(), BINDINGS: {}
+
+001: a() if debug() and b() and c() and d();
+            ^
+002: a() if 5 = 5;
+003: b() if 1 = 1 and 2 = 2;
+004: c() if 3 = 3 and 4 = 4;
+
+debug> line
+001: a() if debug() and b() and c() and d();
+            ^
+debug> rule
+b() if 1 = 1 and 2 = 2;
+debug> rule
+c() if 3 = 3 and 4 = 4;
+debug> rule
+d();
+debug> rule
+True
+a() if 5 = 5;
+debug> rule
+True
 ```
 
 ### Context
