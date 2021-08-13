@@ -5,6 +5,8 @@ from .oso import Policy
 
 class Enforcer:
     """
+    NOTE: This is a preview feature.
+
     Exposes high-level enforcement APIs which can be used by apps to perform
     resource-, request-, and query-level authorization.
     """
