@@ -900,13 +900,11 @@ describe('Oso Roles', () => {
               "edit"
           ];
 
-      parent_child(parent_org, repo: Repo) if
-          repo.org = parent_org and
-          parent_org matches Org;
+      parent_child(parent_org: Org, repo: Repo) if
+          repo.org = parent_org;
 
-      parent_child(parent_repo, issue: Issue) if
-          issue.repo = parent_repo and
-          parent_repo matches Repo;
+      parent_child(parent_repo: Repo, issue: Issue) if
+          issue.repo = parent_repo;
 
       actor_has_role_for_resource(actor, role_name, role_resource) if
           role in actor.roles and

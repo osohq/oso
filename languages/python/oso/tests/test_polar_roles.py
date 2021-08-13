@@ -2504,8 +2504,8 @@ def test_perf_polar(init_oso, sample_data):
     # 	}
     # };
 
-    # parent_child(parent_org, repo: Repo) if
-    # parent_org = repo.org and parent_org matches Org;
+    # parent_child(parent_org: Org, repo: Repo) if
+    # parent_org = repo.org;
     # """
     oso.load_str(p)
     oso.enable_roles()
