@@ -120,6 +120,24 @@ func (p PolarFfi) Load(s string, filename *string) error {
 	return nil
 }
 
+func (p PolarFfi) EnableRoles() error {
+  result := C.polar_enable_roles(p.ptr)
+  if result == 0 {
+    return getError()
+  }
+  return nil
+}
+
+func (p PolarFfi) ValidateRolesConfig(cfg string) error {
+  cs := C.CString(cfg)
+  defer C.free(unsafe.Pointer(cs))
+  result := C.polar_validate_roles_config(p.ptr, cs)
+  if result == 0 {
+    return getError()
+  }
+  return nil
+}
+
 func (p PolarFfi) ClearRules() error {
 	result := C.polar_clear_rules(p.ptr)
 	processMessages(p)

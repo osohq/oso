@@ -292,3 +292,69 @@ func TestExpressionError(t *testing.T) {
 		t.Error("Does not contain unbound in error message.")
 	}
 }
+
+type Org struct {
+  name string
+}
+type Repo struct {
+  name string
+  org Org
+}
+type Issue struct {
+  name string
+  repo Repo
+}
+
+type Role interface {
+  GetName() string
+  GetResource() interface{}
+}
+
+type OrgRole struct {
+  name string
+  org Org
+
+}
+
+func (or OrgRole) GetName() string {
+  return or.name
+}
+
+type RepoRole struct {
+  name string
+  repo Repo
+}
+
+func (rr RepoRole) GetName() string {
+  return rr.name
+}
+
+type User struct {
+  name string
+  roles []Role
+}
+
+func TestRoles(t *testing.T) {
+	var o oso.Oso
+	var err error
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+  o.RegisterClass(reflect.TypeOf(User{}), nil)
+  o.RegisterClass(reflect.TypeOf(Org{}), nil)
+  o.RegisterClass(reflect.TypeOf(Repo{}), nil)
+  o.RegisterClass(reflect.TypeOf(Issue{}), nil)
+  o.RegisterClass(reflect.TypeOf(OrgRole{}), nil)
+  o.RegisterClass(reflect.TypeOf(RepoRole{}), nil)
+
+	if err = o.LoadFile("roles_policy.polar"); err != nil {
+		t.Error(err.Error())
+	}
+
+  if err = o.EnableRoles(); err != nil {
+    t.Error(err.Error())
+  }
+
+}
+

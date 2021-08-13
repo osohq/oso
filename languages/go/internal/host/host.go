@@ -17,11 +17,18 @@ var CLASSES = make(map[string]reflect.Type)
 
 type None struct{}
 
+type RolesHelper struct{}
+
+func (rh RolesHelper) join(sep string, left string, right string) string {
+  return left + sep + right
+}
+
 type Host struct {
 	ffiPolar     ffi.PolarFfi
 	classes      map[string]reflect.Type
 	constructors map[string]reflect.Value
 	instances    map[uint64]reflect.Value
+  AcceptExpressions bool
 }
 
 func NewHost(polar ffi.PolarFfi) Host {
@@ -36,6 +43,7 @@ func NewHost(polar ffi.PolarFfi) Host {
 		classes:      classes,
 		instances:    instances,
 		constructors: constructors,
+    AcceptExpressions: false,
 	}
 }
 
@@ -378,6 +386,9 @@ func (h Host) ToGo(v types.Term) (interface{}, error) {
 	case ValueVariable:
 		return inner, nil
 	case ValueExpression:
+    if h.AcceptExpressions {
+      return inner, nil
+    }
 		return nil, fmt.Errorf(
 			"Received Expression from Polar VM. The Expression type is not yet supported in this language.\n" +
 				"This may mean you performed an operation in your policy over an unbound variable.")

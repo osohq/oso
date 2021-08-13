@@ -199,3 +199,10 @@ Start the oso repl where you can make queries and see results printed out.
 func (o Oso) Repl() error {
 	return (*o.p).repl()
 }
+
+/*
+Enable built-in RBAC support.
+*/
+func (o Oso) EnableRoles() error {
+  return (*o.p).EnableRoles()
+}

@@ -38,6 +38,30 @@ func (variant *ErrorKindParse) UnmarshalJSON(b []byte) error {
 
 func (ErrorKindParse) isErrorKind() {}
 
+type ErrorKindValidation ValidationError
+
+func (variant ErrorKindValidation) MarshalJSON() ([]byte, error) {
+  return json.Marshal(ValidationError(variant))
+}
+
+func (variant *ErrorKindValidation) UnmarshalJSON(b []byte) error {
+	inner := ValidationError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindValidation(inner)
+	return err
+}
+
+func (ErrorKindValidation) isErrorKind() {}
+
+// ValidationError enum
+type ValidationErrorVariant interface {
+	isValidationError()
+}
+
+type ValidationError string
+
+func (ValidationError) isValidationError() {}
+
 // ErrorKindRuntime newtype
 type ErrorKindRuntime RuntimeError
 
@@ -162,6 +186,16 @@ func (result *ErrorKind) UnmarshalJSON(b []byte) error {
 		*result = ErrorKind{variant}
 		return nil
 
+  case "RolesValidation":
+    var variant ErrorKindValidation
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ErrorKind{variant}
+		return nil
 	}
 
 	return fmt.Errorf("Cannot deserialize ErrorKind: %s", string(b))
@@ -188,6 +222,11 @@ func (variant ErrorKind) MarshalJSON() ([]byte, error) {
 	case ErrorKindParameter:
 		return json.Marshal(map[string]ErrorKindParameter{
 			"Parameter": inner,
+		})
+
+	case ErrorKindValidation:
+		return json.Marshal(map[string]ErrorKindValidation{
+			"RolesValidation": inner,
 		})
 
 	}
@@ -1073,132 +1112,82 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 }
 
 func (variant Operator) MarshalJSON() ([]byte, error) {
-	switch inner := variant.OperatorVariant.(type) {
+	switch variant.OperatorVariant.(type) {
 
 	case OperatorDebug:
-		return json.Marshal(map[string]OperatorDebug{
-			"Debug": inner,
-		})
+		return json.Marshal("Debug")
 
 	case OperatorPrint:
-		return json.Marshal(map[string]OperatorPrint{
-			"Print": inner,
-		})
+		return json.Marshal("Print")
 
 	case OperatorCut:
-		return json.Marshal(map[string]OperatorCut{
-			"Cut": inner,
-		})
+		return json.Marshal("Cut")
 
 	case OperatorIn:
-		return json.Marshal(map[string]OperatorIn{
-			"In": inner,
-		})
+		return json.Marshal("In")
 
 	case OperatorIsa:
-		return json.Marshal(map[string]OperatorIsa{
-			"Isa": inner,
-		})
+		return json.Marshal("Isa")
 
 	case OperatorNew:
-		return json.Marshal(map[string]OperatorNew{
-			"New": inner,
-		})
+		return json.Marshal("New")
 
 	case OperatorDot:
-		return json.Marshal(map[string]OperatorDot{
-			"Dot": inner,
-		})
+		return json.Marshal("Dot")
 
 	case OperatorNot:
-		return json.Marshal(map[string]OperatorNot{
-			"Not": inner,
-		})
+		return json.Marshal("Not")
 
 	case OperatorMul:
-		return json.Marshal(map[string]OperatorMul{
-			"Mul": inner,
-		})
+		return json.Marshal("Mul")
 
 	case OperatorDiv:
-		return json.Marshal(map[string]OperatorDiv{
-			"Div": inner,
-		})
+		return json.Marshal("Div")
 
 	case OperatorMod:
-		return json.Marshal(map[string]OperatorMod{
-			"Mod": inner,
-		})
+		return json.Marshal("Mod")
 
 	case OperatorRem:
-		return json.Marshal(map[string]OperatorRem{
-			"Rem": inner,
-		})
+		return json.Marshal("Rem")
 
 	case OperatorAdd:
-		return json.Marshal(map[string]OperatorAdd{
-			"Add": inner,
-		})
+		return json.Marshal("Add")
 
 	case OperatorSub:
-		return json.Marshal(map[string]OperatorSub{
-			"Sub": inner,
-		})
+		return json.Marshal("Sub")
 
 	case OperatorEq:
-		return json.Marshal(map[string]OperatorEq{
-			"Eq": inner,
-		})
+		return json.Marshal("Eq")
 
 	case OperatorGeq:
-		return json.Marshal(map[string]OperatorGeq{
-			"Geq": inner,
-		})
+		return json.Marshal("Geq")
 
 	case OperatorLeq:
-		return json.Marshal(map[string]OperatorLeq{
-			"Leq": inner,
-		})
+		return json.Marshal("Leq")
 
 	case OperatorNeq:
-		return json.Marshal(map[string]OperatorNeq{
-			"Neq": inner,
-		})
+		return json.Marshal("Neq")
 
 	case OperatorGt:
-		return json.Marshal(map[string]OperatorGt{
-			"Gt": inner,
-		})
+		return json.Marshal("Gt")
 
 	case OperatorLt:
-		return json.Marshal(map[string]OperatorLt{
-			"Lt": inner,
-		})
+		return json.Marshal("Lt")
 
 	case OperatorUnify:
-		return json.Marshal(map[string]OperatorUnify{
-			"Unify": inner,
-		})
+		return json.Marshal("Unify")
 
 	case OperatorOr:
-		return json.Marshal(map[string]OperatorOr{
-			"Or": inner,
-		})
+		return json.Marshal("Or")
 
 	case OperatorAnd:
-		return json.Marshal(map[string]OperatorAnd{
-			"And": inner,
-		})
+		return json.Marshal("And")
 
 	case OperatorForAll:
-		return json.Marshal(map[string]OperatorForAll{
-			"ForAll": inner,
-		})
+		return json.Marshal("ForAll")
 
 	case OperatorAssign:
-		return json.Marshal(map[string]OperatorAssign{
-			"Assign": inner,
-		})
+		return json.Marshal("Assign")
 
 	}
 
@@ -2632,63 +2621,67 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 }
 
 func (variant Value) MarshalJSON() ([]byte, error) {
+  var in map[string]ValueVariant
+
 	switch inner := variant.ValueVariant.(type) {
 
 	case ValueNumber:
-		return json.Marshal(map[string]ValueNumber{
+		in = map[string]ValueVariant{
 			"Number": inner,
-		})
+		}
 
 	case ValueString:
-		return json.Marshal(map[string]ValueString{
+		in = map[string]ValueVariant{
 			"String": inner,
-		})
+		}
 
 	case ValueBoolean:
-		return json.Marshal(map[string]ValueBoolean{
+		in = map[string]ValueVariant{
 			"Boolean": inner,
-		})
+		}
 
 	case ValueExternalInstance:
-		return json.Marshal(map[string]ValueExternalInstance{
+		in = map[string]ValueVariant{
 			"ExternalInstance": inner,
-		})
+		}
 
 	case ValueDictionary:
-		return json.Marshal(map[string]ValueDictionary{
+		in = map[string]ValueVariant{
 			"Dictionary": inner,
-		})
+		}
 
 	case ValuePattern:
-		return json.Marshal(map[string]ValuePattern{
+		in = map[string]ValueVariant{
 			"Pattern": inner,
-		})
+		}
 
 	case ValueCall:
-		return json.Marshal(map[string]ValueCall{
+		in = map[string]ValueVariant{
 			"Call": inner,
-		})
+		}
 
 	case ValueList:
-		return json.Marshal(map[string]ValueList{
+		in = map[string]ValueVariant{
 			"List": inner,
-		})
+		}
 
 	case ValueVariable:
-		return json.Marshal(map[string]ValueVariable{
+		in = map[string]ValueVariant{
 			"Variable": inner,
-		})
+		}
 
 	case ValueRestVariable:
-		return json.Marshal(map[string]ValueRestVariable{
+		in =map[string]ValueVariant{
 			"RestVariable": inner,
-		})
+		}
 
 	case ValueExpression:
-		return json.Marshal(map[string]ValueExpression{
+		in =map[string]ValueVariant{
 			"Expression": inner,
-		})
+		}
+  default:
+    return nil, fmt.Errorf("unexpected variant of %v", variant)
 	}
+  return json.Marshal(in)
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
