@@ -16,7 +16,7 @@ class OsoError(Exception):
     @classmethod
     def add_get_help(cls, message):
         return (
-            message
+            str(message)
             + f"\n\tGet help with Oso from our engineers: https://help.osohq.com/error/{cls.__name__}"
         )
 

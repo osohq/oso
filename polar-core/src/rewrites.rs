@@ -128,8 +128,9 @@ impl<'kb> Folder for Rewriter<'kb> {
                 let mut new = self.fold_term(t);
                 let mut rewrites = self.stack.pop().unwrap();
                 for rewrite in rewrites.drain(..).rev() {
-                    and_wrap(&mut new, rewrite);
+                    and_prepend(&mut new, rewrite);
                 }
+
                 new
             }
             Value::Expression(o) if self.needs_rewrite(o) => {
@@ -159,11 +160,37 @@ impl<'kb> Folder for Rewriter<'kb> {
                     .args
                     .into_iter()
                     .map(|arg| {
+                        let arg_operator = arg.value().as_expression().map(|e| e.operator).ok();
+
                         self.stack.push(vec![]);
                         let mut arg = self.fold_term(arg);
                         let mut rewrites = self.stack.pop().unwrap();
-                        for rewrite in rewrites.drain(..).rev() {
-                            and_wrap(&mut arg, rewrite);
+                        // Decide whether to prepend, or append
+                        // If the current operator is unify and rewrites are only
+                        // dot operations we append the rewrites after the temporary variable.
+                        // This ensures that grounding does not occur when performing dot
+                        // operations on a partial.
+                        //
+                        // Append:
+                        // - x.foo.bar = 1 => _value_1 = 1 and x.foo = _value_2 and _value_2.bar = _value_1
+                        //
+                        // Prepend:
+                        //
+                        // - x = new Foo(x: new Bar(x: 1)) =>
+                        //   _instance_2 = new Bar(x: 1) and _instance_1 = new Foo(x: _instance_2) and x = _instance_1
+                        //
+                        // We prepend when the rewritten variable needs to be bound before it is
+                        // used.
+                        if only_dots(&rewrites)
+                            && arg_operator.map_or(false, |o| o == Operator::Unify)
+                        {
+                            for rewrite in rewrites {
+                                and_append(&mut arg, rewrite);
+                            }
+                        } else {
+                            for rewrite in rewrites.drain(..).rev() {
+                                and_prepend(&mut arg, rewrite);
+                            }
                         }
                         arg
                     })
@@ -190,11 +217,28 @@ impl<'kb> Folder for Rewriter<'kb> {
     }
 }
 
+fn only_dots(rewrites: &[Term]) -> bool {
+    rewrites.iter().all(|t| {
+        t.value()
+            .as_expression()
+            .map_or(false, |op| op.operator == Operator::Dot)
+    })
+}
+
 /// Replace the left value with And(right, left).
-fn and_wrap(left: &mut Term, right: Term) {
+fn and_prepend(left: &mut Term, right: Term) {
     let new_value = Value::Expression(Operation {
         operator: Operator::And,
         args: vec![right, left.clone()],
+    });
+    left.replace_value(new_value);
+}
+
+/// Replace the left value with And(left, right).
+fn and_append(left: &mut Term, right: Term) {
+    let new_value = Value::Expression(Operation {
+        operator: Operator::And,
+        args: vec![left.clone(), right],
     });
     left.replace_value(new_value);
 }
@@ -418,7 +462,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             rewrite_term(term, &mut kb).to_polar(),
-            "not (foo.x = _value_1 and _value_1 = 1)"
+            "not (_value_1 = 1 and foo.x = _value_1)"
         )
     }
 }
