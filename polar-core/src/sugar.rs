@@ -11,11 +11,13 @@ use super::terms::*;
 pub enum Declaration {
     Role,
     Permission,
+    Relation(Term),
 }
 
 fn transform_declarations(
     roles: Option<Vec<Term>>,
     permissions: Option<Vec<Term>>,
+    relations: Option<Vec<(Term, Term)>>,
 ) -> HashMap<Term, Declaration> {
     // Fold Vec<role> => HashMap<role, Declaration>
     let declarations = roles
@@ -27,42 +29,93 @@ fn transform_declarations(
         });
 
     // Fold Vec<permission> => HashMap<permission_or_role, Declaration>
-    permissions
+    let declarations =
+        permissions
+            .into_iter()
+            .flatten()
+            .fold(declarations, |mut acc, permission| {
+                acc.insert(permission, Declaration::Permission);
+                acc
+            });
+
+    relations
         .into_iter()
         .flatten()
-        .fold(declarations, |mut acc, permission| {
-            acc.insert(permission, Declaration::Permission);
+        .fold(declarations, |mut acc, (relation, resource)| {
+            acc.insert(relation, Declaration::Relation(resource));
             acc
         })
 }
 
 fn rewrite_implication(
-    implied: Term,
-    implier: Term,
+    implication: (Term, Term, Option<Term>),
     resource: Term,
-    declarations: HashMap<Term, Declaration>,
+    namespaces: HashMap<Term, HashMap<Term, Declaration>>,
 ) -> Rule {
-    let resource_name = &resource.value().as_symbol().unwrap().0;
-    let implier_resource = implier.clone_with_value(value!(sym!(resource_name.to_lowercase())));
-    let implier_actor = implier.clone_with_value(value!(sym!("actor")));
-    let implier_predicate = match declarations[&implier] {
-        Declaration::Role => sym!("role"),
-        Declaration::Permission => sym!("permission"),
-    };
-    let args = vec![implier_actor, implier.clone(), implier_resource];
-    let body = implier.clone_with_value(value!(op!(
-        And,
-        implier.clone_with_value(value!(Call {
-            name: implier_predicate,
-            args,
-            kwargs: None
-        }))
-    )));
+    let (implied, implier, relation) = implication;
+    let body = if let Some(relation) = relation {
+        let resource_name = &resource.value().as_symbol().unwrap().0;
+        let implier_resource = implier.clone_with_value(value!(sym!(resource_name.to_lowercase())));
+        let implier_actor = implier.clone_with_value(value!(sym!("actor")));
+        eprintln!("RELATION: {}", relation.to_polar());
+        let related_resource = &namespaces[&resource][&relation];
+        let (implier_predicate, xxx) = if let Declaration::Relation(relation) = related_resource {
+            eprintln!("RELATION2: {}", relation.to_polar());
+            match namespaces[relation][&implier] {
+                Declaration::Role => (sym!("role"), relation),
+                Declaration::Permission => (sym!("permission"), relation),
+                _ => unreachable!(),
+            }
+        } else {
+            panic!();
+        };
 
-    let rule_name = match declarations[&implied] {
+        let related_resource_name = &xxx.value().as_symbol().unwrap().0;
+        let related_resource =
+            relation.clone_with_value(value!(sym!(related_resource_name.to_lowercase())));
+
+        let relation_predicate = relation.clone_with_value(value!(Call {
+            name: sym!("relation"),
+            args: vec![related_resource.clone(), relation.clone(), implier_resource],
+            kwargs: None
+        }));
+
+        let args = vec![implier_actor, implier.clone(), related_resource];
+        implier.clone_with_value(value!(op!(
+            And,
+            relation_predicate,
+            implier.clone_with_value(value!(Call {
+                name: implier_predicate,
+                args,
+                kwargs: None
+            }))
+        )))
+    } else {
+        let resource_name = &resource.value().as_symbol().unwrap().0;
+        let implier_resource = implier.clone_with_value(value!(sym!(resource_name.to_lowercase())));
+        let implier_actor = implier.clone_with_value(value!(sym!("actor")));
+        let implier_predicate = match namespaces[&resource][&implier] {
+            Declaration::Role => sym!("role"),
+            Declaration::Permission => sym!("permission"),
+            _ => unreachable!(),
+        };
+        let args = vec![implier_actor, implier.clone(), implier_resource];
+        implier.clone_with_value(value!(op!(
+            And,
+            implier.clone_with_value(value!(Call {
+                name: implier_predicate,
+                args,
+                kwargs: None
+            }))
+        )))
+    };
+
+    let rule_name = match namespaces[&resource][&implied] {
         Declaration::Role => sym!("role"),
         Declaration::Permission => sym!("permission"),
+        _ => unreachable!(),
     };
+    let resource_name = &resource.value().as_symbol().unwrap().0;
     let params = vec![
         Parameter {
             parameter: implied.clone_with_value(value!(sym!("actor"))),
@@ -88,6 +141,7 @@ impl KnowledgeBase {
             resource,
             roles,
             permissions,
+            relations,
             implications,
         } = namespace;
 
@@ -117,9 +171,9 @@ impl KnowledgeBase {
             .into());
         }
 
-        let declarations = transform_declarations(roles, permissions);
+        let declarations = transform_declarations(roles, permissions, relations);
         self.resource_namespaces
-            .insert(resource.clone(), declarations.clone());
+            .insert(resource.clone(), declarations);
 
         // TODO(gj): what to do for `on "parent_org"` if Org{} namespace hasn't
         // been processed yet? Whether w/ multiple load_file calls or some future
@@ -130,9 +184,12 @@ impl KnowledgeBase {
         // know when the final load_file call has been made? Answer: hax.
 
         if let Some(implications) = implications {
-            for (implied, implier) in implications {
-                let rule =
-                    rewrite_implication(implied, implier, resource.clone(), declarations.clone());
+            for implication in implications {
+                let rule = rewrite_implication(
+                    implication,
+                    resource.clone(),
+                    self.resource_namespaces.clone(),
+                );
                 let generic_rule = self
                     .rules
                     .entry(rule.name.clone())
@@ -150,15 +207,16 @@ mod tests {
     use crate::formatting::ToPolarString;
 
     #[test]
-    fn test_resource_namespace_rewrite_implications() {
+    fn test_resource_namespace_local_rewrite_implications() {
         let roles = vec![term!("owner"), term!("member")];
         let permissions = vec![term!("invite"), term!("create_repo")];
-        let declarations = transform_declarations(Some(roles), Some(permissions));
+        let declarations = transform_declarations(Some(roles), Some(permissions), None);
+        let mut namespaces = HashMap::new();
+        namespaces.insert(term!(sym!("Org")), declarations);
         let rewritten_role_role = rewrite_implication(
-            term!("member"),
-            term!("owner"),
+            (term!("member"), term!("owner"), None),
             term!(sym!("Org")),
-            declarations.clone(),
+            namespaces.clone(),
         );
         assert_eq!(
             rewritten_role_role.to_polar(),
@@ -166,10 +224,9 @@ mod tests {
         );
 
         let rewritten_permission_role = rewrite_implication(
-            term!("invite"),
-            term!("owner"),
+            (term!("invite"), term!("owner"), None),
             term!(sym!("Org")),
-            declarations.clone(),
+            namespaces.clone(),
         );
         assert_eq!(
             rewritten_permission_role.to_polar(),
@@ -177,14 +234,35 @@ mod tests {
         );
 
         let rewritten_permission_permission = rewrite_implication(
-            term!("create_repo"),
-            term!("invite"),
+            (term!("create_repo"), term!("invite"), None),
             term!(sym!("Org")),
-            declarations,
+            namespaces,
         );
         assert_eq!(
             rewritten_permission_permission.to_polar(),
             r#"permission(actor, "create_repo", org: Org{}) if permission(actor, "invite", org);"#
+        );
+    }
+
+    #[test]
+    fn test_resource_namespace_nonlocal_rewrite_implications() {
+        let repo_roles = vec![term!("reader")];
+        let repo_relations = vec![(term!("parent"), term!(sym!("Org")))];
+        let repo_declarations =
+            transform_declarations(Some(repo_roles), None, Some(repo_relations));
+        let org_roles = vec![term!("member")];
+        let org_declarations = transform_declarations(Some(org_roles), None, None);
+        let mut namespaces = HashMap::new();
+        namespaces.insert(term!(sym!("Repo")), repo_declarations);
+        namespaces.insert(term!(sym!("Org")), org_declarations);
+        let rewritten_role_role = rewrite_implication(
+            (term!("reader"), term!("member"), Some(term!("parent"))),
+            term!(sym!("Repo")),
+            namespaces,
+        );
+        assert_eq!(
+            rewritten_role_role.to_polar(),
+            r#"role(actor, "reader", repo: Repo{}) if relation(org, "parent", repo) and role(actor, "member", org);"#
         );
     }
 }
