@@ -294,44 +294,43 @@ func TestExpressionError(t *testing.T) {
 }
 
 type Org struct {
-  name string
+	name string
 }
 type Repo struct {
-  name string
-  org Org
+	name string
+	org  Org
 }
 type Issue struct {
-  name string
-  repo Repo
+	name string
+	repo Repo
 }
 
 type Role interface {
-  GetName() string
-  GetResource() interface{}
+	GetName() string
+	GetResource() interface{}
 }
 
 type OrgRole struct {
-  name string
-  org Org
-
+	name string
+	org  Org
 }
 
 func (or OrgRole) GetName() string {
-  return or.name
+	return or.name
 }
 
 type RepoRole struct {
-  name string
-  repo Repo
+	name string
+	repo Repo
 }
 
 func (rr RepoRole) GetName() string {
-  return rr.name
+	return rr.name
 }
 
 type User struct {
-  name string
-  roles []Role
+	name  string
+	roles []Role
 }
 
 func TestRoles(t *testing.T) {
@@ -341,20 +340,19 @@ func TestRoles(t *testing.T) {
 		t.Fatalf("Failed to set up Oso: %v", err)
 	}
 
-  o.RegisterClass(reflect.TypeOf(User{}), nil)
-  o.RegisterClass(reflect.TypeOf(Org{}), nil)
-  o.RegisterClass(reflect.TypeOf(Repo{}), nil)
-  o.RegisterClass(reflect.TypeOf(Issue{}), nil)
-  o.RegisterClass(reflect.TypeOf(OrgRole{}), nil)
-  o.RegisterClass(reflect.TypeOf(RepoRole{}), nil)
+	o.RegisterClass(reflect.TypeOf(User{}), nil)
+	o.RegisterClass(reflect.TypeOf(Org{}), nil)
+	o.RegisterClass(reflect.TypeOf(Repo{}), nil)
+	o.RegisterClass(reflect.TypeOf(Issue{}), nil)
+	o.RegisterClass(reflect.TypeOf(OrgRole{}), nil)
+	o.RegisterClass(reflect.TypeOf(RepoRole{}), nil)
 
 	if err = o.LoadFile("roles_policy.polar"); err != nil {
 		t.Error(err.Error())
 	}
 
-  if err = o.EnableRoles(); err != nil {
-    t.Error(err.Error())
-  }
+	if err = o.EnableRoles(); err != nil {
+		t.Error(err.Error())
+	}
 
 }
-

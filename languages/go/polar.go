@@ -4,13 +4,13 @@ package oso
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
-  "encoding/json"
 
 	"github.com/osohq/go-oso/errors"
 	"github.com/osohq/go-oso/internal/ffi"
@@ -20,30 +20,30 @@ import (
 )
 
 type Polar struct {
-	ffiPolar ffi.PolarFfi
-	host     host.Host
-  polarRolesEnabled bool
+	ffiPolar          ffi.PolarFfi
+	host              host.Host
+	polarRolesEnabled bool
 }
 
 func newPolar() (*Polar, error) {
 	ffiPolar := ffi.NewPolarFfi()
 	polar := Polar{
-		ffiPolar: ffiPolar,
-		host:     host.NewHost(ffiPolar),
-    polarRolesEnabled: false,
+		ffiPolar:          ffiPolar,
+		host:              host.NewHost(ffiPolar),
+		polarRolesEnabled: false,
 	}
 
-  builtinConstants := map[string]interface{}{
-    "nil": host.None{},
-    "__oso_internal_roles_helpers__": host.RolesHelper{},
-  }
+	builtinConstants := map[string]interface{}{
+		"nil":                            host.None{},
+		"__oso_internal_roles_helpers__": host.RolesHelper{},
+	}
 
 	for k, v := range builtinConstants {
 		err := polar.registerConstant(v, k)
 		if err != nil {
 			return nil, err
-    }
-  }
+		}
+	}
 
 	builtinClasses := map[string]reflect.Type{
 		"Boolean":    reflect.TypeOf(true),
@@ -90,84 +90,84 @@ func (p Polar) checkInlineQueries() error {
 }
 
 func (p Polar) EnableRoles() error {
-  if p.polarRolesEnabled {
-    return nil
-  }
+	if p.polarRolesEnabled {
+		return nil
+	}
 
-  err := p.ffiPolar.EnableRoles()
-  if err != nil {
-    return err
-  }
+	err := p.ffiPolar.EnableRoles()
+	if err != nil {
+		return err
+	}
 
-  allResults := make([][]map[string]interface{}, 0)
+	allResults := make([][]map[string]interface{}, 0)
 
-  ffiQuery, err := p.ffiPolar.NextInlineQuery()
-  if err != nil {
-    return err
-  }
+	ffiQuery, err := p.ffiPolar.NextInlineQuery()
+	if err != nil {
+		return err
+	}
 
-  for ffiQuery != nil {
-    dupHost := p.host.Copy()
-    dupHost.AcceptExpressions = true
-    query := newQuery(*ffiQuery, dupHost)
-    res, err := query.GetAllResults()
-    if err != nil {
-      return err
-    }
-    if len(res) == 0 {
-      querySource, err := query.ffiQuery.Source()
-      if err != nil {
-        return err
-      }
-      return errors.NewInlineQueryFailedError(*querySource)
-    }
-    allResults = append(allResults, res)
+	for ffiQuery != nil {
+		dupHost := p.host.Copy()
+		dupHost.AcceptExpressions = true
+		query := newQuery(*ffiQuery, dupHost)
+		res, err := query.GetAllResults()
+		if err != nil {
+			return err
+		}
+		if len(res) == 0 {
+			querySource, err := query.ffiQuery.Source()
+			if err != nil {
+				return err
+			}
+			return errors.NewInlineQueryFailedError(*querySource)
+		}
+		allResults = append(allResults, res)
 
-    ffiQuery, err = p.ffiPolar.NextInlineQuery()
-    if err != nil {
-      return err
-    }
-  }
+		ffiQuery, err = p.ffiPolar.NextInlineQuery()
+		if err != nil {
+			return err
+		}
+	}
 
-  for _, results := range allResults {
-    for j, result := range results {
-      inner := make(map[string]Term, 0)
-      for k, v := range result {
-        pol, err := p.host.ToPolar(v)
-        if err != nil {
-          return err
-        }
-        inner[k] = Term{*pol}
-      }
-      outer := make(map[string]interface{}, 1)
-      outer["bindings"] = inner
-      results[j] = outer
-    }
-  }
+	for _, results := range allResults {
+		for j, result := range results {
+			inner := make(map[string]Term, 0)
+			for k, v := range result {
+				pol, err := p.host.ToPolar(v)
+				if err != nil {
+					return err
+				}
+				inner[k] = Term{*pol}
+			}
+			outer := make(map[string]interface{}, 1)
+			outer["bindings"] = inner
+			results[j] = outer
+		}
+	}
 
-  cfg, err := json.Marshal(allResults)
-  if err != nil {
-    return err
-  }
+	cfg, err := json.Marshal(allResults)
+	if err != nil {
+		return err
+	}
 
-  cfgString := string(cfg)
+	cfgString := string(cfg)
 
-  err = p.ffiPolar.ValidateRolesConfig(cfgString)
-  if err != nil {
-    return err
-  }
+	err = p.ffiPolar.ValidateRolesConfig(cfgString)
+	if err != nil {
+		return err
+	}
 
-  p.polarRolesEnabled = true
-  return nil
+	p.polarRolesEnabled = true
+	return nil
 }
 
 func (p Polar) reinitializeRoles() error {
-  if !p.polarRolesEnabled {
-    return nil
-  }
+	if !p.polarRolesEnabled {
+		return nil
+	}
 
-  p.polarRolesEnabled = false
-  return p.EnableRoles()
+	p.polarRolesEnabled = false
+	return p.EnableRoles()
 }
 
 func (p Polar) loadFile(f string) error {
@@ -187,7 +187,7 @@ func (p Polar) loadFile(f string) error {
 	if err != nil {
 		return err
 	}
-  return p.reinitializeRoles()
+	return p.reinitializeRoles()
 }
 
 func (p Polar) loadString(s string) error {
@@ -199,15 +199,15 @@ func (p Polar) loadString(s string) error {
 	if err != nil {
 		return err
 	}
-  return p.reinitializeRoles()
+	return p.reinitializeRoles()
 }
 
 func (p Polar) clearRules() error {
-  err := p.ffiPolar.ClearRules()
-  if err != nil {
-    return err
-  }
-  return p.reinitializeRoles()
+	err := p.ffiPolar.ClearRules()
+	if err != nil {
+		return err
+	}
+	return p.reinitializeRoles()
 }
 
 func (p Polar) queryStr(query string) (*Query, error) {

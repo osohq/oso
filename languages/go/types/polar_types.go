@@ -41,7 +41,7 @@ func (ErrorKindParse) isErrorKind() {}
 type ErrorKindValidation ValidationError
 
 func (variant ErrorKindValidation) MarshalJSON() ([]byte, error) {
-  return json.Marshal(ValidationError(variant))
+	return json.Marshal(ValidationError(variant))
 }
 
 func (variant *ErrorKindValidation) UnmarshalJSON(b []byte) error {
@@ -186,8 +186,8 @@ func (result *ErrorKind) UnmarshalJSON(b []byte) error {
 		*result = ErrorKind{variant}
 		return nil
 
-  case "RolesValidation":
-    var variant ErrorKindValidation
+	case "RolesValidation":
+		var variant ErrorKindValidation
 		if variantValue != nil {
 			err := json.Unmarshal(*variantValue, &variant)
 			if err != nil {
@@ -2621,7 +2621,7 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 }
 
 func (variant Value) MarshalJSON() ([]byte, error) {
-  var in map[string]ValueVariant
+	var in map[string]ValueVariant
 
 	switch inner := variant.ValueVariant.(type) {
 
@@ -2671,17 +2671,17 @@ func (variant Value) MarshalJSON() ([]byte, error) {
 		}
 
 	case ValueRestVariable:
-		in =map[string]ValueVariant{
+		in = map[string]ValueVariant{
 			"RestVariable": inner,
 		}
 
 	case ValueExpression:
-		in =map[string]ValueVariant{
+		in = map[string]ValueVariant{
 			"Expression": inner,
 		}
-  default:
-    return nil, fmt.Errorf("unexpected variant of %v", variant)
+	default:
+		return nil, fmt.Errorf("unexpected variant of %v", variant)
 	}
-  return json.Marshal(in)
+	return json.Marshal(in)
 
 }

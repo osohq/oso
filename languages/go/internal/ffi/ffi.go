@@ -121,21 +121,21 @@ func (p PolarFfi) Load(s string, filename *string) error {
 }
 
 func (p PolarFfi) EnableRoles() error {
-  result := C.polar_enable_roles(p.ptr)
-  if result == 0 {
-    return getError()
-  }
-  return nil
+	result := C.polar_enable_roles(p.ptr)
+	if result == 0 {
+		return getError()
+	}
+	return nil
 }
 
 func (p PolarFfi) ValidateRolesConfig(cfg string) error {
-  cs := C.CString(cfg)
-  defer C.free(unsafe.Pointer(cs))
-  result := C.polar_validate_roles_config(p.ptr, cs)
-  if result == 0 {
-    return getError()
-  }
-  return nil
+	cs := C.CString(cfg)
+	defer C.free(unsafe.Pointer(cs))
+	result := C.polar_validate_roles_config(p.ptr, cs)
+	if result == 0 {
+		return getError()
+	}
+	return nil
 }
 
 func (p PolarFfi) ClearRules() error {

@@ -204,5 +204,5 @@ func (o Oso) Repl() error {
 Enable built-in RBAC support.
 */
 func (o Oso) EnableRoles() error {
-  return (*o.p).EnableRoles()
+	return (*o.p).EnableRoles()
 }
