@@ -355,42 +355,4 @@ mod tests {
             .load("f(x) if x = 1;", Some("test.polar".to_string()))
             .unwrap();
     }
-
-    #[test]
-    fn test_namespace_must_be_registered() {
-        let p = Polar::new();
-        let valid_policy = r#"Org{roles=["owner"];}"#;
-        assert!(matches!(
-            p.load(valid_policy, None).unwrap_err(),
-            error::PolarError {
-                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
-                    token,
-                    ..
-                }),
-                ..
-            } if token == "namespace Org must be registered as a class"
-        ));
-        p.register_constant(sym!("Org"), term!(1));
-        assert!(p.load(valid_policy, None).is_ok());
-    }
-
-    #[test]
-    fn test_namespace_duplicate_namespaces() {
-        let p = Polar::new();
-        let invalid_policy = r#"
-            Org { roles=["owner"]; }
-            Org { roles=["member"]; }
-        "#;
-        p.register_constant(sym!("Org"), term!(1));
-        assert!(matches!(
-            p.load(invalid_policy, None).unwrap_err(),
-            error::PolarError {
-                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
-                    token,
-                    ..
-                }),
-                ..
-            } if token == "duplicate declaration of Org namespace"
-        ));
-    }
 }

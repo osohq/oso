@@ -205,6 +205,7 @@ impl KnowledgeBase {
 mod tests {
     use super::*;
     use crate::formatting::ToPolarString;
+    use crate::polar::Polar;
 
     #[test]
     fn test_namespace_local_rewrite_implications() {
@@ -264,5 +265,43 @@ mod tests {
             rewritten_role_role.to_polar(),
             r#"role(actor, "reader", repo: Repo{}) if relation(org, "parent", repo) and role(actor, "member", org);"#
         );
+    }
+
+    #[test]
+    fn test_namespace_must_be_registered() {
+        let p = Polar::new();
+        let valid_policy = r#"Org{roles=["owner"];}"#;
+        assert!(matches!(
+            p.load(valid_policy, None).unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+            } if token == "namespace Org must be registered as a class"
+        ));
+        p.register_constant(sym!("Org"), term!(1));
+        assert!(p.load(valid_policy, None).is_ok());
+    }
+
+    #[test]
+    fn test_namespace_duplicate_namespaces() {
+        let p = Polar::new();
+        let invalid_policy = r#"
+            Org { roles=["owner"]; }
+            Org { roles=["member"]; }
+        "#;
+        p.register_constant(sym!("Org"), term!(1));
+        assert!(matches!(
+            p.load(invalid_policy, None).unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+            } if token == "duplicate declaration of Org namespace"
+        ));
     }
 }
