@@ -19,7 +19,7 @@ type None struct{}
 
 type RolesHelper struct{}
 
-func (rh RolesHelper) join(sep string, left string, right string) string {
+func (rh RolesHelper) Join(sep string, left string, right string) string {
 	return left + sep + right
 }
 

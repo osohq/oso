@@ -294,15 +294,15 @@ func TestExpressionError(t *testing.T) {
 }
 
 type Org struct {
-	name string
+	Name string
 }
 type Repo struct {
-	name string
-	org  Org
+	Name string
+	Org  Org
 }
 type Issue struct {
-	name string
-	repo Repo
+	Name string
+	Repo Repo
 }
 
 type Role interface {
@@ -311,26 +311,34 @@ type Role interface {
 }
 
 type OrgRole struct {
-	name string
-	org  Org
+	Name     string
+	Resource Org
 }
 
 func (or OrgRole) GetName() string {
-	return or.name
+	return or.Name
+}
+
+func (or OrgRole) GetResource() interface{} {
+	return or.Resource
 }
 
 type RepoRole struct {
-	name string
-	repo Repo
+	Name     string
+	Resource Repo
 }
 
 func (rr RepoRole) GetName() string {
-	return rr.name
+	return rr.Name
+}
+
+func (rr RepoRole) GetResource() interface{} {
+	return rr.Resource
 }
 
 type User struct {
-	name  string
-	roles []Role
+	Name  string
+	Roles []Role
 }
 
 func TestRoles(t *testing.T) {
@@ -355,4 +363,47 @@ func TestRoles(t *testing.T) {
 		t.Error(err.Error())
 	}
 
+	osohq := Org{"osohq"}
+	apple := Org{"apple"}
+	oso := Repo{"oso", osohq}
+	ios := Repo{"ios", apple}
+	bug := Issue{"bug", oso}
+	laggy := Issue{"laggy", ios}
+	osohqOwner := OrgRole{"owner", osohq}
+	osohqMember := OrgRole{"member", osohq}
+
+	leina := User{"leina", []Role{osohqOwner}}
+	steve := User{"steve", []Role{osohqMember}}
+
+	cant := func(rs <-chan map[string]interface{}, errs <-chan error) {
+		if r := <-rs; r != nil {
+			t.Error("Expected no result, got some")
+		}
+		if err := <-errs; err != nil {
+			t.Error(err.Error())
+		}
+	}
+	can := func(rs <-chan map[string]interface{}, errs <-chan error) {
+		if r := <-rs; r == nil {
+			t.Error("Expected result, got none")
+		}
+		if err := <-errs; err != nil {
+			t.Error(err.Error())
+		}
+	}
+
+	can(o.QueryRule("allow", leina, "invite", osohq))
+	can(o.QueryRule("allow", leina, "create_repo", osohq))
+	can(o.QueryRule("allow", leina, "push", oso))
+	can(o.QueryRule("allow", leina, "pull", oso))
+	can(o.QueryRule("allow", leina, "edit", bug))
+
+	cant(o.QueryRule("allow", steve, "invite", osohq))
+	can(o.QueryRule("allow", steve, "create_repo", osohq))
+	cant(o.QueryRule("allow", steve, "push", oso))
+	can(o.QueryRule("allow", steve, "pull", oso))
+	cant(o.QueryRule("allow", steve, "edit", bug))
+
+	cant(o.QueryRule("allow", leina, "edit", laggy))
+	cant(o.QueryRule("allow", steve, "edit", laggy))
 }

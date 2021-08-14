@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"unicode"
 
 	"github.com/osohq/go-oso/errors"
 	"github.com/osohq/go-oso/interfaces"
@@ -157,7 +158,11 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 
 	// if we provided Args, it should be callable
 	if event.Args != nil {
-		method := reflect.ValueOf(instance).MethodByName(string(event.Attribute))
+		// go is THE WORST :(
+		mtdName := []byte(event.Attribute)
+		firstChar := byte(unicode.ToUpper(rune(mtdName[0])))
+		mtdName[0] = firstChar
+		method := reflect.ValueOf(instance).MethodByName(string(mtdName))
 		if !method.IsValid() {
 			q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, string(event.Attribute))).Error())
 			q.ffiQuery.CallResult(event.CallId, nil)
@@ -175,6 +180,7 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 			// It does work the same way in python if you return a tuple though so maybe it's fine.
 			// You could destructure it in polar if you want.
 			if len(results) == 1 {
+				//fmt.Println(results[0])
 				result = results[0].Interface()
 			} else {
 				arrayResult := make([]interface{}, len(results))

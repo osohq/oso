@@ -34,17 +34,15 @@ resource(_type: Issue, "issue", actions, {}) if
         "edit"
     ];
 
-parent_child(parent_org, repo: Repo) if
-    repo.org = parent_org and
-    parent_org matches Org;
+parent_child(parent_org: Org, repo: Repo) if
+    repo.Org = parent_org;
 
-parent_child(parent_repo, issue: Issue) if
-    issue.repo = parent_repo and
-    parent_repo matches Repo;
+parent_child(parent_repo: Repo, issue: Issue) if
+    issue.Repo = parent_repo;
 
 actor_has_role_for_resource(actor, role_name, role_resource) if
-    role in actor.roles and
-    role matches {name: role_name, resource: role_resource};
+    role in actor.Roles and
+    role matches {Name: role_name, Resource: role_resource};
 
 allow(actor, action, resource) if
     role_allows(actor, action, resource);
