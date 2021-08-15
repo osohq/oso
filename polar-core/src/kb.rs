@@ -6,7 +6,7 @@ pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::rules::*;
 use super::sources::*;
-use super::sugar::Declaration;
+use super::sugar::Namespaces;
 use super::terms::*;
 
 /// A map of bindings: variable name → value. The VM uses a stack internally,
@@ -30,7 +30,7 @@ pub struct KnowledgeBase {
     pub inline_queries: Vec<Term>,
 
     /// Namespace Bookkeeping
-    pub namespaces: HashMap<Term, HashMap<Term, Declaration>>,
+    pub namespaces: Namespaces,
 }
 
 impl KnowledgeBase {

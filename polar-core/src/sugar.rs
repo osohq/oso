@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use super::error::{ParseError, PolarResult};
 use super::kb::KnowledgeBase;
-use super::parser::Namespace;
 use super::rules::*;
 use super::terms::*;
 
@@ -16,6 +15,18 @@ pub enum Declaration {
     Permission,
     Relation(Term),
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Namespace {
+    pub resource: Term,
+    // TODO(gj): maybe HashSet instead of Vec so we can easily catch duplicates?
+    pub roles: Option<Term>,
+    pub permissions: Option<Term>,
+    pub relations: Option<Term>,
+    pub implications: Option<Vec<(Term, Term, Option<Term>)>>,
+}
+
+pub type Namespaces = HashMap<Term, HashMap<Term, Declaration>>;
 
 fn transform_declarations(
     roles: Option<Term>,
@@ -56,25 +67,26 @@ fn transform_declarations(
 fn rewrite_implication(
     implication: (Term, Term, Option<Term>),
     resource: Term,
-    namespaces: HashMap<Term, HashMap<Term, Declaration>>,
-) -> Rule {
+    namespaces: Namespaces,
+) -> PolarResult<Rule> {
     let (implied, implier, relation) = implication;
-    let body = if let Some(relation) = relation {
+    let body = if let Some(ref relation) = relation {
         let resource_name = &resource.value().as_symbol().unwrap().0;
         let implier_resource = implier.clone_with_value(value!(sym!(resource_name.to_lowercase())));
         let implier_actor = implier.clone_with_value(value!(sym!("actor")));
-        let related_resource = &namespaces[&resource][&relation];
-        let (implier_predicate, xxx) = if let Declaration::Relation(relation) = related_resource {
-            match namespaces[relation][&implier] {
-                Declaration::Role => (sym!("role"), relation),
-                Declaration::Permission => (sym!("permission"), relation),
-                _ => unreachable!(),
-            }
-        } else {
-            panic!();
-        };
+        let related_resource = &namespaces[&resource][relation];
+        let (implier_predicate, related_resource) =
+            if let Declaration::Relation(relation) = related_resource {
+                match namespaces[relation][&implier] {
+                    Declaration::Role => (sym!("role"), relation),
+                    Declaration::Permission => (sym!("permission"), relation),
+                    Declaration::Relation(_) => (sym!("relation"), relation),
+                }
+            } else {
+                panic!();
+            };
 
-        let related_resource_name = &xxx.value().as_symbol().unwrap().0;
+        let related_resource_name = &related_resource.value().as_symbol().unwrap().0;
         let related_resource =
             relation.clone_with_value(value!(sym!(related_resource_name.to_lowercase())));
 
@@ -98,10 +110,24 @@ fn rewrite_implication(
         let resource_name = &resource.value().as_symbol().unwrap().0;
         let implier_resource = implier.clone_with_value(value!(sym!(resource_name.to_lowercase())));
         let implier_actor = implier.clone_with_value(value!(sym!("actor")));
-        let implier_predicate = match namespaces[&resource][&implier] {
-            Declaration::Role => sym!("role"),
-            Declaration::Permission => sym!("permission"),
-            _ => unreachable!(),
+        let implier_predicate = match namespaces[&resource].get(&implier) {
+            Some(Declaration::Role) => sym!("role"),
+            Some(Declaration::Permission) => sym!("permission"),
+            // TODO(gj): can we do anything with the relation's type? E.g., `User` in
+            // `relations = { creator: User };`.
+            Some(Declaration::Relation(_)) => sym!("relation"),
+            None => {
+                return Err(ParseError::IntegerOverflow {
+                    loc: implier.offset(),
+                    token: format!(
+                        "Undeclared term {} referenced in implication in {} namespace. \
+                        Did you mean to declare it as a role, permission, or relation?",
+                        implier.to_polar(),
+                        resource
+                    ),
+                }
+                .into())
+            }
         };
         let args = vec![implier_actor, implier.clone(), implier_resource];
         implier.clone_with_value(value!(op!(
@@ -114,10 +140,22 @@ fn rewrite_implication(
         )))
     };
 
-    let rule_name = match namespaces[&resource][&implied] {
-        Declaration::Role => sym!("role"),
-        Declaration::Permission => sym!("permission"),
-        _ => unreachable!(),
+    let rule_name = match namespaces[&resource].get(&implied) {
+        Some(Declaration::Role) => sym!("role"),
+        Some(Declaration::Permission) => sym!("permission"),
+        Some(Declaration::Relation(_)) => sym!("relation"),
+        None => {
+            return Err(ParseError::IntegerOverflow {
+                loc: implied.offset(),
+                token: format!(
+                    "Undeclared term {} referenced in implication in {} namespace. \
+                        Did you mean to declare it as a role, permission, or relation?",
+                    implied.to_polar(),
+                    resource
+                ),
+            }
+            .into())
+        }
     };
     let resource_name = &resource.value().as_symbol().unwrap().0;
     let params = vec![
@@ -136,11 +174,212 @@ fn rewrite_implication(
             ),
         },
     ];
-    Rule::new_from_parser(0, 0, 0, rule_name, params, body)
+
+    // TODO(gj): I think this will only be None in tests. Assert that.
+    let src_id = resource.get_source_id().unwrap_or(0);
+    let start = implied.offset();
+    let end = relation.map_or_else(|| implier.offset_to_end(), |r| r.offset_to_end());
+    Ok(Rule::new_from_parser(
+        src_id, start, end, rule_name, params, body,
+    ))
+}
+
+fn check_for_duplicate_namespaces(namespaces: &Namespaces, resource: &Term) -> PolarResult<()> {
+    if namespaces.contains_key(resource) {
+        return Err(ParseError::IntegerOverflow {
+            loc: resource.offset(),
+            // TODO(gj): better error message, e.g.:
+            //               duplicate namespace declaration: Org { ... } defined on line XX of file YY
+            //                                                previously defined on line AA of file BB
+            token: format!("duplicate declaration of {} namespace", resource),
+        }
+        .into());
+    }
+    Ok(())
+}
+
+// TODO(gj): no way to know in the core if `resource` was registered as a class or a constant.
+fn check_that_namespace_resource_is_registered(
+    kb: &KnowledgeBase,
+    resource: &Term,
+) -> PolarResult<()> {
+    if !kb.is_constant(resource.value().as_symbol()?) {
+        return Err(ParseError::IntegerOverflow {
+            loc: resource.offset(),
+            // TODO(gj): better error message
+            token: format!(
+                "{} namespace must be registered as a class",
+                resource.to_polar()
+            ),
+        }
+        .into());
+    }
+    Ok(())
+}
+
+// fn caret_me_captain(string: &str, implier_too: bool) -> {
+// source_lines(source, offset, 0)
+// }
+
+fn check_for_empty_namespace(namespace: &Namespace) -> PolarResult<()> {
+    let Namespace {
+        resource,
+        roles,
+        permissions,
+        relations,
+        implications,
+    } = namespace;
+    if roles.is_none() && permissions.is_none() && relations.is_none() && implications.is_none() {
+        let loc = resource.offset();
+        let token = format!(
+            "{} namespace is empty. Please add roles, permissions, and/or relations, or delete it.",
+            resource
+        );
+        return Err(ParseError::IntegerOverflow { loc, token }.into());
+    }
+    Ok(())
+}
+
+fn check_empty_declarations(namespace: &Namespace) -> PolarResult<()> {
+    let Namespace {
+        resource,
+        roles,
+        permissions,
+        relations,
+        ..
+    } = namespace;
+
+    let roles_empty = roles
+        .as_ref()
+        .map_or(false, |roles| roles.value().as_list().unwrap().is_empty());
+    let permissions_empty = permissions.as_ref().map_or(false, |permissions| {
+        permissions.value().as_list().unwrap().is_empty()
+    });
+    let relations_empty = relations.as_ref().map_or(false, |relations| {
+        relations.value().as_dict().unwrap().is_empty()
+    });
+
+    match (roles_empty, permissions_empty, relations_empty) {
+        (true, true, true) => Err(ParseError::IntegerOverflow {
+            loc: resource.offset(),
+            token: format!(
+                "{} namespace contains empty roles, permissions, and relations declarations. \
+                        Please add roles, permissions, and relations or delete the declarations.",
+                resource
+            ),
+        }
+        .into()),
+        (true, true, _) => Err(ParseError::IntegerOverflow {
+            loc: resource.offset(),
+            token: format!(
+                "{} namespace contains empty roles and permissions declarations. \
+                        Please add roles and permissions or delete the declarations.",
+                resource
+            ),
+        }
+        .into()),
+        (true, _, true) => Err(ParseError::IntegerOverflow {
+            loc: resource.offset(),
+            token: format!(
+                "{} namespace contains empty roles and relations declarations. \
+                        Please add roles and relations or delete the declarations.",
+                resource
+            ),
+        }
+        .into()),
+        (_, true, true) => Err(ParseError::IntegerOverflow {
+            loc: resource.offset(),
+            token: format!(
+                "{} namespace contains empty permissions and relations declarations. \
+                        Please add permissions and relations or delete the declarations.",
+                resource
+            ),
+        }
+        .into()),
+        (true, _, _) => Err(ParseError::IntegerOverflow {
+            loc: roles.as_ref().unwrap().offset(),
+            token: format!(
+                "{} namespace contains an empty roles declaration. \
+                        Please add roles or delete the declaration.",
+                resource
+            ),
+        }
+        .into()),
+        (_, true, _) => Err(ParseError::IntegerOverflow {
+            loc: resource.offset(),
+            token: format!(
+                "{} namespace contains an empty permissions declaration. \
+                        Please add permissions or delete the declaration.",
+                resource
+            ),
+        }
+        .into()),
+        (_, _, true) => Err(ParseError::IntegerOverflow {
+            loc: resource.offset(),
+            token: format!(
+                "{} namespace contains an empty relations declaration. \
+                        Please add relations or delete the declaration.",
+                resource
+            ),
+        }
+        .into()),
+        (false, false, false) => Ok(()),
+    }
+}
+
+fn check_all_permissions_involved_in_implications(namespace: &Namespace) -> PolarResult<()> {
+    let Namespace {
+        resource,
+        permissions,
+        implications,
+        ..
+    } = namespace;
+    if let Some(ref permissions_list) = permissions {
+        let permissions = permissions_list.value().as_list()?;
+        if let Some(ref implications) = implications {
+            for permission in permissions.iter() {
+                let implication_references_permission =
+                    implications
+                        .iter()
+                        .any(|(implied, implier, maybe_relation)| {
+                            // Permission is referenced on the 'implied' side of an implication or
+                            // on the 'implier' side of a _local_ implication. If permission shows
+                            // up on the 'implier' side of a non-local implication, that's actually
+                            // a reference to a permission of the same name declared in the other
+                            // resource namespace.
+                            permission == implied
+                                || (permission == implier && maybe_relation.is_none())
+                        });
+
+                if !implication_references_permission {
+                    return Err(ParseError::IntegerOverflow {
+                            loc: permission.offset(),
+                            token: format!("{}: declared {} permission must be involved in at least one implication.", resource.to_polar(), permission.to_polar())
+                        }.into());
+                }
+            }
+        } else {
+            return Err(ParseError::IntegerOverflow {
+                loc: permissions_list.offset(),
+                token: format!(
+                    "{}: all declared permissions must be involved in at least one implication.",
+                    resource.to_polar(),
+                ),
+            }
+            .into());
+        }
+    }
+    Ok(())
 }
 
 impl KnowledgeBase {
     pub fn add_namespace(&mut self, namespace: Namespace) -> PolarResult<()> {
+        check_that_namespace_resource_is_registered(self, &namespace.resource)?;
+        check_for_duplicate_namespaces(&self.namespaces, &namespace.resource)?;
+        check_for_empty_namespace(&namespace)?;
+        check_empty_declarations(&namespace)?;
+        check_all_permissions_involved_in_implications(&namespace)?;
+
         let Namespace {
             resource,
             roles,
@@ -148,32 +387,6 @@ impl KnowledgeBase {
             relations,
             implications,
         } = namespace;
-
-        // TODO(gj): no way to know in the core if `resource` was registered as a class
-        // or a constant.
-        if !self.is_constant(resource.value().as_symbol()?) {
-            return Err(ParseError::IntegerOverflow {
-                loc: resource.offset(),
-                // TODO(gj): better error message
-                token: format!(
-                    "namespace {} must be registered as a class",
-                    resource.to_polar()
-                ),
-            }
-            .into());
-        }
-
-        // Check for duplicate namespace definitions.
-        if self.namespaces.contains_key(&resource) {
-            return Err(ParseError::IntegerOverflow {
-                loc: resource.offset(),
-                // TODO(gj): better error message, e.g.:
-                //               duplicate namespace declaration: Org { ... } defined on line XX of file YY
-                //                                                previously defined on line AA of file BB
-                token: format!("duplicate declaration of {} namespace", resource),
-            }
-            .into());
-        }
 
         let declarations = transform_declarations(roles, permissions, relations);
         self.namespaces.insert(resource.clone(), declarations);
@@ -188,8 +401,16 @@ impl KnowledgeBase {
 
         if let Some(implications) = implications {
             for implication in implications {
-                let rule =
+                let rewritten =
                     rewrite_implication(implication, resource.clone(), self.namespaces.clone());
+                let rule = match rewritten {
+                    Ok(rule) => rule,
+                    Err(e) => {
+                        // If we error out at this point, remove the namespace entry.
+                        self.namespaces.remove(&resource);
+                        return Err(e);
+                    }
+                };
                 let generic_rule = self
                     .rules
                     .entry(rule.name.clone())
@@ -204,8 +425,22 @@ impl KnowledgeBase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::formatting::ToPolarString;
+    use crate::parser::{parse_lines, Line};
     use crate::polar::Polar;
+
+    #[track_caller]
+    fn expect_error(p: &Polar, policy: &str, expected: &str) {
+        assert!(matches!(
+            p.load_str(policy).unwrap_err(),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
+                    token,
+                    ..
+                }),
+                ..
+            } if token == expected
+        ));
+    }
 
     #[test]
     fn test_namespace_local_rewrite_implications() {
@@ -218,7 +453,8 @@ mod tests {
             (term!("member"), term!("owner"), None),
             term!(sym!("Org")),
             namespaces.clone(),
-        );
+        )
+        .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
             r#"role(actor, "member", org: Org{}) if role(actor, "owner", org);"#
@@ -228,7 +464,8 @@ mod tests {
             (term!("invite"), term!("owner"), None),
             term!(sym!("Org")),
             namespaces.clone(),
-        );
+        )
+        .unwrap();
         assert_eq!(
             rewritten_permission_role.to_polar(),
             r#"permission(actor, "invite", org: Org{}) if role(actor, "owner", org);"#
@@ -238,7 +475,8 @@ mod tests {
             (term!("create_repo"), term!("invite"), None),
             term!(sym!("Org")),
             namespaces,
-        );
+        )
+        .unwrap();
         assert_eq!(
             rewritten_permission_permission.to_polar(),
             r#"permission(actor, "create_repo", org: Org{}) if permission(actor, "invite", org);"#
@@ -260,7 +498,8 @@ mod tests {
             (term!("reader"), term!("member"), Some(term!("parent"))),
             term!(sym!("Repo")),
             namespaces,
-        );
+        )
+        .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
             r#"role(actor, "reader", repo: Repo{}) if relation(org, "parent", repo) and role(actor, "member", org);"#
@@ -271,18 +510,13 @@ mod tests {
     fn test_namespace_must_be_registered() {
         let p = Polar::new();
         let valid_policy = r#"Org{roles=["owner"];}"#;
-        assert!(matches!(
-            p.load(valid_policy, None).unwrap_err(),
-            error::PolarError {
-                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
-                    token,
-                    ..
-                }),
-                ..
-            } if token == "namespace Org must be registered as a class"
-        ));
-        p.register_constant(sym!("Org"), term!(1));
-        assert!(p.load(valid_policy, None).is_ok());
+        expect_error(
+            &p,
+            valid_policy,
+            "Org namespace must be registered as a class",
+        );
+        p.register_constant(sym!("Org"), term!("unimportant"));
+        assert!(p.load_str(valid_policy).is_ok());
     }
 
     #[test]
@@ -292,16 +526,134 @@ mod tests {
             Org { roles=["owner"]; }
             Org { roles=["member"]; }
         "#;
-        p.register_constant(sym!("Org"), term!(1));
-        assert!(matches!(
-            p.load(invalid_policy, None).unwrap_err(),
-            error::PolarError {
-                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
-                    token,
-                    ..
-                }),
-                ..
-            } if token == "duplicate declaration of Org namespace"
-        ));
+        p.register_constant(sym!("Org"), term!("unimportant"));
+        expect_error(&p, invalid_policy, "duplicate declaration of Org namespace");
+    }
+
+    #[test]
+    fn test_namespace_empty() {
+        let p = Polar::new();
+        p.register_constant(sym!("Org"), term!("unimportant"));
+        expect_error(
+            &p,
+            "Org{}",
+            "Org namespace is empty. Please add roles, permissions, and/or relations, or delete it."
+        );
+    }
+
+    #[test]
+    fn test_namespace_with_empty_declarations() {
+        let p = Polar::new();
+        p.register_constant(sym!("Org"), term!("unimportant"));
+
+        expect_error(
+            &p,
+            "Org { roles=[]; permissions=[]; relations={}; }",
+            "Org namespace contains empty roles, permissions, and relations declarations. \
+            Please add roles, permissions, and relations or delete the declarations.",
+        );
+
+        expect_error(
+            &p,
+            "Org { roles=[]; }",
+            "Org namespace contains an empty roles declaration. \
+            Please add roles or delete the declaration.",
+        );
+    }
+
+    #[test]
+    fn test_namespace_with_permissions_but_no_implications() {
+        let p = Polar::new();
+        p.register_constant(sym!("Org"), term!("unimportant"));
+        expect_error(
+            &p,
+            r#"Org{permissions=["invite","create_repo"];}"#,
+            r#"Org: all declared permissions must be involved in at least one implication."#,
+        );
+    }
+
+    #[test]
+    fn test_namespace_with_permission_not_involved_in_implication() {
+        let p = Polar::new();
+        p.register_constant(sym!("Org"), term!("unimportant"));
+
+        expect_error(
+            &p,
+            r#"Org {
+                permissions=["invite","create_repo","ban"];
+                "invite" if "ban";
+            }"#,
+            r#"Org: declared "create_repo" permission must be involved in at least one implication."#,
+        );
+    }
+
+    #[test]
+    fn test_namespace_parse_only_roles() {
+        assert_eq!(
+            parse_lines(0, r#"Org{roles=["owner",];}"#).unwrap()[0],
+            Line::Namespace(Namespace {
+                resource: term!(sym!("Org")),
+                roles: Some(term!(["owner"])),
+                permissions: None,
+                relations: None,
+                implications: None,
+            })
+        );
+        assert_eq!(
+            parse_lines(0, r#"Org{roles=["owner","member",];}"#).unwrap()[0],
+            Line::Namespace(Namespace {
+                resource: term!(sym!("Org")),
+                roles: Some(term!(["owner", "member"])),
+                permissions: None,
+                relations: None,
+                implications: None,
+            })
+        );
+    }
+
+    #[test]
+    fn test_namespace_parse_roles_and_role_implications() {
+        assert_eq!(
+            parse_lines(
+                0,
+                r#"Org {
+                     roles=["owner","member"];
+                     "member" if "owner";
+                }"#
+            )
+            .unwrap()[0],
+            Line::Namespace(Namespace {
+                resource: term!(sym!("Org")),
+                roles: Some(term!(["owner", "member"])),
+                permissions: None,
+                relations: None,
+                implications: Some(vec![(term!("member"), term!("owner"), None)]),
+            })
+        );
+    }
+
+    #[test]
+    fn test_namespace_with_only_implications() {
+        let p = Polar::new();
+        p.register_constant(sym!("Org"), term!("unimportant"));
+        expect_error(
+            &p,
+            r#"Org{"member" if "owner";}"#,
+            r#"Undeclared term "owner" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
+        );
+    }
+
+    #[test]
+    fn test_namespace_parse_with_implied_term_not_declared_locally() {
+        let p = Polar::new();
+        p.register_constant(sym!("Org"), term!("unimportant"));
+        expect_error(
+            &p,
+            r#"Org {
+                roles=["owner"];
+                "member" if "owner";
+            }"#,
+            r#"Undeclared term "member" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
+        );
     }
 }

@@ -318,6 +318,14 @@ impl Term {
         }
     }
 
+    pub fn offset_to_end(&self) -> usize {
+        if let SourceInfo::Parser { right, .. } = self.source_info {
+            right
+        } else {
+            0
+        }
+    }
+
     pub fn span(&self) -> Option<(usize, usize)> {
         if let SourceInfo::Parser { left, right, .. } = self.source_info {
             Some((left, right))
