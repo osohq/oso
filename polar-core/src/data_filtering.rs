@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 use crate::error::PolarResult;
 use crate::events::ResultEvent;
 
+use crate::counter::*;
 use crate::terms::*;
+use std::hash::Hash;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Type {
@@ -25,6 +27,8 @@ pub struct Ref {
     field: Option<String>, // An optional field to map over the result objects with.
     result_id: String,     // Id of the FetchResult that should be an input.
 }
+
+type Id = String; // FIXME
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum ConstraintValue {
@@ -65,7 +69,7 @@ pub struct FetchRequest {
 pub struct ResultSet {
     requests: HashMap<String, FetchRequest>,
     resolve_order: Vec<String>,
-    result_id: String,
+    result_id: Id,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -110,7 +114,7 @@ impl FilterPlan {
 pub type Types = HashMap<String, HashMap<String, Type>>;
 pub type PartialResults = Vec<ResultEvent>;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct VarInfo {
     cycles: Vec<(Symbol, Symbol)>,                      // x = y
     types: Vec<(Symbol, String)>,                       // x matches XClass
@@ -118,6 +122,7 @@ struct VarInfo {
     contained_values: Vec<(Term, Symbol)>,              // 1 in x
     field_relationships: Vec<(Symbol, String, Symbol)>, // x.a = y
     in_relationships: Vec<(Symbol, Symbol)>,            // x in y
+    counter: Counter,
 }
 
 // @TODO(steve): Better way to handle these checks than just unwraps and asserts.
@@ -130,14 +135,15 @@ fn process_result(exp: &Operation) -> VarInfo {
         contained_values: vec![],
         field_relationships: vec![],
         in_relationships: vec![],
+        counter: Counter::default(),
     };
     process_exp(&mut var_info, exp);
     var_info
 }
 
-fn dot_var(var_info: &mut VarInfo, var: Term, field: &Term) -> Symbol {
-    let mut var = var;
-    while let Ok(Operation {
+fn dot_var(var_info: &mut VarInfo, mut var: Term, field: &Term) -> Symbol {
+    // handle nested dot ops.
+    if let Ok(Operation {
         operator: Operator::Dot,
         args,
     }) = var.value().as_expression()
@@ -148,11 +154,11 @@ fn dot_var(var_info: &mut VarInfo, var: Term, field: &Term) -> Symbol {
             &args[1],
         )))
     }
-    // TODO(steve): There's a potential name clash here which would be bad. Works for now.
-    // but should probably generate this var better.
+
     let sym = var.value().as_symbol().unwrap();
     let field_str = field.value().as_string().unwrap();
-    let new_var = Symbol::new(&format!("{}_dot_{}", sym.0, field_str));
+    let id = var_info.counter.next();
+    let new_var = Symbol::new(&format!("_{}_dot_{}_{}", sym.0, field_str, id));
 
     // Record the relationship between the vars.
     var_info
@@ -305,229 +311,158 @@ fn process_exp(var_info: &mut VarInfo, exp: &Operation) -> Option<Term> {
 
 #[derive(Debug)]
 struct Vars {
-    variables: HashMap<String, HashSet<Symbol>>,
-    field_relationships: HashSet<(String, String, String)>,
-    in_relationships: HashSet<(String, String)>,
-    eq_values: HashMap<String, Term>,
-    contained_values: HashMap<String, HashSet<Term>>,
-    types: HashMap<String, String>,
-    this_id: String,
+    variables: HashMap<Id, HashSet<Symbol>>,
+    field_relationships: HashSet<(Id, String, Id)>,
+    in_relationships: HashSet<(Id, Id)>,
+    eq_values: HashMap<Id, Term>,
+    contained_values: HashMap<Id, HashSet<Term>>,
+    types: HashMap<Id, String>,
+    this_id: Id,
+}
+
+/// generate a variable id from a counter.
+fn get_id_string(counter: &Counter) -> String {
+    format!("{}", counter.next())
+}
+
+/// get the id for this variable, or create one if the variable is new.
+fn get_var_id(
+    vars: &mut HashMap<String, HashSet<Symbol>>,
+    counter: &Counter,
+    var: Symbol,
+) -> String {
+    vars.iter()
+        .find_map(|(id, set)| set.contains(&var).then(|| id.clone()))
+        .unwrap_or_else(|| {
+            let new_id = get_id_string(counter);
+            let mut new_set = HashSet::new();
+            new_set.insert(var);
+            vars.insert(new_id.clone(), new_set);
+            new_id
+        })
+}
+
+/// find the key for the equivalence class this variable belongs to.
+fn resolve<'a, A>(map: &'a HashMap<A, A>, key: &'a A) -> &'a A
+where
+    A: Hash + Eq,
+{
+    map.get(key).map_or(key, |key| resolve(map, key))
 }
 
 /// Collapses the var info that we obtained from walking the expressions.
 /// Track equivalence classes of variables and assign each one an id.
 fn collapse_vars(var_info: VarInfo) -> Vars {
-    // Merge variable cycles.
-    let mut joined_cycles: Vec<HashSet<Symbol>> = vec![];
-    'cycles: for (l, r) in var_info.cycles {
-        // See if we can add to an existing cycle.
-        for joined_cycle in &mut joined_cycles {
-            if joined_cycle.contains(&l) || joined_cycle.contains(&r) {
-                joined_cycle.insert(l);
-                joined_cycle.insert(r);
-                continue 'cycles;
-            }
-        }
-        // Create new cycle if we couldn't
-        let mut new_cycle = HashSet::new();
-        new_cycle.insert(l);
-        new_cycle.insert(r);
-        joined_cycles.push(new_cycle);
-    }
+    // id generator
+    let counter = Counter::default();
+    let get_id = || get_id_string(&counter);
 
-    let mut next_id = 0;
-    let mut get_id = move || {
-        let id = next_id;
-        next_id += 1;
-        format!("{}", id)
+    // group the variables into equivalence classes.
+    let mut variables = var_info
+        .cycles
+        .into_iter()
+        .fold(vec![], |mut joined: Vec<HashSet<Symbol>>, (l, r)| {
+            match joined.iter_mut().find(|c| c.contains(&l) || c.contains(&r)) {
+                // See if we can add to an existing cycle.
+                Some(cycle) => {
+                    cycle.insert(l);
+                    cycle.insert(r);
+                }
+                // Create new cycle if we couldn't
+                None => {
+                    let mut cycle = HashSet::new();
+                    cycle.insert(l);
+                    cycle.insert(r);
+                    joined.push(cycle);
+                }
+            }
+            joined
+        })
+        // Give each cycle an id
+        .into_iter()
+        .map(|c| (get_id(), c))
+        .collect::<HashMap<_, _>>();
+
+    // we're not done yet! now get all the parent / field / child triples.
+    let triples = {
+        let mut find_id = |item: &Symbol| get_var_id(&mut variables, &counter, item.clone());
+        var_info
+            .field_relationships
+            .iter()
+            .map(|(p, f, c)| (find_id(p), f, find_id(c)))
+            .collect::<Vec<_>>()
     };
 
-    // Give each cycle an id
-    let mut variables: HashMap<String, HashSet<Symbol>> = HashMap::new();
-    for joined_cycle in joined_cycles {
-        let id = get_id();
-        variables.insert(id, joined_cycle);
-    }
-
-    // Substitute in relationships
-    let mut parent_ids = vec![];
-    'parent_relationships: for (parent, _, _) in &var_info.field_relationships {
-        for (id, set) in &mut variables {
-            if set.contains(parent) {
-                parent_ids.push(id.clone());
-                continue 'parent_relationships;
-            }
-        }
-        // Create a new set if we didn't find one.
-        let new_id = get_id();
-        let mut new_set = HashSet::new();
-        new_set.insert(parent.clone());
-        variables.insert(new_id.clone(), new_set);
-        parent_ids.push(new_id);
-    }
-    let mut child_ids = vec![];
-    'child_relationships: for (_, _, child) in &var_info.field_relationships {
-        for (id, set) in &mut variables {
-            if set.contains(child) {
-                child_ids.push(id.clone());
-                continue 'child_relationships;
-            }
-        }
-        // Create a new set if we didn't find one.
-        let new_id = get_id();
-        let mut new_set = HashSet::new();
-        new_set.insert(child.clone());
-        variables.insert(new_id.clone(), new_set);
-        child_ids.push(new_id);
-    }
-
-    // If a.b = c and a.b = d, that means c = d.
-    // @Sorry(steve): Wow, what a loop. Maybe just loop over indexes instead.
-    let mut new_unifies: Vec<(String, String)> = vec![];
-    for (i, ((parent_id1, child_id1), (_, field1, _))) in parent_ids
+    // if p.f=a and p.f=b then a=b, so merge the equivalence classes of a and b.
+    triples
         .iter()
-        .zip(child_ids.iter())
-        .zip(var_info.field_relationships.iter())
-        .enumerate()
-    {
-        for (j, ((parent_id2, child_id2), (_, field2, _))) in parent_ids
-            .iter()
-            .zip(child_ids.iter())
-            .zip(var_info.field_relationships.iter())
-            .enumerate()
-        {
-            if i != j && parent_id1 == parent_id2 && field1 == field2 && child_id1 != child_id2 {
-                // Unify children
-                new_unifies.push((child_id1.clone(), child_id2.clone()));
+        .flat_map(|(p1, f1, c1)| {
+            triples.iter().filter_map(move |(p2, f2, c2)| {
+                (c1 != c2 && f1 == f2 && p1 == p2).then(|| (c1.clone(), c2.clone()))
+            })
+        })
+        .fold(HashMap::new(), |mut maps, (x, y)| {
+            let (x, y) = (resolve(&maps, &x), resolve(&maps, &y));
+            if x != y {
+                let mut vars = variables.remove(y).unwrap();
+                vars.extend(variables.remove(x).unwrap());
+                let (x, y) = (x.clone(), y.clone());
+                maps.insert(x, y.clone());
+                variables.insert(y, vars);
             }
-        }
-    }
+            maps
+        });
 
-    // @TODO(steve): There are absolutely bugs in here.
-    // If we're turning 0 into 1 and then 0 into 2 it'll just blow up
-    // not correctly turn 0 and 1 into 2. Needs some tests.
-    for (x, y) in &new_unifies {
-        if x != y {
-            let mut xs = variables.remove(x).unwrap();
-            let ys = variables.remove(y).unwrap();
-            xs.extend(ys);
-            variables.insert(x.clone(), xs);
-        }
-    }
+    let mut find_id = |item| get_var_id(&mut variables, &counter, item);
 
-    // Substitute in relationship ids.
-    // @Sorry(steve): This is a real mess too.
-    let mut field_relationships = HashSet::new();
-    for (parent, field, child) in &var_info.field_relationships {
-        let mut parent_id = String::new();
-        let mut child_id = String::new();
-        for (id, set) in &mut variables {
-            if set.contains(parent) {
-                parent_id = id.clone();
-            }
-            if set.contains(child) {
-                child_id = id.clone();
-            }
-        }
-        assert_ne!(parent_id, String::new());
-        assert_ne!(child_id, String::new());
-        field_relationships.insert((parent_id, field.clone(), child_id));
-    }
+    // the rest is comparatively easy!
 
-    // In relationships
-    let mut in_relationships = HashSet::new();
-    for (lhs, rhs) in &var_info.in_relationships {
-        let mut lhs_id = String::new();
-        let mut rhs_id = String::new();
-        for (id, set) in &mut variables {
-            if set.contains(lhs) {
-                lhs_id = id.clone();
-            }
-            if set.contains(rhs) {
-                rhs_id = id.clone();
-            }
-        }
-        if lhs_id == String::new() {
-            let new_id = get_id();
-            let mut new_set = HashSet::new();
-            new_set.insert(lhs.clone());
-            variables.insert(new_id.clone(), new_set);
-        }
-        if rhs_id == String::new() {
-            let new_id = get_id();
-            let mut new_set = HashSet::new();
-            new_set.insert(rhs.clone());
-            variables.insert(new_id.clone(), new_set);
-        }
-        in_relationships.insert((lhs_id, rhs_id));
-    }
+    let in_relationships = var_info
+        .in_relationships
+        .into_iter()
+        .map(|(lhs, rhs)| (find_id(lhs), find_id(rhs)))
+        .collect::<HashSet<_>>();
 
     // I think a var can only have one value since we make sure there's a var for the dot lookup,
     // and if they had aliases they'd be collapsed by now, so it should be an error
     // if foo.name = "steve" and foo.name = "gabe".
-    let mut eq_values = HashMap::new();
-    'values: for (var, value) in var_info.eq_values {
-        for (id, set) in &mut variables {
-            if set.contains(&var) {
-                // @TODO(steve): If we already have a value for it make sure they match don't just
-                // overwrite it.
-                eq_values.insert(id.clone(), value);
-                continue 'values;
-            }
-        }
-        // Create new variable if we didn't find one.
-        let new_id = get_id();
-        let mut new_set = HashSet::new();
-        new_set.insert(var.clone());
-        variables.insert(new_id.clone(), new_set);
-        eq_values.insert(new_id, value);
-    }
+    let eq_values = var_info
+        .eq_values
+        .into_iter()
+        .map(|(var, val)| (find_id(var), val))
+        .collect::<HashMap<_, _>>();
 
-    let mut contained_values = HashMap::new();
-    'contained_values: for (value, var) in var_info.contained_values {
-        for (id, set) in &mut variables {
-            if set.contains(&var) {
-                contained_values
-                    .entry(id.clone())
+    let types = var_info
+        .types
+        .into_iter()
+        .map(|(var, typ)| (find_id(var), typ))
+        .collect::<HashMap<_, _>>();
+
+    let contained_values =
+        var_info
+            .contained_values
+            .into_iter()
+            .fold(HashMap::new(), |mut map, (val, var)| {
+                map.entry(find_id(var))
                     .or_insert_with(HashSet::new)
-                    .insert(value);
-                continue 'contained_values;
-            }
-        }
-        // Create new variable if we didn't find one.
-        let new_id = get_id();
-        let mut new_set = HashSet::new();
-        new_set.insert(var.clone());
-        variables.insert(new_id.clone(), new_set);
-        let mut new_val_set = HashSet::new();
-        new_val_set.insert(value);
-        contained_values.insert(new_id, new_val_set);
-    }
+                    .insert(val);
+                map
+            });
 
-    let mut types = HashMap::new();
-    'types: for (var, typ) in var_info.types {
-        for (id, set) in &mut variables {
-            if set.contains(&var) {
-                // @TODO(steve): If we already have a type for it make sure they match don't just
-                // overwrite it.
-                types.insert(id.clone(), typ);
-                continue 'types;
-            }
-        }
-        // Create new variable if we didn't find one.
-        let new_id = get_id();
-        let mut new_set = HashSet::new();
-        new_set.insert(var.clone());
-        variables.insert(new_id.clone(), new_set);
-        types.insert(new_id, typ);
-    }
+    let find_id = |item| {
+        variables
+            .iter()
+            .find_map(|(id, set)| set.contains(&item).then(|| id.clone()))
+            .expect("couldn't find id")
+    };
 
-    let mut this_id = String::new();
-    for (id, set) in &variables {
-        if set.contains(&Symbol::new("_this")) {
-            this_id = id.clone()
-        }
-    }
+    let field_relationships = var_info
+        .field_relationships
+        .into_iter()
+        .map(|(p, f, c)| (find_id(p), f, find_id(c)))
+        .collect::<HashSet<_>>();
+
+    let this_id = find_id(Symbol::new("_this"));
 
     Vars {
         variables,
