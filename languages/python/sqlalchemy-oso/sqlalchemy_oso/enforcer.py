@@ -13,10 +13,10 @@ class SQLAlchemyEnforcer(Enforcer):
     def __init__(self, policy: SQLAlchemyPolicy, session_maker, *args, **kwargs):
         """Construct a new SQLAlchemyEnforcer
 
-        >>> policy = SQLAlchemyPolicy(Base)
-        >>> oso = SQLAlchemyEnforcer(policy, Session)
-        >>> # ...
-        >>> oso.authorize_query(user, Article).all()
+        > policy = SQLAlchemyPolicy(Base)
+        > oso = SQLAlchemyEnforcer(policy, Session)
+        > # ...
+        > oso.authorize_query(user, Article).all()
 
         :param policy: An instance of ``SQLAlchemyPolicy``
         :param session_maker: A SQLAlchemy session maker instance"""
