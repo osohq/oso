@@ -269,7 +269,7 @@ LogExp: Term = {
 // A and B to be values, but `x in y` is a logical term.
 
 // In Prolog, logicals would be a callable - things that can be called and fail or success
-// Values are not callable. Togoether, values and logicals are terms.
+// Values are not callable. Together, values and logicals are terms.
 
 
 IsValue<T>: ValueOrLogical = {
