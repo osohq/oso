@@ -122,3 +122,20 @@ class Enforcer:
             actions.add(action)
 
         return list(actions)
+
+    def authorize_field(self, actor, action, resource, field):
+        """Ensure that ``actor`` is allowed to perform ``action`` on a given
+        ``resource``'s ``field``.
+
+        If the action is permitted with an ``allow_field`` rule in the policy,
+        then this method returns ``None``. If the action is not permitted by the
+        policy, this method will raise a ``ForbiddenError`.
+
+        :param actor: The actor performing the request.
+        :param action: The action the actor is attempting to perform on the
+        field.
+        :param resource: The resource being accessed.
+        :param field: The name of the field being accessed.
+        """
+        if not self.policy.query_rule_once("allow_field", actor, action, resource, field):
+            raise self._get_error(False)

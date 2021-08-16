@@ -148,6 +148,23 @@ def test_authorize_request(test_enforcer):
         test_enforcer.authorize_request("graham", Request("GET", "/account"))
 
 
+def test_authorize_field(test_enforcer):
+    admin = Actor(name="president")
+    guest = Actor(name="guest")
+    company = Company(id="1")
+    resource = Widget(id=company.id)
+    # Admin can update name
+    test_enforcer.authorize_field(admin, "update", resource, "name")
+    # Admin cannot update another field
+    with pytest.raises(ForbiddenError):
+        test_enforcer.authorize_field(guest, "update", resource, "foo")
+
+    # Guests can read non-private fields
+    test_enforcer.authorize_field(guest, "read", resource, "name")
+    with pytest.raises(ForbiddenError):
+        test_enforcer.authorize_field(guest, "read", resource, "private_field")
+
+
 def test_custom_errors():
     class TestException(Exception):
         def __init__(self, is_not_found):
