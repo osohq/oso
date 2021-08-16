@@ -27,7 +27,7 @@ class Widget:
     id: str = ""
 
     # Class variables.
-    actions = ("get", "create")
+    actions = ("read", "create")
 
     def __init__(self, id):
         self.id = id
@@ -89,7 +89,7 @@ class BarDecorated(FooDecorated):
 def test_is_allowed(test_oso):
     actor = Actor(name="guest")
     resource = Widget(id="1")
-    action = "get"
+    action = "read"
     assert test_oso.is_allowed(actor, action, resource)
     assert test_oso.is_allowed({"username": "guest"}, action, resource)
     assert test_oso.is_allowed("guest", action, resource)
@@ -104,7 +104,7 @@ def test_is_allowed(test_oso):
 def test_query_rule(test_oso):
     actor = Actor(name="guest")
     resource = Widget(id="1")
-    action = "get"
+    action = "read"
     assert list(test_oso.query_rule("allow", actor, action, resource))
 
 
@@ -132,13 +132,13 @@ def test_allow_model(test_oso):
 
 def test_get_allowed_actions(test_oso):
     rule = """allow(_actor: test_oso::Actor{name: "Sally"}, action, _resource: test_oso::Widget{id: "1"}) if
-        action in ["CREATE", "READ"];"""
+        action in ["CREATE", "UPDATE"];"""
 
     test_oso.load_str(rule)
     user = Actor(name="Sally")
     resource = Widget(id="1")
     assert set(test_oso.get_allowed_actions(user, resource)) == set(
-        ["get", "CREATE", "READ"]
+        ["read", "CREATE", "UPDATE"]
     )
 
     rule = """allow(_actor: test_oso::Actor{name: "John"}, _action, _resource: test_oso::Widget{id: "1"});"""
