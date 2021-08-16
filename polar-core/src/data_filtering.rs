@@ -25,10 +25,10 @@ pub enum Type {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Ref {
     field: Option<String>, // An optional field to map over the result objects with.
-    result_id: String,     // Id of the FetchResult that should be an input.
+    result_id: Id,     // Id of the FetchResult that should be an input.
 }
 
-type Id = String; // FIXME
+type Id = u64; // FIXME
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum ConstraintValue {
@@ -67,8 +67,8 @@ pub struct FetchRequest {
 // @Q(steve): Is it always the last one in the resolve_order?
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct ResultSet {
-    requests: HashMap<String, FetchRequest>,
-    resolve_order: Vec<String>,
+    requests: HashMap<Id, FetchRequest>,
+    resolve_order: Vec<Id>,
     result_id: Id,
 }
 
@@ -321,16 +321,17 @@ struct Vars {
 }
 
 /// generate a variable id from a counter.
-fn get_id_string(counter: &Counter) -> String {
-    format!("{}", counter.next())
+fn get_id_string(counter: &Counter) -> Id {
+    counter.next()
+//    format!("{}", counter.next())
 }
 
 /// get the id for this variable, or create one if the variable is new.
 fn get_var_id(
-    vars: &mut HashMap<String, HashSet<Symbol>>,
+    vars: &mut HashMap<Id, HashSet<Symbol>>,
     counter: &Counter,
     var: Symbol,
-) -> String {
+) -> Id {
     vars.iter()
         .find_map(|(id, set)| set.contains(&var).then(|| id.clone()))
         .unwrap_or_else(|| {
@@ -481,7 +482,7 @@ fn constrain_vars(types: &Types, vars: &Vars, this_type: &str) -> ResultSet {
         resolve_order: vec![],
         result_id: vars.this_id.clone(),
     };
-    constrain_var(&mut result_set, types, vars, &vars.this_id, this_type);
+    constrain_var(&mut result_set, types, vars, vars.this_id, this_type);
     result_set
 }
 
@@ -489,7 +490,7 @@ fn constrain_var(
     result_set: &mut ResultSet,
     types: &Types,
     vars: &Vars,
-    var_id: &str,
+    var_id: Id,
     var_type: &str,
 ) {
     // @TODO(steve): Probably should check the type against the var types. I think???
@@ -499,8 +500,8 @@ fn constrain_var(
         .map(|r| r.1.clone())
         .unwrap_or_else(HashMap::new);
 
-    let mut request = if result_set.requests.contains_key(var_id) {
-        result_set.requests.remove(var_id).unwrap()
+    let mut request = if result_set.requests.contains_key(&var_id) {
+        result_set.requests.remove(&var_id).unwrap()
     } else {
         FetchRequest {
             class_tag: var_type.to_string(),
@@ -509,7 +510,7 @@ fn constrain_var(
     };
 
     for (parent, field, child) in &vars.field_relationships {
-        if parent == var_id {
+        if *parent == var_id {
             let typ = match type_def.get(field) {
                 None => panic!("unknown field {}", field),
                 Some(t) => t,
@@ -522,7 +523,7 @@ fn constrain_var(
                 ..
             } = typ
             {
-                constrain_var(result_set, types, vars, child, other_class_tag);
+                constrain_var(result_set, types, vars, *child, other_class_tag);
 
                 // If the constrained child var doesn't have any constraints on it, we don't need to
                 // constrain this var. Otherwise we're just saying field foo in all Foos which
@@ -587,16 +588,16 @@ fn constrain_var(
     // @NOTE(steve): I think this is right, but I'm not totally sure.
     // This might assume that the current var is a relationship of kind "children".
     for (lhs, rhs) in &vars.in_relationships {
-        if rhs == var_id {
-            constrain_var(result_set, types, vars, lhs, var_type);
+        if *rhs == var_id {
+            constrain_var(result_set, types, vars, *lhs, var_type);
             let in_result_set = result_set.requests.remove(lhs).unwrap();
-            assert_eq!(result_set.resolve_order.pop(), Some(lhs.to_string()));
+            assert_eq!(result_set.resolve_order.pop(), Some(*lhs));
             request.constraints.extend(in_result_set.constraints);
         }
     }
 
-    result_set.requests.insert(var_id.to_string(), request);
-    result_set.resolve_order.push(var_id.to_string());
+    result_set.requests.insert(var_id, request);
+    result_set.resolve_order.push(var_id);
 }
 
 pub fn opt_pass(filter_plan: &mut FilterPlan, explain: bool) -> bool {

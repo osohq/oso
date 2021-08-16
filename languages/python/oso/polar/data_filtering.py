@@ -51,7 +51,7 @@ class Field:
 @dataclass
 class Ref:
     field: Optional[str]
-    result_id: str
+    result_id: int
 
 
 @dataclass
@@ -124,7 +124,7 @@ def builtin_filter_plan_resolver(polar, filter_plan):
         result_id = rs["result_id"]
 
         for i in resolve_order:
-            req = requests[i]
+            req = requests[str(i)] # thanks JSON
             class_name = req["class_tag"]
             constraints = req["constraints"]
 
@@ -141,8 +141,5 @@ def builtin_filter_plan_resolver(polar, filter_plan):
     return [i for n, i in enumerate(results) if i not in results[:n]]
 
 
-def filter_data(polar, filter_plan, filter_plan_resolver=None):
-    if filter_plan_resolver is None:
-        return builtin_filter_plan_resolver(polar, filter_plan)
-    else:
-        return filter_plan_resolver(polar, filter_plan)
+def filter_data(polar, filter_plan, filter_plan_resolver=builtin_filter_plan_resolver):
+    return filter_plan_resolver(polar, filter_plan)
