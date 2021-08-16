@@ -863,6 +863,8 @@ describe('Oso Roles', () => {
     const leina = new User('leina', [osohqOwner]);
     const steve = new User('steve', [osohqMember]);
 
+    // TODO: had to change specializers in `parent_child` rules back to
+    // `matches` in the body in order to get tests passing--revisit
     const policy = `
       resource(_type: Org, "org", actions, roles) if
           actions = [
