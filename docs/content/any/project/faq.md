@@ -134,7 +134,7 @@ product, please [contact us](https://osohq.com/company/contact-us).
 
 ## Who builds and maintains Oso?
 
-Oso is built by [Oso](https://www.osohq.com/company/about-us)! We are headquartered in New York City with engineers across two continents, and we are
+Oso is built by [Oso](https://www.osohq.com/company/about-us)! We are headquartered in New York City and remotely with engineers across two continents, and we are
 hard at work on new features and improvements. If you have feedback or ideas about
 how we can make the product better, we would be delighted to hear from you.
 Please feel free to reach out to us at <a href="mailto:engineering@osohq.com">engineering@osohq.com</a>.

@@ -79,22 +79,6 @@ macro_rules! instance {
 }
 
 #[macro_export]
-macro_rules! partial {
-    ($arg:expr) => {
-        Value::Partial(Partial::new(sym!($arg)))
-    };
-    ($arg:expr, [$($args:expr),*]) => {
-        {
-            let mut constraint = Partial::new(sym!($arg));
-            $(
-                constraint.add_constraint($args);
-            )*
-            constraint
-        }
-    };
-}
-
-#[macro_export]
 macro_rules! sym {
     ($arg:expr) => {
         $crate::macros::TestHelper::<Symbol>::from($arg).0
