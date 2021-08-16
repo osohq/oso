@@ -111,7 +111,7 @@ class Enforcer:
             if isinstance(action, Variable):
                 if not allow_wildcard:
                     raise exceptions.OsoError(
-                        """The result of get_allowed_actions() contained an
+                        """The result of authorized_actions() contained an
                         "unconstrained" action that could represent any
                         action, but allow_wildcard was set to False. To fix,
                         set allow_wildcard to True and compare with the "*"
@@ -137,5 +137,47 @@ class Enforcer:
         :param resource: The resource being accessed.
         :param field: The name of the field being accessed.
         """
-        if not self.policy.query_rule_once("allow_field", actor, action, resource, field):
+        if not self.policy.query_rule_once(
+            "allow_field", actor, action, resource, field
+        ):
             raise self._get_error(False)
+
+    def authorized_fields(self, actor, action, resource, allow_wildcard=False) -> list:
+        """Determine the fields of ``resource`` on which ``actor`` is allowed to
+        perform  ``action``.
+
+        Uses ``allow_field`` rules in the policy to find all allowed fields.
+
+        :param actor: The actor for whom to collect allowed fields.
+        :param action: The action being taken on the field.
+        :param resource: The resource being accessed.
+
+        :param allow_wildcard: Flag to determine behavior if the policy \
+        includes a wildcard field. E.g., a rule allowing any field: \
+        ``allow(_actor, _field, _resource)``. If ``True``, the method will \
+        return ``["*"]``, if ``False``, the method will raise an exception.
+
+        :type allow_wildcard: bool
+
+        :return: A list of the unique allowed fields.
+        """
+        results = self.policy.query_rule(
+            "allow_field", actor, action, resource, Variable("field")
+        )
+        fields = set()
+        for result in results:
+            field = result.get("bindings").get("field")
+            if isinstance(field, Variable):
+                if not allow_wildcard:
+                    raise exceptions.OsoError(
+                        """The result of authorized_fields() contained an
+                        "unconstrained" field that could represent any
+                        field, but allow_wildcard was set to False. To fix,
+                        set allow_wildcard to True and compare with the "*"
+                        string."""
+                    )
+                else:
+                    return ["*"]
+            fields.add(field)
+
+        return list(fields)
