@@ -36,6 +36,22 @@ class Polar:
         self.process_messages()
         self.check_result(result)
 
+    def build_filter_plan(self, types, partial_results, variable, class_tag):
+        """Get a filterplan for data filtering."""
+        # @TODO(Steve): Pass types.
+        typs = ffi_serialize(types)
+        prs = ffi_serialize(partial_results)
+        var = to_c_str(variable)
+        class_tag = to_c_str(class_tag)
+        plan = lib.polar_build_filter_plan(self.ptr, typs, prs, var, class_tag)
+        process_messages(self.next_message)
+        filter_plan_p = check_result(plan)
+        filter_plan_s = ffi.string(filter_plan_p).decode()
+        lib.string_free(filter_plan_p)
+        filter_plan = json.loads(filter_plan_s)
+        # @TODO(Steve): Decode Filter Plan to not just json?
+        return filter_plan
+
     def load(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
         string = to_c_str(string)

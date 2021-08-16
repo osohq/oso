@@ -20,25 +20,56 @@ from .expression import Expression, Pattern
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
-    def __init__(self, polar, classes=None, instances=None, get_field=None):
+    def __init__(
+        self,
+        polar,
+        classes=None,
+        cls_names=None,
+        instances=None,
+        get_field=None,
+        types=None,
+        fetchers=None,
+    ):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
         self.classes = (classes or {}).copy()
+        self.cls_names = (cls_names or {}).copy()
         self.instances = (instances or {}).copy()
+        self.types = (types or {}).copy()
+        self.fetchers = (fetchers or {}).copy()
         self._accept_expression = False  # default, see set_accept_expression
 
-        def default_get_field(_obj, _field):
-            raise PolarRuntimeError("Cannot generically walk fields of a Python class")
+        # Check the types.
+        def default_get_field(obj, field):
+            return self.types_get_field(obj, field)
 
         self.get_field = get_field or default_get_field
+
+    # @Q: I'm not really sure what I'm returning here.
+    def types_get_field(self, obj, field):
+        obj_type_name = self.cls_names[obj]
+        if obj_type_name in self.types:
+            obj_type_info = self.types[obj_type_name]
+            if field in obj_type_info:
+                field_type = obj_type_info[field]
+                if field_type.kind == "parent":
+                    return self.classes[field_type.other_type]
+                elif field_type.kind == "children":
+                    return list
+            else:
+                raise AttributeError(f"no field {field} on {obj.__name__}")
+        raise PolarRuntimeError(f"No type information for Python class {obj.__name__}")
 
     def copy(self):
         """Copy an existing cache."""
         return type(self)(
             self.ffi_polar,
             classes=self.classes,
+            cls_names=self.cls_names,
             instances=self.instances,
             get_field=self.get_field,
+            types=self.types,
+            fetchers=self.fetchers,
         )
 
     def get_class(self, name):
