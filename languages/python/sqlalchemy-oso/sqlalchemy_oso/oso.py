@@ -55,4 +55,5 @@ class SQLAlchemyOso(Oso):
             )
         return self._roles
 
+
 SQLAlchemyPolicy = SQLAlchemyOso

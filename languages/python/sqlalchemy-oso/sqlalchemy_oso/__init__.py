@@ -6,4 +6,10 @@ from .oso import SQLAlchemyOso, SQLAlchemyPolicy
 from .session import authorized_sessionmaker
 from .enforcer import SQLAlchemyEnforcer
 
-__all__ = ["register_models", "authorized_sessionmaker", "SQLAlchemyOso"]
+__all__ = [
+    "register_models",
+    "authorized_sessionmaker",
+    "SQLAlchemyOso",
+    "SQLAlchemyEnforcer",
+    "SQLAlchemyPolicy",
+]

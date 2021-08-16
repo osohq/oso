@@ -2,12 +2,14 @@ from oso import Enforcer
 from .oso import SQLAlchemyPolicy
 from .auth import authorize_model
 
+
 class SQLAlchemyEnforcer(Enforcer):
     """
     NOTE: This is a preview feature.
 
     Custom Oso enforcer for SQLAlchemy.
     """
+
     def __init__(self, policy: SQLAlchemyPolicy, session_maker, *args, **kwargs):
         """Construct a new SQLAlchemyEnforcer
 
