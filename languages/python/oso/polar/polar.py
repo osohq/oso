@@ -270,9 +270,6 @@ class Polar:
             self.host.types[cls_name] = types
         if fetcher:
             self.host.fetchers[cls_name] = fetcher
-        self.ffi_polar.register_mro(
-            cls_name, self.host.to_polar(list(inspect.getmro(cls)))
-        )
 
     def register_constant(self, value, name):
         """Register `value` as a Polar constant variable called `name`."""
