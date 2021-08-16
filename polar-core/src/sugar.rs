@@ -28,7 +28,7 @@ pub struct Namespace {
 
 pub type Namespaces = HashMap<Term, HashMap<Term, Declaration>>;
 
-fn transform_declarations(
+fn index_declarations(
     roles: Option<Term>,
     permissions: Option<Term>,
     relations: Option<Term>,
@@ -388,7 +388,7 @@ impl KnowledgeBase {
             implications,
         } = namespace;
 
-        let declarations = transform_declarations(roles, permissions, relations);
+        let declarations = index_declarations(roles, permissions, relations);
         self.namespaces.insert(resource.clone(), declarations);
 
         // TODO(gj): what to do for `on "parent_org"` if Org{} namespace hasn't
@@ -446,7 +446,7 @@ mod tests {
     fn test_namespace_local_rewrite_implications() {
         let roles = term!(["owner", "member"]);
         let permissions = term!(["invite", "create_repo"]);
-        let declarations = transform_declarations(Some(roles), Some(permissions), None);
+        let declarations = index_declarations(Some(roles), Some(permissions), None);
         let mut namespaces = HashMap::new();
         namespaces.insert(term!(sym!("Org")), declarations);
         let rewritten_role_role = rewrite_implication(
@@ -487,10 +487,9 @@ mod tests {
     fn test_namespace_nonlocal_rewrite_implications() {
         let repo_roles = term!(["reader"]);
         let repo_relations = term!(btreemap! { sym!("parent") => term!(sym!("Org")) });
-        let repo_declarations =
-            transform_declarations(Some(repo_roles), None, Some(repo_relations));
+        let repo_declarations = index_declarations(Some(repo_roles), None, Some(repo_relations));
         let org_roles = term!(["member"]);
-        let org_declarations = transform_declarations(Some(org_roles), None, None);
+        let org_declarations = index_declarations(Some(org_roles), None, None);
         let mut namespaces = HashMap::new();
         namespaces.insert(term!(sym!("Repo")), repo_declarations);
         namespaces.insert(term!(sym!("Org")), org_declarations);
