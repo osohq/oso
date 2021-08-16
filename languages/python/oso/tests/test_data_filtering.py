@@ -1,5 +1,11 @@
 import pytest
 
+from sqlalchemy import create_engine
+from sqlalchemy.types import String, Boolean
+from sqlalchemy.schema import Column, ForeignKey
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+
 from dataclasses import dataclass
 from oso import Oso
 from polar import Relationship
