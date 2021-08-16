@@ -132,12 +132,6 @@ def t(oso):
     }
 
 
-from sqlalchemy import create_engine
-from sqlalchemy.types import String, Boolean
-from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-
 # Shared test setup.
 @pytest.fixture
 def sqlalchemy_t(oso):
