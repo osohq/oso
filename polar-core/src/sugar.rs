@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::error::{ParseError, PolarResult};
+use super::error::{ParseError, PolarResult, RuntimeError};
 use super::kb::KnowledgeBase;
 use super::rules::*;
 use super::terms::*;
@@ -16,6 +16,30 @@ pub enum Declaration {
     Relation(Term),
 }
 
+type Declarations = HashMap<Term, Declaration>;
+
+impl Declaration {
+    fn as_relation(&self) -> PolarResult<&Term> {
+        if let Declaration::Relation(relation) = self {
+            Ok(relation)
+        } else {
+            Err(RuntimeError::TypeError {
+                msg: format!("Expected Relation; got: {:?}", self),
+                stack_trace: None, // @TODO
+            }
+            .into())
+        }
+    }
+
+    fn as_predicate(&self) -> Symbol {
+        match self {
+            Declaration::Role => sym!("role"),
+            Declaration::Permission => sym!("permission"),
+            Declaration::Relation(_) => sym!("relation"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Namespace {
     pub resource: Term,
@@ -26,7 +50,65 @@ pub struct Namespace {
     pub implications: Option<Vec<(Term, Term, Option<Term>)>>,
 }
 
-pub type Namespaces = HashMap<Term, HashMap<Term, Declaration>>;
+#[derive(Clone, Default)]
+pub struct Namespaces {
+    inner: HashMap<Term, Declarations>,
+}
+
+impl Namespaces {
+    pub fn new() -> Self {
+        Self {
+            inner: HashMap::new(),
+        }
+    }
+
+    fn add(&mut self, resource: Term, declarations: Declarations) -> Option<Declarations> {
+        self.inner.insert(resource, declarations)
+    }
+
+    fn remove(&mut self, resource: &Term) -> Option<Declarations> {
+        self.inner.remove(resource)
+    }
+
+    fn exists(&self, resource: &Term) -> bool {
+        self.inner.contains_key(resource)
+    }
+
+    fn get_declaration(&self, resource: &Term, name: &Term) -> PolarResult<&Declaration> {
+        if let Some(declaration) = self.inner[resource].get(name) {
+            Ok(declaration)
+        } else {
+            Err(ParseError::IntegerOverflow {
+                loc: name.offset(),
+                token: format!(
+                    "Undeclared term {} referenced in implication in {} namespace. \
+                        Did you mean to declare it as a role, permission, or relation?",
+                    name.to_polar(),
+                    resource
+                ),
+            }
+            .into())
+        }
+    }
+
+    fn get_related_type(&self, resource: &Term, relation: &Term) -> PolarResult<&Term> {
+        self.get_declaration(resource, relation)?.as_relation()
+    }
+
+    fn local_predicate_name(&self, resource: &Term, name: &Term) -> PolarResult<Symbol> {
+        Ok(self.get_declaration(resource, name)?.as_predicate())
+    }
+
+    fn cross_resource_predicate_name(
+        &self,
+        resource: &Term,
+        relation: &Term,
+        name: &Term,
+    ) -> PolarResult<Symbol> {
+        let related_type = self.get_related_type(resource, relation)?;
+        self.local_predicate_name(related_type, name)
+    }
+}
 
 fn index_declarations(
     roles: Option<Term>,
@@ -64,101 +146,60 @@ fn index_declarations(
         })
 }
 
-fn rewrite_implication(
-    implication: (Term, Term, Option<Term>),
-    resource: Term,
-    namespaces: Namespaces,
-) -> PolarResult<Rule> {
-    let (implied, implier, relation) = implication;
-    let body = if let Some(ref relation) = relation {
-        let resource_name = &resource.value().as_symbol().unwrap().0;
-        let implier_resource = implier.clone_with_value(value!(sym!(resource_name.to_lowercase())));
-        let implier_actor = implier.clone_with_value(value!(sym!("actor")));
-        let related_resource = &namespaces[&resource][relation];
-        let (implier_predicate, related_resource) =
-            if let Declaration::Relation(relation) = related_resource {
-                match namespaces[relation][&implier] {
-                    Declaration::Role => (sym!("role"), relation),
-                    Declaration::Permission => (sym!("permission"), relation),
-                    Declaration::Relation(_) => (sym!("relation"), relation),
-                }
-            } else {
-                panic!();
-            };
+fn resource_as_var(resource: &Term) -> PolarResult<Value> {
+    let name = &resource.value().as_symbol()?.0;
+    let mut lowercased = name.to_lowercase();
 
-        let related_resource_name = &related_resource.value().as_symbol().unwrap().0;
-        let related_resource =
-            relation.clone_with_value(value!(sym!(related_resource_name.to_lowercase())));
+    // If the resource's name is already lowercase, append "_instance" to distinguish the variable
+    // name from the resource's name.
+    if &lowercased == name {
+        lowercased += "_instance";
+    }
 
-        let relation_predicate = relation.clone_with_value(value!(Call {
+    Ok(value!(sym!(lowercased)))
+}
+
+fn rewrite_implier_as_rule_body(
+    implier: &Term,
+    relation: &Option<Term>,
+    namespaces: &Namespaces,
+    resource: &Term,
+) -> PolarResult<Term> {
+    let resource_var = implier.clone_with_value(resource_as_var(resource)?);
+    let actor_var = implier.clone_with_value(value!(sym!("actor")));
+    if let Some(relation) = relation {
+        // TODO(gj): what if the relation is with the same type? E.g.,
+        // `Dir { relations = { parent: Dir }; }`. This might cause Polar to loop.
+        let related_type = namespaces.get_related_type(resource, relation)?;
+        let related_resource_var = relation.clone_with_value(resource_as_var(related_type)?);
+
+        let relation_call = relation.clone_with_value(value!(Call {
             name: sym!("relation"),
-            args: vec![related_resource.clone(), relation.clone(), implier_resource],
+            // For example: vec![org, "parent", repo]
+            args: vec![related_resource_var.clone(), relation.clone(), resource_var],
             kwargs: None
         }));
 
-        let args = vec![implier_actor, implier.clone(), related_resource];
-        implier.clone_with_value(value!(op!(
-            And,
-            relation_predicate,
-            implier.clone_with_value(value!(Call {
-                name: implier_predicate,
-                args,
-                kwargs: None
-            }))
-        )))
+        let implier_call = implier.clone_with_value(value!(Call {
+            name: namespaces.cross_resource_predicate_name(resource, relation, implier)?,
+            // For example: vec![actor, "owner", org]
+            args: vec![actor_var, implier.clone(), related_resource_var],
+            kwargs: None
+        }));
+        Ok(implier.clone_with_value(value!(op!(And, relation_call, implier_call))))
     } else {
-        let resource_name = &resource.value().as_symbol().unwrap().0;
-        let implier_resource = implier.clone_with_value(value!(sym!(resource_name.to_lowercase())));
-        let implier_actor = implier.clone_with_value(value!(sym!("actor")));
-        let implier_predicate = match namespaces[&resource].get(&implier) {
-            Some(Declaration::Role) => sym!("role"),
-            Some(Declaration::Permission) => sym!("permission"),
-            // TODO(gj): can we do anything with the relation's type? E.g., `User` in
-            // `relations = { creator: User };`.
-            Some(Declaration::Relation(_)) => sym!("relation"),
-            None => {
-                return Err(ParseError::IntegerOverflow {
-                    loc: implier.offset(),
-                    token: format!(
-                        "Undeclared term {} referenced in implication in {} namespace. \
-                        Did you mean to declare it as a role, permission, or relation?",
-                        implier.to_polar(),
-                        resource
-                    ),
-                }
-                .into())
-            }
-        };
-        let args = vec![implier_actor, implier.clone(), implier_resource];
-        implier.clone_with_value(value!(op!(
-            And,
-            implier.clone_with_value(value!(Call {
-                name: implier_predicate,
-                args,
-                kwargs: None
-            }))
-        )))
-    };
+        let implier_call = implier.clone_with_value(value!(Call {
+            name: namespaces.local_predicate_name(resource, implier)?,
+            args: vec![actor_var, implier.clone(), resource_var],
+            kwargs: None
+        }));
+        Ok(implier.clone_with_value(value!(op!(And, implier_call))))
+    }
+}
 
-    let rule_name = match namespaces[&resource].get(&implied) {
-        Some(Declaration::Role) => sym!("role"),
-        Some(Declaration::Permission) => sym!("permission"),
-        Some(Declaration::Relation(_)) => sym!("relation"),
-        None => {
-            return Err(ParseError::IntegerOverflow {
-                loc: implied.offset(),
-                token: format!(
-                    "Undeclared term {} referenced in implication in {} namespace. \
-                        Did you mean to declare it as a role, permission, or relation?",
-                    implied.to_polar(),
-                    resource
-                ),
-            }
-            .into())
-        }
-    };
-    let resource_name = &resource.value().as_symbol().unwrap().0;
-    let params = vec![
+fn rewrite_implied_as_rule_params(implied: &Term, resource: &Term) -> PolarResult<Vec<Parameter>> {
+    let resource_name = &resource.value().as_symbol()?.0;
+    Ok(vec![
         Parameter {
             parameter: implied.clone_with_value(value!(sym!("actor"))),
             specializer: None,
@@ -168,12 +209,23 @@ fn rewrite_implication(
             specializer: None,
         },
         Parameter {
-            parameter: implied.clone_with_value(value!(sym!(resource_name.to_lowercase()))),
+            parameter: implied.clone_with_value(resource_as_var(resource)?),
             specializer: Some(
                 resource.clone_with_value(value!(pattern!(instance!(resource_name)))),
             ),
         },
-    ];
+    ])
+}
+
+fn rewrite_implication(
+    implication: (Term, Term, Option<Term>),
+    resource: &Term,
+    namespaces: &Namespaces,
+) -> PolarResult<Rule> {
+    let (implied, implier, relation) = implication;
+    let rule_name = namespaces.local_predicate_name(resource, &implied)?;
+    let params = rewrite_implied_as_rule_params(&implied, resource)?;
+    let body = rewrite_implier_as_rule_body(&implier, &relation, namespaces, resource)?;
 
     // TODO(gj): I think this will only be None in tests. Assert that.
     let src_id = resource.get_source_id().unwrap_or(0);
@@ -185,7 +237,7 @@ fn rewrite_implication(
 }
 
 fn check_for_duplicate_namespaces(namespaces: &Namespaces, resource: &Term) -> PolarResult<()> {
-    if namespaces.contains_key(resource) {
+    if namespaces.exists(resource) {
         return Err(ParseError::IntegerOverflow {
             loc: resource.offset(),
             // TODO(gj): better error message, e.g.:
@@ -353,16 +405,21 @@ fn check_all_permissions_involved_in_implications(namespace: &Namespace) -> Pola
 
                 if !implication_references_permission {
                     return Err(ParseError::IntegerOverflow {
-                            loc: permission.offset(),
-                            token: format!("{}: declared {} permission must be involved in at least one implication.", resource.to_polar(), permission.to_polar())
-                        }.into());
+                        loc: permission.offset(),
+                        token: format!(
+                            "{}: permission {} must be involved in at least one implication.",
+                            resource.to_polar(),
+                            permission.to_polar()
+                        ),
+                    }
+                    .into());
                 }
             }
         } else {
             return Err(ParseError::IntegerOverflow {
                 loc: permissions_list.offset(),
                 token: format!(
-                    "{}: all declared permissions must be involved in at least one implication.",
+                    "{}: all permissions must be involved in at least one implication.",
                     resource.to_polar(),
                 ),
             }
@@ -389,7 +446,7 @@ impl KnowledgeBase {
         } = namespace;
 
         let declarations = index_declarations(roles, permissions, relations);
-        self.namespaces.insert(resource.clone(), declarations);
+        self.namespaces.add(resource.clone(), declarations);
 
         // TODO(gj): what to do for `on "parent_org"` if Org{} namespace hasn't
         // been processed yet? Whether w/ multiple load_file calls or some future
@@ -401,8 +458,7 @@ impl KnowledgeBase {
 
         if let Some(implications) = implications {
             for implication in implications {
-                let rewritten =
-                    rewrite_implication(implication, resource.clone(), self.namespaces.clone());
+                let rewritten = rewrite_implication(implication, &resource, &self.namespaces);
                 let rule = match rewritten {
                     Ok(rule) => rule,
                     Err(e) => {
@@ -443,16 +499,40 @@ mod tests {
     }
 
     #[test]
+    fn test_namespace_rewrite_implications_with_lowercase_resource_specializer() {
+        let repo_roles = term!(["reader"]);
+        let repo_relations = term!(btreemap! { sym!("parent") => term!(sym!("org")) });
+        let repo_declarations = index_declarations(Some(repo_roles), None, Some(repo_relations));
+
+        let org_roles = term!(["member"]);
+        let org_declarations = index_declarations(Some(org_roles), None, None);
+
+        let mut namespaces = Namespaces::new();
+        namespaces.add(term!(sym!("repo")), repo_declarations);
+        namespaces.add(term!(sym!("org")), org_declarations);
+        let rewritten_role_role = rewrite_implication(
+            (term!("reader"), term!("member"), Some(term!("parent"))),
+            &term!(sym!("repo")),
+            &namespaces,
+        )
+        .unwrap();
+        assert_eq!(
+            rewritten_role_role.to_polar(),
+            r#"role(actor, "reader", repo_instance: repo{}) if relation(org_instance, "parent", repo_instance) and role(actor, "member", org_instance);"#
+        );
+    }
+
+    #[test]
     fn test_namespace_local_rewrite_implications() {
         let roles = term!(["owner", "member"]);
         let permissions = term!(["invite", "create_repo"]);
         let declarations = index_declarations(Some(roles), Some(permissions), None);
-        let mut namespaces = HashMap::new();
-        namespaces.insert(term!(sym!("Org")), declarations);
+        let mut namespaces = Namespaces::new();
+        namespaces.add(term!(sym!("Org")), declarations);
         let rewritten_role_role = rewrite_implication(
             (term!("member"), term!("owner"), None),
-            term!(sym!("Org")),
-            namespaces.clone(),
+            &term!(sym!("Org")),
+            &namespaces,
         )
         .unwrap();
         assert_eq!(
@@ -462,8 +542,8 @@ mod tests {
 
         let rewritten_permission_role = rewrite_implication(
             (term!("invite"), term!("owner"), None),
-            term!(sym!("Org")),
-            namespaces.clone(),
+            &term!(sym!("Org")),
+            &namespaces,
         )
         .unwrap();
         assert_eq!(
@@ -473,8 +553,8 @@ mod tests {
 
         let rewritten_permission_permission = rewrite_implication(
             (term!("create_repo"), term!("invite"), None),
-            term!(sym!("Org")),
-            namespaces,
+            &term!(sym!("Org")),
+            &namespaces,
         )
         .unwrap();
         assert_eq!(
@@ -490,13 +570,13 @@ mod tests {
         let repo_declarations = index_declarations(Some(repo_roles), None, Some(repo_relations));
         let org_roles = term!(["member"]);
         let org_declarations = index_declarations(Some(org_roles), None, None);
-        let mut namespaces = HashMap::new();
-        namespaces.insert(term!(sym!("Repo")), repo_declarations);
-        namespaces.insert(term!(sym!("Org")), org_declarations);
+        let mut namespaces = Namespaces::new();
+        namespaces.add(term!(sym!("Repo")), repo_declarations);
+        namespaces.add(term!(sym!("Org")), org_declarations);
         let rewritten_role_role = rewrite_implication(
             (term!("reader"), term!("member"), Some(term!("parent"))),
-            term!(sym!("Repo")),
-            namespaces,
+            &term!(sym!("Repo")),
+            &namespaces,
         )
         .unwrap();
         assert_eq!(
@@ -567,7 +647,7 @@ mod tests {
         expect_error(
             &p,
             r#"Org{permissions=["invite","create_repo"];}"#,
-            r#"Org: all declared permissions must be involved in at least one implication."#,
+            r#"Org: all permissions must be involved in at least one implication."#,
         );
     }
 
@@ -582,12 +662,12 @@ mod tests {
                 permissions=["invite","create_repo","ban"];
                 "invite" if "ban";
             }"#,
-            r#"Org: declared "create_repo" permission must be involved in at least one implication."#,
+            r#"Org: permission "create_repo" must be involved in at least one implication."#,
         );
     }
 
     #[test]
-    fn test_namespace_parse_only_roles() {
+    fn test_namespace_with_only_roles() {
         assert_eq!(
             parse_lines(0, r#"Org{roles=["owner",];}"#).unwrap()[0],
             Line::Namespace(Namespace {
@@ -611,7 +691,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_parse_roles_and_role_implications() {
+    fn test_namespace_roles_and_role_implications() {
         assert_eq!(
             parse_lines(
                 0,
@@ -638,21 +718,21 @@ mod tests {
         expect_error(
             &p,
             r#"Org{"member" if "owner";}"#,
-            r#"Undeclared term "owner" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
+            r#"Undeclared term "member" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
         );
     }
 
     #[test]
-    fn test_namespace_parse_with_implied_term_not_declared_locally() {
+    fn test_namespace_with_implier_term_not_declared_locally() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
             &p,
             r#"Org {
-                roles=["owner"];
+                roles=["member"];
                 "member" if "owner";
             }"#,
-            r#"Undeclared term "member" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
+            r#"Undeclared term "owner" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
         );
     }
 }

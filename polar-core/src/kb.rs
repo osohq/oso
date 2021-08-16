@@ -44,7 +44,7 @@ impl KnowledgeBase {
             id_counter: Counter::default(),
             gensym_counter: Counter::default(),
             inline_queries: vec![],
-            namespaces: HashMap::new(),
+            namespaces: Namespaces::new(),
         }
     }
 
