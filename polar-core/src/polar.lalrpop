@@ -677,49 +677,44 @@ Implication: (Term, Term, Option<Term>) = {
     <implied:Spanned<PolarString>> Define <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (implied, implier, relation),
 };
 
-TrailingImps<T>: (Term, Vec<(Term, Term, Option<Term>)>) = <Spanned<T>> <Implication*> => (<>);
-
-Imps3<T, U, V>: (Term, Term, Term, Vec<(Term, Term, Option<Term>)>) = {
-    <mut implications:Implication*> <mut t:TrailingImps<T>> <mut u:TrailingImps<U>> <mut v:TrailingImps<V>> => {
-        implications.append(&mut t.1);
-        implications.append(&mut u.1);
-        implications.append(&mut v.1);
-        (t.0, u.0, v.0, implications)
-    }
+Declarations: (Option<Term>, Option<Term>, Option<Term>) = {
+    <r:Spanned<Roles>> => {
+        (Some(r), None, None)
+    },
+    <p:Spanned<Permissions>> => {
+        (None, Some(p), None)
+    },
+    <rel:Spanned<Relations>> => {
+        (None, None, Some(rel))
+    },
+    <mut d:Declarations> <loc:@L> <r:Spanned<Roles>> =>? {
+        if let Some(_) = d.0.replace(r.clone()) {
+            Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term: r, expected: "roles already defined".to_string() } })
+        } else {
+            Ok(d)
+        }
+    },
+    <mut d:Declarations> <loc:@L> <p:Spanned<Permissions>> =>? {
+        if let Some(_) = d.1.replace(p.clone()) {
+            Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term: p, expected: "permissions already defined".to_string() } })
+        } else {
+            Ok(d)
+        }
+    },
+    <mut d:Declarations> <loc:@L> <rel:Spanned<Relations>> =>? {
+        if let Some(_) = d.2.replace(rel.clone()) {
+            Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term: rel, expected: "relationships already defined".to_string() } })
+        } else {
+            Ok(d)
+        }
+    },
 }
 
-Imps2<T, U>: (Term, Term, Vec<(Term, Term, Option<Term>)>) = {
-    <mut implications:Implication*> <mut t:TrailingImps<T>> <mut u:TrailingImps<U>> => {
-        implications.append(&mut t.1);
-        implications.append(&mut u.1);
-        (t.0, u.0, implications)
-    }
-}
-
-Imps1<T>: (Term, Vec<(Term, Term, Option<Term>)>) = {
-    <mut implications:Implication*> <mut t:TrailingImps<T>> => {
-        implications.append(&mut t.1);
-        (t.0, implications)
-    }
-}
-
+// Namespace is (Roles, Permissions, Relations, Implications)
 NamespaceBody: (Option<Term>, Option<Term>, Option<Term>, Vec<(Term, Term, Option<Term>)>) = {
-    <x:Imps3<Roles,        Permissions,  Relations>>   => (Some(x.0),  Some(x.1),  Some(x.2), x.3),
-    <x:Imps3<Roles,        Relations,    Permissions>> => (Some(x.0),  Some(x.2),  Some(x.1), x.3),
-    <x:Imps2<Roles,        Permissions>>               => (Some(x.0),  Some(x.1),       None, x.2),
-    <x:Imps2<Roles,        Relations>>                 => (Some(x.0),       None,  Some(x.1), x.2),
-    <x:Imps1<Roles>>                                   => (Some(x.0),       None,       None, x.1),
-    <x:Imps3<Permissions,  Roles,        Relations>>   => (Some(x.1),  Some(x.0),  Some(x.2), x.3),
-    <x:Imps3<Permissions,  Relations,    Roles>>       => (Some(x.2),  Some(x.0),  Some(x.1), x.3),
-    <x:Imps2<Permissions,  Roles>>                     => (Some(x.1),  Some(x.0),       None, x.2),
-    <x:Imps2<Permissions,  Relations>>                 => (     None,  Some(x.0),  Some(x.1), x.2),
-    <x:Imps1<Permissions>>                             => (     None,  Some(x.0),       None, x.1),
-    <x:Imps3<Relations,    Roles,        Permissions>> => (Some(x.1),  Some(x.2),  Some(x.0), x.3),
-    <x:Imps3<Relations,    Permissions,  Roles>>       => (Some(x.2),  Some(x.1),  Some(x.0), x.3),
-    <x:Imps2<Relations,    Roles>>                     => (Some(x.1),       None,  Some(x.0), x.2),
-    <x:Imps2<Relations,    Permissions>>               => (     None,  Some(x.1),  Some(x.0), x.2),
-    <x:Imps1<Relations>>                               => (     None,       None,  Some(x.0), x.1),
-    <Implication*>                                     => (     None,       None,       None,  <>),
+    <d:Declarations> <imp:Implication*> => {
+        (d.0, d.1, d.2, imp)
+    }
 }
 
 Line: Line = {
