@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1629152499529,
+  "lastUpdate": 1629171712639,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -78177,6 +78177,240 @@ window.BENCHMARK_DATA = {
             "name": "partial_rule_depth/100",
             "value": 80887696,
             "range": "± 1641907",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "12413582+leina05@users.noreply.github.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bfd19d7fecdfb353829f0419facdc2672a7d31f0",
+          "message": "Rule prototypes (#1063)\n\n* add rule templates to parser and make rules private\r\n\r\nadd method to validate rules\r\n\r\nWIP rule prototype matching checks\r\n\r\nI think the checking logic is done, need to test\r\n\r\nfirst test case passing\r\n\r\ntests passing, WIP\r\n\r\nfinish unit tests\r\n\r\nadd register_mro\r\n\r\nadd mro check to rule_params_match and one python test\r\n\r\nclippy\r\n\r\nremove extra print\r\n\r\nuse class as key for class_ids instead of class.__name__\r\n\r\nfix mistake in rule template filtering\r\n\r\nredundant reference\r\n\r\nadd error messages to rule_params_match\r\n\r\nadd another subclass to mro test and change order of class registrations\r\n\r\nregister MROs in load_str instead of register_class\r\n\r\nclear templates in clear_rules\r\n\r\nnew test case + improve error print\r\n\r\nadd field check for subclass instances\r\n\r\ncleanups from Dave\r\n\r\nprint templates in error messages\r\n\r\nstore MRO as list of class instance_id s\r\n\r\nfix rule prototype bug that errored when rule didn't have specializer\r\n\r\nmove subclass checks from integration tests into unit test\r\n\r\nclippy\r\n\r\nadd error context to KB errors\r\n\r\nrefactor rule_params_match\r\n\r\nbreak check_param into functions\r\n\r\nuse any to clean up validate_rules\r\n\r\ncreate ValidationError type\r\n\r\nrule template -> rule prototype\r\n\r\nadd validationerror to Python lib\r\n\r\nadd test_validate_rules\r\n\r\nUpdate languages/python/oso/polar/polar.py\r\n\r\nCo-authored-by: David Hatch <david@osohq.com>\r\n\r\naddress dave's comments\r\n\r\nchange rule prototypes from genericrule to vec<rule>\r\n\r\n* fix rebase mistake\r\n\r\n* fix for TS test to pass\r\n\r\n* comment\r\n\r\n* lint\r\n\r\n* update template -> prototype\r\n\r\n* Clippy",
+          "timestamp": "2021-08-16T20:29:13-07:00",
+          "tree_id": "c39ee13170e12b1a569fc7249b933f14a87e8b58",
+          "url": "https://github.com/osohq/oso/commit/bfd19d7fecdfb353829f0419facdc2672a7d31f0"
+        },
+        "date": 1629171709755,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 55084,
+            "range": "± 4189",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2600401,
+            "range": "± 129035",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 11901580,
+            "range": "± 557866",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 23668633,
+            "range": "± 879482",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 982,
+            "range": "± 63",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2611,
+            "range": "± 142",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 62254,
+            "range": "± 4906",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 601188,
+            "range": "± 49671",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 22694,
+            "range": "± 1840",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 22381,
+            "range": "± 1614",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 22071,
+            "range": "± 1610",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 21713,
+            "range": "± 1842",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 20042,
+            "range": "± 1356",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6372,
+            "range": "± 1212",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 8176,
+            "range": "± 4561",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 9613,
+            "range": "± 1621",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 14375,
+            "range": "± 5161",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 7146,
+            "range": "± 499",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 17148,
+            "range": "± 805",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 10653,
+            "range": "± 386",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "load_policy",
+            "value": 1130183,
+            "range": "± 74222",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/1",
+            "value": 45272,
+            "range": "± 2798",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/5",
+            "value": 152854,
+            "range": "± 11485",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/10",
+            "value": 288217,
+            "range": "± 19732",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/20",
+            "value": 584990,
+            "range": "± 14307",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/40",
+            "value": 1292031,
+            "range": "± 50458",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/80",
+            "value": 2905504,
+            "range": "± 75966",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/100",
+            "value": 3914945,
+            "range": "± 120869",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/1",
+            "value": 137416,
+            "range": "± 7874",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/5",
+            "value": 421507,
+            "range": "± 25495",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/10",
+            "value": 889745,
+            "range": "± 25618",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/20",
+            "value": 2497247,
+            "range": "± 57405",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/40",
+            "value": 9346177,
+            "range": "± 340963",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/80",
+            "value": 61620774,
+            "range": "± 2992868",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/100",
+            "value": 107617823,
+            "range": "± 4845494",
             "unit": "ns/iter"
           }
         ]
