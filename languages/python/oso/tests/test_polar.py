@@ -984,7 +984,7 @@ def test_rule_prototypes_with_subclass_check(polar):
     """
     polar.load_str(p)
 
-    with pytest.raises(ValidationError) as e:
+    with pytest.raises(ValidationError):
         polar.load_str("f(_x: Bad);")
 
     polar.clear_rules()
@@ -996,12 +996,12 @@ def test_rule_prototypes_with_subclass_check(polar):
     f(_x: Baz{id: 1});
     """
     polar.load_str(p)
-    with pytest.raises(ValidationError) as e:
+    with pytest.raises(ValidationError):
         polar.load_str("f(_x: Baz);")
 
     # Test invalid rule prototype
     p = """
     type f(x: Foo, x.baz);
     """
-    with pytest.raises(ValidationError) as e:
+    with pytest.raises(ValidationError):
         polar.load_str(p)

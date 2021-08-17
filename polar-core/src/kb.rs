@@ -443,10 +443,7 @@ impl KnowledgeBase {
     pub fn add_rule_prototype(&mut self, prototype: Rule) {
         let name = prototype.name.clone();
         // get rule prototypes
-        let prototypes = self
-            .rule_prototypes
-            .entry(name.clone())
-            .or_insert_with(|| vec![]);
+        let prototypes = self.rule_prototypes.entry(name).or_insert_with(Vec::new);
         prototypes.push(prototype);
     }
 
