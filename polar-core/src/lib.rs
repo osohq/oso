@@ -9,6 +9,7 @@ pub mod macros;
 
 mod bindings;
 mod counter;
+pub mod data_filtering;
 mod debugger;
 pub mod error;
 pub mod events;

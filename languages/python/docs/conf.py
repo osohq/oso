@@ -42,8 +42,8 @@ import lexer
 project = "oso"
 copyright = "2020-2021 Oso Security, Inc"
 author = "oso"
-version = "0.14.1"
-release = "0.14.1"
+version = "0.15.0"
+release = "0.15.0"
 
 
 # -- General configuration ---------------------------------------------------

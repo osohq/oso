@@ -1,6 +1,6 @@
 """Core oso functionality"""
 
-__version__ = "0.14.1"
+__version__ = "0.15.0"
 
 import os
 from polar import Polar, Variable, exceptions
@@ -86,3 +86,6 @@ class Oso(Polar):
                 "Polar tracing enabled. Get help with "
                 + "traces from our engineering team: https://help.osohq.com/trace"
             )
+
+
+Policy = Oso

@@ -22,6 +22,7 @@ use super::terms::*;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
     Rule(Rule),
+    RulePrototype(Rule),
     Query(Term),
     Namespace(Namespace),
 }
@@ -213,6 +214,19 @@ mod tests {
         let line = parse_lines(f);
 
         assert_eq!(line[0], Line::Query(term!(call!("f", [1]))));
+
+        let prototype = r#"type f(x: String);"#;
+        let line = parse_lines(prototype);
+        assert_eq!(
+            line[0],
+            Line::RulePrototype(rule!("f", ["x"; value!(instance!("String"))]))
+        );
+    }
+
+    #[test]
+    fn test_rule_prototype_error() {
+        let prototype = r#"type f(x: String) if x = "bad";"#;
+        super::parse_lines(0, prototype).expect_err("parse error");
     }
 
     #[test]

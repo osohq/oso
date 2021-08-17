@@ -21,6 +21,8 @@ int32_t polar_clear_rules(polar_Polar *polar_ptr);
 
 int32_t polar_register_constant(polar_Polar *polar_ptr, const char *name, const char *value);
 
+int32_t polar_register_mro(polar_Polar *polar_ptr, const char *name, const char *mro);
+
 polar_Query *polar_next_inline_query(polar_Polar *polar_ptr, uint32_t trace);
 
 polar_Query *polar_new_query_from_term(polar_Polar *polar_ptr,
@@ -83,3 +85,9 @@ int32_t query_free(polar_Query *query);
 int32_t polar_enable_roles(polar_Polar *polar_ptr);
 
 int32_t polar_validate_roles_config(polar_Polar *polar_ptr, const char *validation_query_results);
+
+const char *polar_build_filter_plan(polar_Polar *polar_ptr,
+                                    const char *types,
+                                    const char *results,
+                                    const char *variable,
+                                    const char *class_tag);

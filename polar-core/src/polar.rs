@@ -1,13 +1,11 @@
+use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::error::PolarResult;
 use super::events::*;
 use super::kb::*;
 use super::messages::*;
 use super::parser;
 use super::rewrites::*;
-use super::roles_validation::{
-    validate_roles_config, ResultEvent, VALIDATE_ROLES_CONFIG_RESOURCES,
-};
-use super::rules::*;
+use super::roles_validation::{validate_roles_config, VALIDATE_ROLES_CONFIG_RESOURCES};
 use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
@@ -183,22 +181,40 @@ impl Polar {
                         let mut rule_warnings = check_singletons(&rule, &*kb)?;
                         warnings.append(&mut rule_warnings);
                         let rule = rewrite_rule(rule, kb);
-
-                        let name = rule.name.clone();
-                        let generic_rule = kb
-                            .rules
-                            .entry(name.clone())
-                            .or_insert_with(|| GenericRule::new(name, vec![]));
-                        generic_rule.add_rule(Arc::new(rule));
+                        kb.add_rule(rule);
                     }
                     parser::Line::Query(term) => {
                         kb.inline_queries.push(term);
+                    }
+                    parser::Line::RulePrototype(prototype) => {
+                        // make sure prototype doesn't have anything that needs to be rewritten in the head
+                        let prototype = rewrite_rule(prototype, kb);
+                        if !matches!(
+                            prototype.body.value(),
+                            Value::Expression(
+                                Operation {
+                                    operator: Operator::And,
+                                    args
+                                }
+                            ) if args.is_empty()
+                        ) {
+                            return Err(kb.set_error_context(
+                                &prototype.body,
+                                error::ValidationError::InvalidPrototype {
+                                    prototype: prototype.to_polar(),
+                                    msg: "\nPrototypes cannot contain dot lookups.".to_owned(),
+                                },
+                            ));
+                        }
+                        kb.add_rule_prototype(prototype);
                     }
                     parser::Line::Namespace(namespace) => {
                         kb.add_namespace(namespace)?;
                     }
                 }
             }
+            // check rules are valid against rule prototypes
+            kb.validate_rules()?;
             Ok(warnings)
         }
 
@@ -277,6 +293,10 @@ impl Polar {
         self.kb.write().unwrap().constant(name, value)
     }
 
+    pub fn register_mro(&self, name: Symbol, mro: Vec<u64>) -> PolarResult<()> {
+        self.kb.write().unwrap().add_mro(name, mro)
+    }
+
     pub fn next_message(&self) -> Option<Message> {
         self.messages.next()
     }
@@ -300,7 +320,17 @@ impl Polar {
     }
 
     pub fn validate_roles_config(&self, results: Vec<Vec<ResultEvent>>) -> PolarResult<()> {
-        validate_roles_config(&self.kb.read().unwrap().rules, results)
+        validate_roles_config(self.kb.read().unwrap().get_rules(), results)
+    }
+
+    pub fn build_filter_plan(
+        &self,
+        types: Types,
+        partial_results: PartialResults,
+        variable: &str,
+        class_tag: &str,
+    ) -> PolarResult<FilterPlan> {
+        build_filter_plan(types, partial_results, variable, class_tag)
     }
 }
 

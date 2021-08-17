@@ -3,6 +3,7 @@ pub use super::{error, formatting::ToPolarString};
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, HashSet};
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
@@ -230,6 +231,12 @@ impl Value {
     }
 }
 
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 /// Represents a concrete instance of a Polar value
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Term {
@@ -256,6 +263,12 @@ impl Hash for Term {
         H: Hasher,
     {
         self.value().hash(state)
+    }
+}
+
+impl From<Value> for Term {
+    fn from(other: Value) -> Self {
+        Self::new_temporary(other)
     }
 }
 

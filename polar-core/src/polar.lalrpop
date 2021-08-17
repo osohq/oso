@@ -63,6 +63,7 @@ extern {
         "or" => lexer::Token::Or,           // or
         "not" => lexer::Token::Not,         // not
         "matches" => lexer::Token::Matches, // matches
+        "type" => lexer::Token::Type,       // type
 
         "permissions" => lexer::Token::Permissions, // permissions
         "roles" => lexer::Token::Roles,             // roles
@@ -656,6 +657,15 @@ Rule: Rule = {
     }
 }
 
+RulePrototype: Rule = {
+    "type" <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
+        let (name, params) = head;
+        let op = Operation{operator: Operator::And, args: vec![]};
+        let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
+        Rule::new_from_parser(src_id, start_head, start, name, params, body)
+    }
+}
+
 pub(crate) Rules: Vec<Rule> = <Rule*>;
 
 Roles: Value = "roles" "=" <StringList> ";" => <>;
@@ -684,6 +694,7 @@ Declarations: (Option<Term>, Option<Term>, Option<Term>) = {
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
+    <RulePrototype> => Line::RulePrototype(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
 
     <start:@L> <resource:Variable> "{" <declarations:Declarations> <implications:Implications?> "}" <end:@R> =>? {

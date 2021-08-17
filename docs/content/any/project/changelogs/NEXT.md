@@ -49,3 +49,5 @@ Link to [relevant documentation section]().
   instance needs to be serialized for a log line, debug message, or error. This
   improves performance in cases where `to_s` is slow (i.e. requires a round-trip
   to the database).
+
+#### TODO: enforcement changelog, if we decide to release it
