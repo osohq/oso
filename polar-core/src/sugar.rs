@@ -46,7 +46,7 @@ pub struct Namespace {
     pub roles: Option<Term>,
     pub permissions: Option<Term>,
     pub relations: Option<Term>,
-    pub implications: Option<Vec<(Term, Term, Option<Term>)>>,
+    pub implications: Vec<(Term, Term, Option<Term>)>,
 }
 
 #[derive(Clone, Default)]
@@ -280,7 +280,7 @@ fn check_for_empty_namespace(namespace: &Namespace) -> PolarResult<()> {
         relations,
         implications,
     } = namespace;
-    if roles.is_none() && permissions.is_none() && relations.is_none() && implications.is_none() {
+    if roles.is_none() && permissions.is_none() && relations.is_none() && implications.is_empty() {
         let loc = resource.offset();
         let token = format!(
             "{} namespace is empty. Please add roles, permissions, and/or relations, or delete it.",
@@ -387,34 +387,8 @@ fn check_all_permissions_involved_in_implications(namespace: &Namespace) -> Pola
     } = namespace;
     if let Some(ref permissions_list) = permissions {
         let permissions = permissions_list.value().as_list()?;
-        if let Some(ref implications) = implications {
-            for permission in permissions.iter() {
-                let implication_references_permission =
-                    implications
-                        .iter()
-                        .any(|(implied, implier, maybe_relation)| {
-                            // Permission is referenced on the 'implied' side of an implication or
-                            // on the 'implier' side of a _local_ implication. If permission shows
-                            // up on the 'implier' side of a non-local implication, that's actually
-                            // a reference to a permission of the same name declared in the other
-                            // resource namespace.
-                            permission == implied
-                                || (permission == implier && maybe_relation.is_none())
-                        });
 
-                if !implication_references_permission {
-                    return Err(ParseError::IntegerOverflow {
-                        loc: permission.offset(),
-                        token: format!(
-                            "{}: permission {} must be involved in at least one implication.",
-                            resource.to_polar(),
-                            permission.to_polar()
-                        ),
-                    }
-                    .into());
-                }
-            }
-        } else {
+        if implications.is_empty() {
             return Err(ParseError::IntegerOverflow {
                 loc: permissions_list.offset(),
                 token: format!(
@@ -423,6 +397,32 @@ fn check_all_permissions_involved_in_implications(namespace: &Namespace) -> Pola
                 ),
             }
             .into());
+        }
+
+        for permission in permissions.iter() {
+            let implication_references_permission =
+                implications
+                    .iter()
+                    .any(|(implied, implier, maybe_relation)| {
+                        // Permission is referenced on the 'implied' side of an implication or
+                        // on the 'implier' side of a _local_ implication. If permission shows
+                        // up on the 'implier' side of a non-local implication, that's actually
+                        // a reference to a permission of the same name declared in the other
+                        // resource namespace.
+                        permission == implied || (permission == implier && maybe_relation.is_none())
+                    });
+
+            if !implication_references_permission {
+                return Err(ParseError::IntegerOverflow {
+                    loc: permission.offset(),
+                    token: format!(
+                        "{}: permission {} must be involved in at least one implication.",
+                        resource.to_polar(),
+                        permission.to_polar()
+                    ),
+                }
+                .into());
+            }
         }
     }
     Ok(())
@@ -455,19 +455,17 @@ impl KnowledgeBase {
         // imported? That might work for the future import case, but how would we
         // know when the final load_file call has been made? Answer: hax.
 
-        if let Some(implications) = implications {
-            for implication in implications {
-                let rewritten = rewrite_implication(implication, &resource, &self.namespaces);
-                let rule = match rewritten {
-                    Ok(rule) => rule,
-                    Err(e) => {
-                        // If we error out at this point, remove the namespace entry.
-                        self.namespaces.remove(&resource);
-                        return Err(e);
-                    }
-                };
-                self.add_rule(rule);
-            }
+        for implication in implications {
+            let rewritten = rewrite_implication(implication, &resource, &self.namespaces);
+            let rule = match rewritten {
+                Ok(rule) => rule,
+                Err(e) => {
+                    // If we error out at this point, remove the namespace entry.
+                    self.namespaces.remove(&resource);
+                    return Err(e);
+                }
+            };
+            self.add_rule(rule);
         }
         Ok(())
     }
@@ -670,7 +668,7 @@ mod tests {
                 roles: Some(term!(["owner"])),
                 permissions: None,
                 relations: None,
-                implications: None,
+                implications: vec![],
             })
         );
         assert_eq!(
@@ -680,7 +678,7 @@ mod tests {
                 roles: Some(term!(["owner", "member"])),
                 permissions: None,
                 relations: None,
-                implications: None,
+                implications: vec![],
             })
         );
     }
@@ -701,7 +699,7 @@ mod tests {
                 roles: Some(term!(["owner", "member"])),
                 permissions: None,
                 relations: None,
-                implications: Some(vec![(term!("member"), term!("owner"), None)]),
+                implications: vec![(term!("member"), term!("owner"), None)],
             })
         );
     }
