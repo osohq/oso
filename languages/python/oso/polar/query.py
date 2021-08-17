@@ -98,29 +98,28 @@ class Query:
             # Check if it's a relationship
             attr = None
             cls = instance.__class__
-            if cls in self.host.cls_names:
-                cls_name = self.host.cls_names[cls]
-                if cls_name in self.host.types:
-                    typ = self.host.types[cls_name]
-                    if attribute in typ:
-                        attr_typ = typ[attribute]
-                        if isinstance(attr_typ, Relationship):
-                            rel = attr_typ
-                            # Use the fetcher for the other type to traverse the relationship
-                            assert rel.other_type in self.host.fetchers
-                            fetcher = self.host.fetchers[rel.other_type]
-                            constraint = Constraint(
-                                kind="Eq",
-                                field=rel.other_field,
-                                value=getattr(instance, rel.my_field),
-                            )
-                            constraints = [constraint]
-                            results = fetcher(constraints)
-                            if rel.kind == "parent":
-                                assert len(results) == 1
-                                attr = results[0]
-                            elif rel.kind == "children":
-                                attr = results
+            if cls in self.host.types:
+                cls_rec = self.host.types[cls]
+                typ = cls_rec.fields
+                if attribute in typ:
+                    attr_typ = typ[attribute]
+                    if isinstance(attr_typ, Relationship):
+                        rel = attr_typ
+                        # Use the fetcher for the other type to traverse the relationship
+                        fetcher = self.host.types[rel.other_type].fetcher
+                        assert fetcher is not None
+                        constraint = Constraint(
+                            kind="Eq",
+                            field=rel.other_field,
+                            value=getattr(instance, rel.my_field),
+                        )
+                        constraints = [constraint]
+                        results = fetcher(constraints)
+                        if rel.kind == "parent":
+                            assert len(results) == 1
+                            attr = results[0]
+                        elif rel.kind == "children":
+                            attr = results
             if attr is None:
                 attr = getattr(instance, attribute)
         except AttributeError as e:

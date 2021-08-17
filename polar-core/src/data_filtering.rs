@@ -250,17 +250,11 @@ impl From<VarInfo> for Vars {
 }
 
 impl VarInfo {
-    fn dot_var(&mut self, mut var: Term, field: &Term) -> Symbol {
+    fn dot_var(&mut self, var: &Term, field: &Term) -> Symbol {
         // handle nested dot ops.
-        if let Ok(Operation {
-            operator: Operator::Dot,
-            args,
-        }) = var.value().as_expression()
-        {
-            var = Term::from(self.dot_var(args[0].clone(), &args[1]))
-        }
+        let var = self.eval(var);
 
-        let sym = var.value().as_symbol().unwrap();
+        let sym = var.as_symbol().unwrap();
         let field_str = field.value().as_string().unwrap();
         let new_var = Symbol::new(&format!(
             "_{}_dot_{}_{}",
@@ -276,15 +270,18 @@ impl VarInfo {
         new_var
     }
 
-    fn maybe_process(&mut self, term: &Term) -> Term {
+    fn eval(&mut self, term: &Term) -> Value {
         match term.value() {
-            Value::Expression(op) => self.process_exp(op).unwrap(),
-            _ => term.clone(),
+            Value::Expression(Operation {
+                operator: Operator::Dot,
+                args,
+            }) if args.len() == 2 => self.dot_var(&args[0], &args[1]).into(),
+            v => v.clone(),
         }
     }
 
     /// Process an expression in the context of this VarInfo. Mostly about the side effects.
-    fn process_exp(&mut self, exp: &Operation) -> Option<Term> {
+    fn process_exp(&mut self, exp: &Operation) {
         match exp.operator {
             Operator::And => {
                 for arg in &exp.args {
@@ -295,21 +292,11 @@ impl VarInfo {
             Operator::Dot => {
                 // Dot operations return a var that can be unified with.
                 // We create a new var to represent the result of the operation.
-                assert_eq!(exp.args.len(), 2);
-                let mut var = exp.args[0].clone();
-                if let Ok(inner_exp) = var.value().as_expression() {
-                    if inner_exp.operator != Operator::Dot {
-                        unimplemented!("Operations other than dot nested within a dot are not yet supported for data filtering.")
-                    }
-                    var = self.process_exp(inner_exp).unwrap();
-                }
-                // Return the var so we can unify with it.
-                return Some(Term::from(self.dot_var(var, &exp.args[1])));
+                self.dot_var(&exp.args[0], &exp.args[1]);
             }
             Operator::Isa => {
                 assert_eq!(exp.args.len(), 2);
-                let lhs = &exp.args[0];
-                let rhs = &exp.args[1];
+                let (lhs, rhs) = (&exp.args[0], &exp.args[1]);
                 if let Ok(Pattern::Instance(InstanceLiteral { tag, fields })) =
                     rhs.value().as_pattern()
                 {
@@ -318,14 +305,11 @@ impl VarInfo {
                             "Specializer fields are not yet supported for data filtering."
                         )
                     }
-                    let var = match lhs.value() {
-                        Value::Variable(var) | Value::RestVariable(var) => var.clone(),
-                        Value::Expression(op) if op.operator == Operator::Dot => {
-                            self.dot_var(op.args[0].clone(), &op.args[1])
-                        }
+                    let var = match self.eval(lhs) {
+                        Value::Variable(var) | Value::RestVariable(var) => var,
                         _ => todo!(),
                     };
-                    self.types.push((var, tag.clone().0))
+                    self.types.push((var, tag.0.clone()))
                 } else {
                     unimplemented!(
                         "Non pattern specializers are not yet supported for data filtering."
@@ -335,17 +319,12 @@ impl VarInfo {
             Operator::Unify | Operator::Eq | Operator::Assign => {
                 assert_eq!(exp.args.len(), 2);
 
-                let lhs = self.maybe_process(&exp.args[0]);
-                let rhs = self.maybe_process(&exp.args[1]);
-
-                match (lhs.value(), rhs.value()) {
+                match (self.eval(&exp.args[0]), self.eval(&exp.args[1])) {
                     // Unifying two variables
-                    (Value::Variable(l), Value::Variable(r)) => {
-                        self.cycles.push((l.clone(), r.clone()))
-                    }
+                    (Value::Variable(l), Value::Variable(r)) => self.cycles.push((l, r)),
                     // Unifying a variable with a value
                     (Value::Variable(var), val) | (val, Value::Variable(var)) => {
-                        self.eq_values.push((var.clone(), Term::from(val.clone())))
+                        self.eq_values.push((var, Term::from(val)))
                     }
                     // Unifying something else.
                     // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
@@ -359,13 +338,10 @@ impl VarInfo {
             Operator::In => {
                 assert_eq!(exp.args.len(), 2);
 
-                let lhs = self.maybe_process(&exp.args[0]);
-                let rhs = self.maybe_process(&exp.args[1]);
-
-                match (lhs.value(), rhs.value()) {
+                match (self.eval(&exp.args[0]), self.eval(&exp.args[1])) {
                     // l in r
                     (Value::Variable(l), Value::Variable(r)) =>
-                        self.in_relationships.push((l.clone(), r.clone())),
+                        self.in_relationships.push((l, r)),
                     // var in [1, 2, 3]
                     (Value::Variable(_var), _val) =>
                         // @Q(steve): Does this ever actually come through the simplifier?
@@ -376,7 +352,7 @@ impl VarInfo {
                     // 123 in var
                     (val, Value::Variable(var)) =>
                         self.contained_values
-                            .push((Term::from(val.clone()), var.clone())),
+                            .push((Term::from(val), var)),
                     _ =>
                         // @NOTE: This is probably just a bug if we hit it. Shouldn't get any other `in` cases.
                         unimplemented!(
@@ -391,7 +367,6 @@ impl VarInfo {
                 x.to_polar()
             ),
         }
-        None
     }
 }
 

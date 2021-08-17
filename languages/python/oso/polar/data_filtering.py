@@ -16,12 +16,13 @@ class Relationship:
 # @NOTE(Steve): Some of this stuff is very inconsistent right now. Names for fields
 # and stuff need cleaning up. Sort of left a mess from when I was figuring this all
 # out.
-def serialize_types(types, class_names):
+def serialize_types(types, tmap):
     """
     Convert types stored in python to what the core expects.
     """
     polar_types = {}
-    for tag, fields in types.items():
+    for typ in types:
+        tag, fields = typ.name, typ.fields
         field_types = {}
         for k, v in fields.items():
             if isinstance(v, Relationship):
@@ -36,7 +37,7 @@ def serialize_types(types, class_names):
             else:
                 field_types[k] = {
                     "Base": {
-                        "class_tag": class_names[v],
+                        "class_tag": tmap[v].name,
                     }
                 }
         polar_types[tag] = field_types
@@ -132,7 +133,7 @@ def builtin_filter_plan_resolver(polar, filter_plan):
 
             # Substitute in results from previous requests.
             ground_constraints(polar, set_results, filter_plan, constraints)
-            fetcher = polar.host.fetchers[class_name]
+            fetcher = polar.host.types[class_name].fetcher
             set_results[i] = fetcher(constraints)
 
         results.extend(set_results[result_id])
