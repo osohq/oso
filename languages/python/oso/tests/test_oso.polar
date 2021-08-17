@@ -11,7 +11,7 @@ allow("guest", action, resource) if
 allow(_: {username: name}, action, resource) if
     allow(new test_oso::Actor(name: name), action, resource);
 
-allow(_actor: test_oso::Actor, "get", _resource: test_oso::Widget);
+allow(_actor: test_oso::Actor, "read", _resource: test_oso::Widget);
 allow(actor: test_oso::Actor, "create", resource: test_oso::Company) if
     resource.role(actor) = "admin";
 
