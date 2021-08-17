@@ -105,7 +105,7 @@ impl KnowledgeBase {
     /// Validate that all rules loaded into the knowledge base are valid based on rule prototypes.
     pub fn validate_rules(&self) -> PolarResult<()> {
         for (rule_name, generic_rule) in &self.rules {
-            if let Some(prototypes) = self.rule_prototypes.get(&rule_name) {
+            if let Some(prototypes) = self.rule_prototypes.get(rule_name) {
                 // If a prototype with the same name exists, then the parameters must match for each rule
                 for rule in generic_rule.rules.values() {
                     let mut msg = "Must match one of the following rule prototypes:\n".to_owned();
