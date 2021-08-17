@@ -99,11 +99,10 @@ impl KnowledgeBase {
     }
 
     pub fn add_rule(&mut self, rule: Rule) {
-        let name = rule.name.clone();
         let generic_rule = self
             .rules
-            .entry(name.clone())
-            .or_insert_with(|| GenericRule::new(name, vec![]));
+            .entry(rule.name.clone())
+            .or_insert_with(|| GenericRule::new(rule.name.clone(), vec![]));
         generic_rule.add_rule(Arc::new(rule));
     }
 

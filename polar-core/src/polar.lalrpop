@@ -8,7 +8,6 @@ use crate::terms::*;
 use crate::rules::*;
 use crate::terms::*;
 use crate::numerics::*;
-use crate::formatting::ToPolarString;
 use super::ValueOrLogical;
 
 use lalrpop_util::ParseError;
@@ -104,7 +103,6 @@ Boolean: Value = <b:"Boolean"> => {
 
 Name: Symbol = <s:"Symbol"> => s;
 
-#[inline]
 Variable: Value  = <n:Name> => {
     Value::Variable(n)
 };

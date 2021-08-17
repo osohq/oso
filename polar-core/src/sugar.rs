@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use super::error::{ParseError, PolarResult, RuntimeError};
 use super::kb::KnowledgeBase;
@@ -467,11 +466,7 @@ impl KnowledgeBase {
                         return Err(e);
                     }
                 };
-                let generic_rule = self
-                    .rules
-                    .entry(rule.name.clone())
-                    .or_insert_with(|| GenericRule::new(rule.name.clone(), vec![]));
-                generic_rule.add_rule(Arc::new(rule));
+                self.add_rule(rule);
             }
         }
         Ok(())
