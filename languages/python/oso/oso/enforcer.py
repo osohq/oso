@@ -1,3 +1,4 @@
+from typing import List
 from polar import Variable, exceptions
 from .exceptions import NotFoundError, ForbiddenError
 from .oso import Policy
@@ -83,7 +84,7 @@ class Enforcer:
         if not self.policy.query_rule_once("allow_request", actor, request):
             raise self._get_error(False)
 
-    def authorized_actions(self, actor, resource, allow_wildcard=False) -> list:
+    def authorized_actions(self, actor, resource, allow_wildcard=False) -> List[any]:
         """Determine the actions ``actor`` is allowed to take on ``resource``.
 
         Collects all actions allowed by allow rules in the Polar policy for the
@@ -127,7 +128,7 @@ class Enforcer:
         """Ensure that ``actor`` is allowed to perform ``action`` on a given
         ``resource``'s ``field``.
 
-        If the action is permitted with an ``allow_field`` rule in the policy,
+        If the action is permitted by an ``allow_field`` rule in the policy,
         then this method returns ``None``. If the action is not permitted by the
         policy, this method will raise a ``ForbiddenError`.
 
@@ -142,7 +143,9 @@ class Enforcer:
         ):
             raise self._get_error(False)
 
-    def authorized_fields(self, actor, action, resource, allow_wildcard=False) -> list:
+    def authorized_fields(
+        self, actor, action, resource, allow_wildcard=False
+    ) -> List[any]:
         """Determine the fields of ``resource`` on which ``actor`` is allowed to
         perform  ``action``.
 
@@ -154,8 +157,9 @@ class Enforcer:
 
         :param allow_wildcard: Flag to determine behavior if the policy \
         includes a wildcard field. E.g., a rule allowing any field: \
-        ``allow(_actor, _field, _resource)``. If ``True``, the method will \
-        return ``["*"]``, if ``False``, the method will raise an exception.
+        ``allow_field(_actor, _field, _resource, _field)``. If ``True``, the \
+        method will return ``["*"]``, if ``False``, the method will raise an \
+        exception.
 
         :type allow_wildcard: bool
 
