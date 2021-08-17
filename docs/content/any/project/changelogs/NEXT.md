@@ -41,13 +41,12 @@ Link to [relevant documentation section]().
 - Of smaller improvements
 - Potentially with doc [links]().
 
-### Ruby
+## `oso` NEW_VERSION
+
+### Core
 
 #### Other bugs & improvements
 
-- The ruby host library now only calls `to_s` on external instances when the
-  instance needs to be serialized for a log line, debug message, or error. This
-  improves performance in cases where `to_s` is slow (i.e. requires a round-trip
-  to the database).
+- The debugger can now break on rule matches.
 
 #### TODO: enforcement changelog, if we decide to release it

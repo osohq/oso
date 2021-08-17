@@ -34,6 +34,7 @@ pub enum ErrorKind {
     Operational(OperationalError),
     Parameter(ParameterError),
     RolesValidation(RolesValidationError),
+    Validation(ValidationError),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -125,6 +126,15 @@ impl From<RolesValidationError> for PolarError {
     }
 }
 
+impl From<ValidationError> for PolarError {
+    fn from(err: ValidationError) -> Self {
+        Self {
+            kind: ErrorKind::Validation(err),
+            context: None,
+        }
+    }
+}
+
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
 
 impl std::error::Error for PolarError {}
@@ -137,6 +147,7 @@ impl fmt::Display for PolarError {
             ErrorKind::Operational(e) => write!(f, "{}", e)?,
             ErrorKind::Parameter(e) => write!(f, "{}", e)?,
             ErrorKind::RolesValidation(e) => write!(f, "{}", e)?,
+            ErrorKind::Validation(e) => write!(f, "{}", e)?,
         }
         if let Some(ref context) = self.context {
             write!(f, "{}", context)?;
@@ -374,5 +385,25 @@ pub struct RolesValidationError(pub String);
 impl fmt::Display for RolesValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Oso Roles Validation Error: {}", self.0)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ValidationError {
+    InvalidRule { rule: String, msg: String },
+    InvalidPrototype { prototype: String, msg: String },
+    // TODO: add SingletonVariable, RolesValidationError and Macro errors here
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::InvalidRule { rule, msg } => {
+                write!(f, "Invalid rule: {} {}", rule, msg)
+            }
+            Self::InvalidPrototype { prototype, msg } => {
+                write!(f, "Invalid prototype: {} {}", prototype, msg)
+            }
+        }
     }
 }
