@@ -23,7 +23,7 @@ from .exceptions import (
     InvalidQueryTypeError,
 )
 from .ffi import Polar as FfiPolar
-from .host import Host
+from .host import Host, OsoActor, OsoGroup, OsoResource
 from .query import Query
 from .predicate import Predicate
 from .variable import Variable
@@ -84,6 +84,9 @@ class Polar:
         self.register_class(str, name="String")
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
+        self.register_class(OsoActor, entity_type="OsoActor")
+        self.register_class(OsoGroup, entity_type="OsoGroup")
+        self.register_class(OsoResource, entity_type="OsoResource")
 
         # Pre-registered classes.
         for name, cls in classes.items():
@@ -261,7 +264,9 @@ class Polar:
             if not result:
                 print(False)
 
-    def register_class(self, cls, *, name=None, types=None, fetcher=None):
+    def register_class(
+        self, cls, *, name=None, types=None, fetcher=None, entity_type=None
+    ):
         """Register `cls` as a class accessible by Polar."""
         cls_name = self.host.cache_class(cls, name)
         self.register_constant(cls, cls_name)

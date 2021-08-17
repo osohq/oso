@@ -17,6 +17,75 @@ from .predicate import Predicate
 from .expression import Expression, Pattern
 
 
+# Entity classes
+
+
+class OsoResource:
+    pass
+
+
+class OsoActor:
+    pass
+
+
+class OsoGroup:
+    pass
+
+
+class EntityMap:
+    ENTITY_TYPES = ["OsoResource", "OsoActor", "OsoGroup"]
+
+    def __init__(self):
+        self.actors = {}
+        self.groups = {}
+        self.resources = {}
+
+    def add_entity(self, name, cls, entity_type):
+        assert entity_type in EntityMap.ENTITY_TYPES
+        if entity_type == "OsoActor":
+            self.actors[name] = cls
+        elif entity_type == "OsoGroup":
+            self.groups = cls
+        elif entity_type == "OsoResource":
+            self.reosurces = cls
+
+    def instance_is_entity(self, python_instance, entity_tag):
+        if entity_tag == "OsoResource":
+            for resource in self.resources.values():
+                if isinstance(python_instance, resource):
+                    return True
+        elif entity_tag == "OsoActor":
+            for actor in self.actors.values():
+                if isinstance(python_instance, actor):
+                    return True
+        elif entity_tag == "OsoGroup":
+            for group in self.groups.values():
+                if isinstance(python_instance, group):
+                    return True
+        else:
+            raise ("Unreachable")
+        return False
+
+    def class_is_entity(self, python_class, entity_tag):
+        if entity_tag == "OsoResource":
+            for resource in self.resources.values():
+                if issubclass(python_class, resource):
+                    return True
+        elif entity_tag == "OsoActor":
+            for actor in self.actors.values():
+                if issubclass(python_class, actor):
+                    return True
+        elif entity_tag == "OsoGroup":
+            for group in self.groups.values():
+                if issubclass(python_class, group):
+                    return True
+        else:
+            raise ("Unreachable")
+        return False
+
+    # def instance_is_actor(self, instance):
+
+
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
@@ -30,6 +99,7 @@ class Host:
         get_field=None,
         types=None,
         fetchers=None,
+        entities=None,
     ):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
@@ -41,6 +111,7 @@ class Host:
         self.instances = (instances or {}).copy()
         self.types = (types or {}).copy()
         self.fetchers = (fetchers or {}).copy()
+        self.entities = (entities or EntityMap()).copy()
         self._accept_expression = False  # default, see set_accept_expression
 
         # Check the types.
@@ -75,6 +146,7 @@ class Host:
             get_field=self.get_field,
             types=self.types,
             fetchers=self.fetchers,
+            entities=self.entities,
         )
 
     def get_class(self, name):
@@ -84,7 +156,7 @@ class Host:
         except KeyError:
             raise UnregisteredClassError(name)
 
-    def cache_class(self, cls, name=None):
+    def cache_class(self, cls, entity_type, name=None):
         """Cache Python class by name."""
         name = cls.__name__ if name is None else name
         if name in self.classes.keys():
@@ -92,6 +164,8 @@ class Host:
 
         self.classes[name] = cls
         self.class_ids[cls] = self.cache_instance(cls)
+        if entity_type:
+            self.entities.add_entity(name, cls, entity_type)
         return name
 
     def get_instance(self, id):
@@ -126,6 +200,8 @@ class Host:
 
     def isa(self, instance, class_tag) -> bool:
         instance = self.to_python(instance)
+        if class_tag in EntityMap.ENTITY_TYPES:
+            return self.entities.instance_is_entity(instance, class_tag)
         cls = self.get_class(class_tag)
         return isinstance(instance, cls)
 
@@ -135,12 +211,16 @@ class Host:
         for field in path:
             field = self.to_python(field)
             base = self.get_field(base, field)
+        if class_tag in EntityMap.ENTITY_TYPES:
+            return self.entities.class_is_entity(base, class_tag)
         return issubclass(base, cls)
 
     def is_subclass(self, left_tag, right_tag) -> bool:
         """Return true if left is a subclass (or the same class) as right."""
         left = self.get_class(left_tag)
         right = self.get_class(right_tag)
+        if right_tag in EntityMap.ENTITY_TYPES:
+            return self.entities.class_is_entity(left, right_tag)
         return issubclass(left, right)
 
     def is_subspecializer(self, instance_id, left_tag, right_tag) -> bool:
@@ -150,6 +230,11 @@ class Host:
             mro = self.get_instance(instance_id).__class__.__mro__
             left = self.get_class(left_tag)
             right = self.get_class(right_tag)
+            # Base entity classes are never more specific
+            if right_tag in EntityMap.ENTITY_TYPES:
+                return True
+            elif left_tag in EntityMap.ENTITY_TYPES:
+                return False
             return mro.index(left) < mro.index(right)
         except ValueError:
             return False
