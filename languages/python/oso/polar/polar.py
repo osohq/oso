@@ -1,6 +1,7 @@
 """Communicate with the Polar virtual machine: load rules, make queries, etc."""
 
 from datetime import datetime, timedelta
+import inspect
 import os
 from pathlib import Path
 import sys
@@ -146,6 +147,18 @@ class Polar:
 
     def load_str(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
+        # Get MRO of all registered classes
+        # NOTE: not ideal that the MRO gets updated each time load_str is
+        # called, but since we are planning to move to only calling load once
+        # with the include feature, I think it's okay for now.
+        for (cls_name, cls) in self.host.classes.items():
+            mro = [
+                self.host.class_ids.get(c)
+                for c in inspect.getmro(cls)
+                if c in self.host.class_ids
+            ]
+            self.ffi_polar.register_mro(cls_name, mro)
+
         self.ffi_polar.load(string, filename)
 
         # check inline queries
