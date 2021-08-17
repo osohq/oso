@@ -1024,12 +1024,18 @@ def test_register_entity_type(polar):
     p = """type f(_x: OsoActor, _y: OsoResource);
     f(_x: User, _y: Resource);"""
 
+    # Test that classes registered as entity types are compatible with a rule
+    # prototype that uses entity type specializers
     polar.load_str(p)
 
+    # Test that classes that aren't registered as the correct entity type don't
+    # match entity type specializers
     with pytest.raises(ValidationError):
         polar.load_str("f(_x: Group, _y: Resource);")
 
     polar.clear_rules()
 
+    # Test that entity type specializers work at evaluation time
     polar.load_str("f(_x: OsoActor, _y: OsoResource);")
     assert list(polar.query_rule("f", User(), Resource()))
+    assert not list(polar.query_rule("f", Group(), Resource()))
