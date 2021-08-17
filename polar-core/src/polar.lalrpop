@@ -636,7 +636,7 @@ Rule: Rule = {
     }
 }
 
-RuleTemplate: Rule = {
+RulePrototype: Rule = {
     "type" <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
         let (name, params) = head;
         let op = Operation{operator: Operator::And, args: vec![]};
@@ -649,7 +649,7 @@ pub(crate) Rules: Vec<Rule> = <Rule*>;
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
-    <RuleTemplate> => Line::RuleTemplate(<>),
+    <RulePrototype> => Line::RulePrototype(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
 }
 

@@ -21,7 +21,7 @@ use super::terms::*;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
     Rule(Rule),
-    RuleTemplate(Rule),
+    RulePrototype(Rule),
     Query(Term),
 }
 
@@ -217,7 +217,7 @@ mod tests {
         let line = parse_lines(prototype);
         assert_eq!(
             line[0],
-            Line::RuleTemplate(rule!("f", ["x"; value!(instance!("String"))]))
+            Line::RulePrototype(rule!("f", ["x"; value!(instance!("String"))]))
         );
     }
 

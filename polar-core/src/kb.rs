@@ -324,7 +324,7 @@ impl KnowledgeBase {
                 )
                 | (Value::Variable(_), Some(Value::Pattern(prototype_spec)), rule_value, None) => {
                     match prototype_spec {
-                        // Template specializer is an instance pattern
+                        // Prototype specializer is an instance pattern
                         Pattern::Instance(InstanceLiteral {
                             tag,
                             fields: prototype_fields,
@@ -356,7 +356,7 @@ impl KnowledgeBase {
                                 ))
                             }
                         }
-                        // Template specializer is a dictionary pattern
+                        // Prototype specializer is a dictionary pattern
                         Pattern::Dictionary(prototype_fields) => {
                             if let Value::Dictionary(rule_fields) = rule_value {
                                 if self.param_fields_match(prototype_fields, rule_fields) {
@@ -971,7 +971,7 @@ mod tests {
         // Orange is a subclass of Citrus
         kb.add_mro(sym!("Orange"), vec![3, 2, 1]).unwrap();
 
-        // Template applies if it has the same name as a rule
+        // Prototype applies if it has the same name as a rule
         kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
@@ -984,7 +984,7 @@ mod tests {
             }
         ));
 
-        // Template does not apply if it doesn't have the same name as a rule
+        // Prototype does not apply if it doesn't have the same name as a rule
         kb.clear_rules();
         kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
@@ -992,7 +992,7 @@ mod tests {
 
         kb.validate_rules().unwrap();
 
-        // Template does apply if it has the same name as a rule even if different arity
+        // Prototype does apply if it has the same name as a rule even if different arity
         kb.clear_rules();
         kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!("Orange")), value!(1)]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));

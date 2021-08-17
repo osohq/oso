@@ -186,7 +186,7 @@ impl Polar {
                     parser::Line::Query(term) => {
                         kb.inline_queries.push(term);
                     }
-                    parser::Line::RuleTemplate(prototype) => {
+                    parser::Line::RulePrototype(prototype) => {
                         // make sure prototype doesn't have anything that needs to be rewritten in the head
                         let prototype = rewrite_rule(prototype, kb);
                         if !matches!(
