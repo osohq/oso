@@ -124,7 +124,7 @@ def builtin_filter_plan_resolver(polar, filter_plan):
         result_id = rs["result_id"]
 
         for i in resolve_order:
-            req = requests[str(i)] # thanks JSON
+            req = requests[str(i)]  # thanks JSON
             class_name = req["class_tag"]
             constraints = req["constraints"]
 
