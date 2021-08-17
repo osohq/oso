@@ -201,6 +201,10 @@ class RolesValidationError(PolarApiError):
     pass
 
 
+class ValidationError(PolarApiError):
+    pass
+
+
 UNEXPECTED_EXPRESSION_MESSAGE = dedent(
     """\
 Received Expression from Polar VM. The Expression type is only supported when

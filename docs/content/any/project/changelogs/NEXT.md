@@ -48,3 +48,5 @@ Link to [relevant documentation section]().
 #### Other bugs & improvements
 
 - The debugger can now break on rule matches.
+
+#### TODO: enforcement changelog, if we decide to release it
