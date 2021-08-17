@@ -55,6 +55,7 @@ class SQLAlchemyOso(Oso):
             )
         return self._roles
 
+
 """
 NOTE: ``SQLAlchemyPolicy`` is a preview API.
 """
