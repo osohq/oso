@@ -1,5 +1,6 @@
 use std::str::FromStr;
-use std::collections::BTreeMap;
+use std::collections::{HashSet, BTreeMap};
+use std::iter::FromIterator;
 
 use crate::lexer::{self, Token};
 use crate::parser::{Line, Namespace};
@@ -728,6 +729,7 @@ Line: Line = {
 
     <start:@L> <resource:Variable> "{" <body:NamespaceBody> "}" <end:@R> => {
         let (roles, permissions, relations, implications) = body;
+        let implications = HashSet::from_iter(implications);
         Line::Namespace(Namespace {
             resource: Term::new_from_parser(src_id, start, end, resource),
             roles,

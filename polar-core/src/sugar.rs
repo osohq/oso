@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::error::{ParseError, PolarResult, RuntimeError};
 use super::kb::KnowledgeBase;
@@ -46,7 +46,7 @@ pub struct Namespace {
     pub roles: Option<Term>,
     pub permissions: Option<Term>,
     pub relations: Option<Term>,
-    pub implications: Vec<(Term, Term, Option<Term>)>,
+    pub implications: HashSet<(Term, Term, Option<Term>)>,
 }
 
 #[derive(Clone, Default)]
@@ -473,6 +473,8 @@ impl KnowledgeBase {
 
 #[cfg(test)]
 mod tests {
+    use permute::permute;
+
     use super::*;
     use crate::parser::{parse_lines, Line};
     use crate::polar::Polar;
@@ -668,7 +670,7 @@ mod tests {
                 roles: Some(term!(["owner"])),
                 permissions: None,
                 relations: None,
-                implications: vec![],
+                implications: hashset! {},
             })
         );
         assert_eq!(
@@ -678,7 +680,7 @@ mod tests {
                 roles: Some(term!(["owner", "member"])),
                 permissions: None,
                 relations: None,
-                implications: vec![],
+                implications: hashset! {},
             })
         );
     }
@@ -699,7 +701,7 @@ mod tests {
                 roles: Some(term!(["owner", "member"])),
                 permissions: None,
                 relations: None,
-                implications: vec![(term!("member"), term!("owner"), None)],
+                implications: hashset! {(term!("member"), term!("owner"), None)},
             })
         );
     }
@@ -727,5 +729,122 @@ mod tests {
             }"#,
             r#"Undeclared term "owner" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
         );
+    }
+
+    #[test]
+    fn test_namespace_parsing_permutations() {
+        // Policy pieces
+        let roles = r#"roles = ["writer", "reader"];"#;
+        let permissions = r#"permissions = ["push", "pull"];"#;
+        let relations = r#"relations = { creator: User, parent: Org };"#;
+        let implications = vec![
+            r#""pull" if "reader";"#,
+            r#""push" if "writer";"#,
+            r#""writer" if "creator";"#,
+            r#""reader" if "member" on "parent";"#,
+        ];
+
+        // Maximal namespace
+        let namespace = Namespace {
+            resource: term!(sym!("Repo")),
+            roles: Some(term!(["writer", "reader"])),
+            permissions: Some(term!(["push", "pull"])),
+            relations: Some(term!(btreemap! {
+                sym!("creator") => term!(sym!("User")),
+                sym!("parent") => term!(sym!("Org")),
+            })),
+            implications: hashset! {
+                (term!("pull"), term!("reader"), None),
+                (term!("push"), term!("writer"), None),
+                (term!("writer"), term!("creator"), None),
+                (term!("reader"), term!("member"), Some(term!("parent"))),
+            },
+        };
+
+        // Helpers
+
+        let test_case = |parts: Vec<&str>, expected: &Namespace| {
+            for permutation in permute(parts).into_iter() {
+                let mut policy = "Repo {\n".to_owned();
+                policy += &permutation.join("\n");
+                policy += "}";
+                assert_eq!(
+                    parse_lines(0, &policy).unwrap()[0],
+                    Line::Namespace(expected.clone())
+                );
+            }
+        };
+
+        // Test each case with and without implications.
+        let test_cases = |parts: Vec<&str>, expected: &Namespace| {
+            let mut parts_with_implications = parts.clone();
+            parts_with_implications.append(&mut implications.clone());
+            test_case(parts_with_implications, expected);
+
+            let expected_without_implications = Namespace {
+                implications: hashset! {},
+                ..expected.clone()
+            };
+            test_case(parts, &expected_without_implications);
+        };
+
+        // Cases
+
+        // Roles, Permissions, Relations
+        test_cases(vec![roles, permissions, relations], &namespace);
+
+        // Roles, Permissions, _________
+        let expected = Namespace {
+            relations: None,
+            ..namespace.clone()
+        };
+        test_cases(vec![roles, permissions], &expected);
+
+        // Roles, ___________, Relations
+        let expected = Namespace {
+            permissions: None,
+            ..namespace.clone()
+        };
+        test_cases(vec![roles, relations], &expected);
+
+        // _____, Permissions, Relations
+        let expected = Namespace {
+            roles: None,
+            ..namespace.clone()
+        };
+        test_cases(vec![permissions, relations], &expected);
+
+        // Roles, ___________, _________
+        let expected = Namespace {
+            permissions: None,
+            relations: None,
+            ..namespace.clone()
+        };
+        test_cases(vec![roles], &expected);
+
+        // _____, Permissions, _________
+        let expected = Namespace {
+            roles: None,
+            relations: None,
+            ..namespace.clone()
+        };
+        test_cases(vec![permissions], &expected);
+
+        // _____, ___________, Relations
+        let expected = Namespace {
+            roles: None,
+            permissions: None,
+            ..namespace.clone()
+        };
+        test_cases(vec![relations], &expected);
+
+        // _____, ___________, _________
+        let expected = Namespace {
+            roles: None,
+            permissions: None,
+            relations: None,
+            ..namespace
+        };
+        test_cases(vec![], &expected);
     }
 }
