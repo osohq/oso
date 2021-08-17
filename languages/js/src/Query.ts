@@ -24,6 +24,7 @@ import type {
 } from './types';
 import { processMessage } from './messages';
 import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
+import { Constraint, Relationship } from './dataFiltering';
 
 function getLogLevelsFromEnv() {
   if (typeof process?.env === 'undefined') return [undefined, undefined];
@@ -116,15 +117,47 @@ export class Query {
     let value;
     try {
       const receiver = await this.#host.toJs(instance);
-      value = receiver[attr];
-      if (args !== undefined) {
-        if (typeof value === 'function') {
-          // If value is a function, call it with the provided args.
-          const jsArgs = args!.map(async a => await this.#host.toJs(a));
-          value = receiver[attr](...(await Promise.all(jsArgs)));
-        } else {
-          // Error on attempt to call non-function.
-          throw new InvalidCallError(receiver, attr);
+
+      // Check if it's a relationship
+      const clsName = this.#host.clsNames.get(receiver.constructor)
+      if (clsName != null) {
+        const typedef = this.#host.types.get(clsName)
+        if (typedef != null) {
+          const fieldType = typedef.get(attr);
+          if (fieldType != null) {
+            if (fieldType instanceof Relationship) {
+              // Use the fetcher for the other type to traverse
+              // the relationship.
+              const otherClsFetcher = this.#host.fetchers.get(fieldType.otherType);
+              const constraint = new Constraint(
+                "Eq",
+                fieldType.otherField,
+                receiver[fieldType.myField]
+              )
+              const constraints = [constraint]
+              let results = otherClsFetcher(constraints)
+              results = await Promise.resolve(results);
+              console.log(results)
+              if (fieldType.kind == "parent") {
+                value = results[0]
+              } else {
+                value = results
+              }
+            }
+          }
+        }
+      }
+      if (value == undefined) {
+        value = receiver[attr];
+        if (args !== undefined) {
+          if (typeof value === 'function') {
+            // If value is a function, call it with the provided args.
+            const jsArgs = args!.map(async a => await this.#host.toJs(a));
+            value = receiver[attr](...(await Promise.all(jsArgs)));
+          } else {
+            // Error on attempt to call non-function.
+            throw new InvalidCallError(receiver, attr);
+          }
         }
       }
     } catch (e) {

@@ -39,7 +39,11 @@ import {
 export class Host {
   #ffiPolar: FfiPolar;
   #classes: Map<string, Class>;
+  #classIds: Map<string, number>;
+  clsNames: Map<Class, string>;
   #instances: Map<number, any>;
+  types: Map<string, Map<string, any>>;
+  fetchers: Map<string, any>;
   #equalityFn: EqualityFn;
 
   /**
@@ -52,6 +56,10 @@ export class Host {
     const clone = new Host(host.#ffiPolar, host.#equalityFn);
     clone.#classes = new Map(host.#classes);
     clone.#instances = new Map(host.#instances);
+    clone.#classIds = new Map(host.#classIds);
+    clone.clsNames = new Map(host.clsNames);
+    clone.types = new Map(host.types);
+    clone.fetchers = new Map(host.fetchers);
     return clone;
   }
 
@@ -60,6 +68,10 @@ export class Host {
     this.#ffiPolar = ffiPolar;
     this.#classes = new Map();
     this.#instances = new Map();
+    this.#classIds = new Map();
+    this.clsNames = new Map();
+    this.types = new Map();
+    this.fetchers = new Map();
     this.#equalityFn = equalityFn;
   }
 

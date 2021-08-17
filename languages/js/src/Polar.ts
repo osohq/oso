@@ -15,6 +15,7 @@ import { Predicate } from './Predicate';
 import { processMessage } from './messages';
 import type { Class, obj, Options, QueryResult } from './types';
 import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
+import { Variable } from './Variable';
 
 /** Create and manage an instance of the Polar runtime. */
 export class Polar {
@@ -221,10 +222,17 @@ export class Polar {
   /**
    * Register a JavaScript class for use in Polar policies.
    */
-  registerClass<T>(cls: Class<T>, alias?: string): void {
+  registerClass<T>(cls: Class<T>, alias?: string, types?: Map<string, any>, fetcher?: any): void {
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
-    const name = this.#host.cacheClass(cls, alias);
-    this.registerConstant(cls, name);
+    const clsName = this.#host.cacheClass(cls, alias);
+    this.registerConstant(cls, clsName);
+    this.#host.clsNames.set(cls, clsName);
+    if (types != null) {
+      this.#host.types.set(clsName, types);
+    }
+    if (fetcher != null) {
+      this.#host.fetchers.set(clsName, fetcher);
+    }
   }
 
   /**
@@ -233,6 +241,15 @@ export class Polar {
   registerConstant(value: any, name: string): void {
     const term = this.#host.toPolar(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
+  }
+
+  /**
+   * Returns all the resources the actor is allowed to perform some action on.
+   */
+  getAllowedResources(actor: any, action: any, cls: any): any {
+    const resource = new Variable("resource");
+    // @TODO: register class stuff to get class name
+
   }
 
   /** Start a REPL session. */
