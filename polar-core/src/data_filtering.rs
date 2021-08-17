@@ -150,26 +150,49 @@ impl From<VarInfo> for Vars {
             })
         }
 
-        let counter = info.counter;
-        let mut cycles = info.cycles;
-        let fields = info.field_relationships;
+        fn resolve<'a, A>(map: &'a HashMap<A, A>, key: &'a A) -> &'a A
+        where
+            A: Hash + Eq,
+        {
+            map.get(key).map_or(key, |key| resolve(map, key))
+        }
 
-        // if x.y=a and x.y=b then a=b, so add a cycle.
-        fields
-            .iter()
-            .flat_map(|(p1, f1, c1)| {
-                fields.iter().filter_map(move |(p2, f2, c2)| {
-                    (c1 != c2 && f1 == f2 && p1 == p2).then(|| (c1.clone(), c2.clone()))
-                })
-            })
-            .for_each(|p| cycles.push(p));
+        let counter = info.counter;
 
         // group the variables into equivalence classes.
-        let mut variables = partition_equivs(cycles)
+        let mut variables = partition_equivs(info.cycles)
             // Give each cycle an id
             .into_iter()
             .map(|c| (counter.next(), c))
             .collect::<HashMap<_, _>>();
+
+        let fields = info.field_relationships;
+        let triples = {
+            let mut assign_id = |item: &Symbol| get_var_id(&mut variables, item.clone(), &counter);
+            fields
+                .iter()
+                .map(|(p, f, c)| (assign_id(p), f, assign_id(c)))
+                .collect::<Vec<_>>()
+        };
+
+        // if x.y=a and x.y=b then a=b, so add a cycle.
+        triples
+            .iter()
+            .flat_map(|(p1, f1, c1)| {
+                triples.iter().filter_map(move |(p2, f2, c2)| {
+                    (c1 != c2 && f1 == f2 && p1 == p2).then(|| (c1, c2))
+                })
+            })
+            .fold(HashMap::new(), |mut maps, (x, y)| {
+                let (x, y) = (*resolve(&maps, x), *resolve(&maps, y));
+                if x != y {
+                    let mut vars = variables.remove(&y).unwrap();
+                    vars.extend(variables.remove(&x).unwrap());
+                    maps.insert(x, y);
+                    variables.insert(y, vars);
+                }
+                maps
+            });
 
         let mut assign_id = |item| get_var_id(&mut variables, item, &counter);
 
