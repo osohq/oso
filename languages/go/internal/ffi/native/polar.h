@@ -21,6 +21,8 @@ int32_t polar_clear_rules(polar_Polar *polar_ptr);
 
 int32_t polar_register_constant(polar_Polar *polar_ptr, const char *name, const char *value);
 
+int32_t polar_register_mro(polar_Polar *polar_ptr, const char *name, const char *mro);
+
 polar_Query *polar_next_inline_query(polar_Polar *polar_ptr, uint32_t trace);
 
 polar_Query *polar_new_query_from_term(polar_Polar *polar_ptr,

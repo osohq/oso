@@ -94,6 +94,13 @@ class Polar:
         self.process_messages()
         self.check_result(result)
 
+    def register_mro(self, name, mro):
+        name = to_c_str(name)
+        mro = ffi_serialize(mro)
+        result = lib.polar_register_mro(self.ptr, name, mro)
+        self.process_messages()
+        self.check_result(result)
+
     def next_message(self):
         return lib.polar_next_polar_message(self.ptr)
 
