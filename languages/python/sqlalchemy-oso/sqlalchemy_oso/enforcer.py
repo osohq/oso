@@ -43,7 +43,7 @@ class SQLAlchemyEnforcer(Enforcer):
         filter = authorize_model(
             oso=self.policy,
             actor=actor,
-            action=self.read_action,
+            action=action,
             session=session,
             model=model,
         )
