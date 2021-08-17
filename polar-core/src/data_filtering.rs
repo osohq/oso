@@ -111,6 +111,142 @@ pub fn build_filter_plan(
     Ok(FilterPlan::new(types, partial_results, variable, class_tag))
 }
 
+impl From<&Operation> for VarInfo {
+    fn from(op: &Operation) -> Self {
+        let mut info = Self::default();
+        info.process_exp(op);
+        info
+    }
+}
+
+impl From<&Operation> for Vars {
+    fn from(op: &Operation) -> Self {
+        VarInfo::from(op).into()
+    }
+}
+
+impl From<VarInfo> for Vars {
+    /// Collapses the var info that we obtained from walking the expressions.
+    /// Track equivalence classes of variables and assign each one an id.
+    fn from(info: VarInfo) -> Self {
+        /// try to find an existing id for this variable.
+        fn seek_var_id(vars: &HashMap<Id, HashSet<Symbol>>, var: &Symbol) -> Option<Id> {
+            vars.iter()
+                .find_map(|(id, set)| set.contains(var).then(|| *id))
+        }
+
+        /// get the id for this variable, or create one if the variable is new.
+        fn get_var_id(
+            vars: &mut HashMap<Id, HashSet<Symbol>>,
+            var: Symbol,
+            counter: &Counter,
+        ) -> Id {
+            seek_var_id(vars, &var).unwrap_or_else(|| {
+                let new_id = counter.next();
+                let mut new_set = HashSet::new();
+                new_set.insert(var);
+                vars.insert(new_id, new_set);
+                new_id
+            })
+        }
+
+        /// generate equivalence classes from equivalencies.
+        fn partition_equivs<I, A>(iter: I) -> Vec<HashSet<A>>
+        where
+            I: Iterator<Item = (A, A)>,
+            A: Hash + Eq,
+        {
+            iter.fold(vec![], |mut joined: Vec<HashSet<A>>, (l, r)| {
+                let cycle = match joined.iter_mut().find(|c| c.contains(&l) || c.contains(&r)) {
+                    Some(c) => c,
+                    None => {
+                        let idx = joined.len();
+                        joined.push(HashSet::new());
+                        &mut joined[idx]
+                    }
+                };
+                cycle.insert(l);
+                cycle.insert(r);
+                joined
+            })
+        }
+
+        let counter = info.counter;
+        let mut cycles = info.cycles;
+        let fields = info.field_relationships;
+
+        // if x.y=a and x.y=b then a=b, so add a cycle.
+        fields
+            .iter()
+            .flat_map(|(p1, f1, c1)| {
+                fields.iter().filter_map(move |(p2, f2, c2)| {
+                    (c1 != c2 && f1 == f2 && p1 == p2).then(|| (c1.clone(), c2.clone()))
+                })
+            })
+            .for_each(|p| cycles.push(p));
+
+        // group the variables into equivalence classes.
+        let mut variables = partition_equivs(cycles.into_iter())
+            // Give each cycle an id
+            .into_iter()
+            .map(|c| (counter.next(), c))
+            .collect::<HashMap<_, _>>();
+
+        let mut assign_id = |item| get_var_id(&mut variables, item, &counter);
+
+        // now convert the remaining VarInfo fields into equivalent Vars fields.
+
+        let in_relationships = info
+            .in_relationships
+            .into_iter()
+            .map(|(lhs, rhs)| (assign_id(lhs), assign_id(rhs)))
+            .collect::<HashSet<_>>();
+
+        // I think a var can only have one value since we make sure there's a var for the dot lookup,
+        // and if they had aliases they'd be collapsed by now, so it should be an error
+        // if foo.name = "steve" and foo.name = "gabe".
+        let eq_values = info
+            .eq_values
+            .into_iter()
+            .map(|(var, val)| (assign_id(var), val))
+            .collect::<HashMap<_, _>>();
+
+        let types = info
+            .types
+            .into_iter()
+            .map(|(var, typ)| (assign_id(var), typ))
+            .collect::<HashMap<_, _>>();
+
+        let contained_values =
+            info.contained_values
+                .into_iter()
+                .fold(HashMap::new(), |mut map, (val, var)| {
+                    map.entry(assign_id(var))
+                        .or_insert_with(HashSet::new)
+                        .insert(val);
+                    map
+                });
+
+        let field_relationships = fields
+            .into_iter()
+            .map(|(p, f, c)| (assign_id(p), f, assign_id(c)))
+            .collect::<HashSet<_>>();
+
+        let this_id =
+            seek_var_id(&variables, &Symbol::new("_this")).expect("nothing to filter for!");
+
+        Vars {
+            variables,
+            field_relationships,
+            in_relationships,
+            eq_values,
+            contained_values,
+            types,
+            this_id,
+        }
+    }
+}
+
 impl VarInfo {
     fn dot_var(&mut self, mut var: Term, field: &Term) -> Symbol {
         // handle nested dot ops.
@@ -250,128 +386,12 @@ impl VarInfo {
             }
 
             Operator::Print => (),
-            x => unimplemented!("`{}` is not supported for data filtering.", x.to_polar()),
+            x => unimplemented!(
+                "`{}` is not yet supported for data filtering.",
+                x.to_polar()
+            ),
         }
         None
-    }
-
-    /// Collapses the var info that we obtained from walking the expressions.
-    /// Track equivalence classes of variables and assign each one an id.
-    fn into_vars(self) -> Vars {
-        fn seek_var_id(vars: &HashMap<Id, HashSet<Symbol>>, var: &Symbol) -> Option<Id> {
-            vars.iter()
-                .find_map(|(id, set)| set.contains(var).then(|| *id))
-        }
-
-        /// get the id for this variable, or create one if the variable is new.
-        fn get_var_id(
-            vars: &mut HashMap<Id, HashSet<Symbol>>,
-            var: Symbol,
-            counter: &Counter,
-        ) -> Id {
-            seek_var_id(vars, &var).unwrap_or_else(|| {
-                let new_id = counter.next();
-                let mut new_set = HashSet::new();
-                new_set.insert(var);
-                vars.insert(new_id, new_set);
-                new_id
-            })
-        }
-
-        /// generate equivalence classes from equivalencies.
-        fn partition_equivs<I, A>(iter: I) -> Vec<HashSet<A>>
-        where
-            I: Iterator<Item = (A, A)>,
-            A: Hash + Eq,
-        {
-            iter.fold(vec![], |mut joined: Vec<HashSet<A>>, (l, r)| {
-                let cycle = match joined.iter_mut().find(|c| c.contains(&l) || c.contains(&r)) {
-                    Some(c) => c,
-                    None => {
-                        let idx = joined.len();
-                        joined.push(HashSet::new());
-                        &mut joined[idx]
-                    }
-                };
-                cycle.insert(l);
-                cycle.insert(r);
-                joined
-            })
-        }
-
-        let counter = self.counter;
-        let mut cycles = self.cycles;
-        let fields = self.field_relationships;
-
-        // if x.y=a and x.y=b then a=b, so add a cycle.
-        fields
-            .iter()
-            .flat_map(|(p1, f1, c1)| {
-                fields.iter().filter_map(move |(p2, f2, c2)| {
-                    (c1 != c2 && f1 == f2 && p1 == p2).then(|| (c1.clone(), c2.clone()))
-                })
-            })
-            .for_each(|p| cycles.push(p));
-
-        // group the variables into equivalence classes.
-        let mut variables = partition_equivs(cycles.into_iter())
-            // Give each cycle an id
-            .into_iter()
-            .map(|c| (counter.next(), c))
-            .collect::<HashMap<_, _>>();
-
-        let mut assign_id = |item| get_var_id(&mut variables, item, &counter);
-
-        // now convert the remaining VarInfo fields into equivalent Vars fields.
-
-        let in_relationships = self
-            .in_relationships
-            .into_iter()
-            .map(|(lhs, rhs)| (assign_id(lhs), assign_id(rhs)))
-            .collect::<HashSet<_>>();
-
-        // I think a var can only have one value since we make sure there's a var for the dot lookup,
-        // and if they had aliases they'd be collapsed by now, so it should be an error
-        // if foo.name = "steve" and foo.name = "gabe".
-        let eq_values = self
-            .eq_values
-            .into_iter()
-            .map(|(var, val)| (assign_id(var), val))
-            .collect::<HashMap<_, _>>();
-
-        let types = self
-            .types
-            .into_iter()
-            .map(|(var, typ)| (assign_id(var), typ))
-            .collect::<HashMap<_, _>>();
-
-        let contained_values =
-            self.contained_values
-                .into_iter()
-                .fold(HashMap::new(), |mut map, (val, var)| {
-                    map.entry(assign_id(var))
-                        .or_insert_with(HashSet::new)
-                        .insert(val);
-                    map
-                });
-
-        let field_relationships = fields
-            .into_iter()
-            .map(|(p, f, c)| (assign_id(p), f, assign_id(c)))
-            .collect::<HashSet<_>>();
-
-        let this_id =
-            seek_var_id(&variables, &Symbol::new("_this")).expect("nothing to filter for!");
-
-        Vars {
-            variables,
-            field_relationships,
-            in_relationships,
-            eq_values,
-            contained_values,
-            types,
-            this_id,
-        }
     }
 }
 
@@ -399,7 +419,7 @@ impl FilterPlan {
                 let term = result.bindings.get(&Symbol::new(variable)).unwrap();
                 let exp = term.value().as_expression().unwrap();
                 assert_eq!(exp.operator, Operator::And);
-                let vars = Vars::from_exp(exp);
+                let vars = Vars::from(exp);
 
                 if explain {
                     eprintln!("  {}: {}", i, term.to_polar());
@@ -471,9 +491,8 @@ impl FilterPlan {
                         ConstraintKind::Eq => "=",
                         ConstraintKind::In => "in",
                         ConstraintKind::Contains => "contains",
-                    }
-                    .to_owned();
-                    let field = constraint.field.clone();
+                    };
+                    let field = &constraint.field;
                     let value = match &constraint.value {
                         ConstraintValue::Term(t) => t.to_polar(),
                         ConstraintValue::Field(f) => format!("FIELD({})", f),
@@ -537,7 +556,10 @@ impl ResultSet {
                     // constrain this var. Otherwise we're just saying field foo in all Foos which
                     // would fetch all Foos and not be good.
                     if let Some(child_result) = self.requests.remove(child) {
-                        if !child_result.constraints.is_empty() {
+                        if child_result.constraints.is_empty() {
+                            // Remove the id from the resolve_order too.
+                            self.resolve_order.pop();
+                        } else {
                             self.requests.insert(child.to_owned(), child_result);
                             request.constraints.push(Constraint {
                                 kind: ConstraintKind::In,
@@ -547,9 +569,6 @@ impl ResultSet {
                                     result_id: *child,
                                 }),
                             });
-                        } else {
-                            // Remove the id from the resolve_order too.
-                            self.resolve_order.pop();
                         }
                     }
 
@@ -575,15 +594,15 @@ impl ResultSet {
                     }
                     contributed_constraints = true;
                 }
-                for eqf in vars
+                for (_, f, _) in vars
                     .field_relationships
                     .iter()
-                    .filter(|r| r.0 == *parent && r.1 != *field && r.2 == *child)
+                    .filter(|(p, f, c)| p == parent && f != field && c == child)
                 {
                     request.constraints.push(Constraint {
                         kind: ConstraintKind::Eq,
                         field: field.clone(),
-                        value: ConstraintValue::Field(eqf.1.clone()),
+                        value: ConstraintValue::Field(f.clone()),
                     });
                     contributed_constraints = true;
                 }
@@ -612,12 +631,6 @@ impl ResultSet {
 }
 
 impl Vars {
-    fn from_exp(exp: &Operation) -> Vars {
-        let mut var_info = VarInfo::default();
-        var_info.process_exp(exp);
-        var_info.into_vars()
-    }
-
     fn explain(&self) {
         eprintln!("    variables");
         for (id, set) in &self.variables {
@@ -628,7 +641,7 @@ impl Vars {
                 .join(", ");
             eprintln!("      {}:  vars: {{{}}}", id, values);
             let type_tag = if let Some(tag) = self.types.get(id) {
-                tag.clone()
+                tag
             } else if let Some(val) = self.eq_values.get(id) {
                 match val.value() {
                     Value::Boolean(_) => "Bool",
@@ -638,9 +651,8 @@ impl Vars {
                     Value::Dictionary(_) => "Dictionary",
                     _ => todo!(),
                 }
-                .to_owned()
             } else {
-                "unknown".to_owned()
+                "unknown"
             };
             eprintln!("          type: {}", type_tag);
             if let Some(val) = self.eq_values.get(id) {
