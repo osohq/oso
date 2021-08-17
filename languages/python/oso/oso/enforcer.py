@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Any
 from polar import Variable, exceptions
 from .exceptions import NotFoundError, ForbiddenError
 from .oso import Policy
@@ -84,7 +84,7 @@ class Enforcer:
         if not self.policy.query_rule_once("allow_request", actor, request):
             raise self._get_error(False)
 
-    def authorized_actions(self, actor, resource, allow_wildcard=False) -> List[any]:
+    def authorized_actions(self, actor, resource, allow_wildcard=False) -> List[Any]:
         """Determine the actions ``actor`` is allowed to take on ``resource``.
 
         Collects all actions allowed by allow rules in the Polar policy for the
@@ -145,7 +145,7 @@ class Enforcer:
 
     def authorized_fields(
         self, actor, action, resource, allow_wildcard=False
-    ) -> List[any]:
+    ) -> List[Any]:
         """Determine the fields of ``resource`` on which ``actor`` is allowed to
         perform  ``action``.
 
