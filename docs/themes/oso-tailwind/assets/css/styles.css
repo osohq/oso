@@ -179,17 +179,3 @@ pre code {
   pointer-events: none;
   background-color: rgb(167, 243, 208);
 }
-
-.prose h1::before,
-.prose h2::before,
-.prose h3::before,
-.prose h4::before,
-.prose h5::before,
-.prose h6::before {
-  display: block;
-  content: " ";
-  margin-top: -130px;
-  height: 130px;
-  visibility: hidden;
-  pointer-events: none;
-}
