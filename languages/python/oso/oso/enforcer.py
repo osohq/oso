@@ -157,7 +157,7 @@ class Enforcer:
 
         :param allow_wildcard: Flag to determine behavior if the policy \
         includes a wildcard field. E.g., a rule allowing any field: \
-        ``allow_field(_actor, _field, _resource, _field)``. If ``True``, the \
+        ``allow_field(_actor, _action, _resource, _field)``. If ``True``, the \
         method will return ``["*"]``, if ``False``, the method will raise an \
         exception.
 
