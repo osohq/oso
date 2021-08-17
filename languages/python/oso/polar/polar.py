@@ -84,9 +84,9 @@ class Polar:
         self.register_class(str, name="String")
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
-        self.register_class(OsoActor, entity_type="OsoActor")
-        self.register_class(OsoGroup, entity_type="OsoGroup")
-        self.register_class(OsoResource, entity_type="OsoResource")
+        self.register_class(OsoActor, name="OsoActor", entity_type="OsoActor")
+        self.register_class(OsoGroup, name="OsoGroup", entity_type="OsoGroup")
+        self.register_class(OsoResource, name="OsoResource", entity_type="OsoResource")
 
         # Pre-registered classes.
         for name, cls in classes.items():
@@ -160,6 +160,9 @@ class Polar:
                 for c in inspect.getmro(cls)
                 if c in self.host.class_ids
             ]
+            entity_type = self.host.entities.get_type(cls)
+            if entity_type:
+                mro.append(self.host.class_ids.get(entity_type))
             self.ffi_polar.register_mro(cls_name, mro)
 
         self.ffi_polar.load(string, filename)
@@ -268,7 +271,7 @@ class Polar:
         self, cls, *, name=None, types=None, fetcher=None, entity_type=None
     ):
         """Register `cls` as a class accessible by Polar."""
-        cls_name = self.host.cache_class(cls, name)
+        cls_name = self.host.cache_class(cls, entity_type, name=name)
         self.register_constant(cls, cls_name)
         self.host.cls_names[cls] = cls_name
         if types:

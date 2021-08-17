@@ -1005,3 +1005,31 @@ def test_rule_prototypes_with_subclass_check(polar):
     """
     with pytest.raises(ValidationError):
         polar.load_str(p)
+
+
+def test_register_entity_type(polar):
+    class Resource:
+        pass
+
+    class User:
+        pass
+
+    class Group:
+        pass
+
+    polar.register_class(Resource, entity_type="OsoResource")
+    polar.register_class(User, entity_type="OsoActor")
+    polar.register_class(Group, entity_type="OsoGroup")
+
+    p = """type f(_x: OsoActor, _y: OsoResource);
+    f(_x: User, _y: Resource);"""
+
+    polar.load_str(p)
+
+    with pytest.raises(ValidationError):
+        polar.load_str("f(_x: Group, _y: Resource);")
+
+    polar.clear_rules()
+
+    polar.load_str("f(_x: OsoActor, _y: OsoResource);")
+    assert list(polar.query_rule("f", User(), Resource()))

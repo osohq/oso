@@ -33,57 +33,44 @@ class OsoGroup:
 
 
 class EntityMap:
-    ENTITY_TYPES = ["OsoResource", "OsoActor", "OsoGroup"]
+    ENTITY_TYPES = {
+        "OsoResource": OsoResource,
+        "OsoActor": OsoActor,
+        "OsoGroup": OsoGroup,
+    }
 
-    def __init__(self):
-        self.actors = {}
-        self.groups = {}
-        self.resources = {}
+    def __init__(self, cls_to_entity=None, entity_to_cls=None):
+        self.cls_to_entity = (cls_to_entity or {}).copy()
+        self.entity_to_cls = (entity_to_cls or {}).copy()
 
-    def add_entity(self, name, cls, entity_type):
-        assert entity_type in EntityMap.ENTITY_TYPES
-        if entity_type == "OsoActor":
-            self.actors[name] = cls
-        elif entity_type == "OsoGroup":
-            self.groups = cls
-        elif entity_type == "OsoResource":
-            self.reosurces = cls
+    def tag_is_entity(self, tag: str):
+        return tag in EntityMap.ENTITY_TYPES.keys()
+
+    def register(self, cls, entity_type: str):
+        assert self.tag_is_entity(entity_type)
+        self.cls_to_entity[cls] = self.ENTITY_TYPES[entity_type]
+        self.entity_to_cls.setdefault(entity_type, []).append(cls)
+
+    def get_type(self, cls):
+        return self.cls_to_entity.get(cls)
 
     def instance_is_entity(self, python_instance, entity_tag):
-        if entity_tag == "OsoResource":
-            for resource in self.resources.values():
-                if isinstance(python_instance, resource):
-                    return True
-        elif entity_tag == "OsoActor":
-            for actor in self.actors.values():
-                if isinstance(python_instance, actor):
-                    return True
-        elif entity_tag == "OsoGroup":
-            for group in self.groups.values():
-                if isinstance(python_instance, group):
-                    return True
-        else:
-            raise ("Unreachable")
+        for cls in self.entity_to_cls.get(entity_tag):
+            if isinstance(python_instance, cls):
+                return True
         return False
 
     def class_is_entity(self, python_class, entity_tag):
-        if entity_tag == "OsoResource":
-            for resource in self.resources.values():
-                if issubclass(python_class, resource):
-                    return True
-        elif entity_tag == "OsoActor":
-            for actor in self.actors.values():
-                if issubclass(python_class, actor):
-                    return True
-        elif entity_tag == "OsoGroup":
-            for group in self.groups.values():
-                if issubclass(python_class, group):
-                    return True
-        else:
-            raise ("Unreachable")
+        for cls in self.entity_to_cls.get(entity_tag):
+            if issubclass(python_class, cls):
+                return True
         return False
 
-    # def instance_is_actor(self, instance):
+    def copy(self):
+        return type(self)(
+            cls_to_entity=self.cls_to_entity,
+            entity_to_cls=self.entity_to_cls,
+        )
 
 
 class Host:
@@ -165,7 +152,7 @@ class Host:
         self.classes[name] = cls
         self.class_ids[cls] = self.cache_instance(cls)
         if entity_type:
-            self.entities.add_entity(name, cls, entity_type)
+            self.entities.register(cls, entity_type)
         return name
 
     def get_instance(self, id):
@@ -200,7 +187,7 @@ class Host:
 
     def isa(self, instance, class_tag) -> bool:
         instance = self.to_python(instance)
-        if class_tag in EntityMap.ENTITY_TYPES:
+        if self.entities.tag_is_entity(class_tag):
             return self.entities.instance_is_entity(instance, class_tag)
         cls = self.get_class(class_tag)
         return isinstance(instance, cls)
@@ -211,7 +198,7 @@ class Host:
         for field in path:
             field = self.to_python(field)
             base = self.get_field(base, field)
-        if class_tag in EntityMap.ENTITY_TYPES:
+        if self.entities.tag_is_entity(class_tag):
             return self.entities.class_is_entity(base, class_tag)
         return issubclass(base, cls)
 
@@ -219,7 +206,7 @@ class Host:
         """Return true if left is a subclass (or the same class) as right."""
         left = self.get_class(left_tag)
         right = self.get_class(right_tag)
-        if right_tag in EntityMap.ENTITY_TYPES:
+        if self.entities.tag_is_entity(right_tag):
             return self.entities.class_is_entity(left, right_tag)
         return issubclass(left, right)
 
@@ -231,7 +218,7 @@ class Host:
             left = self.get_class(left_tag)
             right = self.get_class(right_tag)
             # Base entity classes are never more specific
-            if right_tag in EntityMap.ENTITY_TYPES:
+            if self.entities.tag_is_entity(right_tag):
                 return True
             elif left_tag in EntityMap.ENTITY_TYPES:
                 return False
