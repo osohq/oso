@@ -150,27 +150,6 @@ impl From<VarInfo> for Vars {
             })
         }
 
-        /// generate equivalence classes from equivalencies.
-        fn partition_equivs<I, A>(iter: I) -> Vec<HashSet<A>>
-        where
-            I: Iterator<Item = (A, A)>,
-            A: Hash + Eq,
-        {
-            iter.fold(vec![], |mut joined: Vec<HashSet<A>>, (l, r)| {
-                let cycle = match joined.iter_mut().find(|c| c.contains(&l) || c.contains(&r)) {
-                    Some(c) => c,
-                    None => {
-                        let idx = joined.len();
-                        joined.push(HashSet::new());
-                        &mut joined[idx]
-                    }
-                };
-                cycle.insert(l);
-                cycle.insert(r);
-                joined
-            })
-        }
-
         let counter = info.counter;
         let mut cycles = info.cycles;
         let fields = info.field_relationships;
@@ -186,7 +165,7 @@ impl From<VarInfo> for Vars {
             .for_each(|p| cycles.push(p));
 
         // group the variables into equivalence classes.
-        let mut variables = partition_equivs(cycles.into_iter())
+        let mut variables = partition_equivs(cycles)
             // Give each cycle an id
             .into_iter()
             .map(|c| (counter.next(), c))
@@ -672,5 +651,51 @@ impl Vars {
         for (x, y) in &self.in_relationships {
             eprintln!("      {} in {}", x, y);
         }
+    }
+}
+
+/// generate equivalence classes from equivalencies.
+pub fn partition_equivs<I, A>(coll: I) -> Vec<HashSet<A>>
+where
+    I: IntoIterator<Item = (A, A)>,
+    A: Hash + Eq,
+{
+    coll.into_iter()
+        .fold(vec![], |mut joined: Vec<HashSet<A>>, (l, r)| {
+            let cycle = match joined.iter_mut().find(|c| c.contains(&l) || c.contains(&r)) {
+                Some(c) => c,
+                None => {
+                    let idx = joined.len();
+                    joined.push(HashSet::new());
+                    &mut joined[idx]
+                }
+            };
+            cycle.insert(l);
+            cycle.insert(r);
+            joined
+        })
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    fn unord_eq<A>(a: Vec<A>, mut b: Vec<A>) -> bool
+    where
+        A: Eq,
+    {
+        for x in a {
+            match b.iter().enumerate().find_map(|(i, y)| (x == *y).then(|| i)) {
+                Some(i) => b.remove(i),
+                None => return false,
+            };
+        }
+        b.is_empty()
+    }
+
+    #[test]
+    fn test_partition_equivs() {
+        let pairs = vec![(1, 2), (2, 3), (3, 4), (5, 6), (8, 8), (6, 7)];
+        let classes = vec![hashset! {1, 2, 3, 4}, hashset! {5, 6, 7}, hashset! {8}];
+        assert!(unord_eq(partition_equivs(pairs), classes));
     }
 }

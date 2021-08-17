@@ -12,6 +12,7 @@ use wasm_bindgen::prelude::*;
 use super::visitor::{walk_term, Visitor};
 use crate::bindings::{BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState};
 use crate::counter::Counter;
+use crate::data_filtering::partition_equivs;
 use crate::debugger::{DebugEvent, Debugger};
 use crate::error::{self, PolarError, PolarResult};
 use crate::events::*;
@@ -1092,46 +1093,26 @@ impl PolarVirtualMachine {
     }
 
     fn get_names(&self, s: &Symbol) -> HashSet<Symbol> {
-        let mut cycles: Vec<HashSet<Symbol>> = vec![];
-        self.binding_manager
+        let cycles = self
+            .binding_manager
             .get_constraints(s)
             .constraints()
             .into_iter()
-            .for_each(|con| match con.operator {
+            .filter_map(|con| match con.operator {
                 Operator::Unify | Operator::Eq => {
                     if let (Ok(l), Ok(r)) = (
                         con.args[0].value().as_symbol(),
                         con.args[1].value().as_symbol(),
                     ) {
-                        let check = |cycles: &mut Vec<HashSet<Symbol>>, l: &Symbol, r: &Symbol| {
-                            cycles
-                                .iter_mut()
-                                .find(|c| c.contains(r))
-                                .map(|c| c.insert(l.clone()))
-                        };
-                        if check(&mut cycles, l, r)
-                            .or_else(|| check(&mut cycles, r, l))
-                            .is_none()
-                        {
-                            let mut new = HashSet::new();
-                            new.insert(r.clone());
-                            new.insert(l.clone());
-                            cycles.push(new);
-                        }
+                        Some((l.clone(), r.clone()))
+                    } else {
+                        None
                     }
                 }
-                _ => (),
+                _ => None,
             });
 
-        let mut joined: Vec<HashSet<Symbol>> = vec![];
-        cycles.into_iter().for_each(|cycle| {
-            match joined.iter_mut().find(|c| !c.is_disjoint(&cycle)) {
-                Some(c) => c.extend(cycle.into_iter()),
-                None => joined.push(cycle),
-            }
-        });
-
-        joined
+        partition_equivs(cycles)
             .into_iter()
             .find(|c| c.contains(s))
             .unwrap_or_else(|| {
