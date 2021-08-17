@@ -234,7 +234,7 @@ impl VarInfo {
             args,
         }) = var.value().as_expression()
         {
-            var = Term::new_temporary(Value::Variable(self.dot_var(args[0].clone(), &args[1])))
+            var = Term::from(self.dot_var(args[0].clone(), &args[1]))
         }
 
         let sym = var.value().as_symbol().unwrap();
@@ -280,17 +280,15 @@ impl VarInfo {
                     }
                     var = self.process_exp(inner_exp).unwrap();
                 }
-                let field = &exp.args[1];
-                let new_var = self.dot_var(var, field);
                 // Return the var so we can unify with it.
-                return Some(Term::new_temporary(Value::Variable(new_var)));
+                return Some(Term::from(self.dot_var(var, &exp.args[1])));
             }
             Operator::Isa => {
                 assert_eq!(exp.args.len(), 2);
                 let lhs = &exp.args[0];
                 let rhs = &exp.args[1];
-                if let Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields })) =
-                    rhs.value()
+                if let Ok(Pattern::Instance(InstanceLiteral { tag, fields })) =
+                    rhs.value().as_pattern()
                 {
                     if !fields.fields.is_empty() {
                         unimplemented!(
@@ -323,9 +321,9 @@ impl VarInfo {
                         self.cycles.push((l.clone(), r.clone()))
                     }
                     // Unifying a variable with a value
-                    (Value::Variable(var), val) | (val, Value::Variable(var)) => self
-                        .eq_values
-                        .push((var.clone(), Term::new_temporary(val.clone()))),
+                    (Value::Variable(var), val) | (val, Value::Variable(var)) => {
+                        self.eq_values.push((var.clone(), Term::from(val.clone())))
+                    }
                     // Unifying something else.
                     // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
                     // @NOTE(steve): Going with the same not yet supported message but if this is
@@ -351,11 +349,11 @@ impl VarInfo {
                         // @Note(steve): MikeD wishes this came through as an in instead of or-expanded.
                         // That way we could turn it into an `in` in sql.
                         unimplemented!("var in list of values constraints are not yet supported for data filtering."),
-                        // self.in_values.push((var.clone(), Term::new_temporary(val.clone())));
+                        // self.in_values.push((var.clone(), Term::from(val.clone())));
                     // 123 in var
                     (val, Value::Variable(var)) =>
                         self.contained_values
-                            .push((Term::new_temporary(val.clone()), var.clone())),
+                            .push((Term::from(val.clone()), var.clone())),
                     _ =>
                         // @NOTE: This is probably just a bug if we hit it. Shouldn't get any other `in` cases.
                         unimplemented!(
@@ -694,7 +692,7 @@ mod test {
 
     #[test]
     fn test_partition_equivs() {
-        let pairs = vec![(1, 2), (2, 3), (3, 4), (5, 6), (8, 8), (6, 7)];
+        let pairs = vec![(1, 2), (2, 3), (4, 3), (5, 6), (8, 8), (6, 7)];
         let classes = vec![hashset! {1, 2, 3, 4}, hashset! {5, 6, 7}, hashset! {8}];
         assert!(unord_eq(partition_equivs(pairs), classes));
     }

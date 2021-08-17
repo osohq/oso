@@ -90,7 +90,7 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
                 | (Value::RestVariable(v), Value::RestVariable(w))
                     if v == &this && w == &this =>
                 {
-                    TRUE.into_term()
+                    TRUE.into()
                 }
                 (Value::Variable(l), _) | (Value::RestVariable(l), _)
                     if l == &this && right.is_ground() =>
@@ -121,7 +121,7 @@ pub fn simplify_partial(
     term = simplify_trivial_constraint(var.clone(), term);
     simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
     if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
-        (op!(And, term).into_term(), simplifier.perf_counters())
+        (op!(And, term).into(), simplifier.perf_counters())
     } else {
         (term, simplifier.perf_counters())
     }
@@ -561,7 +561,7 @@ impl Simplifier {
             args.retain(|a| {
                 let o = a.value().as_expression().unwrap();
                 o != &TRUE // trivial
-                    && !seen.contains(&o.mirror().into_term().hash_value()) // reflection
+                    && !seen.contains(&Term::from(o.mirror()).hash_value()) // reflection
                     && seen.insert(a.hash_value()) // duplicate
             });
         }

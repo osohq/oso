@@ -111,7 +111,7 @@ fn invert_partials(bindings: BindingManager) -> Bindings {
     simplified
         .into_iter()
         .map(|(k, v)| match v.value() {
-            Value::Expression(e) => (k, e.invert().into_term()),
+            Value::Expression(e) => (k, e.invert().into()),
             _ => (
                 k.clone(),
                 term!(op!(And, term!(op!(Neq, term!(k), v.clone())))),
