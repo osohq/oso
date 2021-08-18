@@ -79,6 +79,7 @@ impl PolarError {
             _ => {}
         }
 
+        // Augment ParseSugar errors with relevant snippets of parsed Polar policy.
         if let ErrorKind::Parse(ParseError::ParseSugar {
             ref mut msg,
             ref ranges,
@@ -88,6 +89,7 @@ impl PolarError {
             if let Some(source) = source {
                 match ranges.len() {
                     1 => (),
+                    // If two ranges are provided, label them `First` and `Second`.
                     2 => {
                         let first = &source.src[ranges[0].0..ranges[0].1];
                         msg.push_str(&format!("\tFirst:\n\t\t{}\n", first));
@@ -228,6 +230,8 @@ pub enum ParseError {
     ParseSugar {
         loc: usize,
         msg: String,
+        /// Set of source ranges to augment the error message with relevant snippets of the parsed
+        /// Polar policy.
         ranges: Vec<(usize, usize)>,
     },
 }
