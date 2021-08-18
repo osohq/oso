@@ -17,6 +17,7 @@ use super::terms::*;
 // TODO(gj): disallow same string to be declared as a perm/role and a relation.
 // This'll come into play for "owner"-style actor relationships.
 
+// This type is used as a pre-validation bridge between Rust & LALRPOP.
 #[derive(Debug)]
 pub enum ParserDeclaration {
     Roles(Term),
@@ -25,6 +26,7 @@ pub enum ParserDeclaration {
     Implication(Implication),
 }
 
+// Calculate source offsets for an implication.
 fn implication_offsets((implied, implier, relation): &Implication) -> (usize, usize) {
     (
         implied.offset(),
@@ -35,6 +37,7 @@ fn implication_offsets((implied, implier, relation): &Implication) -> (usize, us
     )
 }
 
+// Turn a set of parsed declarations into a `Namespace` (or die validating).
 pub fn parser_declarations_to_namespace(
     resource: Term,
     declarations: Vec<ParserDeclaration>,
@@ -46,58 +49,42 @@ pub fn parser_declarations_to_namespace(
     let mut relations: Option<Term> = None;
     let mut implications = HashSet::new();
 
-    let error_msg = |name: &str| {
-        format!(
+    let make_error = |name: &str, previous: &Term, new: &Term| {
+        let msg = format!(
             "Multiple '{}' declarations in {} namespace.\n",
             name,
             resource.to_polar()
-        )
+        );
+        ParseError::ParseSugar {
+            loc: new.offset(),
+            msg,
+            ranges: vec![
+                (previous.offset(), previous.offset_to_end()),
+                (new.offset(), new.offset_to_end()),
+            ],
+        }
     };
 
     for declaration in declarations {
         match declaration {
             Roles(new) => {
                 if let Some(previous) = roles {
-                    return Err(LalrpopError::User {
-                        error: ParseError::ParseSugar {
-                            loc: new.offset(),
-                            msg: error_msg("roles"),
-                            ranges: vec![
-                                (previous.offset(), previous.offset_to_end()),
-                                (new.offset(), new.offset_to_end()),
-                            ],
-                        },
-                    });
+                    let error = make_error("roles", &previous, &new);
+                    return Err(LalrpopError::User { error });
                 }
                 roles = Some(new);
             }
             Permissions(new) => {
                 if let Some(previous) = permissions {
-                    return Err(LalrpopError::User {
-                        error: ParseError::ParseSugar {
-                            loc: new.offset(),
-                            msg: error_msg("permissions"),
-                            ranges: vec![
-                                (previous.offset(), previous.offset_to_end()),
-                                (new.offset(), new.offset_to_end()),
-                            ],
-                        },
-                    });
+                    let error = make_error("permissions", &previous, &new);
+                    return Err(LalrpopError::User { error });
                 }
                 permissions = Some(new);
             }
             Relations(new) => {
                 if let Some(previous) = relations {
-                    return Err(LalrpopError::User {
-                        error: ParseError::ParseSugar {
-                            loc: new.offset(),
-                            msg: error_msg("relations"),
-                            ranges: vec![
-                                (previous.offset(), previous.offset_to_end()),
-                                (new.offset(), new.offset_to_end()),
-                            ],
-                        },
-                    });
+                    let error = make_error("relations", &previous, &new);
+                    return Err(LalrpopError::User { error });
                 }
                 relations = Some(new);
             }
