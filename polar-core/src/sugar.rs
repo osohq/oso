@@ -633,51 +633,6 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_with_only_roles() {
-        assert_eq!(
-            parse_lines(0, r#"Org{roles=["owner",];}"#).unwrap()[0],
-            Line::Namespace(Namespace {
-                resource: term!(sym!("Org")),
-                roles: Some(term!(["owner"])),
-                permissions: None,
-                relations: None,
-                implications: hashset! {},
-            })
-        );
-        assert_eq!(
-            parse_lines(0, r#"Org{roles=["owner","member",];}"#).unwrap()[0],
-            Line::Namespace(Namespace {
-                resource: term!(sym!("Org")),
-                roles: Some(term!(["owner", "member"])),
-                permissions: None,
-                relations: None,
-                implications: hashset! {},
-            })
-        );
-    }
-
-    #[test]
-    fn test_namespace_roles_and_role_implications() {
-        assert_eq!(
-            parse_lines(
-                0,
-                r#"Org {
-                     roles=["owner","member"];
-                     "member" if "owner";
-                }"#
-            )
-            .unwrap()[0],
-            Line::Namespace(Namespace {
-                resource: term!(sym!("Org")),
-                roles: Some(term!(["owner", "member"])),
-                permissions: None,
-                relations: None,
-                implications: hashset! {(term!("member"), term!("owner"), None)},
-            })
-        );
-    }
-
-    #[test]
     fn test_namespace_with_only_implications() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
