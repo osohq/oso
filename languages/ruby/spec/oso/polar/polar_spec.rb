@@ -1,4 +1,3 @@
-# frozen_string_literal: true
 
 require 'tempfile'
 
@@ -865,6 +864,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   # test_roles_integration
   context 'Oso roles' do # rubocop:disable Metrics/BlockLength
     require_relative './roles_helpers'
+    let(:roles_file) { File.join(__dir__, 'roles_policy.polar') }
     it 'works' do # rubocop:disable Metrics/BlockLength
       osohq = RolesHelpers::Org.new('osohq')
       apple = RolesHelpers::Org.new('apple')
@@ -879,62 +879,11 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       leina = RolesHelpers::User.new('leina', [osohq_owner])
       steve = RolesHelpers::User.new('steve', [osohq_member])
 
-      policy = <<~POLAR
-        resource(_type: Org, "org", actions, roles) if
-            actions = [
-                "invite",
-                "create_repo"
-            ] and
-            roles = {
-                member: {
-                    permissions: ["create_repo"],
-                    implies: ["repo:reader"]
-                },
-                owner: {
-                    permissions: ["invite"],
-                    implies: ["member", "repo:writer"]
-                }
-            };
-
-        resource(_type: Repo, "repo", actions, roles) if
-            actions = [
-                "push",
-                "pull"
-            ] and
-            roles = {
-                writer: {
-                    permissions: ["push", "issue:edit"],
-                    implies: ["reader"]
-                },
-                reader: {
-                    permissions: ["pull"]
-                }
-            };
-
-        resource(_type: Issue, "issue", actions, {}) if
-            actions = [
-                "edit"
-            ];
-
-        parent_child(parent_org: Org, repo: Repo) if
-            repo.org = parent_org;
-
-        parent_child(parent_repo: Repo, issue: Issue) if
-            issue.repo = parent_repo;
-
-        actor_has_role_for_resource(actor, role_name, role_resource) if
-            role in actor.roles and
-            role matches {name: role_name, resource: role_resource};
-
-        allow(actor, action, resource) if
-            role_allows(actor, action, resource);
-      POLAR
-
       subject.register_class(RolesHelpers::Org, name: 'Org')
       subject.register_class(RolesHelpers::Repo, name: 'Repo')
       subject.register_class(RolesHelpers::Issue, name: 'Issue')
       subject.register_class(RolesHelpers::User, name: 'User')
-      subject.load_str(policy)
+      subject.load_file(roles_file)
       subject.enable_roles
 
       expect(subject.query_rule('allow', leina, 'invite', osohq).to_a).not_to be_empty

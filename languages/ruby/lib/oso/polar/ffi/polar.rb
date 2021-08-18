@@ -25,7 +25,12 @@ module Oso
           attach_function :register_constant, :polar_register_constant, [FFI::Polar, :string, :string], :int32
           attach_function :next_message, :polar_next_polar_message, [FFI::Polar], FFI::Message
           attach_function :free, :polar_free, [FFI::Polar], :int32
-          attach_function :build_filter_plan, :polar_build_filter_plan, [FFI::Polar, :string, :string, :string, :string], :string
+          attach_function(
+            :build_filter_plan,
+            :polar_build_filter_plan,
+            [FFI::Polar, :string, :string, :string, :string],
+            :string
+          )
         end
         private_constant :Rust
 
@@ -58,7 +63,7 @@ module Oso
           plan = Rust.build_filter_plan(self, types, partials, variable, class_tag)
           process_messages
           # TODO(gw) more error checking?
-          JSON.load plan
+          JSON.parse plan
         end
 
         # @param src [String]

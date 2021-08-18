@@ -72,6 +72,9 @@ module Oso
       # @raise [Error] if the FFI call raises one.
       def handle_call(attribute, call_id:, instance:, args:, kwargs:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         instance = host.to_ruby(instance)
+        rel = get_relationship(instance.class, attribute)
+        return handle_relationship(call_id, instance, rel) unless rel.nil?
+
         args = args.map { |a| host.to_ruby(a) }
         kwargs = Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
         # The kwargs.empty? check is for Ruby < 2.7.
@@ -143,6 +146,12 @@ module Oso
             right_tag = event.data['right_class_tag']
             answer = host.subspecializer?(instance_id, left_tag: left_tag, right_tag: right_tag)
             question_result(answer, call_id: event.data['call_id'])
+          when 'ExternalIsSubclass'
+            call_id = event.data['call_id']
+            left = event.data['left_class_tag']
+            right = event.data['right_class_tag']
+            answer = host.subclass?(left_tag: left, right_tag: right)
+            question_result(answer, call_id: call_id)
           when 'ExternalIsa'
             instance = event.data['instance']
             class_tag = event.data['class_tag']
@@ -175,6 +184,34 @@ module Oso
             raise "Unhandled event: #{JSON.dump(event.inspect)}"
           end
         end
+      end
+
+      private
+
+      def get_relationship(cls, attr)
+        typ = host.types[cls]
+        return unless typ
+        rel = typ.fields[attr]
+        return unless rel.is_a? ::Oso::Polar::DataFiltering::Relationship
+        rel 
+      end
+
+      def handle_relationship(call_id, instance, rel)
+        fetcher = host.types[rel.other_type].fetcher
+        constraint = ::Oso::Polar::DataFiltering::Constraint.new(
+          kind: 'Eq',
+          field: rel.other_field,
+          value: instance.send(rel.my_field)
+        )
+        res = fetcher[[constraint]]
+
+        if rel.kind == 'parent'
+          raise unless res.length == 1
+          res = res[0]
+        end
+
+        res = JSON.dump host.to_polar res
+        call_result(res, call_id: call_id)
       end
     end
   end

@@ -34,8 +34,10 @@ module Oso
       end
     end
 
+    # For holding type metadata: name, fields, etc.
     class UserType
       attr_reader :name, :klass, :id, :fields, :fetcher
+
       def initialize(name:, klass:, id:, fields:, fetcher:)
         @name = name
         @klass = klass
@@ -49,6 +51,7 @@ module Oso
     class Host # rubocop:disable Metrics/ClassLength
       # @return [Hash<String, Class>]
       attr_reader :types
+
       protected
 
       # @return [FFI::Polar]
@@ -103,7 +106,6 @@ module Oso
           fields: fields,
           fetcher: fetcher
         )
-          
         name
       end
 
@@ -208,6 +210,10 @@ module Oso
         left_index && right_index && left_index < right_index
       end
 
+      def subclass?(left_tag:, right_tag:)
+        get_class(left_tag) <= get_class(right_tag)
+      end
+
       # Check if instance is an instance of class.
       #
       # @param instance [Hash<String, Object>]
@@ -222,23 +228,23 @@ module Oso
       def serialize_types
         polar_types = {}
         types.values.uniq.each do |typ|
-          tag, fields = typ.name, typ.fields
+          tag = typ.name
+          fields = typ.fields
           field_types = {}
           fields.each do |k, v|
-            if v.is_a? ::Oso::Polar::DataFiltering::Relationship
-              field_types[k] = {
-                'Relationship' => {
-                  'kind' => v.kind,
-                  'other_class_tag' => v.other_type,
-                  'my_field' => v.my_field,
-                  'other_field' => v.other_field
+            field_types[k] =
+              if v.is_a? ::Oso::Polar::DataFiltering::Relationship
+                {
+                  'Relationship' => {
+                    'kind' => v.kind,
+                    'other_class_tag' => v.other_type,
+                    'my_field' => v.my_field,
+                    'other_field' => v.other_field
+                  }
                 }
-              }
-            else
-              field_types[k] = {
-                'Base' => { 'class_tag' => types[v].name }
-              }
-            end
+              else
+                { 'Base' => { 'class_tag' => types[v].name } }
+              end
           end
           polar_types[tag] = field_types
         end

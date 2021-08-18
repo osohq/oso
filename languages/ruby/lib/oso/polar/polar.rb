@@ -100,10 +100,22 @@ module Oso
           raise "Unknown class `#{klass}`"
         end
 
-        constraint = Expression.new('And',
-          [ Expression.new('Isa', [resource, Pattern.new(class_name, {})]) ])
-        results = query_rule 'allow', actor, action, resource, bindings: { 'resource' => constraint }, accept_expression: true
-        complete, partial = [], []
+        constraint = Expression.new(
+          'And',
+          [Expression.new('Isa', [resource, Pattern.new(class_name, {})])]
+        )
+
+        results = query_rule(
+          'allow',
+          actor,
+          action,
+          resource,
+          bindings: { 'resource' => constraint },
+          accept_expression: true
+        )
+
+        complete = []
+        partial = []
 
         results.to_a.each do |result|
           result.to_a.each do |key, val|
@@ -117,7 +129,6 @@ module Oso
         types = host.serialize_types
         plan = ffi_polar.build_filter_plan types, partial, 'resource', class_name
         complete + ::Oso::Polar::DataFiltering.filter(self, plan)
-        #raise
       end
 
       # Clear all rules and rule sources from the current Polar instance
@@ -192,6 +203,17 @@ module Oso
           raise InvalidQueryTypeError
         end
         Query.new(ffi_query, host: host, bindings: bindings)
+      end
+
+      # Query the knowledge base to determine whether an actor is allowed to
+      # perform an action upon a resource.
+      #
+      # @param actor [Object] Subject.
+      # @param action [Object] Verb.
+      # @param resource [Object] Object.
+      # @return [Boolean] An access control decision.
+      def allowed?(actor:, action:, resource:)
+        !query_rule('allow', actor, action, resource).first.nil?
       end
 
       # Query for a rule.

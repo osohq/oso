@@ -15,11 +15,11 @@ module Helpers
     end
   end
 
-  def count(a)
-    a.reduce(Hash.new 0) {|c, x| c[x] += 1; c }
+  def count(coll)
+    coll.reduce(Hash.new(0)) { |c, x| c.tap { c[x] += 1 } }
   end
 
-  def unord_eq(a, b)
-    count(a) == count(b)
+  def unord_eq(left, right)
+    count(left) == count(right)
   end
 end

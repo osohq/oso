@@ -8,60 +8,177 @@ Bar = Struct.new :id, :is_cool, :is_still_cool
 Foo = Struct.new :id, :bar_id, :is_fooey, :numbers
 
 Foo.class_eval do
-  define_method(:bar) {
-    Bars.find {|bar| bar.id == bar_id }
-  }
+  define_method(:bar) { BARS.find { |bar| bar.id == bar_id } }
 end
 
-Foos = [
+FOOS = [
   Foo.new('something', 'hello', false, []),
-  Foo.new('another', 'hello',true, [1]),
-  Foo.new('third', 'hello',true, [2]),
-  Foo.new('fourth', 'goodbye', true, [2, 1]),
-]
+  Foo.new('another', 'hello', true, [1]),
+  Foo.new('third', 'hello', true, [2]),
+  Foo.new('fourth', 'goodbye', true, [2, 1])
+].freeze
 
-Bars = [
+BARS = [
   Bar.new('hello', true, true),
   Bar.new('goodbye', false, true),
-  Bar.new('hershey', false, false),
-]
+  Bar.new('hershey', false, false)
+].freeze
+
+FETCH = ->(arr) { ->(cs) { arr.select { |x| cs.all? { |c| c.to_predicate[x] } } } }
+
+Relationship = ::Oso::Polar::DataFiltering::Relationship
 
 
+Org = Struct.new :name
+Repo = Struct.new :name, :org_name
+Issue = Struct.new :name, :repo_name
+User = Struct.new :name 
+Role = Struct.new :user_name, :resource_name, :role
 
 RSpec.configure do |c|
   c.include Helpers
 end
 
 RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
-  let(:test_file) { File.join(__dir__, 'test_file.polar') }
-  let(:test_file_gx) { File.join(__dir__, 'test_file_gx.polar') }
 
-  context 'data filtering' do
+  context 'data filtering' do # rubocop:disable Metrics/BlockLength
     context 'when filtering known values' do
       it 'works' do
         subject.load_str('allow(_, _, i) if i in [1, 2];')
         subject.load_str('allow(_, _, i) if i = {};')
 
-        expect(subject.get_allowed_resources('gwen', 'get', Integer)).to eq([1,2])
+        expect(subject.get_allowed_resources('gwen', 'get', Integer)).to eq([1, 2])
         expect(subject.get_allowed_resources('gwen', 'get', Hash)).to eq([{}])
       end
     end
 
-    context 'when filtering unknown values' do
+    context 'when using Oso roles' do
+      let(:roles_file) { File.join(__dir__, 'data_filtering_roles_policy.polar') }
+      let(:osohq) { Org.new('osohq') }
+      let(:apple) { Org.new('apple') }
+      let(:oso) { Repo.new('oso', 'osohq') }
+      let(:demo) { Repo.new('demo', 'osohq') }
+      let(:ios) { Repo.new('ios', 'apple') }
+      let(:bug) { Issue.new('bug', 'oso') }
+      let(:laggy) { Issue.new('laggy', 'ios') }
+      let(:leina) { User.new('leina') }
+      let(:steve) { User.new('steve') }
+      let(:gabe) { User.new('gabe') }
+      let(:roles) do
+        [Role.new('leina', 'osohq', 'owner'),
+         Role.new('steve', 'osohq', 'member'),
+         Role.new('gabe', 'oso', 'writer')]
+      end
+      let(:check_authz) do
+        ->(actor, action, resource, expected) do
+          results = subject.get_allowed_resources(actor, action, resource)
+          expect(unord_eq(results, expected)).to be true
+          expected.each do |re|
+            answer = subject.allowed?(actor: actor, action: action, resource: re)
+            expect(answer).to be true
+          end
+        end
+      end
+
+
       before do
-        fetcher_for = ->(arr) { ->(cs) { arr.select {|x| cs.all? {|c| c.to_predicate[x] } } } }
+        subject.register_class(
+          Org,
+          fields: { 'name' => String },
+          fetcher: FETCH[[apple, osohq]]
+        )
+        subject.register_class(
+          Repo,
+          fetcher: FETCH[[oso, ios, demo]],
+          fields: {
+            'name' => String,
+            'org_name' => String,
+            'org' => Relationship.new(
+              kind: 'parent',
+              other_type: 'Org',
+              my_field: 'org_name',
+              other_field: 'name'
+            )
+          }
+        )
+        subject.register_class(
+          Issue,
+          fetcher: FETCH[[bug, laggy]],
+          fields: {
+            'name' => String,
+            'repo_name' => String,
+            'repo' => Relationship.new(
+              kind: 'parent',
+              other_type: 'Repo',
+              my_field: 'repo_name',
+              other_field: 'name'
+            )
+          }
+        )
+        subject.register_class(
+          User,
+          fetcher: FETCH[[leina, steve, gabe]],
+          fields: {
+            'name' => String,
+            'roles' => Relationship.new(
+              kind: 'children',
+              other_type: 'Role',
+              my_field: 'name',
+              other_field: 'user_name'
+            )
+          }
+        )
+        subject.register_class(
+          Role,
+          fetcher: FETCH[roles],
+          fields: {
+            'user_name' => String,
+            'resource_name' => String,
+            'role' => String
+          }
+        )
+
+        subject.load_file(roles_file)
+        subject.enable_roles
+      end
+
+      context 'owners' do
+        it 'can do anything in their org' do
+          check_authz[leina, 'invite', Org, [osohq]]
+#          check_authz[leina, 'pull', Repo, [oso, demo]]
+#          check_authz[leina, 'push', Repo, [oso, demo]]
+#          check_authz[leina, 'edit', Repo, [bug]]
+        end
+      end
+    end
+
+    context 'when filtering unknown values' do # rubocop:disable Metrics/BlockLength
+      before do # rubocop:disable Metrics/BlockLength
         subject.register_class(
           Bar,
-          fields: {'id' => String, 'is_cool' => PolarBoolean, 'is_still_cool' => PolarBoolean },
-          fetcher: fetcher_for[Bars]
+          fetcher: FETCH[BARS],
+          fields: {
+            'id' => String,
+            'is_cool' => PolarBoolean,
+            'is_still_cool' => PolarBoolean
+          }
         )
 
         subject.register_class(
           Foo,
-          fields: {'id' => String, 'bar_id' => String, 'is_fooey' => PolarBoolean, 'numbers' => Array,
-                   'bar' => ::Oso::Polar::DataFiltering::Relationship.new(kind: 'parent', other_type: 'Bar', my_field: 'bar_id', other_field: 'id')
-        },
-          fetcher: fetcher_for[Foos]
+          fetcher: FETCH[FOOS],
+          fields: {
+            'id' => String,
+            'bar_id' => String,
+            'is_fooey' => PolarBoolean,
+            'numbers' => Array,
+            'bar' => ::Oso::Polar::DataFiltering::Relationship.new(
+              kind: 'parent',
+              other_type: 'Bar',
+              my_field: 'bar_id',
+              other_field: 'id'
+            )
+          }
         )
       end
 
@@ -70,9 +187,37 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           policy = 'allow("gwen", "get", foo: Foo) if foo.is_fooey = true;'
           subject.load_str(policy)
           results = subject.get_allowed_resources('gwen', 'get', Foo)
-          expected = Foos.select(&:is_fooey)
+          expected = FOOS.select(&:is_fooey)
           expect(expected).not_to be_empty
-          expect(unord_eq results, expected).to be true
+          expect(unord_eq(results, expected)).to be true
+        end
+
+        context 'the in operator' do
+          it 'finds values in variables' do
+            policy = 'allow("gwen", "get", foo: Foo) if 1 in foo.numbers and 2 in foo.numbers;'
+            subject.load_str(policy)
+            results = subject.get_allowed_resources('gwen', 'get', Foo)
+            expected = FOOS.select { |f| f.numbers.include?(1) and f.numbers.include?(2) }
+            expect(expected).not_to be_empty
+            expect(unord_eq(results, expected)).to be true
+          end
+          it 'finds variables in values' do
+            policy = 'allow("gwen", "eat", foo: Foo) if foo.numbers in [[1]];'
+            subject.load_str(policy)
+            results = subject.get_allowed_resources('gwen', 'eat', Foo)
+            expected = FOOS.select { |f| f.numbers == [1] }
+            expect(expected).not_to be_empty
+            expect(unord_eq(results, expected)).to be true
+          end
+        end
+
+        it 'can compare two fields on the same object' do
+          policy = 'allow(_, _, bar: Bar) if bar.is_cool = bar.is_still_cool;'
+          subject.load_str(policy)
+            results = subject.get_allowed_resources('gwen', 'eat', Bar)
+            expected = BARS.select { |b| b.is_cool == b.is_still_cool }
+            expect(expected).not_to be_empty
+            expect(unord_eq(results, expected)).to be true
         end
       end
 
@@ -81,13 +226,11 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           policy = 'allow("gwen", "get", foo: Foo) if foo.bar = bar and bar.is_cool = true and foo.is_fooey = true;'
           subject.load_str(policy)
           results = subject.get_allowed_resources('gwen', 'get', Foo)
-          expected = Foos.select {|foo| foo.bar.is_cool and foo.is_fooey }
+          expected = FOOS.select { |foo| foo.bar.is_cool and foo.is_fooey }
           expect(expected).not_to be_empty
-          expect(unord_eq results, expected).to be true
+          expect(unord_eq(results, expected)).to be true
         end
       end
     end
-
   end
-
 end
