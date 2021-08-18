@@ -30,6 +30,7 @@ import {
   isPolarStr,
   isPolarVariable,
 } from './types';
+import { map } from '../test/helpers';
 
 /**
  * Translator between Polar and JavaScript.
@@ -281,16 +282,20 @@ export class Host {
           },
         };
       case v instanceof Pattern:
-        const dict = this.toPolar(v.fields).value as PolarDictPattern;
+        let dict = this.toPolar(v.fields).value as PolarDictPattern;
         if (v.tag === undefined) {
           return { value: { Pattern: dict } };
         } else {
+          let d = dict.Dictionary;
+          if (d == undefined) {
+            d = { fields: new Map() };
+          }
           return {
             value: {
               Pattern: {
                 Instance: {
                   tag: v.tag,
-                  fields: dict.Dictionary,
+                  fields: d,
                 },
               },
             },

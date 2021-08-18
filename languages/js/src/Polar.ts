@@ -13,9 +13,14 @@ import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
-import type { Class, obj, Options, QueryResult } from './types';
+import { Class, Dict, obj, Options, QueryResult } from './types';
 import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
 import { Variable } from './Variable';
+import { Expression } from './Expression';
+import type { PolarOperator } from './types';
+import { Pattern } from './Pattern';
+import { serializeTypes, filterData } from './dataFiltering';
+import { assert } from 'console';
 
 /** Create and manage an instance of the Polar runtime. */
 export class Polar {
@@ -199,7 +204,7 @@ export class Polar {
   /**
    * Query for a Polar predicate or string.
    */
-  query(q: Predicate | string): QueryResult {
+  query(q: Predicate | string, bindings?: any): QueryResult {
     const host = Host.clone(this.#host);
     let ffiQuery;
     if (typeof q === 'string') {
@@ -209,14 +214,14 @@ export class Polar {
       ffiQuery = this.#ffiPolar.newQueryFromTerm(term);
     }
     this.processMessages();
-    return new Query(ffiQuery, host).results;
+    return new Query(ffiQuery, host, bindings).results;
   }
 
   /**
    * Query for a Polar rule.
    */
-  queryRule(name: string, ...args: unknown[]): QueryResult {
-    return this.query(new Predicate(name, args));
+  queryRule(name: string, bindings?: any, ...args: unknown[]): QueryResult {
+    return this.query(new Predicate(name, args), bindings);
   }
 
   /**
@@ -246,10 +251,30 @@ export class Polar {
   /**
    * Returns all the resources the actor is allowed to perform some action on.
    */
-  getAllowedResources(actor: any, action: any, cls: any): any {
+  async getAllowedResources(actor: any, action: any, cls: any): Promise<any> {
     const resource = new Variable("resource");
-    // @TODO: register class stuff to get class name
+    const clsName = this.#host.clsNames.get(cls)!;
+    const constraint = new Expression("And", [new Expression("Isa", [resource, new Pattern({ tag: clsName, fields: {} })])])
+    let results = this.queryRule("allow", { "resource": constraint }, actor, action, resource);
 
+    const queryResults = [];
+    for await (const result of results) {
+      queryResults.push(result);
+    }
+
+    let jsonResults = queryResults.map(result => ({
+      // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
+      // trivially `JSON.stringify()`-able.
+      bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
+        obj[k] = this.#host.toPolar(v);
+        return obj;
+      }, {}),
+    }));
+    let resultsStr = JSON.stringify(jsonResults)
+    console.log(this.#host.clsNames)
+    let typesStr = serializeTypes(this.#host.types, this.#host.clsNames)
+    let plan = this.#ffiPolar.buildFilterPlan(typesStr, resultsStr, "resource", clsName)
+    return await filterData(this.#host, plan)
   }
 
   /** Start a REPL session. */

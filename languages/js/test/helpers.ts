@@ -23,7 +23,7 @@ export async function queryRule<T extends Polar>(
   ...args: any[]
 ): Promise<Result[]> {
   const results = [];
-  for await (const result of x.queryRule(name, ...args)) {
+  for await (const result of x.queryRule(name, null, ...args)) {
     results.push(result);
   }
   return results;

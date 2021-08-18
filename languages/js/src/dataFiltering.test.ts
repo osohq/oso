@@ -1,7 +1,7 @@
 import { Oso } from './Oso';
 import { Relationship } from './dataFiltering';
 import "reflect-metadata"
-import { Entity, PrimaryColumn, Column, createConnection, Repository } from "typeorm";
+import { Entity, PrimaryColumn, Column, createConnection } from "typeorm";
 
 @Entity()
 export class Bar {
@@ -60,18 +60,19 @@ test('data filtering', async () => {
         let addedWhere = false;
         for (let i in constraints) {
             let c = constraints[i];
-            let op;
+            let clause;
             switch (c.kind) {
                 case "Eq": {
-                    op = "="
+                    clause = `${name}.${c.field} = :${c.field}`
                 } break;
                 case "In": {
-                    op = "in"
+                    clause = `${name}.${c.field} IN (:...${c.field})`
                 } break;
             }
-            let clause = `${name}.${c.field} ${op} :${c.field}`
             let param: any = {}
             param[c.field] = c.value
+            console.log(clause)
+            console.log(param)
             if (!addedWhere) {
                 query.where(clause, param)
                 addedWhere = true;
@@ -90,8 +91,16 @@ test('data filtering', async () => {
         return fromRepo(foos, "foo", constraints)
     }
 
-    oso.registerClass(Bar, "Bar", new Map(), getBars);
+    const barType = new Map();
+    barType.set("id", String)
+    barType.set("isCool", Boolean)
+    barType.set("isStillCool", Boolean)
+    oso.registerClass(Bar, "Bar", barType, getBars);
+
     const fooType = new Map();
+    fooType.set("id", String)
+    fooType.set("barId", String)
+    fooType.set("isFooey", Boolean)
     fooType.set("bar", new Relationship("parent", "Bar", "barId", "id"))
     oso.registerClass(Foo, "Foo", fooType, getFoos);
 
@@ -102,5 +111,5 @@ test('data filtering', async () => {
             resource.isFooey = true;
     `)
     expect(await oso.isAllowed("steve", "get", anotherFoo)).toBe(true);
-    // expect(await oso.getAllowedResources("steve", "get", Foo)).toBe([anotherFoo]);
+    expect(await oso.getAllowedResources("steve", "get", Foo)).toEqual([anotherFoo]);
 });

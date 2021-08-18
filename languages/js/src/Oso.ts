@@ -21,7 +21,7 @@ export class Oso extends Polar {
     action: unknown,
     resource: unknown
   ): Promise<boolean> {
-    const results = this.queryRule('allow', actor, action, resource);
+    const results = this.queryRule('allow', null, actor, action, resource);
     const { done } = await results.next();
     results.return();
     return !done;
