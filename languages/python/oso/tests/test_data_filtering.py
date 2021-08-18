@@ -21,7 +21,7 @@ def oso():
 def fold_constraints(constraints):
     return reduce(
         lambda f, g: lambda x: f(x) and g(x),
-        [c.to_predicate() for c in constraints],
+        [c.check for c in constraints],
         lambda _: True,
     )
 
