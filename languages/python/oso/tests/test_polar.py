@@ -13,6 +13,7 @@ from polar import (
     Pattern,
 )
 from polar.partial import TypeConstraint
+from polar.errors import ValidationError
 
 import pytest
 
@@ -948,3 +949,59 @@ def test_lookup_in_head(polar, is_allowed):
 
     assert not is_allowed("leina", "write", r)
     assert is_allowed("leina", "read", r)
+
+
+def test_rule_prototypes_with_subclass_check(polar):
+    class Foo:
+        pass
+
+    class Bar(Foo):
+        pass
+
+    class Baz(Bar):
+        pass
+
+    class Bad:
+        pass
+
+    # NOTE: keep this order of registering classes--confirms that MROs are added at the correct time
+    polar.register_class(Baz)
+    polar.register_class(Bar)
+    polar.register_class(Foo)
+    polar.register_class(Bad)
+
+    p = """
+    type f(_x: Integer);
+    f(1);
+    """
+    polar.load_str(p)
+
+    p = """
+    type f(_x: Foo);
+    type f(_x: Foo, _y: Bar);
+    f(_x: Bar);
+    f(_x: Baz);
+    """
+    polar.load_str(p)
+
+    with pytest.raises(ValidationError):
+        polar.load_str("f(_x: Bad);")
+
+    polar.clear_rules()
+
+    # Test with fields
+    p = """
+    type f(_x: Foo{id: 1});
+    f(_x: Bar{id: 1});
+    f(_x: Baz{id: 1});
+    """
+    polar.load_str(p)
+    with pytest.raises(ValidationError):
+        polar.load_str("f(_x: Baz);")
+
+    # Test invalid rule prototype
+    p = """
+    type f(x: Foo, x.baz);
+    """
+    with pytest.raises(ValidationError):
+        polar.load_str(p)

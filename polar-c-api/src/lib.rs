@@ -129,6 +129,29 @@ pub extern "C" fn polar_register_constant(
     })
 }
 
+#[no_mangle]
+pub extern "C" fn polar_register_mro(
+    polar_ptr: *mut Polar,
+    name: *const c_char,
+    mro: *const c_char,
+) -> i32 {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let name = unsafe { ffi_string!(name) };
+        let mro = unsafe { ffi_string!(mro) };
+        let mro = serde_json::from_str(&mro);
+        match mro {
+            Ok(mro) => match polar.register_mro(terms::Symbol::new(name.as_ref()), mro) {
+                Err(e) => {
+                    set_error(e);
+                    POLAR_FAILURE
+                }
+                Ok(()) => POLAR_SUCCESS,
+            },
+            Err(e) => set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into()),
+        }
+    })
+}
 // @Note(steve): trace is treated as a bool. 0 for false, anything else for true.
 // If we get more than one flag on these ffi methods, consider renaming it flags and making it a bitflags field.
 // Then we wont have to update the ffi to add new optional things like logging or tracing or whatever.
