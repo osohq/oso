@@ -71,8 +71,6 @@ test('data filtering', async () => {
             }
             let param: any = {}
             param[c.field] = c.value
-            console.log(clause)
-            console.log(param)
             if (!addedWhere) {
                 query.where(clause, param)
                 addedWhere = true;
