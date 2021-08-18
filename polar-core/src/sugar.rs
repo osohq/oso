@@ -381,128 +381,6 @@ fn check_that_namespace_resource_is_registered(
     Ok(())
 }
 
-// fn caret_me_captain(string: &str, implier_too: bool) -> {
-// source_lines(source, offset, 0)
-// }
-
-fn check_for_empty_namespace(namespace: &Namespace) -> PolarResult<()> {
-    let Namespace {
-        resource,
-        roles,
-        permissions,
-        relations,
-        implications,
-    } = namespace;
-    if roles.is_none() && permissions.is_none() && relations.is_none() && implications.is_empty() {
-        let loc = resource.offset();
-        let msg = format!(
-            "{} namespace is empty. Please add roles, permissions, and/or relations, or delete it.",
-            resource
-        );
-        return Err(ParseError::ParseSugar {
-            loc,
-            msg,
-            ranges: vec![],
-        }
-        .into());
-    }
-    Ok(())
-}
-
-fn check_empty_declarations(namespace: &Namespace) -> PolarResult<()> {
-    let Namespace {
-        resource,
-        roles,
-        permissions,
-        relations,
-        ..
-    } = namespace;
-
-    let roles_empty = roles
-        .as_ref()
-        .map_or(false, |roles| roles.value().as_list().unwrap().is_empty());
-    let permissions_empty = permissions.as_ref().map_or(false, |permissions| {
-        permissions.value().as_list().unwrap().is_empty()
-    });
-    let relations_empty = relations.as_ref().map_or(false, |relations| {
-        relations.value().as_dict().unwrap().is_empty()
-    });
-
-    match (roles_empty, permissions_empty, relations_empty) {
-        (true, true, true) => Err(ParseError::ParseSugar {
-            loc: resource.offset(),
-            msg: format!(
-                "{} namespace contains empty roles, permissions, and relations declarations. \
-                        Please add roles, permissions, and relations or delete the declarations.",
-                resource
-            ),
-            ranges: vec![],
-        }
-        .into()),
-        (true, true, _) => Err(ParseError::ParseSugar {
-            loc: resource.offset(),
-            msg: format!(
-                "{} namespace contains empty roles and permissions declarations. \
-                        Please add roles and permissions or delete the declarations.",
-                resource
-            ),
-            ranges: vec![],
-        }
-        .into()),
-        (true, _, true) => Err(ParseError::ParseSugar {
-            loc: resource.offset(),
-            msg: format!(
-                "{} namespace contains empty roles and relations declarations. \
-                        Please add roles and relations or delete the declarations.",
-                resource
-            ),
-            ranges: vec![],
-        }
-        .into()),
-        (_, true, true) => Err(ParseError::ParseSugar {
-            loc: resource.offset(),
-            msg: format!(
-                "{} namespace contains empty permissions and relations declarations. \
-                        Please add permissions and relations or delete the declarations.",
-                resource
-            ),
-            ranges: vec![],
-        }
-        .into()),
-        (true, _, _) => Err(ParseError::ParseSugar {
-            loc: roles.as_ref().unwrap().offset(),
-            msg: format!(
-                "{} namespace contains an empty roles declaration. \
-                        Please add roles or delete the declaration.",
-                resource
-            ),
-            ranges: vec![],
-        }
-        .into()),
-        (_, true, _) => Err(ParseError::ParseSugar {
-            loc: resource.offset(),
-            msg: format!(
-                "{} namespace contains an empty permissions declaration. \
-                        Please add permissions or delete the declaration.",
-                resource
-            ),
-            ranges: vec![],
-        }
-        .into()),
-        (_, _, true) => Err(ParseError::ParseSugar {
-            loc: resource.offset(),
-            msg: format!(
-                "{} namespace contains an empty relations declaration. \
-                        Please add relations or delete the declaration.",
-                resource
-            ),
-            ranges: vec![],
-        }
-        .into()),
-        (false, false, false) => Ok(()),
-    }
-}
-
 fn check_all_permissions_involved_in_implications(namespace: &Namespace) -> PolarResult<()> {
     let Namespace {
         resource,
@@ -559,8 +437,6 @@ impl KnowledgeBase {
     pub fn add_namespace(&mut self, namespace: Namespace) -> PolarResult<()> {
         check_that_namespace_resource_is_registered(self, &namespace.resource)?;
         check_for_duplicate_namespaces(&self.namespaces, &namespace.resource)?;
-        check_for_empty_namespace(&namespace)?;
-        check_empty_declarations(&namespace)?;
         check_all_permissions_involved_in_implications(&namespace)?;
 
         let Namespace {
@@ -729,37 +605,6 @@ mod tests {
         "#;
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(&p, invalid_policy, "duplicate declaration of Org namespace");
-    }
-
-    #[test]
-    fn test_namespace_empty() {
-        let p = Polar::new();
-        p.register_constant(sym!("Org"), term!("unimportant"));
-        expect_error(
-            &p,
-            "Org{}",
-            "Org namespace is empty. Please add roles, permissions, and/or relations, or delete it."
-        );
-    }
-
-    #[test]
-    fn test_namespace_with_empty_declarations() {
-        let p = Polar::new();
-        p.register_constant(sym!("Org"), term!("unimportant"));
-
-        expect_error(
-            &p,
-            "Org { roles=[]; permissions=[]; relations={}; }",
-            "Org namespace contains empty roles, permissions, and relations declarations. \
-            Please add roles, permissions, and relations or delete the declarations.",
-        );
-
-        expect_error(
-            &p,
-            "Org { roles=[]; }",
-            "Org namespace contains an empty roles declaration. \
-            Please add roles or delete the declaration.",
-        );
     }
 
     #[test]
