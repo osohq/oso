@@ -7,53 +7,7 @@ import pytest
 
 from oso import Policy
 from polar import exceptions
-
-# Fake global actor name → company ID map.
-# Should be an external database lookup.
-actors = {"guest": "1", "president": "1"}
-
-
-class Actor:
-    name: str = ""
-
-    def __init__(self, name=""):
-        self.name = name
-
-    def companies(self):
-        yield Company(id="0")  # fake, will fail
-        yield Company(id=actors[self.name])  # real, will pass
-
-
-class Widget:
-    # Data fields.
-    id: str = ""
-
-    # Class variables.
-    actions = ("read", "create")
-
-    def __init__(self, id):
-        self.id = id
-
-    def company(self):
-        return Company(id=self.id)
-
-
-class Company:
-    # Class variables.
-    roles = ("guest", "admin")
-
-    def __init__(self, id, default_role=""):
-        self.id = id
-        self.default_role = default_role
-
-    def role(self, actor: Actor):
-        if actor.name == "president":
-            return "admin"
-        else:
-            return "guest"
-
-    def __eq__(self, other):
-        return self.id == other.id
+from .test_oso import Actor, Widget, Company
 
 
 @pytest.fixture
@@ -146,6 +100,44 @@ def test_authorize_request(test_enforcer):
     test_enforcer.authorize_request(verified, Request("GET", "/account"))
     with pytest.raises(ForbiddenError):
         test_enforcer.authorize_request("graham", Request("GET", "/account"))
+
+
+def test_authorize_field(test_enforcer):
+    admin = Actor(name="president")
+    guest = Actor(name="guest")
+    company = Company(id="1")
+    resource = Widget(id=company.id)
+    # Admin can update name
+    test_enforcer.authorize_field(admin, "update", resource, "name")
+    # Admin cannot update another field
+    with pytest.raises(ForbiddenError):
+        test_enforcer.authorize_field(guest, "update", resource, "foo")
+
+    # Guests can read non-private fields
+    test_enforcer.authorize_field(guest, "read", resource, "name")
+    with pytest.raises(ForbiddenError):
+        test_enforcer.authorize_field(guest, "read", resource, "private_field")
+
+
+def test_authorized_fields(test_enforcer):
+    admin = Actor(name="president")
+    guest = Actor(name="guest")
+    company = Company(id="1")
+    resource = Widget(id=company.id)
+    # Admin should be able to update all fields
+    assert set(test_enforcer.authorized_fields(admin, "update", resource)) == set(
+        ["name", "purpose", "private_field"]
+    )
+    # Guests should not be able to update fields
+    assert set(test_enforcer.authorized_fields(guest, "update", resource)) == set()
+    # Admins should be able to read all fields
+    assert set(test_enforcer.authorized_fields(admin, "read", resource)) == set(
+        ["name", "purpose", "private_field"]
+    )
+    # Guests should be able to read all public fields
+    assert set(test_enforcer.authorized_fields(guest, "read", resource)) == set(
+        ["name", "purpose"]
+    )
 
 
 def test_custom_errors():

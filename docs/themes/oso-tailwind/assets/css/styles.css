@@ -31,7 +31,7 @@ button > * {
     }
 
     .tooltip .tooltip-text {
-        @apply 
+        @apply
             invisible
             p-2 mt-16
             absolute z-50 inline-block
