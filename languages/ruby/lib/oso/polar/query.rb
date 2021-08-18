@@ -10,11 +10,12 @@ module Oso
 
       # @param ffi_query [FFI::Query]
       # @param host [Oso::Polar::Host]
-      def initialize(ffi_query, host:)
+      def initialize(ffi_query, host:, bindings: {})
         @calls = {}
         @ffi_query = ffi_query
         ffi_query.enrich_message = host.method(:enrich_message)
         @host = host
+        bindings.each { |k, v| ffi_query.bind k, host.to_polar(v) }
       end
 
       private

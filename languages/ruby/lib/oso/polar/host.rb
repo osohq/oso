@@ -47,12 +47,12 @@ module Oso
 
     # Translate between Polar and the host language (Ruby).
     class Host # rubocop:disable Metrics/ClassLength
+      # @return [Hash<String, Class>]
+      attr_reader :types
       protected
 
       # @return [FFI::Polar]
       attr_reader :ffi_polar
-      # @return [Hash<String, Class>]
-      attr_reader :types
       # @return [Hash<Integer, Object>]
       attr_reader :instances
       # @return [Boolean]
@@ -96,7 +96,7 @@ module Oso
       def cache_class(cls, name:)
         raise DuplicateClassAliasError.new name: name, old: get_class(name), new: cls if types.key? name
 
-        types[name] = UserType.new(
+        types[name] = types[cls] = UserType.new(
           name: name,
           klass: PolarClass.new(cls),
           id: cache_instance(cls),
@@ -217,6 +217,32 @@ module Oso
         instance = to_ruby(instance)
         cls = get_class(class_tag)
         instance.is_a? cls
+      end
+
+      def serialize_types
+        polar_types = {}
+        types.values.uniq.each do |typ|
+          tag, fields = typ.name, typ.fields
+          field_types = {}
+          fields.each do |k, v|
+            if v.is_a? Relationship
+              field_types[k] = {
+                'Relationship' => {
+                  'kind' => v.kind,
+                  'other_class_tag' => v.other_type,
+                  'my_field' => v.my_field,
+                  'other_field' => v.other_field
+                }
+              }
+            else
+              field_types[k] = {
+                'Base' => { 'class_tag' => types[v].name }
+              }
+            end
+          end
+          polar_types[tag] = field_types
+        end
+        polar_types
       end
 
       # Turn a Ruby value into a Polar term that's ready to be sent across the

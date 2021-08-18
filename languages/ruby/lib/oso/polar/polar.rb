@@ -89,7 +89,35 @@ module Oso
       end
 
       def get_allowed_resources(actor, action, klass)
-        raise
+        resource = Variable.new 'resource'
+
+        # FIXME(gw) kind of a hack because of class autoreloading, maybe not needed?
+        if host.types.key? klass
+          class_name = host.types[klass].name
+        elsif host.types.key? klass.name
+          class_name = host.types[klass.name].name
+        else
+          raise "Unknown class `#{klass}`"
+        end
+
+        constraint = Expression.new('And',
+          [ Expression.new('Isa', [resource, Pattern.new(class_name, {})]) ])
+        results = query_rule 'allow', actor, action, resource, bindings: { 'resource' => constraint }, accept_expression: true
+        complete, partial = [], []
+
+        results.to_a.each do |result|
+          result.to_a.each do |key, val|
+            if val.is_a? Expression
+              partial.push({ 'bindings' => { key => host.to_polar(val) } })
+            else
+              complete.push val
+            end
+          end
+        end
+        types = host.serialize_types
+        plan = ffi_polar.build_filter_plan types, partial, 'resource', class_name
+        complete + ::Oso::Polar::DataFiltering.filter(self, plan)
+        #raise
       end
 
       # Clear all rules and rule sources from the current Polar instance
@@ -154,17 +182,16 @@ module Oso
       #   @param query [Predicate]
       #   @return [Enumerator] of resulting bindings
       #   @raise [Error] if the FFI call raises one.
-      def query(query)
-        new_host = host.dup
+      def query(query, host: self.host.dup, bindings: {})
         case query
         when String
           ffi_query = ffi_polar.new_query_from_str(query)
         when Predicate
-          ffi_query = ffi_polar.new_query_from_term(new_host.to_polar(query))
+          ffi_query = ffi_polar.new_query_from_term(host.to_polar(query))
         else
           raise InvalidQueryTypeError
         end
-        Query.new(ffi_query, host: new_host)
+        Query.new(ffi_query, host: host, bindings: bindings)
       end
 
       # Query for a rule.
@@ -173,8 +200,10 @@ module Oso
       # @param args [Array<Object>]
       # @return [Enumerator] of resulting bindings
       # @raise [Error] if the FFI call raises one.
-      def query_rule(name, *args)
-        query(Predicate.new(name, args: args))
+      def query_rule(name, *args, accept_expression: false, bindings: {})
+        host = self.host.dup
+        host.accept_expression = accept_expression
+        query(Predicate.new(name, args: args), host: host, bindings: bindings)
       end
 
       # Register a Ruby class with Polar.
