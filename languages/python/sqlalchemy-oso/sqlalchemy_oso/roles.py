@@ -432,9 +432,9 @@ def read_config(oso):
             pattern = get_parent.args[1]
             parent_type = pattern.tag
 
-            child_python_class = oso.host.classes[child_type]
+            child_python_class = oso.host.types[child_type].cls
             child_table = child_python_class.__tablename__
-            parent_python_class = oso.host.classes[parent_type]
+            parent_python_class = oso.host.types[parent_type].cls
             parent_table = parent_python_class.__tablename__
 
             # the rule has the form
@@ -513,8 +513,8 @@ def read_config(oso):
         permissions = result["bindings"]["permissions"]
         role_defs = result["bindings"]["roles"]
 
-        assert type in oso.host.classes
-        python_class = oso.host.classes[type]
+        assert type in oso.host.types
+        python_class = oso.host.types[type].cls
 
         if isinstance(permissions, Variable):
             permissions = []

@@ -257,7 +257,8 @@ class Host:
             import inspect
 
             if inspect.isclass(v):
-                instance_id = self.types[v].id
+                if v in self.types:
+                    instance_id = self.types[v].id
                 # BEGIN HACK:
                 # The polar core uses the .repr property to determine whether or not
                 # to allow Roles.role_allows to be called with unbound variables as
