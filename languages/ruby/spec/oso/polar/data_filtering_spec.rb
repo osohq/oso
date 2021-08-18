@@ -142,12 +142,30 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         subject.enable_roles
       end
 
-      context 'owners' do
+      context 'org owners' do
         it 'can do anything in their org' do
           check_authz[leina, 'invite', Org, [osohq]]
-#          check_authz[leina, 'pull', Repo, [oso, demo]]
-#          check_authz[leina, 'push', Repo, [oso, demo]]
-#          check_authz[leina, 'edit', Repo, [bug]]
+          check_authz[leina, 'pull', Repo, [oso, demo]]
+          check_authz[leina, 'push', Repo, [oso, demo]]
+          check_authz[leina, 'edit', Issue, [bug]]
+        end
+      end
+
+      context 'org members' do
+        it "can only pull the org's repos" do
+          check_authz[steve, 'invite', Org, []]
+          check_authz[steve, 'pull', Repo, [oso, demo]]
+          check_authz[steve, 'push', Repo, []]
+          check_authz[steve, 'edit', Issue, []]
+        end
+      end
+
+      context 'repo writers' do
+        it 'can push, pull, and edit issues' do
+          check_authz[gabe, 'invite', Org, []]
+          check_authz[gabe, 'pull', Repo, [oso]]
+          check_authz[gabe, 'push', Repo, [oso]]
+          check_authz[gabe, 'edit', Issue, [bug]]
         end
       end
     end

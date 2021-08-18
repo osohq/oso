@@ -90,6 +90,33 @@ module Oso
         call_result(nil, call_id: call_id)
       end
 
+      def get_field(cls, tag)
+        raise unless cls.fields.key? tag
+
+        ref = cls.fields[tag]
+        return host.types[ref] unless ref.is_a? ::Oso::Polar::DataFiltering::Relationship
+
+        case ref.kind
+        when 'parent'
+          host.types[ref.other_type]
+        when 'children'
+          host.types[Array]
+        end
+      end
+
+      def handle_external_isa_with_path(data)
+        sup = host.types[data['class_tag']]
+        bas = host.types[data['base_tag']]
+        path = data['path'].map &host.method(:to_ruby)
+        sub = path.reduce(bas) { |cls, tag| get_field(cls, tag) }
+#        raise "#{path} #{sub.inspect} #{sup.inspect}"
+        answer = sub.klass.get <= sup.klass.get
+        question_result(answer, call_id: data['call_id'])
+      rescue => e
+        application_error e.message
+        question_result(nil, call_id: data['call_id'])
+      end
+
       def handle_next_external(call_id, iterable)
         unless calls.key? call_id
           value = host.to_ruby iterable
@@ -133,6 +160,8 @@ module Oso
             yield event.data['bindings'].transform_values { |v| host.to_ruby(v) }
           when 'MakeExternal'
             handle_make_external(event.data)
+          when 'ExternalIsaWithPath'
+            handle_external_isa_with_path(event.data)
           when 'ExternalCall'
             call_id = event.data['call_id']
             instance = event.data['instance']
