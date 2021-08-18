@@ -84,7 +84,7 @@ class Host:
             lambda k: self.types[k], filter(lambda k: type(k) is str, self.types.keys())
         )
 
-    def cache_class(self, cls, name=None, fields=None, fetcher=None):
+    def cache_class(self, cls, name=None, fields=None, fetcher=lambda _: []):
         """Cache Python class by name."""
         name = cls.__name__ if name is None else name
         if name in self.types.keys():

@@ -260,7 +260,7 @@ class Polar:
             if not result:
                 print(False)
 
-    def register_class(self, cls, *, name=None, types=None, fetcher=None):
+    def register_class(self, cls, *, name=None, types=None, fetcher=lambda _: []):
         """Register `cls` as a class accessible by Polar."""
         cls_name = self.host.cache_class(cls, name=name, fields=types, fetcher=fetcher)
         self.register_constant(cls, cls_name)
@@ -306,14 +306,19 @@ class Polar:
             )
         )
 
+        complete, partial = [], []
+
         for result in results:
             for k, v in result["bindings"].items():
-                result["bindings"][k] = self.host.to_polar(v)
-                del result["trace"]
+                if isinstance(v, Expression):
+                    partial.append({"bindings": {k: self.host.to_polar(v)}})
+                else:
+                    complete.append(v)
 
         types = serialize_types(self.host.distinct_user_types(), self.host.types)
-        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
-        return filter_data(self, plan)
+        plan = self.ffi_polar.build_filter_plan(types, partial, "resource", class_name)
+        complete += filter_data(self, plan)
+        return complete
 
 
 def polar_class(_cls=None, *, name=None):

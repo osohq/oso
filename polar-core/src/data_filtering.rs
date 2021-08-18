@@ -374,7 +374,7 @@ impl FilterPlan {
     fn new(
         types: Types,
         partial_results: PartialResults,
-        variable: &str,
+        var: &str,
         class_tag: &str,
     ) -> FilterPlan {
         // @NOTE(steve): Just reading an env var here sucks (see all the stuff we had to do
@@ -390,18 +390,21 @@ impl FilterPlan {
         let result_sets = partial_results
             .into_iter()
             .enumerate()
-            .map(|(i, result)| {
-                let term = result.bindings.get(&Symbol::new(variable)).unwrap();
-                let exp = term.value().as_expression().unwrap();
-                assert_eq!(exp.operator, Operator::And);
-                let vars = Vars::from(exp);
+            // if the result doesn't include a binding for this variable,
+            // or if the binding isn't an expression, then just ignore it.
+            .filter_map(|(i, result)| {
+                result.bindings.get(&Symbol::new(var)).and_then(|term| {
+                    term.value().as_expression().ok().map(|exp| {
+                        assert_eq!(exp.operator, Operator::And);
+                        let vars = Vars::from(exp);
+                        if explain {
+                            eprintln!("  {}: {}", i, term.to_polar());
+                            vars.explain()
+                        }
 
-                if explain {
-                    eprintln!("  {}: {}", i, term.to_polar());
-                    vars.explain()
-                }
-
-                ResultSet::new(&types, &vars, class_tag)
+                        ResultSet::new(&types, &vars, class_tag)
+                    })
+                })
             })
             .collect();
 
@@ -514,16 +517,14 @@ impl ResultSet {
 
         for (parent, field, child) in &vars.field_relationships {
             if *parent == var_id {
-                let typ = type_def
-                    .get(field)
-                    .unwrap_or_else(|| panic!("unknown field {}", field));
+                let typ = type_def.get(field);
 
-                if let Type::Relationship {
+                if let Some(Type::Relationship {
                     other_class_tag,
                     my_field,
                     other_field,
                     ..
-                } = typ
+                }) = typ
                 {
                     self.constrain(types, vars, *child, other_class_tag);
 
