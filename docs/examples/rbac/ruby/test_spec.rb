@@ -1,4 +1,7 @@
-require "oso"
+require "bundler"
+Bundler.setup
+
+require "oso-oso"
 
 RSpec.describe do
   before do

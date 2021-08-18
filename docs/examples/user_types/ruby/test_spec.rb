@@ -1,4 +1,7 @@
-require "oso"
+require "bundler"
+Bundler.setup
+
+require "oso-oso"
 require_relative "02-user_classes.rb"
 
 RSpec.describe do

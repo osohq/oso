@@ -1,5 +1,8 @@
-require "oso"
-require_relative '01-simple'
+require "bundler"
+Bundler.setup
+
+require "oso-oso"
+require_relative "01-simple"
 
 EXPENSES_DEFAULT = {
     "location": "NYC",

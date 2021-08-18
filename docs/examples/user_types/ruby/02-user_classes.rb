@@ -1,5 +1,8 @@
 # classes-start
-require 'oso'
+require "bundler"
+Bundler.setup
+
+require 'oso-oso'
 
 OSO ||= Oso.new
 

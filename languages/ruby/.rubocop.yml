@@ -3,5 +3,6 @@ AllCops:
   Exclude:
     - '**/*~'
     - 'bin/oso'
+    - 'lib/oso-oso.rb'
     - 'vendor/**/*'
   NewCops: enable
