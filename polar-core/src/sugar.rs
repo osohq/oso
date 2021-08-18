@@ -1,12 +1,132 @@
 use std::collections::{HashMap, HashSet};
 
+use lalrpop_util::ParseError as LalrpopError;
+
 use super::error::{ParseError, PolarResult, RuntimeError};
 use super::kb::KnowledgeBase;
+use super::lexer::Token;
 use super::rules::*;
 use super::terms::*;
 
+// TODO(gj): round up longhand `has_permission/3` and `has_role/3` rules to incorporate their
+// referenced permissions & roles (implied & implier side) into the exhaustiveness checks.
+
+// TODO(gj): round up longhand `has_relation/3` rules to check that every declared `relation` has a
+// corresponding `has_relation/3` implementation.
+
 // TODO(gj): disallow same string to be declared as a perm/role and a relation.
 // This'll come into play for "owner"-style actor relationships.
+
+#[derive(Debug)]
+pub enum ParserDeclaration {
+    Roles(Term),
+    Permissions(Term),
+    Relations(Term),
+    Implication(Implication),
+}
+
+fn implication_offsets((implied, implier, relation): &Implication) -> (usize, usize) {
+    (
+        implied.offset(),
+        relation.as_ref().map_or_else(
+            || implier.offset_to_end(),
+            |relation| relation.offset_to_end(),
+        ),
+    )
+}
+
+pub fn parser_declarations_to_namespace(
+    resource: Term,
+    declarations: Vec<ParserDeclaration>,
+) -> Result<Namespace, LalrpopError<usize, Token, error::ParseError>> {
+    use ParserDeclaration::*;
+
+    let mut roles: Option<Term> = None;
+    let mut permissions: Option<Term> = None;
+    let mut relations: Option<Term> = None;
+    let mut implications = HashSet::new();
+
+    let error_msg = |name: &str| {
+        format!(
+            "Multiple '{}' declarations in {} namespace.\n",
+            name,
+            resource.to_polar()
+        )
+    };
+
+    for declaration in declarations {
+        match declaration {
+            Roles(new) => {
+                if let Some(previous) = roles {
+                    return Err(LalrpopError::User {
+                        error: ParseError::ParseSugar {
+                            loc: new.offset(),
+                            msg: error_msg("roles"),
+                            ranges: vec![
+                                (previous.offset(), previous.offset_to_end()),
+                                (new.offset(), new.offset_to_end()),
+                            ],
+                        },
+                    });
+                }
+                roles = Some(new);
+            }
+            Permissions(new) => {
+                if let Some(previous) = permissions {
+                    return Err(LalrpopError::User {
+                        error: ParseError::ParseSugar {
+                            loc: new.offset(),
+                            msg: error_msg("permissions"),
+                            ranges: vec![
+                                (previous.offset(), previous.offset_to_end()),
+                                (new.offset(), new.offset_to_end()),
+                            ],
+                        },
+                    });
+                }
+                permissions = Some(new);
+            }
+            Relations(new) => {
+                if let Some(previous) = relations {
+                    return Err(LalrpopError::User {
+                        error: ParseError::ParseSugar {
+                            loc: new.offset(),
+                            msg: error_msg("relations"),
+                            ranges: vec![
+                                (previous.offset(), previous.offset_to_end()),
+                                (new.offset(), new.offset_to_end()),
+                            ],
+                        },
+                    });
+                }
+                relations = Some(new);
+            }
+            Implication(new) => {
+                if let Some(previous) = implications.replace(new.clone()) {
+                    let msg = format!(
+                        "Duplicate implications found in {} namespace.\n",
+                        resource.to_polar()
+                    );
+                    return Err(LalrpopError::User {
+                        error: ParseError::ParseSugar {
+                            loc: new.0.offset(),
+                            msg,
+                            ranges: vec![implication_offsets(&previous), implication_offsets(&new)],
+                        },
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(Namespace {
+        resource,
+        roles,
+        permissions,
+        relations,
+        implications,
+    })
+}
 
 #[derive(Clone, Debug)]
 pub enum Declaration {
@@ -14,6 +134,8 @@ pub enum Declaration {
     Permission,
     Relation(Term),
 }
+
+type Implication = (Term, Term, Option<Term>);
 
 type Declarations = HashMap<Term, Declaration>;
 
@@ -46,7 +168,7 @@ pub struct Namespace {
     pub roles: Option<Term>,
     pub permissions: Option<Term>,
     pub relations: Option<Term>,
-    pub implications: HashSet<(Term, Term, Option<Term>)>,
+    pub implications: HashSet<Implication>,
 }
 
 #[derive(Clone, Default)]
@@ -77,14 +199,19 @@ impl Namespaces {
         if let Some(declaration) = self.inner[resource].get(name) {
             Ok(declaration)
         } else {
-            Err(ParseError::IntegerOverflow {
+            // TODO(gj): message isn't totally accurate when going across resources. E.g., with
+            // policy:
+            // Org{roles=["foo"];} Repo{permissions=["bar"]; relations={parent:Org}; "bar" if "baz"
+            // on "parent";}
+            Err(ParseError::ParseSugar {
                 loc: name.offset(),
-                token: format!(
+                msg: format!(
                     "Undeclared term {} referenced in implication in {} namespace. \
                         Did you mean to declare it as a role, permission, or relation?",
                     name.to_polar(),
                     resource
                 ),
+                ranges: vec![],
             }
             .into())
         }
@@ -217,7 +344,7 @@ fn rewrite_implied_as_rule_params(implied: &Term, resource: &Term) -> PolarResul
 }
 
 fn rewrite_implication(
-    implication: (Term, Term, Option<Term>),
+    implication: Implication,
     resource: &Term,
     namespaces: &Namespaces,
 ) -> PolarResult<Rule> {
@@ -237,12 +364,13 @@ fn rewrite_implication(
 
 fn check_for_duplicate_namespaces(namespaces: &Namespaces, resource: &Term) -> PolarResult<()> {
     if namespaces.exists(resource) {
-        return Err(ParseError::IntegerOverflow {
+        return Err(ParseError::ParseSugar {
             loc: resource.offset(),
             // TODO(gj): better error message, e.g.:
             //               duplicate namespace declaration: Org { ... } defined on line XX of file YY
             //                                                previously defined on line AA of file BB
-            token: format!("duplicate declaration of {} namespace", resource),
+            msg: format!("duplicate declaration of {} namespace", resource),
+            ranges: vec![],
         }
         .into());
     }
@@ -255,13 +383,14 @@ fn check_that_namespace_resource_is_registered(
     resource: &Term,
 ) -> PolarResult<()> {
     if !kb.is_constant(resource.value().as_symbol()?) {
-        return Err(ParseError::IntegerOverflow {
+        return Err(ParseError::ParseSugar {
             loc: resource.offset(),
             // TODO(gj): better error message
-            token: format!(
+            msg: format!(
                 "{} namespace must be registered as a class",
                 resource.to_polar()
             ),
+            ranges: vec![],
         }
         .into());
     }
@@ -282,11 +411,16 @@ fn check_for_empty_namespace(namespace: &Namespace) -> PolarResult<()> {
     } = namespace;
     if roles.is_none() && permissions.is_none() && relations.is_none() && implications.is_empty() {
         let loc = resource.offset();
-        let token = format!(
+        let msg = format!(
             "{} namespace is empty. Please add roles, permissions, and/or relations, or delete it.",
             resource
         );
-        return Err(ParseError::IntegerOverflow { loc, token }.into());
+        return Err(ParseError::ParseSugar {
+            loc,
+            msg,
+            ranges: vec![],
+        }
+        .into());
     }
     Ok(())
 }
@@ -311,67 +445,74 @@ fn check_empty_declarations(namespace: &Namespace) -> PolarResult<()> {
     });
 
     match (roles_empty, permissions_empty, relations_empty) {
-        (true, true, true) => Err(ParseError::IntegerOverflow {
+        (true, true, true) => Err(ParseError::ParseSugar {
             loc: resource.offset(),
-            token: format!(
+            msg: format!(
                 "{} namespace contains empty roles, permissions, and relations declarations. \
                         Please add roles, permissions, and relations or delete the declarations.",
                 resource
             ),
+            ranges: vec![],
         }
         .into()),
-        (true, true, _) => Err(ParseError::IntegerOverflow {
+        (true, true, _) => Err(ParseError::ParseSugar {
             loc: resource.offset(),
-            token: format!(
+            msg: format!(
                 "{} namespace contains empty roles and permissions declarations. \
                         Please add roles and permissions or delete the declarations.",
                 resource
             ),
+            ranges: vec![],
         }
         .into()),
-        (true, _, true) => Err(ParseError::IntegerOverflow {
+        (true, _, true) => Err(ParseError::ParseSugar {
             loc: resource.offset(),
-            token: format!(
+            msg: format!(
                 "{} namespace contains empty roles and relations declarations. \
                         Please add roles and relations or delete the declarations.",
                 resource
             ),
+            ranges: vec![],
         }
         .into()),
-        (_, true, true) => Err(ParseError::IntegerOverflow {
+        (_, true, true) => Err(ParseError::ParseSugar {
             loc: resource.offset(),
-            token: format!(
+            msg: format!(
                 "{} namespace contains empty permissions and relations declarations. \
                         Please add permissions and relations or delete the declarations.",
                 resource
             ),
+            ranges: vec![],
         }
         .into()),
-        (true, _, _) => Err(ParseError::IntegerOverflow {
+        (true, _, _) => Err(ParseError::ParseSugar {
             loc: roles.as_ref().unwrap().offset(),
-            token: format!(
+            msg: format!(
                 "{} namespace contains an empty roles declaration. \
                         Please add roles or delete the declaration.",
                 resource
             ),
+            ranges: vec![],
         }
         .into()),
-        (_, true, _) => Err(ParseError::IntegerOverflow {
+        (_, true, _) => Err(ParseError::ParseSugar {
             loc: resource.offset(),
-            token: format!(
+            msg: format!(
                 "{} namespace contains an empty permissions declaration. \
                         Please add permissions or delete the declaration.",
                 resource
             ),
+            ranges: vec![],
         }
         .into()),
-        (_, _, true) => Err(ParseError::IntegerOverflow {
+        (_, _, true) => Err(ParseError::ParseSugar {
             loc: resource.offset(),
-            token: format!(
+            msg: format!(
                 "{} namespace contains an empty relations declaration. \
                         Please add relations or delete the declaration.",
                 resource
             ),
+            ranges: vec![],
         }
         .into()),
         (false, false, false) => Ok(()),
@@ -389,12 +530,13 @@ fn check_all_permissions_involved_in_implications(namespace: &Namespace) -> Pola
         let permissions = permissions_list.value().as_list()?;
 
         if implications.is_empty() {
-            return Err(ParseError::IntegerOverflow {
+            return Err(ParseError::ParseSugar {
                 loc: permissions_list.offset(),
-                token: format!(
+                msg: format!(
                     "{}: all permissions must be involved in at least one implication.",
                     resource.to_polar(),
                 ),
+                ranges: vec![],
             }
             .into());
         }
@@ -413,13 +555,14 @@ fn check_all_permissions_involved_in_implications(namespace: &Namespace) -> Pola
                     });
 
             if !implication_references_permission {
-                return Err(ParseError::IntegerOverflow {
+                return Err(ParseError::ParseSugar {
                     loc: permission.offset(),
-                    token: format!(
+                    msg: format!(
                         "{}: permission {} must be involved in at least one implication.",
                         resource.to_polar(),
                         permission.to_polar()
                     ),
+                    ranges: vec![],
                 }
                 .into());
             }
@@ -484,12 +627,12 @@ mod tests {
         assert!(matches!(
             p.load_str(policy).unwrap_err(),
             error::PolarError {
-                kind: error::ErrorKind::Parse(error::ParseError::IntegerOverflow {
-                    token,
+                kind: error::ErrorKind::Parse(error::ParseError::ParseSugar {
+                    msg,
                     ..
                 }),
                 ..
-            } if token == expected
+            } if msg == expected
         ));
     }
 
@@ -650,7 +793,6 @@ mod tests {
     fn test_namespace_with_permission_not_involved_in_implication() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
-
         expect_error(
             &p,
             r#"Org {

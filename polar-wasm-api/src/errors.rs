@@ -36,6 +36,7 @@ fn kind(err: &PolarError) -> String {
         Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
         Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
         Parse(SingletonVariable { .. }) => "ParseError::SingletonVariable",
+        Parse(ParseSugar { .. }) => "ParseError::Sugar",
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
         Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
@@ -53,6 +54,7 @@ fn kind(err: &PolarError) -> String {
         RolesValidation(RolesValidationError(..)) => "RolesValidationError::RolesValidationError",
         Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
         Validation(InvalidPrototype { .. }) => "ValidationError::InvalidPrototype",
+        Validation(Sugar { .. }) => "ValidationError::Sugar",
     }
     .to_owned()
 }

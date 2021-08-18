@@ -57,7 +57,8 @@ impl PolarError {
                 | ParseError::WrongValueType { loc, .. }
                 | ParseError::ReservedWord { loc, .. }
                 | ParseError::DuplicateKey { loc, .. }
-                | ParseError::SingletonVariable { loc, .. } => {
+                | ParseError::SingletonVariable { loc, .. }
+                | ParseError::ParseSugar { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -77,6 +78,27 @@ impl PolarError {
             }
             _ => {}
         }
+
+        if let ErrorKind::Parse(ParseError::ParseSugar {
+            ref mut msg,
+            ref ranges,
+            ..
+        }) = self.kind
+        {
+            if let Some(source) = source {
+                match ranges.len() {
+                    1 => (),
+                    2 => {
+                        let first = &source.src[ranges[0].0..ranges[0].1];
+                        msg.push_str(&format!("\tFirst:\n\t\t{}\n", first));
+                        let second = &source.src[ranges[1].0..ranges[1].1];
+                        msg.push_str(&format!("\tSecond:\n\t\t{}\n", second));
+                    }
+                    _ => (),
+                }
+            }
+        }
+
         self
     }
 }
@@ -203,6 +225,11 @@ pub enum ParseError {
         loc: usize,
         name: String,
     },
+    ParseSugar {
+        loc: usize,
+        msg: String,
+        ranges: Vec<(usize, usize)>,
+    },
 }
 
 impl fmt::Display for ErrorContext {
@@ -264,6 +291,9 @@ impl fmt::Display for ParseError {
                     "Singleton variable {} is unused or undefined; try renaming to _{} or _",
                     name, name
                 )
+            }
+            Self::ParseSugar { msg, .. } => {
+                write!(f, "{}", msg)
             }
         }
     }
@@ -392,7 +422,8 @@ impl fmt::Display for RolesValidationError {
 pub enum ValidationError {
     InvalidRule { rule: String, msg: String },
     InvalidPrototype { prototype: String, msg: String },
-    // TODO: add SingletonVariable, RolesValidationError and Macro errors here
+    Sugar { msg: String },
+    // TODO: add SingletonVariable and RolesValidationError
 }
 
 impl fmt::Display for ValidationError {
@@ -403,6 +434,9 @@ impl fmt::Display for ValidationError {
             }
             Self::InvalidPrototype { prototype, msg } => {
                 write!(f, "Invalid prototype: {} {}", prototype, msg)
+            }
+            Self::Sugar { msg } => {
+                write!(f, "{}", msg)
             }
         }
     }
