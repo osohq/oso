@@ -106,7 +106,6 @@ module Oso
         end.uniq
       end
 
-      # @param name [String]
       def self.filter(polar, filter_plan, filter_plan_resolver: method(:builtin_resolve))
         filter_plan_resolver.call(polar, filter_plan)
       end
