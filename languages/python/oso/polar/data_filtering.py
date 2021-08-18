@@ -61,21 +61,23 @@ class Constraint:
     field: str
     value: Any
 
-    def to_predicate(self):
-        def known_value(x):
-            return self.value
+    def __post_init__(self):
+        if isinstance(self.value, Field):
+            self.getter = lambda x: getattr(x, self.value.field)
+        else:
+            self.getter = lambda x: self.value
 
-        def field_value(x):
-            return getattr(x, self.value.field)
-
-        get_value = field_value if isinstance(self.value, Field) else known_value
         if self.kind == "Eq":
-            return lambda x: getattr(x, self.field) == get_value(x)
-        if self.kind == "In":
-            return lambda x: getattr(x, self.field) in get_value(x)
-        if self.kind == "Contains":
-            return lambda x: get_value(x) in getattr(x, self.field)
-        assert False, "unknown constraint kind"
+            self.checker = lambda a, b: a == b
+        elif self.kind == "In":
+            self.checker = lambda a, b: a in b
+        elif self.kind == "Contains":
+            self.checker = lambda a, b: b in a
+        else:
+            assert False, "unknown constraint kind"
+
+    def check(self, item):
+        return self.checker(getattr(item, self.field), self.getter(item))
 
 
 def parse_constraint(polar, constraint):
