@@ -78,7 +78,7 @@ on the `Oso` instance.
 
 {{% callout "Load policies before enabling roles" "blue" %}}
 
-Oso will validate your roles configuration when you call `enable_roles`.
+Oso will validate your roles configuration when you call `enableRoles`.
 You must load all policy files before enabling roles.
 
 {{% /callout %}}
