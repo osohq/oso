@@ -88,6 +88,10 @@ module Oso
         ffi_polar.validate_roles_config(validation_query_results)
       end
 
+      def get_allowed_resources(actor, action, klass)
+        raise
+      end
+
       # Clear all rules and rule sources from the current Polar instance
       #
       # @return [self] for chaining.

@@ -34,6 +34,17 @@ module Oso
       end
     end
 
+    class UserType
+      attr_reader :name, :klass, :id, :fields, :fetcher
+      def initialize(name:, klass:, id:, fields:, fetcher:)
+        @name = name
+        @klass = klass
+        @id = id
+        @fields = fields
+        @fetcher = fetcher
+      end
+    end
+
     # Translate between Polar and the host language (Ruby).
     class Host # rubocop:disable Metrics/ClassLength
       protected
@@ -41,7 +52,7 @@ module Oso
       # @return [FFI::Polar]
       attr_reader :ffi_polar
       # @return [Hash<String, Class>]
-      attr_reader :classes
+      attr_reader :types
       # @return [Hash<Integer, Object>]
       attr_reader :instances
       # @return [Boolean]
@@ -53,29 +64,29 @@ module Oso
 
       def initialize(ffi_polar)
         @ffi_polar = ffi_polar
-        @classes = {}
+        @types = {}
         @instances = {}
         @accept_expression = false
       end
 
       def initialize_copy(other)
         @ffi_polar = other.ffi_polar
-        @classes = other.classes.dup
+        @types = other.types.dup
         @instances = other.instances.dup
       end
 
-      # Fetch a Ruby class from the {#classes} cache.
+      # Fetch a Ruby class from the {#types} cache.
       #
       # @param name [String]
       # @return [Class]
       # @raise [UnregisteredClassError] if the class has not been registered.
       def get_class(name)
-        raise UnregisteredClassError, name unless classes.key? name
+        raise UnregisteredClassError, name unless types.key? name
 
-        classes[name].get
+        types[name].klass.get
       end
 
-      # Store a Ruby class in the {#classes} cache.
+      # Store a Ruby class in the {#types} cache.
       #
       # @param cls [Class] the class to cache.
       # @param name [String] the name to cache the class as.
@@ -83,9 +94,16 @@ module Oso
       # @raise [DuplicateClassAliasError] if attempting to register a class
       # under a previously-registered name.
       def cache_class(cls, name:)
-        raise DuplicateClassAliasError.new name: name, old: get_class(name), new: cls if classes.key? name
+        raise DuplicateClassAliasError.new name: name, old: get_class(name), new: cls if types.key? name
 
-        classes[name] = PolarClass.new(cls)
+        types[name] = UserType.new(
+          name: name,
+          klass: PolarClass.new(cls),
+          id: cache_instance(cls),
+          fields: {},
+          fetcher: nil
+        )
+          
         name
       end
 
