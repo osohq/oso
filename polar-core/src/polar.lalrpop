@@ -9,10 +9,7 @@ use crate::terms::*;
 use crate::rules::*;
 use crate::terms::*;
 use crate::numerics::*;
-use crate::sugar::{
-    ParserDeclaration as Declaration,
-    parser_declarations_to_namespace as declarations_to_namespace,
-};
+use crate::sugar;
 use super::ValueOrLogical;
 
 use lalrpop_util::ParseError;
@@ -672,13 +669,13 @@ RulePrototype: Rule = {
 pub(crate) Rules: Vec<Rule> = <Rule*>;
 
 RolesValue: Value = "roles" "=" <StringList> ";" => <>;
-Roles: Declaration = <Spanned<RolesValue>> => Declaration::Roles(<>);
+Roles: sugar::Expr = <Spanned<RolesValue>> => sugar::Expr::Roles(<>);
 
 PermissionsValue: Value = "permissions" "=" <StringList> ";" => <>;
-Permissions: Declaration = <Spanned<PermissionsValue>> => Declaration::Permissions(<>);
+Permissions: sugar::Expr = <Spanned<PermissionsValue>> => sugar::Expr::Permissions(<>);
 
 RelationsValue: Value = "relations" "=" <Object<Spanned<Variable>>> ";" => Value::Dictionary(<>);
-Relations: Declaration = <Spanned<RelationsValue>> => Declaration::Relations(<>);
+Relations: sugar::Expr = <Spanned<RelationsValue>> => sugar::Expr::Relations(<>);
 
 OnRelation: Term = "on" <relation:Spanned<PolarString>> => relation;
 
@@ -692,25 +689,25 @@ ImplicationTuple: (Term, Term, Option<Term>) = {
         (implied, implier, relation)
     }
 };
-Implication: Declaration = <ImplicationTuple> => Declaration::Implication(<>);
+Implication: sugar::Expr = <ImplicationTuple> => sugar::Expr::Implication(<>);
 
-Declaration: Declaration = {
+NamespaceExpr: sugar::Expr = {
     <Roles> => <>,
     <Permissions> => <>,
     <Relations> => <>,
     <Implication> => <>,
 };
 
-Declarations: Vec<Declaration> = <Declaration*>;
+NamespaceExprs: Vec<sugar::Expr> = <NamespaceExpr*>;
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
     <RulePrototype> => Line::RulePrototype(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
 
-    <start:@L> <resource:Variable> "{" <declarations:Declarations> "}" <end:@R> =>? {
+    <start:@L> <resource:Variable> "{" <exprs:NamespaceExprs> "}" <end:@R> =>? {
         let resource = Term::new_from_parser(src_id, start, end, resource);
-        declarations_to_namespace(resource, declarations).map(|ns| Line::Namespace(ns))
+        sugar::exprs_to_namespace(resource, exprs).map(|ns| Line::Namespace(ns))
     }
 }
 

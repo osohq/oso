@@ -19,7 +19,7 @@ use super::terms::*;
 
 // This type is used as a pre-validation bridge between Rust & LALRPOP.
 #[derive(Debug)]
-pub enum ParserDeclaration {
+pub enum Expr {
     Roles(Term),
     Permissions(Term),
     Relations(Term),
@@ -37,13 +37,11 @@ fn implication_offsets((implied, implier, relation): &Implication) -> (usize, us
     )
 }
 
-// Turn a set of parsed declarations into a `Namespace` (or die validating).
-pub fn parser_declarations_to_namespace(
+// Turn a set of parsed expressions into a `Namespace` (or die validating).
+pub fn exprs_to_namespace(
     resource: Term,
-    declarations: Vec<ParserDeclaration>,
+    exprs: Vec<Expr>,
 ) -> Result<Namespace, LalrpopError<usize, Token, error::ParseError>> {
-    use ParserDeclaration::*;
-
     let mut roles: Option<Term> = None;
     let mut permissions: Option<Term> = None;
     let mut relations: Option<Term> = None;
@@ -65,30 +63,30 @@ pub fn parser_declarations_to_namespace(
         }
     };
 
-    for declaration in declarations {
-        match declaration {
-            Roles(new) => {
+    for expr in exprs {
+        match expr {
+            Expr::Roles(new) => {
                 if let Some(previous) = roles {
                     let error = make_error("roles", &previous, &new);
                     return Err(LalrpopError::User { error });
                 }
                 roles = Some(new);
             }
-            Permissions(new) => {
+            Expr::Permissions(new) => {
                 if let Some(previous) = permissions {
                     let error = make_error("permissions", &previous, &new);
                     return Err(LalrpopError::User { error });
                 }
                 permissions = Some(new);
             }
-            Relations(new) => {
+            Expr::Relations(new) => {
                 if let Some(previous) = relations {
                     let error = make_error("relations", &previous, &new);
                     return Err(LalrpopError::User { error });
                 }
                 relations = Some(new);
             }
-            Implication(new) => {
+            Expr::Implication(new) => {
                 if let Some(previous) = implications.replace(new.clone()) {
                     let msg = format!(
                         "Duplicate implications found in {} namespace.\n",
