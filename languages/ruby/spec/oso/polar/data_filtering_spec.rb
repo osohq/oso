@@ -24,15 +24,14 @@ BARS = [
   Bar.new('hershey', false, false)
 ].freeze
 
-FETCH = ->(arr) { ->(cs) { arr.select { |x| cs.all? { |c| c.to_predicate[x] } } } }
+FETCH = ->(arr) { ->(cs) { arr.select { |x| cs.all? { |c| c.check(x) } } } }
 
 Relationship = ::Oso::Polar::DataFiltering::Relationship
-
 
 Org = Struct.new :name
 Repo = Struct.new :name, :org_name
 Issue = Struct.new :name, :repo_name
-User = Struct.new :name 
+User = Struct.new :name
 Role = Struct.new :user_name, :resource_name, :role
 
 RSpec.configure do |c|
@@ -40,19 +39,17 @@ RSpec.configure do |c|
 end
 
 RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
-
   context 'data filtering' do # rubocop:disable Metrics/BlockLength
     context 'when filtering known values' do
       it 'works' do
         subject.load_str('allow(_, _, i) if i in [1, 2];')
         subject.load_str('allow(_, _, i) if i = {};')
-
         expect(subject.get_allowed_resources('gwen', 'get', Integer)).to eq([1, 2])
         expect(subject.get_allowed_resources('gwen', 'get', Hash)).to eq([{}])
       end
     end
 
-    context 'when using Oso roles' do
+    context 'when using Oso roles' do # rubocop:disable Metrics/BlockLength
       let(:roles_file) { File.join(__dir__, 'data_filtering_roles_policy.polar') }
       let(:osohq) { Org.new('osohq') }
       let(:apple) { Org.new('apple') }
@@ -70,7 +67,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
          Role.new('gabe', 'oso', 'writer')]
       end
       let(:check_authz) do
-        ->(actor, action, resource, expected) do
+        lambda do |actor, action, resource, expected|
           results = subject.get_allowed_resources(actor, action, resource)
           expect(unord_eq(results, expected)).to be true
           expected.each do |re|
@@ -80,8 +77,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         end
       end
 
-
-      before do
+      before do # rubocop:disable Metrics/BlockLength
         subject.register_class(
           Org,
           fields: { 'name' => String },
@@ -171,7 +167,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
 
     context 'when filtering unknown values' do # rubocop:disable Metrics/BlockLength
-      before do # rubocop:disable Metrics/BlockLength
+      before do
         subject.register_class(
           Bar,
           fetcher: FETCH[BARS],
@@ -200,7 +196,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         )
       end
 
-      context 'without relationships' do
+      context 'without relationships' do # rubocop:disable Metrics/BlockLength
         it 'works' do
           policy = 'allow("gwen", "get", foo: Foo) if foo.is_fooey = true;'
           subject.load_str(policy)
@@ -232,10 +228,10 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         it 'can compare two fields on the same object' do
           policy = 'allow(_, _, bar: Bar) if bar.is_cool = bar.is_still_cool;'
           subject.load_str(policy)
-            results = subject.get_allowed_resources('gwen', 'eat', Bar)
-            expected = BARS.select { |b| b.is_cool == b.is_still_cool }
-            expect(expected).not_to be_empty
-            expect(unord_eq(results, expected)).to be true
+          results = subject.get_allowed_resources('gwen', 'eat', Bar)
+          expected = BARS.select { |b| b.is_cool == b.is_still_cool }
+          expect(expected).not_to be_empty
+          expect(unord_eq(results, expected)).to be true
         end
       end
 

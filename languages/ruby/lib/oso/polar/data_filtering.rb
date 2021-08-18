@@ -4,7 +4,7 @@ module Oso
   module Polar
     # Polar variable.
     module DataFiltering
-
+      # Represents relationships between resources, eg. parent/child
       class Relationship
         attr_reader :kind, :other_type, :my_field, :other_field
 
@@ -16,7 +16,7 @@ module Oso
         end
       end
 
-      # Represents self-field relationships
+      # Represents field-field relationships on one resource.
       class Field
         attr_reader :field
 
@@ -25,6 +25,7 @@ module Oso
         end
       end
 
+      # Represents field-field relationships on different resources.
       class Ref
         attr_reader :field, :result_id
 
@@ -34,13 +35,22 @@ module Oso
         end
       end
 
+      # Represents a condition that must hold on a resource.
       class Constraint
         attr_reader :kind, :field, :value
+
+        CHECKS = {
+          'Eq' => ->(a, b) { a == b },
+          'In' => ->(a, b) { b.include? a },
+          'Contains' => ->(a, b) { a.include? b }
+        }.freeze
 
         def initialize(kind:, field:, value:)
           @kind = kind
           @field = field
           @value = value
+          @check = CHECKS[kind]
+          raise "Unknown constraint kind `#{kind}`" if @check.nil?
         end
 
         def ground(results)
@@ -51,27 +61,14 @@ module Oso
           @value = value.map { |v| v.send ref.field } unless ref.field.nil?
         end
 
-        def apply(x)
-          val = value.is_a?(Field) ? x.send(value.field) : value
-          x = x.send field
-          case kind
-          when 'Eq'
-            x == val
-          when 'In'
-            val.include? x
-          when 'Contains'
-            x.include? val
-          else
-            raise "Unknown constraint kind `#{kind}`"
-          end
-        end
-
-        def to_predicate
-          method :apply
+        def check(item)
+          val = value.is_a?(Field) ? item.send(value.field) : value
+          item = item.send field
+          @check[item, val]
         end
       end
 
-      def self.parse_constraint(polar, constraint)
+      def self.parse_constraint(polar, constraint) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         kind = constraint['kind']
         raise unless %w[Eq In Contains].include? kind
 
@@ -97,28 +94,16 @@ module Oso
         Constraint.new kind: kind, field: field, value: value
       end
 
-      def self.builtin_resolve(polar, filter_plan)
-        results = []
-        filter_plan['result_sets'].each do |rs|
-          set_results = {}
+      def self.builtin_resolve(polar, filter_plan) # rubocop:disable Metrics/AbcSize
+        filter_plan['result_sets'].reduce([]) do |acc, rs|
           requests = rs['requests']
-          resolve_order = rs['resolve_order']
-          result_id = rs['result_id']
-
-          resolve_order.each do |i|
+          acc + rs['resolve_order'].each_with_object({}) do |i, set_results|
             req = requests[i.to_s]
-            class_name = req['class_tag']
-            constraints = req['constraints'].map do |con|
-              parse_constraint polar, con
-            end
+            constraints = req['constraints'].map { |con| parse_constraint(polar, con) }
             constraints.each { |c| c.ground set_results }
-            fetcher = polar.host.types[class_name].fetcher
-            set_results[i] = fetcher.call constraints
-          end
-
-          results += set_results[result_id]
-        end
-        results.uniq
+            set_results[i] = polar.host.types[req['class_tag']].fetcher[constraints]
+          end[rs['result_id']]
+        end.uniq
       end
 
       # @param name [String]

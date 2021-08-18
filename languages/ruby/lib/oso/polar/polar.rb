@@ -88,7 +88,7 @@ module Oso
         ffi_polar.validate_roles_config(validation_query_results)
       end
 
-      def get_allowed_resources(actor, action, klass)
+      def get_allowed_resources(actor, action, klass) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         resource = Variable.new 'resource'
 
         # FIXME(gw) kind of a hack because of class autoreloading, maybe not needed?

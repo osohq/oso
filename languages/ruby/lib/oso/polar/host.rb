@@ -225,7 +225,7 @@ module Oso
         instance.is_a? cls
       end
 
-      def serialize_types
+      def serialize_types # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         polar_types = {}
         types.values.uniq.each do |typ|
           tag = typ.name

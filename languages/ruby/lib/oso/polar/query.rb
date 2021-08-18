@@ -90,7 +90,13 @@ module Oso
         call_result(nil, call_id: call_id)
       end
 
-      def get_field(cls, tag)
+      # Get the type information for a field on a class.
+      #
+      # @param cls [UserType]
+      # @param tag [String]
+      # @return [UserType]
+      # @raise [Error] if no information is found
+      def get_field(cls, tag) # rubocop:disable Metrics/AbcSize
         raise unless cls.fields.key? tag
 
         ref = cls.fields[tag]
@@ -104,15 +110,16 @@ module Oso
         end
       end
 
-      def handle_external_isa_with_path(data)
+      # Check if a series of dot operations on a base class yield an
+      # instance of another class.
+      def handle_external_isa_with_path(data) # rubocop:disable Metrics/AbcSize
         sup = host.types[data['class_tag']]
         bas = host.types[data['base_tag']]
-        path = data['path'].map &host.method(:to_ruby)
+        path = data['path'].map(&host.method(:to_ruby))
         sub = path.reduce(bas) { |cls, tag| get_field(cls, tag) }
-#        raise "#{path} #{sub.inspect} #{sup.inspect}"
         answer = sub.klass.get <= sup.klass.get
         question_result(answer, call_id: data['call_id'])
-      rescue => e
+      rescue StandardError => e
         application_error e.message
         question_result(nil, call_id: data['call_id'])
       end
@@ -215,17 +222,17 @@ module Oso
         end
       end
 
-      private
-
       def get_relationship(cls, attr)
         typ = host.types[cls]
         return unless typ
+
         rel = typ.fields[attr]
         return unless rel.is_a? ::Oso::Polar::DataFiltering::Relationship
-        rel 
+
+        rel
       end
 
-      def handle_relationship(call_id, instance, rel)
+      def handle_relationship(call_id, instance, rel) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         fetcher = host.types[rel.other_type].fetcher
         constraint = ::Oso::Polar::DataFiltering::Constraint.new(
           kind: 'Eq',
@@ -236,6 +243,7 @@ module Oso
 
         if rel.kind == 'parent'
           raise unless res.length == 1
+
           res = res[0]
         end
 
