@@ -149,7 +149,6 @@ impl Declaration {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Namespace {
     pub resource: Term,
-    // TODO(gj): maybe HashSet instead of Vec so we can easily catch duplicates?
     pub roles: Option<Term>,
     pub permissions: Option<Term>,
     pub relations: Option<Term>,
