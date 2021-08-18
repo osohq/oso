@@ -24,6 +24,7 @@ class Host:
         self,
         polar,
         classes=None,
+        class_ids=None,
         cls_names=None,
         instances=None,
         get_field=None,
@@ -34,6 +35,9 @@ class Host:
         self.ffi_polar = polar  # a "weak" handle, which we do not free
         self.classes = (classes or {}).copy()
         self.cls_names = (cls_names or {}).copy()
+        self.class_ids = (
+            class_ids or {}
+        ).copy()  # Map from class name (Python) => instance ID used every time the class is converted to polar
         self.instances = (instances or {}).copy()
         self.types = (types or {}).copy()
         self.fetchers = (fetchers or {}).copy()
@@ -66,6 +70,7 @@ class Host:
             self.ffi_polar,
             classes=self.classes,
             cls_names=self.cls_names,
+            class_ids=self.class_ids,
             instances=self.instances,
             get_field=self.get_field,
             types=self.types,
@@ -86,6 +91,7 @@ class Host:
             raise DuplicateClassAliasError(name, self.get_class(name), cls)
 
         self.classes[name] = cls
+        self.class_ids[cls] = self.cache_instance(cls)
         return name
 
     def get_instance(self, id):
@@ -241,25 +247,27 @@ class Host:
                     }
                 }
         else:
-            # BEGIN HACK:
-            # The polar core uses the .repr property to determine whether or not
-            # to allow Roles.role_allows to be called with unbound variables as
-            # arguments (only for sqlalchemy_oso)
-            # Because of this, we need to continue to send the repr for
-            # sqlalchemy_oso.roles.OsoRoles.Roles ONLY
+            instance_id = None
             repr_str = None
             import inspect
 
-            if (
-                inspect.isclass(v)
-                and "OsoRoles" in v.__qualname__
-                and v.__module__ == "sqlalchemy_oso.roles"
-            ):
-                repr_str = repr(v)
-            # END HACK
+            if inspect.isclass(v):
+                instance_id = self.class_ids.get(v)
+                # BEGIN HACK:
+                # The polar core uses the .repr property to determine whether or not
+                # to allow Roles.role_allows to be called with unbound variables as
+                # arguments (only for sqlalchemy_oso)
+                # Because of this, we need to continue to send the repr for
+                # sqlalchemy_oso.roles.OsoRoles.Roles ONLY
+                if (
+                    "OsoRoles" in v.__qualname__
+                    and v.__module__ == "sqlalchemy_oso.roles"
+                ):
+                    repr_str = repr(v)
+                # END HACK
             val = {
                 "ExternalInstance": {
-                    "instance_id": self.cache_instance(v),
+                    "instance_id": self.cache_instance(v, instance_id),
                     "repr": repr_str,
                 }
             }
