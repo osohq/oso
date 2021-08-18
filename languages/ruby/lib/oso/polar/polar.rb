@@ -214,8 +214,8 @@ module Oso
       # under a previously-registered name.
       # @raise [FFI::Error] if the FFI call returns an error.
       # @return [self] for chaining.
-      def register_class(cls, name: nil)
-        name = host.cache_class(cls, name: name || cls.name)
+      def register_class(cls, name: nil, fields: {}, fetcher: nil)
+        name = host.cache_class(cls, name: name || cls.name, fields: fields, fetcher: fetcher)
         register_constant(cls, name: name)
       end
 

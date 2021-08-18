@@ -93,15 +93,15 @@ module Oso
       # @return [String] the name the class is cached as.
       # @raise [DuplicateClassAliasError] if attempting to register a class
       # under a previously-registered name.
-      def cache_class(cls, name:)
+      def cache_class(cls, name:, fields: {}, fetcher: nil)
         raise DuplicateClassAliasError.new name: name, old: get_class(name), new: cls if types.key? name
 
         types[name] = types[cls] = UserType.new(
           name: name,
           klass: PolarClass.new(cls),
           id: cache_instance(cls),
-          fields: {},
-          fetcher: nil
+          fields: fields,
+          fetcher: fetcher
         )
           
         name
@@ -225,7 +225,7 @@ module Oso
           tag, fields = typ.name, typ.fields
           field_types = {}
           fields.each do |k, v|
-            if v.is_a? Relationship
+            if v.is_a? ::Oso::Polar::DataFiltering::Relationship
               field_types[k] = {
                 'Relationship' => {
                   'kind' => v.kind,

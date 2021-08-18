@@ -14,4 +14,12 @@ module Helpers
       results.map { |r| r[var] }
     end
   end
+
+  def count(a)
+    a.reduce(Hash.new 0) {|c, x| c[x] += 1; c }
+  end
+
+  def unord_eq(a, b)
+    count(a) == count(b)
+  end
 end

@@ -67,7 +67,7 @@ module Oso
         field = constraint['field']
         value = constraint['value']
 
-        value_kind = value.first
+        value_kind = value.keys.first
         value = value[value_kind]
 
         case value_kind
@@ -98,8 +98,10 @@ module Oso
           resolve_order.each do |i|
             req = requests[i.to_s]
             class_name = req['class_tag']
-            constraints = req['constraints'].map(&method(:parse_constraint))
-            constrains.each {|c| con.ground set_results }
+            constraints = req['constraints'].map do |con|
+              parse_constraint polar, con
+            end
+            constraints.each {|c| c.ground set_results }
             fetcher = polar.host.types[class_name].fetcher
             set_results[i] = fetcher.call constraints
           end
