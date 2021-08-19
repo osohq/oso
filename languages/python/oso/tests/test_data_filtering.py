@@ -320,8 +320,7 @@ def test_parent_child(oso, t):
     allow(log: FooLogRecord, "thither", foo: Foo) if
       log in foo.logs;
     allow(log: FooLogRecord, "glub", foo: Foo) if
-      allow(log, "thence", foo) and allow(log, "thither", foo);
-#      log.foo = log and log in foo.logs;
+      log.foo = foo and log in foo.logs;
     allow(log: FooLogRecord, "bluh", foo: Foo) if
       log in foo.logs and log.foo = foo;
     """
