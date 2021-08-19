@@ -1,15 +1,17 @@
 allow(wiz: Wizard, "groom", fam: Familiar) if
-  fam.wizard.name = wiz.name; # fam.wizard = wiz; # ???
+  fam in wiz.familiars;
 
 allow(fam: Familiar, "groom", wiz: Wizard) if
-  allow(wiz, "groom", fam) and
+  wiz = fam.wizard and
   fam.kind = "rat";
 
-allow(fam: Familiar, "groom", _: Familiar) if
-  fam.kind = "rat";
+allow(fam: Familiar, "groom", other: Familiar) if
+  fam.kind = "rat" and
+  # data filtering doesn't support != yet :(
+  other.kind in ["rat", "horse", "dwarf"];
 
 allow(wiz: Wizard, "ride", fam: Familiar) if
-  allow(wiz, "groom", fam) and
+  fam in wiz.familiars and
   fam.kind = "horse";
 
 allow(wiz: Wizard, "cast", spell: Spell) if

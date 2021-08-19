@@ -108,28 +108,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       let(:baba_yaga) { Wizard.new('baba yaga', %w[necromancy summoning destruction], level[8]) }
       let(:shadowfax) { Familiar.new('shadowfax', 'horse', 'gandalf') }
       let(:brown_jenkin) { Familiar.new('brown jenkin', 'rat', 'baba yaga') }
-      let(:spells) do
-        [
-          Spell.new('teleport other',    'thaumaturgy', 7),
-          Spell.new('wish',              'thaumaturgy', 9),
-          Spell.new('cure light wounds', 'necromancy',  1),
-          Spell.new('identify',          'divination',  1),
-          Spell.new('call familiar',     'summoning',   1),
-          Spell.new('call ent',          'summoning',   7),
-          Spell.new('magic missile',     'destruction', 1),
-          Spell.new('liquify organ',     'destruction', 5),
-          Spell.new('call dragon',       'summoning',   9),
-          Spell.new('know alignment',    'divination',  6)
-        ]
-      end
-
-      let(:spell_list) do
-        lambda do |wiz|
-          Spell.all.select do |spell|
-            wiz.books.include?(spell.school) and wiz.spell_levels.include?(spell.level)
-          end
-        end
-      end
+      let(:gimli) { Familiar.new('gimli', 'dwarf', 'galadriel') }
+      let(:hedwig) { Familiar.new('hedwig', 'owl', 'galadriel') }
 
       before do # rubocop:disable Metrics/BlockLength
         subject.register_class(
@@ -138,7 +118,13 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           fields: {
             'name' => String,
             'books' => Array,
-            'spell_levels' => Array
+            'spell_levels' => Array,
+            'familiars' => Relationship.new(
+              kind: 'children',
+              other_type: 'Familiar',
+              my_field: 'name',
+              other_field: 'wizard_name'
+            )
           }
         )
 
@@ -171,50 +157,41 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         subject.load_file policy_file
       end
 
-      context 'familiars' do
-        context '(rat kind)' do
-          it 'can groom familiars' do
-            check_authz brown_jenkin, 'groom', Familiar, Familiar.all
-          end
-          it 'can groom their wizard' do
-            check_authz brown_jenkin, 'groom', Wizard, [baba_yaga]
+      context 'wizards' do
+        it 'can cast any spell in their spellbook up to their level' do
+          Wizard.all.each do |wiz|
+            check_authz wiz, 'cast', Spell, wiz.spells
           end
         end
 
-        context '(horse kind)' do
-          it 'can be ridden by their wizard' do
-            check_authz gandalf, 'ride', Familiar, [shadowfax]
-            check_authz galadriel, 'ride', Familiar, []
-            check_authz baba_yaga, 'ride', Familiar, []
+        it 'can ride their horse familiars' do
+          check_authz gandalf, 'ride', Familiar, [shadowfax]
+          check_authz galadriel, 'ride', Familiar, []
+          check_authz baba_yaga, 'ride', Familiar, []
+        end
+
+        it 'can groom their familiars' do
+          check_authz gandalf, 'groom', Familiar, [shadowfax]
+          check_authz baba_yaga, 'groom', Familiar, [brown_jenkin]
+          check_authz galadriel, 'groom', Familiar, [hedwig, gimli]
+        end
+
+        context 'having mastered inscription' do
+          it 'can inscribe any spell they can cast' do
+            check_authz galadriel, 'inscribe', Spell, galadriel.spells
+            check_authz gandalf, 'inscribe', Spell, []
+            check_authz baba_yaga, 'inscribe', Spell, []
           end
         end
       end
 
-      context 'wizards' do
-        it 'can cast any spell in their spellbook up to their level' do
-          Wizard.all.each do |wiz|
-            check_authz wiz, 'cast', Spell, spell_list[wiz]
-          end
+      context 'rat familiars' do
+        it 'can groom other familiars, except owls (predator)' do
+          check_authz brown_jenkin, 'groom', Familiar, [gimli, brown_jenkin, shadowfax]
         end
-
-        it 'can groom their familiar' do
-          check_authz gandalf, 'groom', Familiar, [shadowfax]
-          check_authz baba_yaga, 'groom', Familiar, [brown_jenkin]
-          check_authz galadriel, 'groom', Familiar, []
-        end
-
-        context 'inscribing scrolls' do
-          context 'having mastered inscription' do
-            it 'can inscribe any spell they can cast' do
-              check_authz galadriel, 'inscribe', Spell, spell_list[galadriel]
-            end
-          end
-          context 'being ignorant of the art' do
-            it 'can inscribe nothing' do
-              check_authz gandalf, 'inscribe', Spell, []
-              check_authz baba_yaga, 'inscribe', Spell, []
-            end
-          end
+        it 'can groom their wizard' do
+          res = subject.get_allowed_resources(brown_jenkin, 'groom', Wizard)
+          check_authz brown_jenkin, 'groom', Wizard, [baba_yaga]
         end
       end
     end
