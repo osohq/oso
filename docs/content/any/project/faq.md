@@ -105,7 +105,7 @@ please see the [performance page](performance).
 The foundation of Oso is designed to support a wide variety of use cases, though
 given Oso’s focus on application integration there are some use cases that are
 currently a more natural fit than others. For a more detailed discussion of this
-topic, please see our [use cases page](use-cases).
+topic, please see our [use cases page](https://www.osohq.com/use-cases).
 
 ## What languages and frameworks do you support?
 

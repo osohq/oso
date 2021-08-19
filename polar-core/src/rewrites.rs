@@ -137,7 +137,7 @@ impl<'kb> Folder for Rewriter<'kb> {
                 // Rewrite sub-expressions, then push a temp onto the args.
                 let mut new = fold_operation(o.clone(), self);
                 let temp = Value::Variable(self.kb.gensym(temp_name(&o.operator)));
-                new.args.push(Term::new_temporary(temp.clone()));
+                new.args.push(Term::from(temp.clone()));
 
                 // Push the rewritten expression into the top stack frame.
                 self.stack

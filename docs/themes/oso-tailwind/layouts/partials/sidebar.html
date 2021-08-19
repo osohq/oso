@@ -11,11 +11,11 @@
 <div id="sidebar-content"
     class="fixed z-40 inset-0 flex-none h-full bg-primary-dark bg-opacity-25 w-full lg:bg-white lg:static lg:h-auto lg:overflow-y-visible lg:pt-0 lg:w-72 hidden lg:block">
     <aside id="nav-wrapper"
-        class="h-full overflow-y-auto  overscroll-y-contain scrolling-touch lg:h-auto lg:block lg:relative lg:sticky lg:bg-transparent overflow-hidden lg:top-20 bg-white w-1/2 lg:w-full">
+        class="h-full overflow-y-auto  overscroll-y-contain scrolling-touch lg:h-auto lg:block lg:relative lg:sticky lg:bg-transparent overflow-hidden lg:top-20 bg-white w-3/4 lg:w-full">
         <nav id="sidebar-inner"
-            class="overflow-y-auto overscroll-y-contain font-medium text-base sm:px-3 xl:px-5 lg:text-sm pb-10 lg:pt-6 lg:pb-14 sticky?lg:h-(screen-20)">
+            class="overflow-y-auto overscroll-y-contain font-medium text-base sm:px-3 xl:px-5 lg:text-sm pb-10 pt-5 lg:pt-6 lg:pb-14 sticky?lg:h-(screen-20)">
             <div
-                class="h-full overflow-y-auto scrolling-touch lg:h-auto lg:block lg:relative lg:sticky lg:bg-transparent overflow-hidden bg-white mr-24 lg:mr-0 sticky?lg:h-(screen-20)">
+                class="h-full overflow-y-auto scrolling-touch lg:h-auto lg:block lg:relative lg:sticky lg:bg-transparent overflow-hidden bg-white mr-1 lg:mr-0 sticky?lg:h-(screen-20)">
                 <div class="search-button-div">
                     <button class="search-button" onclick="searchButtonClick(event)">
                         <div class="search-inner-button">
@@ -59,7 +59,7 @@
     {{ else }}
     hidden
     {{ end }}
-    {{ if eq $level 0 }}font-bold py-2{{else}}font-normal{{end}} 
+    {{ if eq $level 0 }}font-bold py-2{{else}}font-normal{{end}}
     {{ if $isCurrent}}active text-primary{{else}} text-black{{ end }}
 ">
     <a class="flex items-center px-3 hover:text-gray-900 transition-colors duration-200 mb-2" href="{{.RelPermalink}}">
@@ -100,7 +100,7 @@
         {{ else }}
         hidden
         {{ end }}
-        {{end}} 
+        {{end}}
         {{ if eq $level 0 }} font-bold {{ else }} font-normal {{ end}}
         text-black pl-2">
     <a class=" flex items-center px-3 transition-colors duration-200 mb-2" href="{{ .RelPermalink}}">
