@@ -80,7 +80,7 @@ impl Query {
 
     #[wasm_bindgen(js_class = Query, js_name = bind)]
     pub fn wasm_bind(&mut self, name: &str, value: &str) -> JsResult<()> {
-        let term = match serde_json::from_str(&value) {
+        let term = match serde_json::from_str(value) {
             Ok(term) => term,
             Err(e) => return Err(serde_serialization_error(e)),
         };
