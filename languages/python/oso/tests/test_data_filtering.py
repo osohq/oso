@@ -21,7 +21,7 @@ def oso():
 def fold_constraints(constraints):
     return reduce(
         lambda f, g: lambda x: f(x) and g(x),
-        [c.to_predicate() for c in constraints],
+        [c.check for c in constraints],
         lambda _: True,
     )
 
@@ -267,6 +267,23 @@ def test_relationship(oso, t):
 
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
     assert len(results) == 2
+
+
+def test_known_results(oso):
+    policy = """
+      allow(_, _, i: Integer) if i in [1, 2];
+      allow(_, _, d: Dictionary) if d = {};
+    """
+    oso.load_str(policy)
+
+    results = oso.get_allowed_resources("gwen", "get", int)
+    assert unord_eq(results, [1, 2])
+
+    results = oso.get_allowed_resources("gwen", "get", dict)
+    assert results == [{}]
+
+    results = oso.get_allowed_resources("gwen", "get", str)
+    assert results == []
 
 
 def test_var_in_values(oso, t):
