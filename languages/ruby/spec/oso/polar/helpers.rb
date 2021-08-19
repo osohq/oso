@@ -14,12 +14,4 @@ module Helpers
       results.map { |r| r[var] }
     end
   end
-
-  def count(coll)
-    coll.reduce(Hash.new(0)) { |c, x| c.tap { c[x] += 1 } }
-  end
-
-  def unord_eq(left, right)
-    count(left) == count(right)
-  end
 end

@@ -239,7 +239,7 @@ module Oso
           field: rel.other_field,
           value: instance.send(rel.my_field)
         )
-        res = fetcher[[constraint]]
+        res = fetcher[[constraint]].uniq
 
         if rel.kind == 'parent'
           raise unless res.length == 1
