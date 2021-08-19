@@ -166,7 +166,7 @@ impl BindingManager {
             Some(grounded) => {
                 self.add_binding(var, val);
                 Ok(Goal::Query {
-                    term: grounded.into_term(),
+                    term: grounded.into(),
                 })
             }
         }
@@ -294,7 +294,7 @@ impl BindingManager {
 
         // apply the new constraint to every remaining variable.
         for var in varset {
-            self.add_binding(var, op.clone().into_term())
+            self.add_binding(var, op.clone().into())
         }
         Ok(())
     }
@@ -525,9 +525,7 @@ impl BindingManager {
             }
             (BindingManagerVariableState::Partial(_), _)
             | (_, BindingManagerVariableState::Partial(_)) => {
-                self.add_constraint(
-                    &op!(Unify, term!(left.clone()), term!(right.clone())).into_term(),
-                )?;
+                self.add_constraint(&op!(Unify, term!(left.clone()), term!(right.clone())).into())?;
             }
         }
 
