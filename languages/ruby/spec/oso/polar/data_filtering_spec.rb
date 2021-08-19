@@ -20,7 +20,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
     end
     context 'when filtering unknown values' do # rubocop:disable Metrics/BlockLength
-      before do
+      before do # rubocop:disable Metrics/BlockLength
         subject.register_class(
           Bar,
           fetcher: Bar.fetcher,
@@ -32,6 +32,22 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         )
 
         subject.register_class(
+          FooLog,
+          fetcher: FooLog.fetcher,
+          fields: {
+            'id' => String,
+            'foo_id' => String,
+            'data' => String,
+            'foo' => Relationship.new(
+              kind: 'parent',
+              other_type: 'Foo',
+              my_field: 'foo_id',
+              other_field: 'id'
+            )
+          }
+        )
+
+        subject.register_class(
           Foo,
           fetcher: Foo.fetcher,
           fields: {
@@ -39,64 +55,72 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
             'bar_id' => String,
             'is_fooey' => PolarBoolean,
             'numbers' => Array,
-            'bar' => ::Oso::Polar::DataFiltering::Relationship.new(
+            'bar' => Relationship.new(
               kind: 'parent',
               other_type: 'Bar',
               my_field: 'bar_id',
               other_field: 'id'
+            ),
+            'logs' => Relationship.new(
+              kind: 'children',
+              other_type: 'FooLog',
+              my_field: 'id',
+              other_field: 'foo_id'
             )
           }
         )
       end
 
-      context 'without relationships' do # rubocop:disable Metrics/BlockLength
-        it 'works' do
-          policy = 'allow("gwen", "get", foo: Foo) if foo.is_fooey = true;'
-          subject.load_str(policy)
-          results = subject.get_allowed_resources('gwen', 'get', Foo)
-          expected = Foo.all.select(&:is_fooey)
-          expect(expected).not_to be_empty
-          expect(unord_eq(results, expected)).to be true
-        end
-
-        context 'the in operator' do
-          it 'finds values in variables' do
-            policy = 'allow("gwen", "get", foo: Foo) if 1 in foo.numbers and 2 in foo.numbers;'
-            subject.load_str(policy)
-            results = subject.get_allowed_resources('gwen', 'get', Foo)
-            expected = Foo.all.select { |f| f.numbers.include?(1) and f.numbers.include?(2) }
-            expect(expected).not_to be_empty
-            expect(unord_eq(results, expected)).to be true
-          end
-          it 'finds variables in values' do
-            policy = 'allow("gwen", "eat", foo: Foo) if foo.numbers in [[1]];'
-            subject.load_str(policy)
-            results = subject.get_allowed_resources('gwen', 'eat', Foo)
-            expected = Foo.all.select { |f| f.numbers == [1] }
-            expect(expected).not_to be_empty
-            expect(unord_eq(results, expected)).to be true
-          end
-        end
-
-        it 'can compare two fields on the same object' do
-          policy = 'allow(_, _, bar: Bar) if bar.is_cool = bar.is_still_cool;'
-          subject.load_str(policy)
-          results = subject.get_allowed_resources('gwen', 'eat', Bar)
-          expected = Bar.all.select { |b| b.is_cool == b.is_still_cool }
-          expect(expected).not_to be_empty
-          expect(unord_eq(results, expected)).to be true
-        end
+      it 'can compare a field with a known value' do
+        policy = 'allow("gwen", "get", foo: Foo) if foo.is_fooey = true;'
+        subject.load_str(policy)
+        results = subject.get_allowed_resources('gwen', 'get', Foo)
+        expected = Foo.all.select(&:is_fooey)
+        expect(expected).not_to be_empty
+        expect(unord_eq(results, expected)).to be true
       end
 
-      context 'with relationships' do
-        it 'works' do
-          policy = 'allow("gwen", "get", foo: Foo) if foo.bar = bar and bar.is_cool = true and foo.is_fooey = true;'
-          subject.load_str(policy)
-          results = subject.get_allowed_resources('gwen', 'get', Foo)
-          expected = Foo.all.select { |foo| foo.bar.is_cool and foo.is_fooey }
-          expect(expected).not_to be_empty
-          expect(unord_eq(results, expected)).to be true
-        end
+      it 'can check if a value is in a field' do
+        policy = 'allow("gwen", "get", foo: Foo) if 1 in foo.numbers and 2 in foo.numbers;'
+        subject.load_str(policy)
+        results = subject.get_allowed_resources('gwen', 'get', Foo)
+        expected = Foo.all.select { |f| f.numbers.include?(1) and f.numbers.include?(2) }
+        expect(expected).not_to be_empty
+        expect(unord_eq(results, expected)).to be true
+      end
+
+      it 'can check if a field is in a value' do
+        policy = 'allow("gwen", "eat", foo: Foo) if foo.numbers in [[1]];'
+        subject.load_str(policy)
+        results = subject.get_allowed_resources('gwen', 'eat', Foo)
+        expected = Foo.all.select { |f| f.numbers == [1] }
+        expect(expected).not_to be_empty
+        expect(unord_eq(results, expected)).to be true
+      end
+
+      it 'can compare two fields on the same object' do
+        policy = 'allow(_, _, bar: Bar) if bar.is_cool = bar.is_still_cool;'
+        subject.load_str(policy)
+        results = subject.get_allowed_resources('gwen', 'eat', Bar)
+        expected = Bar.all.select { |b| b.is_cool == b.is_still_cool }
+        expect(expected).not_to be_empty
+        expect(unord_eq(results, expected)).to be true
+      end
+
+      it 'handles parent relationships' do
+        policy = 'allow("gwen", "get", foo: Foo) if foo.bar = bar and bar.is_cool = true and foo.is_fooey = true;'
+        subject.load_str(policy)
+        results = subject.get_allowed_resources('gwen', 'get', Foo)
+        expected = Foo.all.select { |foo| foo.bar.is_cool and foo.is_fooey }
+        expect(expected).not_to be_empty
+        expect(unord_eq(results, expected)).to be true
+      end
+
+      it 'handles child relationships' do
+        policy = 'allow("gwen", "get", foo: Foo) if log in foo.logs and log.data = "hello";'
+        subject.load_str policy
+        expected = Foo.all.select { |foo| foo.id = 'fourth' }
+        check_authz 'gwen', 'get', Foo, expected
       end
     end
 
@@ -190,7 +214,6 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           check_authz brown_jenkin, 'groom', Familiar, [gimli, brown_jenkin, shadowfax]
         end
         it 'can groom their wizard' do
-          res = subject.get_allowed_resources(brown_jenkin, 'groom', Wizard)
           check_authz brown_jenkin, 'groom', Wizard, [baba_yaga]
         end
       end

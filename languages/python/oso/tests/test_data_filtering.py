@@ -116,9 +116,9 @@ def t(oso):
             "id": str,
             "foo_id": str,
             "data": str,
-            # "bar": Relationship(
-            #     kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
-            # ),
+            "foo": Relationship(
+                kind="parent", other_type="Foo", my_field="foo_id", other_field="id"
+            ),
         },
         fetcher=get_foo_logs,
     )
@@ -135,6 +135,7 @@ def t(oso):
         "another_log_c": another_log_c,
         "bars": bars,
         "foos": foos,
+        "logs": foo_logs,
     }
 
 
@@ -310,6 +311,18 @@ def test_var_in_var(oso, t):
 
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
     assert len(results) == 1
+
+
+def test_from(oso, t):
+    policy = """
+    allow(log: FooLogRecord, "frob", foo: Foo) if
+#      log in foo.logs and # FIXME
+      log.foo = foo and
+      log.data = "hello";
+    """
+    oso.load_str(policy)
+    fourth = t["fourth_foo"]
+    check_authz(oso, t["logs"][0], "frob", t["Foo"], [fourth])
 
 
 def test_val_in_var(oso, t):

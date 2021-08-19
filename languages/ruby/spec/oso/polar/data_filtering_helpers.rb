@@ -56,6 +56,7 @@ Foo = record(:id, :bar_id, :is_fooey, :numbers) do
     Bar.all.find { |bar| bar.id == bar_id }
   end
 end
+FooLog = record(:id, :foo_id, :data)
 
 Foo.new('something', 'hello', false, [])
 Foo.new('another', 'hello', true, [1])
@@ -65,6 +66,10 @@ Foo.new('fourth', 'goodbye', true, [2, 1])
 Bar.new('hello', true, true)
 Bar.new('goodbye', false, true)
 Bar.new('hershey', false, false)
+
+FooLog.new('a', 'fourth', 'hello')
+FooLog.new('b', 'third', 'world')
+FooLog.new('c', 'another', 'steve')
 
 Org = record :name
 Repo = record :name, :org_name
