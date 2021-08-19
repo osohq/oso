@@ -49,7 +49,7 @@ export class Query {
     this.#host = host;
 
     for (const k in bindings) {
-      this.bind(k, bindings[k])
+      this.bind(k, bindings[k]);
     }
 
     this.results = this.start();
@@ -61,7 +61,7 @@ export class Query {
    * @internal
    */
   private bind(name: any, value: any) {
-    this.#ffiQuery.bind(name, JSON.stringify(this.#host.toPolar(value)))
+    this.#ffiQuery.bind(name, JSON.stringify(this.#host.toPolar(value)));
   }
 
   /**
@@ -134,28 +134,30 @@ export class Query {
 
       // Check if it's a relationship
       if (receiver != undefined) {
-        const clsName = this.#host.clsNames.get(receiver.constructor)
+        const clsName = this.#host.clsNames.get(receiver.constructor);
         if (clsName != null) {
-          const typedef = this.#host.types.get(clsName)
+          const typedef = this.#host.types.get(clsName);
           if (typedef != null) {
             const fieldType = typedef.get(attr);
             if (fieldType != null) {
               if (fieldType instanceof Relationship) {
                 // Use the fetcher for the other type to traverse
                 // the relationship.
-                const otherClsFetcher = this.#host.fetchers.get(fieldType.otherType);
+                const otherClsFetcher = this.#host.fetchers.get(
+                  fieldType.otherType
+                );
                 const constraint = new Constraint(
-                  "Eq",
+                  'Eq',
                   fieldType.otherField,
                   receiver[fieldType.myField]
-                )
-                const constraints = [constraint]
-                let results = otherClsFetcher(constraints)
+                );
+                const constraints = [constraint];
+                let results = otherClsFetcher(constraints);
                 results = await Promise.resolve(results);
-                if (fieldType.kind == "parent") {
-                  value = results[0]
+                if (fieldType.kind == 'parent') {
+                  value = results[0];
                 } else {
-                  value = results
+                  value = results;
                 }
               }
             }

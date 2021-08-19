@@ -227,7 +227,12 @@ export class Polar {
   /**
    * Register a JavaScript class for use in Polar policies.
    */
-  registerClass<T>(cls: Class<T>, alias?: string, types?: Map<string, any>, fetcher?: any): void {
+  registerClass<T>(
+    cls: Class<T>,
+    alias?: string,
+    types?: Map<string, any>,
+    fetcher?: any
+  ): void {
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const clsName = this.#host.cacheClass(cls, alias);
     this.registerConstant(cls, clsName);
@@ -252,10 +257,21 @@ export class Polar {
    * Returns all the resources the actor is allowed to perform some action on.
    */
   async getAllowedResources(actor: any, action: any, cls: any): Promise<any> {
-    const resource = new Variable("resource");
+    const resource = new Variable('resource');
     const clsName = this.#host.clsNames.get(cls)!;
-    const constraint = new Expression("And", [new Expression("Isa", [resource, new Pattern({ tag: clsName, fields: {} })])])
-    let results = this.queryRule("allow", { "resource": constraint }, actor, action, resource);
+    const constraint = new Expression('And', [
+      new Expression('Isa', [
+        resource,
+        new Pattern({ tag: clsName, fields: {} }),
+      ]),
+    ]);
+    let results = this.queryRule(
+      'allow',
+      { resource: constraint },
+      actor,
+      action,
+      resource
+    );
 
     const queryResults = [];
     for await (const result of results) {
@@ -270,11 +286,16 @@ export class Polar {
         return obj;
       }, {}),
     }));
-    let resultsStr = JSON.stringify(jsonResults)
-    console.log(this.#host.clsNames)
-    let typesStr = serializeTypes(this.#host.types, this.#host.clsNames)
-    let plan = this.#ffiPolar.buildFilterPlan(typesStr, resultsStr, "resource", clsName)
-    return await filterData(this.#host, plan)
+    let resultsStr = JSON.stringify(jsonResults);
+    console.log(this.#host.clsNames);
+    let typesStr = serializeTypes(this.#host.types, this.#host.clsNames);
+    let plan = this.#ffiPolar.buildFilterPlan(
+      typesStr,
+      resultsStr,
+      'resource',
+      clsName
+    );
+    return await filterData(this.#host, plan);
   }
 
   /** Start a REPL session. */
