@@ -21,8 +21,8 @@ description: >
 # Construct an `Enforcer` instance
 
 To make use of the new Oso enforcement APIs, you'll need an Enforcer instance.
-The enforcer is a link between your policy and your app, and should be
-accessible throughout our app.
+The enforcer is a link between your policy and your application code, and should
+be accessible throughout your app.
 
 ```python
 from oso import Enforcer, Policy
@@ -41,7 +41,8 @@ def init_oso(app):
 
 An enforcer exposes a number of useful methods that your app can use. Each one
 queries your policy for `allow`, `allow_request`, or `allow_field` rules. To
-write those rules, read about [writing a policy](../policies).
+learn more about writing those rules, read about [writing a
+policy](../policies).
 
 - `authorize(user, action, resource)`: Ensure that a user can perform an action
   on a certain resource. Read about [resource-level enforcement](resource.html).

@@ -17,17 +17,18 @@ any: true
 # Resource-level Enforcement
 
 Is the current user allowed to perform a certain action on a certain resource?
-This is the central question of "resource-level" authorization enforcement.
+This is the central question of **"resource-level" enforcement.**
 
 Resource-level enforcement is the bread-and-butter of application authorization.
 If you only perform one type of authorization in your app, it should be
-resource-level enforcement. **Just about every endpoint in your application
-should perform some kind of resource-level enforcement.**
+this. **Just about every endpoint in your application should perform some kind
+of resource-level enforcement.**
 
-The method you use for resource-level authorization is called `authorize`. It
-takes three arguments, `user`, `action`, and `resource`. It doesn't return
-anything, but potentially throws an error. To handle this error, see
-[Authorization Failure](#authorization-failure).
+The method you use for resource-level authorization is called `authorize`, and
+is exposed by an Oso enforcer. The `authorize` method takes three arguments,
+`user`, `action`, and `resource`. It doesn't return anything, but potentially
+throws an error. To handle this error, see [Authorization
+Failure](#authorization-failure).
 
 <!-- You'll see this method in a lot of our guides and examples, because it's the
 simplest way to use Oso in your app. -->
@@ -69,14 +70,14 @@ resource? In that case, the `authorize` method will raise an
 `AuthorizationError`. There are actually two types of authorization errors,
 depending on the situation.
 
-  - `NotFound` errors are for situations where the user should not even know
-    that a particular resource _exists_. That is, the user does not have
-    `"read"` permission on the resource. **You should handle these errors by
-    showing the user a 404 "Not Found" error**.
-  - `Forbidden` errors are raised when the user knows that a resource exists
-    (i.e. when they have permission to `"read"` the resource), but they are not
-    allowed to perform the given action. **You should handle these errors by
-    showing the user a 403 "Forbidden" error.**
+- `NotFound` errors are for situations where the user should not even know
+  that a particular resource _exists_. That is, the user does not have
+  `"read"` permission on the resource. **You should handle these errors by
+  showing the user a 404 "Not Found" error**.
+- `Forbidden` errors are raised when the user knows that a resource exists
+  (i.e. when they have permission to `"read"` the resource), but they are not
+  allowed to perform the given action. **You should handle these errors by
+  showing the user a 403 "Forbidden" error.**
 
 Note: a call to `authorize` with a `"read"` action will never raise a
 `Forbidden` error, only `NotFound` errors—if the user is not allowed to read

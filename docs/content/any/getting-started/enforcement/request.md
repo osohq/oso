@@ -17,8 +17,8 @@ any: true
 # Request-level Enforcement
 
 It's likely that your app already has a way of preventing logged-out users from
-accessing certain endpoints. This is an example of "request-level" authorization
-enforcement, and you can use Oso to express these types of rules.
+accessing certain endpoints. This is an example of **"request-level"
+enforcement**, and you can use Oso to express these types of rules.
 
 Often this gets more complicated as time goes along. "Logged-in" vs "logged-out"
 is the first question you might want to ask, but perhaps users can't perform
@@ -29,10 +29,10 @@ accessible.
 To implement "request-level" enforcement, you can use the `authorize_request`
 method provided by the Oso enforcer.
 
-{{% callout "Enforcer" %}}
-You'll need an Oso enforcer to use the `authorize_request` method. Check out
+{{% minicallout %}}
+**Note**: You'll need an Oso enforcer to use the `authorize_request` method. Check out
 [how to build one](enforcer.html).
-{{% /callout %}}
+{{% /minicallout %}}
 
 In your request middleware, after you've loaded the user, but not executed any
 endpoint-specific code, you should call Oso to determine whether the action is
