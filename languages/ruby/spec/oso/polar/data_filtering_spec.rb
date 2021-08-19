@@ -79,8 +79,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           allow(log: FooLog, "d", foo: Foo) if log in foo.logs and log.foo = foo;
         POL
         subject.load_str policy
-        log = FooLog.all.find { |log| log.foo_id == 'fourth' }
+        log = FooLog.all.find { |l| l.foo_id == 'fourth' }
         foos = Foo.all.select { |foo| foo.id == 'fourth' }
+        # d causes a polar stack overflow!! :O
         %w[a b c].each do |x|
           check_authz log, x, Foo, foos
         end
