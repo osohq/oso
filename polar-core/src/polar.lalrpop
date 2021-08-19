@@ -538,21 +538,6 @@ List<T>: Value = {
     }
 }
 
-StringListTerms: Vec<Term> = {
-    <Spanned<PolarString>> => vec![<>],
-    <mut list:StringListTerms> "," <tail:Spanned<PolarString>?> => {
-        if let Some(tail) = tail {
-            list.push(tail);
-        }
-        list
-    },
-}
-
-StringList: Value = {
-    "[" "]" => Value::List(vec![]),
-    "[" <StringListTerms> "]" => Value::List(<>),
-}
-
 Pattern: Value = {
     <Number>,
     <PolarString>,
@@ -667,6 +652,21 @@ RulePrototype: Rule = {
 }
 
 pub(crate) Rules: Vec<Rule> = <Rule*>;
+
+// TODO(gj): combine this with ListTerms/List?
+StringListTerms: Vec<Term> = {
+    <Spanned<PolarString>> => vec![<>],
+    <mut list:StringListTerms> "," <tail:Spanned<PolarString>?> => {
+        if let Some(tail) = tail {
+            list.push(tail);
+        }
+        list
+    },
+}
+StringList: Value = {
+    "[" "]" => Value::List(vec![]),
+    "[" <StringListTerms> "]" => Value::List(<>),
+}
 
 RolesValue: Value = "roles" "=" <StringList> ";" => <>;
 Roles: sugar::Expr = <Spanned<RolesValue>> => sugar::Expr::Roles(<>);
