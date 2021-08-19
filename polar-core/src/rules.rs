@@ -225,7 +225,7 @@ mod tests {
         polar.load_str(r#"f(1, 3, {c: "z"});"#).unwrap();
 
         let kb = polar.kb.read().unwrap();
-        let generic_rule = kb.rules.get(&sym!("f")).unwrap();
+        let generic_rule = kb.get_generic_rule(&sym!("f")).unwrap();
         let index = &generic_rule.index;
         assert!(index.rules.is_empty());
 
