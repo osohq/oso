@@ -680,12 +680,7 @@ Relations: sugar::Expr = <Spanned<RelationsValue>> => sugar::Expr::Relations(<>)
 OnRelation: Term = "on" <relation:Spanned<PolarString>> => relation;
 
 ImplicationTuple: (Term, Term, Option<Term>) = {
-    <implied:Spanned<PolarString>> Define <mut implier:Spanned<PolarString>> <mut relation:OnRelation?> ";" <end:@R> => {
-        if relation.is_some() {
-            relation = Some(Term::new_from_parser(src_id, relation.as_ref().unwrap().offset(), end, relation.unwrap().value().clone()));
-        } else {
-            implier = Term::new_from_parser(src_id, implier.offset(), end, implier.value().clone());
-        }
+    <implied:Spanned<PolarString>> Define <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => {
         (implied, implier, relation)
     }
 };
