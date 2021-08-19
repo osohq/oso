@@ -11,7 +11,7 @@ allow(fam: Familiar, "groom", other: Familiar) if
   other.kind in ["rat", "horse", "dwarf"];
 
 allow(wiz: Wizard, "ride", fam: Familiar) if
-  fam in wiz.familiars and
+  wiz = fam.wizard and
   fam.kind = "horse";
 
 allow(wiz: Wizard, "cast", spell: Spell) if

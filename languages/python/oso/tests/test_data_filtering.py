@@ -313,16 +313,25 @@ def test_var_in_var(oso, t):
     assert len(results) == 1
 
 
-def test_from(oso, t):
+def test_parent_child(oso, t):
     policy = """
-    allow(log: FooLogRecord, "frob", foo: Foo) if
-#      log in foo.logs and # FIXME
-      log.foo = foo and
-      log.data = "hello";
+    allow(log: FooLogRecord, "thence", foo: Foo) if
+      log.foo = foo;
+    allow(log: FooLogRecord, "thither", foo: Foo) if
+      log in foo.logs;
+    allow(log: FooLogRecord, "glub", foo: Foo) if
+      allow(log, "thence", foo) and allow(log, "thither", foo);
+#      log.foo = log and log in foo.logs;
+    allow(log: FooLogRecord, "bluh", foo: Foo) if
+      log in foo.logs and log.foo = foo;
     """
     oso.load_str(policy)
-    fourth = t["fourth_foo"]
-    check_authz(oso, t["logs"][0], "frob", t["Foo"], [fourth])
+    foo = t["fourth_foo"]
+    log = t["logs"][0]
+    check_authz(oso, log, "thence", t["Foo"], [foo])
+    check_authz(oso, log, "thither", t["Foo"], [foo])
+    check_authz(oso, log, "glub", t["Foo"], [foo])
+    check_authz(oso, log, "bluh", t["Foo"], [foo])
 
 
 def test_val_in_var(oso, t):

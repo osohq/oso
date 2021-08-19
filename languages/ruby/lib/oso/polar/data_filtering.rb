@@ -63,7 +63,7 @@ module Oso
 
         def check(item)
           val = value.is_a?(Field) ? item.send(value.field) : value
-          item = item.send field
+          item = field.nil? ? item : item.send(field)
           @check[item, val]
         end
       end

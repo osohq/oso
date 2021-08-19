@@ -67,6 +67,11 @@ class Constraint:
         else:
             self.getter = lambda x: self.value
 
+        if self.field is None:
+            self.iget = lambda x: x
+        else:
+            self.iget = lambda x: getattr(x, self.field)
+
         if self.kind == "Eq":
             self.checker = lambda a, b: a == b
         elif self.kind == "In":
@@ -77,7 +82,7 @@ class Constraint:
             assert False, "unknown constraint kind"
 
     def check(self, item):
-        return self.checker(getattr(item, self.field), self.getter(item))
+        return self.checker(self.iget(item), self.getter(item))
 
 
 def parse_constraint(polar, constraint):

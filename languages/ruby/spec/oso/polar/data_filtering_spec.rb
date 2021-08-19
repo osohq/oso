@@ -71,6 +71,21 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         )
       end
 
+      it 'handles all the relationships' do
+        policy = <<~POL
+          allow(log: FooLog, "a", foo: Foo) if log in foo.logs;
+          allow(log: FooLog, "b", foo: Foo) if foo = log.foo;
+          allow(log: FooLog, "c", foo: Foo) if log.foo = foo and log in foo.logs;
+          allow(log: FooLog, "d", foo: Foo) if log in foo.logs and log.foo = foo;
+        POL
+        subject.load_str policy
+        log = FooLog.all.find { |log| log.foo_id == 'fourth' }
+        foos = Foo.all.select { |foo| foo.id == 'fourth' }
+        %w[a b c].each do |x|
+          check_authz log, x, Foo, foos
+        end
+      end
+
       it 'can compare a field with a known value' do
         policy = 'allow("gwen", "get", foo: Foo) if foo.is_fooey = true;'
         subject.load_str(policy)
@@ -195,9 +210,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         end
 
         it 'can groom their familiars' do
-          check_authz gandalf, 'groom', Familiar, [shadowfax]
           check_authz baba_yaga, 'groom', Familiar, [brown_jenkin]
           check_authz galadriel, 'groom', Familiar, [hedwig, gimli]
+          check_authz gandalf, 'groom', Familiar, [shadowfax]
         end
 
         context 'having mastered inscription' do

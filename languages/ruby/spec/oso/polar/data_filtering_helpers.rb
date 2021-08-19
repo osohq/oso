@@ -15,7 +15,8 @@ module DataFilteringHelpers
 
   def check_authz(actor, action, resource, expected)
     results = subject.get_allowed_resources(actor, action, resource)
-    expect(unord_eq(results, expected)).to be true
+    res = unord_eq(results, expected)
+    expect(res).to be true
     expected.each do |re|
       answer = subject.allowed?(actor: actor, action: action, resource: re)
       expect(answer).to be true
