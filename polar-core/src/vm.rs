@@ -1392,13 +1392,6 @@ impl PolarVirtualMachine {
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
     fn query(&mut self, term: &Term) -> PolarResult<QueryEvent> {
-        /*
-        if self.queries.iter().find(|q| *q == term).is_some() {
-            self.push_goal(Goal::Backtrack)?;
-            return Ok(QueryEvent::None);
-        }
-        */
-
         // Don't log if it's just a single element AND like lots of rule bodies tend to be.
         match &term.value() {
             Value::Expression(Operation {
