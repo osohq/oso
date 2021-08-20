@@ -388,6 +388,18 @@ export interface ExternalIsa {
 }
 
 /**
+ * The `ExternalIsSubclass` [[`QueryEvent`]] is how Polar determines whether a given
+ * class is a subclass of a particular class.
+ *
+ * @internal
+ */
+export interface ExternalIsSubclass {
+  leftTag: string;
+  rightTag: string;
+  callId: number;
+}
+
+/**
  * Polar comparison operators.
  *
  * Currently, these are the only operators supported for external operations.
@@ -466,6 +478,7 @@ export enum QueryEventKind {
   ExternalCall,
   ExternalIsa,
   ExternalIsSubspecializer,
+  ExternalIsSubclass,
   ExternalOp,
   MakeExternal,
   NextExternal,
@@ -480,14 +493,15 @@ export enum QueryEventKind {
 export interface QueryEvent {
   kind: QueryEventKind;
   data?:
-    | Debug
-    | ExternalCall
-    | ExternalIsa
-    | ExternalIsSubspecializer
-    | ExternalOp
-    | MakeExternal
-    | NextExternal
-    | Result;
+  | Debug
+  | ExternalCall
+  | ExternalIsa
+  | ExternalIsSubspecializer
+  | ExternalIsSubclass
+  | ExternalOp
+  | MakeExternal
+  | NextExternal
+  | Result;
 }
 
 /**

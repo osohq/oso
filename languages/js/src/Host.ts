@@ -201,6 +201,21 @@ export class Host {
   }
 
   /**
+   * Check if the left class is a subclass of the right class.
+   *
+   * @internal
+   */
+  async isSubclass(
+    left: string,
+    right: string
+  ): Promise<boolean> {
+    const leftCls = this.getClass(left)
+    const rightCls = this.getClass(right)
+    const mro = ancestors(leftCls);
+    return mro.includes(rightCls)
+  }
+
+  /**
    * Check if the given instance is an instance of a particular class.
    *
    * @internal

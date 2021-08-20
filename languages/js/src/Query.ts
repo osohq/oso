@@ -13,6 +13,7 @@ import type {
   Debug,
   ExternalCall,
   ExternalIsa,
+  ExternalIsSubclass,
   ExternalIsSubspecializer,
   ExternalOp,
   MakeExternal,
@@ -262,6 +263,12 @@ export class Query {
               leftTag,
               rightTag
             );
+            this.questionResult(answer, callId);
+            break;
+          }
+          case QueryEventKind.ExternalIsSubclass: {
+            const { leftTag, rightTag, callId } = event.data as ExternalIsSubclass;
+            const answer = await this.#host.isSubclass(leftTag, rightTag);
             this.questionResult(answer, callId);
             break;
           }

@@ -63,6 +63,8 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
         return parseExternalCall(event['ExternalCall']);
       case event['ExternalIsSubSpecializer'] !== undefined:
         return parseExternalIsSubspecializer(event['ExternalIsSubSpecializer']);
+      case event['ExternalIsSubclass'] !== undefined:
+        return parseExternalIsSubclass(event['ExternalIsSubclass']);
       case event['ExternalIsa'] !== undefined:
         return parseExternalIsa(event['ExternalIsa']);
       case event['Debug'] !== undefined:
@@ -188,6 +190,29 @@ function parseExternalIsSubspecializer({
   return {
     kind: QueryEventKind.ExternalIsSubspecializer,
     data: { callId, instanceId, leftTag, rightTag },
+  };
+}
+
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * an [[`ExternalIsSubclass`]].
+ *
+ * @internal
+ */
+function parseExternalIsSubclass({
+  call_id: callId,
+  left_class_tag: leftTag,
+  right_class_tag: rightTag,
+}: obj): QueryEvent {
+  if (
+    !Number.isSafeInteger(callId) ||
+    typeof leftTag !== 'string' ||
+    typeof rightTag !== 'string'
+  )
+    throw new Error();
+  return {
+    kind: QueryEventKind.ExternalIsSubclass,
+    data: { callId, leftTag, rightTag },
   };
 }
 

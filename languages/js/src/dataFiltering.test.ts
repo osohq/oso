@@ -137,16 +137,15 @@ test('data filtering', async () => {
             };
 
         parent_child(parent_bar: Bar, foo: Foo) if
-            foo.bar = parent_bar and print(parent_bar);
+            foo.bar = parent_bar;
 
-        actor_has_role_for_resource(a, b, c) if print(a,b,c) and false;
         actor_has_role_for_resource("steve", "owner", bar: Bar) if bar.id = "hello";
 
         allow(actor, action, resource) if role_allows(actor, action, resource);
     `);
   oso.enableRoles();
   expect(await oso.isAllowed('steve', 'read', anotherFoo)).toBe(true);
-  /* expect(await oso.getAllowedResources('steve', 'get', Foo)).toEqual([
+  expect(await oso.getAllowedResources('steve', 'get', Foo)).toEqual([
     anotherFoo,
-  ]); */
+  ]);
 });
