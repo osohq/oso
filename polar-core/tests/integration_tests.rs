@@ -1686,7 +1686,10 @@ fn test_keyword_dot() -> TestResult {
     let mut p = Polar::new();
     p.load_str("f(a, b) if a.in(b);")?;
     p.load_str("g(a, b) if a.new(b);")?;
-    qeval(&mut p, "x = {debug: 1} and x.debug = 1");
+    qeval(
+        &mut p,
+        "x = {debug: 1, new: 2, type: 3} and x.debug + x.new = x.type",
+    );
     Ok(())
 }
 
