@@ -48,5 +48,6 @@ Link to [relevant documentation section]().
 #### Other bugs & improvements
 
 - The debugger can now break on rule matches.
+- Reserved words can be used as field and method names in dictionaries and objects.
 
 #### TODO: enforcement changelog, if we decide to release it
