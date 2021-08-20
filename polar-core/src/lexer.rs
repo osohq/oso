@@ -90,7 +90,6 @@ pub enum Token {
     Not,       // not
     Matches,   // matches
     Type,      // type
-    On,        // on
 }
 
 impl ToString for Token {
@@ -141,7 +140,6 @@ impl ToString for Token {
             Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
             Token::Type => "type".to_owned(),       // type
-            Token::On => "on".to_owned(),           // on
         }
     }
 }
@@ -237,7 +235,6 @@ impl<'input> Lexer<'input> {
             "type" => Token::Type,
             "mod" => Token::Mod,
             "rem" => Token::Rem,
-            "on" => Token::On,
             _ => Token::Symbol(Symbol::new(&self.buf)),
         };
         Some(Ok((start, token, last + 1)))

@@ -26,6 +26,25 @@ pub enum Expr {
     Implication(Term, (Term, Option<Term>)), // (String, (String, Option<String>))
 }
 
+pub fn validate_relation_keyword(
+    (keyword, relation): (Term, Term),
+) -> Result<Term, LalrpopError<usize, Token, error::ParseError>> {
+    if keyword.value().as_symbol().unwrap().0 == "on" {
+        Ok(relation)
+    } else {
+        Err(LalrpopError::User {
+            error: ParseError::ParseSugar {
+                loc: keyword.offset(),
+                msg: format!(
+                    "Unexpected relation keyword '{}'. Did you mean 'on'?",
+                    keyword
+                ),
+                ranges: vec![],
+            },
+        })
+    }
+}
+
 pub fn declaration_to_expr(
     (name, term): (Symbol, Term),
 ) -> Result<Expr, LalrpopError<usize, Token, error::ParseError>> {
@@ -39,7 +58,7 @@ pub fn declaration_to_expr(
                 error: ParseError::ParseSugar {
                     loc: term.offset(),
                     msg: format!(
-                        "Expected '{}' declaration to be a list of strings; found a dictionary:",
+                        "Expected '{}' declaration to be a list of strings; found a dictionary:\n",
                         name
                     ),
                     ranges: vec![term.span().unwrap()],
@@ -49,7 +68,7 @@ pub fn declaration_to_expr(
         ("relations", Value::List(_)) => Err(LalrpopError::User {
             error: ParseError::ParseSugar {
                 loc: term.offset(),
-                msg: "Expected 'relations' declaration to be a dictionary; found a list:".to_owned(),
+                msg: "Expected 'relations' declaration to be a dictionary; found a list:\n".to_owned(),
                 ranges: vec![term.span().unwrap()],
             },
         }),
@@ -58,7 +77,7 @@ pub fn declaration_to_expr(
             error: ParseError::ParseSugar {
                 loc: term.offset(),
                 msg: format!(
-                    "Encountered unexpected declaration '{}'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?", name
+                    "Unexpected declaration '{}'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?\n", name
                 ),
                 ranges: vec![term.span().unwrap()],
             },
@@ -67,7 +86,7 @@ pub fn declaration_to_expr(
             error: ParseError::ParseSugar {
                 loc: term.offset(),
                 msg: format!(
-                    "Encountered unexpected declaration '{}'. Did you mean for this to be 'relations = {{ ... }};'?", name
+                    "Unexpected declaration '{}'. Did you mean for this to be 'relations = {{ ... }};'?\n", name
                 ),
                 ranges: vec![term.span().unwrap()],
             },
@@ -942,19 +961,24 @@ mod tests {
         expect_error(
             &p,
             r#"Org{foo=[];}"#,
-            r#"Encountered unexpected declaration 'foo'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?"#,
+            r#"Unexpected declaration 'foo'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?"#,
         );
         expect_error(
             &p,
             r#"Org{foo={};}"#,
-            r#"Encountered unexpected declaration 'foo'. Did you mean for this to be 'relations = { ... };'?"#,
+            r#"Unexpected declaration 'foo'. Did you mean for this to be 'relations = { ... };'?"#,
+        );
+        expect_error(
+            &p,
+            r#"Org{"foo" if "bar" onn "baz";}"#,
+            r#"Unexpected relation keyword 'onn'. Did you mean 'on'?"#,
         );
     }
 
     #[test]
     fn test_namespace_declaration_keywords_are_not_reserved_words() {
         let p = Polar::new();
-        p.load_str("roles(permissions) if permissions.relations;")
+        p.load_str("roles(permissions, on) if permissions.relations = on;")
             .unwrap();
     }
 }

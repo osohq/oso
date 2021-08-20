@@ -88,7 +88,10 @@ impl PolarError {
         {
             if let Some(source) = source {
                 match ranges.len() {
-                    1 => (),
+                    1 => {
+                        let first = &source.src[ranges[0].0..ranges[0].1];
+                        msg.push_str(&format!("\t{}\n", first));
+                    }
                     // If two ranges are provided, label them `First` and `Second`.
                     2 => {
                         let first = &source.src[ranges[0].0..ranges[0].1];

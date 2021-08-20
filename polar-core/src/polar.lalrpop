@@ -65,7 +65,6 @@ extern {
         "not" => lexer::Token::Not,         // not
         "matches" => lexer::Token::Matches, // matches
         "type" => lexer::Token::Type,       // type
-        "on" => lexer::Token::On,           // on
     }
 }
 
@@ -665,11 +664,17 @@ StringList: Value = {
 }
 RelationsDict: Value = <Object<Spanned<Variable>>> => Value::Dictionary(<>);
 Declaration: sugar::Expr = {
-    <Name> "=" <Spanned<StringList>> ";" =>? sugar::declaration_to_expr((<>)),
-    <Name> "=" <Spanned<RelationsDict>> ";" =>? sugar::declaration_to_expr((<>)),
+    <start:@L> <keyword:Name> "=" <value:StringList> <end:@R> ";" =>? {
+        let term = Term::new_from_parser(src_id, start, end, value);
+        return sugar::declaration_to_expr((keyword, term));
+    },
+    <start:@L> <keyword:Name> "=" <value:RelationsDict> <end:@R> ";" =>? {
+        let term = Term::new_from_parser(src_id, start, end, value);
+        return sugar::declaration_to_expr((keyword, term));
+    },
 }
 
-OnRelation: Term = "on" <relation:Spanned<PolarString>> => relation;
+OnRelation: Term = <Spanned<Variable>> <Spanned<PolarString>> =>? sugar::validate_relation_keyword((<>));
 ImplicationBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
 Implication: sugar::Expr = <head:Spanned<PolarString>> Define <body:ImplicationBody> => sugar::Expr::Implication(<>);
 
