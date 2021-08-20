@@ -2233,6 +2233,12 @@ impl PolarVirtualMachine {
             | (Value::Variable(l), Value::RestVariable(r))
             | (Value::RestVariable(l), Value::Variable(r))
             | (Value::RestVariable(l), Value::RestVariable(r)) => {
+                // FIXME(gw):
+                // if the variables are the same the unification succeeds, so
+                // we don't need to do anything. but this causes an inconsistency
+                // with NaN where `nan = nan` is false but `x = nan and x = x` is
+                // true. if we really want to keep the NaN equality semantics
+                // maybe we can have `nan = nan` but not `nan == nan`?
                 if l != r {
                     match (self.variable_state(l), self.variable_state(r)) {
                         (VariableState::Bound(x), VariableState::Bound(y)) => {
@@ -2248,6 +2254,12 @@ impl PolarVirtualMachine {
                     }
                 }
             }
+
+            // FIXME(gw): i think we might actually want this, see the comment
+            // above about unifying variables.
+            // (Value::Number(Numeric::Float(a)),
+            //  Value::Number(Numeric::Float(b)))
+            //     if a.is_nan() && b.is_nan() => (),
 
             // Unify/bind a variable on the left with/to the term on the right.
             (Value::Variable(var), _) | (Value::RestVariable(var), _) => {
@@ -2321,11 +2333,6 @@ impl PolarVirtualMachine {
                 }
             }
 
-            /* XXX(gw): i think we might actually want this.
-            (Value::Number(Numeric::Float(a)),
-             Value::Number(Numeric::Float(b)))
-                if a.is_nan() && b.is_nan() => (),
-            */
             // Unify integers by value.
             (Value::Number(left), Value::Number(right)) => {
                 if left != right {
