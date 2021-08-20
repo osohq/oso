@@ -52,6 +52,10 @@ module Oso
         register_class String
       end
 
+      def ffi
+        @ffi_polar
+      end
+
       def enable_roles # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         return if polar_roles_enabled
 
@@ -126,9 +130,8 @@ module Oso
             end
           end
         end
-        types = host.serialize_types
-        plan = ffi_polar.build_filter_plan types, partial, 'resource', class_name
-        complete + ::Oso::Polar::DataFiltering.filter(self, plan)
+        filter = ::Oso::Polar::DataFiltering::FilterPlan.new(self, partial, class_name)
+        complete + filter.resolve
       end
 
       # Clear all rules and rule sources from the current Polar instance

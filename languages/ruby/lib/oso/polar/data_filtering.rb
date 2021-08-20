@@ -4,22 +4,15 @@ module Oso
   module Polar
     # Data filtering interface for Ruby
     module DataFiltering
-      def self.filter(polar, filter_plan, filter_plan_resolver: method(:builtin_resolve))
-        filter_plan_resolver.call(polar, filter_plan)
-      end
-
-      def self.builtin_resolve(polar, filter_plan)
-        FilterPlan.new(polar, filter_plan).builtin_resolve
-      end
-
-      # Wrapper for filter plan json.
       # Represents a set of filter sequences that should allow the host
       # to obtain the records satisfying a query.
       class FilterPlan
         include Enumerable
         attr_reader :result_sets
 
-        def initialize(polar, parsed_json)
+        def initialize(polar, partials, class_name)
+          types = polar.host.serialize_types
+          parsed_json = polar.ffi.build_filter_plan(types, partials, 'resource', class_name)
           @polar = polar
           @result_sets = parsed_json['result_sets'].map do |rset|
             ResultSet.new polar, rset
@@ -30,7 +23,7 @@ module Oso
           result_sets.each(&blk)
         end
 
-        def builtin_resolve # rubocop:disable Metrics/AbcSize
+        def resolve # rubocop:disable Metrics/AbcSize
           reduce([]) do |acc, rs|
             requests = rs.requests
             acc + rs.resolve_order.each_with_object({}) do |i, set_results|
