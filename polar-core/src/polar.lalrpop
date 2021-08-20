@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use std::collections::{HashSet, BTreeMap};
+use std::collections::BTreeMap;
 use std::iter::FromIterator;
 
 use crate::lexer::{self, Token};
@@ -678,13 +678,8 @@ RelationsValue: Value = "relations" "=" <Object<Spanned<Variable>>> ";" => Value
 Relations: sugar::Expr = <Spanned<RelationsValue>> => sugar::Expr::Relations(<>);
 
 OnRelation: Term = "on" <relation:Spanned<PolarString>> => relation;
-
-ImplicationTuple: (Term, Term, Option<Term>) = {
-    <implied:Spanned<PolarString>> Define <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => {
-        (implied, implier, relation)
-    }
-};
-Implication: sugar::Expr = <ImplicationTuple> => sugar::Expr::Implication(<>);
+ImplicationBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
+Implication: sugar::Expr = <head:Spanned<PolarString>> Define <body:ImplicationBody> => sugar::Expr::Implication(<>);
 
 NamespaceExpr: sugar::Expr = {
     <Roles> => <>,

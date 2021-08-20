@@ -7,7 +7,7 @@ pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::rules::*;
 use super::sources::*;
-use super::sugar::Namespaces;
+use super::sugar::{Implication, Namespaces};
 use super::terms::*;
 use std::sync::Arc;
 
@@ -47,6 +47,7 @@ pub struct KnowledgeBase {
 
     /// Namespace Bookkeeping
     pub namespaces: Namespaces,
+    pub rewrite_me_pls: HashMap<Term, Vec<Implication>>,
 }
 
 impl KnowledgeBase {
@@ -63,6 +64,7 @@ impl KnowledgeBase {
             gensym_counter: Counter::default(),
             inline_queries: vec![],
             namespaces: Namespaces::new(),
+            rewrite_me_pls: HashMap::new(),
         }
     }
 
@@ -438,6 +440,10 @@ impl KnowledgeBase {
 
     pub fn get_rules(&self) -> &HashMap<Symbol, GenericRule> {
         &self.rules
+    }
+
+    pub fn set_rules(&mut self, rules: HashMap<Symbol, GenericRule>) {
+        self.rules = rules;
     }
 
     pub fn get_generic_rule(&self, name: &Symbol) -> Option<&GenericRule> {

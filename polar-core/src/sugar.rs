@@ -1,8 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use lalrpop_util::ParseError as LalrpopError;
 
-use super::error::{ParseError, PolarResult, RuntimeError};
+use super::error::{ParseError, PolarError, PolarResult, RuntimeError};
 use super::kb::KnowledgeBase;
 use super::lexer::Token;
 use super::rules::*;
@@ -20,21 +20,10 @@ use super::terms::*;
 // This type is used as a pre-validation bridge between Rust & LALRPOP.
 #[derive(Debug)]
 pub enum Expr {
-    Roles(Term),
-    Permissions(Term),
-    Relations(Term),
-    Implication(Implication),
-}
-
-// Calculate source offsets for an implication.
-fn implication_offsets((implied, implier, relation): &Implication) -> (usize, usize) {
-    (
-        implied.offset(),
-        relation.as_ref().map_or_else(
-            || implier.offset_to_end(),
-            |relation| relation.offset_to_end(),
-        ),
-    )
+    Roles(Term),                             // List<String>
+    Permissions(Term),                       // List<String>
+    Relations(Term),                         // Dict<Symbol, Symbol>
+    Implication(Term, (Term, Option<Term>)), // (String, (String, Option<String>))
 }
 
 // Turn a set of parsed expressions into a `Namespace` (or die validating).
@@ -45,7 +34,7 @@ pub fn exprs_to_namespace(
     let mut roles: Option<Term> = None;
     let mut permissions: Option<Term> = None;
     let mut relations: Option<Term> = None;
-    let mut implications = HashSet::new();
+    let mut implications = vec![];
 
     let make_error = |name: &str, previous: &Term, new: &Term| {
         let msg = format!(
@@ -56,10 +45,8 @@ pub fn exprs_to_namespace(
         ParseError::ParseSugar {
             loc: new.offset(),
             msg,
-            ranges: vec![
-                (previous.offset(), previous.offset_to_end()),
-                (new.offset(), new.offset_to_end()),
-            ],
+            // TODO(gj): Create a Parsed<Term> or something that _always_ has source info.
+            ranges: vec![(previous.span().unwrap()), (new.span().unwrap())],
         }
     };
 
@@ -86,20 +73,9 @@ pub fn exprs_to_namespace(
                 }
                 relations = Some(new);
             }
-            Expr::Implication(new) => {
-                if let Some(previous) = implications.replace(new.clone()) {
-                    let msg = format!(
-                        "Duplicate implications found in {} namespace.\n",
-                        resource.to_polar()
-                    );
-                    return Err(LalrpopError::User {
-                        error: ParseError::ParseSugar {
-                            loc: new.0.offset(),
-                            msg,
-                            ranges: vec![implication_offsets(&previous), implication_offsets(&new)],
-                        },
-                    });
-                }
+            Expr::Implication(head, body) => {
+                // TODO(gj): Warn the user on duplicate implication definitions.
+                implications.push(Implication { head, body });
             }
         }
     }
@@ -120,7 +96,31 @@ pub enum Declaration {
     Relation(Term),
 }
 
-type Implication = (Term, Term, Option<Term>);
+#[derive(Clone, Debug, Hash, PartialEq)]
+pub struct Implication {
+    pub head: Term,
+    pub body: (Term, Option<Term>),
+}
+
+impl Eq for Implication {}
+
+impl Implication {
+    pub fn into_rule(self, resource: &Term, namespaces: &Namespaces) -> PolarResult<Rule> {
+        let Self { head, body } = self;
+        // Copy SourceInfo from head of implication.
+        // TODO(gj): assert these can only be None in tests.
+        let src_id = head.get_source_id().unwrap_or(0);
+        let (start, end) = head.span().unwrap_or((0, 0));
+
+        let name = namespaces.local_declaration_to_rule_name(&head, resource)?;
+        let params = implication_head_into_params(head, resource);
+        let body = implication_body_into_rule_body(body, resource, namespaces)?;
+
+        Ok(Rule::new_from_parser(
+            src_id, start, end, name, params, body,
+        ))
+    }
+}
 
 type Declarations = HashMap<Term, Declaration>;
 
@@ -152,35 +152,32 @@ pub struct Namespace {
     pub roles: Option<Term>,
     pub permissions: Option<Term>,
     pub relations: Option<Term>,
-    pub implications: HashSet<Implication>,
+    pub implications: Vec<Implication>,
 }
 
 #[derive(Clone, Default)]
 pub struct Namespaces {
-    inner: HashMap<Term, Declarations>,
+    declarations: HashMap<Term, Declarations>,
 }
 
 impl Namespaces {
     pub fn new() -> Self {
         Self {
-            inner: HashMap::new(),
+            declarations: HashMap::new(),
         }
     }
 
     fn add(&mut self, resource: Term, declarations: Declarations) -> Option<Declarations> {
-        self.inner.insert(resource, declarations)
-    }
-
-    fn remove(&mut self, resource: &Term) -> Option<Declarations> {
-        self.inner.remove(resource)
+        self.declarations.insert(resource, declarations)
     }
 
     fn exists(&self, resource: &Term) -> bool {
-        self.inner.contains_key(resource)
+        self.declarations.contains_key(resource)
     }
 
-    fn get_declaration(&self, resource: &Term, name: &Term) -> PolarResult<&Declaration> {
-        if let Some(declaration) = self.inner[resource].get(name) {
+    fn get_declaration(&self, name: &Term, resource: &Term) -> PolarResult<&Declaration> {
+        // TODO(gj): .get(resource) instead of [resource]
+        if let Some(declaration) = self.declarations[resource].get(name) {
             Ok(declaration)
         } else {
             // TODO(gj): message isn't totally accurate when going across resources. E.g., with
@@ -201,22 +198,53 @@ impl Namespaces {
         }
     }
 
-    fn get_related_type(&self, resource: &Term, relation: &Term) -> PolarResult<&Term> {
-        self.get_declaration(resource, relation)?.as_relation()
+    fn get_related_type(&self, relation: &Term, resource: &Term) -> PolarResult<&Term> {
+        self.get_declaration(relation, resource)?.as_relation()
     }
 
-    fn local_predicate_name(&self, resource: &Term, name: &Term) -> PolarResult<Symbol> {
-        Ok(self.get_declaration(resource, name)?.as_predicate())
+    fn local_declaration_to_rule_name(&self, name: &Term, resource: &Term) -> PolarResult<Symbol> {
+        Ok(self.get_declaration(name, resource)?.as_predicate())
     }
 
     fn cross_resource_predicate_name(
         &self,
-        resource: &Term,
-        relation: &Term,
         name: &Term,
+        relation: &Term,
+        resource: &Term,
     ) -> PolarResult<Symbol> {
-        let related_type = self.get_related_type(resource, relation)?;
-        self.local_predicate_name(related_type, name)
+        let related_type = self.get_related_type(relation, resource)?;
+        self.local_declaration_to_rule_name(name, related_type)
+    }
+}
+
+impl KnowledgeBase {
+    pub fn rewrite_implications(&mut self) -> PolarResult<()> {
+        let mut rules = vec![];
+        let mut errors = vec![];
+        for (resource, implications) in self.rewrite_me_pls.drain() {
+            for implication in implications {
+                match implication.into_rule(&resource, &self.namespaces) {
+                    Ok(rule) => rules.push(rule),
+                    Err(error) => errors.push(error),
+                }
+            }
+        }
+
+        // Copy the existing rules in the KB in case we encounter an error and need to revert.
+        let existing = self.get_rules().clone();
+
+        // Add the rewritten rules to the KB.
+        for rule in rules {
+            self.add_rule(rule);
+        }
+
+        // TODO(gj): Emit all errors instead of just the first.
+        if !errors.is_empty() {
+            self.set_rules(existing);
+            return Err(errors[0].clone());
+        }
+
+        Ok(())
     }
 }
 
@@ -256,8 +284,8 @@ fn index_declarations(
         })
 }
 
-fn resource_as_var(resource: &Term) -> PolarResult<Value> {
-    let name = &resource.value().as_symbol()?.0;
+fn resource_as_var(resource: &Term) -> Value {
+    let name = &resource.value().as_symbol().expect("sym").0;
     let mut lowercased = name.to_lowercase();
 
     // If the resource's name is already lowercase, append "_instance" to distinguish the variable
@@ -266,22 +294,22 @@ fn resource_as_var(resource: &Term) -> PolarResult<Value> {
         lowercased += "_instance";
     }
 
-    Ok(value!(sym!(lowercased)))
+    value!(sym!(lowercased))
 }
 
-fn rewrite_implier_as_rule_body(
-    implier: &Term,
-    relation: &Option<Term>,
-    namespaces: &Namespaces,
+fn implication_body_into_rule_body(
+    body: (Term, Option<Term>),
     resource: &Term,
+    namespaces: &Namespaces,
 ) -> PolarResult<Term> {
-    let resource_var = implier.clone_with_value(resource_as_var(resource)?);
+    let (implier, relation) = body;
+    let resource_var = implier.clone_with_value(resource_as_var(resource));
     let actor_var = implier.clone_with_value(value!(sym!("actor")));
     if let Some(relation) = relation {
         // TODO(gj): what if the relation is with the same type? E.g.,
         // `Dir { relations = { parent: Dir }; }`. This might cause Polar to loop.
-        let related_type = namespaces.get_related_type(resource, relation)?;
-        let related_resource_var = relation.clone_with_value(resource_as_var(related_type)?);
+        let related_type = namespaces.get_related_type(&relation, resource)?;
+        let related_resource_var = relation.clone_with_value(resource_as_var(related_type));
 
         let relation_call = relation.clone_with_value(value!(Call {
             name: sym!("relation"),
@@ -291,7 +319,7 @@ fn rewrite_implier_as_rule_body(
         }));
 
         let implier_call = implier.clone_with_value(value!(Call {
-            name: namespaces.cross_resource_predicate_name(resource, relation, implier)?,
+            name: namespaces.cross_resource_predicate_name(&implier, &relation, resource)?,
             // For example: vec![actor, "owner", org]
             args: vec![actor_var, implier.clone(), related_resource_var],
             kwargs: None
@@ -299,7 +327,7 @@ fn rewrite_implier_as_rule_body(
         Ok(implier.clone_with_value(value!(op!(And, relation_call, implier_call))))
     } else {
         let implier_call = implier.clone_with_value(value!(Call {
-            name: namespaces.local_predicate_name(resource, implier)?,
+            name: namespaces.local_declaration_to_rule_name(&implier, resource)?,
             args: vec![actor_var, implier.clone(), resource_var],
             kwargs: None
         }));
@@ -307,43 +335,24 @@ fn rewrite_implier_as_rule_body(
     }
 }
 
-fn rewrite_implied_as_rule_params(implied: &Term, resource: &Term) -> PolarResult<Vec<Parameter>> {
-    let resource_name = &resource.value().as_symbol()?.0;
-    Ok(vec![
+fn implication_head_into_params(head: Term, resource: &Term) -> Vec<Parameter> {
+    let resource_name = &resource.value().as_symbol().expect("sym").0;
+    vec![
         Parameter {
-            parameter: implied.clone_with_value(value!(sym!("actor"))),
+            parameter: head.clone_with_value(value!(sym!("actor"))),
             specializer: None,
         },
         Parameter {
-            parameter: implied.clone(),
+            parameter: head.clone(),
             specializer: None,
         },
         Parameter {
-            parameter: implied.clone_with_value(resource_as_var(resource)?),
+            parameter: head.clone_with_value(resource_as_var(resource)),
             specializer: Some(
                 resource.clone_with_value(value!(pattern!(instance!(resource_name)))),
             ),
         },
-    ])
-}
-
-fn rewrite_implication(
-    implication: Implication,
-    resource: &Term,
-    namespaces: &Namespaces,
-) -> PolarResult<Rule> {
-    let (implied, implier, relation) = implication;
-    let rule_name = namespaces.local_predicate_name(resource, &implied)?;
-    let params = rewrite_implied_as_rule_params(&implied, resource)?;
-    let body = rewrite_implier_as_rule_body(&implier, &relation, namespaces, resource)?;
-
-    // TODO(gj): I think this will only be None in tests. Assert that.
-    let src_id = resource.get_source_id().unwrap_or(0);
-    let start = implied.offset();
-    let end = relation.map_or_else(|| implier.offset_to_end(), |r| r.offset_to_end());
-    Ok(Rule::new_from_parser(
-        src_id, start, end, rule_name, params, body,
-    ))
+    ]
 }
 
 fn check_for_duplicate_namespaces(namespaces: &Namespaces, resource: &Term) -> PolarResult<()> {
@@ -367,6 +376,7 @@ fn check_that_namespace_resource_is_registered(
     resource: &Term,
 ) -> PolarResult<()> {
     if !kb.is_constant(resource.value().as_symbol()?) {
+        // TODO(gj): UnregisteredClassError in the core.
         return Err(ParseError::ParseSugar {
             loc: resource.offset(),
             // TODO(gj): better error message
@@ -381,63 +391,36 @@ fn check_that_namespace_resource_is_registered(
     Ok(())
 }
 
-fn check_all_permissions_involved_in_implications(namespace: &Namespace) -> PolarResult<()> {
-    let Namespace {
-        resource,
-        permissions,
-        implications,
-        ..
-    } = namespace;
-    if let Some(ref permissions_list) = permissions {
-        let permissions = permissions_list.value().as_list()?;
-
-        if implications.is_empty() {
-            return Err(ParseError::ParseSugar {
-                loc: permissions_list.offset(),
-                msg: format!(
-                    "{}: all permissions must be involved in at least one implication.",
-                    resource.to_polar(),
-                ),
+fn check_that_implication_heads_are_declared_locally(
+    implications: &[Implication],
+    declarations: &Declarations,
+    resource: &Term,
+) -> Vec<PolarError> {
+    let mut errors = vec![];
+    for Implication { head, .. } in implications {
+        if !declarations.contains_key(head) {
+            let msg = format!(
+                "Undeclared term {} referenced in implication in {} namespace. \
+                Did you mean to declare it as a role, permission, or relation?",
+                head.to_polar(),
+                resource
+            );
+            let error = ParseError::ParseSugar {
+                loc: head.offset(),
+                msg,
                 ranges: vec![],
-            }
-            .into());
-        }
-
-        for permission in permissions.iter() {
-            let implication_references_permission =
-                implications
-                    .iter()
-                    .any(|(implied, implier, maybe_relation)| {
-                        // Permission is referenced on the 'implied' side of an implication or
-                        // on the 'implier' side of a _local_ implication. If permission shows
-                        // up on the 'implier' side of a non-local implication, that's actually
-                        // a reference to a permission of the same name declared in the other
-                        // resource namespace.
-                        permission == implied || (permission == implier && maybe_relation.is_none())
-                    });
-
-            if !implication_references_permission {
-                return Err(ParseError::ParseSugar {
-                    loc: permission.offset(),
-                    msg: format!(
-                        "{}: permission {} must be involved in at least one implication.",
-                        resource.to_polar(),
-                        permission.to_polar()
-                    ),
-                    ranges: vec![],
-                }
-                .into());
-            }
+            };
+            errors.push(error.into());
         }
     }
-    Ok(())
+    errors
 }
 
-impl KnowledgeBase {
-    pub fn add_namespace(&mut self, namespace: Namespace) -> PolarResult<()> {
-        check_that_namespace_resource_is_registered(self, &namespace.resource)?;
-        check_for_duplicate_namespaces(&self.namespaces, &namespace.resource)?;
-        check_all_permissions_involved_in_implications(&namespace)?;
+impl Namespace {
+    pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> PolarResult<()> {
+        let mut errors = vec![];
+        errors.extend(check_that_namespace_resource_is_registered(kb, &self.resource).err());
+        errors.extend(check_for_duplicate_namespaces(&kb.namespaces, &self.resource).err());
 
         let Namespace {
             resource,
@@ -445,10 +428,23 @@ impl KnowledgeBase {
             permissions,
             relations,
             implications,
-        } = namespace;
+        } = self;
 
         let declarations = index_declarations(roles, permissions, relations);
-        self.namespaces.add(resource.clone(), declarations);
+
+        errors.append(&mut check_that_implication_heads_are_declared_locally(
+            &implications,
+            &declarations,
+            &resource,
+        ));
+
+        // TODO(gj): Emit all errors instead of just the first.
+        if !errors.is_empty() {
+            return Err(errors[0].clone());
+        }
+
+        kb.namespaces.add(resource.clone(), declarations);
+        kb.rewrite_me_pls.insert(resource, implications);
 
         // TODO(gj): what to do for `on "parent_org"` if Org{} namespace hasn't
         // been processed yet? Whether w/ multiple load_file calls or some future
@@ -458,18 +454,6 @@ impl KnowledgeBase {
         // imported? That might work for the future import case, but how would we
         // know when the final load_file call has been made? Answer: hax.
 
-        for implication in implications {
-            let rewritten = rewrite_implication(implication, &resource, &self.namespaces);
-            let rule = match rewritten {
-                Ok(rule) => rule,
-                Err(e) => {
-                    // If we error out at this point, remove the namespace entry.
-                    self.namespaces.remove(&resource);
-                    return Err(e);
-                }
-            };
-            self.add_rule(rule);
-        }
         Ok(())
     }
 }
@@ -477,6 +461,8 @@ impl KnowledgeBase {
 #[cfg(test)]
 mod tests {
     use permute::permute;
+
+    use std::collections::HashSet;
 
     use super::*;
     use crate::parser::{parse_lines, Line};
@@ -508,12 +494,13 @@ mod tests {
         let mut namespaces = Namespaces::new();
         namespaces.add(term!(sym!("repo")), repo_declarations);
         namespaces.add(term!(sym!("org")), org_declarations);
-        let rewritten_role_role = rewrite_implication(
-            (term!("reader"), term!("member"), Some(term!("parent"))),
-            &term!(sym!("repo")),
-            &namespaces,
-        )
-        .unwrap();
+        let implication = Implication {
+            head: term!("reader"),
+            body: (term!("member"), Some(term!("parent"))),
+        };
+        let rewritten_role_role = implication
+            .into_rule(&term!(sym!("repo")), &namespaces)
+            .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
             r#"role(actor, "reader", repo_instance: repo{}) if relation(org_instance, "parent", repo_instance) and role(actor, "member", org_instance);"#
@@ -527,34 +514,37 @@ mod tests {
         let declarations = index_declarations(Some(roles), Some(permissions), None);
         let mut namespaces = Namespaces::new();
         namespaces.add(term!(sym!("Org")), declarations);
-        let rewritten_role_role = rewrite_implication(
-            (term!("member"), term!("owner"), None),
-            &term!(sym!("Org")),
-            &namespaces,
-        )
-        .unwrap();
+        let implication = Implication {
+            head: term!("member"),
+            body: (term!("owner"), None),
+        };
+        let rewritten_role_role = implication
+            .into_rule(&term!(sym!("Org")), &namespaces)
+            .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
             r#"role(actor, "member", org: Org{}) if role(actor, "owner", org);"#
         );
 
-        let rewritten_permission_role = rewrite_implication(
-            (term!("invite"), term!("owner"), None),
-            &term!(sym!("Org")),
-            &namespaces,
-        )
-        .unwrap();
+        let implication = Implication {
+            head: term!("invite"),
+            body: (term!("owner"), None),
+        };
+        let rewritten_permission_role = implication
+            .into_rule(&term!(sym!("Org")), &namespaces)
+            .unwrap();
         assert_eq!(
             rewritten_permission_role.to_polar(),
             r#"permission(actor, "invite", org: Org{}) if role(actor, "owner", org);"#
         );
 
-        let rewritten_permission_permission = rewrite_implication(
-            (term!("create_repo"), term!("invite"), None),
-            &term!(sym!("Org")),
-            &namespaces,
-        )
-        .unwrap();
+        let implication = Implication {
+            head: term!("create_repo"),
+            body: (term!("invite"), None),
+        };
+        let rewritten_permission_permission = implication
+            .into_rule(&term!(sym!("Org")), &namespaces)
+            .unwrap();
         assert_eq!(
             rewritten_permission_permission.to_polar(),
             r#"permission(actor, "create_repo", org: Org{}) if permission(actor, "invite", org);"#
@@ -571,12 +561,13 @@ mod tests {
         let mut namespaces = Namespaces::new();
         namespaces.add(term!(sym!("Repo")), repo_declarations);
         namespaces.add(term!(sym!("Org")), org_declarations);
-        let rewritten_role_role = rewrite_implication(
-            (term!("reader"), term!("member"), Some(term!("parent"))),
-            &term!(sym!("Repo")),
-            &namespaces,
-        )
-        .unwrap();
+        let implication = Implication {
+            head: term!("reader"),
+            body: (term!("member"), Some(term!("parent"))),
+        };
+        let rewritten_role_role = implication
+            .into_rule(&term!(sym!("Repo")), &namespaces)
+            .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
             r#"role(actor, "reader", repo: Repo{}) if relation(org, "parent", repo) and role(actor, "member", org);"#
@@ -586,7 +577,7 @@ mod tests {
     #[test]
     fn test_namespace_must_be_registered() {
         let p = Polar::new();
-        let valid_policy = r#"Org{roles=["owner"];}"#;
+        let valid_policy = "Org{}";
         expect_error(
             &p,
             valid_policy,
@@ -599,10 +590,7 @@ mod tests {
     #[test]
     fn test_namespace_duplicate_namespaces() {
         let p = Polar::new();
-        let invalid_policy = r#"
-            Org { roles=["owner"]; }
-            Org { roles=["member"]; }
-        "#;
+        let invalid_policy = "Org{}Org{}";
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(&p, invalid_policy, "duplicate declaration of Org namespace");
     }
@@ -633,7 +621,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_with_only_implications() {
+    fn test_namespace_with_implication_head_not_declared_locally() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
@@ -644,7 +632,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_with_implier_term_not_declared_locally() {
+    fn test_namespace_with_relationless_implier_term_not_declared_locally() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
@@ -659,6 +647,8 @@ mod tests {
 
     #[test]
     fn test_namespace_parsing_permutations() {
+        use std::iter::FromIterator;
+
         // Policy pieces
         let roles = r#"roles = ["writer", "reader"];"#;
         let permissions = r#"permissions = ["push", "pull"];"#;
@@ -679,25 +669,49 @@ mod tests {
                 sym!("creator") => term!(sym!("User")),
                 sym!("parent") => term!(sym!("Org")),
             })),
-            implications: hashset! {
-                (term!("pull"), term!("reader"), None),
-                (term!("push"), term!("writer"), None),
-                (term!("writer"), term!("creator"), None),
-                (term!("reader"), term!("member"), Some(term!("parent"))),
-            },
+            implications: vec![
+                // TODO(gj): implication! macro
+                Implication {
+                    head: term!("pull"),
+                    body: (term!("reader"), None),
+                },
+                Implication {
+                    head: term!("push"),
+                    body: (term!("writer"), None),
+                },
+                Implication {
+                    head: term!("writer"),
+                    body: (term!("creator"), None),
+                },
+                Implication {
+                    head: term!("reader"),
+                    body: (term!("member"), Some(term!("parent"))),
+                },
+            ],
         };
 
         // Helpers
+
+        let equal = |line: &Line, expected: &Namespace| match line {
+            Line::Namespace(parsed) => {
+                let parsed_implications: HashSet<&Implication> =
+                    HashSet::from_iter(&parsed.implications);
+                let expected_implications = HashSet::from_iter(&expected.implications);
+                parsed.resource == expected.resource
+                    && parsed.roles == expected.roles
+                    && parsed.permissions == expected.permissions
+                    && parsed.relations == expected.relations
+                    && parsed_implications == expected_implications
+            }
+            _ => false,
+        };
 
         let test_case = |parts: Vec<&str>, expected: &Namespace| {
             for permutation in permute(parts).into_iter() {
                 let mut policy = "Repo {\n".to_owned();
                 policy += &permutation.join("\n");
                 policy += "}";
-                assert_eq!(
-                    parse_lines(0, &policy).unwrap()[0],
-                    Line::Namespace(expected.clone())
-                );
+                assert!(equal(&parse_lines(0, &policy).unwrap()[0], expected));
             }
         };
 
@@ -708,7 +722,7 @@ mod tests {
             test_case(parts_with_implications, expected);
 
             let expected_without_implications = Namespace {
-                implications: hashset! {},
+                implications: vec![],
                 ..expected.clone()
             };
             test_case(parts, &expected_without_implications);
