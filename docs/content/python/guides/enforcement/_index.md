@@ -14,6 +14,8 @@ any: true
   here to help.
 {{% /callout %}}
 
+<div class="pb-10"></div>
+
 # Use Oso Policies in an App
 
 To use an Oso policy in your app, you'll need to "enforce" it. A policy is
