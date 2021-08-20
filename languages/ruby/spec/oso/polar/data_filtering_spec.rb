@@ -340,5 +340,26 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         end
       end
     end
+
+    context '#get_allowed_resources' do
+      it 'handles classes with explicit names' do
+        Widget = Struct.new(:id) do
+          include DataFilteringHelpers::Fetcher
+        end
+        0.upto(9).each { |id| Widget.new id }
+
+        subject.register_class(
+          Widget,
+          name: 'Doohickey',
+          fetcher: Widget.fetcher,
+          fields: {
+            'id' => Integer
+          }
+        )
+
+        subject.load_str 'allow("gwen", "eat", it: Doohickey) if it.id = 8;'
+        check_authz 'gwen', 'eat', Widget, [Widget.all[8]]
+      end
+    end
   end
 end
