@@ -65,11 +65,7 @@ extern {
         "not" => lexer::Token::Not,         // not
         "matches" => lexer::Token::Matches, // matches
         "type" => lexer::Token::Type,       // type
-
-        "permissions" => lexer::Token::Permissions, // permissions
-        "roles" => lexer::Token::Roles,             // roles
-        "relations" => lexer::Token::Relations,     // relations
-        "on" => lexer::Token::On,                   // on
+        "on" => lexer::Token::On,           // on
     }
 }
 
@@ -667,24 +663,18 @@ StringList: Value = {
     "[" "]" => Value::List(vec![]),
     "[" <StringListTerms> "]" => Value::List(<>),
 }
-
-RolesValue: Value = "roles" "=" <StringList> ";" => <>;
-Roles: sugar::Expr = <Spanned<RolesValue>> => sugar::Expr::Roles(<>);
-
-PermissionsValue: Value = "permissions" "=" <StringList> ";" => <>;
-Permissions: sugar::Expr = <Spanned<PermissionsValue>> => sugar::Expr::Permissions(<>);
-
-RelationsValue: Value = "relations" "=" <Object<Spanned<Variable>>> ";" => Value::Dictionary(<>);
-Relations: sugar::Expr = <Spanned<RelationsValue>> => sugar::Expr::Relations(<>);
+RelationsDict: Value = <Object<Spanned<Variable>>> => Value::Dictionary(<>);
+Declaration: sugar::Expr = {
+    <Name> "=" <Spanned<StringList>> ";" =>? sugar::declaration_to_expr((<>)),
+    <Name> "=" <Spanned<RelationsDict>> ";" =>? sugar::declaration_to_expr((<>)),
+}
 
 OnRelation: Term = "on" <relation:Spanned<PolarString>> => relation;
 ImplicationBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
 Implication: sugar::Expr = <head:Spanned<PolarString>> Define <body:ImplicationBody> => sugar::Expr::Implication(<>);
 
 NamespaceExpr: sugar::Expr = {
-    <Roles> => <>,
-    <Permissions> => <>,
-    <Relations> => <>,
+    <Declaration> => <>,
     <Implication> => <>,
 };
 

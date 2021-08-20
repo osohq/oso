@@ -26,6 +26,56 @@ pub enum Expr {
     Implication(Term, (Term, Option<Term>)), // (String, (String, Option<String>))
 }
 
+pub fn declaration_to_expr(
+    (name, term): (Symbol, Term),
+) -> Result<Expr, LalrpopError<usize, Token, error::ParseError>> {
+    match (name.0.as_ref(), term.value()) {
+        ("roles", Value::List(_)) => Ok(Expr::Roles(term)),
+        ("permissions", Value::List(_)) => Ok(Expr::Permissions(term)),
+        ("relations", Value::Dictionary(_)) => Ok(Expr::Relations(term)),
+
+        ("roles", Value::Dictionary(_)) | ("permissions", Value::Dictionary(_)) => {
+            Err(LalrpopError::User {
+                error: ParseError::ParseSugar {
+                    loc: term.offset(),
+                    msg: format!(
+                        "Expected '{}' declaration to be a list of strings; found a dictionary:",
+                        name
+                    ),
+                    ranges: vec![term.span().unwrap()],
+                },
+            })
+        }
+        ("relations", Value::List(_)) => Err(LalrpopError::User {
+            error: ParseError::ParseSugar {
+                loc: term.offset(),
+                msg: "Expected 'relations' declaration to be a dictionary; found a list:".to_owned(),
+                ranges: vec![term.span().unwrap()],
+            },
+        }),
+
+        (_, Value::List(_)) => Err(LalrpopError::User {
+            error: ParseError::ParseSugar {
+                loc: term.offset(),
+                msg: format!(
+                    "Encountered unexpected declaration '{}'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?", name
+                ),
+                ranges: vec![term.span().unwrap()],
+            },
+        }),
+        (_, Value::Dictionary(_)) => Err(LalrpopError::User {
+            error: ParseError::ParseSugar {
+                loc: term.offset(),
+                msg: format!(
+                    "Encountered unexpected declaration '{}'. Did you mean for this to be 'relations = {{ ... }};'?", name
+                ),
+                ranges: vec![term.span().unwrap()],
+            },
+        }),
+        _ => unreachable!(),
+    }
+}
+
 // Turn a set of parsed expressions into a `Namespace` (or die validating).
 pub fn exprs_to_namespace(
     resource: Term,
@@ -576,7 +626,7 @@ mod tests {
                     ..
                 }),
                 ..
-            } if msg == expected
+            } if msg.contains(expected)
         ));
     }
 
@@ -874,5 +924,37 @@ mod tests {
             ..namespace
         };
         test_cases(vec![], &expected);
+    }
+
+    #[test]
+    fn test_namespace_declaration_keywords() {
+        let p = Polar::new();
+        expect_error(
+            &p,
+            r#"Org{roles={};}"#,
+            r#"Expected 'roles' declaration to be a list of strings; found a dictionary:"#,
+        );
+        expect_error(
+            &p,
+            r#"Org{relations=[];}"#,
+            r#"Expected 'relations' declaration to be a dictionary; found a list:"#,
+        );
+        expect_error(
+            &p,
+            r#"Org{foo=[];}"#,
+            r#"Encountered unexpected declaration 'foo'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?"#,
+        );
+        expect_error(
+            &p,
+            r#"Org{foo={};}"#,
+            r#"Encountered unexpected declaration 'foo'. Did you mean for this to be 'relations = { ... };'?"#,
+        );
+    }
+
+    #[test]
+    fn test_namespace_declaration_keywords_are_not_reserved_words() {
+        let p = Polar::new();
+        p.load_str("roles(permissions) if permissions.relations;")
+            .unwrap();
     }
 }

@@ -90,11 +90,7 @@ pub enum Token {
     Not,       // not
     Matches,   // matches
     Type,      // type
-
-    Permissions, // permissions
-    Roles,       // roles
-    Relations,   // relations
-    On,          // on
+    On,        // on
 }
 
 impl ToString for Token {
@@ -145,11 +141,7 @@ impl ToString for Token {
             Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
             Token::Type => "type".to_owned(),       // type
-
-            Token::Permissions => "permissions".to_owned(), // permissions
-            Token::Roles => "roles".to_owned(),             // roles
-            Token::Relations => "relations".to_owned(),     // relations
-            Token::On => "on".to_owned(),                   // on
+            Token::On => "on".to_owned(),           // on
         }
     }
 }
@@ -245,9 +237,6 @@ impl<'input> Lexer<'input> {
             "type" => Token::Type,
             "mod" => Token::Mod,
             "rem" => Token::Rem,
-            "permissions" => Token::Permissions,
-            "roles" => Token::Roles,
-            "relations" => Token::Relations,
             "on" => Token::On,
             _ => Token::Symbol(Symbol::new(&self.buf)),
         };
