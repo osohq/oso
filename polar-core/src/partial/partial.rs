@@ -204,7 +204,7 @@ impl Operation {
     // Purposes?
     pub fn add_constraint(&mut self, o: Operation) {
         assert_eq!(self.operator, Operator::And);
-        self.constrain(o.into_term());
+        self.constrain(o.into());
     }
 
     /// Augment our constraints with those on `other`.
@@ -242,14 +242,10 @@ impl Operation {
             .collect()
     }
 
-    pub fn into_term(self) -> Term {
-        Term::new_temporary(Value::Expression(self))
-    }
-
     pub fn clone_with_constraints(&self, constraints: Vec<Operation>) -> Self {
         assert_eq!(self.operator, Operator::And);
         let mut new = self.clone();
-        new.args = constraints.into_iter().map(|c| c.into_term()).collect();
+        new.args = constraints.into_iter().map(|c| c.into()).collect();
         new
     }
 
@@ -1051,9 +1047,9 @@ mod test {
             sym!("x"),
             op!(
                 And,
-                op!(Isa, term!(sym!("x")), term!(pattern!(instance!("A")))).into_term()
+                op!(Isa, term!(sym!("x")), term!(pattern!(instance!("A")))).into()
             )
-            .into_term(),
+            .into(),
         );
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
@@ -1651,7 +1647,7 @@ mod test {
     fn test_that_cut_with_partial_errors() -> TestResult {
         let p = Polar::new();
         p.load_str("f(_) if cut;")?;
-        p.register_constant(sym!("x"), op!(And).into_term());
+        p.register_constant(sym!("x"), op!(And).into());
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(

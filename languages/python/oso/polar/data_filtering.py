@@ -16,12 +16,13 @@ class Relationship:
 # @NOTE(Steve): Some of this stuff is very inconsistent right now. Names for fields
 # and stuff need cleaning up. Sort of left a mess from when I was figuring this all
 # out.
-def serialize_types(types, class_names):
+def serialize_types(types, tmap):
     """
     Convert types stored in python to what the core expects.
     """
     polar_types = {}
-    for tag, fields in types.items():
+    for typ in types:
+        tag, fields = typ.name, typ.fields
         field_types = {}
         for k, v in fields.items():
             if isinstance(v, Relationship):
@@ -36,7 +37,7 @@ def serialize_types(types, class_names):
             else:
                 field_types[k] = {
                     "Base": {
-                        "class_tag": class_names[v],
+                        "class_tag": tmap[v].name,
                     }
                 }
         polar_types[tag] = field_types
@@ -51,7 +52,7 @@ class Field:
 @dataclass
 class Ref:
     field: Optional[str]
-    result_id: str
+    result_id: int
 
 
 @dataclass
@@ -60,21 +61,23 @@ class Constraint:
     field: str
     value: Any
 
-    def to_predicate(self):
-        def known_value(x):
-            return self.value
+    def __post_init__(self):
+        if isinstance(self.value, Field):
+            self.getter = lambda x: getattr(x, self.value.field)
+        else:
+            self.getter = lambda x: self.value
 
-        def field_value(x):
-            return getattr(x, self.value.field)
-
-        get_value = field_value if isinstance(self.value, Field) else known_value
         if self.kind == "Eq":
-            return lambda x: getattr(x, self.field) == get_value(x)
-        if self.kind == "In":
-            return lambda x: getattr(x, self.field) in get_value(x)
-        if self.kind == "Contains":
-            return lambda x: get_value(x) in getattr(x, self.field)
-        assert False, "unknown constraint kind"
+            self.checker = lambda a, b: a == b
+        elif self.kind == "In":
+            self.checker = lambda a, b: a in b
+        elif self.kind == "Contains":
+            self.checker = lambda a, b: b in a
+        else:
+            assert False, "unknown constraint kind"
+
+    def check(self, item):
+        return self.checker(getattr(item, self.field), self.getter(item))
 
 
 def parse_constraint(polar, constraint):
@@ -124,7 +127,7 @@ def builtin_filter_plan_resolver(polar, filter_plan):
         result_id = rs["result_id"]
 
         for i in resolve_order:
-            req = requests[i]
+            req = requests[str(i)]  # thanks JSON
             class_name = req["class_tag"]
             constraints = req["constraints"]
 
@@ -132,7 +135,7 @@ def builtin_filter_plan_resolver(polar, filter_plan):
 
             # Substitute in results from previous requests.
             ground_constraints(polar, set_results, filter_plan, constraints)
-            fetcher = polar.host.fetchers[class_name]
+            fetcher = polar.host.types[class_name].fetcher
             set_results[i] = fetcher(constraints)
 
         results.extend(set_results[result_id])
@@ -141,8 +144,5 @@ def builtin_filter_plan_resolver(polar, filter_plan):
     return [i for n, i in enumerate(results) if i not in results[:n]]
 
 
-def filter_data(polar, filter_plan, filter_plan_resolver=None):
-    if filter_plan_resolver is None:
-        return builtin_filter_plan_resolver(polar, filter_plan)
-    else:
-        return filter_plan_resolver(polar, filter_plan)
+def filter_data(polar, filter_plan, filter_plan_resolver=builtin_filter_plan_resolver):
+    return filter_plan_resolver(polar, filter_plan)
