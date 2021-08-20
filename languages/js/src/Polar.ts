@@ -218,10 +218,18 @@ export class Polar {
   }
 
   /**
+   * Query for a Polar rule with bindings.
+   */
+  queryRuleWithBindings(name: string, bindings?: any, ...args: unknown[]): QueryResult {
+    console.log(bindings);
+    return this.query(new Predicate(name, args), bindings);
+  }
+
+  /**
    * Query for a Polar rule.
    */
-  queryRule(name: string, bindings?: any, ...args: unknown[]): QueryResult {
-    return this.query(new Predicate(name, args), bindings);
+  queryRule(name: string, ...args: unknown[]): QueryResult {
+    return this.query(new Predicate(name, args));
   }
 
   /**
@@ -265,7 +273,7 @@ export class Polar {
         new Pattern({ tag: clsName, fields: {} }),
       ]),
     ]);
-    let results = this.queryRule(
+    let results = this.queryRuleWithBindings(
       'allow',
       { resource: constraint },
       actor,
