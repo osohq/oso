@@ -116,4 +116,37 @@ test('data filtering', async () => {
   expect(await oso.getAllowedResources('steve', 'get', Foo)).toEqual([
     anotherFoo,
   ]);
+
+  oso.clearRules()
+  oso.loadStr(`
+        resource(_type: Bar, "bar", actions, roles) if
+            actions = ["get"] and
+            roles = {
+                owner: {
+                    permissions: ["get"],
+                    implies: ["foo:reader"]
+                }
+            };
+
+        resource(_type: Foo, "foo", actions, roles) if
+            actions = ["read"] and
+            roles = {
+                reader: {
+                    permissions: ["read"]
+                }
+            };
+
+        parent_child(parent_bar: Bar, foo: Foo) if
+            foo.bar = parent_bar and print(parent_bar);
+
+        actor_has_role_for_resource(a, b, c) if print(a,b,c) and false;
+        actor_has_role_for_resource("steve", "owner", bar: Bar) if bar.id = "hello";
+
+        allow(actor, action, resource) if role_allows(actor, action, resource);
+    `);
+  oso.enableRoles();
+  expect(await oso.isAllowed('steve', 'read', anotherFoo)).toBe(true);
+  /* expect(await oso.getAllowedResources('steve', 'get', Foo)).toEqual([
+    anotherFoo,
+  ]); */
 });
