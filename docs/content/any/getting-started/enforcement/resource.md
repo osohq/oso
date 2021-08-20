@@ -79,9 +79,11 @@ depending on the situation.
   allowed to perform the given action. **You should handle these errors by
   showing the user a 403 "Forbidden" error.**
 
-Note: a call to `authorize` with a `"read"` action will never raise a
+{{% minicallout %}}
+**Note**: a call to `authorize` with a `"read"` action will never raise a
 `Forbidden` error, only `NotFound` errors—if the user is not allowed to read
 the resource, the server should act as though it doesn't exist.
+{{% /minicallout %}}
 
 You could handle these errors at each place you call `authorize`, but that would
 mean a lot of error handling. We recommend handling `NotFound` and `Forbidden`
