@@ -114,11 +114,6 @@ Boolean: Value = <b:"Boolean"> => {
 
 Name: Symbol = <s:"Symbol"> => s;
 
-ResName: Symbol = {
-  <Name>,
-  <w:ResWord> => Symbol(w),
-}
-
 Variable: Value  = <n:Name> => {
     Value::Variable(n)
 };
