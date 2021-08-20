@@ -42,7 +42,7 @@ def init_oso(app):
 An enforcer exposes a number of useful methods that your app can use. Each one
 queries your policy for `allow`, `allow_request`, or `allow_field` rules. To
 learn more about writing those rules, read about [writing a
-policy](../policies).
+policy](../../getting-started/policies).
 
 - `authorize(user, action, resource)`: Ensure that a user can perform an action
   on a certain resource. Read about [resource-level enforcement](resource.html).
