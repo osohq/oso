@@ -66,6 +66,22 @@ extern {
     }
 }
 
+ResWord: String = {
+  "type" => "type".to_owned(),
+  "cut" => "cut".to_owned(),
+  "debug" => "debug".to_owned(),
+  "print" => "print".to_owned(),
+  "in" => "in".to_owned(),
+  "forall" => "forall".to_owned(),
+  "if" => "if".to_owned(),
+  "and" => "and".to_owned(),
+  "or" => "or".to_owned(),
+  "not" => "not".to_owned(),
+  "new" => "new".to_owned(),
+  "matches" => "matches".to_owned(),
+}
+
+
 
 // ****** Values ******* //
 
@@ -98,6 +114,11 @@ Boolean: Value = <b:"Boolean"> => {
 
 Name: Symbol = <s:"Symbol"> => s;
 
+ResName: Symbol = {
+  <Name>,
+  <w:ResWord> => Symbol(w),
+}
+
 Variable: Value  = <n:Name> => {
     Value::Variable(n)
 };
@@ -126,6 +147,30 @@ Call: Value = {
     }
 };
 
+DotCall: Value = {
+  <Call>,
+  // No args.
+  <w:ResWord> "("  ")" => {
+      let args = vec![];
+      let kwargs = None;
+      let name = Symbol(w);
+      Value::Call(Call{name, args, kwargs})
+  },
+  // Positional args only.
+  <w:ResWord> "(" <mut args:(<ValExp> ",")*> <arg:ValExp> ")" => {
+      args.push(arg);
+      let kwargs = None;
+      let name = Symbol(w);
+      Value::Call(Call{name, args, kwargs})
+  },
+  // Positional args + kwargs.
+  <w:ResWord> "(" <mut args:(<ValExp> ",")*> <fields:(<Fields<ValExp>>)>")" => {
+      let kwargs = Some(fields);
+      let name = Symbol(w);
+      Value::Call(Call{name, args, kwargs})
+  },
+}
+
 New: Value = {
     "new" <call:Spanned<Call>> => {
         let args = vec![call];
@@ -135,7 +180,8 @@ New: Value = {
 };
 
 Field<T>: (Symbol, Term) = {
-    <name:Name> ":" <value:T> => (name, value)
+    <name:Name> ":" <value:T> => (name, value),
+    <w:ResWord> ":" <value:T> => (Symbol(w), value),
 }
 
 Fields<T>: BTreeMap<Symbol, Term> = {
@@ -308,7 +354,8 @@ Exp10<T>: ValueOrLogical = {
 }
 
 CallTerm: Value = {
-    <Call>,
+    <DotCall>,
+    <w:ResWord> => Value::String(w),
     <s:"Symbol"> => Value::String(s.0),
     // These provide ways to get keys that aren't
     // expressable as `foo.bar`
@@ -371,6 +418,7 @@ Op7: Operator = {
     "mod" => Operator::Mod,
     "rem" => Operator::Rem,
 }
+
 MulExp<T>: Value = {
     <exp7:ExpectValue<Exp7<T>>> <operator:Op7> <exp8:ExpectValue<Exp8<T>>> => {
         let args = vec![exp7, exp8];
