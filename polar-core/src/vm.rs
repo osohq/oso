@@ -1154,7 +1154,6 @@ impl PolarVirtualMachine {
                 let partial = partial.into();
                 let (simplified, _) = simplify_partial(var, partial, output, false);
 
-                //                println!("isa/cc for {} matches {}, existing : {}", var, tag, simplified.to_polar());
                 let simplified = simplified.value().as_expression()?;
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
@@ -1393,6 +1392,13 @@ impl PolarVirtualMachine {
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
     fn query(&mut self, term: &Term) -> PolarResult<QueryEvent> {
+        /*
+        if self.queries.iter().find(|q| *q == term).is_some() {
+            self.push_goal(Goal::Backtrack)?;
+            return Ok(QueryEvent::None);
+        }
+        */
+
         // Don't log if it's just a single element AND like lots of rule bodies tend to be.
         match &term.value() {
             Value::Expression(Operation {
@@ -1888,16 +1894,16 @@ impl PolarVirtualMachine {
                 let answer = self.kb.read().unwrap().gensym("lookup_value");
                 let call_id = self.new_call_id(&answer);
                 self.append_goals(vec![
-                    Goal::Unify {
-                        left: Term::from(answer),
-                        right: value.clone(),
-                    },
                     Goal::LookupExternal {
                         call_id,
                         field: field.clone(),
                         instance: object.clone(),
                     },
                     Goal::CheckError,
+                    Goal::Unify {
+                        left: value.clone(),
+                        right: Term::from(answer),
+                    },
                 ])?;
             }
             Value::Variable(v) => {
@@ -1913,7 +1919,8 @@ impl PolarVirtualMachine {
                 // Translate `.(object, field, value)` → `value = .(object, field)`.
                 let dot2 = op!(Dot, object.clone(), field.clone());
                 let value = self.deep_deref(value);
-                self.add_constraint(&op!(Unify, value, dot2.into()).into())?;
+                let term = Term::from(op!(Unify, value, dot2.into()));
+                self.add_constraint(&term)?;
             }
             _ => {
                 return Err(self.type_error(
@@ -2188,13 +2195,12 @@ impl PolarVirtualMachine {
                         operator: Operator::Dot,
                         args,
                     } if args.len() == 2 => {
-                        let term = op!(
+                        let term = Term::from(op!(
                             Dot,
                             args[0].clone(),
                             args[1].clone(),
                             Term::from(other.clone())
-                        )
-                        .into();
+                        ));
                         self.push_goal(Goal::Query { term })?
                     }
                     // otherwise this should never happen.
@@ -2227,15 +2233,17 @@ impl PolarVirtualMachine {
             | (Value::Variable(l), Value::RestVariable(r))
             | (Value::RestVariable(l), Value::Variable(r))
             | (Value::RestVariable(l), Value::RestVariable(r)) => {
-                match (self.variable_state(l), self.variable_state(r)) {
-                    (VariableState::Bound(x), VariableState::Bound(y)) => {
-                        // Both variables are bound. Unify their values.
-                        self.push_goal(Goal::Unify { left: x, right: y })?;
-                    }
-                    (_, _) => {
-                        // At least one variable is unbound. Bind it.
-                        if self.bind(l, right.clone()).is_err() {
-                            self.push_goal(Goal::Backtrack)?;
+                if l != r {
+                    match (self.variable_state(l), self.variable_state(r)) {
+                        (VariableState::Bound(x), VariableState::Bound(y)) => {
+                            // Both variables are bound. Unify their values.
+                            self.push_goal(Goal::Unify { left: x, right: y })?;
+                        }
+                        _ => {
+                            // At least one variable is unbound. Bind it.
+                            if self.bind(l, right.clone()).is_err() {
+                                self.push_goal(Goal::Backtrack)?;
+                            }
                         }
                     }
                 }
@@ -2313,6 +2321,11 @@ impl PolarVirtualMachine {
                 }
             }
 
+            /* XXX(gw): i think we might actually want this.
+            (Value::Number(Numeric::Float(a)),
+             Value::Number(Numeric::Float(b)))
+                if a.is_nan() && b.is_nan() => (),
+            */
             // Unify integers by value.
             (Value::Number(left), Value::Number(right)) => {
                 if left != right {

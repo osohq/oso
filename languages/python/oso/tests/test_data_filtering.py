@@ -313,7 +313,7 @@ def test_var_in_var(oso, t):
     assert len(results) == 1
 
 
-def test_parent_child(oso, t):
+def test_parent_child_cases(oso, t):
     policy = """
     allow(log: FooLogRecord, "thence", foo: Foo) if
       log.foo = foo;
@@ -330,7 +330,7 @@ def test_parent_child(oso, t):
     check_authz(oso, log, "thence", t["Foo"], [foo])
     check_authz(oso, log, "thither", t["Foo"], [foo])
     check_authz(oso, log, "glub", t["Foo"], [foo])
-    # check_authz(oso, log, "bluh", t["Foo"], [foo]) # FIXME stack overflow :(
+    check_authz(oso, log, "bluh", t["Foo"], [foo])
 
 
 def test_val_in_var(oso, t):

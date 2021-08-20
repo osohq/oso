@@ -242,7 +242,7 @@ module Oso
         res = fetcher[[constraint]].uniq
 
         if rel.kind == 'parent'
-          raise unless res.length == 1
+          raise "multiple parents: #{res}" unless res.length == 1
 
           res = res[0]
         end

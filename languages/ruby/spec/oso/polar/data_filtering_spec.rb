@@ -71,22 +71,6 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         )
       end
 
-      it 'handles all the relationships' do
-        policy = <<~POL
-          allow(log: FooLog, "a", foo: Foo) if log in foo.logs;
-          allow(log: FooLog, "b", foo: Foo) if foo = log.foo;
-          allow(log: FooLog, "c", foo: Foo) if log.foo = foo and log in foo.logs;
-          allow(log: FooLog, "d", foo: Foo) if log in foo.logs and log.foo = foo;
-        POL
-        subject.load_str policy
-        log = FooLog.all.find { |l| l.foo_id == 'fourth' }
-        foos = Foo.all.select { |foo| foo.id == 'fourth' }
-        # d causes a polar stack overflow!! :O
-        %w[a b c].each do |x|
-          check_authz log, x, Foo, foos
-        end
-      end
-
       it 'can compare a field with a known value' do
         policy = 'allow("gwen", "get", foo: Foo) if foo.is_fooey = true;'
         subject.load_str(policy)
@@ -135,8 +119,23 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       it 'handles child relationships' do
         policy = 'allow("gwen", "get", foo: Foo) if log in foo.logs and log.data = "hello";'
         subject.load_str policy
-        expected = Foo.all.select { |foo| foo.id = 'fourth' }
+        expected = Foo.all.select { |foo| foo.id == 'fourth' }
         check_authz 'gwen', 'get', Foo, expected
+      end
+
+      it 'handles all the relationships at once' do
+        policy = <<~POL
+          allow(log: FooLog, "a", foo: Foo) if log in foo.logs;
+          allow(log: FooLog, "b", foo: Foo) if foo = log.foo;
+          allow(log: FooLog, "c", foo: Foo) if log.foo = foo and log in foo.logs;
+          allow(log: FooLog, "d", foo: Foo) if log in foo.logs and log.foo = foo;
+        POL
+        subject.load_str policy
+        log = FooLog.all.find { |l| l.foo_id == 'fourth' }
+        foos = Foo.all.select { |foo| foo.id == 'fourth' }
+        %w[a b c d].each do |x|
+          check_authz log, x, Foo, foos
+        end
       end
     end
 
