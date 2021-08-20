@@ -204,7 +204,7 @@ export class Polar {
   /**
    * Query for a Polar predicate or string.
    */
-  query(q: Predicate | string, bindings?: any): QueryResult {
+  query(q: Predicate | string, bindings?: Map<string, any>): QueryResult {
     const host = Host.clone(this.#host);
     let ffiQuery;
     if (typeof q === 'string') {
@@ -220,8 +220,7 @@ export class Polar {
   /**
    * Query for a Polar rule with bindings.
    */
-  queryRuleWithBindings(name: string, bindings?: any, ...args: unknown[]): QueryResult {
-    console.log(bindings);
+  queryRuleWithBindings(name: string, bindings: Map<string, any>, ...args: unknown[]): QueryResult {
     return this.query(new Predicate(name, args), bindings);
   }
 
@@ -273,9 +272,11 @@ export class Polar {
         new Pattern({ tag: clsName, fields: {} }),
       ]),
     ]);
+    let bindings = new Map();
+    bindings.set("resource", constraint);
     let results = this.queryRuleWithBindings(
       'allow',
-      { resource: constraint },
+      bindings,
       actor,
       action,
       resource

@@ -43,14 +43,14 @@ export class Query {
   #host: Host;
   results: QueryResult;
 
-  constructor(ffiQuery: FfiQuery, host: Host, bindings?: any) {
+  constructor(ffiQuery: FfiQuery, host: Host, bindings?: Map<string, any>) {
     ffiQuery.setLoggingOptions(...getLogLevelsFromEnv());
     this.#ffiQuery = ffiQuery;
     this.#calls = new Map();
     this.#host = host;
 
     for (const k in bindings) {
-      this.bind(k, bindings[k]);
+      this.bind(k, bindings.get(k));
     }
 
     this.results = this.start();
@@ -61,7 +61,7 @@ export class Query {
    *
    * @internal
    */
-  private bind(name: any, value: any) {
+  private bind(name: string, value: any) {
     this.#ffiQuery.bind(name, JSON.stringify(this.#host.toPolar(value)));
   }
 
