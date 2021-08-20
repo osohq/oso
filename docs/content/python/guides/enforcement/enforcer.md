@@ -9,11 +9,12 @@ description: >
 # draft: True
 ---
 
-{{% callout "Note: Preview API" %}}
-  This is a preview API, meaning that it is not yet officially released. You may
-  find other docs that conflict with the guidance here, so proceed at your own
-  risk! If you have any questions, don't hesitate to [reach out to us on
-  Slack](https://join-slack.osohq.com). We're here to help.
+{{% callout "Note: 0.20.0 Alpha Feature" %}}
+  This is an API provided by the alpha release of Oso 0.20.0, meaning that it is
+  not yet officially released. You may find other docs that conflict with the
+  guidance here, so proceed at your own risk! If you have any questions, don't
+  hesitate to [reach out to us on Slack](https://join-slack.osohq.com). We're
+  here to help.
 {{% /callout %}}
 
 <div class="pb-10"></div>
