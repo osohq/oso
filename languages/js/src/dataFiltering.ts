@@ -51,7 +51,7 @@ export class Constraint {
   }
 }
 
-export function serializeTypes(types: any, clsNames: any): any {
+export function serializeTypes(types: Map<string, any>, clsNames: Map<any, string>): string {
   let polarTypes: any = {};
   for (let [tag, fields] of types.entries()) {
     let fieldTypes: any = {};
@@ -120,6 +120,8 @@ function groundConstraints(
   }
   return constraints;
 }
+
+// @TODO: type for filter plan
 
 export async function filterData(host: Host, plan: any): Promise<any> {
   let resultSets = plan['result_sets'];

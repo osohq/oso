@@ -296,7 +296,6 @@ export class Polar {
       }, {}),
     }));
     let resultsStr = JSON.stringify(jsonResults);
-    console.log(this.#host.clsNames);
     let typesStr = serializeTypes(this.#host.types, this.#host.clsNames);
     let plan = this.#ffiPolar.buildFilterPlan(
       typesStr,
