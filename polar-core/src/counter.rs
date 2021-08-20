@@ -5,7 +5,7 @@ use crate::numerics::MOST_POSITIVE_EXACT_FLOAT;
 
 const MAX_ID: u64 = (MOST_POSITIVE_EXACT_FLOAT - 1) as u64;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Counter {
     next: Arc<AtomicU64>,
 }

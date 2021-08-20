@@ -158,10 +158,10 @@ macro_rules! op {
 #[macro_export]
 macro_rules! opn {
     ($op_type:ident, $($args:expr),+) => {
-        op!($op_type, $($args),+).into_term()
+        op!($op_type, $($args),+).into()
     };
     ($op_type:ident) => {
-        op!($op_type).into_term()
+        op!($op_type).into()
     };
 }
 
@@ -231,7 +231,7 @@ impl<T> From<T> for TestHelper<T> {
 
 impl From<Value> for TestHelper<Term> {
     fn from(other: Value) -> Self {
-        Self(Term::new_temporary(other))
+        Self(Term::from(other))
     }
 }
 
@@ -256,7 +256,7 @@ impl From<Value> for TestHelper<Parameter> {
     /// a specializer.
     fn from(name: Value) -> Self {
         Self(Parameter {
-            parameter: Term::new_temporary(name),
+            parameter: Term::from(name),
             specializer: None,
         })
     }
@@ -351,6 +351,6 @@ impl From<InstanceLiteral> for TestHelper<Pattern> {
 }
 impl From<Pattern> for TestHelper<Term> {
     fn from(other: Pattern) -> Self {
-        Self(Term::new_temporary(value!(other)))
+        Self(Term::from(value!(other)))
     }
 }
