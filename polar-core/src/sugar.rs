@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use lalrpop_util::ParseError as LalrpopError;
 
@@ -238,6 +238,8 @@ impl KnowledgeBase {
             self.add_rule(rule);
         }
 
+        errors.append(&mut check_exhaustiveness_for_declarations(self));
+
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {
             self.set_rules(existing);
@@ -246,6 +248,104 @@ impl KnowledgeBase {
 
         Ok(())
     }
+}
+
+fn rule_name_is_cool(n: &Symbol) -> bool {
+    n == &sym!("role") || n == &sym!("permission") || n == &sym!("relation")
+}
+
+// TODO(gj): how do bodiless rules factor into exhaustiveness? E.g., the only reference to the
+// "foo" role is in `has_role(_: Actor, "foo", _: Org);`. I guess that's fine; it's a bit funky,
+// but it's saying that all Actors have the "foo" role on all Orgs.
+fn check_exhaustiveness_for_declarations(kb: &KnowledgeBase) -> Vec<PolarError> {
+    let mut errors = vec![];
+
+    let mut x = HashSet::new();
+    for (resource, declarations) in &kb.namespaces.declarations {
+        for (declaration, kind) in declarations {
+            x.insert((
+                kind.as_predicate(),
+                declaration.clone(),
+                Some(resource.clone_with_value(value!(pattern!(instance!(
+                    &resource.value().as_symbol().unwrap().0
+                ))))),
+            ));
+        }
+    }
+
+    for generic_rule in kb.get_rules().values() {
+        for rule in generic_rule.rules.values() {
+            eprintln!("Checking: {}", rule.to_polar());
+            let Rule {
+                name, params, body, ..
+            } = rule.as_ref();
+            eprintln!("  [HEAD] name = {}", name);
+            if rule_name_is_cool(name) {
+                // TODO(gj): Is this length check obviated by rule prototypes? Are 'built-in' rule
+                // prototypes extendable by users?
+                eprintln!("  [HEAD] params.len() = {}", params.len());
+                if params.len() == 3 {
+                    eprintln!(
+                        "  [HEAD] ({}, {}, {:?})",
+                        name,
+                        params[1].parameter,
+                        params[2].specializer.as_ref().map(|x| x.to_polar())
+                    );
+                    let removed = x.remove(&(
+                        name.clone(),
+                        params[1].parameter.clone(),
+                        params[2].specializer.clone(),
+                    ));
+                    if removed {
+                        eprintln!("\tREMOVED via HEAD check");
+                    }
+                }
+            }
+            for clause in &body.value().as_expression().unwrap().args {
+                // TODO(gj): Don't think I need to worry about kwargs being non-empty... right?
+                if let Ok(Call { name, args, .. }) = clause.value().as_call() {
+                    if rule_name_is_cool(name) {
+                        // TODO(gj): same question about checking length as above.
+                        if args.len() == 3 {
+                            let removed = x.remove(&(
+                                name.clone(),
+                                args[1].clone(),
+                                // TODO(gj): how to check the arg against the resource specializer?
+                                // Do I need to query this rule with unbounds and then check the
+                                // constraints for it?
+                                params[2].specializer.clone(),
+                            ));
+                            if removed {
+                                eprintln!("\tREMOVED via BODY check");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for (rule_name, declaration, resource) in x {
+        let resource = match resource.as_ref().unwrap().value().as_pattern().unwrap() {
+            Pattern::Instance(InstanceLiteral { tag, .. }) => tag,
+            _ => unreachable!(),
+        };
+        errors.push(
+            ParseError::ParseSugar {
+                loc: declaration.offset(),
+                msg: format!(
+                    "{}: {} {} declared but never referenced.",
+                    resource,
+                    rule_name,
+                    declaration.to_polar(),
+                ),
+                ranges: vec![],
+            }
+            .into(),
+        );
+    }
+
+    errors
 }
 
 fn index_declarations(
@@ -462,8 +562,6 @@ impl Namespace {
 mod tests {
     use permute::permute;
 
-    use std::collections::HashSet;
-
     use super::*;
     use crate::parser::{parse_lines, Line};
     use crate::polar::Polar;
@@ -596,28 +694,18 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_with_permissions_but_no_implications() {
+    fn test_namespace_permission_exhaustiveness_checks() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
-        expect_error(
-            &p,
-            r#"Org{permissions=["invite","create_repo"];}"#,
-            r#"Org: all permissions must be involved in at least one implication."#,
-        );
-    }
-
-    #[test]
-    fn test_namespace_with_permission_not_involved_in_implication() {
-        let p = Polar::new();
-        p.register_constant(sym!("Org"), term!("unimportant"));
-        expect_error(
-            &p,
-            r#"Org {
-                permissions=["invite","create_repo","ban"];
-                "invite" if "ban";
-            }"#,
-            r#"Org: permission "create_repo" must be involved in at least one implication."#,
-        );
+        let invalid_policy = r#"
+            Org { permissions=["invite","create_repo","ban"]; }
+            permission(actor, "invite", org: Org) if permission(actor, "ban", org);"#;
+        // TODO(gj): can we ever actually know this? What if someone wrote has_permission/3 with a
+        // variable for the second argument? Maybe this will be disallowed by rule prototypes if we
+        // specialize the second argument as a String (and as a `T::Permission where T: Resource`
+        // in the future)?
+        let expected = r#"Org: permission "create_repo" declared but never referenced."#;
+        expect_error(&p, invalid_policy, expected);
     }
 
     #[test]
