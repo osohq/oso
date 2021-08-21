@@ -344,30 +344,18 @@ fn check_exhaustiveness_for_declarations(kb: &KnowledgeBase) -> Vec<PolarError> 
 
     for generic_rule in kb.get_rules().values() {
         for rule in generic_rule.rules.values() {
-            eprintln!("Checking: {}", rule.to_polar());
             let Rule {
                 name, params, body, ..
             } = rule.as_ref();
-            eprintln!("  [HEAD] name = {}", name);
             if rule_name_is_cool(name) {
                 // TODO(gj): Is this length check obviated by rule prototypes? Are 'built-in' rule
                 // prototypes extendable by users?
-                eprintln!("  [HEAD] params.len() = {}", params.len());
                 if params.len() == 3 {
-                    eprintln!(
-                        "  [HEAD] ({}, {}, {:?})",
-                        name,
-                        params[1].parameter,
-                        params[2].specializer.as_ref().map(|x| x.to_polar())
-                    );
-                    let removed = x.remove(&(
+                    x.remove(&(
                         name.clone(),
                         params[1].parameter.clone(),
                         params[2].specializer.clone(),
                     ));
-                    if removed {
-                        eprintln!("\tREMOVED via HEAD check");
-                    }
                 }
             }
             for clause in &body.value().as_expression().unwrap().args {
@@ -376,7 +364,7 @@ fn check_exhaustiveness_for_declarations(kb: &KnowledgeBase) -> Vec<PolarError> 
                     if rule_name_is_cool(name) {
                         // TODO(gj): same question about checking length as above.
                         if args.len() == 3 {
-                            let removed = x.remove(&(
+                            x.remove(&(
                                 name.clone(),
                                 args[1].clone(),
                                 // TODO(gj): how to check the arg against the resource specializer?
@@ -384,9 +372,6 @@ fn check_exhaustiveness_for_declarations(kb: &KnowledgeBase) -> Vec<PolarError> 
                                 // constraints for it?
                                 params[2].specializer.clone(),
                             ));
-                            if removed {
-                                eprintln!("\tREMOVED via BODY check");
-                            }
                         }
                     }
                 }
