@@ -27,17 +27,26 @@ export class Foo {
   isFooey!: boolean;
 }
 
+@Entity()
+export class Num {
+  @PrimaryColumn()
+  fooId!: string;
+  @PrimaryColumn()
+  number!: number;
+}
+
 test('data filtering', async () => {
   const connection = await createConnection({
     type: 'sqlite',
     database: `:memory:`,
-    entities: [Foo, Bar],
+    entities: [Foo, Bar, Num],
     synchronize: true,
     logging: false,
   });
 
   let bars = connection.getRepository(Bar);
   let foos = connection.getRepository(Foo);
+  let nums = connection.getRepository(Num);
 
   async function mkBar(id: string, cool: boolean, stillCool: boolean) {
     let bar = new Bar();
@@ -57,12 +66,29 @@ test('data filtering', async () => {
     return foo;
   }
 
+  async function mkNum(number: number, fooId: string) {
+    let num = new Num();
+    num.fooId = fooId;
+    num.number = number;
+    await nums.save(num);
+    return num;
+  }
+
   let helloBar = await mkBar('hello', true, true);
   let byeBar = await mkBar('goodbye', true, false);
 
   let aFoo = await mkFoo('one', 'hello', false);
   let anotherFoo = await mkFoo('another', 'hello', true);
   let thirdFoo = await mkFoo('next', 'goodbye', true);
+
+  await mkNum(0, 'one');
+  await mkNum(1, 'one');
+  await mkNum(2, 'one');
+
+  await mkNum(0, 'another');
+  await mkNum(1, 'another');
+
+  await mkNum(0, 'next');
 
   const oso = new Oso();
 
@@ -81,6 +107,11 @@ test('data filtering', async () => {
         case 'In':
           {
             clause = `${name}.${c.field} IN (:...${c.field})`;
+          }
+          break;
+        case 'Contains':
+          {
+            clause = `(:...${c.field}) IN ${name}.${c.field} `;
           }
           break;
       }
@@ -104,10 +135,15 @@ test('data filtering', async () => {
     return fromRepo(foos, 'foo', constraints);
   }
 
+  function getNums(constraints: any) {
+    return fromRepo(nums, 'num', constraints);
+  }
+
   const barType = new Map();
   barType.set('id', String);
   barType.set('isCool', Boolean);
   barType.set('isStillCool', Boolean);
+  barType.set('foos', new Relationship('children', 'Foo', 'id', 'barId'));
   oso.registerClass(Bar, 'Bar', barType, getBars);
 
   const fooType = new Map();
@@ -115,7 +151,14 @@ test('data filtering', async () => {
   fooType.set('barId', String);
   fooType.set('isFooey', Boolean);
   fooType.set('bar', new Relationship('parent', 'Bar', 'barId', 'id'));
+  fooType.set('numbers', new Relationship('children', 'Num', 'id', 'fooId'));
   oso.registerClass(Foo, 'Foo', fooType, getFoos);
+
+  const numType = new Map();
+  numType.set('number', Number);
+  numType.set('fooId', String);
+  numType.set('foo', new Relationship('parent', 'Foo', 'fooId', 'id'));
+  oso.registerClass(Num, 'Num', numType, getNums);
 
   const expectSameResults = (a: any[], b: any[]) => {
     expect(a).toEqual(expect.arrayContaining(b));
@@ -123,7 +166,7 @@ test('data filtering', async () => {
   };
 
   const checkAuthz = async (
-    actor: string,
+    actor: any,
     action: string,
     resource: any,
     expected: any[]
@@ -143,6 +186,27 @@ test('data filtering', async () => {
             resource.isFooey = true;
     `);
   await checkAuthz('steve', 'get', Foo, [anotherFoo, thirdFoo]);
+
+
+  oso.loadStr(`
+        allow("steve", "patch", foo: Foo) if
+          foo in foo.bar.foos;
+    `);
+  await checkAuthz('steve', 'patch', Foo, [aFoo, anotherFoo, thirdFoo]);
+
+  oso.loadStr(`
+        allow(num: Integer, "count", foo: Foo) if
+          rec in foo.numbers and
+          rec.number = num;
+        allow("gwen", "eat", foo: Foo) if
+          rec in foo.numbers and
+          rec.number in [1, 2];
+  `);
+  await checkAuthz(0, 'count', Foo, [aFoo, anotherFoo, thirdFoo]);
+  await checkAuthz(1, 'count', Foo, [aFoo, anotherFoo]);
+  await checkAuthz(2, 'count', Foo, [aFoo]);
+  await checkAuthz("gwen", "eat", Foo, [aFoo, anotherFoo]);
+
 
   oso.clearRules();
   oso.loadStr(`

@@ -27,7 +27,13 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           fields: {
             'id' => String,
             'is_cool' => PolarBoolean,
-            'is_still_cool' => PolarBoolean
+            'is_still_cool' => PolarBoolean,
+            'foos' => Relationship.new(
+              kind: 'children',
+              other_type: 'Foo',
+              my_field: 'id',
+              other_field: 'bar_id'
+            )
           }
         )
 
@@ -129,13 +135,13 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           allow(log: FooLog, "b", foo: Foo) if foo = log.foo;
           allow(log: FooLog, "c", foo: Foo) if log.foo = foo and log in foo.logs;
           allow(log: FooLog, "d", foo: Foo) if log in foo.logs and log.foo = foo;
+          allow("gwen", "eat", foo: Foo) if foo in foo.bar.foos;
         POL
         subject.load_str policy
         log = FooLog.all.find { |l| l.foo_id == 'fourth' }
         foos = Foo.all.select { |foo| foo.id == 'fourth' }
-        %w[a b c d].each do |x|
-          check_authz log, x, Foo, foos
-        end
+        %w[a b c d].each { |x| check_authz log, x, Foo, foos }
+        check_authz 'gwen', 'eat', Foo, Foo.all
       end
     end
 
