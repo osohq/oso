@@ -207,9 +207,9 @@ impl Declaration {
 
     fn as_predicate(&self) -> Symbol {
         match self {
-            Declaration::Role => sym!("role"),
-            Declaration::Permission => sym!("permission"),
-            Declaration::Relation(_) => sym!("relation"),
+            Declaration::Role => sym!("has_role"),
+            Declaration::Permission => sym!("has_permission"),
+            Declaration::Relation(_) => sym!("has_relation"),
         }
     }
 }
@@ -340,7 +340,7 @@ fn check_all_relation_types_have_been_registered(kb: &KnowledgeBase) -> Vec<Pola
 }
 
 fn rule_name_is_cool(n: &Symbol) -> bool {
-    n == &sym!("role") || n == &sym!("permission") || n == &sym!("relation")
+    n == &sym!("has_role") || n == &sym!("has_permission") || n == &sym!("has_relation")
 }
 
 // TODO(gj): how do bodiless rules factor into exhaustiveness? E.g., the only reference to the
@@ -747,7 +747,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            r#"role(actor, "reader", repo_instance: repo{}) if relation(org_instance, "parent", repo_instance) and role(actor, "member", org_instance);"#
+            r#"has_role(actor, "reader", repo_instance: repo{}) if has_relation(org_instance, "parent", repo_instance) and has_role(actor, "member", org_instance);"#
         );
     }
 
@@ -768,7 +768,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            r#"role(actor, "member", org: Org{}) if role(actor, "owner", org);"#
+            r#"has_role(actor, "member", org: Org{}) if has_role(actor, "owner", org);"#
         );
 
         let implication = Implication {
@@ -780,7 +780,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_permission_role.to_polar(),
-            r#"permission(actor, "invite", org: Org{}) if role(actor, "owner", org);"#
+            r#"has_permission(actor, "invite", org: Org{}) if has_role(actor, "owner", org);"#
         );
 
         let implication = Implication {
@@ -792,7 +792,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_permission_permission.to_polar(),
-            r#"permission(actor, "create_repo", org: Org{}) if permission(actor, "invite", org);"#
+            r#"has_permission(actor, "create_repo", org: Org{}) if has_permission(actor, "invite", org);"#
         );
     }
 
@@ -818,7 +818,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            r#"role(actor, "reader", repo: Repo{}) if relation(org, "parent", repo) and role(actor, "member", org);"#
+            r#"has_role(actor, "reader", repo: Repo{}) if has_relation(org, "parent", repo) and has_role(actor, "member", org);"#
         );
     }
 
@@ -849,7 +849,7 @@ mod tests {
         p.register_constant(sym!("Org"), term!("unimportant"));
         let invalid_policy = r#"
             Org { permissions=["invite","create_repo","ban"]; }
-            permission(actor, "invite", org: Org) if permission(actor, "ban", org);"#;
+            has_permission(actor, "invite", org: Org) if has_permission(actor, "ban", org);"#;
         // TODO(gj): can we ever actually know this? What if someone wrote has_permission/3 with a
         // variable for the second argument? Maybe this will be disallowed by rule prototypes if we
         // specialize the second argument as a String (and as a `T::Permission where T: Resource`
