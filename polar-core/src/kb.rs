@@ -442,10 +442,6 @@ impl KnowledgeBase {
         &self.rules
     }
 
-    pub fn set_rules(&mut self, rules: HashMap<Symbol, GenericRule>) {
-        self.rules = rules;
-    }
-
     pub fn get_generic_rule(&self, name: &Symbol) -> Option<&GenericRule> {
         self.rules.get(name)
     }
