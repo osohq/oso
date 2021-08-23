@@ -45,8 +45,32 @@ export class Polar {
   #rolesEnabled: boolean;
 
   constructor(opts: Options = {}) {
+
+    function defaultEqual(a: any, b: any) {
+      if (a && b && // good grief!!
+          typeof a === typeof b &&
+          typeof a === 'object' &&
+          a.__proto__ === b.__proto__) {
+
+        let check = new Map();
+
+        for (let x in a) {
+          if (!defaultEqual(a[x], b[x]))
+            return false;
+          check.set(x, true);
+        }
+
+        for (let x in b)
+          if (!check.get(x))
+            return false;
+
+        return true;
+      }
+      return a == b;
+    }
+
     this.#ffiPolar = new FfiPolar();
-    const equalityFn = opts.equalityFn || ((x, y) => x == y);
+    const equalityFn = opts.equalityFn || defaultEqual;
     this.#host = new Host(this.#ffiPolar, equalityFn);
     this.#rolesEnabled = false;
 
