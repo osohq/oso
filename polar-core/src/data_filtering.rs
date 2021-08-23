@@ -50,7 +50,7 @@ pub enum ConstraintKind {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Constraint {
     kind: ConstraintKind,
-    field: String,
+    field: Option<String>,
     value: ConstraintValue,
 }
 
@@ -482,7 +482,7 @@ impl FilterPlan {
                             format!("REF({})", inside)
                         }
                     };
-                    eprintln!("          {} {} {}", field, op, value);
+                    eprintln!("          {:?} {} {}", field, op, value);
                 }
             }
         }
@@ -539,7 +539,7 @@ impl ResultSet {
                             self.requests.insert(child.to_owned(), child_result);
                             request.constraints.push(Constraint {
                                 kind: ConstraintKind::In,
-                                field: my_field.clone(),
+                                field: Some(my_field.clone()),
                                 value: ConstraintValue::Ref(Ref {
                                     field: Some(other_field.clone()),
                                     result_id: *child,
@@ -555,7 +555,7 @@ impl ResultSet {
                 if let Some(value) = vars.eq_values.get(child) {
                     request.constraints.push(Constraint {
                         kind: ConstraintKind::Eq,
-                        field: field.clone(),
+                        field: Some(field.clone()),
                         value: ConstraintValue::Term(value.clone()),
                     });
                     contributed_constraints = true;
@@ -564,7 +564,7 @@ impl ResultSet {
                     for value in values {
                         request.constraints.push(Constraint {
                             kind: ConstraintKind::Contains,
-                            field: field.clone(),
+                            field: Some(field.clone()),
                             value: ConstraintValue::Term(value.clone()),
                         });
                     }
@@ -577,7 +577,7 @@ impl ResultSet {
                 {
                     request.constraints.push(Constraint {
                         kind: ConstraintKind::Eq,
-                        field: field.clone(),
+                        field: Some(field.clone()),
                         value: ConstraintValue::Field(f.clone()),
                     });
                     contributed_constraints = true;
@@ -599,6 +599,24 @@ impl ResultSet {
             let in_result_set = self.requests.remove(l).unwrap();
             assert_eq!(self.resolve_order.pop().unwrap(), *l);
             request.constraints.extend(in_result_set.constraints);
+        }
+
+        if let Some(vs) = vars.contained_values.get(&var_id) {
+            for l in vs {
+                request.constraints.push(Constraint {
+                    kind: ConstraintKind::Eq,
+                    field: None,
+                    value: ConstraintValue::Term(l.clone()),
+                })
+            }
+        }
+
+        if let Some(l) = vars.eq_values.get(&var_id) {
+            request.constraints.push(Constraint {
+                kind: ConstraintKind::Eq,
+                field: None,
+                value: ConstraintValue::Term(l.clone()),
+            })
         }
 
         self.requests.insert(var_id, request);
