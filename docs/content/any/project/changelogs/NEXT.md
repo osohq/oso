@@ -27,11 +27,15 @@ necessary to group `or` operations using parentheses:
 foo(a, b, c) if a and b or c;
 ```
 
-becomes
+would now be written
 
 ```polar
 foo(a, b, c) if a and (b or c);
 ```
+
+We have temporarily made policies which combine `and` and `or` _without_
+using parentheses throw errors in order to avoid silent changes.
+To silence the error, add parentheses.
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
