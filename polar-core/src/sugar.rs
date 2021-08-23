@@ -165,7 +165,7 @@ pub enum Declaration {
     Relation(Term),
 }
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Implication {
     /// `Term` is a `String`. E.g., `"member"` in `"member" if "owner";`.
     pub head: Term,
@@ -173,8 +173,6 @@ pub struct Implication {
     /// `"owner"` and `"parent"`, respectively, in `"writer" if "owner" on "parent";`.
     pub body: (Term, Option<Term>),
 }
-
-impl Eq for Implication {}
 
 impl Implication {
     pub fn into_rule(self, resource: &Term, namespaces: &Namespaces) -> PolarResult<Rule> {
