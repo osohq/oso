@@ -161,12 +161,16 @@ pub fn turn_productions_into_namespace(
 pub enum Declaration {
     Role,
     Permission,
+    /// `Term` is a `Symbol` that is the (registered) type of the relation. E.g., `Org` in `parent: Org`.
     Relation(Term),
 }
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct Implication {
+    /// `Term` is a `String`. E.g., `"member"` in `"member" if "owner";`.
     pub head: Term,
+    /// Both terms are strings. The former is the 'implier' and the latter is the 'relation', e.g.,
+    /// `"owner"` and `"parent"`, respectively, in `"writer" if "owner" on "parent";`.
     pub body: (Term, Option<Term>),
 }
 
@@ -663,6 +667,8 @@ fn check_that_implication_heads_are_declared_locally(
 }
 
 impl Namespace {
+    // TODO(gj): Add 'includes' feature to ensure we have a clean hook for validation _after_ all
+    // Polar rules are loaded.
     pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> PolarResult<()> {
         let mut errors = vec![];
         errors.extend(check_that_namespace_resource_is_registered(kb, &self.resource).err());
@@ -691,14 +697,6 @@ impl Namespace {
 
         kb.namespaces.add(resource.clone(), declarations);
         kb.rewrite_me_pls.insert(resource, implications);
-
-        // TODO(gj): what to do for `on "parent_org"` if Org{} namespace hasn't
-        // been processed yet? Whether w/ multiple load_file calls or some future
-        // `import` feature, we probably don't want to force a specific load order
-        // on folks if we don't have to. Maybe add as-of-yet uncheckable
-        // implications into a queue that we check once all files are loaded /
-        // imported? That might work for the future import case, but how would we
-        // know when the final load_file call has been made? Answer: hax.
 
         Ok(())
     }
