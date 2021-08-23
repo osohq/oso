@@ -10,7 +10,7 @@ use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
 use super::vm::*;
-use super::warnings::{check_singletons, check_ambiguous_precedence};
+use super::warnings::{check_ambiguous_precedence, check_singletons};
 
 use std::sync::{Arc, RwLock};
 

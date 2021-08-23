@@ -12,6 +12,7 @@ use super::ValueOrLogical;
 
 use lalrpop_util::ParseError;
 
+#[LALR]
 grammar(src_id: u64);
 
 extern {
