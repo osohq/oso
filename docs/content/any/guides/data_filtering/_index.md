@@ -6,6 +6,22 @@ showContentForAnyLanguage: true
 
 # Data Filtering Preview
 
+{{< ifLangExists >}}
+{{% ifLang not="node" %}}
+{{% ifLang not="python" %}}
+{{% ifLang not="ruby" %}}
+
+Data filtering is coming soon for {{< lang >}}!
+
+If you want to get data filtering in your app now or just want to
+register your interest for Data Filtering in {{< lang >}} [drop into our Slack](http://join-slack.osohq.com) or
+<a href="mailto:engineering@osohq.com?subject=Data%20filtering%20support%20for%20{{< currentLanguage >}}&body=I%27m%20interested%20in%20data%20filtering%20support%20for%20{{< currentLanguage >}}">send an email</a>.
+to our engineering team and we'll unblock you.
+{{% /ifLang %}}
+{{% /ifLang %}}
+{{% /ifLang %}}
+{{% /ifLangExists %}}
+
 {{% callout "Early Preview" "orange" %}}
 
 Data filtering is currently an Early Preview. If you have any trouble using it or it doesn't work with your policy [drop into our Slack](http://join-slack.osohq.com) or
@@ -53,15 +69,6 @@ You can pass both of these things as arguments when registering a class and then
 
 ## Example
 
-
-
-## Limitations
-Currently there are some limitations to what you can do while using data filtering. You can not call any methods on the passed in resource (or any of it's properties). You also can not pass the resource as an argument to a method. Many cases where you would want to do this are better handled by Relationship fields.
-
-Some polar expressions are not supported but may be in the future. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numeric comparisons are also not yet supported. `< > <= >= !=`
-
-For now, Relationships only support matching on a single field. 
-
 {{% ifLang "python" %}}
 ## Python
 
@@ -83,18 +90,9 @@ node
 
 {{% /ifLang %}}
 
-{{< ifLangExists >}}
-{{% ifLang not="node" %}}
-{{% ifLang not="python" %}}
-{{% ifLang not="ruby" %}}
+## Limitations
+Currently there are some limitations to what you can do while using data filtering. You can not call any methods on the passed in resource (or any of it's properties). You also can not pass the resource as an argument to a method. Many cases where you would want to do this are better handled by Relationship fields.
 
-Data filtering is coming soon for {{< lang >}}!
+Some polar expressions are not supported but may be in the future. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numeric comparisons are also not yet supported. `< > <= >= !=`
 
-If you want to get data filtering in your app now or just want to
-register your interest for Data Filtering in {{< lang >}} [drop into our Slack](http://join-slack.osohq.com) or
-<a href="mailto:engineering@osohq.com?subject=Data%20filtering%20support%20for%20{{< currentLanguage >}}&body=I%27m%20interested%20in%20data%20filtering%20support%20for%20{{< currentLanguage >}}">send an email</a>.
-to our engineering team and we'll unblock you.
-{{% /ifLang %}}
-{{% /ifLang %}}
-{{% /ifLang %}}
-{{% /ifLangExists %}}
+For now, Relationships only support matching on a single field. 
