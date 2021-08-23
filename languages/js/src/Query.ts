@@ -157,6 +157,10 @@ export class Query {
                 let results = otherClsFetcher(constraints);
                 results = await Promise.resolve(results);
                 if (fieldType.kind == 'parent') {
+                  if (results.length != 1)
+                    throw new Error(
+                      'Wrong number of parents: ' + results.length
+                    );
                   value = results[0];
                 } else {
                   value = results;

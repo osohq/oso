@@ -187,7 +187,6 @@ test('data filtering', async () => {
     `);
   await checkAuthz('steve', 'get', Foo, [anotherFoo, thirdFoo]);
 
-
   oso.loadStr(`
         allow("steve", "patch", foo: Foo) if
           foo in foo.bar.foos;
@@ -205,8 +204,7 @@ test('data filtering', async () => {
   await checkAuthz(0, 'count', Foo, [aFoo, anotherFoo, thirdFoo]);
   await checkAuthz(1, 'count', Foo, [aFoo, anotherFoo]);
   await checkAuthz(2, 'count', Foo, [aFoo]);
-  await checkAuthz("gwen", "eat", Foo, [aFoo, anotherFoo]);
-
+  await checkAuthz('gwen', 'eat', Foo, [aFoo, anotherFoo]);
 
   oso.clearRules();
   oso.loadStr(`
