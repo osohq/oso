@@ -175,16 +175,16 @@ pub struct Implication {
 }
 
 impl Implication {
-    pub fn into_rule(self, resource: &Term, namespaces: &Namespaces) -> PolarResult<Rule> {
+    pub fn into_rule(self, namespace: &Term, namespaces: &Namespaces) -> PolarResult<Rule> {
         let Self { head, body } = self;
         // Copy SourceInfo from head of implication.
         // TODO(gj): assert these can only be None in tests.
         let src_id = head.get_source_id().unwrap_or(0);
         let (start, end) = head.span().unwrap_or((0, 0));
 
-        let name = namespaces.local_declaration_to_rule_name(&head, resource)?;
-        let params = implication_head_into_params(head, resource);
-        let body = implication_body_into_rule_body(body, resource, namespaces)?;
+        let name = namespaces.get_rule_name_for_declaration_in_namespace(namespace, &head)?;
+        let params = implication_head_into_params(head, namespace);
+        let body = implication_body_into_rule_body(body, namespace, namespaces)?;
 
         Ok(Rule::new_from_parser(
             src_id, start, end, name, params, body,
@@ -195,19 +195,19 @@ impl Implication {
 type Declarations = HashMap<Term, Declaration>;
 
 impl Declaration {
-    fn as_relation(&self) -> PolarResult<&Term> {
+    fn as_relation_type(&self) -> PolarResult<&Term> {
         if let Declaration::Relation(relation) = self {
             Ok(relation)
         } else {
             Err(RuntimeError::TypeError {
                 msg: format!("Expected Relation; got: {:?}", self),
-                stack_trace: None, // @TODO
+                stack_trace: None,
             }
             .into())
         }
     }
 
-    fn as_predicate(&self) -> Symbol {
+    fn as_rule_name(&self) -> Symbol {
         match self {
             Declaration::Role => sym!("has_role"),
             Declaration::Permission => sym!("has_permission"),
@@ -250,12 +250,15 @@ impl Namespaces {
         self.declarations.clear();
     }
 
-    fn get_declaration(&self, name: &Term, resource: &Term) -> PolarResult<&Declaration> {
-        // TODO(gj): .get(resource) instead of [resource]
-        if let Some(declaration) = self.declarations[resource].get(name) {
+    fn get_declaration_by_namespace_and_name(
+        &self,
+        namespace: &Term,
+        name: &Term,
+    ) -> PolarResult<&Declaration> {
+        if let Some(declaration) = self.declarations[namespace].get(name) {
             Ok(declaration)
         } else {
-            // TODO(gj): message isn't totally accurate when going across resources. E.g., with
+            // TODO(gj): message isn't totally accurate when going across namespaces. E.g., with
             // policy:
             // Org{roles=["foo"];} Repo{permissions=["bar"]; relations={parent:Org}; "bar" if "baz"
             // on "parent";}
@@ -265,7 +268,7 @@ impl Namespaces {
                     "Undeclared term {} referenced in implication in {} namespace. \
                         Did you mean to declare it as a role, permission, or relation?",
                     name.to_polar(),
-                    resource
+                    namespace
                 ),
                 ranges: vec![],
             }
@@ -273,22 +276,34 @@ impl Namespaces {
         }
     }
 
-    fn get_related_type(&self, relation: &Term, resource: &Term) -> PolarResult<&Term> {
-        self.get_declaration(relation, resource)?.as_relation()
-    }
-
-    fn local_declaration_to_rule_name(&self, name: &Term, resource: &Term) -> PolarResult<Symbol> {
-        Ok(self.get_declaration(name, resource)?.as_predicate())
-    }
-
-    fn cross_resource_predicate_name(
+    fn get_relation_type_by_namespace_and_relation(
         &self,
+        namespace: &Term,
+        relation: &Term,
+    ) -> PolarResult<&Term> {
+        self.get_declaration_by_namespace_and_name(namespace, relation)?
+            .as_relation_type()
+    }
+
+    fn get_rule_name_for_declaration_in_namespace(
+        &self,
+        namespace: &Term,
+        name: &Term,
+    ) -> PolarResult<Symbol> {
+        Ok(self
+            .get_declaration_by_namespace_and_name(namespace, name)?
+            .as_rule_name())
+    }
+
+    fn get_rule_name_for_declaration_in_related_namespace(
+        &self,
+        namespace: &Term,
         name: &Term,
         relation: &Term,
-        resource: &Term,
     ) -> PolarResult<Symbol> {
-        let related_type = self.get_related_type(relation, resource)?;
-        self.local_declaration_to_rule_name(name, related_type)
+        let related_namespace =
+            self.get_relation_type_by_namespace_and_relation(namespace, relation)?;
+        self.get_rule_name_for_declaration_in_namespace(related_namespace, name)
     }
 }
 
@@ -299,9 +314,9 @@ impl KnowledgeBase {
         errors.append(&mut check_all_relation_types_have_been_registered(self));
 
         let mut rules = vec![];
-        for (resource, implications) in self.rewrite_me_pls.drain() {
+        for (namespace, implications) in self.rewrite_me_pls.drain() {
             for implication in implications {
-                match implication.into_rule(&resource, &self.namespaces) {
+                match implication.into_rule(&namespace, &self.namespaces) {
                     Ok(rule) => rules.push(rule),
                     Err(error) => errors.push(error),
                 }
@@ -327,8 +342,8 @@ fn check_all_relation_types_have_been_registered(kb: &KnowledgeBase) -> Vec<Pola
     let mut errors = vec![];
     for declarations in kb.namespaces.declarations.values() {
         for (declaration, kind) in declarations {
-            if let Declaration::Relation(related_type) = kind {
-                errors.extend(relation_type_is_registered(kb, (declaration, related_type)).err());
+            if let Declaration::Relation(relation_type) = kind {
+                errors.extend(relation_type_is_registered(kb, (declaration, relation_type)).err());
             }
         }
     }
@@ -391,13 +406,13 @@ fn index_declarations(
     }
 
     if let Some(relations) = relations {
-        for (relation, related_type) in &relations.value().as_dict()?.fields {
+        for (relation, relation_type) in &relations.value().as_dict()?.fields {
             // Stringify relation so that we can index into the declarations map with a string
             // reference to the relation. E.g., relation `creator: User` gets stored as `"creator"
             // => Relation(User)` so that when we encounter an implication `"admin" if "creator";`
             // we can easily look up what type of declaration `"creator"` is.
-            let stringified_relation = related_type.clone_with_value(value!(relation.0.as_str()));
-            let declaration = Declaration::Relation(related_type.clone());
+            let stringified_relation = relation_type.clone_with_value(value!(relation.0.as_str()));
+            let declaration = Declaration::Relation(relation_type.clone());
             if let Some(previous) = declarations.insert(stringified_relation, declaration) {
                 let msg = match previous {
                     Declaration::Role => format!(
@@ -413,7 +428,7 @@ fn index_declarations(
                     _ => unreachable!("duplicate dict keys aren't parseable"),
                 };
                 return Err(ParseError::ParseSugar {
-                    loc: related_type.offset(),
+                    loc: relation_type.offset(),
                     msg,
                     ranges: vec![],
                 }
@@ -424,12 +439,12 @@ fn index_declarations(
     Ok(declarations)
 }
 
-fn resource_as_var(resource: &Term) -> Value {
-    let name = &resource.value().as_symbol().expect("sym").0;
+fn namespace_as_var(namespace: &Term) -> Value {
+    let name = &namespace.value().as_symbol().expect("sym").0;
     let mut lowercased = name.to_lowercase();
 
-    // If the resource's name is already lowercase, append "_instance" to distinguish the variable
-    // name from the resource's name.
+    // If the namespace's name is already lowercase, append "_instance" to distinguish the variable
+    // name from the namespace's name.
     if &lowercased == name {
         lowercased += "_instance";
     }
@@ -439,44 +454,47 @@ fn resource_as_var(resource: &Term) -> Value {
 
 fn implication_body_into_rule_body(
     body: (Term, Option<Term>),
-    resource: &Term,
+    namespace: &Term,
     namespaces: &Namespaces,
 ) -> PolarResult<Term> {
     let (implier, relation) = body;
-    let resource_var = implier.clone_with_value(resource_as_var(resource));
+    let namespace_var = implier.clone_with_value(namespace_as_var(namespace));
     let actor_var = implier.clone_with_value(value!(sym!("actor")));
     if let Some(relation) = relation {
         // TODO(gj): what if the relation is with the same type? E.g.,
         // `Dir { relations = { parent: Dir }; }`. This might cause Polar to loop.
-        let related_type = namespaces.get_related_type(&relation, resource)?;
-        let related_type_var = relation.clone_with_value(resource_as_var(related_type));
+        let relation_type =
+            namespaces.get_relation_type_by_namespace_and_relation(namespace, &relation)?;
+        let relation_type_var = relation.clone_with_value(namespace_as_var(relation_type));
 
         let relation_call = relation.clone_with_value(value!(Call {
             name: sym!("has_relation"),
             // For example: vec![org, "parent", repo]
-            args: vec![related_type_var.clone(), relation.clone(), resource_var],
+            args: vec![relation_type_var.clone(), relation.clone(), namespace_var],
             kwargs: None
         }));
 
         let implier_call = implier.clone_with_value(value!(Call {
-            name: namespaces.cross_resource_predicate_name(&implier, &relation, resource)?,
+            name: namespaces.get_rule_name_for_declaration_in_related_namespace(
+                namespace, &implier, &relation
+            )?,
             // For example: vec![actor, "owner", org]
-            args: vec![actor_var, implier.clone(), related_type_var],
+            args: vec![actor_var, implier.clone(), relation_type_var],
             kwargs: None
         }));
         Ok(implier.clone_with_value(value!(op!(And, relation_call, implier_call))))
     } else {
         let implier_call = implier.clone_with_value(value!(Call {
-            name: namespaces.local_declaration_to_rule_name(&implier, resource)?,
-            args: vec![actor_var, implier.clone(), resource_var],
+            name: namespaces.get_rule_name_for_declaration_in_namespace(namespace, &implier)?,
+            args: vec![actor_var, implier.clone(), namespace_var],
             kwargs: None
         }));
         Ok(implier.clone_with_value(value!(op!(And, implier_call))))
     }
 }
 
-fn implication_head_into_params(head: Term, resource: &Term) -> Vec<Parameter> {
-    let resource_name = &resource.value().as_symbol().expect("sym").0;
+fn implication_head_into_params(head: Term, namespace: &Term) -> Vec<Parameter> {
+    let namespace_name = &namespace.value().as_symbol().expect("sym").0;
     vec![
         Parameter {
             parameter: head.clone_with_value(value!(sym!("actor"))),
@@ -487,22 +505,22 @@ fn implication_head_into_params(head: Term, resource: &Term) -> Vec<Parameter> {
             specializer: None,
         },
         Parameter {
-            parameter: head.clone_with_value(resource_as_var(resource)),
+            parameter: head.clone_with_value(namespace_as_var(namespace)),
             specializer: Some(
-                resource.clone_with_value(value!(pattern!(instance!(resource_name)))),
+                namespace.clone_with_value(value!(pattern!(instance!(namespace_name)))),
             ),
         },
     ]
 }
 
-fn check_for_duplicate_namespaces(namespaces: &Namespaces, resource: &Term) -> PolarResult<()> {
-    if namespaces.exists(resource) {
+fn check_for_duplicate_namespaces(namespaces: &Namespaces, namespace: &Term) -> PolarResult<()> {
+    if namespaces.exists(namespace) {
         return Err(ParseError::ParseSugar {
-            loc: resource.offset(),
+            loc: namespace.offset(),
             // TODO(gj): better error message, e.g.:
             //               duplicate namespace declaration: Org { ... } defined on line XX of file YY
             //                                                previously defined on line AA of file BB
-            msg: format!("duplicate declaration of {} namespace", resource),
+            msg: format!("duplicate declaration of {} namespace", namespace),
             ranges: vec![],
         }
         .into());
@@ -510,19 +528,19 @@ fn check_for_duplicate_namespaces(namespaces: &Namespaces, resource: &Term) -> P
     Ok(())
 }
 
-// TODO(gj): no way to know in the core if `resource` was registered as a class or a constant.
-fn is_registered_class(kb: &KnowledgeBase, x: &Term) -> PolarResult<bool> {
-    Ok(kb.is_constant(x.value().as_symbol()?))
+// TODO(gj): no way to know in the core if `term` was registered as a class or a constant.
+fn is_registered_class(kb: &KnowledgeBase, term: &Term) -> PolarResult<bool> {
+    Ok(kb.is_constant(term.value().as_symbol()?))
 }
 
-fn check_that_namespace_resource_is_registered(
+fn check_that_namespace_resource_is_registered_as_a_class(
     kb: &KnowledgeBase,
     resource: &Term,
 ) -> PolarResult<()> {
     if !is_registered_class(kb, resource)? {
         // TODO(gj): better error message
         let msg = format!(
-            "{} namespace must be registered as a class.",
+            "In order to be declared as a namespace, {} must be registered as a class.",
             resource.to_polar()
         );
         let (loc, ranges) = (resource.offset(), vec![]);
@@ -580,7 +598,9 @@ impl Namespace {
     // Polar rules are loaded.
     pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> PolarResult<()> {
         let mut errors = vec![];
-        errors.extend(check_that_namespace_resource_is_registered(kb, &self.resource).err());
+        errors.extend(
+            check_that_namespace_resource_is_registered_as_a_class(kb, &self.resource).err(),
+        );
         errors.extend(check_for_duplicate_namespaces(&kb.namespaces, &self.resource).err());
 
         let Namespace {
@@ -741,7 +761,7 @@ mod tests {
         expect_error(
             &p,
             valid_policy,
-            "Org namespace must be registered as a class.",
+            "In order to be declared as a namespace, Org must be registered as a class.",
         );
         p.register_constant(sym!("Org"), term!("unimportant"));
         assert!(p.load_str(valid_policy).is_ok());
