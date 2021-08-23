@@ -15,6 +15,9 @@ Classes
 
 .. autoclass:: oso.Predicate
 
+.. autoclass:: oso.Enforcer
+    :members:
+
 Decorator Functions
 ^^^^^^^^^^^^^^^^^^^
 .. autofunction:: oso.polar_class
