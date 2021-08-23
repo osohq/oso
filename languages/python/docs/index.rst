@@ -25,6 +25,10 @@ Decorator Functions
 Exceptions
 ==========
 
+.. automodule:: oso.exceptions
+    :members:
+    :show-inheritance:
+
 .. automodule:: polar.exceptions
     :members:
     :show-inheritance:
