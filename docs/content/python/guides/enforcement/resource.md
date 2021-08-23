@@ -49,7 +49,7 @@ action, and resource:
 
 ```polar
 allow(user: User, "approve", expense: Expense) if
-    expense.org = org and
+    org = expense.org and
     user.has_org_role(org, "admin");
 ```
 
@@ -100,7 +100,7 @@ errors globally in your application, using middleware or something similar.
 Ideally, you can perform resource-level authorization by adding a single line of
 code to each endpoint.
 
-As an example, here's what a global error handler looks like in a flask app:
+As an example, here's what a global error handler looks like in a Flask app:
 
 ```python
 from oso import ForbiddenError, NotFoundError
