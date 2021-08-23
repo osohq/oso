@@ -7,7 +7,7 @@ pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::rules::*;
 use super::sources::*;
-use super::sugar::{Implication, Namespaces};
+use super::sugar::Namespaces;
 use super::terms::*;
 use std::sync::Arc;
 
@@ -47,7 +47,6 @@ pub struct KnowledgeBase {
 
     /// Namespace Bookkeeping
     pub namespaces: Namespaces,
-    pub rewrite_me_pls: HashMap<Term, Vec<Implication>>,
 }
 
 impl KnowledgeBase {
@@ -64,7 +63,6 @@ impl KnowledgeBase {
             gensym_counter: Counter::default(),
             inline_queries: vec![],
             namespaces: Namespaces::new(),
-            rewrite_me_pls: HashMap::new(),
         }
     }
 
@@ -587,6 +585,35 @@ impl KnowledgeBase {
             .and_then(|id| self.sources.get_source(id));
         let error: PolarError = error.into();
         error.set_context(source.as_ref(), Some(term))
+    }
+
+    pub fn rewrite_implications(&mut self) -> PolarResult<()> {
+        let mut errors = vec![];
+
+        errors.append(&mut super::sugar::check_all_relation_types_have_been_registered(self));
+
+        let mut rules = vec![];
+        for (namespace, implications) in &self.namespaces.implications {
+            for implication in implications {
+                match implication.as_rule(namespace, &self.namespaces) {
+                    Ok(rule) => rules.push(rule),
+                    Err(error) => errors.push(error),
+                }
+            }
+        }
+
+        // Add the rewritten rules to the KB.
+        for rule in rules {
+            self.add_rule(rule);
+        }
+
+        // TODO(gj): Emit all errors instead of just the first.
+        if !errors.is_empty() {
+            self.namespaces.clear();
+            return Err(errors[0].clone());
+        }
+
+        Ok(())
     }
 }
 
