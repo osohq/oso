@@ -48,5 +48,7 @@ Link to [relevant documentation section]().
 #### Other bugs & improvements
 
 - The debugger can now break on rule matches.
+- Polar reserved words (e.g. `type`, `if`, `debug`) can be used as field and method names in
+  dictionaries and objects.
 
 #### TODO: enforcement changelog, if we decide to release it
