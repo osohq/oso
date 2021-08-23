@@ -452,7 +452,7 @@ fn implication_body_into_rule_body(
         let related_type_var = relation.clone_with_value(resource_as_var(related_type));
 
         let relation_call = relation.clone_with_value(value!(Call {
-            name: sym!("relation"),
+            name: sym!("has_relation"),
             // For example: vec![org, "parent", repo]
             args: vec![related_type_var.clone(), relation.clone(), resource_var],
             kwargs: None
