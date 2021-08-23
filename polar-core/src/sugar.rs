@@ -244,6 +244,10 @@ impl Namespaces {
         self.declarations.contains_key(resource)
     }
 
+    fn clear(&mut self) {
+        self.declarations.clear();
+    }
+
     fn get_declaration(&self, name: &Term, resource: &Term) -> PolarResult<&Declaration> {
         // TODO(gj): .get(resource) instead of [resource]
         if let Some(declaration) = self.declarations[resource].get(name) {
@@ -288,8 +292,11 @@ impl Namespaces {
 
 impl KnowledgeBase {
     pub fn rewrite_implications(&mut self) -> PolarResult<()> {
-        let mut rules = vec![];
         let mut errors = vec![];
+
+        errors.append(&mut check_all_relation_types_have_been_registered(self));
+
+        let mut rules = vec![];
         for (resource, implications) in self.rewrite_me_pls.drain() {
             for implication in implications {
                 match implication.into_rule(&resource, &self.namespaces) {
@@ -312,11 +319,24 @@ impl KnowledgeBase {
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {
             self.set_rules(existing);
+            self.namespaces.clear();
             return Err(errors[0].clone());
         }
 
         Ok(())
     }
+}
+
+fn check_all_relation_types_have_been_registered(kb: &KnowledgeBase) -> Vec<PolarError> {
+    let mut errors = vec![];
+    for (_resource, declarations) in &kb.namespaces.declarations {
+        for (declaration, kind) in declarations {
+            if let Declaration::Relation(related_type) = kind {
+                errors.extend(relation_type_is_registered(kb, (declaration, related_type)).err());
+            }
+        }
+    }
+    errors
 }
 
 fn rule_name_is_cool(n: &Symbol) -> bool {
@@ -455,14 +475,13 @@ fn index_declarations(
     }
 
     if let Some(relations) = relations {
-        for (relation, related_resource) in &relations.value().as_dict()?.fields {
+        for (relation, related_type) in &relations.value().as_dict()?.fields {
             // Stringify relation so that we can index into the declarations map with a string
             // reference to the relation. E.g., relation `creator: User` gets stored as `"creator"
             // => Relation(User)` so that when we encounter an implication `"admin" if "creator";`
             // we can easily look up what type of declaration `"creator"` is.
-            let stringified_relation =
-                related_resource.clone_with_value(value!(relation.0.as_str()));
-            let declaration = Declaration::Relation(related_resource.clone());
+            let stringified_relation = related_type.clone_with_value(value!(relation.0.as_str()));
+            let declaration = Declaration::Relation(related_type.clone());
             if let Some(previous) = declarations.insert(stringified_relation, declaration) {
                 let msg = match previous {
                     Declaration::Role => format!(
@@ -478,7 +497,7 @@ fn index_declarations(
                     _ => unreachable!("duplicate dict keys aren't parseable"),
                 };
                 return Err(ParseError::ParseSugar {
-                    loc: related_resource.offset(),
+                    loc: related_type.offset(),
                     msg,
                     ranges: vec![],
                 }
@@ -514,19 +533,19 @@ fn implication_body_into_rule_body(
         // TODO(gj): what if the relation is with the same type? E.g.,
         // `Dir { relations = { parent: Dir }; }`. This might cause Polar to loop.
         let related_type = namespaces.get_related_type(&relation, resource)?;
-        let related_resource_var = relation.clone_with_value(resource_as_var(related_type));
+        let related_type_var = relation.clone_with_value(resource_as_var(related_type));
 
         let relation_call = relation.clone_with_value(value!(Call {
             name: sym!("relation"),
             // For example: vec![org, "parent", repo]
-            args: vec![related_resource_var.clone(), relation.clone(), resource_var],
+            args: vec![related_type_var.clone(), relation.clone(), resource_var],
             kwargs: None
         }));
 
         let implier_call = implier.clone_with_value(value!(Call {
             name: namespaces.cross_resource_predicate_name(&implier, &relation, resource)?,
             // For example: vec![actor, "owner", org]
-            args: vec![actor_var, implier.clone(), related_resource_var],
+            args: vec![actor_var, implier.clone(), related_type_var],
             kwargs: None
         }));
         Ok(implier.clone_with_value(value!(op!(And, relation_call, implier_call))))
@@ -576,22 +595,41 @@ fn check_for_duplicate_namespaces(namespaces: &Namespaces, resource: &Term) -> P
 }
 
 // TODO(gj): no way to know in the core if `resource` was registered as a class or a constant.
+fn is_registered_class(kb: &KnowledgeBase, x: &Term) -> PolarResult<bool> {
+    Ok(kb.is_constant(x.value().as_symbol()?))
+}
+
 fn check_that_namespace_resource_is_registered(
     kb: &KnowledgeBase,
     resource: &Term,
 ) -> PolarResult<()> {
-    if !kb.is_constant(resource.value().as_symbol()?) {
+    if !is_registered_class(kb, resource)? {
+        // TODO(gj): better error message
+        let msg = format!(
+            "{} namespace must be registered as a class.",
+            resource.to_polar()
+        );
+        let (loc, ranges) = (resource.offset(), vec![]);
         // TODO(gj): UnregisteredClassError in the core.
-        return Err(ParseError::ParseSugar {
-            loc: resource.offset(),
-            // TODO(gj): better error message
-            msg: format!(
-                "{} namespace must be registered as a class",
-                resource.to_polar()
-            ),
-            ranges: vec![],
-        }
-        .into());
+        return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
+    }
+    Ok(())
+}
+
+fn relation_type_is_registered(
+    kb: &KnowledgeBase,
+    (relation, kind): (&Term, &Term),
+) -> PolarResult<()> {
+    if !is_registered_class(kb, kind)? {
+        let msg = format!(
+            "Type '{}' in relation '{}: {}' must be registered as a class.",
+            kind.to_polar(),
+            relation.value().as_string()?,
+            kind.to_polar(),
+        );
+        let (loc, ranges) = (relation.offset(), vec![]);
+        // TODO(gj): UnregisteredClassError in the core.
+        return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
     }
     Ok(())
 }
@@ -791,7 +829,7 @@ mod tests {
         expect_error(
             &p,
             valid_policy,
-            "Org namespace must be registered as a class",
+            "Org namespace must be registered as a class.",
         );
         p.register_constant(sym!("Org"), term!("unimportant"));
         assert!(p.load_str(valid_policy).is_ok());
@@ -917,6 +955,17 @@ mod tests {
         //     &p,
         //     r#"Undeclared term "owner" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
         // );
+    }
+
+    #[test]
+    fn test_namespace_with_unregistered_relation_type() {
+        let p = Polar::new();
+        p.register_constant(sym!("Repo"), term!("unimportant"));
+        expect_error(
+            &p,
+            r#"Repo { relations = { parent: Org }; }"#,
+            "Type 'Org' in relation 'parent: Org' must be registered as a class.",
+        );
     }
 
     #[test]
