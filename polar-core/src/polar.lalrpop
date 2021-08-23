@@ -504,33 +504,9 @@ Exp3<T>: ValueOrLogical = {
 }
 
 
-Or = {"or"};
-OrExp<T>: Value = {
-    <head:ExpectLogical<Exp3<T>>> Or <mut tail:ExpectLogical<Exp2<T>>> => {
-        let args = match &mut tail.value() {
-            Value::Expression(Operation{operator: Operator::Or, args: tail_args}) => {
-                let mut args = vec![head];
-                args.append(&mut tail_args.clone());
-                args
-            }
-            _ => {
-                vec![head, tail]
-            }
-        };
-        let op = Operation{operator: Operator::Or, args};
-        Value::Expression(op)
-    },
-}
-
-Exp2<T>: ValueOrLogical = {
-    <IsLogical<OrExp<T>>>,
-    <Exp3<T>>,
-}
-
-
 And = {"and"};
 AndExp<T>: Value = {
-    <head:ExpectLogical<Exp2<T>>> And <mut tail:ExpectLogical<Exp1<T>>> => {
+    <head:ExpectLogical<Exp3<T>>> And <mut tail:ExpectLogical<Exp2<T>>> => {
         let args = match &mut tail.value() {
             Value::Expression(Operation{operator: Operator::And, args: tail_args}) => {
                 let mut args = vec![head];
@@ -546,10 +522,35 @@ AndExp<T>: Value = {
     },
 }
 
-Exp1<T>: ValueOrLogical = {
+Exp2<T>: ValueOrLogical = {
     <IsLogical<AndExp<T>>>,
+    <Exp3<T>>,
+}
+
+
+Or = {"or"};
+OrExp<T>: Value = {
+    <head:ExpectLogical<Exp2<T>>> Or <mut tail:ExpectLogical<Exp1<T>>> => {
+        let args = match &mut tail.value() {
+            Value::Expression(Operation{operator: Operator::Or, args: tail_args}) => {
+                let mut args = vec![head];
+                args.append(&mut tail_args.clone());
+                args
+            }
+            _ => {
+                vec![head, tail]
+            }
+        };
+        let op = Operation{operator: Operator::Or, args};
+        Value::Expression(op)
+    },
+}
+
+Exp1<T>: ValueOrLogical = {
+    <IsLogical<OrExp<T>>>,
     <Exp2<T>>,
 }
+
 
 ListTerms<T>: Vec<Term> = {
     <ExpectValue<Exp6<T>>> => vec![<>],
