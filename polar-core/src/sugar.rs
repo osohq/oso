@@ -846,6 +846,80 @@ mod tests {
     }
 
     #[test]
+    fn test_namespace_relation_used_in_head_and_relation_position() {
+        let p = Polar::new();
+        p.register_constant(sym!("Repo"), term!("unimportant"));
+        let policy = r#"Repo {
+            relations = { parent: Org };
+            "parent" if "owner" on "parent";
+        }"#;
+        panic!("{}", p.load_str(policy).unwrap_err());
+    }
+
+    #[test]
+    fn test_namespace_with_undeclared_related_resource() {
+        let p = Polar::new();
+        p.register_constant(sym!("Repo"), term!("unimportant"));
+        p.register_constant(sym!("Org"), term!("unimportant"));
+        let policy = r#"
+            Org { relations = { owner: User }; }
+            Repo { relations = { parent: Org };
+                   roles = ["writer"];
+                   "writer" if "owner" on "parent"; }
+        "#;
+        panic!("{}", p.load_str(policy).unwrap_err());
+
+        // let policy = r#"Repo {
+        //     roles = [ "writer" ];
+        //     relations = { parent: Org };
+        //     "writer" if "owner" on "parent";
+        // }"#;
+        // panic!("{}", p.load_str(policy).unwrap_err());
+    }
+
+    #[test]
+    fn test_namespace_with_circular_implications() {
+        let p = Polar::new();
+        p.register_constant(sym!("Repo"), term!("unimportant"));
+        let policy = r#"Repo {
+            roles = [ "writer" ];
+            "writer" if "writer";
+        }"#;
+        panic!("{}", p.load_str(policy).unwrap_err());
+
+        // let policy = r#"Repo {
+        //     roles = [ "writer", "reader" ];
+        //     "writer" if "reader";
+        //     "reader" if "writer";
+        // }"#;
+        // panic!("{}", p.load_str(policy).unwrap_err());
+        //
+        // let policy = r#"Repo {
+        //     roles = [ "writer", "reader", "admin" ];
+        //     "admin" if "reader";
+        //     "writer" if "admin";
+        //     "reader" if "writer";
+        // }"#;
+        // panic!("{}", p.load_str(policy).unwrap_err());
+    }
+
+    #[test]
+    fn test_namespace_with_undeclared_cross_resource_implier_term() {
+        let p = Polar::new();
+        p.register_constant(sym!("Repo"), term!("unimportant"));
+        let policy = r#"Repo {
+                roles = ["writer"];
+                relations = { parent: Org };
+                "writer" if "owner" on "parent";
+            }"#;
+        panic!("{}", p.load_str(policy).unwrap_err());
+        // expect_error(
+        //     &p,
+        //     r#"Undeclared term "owner" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
+        // );
+    }
+
+    #[test]
     fn test_namespace_with_clashing_declarations() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
