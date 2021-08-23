@@ -203,6 +203,9 @@ pub enum ParseError {
         loc: usize,
         name: String,
     },
+    AmbiguousAndOr {
+        msg: String,
+    },
 }
 
 impl fmt::Display for ErrorContext {
@@ -264,6 +267,9 @@ impl fmt::Display for ParseError {
                     "Singleton variable {} is unused or undefined; try renaming to _{} or _",
                     name, name
                 )
+            }
+            Self::AmbiguousAndOr { msg, .. } => {
+                write!(f, "{}", msg)
             }
         }
     }
