@@ -61,10 +61,10 @@ Writing a request-level authorization policy means implementing an
 
 ```polar
 # Allow anyone to hit the login endpoint
-allow_request(_, Request{path: "/login"})
+allow_request(_, _: Request{path: "/login"});
 
 # Only allow access to payments by users with verified emails
-allow_request(user: User, request) if
+allow_request(user: User, request: Request) if
     request.path.startswith("/payments") and
     user.verified_email;
 ```
@@ -87,10 +87,10 @@ Scopes](https://docs.github.com/en/developers/apps/building-oauth-apps/scopes-fo
 
 
 ```polar
-allow_request(token: AccessToken, {method: "POST", path: "/repos"}) if
+allow_request(token: AccessToken, _: Request{method: "POST", path: "/repos"}) if
     "repos.create" in token.scopes;
 
-allow_request(token: AccessToken, {method: "GET", path: "/repos"}) if
+allow_request(token: AccessToken, _: Request{method: "GET", path: "/repos"}) if
     "repos.list" in token.scopes;
 ```
 

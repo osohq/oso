@@ -105,7 +105,7 @@ allow_field(user: User, "read", profile: Profile, field) if
     user.is_admin;
 ```
 
-If you have trouble listing all fields in your Polar policy files, and you'd
+Or, if you have trouble listing all fields in your Polar policy files, and you'd
 prefer to list fields in your application code, you can also use a constant
 defined on the class, like this:
 
