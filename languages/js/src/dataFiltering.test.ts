@@ -94,7 +94,6 @@ test('data filtering', async () => {
 
   function fromRepo(repo: any, name: string, constraints: any) {
     let query = repo.createQueryBuilder(name);
-    let addedWhere = false;
     for (let i in constraints) {
       let c = constraints[i];
       let clause;
@@ -109,20 +108,10 @@ test('data filtering', async () => {
             clause = `${name}.${c.field} IN (:...${c.field})`;
           }
           break;
-        case 'Contains':
-          {
-            clause = `(:...${c.field}) IN ${name}.${c.field} `;
-          }
-          break;
       }
       let param: any = {};
       param[c.field] = c.value;
-      if (!addedWhere) {
-        query.where(clause, param);
-        addedWhere = true;
-      } else {
-        query.andWhere(clause, param);
-      }
+      query.andWhere(clause, param);
     }
     return query.getMany();
   }
