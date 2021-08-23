@@ -17,9 +17,9 @@ use super::terms::*;
 // TODO(gj): disallow same string to be declared as a perm/role and a relation.
 // This'll come into play for "owner"-style actor relationships.
 
-// This type is used as a pre-validation bridge between Rust & LALRPOP.
+// This type is used as a pre-validation bridge between LALRPOP & Rust.
 #[derive(Debug)]
-pub enum Expr {
+pub enum Production {
     Roles(Term),                             // List<String>
     Permissions(Term),                       // List<String>
     Relations(Term),                         // Dict<Symbol, Symbol>
@@ -45,13 +45,13 @@ pub fn validate_relation_keyword(
     }
 }
 
-pub fn declaration_to_expr(
+pub fn validate_parsed_declaration(
     (name, term): (Symbol, Term),
-) -> Result<Expr, LalrpopError<usize, Token, error::ParseError>> {
+) -> Result<Production, LalrpopError<usize, Token, error::ParseError>> {
     match (name.0.as_ref(), term.value()) {
-        ("roles", Value::List(_)) => Ok(Expr::Roles(term)),
-        ("permissions", Value::List(_)) => Ok(Expr::Permissions(term)),
-        ("relations", Value::Dictionary(_)) => Ok(Expr::Relations(term)),
+        ("roles", Value::List(_)) => Ok(Production::Roles(term)),
+        ("permissions", Value::List(_)) => Ok(Production::Permissions(term)),
+        ("relations", Value::Dictionary(_)) => Ok(Production::Relations(term)),
 
         ("roles", Value::Dictionary(_)) | ("permissions", Value::Dictionary(_)) => {
             Err(LalrpopError::User {
@@ -95,10 +95,9 @@ pub fn declaration_to_expr(
     }
 }
 
-// Turn a set of parsed expressions into a `Namespace` (or die validating).
-pub fn exprs_to_namespace(
+pub fn turn_productions_into_namespace(
     resource: Term,
-    exprs: Vec<Expr>,
+    productions: Vec<Production>,
 ) -> Result<Namespace, LalrpopError<usize, Token, error::ParseError>> {
     let mut roles: Option<Term> = None;
     let mut permissions: Option<Term> = None;
@@ -119,30 +118,30 @@ pub fn exprs_to_namespace(
         }
     };
 
-    for expr in exprs {
-        match expr {
-            Expr::Roles(new) => {
+    for production in productions {
+        match production {
+            Production::Roles(new) => {
                 if let Some(previous) = roles {
                     let error = make_error("roles", &previous, &new);
                     return Err(LalrpopError::User { error });
                 }
                 roles = Some(new);
             }
-            Expr::Permissions(new) => {
+            Production::Permissions(new) => {
                 if let Some(previous) = permissions {
                     let error = make_error("permissions", &previous, &new);
                     return Err(LalrpopError::User { error });
                 }
                 permissions = Some(new);
             }
-            Expr::Relations(new) => {
+            Production::Relations(new) => {
                 if let Some(previous) = relations {
                     let error = make_error("relations", &previous, &new);
                     return Err(LalrpopError::User { error });
                 }
                 relations = Some(new);
             }
-            Expr::Implication(head, body) => {
+            Production::Implication(head, body) => {
                 // TODO(gj): Warn the user on duplicate implication definitions.
                 implications.push(Implication { head, body });
             }
@@ -226,6 +225,7 @@ pub struct Namespace {
 
 #[derive(Clone, Default)]
 pub struct Namespaces {
+    /// Map from resource (`Symbol`) to the declarations for that resource.
     declarations: HashMap<Term, Declarations>,
 }
 

@@ -663,36 +663,36 @@ StringList: Value = {
     "[" <StringListTerms> "]" => Value::List(<>),
 }
 RelationsDict: Value = <Object<Spanned<Variable>>> => Value::Dictionary(<>);
-Declaration: sugar::Expr = {
+Declaration: sugar::Production = {
     <start:@L> <keyword:Name> "=" <value:StringList> <end:@R> ";" =>? {
         let term = Term::new_from_parser(src_id, start, end, value);
-        return sugar::declaration_to_expr((keyword, term));
+        return sugar::validate_parsed_declaration((keyword, term));
     },
     <start:@L> <keyword:Name> "=" <value:RelationsDict> <end:@R> ";" =>? {
         let term = Term::new_from_parser(src_id, start, end, value);
-        return sugar::declaration_to_expr((keyword, term));
+        return sugar::validate_parsed_declaration((keyword, term));
     },
 }
 
 OnRelation: Term = <Spanned<Variable>> <Spanned<PolarString>> =>? sugar::validate_relation_keyword((<>));
 ImplicationBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
-Implication: sugar::Expr = <head:Spanned<PolarString>> Define <body:ImplicationBody> => sugar::Expr::Implication(<>);
+Implication: sugar::Production = <head:Spanned<PolarString>> Define <body:ImplicationBody> => sugar::Production::Implication(<>);
 
-NamespaceExpr: sugar::Expr = {
+NamespaceProduction: sugar::Production = {
     <Declaration> => <>,
     <Implication> => <>,
 };
 
-NamespaceExprs: Vec<sugar::Expr> = <NamespaceExpr*>;
+NamespaceProductions: Vec<sugar::Production> = <NamespaceProduction*>;
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
     <RulePrototype> => Line::RulePrototype(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
 
-    <start:@L> <resource:Variable> "{" <exprs:NamespaceExprs> "}" <end:@R> =>? {
+    <start:@L> <resource:Variable> "{" <productions:NamespaceProductions> "}" <end:@R> =>? {
         let resource = Term::new_from_parser(src_id, start, end, resource);
-        sugar::exprs_to_namespace(resource, exprs).map(|ns| Line::Namespace(ns))
+        sugar::turn_productions_into_namespace(resource, productions).map(|ns| Line::Namespace(ns))
     }
 }
 
