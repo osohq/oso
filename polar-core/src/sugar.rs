@@ -406,36 +406,87 @@ fn index_declarations(
     roles: Option<Term>,
     permissions: Option<Term>,
     relations: Option<Term>,
-) -> HashMap<Term, Declaration> {
-    // Fold List<role> => HashMap<role, Declaration>
-    let declarations = roles
-        .into_iter()
-        .flat_map(|inner| inner.value().as_list().unwrap().clone())
-        .fold(HashMap::new(), |mut acc, role| {
-            acc.insert(role, Declaration::Role);
-            acc
-        });
+    resource: &Term,
+) -> PolarResult<HashMap<Term, Declaration>> {
+    let mut declarations = HashMap::new();
 
-    // Fold List<permission> => HashMap<permission_or_role, Declaration>
-    let declarations = permissions
-        .into_iter()
-        .flat_map(|inner| inner.value().as_list().unwrap().clone())
-        .fold(declarations, |mut acc, permission| {
-            acc.insert(permission, Declaration::Permission);
-            acc
-        });
+    if let Some(roles) = roles {
+        for role in roles.value().as_list()? {
+            if let Some(_) = declarations.insert(role.clone(), Declaration::Role) {
+                return Err(ParseError::ParseSugar {
+                    loc: role.offset(),
+                    msg: format!(
+                        "{}: Duplicate declaration of {} in the roles list.",
+                        resource.to_polar(),
+                        role.to_polar()
+                    ),
+                    ranges: vec![],
+                }
+                .into());
+            }
+        }
+    }
 
-    // Fold Dict<relation, resource> => HashMap<permission_or_role_or_relation, Declaration>
-    relations
-        .into_iter()
-        .flat_map(|inner| inner.value().as_dict().unwrap().fields.clone())
-        .fold(declarations, |mut acc, (relation, resource)| {
-            acc.insert(
-                resource.clone_with_value(value!(relation.0.as_str())),
-                Declaration::Relation(resource),
-            );
-            acc
-        })
+    if let Some(permissions) = permissions {
+        for permission in permissions.value().as_list()? {
+            if let Some(previous) = declarations.insert(permission.clone(), Declaration::Permission)
+            {
+                let msg = if matches!(previous, Declaration::Permission) {
+                    format!(
+                        "{}: Duplicate declaration of {} in the permissions list.",
+                        resource.to_polar(),
+                        permission.to_polar()
+                    )
+                } else {
+                    format!(
+                        "{}: {} declared as a permission but it was previously declared as a role.",
+                        resource.to_polar(),
+                        permission.to_polar()
+                    )
+                };
+                return Err(ParseError::ParseSugar {
+                    loc: permission.offset(),
+                    msg,
+                    ranges: vec![],
+                }
+                .into());
+            }
+        }
+    }
+
+    if let Some(relations) = relations {
+        for (relation, related_resource) in &relations.value().as_dict()?.fields {
+            // Stringify relation so that we can index into the declarations map with a string
+            // reference to the relation. E.g., relation `creator: User` gets stored as `"creator"
+            // => Relation(User)` so that when we encounter an implication `"admin" if "creator";`
+            // we can easily look up what type of declaration `"creator"` is.
+            let stringified_relation =
+                related_resource.clone_with_value(value!(relation.0.as_str()));
+            let declaration = Declaration::Relation(related_resource.clone());
+            if let Some(previous) = declarations.insert(stringified_relation, declaration) {
+                let msg = match previous {
+                    Declaration::Role => format!(
+                        "{}: '{}' declared as a relation but it was previously declared as a role.",
+                        resource.to_polar(),
+                        relation.to_polar()
+                    ),
+                    Declaration::Permission => format!(
+                        "{}: '{}' declared as a relation but it was previously declared as a permission.",
+                        resource.to_polar(),
+                        relation.to_polar()
+                    ),
+                    _ => unreachable!("duplicate dict keys aren't parseable"),
+                };
+                return Err(ParseError::ParseSugar {
+                    loc: related_resource.offset(),
+                    msg,
+                    ranges: vec![],
+                }
+                .into());
+            }
+        }
+    }
+    Ok(declarations)
 }
 
 fn resource_as_var(resource: &Term) -> Value {
@@ -584,7 +635,7 @@ impl Namespace {
             implications,
         } = self;
 
-        let declarations = index_declarations(roles, permissions, relations);
+        let declarations = index_declarations(roles, permissions, relations, &resource)?;
 
         errors.append(&mut check_that_implication_heads_are_declared_locally(
             &implications,
@@ -636,16 +687,19 @@ mod tests {
 
     #[test]
     fn test_namespace_rewrite_implications_with_lowercase_resource_specializer() {
+        let repo_resource = term!(sym!("repo"));
         let repo_roles = term!(["reader"]);
         let repo_relations = term!(btreemap! { sym!("parent") => term!(sym!("org")) });
-        let repo_declarations = index_declarations(Some(repo_roles), None, Some(repo_relations));
+        let repo_declarations =
+            index_declarations(Some(repo_roles), None, Some(repo_relations), &repo_resource);
 
+        let org_resource = term!(sym!("org"));
         let org_roles = term!(["member"]);
-        let org_declarations = index_declarations(Some(org_roles), None, None);
+        let org_declarations = index_declarations(Some(org_roles), None, None, &org_resource);
 
         let mut namespaces = Namespaces::new();
-        namespaces.add(term!(sym!("repo")), repo_declarations);
-        namespaces.add(term!(sym!("org")), org_declarations);
+        namespaces.add(repo_resource, repo_declarations.unwrap());
+        namespaces.add(org_resource, org_declarations.unwrap());
         let implication = Implication {
             head: term!("reader"),
             body: (term!("member"), Some(term!("parent"))),
@@ -661,11 +715,12 @@ mod tests {
 
     #[test]
     fn test_namespace_local_rewrite_implications() {
+        let resource = term!(sym!("Org"));
         let roles = term!(["owner", "member"]);
         let permissions = term!(["invite", "create_repo"]);
-        let declarations = index_declarations(Some(roles), Some(permissions), None);
+        let declarations = index_declarations(Some(roles), Some(permissions), None, &resource);
         let mut namespaces = Namespaces::new();
-        namespaces.add(term!(sym!("Org")), declarations);
+        namespaces.add(resource, declarations.unwrap());
         let implication = Implication {
             head: term!("member"),
             body: (term!("owner"), None),
@@ -705,14 +760,17 @@ mod tests {
 
     #[test]
     fn test_namespace_nonlocal_rewrite_implications() {
+        let repo_resource = term!(sym!("Repo"));
         let repo_roles = term!(["reader"]);
         let repo_relations = term!(btreemap! { sym!("parent") => term!(sym!("Org")) });
-        let repo_declarations = index_declarations(Some(repo_roles), None, Some(repo_relations));
+        let repo_declarations =
+            index_declarations(Some(repo_roles), None, Some(repo_relations), &repo_resource);
+        let org_resource = term!(sym!("Org"));
         let org_roles = term!(["member"]);
-        let org_declarations = index_declarations(Some(org_roles), None, None);
+        let org_declarations = index_declarations(Some(org_roles), None, None, &org_resource);
         let mut namespaces = Namespaces::new();
-        namespaces.add(term!(sym!("Repo")), repo_declarations);
-        namespaces.add(term!(sym!("Org")), org_declarations);
+        namespaces.add(repo_resource, repo_declarations.unwrap());
+        namespaces.add(org_resource, org_declarations.unwrap());
         let implication = Implication {
             head: term!("reader"),
             body: (term!("member"), Some(term!("parent"))),
@@ -784,6 +842,42 @@ mod tests {
                 "member" if "owner";
             }"#,
             r#"Undeclared term "owner" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
+        );
+    }
+
+    #[test]
+    fn test_namespace_with_clashing_declarations() {
+        let p = Polar::new();
+        p.register_constant(sym!("Org"), term!("unimportant"));
+
+        expect_error(
+            &p,
+            r#"Org{
+              roles = ["egg","egg"];
+              "egg" if "egg";
+            }"#,
+            r#"Org: Duplicate declaration of "egg" in the roles list."#,
+        );
+
+        expect_error(
+            &p,
+            r#"Org{
+              roles = ["egg","tootsie"];
+              permissions = ["spring","egg"];
+
+              "egg" if "tootsie";
+              "tootsie" if "spring";
+            }"#,
+            r#"Org: "egg" declared as a permission but it was previously declared as a role."#,
+        );
+
+        expect_error(
+            &p,
+            r#"Org{
+              permissions = [ "egg" ];
+              relations = { egg: Roll };
+            }"#,
+            r#"Org: 'egg' declared as a relation but it was previously declared as a permission."#,
         );
     }
 
