@@ -1592,8 +1592,8 @@ fn test_rest_vars() -> TestResult {
 #[test]
 fn test_circular_data() -> TestResult {
     let mut p = Polar::new();
-    qeval(&mut p, "x = [x]");
-    qeval(&mut p, "y = {y:y}");
+    qeval(&mut p, "x = [x] and x in x");
+    qeval(&mut p, "y = {y:y} and [\"y\", y] in y");
     qruntime!(
         "x = [x, y] and y = [y, x] and x = y",
         RuntimeError::StackOverflow { .. }
@@ -1942,7 +1942,7 @@ fn test_numeric_applicability() -> TestResult {
     qeval(&mut p, "f(9223372036854775807)");
     qeval(&mut p, "f(-9223372036854775807)");
     qeval(&mut p, "f(9223372036854776000.0)");
-    qnull(&mut p, "f(nan1)");
+    qeval(&mut p, "f(nan1)");
     qnull(&mut p, "f(nan2)");
     Ok(())
 }
