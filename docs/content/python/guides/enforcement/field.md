@@ -32,12 +32,14 @@ this:
 
 ```polar
 allow_field(user, "read", profile: Profile, "email") if
-    profile.user = user or
+    user = profile.user or
     user.is_admin;
 ```
 
 Notice that an `allow_field` rule is just like an `allow` rule, except that it
 takes an additional argument: the field name.
+
+## The `authorize_field` method
 
 To enforce field-level authorization in your app, you use the {{% apiDeepLink
 class="Enforcer" %}}authorize_field{{% /apiDeepLink %}} method.
@@ -55,18 +57,20 @@ def get_last_check_in_location(profile, current_user):
 
 Like `authorize`, `authorize_field` will raise an `AuthorizationError` when the
 user is not allowed to perform the given action. This is an error that you
-should handle globally in your app. You can read more details about this on the
+should handle globally in your app. You can read more details about this in the
 [Resource-level Enforcement Guide](resource.html#authorization-failure).
 
-Sometimes it is helpful to get
-_all_ fields that a user can access, and for this there is a separate method
-called {{% apiDeepLink class="Enforcer" %}}authorized_fields{{%/apiDeepLink %}}:
+## Get all authorized fields
+
+Sometimes it is helpful to get _all_ fields that a user can access, and for this
+there is a separate method called {{% apiDeepLink class="Enforcer"
+%}}authorized_fields{{%/apiDeepLink %}}:
 
 ```python
 # Serialize only the fields of profile that the current user is allowed to read
 def serialize_profile(profile, current_user):
     fields = oso.authorized_fields(current_user, "read", profile)
-    return { field: profile[field] for key in fields }
+    return {field: profile[field] for field in fields}
 ```
 
 The `authorized_fields` method can be used to send only the fields that the user
@@ -78,5 +82,51 @@ might use an `"update"` action in the call to `authorized_fields`:
 # Filter update_params by the fields on profile that the user can update
 def filter_update_params(profile, raw_update_params, current_user):
     fields = oso.authorized_fields(current_user, "update", profile)
-    return { field: raw_update_params[field] for key in fields }
+    return {field: raw_update_params[field] for field in fields}
 ```
+
+## Authorizing many fields
+
+Perhaps you have many fields on each object, and you'd like to allow access to
+them in groups. For example, a `Profile` object might have some public fields,
+some fields viewable only by friends, and some fields viewable by admins only.
+
+You can do this with Polar's `in` operator:
+
+```python
+# Allow friends access to friend-only fields
+allow_field(user: User, "read", profile: Profile, field) if
+    field in ["last_check_in_location", "favorite_animal"] and
+    user in profile.friends;
+
+# Allow admins access to admin-only fields
+allow_field(user: User, "read", profile: Profile, field) if
+    field in ["email", "last_login"] and
+    user.is_admin;
+```
+
+If you have trouble listing all fields in your Polar policy files, and you'd
+prefer to list fields in your application code, you can also use a constant
+defined on the class, like this:
+
+```python
+allow_field(user: User, "read", profile: Profile, field) if
+    field in Profile.FRIENDS_ONLY_FIELDS and
+    user in profile.friends;
+
+allow_field(user: User, "read", profile: Profile, field) if
+    field in Profile.ADMIN_ONLY_FIELDS and
+    user.is_admin;
+```
+
+Doing so would require you to add the `FRIENDS_ONLY_FIELDS` and
+`ADMIN_ONLY_FIELDS` constants to your `Profile` class:
+
+```python
+class Profile:
+    ADMIN_ONLY_FIELDS = ["email", "last_login"]
+    FRIENDS_ONLY_FIELDS = ["last_check_in_location", "favorite_animal"]
+```
+
+That way, you can add new fields and authorize access to them without touching
+your Polar policy code.
