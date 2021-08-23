@@ -160,7 +160,7 @@ impl BindingManager {
     fn partial_bind(&mut self, partial: Operation, var: &Symbol, val: Term) -> PolarResult<Goal> {
         match partial.ground(var, val.clone()) {
             None => Err(RuntimeError::IncompatibleBindings {
-                msg: "Grounding failed".into(),
+                msg: "Grounding failed A".into(),
             }
             .into()),
             Some(grounded) => {
@@ -284,7 +284,7 @@ impl BindingManager {
                     Some(o) => op = o,
                     None => {
                         return Err(RuntimeError::IncompatibleBindings {
-                            msg: "Grounding failed".into(),
+                            msg: "Grounding failed B".into(),
                         }
                         .into())
                     }
@@ -512,7 +512,6 @@ impl BindingManager {
                 BindingManagerVariableState::Bound(left_value),
                 BindingManagerVariableState::Partial(p),
             ) => {
-                // Left is bound, right has constraints.
                 let p = p.clone();
                 goal = Some(self.partial_bind(p, right, left_value)?);
             }

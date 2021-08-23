@@ -116,9 +116,9 @@ def t(oso):
             "id": str,
             "foo_id": str,
             "data": str,
-            # "bar": Relationship(
-            #     kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
-            # ),
+            "foo": Relationship(
+                kind="parent", other_type="Foo", my_field="foo_id", other_field="id"
+            ),
         },
         fetcher=get_foo_logs,
     )
@@ -135,6 +135,7 @@ def t(oso):
         "another_log_c": another_log_c,
         "bars": bars,
         "foos": foos,
+        "logs": foo_logs,
     }
 
 
@@ -310,6 +311,26 @@ def test_var_in_var(oso, t):
 
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
     assert len(results) == 1
+
+
+def test_parent_child_cases(oso, t):
+    policy = """
+    allow(log: FooLogRecord, "thence", foo: Foo) if
+      log.foo = foo;
+    allow(log: FooLogRecord, "thither", foo: Foo) if
+      log in foo.logs;
+    allow(log: FooLogRecord, "glub", foo: Foo) if
+      log.foo = foo and log in foo.logs;
+    allow(log: FooLogRecord, "bluh", foo: Foo) if
+      log in foo.logs and log.foo = foo;
+    """
+    oso.load_str(policy)
+    foo = t["fourth_foo"]
+    log = t["logs"][0]
+    check_authz(oso, log, "thence", t["Foo"], [foo])
+    check_authz(oso, log, "thither", t["Foo"], [foo])
+    check_authz(oso, log, "glub", t["Foo"], [foo])
+    check_authz(oso, log, "bluh", t["Foo"], [foo])
 
 
 def test_val_in_var(oso, t):

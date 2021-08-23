@@ -1936,9 +1936,7 @@ mod test {
     #[test]
     fn test_grounding_1() -> TestResult {
         test_grounding(
-            r#"
-            f(x) if x in y and x > 0 and y = [1, 2, 3] and x = 1;
-        "#,
+            "f(x) if x in y and x > 0 and y = [1, 2, 3] and x = 1;",
             term!(call!("f", [sym!("x")])),
             &[|r: Bindings| {
                 assert_eq!(r.get(&sym!("x")).unwrap(), &term!(1));
