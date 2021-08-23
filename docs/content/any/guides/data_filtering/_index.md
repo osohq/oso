@@ -6,18 +6,33 @@ showContentForAnyLanguage: true
 
 # Data Filtering Preview
 
+{{% callout "Early Preview" "orange" %}}
+
+Data filtering is currently an Early Preview. If you have any trouble using it or it doesn't work with your policy [drop into our Slack](http://join-slack.osohq.com) or
+<a href="mailto:engineering@osohq.com?subject=Data%20filtering%20help%20for%20{{< currentLanguage >}}&body=I%20need%20data%20filtering%20help%20in%20{{< currentLanguage >}}">send us an email</a>.
+
+Thanks for trying it out!
+
+{{% /callout %}}
+
 ## What is data filtering
-When you evaluate an oso policy (using `is_allowed`) for a specific `actor`, `action` and `resource`, oso evaluates the allow rule(s) you have defined to determine if that `actor` is allowed to do that `action` on that `resource`. For instance if you have a policy that says something like this,
-```
+When you evaluate an oso policy (using `is_allowed`) for a specific `actor`, `action` and `resource`, oso evaluates the allow rule(s) you have defined to determine if that `actor` is allowed to do that `action` on that `resource`. For instance if you have a policy like this.
+
+
+```polar
 allow(actor, "get", doc: Document) if doc.owner = actor;
 ```
-Then oso checks that the passed in `doc`'s owner field is equal to the passed in actor. Eg. if the actor is `"steve"` and the document is `{owner: "steve", content: "..."}` Then steve would be allowed to `"get"` that document.
+
+Oso checks that the passed in `doc`'s owner field is equal to the passed in actor. Eg. if the actor is `"steve"` and the document is `{owner: "steve", content: "..."}` Then `"steve"` would be allowed to `"get"` that document.
 
 Data filtering is asking a slightly different question of the policy. Instead of asking "Can this actor do this action on this specific resource?", we want to ask "What are all the resources that this actor can do this specific action on?".
 One way to answer this question would be to take every Document in the system and call `is_allowed` on it. This isn't efficient and many times is just impossible. There could be thousands of Documents in a database but only 3 that have the owner "steve". Instead of fetching every document and passing it into oso, we would like to ask our database for only the documents that have the owner "steve". This process of filtering the data in our data store, based on the logic in our policy is what we call "Data Filtering".
 
-## Callout that if you're using sqlalchemy or django data filtering is built in and you don't have to worry about this
-link to the docs instead.
+{{% callout "ORM Integrations" "blue" %}}
+
+If you are using one of our ORM integration libraries like sqlalchemy-oso or django-oso data filtering is already built in and you won't have to worry about integrating it yourself. See docs for the orm library instead.
+
+{{% /callout %}}
 
 ## How data filtering works
 Data filtering works by evaluating the policy without passing in a resource. Instead of checking things on the resource
@@ -77,7 +92,7 @@ Data filtering is coming soon for {{< lang >}}!
 
 If you want to get data filtering in your app now or just want to
 register your interest for Data Filtering in {{< lang >}} [drop into our Slack](http://join-slack.osohq.com) or
-<a href="mailto:engineering@osohq.com?subject=Roles%20support%20for%20{{< currentLanguage >}}&body=I%27m%20interested%20in%20Oso%20roles%20support%20for%20{{< currentLanguage >}}">send an email</a>
+<a href="mailto:engineering@osohq.com?subject=Data%20filtering%20support%20for%20{{< currentLanguage >}}&body=I%27m%20interested%20in%20data%20filtering%20support%20for%20{{< currentLanguage >}}">send an email</a>.
 to our engineering team and we'll unblock you.
 {{% /ifLang %}}
 {{% /ifLang %}}
