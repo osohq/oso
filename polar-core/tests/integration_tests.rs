@@ -1513,6 +1513,36 @@ fn test_unknown_specializer_warning() -> TestResult {
 }
 
 #[test]
+fn test_and_or_warning() -> TestResult {
+    let p = Polar::new();
+
+    // free-standing OR is fine
+    p.load_str("f(x) if x > 1 or x < 3;")?;
+    // assert_eq!(p.next_message().map(|msg| msg.msg), None);
+
+    // OR with explicit parenthesis is fine (old behaviour)
+    p.load_str("f(x) if x = 1 and (x > 1 or x < 3);")?;
+    // assert_eq!(p.next_message().map(|msg| msg.msg), None);
+
+    // OR with parenthesized AND is fine (new default)
+    p.load_str("f(x) if (x = 1 and x > 1) or x < 3;")?;
+    // assert_eq!(p.next_message().map(|msg| msg.msg), None);
+
+    // Add whitespace to make sure it can find parentheses wherever they are
+    p.load_str("f(x) if (\n\t    x = 1 and  x > 1) or x < 3;")?;
+    // assert_eq!(p.next_message().map(|msg| msg.msg), None);
+
+    // This is ambiguous between 0.16 and 0.20
+    p.load_str("f(x) if x = 1 and x > 1 or x < 3;").unwrap_err();
+    // let out = p.next_message().unwrap();
+    // assert!(matches!(&out.kind, MessageKind::Warning));
+    // assert!(&out
+    //     .msg
+    //     .starts_with("Expression without parentheses could be ambiguous"));
+    Ok(())
+}
+
+#[test]
 fn test_print() -> TestResult {
     // TODO: If POLAR_LOG is on this test will fail.
     let p = Polar::new();
