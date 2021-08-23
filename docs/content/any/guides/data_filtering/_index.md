@@ -22,7 +22,7 @@ to our engineering team and we'll unblock you.
 {{% /ifLang %}}
 {{% /ifLangExists %}}
 
-{{% callout "Early Preview" "orange" %}}
+{{% callout "Early Preview" "blue" %}}
 
 Data filtering is currently an Early Preview. If you have any trouble using it or it doesn't work with your policy [drop into our Slack](http://join-slack.osohq.com) or
 <a href="mailto:engineering@osohq.com?subject=Data%20filtering%20help%20for%20{{< currentLanguage >}}&body=I%20need%20data%20filtering%20help%20in%20{{< currentLanguage >}}">send us an email</a>.
@@ -71,15 +71,14 @@ You can pass both of these things as arguments when registering a class and then
 
 {{% ifLang "python" %}}
 
+Here's a small SQLAlchemy example, but the principles should apply to any ORM.
+
 ```python
 from sqlalchemy import create_engine
 from sqlalchemy.types import String, Boolean
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-
-from polar import Relationship
-from oso import Oso
 
 Base = declarative_base()
 
@@ -111,27 +110,6 @@ session = Session()
 
 Base.metadata.create_all(engine)
 
-
-def query_model(model, constraints):
-    query = session.query(model)
-    for constraint in constraints:
-        assert constraint.kind in ["Eq", "In"]
-        field = getattr(model, constraint.field)
-        if constraint.kind == "Eq":
-            query = query.filter(field == constraint.value)
-        elif constraint.kind == "In":
-            query = query.filter(field.in_(constraint.value))
-    return query.all()
-
-
-def get_orgs(constraints):
-    return query_model(Org, constraints)
-
-
-def get_repos(constraints):
-    return query_model(Repo, constraints)
-
-
 apple = Org(id="apple")
 osohq = Org(id="osohq")
 
@@ -154,6 +132,63 @@ objs = {
 for obj in objs.values():
     session.add(obj)
 session.commit()
+```
+
+{{% /ifLang %}}
+
+For each class, we need to define a fetching function. This is a function that takes a list of constraints and returns all the instances that match them. In some cases you might be filtering an in memory array, in other cases you might be constructing a request to an external service to fetch data. In this case we are turning the constraints into a database query.
+
+{{% callout "Handling Constraints" "orange" %}}
+
+It is very important that you handle every constraint that is passed in. Missing any will result in
+returning data that the user is not allowed to see.
+
+{{% /callout %}}
+
+The constraints are object with a `kind`, `field` and `value`.
+There are three kinds of constraints.
+
+* `"Eq"` constraints mean that the field `field` must be equal to the value `value`
+* `"In"` constraints mean that the value of the field `field` must be one of the values in the list `value`.
+* `"Contains"` constraints only apply if the field `field` is a list. It means this list must contain all the values in `value`. If none of your fields are lists you wont get passed this one.
+
+{{% ifLang "python" %}}
+
+```python
+def query_model(model, constraints):
+    query = session.query(model)
+    for constraint in constraints:
+        assert constraint.kind in ["Eq", "In"]
+        field = getattr(model, constraint.field)
+        if constraint.kind == "Eq":
+            query = query.filter(field == constraint.value)
+        elif constraint.kind == "In":
+            query = query.filter(field.in_(constraint.value))
+    return query.all()
+
+
+def get_orgs(constraints):
+    return query_model(Org, constraints)
+
+
+def get_repos(constraints):
+    return query_model(Repo, constraints)
+```
+
+{{% /ifLang %}}
+
+When you register classes you need to specify two new things. One is `types` which is a map that says what the type of each field in the class is. This can be base types like `String` or another registered class or it can be a `Relationship`.
+
+The Relationship specifies the type of the related value. It also says how it's related. Any instance of the other type that has their `other_field` equal to the current objects `my_field` is related. `kind` can be either `"parent"` which means there is one related instance, or `"children"` which means there are many.
+Internally the fields are used to create constraints and the related instances are fetched using the fetching functions.
+
+The other new thing to specify when registering a class is the fetching function for that class.
+
+{{% ifLang "python" %}}
+
+```python
+from polar import Relationship
+from oso import Oso
 
 oso = Oso()
 
@@ -173,6 +208,14 @@ oso.register_class(
 
 oso.register_class(User, types={"id": str, "org_id": str})
 
+```
+
+{{% /ifLang %}}
+
+One everything is set up we can use the new "get allowed resources" method to filter a Class to all the instances that the user is allowed to preform the action on.
+
+{{% ifLang "python" %}}
+```python
 policy = """
 allow(user: User, "read", repo: Repo) if
     org = repo.org and
