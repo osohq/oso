@@ -35,23 +35,34 @@ test('data filtering', async () => {
     synchronize: true,
     logging: false,
   });
+
   let bars = connection.getRepository(Bar);
-
-  let helloBar = new Bar();
-  helloBar.id = 'hello';
-  helloBar.isCool = true;
-  helloBar.isStillCool = true;
-
-  await bars.save(helloBar);
-
   let foos = connection.getRepository(Foo);
 
-  let anotherFoo = new Foo();
-  anotherFoo.id = 'Another';
-  anotherFoo.barId = 'hello';
-  anotherFoo.isFooey = true;
+  async function mkBar(id: string, cool: boolean, stillCool: boolean) {
+    let bar = new Bar();
+    bar.id = id;
+    bar.isCool = cool;
+    bar.isStillCool = stillCool;
+    await bars.save(bar);
+    return bar;
+  }
 
-  await foos.save(anotherFoo);
+  async function mkFoo(id: string, barId: string, fooey: boolean) {
+    let foo = new Foo();
+    foo.id = id;
+    foo.barId = barId;
+    foo.isFooey = fooey;
+    await foos.save(foo);
+    return foo;
+  }
+
+  let helloBar = await mkBar('hello', true, true);
+  let byeBar = await mkBar('goodbye', true, false);
+
+  let aFoo = await mkFoo('one', 'hello', false);
+  let anotherFoo = await mkFoo('another', 'hello', true);
+  let thirdFoo = await mkFoo('next', 'goodbye', true);
 
   const oso = new Oso();
 
@@ -106,18 +117,34 @@ test('data filtering', async () => {
   fooType.set('bar', new Relationship('parent', 'Bar', 'barId', 'id'));
   oso.registerClass(Foo, 'Foo', fooType, getFoos);
 
+  const expectSameResults = (a: any[], b: any[]) => {
+    expect(a).toEqual(expect.arrayContaining(b));
+    expect(b).toEqual(expect.arrayContaining(a));
+  };
+
+  const checkAuthz = async (
+    actor: string,
+    action: string,
+    resource: any,
+    expected: any[]
+  ) => {
+    for (let x in expected)
+      expect(await oso.isAllowed(actor, action, expected[x])).toBe(true);
+    expectSameResults(
+      await oso.getAllowedResources(actor, action, resource),
+      expected
+    );
+  };
+
   oso.loadStr(`
         allow("steve", "get", resource: Foo) if
             resource.bar = bar and
             bar.isCool = true and
             resource.isFooey = true;
     `);
-  expect(await oso.isAllowed('steve', 'get', anotherFoo)).toBe(true);
-  expect(await oso.getAllowedResources('steve', 'get', Foo)).toEqual([
-    anotherFoo,
-  ]);
+  await checkAuthz('steve', 'get', Foo, [anotherFoo, thirdFoo]);
 
-  oso.clearRules()
+  oso.clearRules();
   oso.loadStr(`
         resource(_type: Bar, "bar", actions, roles) if
             actions = ["get"] and
@@ -144,8 +171,6 @@ test('data filtering', async () => {
         allow(actor, action, resource) if role_allows(actor, action, resource);
     `);
   oso.enableRoles();
-  expect(await oso.isAllowed('steve', 'read', anotherFoo)).toBe(true);
-  expect(await oso.getAllowedResources('steve', 'get', Foo)).toEqual([
-    anotherFoo,
-  ]);
+  await checkAuthz('steve', 'get', Bar, [helloBar]);
+  await checkAuthz('steve', 'read', Foo, [aFoo, anotherFoo]);
 });

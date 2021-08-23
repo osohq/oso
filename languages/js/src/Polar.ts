@@ -45,24 +45,22 @@ export class Polar {
   #rolesEnabled: boolean;
 
   constructor(opts: Options = {}) {
-
     function defaultEqual(a: any, b: any) {
-      if (a && b && // good grief!!
-          typeof a === typeof b &&
-          typeof a === 'object' &&
-          a.__proto__ === b.__proto__) {
-
+      if (
+        a &&
+        b && // good grief!!
+        typeof a === typeof b &&
+        typeof a === 'object' &&
+        a.__proto__ === b.__proto__
+      ) {
         let check = new Map();
 
         for (let x in a) {
-          if (!defaultEqual(a[x], b[x]))
-            return false;
+          if (!defaultEqual(a[x], b[x])) return false;
           check.set(x, true);
         }
 
-        for (let x in b)
-          if (!check.get(x))
-            return false;
+        for (let x in b) if (!check.get(x)) return false;
 
         return true;
       }
@@ -244,7 +242,11 @@ export class Polar {
   /**
    * Query for a Polar rule with bindings.
    */
-  queryRuleWithBindings(name: string, bindings: Map<string, any>, ...args: unknown[]): QueryResult {
+  queryRuleWithBindings(
+    name: string,
+    bindings: Map<string, any>,
+    ...args: unknown[]
+  ): QueryResult {
     return this.query(new Predicate(name, args), bindings);
   }
 
@@ -297,7 +299,7 @@ export class Polar {
       ]),
     ]);
     let bindings = new Map();
-    bindings.set("resource", constraint);
+    bindings.set('resource', constraint);
     let results = this.queryRuleWithBindings(
       'allow',
       bindings,

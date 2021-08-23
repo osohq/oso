@@ -13,6 +13,7 @@ import type {
   Debug,
   ExternalCall,
   ExternalIsa,
+  ExternalIsaWithPath,
   ExternalIsSubclass,
   ExternalIsSubspecializer,
   ExternalOp,
@@ -267,7 +268,8 @@ export class Query {
             break;
           }
           case QueryEventKind.ExternalIsSubclass: {
-            const { leftTag, rightTag, callId } = event.data as ExternalIsSubclass;
+            const { leftTag, rightTag, callId } =
+              event.data as ExternalIsSubclass;
             const answer = await this.#host.isSubclass(leftTag, rightTag);
             this.questionResult(answer, callId);
             break;
@@ -285,6 +287,17 @@ export class Query {
           case QueryEventKind.ExternalIsa: {
             const { instance, tag, callId } = event.data as ExternalIsa;
             const answer = await this.#host.isa(instance, tag);
+            this.questionResult(answer, callId);
+            break;
+          }
+          case QueryEventKind.ExternalIsaWithPath: {
+            const { baseTag, path, classTag, callId } =
+              event.data as ExternalIsaWithPath;
+            const answer = await this.#host.isaWithPath(
+              baseTag,
+              path,
+              classTag
+            );
             this.questionResult(answer, callId);
             break;
           }

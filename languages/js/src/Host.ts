@@ -205,14 +205,11 @@ export class Host {
    *
    * @internal
    */
-  async isSubclass(
-    left: string,
-    right: string
-  ): Promise<boolean> {
-    const leftCls = this.getClass(left)
-    const rightCls = this.getClass(right)
+  async isSubclass(left: string, right: string): Promise<boolean> {
+    const leftCls = this.getClass(left);
+    const rightCls = this.getClass(right);
     const mro = ancestors(leftCls);
-    return mro.includes(rightCls)
+    return mro.includes(rightCls);
   }
 
   /**
@@ -224,6 +221,30 @@ export class Host {
     const instance = await this.toJs(polarInstance);
     const cls = this.getClass(name);
     return instance instanceof cls || instance?.constructor === cls;
+  }
+
+  /**
+   * Check if a sequence of field accesses on the given class is an
+   * instance of another class.
+   *
+   * @internal
+   */
+  async isaWithPath(
+    baseTag: string,
+    path: string[],
+    classTag: string
+  ): Promise<boolean> {
+    return (
+      classTag ==
+      path.reduce((k: string | undefined, field: string) => {
+        if (k != undefined) {
+          const l = this.types.get(k);
+          if (l != undefined) k = this.clsNames.get(l.get(field));
+          else k = l;
+        }
+        return k;
+      }, baseTag)
+    );
   }
 
   /**

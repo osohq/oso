@@ -51,7 +51,10 @@ export class Constraint {
   }
 }
 
-export function serializeTypes(types: Map<string, any>, clsNames: Map<any, string>): string {
+export function serializeTypes(
+  types: Map<string, any>,
+  clsNames: Map<any, string>
+): string {
   let polarTypes: any = {};
   for (let [tag, fields] of types.entries()) {
     let fieldTypes: any = {};

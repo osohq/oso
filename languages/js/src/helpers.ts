@@ -67,6 +67,8 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
         return parseExternalIsSubclass(event['ExternalIsSubclass']);
       case event['ExternalIsa'] !== undefined:
         return parseExternalIsa(event['ExternalIsa']);
+      case event['ExternalIsaWithPath'] !== undefined:
+        return parseExternalIsaWithPath(event['ExternalIsaWithPath']);
       case event['Debug'] !== undefined:
         return parseDebug(event['Debug']);
       case event['ExternalOp'] !== undefined:
@@ -236,6 +238,30 @@ function parseExternalIsa({
   return {
     kind: QueryEventKind.ExternalIsa,
     data: { callId, instance, tag },
+  };
+}
+
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * an [[`ExternalIsa`]].
+ *
+ * @internal
+ */
+function parseExternalIsaWithPath({
+  call_id: callId,
+  base_tag: baseTag,
+  path,
+  class_tag: classTag,
+}: obj): QueryEvent {
+  if (
+    !Number.isSafeInteger(callId) ||
+    typeof classTag !== 'string' ||
+    typeof baseTag !== 'string'
+  )
+    throw new Error();
+  return {
+    kind: QueryEventKind.ExternalIsaWithPath,
+    data: { callId, baseTag, path, classTag },
   };
 }
 
