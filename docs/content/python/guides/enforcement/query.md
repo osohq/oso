@@ -46,7 +46,9 @@ draft: true
   oso.authorize_query(current_user, Expense)
   ```
 
-- Exactly what's returned from this method depends on the enforcer you're using. We have enforcers for several popular ORMs which return querysets with proper filters applied. An example of using `authorize_query` in an app:
+- Exactly what's returned from this method depends on the enforcer you're using.
+  We have enforcers for several popular ORMs which return "query sets" with
+  proper filters applied. An example of using `authorize_query` in an app:
 
   ```ruby
   def list_articles_for_org(user, org):

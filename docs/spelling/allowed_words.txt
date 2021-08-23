@@ -19,11 +19,11 @@ GC
 GDB
 GSuite
 GitClub
+Github's
 Gradle
 GraphQL
 Graphene
 Halbert
-hotfixes
 IAM
 IDEs
 JARs
@@ -109,6 +109,7 @@ glibc
 hardcoded
 hardcoding
 hoc
+hotfixes
 href
 ing
 instantiation
