@@ -92,18 +92,25 @@ module Oso
         ffi_polar.validate_roles_config(validation_query_results)
       end
 
+      # get the (maybe user-supplied) name of a class.
+      # kind of a hack because of class autoreloading.
+      def get_class_name(klass) # rubocop:disable Metrics/AbcSize
+        if host.types.key? klass
+          host.types[klass].name
+        elsif host.types.key? klass.name
+          host.types[klass.name].name
+        else
+          rec = host.types.values.find { |v| v.klass.get == klass }
+          raise "Unknown class `#{klass}`" if rec.nil?
+
+          host.types[klass] = rec
+          rec.name
+        end
+      end
+
       def get_allowed_resources(actor, action, klass) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         resource = Variable.new 'resource'
-
-        # FIXME(gw) kind of a hack because of class autoreloading, maybe not needed?
-        if host.types.key? klass
-          class_name = host.types[klass].name
-        elsif host.types.key? klass.name
-          class_name = host.types[klass.name].name
-        else
-          raise "Unknown class `#{klass}`"
-        end
-
+        class_name = get_class_name klass
         constraint = Expression.new(
           'And',
           [Expression.new('Isa', [resource, Pattern.new(class_name, {})])]
@@ -206,17 +213,6 @@ module Oso
           raise InvalidQueryTypeError
         end
         Query.new(ffi_query, host: host, bindings: bindings)
-      end
-
-      # Query the knowledge base to determine whether an actor is allowed to
-      # perform an action upon a resource.
-      #
-      # @param actor [Object] Subject.
-      # @param action [Object] Verb.
-      # @param resource [Object] Object.
-      # @return [Boolean] An access control decision.
-      def allowed?(actor:, action:, resource:)
-        !query_rule('allow', actor, action, resource).first.nil?
       end
 
       # Query for a rule.

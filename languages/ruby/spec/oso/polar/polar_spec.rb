@@ -842,6 +842,22 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(query(subject, 'Foo.class_version = 2')).to eq([{}])
     end
 
+    it 'retrieves user-supplied names for reloaded classes' do
+      stub_const('Bar', Class.new do
+        def version
+          1
+        end
+      end)
+      subject.register_class(Bar, name: 'Baz')
+      stub_const('Bar', Class.new do
+        def version
+          2
+        end
+      end)
+
+      expect(subject.get_class_name(Bar)).to be 'Baz'
+    end
+
     it 'can lookup attributes on anonymous classes' do
       subject.register_class(Class.new do
         def self.test

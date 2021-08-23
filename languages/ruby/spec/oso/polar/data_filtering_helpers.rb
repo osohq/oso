@@ -17,9 +17,9 @@ module DataFilteringHelpers
     results = subject.get_allowed_resources(actor, action, resource)
     res = unord_eq(results, expected)
     expect(res).to be true
-    expected.each do |re|
-      answer = subject.allowed?(actor: actor, action: action, resource: re)
-      expect(answer).to be true
+    expected.each do |it|
+      answer = subject.query_rule 'allow', actor, action, it
+      expect(answer.to_a).not_to be_empty
     end
   end
 
