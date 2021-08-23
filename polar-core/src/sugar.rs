@@ -884,14 +884,19 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_relation_used_in_head_and_relation_position() {
+    #[ignore = "probably easier after the entity PR goes in"]
+    fn test_namespace_resource_relations_can_only_appear_after_on() {
         let p = Polar::new();
         p.register_constant(sym!("Repo"), term!("unimportant"));
-        let policy = r#"Repo {
-            relations = { parent: Org };
-            "parent" if "owner" on "parent";
-        }"#;
-        panic!("{}", p.load_str(policy).unwrap_err());
+        expect_error(
+            &p,
+            r#"Repo {
+                roles = ["owner"];
+                relations = { parent: Org };
+                "parent" if "owner";
+            }"#,
+            r#"Repo: resource relation "parent" can only appear in an implication following the keyword 'on'."#,
+        );
     }
 
     #[test]
