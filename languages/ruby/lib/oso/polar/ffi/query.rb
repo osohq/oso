@@ -21,6 +21,7 @@ module Oso
           attach_function :next_message, :polar_next_query_message, [FFI::Query], FFI::Message
           attach_function :source, :polar_query_source_info, [FFI::Query], FFI::Source
           attach_function :free, :query_free, [FFI::Query], :int32
+          attach_function :bind, :polar_bind, [FFI::Query, :string, :string], :int32
         end
         private_constant :Rust
 
@@ -65,6 +66,11 @@ module Oso
           handle_error if event.null?
 
           ::Oso::Polar::QueryEvent.new(JSON.parse(event.to_s))
+        end
+
+        def bind(name, value)
+          res = Rust.bind(self, name, JSON.dump(value))
+          handle_error if res.zero?
         end
 
         def next_message

@@ -10,6 +10,7 @@ require 'oso/polar/predicate'
 require 'oso/polar/query'
 require 'oso/polar/query_event'
 require 'oso/polar/variable'
+require 'oso/polar/data_filtering'
 
 module Oso
   # Top-level namespace for Polar language library.
