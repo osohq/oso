@@ -45,14 +45,17 @@ queries your policy for `allow`, `allow_request`, or `allow_field` rules. To
 learn more about writing those rules, read about [writing a
 policy](../../getting-started/policies).
 
-- `authorize(user, action, resource)`: Ensure that a user can perform an action
+- {{< apiDeepLink class="Enforcer" label="authorize(actor, action, resource)"
+  >}}authorize{{< /apiDeepLink >}}: Ensure that an actor can perform an action
   on a certain resource. Read about [resource-level enforcement](resource.html).
-- `authorize_request(user, request)`: Ensure that a user is allowed to access
-  a certain endpoint. Read about [request-level enforcement](request.html).
-- `authorize_field(user, action, resource, field)`: Ensure that a user can
-  perform a particular action on one _field_ of a given resource. Read about
-  [field-level enforcement](field.html).
-- `authorized_actions(user, resource)`: List the actions that `user` is allowed
-  to take on `resource`.
-- `authorized_fields(user, action, resource)`: List the fields that `user` is
-  allowed to perform `action` upon.
+- {{< apiDeepLink class="Enforcer" label="authorize_request(actor, request)"
+  >}}authorize_request{{< /apiDeepLink >}}:
+  Ensure that an actor is allowed to access a certain endpoint. Read about
+  [request-level enforcement](request.html).
+- {{< apiDeepLink class="Enforcer" label="authorize_field(actor, action, resource, field)" >}}authorize_field{{< /apiDeepLink >}}:
+  Ensure that a actor can perform a particular action on one _field_ of a given
+  resource. Read about [field-level enforcement](field.html).
+- {{< apiDeepLink class="Enforcer" label="authorized_actions(actor, resource)" >}}authorized_actions{{< /apiDeepLink >}}:
+  List the actions that `actor` is allowed to take on `resource`.
+- {{< apiDeepLink class="Enforcer" label="authorized_fields(actor, action, resource)" >}}authorized_fields{{< /apiDeepLink >}}:
+  List the fields that `actor` is allowed to perform `action` upon.

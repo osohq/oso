@@ -42,9 +42,9 @@ button > * {
         @apply visible delay-500
     }
 
-
     .toc a {
-        @apply flex items-center hover:text-gray-900 transition-colors duration-200 mb-2
+      @apply hover:text-gray-900 transition-colors duration-200 mb-2;
+      display: block;
     }
 
     .toc nav {

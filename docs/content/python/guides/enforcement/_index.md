@@ -1,6 +1,6 @@
 ---
 title: Enforcing an Oso Policy (Oso 0.20.0 Alpha)
-weight: 10
+weight: 4
 any: true
 # showContentForAnyLanguage: true
 # draft: True

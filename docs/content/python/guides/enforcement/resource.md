@@ -8,8 +8,8 @@ description: >
 # draft: true
 ---
 
-{{% callout "Note: 0.20.0 Alpha Feature" %}}
-  This is an API provided by the alpha release of Oso 0.20.0, meaning that it is
+{{% callout "Note: 0.20.0 Beta Feature" %}}
+  This is an API provided by the beta release of Oso 0.20.0, meaning that it is
   not yet officially released. You may find other docs that conflict with the
   guidance here, so proceed at your own risk! If you have any questions, don't
   hesitate to [reach out to us on Slack](https://join-slack.osohq.com). We're
@@ -28,11 +28,13 @@ If you only perform one type of authorization in your app, it should be
 this. **Just about every endpoint in your application should perform some kind
 of resource-level enforcement.**
 
-The method you use for resource-level authorization is called `authorize`, and
-is exposed by an Oso enforcer. The `authorize` method takes three arguments,
-`user`, `action`, and `resource`. It doesn't return anything, but potentially
-throws an error. To handle this error, see [Authorization
-Failure](#authorization-failure).
+## Use the `authorize` method
+
+The method to use for resource-level authorization is called `authorize`, and
+is exposed by an Oso enforcer. The {{% apiDeepLink class="Enforcer"
+%}}authorize{{% /apiDeepLink %}} method takes three arguments, `user`, `action`,
+and `resource`. It doesn't return anything, but potentially throws an error. To
+handle this error, see [Authorization Failure](#authorization-failure).
 
 <!-- You'll see this method in a lot of our guides and examples, because it's the
 simplest way to use Oso in your app. -->
@@ -70,27 +72,30 @@ normally need to have the resource loaded!
 
 What happens when the authorization fails? That is, what if there is not an
 `allow` rule that gives the user permission to perform the action on the
-resource? In that case, the `authorize` method will raise an
-`AuthorizationError`. There are actually two types of authorization errors,
-depending on the situation.
+resource? In that case, the {{% apiDeepLink class="Enforcer" %}}authorize{{%
+/apiDeepLink %}} method will raise an {{% apiDeepLink module="oso.exceptions"
+class="AuthorizationError" /%}}. There are actually two types of authorization
+errors, depending on the situation.
 
-- `NotFound` errors are for situations where the user should not even know
-  that a particular resource _exists_. That is, the user does not have
-  `"read"` permission on the resource. **You should handle these errors by
-  showing the user a 404 "Not Found" error**.
-- `Forbidden` errors are raised when the user knows that a resource exists
-  (i.e. when they have permission to `"read"` the resource), but they are not
-  allowed to perform the given action. **You should handle these errors by
-  showing the user a 403 "Forbidden" error.**
+- {{< apiDeepLink module="oso.exceptions" class="NotFoundError" />}} errors are
+  for situations where the user should not even know that a particular resource
+  _exists_. That is, the user does not have `"read"` permission on the resource.
+  **You should handle these errors by showing the user a 404 "Not Found"
+  error**.
+- {{< apiDeepLink module="oso.exceptions" class="ForbiddenError" />}} errors are
+  raised when the  user knows that a resource exists (i.e. when they have
+  permission to `"read"` the resource), but they are not allowed to perform the
+  given action. **You should handle these errors by showing the user a 403
+  "Forbidden" error.**
 
 {{% minicallout %}}
 **Note**: a call to `authorize` with a `"read"` action will never raise a
-`Forbidden` error, only `NotFound` errors—if the user is not allowed to read
+`ForbiddenError` error, only `NotFoundError` errors—if the user is not allowed to read
 the resource, the server should act as though it doesn't exist.
 {{% /minicallout %}}
 
 You could handle these errors at each place you call `authorize`, but that would
-mean a lot of error handling. We recommend handling `NotFound` and `Forbidden`
+mean a lot of error handling. We recommend handling `NotFoundError` and `ForbiddenError`
 errors globally in your application, using middleware or something similar.
 Ideally, you can perform resource-level authorization by adding a single line of
 code to each endpoint.
