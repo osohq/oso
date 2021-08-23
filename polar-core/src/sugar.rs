@@ -797,27 +797,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_with_undeclared_related_resource() {
-        let p = Polar::new();
-        p.register_constant(sym!("Repo"), term!("unimportant"));
-        p.register_constant(sym!("Org"), term!("unimportant"));
-        let policy = r#"
-            Org { relations = { owner: User }; }
-            Repo { relations = { parent: Org };
-                   roles = ["writer"];
-                   "writer" if "owner" on "parent"; }
-        "#;
-        panic!("{}", p.load_str(policy).unwrap_err());
-
-        // let policy = r#"Repo {
-        //     roles = [ "writer" ];
-        //     relations = { parent: Org };
-        //     "writer" if "owner" on "parent";
-        // }"#;
-        // panic!("{}", p.load_str(policy).unwrap_err());
-    }
-
-    #[test]
+    #[ignore = "not yet implemented"]
     fn test_namespace_with_circular_implications() {
         let p = Polar::new();
         p.register_constant(sym!("Repo"), term!("unimportant"));
@@ -863,11 +843,14 @@ mod tests {
     fn test_namespace_with_unregistered_relation_type() {
         let p = Polar::new();
         p.register_constant(sym!("Repo"), term!("unimportant"));
+        let policy = r#"Repo { relations = { parent: Org }; }"#;
         expect_error(
             &p,
-            r#"Repo { relations = { parent: Org }; }"#,
+            policy,
             "Type 'Org' in relation 'parent: Org' must be registered as a class.",
         );
+        p.register_constant(sym!("Org"), term!("unimportant"));
+        p.load_str(policy).unwrap();
     }
 
     #[test]
