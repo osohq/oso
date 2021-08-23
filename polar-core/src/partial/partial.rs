@@ -1294,7 +1294,7 @@ mod test {
         p.load_str(r#"f(x) if not (x.y = 1 and x.b = 2);"#)?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.y or 2 != _this.b");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "(1 != _this.y or 2 != _this.b)");
         assert_query_done!(q);
 
         Ok(())
@@ -1387,7 +1387,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "_this > 0 and _this > 1 and _this > 2 and _this > 3 or _this > 4 or _this > 5"
+            "_this > 0 and _this > 1 and _this > 2 and (_this > 3 or _this > 4 or _this > 5)"
         );
         assert_query_done!(q);
 
@@ -1577,7 +1577,7 @@ mod test {
         p.load_str(
             r#"f(x) if _y in x.values;
                g(x, y) if y in x.values;
-               h(x) if y in x.values and (y.bar = 1 and y.baz = 2) or y.bar = 3;
+               h(x) if y in x.values and (y.bar = 1 and y.baz = 2 or y.bar = 3);
                i() if _x in _y;
                j() if _x in [];
                k(x) if x > 1 and x in [2, 3];
@@ -1679,7 +1679,7 @@ mod test {
     fn test_conditional_cut_with_partial() -> TestResult {
         let p = Polar::new();
         p.load_str(
-            r#"f(x) if x > 1 and cut or x = 2 and x = 3;
+            r#"f(x) if x > 1 and (cut or x = 2) and x = 3;
                g(1) if cut;
                g(2);"#,
         )?;
@@ -2039,7 +2039,7 @@ mod test {
                     // (we reach the y > x constraint in the
                     // negation). Otherwise, the query suceeds because x = 1 fails
                     // and y > x is never reached.
-                    "y" => "_this <= 1 or _this < 3 or _this <= 5"
+                    "y" => "(_this <= 1 or _this < 3 or _this <= 5)"
                 );
                 Ok(())
             }],

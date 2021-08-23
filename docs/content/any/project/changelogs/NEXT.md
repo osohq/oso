@@ -8,6 +8,35 @@ description: >-
 draft: true
 ---
 
+## `oso` NEW_VERSION
+
+### Core
+
+#### Breaking changes
+
+{{% callout "Warning" "orange" %}}
+  This release contains breaking changes. Be sure to follow migration steps
+  before upgrading.
+{{% /callout %}}
+
+The `or` operator has had its precedence lowered to be consistent with other
+programming languages. Existing policies using `or` should be updated where
+necessary to group `or` operations using parentheses:
+
+```polar
+foo(a, b, c) if a and b or c;
+```
+
+would now be written
+
+```polar
+foo(a, b, c) if a and (b or c);
+```
+
+We have temporarily made policies which combine `and` and `or` _without_
+using parentheses throw errors in order to avoid silent changes.
+To silence the error, add parentheses.
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
