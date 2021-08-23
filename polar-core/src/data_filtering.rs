@@ -496,11 +496,23 @@ impl ResultSet {
             resolve_order: vec![],
             result_id: vars.this_id,
         };
-        result_set.constrain(types, vars, vars.this_id, this_type);
+        let mut seen = HashSet::new();
+        result_set.constrain(types, vars, vars.this_id, this_type, &mut seen);
         result_set
     }
 
-    fn constrain(&mut self, types: &Types, vars: &Vars, var_id: Id, var_type: &str) {
+    fn constrain(
+        &mut self,
+        types: &Types,
+        vars: &Vars,
+        var_id: Id,
+        var_type: &str,
+        seen: &mut HashSet<Id>,
+    ) {
+        if seen.contains(&var_id) {
+            return;
+        }
+        seen.insert(var_id);
         // @TODO(steve): Probably should check the type against the var types. I think???
         let type_def = types
             .iter()
@@ -517,16 +529,14 @@ impl ResultSet {
 
         for (parent, field, child) in &vars.field_relationships {
             if *parent == var_id {
-                let typ = type_def.get(field);
-
                 if let Some(Type::Relationship {
                     other_class_tag,
                     my_field,
                     other_field,
                     ..
-                }) = typ
+                }) = type_def.get(field)
                 {
-                    self.constrain(types, vars, *child, other_class_tag);
+                    self.constrain(types, vars, *child, other_class_tag, seen);
 
                     // If the constrained child var doesn't have any constraints on it, we don't need to
                     // constrain this var. Otherwise we're just saying field foo in all Foos which
@@ -595,10 +605,11 @@ impl ResultSet {
             .iter()
             .filter_map(|(l, r)| (*r == var_id).then(|| l))
         {
-            self.constrain(types, vars, *l, var_type);
-            let in_result_set = self.requests.remove(l).unwrap();
-            assert_eq!(self.resolve_order.pop().unwrap(), *l);
-            request.constraints.extend(in_result_set.constraints);
+            self.constrain(types, vars, *l, var_type, seen);
+            if let Some(in_result_set) = self.requests.remove(l) {
+                assert_eq!(self.resolve_order.pop().unwrap(), *l);
+                request.constraints.extend(in_result_set.constraints);
+            }
         }
 
         if let Some(vs) = vars.contained_values.get(&var_id) {

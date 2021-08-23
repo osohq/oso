@@ -89,7 +89,16 @@ def t(oso):
         return filter_array(foo_logs, constraints)
 
     oso.register_class(
-        Bar, types={"id": str, "is_cool": bool, "is_still_cool": bool}, fetcher=get_bars
+        Bar,
+        types={
+            "id": str,
+            "is_cool": bool,
+            "is_still_cool": bool,
+            "foos": Relationship(
+                kind="children", other_type="Foo", my_field="id", other_field="bar_id"
+            ),
+        },
+        fetcher=get_bars,
     )
     oso.register_class(
         Foo,
@@ -268,6 +277,12 @@ def test_relationship(oso, t):
 
     results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
     assert len(results) == 2
+
+
+def test_duplex_relationship(oso, t):
+    policy = "allow(_, _, foo: Foo) if foo in foo.bar.foos;"
+    oso.load_str(policy)
+    check_authz(oso, "gwen", "gwen", t["Foo"], t["foos"])
 
 
 def test_known_results(oso):
