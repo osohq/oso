@@ -329,7 +329,7 @@ impl KnowledgeBase {
 
 fn check_all_relation_types_have_been_registered(kb: &KnowledgeBase) -> Vec<PolarError> {
     let mut errors = vec![];
-    for (_resource, declarations) in &kb.namespaces.declarations {
+    for declarations in kb.namespaces.declarations.values() {
         for (declaration, kind) in declarations {
             if let Declaration::Relation(related_type) = kind {
                 errors.extend(relation_type_is_registered(kb, (declaration, related_type)).err());
@@ -432,7 +432,10 @@ fn index_declarations(
 
     if let Some(roles) = roles {
         for role in roles.value().as_list()? {
-            if let Some(_) = declarations.insert(role.clone(), Declaration::Role) {
+            if declarations
+                .insert(role.clone(), Declaration::Role)
+                .is_some()
+            {
                 return Err(ParseError::ParseSugar {
                     loc: role.offset(),
                     msg: format!(
