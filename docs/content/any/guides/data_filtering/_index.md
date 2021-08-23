@@ -70,23 +70,130 @@ You can pass both of these things as arguments when registering a class and then
 ## Example
 
 {{% ifLang "python" %}}
-## Python
 
-python
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.types import String, Boolean
+from sqlalchemy.schema import Column, ForeignKey
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+
+from polar import Relationship
+from oso import Oso
+
+Base = declarative_base()
+
+
+class Org(Base):
+    __tablename__ = "orgs"
+
+    id = Column(String(), primary_key=True)
+
+
+class Repo(Base):
+    __tablename__ = "repos"
+
+    id = Column(String(), primary_key=True)
+    org_id = Column(String, ForeignKey("orgs.id"))
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String(), primary_key=True)
+    org_id = Column(String, ForeignKey("orgs.id"))
+
+
+engine = create_engine("sqlite:///:memory:")
+
+Session = sessionmaker(bind=engine)
+session = Session()
+
+Base.metadata.create_all(engine)
+
+
+def query_model(model, constraints):
+    query = session.query(model)
+    for constraint in constraints:
+        assert constraint.kind in ["Eq", "In"]
+        field = getattr(model, constraint.field)
+        if constraint.kind == "Eq":
+            query = query.filter(field == constraint.value)
+        elif constraint.kind == "In":
+            query = query.filter(field.in_(constraint.value))
+    return query.all()
+
+
+def get_orgs(constraints):
+    return query_model(Org, constraints)
+
+
+def get_repos(constraints):
+    return query_model(Repo, constraints)
+
+
+apple = Org(id="apple")
+osohq = Org(id="osohq")
+
+ios = Repo(id="ios", org_id="apple")
+oso_repo = Repo(id="oso", org_id="osohq")
+demo_repo = Repo(id="demo", org_id="osohq")
+
+leina = User(id="leina", org_id="osohq")
+steve = User(id="steve", org_id="apple")
+
+objs = {
+    "leina": leina,
+    "steve": steve,
+    "apple": apple,
+    "osohq": osohq,
+    "ios": ios,
+    "oso_repo": oso_repo,
+    "demo_repo": demo_repo,
+}
+for obj in objs.values():
+    session.add(obj)
+session.commit()
+
+oso = Oso()
+
+oso.register_class(Org, types={"id": str}, fetcher=get_orgs)
+
+oso.register_class(
+    Repo,
+    types={
+        "id": str,
+        "org_id": str,
+        "org": Relationship(
+            kind="parent", other_type="Org", my_field="org_id", other_field="id"
+        ),
+    },
+    fetcher=get_repos,
+)
+
+oso.register_class(User, types={"id": str, "org_id": str})
+
+policy = """
+allow(user: User, "read", repo: Repo) if
+    org = repo.org and
+    user.org_id = org.id;
+"""
+oso.load_str(policy)
+leina_repos = list(oso.get_allowed_resources(leina, "read", Repo))
+assert leina_repos == [oso_repo, demo_repo]
+```
 
 {{% /ifLang %}}
 
 {{% ifLang "ruby" %}}
-## Ruby
 
-ruby
+Ruby example coming soon.
 
 {{% /ifLang %}}
 
 {{% ifLang "node" %}}
-## Javascript
 
-node
+JavaScript example coming soon.
 
 {{% /ifLang %}}
 
