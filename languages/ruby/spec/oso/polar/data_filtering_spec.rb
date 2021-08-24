@@ -22,9 +22,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           Widget,
           name: 'Doohickey',
           fetcher: Widget::FETCHER,
-          fields: {
-            'id' => Integer
-          }
+          fields: { id: Integer }
         )
 
         subject.load_str 'allow("gwen", "eat", it: Doohickey) if it.id = 8;'
@@ -65,9 +63,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
             Bar,
             fetcher: Bar::FETCHER,
             fields: {
-              'id' => String,
-              'is_cool' => PolarBoolean,
-              'is_still_cool' => PolarBoolean
+              id: String,
+              is_cool: PolarBoolean,
+              is_still_cool: PolarBoolean
             }
           )
 
@@ -91,17 +89,17 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
             Foo,
             fetcher: Foo::FETCHER,
             fields: {
-              'id' => String,
-              'bar_id' => String,
-              'is_fooey' => PolarBoolean,
-              'numbers' => Array,
-              'bar' => Relationship.new(
+              id: String,
+              bar_id: String,
+              is_fooey: PolarBoolean,
+              numbers: Array,
+              bar: Relationship.new(
                 kind: 'parent',
                 other_type: 'Bar',
                 my_field: 'bar_id',
                 other_field: 'id'
               ),
-              'logs' => Relationship.new(
+              logs: Relationship.new(
                 kind: 'children',
                 other_type: 'FooLog',
                 my_field: 'id',
@@ -214,10 +212,10 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           Wizard,
           fetcher: Wizard::FETCHER,
           fields: {
-            'name' => String,
-            'books' => Array,
-            'spell_levels' => Array,
-            'familiars' => Relationship.new(
+            name: String,
+            books: Array,
+            spell_levels: Array,
+            familiars: Relationship.new(
               kind: 'children',
               other_type: 'Familiar',
               my_field: 'name',
@@ -230,9 +228,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           Spell,
           fetcher: Spell::FETCHER,
           fields: {
-            'name' => String,
-            'school' => String,
-            'level' => Integer
+            name: String,
+            school: String,
+            level: Integer
           }
         )
 
@@ -240,10 +238,10 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           Familiar,
           fetcher: Familiar::FETCHER,
           fields: {
-            'name' => String,
-            'kind' => String,
-            'wizard_name' => String,
-            'wizard' => Relationship.new(
+            name: String,
+            kind: String,
+            wizard_name: String,
+            wizard: Relationship.new(
               kind: 'parent',
               other_type: 'Wizard',
               my_field: 'wizard_name',
@@ -317,16 +315,16 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       before do # rubocop:disable Metrics/BlockLength
         subject.register_class(
           Org,
-          fields: { 'name' => String },
+          fields: { name: String },
           fetcher: generic_fetcher([apple, osohq])
         )
         subject.register_class(
           Repo,
           fetcher: generic_fetcher([oso, ios, demo]),
           fields: {
-            'name' => String,
-            'org_name' => String,
-            'org' => Relationship.new(
+            name: String,
+            org_name: String,
+            org: Relationship.new(
               kind: 'parent',
               other_type: 'Org',
               my_field: 'org_name',
@@ -338,9 +336,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           Issue,
           fetcher: Issue::FETCHER,
           fields: {
-            'name' => String,
-            'repo_name' => String,
-            'repo' => Relationship.new(
+            name: String,
+            repo_name: String,
+            repo: Relationship.new(
               kind: 'parent',
               other_type: 'Repo',
               my_field: 'repo_name',
@@ -352,8 +350,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           User,
           fetcher: User::FETCHER,
           fields: {
-            'name' => String,
-            'roles' => Relationship.new(
+            name: String,
+            roles: Relationship.new(
               kind: 'children',
               other_type: 'Role',
               my_field: 'name',
@@ -365,9 +363,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           Role,
           fetcher: Role::FETCHER,
           fields: {
-            'user_name' => String,
-            'resource_name' => String,
-            'role' => String
+            user_name: String,
+            resource_name: String,
+            role: String
           }
         )
 
@@ -505,9 +503,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
             name: 'User',
             fetcher: GitClub::User::FETCHER,
             fields: {
-              'name' => String,
-              'org_name' => String,
-              'org' => Relationship.new(
+              name: String,
+              org_name: String,
+              org: Relationship.new(
                 kind: 'parent',
                 other_type: 'Org',
                 my_field: 'org_name',
@@ -520,8 +518,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
             name: 'Org',
             fetcher: GitClub::Org::FETCHER,
             fields: {
-              'name' => String,
-              'users' => Relationship.new(
+              name: String,
+              users: Relationship.new(
                 kind: 'children',
                 other_type: 'User',
                 my_field: 'name',
@@ -540,9 +538,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
             name: 'Repo',
             fetcher: GitClub::Repo::FETCHER,
             fields: {
-              'name' => String,
-              'org_name' => String,
-              'org' => Relationship.new(
+              name: String,
+              org_name: String,
+              org: Relationship.new(
                 kind: 'parent',
                 other_type: 'Org',
                 my_field: 'org_name',
@@ -555,9 +553,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
             name: 'Issue',
             fetcher: GitClub::Issue::FETCHER,
             fields: {
-              'name' => String,
-              'repo_name' => String,
-              'repo' => Relationship.new(
+              name: String,
+              repo_name: String,
+              repo: Relationship.new(
                 kind: 'parent',
                 other_type: 'Repo',
                 my_field: 'repo_name',
@@ -653,10 +651,10 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
             Sign,
             fetcher: Sign::FETCHER,
             fields: {
-              'name' => String,
-              'element' => String,
-              'ruler' => String,
-              'people' => Relationship.new(
+              name: String,
+              element: String,
+              ruler: String,
+              people: Relationship.new(
                 kind: 'children',
                 other_type: 'Person',
                 my_field: 'name',
@@ -669,9 +667,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
             Person,
             fetcher: Person::FETCHER,
             fields: {
-              'name' => String,
-              'sign_name' => String,
-              'sign' => Relationship.new(
+              name: String,
+              sign_name: String,
+              sign: Relationship.new(
                 kind: 'parent',
                 other_type: 'Sign',
                 my_field: 'sign_name',

@@ -359,9 +359,9 @@ oso.register_class(
   User,
   fetcher: User::FETCHER,
   fields: {
-    'name' => String,
-    'org_name' => String,
-    'org' => Relationship.new(
+    name: String,
+    org_name: String,
+    org: Relationship.new(
       kind: 'parent',
       other_type: 'Org',
       my_field: 'org_name',
@@ -374,14 +374,14 @@ oso.register_class(
   Org,
   fetcher: Org::FETCHER,
   fields: {
-    'name' => String,
-    'users' => Relationship.new(
+    name: String,
+    users: Relationship.new(
       kind: 'children',
       other_type: 'User',
       my_field: 'name',
       other_field: 'org_name'
     ),
-    'repos' => Relationship.new(
+    repos: Relationship.new(
       kind: 'children',
       other_type: 'Repo',
       my_field: 'name',
@@ -394,9 +394,9 @@ oso.register_class(
   Repo,
   fetcher: Repo::FETCHER,
   fields: {
-    'name' => String,
-    'org_name' => String,
-    'org' => Relationship.new(
+    name: String,
+    org_name: String,
+    org: Relationship.new(
       kind: 'parent',
       other_type: 'Org',
       my_field: 'org_name',
@@ -409,9 +409,9 @@ oso.register_class(
   Issue,
   fetcher: Issue::FETCHER,
   fields: {
-    'name' => String,
-    'repo_name' => String,
-    'repo' => Relationship.new(
+    name: String,
+    repo_name: String,
+    repo: Relationship.new(
       kind: 'parent',
       other_type: 'Repo',
       my_field: 'repo_name',

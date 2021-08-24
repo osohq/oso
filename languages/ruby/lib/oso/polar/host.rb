@@ -42,7 +42,8 @@ module Oso
         @name = name
         @klass = klass
         @id = id
-        @fields = fields
+        # accept symbol keys
+        @fields = fields.each_with_object({}) { |kv, o| o[kv[0].to_s] = kv[1] }
         @fetcher = fetcher
       end
     end
