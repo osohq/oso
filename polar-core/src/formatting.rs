@@ -349,6 +349,7 @@ pub mod display {
 pub mod to_polar {
     use crate::formatting::{format_args, format_params, to_polar_parens};
     use crate::rules::*;
+    use crate::sugar::{Implication, Namespace};
     use crate::terms::*;
 
     /// Effectively works as a reverse-parser. Allows types to be turned
@@ -614,6 +615,45 @@ pub mod to_polar {
                 Value::RestVariable(s) => format!("*{}", s.to_polar()),
                 Value::Expression(e) => e.to_polar(),
             }
+        }
+    }
+
+    impl ToPolarString for Implication {
+        fn to_polar(&self) -> String {
+            let Self {
+                head,
+                body: (implier, relation),
+            } = self;
+            if let Some(relation) = relation {
+                format!(
+                    "{} if {} on {};",
+                    head.to_polar(),
+                    implier.to_polar(),
+                    relation.to_polar()
+                )
+            } else {
+                format!("{} if {};", head.to_polar(), implier.to_polar())
+            }
+        }
+    }
+
+    impl ToPolarString for Namespace {
+        fn to_polar(&self) -> String {
+            let mut s = format!("{} {{\n", self.resource.to_polar());
+            if let Some(ref roles) = self.roles {
+                s += &format!("  roles = {};\n", roles.to_polar());
+            }
+            if let Some(ref permissions) = self.permissions {
+                s += &format!("  permissions = {};\n", permissions.to_polar());
+            }
+            if let Some(ref relations) = self.relations {
+                s += &format!("  relations = {};\n", relations.to_polar());
+            }
+            for implication in &self.implications {
+                s += &format!("  {}\n", implication.to_polar());
+            }
+            s += "}";
+            s
         }
     }
 }
