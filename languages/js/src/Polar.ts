@@ -258,6 +258,15 @@ export class Polar {
   }
 
   /**
+   * Query for a Polar rule, returning true if there are any results.
+   */
+  async queryRuleOnce(name: string, ...args: unknown[]): Promise<boolean> {
+    const results = this.query(new Predicate(name, args));
+    const firstResult = await results.next();
+    return !firstResult.done;
+  }
+
+  /**
    * Register a JavaScript class for use in Polar policies.
    */
   registerClass<T>(

@@ -23,7 +23,7 @@ describe(Enforcer, () => {
     beforeEach(async () => {
       await oso.policy.loadStr(`
         allow(_actor: Actor, "read", widget: Widget) if
-          widget.id = 0;
+          widget.id = "0";
 
         allow(actor: Actor, "update", _widget: Widget) if
           actor.name = "admin";
@@ -36,16 +36,16 @@ describe(Enforcer, () => {
     });
 
     test('throws a ForbiddenError when the actor is allowed to read', async () => {
-      expect(() => oso.authorize(guest, 'update', widget0)).rejects.toThrow(
+      await expect(oso.authorize(guest, 'update', widget0)).rejects.toThrow(
         ForbiddenError
       );
     });
 
     test('throws a NotFoundError when the actor is not allowed to read', async () => {
-      expect(() => oso.authorize(guest, 'read', widget1)).rejects.toThrow(
+      await expect(oso.authorize(guest, 'read', widget1)).rejects.toThrow(
         NotFoundError
       );
-      expect(() => oso.authorize(guest, 'update', widget1)).rejects.toThrow(
+      await expect(oso.authorize(guest, 'update', widget1)).rejects.toThrow(
         NotFoundError
       );
     });
@@ -59,7 +59,7 @@ describe(Enforcer, () => {
     beforeEach(async () => {
       await oso.policy.loadStr(`
         allow(_actor: Actor, "read", _widget: Widget);
-        allow(_actor: Actor, "update", _widget: Widget{id: 0});
+        allow(_actor: Actor, "update", _widget: Widget{id: "0"});
         allow(actor: Actor, "update", _widget: Widget) if
           actor.name = "admin";
       `);
@@ -82,7 +82,7 @@ describe(Enforcer, () => {
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       `);
       const superadmin = new Actor('superadmin');
-      expect(() => oso.authorizedActions(superadmin, widget0)).rejects.toThrow(
+      await expect(oso.authorizedActions(superadmin, widget0)).rejects.toThrow(
         OsoError
       );
     });
@@ -106,23 +106,24 @@ describe(Enforcer, () => {
     const verified = new Actor('verified');
 
     beforeEach(async () => {
-      oso.policy.loadStr(`
-        allow_request(Actor{name: "guest"}, request: Request) if
+      oso.policy.registerClass(Request);
+      await oso.policy.loadStr(`
+        allow_request(_: Actor{name: "guest"}, request: Request) if
             request.path.startsWith("/repos");
 
-        allow_request(Actor{name: "verified"}, request: Request) if
+        allow_request(_: Actor{name: "verified"}, request: Request) if
             request.path.startsWith("/account");
       `);
     });
 
     test('throws a ForbiddenError only if request is not allowed', async () => {
       await oso.authorizeRequest(guest, new Request('GET', '/repos/1'));
-      expect(() =>
+      await expect(() =>
         oso.authorizeRequest(guest, new Request('GET', '/other'))
       ).rejects.toThrow(ForbiddenError);
 
       await oso.authorizeRequest(verified, new Request('GET', '/account'));
-      expect(() =>
+      await expect(() =>
         oso.authorizeRequest(guest, new Request('GET', '/account'))
       ).rejects.toThrow(ForbiddenError);
     });
@@ -137,7 +138,7 @@ describe(Enforcer, () => {
     const widget = new Widget('0');
 
     beforeEach(async () => {
-      oso.policy.loadStr(`
+      await oso.policy.loadStr(`
         # Admins can update all fields
         allow_field(actor: Actor, "update", _widget: Widget, field) if
             actor.name = "admin" and
@@ -155,12 +156,12 @@ describe(Enforcer, () => {
 
     test('authorizeField throws a ForbiddenError only if request is not allowed', async () => {
       await oso.authorizeField(admin, 'update', widget, 'purpose');
-      expect(() =>
+      await expect(() =>
         oso.authorizeField(admin, 'update', widget, 'foo')
       ).rejects.toThrow(ForbiddenError);
 
       await oso.authorizeField(guest, 'read', widget, 'purpose');
-      expect(() =>
+      await expect(() =>
         oso.authorizeField(guest, 'read', widget, 'private_field')
       ).rejects.toThrow(ForbiddenError);
     });
@@ -184,51 +185,38 @@ describe(Enforcer, () => {
       );
     });
   });
+
+  describe('configuration', () => {
+    test('getError overrides the error that is thrown', async () => {
+      class TestError extends Error {
+        constructor(public isNotFound: boolean) {
+          super();
+        }
+      }
+      const policy = new Policy();
+      const enforcer = new Enforcer(policy, {
+        getError: isNotFound => new TestError(isNotFound),
+      });
+
+      await expect(enforcer.authorize('graham', 'frob', 'bar')).rejects.toThrow(
+        expect.objectContaining({ isNotFound: true })
+      );
+    });
+
+    test('readAction overrides the read action used to differentiate not found and forbidden errors', async () => {
+      const policy = new Policy();
+      const enforcer = new Enforcer(policy, {
+        readAction: 'fetch',
+      });
+      await policy.loadStr(`allow("graham", "fetch", "bar");`);
+      await expect(enforcer.authorize('sam', 'frob', 'bar')).rejects.toThrow(
+        NotFoundError
+      );
+      // A user who can "fetch" should get a ForbiddenError instead of a
+      // NotFoundError
+      await expect(enforcer.authorize('graham', 'frob', 'bar')).rejects.toThrow(
+        ForbiddenError
+      );
+    });
+  });
 });
-
-// def test_authorized_fields(test_enforcer):
-//     admin = Actor(name="president")
-//     guest = Actor(name="guest")
-//     company = Company(id="1")
-//     resource = Widget(id=company.id)
-//     # Admin should be able to update all fields
-//     assert set(test_enforcer.authorized_fields(admin, "update", resource)) == set(
-//         ["name", "purpose", "private_field"]
-//     )
-//     # Guests should not be able to update fields
-//     assert set(test_enforcer.authorized_fields(guest, "update", resource)) == set()
-//     # Admins should be able to read all fields
-//     assert set(test_enforcer.authorized_fields(admin, "read", resource)) == set(
-//         ["name", "purpose", "private_field"]
-//     )
-//     # Guests should be able to read all public fields
-//     assert set(test_enforcer.authorized_fields(guest, "read", resource)) == set(
-//         ["name", "purpose"]
-//     )
-
-// def test_custom_errors():
-//     class TestException(Exception):
-//         def __init__(self, is_not_found):
-//             self.is_not_found = is_not_found
-
-//     policy = Policy()
-//     enforcer = Enforcer(policy, get_error=lambda *args: TestException(*args))
-//     with pytest.raises(TestException) as excinfo:
-//         enforcer.authorize("graham", "frob", "bar")
-//     assert excinfo.value.is_not_found
-
-// def test_custom_read_action():
-//     policy = Policy()
-//     enforcer = Enforcer(policy, read_action="fetch")
-//     with pytest.raises(AuthorizationError) as excinfo:
-//         enforcer.authorize("graham", "frob", "bar")
-//     assert excinfo.type == NotFoundError
-
-//     # Allow user to "fetch" bar
-//     policy.load_str("""allow("graham", "fetch", "bar");""")
-//     with pytest.raises(AuthorizationError) as excinfo:
-//         enforcer.authorize("graham", "frob", "bar")
-//     assert excinfo.type == ForbiddenError
-
-// if __name__ == "__main__":
-//     pytest.main([__file__])
