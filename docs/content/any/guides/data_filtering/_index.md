@@ -16,7 +16,8 @@ showContentForAnyLanguage: true
 
 <div class="pb-10"></div>
 
-{{< ifLangExists >}}
+{{% ifLangExists %}}
+
 {{% ifLang not="node" %}}
 {{% ifLang not="python" %}}
 {{% ifLang not="ruby" %}}
@@ -29,12 +30,10 @@ to our engineering team and we'll unblock you.
 {{% /ifLang %}}
 {{% /ifLang %}}
 {{% /ifLang %}}
-{{% /ifLangExists %}}
 
-{{< ifLangExists >}}
-{{% ifLang not="rust" %}}
-{{% ifLang not="go" %}}
-{{% ifLang not="java" %}}
+{{< ifLang not="rust" >}}
+{{< ifLang not="go" >}}
+{{< ifLang not="java" >}}
 
 ## What is data filtering
 When you evaluate an Oso policy (using `is_allowed`) for a specific `actor`, `action` and `resource`, Oso evaluates the allow rule(s) you have defined to determine if that `actor` is allowed to do that `action` on that `resource`. For instance if you have a policy like this.
@@ -84,7 +83,7 @@ You can pass both of these things as arguments when registering a class and then
 
 ## Example
 
-{{% ifLang "python" %}}
+{{< ifLang "python" >}}
 
 Here's a small SQLAlchemy example, but the principles should apply to any ORM.
 
@@ -151,7 +150,7 @@ session.commit()
 
 {{% /ifLang %}}
 
-{{% ifLang "ruby" %}}
+{{< ifLang "ruby" >}}
 
 Here's a small ActiveRecord example, but the principles should apply to any ORM.
 
@@ -242,7 +241,9 @@ laggy = Issue.create name: 'laggy', repo: ios
 
 {{% /ifLang %}}
 
-{{% ifLang "node" %}}
+{{< ifLang "node" >}}
+
+Here's a small TypeORM example, but the principles should apply to any ORM.
 
 ```js
 import 'reflect-metadata';
@@ -339,7 +340,7 @@ There are three kinds of constraints.
 * `"Contains"` constraints only apply if the field `field` is a list. It means this list must contain all the values in `value`.
   If none of your fields are lists you wont get passed this one.
 
-{{% ifLang "python" %}}
+{{< ifLang "python" >}}
 
 ```python
 def query_model(model, constraints):
@@ -364,34 +365,34 @@ def get_repos(constraints):
 
 {{% /ifLang %}}
 
-{{% ifLang "ruby" %}}
+{{< ifLang "ruby" >}}
 
 ```ruby
-# A module to autogenerate a fetcher function for an ActiveRecord subclass.
-# `include` it in `Class`and the fetcher is accessible in `Class::FETCHER`
-module ActiveRecordFetcher
-  def self.included(base)
-    base.class_eval do
-      const_set(:FETCHER, lambda do |cons|
-        cons.reduce(self) do |q, con|
-          raise "Unsupported constraint kind: #{con.kind}" unless %w[Eq In].include? con.kind
-
-          q.where(
-            if con.field.nil?
-              { primary_key => con.value.send(primary_key) }
-            else
-              { con.field => con.value }
-            end
-          )
-        end
-      end)
+  # A module to autogenerate a fetcher function for an ActiveRecord subclass.
+  # `include` it in `Class`and the fetcher is accessible in `Class::FETCHER`
+  module ActiveRecordFetcher
+    def self.included(base)
+      base.class_eval do
+        const_set(:FETCHER, lambda do |cons|
+          cons.reduce(self) do |q, con|
+            raise "Unsupported constraint kind: #{con.kind}" unless %w[Eq In].include? con.kind
+  
+            q.where(
+              if con.field.nil?
+                { primary_key => con.value.send(primary_key) }
+              else
+                { con.field => con.value }
+              end
+            )
+          end
+        end)
+      end
     end
   end
-end
 ```
 {{% /ifLang %}}
 
-{{% ifLang "node" %}}
+{{< ifLang "node" >}}
 
 ```js
   function fromRepo(repo: any, name: string, constraints: any) {
@@ -439,7 +440,7 @@ the related instances are fetched using the fetching functions.
 
 The other new thing to specify when registering a class is the fetching function for that class.
 
-{{% ifLang "python" %}}
+{{< ifLang "python" >}}
 
 ```python
 from polar import Relationship
@@ -467,7 +468,7 @@ oso.register_class(User, types={"id": str, "org_id": str})
 
 {{% /ifLang %}}
 
-{{% ifLang "ruby" %}}
+{{< ifLang "ruby" >}}
 ```ruby
 require 'oso'
 
@@ -541,7 +542,7 @@ oso.register_class(
 ```
 {{% /ifLang %}}
 
-{{% ifLang "node" %}}
+{{< ifLang "node" >}}
 
 ```js
   import { Oso } from './Oso';
@@ -569,7 +570,7 @@ oso.register_class(
 
 One everything is set up we can use the new "get allowed resources" method to filter a Class to all the instances that the user is allowed to preform the action on.
 
-{{% ifLang "python" %}}
+{{< ifLang "python" >}}
 ```python
 policy = """
 allow(user: User, "read", repo: Repo) if
@@ -583,7 +584,8 @@ assert leina_repos == [oso_repo, demo_repo]
 
 {{% /ifLang %}}
 
-{{% ifLang "ruby" %}}
+{{< ifLang "ruby" >}}
+
 ```ruby
 oso.load_str <<~POL
   allow(user: User, "read", repo: Repo) if
@@ -602,7 +604,7 @@ raise unless steve_issues == [laggy]
 
 {{% /ifLang %}}
 
-{{% ifLang "node" %}}
+{{< ifLang "node" >}}
 
 ```js
   oso.loadStr(`
@@ -622,7 +624,7 @@ Currently there are some limitations to what you can do while using data filteri
 
 Some polar expressions are not supported but may be in the future. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numeric comparisons are also not yet supported. `< > <= >= !=`
 
-For now, Relationships only support matching on a single field. 
+For now, Relationships only support matching on a single field.
 
 {{% /ifLang %}}
 {{% /ifLang %}}
