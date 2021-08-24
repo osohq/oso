@@ -11,135 +11,153 @@ end
 
 RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   context 'data filtering' do # rubocop:disable Metrics/BlockLength
-    context 'when filtering known values' do
-      it 'works' do
+    context '#get_allowed_resources' do # rubocop:disable Metrics/BlockLength
+      it 'handles classes with explicit names' do
+        Widget = Struct.new(:id) do
+          include DataFilteringHelpers::Fetcher
+        end
+        0.upto(9).each { |id| Widget.new id }
+
+        subject.register_class(
+          Widget,
+          name: 'Doohickey',
+          fetcher: Widget.fetcher,
+          fields: {
+            'id' => Integer
+          }
+        )
+
+        subject.load_str 'allow("gwen", "eat", it: Doohickey) if it.id = 8;'
+        check_authz 'gwen', 'eat', Widget, [Widget.all[8]]
+      end
+
+      it 'handles queries that return known results' do
         subject.load_str('allow(_, _, i) if i in [1, 2];')
         subject.load_str('allow(_, _, i) if i = {};')
         expect(subject.get_allowed_resources('gwen', 'get', Integer)).to eq([1, 2])
         expect(subject.get_allowed_resources('gwen', 'get', Hash)).to eq([{}])
       end
-    end
-    context 'when filtering unknown values' do # rubocop:disable Metrics/BlockLength
-      before do # rubocop:disable Metrics/BlockLength
-        subject.register_class(
-          Bar,
-          fetcher: Bar.fetcher,
-          fields: {
-            'id' => String,
-            'is_cool' => PolarBoolean,
-            'is_still_cool' => PolarBoolean
-          }
-        )
 
-        subject.register_class(
-          FooLog,
-          fetcher: FooLog.fetcher,
-          fields: {
-            'id' => String,
-            'foo_id' => String,
-            'data' => String,
-            'foo' => Relationship.new(
-              kind: 'parent',
-              other_type: 'Foo',
-              my_field: 'foo_id',
-              other_field: 'id'
-            )
-          }
-        )
+      context 'when filtering data' do # rubocop:disable Metrics/BlockLength
+        before do # rubocop:disable Metrics/BlockLength
+          subject.register_class(
+            Bar,
+            fetcher: Bar.fetcher,
+            fields: {
+              'id' => String,
+              'is_cool' => PolarBoolean,
+              'is_still_cool' => PolarBoolean
+            }
+          )
 
-        subject.register_class(
-          Foo,
-          fetcher: Foo.fetcher,
-          fields: {
-            'id' => String,
-            'bar_id' => String,
-            'is_fooey' => PolarBoolean,
-            'numbers' => Array,
-            'bar' => Relationship.new(
-              kind: 'parent',
-              other_type: 'Bar',
-              my_field: 'bar_id',
-              other_field: 'id'
-            ),
-            'logs' => Relationship.new(
-              kind: 'children',
-              other_type: 'FooLog',
-              my_field: 'id',
-              other_field: 'foo_id'
-            )
-          }
-        )
-      end
+          subject.register_class(
+            FooLog,
+            fetcher: FooLog.fetcher,
+            fields: {
+              'id' => String,
+              'foo_id' => String,
+              'data' => String,
+              'foo' => Relationship.new(
+                kind: 'parent',
+                other_type: 'Foo',
+                my_field: 'foo_id',
+                other_field: 'id'
+              )
+            }
+          )
 
-      it 'can compare a field with a known value' do
-        policy = 'allow("gwen", "get", foo: Foo) if foo.is_fooey = true;'
-        subject.load_str(policy)
-        results = subject.get_allowed_resources('gwen', 'get', Foo)
-        expected = Foo.all.select(&:is_fooey)
-        expect(expected).not_to be_empty
-        expect(unord_eq(results, expected)).to be true
-      end
+          subject.register_class(
+            Foo,
+            fetcher: Foo.fetcher,
+            fields: {
+              'id' => String,
+              'bar_id' => String,
+              'is_fooey' => PolarBoolean,
+              'numbers' => Array,
+              'bar' => Relationship.new(
+                kind: 'parent',
+                other_type: 'Bar',
+                my_field: 'bar_id',
+                other_field: 'id'
+              ),
+              'logs' => Relationship.new(
+                kind: 'children',
+                other_type: 'FooLog',
+                my_field: 'id',
+                other_field: 'foo_id'
+              )
+            }
+          )
+        end
 
-      it 'can check if a value is in a field' do
-        policy = 'allow("gwen", "get", foo: Foo) if 1 in foo.numbers and 2 in foo.numbers;'
-        subject.load_str(policy)
-        results = subject.get_allowed_resources('gwen', 'get', Foo)
-        expected = Foo.all.select { |f| f.numbers.include?(1) and f.numbers.include?(2) }
-        expect(expected).not_to be_empty
-        expect(unord_eq(results, expected)).to be true
-      end
+        it 'can compare a field with a known value' do
+          policy = 'allow("gwen", "get", foo: Foo) if foo.is_fooey = true;'
+          subject.load_str(policy)
+          results = subject.get_allowed_resources('gwen', 'get', Foo)
+          expected = Foo.all.select(&:is_fooey)
+          expect(expected).not_to be_empty
+          expect(unord_eq(results, expected)).to be true
+        end
 
-      it 'can check if a field is in a value' do
-        policy = 'allow("gwen", "eat", foo: Foo) if foo.numbers in [[1]];'
-        subject.load_str(policy)
-        results = subject.get_allowed_resources('gwen', 'eat', Foo)
-        expected = Foo.all.select { |f| f.numbers == [1] }
-        expect(expected).not_to be_empty
-        expect(unord_eq(results, expected)).to be true
-      end
+        it 'can check if a value is in a field' do
+          policy = 'allow("gwen", "get", foo: Foo) if 1 in foo.numbers and 2 in foo.numbers;'
+          subject.load_str(policy)
+          results = subject.get_allowed_resources('gwen', 'get', Foo)
+          expected = Foo.all.select { |f| f.numbers.include?(1) and f.numbers.include?(2) }
+          expect(expected).not_to be_empty
+          expect(unord_eq(results, expected)).to be true
+        end
 
-      it 'can compare two fields on the same object' do
-        policy = 'allow(_, _, bar: Bar) if bar.is_cool = bar.is_still_cool;'
-        subject.load_str(policy)
-        results = subject.get_allowed_resources('gwen', 'eat', Bar)
-        expected = Bar.all.select { |b| b.is_cool == b.is_still_cool }
-        expect(expected).not_to be_empty
-        expect(unord_eq(results, expected)).to be true
-      end
+        it 'can check if a field is in a value' do
+          policy = 'allow("gwen", "eat", foo: Foo) if foo.numbers in [[1]];'
+          subject.load_str(policy)
+          results = subject.get_allowed_resources('gwen', 'eat', Foo)
+          expected = Foo.all.select { |f| f.numbers == [1] }
+          expect(expected).not_to be_empty
+          expect(unord_eq(results, expected)).to be true
+        end
 
-      it 'handles parent relationships' do
-        policy = 'allow("gwen", "get", foo: Foo) if foo.bar = bar and bar.is_cool = true and foo.is_fooey = true;'
-        subject.load_str(policy)
-        results = subject.get_allowed_resources('gwen', 'get', Foo)
-        expected = Foo.all.select { |foo| foo.bar.is_cool and foo.is_fooey }
-        expect(expected).not_to be_empty
-        expect(unord_eq(results, expected)).to be true
-      end
+        it 'can compare two fields on the same object' do
+          policy = 'allow(_, _, bar: Bar) if bar.is_cool = bar.is_still_cool;'
+          subject.load_str(policy)
+          results = subject.get_allowed_resources('gwen', 'eat', Bar)
+          expected = Bar.all.select { |b| b.is_cool == b.is_still_cool }
+          expect(expected).not_to be_empty
+          expect(unord_eq(results, expected)).to be true
+        end
 
-      it 'handles child relationships' do
-        policy = 'allow("gwen", "get", foo: Foo) if log in foo.logs and log.data = "hello";'
-        subject.load_str policy
-        expected = Foo.all.select { |foo| foo.id == 'fourth' }
-        check_authz 'gwen', 'get', Foo, expected
-      end
+        it 'handles parent relationships' do
+          policy = 'allow("gwen", "get", foo: Foo) if foo.bar = bar and bar.is_cool = true and foo.is_fooey = true;'
+          subject.load_str(policy)
+          results = subject.get_allowed_resources('gwen', 'get', Foo)
+          expected = Foo.all.select { |foo| foo.bar.is_cool and foo.is_fooey }
+          expect(expected).not_to be_empty
+          expect(unord_eq(results, expected)).to be true
+        end
 
-      it 'handles all the relationships at once' do
-        policy = <<~POL
-          allow(log: FooLog, "a", foo: Foo) if log in foo.logs;
-          allow(log: FooLog, "b", foo: Foo) if foo = log.foo;
-          allow(log: FooLog, "c", foo: Foo) if log.foo = foo and log in foo.logs;
-          allow(log: FooLog, "d", foo: Foo) if log in foo.logs and log.foo = foo;
-        POL
-        subject.load_str policy
-        log = FooLog.all.find { |l| l.foo_id == 'fourth' }
-        foos = Foo.all.select { |foo| foo.id == 'fourth' }
-        %w[a b c d].each do |x|
-          check_authz log, x, Foo, foos
+        it 'handles child relationships' do
+          policy = 'allow("gwen", "get", foo: Foo) if log in foo.logs and log.data = "hello";'
+          subject.load_str policy
+          expected = Foo.all.select { |foo| foo.id == 'fourth' }
+          check_authz 'gwen', 'get', Foo, expected
+        end
+
+        it 'handles all the relationships at once' do
+          policy = <<~POL
+            allow(log: FooLog, "a", foo: Foo) if log in foo.logs;
+            allow(log: FooLog, "b", foo: Foo) if foo = log.foo;
+            allow(log: FooLog, "c", foo: Foo) if log.foo = foo and log in foo.logs;
+            allow(log: FooLog, "d", foo: Foo) if log in foo.logs and log.foo = foo;
+          POL
+          subject.load_str policy
+          log = FooLog.all.find { |l| l.foo_id == 'fourth' }
+          foos = Foo.all.select { |foo| foo.id == 'fourth' }
+          %w[a b c d].each { |x| check_authz log, x, Foo, foos }
         end
       end
     end
 
-    context 'when meddling in the affairs of wizards' do # rubocop:disable Metrics/BlockLength
+    context 'when meddling with the affairs of wizards' do # rubocop:disable Metrics/BlockLength
       let(:level) { ->(n) { 1.upto(n).to_a } }
       let(:policy_file) { File.join(__dir__, 'magic_policy.polar') }
       let(:gandalf) { Wizard.new('gandalf', %w[divination destruction], level[4]) }
@@ -341,24 +359,148 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
     end
 
-    context '#get_allowed_resources' do
-      it 'handles classes with explicit names' do
-        Widget = Struct.new(:id) do
-          include DataFilteringHelpers::Fetcher
+    context 'a rails-based astrological matchmaking app' do # rubocop:disable Metrics/BlockLength
+      DB_FILE = '/tmp/active_record_test.db'
+      require 'sqlite3'
+      require 'active_record'
+      module ActiveRecordFetcher
+        CONSTRAINT_KINDS = {}.tap do |it|
+          it['Eq'] = it['In'] = ->(q, c) { q.where c.field => c.value }
+          it.default_proc = proc do |kind|
+            raise "Unsupported constraint kind: #{kind}"
+          end
+          it.freeze
         end
-        0.upto(9).each { |id| Widget.new id }
+
+        def self.included(base)
+          base.const_set(:FETCHER, lambda do |constraints|
+            constraints.reduce(base) do |q, con|
+              CONSTRAINT_KINDS[con.kind][q, con]
+            end
+          end)
+        end
+      end
+
+      class Sign < ActiveRecord::Base
+        include ActiveRecordFetcher
+        self.primary_key = 'name'
+        has_many :people, foreign_key: :sign_name
+      end
+
+      class Person < ActiveRecord::Base
+        include ActiveRecordFetcher
+        self.primary_key = 'name'
+        belongs_to :sign, foreign_key: :sign_name
+      end
+
+      before do # rubocop:disable Metrics/BlockLength
+        File.delete DB_FILE if File.exist? DB_FILE
+
+        db = SQLite3::Database.new DB_FILE
+        db.execute <<-SQL
+          create table signs (
+            name varchar(16) not null primary key,
+            element varchar(8) not null,
+            ruler varchar(8) not null
+          );
+        SQL
+
+        db.execute <<-SQL
+          create table people (
+            name varchar(32) not null primary key,
+            sign_name varchar(16) not null
+          );
+        SQL
+
+        ActiveRecord::Base.establish_connection(
+          adapter: 'sqlite3',
+          database: DB_FILE
+        )
+
+        [%w[aries fire mars],
+         %w[taurus earth venus],
+         %w[gemini air mercury],
+         %w[cancer water moon],
+         %w[leo fire sun],
+         %w[virgo earth mercury],
+         %w[libra air venus],
+         %w[scorpio water mars],
+         %w[sagittarius fire jupiter],
+         %w[capricorn earth saturn],
+         %w[aquarius air saturn],
+         %w[pisces water jupiter]].each do |name, element, ruler|
+          Sign.create(name: name, element: element, ruler: ruler)
+        end
+
+        [%w[robin scorpio],
+         %w[pat taurus],
+         %w[dylan virgo],
+         %w[terry libra],
+         %w[chris aquarius],
+         %w[tyler leo],
+         %w[eden cancer],
+         %w[dakota capricorn],
+         %w[charlie aries],
+         %w[alex gemini],
+         %w[sam pisces],
+         %w[avery sagittarius]].each do |name, sign|
+          Person.create(name: name, sign_name: sign)
+        end
 
         subject.register_class(
-          Widget,
-          name: 'Doohickey',
-          fetcher: Widget.fetcher,
+          Sign,
+          fetcher: Sign::FETCHER,
           fields: {
-            'id' => Integer
+            'name' => String,
+            'element' => String,
+            'ruler' => String,
+            'people' => Relationship.new(
+              kind: 'children',
+              other_type: 'Person',
+              my_field: 'name',
+              other_field: 'sign_name'
+            )
           }
         )
 
-        subject.load_str 'allow("gwen", "eat", it: Doohickey) if it.id = 8;'
-        check_authz 'gwen', 'eat', Widget, [Widget.all[8]]
+        subject.register_class(
+          Person,
+          fetcher: Person::FETCHER,
+          fields: {
+            'name' => String,
+            'sign_name' => String,
+            'sign' => Relationship.new(
+              kind: 'parent',
+              other_type: 'Sign',
+              my_field: 'sign_name',
+              other_field: 'name'
+            )
+          }
+        )
+      end
+
+      it 'assigns auspicious matches' do
+        subject.load_str <<~POL
+          allow(a: Sign, "date", b: Sign) if a.element = b.element;
+          allow(a: Sign, "date", b: Sign) if a.ruler = b.ruler;
+          allow(a: Person, "date", b: Person) if allow(a.sign, "date", b.sign);
+        POL
+
+        compatible_signs = lambda do |sign|
+          Sign.where(element: sign.element).or Sign.where(ruler: sign.ruler)
+        end
+
+        Sign.all.each do |sign|
+          check_authz sign, 'date', Sign, compatible_signs[sign]
+        end
+
+        compatible_people = lambda do |person|
+          Person.where sign: compatible_signs[person.sign]
+        end
+
+        Person.all.each do |person|
+          check_authz person, 'date', Person, compatible_people[person]
+        end
       end
     end
   end
