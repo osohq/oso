@@ -78,14 +78,6 @@ class Team(Actor):
 
 
 def test_rebac(polar, is_allowed):
-    # Why does the Pytest 'polar' fixture still have registered classes
-    # from other tests hanging out on its host? Why wasn't it deleted and
-    # recreated? Why does any new Polar I create have the same registered
-    # classes? What the heck is going on? Fine, I'll just manually remove the
-    # previously-registered Actor class. Nope, that doesn't work either. Fine,
-    # I'll just name my class something else. Actually apparently I don't
-    # currently reference it in the policy so BYE.
-
     [polar.register_class(c) for c in [User, Org, Repo, Issue]]
     polar.load_file("tests/sugar.polar")
 
