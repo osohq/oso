@@ -592,6 +592,12 @@ impl KnowledgeBase {
 
         errors.append(&mut super::sugar::check_all_relation_types_have_been_registered(self));
 
+        // TODO(gj): Emit all errors instead of just the first.
+        if !errors.is_empty() {
+            self.namespaces.clear();
+            return Err(errors[0].clone());
+        }
+
         let mut rules = vec![];
         for (namespace, implications) in &self.namespaces.implications {
             for implication in implications {
@@ -602,15 +608,15 @@ impl KnowledgeBase {
             }
         }
 
-        // Add the rewritten rules to the KB.
-        for rule in rules {
-            self.add_rule(rule);
-        }
-
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {
             self.namespaces.clear();
             return Err(errors[0].clone());
+        }
+
+        // Add the rewritten rules to the KB.
+        for rule in rules {
+            self.add_rule(rule);
         }
 
         Ok(())
