@@ -63,8 +63,12 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
         return parseExternalCall(event['ExternalCall']);
       case event['ExternalIsSubSpecializer'] !== undefined:
         return parseExternalIsSubspecializer(event['ExternalIsSubSpecializer']);
+      case event['ExternalIsSubclass'] !== undefined:
+        return parseExternalIsSubclass(event['ExternalIsSubclass']);
       case event['ExternalIsa'] !== undefined:
         return parseExternalIsa(event['ExternalIsa']);
+      case event['ExternalIsaWithPath'] !== undefined:
+        return parseExternalIsaWithPath(event['ExternalIsaWithPath']);
       case event['Debug'] !== undefined:
         return parseDebug(event['Debug']);
       case event['ExternalOp'] !== undefined:
@@ -193,6 +197,29 @@ function parseExternalIsSubspecializer({
 
 /**
  * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * an [[`ExternalIsSubclass`]].
+ *
+ * @internal
+ */
+function parseExternalIsSubclass({
+  call_id: callId,
+  left_class_tag: leftTag,
+  right_class_tag: rightTag,
+}: obj): QueryEvent {
+  if (
+    !Number.isSafeInteger(callId) ||
+    typeof leftTag !== 'string' ||
+    typeof rightTag !== 'string'
+  )
+    throw new Error();
+  return {
+    kind: QueryEventKind.ExternalIsSubclass,
+    data: { callId, leftTag, rightTag },
+  };
+}
+
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
  * an [[`ExternalIsa`]].
  *
  * @internal
@@ -211,6 +238,30 @@ function parseExternalIsa({
   return {
     kind: QueryEventKind.ExternalIsa,
     data: { callId, instance, tag },
+  };
+}
+
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * an [[`ExternalIsa`]].
+ *
+ * @internal
+ */
+function parseExternalIsaWithPath({
+  call_id: callId,
+  base_tag: baseTag,
+  path,
+  class_tag: classTag,
+}: obj): QueryEvent {
+  if (
+    !Number.isSafeInteger(callId) ||
+    typeof classTag !== 'string' ||
+    typeof baseTag !== 'string'
+  )
+    throw new Error();
+  return {
+    kind: QueryEventKind.ExternalIsaWithPath,
+    data: { callId, baseTag, path, classTag },
   };
 }
 

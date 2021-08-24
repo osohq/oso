@@ -143,8 +143,8 @@ fn precedence(o: &Operator) -> i32 {
         Operator::Unify => 4,
         Operator::Assign => 4,
         Operator::Not => 3,
-        Operator::Or => 2,
-        Operator::And => 1,
+        Operator::And => 2,
+        Operator::Or => 1,
     }
 }
 

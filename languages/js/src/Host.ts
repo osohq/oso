@@ -30,6 +30,7 @@ import {
   isPolarStr,
   isPolarVariable,
 } from './types';
+import { map } from '../test/helpers';
 
 /**
  * Translator between Polar and JavaScript.
@@ -39,7 +40,11 @@ import {
 export class Host {
   #ffiPolar: FfiPolar;
   #classes: Map<string, Class>;
+  #classIds: Map<string, number>;
+  clsNames: Map<Class, string>;
   #instances: Map<number, any>;
+  types: Map<string, Map<string, any>>;
+  fetchers: Map<string, any>;
   #equalityFn: EqualityFn;
 
   /**
@@ -52,6 +57,10 @@ export class Host {
     const clone = new Host(host.#ffiPolar, host.#equalityFn);
     clone.#classes = new Map(host.#classes);
     clone.#instances = new Map(host.#instances);
+    clone.#classIds = new Map(host.#classIds);
+    clone.clsNames = new Map(host.clsNames);
+    clone.types = new Map(host.types);
+    clone.fetchers = new Map(host.fetchers);
     return clone;
   }
 
@@ -60,6 +69,10 @@ export class Host {
     this.#ffiPolar = ffiPolar;
     this.#classes = new Map();
     this.#instances = new Map();
+    this.#classIds = new Map();
+    this.clsNames = new Map();
+    this.types = new Map();
+    this.fetchers = new Map();
     this.#equalityFn = equalityFn;
   }
 
@@ -188,6 +201,18 @@ export class Host {
   }
 
   /**
+   * Check if the left class is a subclass of the right class.
+   *
+   * @internal
+   */
+  async isSubclass(left: string, right: string): Promise<boolean> {
+    const leftCls = this.getClass(left);
+    const rightCls = this.getClass(right);
+    const mro = ancestors(leftCls);
+    return mro.includes(rightCls);
+  }
+
+  /**
    * Check if the given instance is an instance of a particular class.
    *
    * @internal
@@ -196,6 +221,30 @@ export class Host {
     const instance = await this.toJs(polarInstance);
     const cls = this.getClass(name);
     return instance instanceof cls || instance?.constructor === cls;
+  }
+
+  /**
+   * Check if a sequence of field accesses on the given class is an
+   * instance of another class.
+   *
+   * @internal
+   */
+  async isaWithPath(
+    baseTag: string,
+    path: string[],
+    classTag: string
+  ): Promise<boolean> {
+    return (
+      classTag ==
+      path.reduce((k: string | undefined, field: string) => {
+        if (k != undefined) {
+          const l = this.types.get(k);
+          if (l != undefined) k = this.clsNames.get(l.get(field));
+          else k = l;
+        }
+        return k;
+      }, baseTag)
+    );
   }
 
   /**
@@ -269,16 +318,20 @@ export class Host {
           },
         };
       case v instanceof Pattern:
-        const dict = this.toPolar(v.fields).value as PolarDictPattern;
+        let dict = this.toPolar(v.fields).value as PolarDictPattern;
         if (v.tag === undefined) {
           return { value: { Pattern: dict } };
         } else {
+          let d = dict.Dictionary;
+          if (d == undefined) {
+            d = { fields: new Map() };
+          }
           return {
             value: {
               Pattern: {
                 Instance: {
                   tag: v.tag,
-                  fields: dict.Dictionary,
+                  fields: d,
                 },
               },
             },

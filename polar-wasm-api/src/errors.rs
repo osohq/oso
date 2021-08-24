@@ -36,6 +36,7 @@ fn kind(err: &PolarError) -> String {
         Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
         Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
         Parse(SingletonVariable { .. }) => "ParseError::SingletonVariable",
+        Parse(AmbiguousAndOr { .. }) => "ParseError::AmbiguousAndOr",
         Parse(ParseSugar { .. }) => "ParseError::Sugar",
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",

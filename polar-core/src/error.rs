@@ -231,6 +231,9 @@ pub enum ParseError {
         loc: usize,
         name: String,
     },
+    AmbiguousAndOr {
+        msg: String,
+    },
     ParseSugar {
         loc: usize,
         msg: String,
@@ -300,7 +303,7 @@ impl fmt::Display for ParseError {
                     name, name
                 )
             }
-            Self::ParseSugar { msg, .. } => {
+            Self::AmbiguousAndOr { msg, .. } | Self::ParseSugar { msg, .. } => {
                 write!(f, "{}", msg)
             }
         }
