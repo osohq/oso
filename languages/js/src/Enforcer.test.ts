@@ -55,7 +55,7 @@ describe(Enforcer, () => {
     const guest = new Actor('guest');
     const admin = new Actor('admin');
     const widget0 = new Widget('0');
-    const widget1 = new Actor('admin');
+    const widget1 = new Widget('1');
     beforeEach(async () => {
       await oso.policy.loadStr(`
         allow(_actor: Actor, "read", _widget: Widget);
@@ -66,15 +66,15 @@ describe(Enforcer, () => {
     });
 
     test('returns a list of actions the user is allowed to take', async () => {
-      expect(await oso.authorizedActions(guest, widget0)).toBe([
-        'read',
-        'update',
-      ]);
-      expect(await oso.authorizedActions(guest, widget1)).toBe(['read']);
-      expect(await oso.authorizedActions(admin, widget1)).toBe([
-        'read',
-        'update',
-      ]);
+      expect(new Set(await oso.authorizedActions(guest, widget0))).toEqual(
+        new Set(['read', 'update'])
+      );
+      expect(new Set(await oso.authorizedActions(guest, widget1))).toEqual(
+        new Set(['read'])
+      );
+      expect(new Set(await oso.authorizedActions(admin, widget1))).toEqual(
+        new Set(['read', 'update'])
+      );
     });
 
     test('throws an OsoError if there is a wildcard action', async () => {
@@ -92,7 +92,7 @@ describe(Enforcer, () => {
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       `);
       const superadmin = new Actor('superadmin');
-      expect(await oso.authorizedActions(superadmin, widget0, true)).toBe([
+      expect(await oso.authorizedActions(superadmin, widget0, true)).toEqual([
         '*',
       ]);
     });
@@ -168,21 +168,21 @@ describe(Enforcer, () => {
 
     test('authorizedFields returns a list of allowed fields', async () => {
       // Admins should be able to update all fields
-      expect(new Set(await oso.authorizedFields(admin, 'update', widget))).toBe(
-        new Set(['name', 'purpose', 'private_field'])
-      );
+      expect(
+        new Set(await oso.authorizedFields(admin, 'update', widget))
+      ).toEqual(new Set(['name', 'purpose', 'private_field']));
       // Admins should be able to read all fields
-      expect(new Set(await oso.authorizedFields(admin, 'read', widget))).toBe(
-        new Set(['name', 'purpose', 'private_field'])
-      );
+      expect(
+        new Set(await oso.authorizedFields(admin, 'read', widget))
+      ).toEqual(new Set(['name', 'purpose', 'private_field']));
       // Guests should not be able to update any fields
       expect(await oso.authorizedFields(guest, 'update', widget)).toHaveLength(
         0
       );
       // Guests should be able to read public fields
-      expect(await oso.authorizedFields(guest, 'read', widget)).toBe(
-        new Set(['name', 'purpose'])
-      );
+      expect(
+        new Set(await oso.authorizedFields(guest, 'read', widget))
+      ).toEqual(new Set(['name', 'purpose']));
     });
   });
 

@@ -1,5 +1,6 @@
-import { ForbiddenError, NotFoundError } from './errors';
+import { ForbiddenError, NotFoundError, OsoError } from './errors';
 import { Policy } from './Oso';
+import { Variable } from './Variable';
 
 type EnforcerOptions<Action> = {
   getError?: (isNotFound: boolean) => Error;
@@ -10,6 +11,7 @@ function defaultGetError(isNotFound: boolean) {
   if (isNotFound) return new NotFoundError();
   return new ForbiddenError();
 }
+
 export class Enforcer<
   Actor = unknown,
   Action = String,
@@ -58,8 +60,28 @@ export class Enforcer<
     actor: Actor,
     resource: Resource,
     allowWildcard: boolean = false
-  ): Promise<Array<Action>> {
-    return [];
+  ): Promise<Array<Action | '*'>> {
+    const results = this.policy.queryRule(
+      'allow',
+      actor,
+      new Variable('action'),
+      resource
+    );
+    const actions = new Set<Action | '*'>();
+    for await (let result of results) {
+      const action = result.get('action');
+      if (action instanceof Variable) {
+        if (!allowWildcard) {
+          throw new OsoError(`
+            The result of authorizedActions() contained an "unconstrained" action that could represent any action, but allow_wildcard was set to False. To fix, set allow_wildcard to True and compare with the "*" string.
+          `);
+        } else {
+          return ['*'];
+        }
+      }
+      actions.add(action);
+    }
+    return Array.from(actions);
   }
 
   async authorizeRequest(actor: Actor, request: Request): Promise<void> {
@@ -92,7 +114,28 @@ export class Enforcer<
     action: Action,
     resource: Resource,
     allowWildcard: boolean = false
-  ): Promise<Array<Field>> {
-    return [];
+  ): Promise<Array<Field | '*'>> {
+    const results = this.policy.queryRule(
+      'allow_field',
+      actor,
+      action,
+      resource,
+      new Variable('field')
+    );
+    const fields = new Set<Field | '*'>();
+    for await (let result of results) {
+      const field = result.get('field');
+      if (field instanceof Variable) {
+        if (!allowWildcard) {
+          throw new OsoError(`
+            The result of authorizedFields() contained an "unconstrained" field that could represent any field, but allow_wildcard was set to False. To fix, set allow_wildcard to True and compare with the "*" string.
+          `);
+        } else {
+          return ['*'];
+        }
+      }
+      fields.add(field);
+    }
+    return Array.from(fields);
   }
 }
