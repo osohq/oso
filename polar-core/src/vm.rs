@@ -994,26 +994,25 @@ impl PolarVirtualMachine {
                 }
             }
             (Value::Variable(l), _) | (Value::RestVariable(l), _) => match self.variable_state(l) {
-                VariableState::Unbound => self.push_goal(Goal::Unify {
-                    left: left.clone(),
-                    right: right.clone(),
-                })?,
                 VariableState::Bound(x) => self.push_goal(Goal::Isa {
                     left: x,
+                    right: right.clone(),
+                })?,
+                VariableState::Unbound => self.push_goal(Goal::Unify {
+                    left: left.clone(),
                     right: right.clone(),
                 })?,
                 _ => self.isa_expr(left, right)?,
             },
             (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => match self.variable_state(r) {
-                VariableState::Unbound => self.push_goal(Goal::Unify {
-                    left: left.clone(),
-                    right: right.clone(),
-                })?,
                 VariableState::Bound(y) => self.push_goal(Goal::Isa {
                     left: left.clone(),
                     right: y,
                 })?,
-                _ => self.isa_expr(left, right)?,
+                _ => self.push_goal(Goal::Unify {
+                    left: left.clone(),
+                    right: right.clone(),
+                })?,
             },
 
             (Value::List(left), Value::List(right)) => {
@@ -1039,10 +1038,11 @@ impl PolarVirtualMachine {
                         .get(k)
                         .expect("left fields should be a superset of right fields")
                         .clone();
-                    self.push_goal(Goal::Isa {
+                    let goal = Goal::Isa {
                         left,
                         right: v.clone(),
-                    })?
+                    };
+                    self.push_goal(goal)?
                 }
             }
 

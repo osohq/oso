@@ -571,7 +571,17 @@ mod test {
             term!(call!("h", [sym!("x"), btreemap! {sym!("x") => term!(1)}])),
             false,
         );
-        assert_partial_expression!(next_binding(&mut q)?, "x", "1 matches X{}");
+        let binding = |q: &mut Query| loop {
+            match q.next_event().unwrap() {
+                QueryEvent::Result { bindings, .. } => return bindings,
+                QueryEvent::ExternalIsa { call_id, .. } => {
+                    q.question_result(call_id, true).unwrap();
+                }
+                e => panic!("unexpected event: {:?}", e),
+            }
+        };
+
+        assert_eq!(binding(&mut q)[&sym!("x")], term!(1));
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x"), sym!("y")])), false);
@@ -643,7 +653,7 @@ mod test {
             term!(call!("j", [sym!("x"), btreemap! {sym!("x") => term!(1)}])),
             false,
         );
-        assert_partial_expression!(maybe_binding(&mut q).unwrap(), "x", "1 matches X{}");
+        assert_eq!(maybe_binding(&mut q).unwrap()[&sym!("x")], term!(1));
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), sym!("y")])), false);
