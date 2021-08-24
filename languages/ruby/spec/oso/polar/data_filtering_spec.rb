@@ -480,12 +480,33 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         )
       end
 
+      it 'applies sound elemental reasoning' do
+        subject.load_str <<~POL
+          allow("the water of aquarius", "slake", x: Person) if
+            x.sign.element in ["air", "earth", "water"];
+          allow("the venom of scorpio", "intoxicate", x: Person) if
+            x.sign.element in ["air", "fire"];
+          allow("the venom of scorpio", "intoxicate", x: Person) if
+            x.sign.ruler in ["saturn", "neptune"];
+        POL
+
+        water_winners = Person.joins(:sign).where.not(signs: { element: 'fire' })
+        check_authz 'the water of aquarius', 'slake', Person, water_winners
+
+        venom_victims =
+          Person.joins(:sign).where(signs: { element: %w[air fire] })
+                .or(Person.joins(:sign).where(signs: { ruler: %w[saturn neptune] }))
+        check_authz 'the venom of scorpio', 'intoxicate', Person, venom_victims
+      end
+
       it 'assigns auspicious matches' do
         # FIXME(gw) probably not astrologically correct
         subject.load_str <<~POL
           allow(a: Sign, "match", b: Sign) if a.element = b.element;
           allow(a: Sign, "match", b: Sign) if a.ruler = b.ruler;
           allow(a: Person, "match", b: Person) if allow(a.sign, "match", b.sign);
+          allow("the water of aquarius", "slake", x: Person) if
+            x.sign.element in ["air", "earth", "water"];
         POL
 
         compatible_signs = lambda do |sign|
