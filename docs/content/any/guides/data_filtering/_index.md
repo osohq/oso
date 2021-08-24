@@ -33,7 +33,7 @@ to our engineering team and we'll unblock you.
 {{% /ifLangExists %}}
 
 ## What is data filtering
-When you evaluate an oso policy (using `is_allowed`) for a specific `actor`, `action` and `resource`, oso evaluates the allow rule(s) you have defined to determine if that `actor` is allowed to do that `action` on that `resource`. For instance if you have a policy like this.
+When you evaluate an Oso policy (using `is_allowed`) for a specific `actor`, `action` and `resource`, Oso evaluates the allow rule(s) you have defined to determine if that `actor` is allowed to do that `action` on that `resource`. For instance if you have a policy like this.
 
 
 ```polar
@@ -45,13 +45,13 @@ then `"steve"` would be allowed to `"get"` that document.
 
 Data filtering is asking a slightly different question of the policy. Instead of asking "Can this actor do this action on this specific resource?", we want to ask
 "What are all the resources that this actor can do this specific action on?".  One way to answer this question would be to take every Document in the system and call
-`is_allowed` on it. This isn't efficient and many times is just impossible. There could be thousands of Documents in a database but only 3 that have the owner "steve".
-Instead of fetching every document and passing it into oso, we would like to ask our database for only the documents that have the owner "steve". This process of
+`is_allowed` on it. This isn't efficient and many times is just impossible. There could be thousands of Documents in a database but only 3 that have the owner `"steve"`.
+Instead of fetching every document and passing it into Oso, we would like to ask our database for only the documents that have the owner `"steve"`. This process of
 filtering the data in our data store, based on the logic in our policy is what we call "Data Filtering".
 
 {{% callout "ORM Integrations" "blue" %}}
 
-If you are using one of our ORM integration libraries like sqlalchemy-oso or django-oso data filtering is already built in and you won't have to worry about integrating
+If you are using one of our ORM integration libraries like `sqlalchemy-oso` or `django-oso` data filtering is already built in and you won't have to worry about integrating
 it yourself. See docs for the ORM library instead.
 
 {{% /callout %}}
@@ -71,7 +71,7 @@ There is one special type called `Relationship` that tells polar the field refer
 related object in polar and tells us how the current object is related to the other object.
 
 ### Fetchers
-The other thing oso has to know to use data filtering are how to fetch data. These are functions that take as input a list of `Constraint`
+The other thing Oso has to know to use data filtering are how to fetch data. These are functions that take as input a list of `Constraint`
 objects. The function is then responsible for selecting data that matches all of the constraint from the database, or an API, or wherever
 the data lives. This is the place that data filtering integrates with your data store. 
 
