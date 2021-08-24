@@ -56,6 +56,23 @@ class Ref:
 
 
 @dataclass
+class Loc:
+    field: Optional[str]
+    result: Optional[int]
+
+
+@dataclass
+class Val:
+    term: Any
+
+
+@dataclass
+class Con:
+    kind: str
+    left: Any
+    right: Any
+
+@dataclass
 class Constraint:
     kind: str  # ["Eq", "In", "Contains"]
     field: str
@@ -106,6 +123,23 @@ def parse_constraint(polar, constraint):
         assert False, "Unknown value kind"
 
     return Constraint(kind=kind, field=field, value=value)
+
+
+def parse_con(polar, com):
+    def parse_val(val):
+        kind = next(iter(val))
+        val = val[kind]
+        if kind == 'Loc':
+            return Loc(field=val['field'], result=val['result'])
+        elif kind == 'Val':
+            return Val(term=val['term'])
+        assert False, "Unknown value kind"
+
+    kind = con['kind']
+    assert kind in ["Eq", "In", "Contains"]
+    left = parse_val(con['left'])
+    right = parse_val(con['right'])
+    return Con(kind=kind, left=left, right=right)
 
 
 def ground_constraints(polar, results, filter_plan, constraints):
