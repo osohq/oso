@@ -65,7 +65,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
     it 'handles enumerator external call results' do
       actor = Actor.new('sam')
-      subject.load_str('widgets(actor, x) if widget in actor.widgets and print(widget) and x = widget.id;')
+      subject.load_str('widgets(actor, x) if widget in actor.widgets and x = widget.id;')
       result = subject.query_rule('widgets', actor, Oso::Polar::Variable.new('x')).to_a
       expect(result).to eq([{ 'x' => 2 }, { 'x' => 3 }])
     end

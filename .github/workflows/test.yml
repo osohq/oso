@@ -92,6 +92,7 @@ jobs:
         with:
           skipCommit: true
           args: "--dry-run --set-exit-if-changed"
+          files: languages/java/**/*.java
 
       ## Check Go
       - name: Check formatting of Go library
