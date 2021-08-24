@@ -360,9 +360,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
 
     context 'a rails-based astrological matchmaking app' do # rubocop:disable Metrics/BlockLength
-      DB_FILE = '/tmp/active_record_test.db'
       require 'sqlite3'
       require 'active_record'
+
       module ActiveRecordFetcher
         CONSTRAINT_KINDS = {}.tap do |it|
           it['Eq'] = it['In'] = ->(q, c) { q.where c.field => c.value }
@@ -393,6 +393,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         belongs_to :sign, foreign_key: :sign_name
       end
 
+      DB_FILE = 'active_record_test.db'
       before do # rubocop:disable Metrics/BlockLength
         File.delete DB_FILE if File.exist? DB_FILE
 
@@ -480,10 +481,11 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
 
       it 'assigns auspicious matches' do
+        # FIXME(gw) probably not astrologically correct
         subject.load_str <<~POL
-          allow(a: Sign, "date", b: Sign) if a.element = b.element;
-          allow(a: Sign, "date", b: Sign) if a.ruler = b.ruler;
-          allow(a: Person, "date", b: Person) if allow(a.sign, "date", b.sign);
+          allow(a: Sign, "match", b: Sign) if a.element = b.element;
+          allow(a: Sign, "match", b: Sign) if a.ruler = b.ruler;
+          allow(a: Person, "match", b: Person) if allow(a.sign, "match", b.sign);
         POL
 
         compatible_signs = lambda do |sign|
@@ -491,7 +493,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         end
 
         Sign.all.each do |sign|
-          check_authz sign, 'date', Sign, compatible_signs[sign]
+          check_authz sign, 'match', Sign, compatible_signs[sign]
         end
 
         compatible_people = lambda do |person|
@@ -499,7 +501,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         end
 
         Person.all.each do |person|
-          check_authz person, 'date', Person, compatible_people[person]
+          check_authz person, 'match', Person, compatible_people[person]
         end
       end
     end
