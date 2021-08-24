@@ -254,6 +254,7 @@ impl Namespaces {
         self.declarations.contains_key(resource)
     }
 
+    /// Invariant: `namespace` param _must_ be an existing namespace.
     fn get_declaration_by_namespace_and_name(
         &self,
         namespace: &Term,
@@ -262,21 +263,9 @@ impl Namespaces {
         if let Some(declaration) = self.declarations[namespace].get(name) {
             Ok(declaration)
         } else {
-            // TODO(gj): message isn't totally accurate when going across namespaces. E.g., with
-            // policy:
-            // Org{roles=["foo"];} Repo{permissions=["bar"]; relations={parent:Org}; "bar" if "baz"
-            // on "parent";}
-            Err(ParseError::ParseSugar {
-                loc: name.offset(),
-                msg: format!(
-                    "Undeclared term {} referenced in implication in {} namespace. \
-                        Did you mean to declare it as a role, permission, or relation?",
-                    name.to_polar(),
-                    namespace
-                ),
-                ranges: vec![],
-            }
-            .into())
+            let (loc, ranges) = (name.offset(), vec![]);
+            let msg = format!("Undeclared term {} referenced in implication in {} namespace. Did you mean to declare it as a role, permission, or relation?", name.to_polar(), namespace);
+            Err(ParseError::ParseSugar { loc, msg, ranges }.into())
         }
     }
 
@@ -307,7 +296,20 @@ impl Namespaces {
     ) -> PolarResult<Symbol> {
         let related_namespace =
             self.get_relation_type_by_namespace_and_relation(namespace, relation)?;
-        self.get_rule_name_for_declaration_in_namespace(related_namespace, name)
+
+        if let Some(declarations) = self.declarations.get(related_namespace) {
+            if let Some(declaration) = declarations.get(name) {
+                Ok(declaration.as_rule_name())
+            } else {
+                let (loc, ranges) = (name.offset(), vec![]);
+                let msg = format!("{}: Term {} not declared on related resource {}. Did you mean to declare it as a role, permission, or relation on resource {}?", namespace.to_polar(), name.to_polar(), related_namespace.to_polar(), related_namespace.to_polar());
+                Err(ParseError::ParseSugar { loc, msg, ranges }.into())
+            }
+        } else {
+            let (loc, ranges) = (related_namespace.offset(), vec![]);
+            let msg = format!("{}: Relation {} in implication body `{} on {}` has type {}, but no such namespace exists. Try declaring one: `{} {{}}`", namespace.to_polar(), relation.to_polar(), name.to_polar(), relation.to_polar(), related_namespace.to_polar(), related_namespace.to_polar());
+            Err(ParseError::ParseSugar { loc, msg, ranges }.into())
+        }
     }
 }
 
@@ -746,7 +748,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_with_implication_head_not_declared_locally() {
+    fn test_namespace_with_undeclared_local_implication_head() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
@@ -757,7 +759,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_with_relationless_implier_term_not_declared_locally() {
+    fn test_namespace_with_undeclared_local_implication_body() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
@@ -767,6 +769,34 @@ mod tests {
                 "member" if "owner";
             }"#,
             r#"Undeclared term "owner" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
+        );
+    }
+
+    #[test]
+    fn test_namespace_with_undeclared_nonlocal_implication_body() {
+        let p = Polar::new();
+        p.register_constant(sym!("Repo"), term!("unimportant"));
+        p.register_constant(sym!("Org"), term!("unimportant"));
+
+        expect_error(
+            &p,
+            r#"Repo {
+                roles = ["writer"];
+                relations = { parent: Org };
+                "writer" if "owner" on "parent";
+            }"#,
+            r#"Repo: Relation "parent" in implication body `"owner" on "parent"` has type Org, but no such namespace exists. Try declaring one: `Org {}`"#,
+        );
+
+        expect_error(
+            &p,
+            r#"Repo {
+                roles = ["writer"];
+                relations = { parent: Org };
+                "writer" if "owner" on "parent";
+            }
+            Org {}"#,
+            r#"Repo: Term "owner" not declared on related resource Org. Did you mean to declare it as a role, permission, or relation on resource Org?"#,
         );
     }
 
@@ -811,22 +841,6 @@ mod tests {
         //     "reader" if "writer";
         // }"#;
         // panic!("{}", p.load_str(policy).unwrap_err());
-    }
-
-    #[test]
-    fn test_namespace_with_undeclared_cross_resource_implier_term() {
-        let p = Polar::new();
-        p.register_constant(sym!("Repo"), term!("unimportant"));
-        let policy = r#"Repo {
-                roles = ["writer"];
-                relations = { parent: Org };
-                "writer" if "owner" on "parent";
-            }"#;
-        panic!("{}", p.load_str(policy).unwrap_err());
-        // expect_error(
-        //     &p,
-        //     r#"Undeclared term "owner" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
-        // );
     }
 
     #[test]
