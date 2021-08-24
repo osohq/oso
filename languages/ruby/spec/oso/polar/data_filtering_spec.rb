@@ -10,18 +10,18 @@ RSpec.configure do |c|
 end
 
 RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
+  DFH = DataFilteringHelpers
+  Relationship = ::Oso::Polar::DataFiltering::Relationship
   context 'data filtering' do # rubocop:disable Metrics/BlockLength
     context '#get_allowed_resources' do # rubocop:disable Metrics/BlockLength
       it 'handles classes with explicit names' do
-        Widget = Struct.new(:id) do
-          include DataFilteringHelpers::Fetcher
-        end
+        Widget = DFH.record :id
         0.upto(9).each { |id| Widget.new id }
 
         subject.register_class(
           Widget,
           name: 'Doohickey',
-          fetcher: Widget.fetcher,
+          fetcher: Widget::FETCHER,
           fields: {
             'id' => Integer
           }
@@ -39,10 +39,31 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
 
       context 'when filtering data' do # rubocop:disable Metrics/BlockLength
+        Bar = DFH.record(:id, :is_cool, :is_still_cool)
+        Foo = DFH.record(:id, :bar_id, :is_fooey, :numbers) do
+          def bar
+            Bar.all.find { |bar| bar.id == bar_id }
+          end
+        end
+        FooLog = DFH.record(:id, :foo_id, :data)
+
+        Foo.new('something', 'hello', false, [])
+        Foo.new('another', 'hello', true, [1])
+        Foo.new('third', 'hello', true, [2])
+        Foo.new('fourth', 'goodbye', true, [2, 1])
+
+        Bar.new('hello', true, true)
+        Bar.new('goodbye', false, true)
+        Bar.new('hershey', false, false)
+
+        FooLog.new('a', 'fourth', 'hello')
+        FooLog.new('b', 'third', 'world')
+        FooLog.new('c', 'another', 'steve')
+
         before do # rubocop:disable Metrics/BlockLength
           subject.register_class(
             Bar,
-            fetcher: Bar.fetcher,
+            fetcher: Bar::FETCHER,
             fields: {
               'id' => String,
               'is_cool' => PolarBoolean,
@@ -52,7 +73,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
           subject.register_class(
             FooLog,
-            fetcher: FooLog.fetcher,
+            fetcher: FooLog::FETCHER,
             fields: {
               'id' => String,
               'foo_id' => String,
@@ -68,7 +89,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
           subject.register_class(
             Foo,
-            fetcher: Foo.fetcher,
+            fetcher: Foo::FETCHER,
             fields: {
               'id' => String,
               'bar_id' => String,
@@ -158,6 +179,26 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
 
     context 'when meddling with the affairs of wizards' do # rubocop:disable Metrics/BlockLength
+      Wizard = DFH.record(:name, :books, :spell_levels) do
+        def spells
+          Spell.all.select do |spell|
+            books.include?(spell.school) and spell_levels.include?(spell.level)
+          end
+        end
+      end
+
+      Familiar = DFH.record :name, :kind, :wizard_name
+      Spell = DFH.record :name, :school, :level
+      Spell.new('teleport other',    'thaumaturgy', 7)
+      Spell.new('wish',              'thaumaturgy', 9)
+      Spell.new('cure light wounds', 'necromancy',  1)
+      Spell.new('identify',          'divination',  1)
+      Spell.new('call familiar',     'summoning',   1)
+      Spell.new('call ent',          'summoning',   7)
+      Spell.new('magic missile',     'destruction', 1)
+      Spell.new('liquify organ',     'destruction', 5)
+      Spell.new('call dragon',       'summoning',   9)
+      Spell.new('know alignment',    'divination',  6)
       let(:level) { ->(n) { 1.upto(n).to_a } }
       let(:policy_file) { File.join(__dir__, 'magic_policy.polar') }
       let(:gandalf) { Wizard.new('gandalf', %w[divination destruction], level[4]) }
@@ -171,7 +212,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       before do # rubocop:disable Metrics/BlockLength
         subject.register_class(
           Wizard,
-          fetcher: Wizard.fetcher,
+          fetcher: Wizard::FETCHER,
           fields: {
             'name' => String,
             'books' => Array,
@@ -187,7 +228,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
         subject.register_class(
           Spell,
-          fetcher: Spell.fetcher,
+          fetcher: Spell::FETCHER,
           fields: {
             'name' => String,
             'school' => String,
@@ -197,7 +238,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
         subject.register_class(
           Familiar,
-          fetcher: Familiar.fetcher,
+          fetcher: Familiar::FETCHER,
           fields: {
             'name' => String,
             'kind' => String,
@@ -253,6 +294,11 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
 
     context 'when using Oso roles' do # rubocop:disable Metrics/BlockLength
+      Org = DFH.record :name
+      Repo = DFH.record :name, :org_name
+      Issue = DFH.record :name, :repo_name
+      User = DFH.record :name
+      Role = DFH.record :user_name, :resource_name, :role
       let(:roles_file) { File.join(__dir__, 'data_filtering_roles_policy.polar') }
       let(:osohq) { Org.new('osohq') }
       let(:apple) { Org.new('apple') }
@@ -264,21 +310,19 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       let(:leina) { User.new('leina') }
       let(:steve) { User.new('steve') }
       let(:gabe) { User.new('gabe') }
-      let(:roles) do
-        [Role.new('leina', 'osohq', 'owner'),
-         Role.new('steve', 'osohq', 'member'),
-         Role.new('gabe', 'oso', 'writer')]
-      end
+      Role.new('leina', 'osohq', 'owner')
+      Role.new('steve', 'osohq', 'member')
+      Role.new('gabe', 'oso', 'writer')
 
       before do # rubocop:disable Metrics/BlockLength
         subject.register_class(
           Org,
           fields: { 'name' => String },
-          fetcher: fetcher([apple, osohq])
+          fetcher: generic_fetcher([apple, osohq])
         )
         subject.register_class(
           Repo,
-          fetcher: fetcher([oso, ios, demo]),
+          fetcher: generic_fetcher([oso, ios, demo]),
           fields: {
             'name' => String,
             'org_name' => String,
@@ -292,7 +336,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         )
         subject.register_class(
           Issue,
-          fetcher: Issue.fetcher,
+          fetcher: Issue::FETCHER,
           fields: {
             'name' => String,
             'repo_name' => String,
@@ -306,7 +350,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         )
         subject.register_class(
           User,
-          fetcher: User.fetcher,
+          fetcher: User::FETCHER,
           fields: {
             'name' => String,
             'roles' => Relationship.new(
@@ -319,7 +363,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         )
         subject.register_class(
           Role,
-          fetcher: fetcher(roles),
+          fetcher: Role::FETCHER,
           fields: {
             'user_name' => String,
             'resource_name' => String,
@@ -359,168 +403,326 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
     end
 
-    context 'a rails-based astrological matchmaking app' do # rubocop:disable Metrics/BlockLength
+    context 'using ActiveRecord' do # rubocop:disable Metrics/BlockLength
       require 'sqlite3'
       require 'active_record'
 
-      module ActiveRecordFetcher
-        CONSTRAINT_KINDS = {}.tap do |it|
-          it['Eq'] = it['In'] = ->(q, c) { q.where c.field => c.value }
-          it.default_proc = proc do |kind|
-            raise "Unsupported constraint kind: #{kind}"
-          end
-          it.freeze
-        end
-
-        def self.included(base)
-          base.const_set(:FETCHER, lambda do |constraints|
-            constraints.reduce(base) do |q, con|
-              CONSTRAINT_KINDS[con.kind][q, con]
-            end
-          end)
-        end
-      end
-
-      class Sign < ActiveRecord::Base
-        include ActiveRecordFetcher
-        self.primary_key = 'name'
-        has_many :people, foreign_key: :sign_name
-      end
-
-      class Person < ActiveRecord::Base
-        include ActiveRecordFetcher
-        self.primary_key = 'name'
-        belongs_to :sign, foreign_key: :sign_name
-      end
-
       DB_FILE = 'active_record_test.db'
-      before do # rubocop:disable Metrics/BlockLength
+
+      before do
         File.delete DB_FILE if File.exist? DB_FILE
-
-        db = SQLite3::Database.new DB_FILE
-        db.execute <<-SQL
-          create table signs (
-            name varchar(16) not null primary key,
-            element varchar(8) not null,
-            ruler varchar(8) not null
-          );
-        SQL
-
-        db.execute <<-SQL
-          create table people (
-            name varchar(32) not null primary key,
-            sign_name varchar(16) not null
-          );
-        SQL
-
-        ActiveRecord::Base.establish_connection(
-          adapter: 'sqlite3',
-          database: DB_FILE
-        )
-
-        [%w[aries fire mars],
-         %w[taurus earth venus],
-         %w[gemini air mercury],
-         %w[cancer water moon],
-         %w[leo fire sun],
-         %w[virgo earth mercury],
-         %w[libra air venus],
-         %w[scorpio water mars],
-         %w[sagittarius fire jupiter],
-         %w[capricorn earth saturn],
-         %w[aquarius air saturn],
-         %w[pisces water jupiter]].each do |name, element, ruler|
-          Sign.create(name: name, element: element, ruler: ruler)
-        end
-
-        [%w[robin scorpio],
-         %w[pat taurus],
-         %w[dylan virgo],
-         %w[terry libra],
-         %w[chris aquarius],
-         %w[tyler leo],
-         %w[eden cancer],
-         %w[dakota capricorn],
-         %w[charlie aries],
-         %w[alex gemini],
-         %w[sam pisces],
-         %w[avery sagittarius]].each do |name, sign|
-          Person.create(name: name, sign_name: sign)
-        end
-
-        subject.register_class(
-          Sign,
-          fetcher: Sign::FETCHER,
-          fields: {
-            'name' => String,
-            'element' => String,
-            'ruler' => String,
-            'people' => Relationship.new(
-              kind: 'children',
-              other_type: 'Person',
-              my_field: 'name',
-              other_field: 'sign_name'
-            )
-          }
-        )
-
-        subject.register_class(
-          Person,
-          fetcher: Person::FETCHER,
-          fields: {
-            'name' => String,
-            'sign_name' => String,
-            'sign' => Relationship.new(
-              kind: 'parent',
-              other_type: 'Sign',
-              my_field: 'sign_name',
-              other_field: 'name'
-            )
-          }
-        )
       end
 
-      it 'applies sound elemental reasoning' do
-        subject.load_str <<~POL
-          allow("the water of aquarius", "slake", x: Person) if
-            x.sign.element in ["air", "earth", "water"];
-          allow("the venom of scorpio", "intoxicate", x: Person) if
-            x.sign.element in ["air", "fire"];
-          allow("the venom of scorpio", "intoxicate", x: Person) if
-            x.sign.ruler in ["saturn", "neptune"];
-        POL
+      context 'a github clone' do # rubocop:disable Metrics/BlockLength
+        module GitClub
+          class User < ActiveRecord::Base
+            include DFH::ActiveRecordFetcher
+            self.primary_key = :name
+            belongs_to :org, foreign_key: :org_name
+          end
+          class Repo < ActiveRecord::Base
+            include DFH::ActiveRecordFetcher
+            self.primary_key = :name
+            belongs_to :org, foreign_key: :org_name
+            has_many :issues, foreign_key: :repo_name
+          end
+          class Org < ActiveRecord::Base
+            include DFH::ActiveRecordFetcher
+            self.primary_key = :name
+            has_many :users, foreign_key: :org_name
+            has_many :repos, foreign_key: :org_name
+          end
+          class Issue < ActiveRecord::Base
+            include DFH::ActiveRecordFetcher
+            self.primary_key = :name
+            belongs_to :repo, foreign_key: :repo_name
+          end
+        end
 
-        water_winners = Person.joins(:sign).where.not(signs: { element: 'fire' })
-        check_authz 'the water of aquarius', 'slake', Person, water_winners
+        before do # rubocop:disable Metrics/BlockLength
+          db = SQLite3::Database.new DB_FILE
 
-        venom_victims =
-          Person.joins(:sign).where(signs: { element: %w[air fire] })
-                .or(Person.joins(:sign).where(signs: { ruler: %w[saturn neptune] }))
-        check_authz 'the venom of scorpio', 'intoxicate', Person, venom_victims
+          db.execute <<-SQL
+            create table orgs (
+              name varchar(16) not null primary key
+            );
+          SQL
+
+          db.execute <<-SQL
+            create table users (
+              name varchar(16) not null primary key,
+              org_name varchar(16) not null
+            );
+          SQL
+
+          db.execute <<-SQL
+            create table repos (
+              name varchar(16) not null primary key,
+              org_name varchar(16) not null
+            );
+          SQL
+
+          db.execute <<-SQL
+            create table issues (
+              name varchar(16) not null primary key,
+              repo_name varchar(16) not null
+            );
+          SQL
+
+          ActiveRecord::Base.establish_connection(
+            adapter: 'sqlite3',
+            database: DB_FILE
+          )
+
+          # create orgs
+          %w[apple osohq].each do |name|
+            GitClub::Org.create name: name
+          end
+
+          # create repos
+          [%w[oso osohq],
+           %w[demo osohq],
+           %w[ios apple]].each do |name, org|
+            GitClub::Repo.create name: name, org_name: org
+          end
+
+          # create users
+          [%w[steve osohq],
+           %w[leina osohq],
+           %w[gabe osohq],
+           %w[graham apple]].each do |name, org|
+            GitClub::User.create name: name, org_name: org
+          end
+
+          # create issues
+          [%w[bug oso],
+           %w[laggy ios]].each do |name, repo|
+            GitClub::Issue.create name: name, repo_name: repo
+          end
+
+          subject.register_class(
+            GitClub::User,
+            name: 'User',
+            fetcher: GitClub::User::FETCHER,
+            fields: {
+              'name' => String,
+              'org_name' => String,
+              'org' => Relationship.new(
+                kind: 'parent',
+                other_type: 'Org',
+                my_field: 'org_name',
+                other_field: 'name'
+              )
+            }
+          )
+          subject.register_class(
+            GitClub::Org,
+            name: 'Org',
+            fetcher: GitClub::Org::FETCHER,
+            fields: {
+              'name' => String,
+              'users' => Relationship.new(
+                kind: 'children',
+                other_type: 'User',
+                my_field: 'name',
+                other_field: 'org_name'
+              ),
+              'repos' => Relationship.new(
+                kind: 'children',
+                other_type: 'Repo',
+                my_field: 'name',
+                other_field: 'org_name'
+              )
+            }
+          )
+          subject.register_class(
+            GitClub::Repo,
+            name: 'Repo',
+            fetcher: GitClub::Repo::FETCHER,
+            fields: {
+              'name' => String,
+              'org_name' => String,
+              'org' => Relationship.new(
+                kind: 'parent',
+                other_type: 'Org',
+                my_field: 'org_name',
+                other_field: 'name'
+              )
+            }
+          )
+          subject.register_class(
+            GitClub::Issue,
+            name: 'Issue',
+            fetcher: GitClub::Issue::FETCHER,
+            fields: {
+              'name' => String,
+              'repo_name' => String,
+              'repo' => Relationship.new(
+                kind: 'parent',
+                other_type: 'Repo',
+                my_field: 'repo_name',
+                other_field: 'name'
+              )
+            }
+          )
+        end
+
+        it 'works' do
+          subject.load_str <<~POL
+            allow(user: User, "push", repo: Repo) if
+              user.org = repo.org;
+            allow(user: User, "edit", issue: Issue) if
+              allow(user, "push", issue.repo);
+          POL
+
+          steve = GitClub::User.find 'steve'
+          bug = GitClub::Issue.find 'bug'
+          oso = GitClub::Repo.find 'oso'
+          demo = GitClub::Repo.find 'demo'
+          check_authz steve, 'edit', GitClub::Issue, [bug]
+          check_authz steve, 'push', GitClub::Repo, [oso, demo]
+        end
       end
 
-      it 'assigns auspicious matches' do
-        # FIXME(gw) probably not astrologically correct
-        subject.load_str <<~POL
-          allow(a: Sign, "match", b: Sign) if a.element = b.element;
-          allow(a: Sign, "match", b: Sign) if a.ruler = b.ruler;
-          allow(a: Person, "match", b: Person) if allow(a.sign, "match", b.sign);
-        POL
-
-        compatible_signs = lambda do |sign|
-          Sign.where(element: sign.element).or Sign.where(ruler: sign.ruler)
+      context 'an astrological matchmaking app' do # rubocop:disable Metrics/BlockLength
+        class Sign < ActiveRecord::Base
+          include DFH::ActiveRecordFetcher
+          self.primary_key = 'name'
+          has_many :people, foreign_key: :sign_name
         end
 
-        Sign.all.each do |sign|
-          check_authz sign, 'match', Sign, compatible_signs[sign]
+        class Person < ActiveRecord::Base
+          include DFH::ActiveRecordFetcher
+          self.primary_key = 'name'
+          belongs_to :sign, foreign_key: :sign_name
         end
 
-        compatible_people = lambda do |person|
-          Person.where sign: compatible_signs[person.sign]
+        before do # rubocop:disable Metrics/BlockLength
+          db = SQLite3::Database.new DB_FILE
+          db.execute <<-SQL
+            create table signs (
+              name varchar(16) not null primary key,
+              element varchar(8) not null,
+              ruler varchar(8) not null
+            );
+          SQL
+
+          db.execute <<-SQL
+            create table people (
+              name varchar(32) not null primary key,
+              sign_name varchar(16) not null
+            );
+          SQL
+
+          ActiveRecord::Base.establish_connection(
+            adapter: 'sqlite3',
+            database: DB_FILE
+          )
+
+          [%w[aries fire mars],
+           %w[taurus earth venus],
+           %w[gemini air mercury],
+           %w[cancer water moon],
+           %w[leo fire sun],
+           %w[virgo earth mercury],
+           %w[libra air venus],
+           %w[scorpio water mars],
+           %w[sagittarius fire jupiter],
+           %w[capricorn earth saturn],
+           %w[aquarius air saturn],
+           %w[pisces water jupiter]].each do |name, element, ruler|
+            Sign.create(name: name, element: element, ruler: ruler)
+          end
+
+          [%w[robin scorpio],
+           %w[pat taurus],
+           %w[dylan virgo],
+           %w[terry libra],
+           %w[chris aquarius],
+           %w[tyler leo],
+           %w[eden cancer],
+           %w[dakota capricorn],
+           %w[charlie aries],
+           %w[alex gemini],
+           %w[sam pisces],
+           %w[avery sagittarius]].each do |name, sign|
+            Person.create(name: name, sign_name: sign)
+          end
+
+          subject.register_class(
+            Sign,
+            fetcher: Sign::FETCHER,
+            fields: {
+              'name' => String,
+              'element' => String,
+              'ruler' => String,
+              'people' => Relationship.new(
+                kind: 'children',
+                other_type: 'Person',
+                my_field: 'name',
+                other_field: 'sign_name'
+              )
+            }
+          )
+
+          subject.register_class(
+            Person,
+            fetcher: Person::FETCHER,
+            fields: {
+              'name' => String,
+              'sign_name' => String,
+              'sign' => Relationship.new(
+                kind: 'parent',
+                other_type: 'Sign',
+                my_field: 'sign_name',
+                other_field: 'name'
+              )
+            }
+          )
         end
 
-        Person.all.each do |person|
-          check_authz person, 'match', Person, compatible_people[person]
+        it 'applies sound elemental reasoning' do
+          subject.load_str <<~POL
+            allow("the water of aquarius", "slake", x: Person) if
+              x.sign.element in ["air", "earth", "water"];
+            allow("the venom of scorpio", "intoxicate", x: Person) if
+              x.sign.element in ["air", "fire"];
+            allow("the venom of scorpio", "intoxicate", x: Person) if
+              x.sign.ruler in ["saturn", "neptune"];
+          POL
+
+          water_winners = Person.joins(:sign).where.not(signs: { element: 'fire' })
+          check_authz 'the water of aquarius', 'slake', Person, water_winners
+
+          venom_victims =
+            Person.joins(:sign).where(signs: { element: %w[air fire] })
+                  .or(Person.joins(:sign).where(signs: { ruler: %w[saturn neptune] }))
+          check_authz 'the venom of scorpio', 'intoxicate', Person, venom_victims
+        end
+
+        it 'assigns auspicious matches' do
+          # FIXME(gw) probably not astrologically correct
+          subject.load_str <<~POL
+            allow(a: Sign, "match", b: Sign) if a.element = b.element;
+            allow(a: Sign, "match", b: Sign) if a.ruler = b.ruler;
+            allow(a: Person, "match", b: Person) if allow(a.sign, "match", b.sign);
+          POL
+
+          compatible_signs = lambda do |sign|
+            Sign.where(element: sign.element).or Sign.where(ruler: sign.ruler)
+          end
+
+          Sign.all.each do |sign|
+            check_authz sign, 'match', Sign, compatible_signs[sign]
+          end
+
+          compatible_people = lambda do |person|
+            Person.where sign: compatible_signs[person.sign]
+          end
+
+          Person.all.each do |person|
+            check_authz person, 'match', Person, compatible_people[person]
+          end
         end
       end
     end
