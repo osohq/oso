@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1629756117874,
+  "lastUpdate": 1629786030820,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -81453,6 +81453,240 @@ window.BENCHMARK_DATA = {
             "name": "partial_rule_depth/100",
             "value": 92744056,
             "range": "± 3190151",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "17556281+gj@users.noreply.github.com",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1318d1d7023c1f41429b4c93267e761de5d27d3e",
+          "message": "Config Sugar (#1066)\n\n* Add comment hint for Token::Assign & align hints\r\n\r\n* Remove unused import\r\n\r\n* Remove trailing whitespace\r\n\r\n* Initial namespace parsing & tests\r\n\r\n* Add missing assertion to test_parse_matches\r\n\r\n* Bump submodule commits\r\n\r\n* Catch unregistered resources (sort of) and duplicate namespaces\r\n\r\n* Create sugar module & rewrite implications\r\n\r\n* Match test names\r\n\r\n* Typo\r\n\r\n* Specializer should be an instance pattern\r\n\r\n* Working local implications\r\n\r\n* Terms instead of Strings to track source info\r\n\r\n* First pass cross-resource implications\r\n\r\n* Simpler LALRPOP\r\n\r\n* ResourceNamespace -> Namespace\r\n\r\n* Move tests into sugar.rs\r\n\r\n* More validation logic moved from LALRPOP -> Rust\r\n\r\n* Typo\r\n\r\n* Rename {transform,index}_declarations\r\n\r\n* Clean up a bit\r\n\r\n* test_sugar.py passes\r\n\r\n* Post-merge cleanup\r\n\r\n* Remove outdated TODO\r\n\r\n* Increase flexibility for parsing namespaces\r\n\r\n* Test all parse-able namespace permutations\r\n\r\n* Better errors\r\n\r\n* Add a few comments & reduce duplication\r\n\r\n* Few more comments\r\n\r\n* Improve naming; implications aren't declarations\r\n\r\n* Remove outdated TODO\r\n\r\n* Remove empty namespace- & declaration-checking code\r\n\r\nNot much difference between `Org{}` and `Org{roles=[];}`, and no need to\r\nbe overly militant about forcing folks to clean up \"clutter\" (if you can\r\neven use that word to describe an empty declaration or namespace.\r\n\r\n* Remove tests superseded by parse permutations test\r\n\r\n* Move StringList{Terms} next to where it's used\r\n\r\n* Regular rules don't include the semicolon in span\r\n\r\n* Address some PR feedback\r\n\r\n* Preliminary WOHA exhaustiveness validation\r\n\r\n* Remove Term::offset_to_end\r\n\r\n* Small refactor suggested by @samscott89\r\n\r\n* Un-reserve 'roles', 'permissions', and 'relations'\r\n\r\n* Un-reserve 'on'\r\n\r\n* Less is more\r\n\r\n* Remove eprintlns\r\n\r\n* make -C languages/python/oso lint\r\n\r\n* Handle duplicate declarations\r\n\r\n* Add some failing tests\r\n\r\n* Validate all relation types have been registered\r\n\r\n* Ignore resource relation position test\r\n\r\n* 'Expr' is overloaded -- use 'Production' instead\r\n\r\n* Bare rewrites -> has_* variants\r\n\r\n* Clippy\r\n\r\n* Few more comments\r\n\r\n* Derive Eq\r\n\r\n* Remove exhaustiveness validation... for now\r\n\r\n* Missed one `relation()` -> `has_relation()` update\r\n\r\n* Couple minor test updates\r\n\r\n* Some naming updates\r\n\r\n* Clean up additional exhaustiveness checking helper\r\n\r\n* Move KB impl into kb.rs\r\n\r\n* Error if relation types aren't registered before trying to rewrite implications\r\n\r\n* Trivial rename of function\r\n\r\n* Inline function logic so we have more granular control over errors\r\n\r\n* Use std::ops::Range instead of (usize, usize)\r\n\r\n* Flatten some error constructions\r\n\r\n* Clear namespaces after rewriting rules\r\n\r\n* Some renaming & comments\r\n\r\n* Add comments\r\n\r\n* Remove pytest rant\r\n\r\n* Add leading 'resource' keyword\r\n\r\n* Update Python sugar.polar policy to has_* rules",
+          "timestamp": "2021-08-24T02:07:47-04:00",
+          "tree_id": "aca7d5369936bff23541b9aaf143fb011156f3dd",
+          "url": "https://github.com/osohq/oso/commit/1318d1d7023c1f41429b4c93267e761de5d27d3e"
+        },
+        "date": 1629786027562,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 47542,
+            "range": "± 2671",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2335736,
+            "range": "± 2544",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 11319611,
+            "range": "± 20296",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 22441275,
+            "range": "± 50821",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 854,
+            "range": "± 19",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2350,
+            "range": "± 37",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 55404,
+            "range": "± 1523",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 499575,
+            "range": "± 17231",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 19133,
+            "range": "± 626",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 19137,
+            "range": "± 585",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 19177,
+            "range": "± 663",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 19088,
+            "range": "± 633",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 17236,
+            "range": "± 534",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5095,
+            "range": "± 441",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 6071,
+            "range": "± 1754",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 7741,
+            "range": "± 132",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 14025,
+            "range": "± 2137",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 5996,
+            "range": "± 57",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 12574,
+            "range": "± 146",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 7778,
+            "range": "± 108",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "load_policy",
+            "value": 868361,
+            "range": "± 1804",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/1",
+            "value": 35923,
+            "range": "± 1318",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/5",
+            "value": 107076,
+            "range": "± 3220",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/10",
+            "value": 201741,
+            "range": "± 4996",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/20",
+            "value": 419247,
+            "range": "± 8619",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/40",
+            "value": 1055672,
+            "range": "± 9318",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/80",
+            "value": 2358305,
+            "range": "± 5494",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/100",
+            "value": 3091575,
+            "range": "± 6872",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/1",
+            "value": 112280,
+            "range": "± 4222",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/5",
+            "value": 345566,
+            "range": "± 5633",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/10",
+            "value": 731481,
+            "range": "± 11374",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/20",
+            "value": 1960673,
+            "range": "± 24893",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/40",
+            "value": 6740730,
+            "range": "± 52590",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/80",
+            "value": 37151034,
+            "range": "± 396874",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/100",
+            "value": 68212802,
+            "range": "± 447143",
             "unit": "ns/iter"
           }
         ]
