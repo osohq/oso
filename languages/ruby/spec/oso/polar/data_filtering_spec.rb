@@ -505,8 +505,6 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           allow(a: Sign, "match", b: Sign) if a.element = b.element;
           allow(a: Sign, "match", b: Sign) if a.ruler = b.ruler;
           allow(a: Person, "match", b: Person) if allow(a.sign, "match", b.sign);
-          allow("the water of aquarius", "slake", x: Person) if
-            x.sign.element in ["air", "earth", "water"];
         POL
 
         compatible_signs = lambda do |sign|
