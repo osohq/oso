@@ -194,6 +194,26 @@ impl Value {
         }
     }
 
+    pub fn as_list(&self) -> Result<&TermList, error::RuntimeError> {
+        match self {
+            Value::List(l) => Ok(l),
+            _ => Err(error::RuntimeError::TypeError {
+                msg: format!("Expected list, got: {}", self.to_polar()),
+                stack_trace: None, // @TODO
+            }),
+        }
+    }
+
+    pub fn as_dict(&self) -> Result<&Dictionary, error::RuntimeError> {
+        match self {
+            Value::Dictionary(d) => Ok(d),
+            _ => Err(error::RuntimeError::TypeError {
+                msg: format!("Expected dictionary, got: {}", self.to_polar()),
+                stack_trace: None, // @TODO
+            }),
+        }
+    }
+
     pub fn is_ground(&self) -> bool {
         match self {
             Value::Call(_)
@@ -246,9 +266,36 @@ impl Hash for Term {
     }
 }
 
-impl From<Value> for Term {
-    fn from(other: Value) -> Self {
-        Self::new_temporary(other)
+impl<A> From<A> for Term
+where
+    A: Into<Value>,
+{
+    fn from(other: A) -> Self {
+        Self::new_temporary(other.into())
+    }
+}
+
+impl From<Symbol> for Value {
+    fn from(other: Symbol) -> Self {
+        Self::Variable(other)
+    }
+}
+
+impl From<bool> for Value {
+    fn from(other: bool) -> Self {
+        Self::Boolean(other)
+    }
+}
+
+impl From<Operation> for Value {
+    fn from(other: Operation) -> Self {
+        Self::Expression(other)
+    }
+}
+
+impl From<TermList> for Value {
+    fn from(other: TermList) -> Self {
+        Self::List(other)
     }
 }
 

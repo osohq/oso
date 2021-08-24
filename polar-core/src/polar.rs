@@ -10,7 +10,7 @@ use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
 use super::vm::*;
-use super::warnings::check_singletons;
+use super::warnings::{check_ambiguous_precedence, check_singletons};
 
 use std::sync::{Arc, RwLock};
 
@@ -164,7 +164,7 @@ impl Polar {
         let mut kb = self.kb.write().unwrap();
         let source_id = kb.add_source(source.clone())?;
 
-        // we extract this into a seperate function
+        // we extract this into a separate function
         // so that any errors returned with `?` are captured
         fn load_source(
             source_id: u64,
@@ -180,6 +180,7 @@ impl Polar {
                     parser::Line::Rule(rule) => {
                         let mut rule_warnings = check_singletons(&rule, &*kb)?;
                         warnings.append(&mut rule_warnings);
+                        warnings.append(&mut check_ambiguous_precedence(&rule, &*kb)?);
                         let rule = rewrite_rule(rule, kb);
                         kb.add_rule(rule);
                     }
@@ -208,8 +209,13 @@ impl Polar {
                         }
                         kb.add_rule_prototype(prototype);
                     }
+                    parser::Line::Namespace(namespace) => {
+                        namespace.add_to_kb(kb)?;
+                    }
                 }
             }
+            // Rewrite namespace implications _before_ validating rule prototypes.
+            kb.rewrite_implications()?;
             // check rules are valid against rule prototypes
             kb.validate_rules()?;
             Ok(warnings)

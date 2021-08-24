@@ -5,10 +5,10 @@ role_allows(actor, action, resource) if
     action in actions and
 
     # Role grants local permission (action & role defined in same namespace).
-    __oso_internal__role_has_permission([role, role_resource], action, resource, roles) or
+    (__oso_internal__role_has_permission([role, role_resource], action, resource, roles) or
 
     # Role grants non-local permission (action & role defined in different namespaces).
-    __oso_internal__ancestor_role_has_permission([role, role_resource], __oso_internal_roles_helpers__.join(":", namespace, action), resource) and
+    __oso_internal__ancestor_role_has_permission([role, role_resource], __oso_internal_roles_helpers__.join(":", namespace, action), resource)) and
 
     actor_can_assume_role(actor, role, role_resource);
 

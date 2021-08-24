@@ -16,6 +16,7 @@ lalrpop_mod!(
 use super::error::{self, PolarResult};
 use super::lexer::{self, Lexer};
 use super::rules::*;
+use super::sugar::Namespace;
 use super::terms::*;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -23,6 +24,7 @@ pub enum Line {
     Rule(Rule),
     RulePrototype(Rule),
     Query(Term),
+    Namespace(Namespace),
 }
 
 fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
@@ -273,8 +275,9 @@ mod tests {
     #[test]
     fn test_parse_matches() {
         let term = parse_query("{} matches {}");
-        assert_eq!(term.to_polar(), r#"{} matches {}"#);
-        let _term = parse_query("{x: 1} matches {}");
+        assert_eq!(term.to_polar(), "{} matches {}");
+        let term = parse_query("{x: 1} matches {}");
+        assert_eq!(term.to_polar(), "{x: 1} matches {}");
     }
 
     #[test]
