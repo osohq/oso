@@ -1,5 +1,5 @@
 ---
-title: "Data Filtering Preview"
+title: "Filter Data (Oso 0.20.0 Beta)"
 weight: 1
 showContentForAnyLanguage: true
 ---
