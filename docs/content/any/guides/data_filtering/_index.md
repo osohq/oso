@@ -238,6 +238,84 @@ laggy = Issue.create name: 'laggy', repo: ios
 
 {{% /ifLang %}}
 
+{{% ifLang "node" %}}
+
+```js
+import 'reflect-metadata';
+import { Entity, PrimaryColumn, Column, createConnection } from 'typeorm';
+
+@Entity()
+export class Org {
+  @PrimaryColumn()
+  id!: string;
+}
+
+@Entity()
+export class Repo {
+  @PrimaryColumn()
+  id!: string;
+
+  @Column()
+  orgId!: string;
+}
+
+@Entity()
+export class User {
+  @PrimaryColumn()
+  id!: string;
+
+  @Column()
+  orgId!: string;
+}
+
+  const connection = await createConnection({
+    type: 'sqlite',
+    database: `:memory:`,
+    entities: [Org, Repo, User],
+    synchronize: true,
+    logging: false,
+  });
+
+  let orgs = connection.getRepository(Org);
+  let repos = connection.getRepository(Repo);
+  let users = connection.getRepository(User);
+
+  async function mkOrg(id: string) {
+    let org = new Org()
+    org.id = id;
+    await orgs.save(org);
+    return org;
+  }
+
+  async function mkRepo(id: string, orgId: string) {
+    let repo = new Repo()
+    repo.id = id;
+    repo.orgId = orgId;
+    await repos.save(repo);
+    return repo;
+  }
+
+  async function mkUser(id: string, orgId: string) {
+    let user = new User()
+    user.id = id;
+    user.orgId = orgId;
+    await users.save(user);
+    return user;
+  }
+
+  let apple = await mkOrg("apple")
+  let osoOrg = await mkOrg("osohq")
+
+  let ios = await mkRepo("ios", "apple")
+  let osoRepo = await mkRepo("oso", "osohq")
+  let demoRepo = await mkRepo("demo", "osohq")
+
+  let leina = await mkUser("leina", "osohq")
+  let steve = await mkUser("steve", "apple")
+```
+
+{{% /ifLang %}}
+
 For each class, we need to define a fetching function. This is a function that takes a list of constraints and returns all the instances that match them.
 In some cases you might be filtering an in memory array, in other cases you might be constructing a request to an external service to fetch data. In this
 case we are turning the constraints into a database query.
@@ -307,6 +385,44 @@ module ActiveRecordFetcher
   end
 end
 ```
+{{% /ifLang %}}
+
+{{% ifLang "node" %}}
+
+```js
+  function fromRepo(repo: any, name: string, constraints: any) {
+    let query = repo.createQueryBuilder(name);
+    for (let i in constraints) {
+      let c = constraints[i];
+      let clause;
+      switch (c.kind) {
+        case 'Eq':
+          {
+            clause = `${name}.${c.field} = :${c.field}`;
+          }
+          break;
+        case 'In':
+          {
+            clause = `${name}.${c.field} IN (:...${c.field})`;
+          }
+          break;
+      }
+      let param: any = {};
+      param[c.field] = c.value;
+      query.andWhere(clause, param);
+    }
+    return query.getMany();
+  }
+
+  function getOrgs(constraints: any) {
+    return fromRepo(orgs, 'org', constraints);
+  }
+
+  function getRepos(constraints: any) {
+    return fromRepo(repos, 'repo', constraints);
+  }
+```
+
 {{% /ifLang %}}
 
 When you register classes you need to specify two new things. One is `types` which is a map that says what the type of each
@@ -421,6 +537,32 @@ oso.register_class(
 ```
 {{% /ifLang %}}
 
+{{% ifLang "node" %}}
+
+```js
+  import { Oso } from './Oso';
+  import { Relationship } from './dataFiltering';
+
+  const oso = new Oso();
+
+  const orgType = new Map();
+  orgType.set('id', String);
+  oso.registerClass(Org, 'Org', orgType, getOrgs);
+
+  const repoType = new Map();
+  repoType.set('id', String);
+  repoType.set('orgId', String);
+  repoType.set('org', new Relationship('parent', 'Org', 'orgId', 'id'));
+  oso.registerClass(Repo, 'Repo', repoType, getRepos);
+
+  const userType = new Map();
+  userType.set('id', String);
+  userType.set('orgId', String);
+  oso.registerClass(User, 'User', userType);
+```
+
+{{% /ifLang %}}
+
 One everything is set up we can use the new "get allowed resources" method to filter a Class to all the instances that the user is allowed to preform the action on.
 
 {{% ifLang "python" %}}
@@ -458,7 +600,16 @@ raise unless steve_issues == [laggy]
 
 {{% ifLang "node" %}}
 
-JavaScript example coming soon.
+```js
+  oso.loadStr(`
+    allow(user: User, "read", repo: Repo) if
+      org = repo.org and
+      user.orgId = org.id;
+  `);
+  let leinaRepos = await oso.getAllowedResources(leina, "read", Repo)
+  console.log(leinaRepos)
+  assert(leinaRepos == [osoRepo, demoRepo])
+```
 
 {{% /ifLang %}}
 
