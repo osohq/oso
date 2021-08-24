@@ -20,7 +20,6 @@ showContentForAnyLanguage: true
 {{% ifLang not="node" %}}
 {{% ifLang not="python" %}}
 {{% ifLang not="ruby" %}}
-
 Data filtering is coming soon for {{< lang >}}!
 
 If you want to get data filtering in your app now or just want to
@@ -31,6 +30,11 @@ to our engineering team and we'll unblock you.
 {{% /ifLang %}}
 {{% /ifLang %}}
 {{% /ifLangExists %}}
+
+{{< ifLangExists >}}
+{{% ifLang not="rust" %}}
+{{% ifLang not="go" %}}
+{{% ifLang not="java" %}}
 
 ## What is data filtering
 When you evaluate an Oso policy (using `is_allowed`) for a specific `actor`, `action` and `resource`, Oso evaluates the allow rule(s) you have defined to determine if that `actor` is allowed to do that `action` on that `resource`. For instance if you have a policy like this.
@@ -619,3 +623,8 @@ Currently there are some limitations to what you can do while using data filteri
 Some polar expressions are not supported but may be in the future. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numeric comparisons are also not yet supported. `< > <= >= !=`
 
 For now, Relationships only support matching on a single field. 
+
+{{% /ifLang %}}
+{{% /ifLang %}}
+{{% /ifLang %}}
+{{% /ifLangExists %}}
