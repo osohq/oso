@@ -94,9 +94,17 @@ pub fn validate_parsed_declaration(
 }
 
 pub fn turn_productions_into_namespace(
+    keyword: Term,
     resource: Term,
     productions: Vec<Production>,
 ) -> Result<Namespace, LalrpopError<usize, Token, error::ParseError>> {
+    if keyword.value().as_symbol().unwrap().0 != "resource" {
+        let (loc, ranges) = (keyword.offset(), vec![]);
+        let msg = format!("Expected 'resource' but found '{}'.", keyword.to_polar());
+        let error = ParseError::ParseSugar { loc, msg, ranges };
+        return Err(LalrpopError::User { error });
+    }
+
     let mut roles: Option<Term> = None;
     let mut permissions: Option<Term> = None;
     let mut relations: Option<Term> = None;
@@ -307,7 +315,7 @@ impl Namespaces {
             }
         } else {
             let (loc, ranges) = (related_namespace.offset(), vec![]);
-            let msg = format!("{}: Relation {} in implication body `{} on {}` has type {}, but no such namespace exists. Try declaring one: `{} {{}}`", namespace.to_polar(), relation.to_polar(), declaration.to_polar(), relation.to_polar(), related_namespace.to_polar(), related_namespace.to_polar());
+            let msg = format!("{}: Relation {} in implication body `{} on {}` has type {}, but no such namespace exists. Try declaring one: `resource {} {{}}`", namespace.to_polar(), relation.to_polar(), declaration.to_polar(), relation.to_polar(), related_namespace.to_polar(), related_namespace.to_polar());
             Err(ParseError::ParseSugar { loc, msg, ranges }.into())
         }
     }
@@ -454,7 +462,7 @@ fn implication_body_to_rule_body(
         // To get the rule name for the rewritten `<implier>` call, we need to figure out what
         // type (role, permission, or relation) `<implier>` is declared as _in the namespace
         // related to the current namespace via `<relation>`_. That is, given
-        // `Repo { roles=["writer"]; relations={parent:Org}; "writer" if "owner" on "parent"; }`,
+        // `resource Repo { roles=["writer"]; relations={parent:Org}; "writer" if "owner" on "parent"; }`,
         // we need to find out whether `"owner"` is declared as a role, permission, or relation in
         // the `Org` namespace. The args for the rewritten `<implier>` call are, in order: the
         // actor variable, the `<implier>` string, and the shared variable we created above for the
@@ -507,7 +515,7 @@ fn implication_head_to_params(head: &Term, namespace: &Term) -> Vec<Parameter> {
 }
 
 // TODO(gj): better error message, e.g.:
-//               duplicate namespace declaration: Org { ... } defined on line XX of file YY
+//               duplicate namespace declaration: resource Org { ... } defined on line XX of file YY
 //                                                previously defined on line AA of file BB
 fn check_for_duplicate_namespaces(namespaces: &Namespaces, namespace: &Term) -> PolarResult<()> {
     if namespaces.exists(namespace) {
@@ -624,6 +632,7 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
+    use crate::error::ErrorKind;
     use crate::parser::{parse_lines, Line};
     use crate::polar::Polar;
 
@@ -743,7 +752,7 @@ mod tests {
     #[test]
     fn test_namespace_must_be_registered() {
         let p = Polar::new();
-        let valid_policy = "Org{}";
+        let valid_policy = "resource Org{}";
         expect_error(
             &p,
             valid_policy,
@@ -756,7 +765,7 @@ mod tests {
     #[test]
     fn test_namespace_duplicate_namespaces() {
         let p = Polar::new();
-        let invalid_policy = "Org{}Org{}";
+        let invalid_policy = "resource Org{}resource Org{}";
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
             &p,
@@ -771,7 +780,7 @@ mod tests {
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
             &p,
-            r#"Org{"member" if "owner";}"#,
+            r#"resource Org{"member" if "owner";}"#,
             r#"Undeclared term "member" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
         );
     }
@@ -782,7 +791,7 @@ mod tests {
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
             &p,
-            r#"Org {
+            r#"resource Org {
                 roles=["member"];
                 "member" if "owner";
             }"#,
@@ -798,22 +807,22 @@ mod tests {
 
         expect_error(
             &p,
-            r#"Repo {
+            r#"resource Repo {
                 roles = ["writer"];
                 relations = { parent: Org };
                 "writer" if "owner" on "parent";
             }"#,
-            r#"Repo: Relation "parent" in implication body `"owner" on "parent"` has type Org, but no such namespace exists. Try declaring one: `Org {}`"#,
+            r#"Repo: Relation "parent" in implication body `"owner" on "parent"` has type Org, but no such namespace exists. Try declaring one: `resource Org {}`"#,
         );
 
         expect_error(
             &p,
-            r#"Repo {
+            r#"resource Repo {
                 roles = ["writer"];
                 relations = { parent: Org };
                 "writer" if "owner" on "parent";
             }
-            Org {}"#,
+            resource Org {}"#,
             r#"Repo: Term "owner" not declared on related resource Org. Did you mean to declare it as a role, permission, or relation on resource Org?"#,
         );
     }
@@ -825,7 +834,7 @@ mod tests {
         p.register_constant(sym!("Repo"), term!("unimportant"));
         expect_error(
             &p,
-            r#"Repo {
+            r#"resource Repo {
                 roles = ["owner"];
                 relations = { parent: Org };
                 "parent" if "owner";
@@ -839,20 +848,20 @@ mod tests {
     fn test_namespace_with_circular_implications() {
         let p = Polar::new();
         p.register_constant(sym!("Repo"), term!("unimportant"));
-        let policy = r#"Repo {
+        let policy = r#"resource Repo {
             roles = [ "writer" ];
             "writer" if "writer";
         }"#;
         panic!("{}", p.load_str(policy).unwrap_err());
 
-        // let policy = r#"Repo {
+        // let policy = r#"resource Repo {
         //     roles = [ "writer", "reader" ];
         //     "writer" if "reader";
         //     "reader" if "writer";
         // }"#;
         // panic!("{}", p.load_str(policy).unwrap_err());
         //
-        // let policy = r#"Repo {
+        // let policy = r#"resource Repo {
         //     roles = [ "writer", "reader", "admin" ];
         //     "admin" if "reader";
         //     "writer" if "admin";
@@ -865,7 +874,7 @@ mod tests {
     fn test_namespace_with_unregistered_relation_type() {
         let p = Polar::new();
         p.register_constant(sym!("Repo"), term!("unimportant"));
-        let policy = r#"Repo { relations = { parent: Org }; }"#;
+        let policy = r#"resource Repo { relations = { parent: Org }; }"#;
         expect_error(
             &p,
             policy,
@@ -882,7 +891,7 @@ mod tests {
 
         expect_error(
             &p,
-            r#"Org{
+            r#"resource Org{
               roles = ["egg","egg"];
               "egg" if "egg";
             }"#,
@@ -891,7 +900,7 @@ mod tests {
 
         expect_error(
             &p,
-            r#"Org{
+            r#"resource Org{
               roles = ["egg","tootsie"];
               permissions = ["spring","egg"];
 
@@ -903,7 +912,7 @@ mod tests {
 
         expect_error(
             &p,
-            r#"Org{
+            r#"resource Org{
               permissions = [ "egg" ];
               relations = { egg: Roll };
             }"#,
@@ -974,7 +983,7 @@ mod tests {
 
         let test_case = |parts: Vec<&str>, expected: &Namespace| {
             for permutation in permute(parts).into_iter() {
-                let mut policy = "Repo {\n".to_owned();
+                let mut policy = "resource Repo {\n".to_owned();
                 policy += &permutation.join("\n");
                 policy += "}";
                 assert!(equal(&parse_lines(0, &policy).unwrap()[0], expected));
@@ -1059,35 +1068,51 @@ mod tests {
         let p = Polar::new();
         expect_error(
             &p,
-            r#"Org{roles={};}"#,
+            r#"resource Org{roles={};}"#,
             r#"Expected 'roles' declaration to be a list of strings; found a dictionary:"#,
         );
         expect_error(
             &p,
-            r#"Org{relations=[];}"#,
+            r#"resource Org{relations=[];}"#,
             r#"Expected 'relations' declaration to be a dictionary; found a list:"#,
         );
         expect_error(
             &p,
-            r#"Org{foo=[];}"#,
+            r#"resource Org{foo=[];}"#,
             r#"Unexpected declaration 'foo'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?"#,
         );
         expect_error(
             &p,
-            r#"Org{foo={};}"#,
+            r#"resource Org{foo={};}"#,
             r#"Unexpected declaration 'foo'. Did you mean for this to be 'relations = { ... };'?"#,
         );
         expect_error(
             &p,
-            r#"Org{"foo" if "bar" onn "baz";}"#,
+            r#"resource Org{"foo" if "bar" onn "baz";}"#,
             r#"Unexpected relation keyword 'onn'. Did you mean 'on'?"#,
+        );
+    }
+
+    #[test]
+    fn test_namespace_leading_resource_keyword() {
+        let p = Polar::new();
+
+        assert!(matches!(
+            p.load_str("Org{}").unwrap_err().kind,
+            ErrorKind::Parse(ParseError::UnrecognizedToken { .. })
+        ));
+
+        expect_error(
+            &p,
+            "seahorse Org{}",
+            "Expected 'resource' but found 'seahorse'.",
         );
     }
 
     #[test]
     fn test_namespace_declaration_keywords_are_not_reserved_words() {
         let p = Polar::new();
-        p.load_str("roles(permissions, on) if permissions.relations = on;")
+        p.load_str("roles(permissions, on, resource) if permissions.relations = on and resource;")
             .unwrap();
     }
 }

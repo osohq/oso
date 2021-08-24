@@ -8,7 +8,7 @@ role(user: User, role, resource) if
   team in user.teams and
   role(team, role, resource);
 
-Org {
+resource Org {
   roles = ["owner", "member"];
   permissions = ["invite", "create_repo"];
   relations = { owns: User };
@@ -22,7 +22,7 @@ Org {
 relation(user: User, "owns", org: Org) if
   user = org.owner;
 
-Repo {
+resource Repo {
   roles = ["reader", "writer", "admin"];
   permissions = ["pull", "push"];
   relations = {
@@ -47,7 +47,7 @@ relation(org, "parent", repo: Repo) if
 permission(_: User, "pull", repo: Repo) if
   repo.is_public;
 
-Issue {
+resource Issue {
   permissions = ["delete", "edit"];
   relations = {
     parent: Repo,

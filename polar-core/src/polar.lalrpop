@@ -690,9 +690,9 @@ Line: Line = {
     <RulePrototype> => Line::RulePrototype(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
 
-    <start:@L> <resource:Variable> "{" <productions:NamespaceProductions> "}" <end:@R> =>? {
+    <start:@L> <keyword:Spanned<Variable>> <resource:Variable> "{" <productions:NamespaceProductions> "}" <end:@R> =>? {
         let resource = Term::new_from_parser(src_id, start, end, resource);
-        sugar::turn_productions_into_namespace(resource, productions).map(|ns| Line::Namespace(ns))
+        sugar::turn_productions_into_namespace(keyword, resource, productions).map(|ns| Line::Namespace(ns))
     }
 }
 
