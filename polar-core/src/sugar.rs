@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::Range;
 
 use lalrpop_util::ParseError as LalrpopError;
 
@@ -45,6 +46,11 @@ pub fn validate_relation_keyword(
     }
 }
 
+fn term_source_range(term: &Term) -> Range<usize> {
+    let (start, end) = term.span().unwrap();
+    start..end
+}
+
 pub fn validate_parsed_declaration(
     (name, term): (Symbol, Term),
 ) -> Result<Production, LalrpopError<usize, Token, error::ParseError>> {
@@ -54,22 +60,15 @@ pub fn validate_parsed_declaration(
         ("relations", Value::Dictionary(_)) => Ok(Production::Relations(term)),
 
         ("roles", Value::Dictionary(_)) | ("permissions", Value::Dictionary(_)) => {
-            Err(LalrpopError::User {
-                error: ParseError::ParseSugar {
-                    loc: term.offset(),
-                    msg: format!(
-                        "Expected '{}' declaration to be a list of strings; found a dictionary:\n",
-                        name
-                    ),
-                    ranges: vec![term.span().unwrap()],
-                },
-            })
+            let (loc, ranges) = (term.offset(), vec![term_source_range(&term)]);
+            let msg = format!("Expected '{}' declaration to be a list of strings; found a dictionary:\n", name);
+            Err(LalrpopError::User { error: ParseError::ParseSugar { loc, msg, ranges } })
         }
         ("relations", Value::List(_)) => Err(LalrpopError::User {
             error: ParseError::ParseSugar {
                 loc: term.offset(),
                 msg: "Expected 'relations' declaration to be a dictionary; found a list:\n".to_owned(),
-                ranges: vec![term.span().unwrap()],
+                ranges: vec![term_source_range(&term)],
             },
         }),
 
@@ -79,7 +78,7 @@ pub fn validate_parsed_declaration(
                 msg: format!(
                     "Unexpected declaration '{}'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?\n", name
                 ),
-                ranges: vec![term.span().unwrap()],
+                ranges: vec![term_source_range(&term)],
             },
         }),
         (_, Value::Dictionary(_)) => Err(LalrpopError::User {
@@ -88,7 +87,7 @@ pub fn validate_parsed_declaration(
                 msg: format!(
                     "Unexpected declaration '{}'. Did you mean for this to be 'relations = {{ ... }};'?\n", name
                 ),
-                ranges: vec![term.span().unwrap()],
+                ranges: vec![term_source_range(&term)],
             },
         }),
         _ => unreachable!(),
@@ -114,7 +113,7 @@ pub fn turn_productions_into_namespace(
             loc: new.offset(),
             msg,
             // TODO(gj): Create a Parsed<Term> or something that _always_ has source info.
-            ranges: vec![(previous.span().unwrap()), (new.span().unwrap())],
+            ranges: vec![term_source_range(previous), term_source_range(new)],
         }
     };
 

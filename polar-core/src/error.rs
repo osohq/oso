@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use std::fmt;
+use std::{fmt, ops};
 
 use crate::sources::*;
 use crate::terms::*;
@@ -88,15 +88,16 @@ impl PolarError {
         {
             if let Some(source) = source {
                 match ranges.len() {
+                    // If one range is provided, print it with no label.
                     1 => {
-                        let first = &source.src[ranges[0].0..ranges[0].1];
+                        let first = &source.src[ranges[0].clone()];
                         msg.push_str(&format!("\t{}\n", first));
                     }
                     // If two ranges are provided, label them `First` and `Second`.
                     2 => {
-                        let first = &source.src[ranges[0].0..ranges[0].1];
+                        let first = &source.src[ranges[0].clone()];
                         msg.push_str(&format!("\tFirst:\n\t\t{}\n", first));
-                        let second = &source.src[ranges[1].0..ranges[1].1];
+                        let second = &source.src[ranges[1].clone()];
                         msg.push_str(&format!("\tSecond:\n\t\t{}\n", second));
                     }
                     _ => (),
@@ -235,7 +236,7 @@ pub enum ParseError {
         msg: String,
         /// Set of source ranges to augment the error message with relevant snippets of the parsed
         /// Polar policy.
-        ranges: Vec<(usize, usize)>,
+        ranges: Vec<ops::Range<usize>>,
     },
 }
 
