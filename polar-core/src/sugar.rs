@@ -178,7 +178,7 @@ impl Implication {
         let (start, end) = head.span().unwrap_or((0, 0));
 
         let name = namespaces.get_rule_name_for_declaration_in_namespace(head, namespace)?;
-        let params = implication_head_into_params(head, namespace);
+        let params = implication_head_to_params(head, namespace);
         let body = implication_body_to_rule_body(body, namespace, namespaces)?;
 
         Ok(Rule::new_from_parser(
@@ -416,45 +416,77 @@ fn namespace_as_var(namespace: &Term) -> Value {
     value!(sym!(lowercased))
 }
 
+/// Turn an implication body into an And-wrapped call (for a local implication) or pair of calls
+/// (for a cross-resource implication).
 fn implication_body_to_rule_body(
     (implier, relation): &(Term, Option<Term>),
     namespace: &Term,
     namespaces: &Namespaces,
 ) -> PolarResult<Term> {
+    // Create a variable derived from the name of the current namespace. E.g., if we're in the
+    // `Repo` namespace, the variable name will be `repo`.
     let namespace_var = implier.clone_with_value(namespace_as_var(namespace));
+
+    // The actor variable will always be named `actor`.
     let actor_var = implier.clone_with_value(value!(sym!("actor")));
+
+    // If there's a relation, e.g., `if <implier> on <relation>`...
     if let Some(relation) = relation {
         // TODO(gj): what if the relation is with the same type? E.g.,
         // `Dir { relations = { parent: Dir }; }`. This might cause Polar to loop.
+
+        // ...then we need to link the rewritten `<implier>` and `<relation>` rules via a shared
+        // variable. To be clever, we'll name the variable according to the type of the relation,
+        // e.g., if the declared relation is `parent: Org` we'll name the variable `org`.
         let relation_type = namespaces.get_relation_type_in_namespace(relation, namespace)?;
         let relation_type_var = relation.clone_with_value(namespace_as_var(relation_type));
 
+        // For the rewritten `<relation>` call, the rule name will always be `has_relation` and the
+        // arguments, in order, will be: the shared variable we just created above, the
+        // `<relation>` string, and the namespace variable we created at the top of the function.
+        // E.g., `vec![org, "parent", repo]`.
         let relation_call = relation.clone_with_value(value!(Call {
             name: sym!("has_relation"),
-            // For example: vec![org, "parent", repo]
             args: vec![relation_type_var.clone(), relation.clone(), namespace_var],
             kwargs: None
         }));
 
+        // To get the rule name for the rewritten `<implier>` call, we need to figure out what
+        // type (role, permission, or relation) `<implier>` is declared as _in the namespace
+        // related to the current namespace via `<relation>`_. That is, given
+        // `Repo { roles=["writer"]; relations={parent:Org}; "writer" if "owner" on "parent"; }`,
+        // we need to find out whether `"owner"` is declared as a role, permission, or relation in
+        // the `Org` namespace. The args for the rewritten `<implier>` call are, in order: the
+        // actor variable, the `<implier>` string, and the shared variable we created above for the
+        // related type.
         let implier_call = implier.clone_with_value(value!(Call {
             name: namespaces
                 .get_rule_name_for_declaration_in_related_namespace(implier, relation, namespace)?,
-            // For example: vec![actor, "owner", org]
             args: vec![actor_var, implier.clone(), relation_type_var],
             kwargs: None
         }));
+
+        // Wrap the rewritten `<relation>` and `<implier>` calls in an `And`.
         Ok(implier.clone_with_value(value!(op!(And, relation_call, implier_call))))
     } else {
+        // If there's no `<relation>` (e.g., `... if "writer";`), we're dealing with a local
+        // implication, and the rewriting process is a bit simpler. To get the appropriate rule
+        // name, we look up the declared type (role, permission, or relation) of `<implier>` in the
+        // current namespace. The call's args are, in order: the actor variable, the `<implier>`
+        // string, and the namespace variable. E.g., `vec![actor, "writer", repo]`.
         let implier_call = implier.clone_with_value(value!(Call {
             name: namespaces.get_rule_name_for_declaration_in_namespace(implier, namespace)?,
             args: vec![actor_var, implier.clone(), namespace_var],
             kwargs: None
         }));
+
+        // Wrap the rewritten `<implier>` call in an `And`.
         Ok(implier.clone_with_value(value!(op!(And, implier_call))))
     }
 }
 
-fn implication_head_into_params(head: &Term, namespace: &Term) -> Vec<Parameter> {
+/// Turn an implication head into a trio of params that go in the head of the rewritten rule.
+fn implication_head_to_params(head: &Term, namespace: &Term) -> Vec<Parameter> {
     let namespace_name = &namespace.value().as_symbol().expect("sym").0;
     vec![
         Parameter {
