@@ -184,7 +184,7 @@ impl Implication {
 
         let name = namespaces.get_rule_name_for_declaration_in_namespace(namespace, head)?;
         let params = implication_head_into_params(head, namespace);
-        let body = implication_body_into_rule_body(body, namespace, namespaces)?;
+        let body = implication_body_to_rule_body(body, namespace, namespaces)?;
 
         Ok(Rule::new_from_parser(
             src_id, start, end, name, params, body,
@@ -425,12 +425,11 @@ fn namespace_as_var(namespace: &Term) -> Value {
     value!(sym!(lowercased))
 }
 
-fn implication_body_into_rule_body(
-    body: &(Term, Option<Term>),
+fn implication_body_to_rule_body(
+    (implier, relation): &(Term, Option<Term>),
     namespace: &Term,
     namespaces: &Namespaces,
 ) -> PolarResult<Term> {
-    let (implier, relation) = body;
     let namespace_var = implier.clone_with_value(namespace_as_var(namespace));
     let actor_var = implier.clone_with_value(value!(sym!("actor")));
     if let Some(relation) = relation {
