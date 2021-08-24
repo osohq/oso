@@ -6,6 +6,16 @@ showContentForAnyLanguage: true
 
 # Data Filtering Preview
 
+{{% callout "Note: 0.20.0 Beta Feature" %}}
+  This is an API provided by the beta release of Oso 0.20.0, meaning that it is
+  not yet officially released. You may find other docs that conflict with the
+  guidance here, so proceed at your own risk! If you have any questions, don't
+  hesitate to [reach out to us on Slack](https://join-slack.osohq.com). We're
+  here to help.
+{{% /callout %}}
+
+<div class="pb-10"></div>
+
 {{< ifLangExists >}}
 {{% ifLang not="node" %}}
 {{% ifLang not="python" %}}
@@ -21,15 +31,6 @@ to our engineering team and we'll unblock you.
 {{% /ifLang %}}
 {{% /ifLang %}}
 {{% /ifLangExists %}}
-
-{{% callout "Early Preview" "blue" %}}
-
-Data filtering is currently an Early Preview. If you have any trouble using it or it doesn't work with your policy [drop into our Slack](http://join-slack.osohq.com) or
-<a href="mailto:engineering@osohq.com?subject=Data%20filtering%20help%20for%20{{< currentLanguage >}}&body=I%20need%20data%20filtering%20help%20in%20{{< currentLanguage >}}">send us an email</a>.
-
-Thanks for trying it out!
-
-{{% /callout %}}
 
 ## What is data filtering
 When you evaluate an oso policy (using `is_allowed`) for a specific `actor`, `action` and `resource`, oso evaluates the allow rule(s) you have defined to determine if that `actor` is allowed to do that `action` on that `resource`. For instance if you have a policy like this.
