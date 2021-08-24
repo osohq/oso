@@ -177,7 +177,7 @@ impl Implication {
         let src_id = head.get_source_id().unwrap_or(0);
         let (start, end) = head.span().unwrap_or((0, 0));
 
-        let name = namespaces.get_rule_name_for_declaration_in_namespace(namespace, head)?;
+        let name = namespaces.get_rule_name_for_declaration_in_namespace(head, namespace)?;
         let params = implication_head_into_params(head, namespace);
         let body = implication_body_to_rule_body(body, namespace, namespaces)?;
 
@@ -249,60 +249,65 @@ impl Namespaces {
         self.declarations.contains_key(resource)
     }
 
-    /// Invariant: `namespace` param _must_ be an existing namespace.
-    fn get_declaration_by_namespace_and_name(
+    /// Look up `declaration` in `namespace`.
+    ///
+    /// Invariant: `namespace` _must_ exist.
+    fn get_declaration_in_namespace(
         &self,
+        declaration: &Term,
         namespace: &Term,
-        name: &Term,
     ) -> PolarResult<&Declaration> {
-        if let Some(declaration) = self.declarations[namespace].get(name) {
+        if let Some(declaration) = self.declarations[namespace].get(declaration) {
             Ok(declaration)
         } else {
-            let (loc, ranges) = (name.offset(), vec![]);
-            let msg = format!("Undeclared term {} referenced in implication in {} namespace. Did you mean to declare it as a role, permission, or relation?", name.to_polar(), namespace);
+            let (loc, ranges) = (declaration.offset(), vec![]);
+            let msg = format!("Undeclared term {} referenced in implication in {} namespace. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), namespace);
             Err(ParseError::ParseSugar { loc, msg, ranges }.into())
         }
     }
 
-    fn get_relation_type_by_namespace_and_relation(
+    /// Look up `relation` in `namespace` and return its type.
+    fn get_relation_type_in_namespace(
         &self,
-        namespace: &Term,
         relation: &Term,
+        namespace: &Term,
     ) -> PolarResult<&Term> {
-        self.get_declaration_by_namespace_and_name(namespace, relation)?
+        self.get_declaration_in_namespace(relation, namespace)?
             .as_relation_type()
     }
 
+    /// Look up `declaration` in `namespace` and return the appropriate rule name for rewriting.
     fn get_rule_name_for_declaration_in_namespace(
         &self,
+        declaration: &Term,
         namespace: &Term,
-        name: &Term,
     ) -> PolarResult<Symbol> {
         Ok(self
-            .get_declaration_by_namespace_and_name(namespace, name)?
+            .get_declaration_in_namespace(declaration, namespace)?
             .as_rule_name())
     }
 
+    /// Traverse from `namespace` to a related namespace via `relation`, then look up `declaration`
+    /// in the related namespace and return the appropriate rule name for rewriting.
     fn get_rule_name_for_declaration_in_related_namespace(
         &self,
-        namespace: &Term,
-        name: &Term,
+        declaration: &Term,
         relation: &Term,
+        namespace: &Term,
     ) -> PolarResult<Symbol> {
-        let related_namespace =
-            self.get_relation_type_by_namespace_and_relation(namespace, relation)?;
+        let related_namespace = self.get_relation_type_in_namespace(relation, namespace)?;
 
         if let Some(declarations) = self.declarations.get(related_namespace) {
-            if let Some(declaration) = declarations.get(name) {
+            if let Some(declaration) = declarations.get(declaration) {
                 Ok(declaration.as_rule_name())
             } else {
-                let (loc, ranges) = (name.offset(), vec![]);
-                let msg = format!("{}: Term {} not declared on related resource {}. Did you mean to declare it as a role, permission, or relation on resource {}?", namespace.to_polar(), name.to_polar(), related_namespace.to_polar(), related_namespace.to_polar());
+                let (loc, ranges) = (declaration.offset(), vec![]);
+                let msg = format!("{}: Term {} not declared on related resource {}. Did you mean to declare it as a role, permission, or relation on resource {}?", namespace.to_polar(), declaration.to_polar(), related_namespace.to_polar(), related_namespace.to_polar());
                 Err(ParseError::ParseSugar { loc, msg, ranges }.into())
             }
         } else {
             let (loc, ranges) = (related_namespace.offset(), vec![]);
-            let msg = format!("{}: Relation {} in implication body `{} on {}` has type {}, but no such namespace exists. Try declaring one: `{} {{}}`", namespace.to_polar(), relation.to_polar(), name.to_polar(), relation.to_polar(), related_namespace.to_polar(), related_namespace.to_polar());
+            let msg = format!("{}: Relation {} in implication body `{} on {}` has type {}, but no such namespace exists. Try declaring one: `{} {{}}`", namespace.to_polar(), relation.to_polar(), declaration.to_polar(), relation.to_polar(), related_namespace.to_polar(), related_namespace.to_polar());
             Err(ParseError::ParseSugar { loc, msg, ranges }.into())
         }
     }
@@ -421,8 +426,7 @@ fn implication_body_to_rule_body(
     if let Some(relation) = relation {
         // TODO(gj): what if the relation is with the same type? E.g.,
         // `Dir { relations = { parent: Dir }; }`. This might cause Polar to loop.
-        let relation_type =
-            namespaces.get_relation_type_by_namespace_and_relation(namespace, relation)?;
+        let relation_type = namespaces.get_relation_type_in_namespace(relation, namespace)?;
         let relation_type_var = relation.clone_with_value(namespace_as_var(relation_type));
 
         let relation_call = relation.clone_with_value(value!(Call {
@@ -434,7 +438,7 @@ fn implication_body_to_rule_body(
 
         let implier_call = implier.clone_with_value(value!(Call {
             name: namespaces
-                .get_rule_name_for_declaration_in_related_namespace(namespace, implier, relation)?,
+                .get_rule_name_for_declaration_in_related_namespace(implier, relation, namespace)?,
             // For example: vec![actor, "owner", org]
             args: vec![actor_var, implier.clone(), relation_type_var],
             kwargs: None
@@ -442,7 +446,7 @@ fn implication_body_to_rule_body(
         Ok(implier.clone_with_value(value!(op!(And, relation_call, implier_call))))
     } else {
         let implier_call = implier.clone_with_value(value!(Call {
-            name: namespaces.get_rule_name_for_declaration_in_namespace(namespace, implier)?,
+            name: namespaces.get_rule_name_for_declaration_in_namespace(implier, namespace)?,
             args: vec![actor_var, implier.clone(), namespace_var],
             kwargs: None
         }));
@@ -722,7 +726,11 @@ mod tests {
         let p = Polar::new();
         let invalid_policy = "Org{}Org{}";
         p.register_constant(sym!("Org"), term!("unimportant"));
-        expect_error(&p, invalid_policy, "Duplicate declaration of Org namespace.");
+        expect_error(
+            &p,
+            invalid_policy,
+            "Duplicate declaration of Org namespace.",
+        );
     }
 
     #[test]
