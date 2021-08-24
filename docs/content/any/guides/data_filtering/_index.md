@@ -40,8 +40,8 @@ When you evaluate an oso policy (using `is_allowed`) for a specific `actor`, `ac
 allow(actor, "get", doc: Document) if doc.owner = actor;
 ```
 
-Oso checks that the passed in `doc`'s owner field is equal to the passed in actor. Eg. if the actor is `"steve"` and the document is `{owner: "steve", content: "..."}`
-Then `"steve"` would be allowed to `"get"` that document.
+Oso checks that the passed in `doc`'s owner field is equal to the passed in actor. For example if the actor is `"steve"` and the document is `{owner: "steve", content: "..."}`
+then `"steve"` would be allowed to `"get"` that document.
 
 Data filtering is asking a slightly different question of the policy. Instead of asking "Can this actor do this action on this specific resource?", we want to ask
 "What are all the resources that this actor can do this specific action on?".  One way to answer this question would be to take every Document in the system and call
@@ -52,7 +52,7 @@ filtering the data in our data store, based on the logic in our policy is what w
 {{% callout "ORM Integrations" "blue" %}}
 
 If you are using one of our ORM integration libraries like sqlalchemy-oso or django-oso data filtering is already built in and you won't have to worry about integrating
-it yourself. See docs for the orm library instead.
+it yourself. See docs for the ORM library instead.
 
 {{% /callout %}}
 
@@ -72,7 +72,7 @@ related object in polar and tells us how the current object is related to the ot
 
 ### Fetchers
 The other thing oso has to know to use data filtering are how to fetch data. These are functions that take as input a list of `Constraint`
-objects. The function is then responsible for selecting data that matches all of the constraint from the database, or an api, or wheverver
+objects. The function is then responsible for selecting data that matches all of the constraint from the database, or an API, or wherever
 the data lives. This is the place that data filtering integrates with your data store. 
 
 ### Using
