@@ -31,7 +31,7 @@ Thanks for trying it out!
 
 {{% /callout %}}
 
-## What is data filtering
+## What is data filtering?
 When you evaluate an oso policy (using `is_allowed`) for a specific `actor`, `action` and `resource`, oso evaluates the allow rule(s) you have defined to determine if that `actor` is allowed to do that `action` on that `resource`. For instance if you have a policy like this.
 
 
@@ -39,30 +39,40 @@ When you evaluate an oso policy (using `is_allowed`) for a specific `actor`, `ac
 allow(actor, "get", doc: Document) if doc.owner = actor;
 ```
 
-Oso checks that the passed in `doc`'s owner field is equal to the passed in actor. Eg. if the actor is `"steve"` and the document is `{owner: "steve", content: "..."}` Then `"steve"` would be allowed to `"get"` that document.
+Oso checks that the passed in `doc`'s owner field is equal to the passed in actor. Eg. if the actor is `"steve"` and the document is `{owner: "steve", content: "..."}`
+Then `"steve"` would be allowed to `"get"` that document.
 
-Data filtering is asking a slightly different question of the policy. Instead of asking "Can this actor do this action on this specific resource?", we want to ask "What are all the resources that this actor can do this specific action on?".
-One way to answer this question would be to take every Document in the system and call `is_allowed` on it. This isn't efficient and many times is just impossible. There could be thousands of Documents in a database but only 3 that have the owner "steve". Instead of fetching every document and passing it into oso, we would like to ask our database for only the documents that have the owner "steve". This process of filtering the data in our data store, based on the logic in our policy is what we call "Data Filtering".
+Data filtering is asking a slightly different question of the policy. Instead of asking "Can this actor do this action on this specific resource?", we want to ask
+"What are all the resources that this actor can do this specific action on?".  One way to answer this question would be to take every Document in the system and call
+`is_allowed` on it. This isn't efficient and many times is just impossible. There could be thousands of Documents in a database but only 3 that have the owner "steve".
+Instead of fetching every document and passing it into oso, we would like to ask our database for only the documents that have the owner "steve". This process of
+filtering the data in our data store, based on the logic in our policy is what we call "Data Filtering".
 
 {{% callout "ORM Integrations" "blue" %}}
 
-If you are using one of our ORM integration libraries like sqlalchemy-oso or django-oso data filtering is already built in and you won't have to worry about integrating it yourself. See docs for the orm library instead.
+If you are using one of our ORM integration libraries like sqlalchemy-oso or django-oso data filtering is already built in and you won't have to worry about integrating
+it yourself. See docs for the orm library instead.
 
 {{% /callout %}}
 
 ## How data filtering works
 Data filtering works by evaluating the policy without passing in a resource. Instead of checking things on the resource
-like `resource.name = "steve"`, we collect up what each of those individual checks would be. These are called `Constraint`s. We then call a function the user has registered with those constraints so that the user can query their own data store with them.
+like `resource.name = "steve"`, we collect up what each of those individual checks would be. These are called `Constraint`s. We
+then call a function the user has registered with those constraints so that the user can query their own data store with them.
 
 ## How to use data filtering
 To use data filtering you need to provide two additional things when you register your classes.
 
 ### Types
-Oso needs to know the types of all the fields in your class. This is how we know what `resource.name` will be when we don't have a concrete resource to check the field on. This lets polar code work the same way it does normally and things like specializers match.
-There is one special type called `Relationship` that tells polar the field refers to a related object. This lets you reference a related object in polar and tells us how the current object is related to the other object.
+Oso needs to know the types of all the fields in your class. This is how we know what `resource.name` will be when we don't have
+a concrete resource to check the field on. This lets polar code work the same way it does normally and things like specializers match.
+There is one special type called `Relationship` that tells polar the field refers to a related object. This lets you reference a
+related object in polar and tells us how the current object is related to the other object.
 
 ### Fetchers
-The other thing oso has to know to use data filtering are how to fetch data. These are functions that take as input a list of `Constraint` objects. The function is then responsible for selecting data that matches all of the constraint from the database, or an api, or wheverver the data lives. This is the place that data filtering integrates with your data store. 
+The other thing oso has to know to use data filtering are how to fetch data. These are functions that take as input a list of `Constraint`
+objects. The function is then responsible for selecting data that matches all of the constraint from the database, or an api, or wheverver
+the data lives. This is the place that data filtering integrates with your data store. 
 
 ### Using
 You can pass both of these things as arguments when registering a class and then you can use data filtering. Here's  an example.
@@ -136,7 +146,100 @@ session.commit()
 
 {{% /ifLang %}}
 
-For each class, we need to define a fetching function. This is a function that takes a list of constraints and returns all the instances that match them. In some cases you might be filtering an in memory array, in other cases you might be constructing a request to an external service to fetch data. In this case we are turning the constraints into a database query.
+{{% ifLang "ruby" %}}
+
+Here's a small ActiveRecord example, but the principles should apply to any ORM.
+
+```ruby
+require 'active_record'
+require 'sqlite3'
+
+# define models
+class User < ActiveRecord::Base
+  include ActiveRecordFetcher # see below
+  self.primary_key = :name
+  belongs_to :org, foreign_key: :org_name
+end
+
+class Repo < ActiveRecord::Base
+  include ActiveRecordFetcher
+  self.primary_key = :name
+  belongs_to :org, foreign_key: :org_name
+  has_many :issues, foreign_key: :repo_name
+end
+
+class Org < ActiveRecord::Base
+  include ActiveRecordFetcher
+  self.primary_key = :name
+  has_many :users, foreign_key: :org_name
+  has_many :repos, foreign_key: :org_name
+end
+
+class Issue < ActiveRecord::Base
+  include ActiveRecordFetcher
+  self.primary_key = :name
+  belongs_to :repo, foreign_key: :repo_name
+end
+
+# create database
+DB_FILE = 'test.db'
+
+db = SQLite3::Database.new DB_FILE
+
+db.execute <<-SQL
+  create table orgs (
+    name varchar(16) not null primary key
+  );
+SQL
+
+db.execute <<-SQL
+  create table users (
+    name varchar(16) not null primary key,
+    org_name varchar(16) not null
+  );
+SQL
+
+db.execute <<-SQL
+  create table repos (
+    name varchar(16) not null primary key,
+    org_name varchar(16) not null
+  );
+SQL
+
+db.execute <<-SQL
+  create table issues (
+    name varchar(16) not null primary key,
+    repo_name varchar(16) not null
+  );
+SQL
+
+ActiveRecord::Base.establish_connection(
+  adapter: 'sqlite3',
+  database: DB_FILE
+)
+
+
+# create some records!
+
+apple = Org.create name: 'apple'
+osohq = Org.create name: 'osohq'
+
+ios = Repo.create name: 'ios', org: apple
+oso_repo = Repo.create name: 'oso', org: osohq
+demo_repo = Repo.create name: 'demo', org: osohq
+
+leina = User.create name: 'leina', org: osohq
+steve = User.create name: 'steve', org: apple
+
+bug = Issue.create name: 'bug', repo: oso_repo
+laggy = Issue.create name: 'laggy', repo: ios
+```
+
+{{% /ifLang %}}
+
+For each class, we need to define a fetching function. This is a function that takes a list of constraints and returns all the instances that match them.
+In some cases you might be filtering an in memory array, in other cases you might be constructing a request to an external service to fetch data. In this
+case we are turning the constraints into a database query.
 
 {{% callout "Handling Constraints" "orange" %}}
 
@@ -150,7 +253,8 @@ There are three kinds of constraints.
 
 * `"Eq"` constraints mean that the field `field` must be equal to the value `value`
 * `"In"` constraints mean that the value of the field `field` must be one of the values in the list `value`.
-* `"Contains"` constraints only apply if the field `field` is a list. It means this list must contain all the values in `value`. If none of your fields are lists you wont get passed this one.
+* `"Contains"` constraints only apply if the field `field` is a list. It means this list must contain all the values in `value`.
+  If none of your fields are lists you wont get passed this one.
 
 {{% ifLang "python" %}}
 
@@ -177,10 +281,41 @@ def get_repos(constraints):
 
 {{% /ifLang %}}
 
-When you register classes you need to specify two new things. One is `types` which is a map that says what the type of each field in the class is. This can be base types like `String` or another registered class or it can be a `Relationship`.
+{{% ifLang "ruby" %}}
 
-The Relationship specifies the type of the related value. It also says how it's related. Any instance of the other type that has their `other_field` equal to the current objects `my_field` is related. `kind` can be either `"parent"` which means there is one related instance, or `"children"` which means there are many.
-Internally the fields are used to create constraints and the related instances are fetched using the fetching functions.
+```ruby
+# A module to autogenerate a fetcher function for an ActiveRecord subclass.
+# `include` it in `Class`and the fetcher is accessible in `Class::FETCHER`
+module ActiveRecordFetcher
+  def self.included(base)
+    base.class_eval do
+      kinds = Hash.new { |k| raise "Unsupported constraint kind: #{k}" }
+      kinds['Eq'] = kinds['In'] = lambda do |q, c|
+        q.where(
+          if c.field.nil?
+            { primary_key => c.value.send(primary_key) }
+          else
+            { c.field => c.value }
+          end
+        )
+      end
+
+      const_set(:FETCHER, lambda do |cons|
+        cons.reduce(self) { |q, con| kinds[con.kind][q, con] }
+      end)
+    end
+  end
+end
+```
+{{% /ifLang %}}
+
+When you register classes you need to specify two new things. One is `types` which is a map that says what the type of each
+field in the class is. This can be base types like `String` or another registered class or it can be a `Relationship`.
+
+The Relationship specifies the type of the related value. It also says how it's related. Any instance of the other type that
+has their `other_field` equal to the current objects `my_field` is related. `kind` can be either `"parent"` which means there
+is one related instance, or `"children"` which means there are many. Internally the fields are used to create constraints and
+the related instances are fetched using the fetching functions.
 
 The other new thing to specify when registering a class is the fetching function for that class.
 
@@ -212,6 +347,80 @@ oso.register_class(User, types={"id": str, "org_id": str})
 
 {{% /ifLang %}}
 
+{{% ifLang "ruby" %}}
+```ruby
+require 'oso'
+
+oso = Oso.new
+Relationship = Oso::Polar::DataFiltering::Relationship
+
+oso.register_class(
+  User,
+  fetcher: User::FETCHER,
+  fields: {
+    'name' => String,
+    'org_name' => String,
+    'org' => Relationship.new(
+      kind: 'parent',
+      other_type: 'Org',
+      my_field: 'org_name',
+      other_field: 'name'
+    )
+  }
+)
+
+oso.register_class(
+  Org,
+  fetcher: Org::FETCHER,
+  fields: {
+    'name' => String,
+    'users' => Relationship.new(
+      kind: 'children',
+      other_type: 'User',
+      my_field: 'name',
+      other_field: 'org_name'
+    ),
+    'repos' => Relationship.new(
+      kind: 'children',
+      other_type: 'Repo',
+      my_field: 'name',
+      other_field: 'org_name'
+    )
+  }
+)
+
+oso.register_class(
+  Repo,
+  fetcher: Repo::FETCHER,
+  fields: {
+    'name' => String,
+    'org_name' => String,
+    'org' => Relationship.new(
+      kind: 'parent',
+      other_type: 'Org',
+      my_field: 'org_name',
+      other_field: 'name'
+    )
+  }
+)
+
+oso.register_class(
+  Issue,
+  fetcher: Issue::FETCHER,
+  fields: {
+    'name' => String,
+    'repo_name' => String,
+    'repo' => Relationship.new(
+      kind: 'parent',
+      other_type: 'Repo',
+      my_field: 'repo_name',
+      other_field: 'name'
+    )
+  }
+)
+```
+{{% /ifLang %}}
+
 One everything is set up we can use the new "get allowed resources" method to filter a Class to all the instances that the user is allowed to preform the action on.
 
 {{% ifLang "python" %}}
@@ -229,8 +438,21 @@ assert leina_repos == [oso_repo, demo_repo]
 {{% /ifLang %}}
 
 {{% ifLang "ruby" %}}
+```ruby
+oso.load_str <<~POL
+  allow(user: User, "read", repo: Repo) if
+    user.org = repo.org;
+  allow(user: User, "edit", issue: Issue) if
+    user.org = issue.repo.org;
+POL
 
-Ruby example coming soon.
+leina_repos = oso.get_allowed_resources leina, 'read', Repo
+raise unless leina_repos == [oso_repo, demo_repo]
+
+steve_issues = oso.get_allowed_resources steve, 'edit', Issue
+raise unless steve_issues == [laggy]
+
+```
 
 {{% /ifLang %}}
 
