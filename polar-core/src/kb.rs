@@ -7,6 +7,7 @@ pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::rules::*;
 use super::sources::*;
+use super::sugar::Namespaces;
 use super::terms::*;
 use std::sync::Arc;
 
@@ -43,6 +44,9 @@ pub struct KnowledgeBase {
     /// For call IDs, instance IDs, symbols, etc.
     id_counter: Counter,
     pub inline_queries: Vec<Term>,
+
+    /// Namespace Bookkeeping
+    pub namespaces: Namespaces,
 }
 
 impl KnowledgeBase {
@@ -58,6 +62,7 @@ impl KnowledgeBase {
             id_counter: Counter::default(),
             gensym_counter: Counter::default(),
             inline_queries: vec![],
+            namespaces: Namespaces::new(),
         }
     }
 
@@ -94,11 +99,10 @@ impl KnowledgeBase {
     }
 
     pub fn add_rule(&mut self, rule: Rule) {
-        let name = rule.name.clone();
         let generic_rule = self
             .rules
-            .entry(name.clone())
-            .or_insert_with(|| GenericRule::new(name, vec![]));
+            .entry(rule.name.clone())
+            .or_insert_with(|| GenericRule::new(rule.name.clone(), vec![]));
         generic_rule.add_rule(Arc::new(rule));
     }
 
@@ -581,6 +585,43 @@ impl KnowledgeBase {
             .and_then(|id| self.sources.get_source(id));
         let error: PolarError = error.into();
         error.set_context(source.as_ref(), Some(term))
+    }
+
+    pub fn rewrite_implications(&mut self) -> PolarResult<()> {
+        let mut errors = vec![];
+
+        errors.append(&mut super::sugar::check_all_relation_types_have_been_registered(self));
+
+        // TODO(gj): Emit all errors instead of just the first.
+        if !errors.is_empty() {
+            self.namespaces.clear();
+            return Err(errors[0].clone());
+        }
+
+        let mut rules = vec![];
+        for (namespace, implications) in &self.namespaces.implications {
+            for implication in implications {
+                match implication.as_rule(namespace, &self.namespaces) {
+                    Ok(rule) => rules.push(rule),
+                    Err(error) => errors.push(error),
+                }
+            }
+        }
+
+        // If we've reached this point, we're all done with the namespaces.
+        self.namespaces.clear();
+
+        // TODO(gj): Emit all errors instead of just the first.
+        if !errors.is_empty() {
+            return Err(errors[0].clone());
+        }
+
+        // Add the rewritten rules to the KB.
+        for rule in rules {
+            self.add_rule(rule);
+        }
+
+        Ok(())
     }
 }
 

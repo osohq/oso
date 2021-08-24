@@ -890,7 +890,7 @@ def test_partial_rule_filtering(polar):
     x = Variable("x")
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         next(polar.query_rule("f", x, bindings={x: TypeConstraint(x, "A")}))
-    assert str(e.value).startswith("No type information for Python class A")
+    assert str(e.value).startswith("No field c on A")
 
 
 def test_iterators(polar, qeval, qvar):
@@ -924,7 +924,7 @@ def test_lookup_in_head(polar, is_allowed):
         READ = 1
         WRITE = 2
 
-    polar.register_constant(Actions, "Actions")
+    polar.register_class(Actions, name="Actions")
     polar.load_str('allow("leina", Actions.READ, "doc");')
 
     assert not is_allowed("leina", Actions.WRITE, "doc")

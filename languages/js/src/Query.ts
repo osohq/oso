@@ -13,6 +13,8 @@ import type {
   Debug,
   ExternalCall,
   ExternalIsa,
+  ExternalIsaWithPath,
+  ExternalIsSubclass,
   ExternalIsSubspecializer,
   ExternalOp,
   MakeExternal,
@@ -24,6 +26,7 @@ import type {
 } from './types';
 import { processMessage } from './messages';
 import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
+import { Constraint, Relationship } from './dataFiltering';
 
 function getLogLevelsFromEnv() {
   if (typeof process?.env === 'undefined') return [undefined, undefined];
@@ -41,12 +44,26 @@ export class Query {
   #host: Host;
   results: QueryResult;
 
-  constructor(ffiQuery: FfiQuery, host: Host) {
+  constructor(ffiQuery: FfiQuery, host: Host, bindings?: Map<string, any>) {
     ffiQuery.setLoggingOptions(...getLogLevelsFromEnv());
     this.#ffiQuery = ffiQuery;
     this.#calls = new Map();
     this.#host = host;
+
+    for (const k in bindings) {
+      this.bind(k, bindings.get(k));
+    }
+
     this.results = this.start();
+  }
+
+  /**
+   * Process messages received from the Polar VM.
+   *
+   * @internal
+   */
+  private bind(name: string, value: any) {
+    this.#ffiQuery.bind(name, JSON.stringify(this.#host.toPolar(value)));
   }
 
   /**
@@ -116,15 +133,54 @@ export class Query {
     let value;
     try {
       const receiver = await this.#host.toJs(instance);
-      value = receiver[attr];
-      if (args !== undefined) {
-        if (typeof value === 'function') {
-          // If value is a function, call it with the provided args.
-          const jsArgs = args!.map(async a => await this.#host.toJs(a));
-          value = receiver[attr](...(await Promise.all(jsArgs)));
-        } else {
-          // Error on attempt to call non-function.
-          throw new InvalidCallError(receiver, attr);
+
+      // Check if it's a relationship
+      if (receiver != undefined) {
+        const clsName = this.#host.clsNames.get(receiver.constructor);
+        if (clsName != null) {
+          const typedef = this.#host.types.get(clsName);
+          if (typedef != null) {
+            const fieldType = typedef.get(attr);
+            if (fieldType != null) {
+              if (fieldType instanceof Relationship) {
+                // Use the fetcher for the other type to traverse
+                // the relationship.
+                const otherClsFetcher = this.#host.fetchers.get(
+                  fieldType.otherType
+                );
+                const constraint = new Constraint(
+                  'Eq',
+                  fieldType.otherField,
+                  receiver[fieldType.myField]
+                );
+                const constraints = [constraint];
+                let results = otherClsFetcher(constraints);
+                results = await Promise.resolve(results);
+                if (fieldType.kind == 'parent') {
+                  if (results.length != 1)
+                    throw new Error(
+                      'Wrong number of parents: ' + results.length
+                    );
+                  value = results[0];
+                } else {
+                  value = results;
+                }
+              }
+            }
+          }
+        }
+      }
+      if (value == undefined) {
+        value = receiver[attr];
+        if (args !== undefined) {
+          if (typeof value === 'function') {
+            // If value is a function, call it with the provided args.
+            const jsArgs = args!.map(async a => await this.#host.toJs(a));
+            value = receiver[attr](...(await Promise.all(jsArgs)));
+          } else {
+            // Error on attempt to call non-function.
+            throw new InvalidCallError(receiver, attr);
+          }
         }
       }
     } catch (e) {
@@ -215,6 +271,13 @@ export class Query {
             this.questionResult(answer, callId);
             break;
           }
+          case QueryEventKind.ExternalIsSubclass: {
+            const { leftTag, rightTag, callId } =
+              event.data as ExternalIsSubclass;
+            const answer = await this.#host.isSubclass(leftTag, rightTag);
+            this.questionResult(answer, callId);
+            break;
+          }
           case QueryEventKind.ExternalOp: {
             const { args, callId, operator } = event.data as ExternalOp;
             const answer = await this.#host.externalOp(
@@ -228,6 +291,17 @@ export class Query {
           case QueryEventKind.ExternalIsa: {
             const { instance, tag, callId } = event.data as ExternalIsa;
             const answer = await this.#host.isa(instance, tag);
+            this.questionResult(answer, callId);
+            break;
+          }
+          case QueryEventKind.ExternalIsaWithPath: {
+            const { baseTag, path, classTag, callId } =
+              event.data as ExternalIsaWithPath;
+            const answer = await this.#host.isaWithPath(
+              baseTag,
+              path,
+              classTag
+            );
             this.questionResult(answer, callId);
             break;
           }

@@ -85,6 +85,13 @@ class Polar:
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
 
+        class InternalRolesHelpers:
+            @staticmethod
+            def join(separator, left, right):
+                return separator.join([left, right])
+
+        self.register_class(InternalRolesHelpers, name="__oso_internal_roles_helpers__")
+
         # Pre-registered classes.
         for name, cls in classes.items():
             self.register_class(cls, name=name)
@@ -96,14 +103,6 @@ class Polar:
     def enable_roles(self):
         if not self._polar_roles_enabled:
 
-            class InternalRolesHelpers:
-                @staticmethod
-                def join(separator, left, right):
-                    return separator.join([left, right])
-
-            self.register_constant(
-                InternalRolesHelpers, "__oso_internal_roles_helpers__"
-            )
             self.ffi_polar.enable_roles()
             self._polar_roles_enabled = True
 
@@ -151,13 +150,13 @@ class Polar:
         # NOTE: not ideal that the MRO gets updated each time load_str is
         # called, but since we are planning to move to only calling load once
         # with the include feature, I think it's okay for now.
-        for (cls_name, cls) in self.host.classes.items():
+        for rec in self.host.distinct_user_types():
             mro = [
-                self.host.class_ids.get(c)
-                for c in inspect.getmro(cls)
-                if c in self.host.class_ids
+                self.host.types[c].id
+                for c in inspect.getmro(rec.cls)
+                if c in self.host.types
             ]
-            self.ffi_polar.register_mro(cls_name, mro)
+            self.ffi_polar.register_mro(rec.name, mro)
 
         self.ffi_polar.load(string, filename)
 
@@ -261,15 +260,10 @@ class Polar:
             if not result:
                 print(False)
 
-    def register_class(self, cls, *, name=None, types=None, fetcher=None):
+    def register_class(self, cls, *, name=None, types=None, fetcher=lambda _: []):
         """Register `cls` as a class accessible by Polar."""
-        cls_name = self.host.cache_class(cls, name)
+        cls_name = self.host.cache_class(cls, name=name, fields=types, fetcher=fetcher)
         self.register_constant(cls, cls_name)
-        self.host.cls_names[cls] = cls_name
-        if types:
-            self.host.types[cls_name] = types
-        if fetcher:
-            self.host.fetchers[cls_name] = fetcher
 
     def register_constant(self, value, name):
         """Register `value` as a Polar constant variable called `name`."""
@@ -297,7 +291,7 @@ class Polar:
         # Data filtering.
         resource = Variable("resource")
         # Get registered class name somehow
-        class_name = self.host.cls_names[cls]
+        class_name = self.host.types[cls].name
         constraint = Expression(
             "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
         )
@@ -312,14 +306,19 @@ class Polar:
             )
         )
 
+        complete, partial = [], []
+
         for result in results:
             for k, v in result["bindings"].items():
-                result["bindings"][k] = self.host.to_polar(v)
-                del result["trace"]
+                if isinstance(v, Expression):
+                    partial.append({"bindings": {k: self.host.to_polar(v)}})
+                else:
+                    complete.append(v)
 
-        types = serialize_types(self.host.types, self.host.cls_names)
-        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
-        return filter_data(self, plan)
+        types = serialize_types(self.host.distinct_user_types(), self.host.types)
+        plan = self.ffi_polar.build_filter_plan(types, partial, "resource", class_name)
+        complete += filter_data(self, plan)
+        return complete
 
 
 def polar_class(_cls=None, *, name=None):
