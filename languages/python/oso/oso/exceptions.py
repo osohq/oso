@@ -15,6 +15,7 @@ class NotFoundError(AuthorizationError):
     ``NotFoundError`` and ``ForbiddenError``, you can customize the
     ``read_action`` on your ``Enforcer``.
     """
+
     pass
 
 
@@ -26,4 +27,5 @@ class ForbiddenError(AuthorizationError):
     Most of the time, your app should handle this error by returning a 403 HTTP
     error to the client.
     """
+
     pass
