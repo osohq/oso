@@ -290,19 +290,18 @@ def get_repos(constraints):
 module ActiveRecordFetcher
   def self.included(base)
     base.class_eval do
-      kinds = Hash.new { |k| raise "Unsupported constraint kind: #{k}" }
-      kinds['Eq'] = kinds['In'] = lambda do |q, c|
-        q.where(
-          if c.field.nil?
-            { primary_key => c.value.send(primary_key) }
-          else
-            { c.field => c.value }
-          end
-        )
-      end
-
       const_set(:FETCHER, lambda do |cons|
-        cons.reduce(self) { |q, con| kinds[con.kind][q, con] }
+        cons.reduce(self) do |q, con|
+          raise "Unsupported constraint kind: #{con.kind}" unless %w[Eq In].include? con.kind
+
+          q.where(
+            if con.field.nil?
+              { primary_key => con.value.send(primary_key) }
+            else
+              { con.field => con.value }
+            end
+          )
+        end
       end)
     end
   end
