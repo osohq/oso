@@ -33,19 +33,18 @@ pub fn validate_relation_keyword(
     if keyword.value().as_symbol().unwrap().0 == "on" {
         Ok(relation)
     } else {
+        let (loc, ranges) = (keyword.offset(), vec![]);
+        let msg = format!(
+            "Unexpected relation keyword '{}'. Did you mean 'on'?",
+            keyword
+        );
         Err(LalrpopError::User {
-            error: ParseError::ParseSugar {
-                loc: keyword.offset(),
-                msg: format!(
-                    "Unexpected relation keyword '{}'. Did you mean 'on'?",
-                    keyword
-                ),
-                ranges: vec![],
-            },
+            error: ParseError::ParseSugar { loc, msg, ranges },
         })
     }
 }
 
+// TODO(gj): Create a Parsed<Term> or something that _always_ has source info.
 fn term_source_range(term: &Term) -> Range<usize> {
     let (start, end) = term.span().unwrap();
     start..end
@@ -104,17 +103,14 @@ pub fn turn_productions_into_namespace(
     let mut implications = vec![];
 
     let make_error = |name: &str, previous: &Term, new: &Term| {
+        let loc = new.offset();
+        let ranges = vec![term_source_range(previous), term_source_range(new)];
         let msg = format!(
             "Multiple '{}' declarations in {} namespace.\n",
             name,
             resource.to_polar()
         );
-        ParseError::ParseSugar {
-            loc: new.offset(),
-            msg,
-            // TODO(gj): Create a Parsed<Term> or something that _always_ has source info.
-            ranges: vec![term_source_range(previous), term_source_range(new)],
-        }
+        ParseError::ParseSugar { loc, msg, ranges }
     };
 
     for production in productions {
@@ -338,16 +334,13 @@ fn index_declarations(
                 .insert(role.clone(), Declaration::Role)
                 .is_some()
             {
-                return Err(ParseError::ParseSugar {
-                    loc: role.offset(),
-                    msg: format!(
-                        "{}: Duplicate declaration of {} in the roles list.",
-                        resource.to_polar(),
-                        role.to_polar()
-                    ),
-                    ranges: vec![],
-                }
-                .into());
+                let (loc, ranges) = (role.offset(), vec![]);
+                let msg = format!(
+                    "{}: Duplicate declaration of {} in the roles list.",
+                    resource.to_polar(),
+                    role.to_polar()
+                );
+                return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
             }
         }
     }
@@ -369,12 +362,8 @@ fn index_declarations(
                         permission.to_polar()
                     )
                 };
-                return Err(ParseError::ParseSugar {
-                    loc: permission.offset(),
-                    msg,
-                    ranges: vec![],
-                }
-                .into());
+                let (loc, ranges) = (permission.offset(), vec![]);
+                return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
             }
         }
     }
@@ -401,12 +390,8 @@ fn index_declarations(
                     ),
                     _ => unreachable!("duplicate dict keys aren't parseable"),
                 };
-                return Err(ParseError::ParseSugar {
-                    loc: relation_type.offset(),
-                    msg,
-                    ranges: vec![],
-                }
-                .into());
+                let (loc, ranges) = (relation_type.offset(), vec![]);
+                return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
             }
         }
     }
@@ -485,17 +470,14 @@ fn implication_head_into_params(head: &Term, namespace: &Term) -> Vec<Parameter>
     ]
 }
 
+// TODO(gj): better error message, e.g.:
+//               duplicate namespace declaration: Org { ... } defined on line XX of file YY
+//                                                previously defined on line AA of file BB
 fn check_for_duplicate_namespaces(namespaces: &Namespaces, namespace: &Term) -> PolarResult<()> {
     if namespaces.exists(namespace) {
-        return Err(ParseError::ParseSugar {
-            loc: namespace.offset(),
-            // TODO(gj): better error message, e.g.:
-            //               duplicate namespace declaration: Org { ... } defined on line XX of file YY
-            //                                                previously defined on line AA of file BB
-            msg: format!("duplicate declaration of {} namespace", namespace),
-            ranges: vec![],
-        }
-        .into());
+        let (loc, ranges) = (namespace.offset(), vec![]);
+        let msg = format!("Duplicate declaration of {} namespace.", namespace);
+        return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
     }
     Ok(())
 }
@@ -554,11 +536,8 @@ fn check_that_implication_heads_are_declared_locally(
                 head.to_polar(),
                 resource
             );
-            let error = ParseError::ParseSugar {
-                loc: head.offset(),
-                msg,
-                ranges: vec![],
-            };
+            let (loc, ranges) = (head.offset(), vec![]);
+            let error = ParseError::ParseSugar { loc, msg, ranges };
             errors.push(error.into());
         }
     }
@@ -743,7 +722,7 @@ mod tests {
         let p = Polar::new();
         let invalid_policy = "Org{}Org{}";
         p.register_constant(sym!("Org"), term!("unimportant"));
-        expect_error(&p, invalid_policy, "duplicate declaration of Org namespace");
+        expect_error(&p, invalid_policy, "Duplicate declaration of Org namespace.");
     }
 
     #[test]
