@@ -608,9 +608,11 @@ impl KnowledgeBase {
             }
         }
 
+        // If we've reached this point, we're all done with the namespaces.
+        self.namespaces.clear();
+
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {
-            self.namespaces.clear();
             return Err(errors[0].clone());
         }
 
