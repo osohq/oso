@@ -1,5 +1,13 @@
 import { repr } from './helpers';
 
+export class AuthorizationError extends Error {}
+
+export class NotFoundError extends AuthorizationError {}
+
+export class ForbiddenError extends AuthorizationError {}
+
+export class OsoError extends Error {}
+
 /** Base error type. */
 export class PolarError extends Error {
   constructor(msg: string) {

@@ -27,3 +27,6 @@ export class Oso extends Polar {
     return !done;
   }
 }
+
+export const Policy = Oso;
+export type Policy = Oso;
