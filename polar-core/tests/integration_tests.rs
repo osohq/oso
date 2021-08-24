@@ -1513,6 +1513,38 @@ fn test_unknown_specializer_warning() -> TestResult {
 }
 
 #[test]
+fn test_and_or_warning() -> TestResult {
+    let p = Polar::new();
+
+    // free-standing OR is fine
+    p.load_str("f(x) if x > 1 or x < 3;")?;
+
+    // OR with explicit parenthesis is fine (old behaviour)
+    p.load_str("f(x) if x = 1 and (x > 1 or x < 3);")?;
+
+    // OR with parenthesized AND is fine (new default)
+    p.load_str("f(x) if (x = 1 and x > 1) or x < 3;")?;
+
+    // Add whitespace to make sure it can find parentheses wherever they are
+    p.load_str("f(x) if (\n\t    x = 1 and  x > 1) or x < 3;")?;
+
+    // This is ambiguous between 0.16 and 0.20
+    assert!(matches!(
+        p.load_str("f(x) if x = 1 and x > 1 or x < 3;")
+            .unwrap_err()
+            .kind,
+        ErrorKind::Parse(ParseError::AmbiguousAndOr { .. })
+    ));
+    assert!(matches!(
+        p.load_str("f(x) if x = 1 or x > 1 and x < 3;")
+            .unwrap_err()
+            .kind,
+        ErrorKind::Parse(ParseError::AmbiguousAndOr { .. })
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_print() -> TestResult {
     // TODO: If POLAR_LOG is on this test will fail.
     let p = Polar::new();
@@ -1582,6 +1614,11 @@ fn test_rest_vars() -> TestResult {
     qeval(&mut p, "append([1,2], [3], [1,2,3])");
     qeval(&mut p, "append([1,2,3], [], [1,2,3])");
     qeval(&mut p, "not append([1,2,3], [4], [1,2,3])");
+
+    qeval(
+        &mut p,
+        "a = [1, *b] and b = [2, *c] and c=[3] and 1 in a and 2 in a and 3 in a",
+    );
 
     let a = &var(&mut p, "[*_] in [*a] and [*b] in [*_] and b = 1", "a")[0];
     // check that a isn't bound to [b]
@@ -1671,11 +1708,26 @@ fn test_matches() {
 }
 
 #[test]
-fn test_keyword_bug() {
-    qparse!("g(a) if a.new(b);", ParseError::ReservedWord { .. });
-    qparse!("f(a) if a.in(b);", ParseError::ReservedWord { .. });
+fn test_keyword_call() {
     qparse!("cut(a) if a;", ParseError::ReservedWord { .. });
     qparse!("debug(a) if a;", ParseError::ReservedWord { .. });
+    qparse!(
+        "foo(debug) if debug = 1;",
+        ParseError::UnrecognizedToken { .. }
+    );
+}
+
+#[test]
+fn test_keyword_dot() -> TestResult {
+    // field accesses of reserved words are allowed
+    let mut p = Polar::new();
+    p.load_str("f(a, b) if a.in(b);")?;
+    p.load_str("g(a, b) if a.new(b);")?;
+    qeval(
+        &mut p,
+        "x = {debug: 1, new: 2, type: 3} and x.debug + x.new = x.type",
+    );
+    Ok(())
 }
 
 /// Test that rule heads work correctly when unification or specializers are used.
@@ -1716,7 +1768,7 @@ fn test_cut() -> TestResult {
     p.load_str(
         r#"a(x) if x = 1 or x = 2;
            b(x) if x = 3 or x = 4;
-           bcut(x) if x = 3 or x = 4 and cut;
+           bcut(x) if (x = 3 or x = 4) and cut;
            c(a, b) if a(a) and b(b) and cut;
            c_no_cut(a, b) if a(a) and b(b);
            c_partial_cut(a, b) if a(a) and bcut(b);

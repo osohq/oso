@@ -53,8 +53,8 @@ class Enforcer:
         :param resource: The resource being accessed.
 
         :param check_read: If set to ``False``, a ``ForbiddenError`` is always
-        thrown on authorization failures, regardless of whether the actor can
-        read the resource. Default is ``True``.
+            thrown on authorization failures, regardless of whether the actor can
+            read the resource. Default is ``True``.
         :type check_read: bool
 
         """
@@ -79,7 +79,7 @@ class Enforcer:
 
         :param actor: The actor performing the request.
         :param request: An object representing the request that was sent by the
-        actor.
+            actor.
         """
         if not self.policy.query_rule_once("allow_request", actor, request):
             raise self._get_error(False)
@@ -97,9 +97,9 @@ class Enforcer:
         :param resource: The resource being accessed
 
         :param allow_wildcard: Flag to determine behavior if the policy \
-        includes a wildcard action. E.g., a rule allowing any action: \
-        ``allow(_actor, _action, _resource)``. If ``True``, the method will \
-        return ``["*"]``, if ``False``, the method will raise an exception.
+            includes a wildcard action. E.g., a rule allowing any action: \
+            ``allow(_actor, _action, _resource)``. If ``True``, the method will \
+            return ``["*"]``, if ``False``, the method will raise an exception.
 
         :type allow_wildcard: bool
 
@@ -130,11 +130,11 @@ class Enforcer:
 
         If the action is permitted by an ``allow_field`` rule in the policy,
         then this method returns ``None``. If the action is not permitted by the
-        policy, this method will raise a ``ForbiddenError`.
+        policy, this method will raise a ``ForbiddenError``.
 
         :param actor: The actor performing the request.
         :param action: The action the actor is attempting to perform on the
-        field.
+            field.
         :param resource: The resource being accessed.
         :param field: The name of the field being accessed.
         """
@@ -156,10 +156,10 @@ class Enforcer:
         :param resource: The resource being accessed.
 
         :param allow_wildcard: Flag to determine behavior if the policy \
-        includes a wildcard field. E.g., a rule allowing any field: \
-        ``allow_field(_actor, _action, _resource, _field)``. If ``True``, the \
-        method will return ``["*"]``, if ``False``, the method will raise an \
-        exception.
+            includes a wildcard field. E.g., a rule allowing any field: \
+            ``allow_field(_actor, _action, _resource, _field)``. If ``True``, the \
+            method will return ``["*"]``, if ``False``, the method will raise an \
+            exception.
 
         :type allow_wildcard: bool
 

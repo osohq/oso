@@ -3,10 +3,15 @@
   "compilerOptions": {
     "allowJs": true,
     "esModuleInterop": true,
-    "lib": ["DOM", "ES2018"],
+    "lib": [
+      "DOM",
+      "ES2018"
+    ],
     "noEmit": true,
     "outDir": "dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
   },
   "include": [
     "src/**/*",

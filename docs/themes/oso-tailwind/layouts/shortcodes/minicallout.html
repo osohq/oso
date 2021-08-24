@@ -1,0 +1,12 @@
+{{ $color := "blue" }}
+{{ with .Get 0 }}
+{{ $color = . }}
+{{ end }}
+
+<div class="my-2 border-opacity-20 border-4 border-{{$color}} shadow-md rounded">
+<div class="px-4">
+  <div class="-mb-2"></div>
+  {{ .Inner }}
+  <div class="-mt-2"></div>
+</div>
+</div>

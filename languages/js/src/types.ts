@@ -388,6 +388,31 @@ export interface ExternalIsa {
 }
 
 /**
+ * The `ExternalIsaWithPath` [[`QueryEvent`]] is how Polar determines whether a given
+ * sequence of field accesses on a value is an instance of a particular class.
+ *
+ * @internal
+ */
+export interface ExternalIsaWithPath {
+  baseTag: string;
+  path: string[];
+  classTag: string;
+  callId: number;
+}
+
+/**
+ * The `ExternalIsSubclass` [[`QueryEvent`]] is how Polar determines whether a given
+ * class is a subclass of a particular class.
+ *
+ * @internal
+ */
+export interface ExternalIsSubclass {
+  leftTag: string;
+  rightTag: string;
+  callId: number;
+}
+
+/**
  * Polar comparison operators.
  *
  * Currently, these are the only operators supported for external operations.
@@ -465,7 +490,9 @@ export enum QueryEventKind {
   Done,
   ExternalCall,
   ExternalIsa,
+  ExternalIsaWithPath,
   ExternalIsSubspecializer,
+  ExternalIsSubclass,
   ExternalOp,
   MakeExternal,
   NextExternal,
@@ -483,7 +510,9 @@ export interface QueryEvent {
     | Debug
     | ExternalCall
     | ExternalIsa
+    | ExternalIsaWithPath
     | ExternalIsSubspecializer
+    | ExternalIsSubclass
     | ExternalOp
     | MakeExternal
     | NextExternal
