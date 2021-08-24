@@ -1,12 +1,12 @@
 allow(actor, action, resource) if
-  permission(actor, action, resource);
+  has_permission(actor, action, resource);
 
-role(actor, role, resource) if
+has_role(actor, role, resource) if
   actor.has_role_for_resource(name: role, resource: resource);
 
-role(user: User, role, resource) if
+has_role(user: User, role, resource) if
   team in user.teams and
-  role(team, role, resource);
+  has_role(team, role, resource);
 
 resource Org {
   roles = ["owner", "member"];
@@ -19,7 +19,7 @@ resource Org {
   "create_repo" if "member";
 }
 
-relation(user: User, "owns", org: Org) if
+has_relation(user: User, "owns", org: Org) if
   user = org.owner;
 
 resource Repo {
@@ -40,11 +40,11 @@ resource Repo {
   "pull" if "reader";
 }
 
-relation(org, "parent", repo: Repo) if
+has_relation(org, "parent", repo: Repo) if
   org = repo.org and
   org matches Org;
 
-permission(_: User, "pull", repo: Repo) if
+has_permission(_: User, "pull", repo: Repo) if
   repo.is_public;
 
 resource Issue {
@@ -59,9 +59,9 @@ resource Issue {
   "delete" if "creator";
 }
 
-relation(repo, "parent", issue: Issue) if
+has_relation(repo, "parent", issue: Issue) if
   repo = issue.repo and
   repo matches Repo;
 
-relation(user: User, "creator", issue: Issue) if
+has_relation(user: User, "creator", issue: Issue) if
   user = issue.creator;
