@@ -59,6 +59,7 @@ SaaS
 Sascha
 TODO
 TypeScript
+TypeORM
 UI
 URI
 URIs
