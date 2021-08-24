@@ -1,8 +1,8 @@
-run: api_docs
-	$(MAKE) run_without_api_docs
-
-run_without_api_docs: install
+run: api_docs install
 	hugo server
+
+dev: install
+	HUGO_PURGECSS=false hugo server
 
 export JAVA_DIR := $(abspath ../languages/java/oso)
 export JS_DIR := $(abspath ../languages/js)

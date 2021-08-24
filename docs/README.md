@@ -4,7 +4,7 @@ To get started:
 
 1. `make install`
 2. Install [Hugo][]
-3. `make run`
+3. `make dev`
 
 To live reload the `webpack` theme in `themes/oso-webpack`, run:
 
@@ -12,6 +12,14 @@ To live reload the `webpack` theme in `themes/oso-webpack`, run:
 cd themes/oso-webpack
 npm run serve
 ```
+
+## Developing API docs
+
+If you'd like to update API docs & test those, run `make run` to include
+them in the build.
+
+This requires all the dependencies for the Oso build to be
+setup.
 
 # Search Index Generation
 
