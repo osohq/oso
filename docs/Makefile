@@ -1,5 +1,5 @@
-run: api_docs install
-	hugo server
+run: api_docs
+	$(MAKE) run_without_api_docs
 
 run_without_api_docs: install
 	hugo server
