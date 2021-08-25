@@ -32,42 +32,40 @@ module Oso
       raise @get_error.call(false) unless policy.query_rule_once('allow_field', actor, action, resource, field)
     end
 
-    def authorized_actions(actor, resource, allow_wildcard: false)
-      results = policy.query_rule("allow", actor, Polar::Variable.new("action"), resource)
+    def authorized_actions(actor, resource, allow_wildcard: false) # rubocop:disable Metrics/MethodLength
+      results = policy.query_rule('allow', actor, Polar::Variable.new('action'), resource)
       actions = Set.new
       results.each do |result|
-        action = result["action"]
+        action = result['action']
         if action.is_a?(Polar::Variable)
-          return ["*"] if allow_wildcard
+          return ['*'] if allow_wildcard
 
-          raise ::Oso::Error.new(%|
-            The result of authorized_actions() contained an
-            "unconstrained" action that could represent any
-            action, but allow_wildcard was set to False. To fix,
-            set allow_wildcard to True and compare with the "*"
-            string.
-          |)
+          raise ::Oso::Error,
+                'The result of authorized_actions() contained an '\
+                '"unconstrained" action that could represent any '\
+                'action, but allow_wildcard was set to False. To fix, '\
+                'set allow_wildcard to True and compare with the "*" '\
+                'string.'
         end
         actions.add(action)
       end
       actions.to_a
     end
 
-    def authorized_fields(actor, action, resource, allow_wildcard: false)
-      results = policy.query_rule("allow_field", actor, action, resource, Polar::Variable.new("field"))
+    def authorized_fields(actor, action, resource, allow_wildcard: false) # rubocop:disable Metrics/MethodLength
+      results = policy.query_rule('allow_field', actor, action, resource, Polar::Variable.new('field'))
       fields = Set.new
       results.each do |result|
-        field = result["field"]
+        field = result['field']
         if field.is_a?(Polar::Variable)
-          return ["*"] if allow_wildcard
+          return ['*'] if allow_wildcard
 
-          raise ::Oso::Error.new(%|
-            The result of authorized_fields() contained an
-            "unconstrained" field that could represent any
-            field, but allow_wildcard was set to False. To fix,
-            set allow_wildcard to True and compare with the "*"
-            string.
-          |)
+          raise ::Oso::Error,
+                'The result of authorized_fields() contained an '\
+                '"unconstrained" field that could represent any '\
+                'field, but allow_wildcard was set to False. To fix, '\
+                'set allow_wildcard to True and compare with the "*" '\
+                'string.'
         end
         fields.add(field)
       end
@@ -77,8 +75,7 @@ module Oso
     private
 
     def default_error(is_not_found)
-      return NotFoundError if is_not_found
-      return ForbiddenError
+      is_not_found ? NotFoundError : ForbiddenError
     end
   end
 end

@@ -1,7 +1,9 @@
+# rubocop:disable Metrics/BlockLength
 # frozen_string_literal: true
 
 class Actor
   attr_reader :name
+
   def initialize(name)
     @name = name
   end
@@ -9,18 +11,19 @@ end
 
 class Widget
   attr_reader :id
+
   def initialize(id)
     @id = id
   end
 end
 
-RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
+RSpec.describe Oso::Enforcer do
   let(:oso) do
-    policy = Oso::Policy.new()
+    policy = Oso::Policy.new
     policy.register_class(Actor)
     policy.register_class(Widget)
 
-    oso = Oso::Enforcer.new(policy)
+    Oso::Enforcer.new(policy)
   end
 
   context '#authorize' do
@@ -67,9 +70,9 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
     end
 
     it 'returns a list of actions the user is allowed to take' do
-      expect(oso.authorized_actions(guest, widget0)).to match_array(['read', 'update'])
-      expect(oso.authorized_actions(guest, widget1)).to match_array(['read'])
-      expect(oso.authorized_actions(admin, widget1)).to match_array(['read', 'update'])
+      expect(oso.authorized_actions(guest, widget0)).to match_array(%w[read update])
+      expect(oso.authorized_actions(guest, widget1)).to match_array(%w[read])
+      expect(oso.authorized_actions(admin, widget1)).to match_array(%w[read update])
     end
 
     it 'throws an Oso::Error if there is a wildcard action' do
@@ -92,6 +95,7 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
   context '#authorize_request' do
     class Request
       attr_reader :method, :path
+
       def initialize(method, path)
         @method = method
         @path = path
@@ -102,7 +106,7 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
     verified = Actor.new('verified')
 
     before(:each) do
-      oso.policy.register_class(Request);
+      oso.policy.register_class(Request)
       oso.policy.load_str(%|
         allow_request(_: Actor{name: "guest"}, request: Request) if
             request.path.start_with?("/repos");
@@ -141,7 +145,7 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
         # Anybody can read public fields
         allow_field(_: Actor, "read", _: Widget, field) if
             field in ["name", "purpose"];
-      |);
+      |)
     end
 
     it 'authorize_field throws a ForbiddenError only if request is not allowed' do
@@ -158,13 +162,13 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
 
     it 'authorized_fields returns a list of allowed fields' do
       # Admins should be able to update all fields
-      expect(oso.authorized_fields(admin, 'update', widget)).to match_array(['name', 'purpose', 'private_field'])
+      expect(oso.authorized_fields(admin, 'update', widget)).to match_array(%w[name purpose private_field])
       # Admins should be able to read all fields
-      expect(oso.authorized_fields(admin, 'read', widget)).to match_array(['name', 'purpose', 'private_field'])
+      expect(oso.authorized_fields(admin, 'read', widget)).to match_array(%w[name purpose private_field])
       # Guests should not be able to update any fields
       expect(oso.authorized_fields(guest, 'update', widget)).to eq([])
       # Guests should be able to read public fields
-      expect(oso.authorized_fields(guest, 'read', widget)).to match_array(['name', 'purpose'])
+      expect(oso.authorized_fields(guest, 'read', widget)).to match_array(%w[name purpose])
     end
   end
 
@@ -172,7 +176,9 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
     it 'get_error overrides the error that is thrown' do
       class TestError < StandardError
         attr_reader :is_not_found
+
         def initialize(is_not_found)
+          super()
           @is_not_found = is_not_found
         end
       end
@@ -180,11 +186,11 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
       policy = Oso::Policy.new
       enforcer = Oso::Enforcer.new(
         policy,
-        get_error: lambda { |is_not_found| TestError.new(is_not_found) }
+        get_error: ->(is_not_found) { TestError.new(is_not_found) }
       )
 
       expect { enforcer.authorize('graham', 'frob', 'bar') }.to raise_error(
-        an_instance_of(TestError).and having_attributes({is_not_found: true})
+        an_instance_of(TestError).and(having_attributes({ is_not_found: true }))
       )
     end
 
@@ -199,3 +205,5 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
     end
   end
 end
+
+# rubocop:enable Metrics/BlockLength

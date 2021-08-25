@@ -234,7 +234,7 @@ module Oso
       # @return [Boolean] of resulting bindings
       # @raise [Error] if the FFI call raises one.
       def query_rule_once(name, *args)
-        self.query_rule(name, *args).any?
+        query_rule(name, *args).any?
       end
 
       # Register a Ruby class with Polar.
