@@ -8,6 +8,15 @@ description: >-
 draft: true
 ---
 
+## `oso` NEW_VERSION
+
+### Core
+
+#### Other bugs & improvements
+
+- Data filtering now supports the not-equals operator (`!=`)
+
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
