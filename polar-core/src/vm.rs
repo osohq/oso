@@ -176,11 +176,7 @@ pub type Queries = TermList;
 pub fn compare(op: Operator, left: &Term, right: &Term) -> PolarResult<bool> {
     // Coerce booleans to integers.
     fn to_int(x: bool) -> Numeric {
-        if x {
-            Numeric::Integer(1)
-        } else {
-            Numeric::Integer(0)
-        }
+        Numeric::Integer(if x { 1 } else { 0 })
     }
 
     fn compare<T: PartialOrd>(op: Operator, left: T, right: T) -> bool {
@@ -934,7 +930,7 @@ impl PolarVirtualMachine {
 
     /// Commit to the current choice.
     fn cut(&mut self, index: usize) {
-        let _ = self.choices.truncate(index);
+        self.choices.truncate(index);
     }
 
     /// Clean up the query stack after completing a query.
@@ -990,7 +986,7 @@ impl PolarVirtualMachine {
                         left: left.clone(),
                         right: y,
                     })?,
-                    (_, _) => self.add_constraint(&term!(op!(Isa, left.clone(), right.clone())))?,
+                    (_, _) => self.add_constraint(&opn!(Isa, left.clone(), right.clone()))?,
                 }
             }
             (Value::Variable(l), _) | (Value::RestVariable(l), _) => match self.variable_state(l) {
@@ -1038,11 +1034,10 @@ impl PolarVirtualMachine {
                         .get(k)
                         .expect("left fields should be a superset of right fields")
                         .clone();
-                    let goal = Goal::Isa {
+                    self.push_goal(Goal::Isa {
                         left,
                         right: v.clone(),
-                    };
-                    self.push_goal(goal)?
+                    })?;
                 }
             }
 
@@ -1130,8 +1125,7 @@ impl PolarVirtualMachine {
                     let value = self.deep_deref(value);
                     let field = right.clone_with_value(value!(field.0.as_ref()));
                     let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
-                    let unify = op!(Unify, left, value);
-                    term!(unify)
+                    opn!(Unify, left, value)
                 };
 
                 let constraints = fields.fields.iter().rev().map(to_unify).collect::<Vec<_>>();
@@ -1375,11 +1369,11 @@ impl PolarVirtualMachine {
                 msg: error.clone(),
                 stack_trace: Some(stack_trace),
             };
-            if let Some(term) = term {
-                Err(self.set_error_context(&term, error))
+            Err(if let Some(term) = term {
+                self.set_error_context(&term, error)
             } else {
-                Err(error.into())
-            }
+                error.into()
+            })
         } else {
             Ok(QueryEvent::None)
         }
@@ -1418,16 +1412,18 @@ impl PolarVirtualMachine {
                 return self.query_for_operation(term);
             }
             Value::Variable(sym) => {
-                if let VariableState::Bound(val) = self.variable_state(sym) {
-                    self.push_goal(Goal::Query { term: val })?;
-                } else {
-                    // variable was unbound
-                    // apply a constraint to variable that it must be truthy
-                    self.push_goal(Goal::Unify {
-                        left: term.clone(),
-                        right: term!(true),
-                    })?;
-                }
+                self.push_goal(
+                    if let VariableState::Bound(val) = self.variable_state(sym) {
+                        Goal::Query { term: val }
+                    } else {
+                        // variable was unbound
+                        // apply a constraint to variable that it must be truthy
+                        Goal::Unify {
+                            left: term.clone(),
+                            right: true.into(),
+                        }
+                    },
+                )?
             }
             Value::Boolean(value) => {
                 if !value {
@@ -2046,16 +2042,17 @@ impl PolarVirtualMachine {
                                             ),
                                         }));
                     }
-                    let dot = op!(
+                    let dot = opn!(
                         Dot,
                         object.clone(),
-                        term!(value!(Call {
+                        Call {
                             name,
                             args,
                             kwargs: maybe_kwargs
-                        }))
+                        }
+                        .into()
                     );
-                    let constraint_term = op!(Unify, value.clone(), dot.into()).into();
+                    let constraint_term = opn!(Unify, value.clone(), dot);
                     return Ok(Some(constraint_term));
                 }
             }
@@ -3022,7 +3019,7 @@ mod tests {
         };
         ($($term:expr),+) => {
             Goal::Query {
-                term: term!(op!(And, $($term),+))
+                term: opn!(And, $($term),+)
             }
         };
     }
@@ -3123,7 +3120,7 @@ mod tests {
     #[test]
     fn unify_expression() {
         let mut vm = PolarVirtualMachine::default();
-        vm.push_goal(query!(op!(Unify, term!(1), term!(1))))
+        vm.push_goal(query!(op!(Unify, 1.into(), 1.into())))
             .unwrap();
 
         assert_query_events!(vm, [
@@ -3131,7 +3128,7 @@ mod tests {
             QueryEvent::Done { result: true }
         ]);
 
-        let q = op!(Unify, term!(1), term!(2));
+        let q = op!(Unify, 1.into(), 2.into());
         vm.push_goal(query!(q)).unwrap();
 
         assert_query_events!(vm, [QueryEvent::Done { result: true }]);
