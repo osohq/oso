@@ -4,8 +4,6 @@ weight: 1
 showContentForAnyLanguage: true
 ---
 
-# Data Filtering Preview
-
 {{% callout "Note: 0.20.0 Beta Feature" %}}
   This is an API provided by the beta release of Oso 0.20.0, meaning that it is
   not yet officially released. You may find other docs that conflict with the
@@ -16,20 +14,22 @@ showContentForAnyLanguage: true
 
 <div class="pb-10"></div>
 
+# Data Filtering Preview
+
 {{% ifLangExists %}}
 
-{{% ifLang not="node" %}}
-{{% ifLang not="python" %}}
-{{% ifLang not="ruby" %}}
+{{< ifLang not="node" >}}
+{{< ifLang not="python" >}}
+{{< ifLang not="ruby" >}}
 Data filtering is coming soon for {{< lang >}}!
 
 If you want to get data filtering in your app now or just want to
-register your interest for Data Filtering in {{< lang >}} [drop into our Slack](http://join-slack.osohq.com) or
-<a href="mailto:engineering@osohq.com?subject=Data%20filtering%20support%20for%20{{< currentLanguage >}}&body=I%27m%20interested%20in%20data%20filtering%20support%20for%20{{< currentLanguage >}}">send an email</a>.
+register your interest for Data Filtering in {{< lang >}}, [drop into our Slack](https://join-slack.osohq.com) or
+<a href="mailto:engineering@osohq.com?subject=Data%20filtering%20support%20for%20{{< currentLanguage >}}&body=I%27m%20interested%20in%20data%20filtering%20support%20for%20{{< currentLanguage >}}">send an email</a>
 to our engineering team and we'll unblock you.
-{{% /ifLang %}}
-{{% /ifLang %}}
-{{% /ifLang %}}
+{{< /ifLang >}}
+{{< /ifLang >}}
+{{< /ifLang >}}
 
 {{< ifLang not="rust" >}}
 {{< ifLang not="go" >}}
@@ -69,14 +69,14 @@ To use data filtering you need to provide two additional things when you registe
 
 ### Types
 Oso needs to know the types of all the fields in your class. This is how we know what `resource.name` will be when we don't have
-a concrete resource to check the field on. This lets polar code work the same way it does normally and things like specializers match.
-There is one special type called `Relationship` that tells polar the field refers to a related object. This lets you reference a
-related object in polar and tells us how the current object is related to the other object.
+a concrete resource to check the field on. This lets Polar code work the same way it does normally and things like specializers match.
+There is one special type called `Relationship` that tells Polar the field refers to a related object. This lets you reference a
+related object in Polar and tells us how the current object is related to the other object.
 
 ### Fetchers
 The other thing Oso has to know to use data filtering are how to fetch data. These are functions that take as input a list of `Constraint`
 objects. The function is then responsible for selecting data that matches all of the constraint from the database, or an API, or wherever
-the data lives. This is the place that data filtering integrates with your data store. 
+the data lives. This is the place that data filtering integrates with your data store.
 
 ### Using
 You can pass both of these things as arguments when registering a class and then you can use data filtering. Here's  an example.
@@ -322,8 +322,8 @@ export class User {
 {{% /ifLang %}}
 
 For each class, we need to define a fetching function. This is a function that takes a list of constraints and returns all the instances that match them.
-In some cases you might be filtering an in memory array, in other cases you might be constructing a request to an external service to fetch data. In this
-case we are turning the constraints into a database query.
+In some cases you might be filtering an in-memory array; in other cases, you might be constructing a request to an external service to fetch data. In this
+case, we are turning the constraints into a database query.
 
 {{% callout "Handling Constraints" "orange" %}}
 
@@ -332,7 +332,7 @@ returning data that the user is not allowed to see.
 
 {{% /callout %}}
 
-The constraints are object with a `kind`, `field` and `value`.
+Each constraint is an object with a `kind`, `field` and `value`.
 There are three kinds of constraints.
 
 * `"Eq"` constraints mean that the field `field` must be equal to the value `value`
@@ -376,7 +376,7 @@ def get_repos(constraints):
         const_set(:FETCHER, lambda do |cons|
           cons.reduce(self) do |q, con|
             raise "Unsupported constraint kind: #{con.kind}" unless %w[Eq In].include? con.kind
-  
+
             q.where(
               if con.field.nil?
                 { primary_key => con.value.send(primary_key) }
@@ -620,9 +620,9 @@ raise unless steve_issues == [laggy]
 {{% /ifLang %}}
 
 ## Limitations
-Currently there are some limitations to what you can do while using data filtering. You can not call any methods on the passed in resource (or any of it's properties). You also can not pass the resource as an argument to a method. Many cases where you would want to do this are better handled by Relationship fields.
+Currently there are some limitations to what you can do while using data filtering. You can not call any methods on the passed in resource (or any of its properties). You also can not pass the resource as an argument to a method. Many cases where you would want to do this are better handled by Relationship fields.
 
-Some polar expressions are not supported but may be in the future. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numeric comparisons are also not yet supported. `< > <= >= !=`
+Some Polar expressions are not supported but may be in the future. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numeric comparisons with the `< > <= >= !=` operators are also not yet supported.
 
 For now, Relationships only support matching on a single field.
 
