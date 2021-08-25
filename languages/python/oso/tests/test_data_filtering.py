@@ -177,13 +177,13 @@ def sqlalchemy_t(oso):
     def get_bars(constraints):
         query = session.query(Bar)
         for constraint in constraints:
-            field = getattr(Bar, constraint.left.field)
+            field = getattr(Bar, constraint.field)
             if constraint.kind == "Eq":
-                query = query.filter(field == constraint.right.term)
+                query = query.filter(field == constraint.value)
             elif constraint.kind == "Neq":
-                query = query.filter(field != constraint.right.term)
+                query = query.filter(field != constraint.value)
             elif constraint.kind == "In":
-                query = query.filter(field.in_(constraint.right.term))
+                query = query.filter(field.in_(constraint.value))
             # ...
         return query.all()
 
@@ -194,13 +194,13 @@ def sqlalchemy_t(oso):
     def get_foos(constraints):
         query = session.query(Foo)
         for constraint in constraints:
-            field = getattr(Foo, constraint.left.field)
+            field = getattr(Foo, constraint.field)
             if constraint.kind == "Eq":
-                query = query.filter(field == constraint.right.term)
+                query = query.filter(field == constraint.value)
             elif constraint.kind == "Neq":
-                query = query.filter(field != constraint.right.term)
+                query = query.filter(field != constraint.value)
             elif constraint.kind == "In":
-                query = query.filter(field.in_(constraint.right.term))
+                query = query.filter(field.in_(constraint.value))
             # ...
         return query.all()
 

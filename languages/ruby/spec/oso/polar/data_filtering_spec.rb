@@ -145,6 +145,15 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           expect(unord_eq(results, expected)).to be true
         end
 
+        it 'can check that two fields are not equal' do
+          policy = 'allow(_, _, bar: Bar) if bar.is_cool != bar.is_still_cool;'
+          subject.load_str(policy)
+          results = subject.get_allowed_resources('gwen', 'eat', Bar)
+          expected = Bar.all.select { |b| b.is_cool != b.is_still_cool }
+          expect(expected).not_to be_empty
+          expect(unord_eq(results, expected)).to be true
+        end
+
         it 'handles parent relationships' do
           policy = 'allow("gwen", "get", foo: Foo) if foo.bar = bar and bar.is_cool = true and foo.is_fooey = true;'
           subject.load_str(policy)
@@ -703,7 +712,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           subject.load_str <<~POL
             allow(a: Sign, "match", b: Sign) if a.element = b.element;
             allow(a: Sign, "match", b: Sign) if a.ruler = b.ruler;
-            allow(a: Person, "match", b: Person) if allow(a.sign, "match", b.sign);
+            allow(a: Person, "match", b: Person) if allow(a.sign, "match", b.sign) and a != b;
           POL
 
           compatible_signs = lambda do |sign|
@@ -715,7 +724,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           end
 
           compatible_people = lambda do |person|
-            Person.where sign: compatible_signs[person.sign]
+            Person.where.not(name: person.name).where(sign: compatible_signs[person.sign])
           end
 
           Person.all.each do |person|

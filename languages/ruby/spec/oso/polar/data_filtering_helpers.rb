@@ -54,15 +54,16 @@ module DataFilteringHelpers
     def self.included(base) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
       base.class_eval do
         kinds = Hash.new { |k| raise "Unsupported constraint kind: #{k}" }
-        kinds['Eq'] = kinds['In'] = lambda do |q, c|
-          q.where(
-            if c.field.nil?
-              { primary_key => c.value.send(primary_key) }
-            else
-              { c.field => c.value }
-            end
-          )
+        qhash = lambda do |c|
+          if c.field.nil?
+            { primary_key => c.value.send(primary_key) }
+          else
+            { c.field => c.value }
+          end
         end
+
+        kinds['Eq'] = kinds['In'] = ->(q, c) { q.where(qhash[c]) }
+        kinds['Neq'] = ->(q, c) { q.where.not(qhash[c]) }
 
         const_set(:FETCHER, lambda do |cons|
           cons.reduce(self) { |q, con| kinds[con.kind][q, con] }

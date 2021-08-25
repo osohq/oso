@@ -7,8 +7,7 @@ allow(fam: Familiar, "groom", wiz: Wizard) if
 
 allow(fam: Familiar, "groom", other: Familiar) if
   fam.kind = "rat" and
-  # data filtering doesn't support != yet :(
-  other.kind in ["rat", "horse", "dwarf"];
+  other.kind != "owl";
 
 allow(wiz: Wizard, "ride", fam: Familiar) if
   wiz = fam.wizard and

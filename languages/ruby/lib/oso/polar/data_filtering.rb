@@ -99,6 +99,7 @@ module Oso
         CHECKS = {
           'Eq' => ->(a, b) { a == b },
           'In' => ->(a, b) { b.include? a },
+          'Neq' => ->(a, b) { a != b },
           'Contains' => ->(a, b) { a.include? b }
         }.freeze
 
@@ -126,8 +127,6 @@ module Oso
 
         def self.parse(polar, constraint) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
           kind = constraint['kind']
-          raise unless %w[Eq In Contains].include? kind
-
           field = constraint['field']
           value = constraint['value']
 
