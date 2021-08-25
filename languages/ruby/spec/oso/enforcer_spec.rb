@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Actor
   attr_reader :name
   def initialize(name)
@@ -83,7 +85,7 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       |)
       superadmin = Actor.new('superadmin')
-      expect(oso.authorized_actions(superadmin, widget0, allow_wildcard: true)).to equal(['*'])
+      expect(oso.authorized_actions(superadmin, widget0, allow_wildcard: true)).to eq(['*'])
     end
   end
 
@@ -103,9 +105,9 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
       oso.policy.register_class(Request);
       oso.policy.load_str(%|
         allow_request(_: Actor{name: "guest"}, request: Request) if
-            request.path.startsWith("/repos");
+            request.path.start_with?("/repos");
         allow_request(_: Actor{name: "verified"}, request: Request) if
-            request.path.startsWith("/account");
+            request.path.start_with?("/account");
       |)
     end
 
@@ -113,12 +115,12 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
       oso.authorize_request(guest, Request.new('GET', '/repos/1'))
       expect do
         oso.authorize_request(guest, Request.new('GET', '/other'))
-      end.to throw(Oso::ForbiddenError)
+      end.to raise_error(Oso::ForbiddenError)
 
       oso.authorize_request(verified, Request.new('GET', '/account'))
       expect do
         oso.authorize_request(guest, Request.new('GET', '/account'))
-      end.to throw(Oso::ForbiddenError)
+      end.to raise_error(Oso::ForbiddenError)
     end
   end
 
@@ -146,12 +148,12 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
       oso.authorize_field(admin, 'update', widget, 'purpose')
       expect do
         oso.authorize_field(admin, 'update', widget, 'foo')
-      end.to throw(Oso::ForbiddenError)
+      end.to raise_error(Oso::ForbiddenError)
 
       oso.authorize_field(guest, 'read', widget, 'purpose')
       expect do
         oso.authorize_field(guest, 'read', widget, 'private_field')
-      end.to throw(Oso::ForbiddenError)
+      end.to raise_error(Oso::ForbiddenError)
     end
 
     it 'authorized_fields returns a list of allowed fields' do
@@ -160,7 +162,7 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
       # Admins should be able to read all fields
       expect(oso.authorized_fields(admin, 'read', widget)).to match_array(['name', 'purpose', 'private_field'])
       # Guests should not be able to update any fields
-      expect(oso.authorized_fields(guest, 'update', widget)).to be([])
+      expect(oso.authorized_fields(guest, 'update', widget)).to eq([])
       # Guests should be able to read public fields
       expect(oso.authorized_fields(guest, 'read', widget)).to match_array(['name', 'purpose'])
     end

@@ -152,6 +152,8 @@ module Oso
         host.make_instance(cls_name, args: args, kwargs: kwargs, id: id)
       end
 
+      public
+
       # Create a generator that can be polled to advance the query loop.
       #
       # @yieldparam [Hash<String, Object>]
@@ -221,6 +223,8 @@ module Oso
           end
         end
       end
+
+      private
 
       def get_relationship(cls, attr)
         typ = host.types[cls]
