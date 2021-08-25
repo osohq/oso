@@ -1,11 +1,12 @@
 ---
-title: Java Authorization Library
-weight: 2
-any: false
-description: Download instructions and API reference for the Oso Java library.
+title: Installation
+weight: 1
+description: Installation instructions for Oso's Java library.
+aliases: 
+  - ./lib.html
 ---
 
-# Java Authorization Library
+# Installation
 
 The Java version of Oso is available on [Maven
 Central](https://search.maven.org/artifact/com.osohq/oso).
@@ -36,8 +37,6 @@ $ javac -classpath "oso-{{< version >}}.jar:." MyProject.java
 $ java -classpath "oso-{{< version >}}.jar:." MyProject
 ```
 
-For more information on the Oso Java library, see the library documentation.
-
 ## Requirements
 
 - Java version 10 or greater
@@ -45,8 +44,3 @@ For more information on the Oso Java library, see the library documentation.
   - Linux
   - macOS
   - Windows
-
-## API Reference
-
-The [Java API reference]({{% apiLink "reference/api/index.html" %}}) is
-automatically generated from the Oso Java library source files.

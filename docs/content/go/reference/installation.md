@@ -1,10 +1,12 @@
 ---
-title: Go Authorization Library
-weight: 2
-any: false
+title: Installation
+weight: 1
+description: Installation instructions for Oso's Go library.
+aliases: 
+  - ./lib.html
 ---
 
-# Go Authorization Library
+# Installation
 
 The Go version of Oso is available on
 [go.dev](https://pkg.go.dev/github.com/osohq/go-oso).
@@ -21,8 +23,6 @@ And imported into a Go file:
 import "github.com/osohq/go-oso"
 ```
 
-For more information on the Oso Go library, see the library documentation.
-
 ## Requirements
 
 - Go version 1.12 or higher
@@ -31,5 +31,10 @@ For more information on the Oso Go library, see the library documentation.
   - macOS
   - Windows
 
-Oso uses cgo to embed our VM and on Windows cgo depends on a [MinGW
-toolchain](https://jmeubank.github.io/tdm-gcc/).
+{{% minicallout %}}
+  **Note**: Oso depends on [cgo][], and on Windows cgo depends on a [MinGW
+  toolchain][tdm-gcc].
+{{% /minicallout %}}
+
+[cgo]: https://pkg.go.dev/cmd/cgo
+[tdm-gcc]: https://jmeubank.github.io/tdm-gcc/

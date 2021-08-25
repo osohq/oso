@@ -62,15 +62,15 @@
                     </span>
                 </button>
             </a>
-            {{ $downloadUrl := $.Site.GetPage "/reference/lib" }}
-            <a href="{{ $downloadUrl.RelPermalink }}">
+            {{ $quickstartUrl := $.Site.GetPage "/getting-started/quickstart" }}
+            <a href="{{ $quickstartUrl.RelPermalink }}">
                 <button class=" nav-btn bg-yellow text-black tooltip">
-                    <span class="tooltip-text" aria-hidden="true">Get the latest releases of Oso</span>
+                    <span class="tooltip-text" aria-hidden="true">Get started with Oso!</span>
                     <div class=" h-5 w-5 mr-2">
-                        {{ partialCached "fontawesome.html" "download" "download" }}
+                        {{ partialCached "fontawesome.html" "rocket" "rocket" }}
                     </div>
                     <span class="hidden md:block">
-                        Download
+                        Get Started
                     </span>
                 </button>
             </a>
