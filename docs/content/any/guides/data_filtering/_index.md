@@ -76,7 +76,7 @@ related object in Polar and tells us how the current object is related to the ot
 ### Fetchers
 The other thing Oso has to know to use data filtering are how to fetch data. These are functions that take as input a list of `Constraint`
 objects. The function is then responsible for selecting data that matches all of the constraint from the database, or an API, or wherever
-the data lives. This is the place that data filtering integrates with your data store. 
+the data lives. This is the place that data filtering integrates with your data store.
 
 ### Using
 You can pass both of these things as arguments when registering a class and then you can use data filtering. Here's  an example.
@@ -376,7 +376,7 @@ def get_repos(constraints):
         const_set(:FETCHER, lambda do |cons|
           cons.reduce(self) do |q, con|
             raise "Unsupported constraint kind: #{con.kind}" unless %w[Eq In].include? con.kind
-  
+
             q.where(
               if con.field.nil?
                 { primary_key => con.value.send(primary_key) }
