@@ -6,18 +6,18 @@ on:
         description: "Version Number"
         required: true
 jobs:
-  go:
-    # Notifies the go-oso repo there's a new release.
-    # CI over there then pulls this tag, commits and pushes their own tag.
-    runs-on: ubuntu-latest
-    steps:
-      - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v1
-        with:
-          token: ${{ secrets.REPO_API_TOKEN }}
-          repository: osohq/go-oso
-          event-type: oso_publish
-          client-payload: '{"version": "${{ github.event.inputs.version }}"}'
+  # go:
+  #   # Notifies the go-oso repo there's a new release.
+  #   # CI over there then pulls this tag, commits and pushes their own tag.
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Repository Dispatch
+  #       uses: peter-evans/repository-dispatch@v1
+  #       with:
+  #         token: ${{ secrets.REPO_API_TOKEN }}
+  #         repository: osohq/go-oso
+  #         event-type: oso_publish
+  #         client-payload: '{"version": "${{ github.event.inputs.version }}"}'
 
   # java:
   #   name: Publish java jar to maven repository
@@ -99,7 +99,7 @@ jobs:
         with:
           ruby-version: "2.7"
           working-directory: "languages/ruby"
-      - run: gem push 0.20.0.pre.beta.gem
+      - run: gem push oso-oso-0.20.0.pre.beta.gem
         working-directory: "oso-ruby-${{ github.event.inputs.version }}"
   # js:
   #   name: Publish Node.js package to NPM
