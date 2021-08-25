@@ -21,7 +21,7 @@ export class Relationship {
   }
 }
 
-class Field {
+export class Field {
   field: string;
 
   constructor(field: string) {

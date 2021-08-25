@@ -1,5 +1,5 @@
 import { Oso } from './Oso';
-import { Relationship } from './dataFiltering';
+import { Relationship, Field } from './dataFiltering';
 import 'reflect-metadata';
 import { Entity, PrimaryColumn, Column, createConnection } from 'typeorm';
 
@@ -97,20 +97,33 @@ test('data filtering', async () => {
     for (let i in constraints) {
       let c = constraints[i];
       let clause;
+      let rhs;
+      let param: any = {};
+
+      if (c.value instanceof Field) {
+        rhs = `${name}.${c.value.field}`;
+      } else {
+        rhs = c.kind == 'In' ? `(:...${c.field})` : `:${c.field}`;
+        param[c.field] = c.value;
+      }
+
       switch (c.kind) {
         case 'Eq':
           {
-            clause = `${name}.${c.field} = :${c.field}`;
+            clause = `${name}.${c.field} = ${rhs}`;
+          }
+          break;
+        case 'Neq':
+          {
+            clause = `${name}.${c.field} <> ${rhs}`;
           }
           break;
         case 'In':
           {
-            clause = `${name}.${c.field} IN (:...${c.field})`;
+            clause = `${name}.${c.field} IN ${rhs}`;
           }
           break;
       }
-      let param: any = {};
-      param[c.field] = c.value;
       query.andWhere(clause, param);
     }
     return query.getMany();
@@ -194,6 +207,12 @@ test('data filtering', async () => {
   await checkAuthz(1, 'count', Foo, [aFoo, anotherFoo]);
   await checkAuthz(2, 'count', Foo, [aFoo]);
   await checkAuthz('gwen', 'eat', Foo, [aFoo, anotherFoo]);
+
+  oso.loadStr(`
+    allow("gwen", "get", bar: Bar) if
+      bar.isCool != bar.isStillCool;
+  `);
+  await checkAuthz('gwen', 'get', Bar, [byeBar]);
 
   oso.clearRules();
   oso.loadStr(`

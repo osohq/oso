@@ -61,32 +61,11 @@ pub enum Spec {
     Val { term: Term },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct Con {
-    kind: ConstraintKind,
-    left: Spec,
-    right: Spec,
-}
-
-impl From<Constraint> for Con {
-    fn from(other: Constraint) -> Self {
-        let kind = other.kind;
-        let left = Spec::Loc { result: None, field: other.field };
-        let right = match other.value {
-            ConstraintValue::Term(term) => Spec::Val { term },
-            ConstraintValue::Field(field) => Spec::Loc { result: None, field: Some(field) },
-            ConstraintValue::Ref(Ref { field, result_id: rid }) => Spec::Loc { field, result: Some(rid) },
-        };
-        Con { kind, left, right }
-    }
-}
-
 // The list of constraints passed to a fetching function for a particular type.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct FetchRequest {
     class_tag: String,
     constraints: Vec<Constraint>,
-    cons: Vec<Con>,
 }
 
 // A Set of fetch requests that may depend on the results of other fetches.
@@ -565,7 +544,6 @@ impl ResultSet {
             .unwrap_or_else(|| FetchRequest {
                 class_tag: var_type.to_string(),
                 constraints: vec![],
-                cons: vec![],
             });
 
         for (parent, field, child) in &vars.field_relationships {
@@ -596,7 +574,6 @@ impl ResultSet {
                                     result_id: *child,
                                 }),
                             });
-                            request.cons.push(request.constraints.last().unwrap().clone().into());
                         }
                     }
 
@@ -610,7 +587,6 @@ impl ResultSet {
                         field: Some(field.clone()),
                         value: ConstraintValue::Term(value.clone()),
                     });
-                    request.cons.push(request.constraints.last().unwrap().clone().into());
                     contributed_constraints = true;
                 }
 
@@ -620,7 +596,6 @@ impl ResultSet {
                         field: Some(field.clone()),
                         value: ConstraintValue::Term(v.clone()),
                     });
-                    request.cons.push(request.constraints.last().unwrap().clone().into());
                     contributed_constraints = true;
                 });
                 if let Some(values) = vars.contained_values.get(child) {
@@ -630,7 +605,6 @@ impl ResultSet {
                             field: Some(field.clone()),
                             value: ConstraintValue::Term(value.clone()),
                         });
-                        request.cons.push(request.constraints.last().unwrap().clone().into());
                     }
                     contributed_constraints = true;
                 }
@@ -642,7 +616,6 @@ impl ResultSet {
                                 field: Some(field.clone()),
                                 value: ConstraintValue::Field(f.clone()),
                             });
-                            request.cons.push(request.constraints.last().unwrap().clone().into());
                             contributed_constraints = true;
                             continue;
                         }
@@ -653,7 +626,6 @@ impl ResultSet {
                                 field: Some(field.clone()),
                                 value: ConstraintValue::Field(f.clone()),
                             });
-                            request.cons.push(request.constraints.last().unwrap().clone().into());
                             contributed_constraints = true;
                             continue;
                         }
@@ -677,7 +649,6 @@ impl ResultSet {
                 assert_eq!(self.resolve_order.pop().unwrap(), *l);
                 for con in in_result_set.constraints {
                     request.constraints.push(con);
-                    request.cons.push(request.constraints.last().unwrap().clone().into());
                 }
             }
         }
@@ -688,7 +659,6 @@ impl ResultSet {
                 field: None,
                 value: ConstraintValue::Term(v.clone()),
             });
-            request.cons.push(request.constraints.last().unwrap().clone().into());
         });
 
         if let Some(vs) = vars.contained_values.get(&var_id) {
@@ -698,7 +668,6 @@ impl ResultSet {
                     field: None,
                     value: ConstraintValue::Term(l.clone()),
                 });
-                request.cons.push(request.constraints.last().unwrap().clone().into());
             }
         }
 
@@ -708,7 +677,6 @@ impl ResultSet {
                 field: None,
                 value: ConstraintValue::Term(l.clone()),
             });
-            request.cons.push(request.constraints.last().unwrap().clone().into());
         }
 
         self.requests.insert(var_id, request);
