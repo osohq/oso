@@ -99,8 +99,7 @@ jobs:
         with:
           ruby-version: "2.7"
           working-directory: "languages/ruby"
-      #- run: gem push oso-oso-${{ github.event.inputs.version }}.gem
-        - run: gem push 0.20.0.pre.beta.gem
+      - run: gem push 0.20.0.pre.beta.gem
         working-directory: "oso-ruby-${{ github.event.inputs.version }}"
   # js:
   #   name: Publish Node.js package to NPM
