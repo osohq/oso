@@ -322,8 +322,8 @@ export class User {
 {{% /ifLang %}}
 
 For each class, we need to define a fetching function. This is a function that takes a list of constraints and returns all the instances that match them.
-In some cases you might be filtering an in memory array, in other cases you might be constructing a request to an external service to fetch data. In this
-case we are turning the constraints into a database query.
+In some cases you might be filtering an in-memory array; in other cases, you might be constructing a request to an external service to fetch data. In this
+case, we are turning the constraints into a database query.
 
 {{% callout "Handling Constraints" "orange" %}}
 
