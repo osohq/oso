@@ -19,7 +19,7 @@ describe(Enforcer, () => {
     const guest = new Actor('guest');
     const admin = new Actor('admin');
     const widget0 = new Widget('0');
-    const widget1 = new Actor('admin');
+    const widget1 = new Widget('1');
     beforeEach(async () => {
       await oso.policy.loadStr(`
         allow(_actor: Actor, "read", widget: Widget) if
@@ -31,8 +31,8 @@ describe(Enforcer, () => {
     });
 
     test('succeeds when the actor is allowed to perform the action', async () => {
-      await oso.authorize(new Actor('guest'), 'read', new Widget('0'));
-      await oso.authorize(new Actor('admin'), 'update', new Widget('1'));
+      await oso.authorize(guest, 'read', widget0);
+      await oso.authorize(admin, 'update', widget1);
     });
 
     test('throws a ForbiddenError when the actor is allowed to read', async () => {
