@@ -1,18 +1,19 @@
 ---
-title: Python Authorization Library
-weight: 2
-any: false
+title: Installation
+weight: 1
+description: Installation instructions for Oso's Python library.
 aliases:
   - /using/libraries/python/api.html
+  - ./lib.html
 ---
 
-# Python Authorization Library
+# Installation
 
 The Python version of Oso is available on [PyPI](https://pypi.org/project/oso/)
 and can be installed using `pip`:
 
 ```console
-$ pip install oso
+$ pip install oso=={{< version >}}
 ```
 
 ## Requirements
@@ -23,15 +24,14 @@ $ pip install oso
   - macOS
   - Windows
 
-The standard Python package is known to work on glibc-based distributions, but
-not on musl-based ones like Alpine Linux. Wheels built against musl that you
-can use on Alpine Linux can be downloaded from [the releases page on
-GitHub](https://github.com/osohq/oso/releases/latest).
+{{% minicallout %}}
+  **Note**: The standard Python package is known to work on glibc-based
+  distributions but not on musl-based ones like Alpine Linux. Wheels built
+  against musl that you can use on Alpine Linux can be downloaded from [the
+  releases page on GitHub][releases].
+{{% /minicallout %}}
 
-## Python API
-
-The [Python API reference]({{% apiLink "reference/api/index.html" %}}) is
-automatically generated from the Oso Python library source files.
+[releases]: https://github.com/osohq/oso/releases/latest
 
 ## Framework & ORM Integrations
 
