@@ -33,6 +33,8 @@ Your data doesn't leave your server. Oso also doesn't persist user data inside t
 
 {{% exampleGet "installation_new" %}}
 
+For additional info, see [Installation](reference/installation).
+
 ## Add Oso to your app
 
 To start, `{{% exampleGet "import" %}}` Oso, create an Oso instance, and enable roles.
