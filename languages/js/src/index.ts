@@ -1,3 +1,4 @@
-import { Oso } from './Oso';
+import { Oso, Policy } from './Oso';
 import { Variable } from './Variable';
-export { Oso, Variable };
+import { Enforcer } from './Enforcer';
+export { Oso, Variable, Policy, Enforcer };
