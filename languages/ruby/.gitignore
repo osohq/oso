@@ -7,6 +7,7 @@
 /spec/reports/
 /tmp/
 vendor
+active_record_test.db
 
 # rspec failure tracking
 .rspec_status

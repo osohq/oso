@@ -9,7 +9,7 @@ module DataFilteringHelpers
     count(left) == count(right)
   end
 
-  def fetcher(coll)
+  def generic_fetcher(coll)
     ->(cons) { coll.select { |x| cons.all? { |c| c.check x } } }
   end
 
@@ -23,7 +23,11 @@ module DataFilteringHelpers
     end
   end
 
-  module Fetcher
+  def self.record(*args, &blk)
+    Struct.new(*args, &blk).include(AutoFetcher)
+  end
+
+  module AutoFetcher
     def self.included(base) # rubocop:disable Metrics/MethodLength
       base.instance_variable_set :@instances, []
 
@@ -31,9 +35,11 @@ module DataFilteringHelpers
         @instances
       end
 
-      def base.fetcher
-        ->(cons) { @instances.select { |x| cons.all? { |c| c.check x } } }
-      end
+      base.const_set(:FETCHER, lambda do |cons|
+        base.instance_variable_get(:@instances).select do |x|
+          cons.all? { |c| c.check x }
+        end
+      end)
 
       class << base
         alias_method :_new, :new
@@ -43,58 +49,25 @@ module DataFilteringHelpers
       end
     end
   end
-end
 
-Relationship = ::Oso::Polar::DataFiltering::Relationship
+  module ActiveRecordFetcher
+    def self.included(base) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
+      base.class_eval do
+        kinds = Hash.new { |k| raise "Unsupported constraint kind: #{k}" }
+        kinds['Eq'] = kinds['In'] = lambda do |q, c|
+          q.where(
+            if c.field.nil?
+              { primary_key => c.value.send(primary_key) }
+            else
+              { c.field => c.value }
+            end
+          )
+        end
 
-def record(*args, &blk)
-  Struct.new(*args, &blk).include(DataFilteringHelpers::Fetcher)
-end
-
-Bar = record(:id, :is_cool, :is_still_cool)
-Foo = record(:id, :bar_id, :is_fooey, :numbers) do
-  def bar
-    Bar.all.find { |bar| bar.id == bar_id }
-  end
-end
-FooLog = record(:id, :foo_id, :data)
-
-Foo.new('something', 'hello', false, [])
-Foo.new('another', 'hello', true, [1])
-Foo.new('third', 'hello', true, [2])
-Foo.new('fourth', 'goodbye', true, [2, 1])
-
-Bar.new('hello', true, true)
-Bar.new('goodbye', false, true)
-Bar.new('hershey', false, false)
-
-FooLog.new('a', 'fourth', 'hello')
-FooLog.new('b', 'third', 'world')
-FooLog.new('c', 'another', 'steve')
-
-Org = record :name
-Repo = record :name, :org_name
-Issue = record :name, :repo_name
-User = record :name
-Role = record :user_name, :resource_name, :role
-
-Wizard = record(:name, :books, :spell_levels) do
-  def spells
-    Spell.all.select do |spell|
-      books.include?(spell.school) and spell_levels.include?(spell.level)
+        const_set(:FETCHER, lambda do |cons|
+          cons.reduce(self) { |q, con| kinds[con.kind][q, con] }
+        end)
+      end
     end
   end
 end
-
-Familiar = record :name, :kind, :wizard_name
-Spell = record :name, :school, :level
-Spell.new('teleport other',    'thaumaturgy', 7)
-Spell.new('wish',              'thaumaturgy', 9)
-Spell.new('cure light wounds', 'necromancy',  1)
-Spell.new('identify',          'divination',  1)
-Spell.new('call familiar',     'summoning',   1)
-Spell.new('call ent',          'summoning',   7)
-Spell.new('magic missile',     'destruction', 1)
-Spell.new('liquify organ',     'destruction', 5)
-Spell.new('call dragon',       'summoning',   9)
-Spell.new('know alignment',    'divination',  6)
