@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    oso-oso (0.15.0)
+    oso-oso (0.20.0.pre.beta)
       ffi (~> 1.0)
 
 GEM
@@ -27,7 +27,7 @@ GEM
     concurrent-ruby (1.1.9)
     diff-lcs (1.4.4)
     e2mmap (0.1.0)
-    ffi (1.15.1)
+    ffi (1.15.3)
     i18n (1.8.10)
       concurrent-ruby (~> 1.0)
     jaro_winkler (1.5.4)

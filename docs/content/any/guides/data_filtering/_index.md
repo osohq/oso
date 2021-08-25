@@ -16,11 +16,11 @@ showContentForAnyLanguage: true
 
 <div class="pb-10"></div>
 
-{{< ifLangExists >}}
+{{% ifLangExists %}}
+
 {{% ifLang not="node" %}}
 {{% ifLang not="python" %}}
 {{% ifLang not="ruby" %}}
-
 Data filtering is coming soon for {{< lang >}}!
 
 If you want to get data filtering in your app now or just want to
@@ -30,10 +30,13 @@ to our engineering team and we'll unblock you.
 {{% /ifLang %}}
 {{% /ifLang %}}
 {{% /ifLang %}}
-{{% /ifLangExists %}}
+
+{{< ifLang not="rust" >}}
+{{< ifLang not="go" >}}
+{{< ifLang not="java" >}}
 
 ## What is data filtering
-When you evaluate an oso policy (using `is_allowed`) for a specific `actor`, `action` and `resource`, oso evaluates the allow rule(s) you have defined to determine if that `actor` is allowed to do that `action` on that `resource`. For instance if you have a policy like this.
+When you evaluate an Oso policy (using `is_allowed`) for a specific `actor`, `action` and `resource`, Oso evaluates the allow rule(s) you have defined to determine if that `actor` is allowed to do that `action` on that `resource`. For instance if you have a policy like this.
 
 
 ```polar
@@ -45,13 +48,13 @@ then `"steve"` would be allowed to `"get"` that document.
 
 Data filtering is asking a slightly different question of the policy. Instead of asking "Can this actor do this action on this specific resource?", we want to ask
 "What are all the resources that this actor can do this specific action on?".  One way to answer this question would be to take every Document in the system and call
-`is_allowed` on it. This isn't efficient and many times is just impossible. There could be thousands of Documents in a database but only 3 that have the owner "steve".
-Instead of fetching every document and passing it into oso, we would like to ask our database for only the documents that have the owner "steve". This process of
+`is_allowed` on it. This isn't efficient and many times is just impossible. There could be thousands of Documents in a database but only 3 that have the owner `"steve"`.
+Instead of fetching every document and passing it into Oso, we would like to ask our database for only the documents that have the owner `"steve"`. This process of
 filtering the data in our data store, based on the logic in our policy is what we call "Data Filtering".
 
 {{% callout "ORM Integrations" "blue" %}}
 
-If you are using one of our ORM integration libraries like sqlalchemy-oso or django-oso data filtering is already built in and you won't have to worry about integrating
+If you are using one of our ORM integration libraries like `sqlalchemy-oso` or `django-oso` data filtering is already built in and you won't have to worry about integrating
 it yourself. See docs for the ORM library instead.
 
 {{% /callout %}}
@@ -71,7 +74,7 @@ There is one special type called `Relationship` that tells polar the field refer
 related object in polar and tells us how the current object is related to the other object.
 
 ### Fetchers
-The other thing oso has to know to use data filtering are how to fetch data. These are functions that take as input a list of `Constraint`
+The other thing Oso has to know to use data filtering are how to fetch data. These are functions that take as input a list of `Constraint`
 objects. The function is then responsible for selecting data that matches all of the constraint from the database, or an API, or wherever
 the data lives. This is the place that data filtering integrates with your data store. 
 
@@ -80,7 +83,7 @@ You can pass both of these things as arguments when registering a class and then
 
 ## Example
 
-{{% ifLang "python" %}}
+{{< ifLang "python" >}}
 
 Here's a small SQLAlchemy example, but the principles should apply to any ORM.
 
@@ -147,7 +150,7 @@ session.commit()
 
 {{% /ifLang %}}
 
-{{% ifLang "ruby" %}}
+{{< ifLang "ruby" >}}
 
 Here's a small ActiveRecord example, but the principles should apply to any ORM.
 
@@ -238,6 +241,86 @@ laggy = Issue.create name: 'laggy', repo: ios
 
 {{% /ifLang %}}
 
+{{< ifLang "node" >}}
+
+Here's a small TypeORM example, but the principles should apply to any ORM.
+
+```js
+import 'reflect-metadata';
+import { Entity, PrimaryColumn, Column, createConnection } from 'typeorm';
+
+@Entity()
+export class Org {
+  @PrimaryColumn()
+  id!: string;
+}
+
+@Entity()
+export class Repo {
+  @PrimaryColumn()
+  id!: string;
+
+  @Column()
+  orgId!: string;
+}
+
+@Entity()
+export class User {
+  @PrimaryColumn()
+  id!: string;
+
+  @Column()
+  orgId!: string;
+}
+
+  const connection = await createConnection({
+    type: 'sqlite',
+    database: `:memory:`,
+    entities: [Org, Repo, User],
+    synchronize: true,
+    logging: false,
+  });
+
+  let orgs = connection.getRepository(Org);
+  let repos = connection.getRepository(Repo);
+  let users = connection.getRepository(User);
+
+  async function mkOrg(id: string) {
+    let org = new Org()
+    org.id = id;
+    await orgs.save(org);
+    return org;
+  }
+
+  async function mkRepo(id: string, orgId: string) {
+    let repo = new Repo()
+    repo.id = id;
+    repo.orgId = orgId;
+    await repos.save(repo);
+    return repo;
+  }
+
+  async function mkUser(id: string, orgId: string) {
+    let user = new User()
+    user.id = id;
+    user.orgId = orgId;
+    await users.save(user);
+    return user;
+  }
+
+  let apple = await mkOrg("apple")
+  let osoOrg = await mkOrg("osohq")
+
+  let ios = await mkRepo("ios", "apple")
+  let osoRepo = await mkRepo("oso", "osohq")
+  let demoRepo = await mkRepo("demo", "osohq")
+
+  let leina = await mkUser("leina", "osohq")
+  let steve = await mkUser("steve", "apple")
+```
+
+{{% /ifLang %}}
+
 For each class, we need to define a fetching function. This is a function that takes a list of constraints and returns all the instances that match them.
 In some cases you might be filtering an in memory array, in other cases you might be constructing a request to an external service to fetch data. In this
 case we are turning the constraints into a database query.
@@ -257,7 +340,7 @@ There are three kinds of constraints.
 * `"Contains"` constraints only apply if the field `field` is a list. It means this list must contain all the values in `value`.
   If none of your fields are lists you wont get passed this one.
 
-{{% ifLang "python" %}}
+{{< ifLang "python" >}}
 
 ```python
 def query_model(model, constraints):
@@ -282,31 +365,69 @@ def get_repos(constraints):
 
 {{% /ifLang %}}
 
-{{% ifLang "ruby" %}}
+{{< ifLang "ruby" >}}
 
 ```ruby
-# A module to autogenerate a fetcher function for an ActiveRecord subclass.
-# `include` it in `Class`and the fetcher is accessible in `Class::FETCHER`
-module ActiveRecordFetcher
-  def self.included(base)
-    base.class_eval do
-      const_set(:FETCHER, lambda do |cons|
-        cons.reduce(self) do |q, con|
-          raise "Unsupported constraint kind: #{con.kind}" unless %w[Eq In].include? con.kind
-
-          q.where(
-            if con.field.nil?
-              { primary_key => con.value.send(primary_key) }
-            else
-              { con.field => con.value }
-            end
-          )
-        end
-      end)
+  # A module to autogenerate a fetcher function for an ActiveRecord subclass.
+  # `include` it in `Class`and the fetcher is accessible in `Class::FETCHER`
+  module ActiveRecordFetcher
+    def self.included(base)
+      base.class_eval do
+        const_set(:FETCHER, lambda do |cons|
+          cons.reduce(self) do |q, con|
+            raise "Unsupported constraint kind: #{con.kind}" unless %w[Eq In].include? con.kind
+  
+            q.where(
+              if con.field.nil?
+                { primary_key => con.value.send(primary_key) }
+              else
+                { con.field => con.value }
+              end
+            )
+          end
+        end)
+      end
     end
   end
-end
 ```
+{{% /ifLang %}}
+
+{{< ifLang "node" >}}
+
+```js
+  function fromRepo(repo: any, name: string, constraints: any) {
+    let query = repo.createQueryBuilder(name);
+    for (let i in constraints) {
+      let c = constraints[i];
+      let clause;
+      switch (c.kind) {
+        case 'Eq':
+          {
+            clause = `${name}.${c.field} = :${c.field}`;
+          }
+          break;
+        case 'In':
+          {
+            clause = `${name}.${c.field} IN (:...${c.field})`;
+          }
+          break;
+      }
+      let param: any = {};
+      param[c.field] = c.value;
+      query.andWhere(clause, param);
+    }
+    return query.getMany();
+  }
+
+  function getOrgs(constraints: any) {
+    return fromRepo(orgs, 'org', constraints);
+  }
+
+  function getRepos(constraints: any) {
+    return fromRepo(repos, 'repo', constraints);
+  }
+```
+
 {{% /ifLang %}}
 
 When you register classes you need to specify two new things. One is `types` which is a map that says what the type of each
@@ -319,7 +440,7 @@ the related instances are fetched using the fetching functions.
 
 The other new thing to specify when registering a class is the fetching function for that class.
 
-{{% ifLang "python" %}}
+{{< ifLang "python" >}}
 
 ```python
 from polar import Relationship
@@ -347,7 +468,7 @@ oso.register_class(User, types={"id": str, "org_id": str})
 
 {{% /ifLang %}}
 
-{{% ifLang "ruby" %}}
+{{< ifLang "ruby" >}}
 ```ruby
 require 'oso'
 
@@ -421,9 +542,35 @@ oso.register_class(
 ```
 {{% /ifLang %}}
 
+{{< ifLang "node" >}}
+
+```js
+  import { Oso } from './Oso';
+  import { Relationship } from './dataFiltering';
+
+  const oso = new Oso();
+
+  const orgType = new Map();
+  orgType.set('id', String);
+  oso.registerClass(Org, 'Org', orgType, getOrgs);
+
+  const repoType = new Map();
+  repoType.set('id', String);
+  repoType.set('orgId', String);
+  repoType.set('org', new Relationship('parent', 'Org', 'orgId', 'id'));
+  oso.registerClass(Repo, 'Repo', repoType, getRepos);
+
+  const userType = new Map();
+  userType.set('id', String);
+  userType.set('orgId', String);
+  oso.registerClass(User, 'User', userType);
+```
+
+{{% /ifLang %}}
+
 One everything is set up we can use the new "get allowed resources" method to filter a Class to all the instances that the user is allowed to preform the action on.
 
-{{% ifLang "python" %}}
+{{< ifLang "python" >}}
 ```python
 policy = """
 allow(user: User, "read", repo: Repo) if
@@ -437,7 +584,8 @@ assert leina_repos == [oso_repo, demo_repo]
 
 {{% /ifLang %}}
 
-{{% ifLang "ruby" %}}
+{{< ifLang "ruby" >}}
+
 ```ruby
 oso.load_str <<~POL
   allow(user: User, "read", repo: Repo) if
@@ -456,9 +604,18 @@ raise unless steve_issues == [laggy]
 
 {{% /ifLang %}}
 
-{{% ifLang "node" %}}
+{{< ifLang "node" >}}
 
-JavaScript example coming soon.
+```js
+  oso.loadStr(`
+    allow(user: User, "read", repo: Repo) if
+      org = repo.org and
+      user.orgId = org.id;
+  `);
+  let leinaRepos = await oso.getAllowedResources(leina, "read", Repo)
+  console.log(leinaRepos)
+  assert(leinaRepos == [osoRepo, demoRepo])
+```
 
 {{% /ifLang %}}
 
@@ -467,4 +624,9 @@ Currently there are some limitations to what you can do while using data filteri
 
 Some polar expressions are not supported but may be in the future. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numeric comparisons are also not yet supported. `< > <= >= !=`
 
-For now, Relationships only support matching on a single field. 
+For now, Relationships only support matching on a single field.
+
+{{% /ifLang %}}
+{{% /ifLang %}}
+{{% /ifLang %}}
+{{% /ifLangExists %}}

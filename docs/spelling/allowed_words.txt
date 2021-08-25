@@ -48,6 +48,7 @@ PyPI
 RBAC
 REPL
 RESTful
+ReBAC
 RubyGems
 Rubying
 SLA
@@ -58,6 +59,7 @@ STDIN
 SaaS
 Sascha
 TODO
+TypeORM
 TypeScript
 UI
 URI

@@ -1,7 +1,10 @@
 """Translate between Polar and the host language (Python)."""
 
+from dataclasses import dataclass
 from math import inf, isnan, nan
 import re
+from typing import Any, Dict, Optional, Callable
+
 
 from .exceptions import (
     PolarRuntimeError,
@@ -15,8 +18,6 @@ from .exceptions import (
 from .variable import Variable
 from .predicate import Predicate
 from .expression import Expression, Pattern
-from dataclasses import dataclass
-from typing import Optional, Callable
 
 
 @dataclass
@@ -24,7 +25,7 @@ class UserType:
     name: str
     cls: type
     id: int
-    fields: dict
+    fields: Dict[str, Any]
     fetcher: Optional[Callable]
 
 

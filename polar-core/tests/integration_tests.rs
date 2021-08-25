@@ -1695,6 +1695,15 @@ fn test_in_op() -> TestResult {
 }
 
 #[test]
+fn test_head_patterns() -> TestResult {
+    let p = Polar::new();
+    p.load_str("f(x: Integer, _: Dictionary{x:x});")?;
+    let results = query_results!(p.new_query("f(x, {x:9})", false)?);
+    assert_eq!(results[0].0[&sym!("x")], value!(9));
+    Ok(())
+}
+
+#[test]
 fn test_matches() {
     let mut p = Polar::new();
     qnull(&mut p, "1 matches 2");
