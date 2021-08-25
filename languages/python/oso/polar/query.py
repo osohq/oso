@@ -7,7 +7,7 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
-from .data_filtering import Relationship, Constraint
+from .data_filtering import Relationship, Con, Val, Loc
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -108,10 +108,10 @@ class Query:
                         # Use the fetcher for the other type to traverse the relationship
                         fetcher = self.host.types[rel.other_type].fetcher
                         assert fetcher is not None
-                        constraint = Constraint(
+                        constraint = Con(
                             kind="Eq",
-                            field=rel.other_field,
-                            value=getattr(instance, rel.my_field),
+                            left=Loc(field=rel.other_field, result=None),
+                            right=Val(term=getattr(instance, rel.my_field)),
                         )
                         constraints = [constraint]
                         results = fetcher(constraints)

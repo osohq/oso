@@ -59,11 +59,15 @@ class Ref:
 class Loc:
     field: Optional[str]
     result: Optional[int]
+    def get(self, item):
+        return item if self.field is None else getattr(item, self.field)
 
 
 @dataclass
 class Val:
     term: Any
+    def get(self, item):
+        return self.term
 
 
 @dataclass
@@ -72,84 +76,48 @@ class Con:
     left: Any
     right: Any
 
-@dataclass
-class Constraint:
-    kind: str  # ["Eq", "In", "Contains"]
-    field: str
-    value: Any
-
-    def __post_init__(self):
-        if isinstance(self.value, Field):
-            self.getter = lambda x: getattr(x, self.value.field)
-        else:
-            self.getter = lambda x: self.value
-
-        if self.field is None:
-            self.iget = lambda x: x
-        else:
-            self.iget = lambda x: getattr(x, self.field)
-
-        if self.kind == "Eq":
-            self.checker = lambda a, b: a == b
-        elif self.kind == "In":
-            self.checker = lambda a, b: a in b
-        elif self.kind == "Contains":
-            self.checker = lambda a, b: b in a
-        else:
-            assert False, "unknown constraint kind"
+    def Eq(a, b):
+        return a == b
+    def Neq(a, b):
+        return a != b
+    def In(a, b):
+        return a in b
+    def Contains(a, b):
+        return b in a
 
     def check(self, item):
-        return self.checker(self.iget(item), self.getter(item))
+        return getattr(type(self), self.kind)(self.left.get(item), self.right.get(item))
 
 
-def parse_constraint(polar, constraint):
-    kind = constraint["kind"]
-    assert kind in ["Eq", "In", "Contains"]
-    field = constraint["field"]
-    value = constraint["value"]
-
-    value_kind = next(iter(value))
-    value = value[value_kind]
-
-    if value_kind == "Term":
-        value = polar.host.to_python(value)
-    elif value_kind == "Ref":
-        child_field = value["field"]
-        result_id = value["result_id"]
-        value = Ref(field=child_field, result_id=result_id)
-    elif value_kind == "Field":
-        value = Field(field=value)
-    else:
-        assert False, "Unknown value kind"
-
-    return Constraint(kind=kind, field=field, value=value)
-
-
-def parse_con(polar, com):
+def parse_con(polar, con):
     def parse_val(val):
         kind = next(iter(val))
         val = val[kind]
         if kind == 'Loc':
             return Loc(field=val['field'], result=val['result'])
         elif kind == 'Val':
-            return Val(term=val['term'])
+            return Val(term=polar.host.to_python(val['term']))
         assert False, "Unknown value kind"
 
     kind = con['kind']
-    assert kind in ["Eq", "In", "Contains"]
+    assert kind in ["Eq", "In", "Neq", "Contains"]
     left = parse_val(con['left'])
     right = parse_val(con['right'])
     return Con(kind=kind, left=left, right=right)
 
 
-def ground_constraints(polar, results, filter_plan, constraints):
-    for constraint in constraints:
-        if isinstance(constraint.value, Ref):
-            ref = constraint.value
-            constraint.value = results[ref.result_id]
-            if ref.field is not None:
-                constraint.value = [getattr(v, ref.field) for v in constraint.value]
-
+def ground_cons(polar, results, filter_plan, cons):
+    def do_side(con, side):
+        loc = getattr(con, side)
+        if isinstance(loc, Loc):
+            if loc.result is not None:
+                val = Val(term=results[loc.result])
+                setattr(con, side, val)
+                if loc.field is not None:
+                    val.term = [getattr(v, loc.field) for v in val.term]
+    for con in cons:
+        do_side(con, 'left')
+        do_side(con, 'right')
 
 # @NOTE(Steve): This is just operating on the json. Could still have a step to parse this into a python data structure
 # first. Probably more important later when make implementing a resolver nice.
@@ -168,12 +136,12 @@ def builtin_filter_plan_resolver(polar, filter_plan):
         for i in resolve_order:
             req = requests[str(i)]  # thanks JSON
             class_name = req["class_tag"]
-            constraints = req["constraints"]
+            constraints = req["cons"]
 
-            constraints = [parse_constraint(polar, c) for c in constraints]
+            constraints = [parse_con(polar, c) for c in constraints]
 
             # Substitute in results from previous requests.
-            ground_constraints(polar, set_results, filter_plan, constraints)
+            ground_cons(polar, set_results, filter_plan, constraints)
             fetcher = polar.host.types[class_name].fetcher
             set_results[i] = fetcher(constraints)
 

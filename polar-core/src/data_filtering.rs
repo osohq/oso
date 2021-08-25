@@ -45,7 +45,7 @@ pub enum ConstraintKind {
     Eq,       // The field is equal to a value.
     In,       // The field is equal to one of the values.
     Contains, // The field is a collection that contains the value.
-//    Neq,
+    Neq,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
@@ -111,8 +111,10 @@ pub type PartialResults = Vec<ResultEvent>;
 #[derive(Debug, Default)]
 struct VarInfo {
     cycles: Vec<(Symbol, Symbol)>,                      // x = y
+    uncycles: Vec<(Symbol, Symbol)>,                    // x != y
     types: Vec<(Symbol, String)>,                       // x matches XClass
-    eq_values: Vec<(Symbol, Term)>,                     // x = 1;
+    eq_values: Vec<(Symbol, Term)>,                     // x = 1
+    neq_values: Vec<(Symbol, Term)>,                    // x != 1
     contained_values: Vec<(Term, Symbol)>,              // 1 in x
     field_relationships: Vec<(Symbol, String, Symbol)>, // x.a = y
     in_relationships: Vec<(Symbol, Symbol)>,            // x in y
@@ -123,8 +125,10 @@ struct VarInfo {
 struct Vars {
     variables: HashMap<Id, HashSet<Symbol>>,
     field_relationships: HashSet<(Id, String, Id)>,
+    uncycles: HashSet<(Id, Id)>,
     in_relationships: HashSet<(Id, Id)>,
     eq_values: HashMap<Id, Term>,
+    neq_values: HashSet<(Id, Term)>,
     contained_values: HashMap<Id, HashSet<Term>>,
     types: HashMap<Id, String>,
     this_id: Id,
@@ -178,13 +182,6 @@ impl From<VarInfo> for Vars {
             })
         }
 
-        fn resolve<'a, A>(map: &'a HashMap<A, A>, key: &'a A) -> &'a A
-        where
-            A: Hash + Eq,
-        {
-            map.get(key).map_or(key, |key| resolve(map, key))
-        }
-
         let counter = info.counter;
 
         // group the variables into equivalence classes.
@@ -195,34 +192,13 @@ impl From<VarInfo> for Vars {
             .collect::<HashMap<_, _>>();
 
         let fields = info.field_relationships;
-        let triples = {
-            let mut assign_id = |item: &Symbol| get_var_id(&mut variables, item.clone(), &counter);
-            fields
-                .iter()
-                .map(|(p, f, c)| (assign_id(p), f, assign_id(c)))
-                .collect::<Vec<_>>()
-        };
-
-        // if x.y=a and x.y=b then a=b, so add a cycle.
-        triples
-            .iter()
-            .flat_map(|(p1, f1, c1)| {
-                triples.iter().filter_map(move |(p2, f2, c2)| {
-                    (c1 != c2 && f1 == f2 && p1 == p2).then(|| (c1, c2))
-                })
-            })
-            .fold(HashMap::new(), |mut maps, (x, y)| {
-                let (x, y) = (*resolve(&maps, x), *resolve(&maps, y));
-                if x != y {
-                    let mut vars = variables.remove(&y).unwrap();
-                    vars.extend(variables.remove(&x).unwrap());
-                    maps.insert(x, y);
-                    variables.insert(y, vars);
-                }
-                maps
-            });
-
         let mut assign_id = |item| get_var_id(&mut variables, item, &counter);
+
+        let uncycles = info
+            .uncycles
+            .into_iter()
+            .map(|(a, b)| canonical_pair(assign_id(a), assign_id(b)))
+            .collect();
 
         // now convert the remaining VarInfo fields into equivalent Vars fields.
 
@@ -240,6 +216,12 @@ impl From<VarInfo> for Vars {
             .into_iter()
             .map(|(var, val)| (assign_id(var), val))
             .collect::<HashMap<_, _>>();
+
+        let neq_values = info
+            .neq_values
+            .into_iter()
+            .map(|(var, val)| (assign_id(var), val))
+            .collect::<HashSet<_>>();
 
         let types = info
             .types
@@ -263,13 +245,16 @@ impl From<VarInfo> for Vars {
             .collect::<HashSet<_>>();
 
         let this_id =
-            seek_var_id(&variables, &Symbol::new("_this")).expect("nothing to filter for!");
+            seek_var_id(&variables, &sym!("_this")).expect("nothing to filter for!");
+
 
         Vars {
             variables,
+            uncycles,
             field_relationships,
             in_relationships,
             eq_values,
+            neq_values,
             contained_values,
             types,
             this_id,
@@ -284,7 +269,14 @@ impl VarInfo {
 
         let sym = var.as_symbol().unwrap();
         let field_str = field.value().as_string().unwrap();
-        let new_var = Symbol::new(&format!(
+
+        if let Some(var) = self.field_relationships.iter().find_map(|(p, f, c)| {
+            (p == sym && f == field_str).then(|| c)
+        }) {
+            return var.clone();
+        }
+
+        let new_var = sym!(&format!(
             "_{}_dot_{}_{}",
             sym.0,
             field_str,
@@ -354,6 +346,25 @@ impl VarInfo {
                     (Value::Variable(var), val) | (val, Value::Variable(var)) => {
                         self.eq_values.push((var, Term::from(val)))
                     }
+                    // Unifying something else.
+                    // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
+                    // @NOTE(steve): Going with the same not yet supported message but if this is
+                    // coming through it's probably a bug in the simplifier.
+                    _ => unimplemented!(
+                        "Unification of values is not yet supported for data filtering."
+                    ),
+                };
+            }
+            Operator::Neq => {
+                assert_eq!(exp.args.len(), 2);
+
+                match (self.eval(&exp.args[0]), self.eval(&exp.args[1])) {
+                    // Unifying two variables
+                    (Value::Variable(l), Value::Variable(r)) =>
+                        self.uncycles.push((l, r)),
+                    // Unifying a variable with a value
+                    (Value::Variable(var), val) | (val, Value::Variable(var)) =>
+                        self.neq_values.push((var, Term::from(val))),
                     // Unifying something else.
                     // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
                     // @NOTE(steve): Going with the same not yet supported message but if this is
@@ -496,6 +507,7 @@ impl FilterPlan {
                     let op = match constraint.kind {
                         ConstraintKind::Eq => "=",
                         ConstraintKind::In => "in",
+                        ConstraintKind::Neq => "!=",
                         ConstraintKind::Contains => "contains",
                     };
                     let field = &constraint.field;
@@ -601,6 +613,16 @@ impl ResultSet {
                     request.cons.push(request.constraints.last().unwrap().clone().into());
                     contributed_constraints = true;
                 }
+
+                vars.neq_values.iter().filter_map(|(k, v)| (k == child).then(|| v)).for_each(|v| {
+                    request.constraints.push(Constraint {
+                        kind: ConstraintKind::Neq,
+                        field: Some(field.clone()),
+                        value: ConstraintValue::Term(v.clone()),
+                    });
+                    request.cons.push(request.constraints.last().unwrap().clone().into());
+                    contributed_constraints = true;
+                });
                 if let Some(values) = vars.contained_values.get(child) {
                     for value in values {
                         request.constraints.push(Constraint {
@@ -612,18 +634,30 @@ impl ResultSet {
                     }
                     contributed_constraints = true;
                 }
-                for (_, f, _) in vars
-                    .field_relationships
-                    .iter()
-                    .filter(|(p, f, c)| p == parent && f != field && c == child)
-                {
-                    request.constraints.push(Constraint {
-                        kind: ConstraintKind::Eq,
-                        field: Some(field.clone()),
-                        value: ConstraintValue::Field(f.clone()),
-                    });
-                    request.cons.push(request.constraints.last().unwrap().clone().into());
-                    contributed_constraints = true;
+                for (p, f, c) in vars.field_relationships.iter() {
+                    if p == parent && f != field {
+                        if c == child {
+                            request.constraints.push(Constraint {
+                                kind: ConstraintKind::Eq,
+                                field: Some(field.clone()),
+                                value: ConstraintValue::Field(f.clone()),
+                            });
+                            request.cons.push(request.constraints.last().unwrap().clone().into());
+                            contributed_constraints = true;
+                            continue;
+                        }
+                        let pair = canonical_pair(*c, *child);
+                        if let Some(_) = vars.uncycles.iter().find(|p| *p == &pair) {
+                            request.constraints.push(Constraint {
+                                kind: ConstraintKind::Neq,
+                                field: Some(field.clone()),
+                                value: ConstraintValue::Field(f.clone()),
+                            });
+                            request.cons.push(request.constraints.last().unwrap().clone().into());
+                            contributed_constraints = true;
+                            continue;
+                        }
+                    }
                 }
                 assert!(contributed_constraints);
             }
@@ -647,6 +681,15 @@ impl ResultSet {
                 }
             }
         }
+
+        vars.neq_values.iter().filter_map(|(k, v)| (k == &var_id).then(|| v)).for_each(|v| {
+            request.constraints.push(Constraint {
+                kind: ConstraintKind::Neq,
+                field: None,
+                value: ConstraintValue::Term(v.clone()),
+            });
+            request.cons.push(request.constraints.last().unwrap().clone().into());
+        });
 
         if let Some(vs) = vars.contained_values.get(&var_id) {
             for l in vs {
@@ -718,6 +761,10 @@ impl Vars {
     }
 }
 
+fn canonical_pair<A>(a: A, b: A) -> (A, A) where A: Ord {
+    if a < b { (a, b) } else { (b, a) }
+}
+
 /// generate equivalence classes from equivalencies.
 pub fn partition_equivs<I, A>(coll: I) -> Vec<HashSet<A>>
 where
@@ -761,5 +808,27 @@ mod test {
         let pairs = vec![(1, 2), (2, 3), (4, 3), (5, 6), (8, 8), (6, 7)];
         let classes = vec![hashset! {1, 2, 3, 4}, hashset! {5, 6, 7}, hashset! {8}];
         assert!(unord_eq(partition_equivs(pairs), classes));
+    }
+
+    #[test]
+    fn test_canonical_pair() {
+        assert_eq!((1, 2), canonical_pair(1, 2));
+        assert_eq!((1, 2), canonical_pair(2, 1));
+    }
+
+    #[test]
+    fn test_dot_var_cycles() {
+        let dot_op: Term = opn!(Dot, var!("x"), str!("y"));
+        let op =
+            op!(And,
+                opn!(Unify, dot_op.clone(), 1.into()),
+                opn!(Unify, dot_op, var!("_this")));
+
+        // `x` and `_this` appear in the expn and a temporary will be
+        // created for the output of the dot operation. check that
+        // because the temporary is unified with `_this` the total
+        // number of distinct variables in the output is 2.
+        let vars = Vars::from(&op);
+        assert_eq!(vars.variables.len(), 2);
     }
 }
