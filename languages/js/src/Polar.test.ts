@@ -397,9 +397,9 @@ describe('#loadFile', () => {
   test('throws if two files with the same contents are loaded', async () => {
     const p = new Polar();
     await expect(
-      p.loadFile(await tempFile('', 'a.polar'))
+      p.loadFile(await tempFile('f(1);', 'a.polar'))
     ).resolves.not.toThrow();
-    await expect(p.loadFile(await tempFile('', 'b.polar'))).rejects.toThrow(
+    await expect(p.loadFile(await tempFile('f(1);', 'b.polar'))).rejects.toThrow(
       /Problem loading file: A file with the same contents as .*b.polar named .*a.polar has already been loaded./
     );
   });

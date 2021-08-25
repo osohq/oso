@@ -628,7 +628,7 @@ impl ResultSet {
                             continue;
                         }
                         let pair = canonical_pair(*c, *child);
-                        if let Some(_) = vars.uncycles.iter().find(|p| *p == &pair) {
+                        if vars.uncycles.iter().any(|p| *p == pair) {
                             request.constraints.push(Constraint {
                                 kind: ConstraintKind::Neq,
                                 field: Some(field.clone()),
@@ -655,9 +655,7 @@ impl ResultSet {
             self.constrain(types, vars, *l, var_type, seen);
             if let Some(in_result_set) = self.requests.remove(l) {
                 assert_eq!(self.resolve_order.pop().unwrap(), *l);
-                for con in in_result_set.constraints {
-                    request.constraints.push(con);
-                }
+                request.constraints.extend(in_result_set.constraints);
             }
         }
 
