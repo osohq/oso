@@ -1,4 +1,4 @@
-import { Oso, Policy } from './Oso';
-import { Variable } from './Variable';
-import { Enforcer } from './Enforcer';
-export { Oso, Variable, Policy, Enforcer };
+export { Oso, Policy } from './Oso';
+export { Variable } from './Variable';
+export { Enforcer } from './Enforcer';
+export { AuthorizationError, ForbiddenError, NotFoundError } from './errors';
