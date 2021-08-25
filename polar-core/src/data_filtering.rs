@@ -55,17 +55,6 @@ pub struct Constraint {
     value: ConstraintValue,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub enum Spec {
-    Loc {
-        result: Option<Id>,
-        field: Option<String>,
-    },
-    Val {
-        term: Term,
-    },
-}
-
 // The list of constraints passed to a fetching function for a particular type.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct FetchRequest {
