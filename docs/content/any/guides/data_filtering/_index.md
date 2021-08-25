@@ -69,9 +69,9 @@ To use data filtering you need to provide two additional things when you registe
 
 ### Types
 Oso needs to know the types of all the fields in your class. This is how we know what `resource.name` will be when we don't have
-a concrete resource to check the field on. This lets polar code work the same way it does normally and things like specializers match.
-There is one special type called `Relationship` that tells polar the field refers to a related object. This lets you reference a
-related object in polar and tells us how the current object is related to the other object.
+a concrete resource to check the field on. This lets Polar code work the same way it does normally and things like specializers match.
+There is one special type called `Relationship` that tells Polar the field refers to a related object. This lets you reference a
+related object in Polar and tells us how the current object is related to the other object.
 
 ### Fetchers
 The other thing Oso has to know to use data filtering are how to fetch data. These are functions that take as input a list of `Constraint`
@@ -622,7 +622,7 @@ raise unless steve_issues == [laggy]
 ## Limitations
 Currently there are some limitations to what you can do while using data filtering. You can not call any methods on the passed in resource (or any of it's properties). You also can not pass the resource as an argument to a method. Many cases where you would want to do this are better handled by Relationship fields.
 
-Some polar expressions are not supported but may be in the future. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numeric comparisons are also not yet supported. `< > <= >= !=`
+Some Polar expressions are not supported but may be in the future. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numeric comparisons are also not yet supported. `< > <= >= !=`
 
 For now, Relationships only support matching on a single field.
 
