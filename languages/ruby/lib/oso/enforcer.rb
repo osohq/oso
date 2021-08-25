@@ -12,12 +12,12 @@ module Oso
 
     # Create an Enforcer, which is used to enforce an Oso policy in an app.
     #
-    # @param policy [Oso::Policy] The `Policy` instance to enforce.
-    # @param get_error [Callable] Optionally override the method used to build errors
+    # @param policy [Oso::Oso] The `Policy` instance to enforce.
+    # @param get_error [Proc] Optionally override the method used to build errors
     #   raised by the  {#authorize} and {#authorize_request}
     #   methods. Should be a callable that takes one argument
     #   +is_not_found+ and returns an exception.
-    # @param read_action [Any] The action used by the {#authorize} method to
+    # @param read_action The action used by the {#authorize} method to
     #   determine whether an authorization failure should
     #   raise a {Oso::NotFoundError} or a {Oso::ForbiddenError}
     def initialize(policy, get_error: method(:default_error), read_action: 'read')
