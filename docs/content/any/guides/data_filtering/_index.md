@@ -332,7 +332,7 @@ returning data that the user is not allowed to see.
 
 {{% /callout %}}
 
-The constraints are object with a `kind`, `field` and `value`.
+Each constraint is an object with a `kind`, `field` and `value`.
 There are three kinds of constraints.
 
 * `"Eq"` constraints mean that the field `field` must be equal to the value `value`
@@ -620,7 +620,7 @@ raise unless steve_issues == [laggy]
 {{% /ifLang %}}
 
 ## Limitations
-Currently there are some limitations to what you can do while using data filtering. You can not call any methods on the passed in resource (or any of it's properties). You also can not pass the resource as an argument to a method. Many cases where you would want to do this are better handled by Relationship fields.
+Currently there are some limitations to what you can do while using data filtering. You can not call any methods on the passed in resource (or any of its properties). You also can not pass the resource as an argument to a method. Many cases where you would want to do this are better handled by Relationship fields.
 
 Some Polar expressions are not supported but may be in the future. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numeric comparisons are also not yet supported. `< > <= >= !=`
 
