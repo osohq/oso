@@ -8,34 +8,13 @@ aliases:
 
 # Installation
 
-The Java version of Oso is available on [Maven
-Central](https://search.maven.org/artifact/com.osohq/oso).
+Oso's Java library is available on [Maven Central][].
 
-It can be added as a dependency to a **Maven** project:
+See [Maven's instructions][instructions] to add the latest version of Oso to
+your Java project.
 
-```xml
-<!-- https://mvnrepository.com/artifact/com.osohq/oso -->
-<dependency>
-    <groupId>com.osohq</groupId>
-    <artifactId>oso</artifactId>
-    <version>{{< version >}}</version>
-</dependency>
-```
-
-or a **Gradle** project:
-
-```gradle
-// https://mvnrepository.com/artifact/com.osohq/oso
-compile group: 'com.osohq', name: 'oso', version: '{relase}'
-```
-
-or downloaded as a **JAR** and added to the classpath of any Java project:
-
-```console
-$ javac -classpath "oso-{{< version >}}.jar:." MyProject.java
-
-$ java -classpath "oso-{{< version >}}.jar:." MyProject
-```
+[Maven Central]: https://search.maven.org/artifact/com.osohq/oso
+[instructions]: https://search.maven.org/artifact/com.osohq/oso/{{< version >}}/jar
 
 ## Requirements
 

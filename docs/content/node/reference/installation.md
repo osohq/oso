@@ -12,19 +12,19 @@ Oso's Node.js library is available on
 [npm](https://www.npmjs.com/package/oso) and can be installed globally with npm:
 
 ```console
-$ npm install -g oso
+$ npm install -g oso@{{< version >}}
 ```
 
 or added as a dependency to a project’s `package.json` manifest with npm:
 
 ```console
-$ npm install --save oso
+$ npm install --save oso@{{< version >}}
 ```
 
 or Yarn:
 
 ```console
-$ yarn add oso
+$ yarn add oso@{{< version >}}
 ```
 
 ## Requirements

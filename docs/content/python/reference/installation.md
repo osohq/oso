@@ -13,7 +13,7 @@ The Python version of Oso is available on [PyPI](https://pypi.org/project/oso/)
 and can be installed using `pip`:
 
 ```console
-$ pip install oso
+$ pip install oso=={{< version >}}
 ```
 
 ## Requirements

@@ -14,7 +14,7 @@ The Go version of Oso is available on
 It can be added as a dependency to a Go project:
 
 ```console
-go get github.com/osohq/go-oso
+go get github.com/osohq/go-oso@v{{< version >}}
 ```
 
 And imported into a Go file:
