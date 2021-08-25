@@ -63,10 +63,13 @@ class Constraint:
 
     def Eq(a, b):
         return a == b
+
     def Neq(a, b):
         return a != b
+
     def In(a, b):
         return a in b
+
     def Contains(a, b):
         return b in a
 

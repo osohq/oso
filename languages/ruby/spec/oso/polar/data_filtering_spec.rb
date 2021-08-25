@@ -149,7 +149,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           policy = 'allow(_, _, bar: Bar) if bar.is_cool != bar.is_still_cool;'
           subject.load_str(policy)
           results = subject.get_allowed_resources('gwen', 'eat', Bar)
-          expected = Bar.all.select { |b| b.is_cool != b.is_still_cool }
+          expected = Bar.all.reject { |b| b.is_cool == b.is_still_cool }
           expect(expected).not_to be_empty
           expect(unord_eq(results, expected)).to be true
         end

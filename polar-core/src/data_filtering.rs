@@ -57,8 +57,13 @@ pub struct Constraint {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Spec {
-    Loc { result: Option<Id>, field: Option<String>, },
-    Val { term: Term },
+    Loc {
+        result: Option<Id>,
+        field: Option<String>,
+    },
+    Val {
+        term: Term,
+    },
 }
 
 // The list of constraints passed to a fetching function for a particular type.
@@ -223,9 +228,7 @@ impl From<VarInfo> for Vars {
             .map(|(p, f, c)| (assign_id(p), f, assign_id(c)))
             .collect::<HashSet<_>>();
 
-        let this_id =
-            seek_var_id(&variables, &sym!("_this")).expect("nothing to filter for!");
-
+        let this_id = seek_var_id(&variables, &sym!("_this")).expect("nothing to filter for!");
 
         Vars {
             variables,
@@ -249,9 +252,11 @@ impl VarInfo {
         let sym = var.as_symbol().unwrap();
         let field_str = field.value().as_string().unwrap();
 
-        if let Some(var) = self.field_relationships.iter().find_map(|(p, f, c)| {
-            (p == sym && f == field_str).then(|| c)
-        }) {
+        if let Some(var) = self
+            .field_relationships
+            .iter()
+            .find_map(|(p, f, c)| (p == sym && f == field_str).then(|| c))
+        {
             return var.clone();
         }
 
@@ -339,11 +344,11 @@ impl VarInfo {
 
                 match (self.eval(&exp.args[0]), self.eval(&exp.args[1])) {
                     // Unifying two variables
-                    (Value::Variable(l), Value::Variable(r)) =>
-                        self.uncycles.push((l, r)),
+                    (Value::Variable(l), Value::Variable(r)) => self.uncycles.push((l, r)),
                     // Unifying a variable with a value
-                    (Value::Variable(var), val) | (val, Value::Variable(var)) =>
-                        self.neq_values.push((var, Term::from(val))),
+                    (Value::Variable(var), val) | (val, Value::Variable(var)) => {
+                        self.neq_values.push((var, Term::from(val)))
+                    }
                     // Unifying something else.
                     // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
                     // @NOTE(steve): Going with the same not yet supported message but if this is
@@ -590,14 +595,17 @@ impl ResultSet {
                     contributed_constraints = true;
                 }
 
-                vars.neq_values.iter().filter_map(|(k, v)| (k == child).then(|| v)).for_each(|v| {
-                    request.constraints.push(Constraint {
-                        kind: ConstraintKind::Neq,
-                        field: Some(field.clone()),
-                        value: ConstraintValue::Term(v.clone()),
+                vars.neq_values
+                    .iter()
+                    .filter_map(|(k, v)| (k == child).then(|| v))
+                    .for_each(|v| {
+                        request.constraints.push(Constraint {
+                            kind: ConstraintKind::Neq,
+                            field: Some(field.clone()),
+                            value: ConstraintValue::Term(v.clone()),
+                        });
+                        contributed_constraints = true;
                     });
-                    contributed_constraints = true;
-                });
                 if let Some(values) = vars.contained_values.get(child) {
                     for value in values {
                         request.constraints.push(Constraint {
@@ -653,13 +661,16 @@ impl ResultSet {
             }
         }
 
-        vars.neq_values.iter().filter_map(|(k, v)| (k == &var_id).then(|| v)).for_each(|v| {
-            request.constraints.push(Constraint {
-                kind: ConstraintKind::Neq,
-                field: None,
-                value: ConstraintValue::Term(v.clone()),
+        vars.neq_values
+            .iter()
+            .filter_map(|(k, v)| (k == &var_id).then(|| v))
+            .for_each(|v| {
+                request.constraints.push(Constraint {
+                    kind: ConstraintKind::Neq,
+                    field: None,
+                    value: ConstraintValue::Term(v.clone()),
+                });
             });
-        });
 
         if let Some(vs) = vars.contained_values.get(&var_id) {
             for l in vs {
@@ -729,8 +740,15 @@ impl Vars {
     }
 }
 
-fn canonical_pair<A>(a: A, b: A) -> (A, A) where A: Ord {
-    if a < b { (a, b) } else { (b, a) }
+fn canonical_pair<A>(a: A, b: A) -> (A, A)
+where
+    A: Ord,
+{
+    if a < b {
+        (a, b)
+    } else {
+        (b, a)
+    }
 }
 
 /// generate equivalence classes from equivalencies.
@@ -787,10 +805,11 @@ mod test {
     #[test]
     fn test_dot_var_cycles() {
         let dot_op: Term = opn!(Dot, var!("x"), str!("y"));
-        let op =
-            op!(And,
-                opn!(Unify, dot_op.clone(), 1.into()),
-                opn!(Unify, dot_op, var!("_this")));
+        let op = op!(
+            And,
+            opn!(Unify, dot_op.clone(), 1.into()),
+            opn!(Unify, dot_op, var!("_this"))
+        );
 
         // `x` and `_this` appear in the expn and a temporary will be
         // created for the output of the dot operation. check that

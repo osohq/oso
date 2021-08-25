@@ -18,7 +18,6 @@ def oso():
     return oso
 
 
-
 def filter_array(array, constraints):
     check = reduce(
         lambda f, g: lambda x: f(x) and g(x),
@@ -270,7 +269,13 @@ def test_sqlalchemy_neq(oso, sqlalchemy_t):
     oso.load_str(policy)
     t = sqlalchemy_t
     check_authz(oso, "steve", "get", t["Foo"], [t["fourth_foo"]])
-    check_authz(oso, "steve", "put", t["Foo"], [t["another_foo"], t["third_foo"], t["something_foo"]])
+    check_authz(
+        oso,
+        "steve",
+        "put",
+        t["Foo"],
+        [t["another_foo"], t["third_foo"], t["something_foo"]],
+    )
 
 
 def test_no_relationships(oso, t):
@@ -293,7 +298,13 @@ def test_neq(oso, t):
     """
     oso.load_str(policy)
     check_authz(oso, "steve", "get", t["Foo"], [t["fourth_foo"]])
-    check_authz(oso, "steve", "put", t["Foo"], [t["another_foo"], t["third_foo"], t["something_foo"]])
+    check_authz(
+        oso,
+        "steve",
+        "put",
+        t["Foo"],
+        [t["another_foo"], t["third_foo"], t["something_foo"]],
+    )
 
 
 def test_relationship(oso, t):
