@@ -622,7 +622,7 @@ raise unless steve_issues == [laggy]
 ## Limitations
 Currently there are some limitations to what you can do while using data filtering. You can not call any methods on the passed in resource (or any of its properties). You also can not pass the resource as an argument to a method. Many cases where you would want to do this are better handled by Relationship fields.
 
-Some Polar expressions are not supported but may be in the future. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numeric comparisons are also not yet supported. `< > <= >= !=`
+Some Polar expressions are not supported but may be in the future. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numeric comparisons with the `< > <= >= !=` operators are also not yet supported.
 
 For now, Relationships only support matching on a single field.
 
