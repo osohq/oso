@@ -25,7 +25,7 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
     guest = Actor.new('guest')
     admin = Actor.new('admin')
     widget0 = Widget.new('0')
-    widget1 = Actor.new('admin')
+    widget1 = Widget.new('1')
     before(:each) do
       oso.policy.load_str(%|
         allow(_actor: Actor, "read", widget: Widget) if
@@ -168,7 +168,7 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
 
   context 'configuration' do
     it 'get_error overrides the error that is thrown' do
-      class MyError < StandardError
+      class TestError < StandardError
         attr_reader :is_not_found
         def initialize(is_not_found)
           @is_not_found = is_not_found
@@ -182,7 +182,7 @@ RSpec.describe Oso::Enforcer do # rubocop:disable Metrics/BlockLength
       )
 
       expect { enforcer.authorize('graham', 'frob', 'bar') }.to raise_error(
-        an_instance_of(MyError).and having_attributes({is_not_found: true})
+        an_instance_of(TestError).and having_attributes({is_not_found: true})
       )
     end
 
