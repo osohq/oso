@@ -262,8 +262,9 @@ export class Polar {
    */
   async queryRuleOnce(name: string, ...args: unknown[]): Promise<boolean> {
     const results = this.query(new Predicate(name, args));
-    const firstResult = await results.next();
-    return !firstResult.done;
+    const { done } = await results.next();
+    results.return();
+    return !done;
   }
 
   /**
