@@ -88,6 +88,16 @@ def t(oso):
     def get_foo_logs(constraints):
         return filter_array(foo_logs, constraints)
 
+    # When dealing with just data, the query is really already the results of the query.
+    # so exec is just returning.
+    def exec_query(results):
+        return results
+
+    # Combining is combining but filtering out duplicates.
+    def combine_query(q1, q2):
+        results = q1 + q2
+        return [i for n, i in enumerate(results) if i not in results[:n]]
+
     oso.register_class(
         Bar,
         types={
@@ -98,7 +108,9 @@ def t(oso):
                 kind="children", other_type="Foo", my_field="id", other_field="bar_id"
             ),
         },
-        fetcher=get_bars,
+        build_query=get_bars,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
     oso.register_class(
         Foo,
@@ -117,7 +129,9 @@ def t(oso):
                 other_field="foo_id",
             ),
         },
-        fetcher=get_foos,
+        build_query=get_foos,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
     oso.register_class(
         FooLogRecord,
@@ -129,7 +143,9 @@ def t(oso):
                 kind="parent", other_type="Foo", my_field="foo_id", other_field="id"
             ),
         },
-        fetcher=get_foo_logs,
+        build_query=get_foo_logs,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
     # Sorta hacky, just return anything you want to use in a test.
     return {
@@ -174,6 +190,12 @@ def sqlalchemy_t(oso):
 
     Base.metadata.create_all(engine)
 
+    def exec_query(query):
+        return query.all()
+
+    def combine_query(q1, q2):
+        return q1.union(q2)
+
     # @TODO: Somehow the session needs to get in here, didn't think about that yet... Just hack for now and use a global
     # one.
     def get_bars(constraints):
@@ -185,10 +207,14 @@ def sqlalchemy_t(oso):
             elif constraint.kind == "In":
                 query = query.filter(field.in_(constraint.value))
             # ...
-        return query.all()
+        return query
 
     oso.register_class(
-        Bar, types={"id": str, "is_cool": bool, "is_still_cool": bool}, fetcher=get_bars
+        Bar,
+        types={"id": str, "is_cool": bool, "is_still_cool": bool},
+        build_query=get_bars,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
 
     def get_foos(constraints):
@@ -200,7 +226,7 @@ def sqlalchemy_t(oso):
             elif constraint.kind == "In":
                 query = query.filter(field.in_(constraint.value))
             # ...
-        return query.all()
+        return query
 
     oso.register_class(
         Foo,
@@ -212,7 +238,9 @@ def sqlalchemy_t(oso):
                 kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
             ),
         },
-        fetcher=get_foos,
+        build_query=get_foos,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
 
     hello_bar = Bar(id="hello", is_cool=True, is_still_cool=True)
@@ -248,7 +276,7 @@ def test_sqlalchemy_relationship(oso, sqlalchemy_t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", sqlalchemy_t["another_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", sqlalchemy_t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", sqlalchemy_t["Foo"]))
     assert len(results) == 2
 
 
@@ -261,7 +289,7 @@ def test_no_relationships(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["another_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert len(results) == 3
 
 
@@ -275,7 +303,7 @@ def test_relationship(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["another_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert len(results) == 2
 
 
@@ -292,13 +320,13 @@ def test_known_results(oso):
     """
     oso.load_str(policy)
 
-    results = oso.get_allowed_resources("gwen", "get", int)
+    results = oso.authorized_resources("gwen", "get", int)
     assert unord_eq(results, [1, 2])
 
-    results = oso.get_allowed_resources("gwen", "get", dict)
+    results = oso.authorized_resources("gwen", "get", dict)
     assert results == [{}]
 
-    results = oso.get_allowed_resources("gwen", "get", str)
+    results = oso.authorized_resources("gwen", "get", str)
     assert results == []
 
 
@@ -311,7 +339,7 @@ def test_var_in_values(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["another_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert len(results) == 4
 
 
@@ -324,7 +352,7 @@ def test_var_in_var(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["fourth_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert len(results) == 1
 
 
@@ -358,7 +386,7 @@ def test_val_in_var(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["fourth_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert results == [t["fourth_foo"]]
 
 
@@ -376,7 +404,7 @@ def test_var_in_value(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["fourth_log_a"])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["FooLogRecord"]))
+    results = list(oso.authorized_resources("steve", "get", t["FooLogRecord"]))
     assert unord_eq(results, [t["fourth_log_a"], t["third_log_b"]])
 
 
@@ -393,7 +421,7 @@ def test_or(oso, t):
     oso.load_str(policy)
     # assert oso.is_allowed("steve", "get", t['fourth_log_a'])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert len(results) == 2
 
 
@@ -520,7 +548,20 @@ def roles(oso):
     def get_users(constraints):
         return filter_array(users, constraints)
 
-    oso.register_class(Org, types={"name": str}, fetcher=get_orgs)
+    def exec_query(results):
+        return results
+
+    def combine_query(q1, q2):
+        results = q1 + q2
+        return [i for n, i in enumerate(results) if i not in results[:n]]
+
+    oso.register_class(
+        Org,
+        types={"name": str},
+        build_query=get_orgs,
+        exec_query=exec_query,
+        combine_query=combine_query,
+    )
     oso.register_class(
         Repo,
         types={
@@ -530,7 +571,9 @@ def roles(oso):
                 kind="parent", other_type="Org", my_field="org_name", other_field="name"
             ),
         },
-        fetcher=get_repos,
+        build_query=get_repos,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
     oso.register_class(
         Issue,
@@ -544,7 +587,9 @@ def roles(oso):
                 other_field="name",
             ),
         },
-        fetcher=get_issues,
+        build_query=get_issues,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
     oso.register_class(
         Role,
@@ -553,7 +598,9 @@ def roles(oso):
             "resource_name": str,
             "role": str,
         },
-        fetcher=get_roles,
+        build_query=get_roles,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
     oso.register_class(
         User,
@@ -566,7 +613,9 @@ def roles(oso):
                 other_field="user_name",
             ),
         },
-        fetcher=get_users,
+        build_query=get_users,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
 
     policy = """
@@ -643,7 +692,7 @@ def roles(oso):
 
 
 def check_authz(oso, actor, action, resource, expected):
-    assert unord_eq(oso.get_allowed_resources(actor, action, resource), expected)
+    assert unord_eq(oso.authorized_resources(actor, action, resource), expected)
     for re in expected:
         assert oso.is_allowed(actor, action, re)
 

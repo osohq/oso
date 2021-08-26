@@ -26,7 +26,9 @@ class UserType:
     cls: type
     id: int
     fields: Dict[str, Any]
-    fetcher: Optional[Callable]
+    build_query: Optional[Callable]
+    exec_query: Optional[Callable]
+    combine_query: Optional[Callable]
 
 
 class Host:
@@ -85,7 +87,15 @@ class Host:
             lambda k: self.types[k], filter(lambda k: type(k) is str, self.types.keys())
         )
 
-    def cache_class(self, cls, name=None, fields=None, fetcher=lambda _: []):
+    def cache_class(
+        self,
+        cls,
+        name=None,
+        fields=None,
+        build_query=None,
+        exec_query=None,
+        combine_query=None,
+    ):
         """Cache Python class by name."""
         name = cls.__name__ if name is None else name
         if name in self.types.keys():
@@ -96,7 +106,9 @@ class Host:
             cls=cls,
             id=self.cache_instance(cls),
             fields=fields or {},
-            fetcher=fetcher,
+            build_query=build_query,
+            exec_query=exec_query,
+            combine_query=combine_query,
         )
         return name
 

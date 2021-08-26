@@ -260,9 +260,25 @@ class Polar:
             if not result:
                 print(False)
 
-    def register_class(self, cls, *, name=None, types=None, fetcher=lambda _: []):
+    def register_class(
+        self,
+        cls,
+        *,
+        name=None,
+        types=None,
+        build_query=None,
+        exec_query=None,
+        combine_query=None
+    ):
         """Register `cls` as a class accessible by Polar."""
-        cls_name = self.host.cache_class(cls, name=name, fields=types, fetcher=fetcher)
+        cls_name = self.host.cache_class(
+            cls,
+            name=name,
+            fields=types,
+            build_query=build_query,
+            exec_query=exec_query,
+            combine_query=combine_query,
+        )
         self.register_constant(cls, cls_name)
 
     def register_constant(self, value, name):
@@ -276,9 +292,10 @@ class Polar:
         """
         return self.host.get_class(name)
 
-    def get_allowed_resources(self, actor, action, cls) -> list:
+    def authorized_query(self, actor, action, cls) -> any:
         """
-        Returns all the resources the actor is allowed to perform action on.
+        Returns a query for the resources the actor is allowed to perform action on.
+        The query is built by using the build_query and combine_query methods registered for the type.
 
         :param actor: The actor for whom to collect allowed resources.
 
@@ -286,7 +303,7 @@ class Polar:
 
         :param cls: The type of the resources.
 
-        :return: A list of the unique allowed resources.
+        :return: A query to fetch the resources,
         """
         # Data filtering.
         resource = Variable("resource")
@@ -306,6 +323,8 @@ class Polar:
             )
         )
 
+        # @TODO: How do you deal with value results in the query case?
+        # Do we get them into the filter plan as constraints somehow?
         complete, partial = [], []
 
         for result in results:
@@ -317,9 +336,16 @@ class Polar:
 
         types = serialize_types(self.host.distinct_user_types(), self.host.types)
         plan = self.ffi_polar.build_filter_plan(types, partial, "resource", class_name)
-        complete += filter_data(self, plan)
-        return complete
 
+        return filter_data(self, plan)
+
+    def authorized_resources(self, actor, action, cls) -> any:
+        query = self.authorized_query(actor, action, cls)
+        if query is None:
+            return []
+
+        results = self.host.types[cls].exec_query(query)
+        return results
 
 def polar_class(_cls=None, *, name=None):
     """Decorator to register a Python class with Polar.
