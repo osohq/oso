@@ -351,12 +351,22 @@ class Polar:
 
                 for k, t in typ.fields.items():
                     if not isinstance(t, Relationship):
-                        constraint = {'kind': 'Eq', 'field': k, 'value': {'Term': self.host.to_polar(getattr(c, k))}}
+                        constraint = {
+                            "kind": "Eq",
+                            "field": k,
+                            "value": {"Term": self.host.to_polar(getattr(c, k))},
+                        }
                         constraints.append(constraint)
 
-                result_set = {'requests': {'0': {'class_tag': class_name, 'constraints': constraints}}, 'resolve_order': [0], 'result_id': 0}
+                result_set = {
+                    "requests": {
+                        "0": {"class_tag": class_name, "constraints": constraints}
+                    },
+                    "resolve_order": [0],
+                    "result_id": 0,
+                }
                 new_result_sets.append(result_set)
-            plan['result_sets'] += new_result_sets
+            plan["result_sets"] += new_result_sets
 
         return filter_data(self, plan)
 
@@ -367,6 +377,7 @@ class Polar:
 
         results = self.host.types[cls].exec_query(query)
         return results
+
 
 def polar_class(_cls=None, *, name=None):
     """Decorator to register a Python class with Polar.

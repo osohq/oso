@@ -312,9 +312,8 @@ def test_duplex_relationship(oso, t):
     oso.load_str(policy)
     check_authz(oso, "gwen", "gwen", t["Foo"], t["foos"])
 
-@pytest.mark.skip(
-    """ Cant filter non registered classes anymore."""
-)
+
+@pytest.mark.skip(""" Cant filter non registered classes anymore.""")
 def test_known_results(oso):
     policy = """
       allow(_, _, i: Integer) if i in [1, 2];
