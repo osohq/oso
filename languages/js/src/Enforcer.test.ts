@@ -41,13 +41,16 @@ describe(Enforcer, () => {
       );
     });
 
-    test('throws a NotFoundError when the actor is not allowed to read', async () => {
+    test('throws a NotFoundError when the actor is not allowed to read, unless skipped', async () => {
       await expect(oso.authorize(guest, 'read', widget1)).rejects.toThrow(
         NotFoundError
       );
       await expect(oso.authorize(guest, 'update', widget1)).rejects.toThrow(
         NotFoundError
       );
+      await expect(
+        oso.authorize(guest, 'update', widget1, { checkRead: false })
+      ).rejects.toThrow(ForbiddenError);
     });
   });
 
@@ -92,9 +95,11 @@ describe(Enforcer, () => {
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       `);
       const superadmin = new Actor('superadmin');
-      expect(await oso.authorizedActions(superadmin, widget0, true)).toEqual([
-        '*',
-      ]);
+      expect(
+        await oso.authorizedActions(superadmin, widget0, {
+          allowWildcard: true,
+        })
+      ).toEqual(['*']);
     });
   });
 
@@ -130,9 +135,6 @@ describe(Enforcer, () => {
   });
 
   describe('field-level authorization', () => {
-    class Request {
-      constructor(public method: string, public path: string) {}
-    }
     const admin = new Actor('admin');
     const guest = new Actor('guest');
     const widget = new Widget('0');

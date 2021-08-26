@@ -43,7 +43,7 @@ export class Enforcer<
   policy: Policy;
   #notFoundError: CustomError = NotFoundError;
   #forbiddenError: CustomError = ForbiddenError;
-  #readAction: any = 'read';
+  #readAction: unknown = 'read';
 
   /**
    * Create an Enforcer, which is used to enforce an Oso policy in an app.
@@ -83,8 +83,9 @@ export class Enforcer<
     actor: Actor,
     action: Action,
     resource: Resource,
-    checkRead: boolean = true
+    options: { checkRead?: boolean } = {}
   ): Promise<void> {
+    if (typeof options.checkRead === 'undefined') options.checkRead = true;
     if (await this.policy.queryRuleOnce('allow', actor, action, resource)) {
       return;
     }
@@ -92,7 +93,7 @@ export class Enforcer<
     let isNotFound = false;
     if (action === this.#readAction) {
       isNotFound = true;
-    } else if (checkRead) {
+    } else if (options.checkRead) {
       const canRead = await this.policy.queryRuleOnce(
         'allow',
         actor,
@@ -124,7 +125,7 @@ export class Enforcer<
   async authorizedActions(
     actor: Actor,
     resource: Resource,
-    allowWildcard: boolean = false
+    options: { allowWildcard?: boolean } = {}
   ): Promise<Array<Action | '*'>> {
     const results = this.policy.queryRule(
       'allow',
@@ -133,12 +134,12 @@ export class Enforcer<
       resource
     );
     const actions = new Set<Action | '*'>();
-    for await (let result of results) {
+    for await (const result of results) {
       const action = result.get('action');
       if (action instanceof Variable) {
-        if (!allowWildcard) {
+        if (!options.allowWildcard) {
           throw new OsoError(`
-            The result of authorizedActions() contained an "unconstrained" action that could represent any action, but allow_wildcard was set to False. To fix, set allow_wildcard to True and compare with the "*" string.
+            The result of authorizedActions() contained an "unconstrained" action that could represent any action, but allowWildcard was set to False. To fix, set allowWildcard to True and compare with the "*" string.
           `);
         } else {
           return ['*'];
@@ -225,7 +226,7 @@ export class Enforcer<
     actor: Actor,
     action: Action,
     resource: Resource,
-    allowWildcard: boolean = false
+    options: { allowWildcard?: boolean } = {}
   ): Promise<Array<Field | '*'>> {
     const results = this.policy.queryRule(
       'allow_field',
@@ -235,12 +236,12 @@ export class Enforcer<
       new Variable('field')
     );
     const fields = new Set<Field | '*'>();
-    for await (let result of results) {
+    for await (const result of results) {
       const field = result.get('field');
       if (field instanceof Variable) {
-        if (!allowWildcard) {
+        if (!options.allowWildcard) {
           throw new OsoError(`
-            The result of authorizedFields() contained an "unconstrained" field that could represent any field, but allow_wildcard was set to False. To fix, set allow_wildcard to True and compare with the "*" string.
+            The result of authorizedFields() contained an "unconstrained" field that could represent any field, but allowWildcard was set to False. To fix, set allowWildcard to True and compare with the "*" string.
           `);
         } else {
           return ['*'];
