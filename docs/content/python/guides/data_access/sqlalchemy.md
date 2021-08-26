@@ -22,7 +22,7 @@ The Oso SQLAlchemy integration is available on
 `pip`:
 
 ```console
-$ pip install sqlalchemy-oso
+$ pip install sqlalchemy-oso=={{< version >}}
 ```
 
 ## Usage
