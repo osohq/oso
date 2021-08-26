@@ -123,8 +123,10 @@ def ground_constraints(polar, results, filter_plan, constraints):
 
 def builtin_filter_plan_resolver(polar, filter_plan):
     result_sets = filter_plan["result_sets"]
-    results = []
+    queries = []
+    result_type = None
     for rs in result_sets:
+        set_query = None
         set_results = {}
 
         requests = rs["requests"]
@@ -140,13 +142,24 @@ def builtin_filter_plan_resolver(polar, filter_plan):
 
             # Substitute in results from previous requests.
             ground_constraints(polar, set_results, filter_plan, constraints)
-            fetcher = polar.host.types[class_name].fetcher
-            set_results[i] = fetcher(constraints)
+            cls_type = polar.host.types[class_name]
+            query = cls_type.build_query(constraints)
+            if i != result_id:
+                set_results[i] = cls_type.exec_query(query)
+            else:
+                set_query = query
+                result_type = cls_type
 
-        results.extend(set_results[result_id])
+        queries.append(set_query)
 
-    # NOTE(steve): Not the best way to remove duplicates.
-    return [i for n, i in enumerate(results) if i not in results[:n]]
+    if len(queries) == 0:
+        return None
+
+    result_query = queries[0]
+    for q in queries[1:]:
+        result_query = result_type.combine_query(result_query, q)
+
+    return result_query
 
 
 def filter_data(polar, filter_plan, filter_plan_resolver=builtin_filter_plan_resolver):
