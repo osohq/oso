@@ -126,7 +126,7 @@ export class Enforcer<
     actor: Actor,
     resource: Resource,
     options: { allowWildcard?: boolean } = {}
-  ): Promise<Array<Action | '*'>> {
+  ): Promise<Set<Action | '*'>> {
     const results = this.policy.queryRule(
       'allow',
       actor,
@@ -142,12 +142,12 @@ export class Enforcer<
             The result of authorizedActions() contained an "unconstrained" action that could represent any action, but allowWildcard was set to False. To fix, set allowWildcard to True and compare with the "*" string.
           `);
         } else {
-          return ['*'];
+          return new Set(['*']);
         }
       }
       actions.add(action);
     }
-    return Array.from(actions);
+    return actions;
   }
 
   /**
@@ -227,7 +227,7 @@ export class Enforcer<
     action: Action,
     resource: Resource,
     options: { allowWildcard?: boolean } = {}
-  ): Promise<Array<Field | '*'>> {
+  ): Promise<Set<Field | '*'>> {
     const results = this.policy.queryRule(
       'allow_field',
       actor,
@@ -244,11 +244,11 @@ export class Enforcer<
             The result of authorizedFields() contained an "unconstrained" field that could represent any field, but allowWildcard was set to False. To fix, set allowWildcard to True and compare with the "*" string.
           `);
         } else {
-          return ['*'];
+          return new Set(['*']);
         }
       }
       fields.add(field);
     }
-    return Array.from(fields);
+    return fields;
   }
 }

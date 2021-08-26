@@ -69,13 +69,13 @@ describe(Enforcer, () => {
     });
 
     test('returns a list of actions the user is allowed to take', async () => {
-      expect(new Set(await oso.authorizedActions(guest, widget0))).toEqual(
+      expect(await oso.authorizedActions(guest, widget0)).toEqual(
         new Set(['read', 'update'])
       );
-      expect(new Set(await oso.authorizedActions(guest, widget1))).toEqual(
+      expect(await oso.authorizedActions(guest, widget1)).toEqual(
         new Set(['read'])
       );
-      expect(new Set(await oso.authorizedActions(admin, widget1))).toEqual(
+      expect(await oso.authorizedActions(admin, widget1)).toEqual(
         new Set(['read', 'update'])
       );
     });
@@ -99,7 +99,7 @@ describe(Enforcer, () => {
         await oso.authorizedActions(superadmin, widget0, {
           allowWildcard: true,
         })
-      ).toEqual(['*']);
+      ).toEqual(new Set(['*']));
     });
   });
 
@@ -170,21 +170,21 @@ describe(Enforcer, () => {
 
     test('authorizedFields returns a list of allowed fields', async () => {
       // Admins should be able to update all fields
-      expect(
-        new Set(await oso.authorizedFields(admin, 'update', widget))
-      ).toEqual(new Set(['name', 'purpose', 'private_field']));
+      expect(await oso.authorizedFields(admin, 'update', widget)).toEqual(
+        new Set(['name', 'purpose', 'private_field'])
+      );
       // Admins should be able to read all fields
-      expect(
-        new Set(await oso.authorizedFields(admin, 'read', widget))
-      ).toEqual(new Set(['name', 'purpose', 'private_field']));
+      expect(await oso.authorizedFields(admin, 'read', widget)).toEqual(
+        new Set(['name', 'purpose', 'private_field'])
+      );
       // Guests should not be able to update any fields
-      expect(await oso.authorizedFields(guest, 'update', widget)).toHaveLength(
-        0
+      expect(await oso.authorizedFields(guest, 'update', widget)).toEqual(
+        new Set()
       );
       // Guests should be able to read public fields
-      expect(
-        new Set(await oso.authorizedFields(guest, 'read', widget))
-      ).toEqual(new Set(['name', 'purpose']));
+      expect(await oso.authorizedFields(guest, 'read', widget)).toEqual(
+        new Set(['name', 'purpose'])
+      );
     });
   });
 
