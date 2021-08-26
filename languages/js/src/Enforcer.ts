@@ -2,13 +2,19 @@ import { ForbiddenError, NotFoundError, OsoError } from './errors';
 import { Policy } from './Oso';
 import { Variable } from './Variable';
 
+type CustomError = new (...args: any[]) => Error;
+
 export interface EnforcerOptions<Action> {
   /**
-   * Optionally override the method used to build errors raised by the
-   * `authorize` and `authorizeRequest` methods. Should be a callable that takes
-   * one argument `isNotFound` and returns an instance of an error.
+   * Optionally override the "not found" error class thrown by `authorize`.
+   * Defaults to {@link NotFoundError}.
    */
-  getError?: (isNotFound: boolean) => Error;
+  notFoundError?: CustomError;
+  /**
+   * Optionally override the "forbidden" error class thrown by the `authorize*`
+   * methods. Defaults to {@link ForbiddenError}.
+   */
+  forbiddenError?: CustomError;
   /**
    * The action used by the `authorize` method to determine whether an
    * authorization failure should raise a `NotFoundError` or a `ForbiddenError`.
@@ -29,13 +35,14 @@ function defaultGetError(isNotFound: boolean) {
  */
 export class Enforcer<
   Actor = unknown,
-  Action = String,
+  Action = unknown,
   Resource = unknown,
-  Field = String,
+  Field = unknown,
   Request = unknown
 > {
   policy: Policy;
-  #getError: (isNotFound: boolean) => Error = defaultGetError;
+  #notFoundError: CustomError = NotFoundError;
+  #forbiddenError: CustomError = ForbiddenError;
   #readAction: any = 'read';
 
   /**
@@ -47,7 +54,8 @@ export class Enforcer<
   constructor(policy: Policy, options: EnforcerOptions<Action> = {}) {
     this.policy = policy;
 
-    if (options.getError) this.#getError = options.getError;
+    if (options.notFoundError) this.#notFoundError = options.notFoundError;
+    if (options.forbiddenError) this.#forbiddenError = options.forbiddenError;
     if (options.readAction) this.#readAction = options.readAction;
   }
 
@@ -77,24 +85,26 @@ export class Enforcer<
     resource: Resource,
     checkRead: boolean = true
   ): Promise<void> {
-    if (!(await this.policy.queryRuleOnce('allow', actor, action, resource))) {
-      let isNotFound = false;
-      if (action == this.#readAction) {
-        isNotFound = true;
-      } else if (checkRead) {
-        if (
-          !(await this.policy.queryRuleOnce(
-            'allow',
-            actor,
-            this.#readAction,
-            resource
-          ))
-        ) {
-          isNotFound = true;
-        }
-      }
-      throw this.#getError(isNotFound);
+    if (await this.policy.queryRuleOnce('allow', actor, action, resource)) {
+      return;
     }
+
+    let isNotFound = false;
+    if (action === this.#readAction) {
+      isNotFound = true;
+    } else if (checkRead) {
+      const canRead = await this.policy.queryRuleOnce(
+        'allow',
+        actor,
+        this.#readAction,
+        resource
+      );
+      if (!canRead) {
+        isNotFound = true;
+      }
+    }
+    const ErrorClass = isNotFound ? this.#notFoundError : this.#forbiddenError;
+    throw new ErrorClass();
   }
 
   /**
@@ -153,8 +163,13 @@ export class Enforcer<
    *   actor.
    */
   async authorizeRequest(actor: Actor, request: Request): Promise<void> {
-    if (!(await this.policy.queryRuleOnce('allow_request', actor, request))) {
-      throw this.#getError(false);
+    const isAllowed = await this.policy.queryRuleOnce(
+      'allow_request',
+      actor,
+      request
+    );
+    if (!isAllowed) {
+      throw new this.#forbiddenError();
     }
   }
 
@@ -178,16 +193,15 @@ export class Enforcer<
     resource: Resource,
     field: Field
   ): Promise<void> {
-    if (
-      !(await this.policy.queryRuleOnce(
-        'allow_field',
-        actor,
-        action,
-        resource,
-        field
-      ))
-    ) {
-      throw this.#getError(false);
+    const isAllowed = await this.policy.queryRuleOnce(
+      'allow_field',
+      actor,
+      action,
+      resource,
+      field
+    );
+    if (!isAllowed) {
+      throw new this.#forbiddenError();
     }
   }
 

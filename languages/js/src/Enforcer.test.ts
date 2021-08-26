@@ -188,18 +188,20 @@ describe(Enforcer, () => {
 
   describe('configuration', () => {
     test('getError overrides the error that is thrown', async () => {
-      class TestError extends Error {
-        constructor(public isNotFound: boolean) {
-          super();
-        }
-      }
+      class TestNotFound extends Error {}
+      class TestForbidden extends Error {}
       const policy = new Policy();
+      policy.loadStr(`allow("graham", "read", "bar");`);
       const enforcer = new Enforcer(policy, {
-        getError: isNotFound => new TestError(isNotFound),
+        notFoundError: TestNotFound,
+        forbiddenError: TestForbidden,
       });
 
+      await expect(enforcer.authorize('graham', 'frob', 'foo')).rejects.toThrow(
+        TestNotFound
+      );
       await expect(enforcer.authorize('graham', 'frob', 'bar')).rejects.toThrow(
-        expect.objectContaining({ isNotFound: true })
+        TestForbidden
       );
     });
 

@@ -5,14 +5,10 @@ import { repr } from './helpers';
  */
 export class OsoError extends Error {
   constructor(message?: string) {
+    // If we ever switch to supporting ES5, we'll have to make sure that
+    // OsoError prototypes are properly getting set.
     // See: https://stackoverflow.com/questions/41102060/typescript-extending-error-class/48342359#48342359
     super(message);
-    const actualProto = new.target.prototype;
-    if (Object.setPrototypeOf) {
-      Object.setPrototypeOf(this, actualProto);
-    } else {
-      (this as any).__proto__ = actualProto;
-    }
   }
 }
 
