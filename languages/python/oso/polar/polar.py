@@ -292,7 +292,7 @@ class Polar:
         """
         return self.host.get_class(name)
 
-    def authorized_query(self, actor, action, cls) -> any:
+    def authorized_query(self, actor, action, cls):
         """
         Returns a query for the resources the actor is allowed to perform action on.
         The query is built by using the build_query and combine_query methods registered for the type.
@@ -370,7 +370,7 @@ class Polar:
 
         return filter_data(self, plan)
 
-    def authorized_resources(self, actor, action, cls) -> any:
+    def authorized_resources(self, actor, action, cls):
         query = self.authorized_query(actor, action, cls)
         if query is None:
             return []
