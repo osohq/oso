@@ -36,15 +36,17 @@ module Oso
 
     # For holding type metadata: name, fields, etc.
     class UserType
-      attr_reader :name, :klass, :id, :fields, :fetcher
+      attr_reader :name, :klass, :id, :fields, :build_query, :combine_query, :exec_query
 
-      def initialize(name:, klass:, id:, fields:, fetcher:)
+      def initialize(name:, klass:, id:, fields:, build_query:, combine_query:, exec_query:) # rubocop:disable Metrics/ParameterLists
         @name = name
         @klass = klass
         @id = id
         # accept symbol keys
         @fields = fields.each_with_object({}) { |kv, o| o[kv[0].to_s] = kv[1] }
-        @fetcher = fetcher
+        @build_query = build_query
+        @combine_query = combine_query
+        @exec_query = exec_query
       end
     end
 
@@ -97,15 +99,17 @@ module Oso
       # @return [String] the name the class is cached as.
       # @raise [DuplicateClassAliasError] if attempting to register a class
       # under a previously-registered name.
-      def cache_class(cls, name:, fields: {}, fetcher: nil)
+      def cache_class(cls, name:, fields:, build_query:, combine_query:, exec_query:) # rubocop:disable Metrics/ParameterLists, Metrics/MethodLength
         raise DuplicateClassAliasError.new name: name, old: get_class(name), new: cls if types.key? name
 
         types[name] = types[cls] = UserType.new(
           name: name,
           klass: PolarClass.new(cls),
           id: cache_instance(cls),
-          fields: fields,
-          fetcher: fetcher
+          fields: fields || {},
+          combine_query: combine_query,
+          exec_query: exec_query,
+          build_query: build_query
         )
         name
       end

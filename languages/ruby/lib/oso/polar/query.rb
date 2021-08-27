@@ -18,6 +18,76 @@ module Oso
         bindings.each { |k, v| ffi_query.bind k, host.to_polar(v) }
       end
 
+      # Create a generator that can be polled to advance the query loop.
+      #
+      # @yieldparam [Hash<String, Object>]
+      # @return [Enumerator]
+      # @raise [Error] if any of the FFI calls raise one.
+      def each # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+        loop do # rubocop:disable Metrics/BlockLength
+          event = ffi_query.next_event
+          case event.kind
+          when 'Done'
+            break
+          when 'Result'
+            yield event.data['bindings'].transform_values { |v| host.to_ruby(v) }
+          when 'MakeExternal'
+            handle_make_external(event.data)
+          when 'ExternalIsaWithPath'
+            handle_external_isa_with_path(event.data)
+          when 'ExternalCall'
+            call_id = event.data['call_id']
+            instance = event.data['instance']
+            attribute = event.data['attribute']
+            args = event.data['args'] || []
+            kwargs = event.data['kwargs'] || {}
+            handle_call(attribute, call_id: call_id, instance: instance, args: args, kwargs: kwargs)
+          when 'ExternalIsSubSpecializer'
+            instance_id = event.data['instance_id']
+            left_tag = event.data['left_class_tag']
+            right_tag = event.data['right_class_tag']
+            answer = host.subspecializer?(instance_id, left_tag: left_tag, right_tag: right_tag)
+            question_result(answer, call_id: event.data['call_id'])
+          when 'ExternalIsSubclass'
+            call_id = event.data['call_id']
+            left = event.data['left_class_tag']
+            right = event.data['right_class_tag']
+            answer = host.subclass?(left_tag: left, right_tag: right)
+            question_result(answer, call_id: call_id)
+          when 'ExternalIsa'
+            instance = event.data['instance']
+            class_tag = event.data['class_tag']
+            answer = host.isa?(instance, class_tag: class_tag)
+            question_result(answer, call_id: event.data['call_id'])
+          when 'Debug'
+            msg = event.data['message']
+            if msg
+              msg = host.enrich_message(msg) if msg
+              puts msg
+            end
+            print 'debug> '
+            begin
+              input = $stdin.readline.chomp.chomp(';')
+            rescue EOFError
+              next
+            end
+            command = JSON.dump(host.to_polar(input))
+            ffi_query.debug_command(command)
+          when 'ExternalOp'
+            op = event.data['operator']
+            args = event.data['args'].map(&host.method(:to_ruby))
+            answer = host.operator(op, args)
+            question_result(answer, call_id: event.data['call_id'])
+          when 'NextExternal'
+            call_id = event.data['call_id']
+            iterable = event.data['iterable']
+            handle_next_external(call_id, iterable)
+          else
+            raise "Unhandled event: #{JSON.dump(event.inspect)}"
+          end
+        end
+      end
+
       private
 
       # @return [Hash<Integer, Enumerator>]
@@ -152,76 +222,6 @@ module Oso
         host.make_instance(cls_name, args: args, kwargs: kwargs, id: id)
       end
 
-      # Create a generator that can be polled to advance the query loop.
-      #
-      # @yieldparam [Hash<String, Object>]
-      # @return [Enumerator]
-      # @raise [Error] if any of the FFI calls raise one.
-      def each # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
-        loop do # rubocop:disable Metrics/BlockLength
-          event = ffi_query.next_event
-          case event.kind
-          when 'Done'
-            break
-          when 'Result'
-            yield event.data['bindings'].transform_values { |v| host.to_ruby(v) }
-          when 'MakeExternal'
-            handle_make_external(event.data)
-          when 'ExternalIsaWithPath'
-            handle_external_isa_with_path(event.data)
-          when 'ExternalCall'
-            call_id = event.data['call_id']
-            instance = event.data['instance']
-            attribute = event.data['attribute']
-            args = event.data['args'] || []
-            kwargs = event.data['kwargs'] || {}
-            handle_call(attribute, call_id: call_id, instance: instance, args: args, kwargs: kwargs)
-          when 'ExternalIsSubSpecializer'
-            instance_id = event.data['instance_id']
-            left_tag = event.data['left_class_tag']
-            right_tag = event.data['right_class_tag']
-            answer = host.subspecializer?(instance_id, left_tag: left_tag, right_tag: right_tag)
-            question_result(answer, call_id: event.data['call_id'])
-          when 'ExternalIsSubclass'
-            call_id = event.data['call_id']
-            left = event.data['left_class_tag']
-            right = event.data['right_class_tag']
-            answer = host.subclass?(left_tag: left, right_tag: right)
-            question_result(answer, call_id: call_id)
-          when 'ExternalIsa'
-            instance = event.data['instance']
-            class_tag = event.data['class_tag']
-            answer = host.isa?(instance, class_tag: class_tag)
-            question_result(answer, call_id: event.data['call_id'])
-          when 'Debug'
-            msg = event.data['message']
-            if msg
-              msg = host.enrich_message(msg) if msg
-              puts msg
-            end
-            print 'debug> '
-            begin
-              input = $stdin.readline.chomp.chomp(';')
-            rescue EOFError
-              next
-            end
-            command = JSON.dump(host.to_polar(input))
-            ffi_query.debug_command(command)
-          when 'ExternalOp'
-            op = event.data['operator']
-            args = event.data['args'].map(&host.method(:to_ruby))
-            answer = host.operator(op, args)
-            question_result(answer, call_id: event.data['call_id'])
-          when 'NextExternal'
-            call_id = event.data['call_id']
-            iterable = event.data['iterable']
-            handle_next_external(call_id, iterable)
-          else
-            raise "Unhandled event: #{JSON.dump(event.inspect)}"
-          end
-        end
-      end
-
       def get_relationship(cls, attr)
         typ = host.types[cls]
         return unless typ
@@ -233,13 +233,13 @@ module Oso
       end
 
       def handle_relationship(call_id, instance, rel) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-        fetcher = host.types[rel.other_type].fetcher
+        typ = host.types[rel.other_type]
         constraint = ::Oso::Polar::DataFiltering::Constraint.new(
           kind: 'Eq',
           field: rel.other_field,
           value: instance.send(rel.my_field)
         )
-        res = fetcher[[constraint]].uniq
+        res = typ.exec_query[typ.build_query[[constraint]]]
 
         if rel.kind == 'parent'
           raise "multiple parents: #{res}" unless res.length == 1
