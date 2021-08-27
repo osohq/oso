@@ -3,79 +3,79 @@ use lsp_types::{
     DidOpenTextDocumentParams, Position, Range, RenameFilesParams, TextDocumentItem,
 };
 use polar_core::error::PolarError;
-
-use crate::Polar;
+use tracing::debug;
 
 use super::Backend;
 
-pub async fn open_document(
-    backend: &Backend,
-    params: DidOpenTextDocumentParams,
-) -> crate::Result<()> {
-    let mut polar = backend.analyzer.write().await;
-    let TextDocumentItem { text, uri, .. } = params.text_document;
-    try_load_file(&mut polar, text, uri, backend).await;
-    Ok(())
-}
+impl Backend {
+    pub async fn open_document(&self, params: DidOpenTextDocumentParams) -> crate::Result<()> {
+        let TextDocumentItem { text, uri, .. } = params.text_document;
+        self.try_load_file(text, uri).await;
+        Ok(())
+    }
 
-async fn try_load_file(polar: &mut Polar, src: String, uri: lsp_types::Url, backend: &Backend) {
-    let mut diagnostics = vec![];
-    if let Err(e) = polar.load(&src, uri.as_str()) {
-        diagnostics.push(error_to_diagnostic(e))
-    } else {
-        for (rule_error, start, end) in polar.get_unused_rules(uri.as_str()) {
-            let diagnostic = Diagnostic {
-                severity: Some(DiagnosticSeverity::Warning),
-                message: format!("Rule does not exist: {}", rule_error),
-                range: polar
-                    .source_map
-                    .location_to_range(uri.as_str(), start, end)
-                    .unwrap(),
-                ..Default::default()
-            };
-            diagnostics.push(diagnostic);
+    pub async fn edit_document(&self, params: DidChangeTextDocumentParams) -> crate::Result<()> {
+        let uri = params.text_document.uri;
+        if params.content_changes.len() > 1 {
+            anyhow::bail!("not sure how to handle multiple changes to the same file")
         }
-    }
-
-    backend
-        .client
-        .publish_diagnostics(uri, diagnostics, None)
-        .await
-}
-
-pub async fn edit_document(
-    backend: &Backend,
-    params: DidChangeTextDocumentParams,
-) -> crate::Result<()> {
-    let mut polar = backend.analyzer.write().await;
-    let uri = params.text_document.uri;
-    if params.content_changes.len() > 1 {
-        anyhow::bail!("not sure how to handle multiple changes to the same file")
-    }
-    for change in params.content_changes {
-        if change.range.is_some() {
-            anyhow::bail!("incremental changes are not yet supported")
+        for change in params.content_changes {
+            if change.range.is_some() {
+                anyhow::bail!("incremental changes are not yet supported")
+            }
+            let src = change.text;
+            self.try_load_file(src, uri.clone()).await;
         }
-        let src = change.text;
-        try_load_file(&mut polar, src, uri.clone(), backend).await;
+        Ok(())
     }
-    Ok(())
-}
 
-pub fn rename_files(polar: &Polar, params: RenameFilesParams) -> crate::Result<()> {
-    for rename in params.files {
-        let old = rename.old_uri;
-        let new = rename.new_uri;
-        polar.rename(&old, &new)?;
-    }
-    Ok(())
-}
+    pub async fn rename_files(&self, params: RenameFilesParams) -> crate::Result<()> {
+        let polar = self.analyzer.read().await;
 
-pub fn delete_files(polar: &Polar, params: DeleteFilesParams) -> crate::Result<()> {
-    for deletion in params.files {
-        polar.delete(&deletion.uri);
+        for rename in params.files {
+            let old = self.uri_to_string(&rename.old_uri).await;
+            let new = self.uri_to_string(&rename.new_uri).await;
+            polar.rename(&old, &new)?;
+        }
+        Ok(())
     }
-    Ok(())
+
+    pub async fn delete_files(&self, params: DeleteFilesParams) -> crate::Result<()> {
+        let polar = self.analyzer.read().await;
+
+        for deletion in params.files {
+            let filename = self.uri_to_string(&deletion.uri).await;
+            polar.delete(&filename);
+        }
+        Ok(())
+    }
+
+    async fn try_load_file(&self, src: String, uri: lsp_types::Url) {
+        let filename = self.uri_to_string(&uri).await;
+        let polar = self.analyzer.write().await;
+        debug!("Loading: {} as {}", uri, filename);
+        let mut diagnostics = vec![];
+        if let Err(e) = polar.load(&src, &filename) {
+            diagnostics.push(error_to_diagnostic(e))
+        } else {
+            for (rule_error, start, end) in polar.get_unused_rules(&filename) {
+                let diagnostic = Diagnostic {
+                    severity: Some(DiagnosticSeverity::Warning),
+                    message: format!("Rule does not exist: {}", rule_error),
+                    range: polar
+                        .source_map
+                        .location_to_range(&filename, start, end)
+                        .unwrap(),
+                    ..Default::default()
+                };
+                diagnostics.push(diagnostic);
+            }
+        }
+
+        self.client
+            .publish_diagnostics(uri, diagnostics, None)
+            .await
+    }
 }
 
 fn error_to_diagnostic(error: PolarError) -> Diagnostic {

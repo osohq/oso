@@ -58,6 +58,7 @@ fn main() {
 }
 
 fn try_main() -> xflags::Result<()> {
+    tracing_subscriber::fmt::init();
     let flags = flags::PolarAnalyzer::from_env()?;
     match flags.subcommand {
         flags::PolarAnalyzerCmd::LspServer(flags::LspServer { tcp }) => {
@@ -69,7 +70,9 @@ fn try_main() -> xflags::Result<()> {
                 Some(port) => rt
                     .block_on(polar_analyzer::server::run_tcp_server(None, port))
                     .unwrap(),
-                None => rt.block_on(polar_analyzer::server::run_stdio_server(None)),
+                None => rt
+                    .block_on(polar_analyzer::server::run_stdio_server(None))
+                    .unwrap(),
             };
         }
     }

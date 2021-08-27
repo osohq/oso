@@ -34,6 +34,7 @@ pub fn find_missing_rules(kb: &KnowledgeBase, filename: &str) -> Vec<UnusedRule>
                 Line::Query(q) => {
                     visitor.visit_term(&q);
                 }
+                _ => {}
             }
         }
     }

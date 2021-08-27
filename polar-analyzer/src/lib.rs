@@ -106,6 +106,8 @@ impl Polar {
 }
 
 pub fn run_polar_analyzer(inner: polar::Polar, port: u32) {
+    tracing_subscriber::fmt::init();
+
     let source_map = SourceMap::default();
     {
         let kb = inner.kb.read().unwrap();

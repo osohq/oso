@@ -979,7 +979,6 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "indoc",
- "log",
  "lsp-types",
  "polar-core",
  "serde",
@@ -987,6 +986,8 @@ dependencies = [
  "serde_path_to_error",
  "tokio",
  "tower-lsp",
+ "tracing",
+ "tracing-subscriber",
  "xflags",
 ]
 
@@ -1707,8 +1708,6 @@ dependencies = [
 [[package]]
 name = "tower-lsp"
 version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "701465c44f9e5655785b1420f3dea1d33d15f2fea2e0a65d25c4fd91ec0e6238"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -1729,8 +1728,6 @@ dependencies = [
 [[package]]
 name = "tower-lsp-macros"
 version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb72acc00b574cffa151d0725b3b26404554b371b4c6e059c58eb23f9f097140"
 dependencies = [
  "heck",
  "proc-macro2",

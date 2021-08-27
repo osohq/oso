@@ -1,15 +1,22 @@
 import * as path from 'path';
-import { workspace, ExtensionContext } from 'vscode';
+import { window, workspace, ExtensionContext, commands, WorkspaceSymbolProvider, SymbolInformation, SymbolKind } from 'vscode';
 
 import * as net from 'net';
 
 import {
+	ClientCapabilities,
+	DocumentSelector,
 	Executable,
+	InitializeParams,
 	integer,
 	LanguageClient,
 	LanguageClientOptions,
+	RequestType,
+	ServerCapabilities,
 	ServerOptions,
+	StaticFeature,
 	StreamInfo,
+	TextDocumentFeature,
 } from 'vscode-languageclient/node';
 
 let client: LanguageClient;
@@ -19,7 +26,7 @@ type LspServerConfig = {
 	port: integer,
 }
 
-export function activate(context: ExtensionContext) {
+export async function activate(context: ExtensionContext) {
 	const config = workspace.getConfiguration("polarAnalyzer");
 	const lsp: LspServerConfig = config.get("lspServer");
 
@@ -62,6 +69,16 @@ export function activate(context: ExtensionContext) {
 		}
 	}
 
+	const output = window.createOutputChannel("Oso Extension");
+
+	const log = function (kind, msg) {
+		output.appendLine(`[${kind}] ${msg}`);
+	};
+	const info = (msg) => log("info", msg);
+	// const warn = (msg) => log("warn", msg);
+	// const error = (msg) => log("error", msg);
+
+
 	// Options to control the language client
 	const clientOptions: LanguageClientOptions = {
 		// Register the server for plain text documents
@@ -69,7 +86,8 @@ export function activate(context: ExtensionContext) {
 		synchronize: {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
 			fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
-		}
+		},
+		outputChannel: output
 	};
 
 	// Create the language client and start the client.
@@ -80,9 +98,36 @@ export function activate(context: ExtensionContext) {
 		clientOptions
 	);
 
-	// Start the client. This will also launch the server
+	// client.registerFeature(new SymbolLookupFeature());
+	info("The channel works!");
+	client.onReady().then(() => {
+		info("Configuring the getAllSymbols handler");
+		// the client handles a method for polar analyer, to find all workspace params
+		client.onRequest(getAllSymbols, async (_) => {
+			info("Got a request to get all workspace symbols!");
+			// const symbols = [];
+			const symbols: SymbolInformation[] = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', "");
+			info(`Symbols: ${symbols}`);
+			return {
+				"classes": symbols.filter(sym =>
+					sym.kind === SymbolKind.Class
+				).map(sym => sym.name)
+			};
+		});
+	});
+
 	client.start();
 }
+
+const getAllSymbols = new RequestType<GetAllSymbolsParams, Symbols, void>("polar-analyzer/getAllSymbols");
+
+type GetAllSymbolsParams = Record<string, never>;
+
+interface Symbols {
+	classes: string[]
+}
+
+
 
 export function deactivate(): Thenable<void> | undefined {
 	if (!client) {

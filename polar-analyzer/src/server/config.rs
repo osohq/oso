@@ -20,7 +20,7 @@ pub fn server_capabilities() -> ServerCapabilities {
                 did_delete: Some(FileOperationRegistrationOptions {
                     filters: vec![FileOperationFilter {
                         pattern: FileOperationPattern {
-                            glob: "**/*.polar".to_string(),
+                            glob: "*".to_string(),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -29,7 +29,7 @@ pub fn server_capabilities() -> ServerCapabilities {
                 did_rename: Some(FileOperationRegistrationOptions {
                     filters: vec![FileOperationFilter {
                         pattern: FileOperationPattern {
-                            glob: "**/*.polar".to_string(),
+                            glob: "*".to_string(),
                             ..Default::default()
                         },
                         ..Default::default()

@@ -2,6 +2,7 @@ use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, Documentation,
     InsertTextFormat,
 };
+use tracing::error;
 
 pub fn get_completions(_params: CompletionParams) -> Option<CompletionResponse> {
     let resp = CompletionResponse::Array(vec![CompletionItem {
@@ -29,10 +30,10 @@ pub fn resolve_completion(mut item: CompletionItem) -> CompletionItem {
                     Some("allow(${1:actor}, ${2:action}, ${3:resource}) if\n    $0;".to_string());
                 item.insert_text_format = Some(InsertTextFormat::Snippet);
             }
-            d => eprintln!("Unsupported completion index: {}", d),
+            d => error!("Unsupported completion index: {}", d),
         }
     } else {
-        eprintln!("No completion data to resolve for: {:#?}", item)
+        error!("No completion data to resolve for: {:#?}", item)
     }
     item
 }
