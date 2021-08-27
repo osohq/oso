@@ -3,9 +3,20 @@ package com.osohq.oso;
 import java.util.HashSet;
 import java.util.stream.Collectors;
 
+/**
+ * NOTE: This is a preview feature.
+ *
+ * <p>Exposes high-level enforcement APIs which can be used by apps to perform resource-, request-,
+ * and query-level authorization.
+ */
 public class Enforcer {
   public Oso policy;
   private Object readAction = "read";
+
+  public Enforcer(Oso policy, Object readAction) {
+    this.policy = policy;
+    this.readAction = readAction;
+  }
 
   public Enforcer(Oso policy) {
     this.policy = policy;

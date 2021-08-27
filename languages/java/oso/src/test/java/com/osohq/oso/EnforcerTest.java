@@ -211,4 +211,15 @@ public class EnforcerTest {
     assertEquals(
         oso.authorizedFields(guest, "read", widget), new HashSet(Arrays.asList("name", "purpose")));
   }
+
+  @Test
+  public void testCustomReadAction() throws Exception {
+    policy = new Oso();
+    policy.loadStr("allow(\"graham\", \"fetch\", \"bar\");");
+    oso = new Enforcer(policy, "fetch");
+    assertThrows(Exceptions.NotFoundException.class, () -> oso.authorize("sam", "frob", "bar"));
+    // A user who can "fetch" should get a ForbiddenError instead of a
+    // NotFoundError
+    assertThrows(Exceptions.ForbiddenException.class, () -> oso.authorize("graham", "frob", "bar"));
+  }
 }
