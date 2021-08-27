@@ -117,7 +117,7 @@ module Oso
 
       # Returns a query for the resources belonging to +cls+ that +actor+
       # is allowed to perform +action+ on.
-      def authorized_query(actr, actn, cls) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+      def authorized_query(actr, actn, cls) # rubocop:disable Metrics/MethodLength
         rsrc = Variable.new 'resource'
 
         results = query_rule(
@@ -129,19 +129,15 @@ module Oso
           accept_expression: true
         )
 
-        complete, partial = results.each_with_object([[], []]) do |result, out|
+        results = results.each_with_object([]) do |result, out|
           result.each do |key, val|
-            if val.is_a? Expression
-              out[1].push({ 'bindings' => { key => host.to_polar(val) } })
-            else
-              out[0].push val
-            end
+            out.push({ 'bindings' => { key => host.to_polar(val) } })
           end
         end
 
-        complete.each_with_object(
-          ::Oso::Polar::DataFiltering::FilterPlan.parse(self, partial, get_class_name(cls))
-        ) { |obj, f| f.add obj }.build_query
+        ::Oso::Polar::DataFiltering::FilterPlan
+          .parse(self, results, get_class_name(cls))
+          .build_query
       end
 
       def authorized_resources(actr, actn, cls)

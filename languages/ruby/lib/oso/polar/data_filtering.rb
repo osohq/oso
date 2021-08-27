@@ -24,27 +24,6 @@ module Oso
           @result_sets = result_sets
         end
 
-        def add(obj) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
-          typ = @polar.host.types[obj.class]
-          raise "Can't filter unregistered class #{obj.class}" if typ.nil?
-
-          cons = []
-          typ.fields.each do |f, t|
-            cons.push(Constraint.new(kind: 'Eq', field: f, value: obj.send(f))) unless t.is_a? Relationship
-          end
-
-          result_sets.push ResultSet.new(
-            result_id: 0,
-            resolve_order: [0],
-            requests: {
-              0 => Request.new(
-                constraints: cons,
-                class_tag: typ.name
-              )
-            }
-          )
-        end
-
         def build_query # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
           combine = nil
           result_sets.each_with_object([]) do |rs, qb|
