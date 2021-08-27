@@ -56,6 +56,22 @@ public class Enforcer {
     throw isNotFound ? new Exceptions.NotFoundException() : new Exceptions.ForbiddenException();
   }
 
+  public void authorizeRequest(Object actor, Object request)
+      throws Exceptions.OsoException {
+    boolean authorized = policy.queryRuleOnce("allow_request", actor, request);
+    if (!authorized) {
+      throw new Exceptions.ForbiddenException();
+    }
+  }
+
+  public void authorizeField(Object actor, Object action, Object resource, Object field)
+      throws Exceptions.OsoException {
+    boolean authorized = policy.queryRuleOnce("allow_field", actor, action, resource, field);
+    if (!authorized) {
+      throw new Exceptions.ForbiddenException();
+    }
+  }
+
   /**
    * Return the allowed actions for the given actor and resource, if any.
    *
@@ -113,6 +129,54 @@ public class Enforcer {
                 }
               } else {
                 return action.get("action");
+              }
+            })
+        .collect(Collectors.toCollection(HashSet::new));
+  }
+
+  /**
+   * Return the allowed fields for the given actor and resource, if any.
+   *
+   * @param actor the actor performing the request
+   * @param action the action being performed on the field
+   * @param resource the resource on which the field lives
+   * @return HashSet<Object>
+   * @throws Exceptions.OsoException
+   */
+  public HashSet<Object> authorizedFields(Object actor, Object action, Object resource)
+      throws Exceptions.OsoException {
+    return authorizedFields(actor, action, resource, false);
+  }
+
+  /**
+   * Return the allowed fields for the given actor and resource, if any. Explicitly allow or
+   * disallow wildcard fields. If allowed, wildcard fields are represented as "*".
+   *
+   * @param actor the actor performing the request
+   * @param action the action being performed on the field
+   * @param resource the resource on which the field lives
+   * @param allowWildcard whether or not to allow wildcard fields
+   * @return HashSet<Object>
+   * @throws Exceptions.OsoException
+   */
+  public HashSet<Object> authorizedFields(Object actor, Object action, Object resource, boolean allowWildcard)
+      throws Exceptions.OsoException {
+    return policy.queryRule("allow_field", actor, action, resource, new Variable("field")).results().stream()
+        .map(
+            field -> {
+              if (field.get("field") instanceof Variable) {
+                if (!allowWildcard) {
+                  throw new Exceptions.OsoException(
+                      "\"The result of authorizedFields contained an \"unconstrained\" field that"
+                          + " could represent any\n"
+                          + " field, but allowWildcard was set to false. To fix,\n"
+                          + " set allowWildcard to true and compare with the \"*\"\n"
+                          + " string.\"");
+                } else {
+                  return "*";
+                }
+              } else {
+                return field.get("field");
               }
             })
         .collect(Collectors.toCollection(HashSet::new));
