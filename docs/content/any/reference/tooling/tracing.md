@@ -11,7 +11,14 @@ Polar tracing shows logs of how a query is evaluated.
 
 ## Enabling Tracing
 
+
+{{% ifLang not="rust" %}}
 Debug mode is enabled by setting an environment variable: `POLAR_LOG=1`.
+{{% /ifLang %}}
+
+{{% ifLang "rust" %}}
+Debug mode is enabled by setting an environment variable: `POLAR_LOG=now`.
+{{% /ifLang %}}
 
 It will print out `[debug]` messages during query evaluation that show how the query is executed.
 Notable things include:
