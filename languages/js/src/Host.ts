@@ -32,6 +32,22 @@ import {
 } from './types';
 import { map } from '../test/helpers';
 
+export class UserType {
+  name: string;
+  class: any;
+  fields: Map<string, any>;
+  id: number;
+  fetcher: any;
+
+  constructor({ name, class: cls, fields, id, fetcher }: any) {
+    this.name = name;
+    this.class = cls;
+    this.fields = fields;
+    this.id = id;
+    this.fetcher = fetcher;
+  }
+}
+
 /**
  * Translator between Polar and JavaScript.
  *
@@ -44,6 +60,7 @@ export class Host {
   clsNames: Map<Class, string>;
   #instances: Map<number, any>;
   types: Map<string, Map<string, any>>;
+  userTypes: Map<any, UserType>;
   fetchers: Map<string, any>;
   #equalityFn: EqualityFn;
 
@@ -61,6 +78,7 @@ export class Host {
     clone.clsNames = new Map(host.clsNames);
     clone.types = new Map(host.types);
     clone.fetchers = new Map(host.fetchers);
+    clone.userTypes = new Map(host.userTypes);
     return clone;
   }
 
@@ -74,6 +92,7 @@ export class Host {
     this.types = new Map();
     this.fetchers = new Map();
     this.#equalityFn = equalityFn;
+    this.userTypes = new Map();
   }
 
   /**

@@ -9,7 +9,7 @@ import {
   PolarFileNotFoundError,
 } from './errors';
 import { Query } from './Query';
-import { Host } from './Host';
+import { Host, UserType } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
@@ -268,6 +268,15 @@ export class Polar {
   ): void {
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const clsName = this.#host.cacheClass(cls, alias);
+    const userType = new UserType({
+      name: clsName,
+      class: cls,
+      fetcher: fetcher,
+      fields: types,
+      id: 0,
+    });
+    this.#host.userTypes.set(cls, userType);
+    this.#host.userTypes.set(clsName, userType);
     this.registerConstant(cls, clsName);
     this.#host.clsNames.set(cls, clsName);
     if (types != null) {
