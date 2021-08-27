@@ -322,8 +322,6 @@ class Polar:
             accept_expression=True,
         )
 
-        # @TODO: How do you deal with value results in the query case?
-        # Do we get them into the filter plan as constraints somehow?
         results = [
             {"bindings": {k: self.host.to_polar(v)}}
             for result in query
