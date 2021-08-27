@@ -66,15 +66,15 @@ describe('#registerClass', () => {
   test('errors when registering the same alias twice', () => {
     const p = new Polar();
     expect(() => p.registerClass(Actor)).not.toThrow();
-    expect(() => p.registerClass(User, 'Actor')).toThrow(
+    expect(() => p.registerClass(User, 'Actor', { name: 'Actor' })).toThrow(
       DuplicateClassAliasError
     );
   });
 
   test('can register the same class under different aliases', async () => {
     const p = new Polar();
-    p.registerClass(A, 'A');
-    p.registerClass(A, 'B');
+    p.registerClass(A, 'A', { name: 'A' });
+    p.registerClass(A, 'B', { name: 'B' });
     expect(await query(p, 'new A().a() = new B().a()')).toStrictEqual([map()]);
   });
 
@@ -445,7 +445,7 @@ describe('#clearRules', () => {
 
   test('does not clear registered classes', async () => {
     const p = new Polar();
-    p.registerClass(Belonger, 'Actor');
+    p.registerClass(Belonger, 'Actor', { name: 'Actor' });
     p.clearRules();
     expect(await query(p, 'x = new Actor()')).toHaveLength(1);
   });
@@ -469,7 +469,7 @@ describe('#queryRule', () => {
   describe('querying for a predicate', () => {
     test('can return a list', async () => {
       const p = new Polar();
-      p.registerClass(Belonger, 'Actor');
+      p.registerClass(Belonger, 'Actor', { name: 'Actor' });
       await p.loadStr(
         'allow(actor: Actor, "join", "party") if "social" in actor.groups();'
       );
@@ -816,7 +816,7 @@ describe('iterators', () => {
 
   test('fails for non iterables', async () => {
     const p = new Polar();
-    p.registerClass(NonIterable, 'NonIterable');
+    p.registerClass(NonIterable);
     await expect(query(p, 'x in new NonIterable()')).rejects.toThrow(
       InvalidIteratorError
     );
@@ -824,7 +824,7 @@ describe('iterators', () => {
 
   test('work for custom classes', async () => {
     const p = new Polar();
-    p.registerClass(BarIterator, 'BarIterator');
+    p.registerClass(BarIterator);
     expect(await qvar(p, 'x in new BarIterator([1, 2, 3])', 'x')).toStrictEqual(
       [1, 2, 3]
     );

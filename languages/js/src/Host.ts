@@ -36,12 +36,18 @@ export class UserType {
   class: any;
   fields: Map<string, any>;
   fetcher: any;
+  buildQuery: any;
+  execQuery: any;
+  combineQuery: any;
 
-  constructor({ name, class: cls, fields, fetcher }: any) {
+  constructor({ name, class: cls, fields, fetcher, buildQuery, execQuery, combineQuery }: any) {
     this.name = name;
     this.class = cls;
     this.fields = fields;
     this.fetcher = fetcher;
+    this.buildQuery = buildQuery;
+    this.execQuery = execQuery;
+    this.combineQuery = combineQuery;
   }
 }
 

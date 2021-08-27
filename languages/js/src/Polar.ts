@@ -264,9 +264,11 @@ export class Polar {
   registerClass<T>(
     cls: Class<T>,
     alias?: string,
-    types?: Map<string, any>,
-    fetcher?: any
+    params?: any
   ): void {
+    params = params ? params : {};
+    const { name, types, fetcher, buildQuery, execQuery, combineQuery } = params;
+    alias = name ? name : alias;
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const clsName = alias === undefined ? cls.name : alias;
     const existing = this.#host.types.get(clsName);
@@ -341,6 +343,11 @@ export class Polar {
       clsName
     );
     return await filterData(this.#host, plan);
+  }
+
+  async authorizedResources(actr: any, actn: any, cls: any): Promise<any> {
+    const query = await this.getAllowedResources(actr, actn, cls);
+//    return query ? [] : this.#host.types.get(cls).execQuery(q);
   }
 
   /** Start a REPL session. */
