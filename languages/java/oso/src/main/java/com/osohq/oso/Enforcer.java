@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 public class Enforcer {
   public Oso policy;
+  private Object readAction = "read";
 
   public Enforcer(Oso policy) {
     this.policy = policy;
@@ -23,12 +24,36 @@ public class Enforcer {
    * @param actor the actor performing the request
    * @param action the action the actor is attempting to peform
    * @param resource the resource being accessed
+   * @param checkRead if set to `false`, do not query the policy for the
+   *   `"read"` action, and always throw a ForbiddenException on any non-read
+   *   authorization failure. Default is `true`.
    * @return boolean
    * @throws Exceptions.OsoException
    */
   public void authorize(Object actor, Object action, Object resource)
       throws Exceptions.OsoException {
-    // const result = queryRule("allow", actor, action, resource).hasMoreElements();
+    authorize(actor, action, resource, true);
+  }
+
+  public void authorize(Object actor, Object action, Object resource, boolean checkRead)
+      throws Exceptions.OsoException {
+    boolean authorized = policy.queryRuleOnce("allow", actor, action, resource);
+    if (authorized) {
+      return;
+    }
+
+    // Authorization failure. Determine whether to throw a NotFoundException or
+    // a ForbiddenException.
+    boolean isNotFound = false;
+    if (action == readAction) {
+      isNotFound = true;
+    } else if (checkRead) {
+      boolean canRead = policy.queryRuleOnce("allow", actor, readAction, resource);
+      if (!canRead) {
+        isNotFound = true;
+      }
+    }
+    throw isNotFound ? new Exceptions.NotFoundException() : new Exceptions.ForbiddenException();
   }
 
   /**

@@ -14,19 +14,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class EnforcerTest {
-  protected Oso o;
+  protected Oso policy;
   protected Enforcer oso;
-  protected URL testOso;
 
   public static class Actor {
     public String name;
 
     public Actor(String name) {
       this.name = name;
-    }
-
-    public List<Company> companies() {
-      return List.of(new Company(1));
     }
   }
 
@@ -38,94 +33,50 @@ public class EnforcerTest {
     }
   }
 
-  public static class Company {
-    public int id;
-
-    public Company(int id) {
-      this.id = id;
-    }
-
-    public String role(Actor a) {
-      if (a.name.equals("president")) {
-        return "admin";
-      }
-
-      return "guest";
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      return obj instanceof Company && ((Company) obj).id == this.id;
-    }
-
-    @Override
-    public int hashCode() {
-      return this.id;
-    }
-  }
-
   @BeforeEach
   public void setUp() throws Exception {
     try {
-      testOso = getClass().getClassLoader().getResource("test_oso.polar");
+      policy = new Oso();
+      policy.registerClass(Actor.class, "Actor");
+      policy.registerClass(Widget.class, "Widget");
 
-      o = new Oso();
-      o.registerClass(Actor.class, "Actor");
-      o.registerClass(Widget.class, "Widget");
-      o.registerClass(Company.class, "Company");
-
-      oso = new Enforcer(o);
+      oso = new Enforcer(policy);
     } catch (Exception e) {
       throw new Error(e);
     }
   }
 
   @Test
-  public void testIsAllowed() throws Exception {
-    o.loadFile(testOso.getPath());
+  public void testAuthorize() throws Exception {
     Actor guest = new Actor("guest");
-    Widget resource1 = new Widget(1);
-    assertTrue(o.isAllowed(guest, "get", resource1));
+    Actor admin = new Actor("admin");
+    Widget widget0 = new Widget(0);
+    Widget widget1 = new Widget(1);
 
-    Actor president = new Actor("president");
-    Company company = new Company(1);
-    assertTrue(o.isAllowed(president, "create", company));
-  }
+    policy.loadStr(
+      "allow(_actor: Actor, \"read\", widget: Widget) if " +
+        "widget.id = 0; " +
+      "allow(actor: Actor, \"update\", _widget: Widget) if " +
+        "actor.name = \"admin\";"
+    );
 
-  @Test
-  public void testFail() throws Exception {
-    o.loadFile(testOso.getPath());
-    Actor guest = new Actor("guest");
-    Widget widget = new Widget(1);
-    assertFalse(o.isAllowed(guest, "not_allowed", widget));
-  }
+    oso.authorize(guest, "read", widget0);
+    oso.authorize(admin, "update", widget1);
 
-  @Test
-  public void testInstanceFromExternalCall() throws Exception {
-    o.loadFile(testOso.getPath());
-    Company company = new Company(1);
-    Actor guest = new Actor("guest");
-    assertTrue(o.isAllowed(guest, "frob", company));
+    // Throws a forbidden error when user can read resource
+    assertThrows(Exceptions.ForbiddenException.class, () -> oso.authorize(guest, "update", widget0));
 
-    // if the guest user can do it, then the dict should
-    // create an instance of the user and be allowed
-    HashMap<String, String> userMap = new HashMap<String, String>();
-    userMap.put("username", "guest");
-    assertTrue(o.isAllowed(userMap, "frob", company));
-  }
+    // Throws a not found error when user cannot read resource
+    assertThrows(Exceptions.NotFoundException.class, () -> oso.authorize(guest, "read", widget1));
+    assertThrows(Exceptions.NotFoundException.class, () -> oso.authorize(guest, "update", widget1));
 
-  @Test
-  public void testAllowModel() throws Exception {
-    o.loadFile(testOso.getPath());
-    Actor auditor = new Actor("auditor");
-
-    assertTrue(o.isAllowed(auditor, "list", Company.class));
-    assertFalse(o.isAllowed(auditor, "list", Widget.class));
+    // With checkRead = false, returns a forbidden error
+    assertThrows(Exceptions.ForbiddenException.class, () -> oso.authorize(guest, "update", widget1, false));
   }
 
   @Test
   public void testAuthorizedActions() throws Exception {
-    o.loadStr(
+    oso.policy.loadStr(
         "allow(_actor: Actor{name: \"sally\"}, action, _resource: Widget{id: 1})"
             + " if action in [\"CREATE\", \"READ\"];");
 
@@ -137,7 +88,7 @@ public class EnforcerTest {
     assertTrue(actions.contains("CREATE"));
     assertTrue(actions.contains("READ"));
 
-    o.loadStr(
+    oso.policy.loadStr(
         "allow(_actor: Actor{name: \"fred\"}, action, _resource: Widget{id: 2})"
             + " if action in [1, 2, 3, 4];");
 
@@ -158,7 +109,7 @@ public class EnforcerTest {
 
   @Test
   public void testAuthorizedActionsWildcard() throws Exception {
-    o.loadStr("allow(_actor: Actor{name: \"John\"}, _action, _resource: Widget{id: 1});");
+    policy.loadStr("allow(_actor: Actor{name: \"John\"}, _action, _resource: Widget{id: 1});");
 
     Actor actor = new Actor("John");
     Widget widget = new Widget(1);
