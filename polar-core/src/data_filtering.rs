@@ -130,6 +130,16 @@ impl From<&Operation> for Vars {
     }
 }
 
+impl From<Term> for Constraint {
+    fn from(term: Term) -> Self {
+        Self {
+            kind: ConstraintKind::Eq,
+            field: None,
+            value: ConstraintValue::Term(term),
+        }
+    }
+}
+
 impl From<VarInfo> for Vars {
     /// Collapses the var info that we obtained from walking the expressions.
     /// Track equivalence classes of variables and assign each one an id.
@@ -405,17 +415,20 @@ impl FilterPlan {
             // if the result doesn't include a binding for this variable,
             // or if the binding isn't an expression, then just ignore it.
             .filter_map(|(i, result)| {
-                result.bindings.get(&Symbol::new(var)).and_then(|term| {
-                    term.value().as_expression().ok().map(|exp| {
-                        assert_eq!(exp.operator, Operator::And);
-                        let vars = Vars::from(exp);
-                        if explain {
-                            eprintln!("  {}: {}", i, term.to_polar());
-                            vars.explain()
-                        }
+                result.bindings.get(&Symbol::new(var)).map(|term| {
+                    match term.value().as_expression() {
+                        Err(_) => ResultSet::from_term(term.clone(), class_tag),
+                        Ok(exp) => {
+                            assert_eq!(exp.operator, Operator::And);
+                            let vars = Vars::from(exp);
+                            if explain {
+                                eprintln!("  {}: {}", i, term.to_polar());
+                                vars.explain()
+                            }
 
-                        ResultSet::new(&types, &vars, class_tag)
-                    })
+                            ResultSet::new(&types, &vars, class_tag)
+                        }
+                    }
                 })
             })
             .collect();
@@ -503,7 +516,7 @@ impl FilterPlan {
 }
 
 impl ResultSet {
-    fn new(types: &Types, vars: &Vars, this_type: &str) -> ResultSet {
+    fn new(types: &Types, vars: &Vars, this_type: &str) -> Self {
         let mut result_set = ResultSet {
             requests: HashMap::new(),
             resolve_order: vec![],
@@ -512,6 +525,23 @@ impl ResultSet {
         let mut seen = HashSet::new();
         result_set.constrain(types, vars, vars.this_id, this_type, &mut seen);
         result_set
+    }
+
+    fn from_term(term: Term, tag: &str) -> Self {
+        let fetch = FetchRequest {
+            class_tag: tag.to_owned(),
+            constraints: vec![term.into()],
+        };
+        let id: Id = 0;
+
+        let mut requests = HashMap::new();
+        requests.insert(id, fetch);
+
+        Self {
+            resolve_order: vec![id],
+            result_id: id,
+            requests,
+        }
     }
 
     fn constrain(
