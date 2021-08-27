@@ -1,15 +1,11 @@
 package com.osohq.oso;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URL;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,43 +61,47 @@ public class EnforcerTest {
     Widget widget1 = new Widget(1);
 
     policy.loadStr(
-      "allow(_actor: Actor, \"read\", widget: Widget) if " +
-        "widget.id = 0; " +
-      "allow(actor: Actor, \"update\", _widget: Widget) if " +
-        "actor.name = \"admin\";"
-    );
+        "allow(_actor: Actor, \"read\", widget: Widget) if "
+            + "widget.id = 0; "
+            + "allow(actor: Actor, \"update\", _widget: Widget) if "
+            + "actor.name = \"admin\";");
 
     oso.authorize(guest, "read", widget0);
     oso.authorize(admin, "update", widget1);
 
     // Throws a forbidden error when user can read resource
-    assertThrows(Exceptions.ForbiddenException.class, () -> oso.authorize(guest, "update", widget0));
+    assertThrows(
+        Exceptions.ForbiddenException.class, () -> oso.authorize(guest, "update", widget0));
 
     // Throws a not found error when user cannot read resource
     assertThrows(Exceptions.NotFoundException.class, () -> oso.authorize(guest, "read", widget1));
     assertThrows(Exceptions.NotFoundException.class, () -> oso.authorize(guest, "update", widget1));
 
     // With checkRead = false, returns a forbidden error
-    assertThrows(Exceptions.ForbiddenException.class, () -> oso.authorize(guest, "update", widget1, false));
+    assertThrows(
+        Exceptions.ForbiddenException.class, () -> oso.authorize(guest, "update", widget1, false));
   }
 
   @Test
   public void testAuthorizeRequest() throws Exception {
     policy.registerClass(Request.class, "Request");
     policy.loadStr(
-      "allow_request(_: Actor{name: \"guest\"}, request: Request) if " +
-        "request.path.startsWith(\"/repos\"); " +
-      "allow_request(_: Actor{name: \"verified\"}, request: Request) if " +
-        "request.path.startsWith(\"/account\"); "
-    );
+        "allow_request(_: Actor{name: \"guest\"}, request: Request) if "
+            + "request.path.startsWith(\"/repos\"); "
+            + "allow_request(_: Actor{name: \"verified\"}, request: Request) if "
+            + "request.path.startsWith(\"/account\"); ");
     Actor guest = new Actor("guest");
     Actor verified = new Actor("verified");
 
     oso.authorizeRequest(guest, new Request("GET", "/repos/1"));
-    assertThrows(Exceptions.ForbiddenException.class, () -> oso.authorizeRequest(guest, new Request("GET", "/other")));
+    assertThrows(
+        Exceptions.ForbiddenException.class,
+        () -> oso.authorizeRequest(guest, new Request("GET", "/other")));
 
     oso.authorizeRequest(verified, new Request("GET", "/account"));
-    assertThrows(Exceptions.ForbiddenException.class, () -> oso.authorizeRequest(guest, new Request("GET", "/account")));
+    assertThrows(
+        Exceptions.ForbiddenException.class,
+        () -> oso.authorizeRequest(guest, new Request("GET", "/account")));
   }
 
   @Test
@@ -151,65 +151,64 @@ public class EnforcerTest {
   @Test
   public void testAuthorizeField() throws Exception {
     policy.loadStr(
-      // Admins can update all fields
-      "allow_field(actor: Actor, \"update\", _widget: Widget, field) if " +
-        "actor.name = \"admin\" and " +
-        "field in [\"name\", \"purpose\", \"private_field\"]; " +
-      // Anybody who can update a field can also read it
-      "allow_field(actor, \"read\", widget: Widget, field) if " +
-        "allow_field(actor, \"update\", widget, field); " +
-      // Anybody can read public fields
-      "allow_field(_: Actor, \"read\", _: Widget, field) if " +
-        "field in [\"name\", \"purpose\"];"
-    );
+        // Admins can update all fields
+        "allow_field(actor: Actor, \"update\", _widget: Widget, field) if "
+            + "actor.name = \"admin\" and "
+            + "field in [\"name\", \"purpose\", \"private_field\"]; "
+            +
+            // Anybody who can update a field can also read it
+            "allow_field(actor, \"read\", widget: Widget, field) if "
+            + "allow_field(actor, \"update\", widget, field); "
+            +
+            // Anybody can read public fields
+            "allow_field(_: Actor, \"read\", _: Widget, field) if "
+            + "field in [\"name\", \"purpose\"];");
     Actor admin = new Actor("admin");
     Actor guest = new Actor("guest");
     Widget widget = new Widget(0);
 
     oso.authorizeField(admin, "update", widget, "purpose");
-    assertThrows(Exceptions.ForbiddenException.class, () -> oso.authorizeField(admin, "update", widget, "foo"));
+    assertThrows(
+        Exceptions.ForbiddenException.class,
+        () -> oso.authorizeField(admin, "update", widget, "foo"));
 
     oso.authorizeField(guest, "read", widget, "purpose");
-    assertThrows(Exceptions.ForbiddenException.class, () -> oso.authorizeField(guest, "read", widget, "private_field"));
+    assertThrows(
+        Exceptions.ForbiddenException.class,
+        () -> oso.authorizeField(guest, "read", widget, "private_field"));
   }
 
   @Test
   public void testAuthorizedFields() throws Exception {
     policy.loadStr(
-      // Admins can update all fields
-      "allow_field(actor: Actor, \"update\", _widget: Widget, field) if " +
-        "actor.name = \"admin\" and " +
-        "field in [\"name\", \"purpose\", \"private_field\"]; " +
-      // Anybody who can update a field can also read it
-      "allow_field(actor, \"read\", widget: Widget, field) if " +
-        "allow_field(actor, \"update\", widget, field); " +
-      // Anybody can read public fields
-      "allow_field(_: Actor, \"read\", _: Widget, field) if " +
-        "field in [\"name\", \"purpose\"];"
-    );
+        // Admins can update all fields
+        "allow_field(actor: Actor, \"update\", _widget: Widget, field) if "
+            + "actor.name = \"admin\" and "
+            + "field in [\"name\", \"purpose\", \"private_field\"]; "
+            +
+            // Anybody who can update a field can also read it
+            "allow_field(actor, \"read\", widget: Widget, field) if "
+            + "allow_field(actor, \"update\", widget, field); "
+            +
+            // Anybody can read public fields
+            "allow_field(_: Actor, \"read\", _: Widget, field) if "
+            + "field in [\"name\", \"purpose\"];");
     Actor admin = new Actor("admin");
     Actor guest = new Actor("guest");
     Widget widget = new Widget(0);
 
     // Admins should be able to update all fields
     assertEquals(
-      oso.authorizedFields(admin, "update", widget),
-      new HashSet(Arrays.asList("name", "purpose", "private_field"))
-    );
+        oso.authorizedFields(admin, "update", widget),
+        new HashSet(Arrays.asList("name", "purpose", "private_field")));
     // Admins should be able to read all fields
     assertEquals(
-      oso.authorizedFields(admin, "read", widget),
-      new HashSet(Arrays.asList("name", "purpose", "private_field"))
-    );
+        oso.authorizedFields(admin, "read", widget),
+        new HashSet(Arrays.asList("name", "purpose", "private_field")));
     // Guests should not be able to update any fields
-    assertEquals(
-      oso.authorizedFields(guest, "update", widget),
-      new HashSet()
-    );
+    assertEquals(oso.authorizedFields(guest, "update", widget), new HashSet());
     // Guests should be able to read public fields
     assertEquals(
-      oso.authorizedFields(guest, "read", widget),
-      new HashSet(Arrays.asList("name", "purpose"))
-    );
+        oso.authorizedFields(guest, "read", widget), new HashSet(Arrays.asList("name", "purpose")));
   }
 }

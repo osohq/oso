@@ -1,6 +1,5 @@
 package com.osohq.oso;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.stream.Collectors;
 
@@ -24,9 +23,8 @@ public class Enforcer {
    * @param actor the actor performing the request
    * @param action the action the actor is attempting to peform
    * @param resource the resource being accessed
-   * @param checkRead if set to `false`, do not query the policy for the
-   *   `"read"` action, and always throw a ForbiddenException on any non-read
-   *   authorization failure. Default is `true`.
+   * @param checkRead if set to `false`, do not query the policy for the `"read"` action, and always
+   *     throw a ForbiddenException on any non-read authorization failure. Default is `true`.
    * @return boolean
    * @throws Exceptions.OsoException
    */
@@ -56,8 +54,7 @@ public class Enforcer {
     throw isNotFound ? new Exceptions.NotFoundException() : new Exceptions.ForbiddenException();
   }
 
-  public void authorizeRequest(Object actor, Object request)
-      throws Exceptions.OsoException {
+  public void authorizeRequest(Object actor, Object request) throws Exceptions.OsoException {
     boolean authorized = policy.queryRuleOnce("allow_request", actor, request);
     if (!authorized) {
       throw new Exceptions.ForbiddenException();
@@ -159,9 +156,13 @@ public class Enforcer {
    * @return HashSet<Object>
    * @throws Exceptions.OsoException
    */
-  public HashSet<Object> authorizedFields(Object actor, Object action, Object resource, boolean allowWildcard)
+  public HashSet<Object> authorizedFields(
+      Object actor, Object action, Object resource, boolean allowWildcard)
       throws Exceptions.OsoException {
-    return policy.queryRule("allow_field", actor, action, resource, new Variable("field")).results().stream()
+    return policy
+        .queryRule("allow_field", actor, action, resource, new Variable("field"))
+        .results()
+        .stream()
         .map(
             field -> {
               if (field.get("field") instanceof Variable) {

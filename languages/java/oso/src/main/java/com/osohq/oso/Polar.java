@@ -175,8 +175,8 @@ public class Polar {
   }
 
   /**
-   * Query for a rule, and check if it has any results. Returns true if there
-   * are results, and false if not.
+   * Query for a rule, and check if it has any results. Returns true if there are results, and false
+   * if not.
    *
    * @param rule Rule name, e.g. "f" for rule "f(x)".
    * @param args Variable list of rule arguments.
