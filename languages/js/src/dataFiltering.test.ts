@@ -146,7 +146,7 @@ test('data filtering', async () => {
   barType.set('isCool', Boolean);
   barType.set('isStillCool', Boolean);
   barType.set('foos', new Relationship('children', 'Foo', 'id', 'barId'));
-  oso.registerClass(Bar, 'Bar', { name: 'Bar', types: barType, fetcher: getBars });
+  oso.registerClass(Bar, { name: 'Bar', types: barType, fetcher: getBars });
 
   const fooType = new Map();
   fooType.set('id', String);
@@ -154,13 +154,13 @@ test('data filtering', async () => {
   fooType.set('isFooey', Boolean);
   fooType.set('bar', new Relationship('parent', 'Bar', 'barId', 'id'));
   fooType.set('numbers', new Relationship('children', 'Num', 'id', 'fooId'));
-  oso.registerClass(Foo, 'Foo', { name: 'Foo', types: fooType, fetcher: getFoos });
+  oso.registerClass(Foo, { name: 'Foo', types: fooType, fetcher: getFoos });
 
   const numType = new Map();
   numType.set('number', Number);
   numType.set('fooId', String);
   numType.set('foo', new Relationship('parent', 'Foo', 'fooId', 'id'));
-  oso.registerClass(Num, 'Num', { name: 'Num', types: numType, fetcher: getNums });
+  oso.registerClass(Num, { name: 'Num', types: numType, fetcher: getNums });
 
   const expectSameResults = (a: any[], b: any[]) => {
     expect(a).toEqual(expect.arrayContaining(b));

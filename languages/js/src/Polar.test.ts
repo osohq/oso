@@ -66,15 +66,15 @@ describe('#registerClass', () => {
   test('errors when registering the same alias twice', () => {
     const p = new Polar();
     expect(() => p.registerClass(Actor)).not.toThrow();
-    expect(() => p.registerClass(User, 'Actor', { name: 'Actor' })).toThrow(
+    expect(() => p.registerClass(User, { name: 'Actor' })).toThrow(
       DuplicateClassAliasError
     );
   });
 
   test('can register the same class under different aliases', async () => {
     const p = new Polar();
-    p.registerClass(A, 'A', { name: 'A' });
-    p.registerClass(A, 'B', { name: 'B' });
+    p.registerClass(A, { name: 'A' });
+    p.registerClass(A, { name: 'B' });
     expect(await query(p, 'new A().a() = new B().a()')).toStrictEqual([map()]);
   });
 
@@ -445,7 +445,7 @@ describe('#clearRules', () => {
 
   test('does not clear registered classes', async () => {
     const p = new Polar();
-    p.registerClass(Belonger, 'Actor', { name: 'Actor' });
+    p.registerClass(Belonger, { name: 'Actor' });
     p.clearRules();
     expect(await query(p, 'x = new Actor()')).toHaveLength(1);
   });
@@ -469,7 +469,7 @@ describe('#queryRule', () => {
   describe('querying for a predicate', () => {
     test('can return a list', async () => {
       const p = new Polar();
-      p.registerClass(Belonger, 'Actor', { name: 'Actor' });
+      p.registerClass(Belonger, { name: 'Actor' });
       await p.loadStr(
         'allow(actor: Actor, "join", "party") if "social" in actor.groups();'
       );

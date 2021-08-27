@@ -78,11 +78,11 @@ export class Polar {
 
     // Register built-in classes.
     this.registerClass(Boolean);
-    this.registerClass(Number, 'Integer');
-    this.registerClass(Number, 'Float');
+    this.registerClass(Number, { name: 'Integer' });
+    this.registerClass(Number, { name: 'Float' });
     this.registerClass(String);
-    this.registerClass(Array, 'List');
-    this.registerClass(Object, 'Dictionary');
+    this.registerClass(Array, { name: 'List' });
+    this.registerClass(Object, { name: 'Dictionary' });
   }
 
   /**
@@ -263,14 +263,12 @@ export class Polar {
    */
   registerClass<T>(
     cls: Class<T>,
-    alias?: string,
     params?: any
   ): void {
     params = params ? params : {};
     const { name, types, fetcher, buildQuery, execQuery, combineQuery } = params;
-    alias = name ? name : alias;
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
-    const clsName = alias === undefined ? cls.name : alias;
+    const clsName = name ? name : cls.name;
     const existing = this.#host.types.get(clsName);
     if (existing) {
       throw new DuplicateClassAliasError({
