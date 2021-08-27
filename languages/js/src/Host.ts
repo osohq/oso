@@ -1,5 +1,4 @@
 import {
-  DuplicateClassAliasError,
   PolarError,
   UnregisteredClassError,
   UnregisteredInstanceError,
@@ -36,14 +35,12 @@ export class UserType {
   name: string;
   class: any;
   fields: Map<string, any>;
-  id: number;
   fetcher: any;
 
-  constructor({ name, class: cls, fields, id, fetcher }: any) {
+  constructor({ name, class: cls, fields, fetcher }: any) {
     this.name = name;
     this.class = cls;
     this.fields = fields;
-    this.id = id;
     this.fetcher = fetcher;
   }
 }
@@ -55,13 +52,9 @@ export class UserType {
  */
 export class Host {
   #ffiPolar: FfiPolar;
-  #classes: Map<string, Class>;
   #classIds: Map<string, number>;
-  clsNames: Map<Class, string>;
   #instances: Map<number, any>;
-  types: Map<string, Map<string, any>>;
-  userTypes: Map<any, UserType>;
-  fetchers: Map<string, any>;
+  types: Map<any, UserType>;
   #equalityFn: EqualityFn;
 
   /**
@@ -72,27 +65,19 @@ export class Host {
    */
   static clone(host: Host): Host {
     const clone = new Host(host.#ffiPolar, host.#equalityFn);
-    clone.#classes = new Map(host.#classes);
     clone.#instances = new Map(host.#instances);
     clone.#classIds = new Map(host.#classIds);
-    clone.clsNames = new Map(host.clsNames);
     clone.types = new Map(host.types);
-    clone.fetchers = new Map(host.fetchers);
-    clone.userTypes = new Map(host.userTypes);
     return clone;
   }
 
   /** @internal */
   constructor(ffiPolar: FfiPolar, equalityFn: EqualityFn) {
     this.#ffiPolar = ffiPolar;
-    this.#classes = new Map();
     this.#instances = new Map();
     this.#classIds = new Map();
-    this.clsNames = new Map();
-    this.types = new Map();
-    this.fetchers = new Map();
     this.#equalityFn = equalityFn;
-    this.userTypes = new Map();
+    this.types = new Map();
   }
 
   /**
@@ -103,31 +88,9 @@ export class Host {
    * @internal
    */
   private getClass(name: string): Class {
-    const cls = this.#classes.get(name);
+    const cls = this.types.get(name)!.class;
     if (cls === undefined) throw new UnregisteredClassError(name);
     return cls;
-  }
-
-  /**
-   * Store a JavaScript class in the class cache.
-   *
-   * @param cls Class to cache.
-   * @param name Optional alias under which to cache the class. Defaults to the
-   * class's `name` property.
-   *
-   * @internal
-   */
-  cacheClass<T>(cls: Class<T>, name?: string): string {
-    const clsName = name === undefined ? cls.name : name;
-    const existing = this.#classes.get(clsName);
-    if (existing !== undefined)
-      throw new DuplicateClassAliasError({
-        name: clsName,
-        cls,
-        existing,
-      });
-    this.#classes.set(clsName, cls);
-    return clsName;
   }
 
   /**
@@ -256,12 +219,9 @@ export class Host {
     return (
       classTag ==
       path.reduce((k: string | undefined, field: string) => {
-        if (k != undefined) {
-          const l = this.types.get(k);
-          if (l != undefined) k = this.clsNames.get(l.get(field));
-          else k = l;
-        }
-        return k;
+        let l = this.types.get(k);
+        if (l) l = this.types.get(l.fields.get(field));
+        return l ? l.name : l;
       }, baseTag)
     );
   }

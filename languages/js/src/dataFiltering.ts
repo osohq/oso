@@ -1,6 +1,6 @@
 import { resolve } from 'path/posix';
 import { resourceUsage } from 'process';
-import { Host } from './Host';
+import { Host, UserType } from './Host';
 
 export class Relationship {
   kind: string;
@@ -52,11 +52,11 @@ export class Constraint {
 }
 
 export function serializeTypes(
-  types: Map<string, any>,
-  clsNames: Map<any, string>
+  userTypes: Map<any, UserType>
 ): string {
   let polarTypes: any = {};
-  for (let [tag, fields] of types.entries()) {
+  for (let [tag, userType] of userTypes.entries()) if (typeof tag === 'string') {
+    let fields = userType.fields;
     let fieldTypes: any = {};
     for (let [k, v] of fields.entries()) {
       if (v instanceof Relationship) {
@@ -71,7 +71,7 @@ export function serializeTypes(
       } else {
         fieldTypes[k] = {
           Base: {
-            class_tag: clsNames.get(v),
+            class_tag: userTypes.get(v)?.name,
           },
         };
       }
@@ -146,7 +146,7 @@ export async function filterData(host: Host, plan: any): Promise<any> {
 
       // Substitute in results from previous requests.
       constraints = groundConstraints(host, setResults, plan, constraints);
-      let fetcher = host.fetchers.get(className);
+      let fetcher = host.types.get(className)!.fetcher;
       let fetched = fetcher(constraints);
       fetched = await Promise.resolve(fetched);
       setResults.set(i, fetched);

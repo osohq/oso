@@ -133,39 +133,35 @@ export class Query {
     let value;
     try {
       const receiver = await this.#host.toJs(instance);
+      const userTypes = this.#host.types;
 
       // Check if it's a relationship
       if (receiver != undefined) {
-        const clsName = this.#host.clsNames.get(receiver.constructor);
-        if (clsName != null) {
-          const typedef = this.#host.types.get(clsName);
-          if (typedef != null) {
-            const fieldType = typedef.get(attr);
-            if (fieldType != null) {
-              if (fieldType instanceof Relationship) {
-                // Use the fetcher for the other type to traverse
-                // the relationship.
-                const otherClsFetcher = this.#host.fetchers.get(
-                  fieldType.otherType
+        const userType = userTypes.get(receiver.constructor);
+        const clsName = userType?.name;
+        const typedef = userType?.fields;
+        const fieldType = typedef?.get(attr);
+        if (fieldType != null) {
+          if (fieldType instanceof Relationship) {
+            // Use the fetcher for the other type to traverse
+            // the relationship.
+            const otherClsFetcher = userTypes.get(fieldType.otherType)!.fetcher;
+            const constraint = new Constraint(
+              'Eq',
+              fieldType.otherField,
+              receiver[fieldType.myField]
+            );
+            const constraints = [constraint];
+            let results = otherClsFetcher(constraints);
+            results = await Promise.resolve(results);
+            if (fieldType.kind == 'parent') {
+              if (results.length != 1)
+                throw new Error(
+                  'Wrong number of parents: ' + results.length
                 );
-                const constraint = new Constraint(
-                  'Eq',
-                  fieldType.otherField,
-                  receiver[fieldType.myField]
-                );
-                const constraints = [constraint];
-                let results = otherClsFetcher(constraints);
-                results = await Promise.resolve(results);
-                if (fieldType.kind == 'parent') {
-                  if (results.length != 1)
-                    throw new Error(
-                      'Wrong number of parents: ' + results.length
-                    );
-                  value = results[0];
-                } else {
-                  value = results;
-                }
-              }
+              value = results[0];
+            } else {
+              value = results;
             }
           }
         }

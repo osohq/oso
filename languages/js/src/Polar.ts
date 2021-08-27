@@ -7,6 +7,7 @@ import {
   PolarError,
   PolarFileExtensionError,
   PolarFileNotFoundError,
+  DuplicateClassAliasError,
 } from './errors';
 import { Query } from './Query';
 import { Host, UserType } from './Host';
@@ -267,24 +268,25 @@ export class Polar {
     fetcher?: any
   ): void {
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
-    const clsName = this.#host.cacheClass(cls, alias);
+    const clsName = alias === undefined ? cls.name : alias;
+    const existing = this.#host.types.get(clsName);
+    if (existing) {
+      throw new DuplicateClassAliasError({
+        name: clsName,
+        cls,
+        existing,
+      });
+    }
     const userType = new UserType({
       name: clsName,
       class: cls,
       fetcher: fetcher,
-      fields: types,
+      fields: types || new Map(),
       id: 0,
     });
-    this.#host.userTypes.set(cls, userType);
-    this.#host.userTypes.set(clsName, userType);
+    this.#host.types.set(cls, userType);
+    this.#host.types.set(clsName, userType);
     this.registerConstant(cls, clsName);
-    this.#host.clsNames.set(cls, clsName);
-    if (types != null) {
-      this.#host.types.set(clsName, types);
-    }
-    if (fetcher != null) {
-      this.#host.fetchers.set(clsName, fetcher);
-    }
   }
 
   /**
@@ -300,7 +302,7 @@ export class Polar {
    */
   async getAllowedResources(actor: any, action: any, cls: any): Promise<any> {
     const resource = new Variable('resource');
-    const clsName = this.#host.clsNames.get(cls)!;
+    const clsName = this.#host.types.get(cls)!.name;
     const constraint = new Expression('And', [
       new Expression('Isa', [
         resource,
@@ -331,7 +333,7 @@ export class Polar {
       }, {}),
     }));
     let resultsStr = JSON.stringify(jsonResults);
-    let typesStr = serializeTypes(this.#host.types, this.#host.clsNames);
+    let typesStr = serializeTypes(this.#host.types);
     let plan = this.#ffiPolar.buildFilterPlan(
       typesStr,
       resultsStr,
