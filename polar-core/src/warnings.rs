@@ -155,7 +155,7 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
             .iter()
             .map(|(source, or_term)| {
                 let mut msg = "Expression without parentheses could be ambiguous. \n\
-                    Prior to 0.20, x and y or z would parse as `x and (y or z)`. \n\
+                    Prior to 0.20, `x and y or z` would parse as `x and (y or z)`. \n\
                     This was changed in 0.20 to match other languages. \n\
                 \n\n"
                     .to_string();
