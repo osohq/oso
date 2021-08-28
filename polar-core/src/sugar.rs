@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 
 use lalrpop_util::ParseError as LalrpopError;
@@ -8,6 +8,12 @@ use super::kb::KnowledgeBase;
 use super::lexer::Token;
 use super::rules::*;
 use super::terms::*;
+
+// TODO(gj): if a user imports the built-in rule prototypes, we should emit an error if the user
+// hasn't registered at least a single Actor and Resource type by the time loading is complete.
+// Maybe only if they've defined at least one rule matching one of the rule prototypes? Otherwise,
+// the rule prototypes will always trigger. But maybe their error message will be descriptive
+// enough as-is?
 
 // TODO(gj): round up longhand `has_permission/3` and `has_role/3` rules to incorporate their
 // referenced permissions & roles (implied & implier side) into the exhaustiveness checks.
@@ -94,70 +100,85 @@ pub fn validate_parsed_declaration(
 }
 
 pub fn turn_productions_into_namespace(
-    keyword: Term,
+    keyword: Option<Term>,
     resource: Term,
     productions: Vec<Production>,
 ) -> Result<Namespace, LalrpopError<usize, Token, error::ParseError>> {
-    if keyword.value().as_symbol().unwrap().0 != "resource" {
-        let (loc, ranges) = (keyword.offset(), vec![]);
-        let msg = format!("Expected 'resource' but found '{}'.", keyword.to_polar());
-        let error = ParseError::ParseSugar { loc, msg, ranges };
-        return Err(LalrpopError::User { error });
-    }
-
-    let mut roles: Option<Term> = None;
-    let mut permissions: Option<Term> = None;
-    let mut relations: Option<Term> = None;
-    let mut implications = vec![];
-
-    let make_error = |name: &str, previous: &Term, new: &Term| {
-        let loc = new.offset();
-        let ranges = vec![term_source_range(previous), term_source_range(new)];
-        let msg = format!(
-            "Multiple '{}' declarations in {} namespace.\n",
-            name,
-            resource.to_polar()
-        );
-        ParseError::ParseSugar { loc, msg, ranges }
-    };
-
-    for production in productions {
-        match production {
-            Production::Roles(new) => {
-                if let Some(previous) = roles {
-                    let error = make_error("roles", &previous, &new);
-                    return Err(LalrpopError::User { error });
-                }
-                roles = Some(new);
+    if let Some(keyword) = keyword {
+        let entity_type = match keyword.value().as_symbol().unwrap().0.as_ref() {
+            "actor" => EntityType::Actor,
+            "resource" => EntityType::Resource,
+            _ => {
+                let (loc, ranges) = (keyword.offset(), vec![]);
+                let msg = format!(
+                    "Expected 'actor' or 'resource' but found '{}'.",
+                    keyword.to_polar()
+                );
+                let error = ParseError::ParseSugar { loc, msg, ranges };
+                return Err(LalrpopError::User { error });
             }
-            Production::Permissions(new) => {
-                if let Some(previous) = permissions {
-                    let error = make_error("permissions", &previous, &new);
-                    return Err(LalrpopError::User { error });
+        };
+
+        let mut roles: Option<Term> = None;
+        let mut permissions: Option<Term> = None;
+        let mut relations: Option<Term> = None;
+        let mut implications = vec![];
+
+        let make_error = |name: &str, previous: &Term, new: &Term| {
+            let loc = new.offset();
+            let ranges = vec![term_source_range(previous), term_source_range(new)];
+            let msg = format!(
+                "Multiple '{}' declarations in {} namespace.\n",
+                name,
+                resource.to_polar()
+            );
+            ParseError::ParseSugar { loc, msg, ranges }
+        };
+
+        for production in productions {
+            match production {
+                Production::Roles(new) => {
+                    if let Some(previous) = roles {
+                        let error = make_error("roles", &previous, &new);
+                        return Err(LalrpopError::User { error });
+                    }
+                    roles = Some(new);
                 }
-                permissions = Some(new);
-            }
-            Production::Relations(new) => {
-                if let Some(previous) = relations {
-                    let error = make_error("relations", &previous, &new);
-                    return Err(LalrpopError::User { error });
+                Production::Permissions(new) => {
+                    if let Some(previous) = permissions {
+                        let error = make_error("permissions", &previous, &new);
+                        return Err(LalrpopError::User { error });
+                    }
+                    permissions = Some(new);
                 }
-                relations = Some(new);
-            }
-            Production::Implication(head, body) => {
-                // TODO(gj): Warn the user on duplicate implication definitions.
-                implications.push(Implication { head, body });
+                Production::Relations(new) => {
+                    if let Some(previous) = relations {
+                        let error = make_error("relations", &previous, &new);
+                        return Err(LalrpopError::User { error });
+                    }
+                    relations = Some(new);
+                }
+                Production::Implication(head, body) => {
+                    // TODO(gj): Warn the user on duplicate implication definitions.
+                    implications.push(Implication { head, body });
+                }
             }
         }
-    }
 
-    Ok(Namespace {
-        resource,
-        roles,
-        permissions,
-        relations,
-        implications,
-    })
+        Ok(Namespace {
+            entity_type,
+            resource,
+            roles,
+            permissions,
+            relations,
+            implications,
+        })
+    } else {
+        let (loc, ranges) = (resource.offset(), vec![]);
+        let msg = "Expected 'actor' or 'resource' but found nothing.".to_owned();
+        let error = ParseError::ParseSugar { loc, msg, ranges };
+        Err(LalrpopError::User { error })
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -220,7 +241,14 @@ impl Declaration {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum EntityType {
+    Actor,
+    Resource,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct Namespace {
+    pub entity_type: EntityType,
     pub resource: Term,
     pub roles: Option<Term>,
     pub permissions: Option<Term>,
@@ -233,6 +261,8 @@ pub struct Namespaces {
     /// Map from resource (`Symbol`) to the declarations for that resource.
     declarations: HashMap<Term, Declarations>,
     pub implications: HashMap<Term, Vec<Implication>>,
+    pub actors: HashSet<Term>,
+    pub resources: HashSet<Term>,
 }
 
 impl Namespaces {
@@ -240,17 +270,31 @@ impl Namespaces {
         Self {
             declarations: HashMap::new(),
             implications: HashMap::new(),
+            actors: HashSet::new(),
+            resources: HashSet::new(),
         }
     }
 
     pub fn clear(&mut self) {
         self.declarations.clear();
         self.implications.clear();
+        self.actors.clear();
+        self.resources.clear();
     }
 
-    fn add(&mut self, resource: Term, declarations: Declarations, implications: Vec<Implication>) {
+    fn add(
+        &mut self,
+        entity_type: EntityType,
+        resource: Term,
+        declarations: Declarations,
+        implications: Vec<Implication>,
+    ) {
         self.declarations.insert(resource.clone(), declarations);
-        self.implications.insert(resource, implications);
+        self.implications.insert(resource.clone(), implications);
+        match entity_type {
+            EntityType::Actor => self.actors.insert(resource),
+            EntityType::Resource => self.resources.insert(resource),
+        };
     }
 
     fn exists(&self, resource: &Term) -> bool {
@@ -499,7 +543,7 @@ fn implication_head_to_params(head: &Term, namespace: &Term) -> Vec<Parameter> {
     vec![
         Parameter {
             parameter: head.clone_with_value(value!(sym!("actor"))),
-            specializer: None,
+            specializer: Some(head.clone_with_value(value!(pattern!(instance!("Actor"))))),
         },
         Parameter {
             parameter: head.clone(),
@@ -599,6 +643,7 @@ impl Namespace {
         errors.extend(check_for_duplicate_namespaces(&kb.namespaces, &self.resource).err());
 
         let Namespace {
+            entity_type,
             resource,
             roles,
             permissions,
@@ -619,7 +664,8 @@ impl Namespace {
             return Err(errors[0].clone());
         }
 
-        kb.namespaces.add(resource, declarations, implications);
+        kb.namespaces
+            .add(entity_type, resource, declarations, implications);
 
         Ok(())
     }
@@ -632,7 +678,6 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
-    use crate::error::ErrorKind;
     use crate::parser::{parse_lines, Line};
     use crate::polar::Polar;
 
@@ -663,8 +708,18 @@ mod tests {
         let org_declarations = index_declarations(Some(org_roles), None, None, &org_resource);
 
         let mut namespaces = Namespaces::new();
-        namespaces.add(repo_resource, repo_declarations.unwrap(), vec![]);
-        namespaces.add(org_resource, org_declarations.unwrap(), vec![]);
+        namespaces.add(
+            EntityType::Resource,
+            repo_resource,
+            repo_declarations.unwrap(),
+            vec![],
+        );
+        namespaces.add(
+            EntityType::Resource,
+            org_resource,
+            org_declarations.unwrap(),
+            vec![],
+        );
         let implication = Implication {
             head: term!("reader"),
             body: (term!("member"), Some(term!("parent"))),
@@ -674,7 +729,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            r#"has_role(actor, "reader", repo_instance: repo{}) if has_relation(org_instance, "parent", repo_instance) and has_role(actor, "member", org_instance);"#
+            r#"has_role(actor: Actor{}, "reader", repo_instance: repo{}) if has_relation(org_instance, "parent", repo_instance) and has_role(actor, "member", org_instance);"#
         );
     }
 
@@ -685,7 +740,12 @@ mod tests {
         let permissions = term!(["invite", "create_repo"]);
         let declarations = index_declarations(Some(roles), Some(permissions), None, &resource);
         let mut namespaces = Namespaces::new();
-        namespaces.add(resource, declarations.unwrap(), vec![]);
+        namespaces.add(
+            EntityType::Resource,
+            resource,
+            declarations.unwrap(),
+            vec![],
+        );
         let implication = Implication {
             head: term!("member"),
             body: (term!("owner"), None),
@@ -695,7 +755,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            r#"has_role(actor, "member", org: Org{}) if has_role(actor, "owner", org);"#
+            r#"has_role(actor: Actor{}, "member", org: Org{}) if has_role(actor, "owner", org);"#
         );
 
         let implication = Implication {
@@ -707,7 +767,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_permission_role.to_polar(),
-            r#"has_permission(actor, "invite", org: Org{}) if has_role(actor, "owner", org);"#
+            r#"has_permission(actor: Actor{}, "invite", org: Org{}) if has_role(actor, "owner", org);"#
         );
 
         let implication = Implication {
@@ -719,7 +779,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_permission_permission.to_polar(),
-            r#"has_permission(actor, "create_repo", org: Org{}) if has_permission(actor, "invite", org);"#
+            r#"has_permission(actor: Actor{}, "create_repo", org: Org{}) if has_permission(actor, "invite", org);"#
         );
     }
 
@@ -734,8 +794,18 @@ mod tests {
         let org_roles = term!(["member"]);
         let org_declarations = index_declarations(Some(org_roles), None, None, &org_resource);
         let mut namespaces = Namespaces::new();
-        namespaces.add(repo_resource, repo_declarations.unwrap(), vec![]);
-        namespaces.add(org_resource, org_declarations.unwrap(), vec![]);
+        namespaces.add(
+            EntityType::Resource,
+            repo_resource,
+            repo_declarations.unwrap(),
+            vec![],
+        );
+        namespaces.add(
+            EntityType::Resource,
+            org_resource,
+            org_declarations.unwrap(),
+            vec![],
+        );
         let implication = Implication {
             head: term!("reader"),
             body: (term!("member"), Some(term!("parent"))),
@@ -745,7 +815,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            r#"has_role(actor, "reader", repo: Repo{}) if has_relation(org, "parent", repo) and has_role(actor, "member", org);"#
+            r#"has_role(actor: Actor{}, "reader", repo: Repo{}) if has_relation(org, "parent", repo) and has_role(actor, "member", org);"#
         );
     }
 
@@ -937,6 +1007,7 @@ mod tests {
 
         // Maximal namespace
         let namespace = Namespace {
+            entity_type: EntityType::Resource,
             resource: term!(sym!("Repo")),
             roles: Some(term!(["writer", "reader"])),
             permissions: Some(term!(["push", "pull"])),
@@ -1094,25 +1165,28 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_leading_resource_keyword() {
+    fn test_namespace_entity_type() {
         let p = Polar::new();
 
-        assert!(matches!(
-            p.load_str("Org{}").unwrap_err().kind,
-            ErrorKind::Parse(ParseError::UnrecognizedToken { .. })
-        ));
+        expect_error(
+            &p,
+            "Org{}",
+            "Expected 'actor' or 'resource' but found nothing.",
+        );
 
         expect_error(
             &p,
             "seahorse Org{}",
-            "Expected 'resource' but found 'seahorse'.",
+            "Expected 'actor' or 'resource' but found 'seahorse'.",
         );
     }
 
     #[test]
     fn test_namespace_declaration_keywords_are_not_reserved_words() {
         let p = Polar::new();
-        p.load_str("roles(permissions, on, resource) if permissions.relations = on and resource;")
-            .unwrap();
+        p.load_str(
+            "on(actor, resource, roles, permissions, relations) if on(actor, resource, roles, permissions, relations);",
+        )
+        .unwrap();
     }
 }

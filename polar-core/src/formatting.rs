@@ -349,7 +349,7 @@ pub mod display {
 pub mod to_polar {
     use crate::formatting::{format_args, format_params, to_polar_parens};
     use crate::rules::*;
-    use crate::sugar::{Implication, Namespace};
+    use crate::sugar::{EntityType, Implication, Namespace};
     use crate::terms::*;
 
     /// Effectively works as a reverse-parser. Allows types to be turned
@@ -637,9 +637,22 @@ pub mod to_polar {
         }
     }
 
+    impl ToPolarString for EntityType {
+        fn to_polar(&self) -> String {
+            match self {
+                Self::Actor => "actor".to_owned(),
+                Self::Resource => "resource".to_owned(),
+            }
+        }
+    }
+
     impl ToPolarString for Namespace {
         fn to_polar(&self) -> String {
-            let mut s = format!("{} {{\n", self.resource.to_polar());
+            let mut s = format!(
+                "{} {} {{\n",
+                self.entity_type.to_polar(),
+                self.resource.to_polar()
+            );
             if let Some(ref roles) = self.roles {
                 s += &format!("  roles = {};\n", roles.to_polar());
             }

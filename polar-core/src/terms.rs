@@ -451,6 +451,16 @@ impl Term {
             None
         }
     }
+
+    // TODO(gj): what happens if the user registers a class as `Actor` or `Resource`?
+    pub fn is_entity_specializer(&self) -> bool {
+        match self.value() {
+            Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) => {
+                matches!(tag.0.as_ref(), "Actor" | "Resource")
+            }
+            _ => false,
+        }
+    }
 }
 
 #[cfg(test)]

@@ -975,6 +975,35 @@ impl PolarVirtualMachine {
                 unreachable!("encountered bare expression")
             }
 
+            // To evaluate `left matches EntityType`, look up the classes registered as EntityType
+            // and then create a choicepoint to check if `left` matches any of them.
+            (_, Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })))
+                if right.is_entity_specializer() =>
+            {
+                let alternatives = {
+                    let kb = self.kb.read().unwrap();
+                    match tag.0.as_ref() {
+                        "Actor" => kb.namespaces.actors.clone(),
+                        "Resource" => kb.namespaces.resources.clone(),
+                        _ => unreachable!(),
+                    }
+                };
+                let alternatives: Vec<Goals> = alternatives
+                    .into_iter()
+                    .map(|choice| {
+                        let tag = choice.value().as_symbol().unwrap().0.as_str();
+                        choice.clone_with_value(value!(pattern!(instance!(tag))))
+                    })
+                    .map(|pattern| {
+                        vec![Goal::Isa {
+                            left: left.clone(),
+                            right: pattern,
+                        }]
+                    })
+                    .collect();
+                self.push_choice(alternatives);
+            }
+
             // TODO(gj): (Var, Rest) + (Rest, Var) cases might be unreachable.
             (Value::Variable(l), Value::Variable(r))
             | (Value::Variable(l), Value::RestVariable(r))
@@ -2645,12 +2674,28 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
+    // TODO(gj): how to distinguish `Actor` and `Resource` entity specializers from user-defined
+    // classes named `Actor` and `Resource`?
+
     /// Succeed if `left` is more specific than `right` with respect to `args`.
     #[allow(clippy::ptr_arg)]
     fn is_more_specific(&mut self, left: &Rule, right: &Rule, args: &TermList) -> PolarResult<()> {
         let zipped = left.params.iter().zip(right.params.iter()).zip(args.iter());
         for ((left_param, right_param), arg) in zipped {
             match (&left_param.specializer, &right_param.specializer) {
+                // If both specs are entity specializers, they have the same specificity regardless
+                // of whether they're the same or different entity specializers.
+                (Some(left_spec), Some(right_spec))
+                    if left_spec.is_entity_specializer() && right_spec.is_entity_specializer() => {}
+                // If left is an entity specializer and right is not, left cannot be more specific,
+                // so we backtrack.
+                (Some(left_spec), Some(_)) if left_spec.is_entity_specializer() => {
+                    return self.push_goal(Goal::Backtrack)
+                }
+                // If right is an entity specializer and left is not, left IS more specific, so we
+                // return.
+                (Some(_), Some(right_spec)) if right_spec.is_entity_specializer() => return Ok(()),
+
                 (Some(left_spec), Some(right_spec)) => {
                     // If you find two non-equal specializers, that comparison determines the relative
                     // specificity of the two rules completely. As soon as you have two specializers
