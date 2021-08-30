@@ -93,12 +93,10 @@ test('data filtering', async () => {
   const oso = new Oso();
 
   function fromRepo(repo: any, name: string, constraints: any) {
-    let query = repo.createQueryBuilder(name);
-    for (let i in constraints) {
-      let c = constraints[i];
-      let clause;
-      let rhs;
-      let param: any = {};
+    function constrainQuery(query: any, c: any) {
+      let clause,
+        rhs,
+        param: any = {};
 
       if (c.value instanceof Field) {
         rhs = `${name}.${c.value.field}`;
@@ -107,26 +105,15 @@ test('data filtering', async () => {
         param[c.field] = c.value;
       }
 
-      switch (c.kind) {
-        case 'Eq':
-          {
-            clause = `${name}.${c.field} = ${rhs}`;
-          }
-          break;
-        case 'Neq':
-          {
-            clause = `${name}.${c.field} <> ${rhs}`;
-          }
-          break;
-        case 'In':
-          {
-            clause = `${name}.${c.field} IN ${rhs}`;
-          }
-          break;
-      }
-      query.andWhere(clause, param);
+      if (c.kind === 'Eq') clause = `${name}.${c.field} = ${rhs}`;
+      else if (c.kind === 'Neq') clause = `${name}.${c.field} <> ${rhs}`;
+      else if (c.kind === 'In') clause = `${name}.${c.field} IN ${rhs}`;
+      else throw new Error(`Unknown constraint kind:${c.kind}`);
+
+      return query.andWhere(clause, param);
     }
-    return query.getMany();
+
+    return constraints.reduce(constrainQuery, repo.createQueryBuilder(name));
   }
 
   function getBars(constraints: any) {
@@ -141,12 +128,30 @@ test('data filtering', async () => {
     return fromRepo(nums, 'num', constraints);
   }
 
+  function execQuery(q: any) {
+    return q.getMany();
+  }
+
+  function combineQuery(a: any, b: any) {
+    return {
+      getMany: async () => {
+        return (await a.getMany()).concat(await b.getMany());
+      },
+    };
+  }
+
   const barType = new Map();
   barType.set('id', String);
   barType.set('isCool', Boolean);
   barType.set('isStillCool', Boolean);
   barType.set('foos', new Relationship('children', 'Foo', 'id', 'barId'));
-  oso.registerClass(Bar, { name: 'Bar', types: barType, fetcher: getBars });
+  oso.registerClass(Bar, {
+    name: 'Bar',
+    types: barType,
+    buildQuery: getBars,
+    execQuery: execQuery,
+    combineQuery: combineQuery,
+  });
 
   const fooType = new Map();
   fooType.set('id', String);
@@ -154,13 +159,25 @@ test('data filtering', async () => {
   fooType.set('isFooey', Boolean);
   fooType.set('bar', new Relationship('parent', 'Bar', 'barId', 'id'));
   fooType.set('numbers', new Relationship('children', 'Num', 'id', 'fooId'));
-  oso.registerClass(Foo, { name: 'Foo', types: fooType, fetcher: getFoos });
+  oso.registerClass(Foo, {
+    name: 'Foo',
+    types: fooType,
+    buildQuery: getFoos,
+    execQuery: execQuery,
+    combineQuery: combineQuery,
+  });
 
   const numType = new Map();
   numType.set('number', Number);
   numType.set('fooId', String);
   numType.set('foo', new Relationship('parent', 'Foo', 'fooId', 'id'));
-  oso.registerClass(Num, { name: 'Num', types: numType, fetcher: getNums });
+  oso.registerClass(Num, {
+    name: 'Num',
+    types: numType,
+    buildQuery: getNums,
+    execQuery: execQuery,
+    combineQuery: combineQuery,
+  });
 
   const expectSameResults = (a: any[], b: any[]) => {
     expect(a).toEqual(expect.arrayContaining(b));

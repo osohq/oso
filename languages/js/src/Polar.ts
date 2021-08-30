@@ -261,12 +261,10 @@ export class Polar {
   /**
    * Register a JavaScript class for use in Polar policies.
    */
-  registerClass<T>(
-    cls: Class<T>,
-    params?: any
-  ): void {
+  registerClass<T>(cls: Class<T>, params?: any): void {
     params = params ? params : {};
-    const { name, types, fetcher, buildQuery, execQuery, combineQuery } = params;
+    const { name, types, fetcher, buildQuery, execQuery, combineQuery } =
+      params;
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const clsName = name ? name : cls.name;
     const existing = this.#host.types.get(clsName);
@@ -280,9 +278,11 @@ export class Polar {
     const userType = new UserType({
       name: clsName,
       class: cls,
-      fetcher: fetcher,
+      fetcher: fetcher || buildQuery,
+      buildQuery: buildQuery,
+      execQuery: execQuery,
+      combineQuery: combineQuery,
       fields: types || new Map(),
-      id: 0,
     });
     this.#host.types.set(cls, userType);
     this.#host.types.set(clsName, userType);
@@ -340,12 +340,14 @@ export class Polar {
       'resource',
       clsName
     );
-    return await filterData(this.#host, plan);
+    let query = await filterData(this.#host, plan);
+    let typ = this.#host.types.get(clsName)!;
+    return typ.execQuery!(query);
   }
 
   async authorizedResources(actr: any, actn: any, cls: any): Promise<any> {
     const query = await this.getAllowedResources(actr, actn, cls);
-//    return query ? [] : this.#host.types.get(cls).execQuery(q);
+    //    return query ? [] : this.#host.types.get(cls).execQuery(q);
   }
 
   /** Start a REPL session. */

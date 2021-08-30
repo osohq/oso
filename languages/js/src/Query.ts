@@ -143,22 +143,19 @@ export class Query {
         const fieldType = typedef?.get(attr);
         if (fieldType != null) {
           if (fieldType instanceof Relationship) {
+            const typ = userTypes.get(fieldType.otherType)!;
             // Use the fetcher for the other type to traverse
             // the relationship.
-            const otherClsFetcher = userTypes.get(fieldType.otherType)!.fetcher;
             const constraint = new Constraint(
               'Eq',
               fieldType.otherField,
               receiver[fieldType.myField]
             );
-            const constraints = [constraint];
-            let results = otherClsFetcher(constraints);
-            results = await Promise.resolve(results);
+            let query = await Promise.resolve(typ.buildQuery!([constraint]));
+            let results = await Promise.resolve(typ.execQuery!(query));
             if (fieldType.kind == 'parent') {
               if (results.length != 1)
-                throw new Error(
-                  'Wrong number of parents: ' + results.length
-                );
+                throw new Error('Wrong number of parents: ' + results.length);
               value = results[0];
             } else {
               value = results;

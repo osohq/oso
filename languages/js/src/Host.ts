@@ -36,11 +36,19 @@ export class UserType {
   class: any;
   fields: Map<string, any>;
   fetcher: any;
-  buildQuery: any;
-  execQuery: any;
-  combineQuery: any;
+  buildQuery: undefined | ((_: any) => any);
+  execQuery: undefined | ((_: any) => any);
+  combineQuery: undefined | ((_: any) => any);
 
-  constructor({ name, class: cls, fields, fetcher, buildQuery, execQuery, combineQuery }: any) {
+  constructor({
+    name,
+    class: cls,
+    fields,
+    fetcher,
+    buildQuery,
+    execQuery,
+    combineQuery,
+  }: any) {
     this.name = name;
     this.class = cls;
     this.fields = fields;
@@ -58,7 +66,6 @@ export class UserType {
  */
 export class Host {
   #ffiPolar: FfiPolar;
-  #classIds: Map<string, number>;
   #instances: Map<number, any>;
   types: Map<any, UserType>;
   #equalityFn: EqualityFn;
@@ -72,7 +79,6 @@ export class Host {
   static clone(host: Host): Host {
     const clone = new Host(host.#ffiPolar, host.#equalityFn);
     clone.#instances = new Map(host.#instances);
-    clone.#classIds = new Map(host.#classIds);
     clone.types = new Map(host.types);
     return clone;
   }
@@ -81,7 +87,6 @@ export class Host {
   constructor(ffiPolar: FfiPolar, equalityFn: EqualityFn) {
     this.#ffiPolar = ffiPolar;
     this.#instances = new Map();
-    this.#classIds = new Map();
     this.#equalityFn = equalityFn;
     this.types = new Map();
   }
