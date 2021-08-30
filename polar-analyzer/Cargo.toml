@@ -30,9 +30,10 @@ tokio = { version = "1.10.0", features = [
     "rt-multi-thread",
     "signal",
     "sync",
+    "time",
 ] }
 tower-lsp = { path = "../../../samscott89/tower-lsp" }
-tracing = "0.1.26"
+tracing = { version = "0.1.26", features = ["attributes"] }
 tracing-subscriber = { version = "0.2.19", features = ["fmt"] }
 xflags = "0.2.3"
 

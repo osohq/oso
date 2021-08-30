@@ -18,6 +18,10 @@ pub struct SourceMap {
 }
 
 impl SourceMap {
+    pub fn get_files(&self) -> Vec<String> {
+        self.sources.read().unwrap().keys().cloned().collect()
+    }
+
     pub fn refresh(&self, kb: &KnowledgeBase, files: Vec<(&str, &str)>) {
         let mut sources = self.sources.write().unwrap();
         let updated_files: HashSet<&str> = files

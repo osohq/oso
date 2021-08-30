@@ -38,6 +38,7 @@ fn kind(err: &PolarError) -> String {
         Parse(SingletonVariable { .. }) => "ParseError::SingletonVariable",
         Parse(AmbiguousAndOr { .. }) => "ParseError::AmbiguousAndOr",
         Parse(ParseSugar { .. }) => "ParseError::Sugar",
+        Parse(UnregisteredClass { .. }) => "ParseError::UnregisteredClass",
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
         Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",

@@ -1,23 +1,23 @@
 import * as path from 'path';
-import { window, workspace, ExtensionContext, commands, WorkspaceSymbolProvider, SymbolInformation, SymbolKind } from 'vscode';
+import { extensions, languages, window, workspace, ExtensionContext, commands, SymbolInformation, SymbolKind } from 'vscode';
 
 import * as net from 'net';
 
 import {
-	ClientCapabilities,
-	DocumentSelector,
-	Executable,
-	InitializeParams,
 	integer,
 	LanguageClient,
 	LanguageClientOptions,
 	RequestType,
-	ServerCapabilities,
 	ServerOptions,
-	StaticFeature,
 	StreamInfo,
-	TextDocumentFeature,
 } from 'vscode-languageclient/node';
+
+import {
+	SymbolInformation as LspSymbolInformation
+} from 'vscode-languageserver-types';
+import { createConverter } from 'vscode-languageclient/lib/common/codeConverter';
+
+const converter = createConverter();
 
 let client: LanguageClient;
 
@@ -105,27 +105,43 @@ export async function activate(context: ExtensionContext) {
 		// the client handles a method for polar analyer, to find all workspace params
 		client.onRequest(getAllSymbols, async (params) => {
 			info("Got a request to get all workspace symbols!");
-			info(`Requested symbols: ${params.names}`);
-			const symbols = [];
-			for (const symbol in params.names) {
+			// const langs = await languages.getLanguages();
+			info(`All extensions: ${extensions.all.map(ext => ext.id)}`);
+			info(`All langs: ${await languages.getLanguages()}`);
+			info(`Activating extensions for symbols`);
+			const langExtensions = [
+				extensions.getExtension("ms-python.python"),
+				extensions.getExtension("ms-python.vscode-pylance"),
+			];
+			const allActivated = langExtensions.every(ext => ext.isActive);
+			if (!allActivated) {
+				for (const ext of langExtensions) {
+					await ext.activate();
+				}
+
+				// sleep for 2s to let the extensions load
+				await new Promise(resolve => setTimeout(resolve, 2000));
+			}
+
+			info(`Requested symbols: ${params.names} `);
+			const symbols: LspSymbolInformation[] = [];
+			for (const symbol of params.names) {
 				const matches: SymbolInformation[] = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', symbol);
-				info(`Returned symbols: ${matches.map(m => m.name)}`);
-				symbols.push(...matches);
+				info(`Matches for ${symbol}: ${matches.map(m => m.name)} `);
+				symbols.push(...convertSymbols(matches));
 			}
 			const global: SymbolInformation[] = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', "");
-			info(`Returned symbols: ${global.map(m => m.name)}`);
-			symbols.push(...global);
-			info(`Returned symbols: ${symbols.map(s => s.toString()).join(",")}`);
+			info(`Global symbols: ${global.map(m => m.name)} `);
+			symbols.push(...convertSymbols(global));
+			info(`Returned symbols: ${symbols.map(s => s.toString()).join(",")} `);
 			return {
-				"classes": symbols.filter(sym =>
-					sym.kind === SymbolKind.Class
-				).map(sym => sym.name)
+				symbols
 			};
 		});
 	});
-
 	client.start();
 }
+
 
 const getAllSymbols = new RequestType<GetAllSymbolsParams, Symbols, void>("polar-analyzer/getAllSymbols");
 
@@ -134,10 +150,20 @@ interface GetAllSymbolsParams {
 }
 
 interface Symbols {
-	classes: string[]
+	symbols: LspSymbolInformation[]
 }
 
-
+function convertSymbols(symbols: SymbolInformation[]): LspSymbolInformation[] {
+	return symbols.map(s => {
+		return {
+			name: s.name,
+			containerName: s.containerName,
+			location: converter.asLocation(s.location),
+			kind: converter.asSymbolKind(s.kind),
+			tags: s.tags === undefined ? undefined : converter.asSymbolTags(s.tags),
+		};
+	});
+}
 
 export function deactivate(): Thenable<void> | undefined {
 	if (!client) {

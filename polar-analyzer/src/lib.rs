@@ -8,14 +8,15 @@ use diagnostics::UnusedRule;
 use inspect::{RuleInfo, TermInfo};
 use polar_core::{error::PolarError, polar};
 
+pub use anyhow::Result;
+use tracing::{debug, info};
+
 /// Wrapper for the `polar_core::Polar` type.
 /// Used as the API interface for all the analytics
 pub struct Polar {
     inner: polar::Polar,
     source_map: SourceMap,
 }
-
-pub use anyhow::Result;
 
 impl Default for Polar {
     fn default() -> Self {
@@ -45,19 +46,31 @@ impl Polar {
     /// will first remove the file.
     pub fn load(&self, src: &str, filename: &str) -> Result<(), PolarError> {
         let old = self.inner.remove_file(filename);
-        self.inner
+        let res = self
+            .inner
             .load(src, Some(filename.to_string()))
             .map_err(|e| {
+                // attempt to fall back to the old version _if it was working_
                 if let Some(old_src) = old {
-                    self.inner
+                    if self
+                        .inner
                         .load(&old_src, Some(filename.to_string()))
-                        .expect("failed to reload old policy after new policy loading failed");
+                        .is_err()
+                    {
+                        self.inner.remove_file(filename);
+                        let _ = self.inner.load(src, Some(filename.to_string()));
+                    }
                 }
                 e
-            })?;
+            });
+        match &res {
+            Ok(_) => info!("Loaded file {}", filename),
+            Err(e) => debug!("Error loading file {}: {}", filename, e),
+        }
+        // Other than parse errors, we will end up with rules in the KB.
         let kb = self.inner.kb.read().unwrap();
         self.source_map.refresh(&kb, vec![(filename, src)]);
-        Ok(())
+        res
     }
 
     pub fn rename(&self, old_filename: &str, new_filename: &str) -> Result<(), PolarError> {
@@ -93,6 +106,10 @@ impl Polar {
 
     pub fn get_symbol_at(&self, filename: &str, location: usize) -> Option<TermInfo> {
         self.source_map.get_symbol_at(filename, location)
+    }
+
+    pub fn get_files(&self) -> Vec<String> {
+        self.source_map.get_files()
     }
 
     #[cfg(test)]

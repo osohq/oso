@@ -7,10 +7,11 @@ use super::Backend;
 
 impl Backend {
     pub async fn get_hover(&self, params: HoverParams) -> Option<Hover> {
-        let polar = self.analyzer.read().await;
-        let filename = self
-            .uri_to_string(&params.text_document_position_params.text_document.uri)
-            .await;
+        let filename = {
+            self.uri_to_string(&params.text_document_position_params.text_document.uri)
+                .await
+        };
+        let polar = self.get_analyzer().await;
         let position = params.text_document_position_params.position;
         let offset = match polar.source_map.position_to_offset(&filename, position) {
             Some(offset) => offset,

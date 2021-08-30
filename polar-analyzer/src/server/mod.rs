@@ -6,36 +6,59 @@ mod hover;
 mod symbols;
 
 use lsp_types::*;
-use polar_core::terms::{Symbol, Term, Value};
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, OwnedMutexGuard};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+use std::time::Duration;
 
-use tracing::{debug, error, warn};
+use tracing::{debug, error, trace, warn};
 
 pub struct Backend {
     pub client: Client,
-    pub analyzer: Arc<RwLock<crate::Polar>>,
-    pub root: Arc<RwLock<Option<String>>>,
+    pub analyzer: Arc<Mutex<crate::Polar>>,
+    pub root: Arc<Mutex<Option<String>>>,
+}
+
+impl std::fmt::Debug for Backend {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Backend")
+            // .field("client", &self.client)
+            // .field("analyzer", &self.analyzer)
+            // .field("root", &self.root)
+            .finish()
+    }
 }
 
 impl Backend {
     pub async fn uri_to_string(&self, uri: &impl ToString) -> String {
-        if let Some(root) = self.root.read().await.as_ref() {
+        if let Some(root) = self.root.lock().await.as_ref() {
             uri.to_string().replace(root, "")
         } else {
             uri.to_string()
         }
     }
+    async fn get_analyzer(&self) -> AnalyzerLock {
+        trace!("acquiring analyzer lock");
+
+        let res = tokio::time::timeout(
+            Duration::from_millis(30_000),
+            self.analyzer.clone().lock_owned(),
+        )
+        .await
+        .expect("acquiring a lock on polar-analyzer timed out");
+        AnalyzerLock(res)
+    }
 }
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
+    #[tracing::instrument]
     async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
         if let Some(root) = params.root_uri {
-            self.root.write().await.replace(root.to_string() + "/");
+            self.root.lock().await.replace(root.to_string() + "/");
         }
         let server_capabilities = config::server_capabilities();
 
@@ -50,21 +73,25 @@ impl LanguageServer for Backend {
         Ok(initialize_result)
     }
 
+    #[tracing::instrument]
     async fn initialized(&self, _: InitializedParams) {
         self.client
             .log_message(MessageType::Info, "server initialized!")
             .await;
     }
 
+    #[tracing::instrument]
     async fn shutdown(&self) -> Result<()> {
         Ok(())
     }
 
+    #[tracing::instrument]
     async fn did_change_workspace_folders(&self, params: DidChangeWorkspaceFoldersParams) {
         let _ = params;
         warn!("Got a workspace/didChangeWorkspaceFolders notification, but it is not implemented");
     }
 
+    #[tracing::instrument]
     async fn symbol(
         &self,
         params: WorkspaceSymbolParams,
@@ -74,69 +101,59 @@ impl LanguageServer for Backend {
         Ok(Some(vec![]))
     }
 
+    #[tracing::instrument]
     async fn did_rename_files(&self, params: RenameFilesParams) {
         if let Err(e) = self.rename_files(params).await {
             error!("{}", e)
         }
     }
 
+    #[tracing::instrument]
     async fn did_delete_files(&self, params: DeleteFilesParams) {
         if let Err(e) = self.delete_files(params).await {
             error!("{}", e)
         }
     }
 
+    #[tracing::instrument]
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
-        let filename = self.uri_to_string(&params.text_document.uri).await;
+        self.refresh_workspace_symbols().await;
         if let Err(e) = self.open_document(params).await {
             error!("{}", e)
         }
-        let polar = self.analyzer.read().await;
-        let classes = polar
-            .get_term_info(&filename)
-            .into_iter()
-            .filter_map(|t| match t.r#type.as_str() {
-                "Variable" | "Pattern" => Some(t.name),
-                _ => None,
-            })
-            .collect();
-        let symbols_res = self.get_all_symbols(Some(classes)).await;
-
-        match symbols_res {
-            Ok(symbols) => {
-                debug!("Adding symbols to Polar: {:#?}", symbols);
-                let polar = self.analyzer.write().await;
-                for class in symbols.classes.into_iter() {
-                    polar.inner.register_constant(
-                        Symbol(class),
-                        Term::new_temporary(Value::Boolean(false)),
-                    )
-                }
-            }
-            Err(e) => {
-                error!("Couldn't get symbols: {}", e)
-            }
-        }
+        self.refresh_workspace_symbols().await;
     }
 
+    #[tracing::instrument]
+    async fn did_save(&self, _: DidSaveTextDocumentParams) {
+        self.refresh_workspace_symbols().await;
+    }
+
+    #[tracing::instrument]
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
         if let Err(e) = self.edit_document(params).await {
             error!("{}", e)
         }
     }
 
+    #[tracing::instrument]
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
         Ok(completion::get_completions(params))
     }
 
+    #[tracing::instrument]
     async fn completion_resolve(&self, params: CompletionItem) -> Result<CompletionItem> {
         Ok(completion::resolve_completion(params))
     }
 
+    #[tracing::instrument]
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
-        Ok(self.get_hover(params).await)
+        let res = self.get_hover(params).await;
+        trace!("Hover result: {:#?}", res);
+        Ok(res)
     }
 
+    #[tracing::instrument]
     async fn document_symbol(
         &self,
         params: DocumentSymbolParams,
@@ -146,7 +163,7 @@ impl LanguageServer for Backend {
 }
 
 pub async fn run_tcp_server(polar: Option<crate::Polar>, port: u32) -> anyhow::Result<()> {
-    let analyzer = Arc::new(RwLock::new(polar.unwrap_or_default()));
+    let analyzer = Arc::new(Mutex::new(polar.unwrap_or_default()));
     loop {
         let (service, messages) = LspService::new(|client| Backend {
             client,
@@ -171,7 +188,7 @@ pub async fn run_tcp_server(polar: Option<crate::Polar>, port: u32) -> anyhow::R
 pub async fn run_stdio_server(polar: Option<crate::Polar>) -> anyhow::Result<()> {
     let (service, messages) = LspService::new(|client| Backend {
         client,
-        analyzer: Arc::new(RwLock::new(polar.unwrap_or_default())),
+        analyzer: Arc::new(Mutex::new(polar.unwrap_or_default())),
         root: Default::default(),
     });
 
@@ -185,4 +202,27 @@ pub async fn run_stdio_server(polar: Option<crate::Polar>) -> anyhow::Result<()>
         _ = tokio::signal::ctrl_c() => {},
     }
     Ok(())
+}
+
+struct AnalyzerLock(pub OwnedMutexGuard<crate::Polar>);
+
+impl Deref for AnalyzerLock {
+    type Target = crate::Polar;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for AnalyzerLock {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Drop for AnalyzerLock {
+    fn drop(&mut self) {
+        trace!("releasing analyzer lock");
+        drop(&mut self.0);
+    }
 }

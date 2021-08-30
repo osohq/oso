@@ -37,7 +37,7 @@ pub struct KnowledgeBase {
     pub loaded_content: HashMap<String, String>,
 
     pub rules: HashMap<Symbol, GenericRule>,
-    rule_prototypes: HashMap<Symbol, Vec<Rule>>,
+    pub rule_prototypes: HashMap<Symbol, Vec<Rule>>,
     pub sources: Sources,
     /// For symbols returned from gensym.
     gensym_counter: Counter,

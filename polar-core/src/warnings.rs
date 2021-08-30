@@ -51,11 +51,21 @@ struct SingletonVisitor<'kb> {
 
 fn warn_str(sym: &Symbol, term: &Term, source: &Option<Source>) -> PolarResult<String> {
     if let Value::Pattern(..) = term.value() {
-        let mut msg = format!("Unknown specializer {}", sym);
+        let msg = format!("Unknown specializer {}", sym);
         if let Some(t) = common_misspellings(&sym.0) {
-            msg.push_str(&format!(", did you mean {}?", t));
+            Ok(msg + &format!(", did you mean {}?", t))
+        } else {
+            let src = if let Some(ref s) = source {
+                Some(s)
+            } else {
+                None
+            };
+            Err(PolarError::from(ParseError::UnregisteredClass {
+                loc: term.offset(),
+                name: sym.0.clone(),
+            })
+            .set_context(src, Some(term)))
         }
-        Ok(msg)
     } else {
         let perr = error::ParseError::SingletonVariable {
             loc: term.offset(),
@@ -150,7 +160,7 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
     }
 
     fn warnings(&mut self) -> PolarResult<Vec<String>> {
-        let msgs: Vec<String> = self
+        let msgs: Vec<(String, usize)> = self
             .unparenthesized_expr
             .iter()
             .map(|(source, or_term)| {
@@ -160,16 +170,13 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
                 \n\n"
                     .to_string();
                 msg.push_str(&source_lines(source, or_term.offset(), 0));
-                msg
+                (msg, or_term.offset())
             })
             .collect();
-        if let Some(msg) = msgs.get(0) {
-            return Err(ParseError::AmbiguousAndOr {
-                msg: msg.to_string(),
-            }
-            .into());
+        if let Some((msg, loc)) = msgs.get(0).cloned() {
+            return Err(ParseError::AmbiguousAndOr { loc, msg }.into());
         }
-        Ok(msgs)
+        Ok(vec![])
     }
 }
 

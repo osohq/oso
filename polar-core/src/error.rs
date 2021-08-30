@@ -58,7 +58,9 @@ impl PolarError {
                 | ParseError::ReservedWord { loc, .. }
                 | ParseError::DuplicateKey { loc, .. }
                 | ParseError::SingletonVariable { loc, .. }
-                | ParseError::ParseSugar { loc, .. } => {
+                | ParseError::ParseSugar { loc, .. }
+                | ParseError::AmbiguousAndOr { loc, .. }
+                | ParseError::UnregisteredClass { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -232,6 +234,7 @@ pub enum ParseError {
         name: String,
     },
     AmbiguousAndOr {
+        loc: usize,
         msg: String,
     },
     ParseSugar {
@@ -240,6 +243,10 @@ pub enum ParseError {
         /// Set of source ranges to augment the error message with relevant snippets of the parsed
         /// Polar policy.
         ranges: Vec<ops::Range<usize>>,
+    },
+    UnregisteredClass {
+        loc: usize,
+        name: String,
     },
 }
 
@@ -306,6 +313,11 @@ impl fmt::Display for ParseError {
             Self::AmbiguousAndOr { msg, .. } | Self::ParseSugar { msg, .. } => {
                 write!(f, "{}", msg)
             }
+            Self::UnregisteredClass { name, .. } => write!(
+                f,
+                "\"{}\" has not been registered as a class, but was used as a specialzer",
+                name
+            ),
         }
     }
 }

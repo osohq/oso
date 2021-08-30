@@ -156,86 +156,101 @@ impl Polar {
         }
     }
 
+    /// Parse the file, loading all rules into the knowledge base.
+    ///
+    /// TODO: currently we can't recover from parse errors, but if we could
+    /// then we could return a list of errors and continue.
+    pub fn parse(&self, source_id: u64, source: &Source) -> PolarResult<()> {
+        let mut kb = self.kb.write().unwrap();
+        let mut lines = parser::parse_lines(source_id, &source.src)
+            .map_err(|e| e.set_context(Some(source), None))?;
+        lines.reverse();
+        while let Some(line) = lines.pop() {
+            match line {
+                parser::Line::Rule(rule) => {
+                    let rule = rewrite_rule(rule, &mut kb);
+                    kb.add_rule(rule);
+                }
+                parser::Line::Query(term) => {
+                    kb.inline_queries.push(term);
+                }
+                parser::Line::RulePrototype(prototype) => {
+                    // make sure prototype doesn't have anything that needs to be rewritten in the head
+                    let prototype = rewrite_rule(prototype, &mut kb);
+                    kb.add_rule_prototype(prototype);
+                }
+                parser::Line::Namespace(namespace) => {
+                    namespace.add_to_kb(&mut kb)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn validate(&self) -> PolarResult<()> {
+        let mut kb = self.kb.write().unwrap();
+        for rule in kb.get_rules().iter().flat_map(|(_, gr)| gr.rules.values()) {
+            // for rule in &rules {
+            let mut warnings = vec![];
+            let mut rule_warnings = check_singletons(&rule, &*kb)?;
+            warnings.append(&mut rule_warnings);
+            warnings.append(&mut check_ambiguous_precedence(&rule, &*kb)?);
+        }
+
+        for prototype in kb.rule_prototypes.iter().flat_map(|(_, rp)| rp.iter()) {
+            if !matches!(
+                prototype.body.value(),
+                Value::Expression(
+                    Operation {
+                        operator: Operator::And,
+                        args
+                    }
+                ) if args.is_empty()
+            ) {
+                return Err(kb.set_error_context(
+                    &prototype.body,
+                    error::ValidationError::InvalidPrototype {
+                        prototype: prototype.to_polar(),
+                        msg: "\nPrototypes cannot contain dot lookups.".to_owned(),
+                    },
+                ));
+            }
+        }
+
+        // Rewrite namespace implications _before_ validating rule prototypes.
+        kb.rewrite_implications()?;
+        // check rules are valid against rule prototypes
+        kb.validate_rules()?;
+        Ok(())
+    }
+
     pub fn load(&self, src: &str, filename: Option<String>) -> PolarResult<()> {
         let source = Source {
             filename,
             src: src.to_owned(),
         };
-        let mut kb = self.kb.write().unwrap();
-        let source_id = kb.add_source(source.clone())?;
+        let source_id = self.kb.write().unwrap().add_source(source.clone())?;
 
-        // we extract this into a separate function
-        // so that any errors returned with `?` are captured
-        fn load_source(
-            source_id: u64,
-            source: &Source,
-            kb: &mut KnowledgeBase,
-        ) -> PolarResult<Vec<String>> {
-            let mut lines = parser::parse_lines(source_id, &source.src)
-                .map_err(|e| e.set_context(Some(source), None))?;
-            lines.reverse();
-            let mut warnings = vec![];
-            while let Some(line) = lines.pop() {
-                match line {
-                    parser::Line::Rule(rule) => {
-                        let mut rule_warnings = check_singletons(&rule, &*kb)?;
-                        warnings.append(&mut rule_warnings);
-                        warnings.append(&mut check_ambiguous_precedence(&rule, &*kb)?);
-                        let rule = rewrite_rule(rule, kb);
-                        kb.add_rule(rule);
-                    }
-                    parser::Line::Query(term) => {
-                        kb.inline_queries.push(term);
-                    }
-                    parser::Line::RulePrototype(prototype) => {
-                        // make sure prototype doesn't have anything that needs to be rewritten in the head
-                        let prototype = rewrite_rule(prototype, kb);
-                        if !matches!(
-                            prototype.body.value(),
-                            Value::Expression(
-                                Operation {
-                                    operator: Operator::And,
-                                    args
-                                }
-                            ) if args.is_empty()
-                        ) {
-                            return Err(kb.set_error_context(
-                                &prototype.body,
-                                error::ValidationError::InvalidPrototype {
-                                    prototype: prototype.to_polar(),
-                                    msg: "\nPrototypes cannot contain dot lookups.".to_owned(),
-                                },
-                            ));
-                        }
-                        kb.add_rule_prototype(prototype);
-                    }
-                    parser::Line::Namespace(namespace) => {
-                        namespace.add_to_kb(kb)?;
-                    }
-                }
-            }
-            // Rewrite namespace implications _before_ validating rule prototypes.
-            kb.rewrite_implications()?;
-            // check rules are valid against rule prototypes
-            kb.validate_rules()?;
-            Ok(warnings)
-        }
+        self.parse(source_id, &source)?;
+        self.validate()?;
 
-        // if any of the lines fail to load, we need to remove the source from
-        // the knowledge base
-        match load_source(source_id, &source, &mut kb) {
-            Ok(warnings) => {
-                self.messages.extend(warnings.iter().map(|m| Message {
-                    kind: MessageKind::Warning,
-                    msg: m.to_owned(),
-                }));
-                Ok(())
-            }
-            Err(e) => {
-                kb.remove_source(source_id);
-                Err(e)
-            }
-        }
+        Ok(())
+        // // if any of the lines fail to load, we need to remove the source from
+        // // the knowledge base
+        // match load_source(source_id, &source, &mut kb) {
+        //     Ok(warnings) => {
+        //         self.messages.extend(warnings.iter().map(|m| Message {
+        //             kind: MessageKind::Warning,
+        //             msg: m.to_owned(),
+        //         }));
+        //         Ok(())
+        //     }
+        //     Err(e) => {
+        //         kb.remove_source(source_id);
+        //         eprint!("{}", e);
+        //         Err(e)
+        //     }
+        // }
     }
 
     // Used in integration tests

@@ -30,7 +30,7 @@ impl Backend {
     }
 
     pub async fn rename_files(&self, params: RenameFilesParams) -> crate::Result<()> {
-        let polar = self.analyzer.read().await;
+        let polar = self.get_analyzer().await;
 
         for rename in params.files {
             let old = self.uri_to_string(&rename.old_uri).await;
@@ -41,7 +41,7 @@ impl Backend {
     }
 
     pub async fn delete_files(&self, params: DeleteFilesParams) -> crate::Result<()> {
-        let polar = self.analyzer.read().await;
+        let polar = self.get_analyzer().await;
 
         for deletion in params.files {
             let filename = self.uri_to_string(&deletion.uri).await;
@@ -52,24 +52,23 @@ impl Backend {
 
     async fn try_load_file(&self, src: String, uri: lsp_types::Url) {
         let filename = self.uri_to_string(&uri).await;
-        let polar = self.analyzer.write().await;
+        let polar = self.get_analyzer().await;
         debug!("Loading: {} as {}", uri, filename);
         let mut diagnostics = vec![];
         if let Err(e) = polar.load(&src, &filename) {
             diagnostics.push(error_to_diagnostic(e))
-        } else {
-            for (rule_error, start, end) in polar.get_unused_rules(&filename) {
-                let diagnostic = Diagnostic {
-                    severity: Some(DiagnosticSeverity::Warning),
-                    message: format!("Rule does not exist: {}", rule_error),
-                    range: polar
-                        .source_map
-                        .location_to_range(&filename, start, end)
-                        .unwrap(),
-                    ..Default::default()
-                };
-                diagnostics.push(diagnostic);
-            }
+        }
+        for (rule_error, start, end) in polar.get_unused_rules(&filename) {
+            let diagnostic = Diagnostic {
+                severity: Some(DiagnosticSeverity::Warning),
+                message: format!("Rule does not exist: {}", rule_error),
+                range: polar
+                    .source_map
+                    .location_to_range(&filename, start, end)
+                    .unwrap(),
+                ..Default::default()
+            };
+            diagnostics.push(diagnostic);
         }
 
         self.client
