@@ -4,14 +4,20 @@ use tower_lsp::jsonrpc::Result;
 use super::Backend;
 
 impl Backend {
-    pub async fn get_all_symbols(&self) -> Result<Symbols> {
-        self.client.send_custom_request::<GetAllSymbols>(()).await
+    pub async fn get_all_symbols(&self, names: Option<Vec<String>>) -> Result<Symbols> {
+        self.client
+            .send_custom_request::<GetAllSymbols>(GetAllSymbolsParams { names })
+            .await
     }
 }
 
+enum GetAllSymbols {}
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 
-struct GetAllSymbols;
+struct GetAllSymbolsParams {
+    pub names: Option<Vec<String>>,
+}
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Symbols {
@@ -19,7 +25,7 @@ pub struct Symbols {
 }
 
 impl lsp_types::request::Request for GetAllSymbols {
-    type Params = ();
+    type Params = GetAllSymbolsParams;
 
     type Result = Symbols;
 

@@ -2,7 +2,7 @@ use indoc::indoc;
 use polar_core::{
     kb::KnowledgeBase,
     sources::SourceInfo,
-    terms::{Operator, Term, ToPolarString, Value},
+    terms::{Operator, Pattern, Term, ToPolarString, Value},
     visitor::{walk_operation, Visitor},
 };
 use serde::{Deserialize, Serialize};
@@ -26,6 +26,7 @@ impl TermInfo {
         let name = match term.value() {
             Value::Call(c) => c.name.0.clone(),
             Value::Expression(operation) => operation.operator.to_polar(),
+            Value::Pattern(Pattern::Instance(i)) => i.tag.0.clone(),
             _ => term.to_polar(),
         };
         let location = get_term_location(kb, term);
@@ -704,7 +705,7 @@ pub fn get_term_information(kb: &KnowledgeBase) -> Vec<TermInfo> {
         generic_rule
             .rules
             .iter()
-            .for_each(|(_, r)| visitor.visit_term(&r.body))
+            .for_each(|(_, r)| visitor.visit_rule(&r))
     });
     visitor.terms
 }

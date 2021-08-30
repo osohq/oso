@@ -103,11 +103,19 @@ export async function activate(context: ExtensionContext) {
 	client.onReady().then(() => {
 		info("Configuring the getAllSymbols handler");
 		// the client handles a method for polar analyer, to find all workspace params
-		client.onRequest(getAllSymbols, async (_) => {
+		client.onRequest(getAllSymbols, async (params) => {
 			info("Got a request to get all workspace symbols!");
-			// const symbols = [];
-			const symbols: SymbolInformation[] = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', "");
-			info(`Symbols: ${symbols}`);
+			info(`Requested symbols: ${params.names}`);
+			const symbols = [];
+			for (const symbol in params.names) {
+				const matches: SymbolInformation[] = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', symbol);
+				info(`Returned symbols: ${matches.map(m => m.name)}`);
+				symbols.push(...matches);
+			}
+			const global: SymbolInformation[] = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', "");
+			info(`Returned symbols: ${global.map(m => m.name)}`);
+			symbols.push(...global);
+			info(`Returned symbols: ${symbols.map(s => s.toString()).join(",")}`);
 			return {
 				"classes": symbols.filter(sym =>
 					sym.kind === SymbolKind.Class
@@ -121,7 +129,9 @@ export async function activate(context: ExtensionContext) {
 
 const getAllSymbols = new RequestType<GetAllSymbolsParams, Symbols, void>("polar-analyzer/getAllSymbols");
 
-type GetAllSymbolsParams = Record<string, never>;
+interface GetAllSymbolsParams {
+	names?: string[]
+}
 
 interface Symbols {
 	classes: string[]

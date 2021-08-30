@@ -87,19 +87,20 @@ impl LanguageServer for Backend {
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
+        let filename = self.uri_to_string(&params.text_document.uri).await;
         if let Err(e) = self.open_document(params).await {
             error!("{}", e)
         }
-    }
-
-    async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        if let Err(e) = self.edit_document(params).await {
-            error!("{}", e)
-        }
-    }
-
-    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
-        let symbols_res = self.get_all_symbols().await;
+        let polar = self.analyzer.read().await;
+        let classes = polar
+            .get_term_info(&filename)
+            .into_iter()
+            .filter_map(|t| match t.r#type.as_str() {
+                "Variable" | "Pattern" => Some(t.name),
+                _ => None,
+            })
+            .collect();
+        let symbols_res = self.get_all_symbols(Some(classes)).await;
 
         match symbols_res {
             Ok(symbols) => {
@@ -116,6 +117,15 @@ impl LanguageServer for Backend {
                 error!("Couldn't get symbols: {}", e)
             }
         }
+    }
+
+    async fn did_change(&self, params: DidChangeTextDocumentParams) {
+        if let Err(e) = self.edit_document(params).await {
+            error!("{}", e)
+        }
+    }
+
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
         Ok(completion::get_completions(params))
     }
 
