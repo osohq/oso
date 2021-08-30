@@ -35,159 +35,160 @@ class Num {
   number!: number;
 }
 
-describe('Data filtering', () => {
-  test('using typeorm with sqlite', async () => {
-    const connection = await createConnection({
-      type: 'sqlite',
-      database: `:memory:`,
-      entities: [Foo, Bar, Num],
-      synchronize: true,
-      logging: false,
-    });
+let i = 0;
+const gensym = (tag?: any) => `_${tag}_${i++}`;
 
-    let bars = connection.getRepository(Bar);
-    let foos = connection.getRepository(Foo);
-    let nums = connection.getRepository(Num);
+async function fixtures() {
+  const connection = await createConnection({
+    type: 'sqlite',
+    database: `:memory:`,
+    entities: [Foo, Bar, Num],
+    synchronize: true,
+    logging: false,
+    name: gensym(),
+  });
 
-    async function mkBar(id: string, cool: boolean, stillCool: boolean) {
-      let bar = new Bar();
-      bar.id = id;
-      bar.isCool = cool;
-      bar.isStillCool = stillCool;
-      await bars.save(bar);
-      return bar;
-    }
+  const bars = connection.getRepository(Bar);
+  const foos = connection.getRepository(Foo);
+  const nums = connection.getRepository(Num);
 
-    async function mkFoo(id: string, barId: string, fooey: boolean) {
-      let foo = new Foo();
-      foo.id = id;
-      foo.barId = barId;
-      foo.isFooey = fooey;
-      await foos.save(foo);
-      return foo;
-    }
+  async function mkBar(id: string, cool: boolean, stillCool: boolean) {
+    const bar = new Bar();
+    bar.id = id;
+    bar.isCool = cool;
+    bar.isStillCool = stillCool;
+    await bars.save(bar);
+    return bar;
+  }
 
-    async function mkNum(number: number, fooId: string) {
-      let num = new Num();
-      num.fooId = fooId;
-      num.number = number;
-      await nums.save(num);
-      return num;
-    }
+  async function mkFoo(id: string, barId: string, fooey: boolean) {
+    const foo = new Foo();
+    foo.id = id;
+    foo.barId = barId;
+    foo.isFooey = fooey;
+    await foos.save(foo);
+    return foo;
+  }
 
-    let helloBar = await mkBar('hello', true, true);
-    let byeBar = await mkBar('goodbye', true, false);
+  async function mkNum(number: number, fooId: string) {
+    const num = new Num();
+    num.fooId = fooId;
+    num.number = number;
+    await nums.save(num);
+    return num;
+  }
 
-    let aFoo = await mkFoo('one', 'hello', false);
-    let anotherFoo = await mkFoo('another', 'hello', true);
-    let thirdFoo = await mkFoo('next', 'goodbye', true);
+  const helloBar = await mkBar('hello', true, true);
+  const byeBar = await mkBar('goodbye', true, false);
 
-    await mkNum(0, 'one');
-    await mkNum(1, 'one');
-    await mkNum(2, 'one');
+  const aFoo = await mkFoo('one', 'hello', false);
+  const anotherFoo = await mkFoo('another', 'hello', true);
+  const thirdFoo = await mkFoo('next', 'goodbye', true);
 
-    await mkNum(0, 'another');
-    await mkNum(1, 'another');
+  for (let i of [0, 1, 2]) await mkNum(i, 'one');
+  for (let i of [0, 1]) await mkNum(i, 'another');
+  for (let i of [0]) await mkNum(i, 'next');
 
-    await mkNum(0, 'next');
+  const oso = new Oso();
 
-    const oso = new Oso();
+  const fromRepo = (repo: any, name: string) => {
+    const constrain = (query: any, c: any) => {
+      let clause,
+        rhs,
+        sym = gensym(c.field),
+        param: any = {};
 
-    let i = 0;
-    const gensym = (tag: any) => `_${tag}_${i++}`;
+      if (c.value instanceof Field) {
+        rhs = `${name}.${c.value.field}`;
+      } else {
+        rhs = c.kind == 'In' ? `(:...${sym})` : `:${sym}`;
+        param[sym] = c.value;
+      }
 
-    const fromRepo = (repo: any, name: string) => {
-      const constrain = (query: any, c: any) => {
-        let clause,
-          rhs,
-          sym = gensym(c.field),
-          param: any = {};
+      if (c.kind === 'Eq') clause = `${name}.${c.field} = ${rhs}`;
+      else if (c.kind === 'Neq') clause = `${name}.${c.field} <> ${rhs}`;
+      else if (c.kind === 'In') clause = `${name}.${c.field} IN ${rhs}`;
+      else throw new Error(`Unknown constraint kind: ${c.kind}`);
 
-        if (c.value instanceof Field) {
-          rhs = `${name}.${c.value.field}`;
-        } else {
-          rhs = c.kind == 'In' ? `(:...${sym})` : `:${sym}`;
-          param[sym] = c.value;
-        }
-
-        if (c.kind === 'Eq') clause = `${name}.${c.field} = ${rhs}`;
-        else if (c.kind === 'Neq') clause = `${name}.${c.field} <> ${rhs}`;
-        else if (c.kind === 'In') clause = `${name}.${c.field} IN ${rhs}`;
-        else throw new Error(`Unknown constraint kind: ${c.kind}`);
-
-        return query.andWhere(clause, param);
-      };
-
-      return (constraints: any) =>
-        constraints.reduce(constrain, repo.createQueryBuilder(name));
+      return query.andWhere(clause, param);
     };
 
+    return (constraints: any) =>
+      constraints.reduce(constrain, repo.createQueryBuilder(name));
+  };
+
+  const execQuery = (q: any) => q.getMany();
+  const combineQuery = (a: any, b: any) => {
     // this is kind of bad but typeorm doesn't let you do very much with queries ...
     const whereClause = (sql: string) => /WHERE (.*)$/.exec(sql)![1];
+    a = a.orWhere(whereClause(b.getQuery()), b.getParameters());
+    return a.where(`(${whereClause(a.getQuery())})`, a.getParameters());
+  };
 
-    const execQuery = (q: any) => q.getMany();
-    const combineQuery = (a: any, b: any) => {
-      a = a.orWhere(whereClause(b.getQuery()), b.getParameters());
-      return a.where(`(${whereClause(a.getQuery())})`, a.getParameters());
-    };
+  const barType = new Map();
+  barType.set('id', String);
+  barType.set('isCool', Boolean);
+  barType.set('isStillCool', Boolean);
+  barType.set('foos', new Relationship('children', 'Foo', 'id', 'barId'));
+  oso.registerClass(Bar, {
+    types: barType,
+    buildQuery: fromRepo(bars, 'bar'),
+    execQuery: execQuery,
+    combineQuery: combineQuery,
+  });
 
-    const barType = new Map();
-    barType.set('id', String);
-    barType.set('isCool', Boolean);
-    barType.set('isStillCool', Boolean);
-    barType.set('foos', new Relationship('children', 'Foo', 'id', 'barId'));
-    oso.registerClass(Bar, {
-      name: 'Bar',
-      types: barType,
-      buildQuery: fromRepo(bars, 'bar'),
-      execQuery: execQuery,
-      combineQuery: combineQuery,
-    });
+  const fooType = new Map();
+  fooType.set('id', String);
+  fooType.set('barId', String);
+  fooType.set('isFooey', Boolean);
+  fooType.set('bar', new Relationship('parent', 'Bar', 'barId', 'id'));
+  fooType.set('numbers', new Relationship('children', 'Num', 'id', 'fooId'));
+  oso.registerClass(Foo, {
+    types: fooType,
+    buildQuery: fromRepo(foos, 'foo'),
+    execQuery: execQuery,
+    combineQuery: combineQuery,
+  });
 
-    const fooType = new Map();
-    fooType.set('id', String);
-    fooType.set('barId', String);
-    fooType.set('isFooey', Boolean);
-    fooType.set('bar', new Relationship('parent', 'Bar', 'barId', 'id'));
-    fooType.set('numbers', new Relationship('children', 'Num', 'id', 'fooId'));
-    oso.registerClass(Foo, {
-      name: 'Foo',
-      types: fooType,
-      buildQuery: fromRepo(foos, 'foo'),
-      execQuery: execQuery,
-      combineQuery: combineQuery,
-    });
+  const numType = new Map();
+  numType.set('number', Number);
+  numType.set('fooId', String);
+  numType.set('foo', new Relationship('parent', 'Foo', 'fooId', 'id'));
+  oso.registerClass(Num, {
+    types: numType,
+    buildQuery: fromRepo(nums, 'num'),
+    execQuery: execQuery,
+    combineQuery: combineQuery,
+  });
 
-    const numType = new Map();
-    numType.set('number', Number);
-    numType.set('fooId', String);
-    numType.set('foo', new Relationship('parent', 'Foo', 'fooId', 'id'));
-    oso.registerClass(Num, {
-      name: 'Num',
-      types: numType,
-      buildQuery: fromRepo(nums, 'num'),
-      execQuery: execQuery,
-      combineQuery: combineQuery,
-    });
+  const checkAuthz = async (
+    actor: any,
+    action: string,
+    resource: any,
+    expected: any[]
+  ) => {
+    for (let x in expected)
+      expect(await oso.isAllowed(actor, action, expected[x])).toBe(true);
+    const actual = await oso.authorizedResources(actor, action, resource);
 
-    const expectSameResults = (a: any[], b: any[]) => {
-      expect(a).toEqual(expect.arrayContaining(b));
-      expect(b).toEqual(expect.arrayContaining(a));
-    };
+    expect(actual).toHaveLength(expected.length);
+    expect(actual).toEqual(expect.arrayContaining(expected));
+  };
 
-    const checkAuthz = async (
-      actor: any,
-      action: string,
-      resource: any,
-      expected: any[]
-    ) => {
-      for (let x in expected)
-        expect(await oso.isAllowed(actor, action, expected[x])).toBe(true);
-      expectSameResults(
-        await oso.authorizedResources(actor, action, resource),
-        expected
-      );
-    };
+  return {
+    oso: oso,
+    aFoo: aFoo,
+    anotherFoo: anotherFoo,
+    thirdFoo: thirdFoo,
+    helloBar: helloBar,
+    byeBar: byeBar,
+    checkAuthz: checkAuthz,
+  };
+}
+
+describe('Data filtering using typeorm/sqlite', () => {
+  test('relations and operators', async () => {
+    const { oso, checkAuthz, aFoo, anotherFoo, thirdFoo } = await fixtures();
 
     oso.loadStr(`
       allow("steve", "get", resource: Foo) if
@@ -195,31 +196,53 @@ describe('Data filtering', () => {
           bar.isCool = true and
           resource.isFooey = true;
       allow("steve", "patch", foo: Foo) if
-        foo in foo.bar.foos;`);
+        foo in foo.bar.foos;
+      allow(num: Integer, "count", foo: Foo) if
+        rec in foo.numbers and
+        rec.number = num;`);
+
     await checkAuthz('steve', 'get', Foo, [anotherFoo, thirdFoo]);
     await checkAuthz('steve', 'patch', Foo, [aFoo, anotherFoo, thirdFoo]);
 
-    oso.loadStr(`
-      allow(num: Integer, "count", foo: Foo) if
-        rec in foo.numbers and
-        rec.number = num;
-      allow("gwen", "put", foo: Foo) if
-        rec in foo.numbers and
-        rec.number in [1, 2];
-      allow("gwen", "get", bar: Bar) if
-        bar.isCool != bar.isStillCool;`);
     await checkAuthz(0, 'count', Foo, [aFoo, anotherFoo, thirdFoo]);
     await checkAuthz(1, 'count', Foo, [aFoo, anotherFoo]);
     await checkAuthz(2, 'count', Foo, [aFoo]);
+  });
 
-    await checkAuthz('gwen', 'put', Foo, [aFoo, anotherFoo]);
+  test('an empty result', async () => {
+    const { oso } = await fixtures();
+    oso.loadStr('allow("gwen", "put", _: Foo);');
+    expect(await oso.authorizedResources('gwen', 'delete', Foo)).toEqual([]);
+  });
+
+  test('not equals', async () => {
+    const { oso, checkAuthz, byeBar } = await fixtures();
+    oso.loadStr(`
+      allow("gwen", "get", bar: Bar) if
+        bar.isCool != bar.isStillCool;`);
     await checkAuthz('gwen', 'get', Bar, [byeBar]);
-    await checkAuthz('gwen', 'delete', Foo, []);
+  });
 
-    let putQuery = await oso.authorizedQuery('gwen', 'put', Foo);
-    expect(await putQuery.andWhere("id = 'one'").getMany()).toEqual([aFoo]);
+  test('returning, modifying and executing a query', async () => {
+    const { oso, checkAuthz, aFoo, anotherFoo } = await fixtures();
+    oso.loadStr(`
+      allow("gwen", "put", foo: Foo) if
+        rec in foo.numbers and
+        rec.number in [1, 2];`);
 
-    oso.clearRules();
+    const query = await oso.authorizedQuery('gwen', 'put', Foo);
+
+    let result = await query.getMany();
+    expect(result).toHaveLength(2);
+    expect(result).toEqual(expect.arrayContaining([aFoo, anotherFoo]));
+
+    result = await query.andWhere("id = 'one'").getMany();
+    expect(result).toHaveLength(1);
+    expect(result).toEqual(expect.arrayContaining([aFoo]));
+  });
+
+  test('a roles policy', async () => {
+    const { oso, checkAuthz, aFoo, anotherFoo, helloBar } = await fixtures();
     oso.loadStr(`
           resource(_type: Bar, "bar", actions, roles) if
               actions = ["get"] and
