@@ -13,7 +13,7 @@ macro_rules! check_messages {
             match message.kind {
                 ::polar_core::messages::MessageKind::Print => ::std::println!("{}", &message.msg),
                 ::polar_core::messages::MessageKind::Warning => {
-                    ::std::eprintln!("{}", &message.msg)
+                    ::std::eprintln!("[warning] {}", &message.msg)
                 }
             }
         }
