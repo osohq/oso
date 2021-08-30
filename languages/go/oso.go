@@ -2,6 +2,8 @@ package oso
 
 import (
 	"errors"
+
+	osoErrors "github.com/osohq/go-oso/errors"
 	"github.com/osohq/go-oso/types"
 )
 
@@ -9,7 +11,8 @@ import (
 The central object to manage policy state and verify requests.
 */
 type Oso struct {
-	p *Polar
+	p          *Polar
+	readAction interface{}
 }
 
 /*
@@ -24,8 +27,12 @@ func NewOso() (Oso, error) {
 	if p, e := newPolar(); e != nil {
 		return Oso{}, e
 	} else {
-		return Oso{p: p}, nil
+		return Oso{p: p, readAction: "read"}, nil
 	}
+}
+
+func (o Oso) SetReadAction(readAction interface{}) {
+	o.readAction = readAction
 }
 
 /*
@@ -117,6 +124,31 @@ func (o Oso) QueryRule(name string, args ...interface{}) (<-chan map[string]inte
 }
 
 /*
+Query the policy for a rule; the query is run in a new Go routine.
+Accepts the name of the rule to query, and a variadic list of rule arguments.
+Returns a channel of resulting binding maps, and a channel for errors.
+As the query is evaluated, all resulting bindings will be written to the results channel,
+and any errors will be written to the error channel.
+The results channel must be completely consumed or it will leak memory.
+*/
+func (o Oso) QueryRuleOnce(name string, args ...interface{}) (bool, error) {
+	query, err := (*o.p).queryRule(name, args...)
+	if err != nil {
+		return false, err
+	}
+	results, err := query.Next()
+	if err != nil {
+		return false, err
+	} else if results != nil {
+		// Manually clean up query since we are not pulling all results.
+		defer query.Cleanup()
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+/*
 Create policy query from a query string.
 Accepts the string to query for.
 Returns a new *Query, on which `Next()` can be called to get the next result,
@@ -141,20 +173,7 @@ Check if an (actor, action, resource) combination is allowed by the policy.
 Returns the result as a bool, or an error.
 */
 func (o Oso) IsAllowed(actor interface{}, action interface{}, resource interface{}) (bool, error) {
-	query, err := (*o.p).queryRule("allow", actor, action, resource)
-	if err != nil {
-		return false, err
-	}
-	results, err := query.Next()
-	if err != nil {
-		return false, err
-	} else if results != nil {
-		// Manually clean up query since we are not pulling all results.
-		defer query.Cleanup()
-		return true, nil
-	} else {
-		return false, nil
-	}
+	return o.QueryRuleOnce("allow", actor, action, resource)
 }
 
 /*
@@ -191,6 +210,33 @@ func (o Oso) GetAllowedActions(actor interface{}, resource interface{}, allowWil
 		}
 	}
 	return results, nil
+}
+
+func (o Oso) Authorize(actor interface{}, action interface{}, resource interface{}) error {
+	isAllowed, err := o.QueryRuleOnce("allow", actor, action, resource)
+	if err != nil {
+		return err
+	}
+
+	if isAllowed {
+		return nil
+	}
+
+	// Decide whether to return not found or forbidden error
+	isNotFound := false
+	if action == o.readAction {
+		isNotFound = true
+	} else {
+		isReadAllowed, err := o.QueryRuleOnce("allow", actor, o.readAction, resource)
+		if err != nil {
+			return err
+		}
+		if !isReadAllowed {
+			isNotFound = true
+		}
+	}
+
+	return osoErrors.NewAuthorizationError(isNotFound)
 }
 
 /*
