@@ -35,7 +35,6 @@ export class UserType {
   name: string;
   class: any;
   fields: Map<string, any>;
-  fetcher: any;
   buildQuery: undefined | ((_: any) => any);
   execQuery: undefined | ((_: any) => any);
   combineQuery: undefined | ((_: any) => any);
@@ -44,7 +43,6 @@ export class UserType {
     name,
     class: cls,
     fields,
-    fetcher,
     buildQuery,
     execQuery,
     combineQuery,
@@ -52,7 +50,6 @@ export class UserType {
     this.name = name;
     this.class = cls;
     this.fields = fields;
-    this.fetcher = fetcher;
     this.buildQuery = buildQuery;
     this.execQuery = execQuery;
     this.combineQuery = combineQuery;

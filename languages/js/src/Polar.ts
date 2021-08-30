@@ -263,7 +263,7 @@ export class Polar {
    */
   registerClass<T>(cls: Class<T>, params?: any): void {
     params = params ? params : {};
-    const { name, types, fetcher, buildQuery, execQuery, combineQuery } =
+    const { name, types, buildQuery, execQuery, combineQuery } =
       params;
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const clsName = name ? name : cls.name;
@@ -278,7 +278,6 @@ export class Polar {
     const userType = new UserType({
       name: clsName,
       class: cls,
-      fetcher: fetcher || buildQuery,
       buildQuery: buildQuery,
       execQuery: execQuery,
       combineQuery: combineQuery,
