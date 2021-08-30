@@ -263,8 +263,7 @@ export class Polar {
    */
   registerClass<T>(cls: Class<T>, params?: any): void {
     params = params ? params : {};
-    const { name, types, buildQuery, execQuery, combineQuery } =
-      params;
+    const { name, types, buildQuery, execQuery, combineQuery } = params;
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const clsName = name ? name : cls.name;
     const existing = this.#host.types.get(clsName);
@@ -299,7 +298,7 @@ export class Polar {
   /**
    * Returns all the resources the actor is allowed to perform some action on.
    */
-  async getAllowedResources(actor: any, action: any, cls: any): Promise<any> {
+  async authorizedQuery(actor: any, action: any, cls: any): Promise<any> {
     const resource = new Variable('resource');
     const clsName = this.#host.types.get(cls)!.name;
     const constraint = new Expression('And', [
@@ -339,14 +338,12 @@ export class Polar {
       'resource',
       clsName
     );
-    let query = await filterData(this.#host, plan);
-    let typ = this.#host.types.get(clsName)!;
-    return typ.execQuery!(query);
+    return filterData(this.#host, plan);
   }
 
   async authorizedResources(actr: any, actn: any, cls: any): Promise<any> {
-    const query = await this.getAllowedResources(actr, actn, cls);
-    //    return query ? [] : this.#host.types.get(cls).execQuery(q);
+    const query = await this.authorizedQuery(actr, actn, cls);
+    return !query ? [] : this.#host.types.get(cls)!.execQuery!(query);
   }
 
   /** Start a REPL session. */
