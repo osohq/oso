@@ -258,6 +258,12 @@ export class Polar {
     return this.query(new Predicate(name, args));
   }
 
+  configureDataFiltering({ buildQuery, execQuery, combineQuery }: any) {
+    if (buildQuery) this.#host.buildQuery = buildQuery;
+    if (execQuery) this.#host.execQuery = execQuery;
+    if (combineQuery) this.#host.combineQuery = combineQuery;
+  }
+
   /**
    * Register a JavaScript class for use in Polar policies.
    */
@@ -277,9 +283,9 @@ export class Polar {
     const userType = new UserType({
       name: clsName,
       class: cls,
-      buildQuery: buildQuery,
-      execQuery: execQuery,
-      combineQuery: combineQuery,
+      buildQuery: buildQuery || this.#host.buildQuery,
+      execQuery: execQuery || this.#host.execQuery,
+      combineQuery: combineQuery || this.#host.combineQuery,
       fields: types || new Map(),
     });
     this.#host.types.set(cls, userType);

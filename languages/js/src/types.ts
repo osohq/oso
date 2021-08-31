@@ -555,6 +555,12 @@ export type obj = { [key: string]: any };
 export type EqualityFn = (x: any, y: any) => boolean;
 
 /**
+ * Functions of one or two arguments.
+ */
+export type UnaryFn = (x: any) => any;
+export type BinaryFn = (x: any, y: any) => any;
+
+/**
  * Optional configuration for the [[`Oso.constructor`]].
  */
 export interface Options {

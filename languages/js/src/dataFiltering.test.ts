@@ -119,11 +119,18 @@ async function fixtures() {
 
   const execQuery = (q: any) => q.getMany();
   const combineQuery = (a: any, b: any) => {
-    // this is kind of bad but typeorm doesn't let you do very much with queries ...
+    // this is kind of bad but typeorm doesn't give you a lot of tools
+    // for working with queries :(
     const whereClause = (sql: string) => /WHERE (.*)$/.exec(sql)![1];
     a = a.orWhere(whereClause(b.getQuery()), b.getParameters());
     return a.where(`(${whereClause(a.getQuery())})`, a.getParameters());
   };
+
+  // set global exec/combine query functions
+  oso.configureDataFiltering({
+    execQuery: execQuery,
+    combineQuery: combineQuery,
+  });
 
   const barType = new Map();
   barType.set('id', String);
@@ -133,8 +140,6 @@ async function fixtures() {
   oso.registerClass(Bar, {
     types: barType,
     buildQuery: fromRepo(bars, 'bar'),
-    execQuery: execQuery,
-    combineQuery: combineQuery,
   });
 
   const fooType = new Map();
@@ -146,8 +151,6 @@ async function fixtures() {
   oso.registerClass(Foo, {
     types: fooType,
     buildQuery: fromRepo(foos, 'foo'),
-    execQuery: execQuery,
-    combineQuery: combineQuery,
   });
 
   const numType = new Map();
@@ -157,8 +160,6 @@ async function fixtures() {
   oso.registerClass(Num, {
     types: numType,
     buildQuery: fromRepo(nums, 'num'),
-    execQuery: execQuery,
-    combineQuery: combineQuery,
   });
 
   const checkAuthz = async (
@@ -167,8 +168,8 @@ async function fixtures() {
     resource: any,
     expected: any[]
   ) => {
-    for (let x in expected)
-      expect(await oso.isAllowed(actor, action, expected[x])).toBe(true);
+    for (let x of expected)
+      expect(await oso.isAllowed(actor, action, x)).toBe(true);
     const actual = await oso.authorizedResources(actor, action, resource);
 
     expect(actual).toHaveLength(expected.length);
@@ -244,30 +245,29 @@ describe('Data filtering using typeorm/sqlite', () => {
   test('a roles policy', async () => {
     const { oso, checkAuthz, aFoo, anotherFoo, helloBar } = await fixtures();
     oso.loadStr(`
-          resource(_type: Bar, "bar", actions, roles) if
-              actions = ["get"] and
-              roles = {
-                  owner: {
-                      permissions: ["get"],
-                      implies: ["foo:reader"]
-                  }
-              };
+      resource(_: Bar, "bar", actions, roles) if
+        actions = ["get"] and
+        roles = {
+            owner: {
+                permissions: actions,
+                implies: ["foo:reader"]
+            }
+        };
 
-          resource(_type: Foo, "foo", actions, roles) if
-              actions = ["read"] and
-              roles = {
-                  reader: {
-                      permissions: ["read"]
-                  }
-              };
+      resource(_: Foo, "foo", actions, roles) if
+        actions = ["read"] and
+        roles = {
+            reader: {
+                permissions: actions
+            }
+        };
 
-          parent_child(parent_bar: Bar, foo: Foo) if
-              foo.bar = parent_bar;
+      parent_child(bar: Bar, _: Foo{bar: bar});
 
-          actor_has_role_for_resource("steve", "owner", bar: Bar) if bar.id = "hello";
+      actor_has_role_for_resource("steve", "owner", _: Bar{id: "hello"});
 
-          allow(actor, action, resource) if role_allows(actor, action, resource);
-      `);
+      allow(actor, action, resource) if
+        role_allows(actor, action, resource);`);
     oso.enableRoles();
     await checkAuthz('steve', 'get', Bar, [helloBar]);
     await checkAuthz('steve', 'read', Foo, [aFoo, anotherFoo]);

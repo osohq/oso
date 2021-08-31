@@ -12,6 +12,8 @@ import { Variable } from './Variable';
 import type {
   Class,
   EqualityFn,
+  UnaryFn,
+  BinaryFn,
   PolarComparisonOperator,
   PolarTerm,
   PolarDictPattern,
@@ -35,9 +37,9 @@ export class UserType {
   name: string;
   class: any;
   fields: Map<string, any>;
-  buildQuery: undefined | ((_: any) => any);
-  execQuery: undefined | ((_: any) => any);
-  combineQuery: undefined | ((_: any) => any);
+  buildQuery?: UnaryFn;
+  execQuery?: UnaryFn;
+  combineQuery?: BinaryFn;
 
   constructor({
     name,
@@ -67,6 +69,11 @@ export class Host {
   types: Map<any, UserType>;
   #equalityFn: EqualityFn;
 
+  // global data filtering config
+  buildQuery?: UnaryFn;
+  execQuery?: UnaryFn;
+  combineQuery?: BinaryFn;
+
   /**
    * Shallow clone a host to extend its state for the duration of a particular
    * query without modifying the longer-lived [[`Polar`]] host state.
@@ -77,6 +84,9 @@ export class Host {
     const clone = new Host(host.#ffiPolar, host.#equalityFn);
     clone.#instances = new Map(host.#instances);
     clone.types = new Map(host.types);
+    clone.buildQuery = host.buildQuery;
+    clone.execQuery = host.execQuery;
+    clone.combineQuery = host.combineQuery;
     return clone;
   }
 
