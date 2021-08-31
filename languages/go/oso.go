@@ -236,7 +236,11 @@ func (o Oso) Authorize(actor interface{}, action interface{}, resource interface
 		}
 	}
 
-	return osoErrors.NewAuthorizationError(isNotFound)
+	if isNotFound {
+		return osoErrors.NewNotFoundError()
+	} else {
+		return osoErrors.NewForbiddenError()
+	}
 }
 
 /*

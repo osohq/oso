@@ -8,27 +8,20 @@ import (
 	"github.com/osohq/go-oso/errors"
 )
 
-type Actor struct {
-	Name string
-}
-
-type Widget struct {
-	Id int
-}
-
-type Company struct {
-	Id int
-}
-
 func assertAuthorizationError(err error, isNotFound bool, t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected forbidden error from Authorize")
 	}
-	if authErr, ok := err.(*errors.AuthorizationError); ok {
-		if authErr.IsNotFound != isNotFound {
-			t.Fatal("Authorize returned wrong type of AuthorizationError")
+	switch err.(type) {
+	case *errors.NotFoundError:
+		if !isNotFound {
+			t.Fatalf("Expected ForbiddenError, got NotFoundError")
 		}
-	} else {
+	case *errors.ForbiddenError:
+		if isNotFound {
+			t.Fatalf("Expected NotFoundError, got ForbiddenError")
+		}
+	default:
 		t.Fatalf("Unexpected error from Authorize: %v", err)
 	}
 }
