@@ -13,24 +13,6 @@ type Request struct {
 	Path   string
 }
 
-func assertAuthorizationError(err error, isNotFound bool, t *testing.T) {
-	if err == nil {
-		t.Fatal("Expected forbidden error from Authorize")
-	}
-	switch err.(type) {
-	case *errors.NotFoundError:
-		if !isNotFound {
-			t.Fatalf("Expected ForbiddenError, got NotFoundError")
-		}
-	case *errors.ForbiddenError:
-		if isNotFound {
-			t.Fatalf("Expected NotFoundError, got ForbiddenError")
-		}
-	default:
-		t.Fatalf("Unexpected error from Authorize: %v", err)
-	}
-}
-
 func getOso(t *testing.T) oso.Oso {
 	var o oso.Oso
 	var err error
@@ -44,6 +26,35 @@ func getOso(t *testing.T) oso.Oso {
 	o.RegisterClass(reflect.TypeOf(Request{}), nil)
 
 	return o
+}
+
+func assertAuthorizationError(t *testing.T, err error, isNotFound bool) {
+	if err == nil {
+		t.Fatal("Expected forbidden error from Authorize")
+	}
+	switch err.(type) {
+	case *errors.NotFoundError:
+		if !isNotFound {
+			t.Error("Expected ForbiddenError, got NotFoundError")
+		}
+	case *errors.ForbiddenError:
+		if isNotFound {
+			t.Error("Expected NotFoundError, got ForbiddenError")
+		}
+	default:
+		t.Errorf("Unexpected error from Authorize: %v", err)
+	}
+}
+
+func assertSetEqual(t *testing.T, results map[interface{}]struct{}, elements []string) {
+	if len(results) != len(elements) {
+		t.Errorf("Expected %v to contain exactly %v", results, elements)
+	}
+	for _, element := range elements {
+		if _, ok := results[element]; !ok {
+			t.Errorf("Expected to find %v in %v", element, results)
+		}
+	}
 }
 
 func TestAuthorize(t *testing.T) {
@@ -61,21 +72,21 @@ func TestAuthorize(t *testing.T) {
 		"actor.Name = \"admin\";")
 
 	if err = o.Authorize(guest, "read", widget0); err != nil {
-		t.Fatalf("Authorize returned error for allowed action: %v", err)
+		t.Errorf("Authorize returned error for allowed action: %v", err)
 	}
 	if err = o.Authorize(admin, "update", widget1); err != nil {
-		t.Fatalf("Authorize returned error for allowed action: %v", err)
+		t.Errorf("Authorize returned error for allowed action: %v", err)
 	}
 
 	// Throws a forbidden error when user can read resource
 	err = o.Authorize(guest, "update", widget0)
-	assertAuthorizationError(err, false, t)
+	assertAuthorizationError(t, err, false)
 
 	// Throws a not found error when user cannot read resource
 	err = o.Authorize(guest, "read", widget1)
-	assertAuthorizationError(err, true, t)
+	assertAuthorizationError(t, err, true)
 	err = o.Authorize(guest, "update", widget1)
-	assertAuthorizationError(err, true, t)
+	assertAuthorizationError(t, err, true)
 }
 
 func TestAuthorizeRequest(t *testing.T) {
@@ -91,16 +102,16 @@ func TestAuthorizeRequest(t *testing.T) {
 		"  request.Path = \"/account\"; ")
 
 	if err = o.AuthorizeRequest(guest, Request{"GET", "/repos"}); err != nil {
-		t.Fatalf("Authorize returned error for allowed action: %v", err)
+		t.Errorf("Authorize returned error for allowed action: %v", err)
 	}
 	err = o.AuthorizeRequest(guest, Request{"GET", "/other"})
-	assertAuthorizationError(err, false, t)
+	assertAuthorizationError(t, err, false)
 
 	if err = o.AuthorizeRequest(verified, Request{"GET", "/account"}); err != nil {
-		t.Fatalf("Authorize returned error for allowed action: %v", err)
+		t.Errorf("Authorize returned error for allowed action: %v", err)
 	}
 	err = o.AuthorizeRequest(guest, Request{"GET", "/account"})
-	assertAuthorizationError(err, false, t)
+	assertAuthorizationError(t, err, false)
 }
 
 func TestAuthorizeField(t *testing.T) {
@@ -125,14 +136,89 @@ func TestAuthorizeField(t *testing.T) {
 	widget := Widget{0}
 
 	if err = o.AuthorizeField(admin, "update", widget, "purpose"); err != nil {
-		t.Fatalf("Authorize returned error for allowed action: %v", err)
+		t.Errorf("Authorize returned error for allowed action: %v", err)
 	}
 	err = o.AuthorizeField(admin, "update", widget, "foo")
-	assertAuthorizationError(err, false, t)
+	assertAuthorizationError(t, err, false)
 
 	if err = o.AuthorizeField(guest, "read", widget, "purpose"); err != nil {
-		t.Fatalf("Authorize returned error for allowed action: %v", err)
+		t.Errorf("Authorize returned error for allowed action: %v", err)
 	}
 	err = o.AuthorizeField(guest, "read", widget, "private_field")
-	assertAuthorizationError(err, false, t)
+	assertAuthorizationError(t, err, false)
+}
+
+func TestAuthorizedActions(t *testing.T) {
+	o := getOso(t)
+	var err error
+
+	o.LoadString("allow(_actor: Actor{Name: \"Sally\"}, action, _resource: Widget{Id: 1}) if action in [\"CREATE\", \"READ\"];")
+
+	actor := Actor{Name: "Sally"}
+	resource := Widget{Id: 1}
+
+	res, err := o.AuthorizedActions(actor, resource, false)
+	if err != nil {
+		t.Fatalf("Failed to get allowed actions: %v", err)
+	}
+	assertSetEqual(t, res, []string{"CREATE", "READ"})
+
+	o.LoadString("allow(_actor: Actor{Name: \"John\"}, _action, _resource: Widget{Id: 1});")
+
+	actor = Actor{Name: "John"}
+	res, err = o.AuthorizedActions(actor, resource, true)
+	if err != nil {
+		t.Fatalf("Failed to get allowed actions: %v", err)
+	}
+	if _, ok := res["*"]; !ok {
+		t.Error("expected * action")
+	}
+
+	_, err = o.AuthorizedActions(actor, resource, false)
+	if err == nil {
+		t.Fatal("Expected an error from AuthorizedActions")
+	}
+
+	res, err = o.AuthorizedActions(actor, Widget{Id: 2}, false)
+	if err != nil {
+		t.Fatalf("Failed to get allowed actions: %v", err)
+	}
+	if len(res) != 0 {
+		t.Error("expected no actions", res)
+	}
+}
+
+func TestAuthorizedFields(t *testing.T) {
+	o := getOso(t)
+	var res map[interface{}]struct{}
+
+	o.LoadString( // Admins can update all fields
+		"allow_field(actor: Actor, \"update\", _widget: Widget, field) if " +
+			"  actor.Name = \"admin\" and " +
+			"  field in [\"name\", \"purpose\", \"private_field\"]; " +
+
+			// Anybody who can update a field can also read it
+			"allow_field(actor, \"read\", widget: Widget, field) if " +
+			"  allow_field(actor, \"update\", widget, field); " +
+
+			// Anybody can read public fields
+			"allow_field(_: Actor, \"read\", _: Widget, field) if " +
+			"  field in [\"name\", \"purpose\"];")
+
+	admin := Actor{"admin"}
+	guest := Actor{"guest"}
+	widget := Widget{0}
+
+	// Admins should be able to update all fields
+	res, _ = o.AuthorizedFields(admin, "update", widget, false)
+	assertSetEqual(t, res, []string{"name", "purpose", "private_field"})
+	// Admins should be able to read all fields
+	res, _ = o.AuthorizedFields(admin, "read", widget, false)
+	assertSetEqual(t, res, []string{"name", "purpose", "private_field"})
+	// Guests should not be able to update any fields
+	res, _ = o.AuthorizedFields(guest, "update", widget, false)
+	assertSetEqual(t, res, []string{})
+	// Guests should be able to read public fields
+	res, _ = o.AuthorizedFields(guest, "read", widget, false)
+	assertSetEqual(t, res, []string{"name", "purpose"})
 }

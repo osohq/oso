@@ -273,7 +273,7 @@ func (o Oso) AuthorizedActions(actor interface{}, resource interface{}, allowWil
 	return results, nil
 }
 
-func (o Oso) AuthorizedFields(actor interface{}, action interface{}, resource interface{}, field interface{}, allowWildcard bool) (map[interface{}]struct{}, error) {
+func (o Oso) AuthorizedFields(actor interface{}, action interface{}, resource interface{}, allowWildcard bool) (map[interface{}]struct{}, error) {
 	results := make(map[interface{}]struct{})
 	query, err := (*o.p).queryRule("allow_field", actor, action, resource, types.ValueVariable("field"))
 	if err != nil {
