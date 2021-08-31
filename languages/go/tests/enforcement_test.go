@@ -222,3 +222,53 @@ func TestAuthorizedFields(t *testing.T) {
 	res, _ = o.AuthorizedFields(guest, "read", widget, false)
 	assertSetEqual(t, res, []string{"name", "purpose"})
 }
+
+func TestCustomReadAction(t *testing.T) {
+	var err error
+	o := getOso(t)
+	o.SetReadAction("fetch")
+
+	o.LoadString("allow(\"graham\", \"fetch\", \"bar\");")
+
+	err = o.Authorize("sam", "frob", "bar")
+	// Should throw not found, sam cannot read bar
+	assertAuthorizationError(t, err, true)
+	err = o.Authorize("graham", "frob", "bar")
+	// Should throw forbidden, graham can read bar
+	assertAuthorizationError(t, err, false)
+}
+
+type CustomError struct {
+	IsNotFound bool
+}
+
+func (e *CustomError) Error() string {
+	return "CustomError"
+}
+
+func TestCustomErrors(t *testing.T) {
+	var err error
+	o := getOso(t)
+	o.SetNotFoundError(func() error { return &CustomError{true} })
+	o.SetForbiddenError(func() error { return &CustomError{false} })
+
+	o.LoadString("allow(\"graham\", \"read\", \"bar\");")
+
+	err = o.Authorize("sam", "frob", "bar")
+	if custom, ok := err.(*CustomError); ok {
+		if !custom.IsNotFound {
+			t.Error("Expected CustomError to have IsNotFound = true")
+		}
+	} else {
+		t.Errorf("Expected Authorize to return a CustomError, but got %v", err)
+	}
+
+	err = o.Authorize("graham", "frob", "bar")
+	if custom, ok := err.(*CustomError); ok {
+		if custom.IsNotFound {
+			t.Error("Expected CustomError to have IsNotFound = false")
+		}
+	} else {
+		t.Errorf("Expected Authorize to return a CustomError, but got %v", err)
+	}
+}

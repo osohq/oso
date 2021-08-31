@@ -11,8 +11,10 @@ import (
 The central object to manage policy state and verify requests.
 */
 type Oso struct {
-	p          *Polar
-	readAction interface{}
+	p              *Polar
+	readAction     interface{}
+	forbiddenError func() error
+	notFoundError  func() error
 }
 
 /*
@@ -27,12 +29,25 @@ func NewOso() (Oso, error) {
 	if p, e := newPolar(); e != nil {
 		return Oso{}, e
 	} else {
-		return Oso{p: p, readAction: "read"}, nil
+		return Oso{
+			p:              p,
+			readAction:     "read",
+			forbiddenError: func() error { return osoErrors.NewForbiddenError() },
+			notFoundError:  func() error { return osoErrors.NewNotFoundError() },
+		}, nil
 	}
 }
 
-func (o Oso) SetReadAction(readAction interface{}) {
+func (o *Oso) SetReadAction(readAction interface{}) {
 	o.readAction = readAction
+}
+
+func (o *Oso) SetForbiddenError(forbiddenError func() error) {
+	o.forbiddenError = forbiddenError
+}
+
+func (o *Oso) SetNotFoundError(notFoundError func() error) {
+	o.notFoundError = notFoundError
 }
 
 /*
@@ -209,9 +224,9 @@ func (o Oso) Authorize(actor interface{}, action interface{}, resource interface
 	}
 
 	if isNotFound {
-		return osoErrors.NewNotFoundError()
+		return o.notFoundError()
 	} else {
-		return osoErrors.NewForbiddenError()
+		return o.forbiddenError()
 	}
 }
 
@@ -222,7 +237,7 @@ func (o Oso) AuthorizeRequest(actor interface{}, request interface{}) error {
 	}
 
 	if !isAllowed {
-		return osoErrors.NewForbiddenError()
+		return o.forbiddenError()
 	}
 
 	return nil
@@ -235,7 +250,7 @@ func (o Oso) AuthorizeField(actor interface{}, action interface{}, resource inte
 	}
 
 	if !isAllowed {
-		return osoErrors.NewForbiddenError()
+		return o.forbiddenError()
 	}
 
 	return nil
