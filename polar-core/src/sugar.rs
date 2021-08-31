@@ -543,7 +543,7 @@ fn check_that_namespace_resource_is_registered_as_a_class(
         );
         let (loc, ranges) = (resource.offset(), vec![]);
         // TODO(gj): UnregisteredClassError in the core.
-        return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
+        return Err(kb.set_error_context(resource, ParseError::ParseSugar { loc, msg, ranges }));
     }
     Ok(())
 }
@@ -561,7 +561,7 @@ fn relation_type_is_registered(
         );
         let (loc, ranges) = (relation.offset(), vec![]);
         // TODO(gj): UnregisteredClassError in the core.
-        return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
+        return Err(kb.set_error_context(kind, ParseError::ParseSugar { loc, msg, ranges }));
     }
     Ok(())
 }

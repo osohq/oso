@@ -8,6 +8,32 @@ use tracing::debug;
 use super::Backend;
 
 impl Backend {
+    pub async fn revalidate_document(&self, uri: lsp_types::Url) {
+        let filename = self.uri_to_string(&uri).await;
+        let polar = self.get_analyzer().await;
+
+        let mut diagnostics = vec![];
+
+        if let Err(e) = polar.revalidate(&filename) {
+            diagnostics.push(error_to_diagnostic(e))
+        }
+        for (rule_error, start, end) in polar.get_unused_rules(&filename) {
+            let diagnostic = Diagnostic {
+                severity: Some(DiagnosticSeverity::Warning),
+                message: format!("Rule does not exist: {}", rule_error),
+                range: polar
+                    .source_map
+                    .location_to_range(&filename, start, end)
+                    .unwrap(),
+                ..Default::default()
+            };
+            diagnostics.push(diagnostic);
+        }
+        self.client
+            .publish_diagnostics(uri, diagnostics, None)
+            .await
+    }
+
     pub async fn open_document(&self, params: DidOpenTextDocumentParams) -> crate::Result<()> {
         let TextDocumentItem { text, uri, .. } = params.text_document;
         self.try_load_file(text, uri).await;

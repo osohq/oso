@@ -45,7 +45,7 @@
         "polarAnalyzer.lspServer.mode": {
           "scope": "resource",
           "type": "string",
-          "default": "server",
+          "default": "embedded",
           "enum": [
             "embedded",
             "server"
@@ -67,7 +67,7 @@
   "main": "./client/out/extension",
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -b",
+    "compile": "tsc -b && cp ../../target/release/polar-analyzer ./client/out/",
     "watch": "tsc -b -w",
     "postinstall": "cd client && npm install && npm install && cd ..",
     "test": "sh ./scripts/e2e.sh"

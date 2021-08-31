@@ -118,15 +118,18 @@ impl LanguageServer for Backend {
     #[tracing::instrument]
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         self.refresh_workspace_symbols().await;
+        let uri = params.text_document.uri.clone();
         if let Err(e) = self.open_document(params).await {
             error!("{}", e)
         }
         self.refresh_workspace_symbols().await;
+        self.revalidate_document(uri).await;
     }
 
     #[tracing::instrument]
-    async fn did_save(&self, _: DidSaveTextDocumentParams) {
+    async fn did_save(&self, params: DidSaveTextDocumentParams) {
         self.refresh_workspace_symbols().await;
+        self.revalidate_document(params.text_document.uri).await;
     }
 
     #[tracing::instrument]
@@ -223,6 +226,5 @@ impl DerefMut for AnalyzerLock {
 impl Drop for AnalyzerLock {
     fn drop(&mut self) {
         trace!("releasing analyzer lock");
-        drop(&mut self.0);
     }
 }

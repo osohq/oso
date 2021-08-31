@@ -36,7 +36,7 @@ export async function activate(context: ExtensionContext) {
 		case "embedded": {
 			// The server is implemented in node
 			const serverBinary = context.asAbsolutePath(
-				path.join('..', '..', 'target', 'debug', 'polar-analyzer')
+				path.join('client', 'out', 'polar-analyzer')
 			);
 			// // The debug options for the server
 			// // --inspect=6009: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging

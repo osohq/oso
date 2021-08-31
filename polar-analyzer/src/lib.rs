@@ -9,7 +9,7 @@ use inspect::{RuleInfo, TermInfo};
 use polar_core::{error::PolarError, polar};
 
 pub use anyhow::Result;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 /// Wrapper for the `polar_core::Polar` type.
 /// Used as the API interface for all the analytics
@@ -85,6 +85,15 @@ impl Polar {
     pub fn delete(&self, filename: &str) {
         self.source_map.remove_file(filename);
         let _old = self.inner.remove_file(filename);
+    }
+
+    pub fn revalidate(&self, filename: &str) -> Result<(), PolarError> {
+        if let Some(old) = self.inner.remove_file(filename) {
+            self.inner.load(&old, Some(filename.to_string()))
+        } else {
+            warn!("Attempting to revalidate a file that doesn't exist");
+            Ok(())
+        }
     }
 
     pub fn clear_rules(&self) {

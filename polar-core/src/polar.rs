@@ -192,9 +192,9 @@ impl Polar {
         for rule in kb.get_rules().iter().flat_map(|(_, gr)| gr.rules.values()) {
             // for rule in &rules {
             let mut warnings = vec![];
-            let mut rule_warnings = check_singletons(&rule, &*kb)?;
+            let mut rule_warnings = check_singletons(rule, &*kb)?;
             warnings.append(&mut rule_warnings);
-            warnings.append(&mut check_ambiguous_precedence(&rule, &*kb)?);
+            warnings.append(&mut check_ambiguous_precedence(rule, &*kb)?);
         }
 
         for prototype in kb.rule_prototypes.iter().flat_map(|(_, rp)| rp.iter()) {
