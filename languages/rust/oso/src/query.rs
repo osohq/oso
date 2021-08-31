@@ -6,7 +6,6 @@ use crate::host::{Host, Instance, PolarIterator};
 use crate::{FromPolar, PolarValue};
 
 use polar_core::events::*;
-use polar_core::roles_validation::ResultEvent;
 use polar_core::terms::*;
 
 impl Iterator for Query {

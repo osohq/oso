@@ -10,6 +10,7 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy import inspect, sql
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.exc import UnmappedClassError
+from sqlalchemy.orm.util import AliasedClass
 from .compat import iterate_model_classes
 
 
@@ -23,6 +24,8 @@ def isa_type(arg):
 
 
 def get_pk(model):
+    if isinstance(model, AliasedClass):
+        model = inspect(model).class_
     pks = inspect(model).primary_key
     assert (
         len(pks) == 1
@@ -416,9 +419,9 @@ def read_config(oso):
         try:
             constraints = result["bindings"]["resource"]
             assert len(constraints.args) == 2
-            type_check = constraints.args[0]
+            type_check = constraints.args[1]
             child_type = isa_type(type_check)
-            get_parent = constraints.args[1]
+            get_parent = constraints.args[0]
             assert get_parent.operator == "Isa"
             assert len(get_parent.args) == 2
             getter = get_parent.args[0]
@@ -429,9 +432,9 @@ def read_config(oso):
             pattern = get_parent.args[1]
             parent_type = pattern.tag
 
-            child_python_class = oso.host.classes[child_type]
+            child_python_class = oso.host.types[child_type].cls
             child_table = child_python_class.__tablename__
-            parent_python_class = oso.host.classes[parent_type]
+            parent_python_class = oso.host.types[parent_type].cls
             parent_table = parent_python_class.__tablename__
 
             # the rule has the form
@@ -510,8 +513,8 @@ def read_config(oso):
         permissions = result["bindings"]["permissions"]
         role_defs = result["bindings"]["roles"]
 
-        assert type in oso.host.classes
-        python_class = oso.host.classes[type]
+        assert type in oso.host.types
+        python_class = oso.host.types[type].cls
 
         if isinstance(permissions, Variable):
             permissions = []

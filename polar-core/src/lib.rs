@@ -9,6 +9,7 @@ pub mod macros;
 
 mod bindings;
 mod counter;
+pub mod data_filtering;
 mod debugger;
 pub mod error;
 pub mod events;
@@ -27,6 +28,7 @@ pub mod roles_validation;
 pub mod rules;
 mod runnable;
 mod sources;
+mod sugar;
 pub mod terms;
 pub mod traces;
 mod visitor;

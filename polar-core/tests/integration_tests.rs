@@ -1513,6 +1513,38 @@ fn test_unknown_specializer_warning() -> TestResult {
 }
 
 #[test]
+fn test_and_or_warning() -> TestResult {
+    let p = Polar::new();
+
+    // free-standing OR is fine
+    p.load_str("f(x) if x > 1 or x < 3;")?;
+
+    // OR with explicit parenthesis is fine (old behaviour)
+    p.load_str("f(x) if x = 1 and (x > 1 or x < 3);")?;
+
+    // OR with parenthesized AND is fine (new default)
+    p.load_str("f(x) if (x = 1 and x > 1) or x < 3;")?;
+
+    // Add whitespace to make sure it can find parentheses wherever they are
+    p.load_str("f(x) if (\n\t    x = 1 and  x > 1) or x < 3;")?;
+
+    // This is ambiguous between 0.16 and 0.20
+    assert!(matches!(
+        p.load_str("f(x) if x = 1 and x > 1 or x < 3;")
+            .unwrap_err()
+            .kind,
+        ErrorKind::Parse(ParseError::AmbiguousAndOr { .. })
+    ));
+    assert!(matches!(
+        p.load_str("f(x) if x = 1 or x > 1 and x < 3;")
+            .unwrap_err()
+            .kind,
+        ErrorKind::Parse(ParseError::AmbiguousAndOr { .. })
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_print() -> TestResult {
     // TODO: If POLAR_LOG is on this test will fail.
     let p = Polar::new();
@@ -1536,6 +1568,21 @@ fn test_unknown_specializer_suggestions() -> TestResult {
         &msg.msg,
         "Unknown specializer string, did you mean String?\n001: f(s: string) if s;\n          ^"
     );
+    Ok(())
+}
+
+#[test]
+fn test_partial_grounding() -> TestResult {
+    let rules = r#"
+        f(x, n) if n > 0 and x.n = n;
+        g(x, n) if x.n = n and n > 0;"#;
+    let mut p = Polar::new();
+    p.load_str(rules)?;
+
+    qvar(&mut p, "f({n:1},x)", "x", vec![value!(1)]);
+    qvar(&mut p, "g({n:1},x)", "x", vec![value!(1)]);
+    qnull(&mut p, "f({n:1},x) and x = 2");
+    qnull(&mut p, "g({n:1},x) and x = 2");
     Ok(())
 }
 
@@ -1568,6 +1615,11 @@ fn test_rest_vars() -> TestResult {
     qeval(&mut p, "append([1,2,3], [], [1,2,3])");
     qeval(&mut p, "not append([1,2,3], [4], [1,2,3])");
 
+    qeval(
+        &mut p,
+        "a = [1, *b] and b = [2, *c] and c=[3] and 1 in a and 2 in a and 3 in a",
+    );
+
     let a = &var(&mut p, "[*_] in [*a] and [*b] in [*_] and b = 1", "a")[0];
     // check that a isn't bound to [b]
     assert!(!matches!(a, Value::List(b) if matches!(b[0].value(), Value::Number(_))));
@@ -1577,8 +1629,8 @@ fn test_rest_vars() -> TestResult {
 #[test]
 fn test_circular_data() -> TestResult {
     let mut p = Polar::new();
-    qeval(&mut p, "x = [x]");
-    qeval(&mut p, "y = {y:y}");
+    qeval(&mut p, "x = [x] and x in x");
+    qeval(&mut p, "y = {y:y} and [\"y\", y] in y");
     qruntime!(
         "x = [x, y] and y = [y, x] and x = y",
         RuntimeError::StackOverflow { .. }
@@ -1643,6 +1695,15 @@ fn test_in_op() -> TestResult {
 }
 
 #[test]
+fn test_head_patterns() -> TestResult {
+    let p = Polar::new();
+    p.load_str("f(x: Integer, _: Dictionary{x:x});")?;
+    let results = query_results!(p.new_query("f(x, {x:9})", false)?);
+    assert_eq!(results[0].0[&sym!("x")], value!(9));
+    Ok(())
+}
+
+#[test]
 fn test_matches() {
     let mut p = Polar::new();
     qnull(&mut p, "1 matches 2");
@@ -1656,11 +1717,26 @@ fn test_matches() {
 }
 
 #[test]
-fn test_keyword_bug() {
-    qparse!("g(a) if a.new(b);", ParseError::ReservedWord { .. });
-    qparse!("f(a) if a.in(b);", ParseError::ReservedWord { .. });
+fn test_keyword_call() {
     qparse!("cut(a) if a;", ParseError::ReservedWord { .. });
     qparse!("debug(a) if a;", ParseError::ReservedWord { .. });
+    qparse!(
+        "foo(debug) if debug = 1;",
+        ParseError::UnrecognizedToken { .. }
+    );
+}
+
+#[test]
+fn test_keyword_dot() -> TestResult {
+    // field accesses of reserved words are allowed
+    let mut p = Polar::new();
+    p.load_str("f(a, b) if a.in(b);")?;
+    p.load_str("g(a, b) if a.new(b);")?;
+    qeval(
+        &mut p,
+        "x = {debug: 1, new: 2, type: 3} and x.debug + x.new = x.type",
+    );
+    Ok(())
 }
 
 /// Test that rule heads work correctly when unification or specializers are used.
@@ -1701,7 +1777,7 @@ fn test_cut() -> TestResult {
     p.load_str(
         r#"a(x) if x = 1 or x = 2;
            b(x) if x = 3 or x = 4;
-           bcut(x) if x = 3 or x = 4 and cut;
+           bcut(x) if (x = 3 or x = 4) and cut;
            c(a, b) if a(a) and b(b) and cut;
            c_no_cut(a, b) if a(a) and b(b);
            c_partial_cut(a, b) if a(a) and bcut(b);
@@ -1927,7 +2003,7 @@ fn test_numeric_applicability() -> TestResult {
     qeval(&mut p, "f(9223372036854775807)");
     qeval(&mut p, "f(-9223372036854775807)");
     qeval(&mut p, "f(9223372036854776000.0)");
-    qnull(&mut p, "f(nan1)");
+    qeval(&mut p, "f(nan1)");
     qnull(&mut p, "f(nan2)");
     Ok(())
 }

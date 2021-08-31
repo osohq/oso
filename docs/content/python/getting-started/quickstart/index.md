@@ -32,6 +32,8 @@ Oso also doesn't persist user data inside the library, so you stay in control of
 
 {{% exampleGet "installation_new" %}}
 
+For additional info, see [Installation](reference/installation).
+
 ## Add Oso to your app
 
 To start, `{{% exampleGet "import" %}}` Oso, create an Oso instance, and enable roles.

@@ -16,12 +16,15 @@ lalrpop_mod!(
 use super::error::{self, PolarResult};
 use super::lexer::{self, Lexer};
 use super::rules::*;
+use super::sugar::Namespace;
 use super::terms::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
     Rule(Rule),
+    RulePrototype(Rule),
     Query(Term),
+    Namespace(Namespace),
 }
 
 fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
@@ -211,6 +214,19 @@ mod tests {
         let line = parse_lines(f);
 
         assert_eq!(line[0], Line::Query(term!(call!("f", [1]))));
+
+        let prototype = r#"type f(x: String);"#;
+        let line = parse_lines(prototype);
+        assert_eq!(
+            line[0],
+            Line::RulePrototype(rule!("f", ["x"; value!(instance!("String"))]))
+        );
+    }
+
+    #[test]
+    fn test_rule_prototype_error() {
+        let prototype = r#"type f(x: String) if x = "bad";"#;
+        super::parse_lines(0, prototype).expect_err("parse error");
     }
 
     #[test]
@@ -259,8 +275,9 @@ mod tests {
     #[test]
     fn test_parse_matches() {
         let term = parse_query("{} matches {}");
-        assert_eq!(term.to_polar(), r#"{} matches {}"#);
-        let _term = parse_query("{x: 1} matches {}");
+        assert_eq!(term.to_polar(), "{} matches {}");
+        let term = parse_query("{x: 1} matches {}");
+        assert_eq!(term.to_polar(), "{x: 1} matches {}");
     }
 
     #[test]

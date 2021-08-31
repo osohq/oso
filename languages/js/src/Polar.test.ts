@@ -863,6 +863,8 @@ describe('Oso Roles', () => {
     const leina = new User('leina', [osohqOwner]);
     const steve = new User('steve', [osohqMember]);
 
+    // TODO: had to change specializers in `parent_child` rules back to
+    // `matches` in the body in order to get tests passing--revisit
     const policy = `
       resource(_type: Org, "org", actions, roles) if
           actions = [
@@ -901,8 +903,8 @@ describe('Oso Roles', () => {
           ];
 
       parent_child(parent_org, repo: Repo) if
-          repo.org = parent_org and
-          parent_org matches Org;
+          repo.org = parent_org
+          and parent_org matches Org;
 
       parent_child(parent_repo, issue: Issue) if
           issue.repo = parent_repo and

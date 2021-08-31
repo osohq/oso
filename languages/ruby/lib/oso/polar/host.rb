@@ -34,14 +34,29 @@ module Oso
       end
     end
 
+    # For holding type metadata: name, fields, etc.
+    class UserType
+      attr_reader :name, :klass, :id, :fields, :fetcher
+
+      def initialize(name:, klass:, id:, fields:, fetcher:)
+        @name = name
+        @klass = klass
+        @id = id
+        # accept symbol keys
+        @fields = fields.each_with_object({}) { |kv, o| o[kv[0].to_s] = kv[1] }
+        @fetcher = fetcher
+      end
+    end
+
     # Translate between Polar and the host language (Ruby).
     class Host # rubocop:disable Metrics/ClassLength
+      # @return [Hash<String, Class>]
+      attr_reader :types
+
       protected
 
       # @return [FFI::Polar]
       attr_reader :ffi_polar
-      # @return [Hash<String, Class>]
-      attr_reader :classes
       # @return [Hash<Integer, Object>]
       attr_reader :instances
       # @return [Boolean]
@@ -53,39 +68,45 @@ module Oso
 
       def initialize(ffi_polar)
         @ffi_polar = ffi_polar
-        @classes = {}
+        @types = {}
         @instances = {}
         @accept_expression = false
       end
 
       def initialize_copy(other)
         @ffi_polar = other.ffi_polar
-        @classes = other.classes.dup
+        @types = other.types.dup
         @instances = other.instances.dup
       end
 
-      # Fetch a Ruby class from the {#classes} cache.
+      # Fetch a Ruby class from the {#types} cache.
       #
       # @param name [String]
       # @return [Class]
       # @raise [UnregisteredClassError] if the class has not been registered.
       def get_class(name)
-        raise UnregisteredClassError, name unless classes.key? name
+        raise UnregisteredClassError, name unless types.key? name
 
-        classes[name].get
+        types[name].klass.get
       end
 
-      # Store a Ruby class in the {#classes} cache.
+      # Store a Ruby class in the {#types} cache.
       #
       # @param cls [Class] the class to cache.
       # @param name [String] the name to cache the class as.
       # @return [String] the name the class is cached as.
       # @raise [DuplicateClassAliasError] if attempting to register a class
       # under a previously-registered name.
-      def cache_class(cls, name:)
-        raise DuplicateClassAliasError.new name: name, old: get_class(name), new: cls if classes.key? name
+      def cache_class(cls, name:, fields: {}, fetcher: nil)
+        raise DuplicateClassAliasError.new name: name, old: get_class(name), new: cls if types.key? name
 
-        classes[name] = PolarClass.new(cls)
+        types[name] = types[cls] = UserType.new(
+          name: name,
+          klass: PolarClass.new(cls),
+          id: cache_instance(cls),
+          fields: fields,
+          fetcher: fetcher
+        )
         name
       end
 
@@ -190,6 +211,10 @@ module Oso
         left_index && right_index && left_index < right_index
       end
 
+      def subclass?(left_tag:, right_tag:)
+        get_class(left_tag) <= get_class(right_tag)
+      end
+
       # Check if instance is an instance of class.
       #
       # @param instance [Hash<String, Object>]
@@ -199,6 +224,32 @@ module Oso
         instance = to_ruby(instance)
         cls = get_class(class_tag)
         instance.is_a? cls
+      end
+
+      def serialize_types # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+        polar_types = {}
+        types.values.uniq.each do |typ|
+          tag = typ.name
+          fields = typ.fields
+          field_types = {}
+          fields.each do |k, v|
+            field_types[k] =
+              if v.is_a? ::Oso::Polar::DataFiltering::Relationship
+                {
+                  'Relationship' => {
+                    'kind' => v.kind,
+                    'other_class_tag' => v.other_type,
+                    'my_field' => v.my_field,
+                    'other_field' => v.other_field
+                  }
+                }
+              else
+                { 'Base' => { 'class_tag' => types[v].name } }
+              end
+          end
+          polar_types[tag] = field_types
+        end
+        polar_types
       end
 
       # Turn a Ruby value into a Polar term that's ready to be sent across the

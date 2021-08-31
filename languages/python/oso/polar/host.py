@@ -1,7 +1,10 @@
 """Translate between Polar and the host language (Python)."""
 
+from dataclasses import dataclass
 from math import inf, isnan, nan
 import re
+from typing import Any, Dict, Optional, Callable
+
 
 from .exceptions import (
     PolarRuntimeError,
@@ -17,26 +20,57 @@ from .predicate import Predicate
 from .expression import Expression, Pattern
 
 
+@dataclass
+class UserType:
+    name: str
+    cls: type
+    id: int
+    fields: Dict[str, Any]
+    build_query: Optional[Callable]
+    exec_query: Optional[Callable]
+    combine_query: Optional[Callable]
+
+
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
-    def __init__(self, polar, classes=None, instances=None, get_field=None):
+    def __init__(
+        self,
+        polar,
+        types=None,
+        instances=None,
+        get_field=None,
+    ):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
-        self.classes = (classes or {}).copy()
+        self.types = (types or {}).copy()
         self.instances = (instances or {}).copy()
         self._accept_expression = False  # default, see set_accept_expression
 
-        def default_get_field(_obj, _field):
-            raise PolarRuntimeError("Cannot generically walk fields of a Python class")
+        self.get_field = get_field or self.types_get_field
 
-        self.get_field = get_field or default_get_field
+    # @Q: I'm not really sure what I'm returning here.
+    def types_get_field(self, obj, field):
+        if obj not in self.types:
+            raise PolarRuntimeError(
+                f"No type information for Python class {obj.__name__}"
+            )
+        rec = self.types[obj]
+
+        if field not in rec.fields:
+            raise PolarRuntimeError(f"No field {field} on {obj.__name__}")
+        field_type = rec.fields[field]
+
+        if field_type.kind == "parent":
+            return self.types[field_type.other_type].cls
+        elif field_type.kind == "children":
+            return list
 
     def copy(self):
         """Copy an existing cache."""
         return type(self)(
             self.ffi_polar,
-            classes=self.classes,
+            types=self.types,
             instances=self.instances,
             get_field=self.get_field,
         )
@@ -44,17 +78,38 @@ class Host:
     def get_class(self, name):
         """Fetch a Python class from the cache."""
         try:
-            return self.classes[name]
+            return self.types[name].cls
         except KeyError:
             raise UnregisteredClassError(name)
 
-    def cache_class(self, cls, name=None):
+    def distinct_user_types(self):
+        return map(
+            lambda k: self.types[k], filter(lambda k: type(k) is str, self.types.keys())
+        )
+
+    def cache_class(
+        self,
+        cls,
+        name=None,
+        fields=None,
+        build_query=None,
+        exec_query=None,
+        combine_query=None,
+    ):
         """Cache Python class by name."""
         name = cls.__name__ if name is None else name
-        if name in self.classes.keys():
+        if name in self.types.keys():
             raise DuplicateClassAliasError(name, self.get_class(name), cls)
 
-        self.classes[name] = cls
+        self.types[name] = self.types[cls] = UserType(
+            name=name,
+            cls=cls,
+            id=self.cache_instance(cls),
+            fields=fields or {},
+            build_query=build_query,
+            exec_query=exec_query,
+            combine_query=combine_query,
+        )
         return name
 
     def get_instance(self, id):
@@ -210,25 +265,28 @@ class Host:
                     }
                 }
         else:
-            # BEGIN HACK:
-            # The polar core uses the .repr property to determine whether or not
-            # to allow Roles.role_allows to be called with unbound variables as
-            # arguments (only for sqlalchemy_oso)
-            # Because of this, we need to continue to send the repr for
-            # sqlalchemy_oso.roles.OsoRoles.Roles ONLY
+            instance_id = None
             repr_str = None
             import inspect
 
-            if (
-                inspect.isclass(v)
-                and "OsoRoles" in v.__qualname__
-                and v.__module__ == "sqlalchemy_oso.roles"
-            ):
-                repr_str = repr(v)
-            # END HACK
+            if inspect.isclass(v):
+                if v in self.types:
+                    instance_id = self.types[v].id
+                # BEGIN HACK:
+                # The polar core uses the .repr property to determine whether or not
+                # to allow Roles.role_allows to be called with unbound variables as
+                # arguments (only for sqlalchemy_oso)
+                # Because of this, we need to continue to send the repr for
+                # sqlalchemy_oso.roles.OsoRoles.Roles ONLY
+                if (
+                    "OsoRoles" in v.__qualname__
+                    and v.__module__ == "sqlalchemy_oso.roles"
+                ):
+                    repr_str = repr(v)
+                # END HACK
             val = {
                 "ExternalInstance": {
-                    "instance_id": self.cache_instance(v),
+                    "instance_id": self.cache_instance(v, instance_id),
                     "repr": repr_str,
                 }
             }

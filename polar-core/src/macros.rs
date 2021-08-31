@@ -48,6 +48,12 @@ macro_rules! pattern {
         $crate::macros::TestHelper::<Pattern>::from($arg).0
     };
 }
+#[macro_export]
+macro_rules! ptn {
+    ($arg:expr) => {
+        $crate::macros::TestHelper::<Term>::from(pattern!($arg)).0
+    };
+}
 
 #[macro_export]
 macro_rules! param {
@@ -73,22 +79,6 @@ macro_rules! instance {
 }
 
 #[macro_export]
-macro_rules! partial {
-    ($arg:expr) => {
-        Value::Partial(Partial::new(sym!($arg)))
-    };
-    ($arg:expr, [$($args:expr),*]) => {
-        {
-            let mut constraint = Partial::new(sym!($arg));
-            $(
-                constraint.add_constraint($args);
-            )*
-            constraint
-        }
-    };
-}
-
-#[macro_export]
 macro_rules! sym {
     ($arg:expr) => {
         $crate::macros::TestHelper::<Symbol>::from($arg).0
@@ -96,9 +86,26 @@ macro_rules! sym {
 }
 
 #[macro_export]
+macro_rules! var {
+    ($arg:expr) => {
+        $crate::macros::TestHelper::<Term>::from(
+            $crate::macros::TestHelper::<Value>::from(sym!($arg)).0,
+        )
+        .0
+    };
+}
+
+#[macro_export]
 macro_rules! string {
     ($arg:expr) => {
         Value::String($arg.into())
+    };
+}
+
+#[macro_export]
+macro_rules! str {
+    ($arg:expr) => {
+        $crate::macros::TestHelper::<Term>::from(string!($arg)).0
     };
 }
 
@@ -145,6 +152,16 @@ macro_rules! op {
             operator: Operator::$op_type,
             args: vec![]
         }
+    };
+}
+
+#[macro_export]
+macro_rules! opn {
+    ($op_type:ident, $($args:expr),+) => {
+        op!($op_type, $($args),+).into()
+    };
+    ($op_type:ident) => {
+        op!($op_type).into()
     };
 }
 
@@ -214,7 +231,7 @@ impl<T> From<T> for TestHelper<T> {
 
 impl From<Value> for TestHelper<Term> {
     fn from(other: Value) -> Self {
-        Self(Term::new_temporary(other))
+        Self(Term::from(other))
     }
 }
 
@@ -239,7 +256,7 @@ impl From<Value> for TestHelper<Parameter> {
     /// a specializer.
     fn from(name: Value) -> Self {
         Self(Parameter {
-            parameter: Term::new_temporary(name),
+            parameter: Term::from(name),
             specializer: None,
         })
     }
@@ -334,6 +351,6 @@ impl From<InstanceLiteral> for TestHelper<Pattern> {
 }
 impl From<Pattern> for TestHelper<Term> {
     fn from(other: Pattern) -> Self {
-        Self(Term::new_temporary(value!(other)))
+        Self(Term::from(value!(other)))
     }
 }

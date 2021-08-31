@@ -23,7 +23,6 @@ installation_new: |
     ```bash
     pip install --upgrade oso
     ```
-    Or find the Oso package at [http://pypi.python.org/pypi/oso/](http://pypi.python.org/pypi/oso/).
 import: import
 import_code: |
     ```python

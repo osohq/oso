@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module Oso
-  VERSION = '0.14.1'
+  VERSION = '0.20.0-beta'
 end

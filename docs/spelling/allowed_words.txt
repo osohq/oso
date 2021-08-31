@@ -19,6 +19,7 @@ GC
 GDB
 GSuite
 GitClub
+Github's
 Gradle
 GraphQL
 Graphene
@@ -47,14 +48,18 @@ PyPI
 RBAC
 REPL
 RESTful
+ReBAC
 RubyGems
 Rubying
+SLA
 SQLAlchemy
 SQLAlchemy's
 SQLite
 STDIN
 SaaS
 Sascha
+TODO
+TypeORM
 TypeScript
 UI
 URI
@@ -106,6 +111,7 @@ glibc
 hardcoded
 hardcoding
 hoc
+hotfixes
 href
 ing
 instantiation

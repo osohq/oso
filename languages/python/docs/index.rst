@@ -15,12 +15,19 @@ Classes
 
 .. autoclass:: oso.Predicate
 
+.. autoclass:: oso.Enforcer
+    :members:
+
 Decorator Functions
 ^^^^^^^^^^^^^^^^^^^
 .. autofunction:: oso.polar_class
 
 Exceptions
 ==========
+
+.. automodule:: oso.exceptions
+    :members:
+    :show-inheritance:
 
 .. automodule:: polar.exceptions
     :members:

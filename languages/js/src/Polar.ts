@@ -13,8 +13,14 @@ import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
-import type { Class, obj, Options, QueryResult } from './types';
+import { Class, Dict, obj, Options, QueryResult } from './types';
 import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
+import { Variable } from './Variable';
+import { Expression } from './Expression';
+import type { PolarOperator } from './types';
+import { Pattern } from './Pattern';
+import { serializeTypes, filterData } from './dataFiltering';
+import { assert } from 'console';
 
 /** Create and manage an instance of the Polar runtime. */
 export class Polar {
@@ -39,8 +45,30 @@ export class Polar {
   #rolesEnabled: boolean;
 
   constructor(opts: Options = {}) {
+    function defaultEqual(a: any, b: any) {
+      if (
+        a &&
+        b && // good grief!!
+        typeof a === typeof b &&
+        typeof a === 'object' &&
+        a.__proto__ === b.__proto__
+      ) {
+        let check = new Map();
+
+        for (let x in a) {
+          if (!defaultEqual(a[x], b[x])) return false;
+          check.set(x, true);
+        }
+
+        for (let x in b) if (!check.get(x)) return false;
+
+        return true;
+      }
+      return a == b;
+    }
+
     this.#ffiPolar = new FfiPolar();
-    const equalityFn = opts.equalityFn || ((x, y) => x == y);
+    const equalityFn = opts.equalityFn || defaultEqual;
     this.#host = new Host(this.#ffiPolar, equalityFn);
     this.#rolesEnabled = false;
 
@@ -198,7 +226,7 @@ export class Polar {
   /**
    * Query for a Polar predicate or string.
    */
-  query(q: Predicate | string): QueryResult {
+  query(q: Predicate | string, bindings?: Map<string, any>): QueryResult {
     const host = Host.clone(this.#host);
     let ffiQuery;
     if (typeof q === 'string') {
@@ -208,7 +236,18 @@ export class Polar {
       ffiQuery = this.#ffiPolar.newQueryFromTerm(term);
     }
     this.processMessages();
-    return new Query(ffiQuery, host).results;
+    return new Query(ffiQuery, host, bindings).results;
+  }
+
+  /**
+   * Query for a Polar rule with bindings.
+   */
+  queryRuleWithBindings(
+    name: string,
+    bindings: Map<string, any>,
+    ...args: unknown[]
+  ): QueryResult {
+    return this.query(new Predicate(name, args), bindings);
   }
 
   /**
@@ -221,10 +260,22 @@ export class Polar {
   /**
    * Register a JavaScript class for use in Polar policies.
    */
-  registerClass<T>(cls: Class<T>, alias?: string): void {
+  registerClass<T>(
+    cls: Class<T>,
+    alias?: string,
+    types?: Map<string, any>,
+    fetcher?: any
+  ): void {
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
-    const name = this.#host.cacheClass(cls, alias);
-    this.registerConstant(cls, name);
+    const clsName = this.#host.cacheClass(cls, alias);
+    this.registerConstant(cls, clsName);
+    this.#host.clsNames.set(cls, clsName);
+    if (types != null) {
+      this.#host.types.set(clsName, types);
+    }
+    if (fetcher != null) {
+      this.#host.fetchers.set(clsName, fetcher);
+    }
   }
 
   /**
@@ -233,6 +284,52 @@ export class Polar {
   registerConstant(value: any, name: string): void {
     const term = this.#host.toPolar(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
+  }
+
+  /**
+   * Returns all the resources the actor is allowed to perform some action on.
+   */
+  async getAllowedResources(actor: any, action: any, cls: any): Promise<any> {
+    const resource = new Variable('resource');
+    const clsName = this.#host.clsNames.get(cls)!;
+    const constraint = new Expression('And', [
+      new Expression('Isa', [
+        resource,
+        new Pattern({ tag: clsName, fields: {} }),
+      ]),
+    ]);
+    let bindings = new Map();
+    bindings.set('resource', constraint);
+    let results = this.queryRuleWithBindings(
+      'allow',
+      bindings,
+      actor,
+      action,
+      resource
+    );
+
+    const queryResults = [];
+    for await (const result of results) {
+      queryResults.push(result);
+    }
+
+    let jsonResults = queryResults.map(result => ({
+      // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
+      // trivially `JSON.stringify()`-able.
+      bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
+        obj[k] = this.#host.toPolar(v);
+        return obj;
+      }, {}),
+    }));
+    let resultsStr = JSON.stringify(jsonResults);
+    let typesStr = serializeTypes(this.#host.types, this.#host.clsNames);
+    let plan = this.#ffiPolar.buildFilterPlan(
+      typesStr,
+      resultsStr,
+      'resource',
+      clsName
+    );
+    return await filterData(this.#host, plan);
   }
 
   /** Start a REPL session. */

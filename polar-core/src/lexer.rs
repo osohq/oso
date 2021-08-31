@@ -50,31 +50,31 @@ pub enum Token {
     String(String),
     Boolean(bool),
     Symbol(Symbol),
-    Colon, // :
-    Comma, // ,
-    LB,    // [
-    RB,    // ]
-    LP,    // (
-    RP,    // )
-    LCB,   // {
-    RCB,   // }
-    Dot,   // .
-    New,   // new
-    Bang,  // !
-    Mul,   // *
-    Div,   // /
-    Mod,   // mod
-    Rem,   // rem
-    Add,   // +
-    Sub,   // -
-    Eq,    // ==
-    Neq,   // !=
-    Leq,   // <=
-    Geq,   // >=
-    Lt,    // <
-    Gt,    // >
-    Unify, // =
-    Assign,
+    Colon,     // :
+    Comma,     // ,
+    LB,        // [
+    RB,        // ]
+    LP,        // (
+    RP,        // )
+    LCB,       // {
+    RCB,       // }
+    Dot,       // .
+    New,       // new
+    Bang,      // !
+    Mul,       // *
+    Div,       // /
+    Mod,       // mod
+    Rem,       // rem
+    Add,       // +
+    Sub,       // -
+    Eq,        // ==
+    Neq,       // !=
+    Leq,       // <=
+    Geq,       // >=
+    Lt,        // <
+    Gt,        // >
+    Unify,     // =
+    Assign,    // :=
     Pipe,      // |
     SemiColon, // ;
     Query,     // ?=
@@ -89,6 +89,7 @@ pub enum Token {
     Or,        // or
     Not,       // not
     Matches,   // matches
+    Type,      // type
 }
 
 impl ToString for Token {
@@ -138,6 +139,7 @@ impl ToString for Token {
             Token::Or => "or".to_owned(),           // or
             Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
+            Token::Type => "type".to_owned(),       // type
         }
     }
 }
@@ -213,45 +215,29 @@ impl<'input> Lexer<'input> {
             }
         }
 
-        if &self.buf == "true" {
-            Some(Ok((start, Token::Boolean(true), last + 1)))
-        } else if &self.buf == "false" {
-            Some(Ok((start, Token::Boolean(false), last + 1)))
-        } else if &self.buf == "inf" {
-            Some(Ok((start, Token::Float(f64::INFINITY), last + 1)))
-        } else if &self.buf == "nan" {
-            Some(Ok((start, Token::Float(f64::NAN), last + 1)))
-        } else if &self.buf == "new" {
-            Some(Ok((start, Token::New, last + 1)))
-        } else if &self.buf == "in" {
-            Some(Ok((start, Token::In, last + 1)))
-        } else if &self.buf == "cut" {
-            Some(Ok((start, Token::Cut, last + 1)))
-        } else if &self.buf == "debug" {
-            Some(Ok((start, Token::Debug, last + 1)))
-        } else if &self.buf == "print" {
-            Some(Ok((start, Token::Print, last + 1)))
-        } else if &self.buf == "isa" {
-            Some(Ok((start, Token::Isa, last + 1)))
-        } else if &self.buf == "forall" {
-            Some(Ok((start, Token::ForAll, last + 1)))
-        } else if &self.buf == "if" {
-            Some(Ok((start, Token::If, last + 1)))
-        } else if &self.buf == "and" {
-            Some(Ok((start, Token::And, last + 1)))
-        } else if &self.buf == "or" {
-            Some(Ok((start, Token::Or, last + 1)))
-        } else if &self.buf == "not" {
-            Some(Ok((start, Token::Not, last + 1)))
-        } else if &self.buf == "matches" {
-            Some(Ok((start, Token::Matches, last + 1)))
-        } else if &self.buf == "mod" {
-            Some(Ok((start, Token::Mod, last + 1)))
-        } else if &self.buf == "rem" {
-            Some(Ok((start, Token::Rem, last + 1)))
-        } else {
-            Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
-        }
+        let token = match self.buf.as_ref() {
+            "true" => Token::Boolean(true),
+            "false" => Token::Boolean(false),
+            "inf" => Token::Float(f64::INFINITY),
+            "nan" => Token::Float(f64::NAN),
+            "new" => Token::New,
+            "in" => Token::In,
+            "cut" => Token::Cut,
+            "debug" => Token::Debug,
+            "print" => Token::Print,
+            "isa" => Token::Isa,
+            "forall" => Token::ForAll,
+            "if" => Token::If,
+            "and" => Token::And,
+            "or" => Token::Or,
+            "not" => Token::Not,
+            "matches" => Token::Matches,
+            "type" => Token::Type,
+            "mod" => Token::Mod,
+            "rem" => Token::Rem,
+            _ => Token::Symbol(Symbol::new(&self.buf)),
+        };
+        Some(Ok((start, token, last + 1)))
     }
 
     #[inline]

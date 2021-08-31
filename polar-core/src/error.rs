@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use std::fmt;
+use std::{fmt, ops};
 
 use crate::sources::*;
 use crate::terms::*;
@@ -34,6 +34,7 @@ pub enum ErrorKind {
     Operational(OperationalError),
     Parameter(ParameterError),
     RolesValidation(RolesValidationError),
+    Validation(ValidationError),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,7 +57,8 @@ impl PolarError {
                 | ParseError::WrongValueType { loc, .. }
                 | ParseError::ReservedWord { loc, .. }
                 | ParseError::DuplicateKey { loc, .. }
-                | ParseError::SingletonVariable { loc, .. } => {
+                | ParseError::SingletonVariable { loc, .. }
+                | ParseError::ParseSugar { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -76,6 +78,33 @@ impl PolarError {
             }
             _ => {}
         }
+
+        // Augment ParseSugar errors with relevant snippets of parsed Polar policy.
+        if let ErrorKind::Parse(ParseError::ParseSugar {
+            ref mut msg,
+            ref ranges,
+            ..
+        }) = self.kind
+        {
+            if let Some(source) = source {
+                match ranges.len() {
+                    // If one range is provided, print it with no label.
+                    1 => {
+                        let first = &source.src[ranges[0].clone()];
+                        msg.push_str(&format!("\t{}\n", first));
+                    }
+                    // If two ranges are provided, label them `First` and `Second`.
+                    2 => {
+                        let first = &source.src[ranges[0].clone()];
+                        msg.push_str(&format!("\tFirst:\n\t\t{}\n", first));
+                        let second = &source.src[ranges[1].clone()];
+                        msg.push_str(&format!("\tSecond:\n\t\t{}\n", second));
+                    }
+                    _ => (),
+                }
+            }
+        }
+
         self
     }
 }
@@ -125,6 +154,15 @@ impl From<RolesValidationError> for PolarError {
     }
 }
 
+impl From<ValidationError> for PolarError {
+    fn from(err: ValidationError) -> Self {
+        Self {
+            kind: ErrorKind::Validation(err),
+            context: None,
+        }
+    }
+}
+
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
 
 impl std::error::Error for PolarError {}
@@ -137,6 +175,7 @@ impl fmt::Display for PolarError {
             ErrorKind::Operational(e) => write!(f, "{}", e)?,
             ErrorKind::Parameter(e) => write!(f, "{}", e)?,
             ErrorKind::RolesValidation(e) => write!(f, "{}", e)?,
+            ErrorKind::Validation(e) => write!(f, "{}", e)?,
         }
         if let Some(ref context) = self.context {
             write!(f, "{}", context)?;
@@ -191,6 +230,16 @@ pub enum ParseError {
     SingletonVariable {
         loc: usize,
         name: String,
+    },
+    AmbiguousAndOr {
+        msg: String,
+    },
+    ParseSugar {
+        loc: usize,
+        msg: String,
+        /// Set of source ranges to augment the error message with relevant snippets of the parsed
+        /// Polar policy.
+        ranges: Vec<ops::Range<usize>>,
     },
 }
 
@@ -253,6 +302,9 @@ impl fmt::Display for ParseError {
                     "Singleton variable {} is unused or undefined; try renaming to _{} or _",
                     name, name
                 )
+            }
+            Self::AmbiguousAndOr { msg, .. } | Self::ParseSugar { msg, .. } => {
+                write!(f, "{}", msg)
             }
         }
     }
@@ -374,5 +426,29 @@ pub struct RolesValidationError(pub String);
 impl fmt::Display for RolesValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Oso Roles Validation Error: {}", self.0)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ValidationError {
+    InvalidRule { rule: String, msg: String },
+    InvalidPrototype { prototype: String, msg: String },
+    Sugar { msg: String },
+    // TODO: add SingletonVariable and RolesValidationError
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::InvalidRule { rule, msg } => {
+                write!(f, "Invalid rule: {} {}", rule, msg)
+            }
+            Self::InvalidPrototype { prototype, msg } => {
+                write!(f, "Invalid prototype: {} {}", prototype, msg)
+            }
+            Self::Sugar { msg } => {
+                write!(f, "{}", msg)
+            }
+        }
     }
 }

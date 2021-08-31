@@ -4,7 +4,7 @@ use std::fmt;
 use crate::bindings::Bindings;
 use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
-use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
+use crate::terms::*;
 
 use super::partial::{invert_operation, FALSE, TRUE};
 
@@ -90,7 +90,7 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
                 | (Value::RestVariable(v), Value::RestVariable(w))
                     if v == &this && w == &this =>
                 {
-                    TRUE.into_term()
+                    TRUE.into()
                 }
                 (Value::Variable(l), _) | (Value::RestVariable(l), _)
                     if l == &this && right.is_ground() =>
@@ -121,7 +121,7 @@ pub fn simplify_partial(
     term = simplify_trivial_constraint(var.clone(), term);
     simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
     if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
-        (op!(And, term).into_term(), simplifier.perf_counters())
+        (op!(And, term).into(), simplifier.perf_counters())
     } else {
         (term, simplifier.perf_counters())
     }
@@ -290,6 +290,7 @@ impl PerfCounters {
 pub struct Simplifier {
     bindings: Bindings,
     output_vars: HashSet<Symbol>,
+    seen: HashSet<Term>,
 
     counters: PerfCounters,
 }
@@ -301,6 +302,7 @@ impl Simplifier {
         Self {
             bindings: Bindings::new(),
             output_vars,
+            seen: HashSet::new(),
             counters: PerfCounters::new(track_performance),
         }
     }
@@ -405,7 +407,8 @@ impl Simplifier {
                         // in the expression.
                         (Value::Variable(var), val)
                             if (val.is_ground() || self.is_dot_output(right))
-                                && !self.is_bound(var) =>
+                                && !self.is_bound(var)
+                                && !right.contains_variable(var) =>
                         {
                             simplify_debug!("*** 3");
                             MaybeDrop::Check(var.clone(), right.clone())
@@ -415,7 +418,8 @@ impl Simplifier {
                         // in the expression.
                         (val, Value::Variable(var))
                             if (val.is_ground() || self.is_dot_output(left))
-                                && !self.is_bound(var) =>
+                                && !self.is_bound(var)
+                                && !left.contains_variable(var) =>
                         {
                             simplify_debug!("*** 4");
                             MaybeDrop::Check(var.clone(), left.clone())
@@ -557,7 +561,7 @@ impl Simplifier {
             args.retain(|a| {
                 let o = a.value().as_expression().unwrap();
                 o != &TRUE // trivial
-                    && !seen.contains(&o.mirror().into_term().hash_value()) // reflection
+                    && !seen.contains(&Term::from(o.mirror()).hash_value()) // reflection
                     && seen.insert(a.hash_value()) // duplicate
             });
         }
@@ -597,44 +601,55 @@ impl Simplifier {
     where
         F: Fn(&mut Self, &mut Operation, &TermSimplifier) + 'static + Clone,
     {
-        *term = self.deref(term);
-        if matches!(
-            term.value(),
-            Value::Dictionary(_) | Value::Call(_) | Value::List(_) | Value::Expression(_)
-        ) {
-            let value = term.mut_value();
-            match value {
-                Value::Dictionary(dict) => {
-                    for (_, v) in dict.fields.iter_mut() {
+        if self.seen.contains(term) {
+            //            println!("seen {}", term.to_polar());
+            return;
+        }
+        let orig = term.clone();
+        self.seen.insert(term.clone());
+
+        //        println!("simplify_term pre {}", term.to_polar());
+        let de = self.deref(term);
+        *term = de;
+        //        println!("simplify_term ref {}", term.to_polar());
+
+        match term.mut_value() {
+            Value::Dictionary(dict) => {
+                for (_, v) in dict.fields.iter_mut() {
+                    self.simplify_term(v, simplify_operation.clone());
+                }
+            }
+            Value::Call(call) => {
+                for arg in call.args.iter_mut() {
+                    self.simplify_term(arg, simplify_operation.clone());
+                }
+                if let Some(kwargs) = &mut call.kwargs {
+                    for (_, v) in kwargs.iter_mut() {
                         self.simplify_term(v, simplify_operation.clone());
                     }
                 }
-                Value::Call(call) => {
-                    for arg in call.args.iter_mut() {
-                        self.simplify_term(arg, simplify_operation.clone());
-                    }
-                    if let Some(kwargs) = &mut call.kwargs {
-                        for (_, v) in kwargs.iter_mut() {
-                            self.simplify_term(v, simplify_operation.clone());
-                        }
-                    }
+            }
+            Value::List(list) => {
+                for elem in list.iter_mut() {
+                    self.simplify_term(elem, simplify_operation.clone());
                 }
-                Value::List(list) => {
-                    for elem in list.iter_mut() {
-                        self.simplify_term(elem, simplify_operation.clone());
-                    }
-                }
-                Value::Expression(operation) => {
-                    let so = simplify_operation.clone();
-                    let cont = move |s: &mut Self, term: &mut Term| {
-                        s.simplify_term(term, simplify_operation.clone())
-                    };
-                    so(self, operation, &cont);
-                }
-                // If it's not in the matches above, it's not in here
-                _ => unreachable!(),
+            }
+            Value::Expression(operation) => {
+                let so = simplify_operation.clone();
+                let cont = move |s: &mut Self, term: &mut Term| {
+                    s.simplify_term(term, simplify_operation.clone())
+                };
+                so(self, operation, &cont);
+            }
+            _ => (),
+        }
+
+        if let Ok(sym) = orig.value().as_symbol() {
+            if term.contains_variable(sym) {
+                *term = orig.clone()
             }
         }
+        self.seen.remove(&orig);
     }
 
     /// Simplify a partial until quiescence.
@@ -672,5 +687,23 @@ mod test {
     fn test_debug_off() {
         assert_eq!(SIMPLIFY_DEBUG, false);
         assert_eq!(TRACK_PERF, false);
+    }
+
+    #[test]
+    fn test_simplify_circular_dot_with_isa() {
+        let op = opn!(Dot, var!("x"), str!("x"));
+        let op = opn!(Unify, var!("x"), op);
+        let op = opn!(And, op, opn!(Isa, var!("x"), ptn!(instance!("X"))));
+        let mut vs: HashSet<Symbol> = HashSet::new();
+        vs.insert(sym!("x"));
+        let (x, _) = simplify_partial(&sym!("x"), op, vs, false);
+        assert_eq!(
+            x,
+            opn!(
+                And,
+                opn!(Unify, var!("x"), opn!(Dot, var!("x"), str!("x"))),
+                opn!(Isa, var!("x"), ptn!(instance!("X")))
+            )
+        );
     }
 }

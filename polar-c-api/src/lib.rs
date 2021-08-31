@@ -129,6 +129,29 @@ pub extern "C" fn polar_register_constant(
     })
 }
 
+#[no_mangle]
+pub extern "C" fn polar_register_mro(
+    polar_ptr: *mut Polar,
+    name: *const c_char,
+    mro: *const c_char,
+) -> i32 {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let name = unsafe { ffi_string!(name) };
+        let mro = unsafe { ffi_string!(mro) };
+        let mro = serde_json::from_str(&mro);
+        match mro {
+            Ok(mro) => match polar.register_mro(terms::Symbol::new(name.as_ref()), mro) {
+                Err(e) => {
+                    set_error(e);
+                    POLAR_FAILURE
+                }
+                Ok(()) => POLAR_SUCCESS,
+            },
+            Err(e) => set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into()),
+        }
+    })
+}
 // @Note(steve): trace is treated as a bool. 0 for false, anything else for true.
 // If we get more than one flag on these ffi methods, consider renaming it flags and making it a bitflags field.
 // Then we wont have to update the ffi to add new optional things like logging or tracing or whatever.
@@ -428,5 +451,56 @@ pub extern "C" fn polar_validate_roles_config(
             .and_then(|results| polar.validate_roles_config(results))
             .err()
             .map_or(POLAR_SUCCESS, set_error)
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn polar_build_filter_plan(
+    polar_ptr: *mut Polar,
+    types: *const c_char,
+    results: *const c_char,
+    variable: *const c_char,
+    class_tag: *const c_char,
+) -> *const c_char {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+
+        let types_str = unsafe { ffi_string!(types) };
+        let results_str = unsafe { ffi_string!(results) };
+        let types = match serde_json::from_str(&types_str)
+            .map_err(|e| error::RuntimeError::Serialization { msg: e.to_string() }.into())
+        {
+            Ok(types) => types,
+            Err(e) => {
+                set_error(e);
+                return null();
+            }
+        };
+        let partial_results = match serde_json::from_str(&results_str)
+            .map_err(|e| error::RuntimeError::Serialization { msg: e.to_string() }.into())
+        {
+            Ok(partial_results) => partial_results,
+            Err(e) => {
+                set_error(e);
+                return null();
+            }
+        };
+
+        let variable = unsafe { ffi_string!(variable) };
+        let class_tag = unsafe { ffi_string!(class_tag) };
+
+        let filter_plan = polar.build_filter_plan(types, partial_results, &variable, &class_tag);
+        match filter_plan {
+            Ok(filter_plan) => {
+                let plan_json = serde_json::to_string(&filter_plan).unwrap();
+                CString::new(plan_json)
+                    .expect("JSON should not contain any 0 bytes")
+                    .into_raw()
+            }
+            Err(e) => {
+                set_error(e);
+                null()
+            }
+        }
     })
 }

@@ -41,11 +41,11 @@ Link to [relevant documentation section]().
 - Of smaller improvements
 - Potentially with doc [links]().
 
-### Ruby
+### Rust
 
 #### Other bugs & improvements
 
-- The ruby host library now only calls `to_s` on external instances when the
-  instance needs to be serialized for a log line, debug message, or error. This
-  improves performance in cases where `to_s` is slow (i.e. requires a round-trip
-  to the database).
+- The rust library now prints messages and warnings directly to stdout and
+  stderr respectively. This means that you can predictably enable Polar tracing
+  by running with `POLAR_LOG=1`. Fixes issue
+  [#824](https://github.com/osohq/oso/issues/824)

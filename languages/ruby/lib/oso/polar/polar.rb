@@ -52,6 +52,10 @@ module Oso
         register_class String
       end
 
+      def ffi
+        @ffi_polar
+      end
+
       def enable_roles # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         return if polar_roles_enabled
 
@@ -86,6 +90,55 @@ module Oso
         end
 
         ffi_polar.validate_roles_config(validation_query_results)
+      end
+
+      # get the (maybe user-supplied) name of a class.
+      # kind of a hack because of class autoreloading.
+      def get_class_name(klass) # rubocop:disable Metrics/AbcSize
+        if host.types.key? klass
+          host.types[klass].name
+        elsif host.types.key? klass.name
+          host.types[klass.name].name
+        else
+          rec = host.types.values.find { |v| v.klass.get == klass }
+          raise "Unknown class `#{klass}`" if rec.nil?
+
+          host.types[klass] = rec
+          rec.name
+        end
+      end
+
+      def get_allowed_resources(actor, action, klass) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+        resource = Variable.new 'resource'
+        class_name = get_class_name klass
+        constraint = Expression.new(
+          'And',
+          [Expression.new('Isa', [resource, Pattern.new(class_name, {})])]
+        )
+
+        results = query_rule(
+          'allow',
+          actor,
+          action,
+          resource,
+          bindings: { 'resource' => constraint },
+          accept_expression: true
+        )
+
+        complete = []
+        partial = []
+
+        results.to_a.each do |result|
+          result.to_a.each do |key, val|
+            if val.is_a? Expression
+              partial.push({ 'bindings' => { key => host.to_polar(val) } })
+            else
+              complete.push val
+            end
+          end
+        end
+        filter = ::Oso::Polar::DataFiltering::FilterPlan.new(self, partial, class_name)
+        complete + filter.resolve
       end
 
       # Clear all rules and rule sources from the current Polar instance
@@ -150,17 +203,16 @@ module Oso
       #   @param query [Predicate]
       #   @return [Enumerator] of resulting bindings
       #   @raise [Error] if the FFI call raises one.
-      def query(query)
-        new_host = host.dup
+      def query(query, host: self.host.dup, bindings: {})
         case query
         when String
           ffi_query = ffi_polar.new_query_from_str(query)
         when Predicate
-          ffi_query = ffi_polar.new_query_from_term(new_host.to_polar(query))
+          ffi_query = ffi_polar.new_query_from_term(host.to_polar(query))
         else
           raise InvalidQueryTypeError
         end
-        Query.new(ffi_query, host: new_host)
+        Query.new(ffi_query, host: host, bindings: bindings)
       end
 
       # Query for a rule.
@@ -169,8 +221,10 @@ module Oso
       # @param args [Array<Object>]
       # @return [Enumerator] of resulting bindings
       # @raise [Error] if the FFI call raises one.
-      def query_rule(name, *args)
-        query(Predicate.new(name, args: args))
+      def query_rule(name, *args, accept_expression: false, bindings: {})
+        host = self.host.dup
+        host.accept_expression = accept_expression
+        query(Predicate.new(name, args: args), host: host, bindings: bindings)
       end
 
       # Register a Ruby class with Polar.
@@ -181,8 +235,8 @@ module Oso
       # under a previously-registered name.
       # @raise [FFI::Error] if the FFI call returns an error.
       # @return [self] for chaining.
-      def register_class(cls, name: nil)
-        name = host.cache_class(cls, name: name || cls.name)
+      def register_class(cls, name: nil, fields: {}, fetcher: nil)
+        name = host.cache_class(cls, name: name || cls.name, fields: fields, fetcher: fetcher)
         register_constant(cls, name: name)
       end
 

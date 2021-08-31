@@ -105,7 +105,7 @@ please see the [performance page](performance).
 The foundation of Oso is designed to support a wide variety of use cases, though
 given Oso’s focus on application integration there are some use cases that are
 currently a more natural fit than others. For a more detailed discussion of this
-topic, please see our [use cases page](use-cases).
+topic, please see our [use cases page](https://www.osohq.com/use-cases).
 
 ## What languages and frameworks do you support?
 
@@ -134,7 +134,7 @@ product, please [contact us](https://osohq.com/company/contact-us).
 
 ## Who builds and maintains Oso?
 
-Oso is built by [Oso](https://www.osohq.com/company/about-us)! We are headquartered in New York City with engineers across two continents, and we are
+Oso is built by [Oso](https://www.osohq.com/company/about-us)! We are headquartered in New York City and remotely with engineers across two continents, and we are
 hard at work on new features and improvements. If you have feedback or ideas about
 how we can make the product better, we would be delighted to hear from you.
 Please feel free to reach out to us at <a href="mailto:engineering@osohq.com">engineering@osohq.com</a>.

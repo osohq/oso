@@ -111,7 +111,7 @@ fn invert_partials(bindings: BindingManager) -> Bindings {
     simplified
         .into_iter()
         .map(|(k, v)| match v.value() {
-            Value::Expression(e) => (k, e.invert().into_term()),
+            Value::Expression(e) => (k, e.invert().into()),
             _ => (
                 k.clone(),
                 term!(op!(And, term!(op!(Neq, term!(k), v.clone())))),
@@ -130,8 +130,7 @@ fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
                 .for_each(|(var, value)| match acc.entry(var.clone()) {
                     Entry::Occupied(mut o) => match (o.get().value(), value.value()) {
                         (Value::Expression(x), Value::Expression(y)) => {
-                            let mut x = x.clone();
-                            x.merge_constraints(y.clone());
+                            let x = x.clone().merge_constraints(y.clone());
                             o.insert(value.clone_with_value(value!(x)));
                         }
                         (existing, new) => panic!(

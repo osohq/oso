@@ -89,4 +89,29 @@ impl Polar {
         let message = self.0.next_message();
         serde_wasm_bindgen::to_value(&message).map_err(|e| serialization_error(e.to_string()))
     }
+
+    #[wasm_bindgen(js_class = Polar, js_name = buildFilterPlan)]
+    pub fn wasm_build_filter_plan(
+        &self,
+        types: &str,
+        partial_results: &str,
+        variable: &str,
+        class_tag: &str,
+    ) -> JsResult<JsValue> {
+        let types = match serde_json::from_str(types) {
+            Ok(t) => t,
+            Err(e) => return Err(serde_serialization_error(e)),
+        };
+        let partial_results = match serde_json::from_str(partial_results) {
+            Ok(r) => r,
+            Err(e) => return Err(serde_serialization_error(e)),
+        };
+        self.0
+            .build_filter_plan(types, partial_results, variable, class_tag)
+            .map_err(Error::from)
+            .map_err(Error::into)
+            .and_then(|plan| {
+                serde_wasm_bindgen::to_value(&plan).map_err(|e| serialization_error(e.to_string()))
+            })
+    }
 }
