@@ -181,35 +181,7 @@ Return a set of actions allowed by the given (actor, resource) combination allow
 by the policy.
 */
 func (o Oso) GetAllowedActions(actor interface{}, resource interface{}, allowWildcard bool) (map[interface{}]struct{}, error) {
-	results := make(map[interface{}]struct{})
-	query, err := (*o.p).queryRule("allow", actor, types.ValueVariable("action"), resource)
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		if v, err := query.Next(); err != nil {
-			return nil, err
-		} else if v == nil {
-			break
-		} else if action, ok := (*v)["action"].(interface{}); ok {
-			switch val := (action).(type) {
-			case types.ValueVariable:
-				if allowWildcard {
-					results["*"] = struct{}{}
-				} else {
-					return nil, errors.New(`The result of get_allowed_actions() contained an
-												"unconstrained" action that could represent any
-												action, but allow_wildcard was set to False. To fix,
-												set allow_wildcard to True and compare with the "*"
-												string.`)
-				}
-			default:
-				results[val] = struct{}{}
-			}
-		}
-	}
-	return results, nil
+	return o.AuthorizedActions(actor, resource, allowWildcard)
 }
 
 func (o Oso) Authorize(actor interface{}, action interface{}, resource interface{}) error {
@@ -241,6 +213,96 @@ func (o Oso) Authorize(actor interface{}, action interface{}, resource interface
 	} else {
 		return osoErrors.NewForbiddenError()
 	}
+}
+
+func (o Oso) AuthorizeRequest(actor interface{}, request interface{}) error {
+	isAllowed, err := o.QueryRuleOnce("allow_request", actor, request)
+	if err != nil {
+		return err
+	}
+
+	if !isAllowed {
+		return osoErrors.NewForbiddenError()
+	}
+
+	return nil
+}
+
+func (o Oso) AuthorizeField(actor interface{}, action interface{}, resource interface{}, field interface{}) error {
+	isAllowed, err := o.QueryRuleOnce("allow_field", actor, action, resource, field)
+	if err != nil {
+		return err
+	}
+
+	if !isAllowed {
+		return osoErrors.NewForbiddenError()
+	}
+
+	return nil
+}
+
+func (o Oso) AuthorizedActions(actor interface{}, resource interface{}, allowWildcard bool) (map[interface{}]struct{}, error) {
+	results := make(map[interface{}]struct{})
+	query, err := (*o.p).queryRule("allow", actor, types.ValueVariable("action"), resource)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		if v, err := query.Next(); err != nil {
+			return nil, err
+		} else if v == nil {
+			break
+		} else if action, ok := (*v)["action"].(interface{}); ok {
+			switch val := (action).(type) {
+			case types.ValueVariable:
+				if allowWildcard {
+					results["*"] = struct{}{}
+				} else {
+					return nil, errors.New(`the result of AuthorizedActions() contained an
+												"unconstrained" action that could represent any
+												action, but allow_wildcard was set to False. To fix,
+												set allow_wildcard to True and compare with the "*"
+												string`)
+				}
+			default:
+				results[val] = struct{}{}
+			}
+		}
+	}
+	return results, nil
+}
+
+func (o Oso) AuthorizedFields(actor interface{}, action interface{}, resource interface{}, field interface{}, allowWildcard bool) (map[interface{}]struct{}, error) {
+	results := make(map[interface{}]struct{})
+	query, err := (*o.p).queryRule("allow_field", actor, action, resource, types.ValueVariable("field"))
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		if v, err := query.Next(); err != nil {
+			return nil, err
+		} else if v == nil {
+			break
+		} else if field, ok := (*v)["field"].(interface{}); ok {
+			switch val := (field).(type) {
+			case types.ValueVariable:
+				if allowWildcard {
+					results["*"] = struct{}{}
+				} else {
+					return nil, errors.New(`the result of AuthorizedFields() contained an
+												"unconstrained" field that could represent any
+												field, but allow_wildcard was set to False. To fix,
+												set allow_wildcard to True and compare with the "*"
+												string`)
+				}
+			default:
+				results[val] = struct{}{}
+			}
+		}
+	}
+	return results, nil
 }
 
 /*
