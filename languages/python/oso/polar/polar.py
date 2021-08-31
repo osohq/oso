@@ -21,7 +21,9 @@ from .exceptions import (
     PolarFileExtensionError,
     PolarFileNotFoundError,
     InvalidQueryTypeError,
+    FileLoadingError,
 )
+from .errors import print_warning
 from .ffi import Polar as FfiPolar
 from .host import Host
 from .query import Query
@@ -71,6 +73,7 @@ class Polar:
         self.ffi_polar.set_message_enricher(self.host.enrich_message)
         # TODO(gj): rename to _oso_roles_enabled
         self._polar_roles_enabled = False
+        self._files_loaded = False
 
         # Register global constants.
         self.register_constant(None, name="nil")
@@ -128,8 +131,8 @@ class Polar:
 
             self.ffi_polar.validate_roles_config(validation_query_results)
 
-    def load_file(self, policy_file):
-        """Load Polar policy from a ".polar" file."""
+    def load_file_no_validation(self, policy_file):
+        """Load Polar policy from a ".polar" file without validating any of the rules."""
         policy_file = Path(policy_file)
         extension = policy_file.suffix
         fname = str(policy_file)
@@ -142,9 +145,35 @@ class Polar:
         except FileNotFoundError:
             raise PolarFileNotFoundError(fname)
 
-        self.load_str(file_data.decode("utf-8"), policy_file)
+        self.load_str_no_validation(file_data.decode("utf-8"), policy_file)
 
-    def load_str(self, string, filename=None):
+    def load_file(self, policy_file):
+        """Load Polar policy from a ".polar" file and validate all loaded rules."""
+        if self._files_loaded:
+            raise FileLoadingError("`load_files()` cannot be called twice.")
+
+        print_warning("`load_file()` is deprecated. Consider using `load_files()`.")
+        self.load_file_no_validation(policy_file)
+        self.ffi_polar.validate_rules()
+        self._files_loaded = True
+
+    def load_files(self, policy_files):
+        """Load all policy files (".polar" extension) and validate all loaded rules.
+
+        :param policy_files: list of policy file names (".polar" extension)
+        :type policy_files: list[str]
+        """
+        if self._files_loaded:
+            raise FileLoadingError("`load_files()` cannot be called twice.")
+
+        for f in policy_files:
+            self.load_file_no_validation(f)
+
+        # If validation fails, clear rules and don't set self._files_loaded
+        self.ffi_polar.validate_rules()
+        self._files_loaded = True
+
+    def load_str_no_validation(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
         # Get MRO of all registered classes
         # NOTE: not ideal that the MRO gets updated each time load_str is
@@ -173,13 +202,20 @@ class Polar:
                     raise InlineQueryFailedError(source.get())
 
         # If roles are enabled, re-validate config when new rules are loaded.
+        # TODO: remove
         if self._polar_roles_enabled:
             self._polar_roles_enabled = False
             self.enable_roles()
 
+    def load_str(self, string, filename=None):
+        """Load a Polar string and validate all loaded rules."""
+        self.load_str_no_validation()
+        self.ffi_polar.validate_rules()
+
     def clear_rules(self):
         self.ffi_polar.clear_rules()
         self._polar_roles_enabled = False
+        self._files_loaded = False
 
     def query(self, query, *, bindings=None, accept_expression=False):
         """Query for a predicate, parsing it if necessary.

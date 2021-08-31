@@ -100,6 +100,18 @@ pub extern "C" fn polar_load(
 }
 
 #[no_mangle]
+pub extern "C" fn polar_validate_rules(polar_ptr: *mut Polar) -> i32 {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+
+        match polar.validate_rules() {
+            Err(err) => set_error(err),
+            Ok(_) => POLAR_SUCCESS,
+        }
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn polar_clear_rules(polar_ptr: *mut Polar) -> i32 {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };

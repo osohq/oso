@@ -214,10 +214,6 @@ impl Polar {
                     }
                 }
             }
-            // Rewrite namespace implications _before_ validating rule prototypes.
-            kb.rewrite_implications()?;
-            // check rules are valid against rule prototypes
-            kb.validate_rules()?;
             Ok(warnings)
         }
 
@@ -236,6 +232,15 @@ impl Polar {
                 Err(e)
             }
         }
+    }
+
+    /// Validate rules in the knowledge base once all files have been loaded
+    pub fn validate_rules(&self) -> PolarResult<()> {
+        let mut kb = self.kb.write().unwrap();
+        // Rewrite namespace implications _before_ validating rule prototypes.
+        kb.rewrite_implications()?;
+        // check rules are valid against rule prototypes
+        kb.validate_rules()
     }
 
     // Used in integration tests

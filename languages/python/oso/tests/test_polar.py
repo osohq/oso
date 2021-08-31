@@ -13,7 +13,7 @@ from polar import (
     Pattern,
 )
 from polar.partial import TypeConstraint
-from polar.errors import ValidationError
+from polar.errors import ValidationError, FileLoadingError
 
 import pytest
 
@@ -1005,3 +1005,29 @@ def test_rule_prototypes_with_subclass_check(polar):
     """
     with pytest.raises(ValidationError):
         polar.load_str(p)
+
+
+def test_load_files(polar, load_file):
+    # This file contains a rule type
+    file1 = Path(__file__).parent / "test_load_files1.polar"
+    # This file contains a rule that is incompatible with the type
+    file2 = Path(__file__).parent / "test_load_files2.polar"
+
+    # Ordering in the list shouldn't matter
+    with pytest.raises(ValidationError):
+        polar.load_files([file2, file1])
+
+    with pytest.raises(FileLoadingError):
+        polar.load_files(["test_load_files1.polar"])
+        polar.load_files(["test_file.polar"])
+    polar.clear_rules()
+
+    with pytest.raises(FileLoadingError):
+        polar.load_file("test_load_files1.polar")
+        polar.load_file("test_load_files1.polar")
+    polar.clear_rules()
+
+    with pytest.raises(FileLoadingError):
+        polar.load_file("test_load_files1.polar")
+        polar.load_files(["test_load_files1.polar"])
+    polar.clear_rules()

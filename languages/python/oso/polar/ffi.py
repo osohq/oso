@@ -60,6 +60,12 @@ class Polar:
         self.process_messages()
         self.check_result(result)
 
+    def validate_rules(self):
+        """Validate all loaded rules once all files have been loaded."""
+        result = lib.polar_validate_rules(self.ptr)
+        self.process_messages()
+        self.check_result(result)
+
     def clear_rules(self):
         """Clear all rules from the Polar KB"""
         result = lib.polar_clear_rules(self.ptr)
