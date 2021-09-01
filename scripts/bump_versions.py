@@ -32,7 +32,7 @@ def replace_version(target_version, path, match_re=None):
     """
     if match_re is None:
         log(f"{path}: {target_version}")
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             f.write(target_version + "\n")
         return
 
@@ -46,8 +46,9 @@ def replace_version(target_version, path, match_re=None):
                 start, end = match.span(1)
 
                 replace_line_with = line
-                replace_line_with = (replace_line_with[:start] + target_version
-                                     + replace_line_with[end:])
+                replace_line_with = (
+                    replace_line_with[:start] + target_version + replace_line_with[end:]
+                )
                 log(f"{path}: {line.strip()} => {replace_line_with.strip()}")
 
                 # In file input context, stdout writes to the file.
@@ -85,58 +86,75 @@ def replace_version_toml(filename, mutations):
 
 def bump_oso_version(version):
     replace_version(version, BASE / "VERSION")
-    replace_version(version,
-                    BASE / "languages/java/oso/pom.xml",
-                    fr"<!-- oso_version --><version>({VERSION_RE})<\/version>")
-    replace_version(version,
-                    BASE / "docs/examples/Makefile",
-                    fr"JAVA_PACKAGE_JAR_PATH := .*\/oso-({VERSION_RE})\.jar")
-    replace_version(version,
-                    BASE / "languages/js/package.json",
-                    fr'"version": "({VERSION_RE})"')
-    replace_version(version,
-                    BASE / "languages/python/docs/conf.py",
-                    fr'version = "({VERSION_RE})"')
-    replace_version(version,
-                    BASE / "languages/python/docs/conf.py",
-                    fr'release = "({VERSION_RE})"')
-    replace_version(version,
-                    BASE / "languages/python/oso/oso/oso.py",
-                    fr'__version__ = "({VERSION_RE})"')
-    replace_version(version,
-                    BASE / "languages/ruby/Gemfile.lock",
-                    fr'oso-oso \(({VERSION_RE})\)')
-    replace_version(version,
-                    BASE / "languages/ruby/lib/oso/version.rb",
-                    fr"VERSION = '({VERSION_RE})'")
-    replace_version_toml(BASE / "languages/rust/oso-derive/Cargo.toml",
-                         {
-                             "package.version": version
-                         })
-    replace_version_toml(BASE / "languages/rust/oso/Cargo.toml",
-                         {
-                             "package.version": version,
-                             "dependencies.oso-derive.version": f"={version}",
-                             "dependencies.polar-core.version": f"={version}",
-                             "dev-dependencies.oso-derive.version": f"={version}",
-                         })
-    replace_version_toml(BASE / "polar-c-api/Cargo.toml",
-                         {
-                             "package.version": version,
-                             "dependencies.polar-core.version": f"={version}",
-                         })
-    replace_version_toml(BASE / "polar-core/Cargo.toml",
-                         {
-                             "package.version": version,
-                         })
-    replace_version_toml(BASE / "polar-wasm-api/Cargo.toml",
-                         {
-                             "package.version": version,
-                             "dependencies.polar-core.version": f"={version}",
-                         })
-    replace_version(version,
-                    BASE / ".github/workflows/publish-docs.yml",
-                    fr'default: "({VERSION_RE})" # oso_version')
+    replace_version(
+        version,
+        BASE / "languages/java/oso/pom.xml",
+        fr"<!-- oso_version --><version>({VERSION_RE})<\/version>",
+    )
+    replace_version(
+        version,
+        BASE / "docs/examples/Makefile",
+        fr"JAVA_PACKAGE_JAR_PATH := .*\/oso-({VERSION_RE})\.jar",
+    )
+    replace_version(
+        version, BASE / "languages/js/package.json", fr'"version": "({VERSION_RE})"'
+    )
+    replace_version(
+        version, BASE / "languages/python/docs/conf.py", fr'version = "({VERSION_RE})"'
+    )
+    replace_version(
+        version, BASE / "languages/python/docs/conf.py", fr'release = "({VERSION_RE})"'
+    )
+    replace_version(
+        version,
+        BASE / "languages/python/oso/oso/oso.py",
+        fr'__version__ = "({VERSION_RE})"',
+    )
+    replace_version(
+        version, BASE / "languages/ruby/Gemfile.lock", fr"oso-oso \(({VERSION_RE})\)"
+    )
+    replace_version(
+        version,
+        BASE / "languages/ruby/lib/oso/version.rb",
+        fr"VERSION = '({VERSION_RE})'",
+    )
+    replace_version_toml(
+        BASE / "languages/rust/oso-derive/Cargo.toml", {"package.version": version}
+    )
+    replace_version_toml(
+        BASE / "languages/rust/oso/Cargo.toml",
+        {
+            "package.version": version,
+            "dependencies.oso-derive.version": f"={version}",
+            "dependencies.polar-core.version": f"={version}",
+            "dev-dependencies.oso-derive.version": f"={version}",
+        },
+    )
+    replace_version_toml(
+        BASE / "polar-c-api/Cargo.toml",
+        {
+            "package.version": version,
+            "dependencies.polar-core.version": f"={version}",
+        },
+    )
+    replace_version_toml(
+        BASE / "polar-core/Cargo.toml",
+        {
+            "package.version": version,
+        },
+    )
+    replace_version_toml(
+        BASE / "polar-wasm-api/Cargo.toml",
+        {
+            "package.version": version,
+            "dependencies.polar-core.version": f"={version}",
+        },
+    )
+    replace_version(
+        version,
+        BASE / ".github/workflows/publish-docs.yml",
+        fr'default: "({VERSION_RE})" # oso_version',
+    )
 
 
 def oso_python_dependency_version(version):
@@ -149,44 +167,62 @@ def oso_python_dependency_version(version):
 
 
 def bump_sqlalchemy_version(version, oso_version):
-    replace_version(version,
-                    BASE / "languages/python/sqlalchemy-oso/sqlalchemy_oso/__init__.py",
-                    fr'__version__ = "({VERSION_RE})"')
-    replace_version(oso_python_dependency_version(oso_version),
-                    BASE / "languages/python/sqlalchemy-oso/requirements.txt",
-                    fr'oso~=({VERSION_RE})')
-    replace_version(version,
-                    BASE / ".github/workflows/publish-docs.yml",
-                    fr'default: "({VERSION_RE})" # sqlalchemy_oso_version')
+    replace_version(
+        version,
+        BASE / "languages/python/sqlalchemy-oso/sqlalchemy_oso/__init__.py",
+        fr'__version__ = "({VERSION_RE})"',
+    )
+    replace_version(
+        oso_python_dependency_version(oso_version),
+        BASE / "languages/python/sqlalchemy-oso/requirements.txt",
+        fr"oso~=({VERSION_RE})",
+    )
+    replace_version(
+        version,
+        BASE / ".github/workflows/publish-docs.yml",
+        fr'default: "({VERSION_RE})" # sqlalchemy_oso_version',
+    )
 
 
 def bump_flask_version(version, oso_version):
-    replace_version(version,
-                    BASE / "languages/python/flask-oso/flask_oso/__init__.py",
-                    fr'__version__ = "({VERSION_RE})"')
-    replace_version(oso_python_dependency_version(oso_version),
-                    BASE / "languages/python/flask-oso/requirements.txt",
-                    fr'oso~=({VERSION_RE})')
-    replace_version(version,
-                    BASE / ".github/workflows/publish-docs.yml",
-                    fr'default: "({VERSION_RE})" # flask_oso_version')
+    replace_version(
+        version,
+        BASE / "languages/python/flask-oso/flask_oso/__init__.py",
+        fr'__version__ = "({VERSION_RE})"',
+    )
+    replace_version(
+        oso_python_dependency_version(oso_version),
+        BASE / "languages/python/flask-oso/requirements.txt",
+        fr"oso~=({VERSION_RE})",
+    )
+    replace_version(
+        version,
+        BASE / ".github/workflows/publish-docs.yml",
+        fr'default: "({VERSION_RE})" # flask_oso_version',
+    )
 
 
 def bump_django_version(version, oso_version):
-    replace_version(version,
-                    BASE / "languages/python/django-oso/django_oso/__init__.py",
-                    fr'__version__ = "({VERSION_RE})"')
-    replace_version(oso_python_dependency_version(oso_version),
-                    BASE / "languages/python/django-oso/requirements.txt",
-                    fr'oso~=({VERSION_RE})')
-    replace_version(version,
-                    BASE / ".github/workflows/publish-docs.yml",
-                    fr'default: "({VERSION_RE})" # django_oso_version')
+    replace_version(
+        version,
+        BASE / "languages/python/django-oso/django_oso/__init__.py",
+        fr'__version__ = "({VERSION_RE})"',
+    )
+    replace_version(
+        oso_python_dependency_version(oso_version),
+        BASE / "languages/python/django-oso/requirements.txt",
+        fr"oso~=({VERSION_RE})",
+    )
+    replace_version(
+        version,
+        BASE / ".github/workflows/publish-docs.yml",
+        fr'default: "({VERSION_RE})" # django_oso_version',
+    )
 
 
-
-def bump_versions(oso_version=None, sqlalchemy_version=None,
-                  flask_version=None, django_version=None):
+def bump_versions(
+    oso_version=None, sqlalchemy_version=None, flask_version=None, django_version=None
+):
     if oso_version is not None:
         bump_oso_version(oso_version)
 
@@ -205,13 +241,13 @@ def bump_versions(oso_version=None, sqlalchemy_version=None,
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--oso_version')
-    parser.add_argument('--sqlalchemy_version')
-    parser.add_argument('--flask_version')
-    parser.add_argument('--django_version')
+    parser.add_argument("--oso_version")
+    parser.add_argument("--sqlalchemy_version")
+    parser.add_argument("--flask_version")
+    parser.add_argument("--django_version")
 
     bump_versions(**vars(parser.parse_args()))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

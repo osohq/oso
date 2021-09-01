@@ -6,6 +6,7 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
+
 def read(rel_path):
     here = os.path.abspath(os.path.dirname(__file__))
     # intentionally *not* adding an encoding option to open, See:
