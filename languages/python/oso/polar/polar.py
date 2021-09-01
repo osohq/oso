@@ -28,7 +28,7 @@ from .query import Query
 from .predicate import Predicate
 from .variable import Variable
 from .expression import Expression, Pattern
-from .data_filtering import serialize_types, filter_data
+from .data_filtering import serialize_types, filter_data, Relationship
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
@@ -260,9 +260,25 @@ class Polar:
             if not result:
                 print(False)
 
-    def register_class(self, cls, *, name=None, types=None, fetcher=lambda _: []):
+    def register_class(
+        self,
+        cls,
+        *,
+        name=None,
+        types=None,
+        build_query=None,
+        exec_query=None,
+        combine_query=None
+    ):
         """Register `cls` as a class accessible by Polar."""
-        cls_name = self.host.cache_class(cls, name=name, fields=types, fetcher=fetcher)
+        cls_name = self.host.cache_class(
+            cls,
+            name=name,
+            fields=types,
+            build_query=build_query,
+            exec_query=exec_query,
+            combine_query=combine_query,
+        )
         self.register_constant(cls, cls_name)
 
     def register_constant(self, value, name):
@@ -276,9 +292,10 @@ class Polar:
         """
         return self.host.get_class(name)
 
-    def get_allowed_resources(self, actor, action, cls) -> list:
+    def authorized_query(self, actor, action, cls):
         """
-        Returns all the resources the actor is allowed to perform action on.
+        Returns a query for the resources the actor is allowed to perform action on.
+        The query is built by using the build_query and combine_query methods registered for the type.
 
         :param actor: The actor for whom to collect allowed resources.
 
@@ -286,7 +303,7 @@ class Polar:
 
         :param cls: The type of the resources.
 
-        :return: A list of the unique allowed resources.
+        :return: A query to fetch the resources,
         """
         # Data filtering.
         resource = Variable("resource")
@@ -306,6 +323,8 @@ class Polar:
             )
         )
 
+        # @TODO: How do you deal with value results in the query case?
+        # Do we get them into the filter plan as constraints somehow?
         complete, partial = [], []
 
         for result in results:
@@ -317,8 +336,47 @@ class Polar:
 
         types = serialize_types(self.host.distinct_user_types(), self.host.types)
         plan = self.ffi_polar.build_filter_plan(types, partial, "resource", class_name)
-        complete += filter_data(self, plan)
-        return complete
+
+        # A little tbd if this should happen here or in build_filter_plan.
+        # Would have to wrap them in bindings probably to pass into build_filter_plan
+        if len(complete) > 0:
+            new_result_sets = []
+            for c in complete:
+                constraints = []
+                typ = self.host.types[class_name]
+                if not typ.build_query:
+                    # Maybe a way around this if we make builtins for our builtin
+                    # classes but it'd be a hack just for this case and not worth it right now.
+                    assert False, "Can only filter registered classes"
+
+                for k, t in typ.fields.items():
+                    if not isinstance(t, Relationship):
+                        constraint = {
+                            "kind": "Eq",
+                            "field": k,
+                            "value": {"Term": self.host.to_polar(getattr(c, k))},
+                        }
+                        constraints.append(constraint)
+
+                result_set = {
+                    "requests": {
+                        "0": {"class_tag": class_name, "constraints": constraints}
+                    },
+                    "resolve_order": [0],
+                    "result_id": 0,
+                }
+                new_result_sets.append(result_set)
+            plan["result_sets"] += new_result_sets
+
+        return filter_data(self, plan)
+
+    def authorized_resources(self, actor, action, cls):
+        query = self.authorized_query(actor, action, cls)
+        if query is None:
+            return []
+
+        results = self.host.types[cls].exec_query(query)
+        return results
 
 
 def polar_class(_cls=None, *, name=None):
