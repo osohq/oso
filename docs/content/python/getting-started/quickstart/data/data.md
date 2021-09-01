@@ -30,7 +30,6 @@ import_code: |
     oso = Oso()
     oso.enable_roles()
     ```
-example_app: a Flask
 load_policy: |
     ```python
     oso.load_file("authorization.polar")
@@ -41,24 +40,34 @@ objects: Python objects
 methods: Python methods
 register_classes: |
     ```python
+    class Page:
+      def __init__(self, contents):
+          self.contents = contents
+
+    class User:
+        def __init__(self, role):
+            self.role = role
+
     oso.register_class(Page)
-    oso.register_class(User)
     ```
+
 app_code: |
     ```python
-    from flask import Flask
+    page = Page("a readable page")
+    if oso.is_allowed(
+        User(),  # the user doing the request
+        "read",  # the action we want to do
+        page,  # the resource we want to do it to
+    ):
+        print(page.content)
+    else:
+        raise Exception("Forbidden")
+    ```
 
-    app = Flask(__name__)
-    @app.route("/page/<pagenum>")
-    def page_show(pagenum):
-        page = Page.get_page(pagenum)
-        if oso.is_allowed(
-            User.get_current_user(),  # the user doing the request
-            "read",  # the action we want to do
-            page,  # the resource we want to do it to
-        ):
-            return f"<h1>A Page</h1><p>this is page {pagenum}</p>", 200
-        else:
-            return f"<h1>Sorry</h1><p>You are not allowed to see this page</p>", 403
+assert_code: |
+    ```python
+    assert oso.is_allowed(User(role="guest"), "read", Page("readable page"))
+    assert not oso.is_allowed(User(role="guest", "write", Page("readable page"))
+    assert oso.is_allowed(User(role="admin", "write", Page("readable page"))
     ```
 ---
