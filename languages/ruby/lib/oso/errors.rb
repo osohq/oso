@@ -7,8 +7,8 @@ module Oso
   class AuthorizationError < StandardError
   end
 
-  # Thrown by the Enforcer methods +authorize+, +authorize_field+, and
-  # +authorize_request+ when the action is not allowed.
+  # Thrown by the +authorize+, +authorize_field+, and +authorize_request+
+  # methods when the action is not allowed.
   #
   # Most of the time, your app should handle this error by returning a 403 HTTP
   # error to the client.
@@ -22,7 +22,7 @@ module Oso
     end
   end
 
-  # Thrown by the +authorize+ method of an +Enforcer+. This error indicates
+  # Thrown by the +authorize+ method of an +Oso+ instance. This error indicates
   # that the actor is not only not allowed to perform the given action, but also
   # is not allowed to +"read"+ the given resource.
   #
@@ -31,7 +31,7 @@ module Oso
   #
   # To control which action is used for the distinction between
   # +NotFoundError+ and +ForbiddenError+, you can customize the
-  # +read_action+ on your +Enforcer+.
+  # +read_action+ on your +Oso+ instance.
   class NotFoundError < AuthorizationError
     def initialize
       super(

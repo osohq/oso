@@ -10,8 +10,7 @@ require 'oso/version'
 module Oso
   def self.new
     # TODO: deprecate this method. Instead, users should use:
-    # > policy = Oso::Policy.new
-    # > oso = Oso::Enforcer.new(policy)
+    # > oso = Oso::Oso.new
     ::Oso::Oso.new
   end
 end
