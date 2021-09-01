@@ -2,7 +2,8 @@
 # @TODO: Should we just generate these from the rust code?
 from textwrap import dedent
 
-
+# @TODO(gkaemmer): Move this to an `exceptions` module so that it can be shared
+# between here and oso/exceptions.py without causing a circular dependency.
 class OsoError(Exception):
     """Base exception class for Oso."""
 
