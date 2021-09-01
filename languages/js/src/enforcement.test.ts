@@ -1,18 +1,15 @@
-import { Enforcer } from './Enforcer';
-import { Policy } from './Oso';
+import { Oso } from './Oso';
 import { Actor, User, Widget } from '../test/classes';
 import { ForbiddenError, NotFoundError, OsoError } from './errors';
 
-describe(Enforcer, () => {
-  let oso: Enforcer<Actor, String>;
+describe(Oso, () => {
+  let oso: Oso<Actor, String>;
 
   beforeEach(() => {
-    const policy = new Policy();
-    policy.registerClass(Actor);
-    policy.registerClass(User);
-    policy.registerClass(Widget);
-
-    oso = new Enforcer(policy);
+    oso = new Oso();
+    oso.registerClass(Actor);
+    oso.registerClass(User);
+    oso.registerClass(Widget);
   });
 
   describe('#authorize', () => {
@@ -21,7 +18,7 @@ describe(Enforcer, () => {
     const widget0 = new Widget('0');
     const widget1 = new Widget('1');
     beforeEach(async () => {
-      await oso.policy.loadStr(`
+      await oso.loadStr(`
         allow(_actor: Actor, "read", widget: Widget) if
           widget.id = "0";
 
@@ -60,7 +57,7 @@ describe(Enforcer, () => {
     const widget0 = new Widget('0');
     const widget1 = new Widget('1');
     beforeEach(async () => {
-      await oso.policy.loadStr(`
+      await oso.loadStr(`
         allow(_actor: Actor, "read", _widget: Widget);
         allow(_actor: Actor, "update", _widget: Widget{id: "0"});
         allow(actor: Actor, "update", _widget: Widget) if
@@ -81,7 +78,7 @@ describe(Enforcer, () => {
     });
 
     test('throws an OsoError if there is a wildcard action', async () => {
-      await oso.policy.loadStr(`
+      await oso.loadStr(`
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       `);
       const superadmin = new Actor('superadmin');
@@ -91,7 +88,7 @@ describe(Enforcer, () => {
     });
 
     test('returns a wildcard * if wildcard is explicitly allowed', async () => {
-      await oso.policy.loadStr(`
+      await oso.loadStr(`
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       `);
       const superadmin = new Actor('superadmin');
@@ -111,8 +108,8 @@ describe(Enforcer, () => {
     const verified = new Actor('verified');
 
     beforeEach(async () => {
-      oso.policy.registerClass(Request);
-      await oso.policy.loadStr(`
+      oso.registerClass(Request);
+      await oso.loadStr(`
         allow_request(_: Actor{name: "guest"}, request: Request) if
             request.path.startsWith("/repos");
 
@@ -140,7 +137,7 @@ describe(Enforcer, () => {
     const widget = new Widget('0');
 
     beforeEach(async () => {
-      await oso.policy.loadStr(`
+      await oso.loadStr(`
         # Admins can update all fields
         allow_field(actor: Actor, "update", _widget: Widget, field) if
             actor.name = "admin" and
@@ -192,33 +189,31 @@ describe(Enforcer, () => {
     test('getError overrides the error that is thrown', async () => {
       class TestNotFound extends Error {}
       class TestForbidden extends Error {}
-      const policy = new Policy();
-      policy.loadStr(`allow("graham", "read", "bar");`);
-      const enforcer = new Enforcer(policy, {
+      const oso = new Oso({
         notFoundError: TestNotFound,
         forbiddenError: TestForbidden,
       });
+      oso.loadStr(`allow("graham", "read", "bar");`);
 
-      await expect(enforcer.authorize('graham', 'frob', 'foo')).rejects.toThrow(
+      await expect(oso.authorize('graham', 'frob', 'foo')).rejects.toThrow(
         TestNotFound
       );
-      await expect(enforcer.authorize('graham', 'frob', 'bar')).rejects.toThrow(
+      await expect(oso.authorize('graham', 'frob', 'bar')).rejects.toThrow(
         TestForbidden
       );
     });
 
     test('readAction overrides the read action used to differentiate not found and forbidden errors', async () => {
-      const policy = new Policy();
-      const enforcer = new Enforcer(policy, {
+      const oso = new Oso({
         readAction: 'fetch',
       });
-      await policy.loadStr(`allow("graham", "fetch", "bar");`);
-      await expect(enforcer.authorize('sam', 'frob', 'bar')).rejects.toThrow(
+      await oso.loadStr(`allow("graham", "fetch", "bar");`);
+      await expect(oso.authorize('sam', 'frob', 'bar')).rejects.toThrow(
         NotFoundError
       );
       // A user who can "fetch" should get a ForbiddenError instead of a
       // NotFoundError
-      await expect(enforcer.authorize('graham', 'frob', 'bar')).rejects.toThrow(
+      await expect(oso.authorize('graham', 'frob', 'bar')).rejects.toThrow(
         ForbiddenError
       );
     });
