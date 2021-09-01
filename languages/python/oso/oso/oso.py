@@ -3,7 +3,7 @@
 __version__ = "0.20.0-beta"
 
 import os
-from typing import List, Any
+from typing import List, Any, Set
 
 from polar import Polar, Variable, exceptions
 from .exceptions import NotFoundError, ForbiddenError
@@ -70,12 +70,12 @@ class Oso(Polar):
         except StopIteration:
             return False
 
-    def get_allowed_actions(self, actor, resource, allow_wildcard=False) -> list:
+    def get_allowed_actions(self, actor, resource, allow_wildcard=False) -> List[Any]:
         """Determine the actions ``actor`` is allowed to take on ``resource``.
 
         Deprecated. Use ``authorized_actions`` instead.
         """
-        return self.authorized_actions(actor, resource, allow_wildcard)
+        return list(self.authorized_actions(actor, resource, allow_wildcard))
 
     def authorize(self, actor, action, resource, *, check_read=True):
         """Ensure that ``actor`` is allowed to perform ``action`` on
@@ -127,7 +127,7 @@ class Oso(Polar):
         if not self.query_rule_once("allow_request", actor, request):
             raise self.forbidden_error()
 
-    def authorized_actions(self, actor, resource, allow_wildcard=False) -> List[Any]:
+    def authorized_actions(self, actor, resource, allow_wildcard=False) -> Set[Any]:
         """Determine the actions ``actor`` is allowed to take on ``resource``.
 
         Collects all actions allowed by allow rules in the Polar policy for the
@@ -139,14 +139,15 @@ class Oso(Polar):
 
         :param resource: The resource being accessed
 
-        :param allow_wildcard: Flag to determine behavior if the policy \
-            includes a wildcard action. E.g., a rule allowing any action: \
-            ``allow(_actor, _action, _resource)``. If ``True``, the method will \
-            return ``["*"]``, if ``False``, the method will raise an exception.
+        :param allow_wildcard: Flag to determine behavior if the policy
+            contains an "unconstrained" action that could represent any action:
+            ``allow(_actor, _action, _resource)``. If ``True``, the method will
+            return ``["*"]``, if ``False`` (the default), the method will raise
+            an exception.
 
         :type allow_wildcard: bool
 
-        :return: A list of the unique allowed actions.
+        :return: A set containing all allowed actions.
         """
         results = self.query_rule("allow", actor, Variable("action"), resource)
         actions = set()
@@ -162,10 +163,10 @@ class Oso(Polar):
                         string."""
                     )
                 else:
-                    return ["*"]
+                    return set(["*"])
             actions.add(action)
 
-        return list(actions)
+        return actions
 
     def authorize_field(self, actor, action, resource, field):
         """Ensure that ``actor`` is allowed to perform ``action`` on a given
@@ -186,14 +187,14 @@ class Oso(Polar):
 
     def authorized_fields(
         self, actor, action, resource, allow_wildcard=False
-    ) -> List[Any]:
+    ) -> Set[Any]:
         """Determine the fields of ``resource`` on which ``actor`` is allowed to
         perform  ``action``.
 
         Uses ``allow_field`` rules in the policy to find all allowed fields.
 
         :param actor: The actor for whom to collect allowed fields.
-        :param action: The action being taken on the field.
+        :param action: The action being taken on the fields.
         :param resource: The resource being accessed.
 
         :param allow_wildcard: Flag to determine behavior if the policy \
@@ -204,7 +205,7 @@ class Oso(Polar):
 
         :type allow_wildcard: bool
 
-        :return: A list of the unique allowed fields.
+        :return: A set containing all allowed fields.
         """
         results = self.query_rule(
             "allow_field", actor, action, resource, Variable("field")
@@ -222,10 +223,10 @@ class Oso(Polar):
                         string."""
                     )
                 else:
-                    return ["*"]
+                    return set(["*"])
             fields.add(field)
 
-        return list(fields)
+        return fields
 
     def _print_polar_log_message(self):
         if os.environ.get("POLAR_LOG", None):
