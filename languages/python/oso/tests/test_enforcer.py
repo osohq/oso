@@ -1,6 +1,6 @@
 """Tests the Enforcement API"""
 
-from oso.exceptions import AuthorizationError, ForbiddenError, NotFoundError
+from oso.exceptions import ForbiddenError, NotFoundError
 from pathlib import Path
 import pytest
 
@@ -149,23 +149,21 @@ def test_custom_errors():
     oso = Oso(not_found_error=lambda: TestNotFound, forbidden_error=TestForbidden)
     oso.load_str("""allow("graham", "read", "bar");""")
 
-    with pytest.raises(TestForbidden) as excinfo:
+    with pytest.raises(TestForbidden):
         oso.authorize("graham", "frob", "bar")
-    with pytest.raises(TestNotFound) as excinfo:
+    with pytest.raises(TestNotFound):
         oso.authorize("sam", "frob", "bar")
 
 
 def test_custom_read_action():
     oso = Oso(read_action="fetch")
-    with pytest.raises(AuthorizationError) as excinfo:
+    with pytest.raises(NotFoundError):
         oso.authorize("graham", "frob", "bar")
-    assert excinfo.type == NotFoundError
 
     # Allow user to "fetch" bar
     oso.load_str("""allow("graham", "fetch", "bar");""")
-    with pytest.raises(AuthorizationError) as excinfo:
+    with pytest.raises(ForbiddenError):
         oso.authorize("graham", "frob", "bar")
-    assert excinfo.type == ForbiddenError
 
 
 if __name__ == "__main__":
