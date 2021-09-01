@@ -1,7 +1,6 @@
 """Tests the Enforcement API"""
 
 from oso.exceptions import AuthorizationError, ForbiddenError, NotFoundError
-from oso import Enforcer
 from pathlib import Path
 import pytest
 
