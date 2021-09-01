@@ -3,7 +3,6 @@
 require 'oso/oso'
 require 'oso/polar'
 require 'oso/errors'
-require 'oso/policy'
 require 'oso/version'
 
 # Top-level namespace for oso authorization library.
