@@ -215,7 +215,7 @@ impl Polar {
                 }
             }
             // Rewrite shorthand rules in resource blocks before validating rule prototypes.
-            kb.rewrite_implications()?;
+            kb.rewrite_shorthand_rules()?;
             // check rules are valid against rule prototypes
             kb.validate_rules()?;
             Ok(warnings)

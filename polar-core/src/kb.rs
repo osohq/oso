@@ -587,7 +587,7 @@ impl KnowledgeBase {
         error.set_context(source.as_ref(), Some(term))
     }
 
-    pub fn rewrite_implications(&mut self) -> PolarResult<()> {
+    pub fn rewrite_shorthand_rules(&mut self) -> PolarResult<()> {
         let mut errors = vec![];
 
         errors.append(&mut super::sugar::check_all_relation_types_have_been_registered(self));
@@ -599,9 +599,9 @@ impl KnowledgeBase {
         }
 
         let mut rules = vec![];
-        for (resource_block, implications) in &self.resource_blocks.implications {
-            for implication in implications {
-                match implication.as_rule(resource_block, &self.resource_blocks) {
+        for (resource_block, shorthand_rules) in &self.resource_blocks.shorthand_rules {
+            for shorthand_rule in shorthand_rules {
+                match shorthand_rule.as_rule(resource_block, &self.resource_blocks) {
                     Ok(rule) => rules.push(rule),
                     Err(error) => errors.push(error),
                 }

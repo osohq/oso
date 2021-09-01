@@ -27,10 +27,10 @@ use super::terms::*;
 // This type is used as a pre-validation bridge between LALRPOP & Rust.
 #[derive(Debug)]
 pub enum Production {
-    Roles(Term),                             // List<String>
-    Permissions(Term),                       // List<String>
-    Relations(Term),                         // Dict<Symbol, Symbol>
-    Implication(Term, (Term, Option<Term>)), // (String, (String, Option<String>))
+    Roles(Term),                               // List<String>
+    Permissions(Term),                         // List<String>
+    Relations(Term),                           // Dict<Symbol, Symbol>
+    ShorthandRule(Term, (Term, Option<Term>)), // (String, (String, Option<String>))
 }
 
 pub fn validate_relation_keyword(
@@ -122,7 +122,7 @@ pub fn turn_productions_into_resource_block(
         let mut roles: Option<Term> = None;
         let mut permissions: Option<Term> = None;
         let mut relations: Option<Term> = None;
-        let mut implications = vec![];
+        let mut shorthand_rules = vec![];
 
         let make_error = |name: &str, previous: &Term, new: &Term| {
             let loc = new.offset();
@@ -158,9 +158,9 @@ pub fn turn_productions_into_resource_block(
                     }
                     relations = Some(new);
                 }
-                Production::Implication(head, body) => {
-                    // TODO(gj): Warn the user on duplicate implication definitions.
-                    implications.push(Implication { head, body });
+                Production::ShorthandRule(head, body) => {
+                    // TODO(gj): Warn the user on duplicate rule definitions.
+                    shorthand_rules.push(ShorthandRule { head, body });
                 }
             }
         }
@@ -171,7 +171,7 @@ pub fn turn_productions_into_resource_block(
             roles,
             permissions,
             relations,
-            implications,
+            shorthand_rules,
         })
     } else {
         let (loc, ranges) = (resource.offset(), vec![]);
@@ -190,7 +190,7 @@ pub enum Declaration {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct Implication {
+pub struct ShorthandRule {
     /// `Term` is a `String`. E.g., `"member"` in `"member" if "owner";`.
     pub head: Term,
     /// Both terms are strings. The former is the 'implier' and the latter is the 'relation', e.g.,
@@ -198,17 +198,17 @@ pub struct Implication {
     pub body: (Term, Option<Term>),
 }
 
-impl Implication {
+impl ShorthandRule {
     pub fn as_rule(&self, resource_block: &Term, blocks: &ResourceBlocks) -> PolarResult<Rule> {
         let Self { head, body } = self;
-        // Copy SourceInfo from head of implication.
+        // Copy SourceInfo from head of shorthand rule.
         // TODO(gj): assert these can only be None in tests.
         let src_id = head.get_source_id().unwrap_or(0);
         let (start, end) = head.span().unwrap_or((0, 0));
 
         let name = blocks.get_rule_name_for_declaration_in_resource_block(head, resource_block)?;
-        let params = implication_head_to_params(head, resource_block);
-        let body = implication_body_to_rule_body(body, resource_block, blocks)?;
+        let params = shorthand_rule_head_to_params(head, resource_block);
+        let body = shorthand_rule_body_to_rule_body(body, resource_block, blocks)?;
 
         Ok(Rule::new_from_parser(
             src_id, start, end, name, params, body,
@@ -253,14 +253,15 @@ pub struct ResourceBlock {
     pub roles: Option<Term>,
     pub permissions: Option<Term>,
     pub relations: Option<Term>,
-    pub implications: Vec<Implication>,
+    pub shorthand_rules: Vec<ShorthandRule>,
 }
 
 #[derive(Clone, Default)]
 pub struct ResourceBlocks {
-    /// Map from resource (`Symbol`) to the declarations for that resource.
+    /// Map from resource (`Symbol`) to the declarations in that resource's block.
     declarations: HashMap<Term, Declarations>,
-    pub implications: HashMap<Term, Vec<Implication>>,
+    /// Map from resource (`Symbol`) to the shorthand rules declared in that resource's block.
+    pub shorthand_rules: HashMap<Term, Vec<ShorthandRule>>,
     pub actors: HashSet<Term>,
     pub resources: HashSet<Term>,
 }
@@ -269,7 +270,7 @@ impl ResourceBlocks {
     pub fn new() -> Self {
         Self {
             declarations: HashMap::new(),
-            implications: HashMap::new(),
+            shorthand_rules: HashMap::new(),
             actors: HashSet::new(),
             resources: HashSet::new(),
         }
@@ -277,7 +278,7 @@ impl ResourceBlocks {
 
     pub fn clear(&mut self) {
         self.declarations.clear();
-        self.implications.clear();
+        self.shorthand_rules.clear();
         self.actors.clear();
         self.resources.clear();
     }
@@ -287,10 +288,11 @@ impl ResourceBlocks {
         entity_type: EntityType,
         resource: Term,
         declarations: Declarations,
-        implications: Vec<Implication>,
+        shorthand_rules: Vec<ShorthandRule>,
     ) {
         self.declarations.insert(resource.clone(), declarations);
-        self.implications.insert(resource.clone(), implications);
+        self.shorthand_rules
+            .insert(resource.clone(), shorthand_rules);
         match entity_type {
             EntityType::Actor => self.actors.insert(resource),
             EntityType::Resource => self.resources.insert(resource),
@@ -429,9 +431,10 @@ fn index_declarations(
     if let Some(relations) = relations {
         for (relation, relation_type) in &relations.value().as_dict()?.fields {
             // Stringify relation so that we can index into the declarations map with a string
-            // reference to the relation. E.g., relation `creator: User` gets stored as `"creator"
-            // => Relation(User)` so that when we encounter an implication `"admin" if "creator";`
-            // we can easily look up what type of declaration `"creator"` is.
+            // reference to the relation. E.g., relation `creator: User` gets stored as
+            // `"creator" => Relation(User)` so that when we encounter a shorthand rule
+            // `"admin" if "creator";` we can easily look up what type of declaration `"creator"`
+            // is.
             let stringified_relation = relation_type.clone_with_value(value!(relation.0.as_str()));
             let declaration = Declaration::Relation(relation_type.clone());
             if let Some(previous) = declarations.insert(stringified_relation, declaration) {
@@ -469,9 +472,9 @@ fn resource_as_var(resource: &Term) -> Value {
     value!(sym!(lowercased))
 }
 
-/// Turn an implication body into an And-wrapped call (for a local implication) or pair of calls
-/// (for a cross-resource implication).
-fn implication_body_to_rule_body(
+/// Turn a shorthand rule body into an `And`-wrapped call (for a local rule) or pair of calls (for
+/// a cross-resource rule).
+fn shorthand_rule_body_to_rule_body(
     (implier, relation): &(Term, Option<Term>),
     resource: &Term,
     blocks: &ResourceBlocks,
@@ -523,11 +526,11 @@ fn implication_body_to_rule_body(
         // Wrap the rewritten `<relation>` and `<implier>` calls in an `And`.
         Ok(implier.clone_with_value(value!(op!(And, relation_call, implier_call))))
     } else {
-        // If there's no `<relation>` (e.g., `... if "writer";`), we're dealing with a local
-        // implication, and the rewriting process is a bit simpler. To get the appropriate rule
-        // name, we look up the declared type (role, permission, or relation) of `<implier>` in the
-        // current resource block. The call's args are, in order: the actor variable, the
-        // `<implier>` string, and the resource variable. E.g., `vec![actor, "writer", repo]`.
+        // If there's no `<relation>` (e.g., `... if "writer";`), we're dealing with a local rule,
+        // and the rewriting process is a bit simpler. To get the appropriate rule name, we look up
+        // the declared type (role, permission, or relation) of `<implier>` in the current resource
+        // block. The call's args are, in order: the actor variable, the `<implier>` string, and
+        // the resource variable. E.g., `vec![actor, "writer", repo]`.
         let implier_call = implier.clone_with_value(value!(Call {
             name: blocks.get_rule_name_for_declaration_in_resource_block(implier, resource)?,
             args: vec![actor_var, implier.clone(), resource_var],
@@ -539,8 +542,8 @@ fn implication_body_to_rule_body(
     }
 }
 
-/// Turn an implication head into a trio of params that go in the head of the rewritten rule.
-fn implication_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter> {
+/// Turn a shorthand rule head into a trio of params that go in the head of the rewritten rule.
+fn shorthand_rule_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter> {
     let resource_name = &resource.value().as_symbol().expect("sym").0;
     vec![
         Parameter {
@@ -616,13 +619,13 @@ fn relation_type_is_registered(
     Ok(())
 }
 
-fn check_that_implication_heads_are_declared_locally(
-    implications: &[Implication],
+fn check_that_shorthand_rule_heads_are_declared_locally(
+    shorthand_rules: &[ShorthandRule],
     declarations: &Declarations,
     resource: &Term,
 ) -> Vec<PolarError> {
     let mut errors = vec![];
-    for Implication { head, .. } in implications {
+    for ShorthandRule { head, .. } in shorthand_rules {
         if !declarations.contains_key(head) {
             let msg = format!(
                 "Undeclared term {} referenced in rule in '{}' resource block. \
@@ -639,8 +642,6 @@ fn check_that_implication_heads_are_declared_locally(
 }
 
 impl ResourceBlock {
-    // TODO(gj): Add 'includes' feature to ensure we have a clean hook for validation _after_ all
-    // Polar rules are loaded.
     pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> PolarResult<()> {
         let mut errors = vec![];
         errors.extend(check_that_block_resource_is_registered_as_a_class(kb, &self.resource).err());
@@ -653,13 +654,13 @@ impl ResourceBlock {
             roles,
             permissions,
             relations,
-            implications,
+            shorthand_rules,
         } = self;
 
         let declarations = index_declarations(roles, permissions, relations, &resource)?;
 
-        errors.append(&mut check_that_implication_heads_are_declared_locally(
-            &implications,
+        errors.append(&mut check_that_shorthand_rule_heads_are_declared_locally(
+            &shorthand_rules,
             &declarations,
             &resource,
         ));
@@ -670,7 +671,7 @@ impl ResourceBlock {
         }
 
         kb.resource_blocks
-            .add(entity_type, resource, declarations, implications);
+            .add(entity_type, resource, declarations, shorthand_rules);
 
         Ok(())
     }
@@ -700,7 +701,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_block_rewrite_implications_with_lowercase_resource_specializer() {
+    fn test_resource_block_rewrite_shorthand_rules_with_lowercase_resource_specializer() {
         let repo_resource = term!(sym!("repo"));
         let repo_roles = term!(["reader"]);
         let repo_relations = term!(btreemap! { sym!("parent") => term!(sym!("org")) });
@@ -724,11 +725,13 @@ mod tests {
             org_declarations.unwrap(),
             vec![],
         );
-        let implication = Implication {
+        let shorthand_rule = ShorthandRule {
             head: term!("reader"),
             body: (term!("member"), Some(term!("parent"))),
         };
-        let rewritten_role_role = implication.as_rule(&term!(sym!("repo")), &blocks).unwrap();
+        let rewritten_role_role = shorthand_rule
+            .as_rule(&term!(sym!("repo")), &blocks)
+            .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
             r#"has_role(actor: Actor{}, "reader", repo_instance: repo{}) if has_relation(org_instance, "parent", repo_instance) and has_role(actor, "member", org_instance);"#
@@ -736,7 +739,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_block_local_rewrite_implications() {
+    fn test_resource_block_local_rewrite_shorthand_rules() {
         let resource = term!(sym!("Org"));
         let roles = term!(["owner", "member"]);
         let permissions = term!(["invite", "create_repo"]);
@@ -748,32 +751,37 @@ mod tests {
             declarations.unwrap(),
             vec![],
         );
-        let implication = Implication {
+        let shorthand_rule = ShorthandRule {
             head: term!("member"),
             body: (term!("owner"), None),
         };
-        let rewritten_role_role = implication.as_rule(&term!(sym!("Org")), &blocks).unwrap();
+        let rewritten_role_role = shorthand_rule
+            .as_rule(&term!(sym!("Org")), &blocks)
+            .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
             r#"has_role(actor: Actor{}, "member", org: Org{}) if has_role(actor, "owner", org);"#
         );
 
-        let implication = Implication {
+        let shorthand_rule = ShorthandRule {
             head: term!("invite"),
             body: (term!("owner"), None),
         };
-        let rewritten_permission_role = implication.as_rule(&term!(sym!("Org")), &blocks).unwrap();
+        let rewritten_permission_role = shorthand_rule
+            .as_rule(&term!(sym!("Org")), &blocks)
+            .unwrap();
         assert_eq!(
             rewritten_permission_role.to_polar(),
             r#"has_permission(actor: Actor{}, "invite", org: Org{}) if has_role(actor, "owner", org);"#
         );
 
-        let implication = Implication {
+        let shorthand_rule = ShorthandRule {
             head: term!("create_repo"),
             body: (term!("invite"), None),
         };
-        let rewritten_permission_permission =
-            implication.as_rule(&term!(sym!("Org")), &blocks).unwrap();
+        let rewritten_permission_permission = shorthand_rule
+            .as_rule(&term!(sym!("Org")), &blocks)
+            .unwrap();
         assert_eq!(
             rewritten_permission_permission.to_polar(),
             r#"has_permission(actor: Actor{}, "create_repo", org: Org{}) if has_permission(actor, "invite", org);"#
@@ -781,7 +789,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_block_nonlocal_rewrite_implications() {
+    fn test_resource_block_nonlocal_rewrite_shorthand_rules() {
         let repo_resource = term!(sym!("Repo"));
         let repo_roles = term!(["reader"]);
         let repo_relations = term!(btreemap! { sym!("parent") => term!(sym!("Org")) });
@@ -803,11 +811,13 @@ mod tests {
             org_declarations.unwrap(),
             vec![],
         );
-        let implication = Implication {
+        let shorthand_rule = ShorthandRule {
             head: term!("reader"),
             body: (term!("member"), Some(term!("parent"))),
         };
-        let rewritten_role_role = implication.as_rule(&term!(sym!("Repo")), &blocks).unwrap();
+        let rewritten_role_role = shorthand_rule
+            .as_rule(&term!(sym!("Repo")), &blocks)
+            .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
             r#"has_role(actor: Actor{}, "reader", repo: Repo{}) if has_relation(org, "parent", repo) and has_role(actor, "member", org);"#
@@ -840,7 +850,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_block_with_undeclared_local_implication_head() {
+    fn test_resource_block_with_undeclared_local_shorthand_rule_head() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
@@ -851,7 +861,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_block_with_undeclared_local_implication_body() {
+    fn test_resource_block_with_undeclared_local_shorthand_rule_body() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
@@ -865,7 +875,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_block_with_undeclared_nonlocal_implication_body() {
+    fn test_resource_block_with_undeclared_nonlocal_shorthand_rule_body() {
         let p = Polar::new();
         p.register_constant(sym!("Repo"), term!("unimportant"));
         p.register_constant(sym!("Org"), term!("unimportant"));
@@ -904,13 +914,13 @@ mod tests {
                 relations = { parent: Org };
                 "parent" if "owner";
             }"#,
-            r#"Repo: resource relation "parent" can only appear in an implication following the keyword 'on'."#,
+            r#"Repo: resource relation "parent" can only appear in a rule body following the keyword 'on'."#,
         );
     }
 
     #[test]
     #[ignore = "not yet implemented"]
-    fn test_resource_block_with_circular_implications() {
+    fn test_resource_block_with_circular_shorthand_rules() {
         let p = Polar::new();
         p.register_constant(sym!("Repo"), term!("unimportant"));
         let policy = r#"resource Repo {
@@ -993,7 +1003,7 @@ mod tests {
         let roles = r#"roles = ["writer", "reader"];"#;
         let permissions = r#"permissions = ["push", "pull"];"#;
         let relations = r#"relations = { creator: User, parent: Org };"#;
-        let implications = vec![
+        let shorthand_rules = vec![
             r#""pull" if "reader";"#,
             r#""push" if "writer";"#,
             r#""writer" if "creator";"#,
@@ -1010,21 +1020,21 @@ mod tests {
                 sym!("creator") => term!(sym!("User")),
                 sym!("parent") => term!(sym!("Org")),
             })),
-            implications: vec![
-                // TODO(gj): implication! macro
-                Implication {
+            shorthand_rules: vec![
+                // TODO(gj): shorthand_rule! macro
+                ShorthandRule {
                     head: term!("pull"),
                     body: (term!("reader"), None),
                 },
-                Implication {
+                ShorthandRule {
                     head: term!("push"),
                     body: (term!("writer"), None),
                 },
-                Implication {
+                ShorthandRule {
                     head: term!("writer"),
                     body: (term!("creator"), None),
                 },
-                Implication {
+                ShorthandRule {
                     head: term!("reader"),
                     body: (term!("member"), Some(term!("parent"))),
                 },
@@ -1035,14 +1045,14 @@ mod tests {
 
         let equal = |line: &Line, expected: &ResourceBlock| match line {
             Line::ResourceBlock(parsed) => {
-                let parsed_implications: HashSet<&Implication> =
-                    HashSet::from_iter(&parsed.implications);
-                let expected_implications = HashSet::from_iter(&expected.implications);
+                let parsed_shorthand_rules: HashSet<&ShorthandRule> =
+                    HashSet::from_iter(&parsed.shorthand_rules);
+                let expected_shorthand_rules = HashSet::from_iter(&expected.shorthand_rules);
                 parsed.resource == expected.resource
                     && parsed.roles == expected.roles
                     && parsed.permissions == expected.permissions
                     && parsed.relations == expected.relations
-                    && parsed_implications == expected_implications
+                    && parsed_shorthand_rules == expected_shorthand_rules
             }
             _ => false,
         };
@@ -1056,17 +1066,17 @@ mod tests {
             }
         };
 
-        // Test each case with and without implications.
+        // Test each case with and without shorthand rules.
         let test_cases = |parts: Vec<&str>, expected: &ResourceBlock| {
-            let mut parts_with_implications = parts.clone();
-            parts_with_implications.append(&mut implications.clone());
-            test_case(parts_with_implications, expected);
+            let mut parts_with_shorthand_rules = parts.clone();
+            parts_with_shorthand_rules.append(&mut shorthand_rules.clone());
+            test_case(parts_with_shorthand_rules, expected);
 
-            let expected_without_implications = ResourceBlock {
-                implications: vec![],
+            let expected_without_shorthand_rules = ResourceBlock {
+                shorthand_rules: vec![],
                 ..expected.clone()
             };
-            test_case(parts, &expected_without_implications);
+            test_case(parts, &expected_without_shorthand_rules);
         };
 
         // Cases

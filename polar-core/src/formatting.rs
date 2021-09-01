@@ -349,7 +349,7 @@ pub mod display {
 pub mod to_polar {
     use crate::formatting::{format_args, format_params, to_polar_parens};
     use crate::rules::*;
-    use crate::sugar::{EntityType, Implication, ResourceBlock};
+    use crate::sugar::{EntityType, ResourceBlock, ShorthandRule};
     use crate::terms::*;
 
     /// Effectively works as a reverse-parser. Allows types to be turned
@@ -618,7 +618,7 @@ pub mod to_polar {
         }
     }
 
-    impl ToPolarString for Implication {
+    impl ToPolarString for ShorthandRule {
         fn to_polar(&self) -> String {
             let Self {
                 head,
@@ -662,8 +662,8 @@ pub mod to_polar {
             if let Some(ref relations) = self.relations {
                 s += &format!("  relations = {};\n", relations.to_polar());
             }
-            for implication in &self.implications {
-                s += &format!("  {}\n", implication.to_polar());
+            for rule in &self.shorthand_rules {
+                s += &format!("  {}\n", rule.to_polar());
             }
             s += "}";
             s

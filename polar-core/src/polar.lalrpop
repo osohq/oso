@@ -719,12 +719,12 @@ Declaration: sugar::Production = {
 }
 
 OnRelation: Term = <Spanned<Variable>> <Spanned<PolarString>> =>? sugar::validate_relation_keyword((<>));
-ImplicationBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
-Implication: sugar::Production = <head:Spanned<PolarString>> Define <body:ImplicationBody> => sugar::Production::Implication(<>);
+ShorthandRuleBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
+ShorthandRule: sugar::Production = <head:Spanned<PolarString>> Define <body:ShorthandRuleBody> => sugar::Production::ShorthandRule(<>);
 
 ResourceBlockProduction: sugar::Production = {
     <Declaration> => <>,
-    <Implication> => <>,
+    <ShorthandRule> => <>,
 };
 
 ResourceBlockProductions: Vec<sugar::Production> = <ResourceBlockProduction*>;
