@@ -57,7 +57,7 @@ def test_authorized_actions(test_oso):
     test_oso.load_str(rule)
     user = Actor(name="Sally")
     resource = Widget(id="1")
-    assert set(test_oso.authorized_actions(user, resource)) == set(
+    assert test_oso.authorized_actions(user, resource) == set(
         ["read", "CREATE", "UPDATE"]
     )
 
@@ -66,7 +66,7 @@ def test_authorized_actions(test_oso):
     user = Actor(name="John")
     with pytest.raises(exceptions.OsoError):
         test_oso.authorized_actions(user, resource)
-    assert set(test_oso.authorized_actions(user, resource, allow_wildcard=True)) == set(
+    assert test_oso.authorized_actions(user, resource, allow_wildcard=True) == set(
         ["*"]
     )
 
@@ -124,17 +124,17 @@ def test_authorized_fields(test_oso):
     company = Company(id="1")
     resource = Widget(id=company.id)
     # Admin should be able to update all fields
-    assert set(test_oso.authorized_fields(admin, "update", resource)) == set(
+    assert test_oso.authorized_fields(admin, "update", resource) == set(
         ["name", "purpose", "private_field"]
     )
     # Guests should not be able to update fields
-    assert set(test_oso.authorized_fields(guest, "update", resource)) == set()
+    assert test_oso.authorized_fields(guest, "update", resource) == set()
     # Admins should be able to read all fields
-    assert set(test_oso.authorized_fields(admin, "read", resource)) == set(
+    assert test_oso.authorized_fields(admin, "read", resource) == set(
         ["name", "purpose", "private_field"]
     )
     # Guests should be able to read all public fields
-    assert set(test_oso.authorized_fields(guest, "read", resource)) == set(
+    assert test_oso.authorized_fields(guest, "read", resource) == set(
         ["name", "purpose"]
     )
 
