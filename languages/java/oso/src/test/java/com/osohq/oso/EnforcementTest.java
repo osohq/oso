@@ -10,9 +10,8 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class EnforcerTest {
-  protected Oso policy;
-  protected Enforcer oso;
+public class EnforcementTest {
+  protected Oso oso;
 
   public static class Actor {
     public String name;
@@ -43,11 +42,9 @@ public class EnforcerTest {
   @BeforeEach
   public void setUp() throws Exception {
     try {
-      policy = new Oso();
-      policy.registerClass(Actor.class, "Actor");
-      policy.registerClass(Widget.class, "Widget");
-
-      oso = new Enforcer(policy);
+      oso = new Oso();
+      oso.registerClass(Actor.class, "Actor");
+      oso.registerClass(Widget.class, "Widget");
     } catch (Exception e) {
       throw new Error(e);
     }
@@ -60,7 +57,7 @@ public class EnforcerTest {
     Widget widget0 = new Widget(0);
     Widget widget1 = new Widget(1);
 
-    policy.loadStr(
+    oso.loadStr(
         "allow(_actor: Actor, \"read\", widget: Widget) if "
             + "widget.id = 0; "
             + "allow(actor: Actor, \"update\", _widget: Widget) if "
@@ -84,8 +81,8 @@ public class EnforcerTest {
 
   @Test
   public void testAuthorizeRequest() throws Exception {
-    policy.registerClass(Request.class, "Request");
-    policy.loadStr(
+    oso.registerClass(Request.class, "Request");
+    oso.loadStr(
         "allow_request(_: Actor{name: \"guest\"}, request: Request) if "
             + "request.path.startsWith(\"/repos\"); "
             + "allow_request(_: Actor{name: \"verified\"}, request: Request) if "
@@ -106,7 +103,7 @@ public class EnforcerTest {
 
   @Test
   public void testAuthorizedActions() throws Exception {
-    oso.policy.loadStr(
+    oso.loadStr(
         "allow(_actor: Actor{name: \"sally\"}, action, _resource: Widget{id: 1})"
             + " if action in [\"CREATE\", \"READ\"];");
 
@@ -118,7 +115,7 @@ public class EnforcerTest {
     assertTrue(actions.contains("CREATE"));
     assertTrue(actions.contains("READ"));
 
-    oso.policy.loadStr(
+    oso.loadStr(
         "allow(_actor: Actor{name: \"fred\"}, action, _resource: Widget{id: 2})"
             + " if action in [1, 2, 3, 4];");
 
@@ -139,7 +136,7 @@ public class EnforcerTest {
 
   @Test
   public void testAuthorizedActionsWildcard() throws Exception {
-    policy.loadStr("allow(_actor: Actor{name: \"John\"}, _action, _resource: Widget{id: 1});");
+    oso.loadStr("allow(_actor: Actor{name: \"John\"}, _action, _resource: Widget{id: 1});");
 
     Actor actor = new Actor("John");
     Widget widget = new Widget(1);
@@ -150,7 +147,7 @@ public class EnforcerTest {
 
   @Test
   public void testAuthorizeField() throws Exception {
-    policy.loadStr(
+    oso.loadStr(
         // Admins can update all fields
         "allow_field(actor: Actor, \"update\", _widget: Widget, field) if "
             + "actor.name = \"admin\" and "
@@ -180,7 +177,7 @@ public class EnforcerTest {
 
   @Test
   public void testAuthorizedFields() throws Exception {
-    policy.loadStr(
+    oso.loadStr(
         // Admins can update all fields
         "allow_field(actor: Actor, \"update\", _widget: Widget, field) if "
             + "actor.name = \"admin\" and "
@@ -214,9 +211,8 @@ public class EnforcerTest {
 
   @Test
   public void testCustomReadAction() throws Exception {
-    policy = new Oso();
-    policy.loadStr("allow(\"graham\", \"fetch\", \"bar\");");
-    oso = new Enforcer(policy, "fetch");
+    oso.setReadAction("fetch");
+    oso.loadStr("allow(\"graham\", \"fetch\", \"bar\");");
     assertThrows(Exceptions.NotFoundException.class, () -> oso.authorize("sam", "frob", "bar"));
     // A user who can "fetch" should get a ForbiddenError instead of a
     // NotFoundError
