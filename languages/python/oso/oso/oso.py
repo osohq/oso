@@ -27,7 +27,7 @@ class Oso(Polar):
         read_action="read"
     ):
         """
-        Create an oso object.
+        Create an Oso object.
 
         :param forbidden_error:
             Optionally override the error class that is raised when an action is
@@ -103,13 +103,12 @@ class Oso(Polar):
         if self.query_rule_once("allow", actor, action, resource):
             return
 
-        is_not_found = False
-        if check_read:
-            if action == self.read_action:
-                is_not_found = True
-            elif not self.query_rule_once("allow", actor, self.read_action, resource):
-                is_not_found = True
-        raise self.not_found_error() if is_not_found else self.forbidden_error()
+        if check_read and (
+            action == self.read_action
+            or not self.query_rule_once("allow", actor, self.read_action, resource)
+        ):
+            raise self.not_found_error()
+        raise self.forbidden_error()
 
     def authorize_request(self, actor, request):
         """Ensure that ``actor`` is allowed to send ``request`` to the server.
@@ -163,7 +162,7 @@ class Oso(Polar):
                         string."""
                     )
                 else:
-                    return set(["*"])
+                    return {"*"}
             actions.add(action)
 
         return actions
@@ -223,7 +222,7 @@ class Oso(Polar):
                         string."""
                     )
                 else:
-                    return set(["*"])
+                    return {"*"}
             fields.add(field)
 
         return fields
