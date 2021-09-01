@@ -1,18 +1,4 @@
-class OsoError(Exception):
-    """Base exception class for Oso."""
-
-    def __init__(self, message=None, details=None):
-        self.message = message
-        self.details = details
-        self.stack_trace = details.get("stack_trace") if details else None
-        super().__init__(self.add_get_help(self.message))
-
-    @classmethod
-    def add_get_help(cls, message):
-        return (
-            str(message)
-            + f"\n\tGet help with Oso from our engineers: https://help.osohq.com/error/{cls.__name__}"
-        )
+from polar.exceptions import OsoError
 
 
 class AuthorizationError(OsoError):
