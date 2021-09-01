@@ -9,14 +9,13 @@ Classes
 =======
 
 .. autoclass:: oso.Oso
-   :members: is_allowed, get_allowed_actions, load_str, load_file, register_class, query_rule, query, clear_rules
+   :members: __init__, is_allowed, get_allowed_actions, load_str, load_file,
+      register_class, query_rule, query, clear_rules, authorize,
+      authorize_request, authorize_field, authorized_actions, authorized_fields
 
 .. autoclass:: oso.Variable
 
 .. autoclass:: oso.Predicate
-
-.. autoclass:: oso.Enforcer
-    :members:
 
 Decorator Functions
 ^^^^^^^^^^^^^^^^^^^
