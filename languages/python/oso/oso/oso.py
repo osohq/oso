@@ -234,8 +234,5 @@ class Oso(Polar):
                 + "traces from our engineering team: https://help.osohq.com/trace"
             )
 
-    def _default_get_error(self, is_not_found):
-        return NotFoundError() if is_not_found else ForbiddenError()
-
 
 Policy = Oso
