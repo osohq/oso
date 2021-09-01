@@ -1,10 +1,12 @@
 ---
-title: Ruby Authorization Library
-weight: 2
-any: false
+title: Installation
+weight: 1
+description: Installation instructions for Oso's Ruby library.
+aliases: 
+  - ./lib.html
 ---
 
-# Ruby Authorization Library
+# Installation
 
 The Ruby version of Oso is available on
 [RubyGems](https://rubygems.org/gems/oso-oso) and can be installed to your
@@ -27,8 +29,3 @@ gem 'oso-oso', '~> {{< version >}}'
   - Linux
   - macOS
   - Windows
-
-## API Reference
-
-The [Ruby API reference]({{% apiLink "reference/api/index.html" %}}) is
-automatically generated from the Oso Ruby library source files.

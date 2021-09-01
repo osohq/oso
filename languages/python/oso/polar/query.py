@@ -106,15 +106,18 @@ class Query:
                     if isinstance(attr_typ, Relationship):
                         rel = attr_typ
                         # Use the fetcher for the other type to traverse the relationship
-                        fetcher = self.host.types[rel.other_type].fetcher
-                        assert fetcher is not None
+                        build_query = self.host.types[rel.other_type].build_query
+                        exec_query = self.host.types[rel.other_type].exec_query
+                        assert build_query is not None
+                        assert exec_query is not None
                         constraint = Constraint(
                             kind="Eq",
                             field=rel.other_field,
                             value=getattr(instance, rel.my_field),
                         )
                         constraints = [constraint]
-                        results = fetcher(constraints)
+                        query = build_query(constraints)
+                        results = exec_query(query)
                         if rel.kind == "parent":
                             assert len(results) == 1
                             attr = results[0]

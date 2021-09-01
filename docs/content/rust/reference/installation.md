@@ -1,10 +1,12 @@
 ---
-title: Rust Authorization Library
-weight: 2
-any: false
+title: Installation
+weight: 1
+description: Installation instructions for Oso's Rust library.
+aliases: 
+  - ./lib.html
 ---
 
-# Rust Authorization Library
+# Installation
 
 The Rust version of Oso is available on
 [crates.io](https://crates.io/crates/oso).
@@ -16,15 +18,9 @@ oso = "{{< version >}}"
 oso-derive = "{{< version >}}"
 ```
 
-For more information on the Oso Rust library, see the library documentation.
-
 ## Requirements
 
 - Supported platforms:
   - Linux
   - macOS
   - Windows
-
-## API Reference
-
-Rust API Documentation is on [docs.rs](https://docs.rs/oso/).
