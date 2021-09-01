@@ -99,11 +99,11 @@ pub fn validate_parsed_declaration(
     }
 }
 
-pub fn turn_productions_into_namespace(
+pub fn turn_productions_into_resource_block(
     keyword: Option<Term>,
     resource: Term,
     productions: Vec<Production>,
-) -> Result<Namespace, LalrpopError<usize, Token, error::ParseError>> {
+) -> Result<ResourceBlock, LalrpopError<usize, Token, error::ParseError>> {
     if let Some(keyword) = keyword {
         let entity_type = match keyword.value().as_symbol().unwrap().0.as_ref() {
             "actor" => EntityType::Actor,
@@ -128,7 +128,7 @@ pub fn turn_productions_into_namespace(
             let loc = new.offset();
             let ranges = vec![term_source_range(previous), term_source_range(new)];
             let msg = format!(
-                "Multiple '{}' declarations in {} namespace.\n",
+                "Multiple '{}' declarations in '{}' resource block.\n",
                 name,
                 resource.to_polar()
             );
@@ -165,7 +165,7 @@ pub fn turn_productions_into_namespace(
             }
         }
 
-        Ok(Namespace {
+        Ok(ResourceBlock {
             entity_type,
             resource,
             roles,
@@ -199,16 +199,16 @@ pub struct Implication {
 }
 
 impl Implication {
-    pub fn as_rule(&self, namespace: &Term, namespaces: &Namespaces) -> PolarResult<Rule> {
+    pub fn as_rule(&self, resource_block: &Term, blocks: &ResourceBlocks) -> PolarResult<Rule> {
         let Self { head, body } = self;
         // Copy SourceInfo from head of implication.
         // TODO(gj): assert these can only be None in tests.
         let src_id = head.get_source_id().unwrap_or(0);
         let (start, end) = head.span().unwrap_or((0, 0));
 
-        let name = namespaces.get_rule_name_for_declaration_in_namespace(head, namespace)?;
-        let params = implication_head_to_params(head, namespace);
-        let body = implication_body_to_rule_body(body, namespace, namespaces)?;
+        let name = blocks.get_rule_name_for_declaration_in_resource_block(head, resource_block)?;
+        let params = implication_head_to_params(head, resource_block);
+        let body = implication_body_to_rule_body(body, resource_block, blocks)?;
 
         Ok(Rule::new_from_parser(
             src_id, start, end, name, params, body,
@@ -247,7 +247,7 @@ pub enum EntityType {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Namespace {
+pub struct ResourceBlock {
     pub entity_type: EntityType,
     pub resource: Term,
     pub roles: Option<Term>,
@@ -257,7 +257,7 @@ pub struct Namespace {
 }
 
 #[derive(Clone, Default)]
-pub struct Namespaces {
+pub struct ResourceBlocks {
     /// Map from resource (`Symbol`) to the declarations for that resource.
     declarations: HashMap<Term, Declarations>,
     pub implications: HashMap<Term, Vec<Implication>>,
@@ -265,7 +265,7 @@ pub struct Namespaces {
     pub resources: HashSet<Term>,
 }
 
-impl Namespaces {
+impl ResourceBlocks {
     pub fn new() -> Self {
         Self {
             declarations: HashMap::new(),
@@ -301,65 +301,66 @@ impl Namespaces {
         self.declarations.contains_key(resource)
     }
 
-    /// Look up `declaration` in `namespace`.
+    /// Look up `declaration` in `resource` block.
     ///
-    /// Invariant: `namespace` _must_ exist.
-    fn get_declaration_in_namespace(
+    /// Invariant: `resource` _must_ exist.
+    fn get_declaration_in_resource_block(
         &self,
         declaration: &Term,
-        namespace: &Term,
+        resource: &Term,
     ) -> PolarResult<&Declaration> {
-        if let Some(declaration) = self.declarations[namespace].get(declaration) {
+        if let Some(declaration) = self.declarations[resource].get(declaration) {
             Ok(declaration)
         } else {
             let (loc, ranges) = (declaration.offset(), vec![]);
-            let msg = format!("Undeclared term {} referenced in implication in {} namespace. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), namespace);
+            let msg = format!("Undeclared term {} referenced in rule in the '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), resource);
             Err(ParseError::ParseSugar { loc, msg, ranges }.into())
         }
     }
 
-    /// Look up `relation` in `namespace` and return its type.
-    fn get_relation_type_in_namespace(
+    /// Look up `relation` in `resource` block and return its type.
+    fn get_relation_type_in_resource_block(
         &self,
         relation: &Term,
-        namespace: &Term,
+        resource: &Term,
     ) -> PolarResult<&Term> {
-        self.get_declaration_in_namespace(relation, namespace)?
+        self.get_declaration_in_resource_block(relation, resource)?
             .as_relation_type()
     }
 
-    /// Look up `declaration` in `namespace` and return the appropriate rule name for rewriting.
-    fn get_rule_name_for_declaration_in_namespace(
+    /// Look up `declaration` in `resource` block and return the appropriate rule name for
+    /// rewriting.
+    fn get_rule_name_for_declaration_in_resource_block(
         &self,
         declaration: &Term,
-        namespace: &Term,
+        resource: &Term,
     ) -> PolarResult<Symbol> {
         Ok(self
-            .get_declaration_in_namespace(declaration, namespace)?
+            .get_declaration_in_resource_block(declaration, resource)?
             .as_rule_name())
     }
 
-    /// Traverse from `namespace` to a related namespace via `relation`, then look up `declaration`
-    /// in the related namespace and return the appropriate rule name for rewriting.
-    fn get_rule_name_for_declaration_in_related_namespace(
+    /// Traverse from `resource` block to a related resource block via `relation`, then look up
+    /// `declaration` in the related block and return the appropriate rule name for rewriting.
+    fn get_rule_name_for_declaration_in_related_resource_block(
         &self,
         declaration: &Term,
         relation: &Term,
-        namespace: &Term,
+        resource: &Term,
     ) -> PolarResult<Symbol> {
-        let related_namespace = self.get_relation_type_in_namespace(relation, namespace)?;
+        let related_block = self.get_relation_type_in_resource_block(relation, resource)?;
 
-        if let Some(declarations) = self.declarations.get(related_namespace) {
+        if let Some(declarations) = self.declarations.get(related_block) {
             if let Some(declaration) = declarations.get(declaration) {
                 Ok(declaration.as_rule_name())
             } else {
                 let (loc, ranges) = (declaration.offset(), vec![]);
-                let msg = format!("{}: Term {} not declared on related resource {}. Did you mean to declare it as a role, permission, or relation on resource {}?", namespace.to_polar(), declaration.to_polar(), related_namespace.to_polar(), related_namespace.to_polar());
+                let msg = format!("{}: Term {} not declared in related resource block '{}'. Did you mean to declare it as a role, permission, or relation in the '{}' resource block?", resource.to_polar(), declaration.to_polar(), related_block.to_polar(), related_block.to_polar());
                 Err(ParseError::ParseSugar { loc, msg, ranges }.into())
             }
         } else {
-            let (loc, ranges) = (related_namespace.offset(), vec![]);
-            let msg = format!("{}: Relation {} in implication body `{} on {}` has type {}, but no such namespace exists. Try declaring one: `resource {} {{}}`", namespace.to_polar(), relation.to_polar(), declaration.to_polar(), relation.to_polar(), related_namespace.to_polar(), related_namespace.to_polar());
+            let (loc, ranges) = (related_block.offset(), vec![]);
+            let msg = format!("{}: Relation {} in rule body `{} on {}` has type '{}', but no such resource block exists. Try declaring one: `resource {} {{}}`", resource.to_polar(), relation.to_polar(), declaration.to_polar(), relation.to_polar(), related_block.to_polar(), related_block.to_polar());
             Err(ParseError::ParseSugar { loc, msg, ranges }.into())
         }
     }
@@ -367,7 +368,7 @@ impl Namespaces {
 
 pub fn check_all_relation_types_have_been_registered(kb: &KnowledgeBase) -> Vec<PolarError> {
     let mut errors = vec![];
-    for declarations in kb.namespaces.declarations.values() {
+    for declarations in kb.resource_blocks.declarations.values() {
         for (declaration, kind) in declarations {
             if let Declaration::Relation(relation_type) = kind {
                 errors.extend(relation_type_is_registered(kb, (declaration, relation_type)).err());
@@ -455,12 +456,12 @@ fn index_declarations(
     Ok(declarations)
 }
 
-fn namespace_as_var(namespace: &Term) -> Value {
-    let name = &namespace.value().as_symbol().expect("sym").0;
+fn resource_as_var(resource: &Term) -> Value {
+    let name = &resource.value().as_symbol().expect("sym").0;
     let mut lowercased = name.to_lowercase();
 
-    // If the namespace's name is already lowercase, append "_instance" to distinguish the variable
-    // name from the namespace's name.
+    // If the resource's name is already lowercase, append "_instance" to distinguish the variable
+    // name from the resource's name.
     if &lowercased == name {
         lowercased += "_instance";
     }
@@ -472,12 +473,12 @@ fn namespace_as_var(namespace: &Term) -> Value {
 /// (for a cross-resource implication).
 fn implication_body_to_rule_body(
     (implier, relation): &(Term, Option<Term>),
-    namespace: &Term,
-    namespaces: &Namespaces,
+    resource: &Term,
+    blocks: &ResourceBlocks,
 ) -> PolarResult<Term> {
-    // Create a variable derived from the name of the current namespace. E.g., if we're in the
-    // `Repo` namespace, the variable name will be `repo`.
-    let namespace_var = implier.clone_with_value(namespace_as_var(namespace));
+    // Create a variable derived from the current block's resource name. E.g., if we're in the
+    // `Repo` resource block, the variable name will be `repo`.
+    let resource_var = implier.clone_with_value(resource_as_var(resource));
 
     // The actor variable will always be named `actor`.
     let actor_var = implier.clone_with_value(value!(sym!("actor")));
@@ -490,30 +491,31 @@ fn implication_body_to_rule_body(
         // ...then we need to link the rewritten `<implier>` and `<relation>` rules via a shared
         // variable. To be clever, we'll name the variable according to the type of the relation,
         // e.g., if the declared relation is `parent: Org` we'll name the variable `org`.
-        let relation_type = namespaces.get_relation_type_in_namespace(relation, namespace)?;
-        let relation_type_var = relation.clone_with_value(namespace_as_var(relation_type));
+        let relation_type = blocks.get_relation_type_in_resource_block(relation, resource)?;
+        let relation_type_var = relation.clone_with_value(resource_as_var(relation_type));
 
         // For the rewritten `<relation>` call, the rule name will always be `has_relation` and the
         // arguments, in order, will be: the shared variable we just created above, the
-        // `<relation>` string, and the namespace variable we created at the top of the function.
+        // `<relation>` string, and the resource variable we created at the top of the function.
         // E.g., `vec![org, "parent", repo]`.
         let relation_call = relation.clone_with_value(value!(Call {
             name: sym!("has_relation"),
-            args: vec![relation_type_var.clone(), relation.clone(), namespace_var],
+            args: vec![relation_type_var.clone(), relation.clone(), resource_var],
             kwargs: None
         }));
 
-        // To get the rule name for the rewritten `<implier>` call, we need to figure out what
-        // type (role, permission, or relation) `<implier>` is declared as _in the namespace
-        // related to the current namespace via `<relation>`_. That is, given
+        // To get the rule name for the rewritten `<implier>` call, we need to figure out what type
+        // (role, permission, or relation) `<implier>` is declared as _in the resource block
+        // related to the current resource block via `<relation>`_. That is, given
         // `resource Repo { roles=["writer"]; relations={parent:Org}; "writer" if "owner" on "parent"; }`,
         // we need to find out whether `"owner"` is declared as a role, permission, or relation in
-        // the `Org` namespace. The args for the rewritten `<implier>` call are, in order: the
+        // the `Org` resource block. The args for the rewritten `<implier>` call are, in order: the
         // actor variable, the `<implier>` string, and the shared variable we created above for the
         // related type.
         let implier_call = implier.clone_with_value(value!(Call {
-            name: namespaces
-                .get_rule_name_for_declaration_in_related_namespace(implier, relation, namespace)?,
+            name: blocks.get_rule_name_for_declaration_in_related_resource_block(
+                implier, relation, resource
+            )?,
             args: vec![actor_var, implier.clone(), relation_type_var],
             kwargs: None
         }));
@@ -524,11 +526,11 @@ fn implication_body_to_rule_body(
         // If there's no `<relation>` (e.g., `... if "writer";`), we're dealing with a local
         // implication, and the rewriting process is a bit simpler. To get the appropriate rule
         // name, we look up the declared type (role, permission, or relation) of `<implier>` in the
-        // current namespace. The call's args are, in order: the actor variable, the `<implier>`
-        // string, and the namespace variable. E.g., `vec![actor, "writer", repo]`.
+        // current resource block. The call's args are, in order: the actor variable, the
+        // `<implier>` string, and the resource variable. E.g., `vec![actor, "writer", repo]`.
         let implier_call = implier.clone_with_value(value!(Call {
-            name: namespaces.get_rule_name_for_declaration_in_namespace(implier, namespace)?,
-            args: vec![actor_var, implier.clone(), namespace_var],
+            name: blocks.get_rule_name_for_declaration_in_resource_block(implier, resource)?,
+            args: vec![actor_var, implier.clone(), resource_var],
             kwargs: None
         }));
 
@@ -538,8 +540,8 @@ fn implication_body_to_rule_body(
 }
 
 /// Turn an implication head into a trio of params that go in the head of the rewritten rule.
-fn implication_head_to_params(head: &Term, namespace: &Term) -> Vec<Parameter> {
-    let namespace_name = &namespace.value().as_symbol().expect("sym").0;
+fn implication_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter> {
+    let resource_name = &resource.value().as_symbol().expect("sym").0;
     vec![
         Parameter {
             parameter: head.clone_with_value(value!(sym!("actor"))),
@@ -550,21 +552,24 @@ fn implication_head_to_params(head: &Term, namespace: &Term) -> Vec<Parameter> {
             specializer: None,
         },
         Parameter {
-            parameter: head.clone_with_value(namespace_as_var(namespace)),
+            parameter: head.clone_with_value(resource_as_var(resource)),
             specializer: Some(
-                namespace.clone_with_value(value!(pattern!(instance!(namespace_name)))),
+                resource.clone_with_value(value!(pattern!(instance!(resource_name)))),
             ),
         },
     ]
 }
 
 // TODO(gj): better error message, e.g.:
-//               duplicate namespace declaration: resource Org { ... } defined on line XX of file YY
-//                                                previously defined on line AA of file BB
-fn check_for_duplicate_namespaces(namespaces: &Namespaces, namespace: &Term) -> PolarResult<()> {
-    if namespaces.exists(namespace) {
-        let (loc, ranges) = (namespace.offset(), vec![]);
-        let msg = format!("Duplicate declaration of {} namespace.", namespace);
+//               duplicate resource block declared: resource Org { ... } defined on line XX of file YY
+//                                                  previously defined on line AA of file BB
+fn check_for_duplicate_resource_blocks(
+    blocks: &ResourceBlocks,
+    resource: &Term,
+) -> PolarResult<()> {
+    if blocks.exists(resource) {
+        let (loc, ranges) = (resource.offset(), vec![]);
+        let msg = format!("Duplicate declaration of '{}' resource block.", resource);
         return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
     }
     Ok(())
@@ -575,15 +580,16 @@ fn is_registered_class(kb: &KnowledgeBase, term: &Term) -> PolarResult<bool> {
     Ok(kb.is_constant(term.value().as_symbol()?))
 }
 
-fn check_that_namespace_resource_is_registered_as_a_class(
+fn check_that_block_resource_is_registered_as_a_class(
     kb: &KnowledgeBase,
     resource: &Term,
 ) -> PolarResult<()> {
     if !is_registered_class(kb, resource)? {
         // TODO(gj): better error message
         let msg = format!(
-            "In order to be declared as a namespace, {} must be registered as a class.",
-            resource.to_polar()
+            "Invalid resource block '{}' -- '{}' must be a registered class.",
+            resource.to_polar(),
+            resource.to_polar(),
         );
         let (loc, ranges) = (resource.offset(), vec![]);
         // TODO(gj): UnregisteredClassError in the core.
@@ -619,7 +625,7 @@ fn check_that_implication_heads_are_declared_locally(
     for Implication { head, .. } in implications {
         if !declarations.contains_key(head) {
             let msg = format!(
-                "Undeclared term {} referenced in implication in {} namespace. \
+                "Undeclared term {} referenced in rule in '{}' resource block. \
                 Did you mean to declare it as a role, permission, or relation?",
                 head.to_polar(),
                 resource
@@ -632,17 +638,16 @@ fn check_that_implication_heads_are_declared_locally(
     errors
 }
 
-impl Namespace {
+impl ResourceBlock {
     // TODO(gj): Add 'includes' feature to ensure we have a clean hook for validation _after_ all
     // Polar rules are loaded.
     pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> PolarResult<()> {
         let mut errors = vec![];
-        errors.extend(
-            check_that_namespace_resource_is_registered_as_a_class(kb, &self.resource).err(),
-        );
-        errors.extend(check_for_duplicate_namespaces(&kb.namespaces, &self.resource).err());
+        errors.extend(check_that_block_resource_is_registered_as_a_class(kb, &self.resource).err());
+        errors
+            .extend(check_for_duplicate_resource_blocks(&kb.resource_blocks, &self.resource).err());
 
-        let Namespace {
+        let ResourceBlock {
             entity_type,
             resource,
             roles,
@@ -664,7 +669,7 @@ impl Namespace {
             return Err(errors[0].clone());
         }
 
-        kb.namespaces
+        kb.resource_blocks
             .add(entity_type, resource, declarations, implications);
 
         Ok(())
@@ -695,7 +700,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_rewrite_implications_with_lowercase_resource_specializer() {
+    fn test_resource_block_rewrite_implications_with_lowercase_resource_specializer() {
         let repo_resource = term!(sym!("repo"));
         let repo_roles = term!(["reader"]);
         let repo_relations = term!(btreemap! { sym!("parent") => term!(sym!("org")) });
@@ -706,14 +711,14 @@ mod tests {
         let org_roles = term!(["member"]);
         let org_declarations = index_declarations(Some(org_roles), None, None, &org_resource);
 
-        let mut namespaces = Namespaces::new();
-        namespaces.add(
+        let mut blocks = ResourceBlocks::new();
+        blocks.add(
             EntityType::Resource,
             repo_resource,
             repo_declarations.unwrap(),
             vec![],
         );
-        namespaces.add(
+        blocks.add(
             EntityType::Resource,
             org_resource,
             org_declarations.unwrap(),
@@ -723,9 +728,7 @@ mod tests {
             head: term!("reader"),
             body: (term!("member"), Some(term!("parent"))),
         };
-        let rewritten_role_role = implication
-            .as_rule(&term!(sym!("repo")), &namespaces)
-            .unwrap();
+        let rewritten_role_role = implication.as_rule(&term!(sym!("repo")), &blocks).unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
             r#"has_role(actor: Actor{}, "reader", repo_instance: repo{}) if has_relation(org_instance, "parent", repo_instance) and has_role(actor, "member", org_instance);"#
@@ -733,13 +736,13 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_local_rewrite_implications() {
+    fn test_resource_block_local_rewrite_implications() {
         let resource = term!(sym!("Org"));
         let roles = term!(["owner", "member"]);
         let permissions = term!(["invite", "create_repo"]);
         let declarations = index_declarations(Some(roles), Some(permissions), None, &resource);
-        let mut namespaces = Namespaces::new();
-        namespaces.add(
+        let mut blocks = ResourceBlocks::new();
+        blocks.add(
             EntityType::Resource,
             resource,
             declarations.unwrap(),
@@ -749,9 +752,7 @@ mod tests {
             head: term!("member"),
             body: (term!("owner"), None),
         };
-        let rewritten_role_role = implication
-            .as_rule(&term!(sym!("Org")), &namespaces)
-            .unwrap();
+        let rewritten_role_role = implication.as_rule(&term!(sym!("Org")), &blocks).unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
             r#"has_role(actor: Actor{}, "member", org: Org{}) if has_role(actor, "owner", org);"#
@@ -761,9 +762,7 @@ mod tests {
             head: term!("invite"),
             body: (term!("owner"), None),
         };
-        let rewritten_permission_role = implication
-            .as_rule(&term!(sym!("Org")), &namespaces)
-            .unwrap();
+        let rewritten_permission_role = implication.as_rule(&term!(sym!("Org")), &blocks).unwrap();
         assert_eq!(
             rewritten_permission_role.to_polar(),
             r#"has_permission(actor: Actor{}, "invite", org: Org{}) if has_role(actor, "owner", org);"#
@@ -773,9 +772,8 @@ mod tests {
             head: term!("create_repo"),
             body: (term!("invite"), None),
         };
-        let rewritten_permission_permission = implication
-            .as_rule(&term!(sym!("Org")), &namespaces)
-            .unwrap();
+        let rewritten_permission_permission =
+            implication.as_rule(&term!(sym!("Org")), &blocks).unwrap();
         assert_eq!(
             rewritten_permission_permission.to_polar(),
             r#"has_permission(actor: Actor{}, "create_repo", org: Org{}) if has_permission(actor, "invite", org);"#
@@ -783,7 +781,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_nonlocal_rewrite_implications() {
+    fn test_resource_block_nonlocal_rewrite_implications() {
         let repo_resource = term!(sym!("Repo"));
         let repo_roles = term!(["reader"]);
         let repo_relations = term!(btreemap! { sym!("parent") => term!(sym!("Org")) });
@@ -792,14 +790,14 @@ mod tests {
         let org_resource = term!(sym!("Org"));
         let org_roles = term!(["member"]);
         let org_declarations = index_declarations(Some(org_roles), None, None, &org_resource);
-        let mut namespaces = Namespaces::new();
-        namespaces.add(
+        let mut blocks = ResourceBlocks::new();
+        blocks.add(
             EntityType::Resource,
             repo_resource,
             repo_declarations.unwrap(),
             vec![],
         );
-        namespaces.add(
+        blocks.add(
             EntityType::Resource,
             org_resource,
             org_declarations.unwrap(),
@@ -809,9 +807,7 @@ mod tests {
             head: term!("reader"),
             body: (term!("member"), Some(term!("parent"))),
         };
-        let rewritten_role_role = implication
-            .as_rule(&term!(sym!("Repo")), &namespaces)
-            .unwrap();
+        let rewritten_role_role = implication.as_rule(&term!(sym!("Repo")), &blocks).unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
             r#"has_role(actor: Actor{}, "reader", repo: Repo{}) if has_relation(org, "parent", repo) and has_role(actor, "member", org);"#
@@ -819,43 +815,43 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_must_be_registered() {
+    fn test_resource_block_must_be_registered_as_a_class() {
         let p = Polar::new();
         let valid_policy = "resource Org{}";
         expect_error(
             &p,
             valid_policy,
-            "In order to be declared as a namespace, Org must be registered as a class.",
+            "Invalid resource block 'Org' -- 'Org' must be a registered class.",
         );
         p.register_constant(sym!("Org"), term!("unimportant"));
         assert!(p.load_str(valid_policy).is_ok());
     }
 
     #[test]
-    fn test_namespace_duplicate_namespaces() {
+    fn test_resource_block_duplicates() {
         let p = Polar::new();
         let invalid_policy = "resource Org{}resource Org{}";
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
             &p,
             invalid_policy,
-            "Duplicate declaration of Org namespace.",
+            "Duplicate declaration of 'Org' resource block.",
         );
     }
 
     #[test]
-    fn test_namespace_with_undeclared_local_implication_head() {
+    fn test_resource_block_with_undeclared_local_implication_head() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
             &p,
             r#"resource Org{"member" if "owner";}"#,
-            r#"Undeclared term "member" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
+            r#"Undeclared term "member" referenced in rule in 'Org' resource block. Did you mean to declare it as a role, permission, or relation?"#,
         );
     }
 
     #[test]
-    fn test_namespace_with_undeclared_local_implication_body() {
+    fn test_resource_block_with_undeclared_local_implication_body() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
         expect_error(
@@ -864,12 +860,12 @@ mod tests {
                 roles=["member"];
                 "member" if "owner";
             }"#,
-            r#"Undeclared term "owner" referenced in implication in Org namespace. Did you mean to declare it as a role, permission, or relation?"#,
+            r#"Undeclared term "owner" referenced in rule in the 'Org' resource block. Did you mean to declare it as a role, permission, or relation?"#,
         );
     }
 
     #[test]
-    fn test_namespace_with_undeclared_nonlocal_implication_body() {
+    fn test_resource_block_with_undeclared_nonlocal_implication_body() {
         let p = Polar::new();
         p.register_constant(sym!("Repo"), term!("unimportant"));
         p.register_constant(sym!("Org"), term!("unimportant"));
@@ -881,7 +877,7 @@ mod tests {
                 relations = { parent: Org };
                 "writer" if "owner" on "parent";
             }"#,
-            r#"Repo: Relation "parent" in implication body `"owner" on "parent"` has type Org, but no such namespace exists. Try declaring one: `resource Org {}`"#,
+            r#"Repo: Relation "parent" in rule body `"owner" on "parent"` has type 'Org', but no such resource block exists. Try declaring one: `resource Org {}`"#,
         );
 
         expect_error(
@@ -892,13 +888,13 @@ mod tests {
                 "writer" if "owner" on "parent";
             }
             resource Org {}"#,
-            r#"Repo: Term "owner" not declared on related resource Org. Did you mean to declare it as a role, permission, or relation on resource Org?"#,
+            r#"Repo: Term "owner" not declared in related resource block 'Org'. Did you mean to declare it as a role, permission, or relation in the 'Org' resource block?"#,
         );
     }
 
     #[test]
     #[ignore = "probably easier after the entity PR goes in"]
-    fn test_namespace_resource_relations_can_only_appear_after_on() {
+    fn test_resource_block_resource_relations_can_only_appear_after_on() {
         let p = Polar::new();
         p.register_constant(sym!("Repo"), term!("unimportant"));
         expect_error(
@@ -914,7 +910,7 @@ mod tests {
 
     #[test]
     #[ignore = "not yet implemented"]
-    fn test_namespace_with_circular_implications() {
+    fn test_resource_block_with_circular_implications() {
         let p = Polar::new();
         p.register_constant(sym!("Repo"), term!("unimportant"));
         let policy = r#"resource Repo {
@@ -940,7 +936,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_with_unregistered_relation_type() {
+    fn test_resource_block_with_unregistered_relation_type() {
         let p = Polar::new();
         p.register_constant(sym!("Repo"), term!("unimportant"));
         let policy = r#"resource Repo { relations = { parent: Org }; }"#;
@@ -954,7 +950,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_with_clashing_declarations() {
+    fn test_resource_block_with_clashing_declarations() {
         let p = Polar::new();
         p.register_constant(sym!("Org"), term!("unimportant"));
 
@@ -990,7 +986,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_parsing_permutations() {
+    fn test_resource_block_parsing_permutations() {
         use std::iter::FromIterator;
 
         // Policy pieces
@@ -1004,8 +1000,8 @@ mod tests {
             r#""reader" if "member" on "parent";"#,
         ];
 
-        // Maximal namespace
-        let namespace = Namespace {
+        // Maximal block
+        let block = ResourceBlock {
             entity_type: EntityType::Resource,
             resource: term!(sym!("Repo")),
             roles: Some(term!(["writer", "reader"])),
@@ -1037,8 +1033,8 @@ mod tests {
 
         // Helpers
 
-        let equal = |line: &Line, expected: &Namespace| match line {
-            Line::Namespace(parsed) => {
+        let equal = |line: &Line, expected: &ResourceBlock| match line {
+            Line::ResourceBlock(parsed) => {
                 let parsed_implications: HashSet<&Implication> =
                     HashSet::from_iter(&parsed.implications);
                 let expected_implications = HashSet::from_iter(&expected.implications);
@@ -1051,7 +1047,7 @@ mod tests {
             _ => false,
         };
 
-        let test_case = |parts: Vec<&str>, expected: &Namespace| {
+        let test_case = |parts: Vec<&str>, expected: &ResourceBlock| {
             for permutation in permute(parts).into_iter() {
                 let mut policy = "resource Repo {\n".to_owned();
                 policy += &permutation.join("\n");
@@ -1061,12 +1057,12 @@ mod tests {
         };
 
         // Test each case with and without implications.
-        let test_cases = |parts: Vec<&str>, expected: &Namespace| {
+        let test_cases = |parts: Vec<&str>, expected: &ResourceBlock| {
             let mut parts_with_implications = parts.clone();
             parts_with_implications.append(&mut implications.clone());
             test_case(parts_with_implications, expected);
 
-            let expected_without_implications = Namespace {
+            let expected_without_implications = ResourceBlock {
                 implications: vec![],
                 ..expected.clone()
             };
@@ -1076,65 +1072,65 @@ mod tests {
         // Cases
 
         // Roles, Permissions, Relations
-        test_cases(vec![roles, permissions, relations], &namespace);
+        test_cases(vec![roles, permissions, relations], &block);
 
         // Roles, Permissions, _________
-        let expected = Namespace {
+        let expected = ResourceBlock {
             relations: None,
-            ..namespace.clone()
+            ..block.clone()
         };
         test_cases(vec![roles, permissions], &expected);
 
         // Roles, ___________, Relations
-        let expected = Namespace {
+        let expected = ResourceBlock {
             permissions: None,
-            ..namespace.clone()
+            ..block.clone()
         };
         test_cases(vec![roles, relations], &expected);
 
         // _____, Permissions, Relations
-        let expected = Namespace {
+        let expected = ResourceBlock {
             roles: None,
-            ..namespace.clone()
+            ..block.clone()
         };
         test_cases(vec![permissions, relations], &expected);
 
         // Roles, ___________, _________
-        let expected = Namespace {
+        let expected = ResourceBlock {
             permissions: None,
             relations: None,
-            ..namespace.clone()
+            ..block.clone()
         };
         test_cases(vec![roles], &expected);
 
         // _____, Permissions, _________
-        let expected = Namespace {
+        let expected = ResourceBlock {
             roles: None,
             relations: None,
-            ..namespace.clone()
+            ..block.clone()
         };
         test_cases(vec![permissions], &expected);
 
         // _____, ___________, Relations
-        let expected = Namespace {
+        let expected = ResourceBlock {
             roles: None,
             permissions: None,
-            ..namespace.clone()
+            ..block.clone()
         };
         test_cases(vec![relations], &expected);
 
         // _____, ___________, _________
-        let expected = Namespace {
+        let expected = ResourceBlock {
             roles: None,
             permissions: None,
             relations: None,
-            ..namespace
+            ..block
         };
         test_cases(vec![], &expected);
     }
 
     #[test]
-    fn test_namespace_declaration_keywords() {
+    fn test_resource_block_declaration_keywords() {
         let p = Polar::new();
         expect_error(
             &p,
@@ -1164,7 +1160,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_entity_type() {
+    fn test_resource_block_entity_type() {
         let p = Polar::new();
 
         expect_error(
@@ -1181,7 +1177,7 @@ mod tests {
     }
 
     #[test]
-    fn test_namespace_declaration_keywords_are_not_reserved_words() {
+    fn test_resource_block_declaration_keywords_are_not_reserved_words() {
         let p = Polar::new();
         p.load_str(
             "on(actor, resource, roles, permissions, relations) if on(actor, resource, roles, permissions, relations);",

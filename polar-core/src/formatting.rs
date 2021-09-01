@@ -349,7 +349,7 @@ pub mod display {
 pub mod to_polar {
     use crate::formatting::{format_args, format_params, to_polar_parens};
     use crate::rules::*;
-    use crate::sugar::{EntityType, Implication, Namespace};
+    use crate::sugar::{EntityType, Implication, ResourceBlock};
     use crate::terms::*;
 
     /// Effectively works as a reverse-parser. Allows types to be turned
@@ -646,7 +646,7 @@ pub mod to_polar {
         }
     }
 
-    impl ToPolarString for Namespace {
+    impl ToPolarString for ResourceBlock {
         fn to_polar(&self) -> String {
             let mut s = format!(
                 "{} {} {{\n",

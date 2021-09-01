@@ -983,8 +983,8 @@ impl PolarVirtualMachine {
                 let alternatives = {
                     let kb = self.kb.read().unwrap();
                     match tag.0.as_ref() {
-                        "Actor" => kb.namespaces.actors.clone(),
-                        "Resource" => kb.namespaces.resources.clone(),
+                        "Actor" => kb.resource_blocks.actors.clone(),
+                        "Resource" => kb.resource_blocks.resources.clone(),
                         _ => unreachable!(),
                     }
                 };

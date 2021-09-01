@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use std::iter::FromIterator;
 
 use crate::lexer::{self, Token};
-use crate::parser::{Line, Namespace};
+use crate::parser::{Line, ResourceBlock};
 use crate::error;
 use crate::terms::*;
 use crate::rules::*;
@@ -722,21 +722,21 @@ OnRelation: Term = <Spanned<Variable>> <Spanned<PolarString>> =>? sugar::validat
 ImplicationBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
 Implication: sugar::Production = <head:Spanned<PolarString>> Define <body:ImplicationBody> => sugar::Production::Implication(<>);
 
-NamespaceProduction: sugar::Production = {
+ResourceBlockProduction: sugar::Production = {
     <Declaration> => <>,
     <Implication> => <>,
 };
 
-NamespaceProductions: Vec<sugar::Production> = <NamespaceProduction*>;
+ResourceBlockProductions: Vec<sugar::Production> = <ResourceBlockProduction*>;
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
     <RulePrototype> => Line::RulePrototype(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
 
-    <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:NamespaceProductions> "}" <end:@R> =>? {
+    <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> =>? {
         let resource = Term::new_from_parser(src_id, start, end, resource);
-        sugar::turn_productions_into_namespace(keyword, resource, productions).map(|ns| Line::Namespace(ns))
+        sugar::turn_productions_into_resource_block(keyword, resource, productions).map(|ns| Line::ResourceBlock(ns))
     }
 }
 

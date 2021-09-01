@@ -7,7 +7,7 @@ pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::rules::*;
 use super::sources::*;
-use super::sugar::Namespaces;
+use super::sugar::ResourceBlocks;
 use super::terms::*;
 use std::sync::Arc;
 
@@ -45,8 +45,8 @@ pub struct KnowledgeBase {
     id_counter: Counter,
     pub inline_queries: Vec<Term>,
 
-    /// Namespace Bookkeeping
-    pub namespaces: Namespaces,
+    /// Resource block bookkeeping.
+    pub resource_blocks: ResourceBlocks,
 }
 
 impl KnowledgeBase {
@@ -62,7 +62,7 @@ impl KnowledgeBase {
             id_counter: Counter::default(),
             gensym_counter: Counter::default(),
             inline_queries: vec![],
-            namespaces: Namespaces::new(),
+            resource_blocks: ResourceBlocks::new(),
         }
     }
 
@@ -594,14 +594,14 @@ impl KnowledgeBase {
 
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {
-            self.namespaces.clear();
+            self.resource_blocks.clear();
             return Err(errors[0].clone());
         }
 
         let mut rules = vec![];
-        for (namespace, implications) in &self.namespaces.implications {
+        for (resource_block, implications) in &self.resource_blocks.implications {
             for implication in implications {
-                match implication.as_rule(namespace, &self.namespaces) {
+                match implication.as_rule(resource_block, &self.resource_blocks) {
                     Ok(rule) => rules.push(rule),
                     Err(error) => errors.push(error),
                 }
@@ -610,7 +610,7 @@ impl KnowledgeBase {
 
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {
-            self.namespaces.clear();
+            self.resource_blocks.clear();
             return Err(errors[0].clone());
         }
 
