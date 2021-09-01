@@ -683,16 +683,15 @@ mod tests {
 
     #[track_caller]
     fn expect_error(p: &Polar, policy: &str, expected: &str) {
-        assert!(matches!(
-            p.load_str(policy).unwrap_err(),
+        let msg = match p.load_str(policy).unwrap_err() {
             error::PolarError {
-                kind: error::ErrorKind::Parse(error::ParseError::ParseSugar {
-                    msg,
-                    ..
-                }),
+                kind: error::ErrorKind::Parse(error::ParseError::ParseSugar { msg, .. }),
                 ..
-            } if msg.contains(expected)
-        ));
+            } => msg,
+            _ => panic!(),
+        };
+
+        assert!(msg.contains(expected));
     }
 
     #[test]
