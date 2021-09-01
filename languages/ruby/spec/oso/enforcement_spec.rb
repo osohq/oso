@@ -22,14 +22,14 @@ end
 RSpec.describe Oso::Oso do
   let(:oso) do
     oso = Oso::Oso.new
-    oso.register_class(Actor, name: "Actor")
-    oso.register_class(Widget, name: "Widget")
+    oso.register_class(Actor, name: 'Actor')
+    oso.register_class(Widget, name: 'Widget')
     oso
   end
 
   before(:each) do
-    stub_const("Actor", EnforcementSpec::Actor)
-    stub_const("Widget", EnforcementSpec::Widget)
+    stub_const('Actor', EnforcementSpec::Actor)
+    stub_const('Widget', EnforcementSpec::Widget)
   end
 
   context '#authorize' do

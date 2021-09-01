@@ -63,18 +63,11 @@ module Oso
     def authorize(actor, action, resource, check_read: true)
       return if query_rule_once('allow', actor, action, resource)
 
-      is_not_found = false
-
-      if check_read
-        if action == @read_action
-          is_not_found = true
-        elsif !query_rule_once('allow', actor, @read_action, resource)
-          is_not_found = true
-        end
+      if check_read && action == @read_action || !query_rule_once('allow', actor, @read_action, resource)
+        raise @not_found_error
       end
-      error = is_not_found ? @not_found_error : @forbidden_error
-      puts error
-      raise error
+
+      raise @forbidden_error
     end
 
     # Ensure that +actor+ is allowed to send +request+ to the server.
