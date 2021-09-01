@@ -19,25 +19,34 @@ class Oso(Polar):
 
     """
 
-    def __init__(self, *, get_error=None, read_action="read"):
+    def __init__(
+        self,
+        *,
+        forbidden_error=ForbiddenError,
+        not_found_error=NotFoundError,
+        read_action="read"
+    ):
         """
         Create an oso object.
 
-        :param get_error: Optionally override the method used to build errors
-                          raised by the ``authorize*`` methods. Should be a
-                          callable that takes one argument ``is_not_found`` and
-                          returns an exception.
-        :param read_action: The action used by the ``authorize`` method to
-                            determine whether an authorization failure should
-                            raise a ``NotFoundError`` or a ``ForbiddenError``
+        :param forbidden_error:
+            Optionally override the error class that is raised when an action is
+            unauthorized.
+        :param not_found_error:
+            Optionally override the error class that is raised by the
+            ``authorize`` method when an action is unauthorized AND the actor
+            does not have permission to ``"read"`` the resource (and thus should
+            not know it exists).
+        :param read_action:
+            The action used by the ``authorize`` method to determine whether an
+            authorization failure should raise a ``NotFoundError`` or a
+            ``ForbiddenError``.
         """
         self._print_polar_log_message()
         super().__init__()
 
-        if get_error is None:
-            self._get_error = self._default_get_error
-        else:
-            self._get_error = get_error
+        self.forbidden_error = forbidden_error
+        self.not_found_error = not_found_error
         self.read_action = read_action
 
     def is_allowed(self, actor, action, resource) -> bool:
@@ -91,15 +100,16 @@ class Oso(Polar):
         :type check_read: bool
 
         """
-        if not self.query_rule_once("allow", actor, action, resource):
-            is_not_found = False
+        if self.query_rule_once("allow", actor, action, resource):
+            return
+
+        is_not_found = False
+        if check_read:
             if action == self.read_action:
                 is_not_found = True
-            elif check_read and not self.query_rule_once(
-                "allow", actor, self.read_action, resource
-            ):
+            elif not self.query_rule_once("allow", actor, self.read_action, resource):
                 is_not_found = True
-            raise self._get_error(is_not_found)
+        raise self.not_found_error() if is_not_found else self.forbidden_error()
 
     def authorize_request(self, actor, request):
         """Ensure that ``actor`` is allowed to send ``request`` to the server.
@@ -115,7 +125,7 @@ class Oso(Polar):
             actor.
         """
         if not self.query_rule_once("allow_request", actor, request):
-            raise self._get_error(False)
+            raise self.forbidden_error()
 
     def authorized_actions(self, actor, resource, allow_wildcard=False) -> List[Any]:
         """Determine the actions ``actor`` is allowed to take on ``resource``.
@@ -172,7 +182,7 @@ class Oso(Polar):
         :param field: The name of the field being accessed.
         """
         if not self.query_rule_once("allow_field", actor, action, resource, field):
-            raise self._get_error(False)
+            raise self.forbidden_error()
 
     def authorized_fields(
         self, actor, action, resource, allow_wildcard=False

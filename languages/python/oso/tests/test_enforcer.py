@@ -140,14 +140,19 @@ def test_authorized_fields(test_oso):
 
 
 def test_custom_errors():
-    class TestException(Exception):
-        def __init__(self, is_not_found):
-            self.is_not_found = is_not_found
+    class TestNotFound(Exception):
+        pass
 
-    oso = Oso(get_error=lambda *args: TestException(*args))
-    with pytest.raises(TestException) as excinfo:
+    class TestForbidden(Exception):
+        pass
+
+    oso = Oso(not_found_error=lambda: TestNotFound, forbidden_error=TestForbidden)
+    oso.load_str("""allow("graham", "read", "bar");""")
+
+    with pytest.raises(TestForbidden) as excinfo:
         oso.authorize("graham", "frob", "bar")
-    assert excinfo.value.is_not_found
+    with pytest.raises(TestNotFound) as excinfo:
+        oso.authorize("sam", "frob", "bar")
 
 
 def test_custom_read_action():
