@@ -1,38 +1,44 @@
 # rubocop:disable Metrics/BlockLength
 # frozen_string_literal: true
 
-class Actor
-  attr_reader :name
+module EnforcementSpec
+  class Actor
+    attr_reader :name
 
-  def initialize(name)
-    @name = name
+    def initialize(name)
+      @name = name
+    end
+  end
+
+  class Widget
+    attr_reader :id
+
+    def initialize(id)
+      @id = id
+    end
   end
 end
 
-class Widget
-  attr_reader :id
-
-  def initialize(id)
-    @id = id
-  end
-end
-
-RSpec.describe Oso::Enforcer do
+RSpec.describe Oso::Oso do
   let(:oso) do
-    policy = Oso::Policy.new
-    policy.register_class(Actor)
-    policy.register_class(Widget)
+    oso = Oso::Oso.new
+    oso.register_class(Actor, name: "Actor")
+    oso.register_class(Widget, name: "Widget")
+    oso
+  end
 
-    Oso::Enforcer.new(policy)
+  before(:each) do
+    stub_const("Actor", EnforcementSpec::Actor)
+    stub_const("Widget", EnforcementSpec::Widget)
   end
 
   context '#authorize' do
-    guest = Actor.new('guest')
-    admin = Actor.new('admin')
-    widget0 = Widget.new('0')
-    widget1 = Widget.new('1')
+    let(:guest) { Actor.new('guest') }
+    let(:admin) { Actor.new('admin') }
+    let(:widget0) { Widget.new('0') }
+    let(:widget1) { Widget.new('1') }
     before(:each) do
-      oso.policy.load_str(%|
+      oso.load_str(%|
         allow(_actor: Actor, "read", widget: Widget) if
           widget.id = "0";
         allow(actor: Actor, "update", _widget: Widget) if
@@ -56,12 +62,12 @@ RSpec.describe Oso::Enforcer do
   end
 
   context '#authorized_actions' do
-    guest = Actor.new('guest')
-    admin = Actor.new('admin')
-    widget0 = Widget.new('0')
-    widget1 = Widget.new('1')
+    let(:guest) { Actor.new('guest') }
+    let(:admin) { Actor.new('admin') }
+    let(:widget0) { Widget.new('0') }
+    let(:widget1) { Widget.new('1') }
     before(:each) do
-      oso.policy.load_str(%|
+      oso.load_str(%|
         allow(_actor: Actor, "read", _widget: Widget);
         allow(_actor: Actor, "update", _widget: Widget{id: "0"});
         allow(actor: Actor, "update", _widget: Widget) if
@@ -76,7 +82,7 @@ RSpec.describe Oso::Enforcer do
     end
 
     it 'throws an Oso::Error if there is a wildcard action' do
-      oso.policy.load_str(%|
+      oso.load_str(%|
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       |)
       superadmin = Actor.new('superadmin')
@@ -84,7 +90,7 @@ RSpec.describe Oso::Enforcer do
     end
 
     it 'returns a wildcard * if wildcard is explicitly allowed' do
-      oso.policy.load_str(%|
+      oso.load_str(%|
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       |)
       superadmin = Actor.new('superadmin')
@@ -102,12 +108,12 @@ RSpec.describe Oso::Enforcer do
       end
     end
 
-    guest = Actor.new('guest')
-    verified = Actor.new('verified')
+    let(:guest) { Actor.new('guest') }
+    let(:verified) { Actor.new('verified') }
 
     before(:each) do
-      oso.policy.register_class(Request)
-      oso.policy.load_str(%|
+      oso.register_class(Request)
+      oso.load_str(%|
         allow_request(_: Actor{name: "guest"}, request: Request) if
             request.path.start_with?("/repos");
         allow_request(_: Actor{name: "verified"}, request: Request) if
@@ -129,12 +135,12 @@ RSpec.describe Oso::Enforcer do
   end
 
   context 'field-level authorization' do
-    admin = Actor.new('admin')
-    guest = Actor.new('guest')
-    widget = Widget.new('0')
+    let(:admin) { Actor.new('admin') }
+    let(:guest) { Actor.new('guest') }
+    let(:widget) { Widget.new('0') }
 
     before(:each) do
-      oso.policy.load_str(%|
+      oso.load_str(%|
         # Admins can update all fields
         allow_field(actor: Actor, "update", _widget: Widget, field) if
             actor.name = "admin" and
@@ -173,35 +179,29 @@ RSpec.describe Oso::Enforcer do
   end
 
   context 'configuration' do
-    it 'get_error overrides the error that is thrown' do
-      class TestError < StandardError
-        attr_reader :is_not_found
-
-        def initialize(is_not_found)
-          super()
-          @is_not_found = is_not_found
-        end
+    it 'can override the error that is thrown' do
+      class TestNotFound < StandardError
+      end
+      class TestForbidden < StandardError
       end
 
-      policy = Oso::Policy.new
-      enforcer = Oso::Enforcer.new(
-        policy,
-        get_error: ->(is_not_found) { TestError.new(is_not_found) }
+      oso = Oso::Oso.new(
+        not_found_error: TestNotFound,
+        forbidden_error: TestForbidden
       )
 
-      expect { enforcer.authorize('graham', 'frob', 'bar') }.to raise_error(
-        an_instance_of(TestError).and(having_attributes({ is_not_found: true }))
-      )
+      oso.load_str('allow("graham", "read", "bar");')
+      expect { oso.authorize('sam', 'frob', 'bar') }.to raise_error(TestNotFound)
+      expect { oso.authorize('graham', 'frob', 'bar') }.to raise_error(TestForbidden)
     end
 
     it 'read_action overrides the read action used to differentiate not found and forbidden errors' do
-      policy = Oso::Policy.new
-      enforcer = Oso::Enforcer.new(policy, read_action: 'fetch')
-      enforcer.policy.load_str('allow("graham", "fetch", "bar");')
-      expect { enforcer.authorize('sam', 'frob', 'bar') }.to raise_error(Oso::NotFoundError)
+      oso = Oso::Oso.new(read_action: 'fetch')
+      oso.load_str('allow("graham", "fetch", "bar");')
+      expect { oso.authorize('sam', 'frob', 'bar') }.to raise_error(Oso::NotFoundError)
       # A user who can "fetch" should get a ForbiddenError instead of a
       # NotFoundError
-      expect { enforcer.authorize('graham', 'frob', 'bar') }.to raise_error(Oso::ForbiddenError)
+      expect { oso.authorize('graham', 'frob', 'bar') }.to raise_error(Oso::ForbiddenError)
     end
   end
 end
