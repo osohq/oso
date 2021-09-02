@@ -18,6 +18,12 @@ module Oso
         bindings.each { |k, v| ffi_query.bind k, host.to_polar(v) }
       end
 
+      # Create a generator that can be polled to advance the query loop. Yields
+      # results one by one.
+      #
+      # @yieldparam [Hash<String, Object>]
+      # @return [Enumerator]
+      # @raise [Error] if any of the FFI calls raise one.
       def each(&block)
         run(&block)
       end
@@ -156,7 +162,7 @@ module Oso
         host.make_instance(cls_name, args: args, kwargs: kwargs, id: id)
       end
 
-      # Create a generator that can be polled to advance the query loop.
+      # Run the main Polar loop, yielding results as they are emitted from the VM.
       #
       # @yieldparam [Hash<String, Object>]
       # @return [Enumerator]
