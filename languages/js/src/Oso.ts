@@ -23,7 +23,7 @@ export class Oso extends Polar {
   ): Promise<boolean> {
     const results = this.queryRule('allow', actor, action, resource);
     const { done } = await results.next();
-    results.return();
+    await results.return();
     return !done;
   }
 }
