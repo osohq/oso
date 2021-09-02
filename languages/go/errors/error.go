@@ -203,18 +203,10 @@ func (e *NotFoundError) Error() string {
 		"error to the client."
 }
 
-func NewNotFoundError() *NotFoundError {
-	return &NotFoundError{}
-}
-
 type ForbiddenError struct{}
 
 func (e *ForbiddenError) Error() string {
 	return "Oso Forbidden Error -- the requested action was not allowed for the " +
 		"given resource. Most often, you should handle this error by returning a " +
 		"403 error to the client."
-}
-
-func NewForbiddenError() *ForbiddenError {
-	return &ForbiddenError{}
 }

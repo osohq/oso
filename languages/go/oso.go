@@ -32,8 +32,8 @@ func NewOso() (Oso, error) {
 		return Oso{
 			p:              p,
 			readAction:     "read",
-			forbiddenError: func() error { return osoErrors.NewForbiddenError() },
-			notFoundError:  func() error { return osoErrors.NewNotFoundError() },
+			forbiddenError: func() error { return &osoErrors.ForbiddenError{} },
+			notFoundError:  func() error { return &osoErrors.NotFoundError{} },
 		}, nil
 	}
 }
