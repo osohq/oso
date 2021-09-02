@@ -527,7 +527,7 @@ export interface QueryEvent {
  *
  * If you don't need access to the bindings and only wish to know whether a
  * query succeeded or failed, you may check the `done` property of the yielded
- * value (and then optionally "complete" the generator by calling its
+ * value (and then optionally "complete" the generator by calling and awaiting its
  * `return()` method). If `done` is `true`, the query failed. If `done` is
  * `false`, the query yielded at least one result and therefore succeeded.
  */
