@@ -4,6 +4,7 @@ docname: using/examples/inheritance
 images: {}
 path: /using-examples-inheritance
 title: Share Rules Across Resources
+weight: 10
 description: |
   Oso policies make it possible to share rules across related resource types, and override them as needed.
 aliases:

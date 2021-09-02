@@ -1,6 +1,6 @@
 ---
 title: "Concepts"
-weight: 3
+weight: 4
 aliases:
  - ./learn/examples.html
 ---
