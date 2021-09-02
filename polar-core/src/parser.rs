@@ -15,8 +15,8 @@ lalrpop_mod!(
 
 use super::error::{self, PolarResult};
 use super::lexer::{self, Lexer};
+use super::resource_block::ResourceBlock;
 use super::rules::*;
-use super::sugar::ResourceBlock;
 use super::terms::*;
 
 #[derive(Clone, Debug, PartialEq)]

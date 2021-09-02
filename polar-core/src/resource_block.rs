@@ -45,7 +45,7 @@ pub fn validate_relation_keyword(
             keyword
         );
         Err(LalrpopError::User {
-            error: ParseError::ParseSugar { loc, msg, ranges },
+            error: ParseError::ResourceBlock { loc, msg, ranges },
         })
     }
 }
@@ -67,10 +67,10 @@ pub fn validate_parsed_declaration(
         ("roles", Value::Dictionary(_)) | ("permissions", Value::Dictionary(_)) => {
             let (loc, ranges) = (term.offset(), vec![term_source_range(&term)]);
             let msg = format!("Expected '{}' declaration to be a list of strings; found a dictionary:\n", name);
-            Err(LalrpopError::User { error: ParseError::ParseSugar { loc, msg, ranges } })
+            Err(LalrpopError::User { error: ParseError::ResourceBlock { loc, msg, ranges } })
         }
         ("relations", Value::List(_)) => Err(LalrpopError::User {
-            error: ParseError::ParseSugar {
+            error: ParseError::ResourceBlock {
                 loc: term.offset(),
                 msg: "Expected 'relations' declaration to be a dictionary; found a list:\n".to_owned(),
                 ranges: vec![term_source_range(&term)],
@@ -78,7 +78,7 @@ pub fn validate_parsed_declaration(
         }),
 
         (_, Value::List(_)) => Err(LalrpopError::User {
-            error: ParseError::ParseSugar {
+            error: ParseError::ResourceBlock {
                 loc: term.offset(),
                 msg: format!(
                     "Unexpected declaration '{}'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?\n", name
@@ -87,7 +87,7 @@ pub fn validate_parsed_declaration(
             },
         }),
         (_, Value::Dictionary(_)) => Err(LalrpopError::User {
-            error: ParseError::ParseSugar {
+            error: ParseError::ResourceBlock {
                 loc: term.offset(),
                 msg: format!(
                     "Unexpected declaration '{}'. Did you mean for this to be 'relations = {{ ... }};'?\n", name
@@ -114,7 +114,7 @@ pub fn turn_productions_into_resource_block(
                     "Expected 'actor' or 'resource' but found '{}'.",
                     keyword.to_polar()
                 );
-                let error = ParseError::ParseSugar { loc, msg, ranges };
+                let error = ParseError::ResourceBlock { loc, msg, ranges };
                 return Err(LalrpopError::User { error });
             }
         };
@@ -132,7 +132,7 @@ pub fn turn_productions_into_resource_block(
                 name,
                 resource.to_polar()
             );
-            ParseError::ParseSugar { loc, msg, ranges }
+            ParseError::ResourceBlock { loc, msg, ranges }
         };
 
         for production in productions {
@@ -176,7 +176,7 @@ pub fn turn_productions_into_resource_block(
     } else {
         let (loc, ranges) = (resource.offset(), vec![]);
         let msg = "Expected 'actor' or 'resource' but found nothing.".to_owned();
-        let error = ParseError::ParseSugar { loc, msg, ranges };
+        let error = ParseError::ResourceBlock { loc, msg, ranges };
         Err(LalrpopError::User { error })
     }
 }
@@ -316,7 +316,7 @@ impl ResourceBlocks {
         } else {
             let (loc, ranges) = (declaration.offset(), vec![]);
             let msg = format!("Undeclared term {} referenced in rule in the '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), resource);
-            Err(ParseError::ParseSugar { loc, msg, ranges }.into())
+            Err(ParseError::ResourceBlock { loc, msg, ranges }.into())
         }
     }
 
@@ -358,12 +358,12 @@ impl ResourceBlocks {
             } else {
                 let (loc, ranges) = (declaration.offset(), vec![]);
                 let msg = format!("{}: Term {} not declared in related resource block '{}'. Did you mean to declare it as a role, permission, or relation in the '{}' resource block?", resource.to_polar(), declaration.to_polar(), related_block.to_polar(), related_block.to_polar());
-                Err(ParseError::ParseSugar { loc, msg, ranges }.into())
+                Err(ParseError::ResourceBlock { loc, msg, ranges }.into())
             }
         } else {
             let (loc, ranges) = (related_block.offset(), vec![]);
             let msg = format!("{}: Relation {} in rule body `{} on {}` has type '{}', but no such resource block exists. Try declaring one: `resource {} {{}}`", resource.to_polar(), relation.to_polar(), declaration.to_polar(), relation.to_polar(), related_block.to_polar(), related_block.to_polar());
-            Err(ParseError::ParseSugar { loc, msg, ranges }.into())
+            Err(ParseError::ResourceBlock { loc, msg, ranges }.into())
         }
     }
 }
@@ -400,7 +400,7 @@ fn index_declarations(
                     resource.to_polar(),
                     role.to_polar()
                 );
-                return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
+                return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
             }
         }
     }
@@ -423,7 +423,7 @@ fn index_declarations(
                     )
                 };
                 let (loc, ranges) = (permission.offset(), vec![]);
-                return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
+                return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
             }
         }
     }
@@ -452,7 +452,7 @@ fn index_declarations(
                     _ => unreachable!("duplicate dict keys aren't parseable"),
                 };
                 let (loc, ranges) = (relation_type.offset(), vec![]);
-                return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
+                return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
             }
         }
     }
@@ -573,7 +573,7 @@ fn check_for_duplicate_resource_blocks(
     if blocks.exists(resource) {
         let (loc, ranges) = (resource.offset(), vec![]);
         let msg = format!("Duplicate declaration of '{}' resource block.", resource);
-        return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
+        return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
     }
     Ok(())
 }
@@ -596,7 +596,7 @@ fn check_that_block_resource_is_registered_as_a_class(
         );
         let (loc, ranges) = (resource.offset(), vec![]);
         // TODO(gj): UnregisteredClassError in the core.
-        return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
+        return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
     }
     Ok(())
 }
@@ -614,7 +614,7 @@ fn relation_type_is_registered(
         );
         let (loc, ranges) = (relation.offset(), vec![]);
         // TODO(gj): UnregisteredClassError in the core.
-        return Err(ParseError::ParseSugar { loc, msg, ranges }.into());
+        return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
     }
     Ok(())
 }
@@ -634,7 +634,7 @@ fn check_that_shorthand_rule_heads_are_declared_locally(
                 resource
             );
             let (loc, ranges) = (head.offset(), vec![]);
-            let error = ParseError::ParseSugar { loc, msg, ranges };
+            let error = ParseError::ResourceBlock { loc, msg, ranges };
             errors.push(error.into());
         }
     }
@@ -691,7 +691,7 @@ mod tests {
     fn expect_error(p: &Polar, policy: &str, expected: &str) {
         let msg = match p.load_str(policy).unwrap_err() {
             error::PolarError {
-                kind: error::ErrorKind::Parse(error::ParseError::ParseSugar { msg, .. }),
+                kind: error::ErrorKind::Parse(error::ParseError::ResourceBlock { msg, .. }),
                 ..
             } => msg,
             _ => panic!(),

@@ -5,9 +5,9 @@ use crate::error::{PolarError, PolarResult};
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
+use super::resource_block::ResourceBlocks;
 use super::rules::*;
 use super::sources::*;
-use super::sugar::ResourceBlocks;
 use super::terms::*;
 use std::sync::Arc;
 
@@ -590,7 +590,9 @@ impl KnowledgeBase {
     pub fn rewrite_shorthand_rules(&mut self) -> PolarResult<()> {
         let mut errors = vec![];
 
-        errors.append(&mut super::sugar::check_all_relation_types_have_been_registered(self));
+        errors.append(
+            &mut super::resource_block::check_all_relation_types_have_been_registered(self),
+        );
 
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {

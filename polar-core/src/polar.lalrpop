@@ -9,7 +9,7 @@ use crate::terms::*;
 use crate::rules::*;
 use crate::terms::*;
 use crate::numerics::*;
-use crate::sugar;
+use crate::resource_block;
 use super::ValueOrLogical;
 
 use lalrpop_util::ParseError;
@@ -707,27 +707,27 @@ StringList: Value = {
     "[" <StringListTerms> "]" => Value::List(<>),
 }
 RelationsDict: Value = <Object<Spanned<Variable>>> => Value::Dictionary(<>);
-Declaration: sugar::Production = {
+Declaration: resource_block::Production = {
     <start:@L> <keyword:Name> "=" <value:StringList> <end:@R> ";" =>? {
         let term = Term::new_from_parser(src_id, start, end, value);
-        return sugar::validate_parsed_declaration((keyword, term));
+        return resource_block::validate_parsed_declaration((keyword, term));
     },
     <start:@L> <keyword:Name> "=" <value:RelationsDict> <end:@R> ";" =>? {
         let term = Term::new_from_parser(src_id, start, end, value);
-        return sugar::validate_parsed_declaration((keyword, term));
+        return resource_block::validate_parsed_declaration((keyword, term));
     },
 }
 
-OnRelation: Term = <Spanned<Variable>> <Spanned<PolarString>> =>? sugar::validate_relation_keyword((<>));
+OnRelation: Term = <Spanned<Variable>> <Spanned<PolarString>> =>? resource_block::validate_relation_keyword((<>));
 ShorthandRuleBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
-ShorthandRule: sugar::Production = <head:Spanned<PolarString>> Define <body:ShorthandRuleBody> => sugar::Production::ShorthandRule(<>);
+ShorthandRule: resource_block::Production = <head:Spanned<PolarString>> Define <body:ShorthandRuleBody> => resource_block::Production::ShorthandRule(<>);
 
-ResourceBlockProduction: sugar::Production = {
+ResourceBlockProduction: resource_block::Production = {
     <Declaration> => <>,
     <ShorthandRule> => <>,
 };
 
-ResourceBlockProductions: Vec<sugar::Production> = <ResourceBlockProduction*>;
+ResourceBlockProductions: Vec<resource_block::Production> = <ResourceBlockProduction*>;
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
@@ -736,7 +736,7 @@ Line: Line = {
 
     <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> =>? {
         let resource = Term::new_from_parser(src_id, start, end, resource);
-        sugar::turn_productions_into_resource_block(keyword, resource, productions).map(|ns| Line::ResourceBlock(ns))
+        resource_block::turn_productions_into_resource_block(keyword, resource, productions).map(|ns| Line::ResourceBlock(ns))
     }
 }
 

@@ -348,8 +348,8 @@ pub mod display {
 
 pub mod to_polar {
     use crate::formatting::{format_args, format_params, to_polar_parens};
+    use crate::resource_block::{EntityType, ResourceBlock, ShorthandRule};
     use crate::rules::*;
-    use crate::sugar::{EntityType, ResourceBlock, ShorthandRule};
     use crate::terms::*;
 
     /// Effectively works as a reverse-parser. Allows types to be turned
