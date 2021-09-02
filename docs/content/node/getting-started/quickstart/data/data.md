@@ -30,7 +30,6 @@ import_code: |
     oso = Oso()
     oso.enableRoles()
     ```
-example_app: an Express
 load_policy: |
     ```js
     oso.loadFile("authorization.polar")
