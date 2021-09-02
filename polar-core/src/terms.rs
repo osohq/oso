@@ -1,14 +1,15 @@
-use super::sources::SourceInfo;
-pub use super::{error, formatting::ToPolarString};
-use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use serde::{Deserialize, Serialize};
+
 pub use super::numerics::Numeric;
+use super::sources::SourceInfo;
 use super::visitor::{walk_operation, walk_term, Visitor};
+pub use super::{error, formatting::ToPolarString};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
