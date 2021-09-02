@@ -18,6 +18,10 @@ module Oso
         bindings.each { |k, v| ffi_query.bind k, host.to_polar(v) }
       end
 
+      def each(&block)
+        run(&block)
+      end
+
       private
 
       # @return [Hash<Integer, Enumerator>]
@@ -152,14 +156,12 @@ module Oso
         host.make_instance(cls_name, args: args, kwargs: kwargs, id: id)
       end
 
-      public
-
       # Create a generator that can be polled to advance the query loop.
       #
       # @yieldparam [Hash<String, Object>]
       # @return [Enumerator]
       # @raise [Error] if any of the FFI calls raise one.
-      def each # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+      def run # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         loop do # rubocop:disable Metrics/BlockLength
           event = ffi_query.next_event
           case event.kind
@@ -223,8 +225,6 @@ module Oso
           end
         end
       end
-
-      private
 
       def get_relationship(cls, attr)
         typ = host.types[cls]
