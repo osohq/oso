@@ -5,11 +5,9 @@ require 'oso/polar'
 require 'oso/errors'
 require 'oso/version'
 
-# Top-level namespace for oso authorization library.
+# Top-level namespace for Oso authorization library.
 module Oso
   def self.new
-    # TODO: deprecate this method. Instead, users should use:
-    # > oso = Oso::Oso.new
     ::Oso::Oso.new
   end
 end
