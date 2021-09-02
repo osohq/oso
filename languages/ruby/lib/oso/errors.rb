@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 module Oso
-  class Error < StandardError
+  class Error < ::RuntimeError
   end
 
-  class AuthorizationError < StandardError
+  class AuthorizationError < Error
   end
 
   # Thrown by the +authorize+, +authorize_field+, and +authorize_request+

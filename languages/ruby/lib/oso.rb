@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require 'oso/oso'
-require 'oso/polar'
 require 'oso/errors'
+require 'oso/polar'
 require 'oso/version'
 
 # Top-level namespace for Oso authorization library.

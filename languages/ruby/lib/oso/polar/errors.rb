@@ -3,7 +3,7 @@
 module Oso
   module Polar
     # Base error type for Oso::Polar.
-    class Error < ::RuntimeError
+    class Error < ::Oso::Error
       attr_reader :stack_trace
 
       # @param message [String]
