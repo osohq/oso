@@ -2395,7 +2395,6 @@ func (variant ValidationError) MarshalJSON() ([]byte, error) {
 			"Sugar": inner,
 		})
 
-
 	}
 
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
