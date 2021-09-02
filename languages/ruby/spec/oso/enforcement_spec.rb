@@ -59,6 +59,11 @@ RSpec.describe Oso::Oso do
       expect { oso.authorize(guest, 'read', widget1) }.to raise_error(Oso::NotFoundError)
       expect { oso.authorize(guest, 'update', widget1) }.to raise_error(Oso::NotFoundError)
     end
+
+    it 'throws a ForbiddenError when check_read is false' do
+      expect { oso.authorize(guest, 'read', widget1, check_read: false) }.to raise_error(Oso::ForbiddenError)
+      expect { oso.authorize(guest, 'update', widget1, check_read: false) }.to raise_error(Oso::ForbiddenError)
+    end
   end
 
   context '#authorized_actions' do

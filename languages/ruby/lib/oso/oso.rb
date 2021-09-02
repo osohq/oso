@@ -32,7 +32,7 @@ module Oso
     # @param resource [Object] Object.
     # @return [Boolean] An access control decision.
     def allowed?(actor:, action:, resource:)
-      !query_rule('allow', actor, action, resource).first.nil?
+      query_rule_once('allow', actor, action, resource)
     end
 
     # Ensure that +actor+ is allowed to perform +action+ on
@@ -63,7 +63,7 @@ module Oso
     def authorize(actor, action, resource, check_read: true)
       return if query_rule_once('allow', actor, action, resource)
 
-      if check_read && action == @read_action || !query_rule_once('allow', actor, @read_action, resource)
+      if check_read && (action == @read_action || !query_rule_once('allow', actor, @read_action, resource))
         raise @not_found_error
       end
 
@@ -117,7 +117,7 @@ module Oso
     # @param allow_wildcard Flag to determine behavior if the policy
     #   includes a wildcard action. E.g., a rule allowing any action:
     #   +allow(_actor, _action, _resource)+. If +true+, the method will
-    #   return +["*"]+, if +false+, the method will raise an exception.
+    #   return +Set["*"]+, if +false+, the method will raise an exception.
     # @return A set of the unique allowed actions.
     def authorized_actions(actor, resource, allow_wildcard: false) # rubocop:disable Metrics/MethodLength
       results = query_rule('allow', actor, Polar::Variable.new('action'), resource)
@@ -125,7 +125,7 @@ module Oso
       results.each do |result|
         action = result['action']
         if action.is_a?(Polar::Variable)
-          return ['*'] if allow_wildcard
+          return Set['*'] if allow_wildcard
 
           raise ::Oso::Error,
                 'The result of authorized_actions() contained an '\
@@ -150,7 +150,7 @@ module Oso
     # @param allow_wildcard Flag to determine behavior if the policy \
     #   includes a wildcard field. E.g., a rule allowing any field: \
     #   +allow_field(_actor, _action, _resource, _field)+. If +true+, the \
-    #   method will return +["*"]+, if +false+, the method will raise an \
+    #   method will return +Set["*"]+, if +false+, the method will raise an \
     #   exception.
     # @returns A set of the unique allowed fields.
     def authorized_fields(actor, action, resource, allow_wildcard: false) # rubocop:disable Metrics/MethodLength
@@ -159,7 +159,7 @@ module Oso
       results.each do |result|
         field = result['field']
         if field.is_a?(Polar::Variable)
-          return ['*'] if allow_wildcard
+          return Set['*'] if allow_wildcard
 
           raise ::Oso::Error,
                 'The result of authorized_fields() contained an '\
