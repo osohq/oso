@@ -37,10 +37,7 @@ export class Oso<
     action: Action,
     resource: Resource
   ): Promise<boolean> {
-    const results = this.queryRule('allow', actor, action, resource);
-    const { done } = await results.next();
-    await results.return();
-    return !done;
+    return this.queryRuleOnce('allow', actor, action, resource);
   }
 
   /**
