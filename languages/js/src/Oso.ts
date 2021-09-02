@@ -72,17 +72,19 @@ export class Oso<
     }
 
     let isNotFound = false;
-    if (action === this.#readAction) {
-      isNotFound = true;
-    } else if (options.checkRead) {
-      const canRead = await this.queryRuleOnce(
-        'allow',
-        actor,
-        this.#readAction,
-        resource
-      );
-      if (!canRead) {
+    if (options.checkRead) {
+      if (action === this.#readAction) {
         isNotFound = true;
+      } else {
+        const canRead = await this.queryRuleOnce(
+          'allow',
+          actor,
+          this.#readAction,
+          resource
+        );
+        if (!canRead) {
+          isNotFound = true;
+        }
       }
     }
     const ErrorClass = isNotFound ? this.#notFoundError : this.#forbiddenError;

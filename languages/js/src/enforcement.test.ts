@@ -46,6 +46,9 @@ describe(Oso, () => {
         NotFoundError
       );
       await expect(
+        oso.authorize(guest, 'read', widget1, { checkRead: false })
+      ).rejects.toThrow(ForbiddenError);
+      await expect(
         oso.authorize(guest, 'update', widget1, { checkRead: false })
       ).rejects.toThrow(ForbiddenError);
     });
