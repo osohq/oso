@@ -76,9 +76,9 @@ RSpec.describe Oso::Oso do
     end
 
     it 'returns a list of actions the user is allowed to take' do
-      expect(oso.authorized_actions(guest, widget0)).to match_array(%w[read update])
-      expect(oso.authorized_actions(guest, widget1)).to match_array(%w[read])
-      expect(oso.authorized_actions(admin, widget1)).to match_array(%w[read update])
+      expect(oso.authorized_actions(guest, widget0).to_a).to match_array(%w[read update])
+      expect(oso.authorized_actions(guest, widget1).to_a).to match_array(%w[read])
+      expect(oso.authorized_actions(admin, widget1).to_a).to match_array(%w[read update])
     end
 
     it 'throws an Oso::Error if there is a wildcard action' do
@@ -94,7 +94,7 @@ RSpec.describe Oso::Oso do
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       |)
       superadmin = Actor.new('superadmin')
-      expect(oso.authorized_actions(superadmin, widget0, allow_wildcard: true)).to eq(['*'])
+      expect(oso.authorized_actions(superadmin, widget0, allow_wildcard: true).to_a).to eq(['*'])
     end
   end
 
@@ -168,13 +168,13 @@ RSpec.describe Oso::Oso do
 
     it 'authorized_fields returns a list of allowed fields' do
       # Admins should be able to update all fields
-      expect(oso.authorized_fields(admin, 'update', widget)).to match_array(%w[name purpose private_field])
+      expect(oso.authorized_fields(admin, 'update', widget).to_a).to match_array(%w[name purpose private_field])
       # Admins should be able to read all fields
-      expect(oso.authorized_fields(admin, 'read', widget)).to match_array(%w[name purpose private_field])
+      expect(oso.authorized_fields(admin, 'read', widget).to_a).to match_array(%w[name purpose private_field])
       # Guests should not be able to update any fields
-      expect(oso.authorized_fields(guest, 'update', widget)).to eq([])
+      expect(oso.authorized_fields(guest, 'update', widget).to_a).to eq([])
       # Guests should be able to read public fields
-      expect(oso.authorized_fields(guest, 'read', widget)).to match_array(%w[name purpose])
+      expect(oso.authorized_fields(guest, 'read', widget).to_a).to match_array(%w[name purpose])
     end
   end
 

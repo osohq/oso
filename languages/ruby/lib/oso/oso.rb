@@ -118,7 +118,7 @@ module Oso
     #   includes a wildcard action. E.g., a rule allowing any action:
     #   +allow(_actor, _action, _resource)+. If +true+, the method will
     #   return +["*"]+, if +false+, the method will raise an exception.
-    # @return A list of the unique allowed actions.
+    # @return A set of the unique allowed actions.
     def authorized_actions(actor, resource, allow_wildcard: false) # rubocop:disable Metrics/MethodLength
       results = query_rule('allow', actor, Polar::Variable.new('action'), resource)
       actions = Set.new
@@ -136,7 +136,7 @@ module Oso
         end
         actions.add(action)
       end
-      actions.to_a
+      actions
     end
 
     # Determine the fields of +resource+ on which +actor+ is allowed to
@@ -152,7 +152,7 @@ module Oso
     #   +allow_field(_actor, _action, _resource, _field)+. If +true+, the \
     #   method will return +["*"]+, if +false+, the method will raise an \
     #   exception.
-    # @returns A list of the unique allowed fields.
+    # @returns A set of the unique allowed fields.
     def authorized_fields(actor, action, resource, allow_wildcard: false) # rubocop:disable Metrics/MethodLength
       results = query_rule('allow_field', actor, action, resource, Polar::Variable.new('field'))
       fields = Set.new
@@ -170,7 +170,7 @@ module Oso
         end
         fields.add(field)
       end
-      fields.to_a
+      fields
     end
   end
 end
