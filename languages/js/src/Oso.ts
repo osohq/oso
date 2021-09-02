@@ -3,7 +3,7 @@ import { Variable } from './Variable';
 import type { Options, CustomError } from './types';
 import { NotFoundError, ForbiddenError, OsoError } from './errors';
 
-/** The oso authorization API. */
+/** The Oso authorization API. */
 export class Oso<
   Actor = unknown,
   Action = unknown,
