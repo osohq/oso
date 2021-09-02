@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::error::ParameterError;
 use crate::error::{PolarError, PolarResult};
@@ -622,6 +622,16 @@ impl KnowledgeBase {
         }
 
         Ok(())
+    }
+
+    pub fn get_union_members(&self, union: &Term) -> &HashSet<Term> {
+        if union.is_actor_union() {
+            &self.resource_blocks.actors
+        } else if union.is_resource_union() {
+            &self.resource_blocks.resources
+        } else {
+            unreachable!()
+        }
     }
 }
 

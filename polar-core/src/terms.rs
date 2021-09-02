@@ -7,6 +7,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 pub use super::numerics::Numeric;
+use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::sources::SourceInfo;
 use super::visitor::{walk_operation, walk_term, Visitor};
 pub use super::{error, formatting::ToPolarString};
@@ -454,13 +455,16 @@ impl Term {
     }
 
     // TODO(gj): what happens if the user registers a class as `Actor` or `Resource`?
-    pub fn is_entity_specializer(&self) -> bool {
-        match self.value() {
-            Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) => {
-                matches!(tag.0.as_ref(), "Actor" | "Resource")
-            }
-            _ => false,
-        }
+    pub fn is_union(&self) -> bool {
+        self.is_actor_union() || self.is_resource_union()
+    }
+
+    pub fn is_actor_union(&self) -> bool {
+        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) if tag.0 == ACTOR_UNION_NAME)
+    }
+
+    pub fn is_resource_union(&self) -> bool {
+        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) if tag.0 == RESOURCE_UNION_NAME)
     }
 }
 

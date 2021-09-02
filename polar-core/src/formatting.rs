@@ -348,7 +348,7 @@ pub mod display {
 
 pub mod to_polar {
     use crate::formatting::{format_args, format_params, to_polar_parens};
-    use crate::resource_block::{EntityType, ResourceBlock, ShorthandRule};
+    use crate::resource_block::{BlockType, ResourceBlock, ShorthandRule};
     use crate::rules::*;
     use crate::terms::*;
 
@@ -637,7 +637,7 @@ pub mod to_polar {
         }
     }
 
-    impl ToPolarString for EntityType {
+    impl ToPolarString for BlockType {
         fn to_polar(&self) -> String {
             match self {
                 Self::Actor => "actor".to_owned(),
@@ -650,7 +650,7 @@ pub mod to_polar {
         fn to_polar(&self) -> String {
             let mut s = format!(
                 "{} {} {{\n",
-                self.entity_type.to_polar(),
+                self.block_type.to_polar(),
                 self.resource.to_polar()
             );
             if let Some(ref roles) = self.roles {

@@ -9,6 +9,9 @@ use super::lexer::Token;
 use super::rules::*;
 use super::terms::*;
 
+pub const ACTOR_UNION_NAME: &str = "Actor";
+pub const RESOURCE_UNION_NAME: &str = "Resource";
+
 // TODO(gj): if a user imports the built-in rule prototypes, we should emit an error if the user
 // hasn't registered at least a single Actor and Resource type by the time loading is complete.
 // Maybe only if they've defined at least one rule matching one of the rule prototypes? Otherwise,
@@ -105,9 +108,9 @@ pub fn turn_productions_into_resource_block(
     productions: Vec<Production>,
 ) -> Result<ResourceBlock, LalrpopError<usize, Token, error::ParseError>> {
     if let Some(keyword) = keyword {
-        let entity_type = match keyword.value().as_symbol().unwrap().0.as_ref() {
-            "actor" => EntityType::Actor,
-            "resource" => EntityType::Resource,
+        let block_type = match keyword.value().as_symbol().unwrap().0.as_ref() {
+            "actor" => BlockType::Actor,
+            "resource" => BlockType::Resource,
             _ => {
                 let (loc, ranges) = (keyword.offset(), vec![]);
                 let msg = format!(
@@ -166,7 +169,7 @@ pub fn turn_productions_into_resource_block(
         }
 
         Ok(ResourceBlock {
-            entity_type,
+            block_type,
             resource,
             roles,
             permissions,
@@ -240,15 +243,18 @@ impl Declaration {
     }
 }
 
+// TODO(gj): this will go away when we have true unions in the future.
+/// Resource blocks can either be declared as actors or resources.
 #[derive(Clone, Debug, PartialEq)]
-pub enum EntityType {
+pub enum BlockType {
     Actor,
     Resource,
 }
 
+/// Successfully-parsed but not-yet-fully-validated-or-persisted resource block.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ResourceBlock {
-    pub entity_type: EntityType,
+    pub block_type: BlockType,
     pub resource: Term,
     pub roles: Option<Term>,
     pub permissions: Option<Term>,
@@ -262,7 +268,11 @@ pub struct ResourceBlocks {
     declarations: HashMap<Term, Declarations>,
     /// Map from resource (`Symbol`) to the shorthand rules declared in that resource's block.
     pub shorthand_rules: HashMap<Term, Vec<ShorthandRule>>,
+    /// Set of all resource block types declared as actors. Internally treated like a union type
+    /// where all declared types are members of the union.
     pub actors: HashSet<Term>,
+    /// Set of all resource block types declared as resources. Internally treated like a union type
+    /// where all declared types are members of the union.
     pub resources: HashSet<Term>,
 }
 
@@ -285,7 +295,7 @@ impl ResourceBlocks {
 
     fn add(
         &mut self,
-        entity_type: EntityType,
+        block_type: BlockType,
         resource: Term,
         declarations: Declarations,
         shorthand_rules: Vec<ShorthandRule>,
@@ -293,9 +303,9 @@ impl ResourceBlocks {
         self.declarations.insert(resource.clone(), declarations);
         self.shorthand_rules
             .insert(resource.clone(), shorthand_rules);
-        match entity_type {
-            EntityType::Actor => self.actors.insert(resource),
-            EntityType::Resource => self.resources.insert(resource),
+        match block_type {
+            BlockType::Actor => self.actors.insert(resource),
+            BlockType::Resource => self.resources.insert(resource),
         };
     }
 
@@ -548,7 +558,7 @@ fn shorthand_rule_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter>
     vec![
         Parameter {
             parameter: head.clone_with_value(value!(sym!("actor"))),
-            specializer: Some(head.clone_with_value(value!(pattern!(instance!("Actor"))))),
+            specializer: Some(head.clone_with_value(value!(pattern!(instance!(ACTOR_UNION_NAME))))),
         },
         Parameter {
             parameter: head.clone(),
@@ -649,7 +659,7 @@ impl ResourceBlock {
             .extend(check_for_duplicate_resource_blocks(&kb.resource_blocks, &self.resource).err());
 
         let ResourceBlock {
-            entity_type,
+            block_type,
             resource,
             roles,
             permissions,
@@ -671,7 +681,7 @@ impl ResourceBlock {
         }
 
         kb.resource_blocks
-            .add(entity_type, resource, declarations, shorthand_rules);
+            .add(block_type, resource, declarations, shorthand_rules);
 
         Ok(())
     }
@@ -714,13 +724,13 @@ mod tests {
 
         let mut blocks = ResourceBlocks::new();
         blocks.add(
-            EntityType::Resource,
+            BlockType::Resource,
             repo_resource,
             repo_declarations.unwrap(),
             vec![],
         );
         blocks.add(
-            EntityType::Resource,
+            BlockType::Resource,
             org_resource,
             org_declarations.unwrap(),
             vec![],
@@ -734,7 +744,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            r#"has_role(actor: Actor{}, "reader", repo_instance: repo{}) if has_relation(org_instance, "parent", repo_instance) and has_role(actor, "member", org_instance);"#
+            format!("has_role(actor: {}{{}}, \"reader\", repo_instance: repo{{}}) if has_relation(org_instance, \"parent\", repo_instance) and has_role(actor, \"member\", org_instance);", ACTOR_UNION_NAME),
         );
     }
 
@@ -745,12 +755,7 @@ mod tests {
         let permissions = term!(["invite", "create_repo"]);
         let declarations = index_declarations(Some(roles), Some(permissions), None, &resource);
         let mut blocks = ResourceBlocks::new();
-        blocks.add(
-            EntityType::Resource,
-            resource,
-            declarations.unwrap(),
-            vec![],
-        );
+        blocks.add(BlockType::Resource, resource, declarations.unwrap(), vec![]);
         let shorthand_rule = ShorthandRule {
             head: term!("member"),
             body: (term!("owner"), None),
@@ -760,7 +765,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            r#"has_role(actor: Actor{}, "member", org: Org{}) if has_role(actor, "owner", org);"#
+            format!("has_role(actor: {}{{}}, \"member\", org: Org{{}}) if has_role(actor, \"owner\", org);", ACTOR_UNION_NAME),
         );
 
         let shorthand_rule = ShorthandRule {
@@ -772,7 +777,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_permission_role.to_polar(),
-            r#"has_permission(actor: Actor{}, "invite", org: Org{}) if has_role(actor, "owner", org);"#
+            format!("has_permission(actor: {}{{}}, \"invite\", org: Org{{}}) if has_role(actor, \"owner\", org);", ACTOR_UNION_NAME),
         );
 
         let shorthand_rule = ShorthandRule {
@@ -784,7 +789,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_permission_permission.to_polar(),
-            r#"has_permission(actor: Actor{}, "create_repo", org: Org{}) if has_permission(actor, "invite", org);"#
+            format!("has_permission(actor: {}{{}}, \"create_repo\", org: Org{{}}) if has_permission(actor, \"invite\", org);", ACTOR_UNION_NAME),
         );
     }
 
@@ -800,13 +805,13 @@ mod tests {
         let org_declarations = index_declarations(Some(org_roles), None, None, &org_resource);
         let mut blocks = ResourceBlocks::new();
         blocks.add(
-            EntityType::Resource,
+            BlockType::Resource,
             repo_resource,
             repo_declarations.unwrap(),
             vec![],
         );
         blocks.add(
-            EntityType::Resource,
+            BlockType::Resource,
             org_resource,
             org_declarations.unwrap(),
             vec![],
@@ -820,7 +825,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            r#"has_role(actor: Actor{}, "reader", repo: Repo{}) if has_relation(org, "parent", repo) and has_role(actor, "member", org);"#
+            format!("has_role(actor: {}{{}}, \"reader\", repo: Repo{{}}) if has_relation(org, \"parent\", repo) and has_role(actor, \"member\", org);", ACTOR_UNION_NAME),
         );
     }
 
@@ -1012,7 +1017,7 @@ mod tests {
 
         // Maximal block
         let block = ResourceBlock {
-            entity_type: EntityType::Resource,
+            block_type: BlockType::Resource,
             resource: term!(sym!("Repo")),
             roles: Some(term!(["writer", "reader"])),
             permissions: Some(term!(["push", "pull"])),
@@ -1170,7 +1175,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_block_entity_type() {
+    fn test_resource_block_types() {
         let p = Polar::new();
 
         expect_error(
@@ -1193,5 +1198,24 @@ mod tests {
             "on(actor, resource, roles, permissions, relations) if on(actor, resource, roles, permissions, relations);",
         )
         .unwrap();
+    }
+
+    // TODO(gj): test union types in all of the positions where classes can appear, such as in
+    // `new` expressions.
+
+    #[test]
+    #[ignore = "unimplemented"]
+    fn test_resource_block_union_types_are_not_constructable() {
+        let p = Polar::new();
+        let q = p.new_query(&format!("new {}()", ACTOR_UNION_NAME), false);
+        let msg = match q {
+            Err(error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::ResourceBlock { msg, .. }),
+                ..
+            }) => msg,
+            Err(e) => panic!("{}", e),
+            _ => panic!("succeeded when I should've failed"),
+        };
+        assert_eq!(msg, "hi");
     }
 }
