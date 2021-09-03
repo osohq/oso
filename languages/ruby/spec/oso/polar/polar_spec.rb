@@ -946,7 +946,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
   # test rule types
   context 'Rule types' do # rubocop:disable Metrics/BlockLength
-    it 'subclass checks succeed' do
+    it 'subclass checks succeed' do # rubocop:disable Metrics/BlockLength
       stub_const('Foo', Class.new)
       stub_const('Bar', Class.new(Foo))
       stub_const('Baz', Class.new(Bar))
@@ -957,27 +957,30 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.register_class(Foo, name: 'Foo')
       subject.register_class(Bad, name: 'Bad')
 
-      p = ''"
-      type f(_x: Integer);
-      f(1);
-      "''
+      p = <<~POLAR
+        type f(_x: Integer);
+        f(1);
+      POLAR
+
       subject.load_str(p)
 
-      p = ''"
-      type f(_x: Foo);
-      type f(_x: Foo, _y: Bar);
-      f(_x: Bar);
-      f(_x: Baz);
-      "''
+      p = <<~POLAR
+        type f(_x: Foo);
+        type f(_x: Foo, _y: Bar);
+        f(_x: Bar);
+        f(_x: Baz);
+      POLAR
+
       subject.load_str(p)
       subject.clear_rules
 
       # Test with fields
-      p = ''"
-      type f(_x: Foo{id: 1});
-      f(_x: Bar{id: 1});
-      f(_x: Baz{id: 1});
-      "''
+      p = <<~POLAR
+        type f(_x: Foo{id: 1});
+        f(_x: Bar{id: 1});
+        f(_x: Baz{id: 1});
+      POLAR
+
       subject.load_str(p)
 
       # Should raise error
@@ -986,9 +989,10 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.clear_rules
 
       # Test invalid rule prototype
-      p = ''"
-      type f(x: Foo, x.baz);
-      "''
+      p = <<~POLAR
+        type f(x: Foo, x.baz);
+      POLAR
+
       # Should raise error
       expect { subject.load_str(p) }.to raise_error Oso::Polar::ValidationError
     end

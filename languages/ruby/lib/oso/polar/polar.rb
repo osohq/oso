@@ -176,7 +176,7 @@ module Oso
       def load_str(str, filename: nil) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
-        self.host.register_mros()
+        host.register_mros
 
         ffi_polar.load(str, filename: filename)
         loop do

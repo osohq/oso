@@ -110,7 +110,7 @@ module Oso
         name
       end
 
-      def register_mros
+      def register_mros # rubocop:disable Metrics/AbcSize
         types.values.uniq.each do |typ|
           mro = []
           typ.klass.get.ancestors.each do |a|

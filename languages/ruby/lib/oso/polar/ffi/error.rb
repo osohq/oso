@@ -146,7 +146,6 @@ module Oso
           ::Oso::Polar::RolesValidationError.new(msg, details: details)
         end
 
-
         # Map FFI Validation errors into Ruby exceptions.
         #
         # @param msg [String]
