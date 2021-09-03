@@ -254,7 +254,6 @@ func TestRulePrototypes(t *testing.T) {
 	o.RegisterClass(reflect.TypeOf(Company{}), nil)
 
 	o.LoadString("type is_actor(_actor: Actor);")
-	o.LoadString("is_actor(_actor: Actor);")
 
 	if err = o.LoadString("is_actor(_actor: Actor);"); err != nil {
 		t.Fatalf("Load string failed: %v", err)
