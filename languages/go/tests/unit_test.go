@@ -239,3 +239,29 @@ func TestExpressionError(t *testing.T) {
 		t.Error("Does not contain unbound in error message.")
 	}
 }
+
+func TestRulePrototypes(t *testing.T) {
+	var o oso.Oso
+	var err error
+	var msg string
+
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	o.RegisterClass(reflect.TypeOf(Actor{}), nil)
+	o.RegisterClass(reflect.TypeOf(Widget{}), nil)
+	o.RegisterClass(reflect.TypeOf(Company{}), nil)
+
+	o.LoadString("type is_actor(_actor: Actor);")
+
+	if err = o.LoadString("is_actor(_actor: Actor);"); err != nil {
+		t.Fatalf("Load string failed: %v", err)
+	}
+
+	if err = o.LoadString("is_actor(_actor: Widget);"); err == nil {
+		t.Fatalf("Failed to raise validation error.")
+	} else if msg = err.Error(); !strings.Contains(msg, "Invalid rule") {
+		t.Fatalf("Incorrect error message: %v", msg)
+	}
+}
