@@ -95,7 +95,6 @@ class DooDad(Widget):
 
 
 @dataclass
-@polar_class
 class Actor:
     name: str = ""
     id: int = 0
