@@ -2681,9 +2681,6 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
-    // TODO(gj): how to distinguish `Actor` and `Resource` unions from user-defined classes named
-    // `Actor` and `Resource`?
-
     /// Succeed if `left` is more specific than `right` with respect to `args`.
     #[allow(clippy::ptr_arg)]
     fn is_more_specific(&mut self, left: &Rule, right: &Rule, args: &TermList) -> PolarResult<()> {

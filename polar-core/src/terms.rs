@@ -454,7 +454,6 @@ impl Term {
         }
     }
 
-    // TODO(gj): what happens if the user registers a class as `Actor` or `Resource`?
     pub fn is_actor_union(&self) -> bool {
         matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | Value::Variable(tag) if tag.0 == ACTOR_UNION_NAME)
     }

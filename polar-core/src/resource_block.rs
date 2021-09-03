@@ -593,10 +593,25 @@ fn is_registered_class(kb: &KnowledgeBase, term: &Term) -> PolarResult<bool> {
     Ok(kb.is_constant(term.value().as_symbol()?))
 }
 
-fn check_that_block_resource_is_registered_as_a_class(
+fn check_that_block_type_is_not_already_registered(
     kb: &KnowledgeBase,
+    block_type: &BlockType,
     resource: &Term,
 ) -> PolarResult<()> {
+    let union_name = match block_type {
+        BlockType::Actor => ACTOR_UNION_NAME,
+        BlockType::Resource => RESOURCE_UNION_NAME,
+    };
+    let already_registered = is_registered_class(kb, &term!(sym!(union_name)))?;
+    if already_registered {
+        let msg = format!("Cannot declare '{} {} {{ ... }}'; '{}' already registered as a constant. To resolve this conflict, please register '{}' under a different name.", block_type.to_polar(), resource.to_polar(), union_name, union_name);
+        let (loc, ranges) = (resource.offset(), vec![]);
+        return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
+    }
+    Ok(())
+}
+
+fn check_that_block_resource_is_registered(kb: &KnowledgeBase, resource: &Term) -> PolarResult<()> {
     if !is_registered_class(kb, resource)? {
         // TODO(gj): better error message
         let msg = format!(
@@ -654,7 +669,11 @@ fn check_that_shorthand_rule_heads_are_declared_locally(
 impl ResourceBlock {
     pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> PolarResult<()> {
         let mut errors = vec![];
-        errors.extend(check_that_block_resource_is_registered_as_a_class(kb, &self.resource).err());
+        errors.extend(
+            check_that_block_type_is_not_already_registered(kb, &self.block_type, &self.resource)
+                .err(),
+        );
+        errors.extend(check_that_block_resource_is_registered(kb, &self.resource).err());
         errors
             .extend(check_for_duplicate_resource_blocks(&kb.resource_blocks, &self.resource).err());
 
@@ -831,7 +850,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_block_must_be_registered_as_a_class() {
+    fn test_resource_block_resource_must_be_registered() {
         let p = Polar::new();
         let valid_policy = "resource Org{}";
         expect_error(
@@ -1255,5 +1274,12 @@ mod tests {
         );
         let next_event = query.unwrap().next_event().unwrap();
         assert!(matches!(next_event, QueryEvent::Result { .. }));
+    }
+
+    #[test]
+    fn test_union_type_cannot_be_registered() {
+        let polar = Polar::new();
+        polar.register_constant(sym!(ACTOR_UNION_NAME), term!("unimportant"));
+        expect_error(&polar, "actor User {}", "Cannot declare 'actor User { ... }'; 'Actor' already registered as a constant. To resolve this conflict, please register 'Actor' under a different name.")
     }
 }
