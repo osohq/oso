@@ -107,6 +107,10 @@ impl PolarError {
 
         self
     }
+
+    pub fn unimplemented(msg: String) -> Self {
+        OperationalError::Unimplemented(msg).into()
+    }
 }
 
 impl From<ParseError> for PolarError {
@@ -164,6 +168,12 @@ impl From<ValidationError> for PolarError {
 }
 
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
+
+impl<T> From<PolarError> for PolarResult<T> {
+    fn from(err: PolarError) -> Self {
+        Err(err)
+    }
+}
 
 impl std::error::Error for PolarError {}
 
