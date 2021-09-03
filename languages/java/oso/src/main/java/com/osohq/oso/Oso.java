@@ -40,7 +40,7 @@ public class Oso extends Polar {
    */
   public boolean isAllowed(Object actor, Object action, Object resource)
       throws Exceptions.OsoException {
-    return queryRule("allow", actor, action, resource).hasMoreElements();
+    return queryRuleOnce("allow", actor, action, resource);
   }
 
   /**
@@ -67,14 +67,7 @@ public class Oso extends Polar {
    * Return the allowed actions for the given actor and resource, if any. Explicitly allow or
    * disallow wildcard actions. If allowed, wildcard actions are represented as "*".
    *
-   * <pre>{@code
-   * Oso oso = new Oso();
-   * o.loadStr("allow(_actor, _action, _resource);");
-   * HashSet actions = o.getAllowedActions("guest", "widget", true);
-   * assert actions.contains("*");
-   * HashSet actions = o.getAllowedActions("guest", "widget", false);
-   * // OsoException is thrown
-   * }</pre>
+   * @deprecated Use `authorizedActions` instead.
    *
    * @param actor the actor performing the request
    * @param resource the resource being accessed
@@ -84,25 +77,7 @@ public class Oso extends Polar {
    */
   public HashSet<Object> getAllowedActions(Object actor, Object resource, boolean allowWildcard)
       throws Exceptions.OsoException {
-    return queryRule("allow", actor, new Variable("action"), resource).results().stream()
-        .map(
-            action -> {
-              if (action.get("action") instanceof Variable) {
-                if (!allowWildcard) {
-                  throw new Exceptions.OsoException(
-                      "\"The result of getAllowedActions contained an \"unconstrained\" action that"
-                          + " could represent any\n"
-                          + " action, but allowWildcard was set to false. To fix,\n"
-                          + " set allowWildcard to true and compare with the \"*\"\n"
-                          + " string.\"");
-                } else {
-                  return "*";
-                }
-              } else {
-                return action.get("action");
-              }
-            })
-        .collect(Collectors.toCollection(HashSet::new));
+    return authorizedActions(actor, resource, allowWildcard);
   }
 
   /**
@@ -131,16 +106,12 @@ public class Oso extends Polar {
 
     // Authorization failure. Determine whether to throw a NotFoundException or
     // a ForbiddenException.
-    boolean isNotFound = false;
-    if (action == readAction) {
-      isNotFound = true;
-    } else if (checkRead) {
-      boolean canRead = queryRuleOnce("allow", actor, readAction, resource);
-      if (!canRead) {
-        isNotFound = true;
+    if (checkRead) {
+      if (action == readAction || !queryRuleOnce("allow", actor, readAction, resource)) {
+        throw new Exceptions.NotFoundException();
       }
     }
-    throw isNotFound ? new Exceptions.NotFoundException() : new Exceptions.ForbiddenException();
+    throw new Exceptions.ForbiddenException();
   }
 
   public void authorize(Object actor, Object action, Object resource)

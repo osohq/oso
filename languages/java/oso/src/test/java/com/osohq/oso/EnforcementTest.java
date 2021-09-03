@@ -76,6 +76,8 @@ public class EnforcementTest {
 
     // With checkRead = false, returns a forbidden error
     assertThrows(
+        Exceptions.ForbiddenException.class, () -> oso.authorize(guest, "read", widget1, false));
+    assertThrows(
         Exceptions.ForbiddenException.class, () -> oso.authorize(guest, "update", widget1, false));
   }
 
