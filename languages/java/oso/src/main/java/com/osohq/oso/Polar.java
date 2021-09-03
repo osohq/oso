@@ -77,6 +77,7 @@ public class Polar {
    * @param filename Name of the source file.
    */
   public void loadStr(String str, String filename) throws Exceptions.OsoException {
+    host.registerMros();
     ffiPolar.load(str, filename);
     checkInlineQueries();
   }
@@ -87,6 +88,7 @@ public class Polar {
    * @param str Polar string to be loaded.
    */
   public void loadStr(String str) throws Exceptions.OsoException {
+    host.registerMros();
     ffiPolar.load(str, null);
     checkInlineQueries();
   }

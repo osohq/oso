@@ -378,18 +378,22 @@ impl fmt::Display for RuntimeError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationalError {
-    Unimplemented(String),
+    Unimplemented {
+        msg: String,
+    },
     Unknown,
 
     /// An invariant has been broken internally.
-    InvalidState(String),
+    InvalidState {
+        msg: String,
+    },
 }
 
 impl fmt::Display for OperationalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Unimplemented(s) => write!(f, "{} is not yet implemented", s),
-            Self::InvalidState(s) => write!(f, "Invalid state: {}", s),
+            Self::Unimplemented { msg } => write!(f, "{} is not yet implemented", msg),
+            Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::Unknown => write!(
                 f,
                 "We hit an unexpected error.\n\
