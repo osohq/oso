@@ -1410,4 +1410,8 @@ mod tests {
         // kb.add_rule(rule!("f", ["x"; 1]));
         // assert!(kb.validate_rules().is_ok());
     }
+
+    // TODO(gj): add test for union pattern with fields. Behavior will probably be the same as for
+    // fieldless union pattern where we create a choicepoint of matches against every union member
+    // with the same set of fields.
 }
