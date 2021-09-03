@@ -34,6 +34,7 @@ class UserType:
 
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
+
     types: Dict[Union[str, type], UserType]
 
     def __init__(
@@ -89,7 +90,8 @@ class Host:
 
     def distinct_user_types(self):
         return map(
-            lambda k: self.types[k], filter(lambda k: isinstance(k, str), self.types.keys())
+            lambda k: self.types[k],
+            filter(lambda k: isinstance(k, str), self.types.keys()),
         )
 
     def cache_class(
