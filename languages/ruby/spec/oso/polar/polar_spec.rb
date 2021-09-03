@@ -972,6 +972,10 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       POLAR
 
       subject.load_str(p)
+
+      # Should raise error
+      expect { subject.load_str('f(_x: Bad);') }.to raise_error Oso::Polar::ValidationError
+
       subject.clear_rules
 
       # Test with fields
@@ -984,7 +988,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.load_str(p)
 
       # Should raise error
-      expect { subject.load_str('f(_x: Bad);') }.to raise_error Oso::Polar::ValidationError
+      expect { subject.load_str('f(_x: Baz);') }.to raise_error Oso::Polar::ValidationError
 
       subject.clear_rules
 
