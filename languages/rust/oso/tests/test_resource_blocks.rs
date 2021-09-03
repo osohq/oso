@@ -71,7 +71,7 @@ fn roles_test_oso() -> OsoTest {
 }
 
 #[test]
-fn test_polar_roles() {
+fn test_resource_blocks() {
     common::setup();
     let mut test = roles_test_oso();
     let pol = r#"

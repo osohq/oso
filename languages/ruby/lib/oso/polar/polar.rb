@@ -34,7 +34,7 @@ module Oso
       # @return [Host]
       attr_reader :host
 
-      def initialize # rubocop:disable Metrics/MethodLength
+      def initialize
         @ffi_polar = FFI::Polar.create
         @host = Host.new(ffi_polar)
         @ffi_polar.enrich_message = @host.method(:enrich_message)
@@ -135,7 +135,7 @@ module Oso
       # @raise [InlineQueryFailedError] on the first failed inline query.
       # @raise [Error] if any of the FFI calls raise one.
       # @return [self] for chaining.
-      def load_str(str, filename: nil) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+      def load_str(str, filename: nil)
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
         ffi_polar.load(str, filename: filename)

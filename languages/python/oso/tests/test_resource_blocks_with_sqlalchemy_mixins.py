@@ -125,7 +125,7 @@ def sample_data(init_oso):
     return objs
 
 
-def test_roles_integration(init_oso, sample_data):
+def test_resource_blocks_with_sqlalchemy_mixins(init_oso, sample_data):
     oso, session = init_oso
 
     policy = """

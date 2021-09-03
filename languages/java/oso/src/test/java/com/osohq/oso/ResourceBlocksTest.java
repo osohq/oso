@@ -8,7 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class PolarRolesTest {
+public class ResourceBlocksTest {
   protected Polar p;
 
   public static class Org {
@@ -90,7 +90,7 @@ public class PolarRolesTest {
   }
 
   @Test
-  public void testPolarRoles() {
+  public void testResourceBlocks() {
     Org osohq = new Org("osohq"), apple = new Org("apple");
     Repo oso = new Repo("oso", osohq), ios = new Repo("ios", apple);
     Issue bug = new Issue("bug", oso), laggy = new Issue("laggy", ios);
