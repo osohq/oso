@@ -117,11 +117,11 @@ class Host:
     def register_mros(self):
         """Register the MRO of each registered class to be used for rule prototype validation."""
         # Get MRO of all registered classes
-        for rec in self.host.distinct_user_types():
+        for rec in self.distinct_user_types():
             mro = [
-                self.host.types[c].id
+                self.types[c].id
                 for c in inspect.getmro(rec.cls)
-                if c in self.host.types
+                if c in self.types
             ]
             self.ffi_polar.register_mro(rec.name, mro)
 
