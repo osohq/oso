@@ -1,6 +1,5 @@
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Model
-from polar.exceptions import UnsupportedError
 
 from .oso import Oso, polar_model_name
 from polar.partial import TypeConstraint
