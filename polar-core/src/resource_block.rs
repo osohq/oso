@@ -1282,4 +1282,132 @@ mod tests {
         polar.register_constant(sym!(ACTOR_UNION_NAME), term!("unimportant"));
         expect_error(&polar, "actor User {}", "Cannot declare 'actor User { ... }'; 'Actor' already registered as a constant. To resolve this conflict, please register 'Actor' under a different name.")
     }
+
+    #[test]
+    fn test_validate_rules_with_union_type_specializers() {
+        let mut kb = KnowledgeBase::new();
+        kb.constant(
+            sym!("Fruit"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 1,
+                constructor: None,
+                repr: None
+            })),
+        );
+        kb.constant(
+            sym!("Citrus"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 2,
+                constructor: None,
+                repr: None
+            })),
+        );
+        kb.constant(
+            sym!("Orange"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 3,
+                constructor: None,
+                repr: None
+            })),
+        );
+        kb.add_mro(sym!("Fruit"), vec![1]).unwrap();
+        // Citrus is a subclass of Fruit
+        kb.add_mro(sym!("Citrus"), vec![2, 1]).unwrap();
+        // Orange is a subclass of Citrus
+        kb.add_mro(sym!("Orange"), vec![3, 2, 1]).unwrap();
+
+        kb.constant(
+            sym!("User"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 4,
+                constructor: None,
+                repr: None
+            })),
+        );
+        kb.add_mro(sym!("User"), vec![4]).unwrap();
+
+        // Add member to 'Resource' union.
+        kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
+        // Add member to 'Actor' union.
+        kb.resource_blocks.actors.insert(term!(sym!("User")));
+
+        // Union matches union.
+        kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        kb.add_rule(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        assert!(kb.validate_rules().is_ok());
+
+        // TODO(gj): revisit when we have unions beyond Actor & Resource. Union A matches
+        // union B if union A is a member of union B.
+        //
+        // Union A does not match union B.
+        kb.clear_rules();
+        kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        kb.add_rule(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
+        assert!(matches!(
+            kb.validate_rules().unwrap_err(),
+            PolarError {
+                kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
+                ..
+            }
+        ));
+
+        // Member of union matches union.
+        kb.clear_rules();
+        kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        kb.add_rule(rule!("f", ["x"; instance!(sym!("Citrus"))]));
+        assert!(kb.validate_rules().is_ok());
+
+        // TODO(gj): revisit when we have unions beyond Actor & Resource. Member of union A matches
+        // union B if union A is a member of union B.
+        //
+        // Member of union A does not match union B.
+        kb.clear_rules();
+        kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
+        kb.add_rule(rule!("f", ["x"; instance!(sym!("Citrus"))]));
+        assert!(matches!(
+            kb.validate_rules().unwrap_err(),
+            PolarError {
+                kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
+                ..
+            }
+        ));
+
+        // Subclass of member of union matches union.
+        kb.clear_rules();
+        kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
+        assert!(kb.validate_rules().is_ok());
+
+        // Superclass of member of union does not match union.
+        kb.clear_rules();
+        kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
+        assert!(matches!(
+            kb.validate_rules().unwrap_err(),
+            PolarError {
+                kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
+                ..
+            }
+        ));
+
+        // TODO(gj): revisit when we have unions beyond Actor & Resource. Not currently possible to
+        // have an instance of a member of a union as a specializer until we have true unions where
+        // we could define, e.g., `type MyUnion = Integer;`
+        //
+        // Instance of member of union matches union.
+        // kb.clear_rules();
+        // kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        // kb.add_rule(rule!("f", ["x"; 1]));
+        // assert!(kb.validate_rules().is_ok());
+
+        // TODO(gj): revisit when we have unions beyond Actor & Resource. Not currently possible to
+        // have an instance of a member of a union as a specializer until we have true unions where
+        // we could define, e.g., `type MyUnion = Integer;`
+        //
+        // Instance of subclass of member of union matches union.
+        // kb.clear_rules();
+        // kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        // kb.add_rule(rule!("f", ["x"; 1]));
+        // assert!(kb.validate_rules().is_ok());
+    }
 }

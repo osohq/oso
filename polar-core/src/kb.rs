@@ -187,6 +187,73 @@ impl KnowledgeBase {
                     } else {
                         RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match prototype specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, prototype_instance.to_polar()))
                     }
+                } else if self.is_union(&term!(sym!(&prototype_instance.tag.0))) {
+                    if self.is_union(&term!(sym!(&rule_instance.tag.0))) {
+                        // If both specializers are the same union, check fields.
+                        if rule_instance.tag == prototype_instance.tag {
+                            if self.param_fields_match(
+                                &prototype_instance.fields,
+                                &rule_instance.fields,
+                            ) {
+                                return Ok(RuleParamMatch::True);
+                            } else {
+                                return Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match prototype specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, prototype_instance.to_polar())));
+                            }
+                        } else {
+                            // TODO(gj): revisit when we have unions beyond Actor & Resource. Union
+                            // A matches union B if union A is a member of union B.
+                            return Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} does not match prototype specializer {}", rule_instance.tag, index, prototype_instance.tag)));
+                        }
+                    }
+
+                    let members = self.get_union_members(&term!(sym!(&prototype_instance.tag.0)));
+                    if !members.contains(&term!(sym!(&rule_instance.tag.0))) {
+                        let member_checks = members.iter().map(|member| {
+                            if let Some(Value::ExternalInstance(ExternalInstance {
+                                instance_id,
+                                ..
+                            })) = self
+                                .constants
+                                .get(member.value().as_symbol().unwrap())
+                                .map(|t| t.value())
+                            {
+                                if let Some(rule_mro) = self.mro.get(&rule_instance.tag) {
+                                    if !rule_mro.contains(instance_id) {
+                                        Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} must be a subclass of prototype specializer {}", rule_instance.tag,index, prototype_instance.tag)))
+                                    } else if !self.param_fields_match(&prototype_instance.fields, &rule_instance.fields) {
+                                        Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match prototype specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, prototype_instance.to_polar())))
+                                    } else {
+                                        Ok(RuleParamMatch::True)
+                                    }
+                                } else {
+                                    Err(error::OperationalError::InvalidState(format!(
+                                            "All registered classes must have a registered MRO. Class {} does not have a registered MRO.",
+                                            &rule_instance.tag
+                                        )).into())
+                                }
+                            } else {
+                                unreachable!("Unregistered specializer classes should be caught before this point.");
+                            }
+                        });
+
+                        let mut success = false;
+                        for check in member_checks {
+                            match check {
+                                Ok(RuleParamMatch::True) if !success => success = true,
+                                Err(e) => return Err(e),
+                                _ => (),
+                            }
+                        }
+
+                        if !success {
+                            return Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} must be a member of prototype specializer {}", rule_instance.tag,index, prototype_instance.tag)));
+                        }
+                    }
+                    if !self.param_fields_match(&prototype_instance.fields, &rule_instance.fields) {
+                        RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match prototype specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, prototype_instance.to_polar()))
+                    } else {
+                        RuleParamMatch::True
+                    }
                 // If tags don't match, then rule specializer must be a subclass of prototype specializer
                 } else if let Some(Value::ExternalInstance(ExternalInstance {
                     instance_id,
