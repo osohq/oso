@@ -93,9 +93,7 @@ export class Host {
     return this.clsNames.has(cls);
   }
 
-  getType(
-    cls: Class
-  ):
+  getType(cls: Class):
     | {
         name: string;
         id: number;
@@ -205,6 +203,26 @@ export class Host {
     }
     this.#instances.set(instanceId, instance);
     return instanceId;
+  }
+
+  /**
+   * Register the MROs of all classes that are registered on `this`.
+   */
+  registerMros() {
+    // Get MRO of all registered classes
+    // NOTE: not ideal that the MRO gets updated each time loadStr is
+    // called, but since we are planning to move to only calling load once
+    // with the include feature, I think it's okay for now.
+    for (const typ of this.distinctUserTypes()) {
+      // Get MRO for type.
+      const mro = ancestors(typ.cls)
+        // TODO: as conversion ok?
+        .map(c => this.getType(c as Class)?.id)
+        .filter(id => !!id);
+
+      // Register with core.
+      this.#ffiPolar.registerMro(typ.name, mro);
+    }
   }
 
   /**

@@ -152,20 +152,7 @@ export class Polar {
    * Load a Polar policy string.
    */
   async loadStr(contents: string, name?: string): Promise<void> {
-    // Get MRO of all registered classes
-    // NOTE: not ideal that the MRO gets updated each time loadStr is
-    // called, but since we are planning to move to only calling load once
-    // with the include feature, I think it's okay for now.
-    for (const typ of this.#host.distinctUserTypes()) {
-      // Get MRO for type.
-      const mro = ancestors(typ.cls)
-        // TODO: as conversion ok?
-        .map(c => this.#host.getType(c as Class)?.id)
-        .filter(id => !!id);
-
-      // Register with core.
-      this.#ffiPolar.registerMro(typ.name, mro);
-    }
+    this.#host.registerMros();
 
     this.#ffiPolar.load(contents, name);
     this.processMessages();
