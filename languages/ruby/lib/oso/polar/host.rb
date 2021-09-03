@@ -114,7 +114,7 @@ module Oso
         types.values.uniq.each do |typ|
           mro = []
           typ.klass.get.ancestors.each do |a|
-            mro.append(types[a].id) if types.key?(a)
+            mro.push(types[a].id) if types.key?(a)
           end
           ffi_polar.register_mro(typ.name, mro)
         end
