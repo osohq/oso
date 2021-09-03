@@ -213,7 +213,7 @@ export class Polar {
       const source = query.source();
       const { results } = new Query(query, this.#host);
       const { done } = await results.next();
-      results.return();
+      await results.return();
       if (done) throw new InlineQueryFailedError(source);
     }
 
@@ -255,6 +255,16 @@ export class Polar {
    */
   queryRule(name: string, ...args: unknown[]): QueryResult {
     return this.query(new Predicate(name, args));
+  }
+
+  /**
+   * Query for a Polar rule, returning true if there are any results.
+   */
+  async queryRuleOnce(name: string, ...args: unknown[]): Promise<boolean> {
+    const results = this.query(new Predicate(name, args));
+    const { done } = await results.next();
+    await results.return();
+    return !done;
   }
 
   /**
