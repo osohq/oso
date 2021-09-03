@@ -156,6 +156,7 @@ export class Host {
         existing,
       });
     this.#classes.set(clsName, cls);
+    this.#classIds.set(clsName, this.cacheInstance(cls, undefined));
     return clsName;
   }
 
@@ -391,7 +392,13 @@ export class Host {
         );
         return { value: { Dictionary: { fields } } };
       default:
-        const instance_id = this.cacheInstance(v);
+        // TODO (dhatch): Reliable check that this is a class?
+        let instanceId = undefined;
+        if (v instanceof Function) {
+          instanceId = this.#classIds.get(v.name);
+        }
+
+        const instance_id = this.cacheInstance(v, instanceId);
         return {
           value: {
             ExternalInstance: {

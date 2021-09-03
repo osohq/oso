@@ -153,7 +153,7 @@ export class Polar {
    */
   async loadStr(contents: string, name?: string): Promise<void> {
     // Get MRO of all registered classes
-    // NOTE: not ideal that the MRO gets updated each time load_str is
+    // NOTE: not ideal that the MRO gets updated each time loadStr is
     // called, but since we are planning to move to only calling load once
     // with the include feature, I think it's okay for now.
     for (const typ of this.#host.distinctUserTypes()) {
