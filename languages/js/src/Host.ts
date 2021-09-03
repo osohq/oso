@@ -89,6 +89,54 @@ export class Host {
     return cls;
   }
 
+  isRegisteredType(cls: Class): boolean {
+    return this.clsNames.has(cls);
+  }
+
+  getType(
+    cls: Class
+  ):
+    | {
+        name: string;
+        id: number;
+        cls: Class;
+      }
+    | undefined {
+    const name = this.clsNames.get(cls);
+    if (name === undefined) return undefined;
+
+    return {
+      name: name,
+      id: this.#classIds.get(name)!,
+      cls,
+    };
+  }
+
+  /**
+   * Return user types that are registered with Host.
+   */
+  *distinctUserTypes(): IterableIterator<{
+    name: string;
+    id: number;
+    cls: Class;
+  }> {
+    // TODO: Use UserType object once this is brought in line with Python.
+    for (const entry of this.#classIds.entries()) {
+      const cls = this.#classes.get(entry[0]);
+      if (typeof cls === 'undefined') {
+        throw new Error('cls should not be undefined.');
+      }
+
+      const entryWithClass = {
+        name: entry[0],
+        id: entry[1],
+        cls,
+      };
+
+      yield entryWithClass;
+    }
+  }
+
   /**
    * Store a JavaScript class in the class cache.
    *

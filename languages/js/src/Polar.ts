@@ -14,7 +14,14 @@ import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
 import { Class, Dict, obj, Options, QueryResult } from './types';
-import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
+import {
+  ancestors,
+  isConstructor,
+  printError,
+  PROMPT,
+  readFile,
+  repr,
+} from './helpers';
 import { Variable } from './Variable';
 import { Expression } from './Expression';
 import type { PolarOperator } from './types';
@@ -145,6 +152,21 @@ export class Polar {
    * Load a Polar policy string.
    */
   async loadStr(contents: string, name?: string): Promise<void> {
+    // Get MRO of all registered classes
+    // NOTE: not ideal that the MRO gets updated each time load_str is
+    // called, but since we are planning to move to only calling load once
+    // with the include feature, I think it's okay for now.
+    for (const typ of this.#host.distinctUserTypes()) {
+      // Get MRO for type.
+      const mro = ancestors(typ.cls)
+        // TODO: as conversion ok?
+        .map(c => this.#host.getType(c as Class)?.id)
+        .filter(id => !!id);
+
+      // Register with core.
+      this.#ffiPolar.registerMro(typ.name, mro);
+    }
+
     this.#ffiPolar.load(contents, name);
     this.processMessages();
 
