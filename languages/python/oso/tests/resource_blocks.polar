@@ -1,6 +1,8 @@
 allow(actor, action, resource) if
   has_permission(actor, action, resource);
 
+actor User {}
+
 has_role(actor, role, resource) if
   actor.has_role_for_resource(name: role, resource: resource);
 
