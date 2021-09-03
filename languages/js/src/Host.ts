@@ -89,10 +89,9 @@ export class Host {
     return cls;
   }
 
-  isRegisteredType(cls: Class): boolean {
-    return this.clsNames.has(cls);
-  }
-
+  /**
+   * Get user type for `cls`.
+   */
   getType(cls: Class):
     | {
         name: string;
@@ -100,6 +99,7 @@ export class Host {
         cls: Class;
       }
     | undefined {
+    // TODO: Update when adding user type.
     const name = this.clsNames.get(cls);
     if (name === undefined) return undefined;
 
