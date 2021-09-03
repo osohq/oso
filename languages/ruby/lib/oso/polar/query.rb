@@ -18,7 +18,7 @@ module Oso
         bindings.each { |k, v| ffi_query.bind k, host.to_polar(v) }
       end
 
-      # Create a generator that can be polled to advance the query loop. Yields
+      # Create an enumerator that can be polled to advance the query loop. Yields
       # results one by one.
       #
       # @yieldparam [Hash<String, Object>]
