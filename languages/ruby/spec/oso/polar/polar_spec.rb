@@ -943,4 +943,55 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect { subject.load_str invalid }.to raise_error Oso::Polar::RolesValidationError
     end
   end
+
+  # test rule types
+  context 'Rule types' do # rubocop:disable Metrics/BlockLength
+    it 'subclass checks succeed' do
+
+      stub_const('Foo', Class.new)
+      stub_const('Bar', Class.new(Foo))
+      stub_const('Baz', Class.new(Bar))
+      stub_const('Bad', Class.new)
+
+      subject.register_class(Baz)
+      subject.register_class(Bar)
+      subject.register_class(Foo)
+      subject.register_class(Bad)
+
+      p = """
+      type f(_x: Integer);
+      f(1);
+      """
+      subject.load_str(p)
+
+      p = """
+      type f(_x: Foo);
+      type f(_x: Foo, _y: Bar);
+      f(_x: Bar);
+      f(_x: Baz);
+      """
+      subject.load_str(p)
+      subject.clear_rules()
+
+      # Test with fields
+      p = """
+      type f(_x: Foo{id: 1});
+      f(_x: Bar{id: 1});
+      f(_x: Baz{id: 1});
+      """
+      subject.load_str(p)
+
+      # Should raise error
+      expect { subject.load_str("f(_x: Bad);") }.to raise_error Oso::Polar::ValidationError
+
+      subject.clear_rules()
+
+      # Test invalid rule prototype
+      p = """
+      type f(x: Foo, x.baz);
+      """
+      # Should raise error
+      expect { subject.load_str(p) }.to raise_error Oso::Polar::ValidationError
+    end
+  end
 end
