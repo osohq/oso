@@ -554,6 +554,8 @@ export type obj = { [key: string]: any };
  */
 export type EqualityFn = (x: any, y: any) => boolean;
 
+export type CustomError = new (...args: any[]) => Error;
+
 /**
  * Functions of one or two arguments.
  */
@@ -565,6 +567,21 @@ export type BinaryFn = (x: any, y: any) => any;
  */
 export interface Options {
   equalityFn?: EqualityFn;
+  /**
+   * Optionally override the "not found" error class thrown by `authorize`.
+   * Defaults to {@link NotFoundError}.
+   */
+  notFoundError?: CustomError;
+  /**
+   * Optionally override the "forbidden" error class thrown by the `authorize*`
+   * methods. Defaults to {@link ForbiddenError}.
+   */
+  forbiddenError?: CustomError;
+  /**
+   * The action used by the `authorize` method to determine whether an
+   * authorization failure should raise a `NotFoundError` or a `ForbiddenError`.
+   */
+  readAction?: unknown;
 }
 
 /**
