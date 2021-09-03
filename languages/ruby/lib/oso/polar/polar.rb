@@ -227,6 +227,16 @@ module Oso
         query(Predicate.new(name, args: args), host: host, bindings: bindings)
       end
 
+      # Query for a rule, returning true if it has any results.
+      #
+      # @param name [String]
+      # @param args [Array<Object>]
+      # @return [Boolean] indicating whether the query found at least one result.
+      # @raise [Error] if the FFI call raises one.
+      def query_rule_once(name, *args)
+        query_rule(name, *args).any?
+      end
+
       # Register a Ruby class with Polar.
       #
       # @param cls [Class] the class to register.

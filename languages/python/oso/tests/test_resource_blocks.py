@@ -79,7 +79,7 @@ class Team(Actor):
 
 def test_rebac(polar, is_allowed):
     [polar.register_class(c) for c in [User, Org, Repo, Issue]]
-    polar.load_file("tests/sugar.polar")
+    polar.load_file("tests/resource_blocks.polar")
 
     annie, dave, gabe, graham, leina, lito, sam, shraddha, stephie, steve, tim = [
         User() for _ in range(11)

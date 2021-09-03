@@ -58,7 +58,7 @@ impl PolarError {
                 | ParseError::ReservedWord { loc, .. }
                 | ParseError::DuplicateKey { loc, .. }
                 | ParseError::SingletonVariable { loc, .. }
-                | ParseError::ParseSugar { loc, .. } => {
+                | ParseError::ResourceBlock { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -79,8 +79,8 @@ impl PolarError {
             _ => {}
         }
 
-        // Augment ParseSugar errors with relevant snippets of parsed Polar policy.
-        if let ErrorKind::Parse(ParseError::ParseSugar {
+        // Augment ResourceBlock errors with relevant snippets of parsed Polar policy.
+        if let ErrorKind::Parse(ParseError::ResourceBlock {
             ref mut msg,
             ref ranges,
             ..
@@ -234,7 +234,7 @@ pub enum ParseError {
     AmbiguousAndOr {
         msg: String,
     },
-    ParseSugar {
+    ResourceBlock {
         loc: usize,
         msg: String,
         /// Set of source ranges to augment the error message with relevant snippets of the parsed
@@ -303,7 +303,7 @@ impl fmt::Display for ParseError {
                     name, name
                 )
             }
-            Self::AmbiguousAndOr { msg, .. } | Self::ParseSugar { msg, .. } => {
+            Self::AmbiguousAndOr { msg, .. } | Self::ResourceBlock { msg, .. } => {
                 write!(f, "{}", msg)
             }
         }
@@ -433,8 +433,7 @@ impl fmt::Display for RolesValidationError {
 pub enum ValidationError {
     InvalidRule { rule: String, msg: String },
     InvalidPrototype { prototype: String, msg: String },
-    Sugar { msg: String },
-    // TODO: add SingletonVariable and RolesValidationError
+    // TODO(lm|gj): add ResourceBlock, SingletonVariable, and RolesValidationError.
 }
 
 impl fmt::Display for ValidationError {
@@ -445,9 +444,6 @@ impl fmt::Display for ValidationError {
             }
             Self::InvalidPrototype { prototype, msg } => {
                 write!(f, "Invalid prototype: {} {}", prototype, msg)
-            }
-            Self::Sugar { msg } => {
-                write!(f, "{}", msg)
             }
         }
     }

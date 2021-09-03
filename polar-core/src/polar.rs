@@ -209,13 +209,13 @@ impl Polar {
                         }
                         kb.add_rule_prototype(prototype);
                     }
-                    parser::Line::Namespace(namespace) => {
-                        namespace.add_to_kb(kb)?;
+                    parser::Line::ResourceBlock(block) => {
+                        block.add_to_kb(kb)?;
                     }
                 }
             }
-            // Rewrite namespace implications _before_ validating rule prototypes.
-            kb.rewrite_implications()?;
+            // Rewrite shorthand rules in resource blocks before validating rule prototypes.
+            kb.rewrite_shorthand_rules()?;
             // check rules are valid against rule prototypes
             kb.validate_rules()?;
             Ok(warnings)

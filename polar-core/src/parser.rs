@@ -15,8 +15,8 @@ lalrpop_mod!(
 
 use super::error::{self, PolarResult};
 use super::lexer::{self, Lexer};
+use super::resource_block::ResourceBlock;
 use super::rules::*;
-use super::sugar::Namespace;
 use super::terms::*;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -24,7 +24,7 @@ pub enum Line {
     Rule(Rule),
     RulePrototype(Rule),
     Query(Term),
-    Namespace(Namespace),
+    ResourceBlock(ResourceBlock),
 }
 
 fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
