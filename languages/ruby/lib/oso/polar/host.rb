@@ -50,7 +50,7 @@ module Oso
 
     # Translate between Polar and the host language (Ruby).
     class Host # rubocop:disable Metrics/ClassLength
-      # @return [Hash<String, Class>]
+      # @return [Hash<String, UserType>]
       attr_reader :types
 
       protected
@@ -109,6 +109,20 @@ module Oso
         )
         name
       end
+
+      def register_mros()
+        types.values.uniq.each do |typ|
+          mro = []
+          typ.klass.get.ancestors.each do |a|
+            if types.key?(a)
+              mro.append(types[a].id)
+            end
+          end
+
+          ffi_polar.register_mro(typ.name, mro)
+        end
+      end
+
 
       # Check if an instance exists in the {#instances} cache.
       #
@@ -368,3 +382,4 @@ module Oso
     end
   end
 end
+
