@@ -110,19 +110,15 @@ module Oso
         name
       end
 
-      def register_mros()
+      def register_mros
         types.values.uniq.each do |typ|
           mro = []
           typ.klass.get.ancestors.each do |a|
-            if types.key?(a)
-              mro.append(types[a].id)
-            end
+            mro.append(types[a].id) if types.key?(a)
           end
-
           ffi_polar.register_mro(typ.name, mro)
         end
       end
-
 
       # Check if an instance exists in the {#instances} cache.
       #
@@ -307,7 +303,9 @@ module Oso
                     { 'Pattern' => { 'Instance' => { 'tag' => value.tag, 'fields' => dict['Dictionary'] } } }
                   end
                 else
-                  { 'ExternalInstance' => { 'instance_id' => cache_instance(value), 'repr' => nil } }
+                  instance_id = nil
+                  instance_id = types[value].id if value.is_a?(Class) && types.key?(value)
+                  { 'ExternalInstance' => { 'instance_id' => cache_instance(value, id: instance_id), 'repr' => nil } }
                 end
         { 'value' => value }
       end
@@ -382,4 +380,3 @@ module Oso
     end
   end
 end
-
