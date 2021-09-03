@@ -135,7 +135,7 @@ module Oso
       # @raise [InlineQueryFailedError] on the first failed inline query.
       # @raise [Error] if any of the FFI calls raise one.
       # @return [self] for chaining.
-      def load_str(str, filename: nil)
+      def load_str(str, filename: nil) # rubocop:disable Metrics/AbcSize
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
         host.register_mros
