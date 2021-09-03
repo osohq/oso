@@ -138,6 +138,8 @@ module Oso
       def load_str(str, filename: nil)
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
+        host.register_mros
+
         ffi_polar.load(str, filename: filename)
         loop do
           next_query = ffi_polar.next_inline_query

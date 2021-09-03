@@ -6,7 +6,7 @@ module Oso
   module Polar
     module FFI
       # Wrapper class for Polar FFI pointer + operations.
-      class Polar < ::FFI::AutoPointer
+      class Polar < ::FFI::AutoPointer # rubocop:disable Metrics/ClassLength
         attr_accessor :enrich_message
 
         Rust = Module.new do
@@ -21,6 +21,7 @@ module Oso
           attach_function :new_query_from_str, :polar_new_query, [FFI::Polar, :string, :uint32], FFI::Query
           attach_function :new_query_from_term, :polar_new_query_from_term, [FFI::Polar, :string, :uint32], FFI::Query
           attach_function :register_constant, :polar_register_constant, [FFI::Polar, :string, :string], :int32
+          attach_function :register_mro, :polar_register_mro, [FFI::Polar, :string, :string], :int32
           attach_function :next_message, :polar_next_polar_message, [FFI::Polar], FFI::Message
           attach_function :free, :polar_free, [FFI::Polar], :int32
           attach_function(
@@ -114,6 +115,14 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def register_constant(value, name:)
           registered = Rust.register_constant(self, name, JSON.dump(value))
+          handle_error if registered.zero?
+        end
+
+        # @param name [String]
+        # @param mro [Array<Integer>]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def register_mro(name, mro)
+          registered = Rust.register_mro(self, name, JSON.dump(mro))
           handle_error if registered.zero?
         end
 
