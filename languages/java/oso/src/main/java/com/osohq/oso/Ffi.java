@@ -81,6 +81,10 @@ public class Ffi {
       return checkResult(polarLib.polar_register_constant(ptr, name, value));
     }
 
+    protected int registerMro(String name, String mro) throws Exceptions.OsoException {
+      return checkResult(polarLib.polar_register_mro(ptr, name, mro));
+    }
+
     protected Pointer nextMessage() throws Exceptions.OsoException {
       return polarLib.polar_next_polar_message(ptr);
     }
@@ -238,6 +242,8 @@ public class Ffi {
     int string_free(Pointer s);
 
     int polar_register_constant(Pointer polar_ptr, String name, String value);
+
+    int polar_register_mro(Pointer polar_ptr, String name, String mro);
 
     Pointer polar_next_polar_message(Pointer polar_ptr);
 
