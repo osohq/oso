@@ -68,7 +68,6 @@ public class Oso extends Polar {
    * disallow wildcard actions. If allowed, wildcard actions are represented as "*".
    *
    * @deprecated Use `authorizedActions` instead.
-   *
    * @param actor the actor performing the request
    * @param resource the resource being accessed
    * @param allowWildcard whether or not to allow wildcard actions
