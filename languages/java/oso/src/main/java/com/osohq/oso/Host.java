@@ -15,7 +15,7 @@ import org.json.JSONObject;
 public class Host implements Cloneable {
   private Ffi.Polar ffiPolar;
   private Map<String, Class<?>> classes;
-  private Map<Class<?>, Long> class_ids;
+  private Map<Class<?>, Long> classIds;
   private Map<Long, Object> instances;
 
   // Set to true to accept an expression from the core in toJava.
@@ -25,7 +25,7 @@ public class Host implements Cloneable {
     acceptExpression = false;
     ffiPolar = polarPtr;
     classes = new HashMap<String, Class<?>>();
-    class_ids = new HashMap<Class<?>, Long>();
+    classIds = new HashMap<Class<?>, Long>();
     instances = new HashMap<Long, Object>();
   }
 
@@ -33,7 +33,7 @@ public class Host implements Cloneable {
   public Host clone() {
     Host host = new Host(ffiPolar);
     host.classes.putAll(classes);
-    host.class_ids.putAll(class_ids);
+    host.classIds.putAll(classIds);
     host.instances.putAll(instances);
     host.acceptExpression = acceptExpression;
     return host;
@@ -64,7 +64,7 @@ public class Host implements Cloneable {
           name, classes.get(name).getName(), cls.getName());
     }
     classes.put(name, cls);
-    class_ids.put(cls, cacheInstance(cls, null));
+    classIds.put(cls, cacheInstance(cls, null));
     return name;
   }
 
@@ -78,7 +78,7 @@ public class Host implements Cloneable {
       Class<?> scls = cls.getValue().getSuperclass();
       List<Long> mro = new ArrayList<Long>();
       while (scls != null) {
-        Long id = class_ids.get(scls);
+        Long id = classIds.get(scls);
         if (id != null) mro.add(id);
         scls = scls.getSuperclass();
       }
@@ -272,14 +272,14 @@ public class Host implements Cloneable {
       }
     } else {
       JSONObject attrs = new JSONObject();
-      Long instance_id = null;
+      Long instanceId = null;
 
       // if the object is a Class, then it will already have an instance ID
       if (value instanceof Class) {
-        instance_id = class_ids.get(value);
+        instanceId = classIds.get(value);
       }
 
-      attrs.put("instance_id", cacheInstance(value, instance_id));
+      attrs.put("instance_id", cacheInstance(value, instanceId));
       attrs.put("repr", value == null ? "null" : value.toString());
       jVal.put("ExternalInstance", attrs);
     }
