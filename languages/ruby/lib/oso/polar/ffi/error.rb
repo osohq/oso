@@ -56,8 +56,6 @@ module Oso
             operational_error(subkind, msg: msg, details: details)
           when 'Parameter'
             api_error(subkind, msg: msg, details: details)
-          when 'RolesValidation'
-            validation_error(msg, details: details)
           end
         end
 
@@ -137,16 +135,6 @@ module Oso
           else
             ::Oso::Polar::ApiError.new(msg, details: details)
           end
-        end
-
-        # Map FFI Validation errors into Ruby exceptions.
-        #
-        # @param msg [String]
-        # @param details [Hash<String, Object>]
-        # @return [::Oso::Polar::ValidationError] the object converted into the expected format.
-        private_class_method def self.validation_error(msg, details:)
-          # This is currently the only type of validation error.
-          ::Oso::Polar::RolesValidationError.new(msg, details: details)
         end
       end
     end

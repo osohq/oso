@@ -31,21 +31,6 @@ def partial_policy():
     Oso.load_file(Path(__file__).parent / "partial.polar")
 
 
-@pytest.fixture
-def oso_with_polar_roles_enabled():
-    Oso.load_str(
-        'resource(_: String, "string", ["get"], _roles); actor_has_role_for_resource(_,_,_);'
-    )
-    Oso.enable_roles()
-    yield Oso
-    Oso.clear_rules()
-
-
-def test_cannot_use_data_filtering_if_polar_roles_enabled(oso_with_polar_roles_enabled):
-    with pytest.raises(UnsupportedError, match="Polar roles"):
-        authorize_model(None, None)
-
-
 def test_policy_autoload():
     """Test that policies are loaded from policy directory."""
     # These rules are added by the policies in the test app.

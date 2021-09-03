@@ -84,7 +84,6 @@ public class PolarRolesTest {
       p.registerClass(OrgRole.class, "OrgRole");
       p.registerClass(RepoRole.class, "RepoRole");
       p.loadFile("src/test/java/com/osohq/oso/roles_policy.polar");
-      p.enableRoles();
     } catch (Exceptions.OsoException e) {
       throw new Error(e);
     }
