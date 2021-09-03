@@ -25,7 +25,6 @@ mod partial;
 pub mod polar;
 mod resource_block;
 mod rewrites;
-pub mod roles_validation;
 pub mod rules;
 mod runnable;
 mod sources;

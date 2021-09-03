@@ -901,7 +901,6 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.register_class(RolesHelpers::Issue, name: 'Issue')
       subject.register_class(RolesHelpers::User, name: 'User')
       subject.load_file(roles_file)
-      subject.enable_roles
 
       expect(subject.query_rule('allow', leina, 'invite', osohq).to_a).not_to be_empty
 
@@ -925,22 +924,6 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).to be_empty
       gabe = RolesHelpers::User.new('gabe', [osohq_owner])
       expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).not_to be_empty
-    end
-
-    it 'roles config is revalidated when loading additional rules after enabling roles' do
-      subject.register_class RolesHelpers::Org, name: 'Org'
-      subject.register_class RolesHelpers::Repo, name: 'Repo'
-      valid = <<~POLAR
-        resource(_: Repo, "repo", ["read"], {});
-        actor_has_role_for_resource(_, _, _);
-      POLAR
-      invalid = <<~POLAR
-        resource(_: Org, "org", [], {});
-        actor_has_role_for_resource(_, _, _);
-      POLAR
-      subject.load_str valid
-      subject.enable_roles
-      expect { subject.load_str invalid }.to raise_error Oso::Polar::RolesValidationError
     end
   end
 

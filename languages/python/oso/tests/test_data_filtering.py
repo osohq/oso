@@ -620,59 +620,55 @@ def roles(oso):
     )
 
     policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = [
-            "invite",
-            "create_repo"
-        ] and
-        roles = {
-            member: {
-                permissions: ["create_repo"],
-                implies: ["repo:reader"]
-            },
-            owner: {
-                permissions: ["invite"],
-                implies: ["repo:writer", "member"]
-            }
-        };
+      allow(actor, action, resource) if
+        has_permission(actor, action, resource);
 
-    resource(_type: Repo, "repo", actions, roles) if
-        actions = [
-            "push",
-            "pull"
-        ] and
-        roles = {
-            writer: {
-                permissions: ["push", "issue:edit"],
-                implies: ["reader"]
-            },
-            reader: {
-                permissions: ["pull"]
-            }
-        };
+      has_role(user: User, name, resource) if
+        role in user.roles and
+        role.role = name and
+        role.resource_name = resource.name;
 
-    resource(_type: Issue, "issue", actions, {}) if
-        actions = [
-            "edit"
-        ];
+      actor User {}
 
-    parent_child(parent_org: Org, repo: Repo) if
-        repo.org = parent_org;
+      resource Org {
+        roles = [ "owner", "member" ];
+        permissions = [ "invite", "create_repo" ];
 
-    parent_child(parent_repo: Repo, issue: Issue) if
-        issue.repo = parent_repo;
+        "create_repo" if "member";
+        "invite" if "owner";
 
-    actor_has_role_for_resource(actor, role_name: String, resource) if
-        role in actor.roles and
-        role.resource_name = resource.name and
-        role.role = role_name;
+        "member" if "owner";
+      }
 
-    allow(actor, action, resource) if
-        role_allows(actor, action, resource);
+      resource Repo {
+        roles = [ "writer", "reader" ];
+        permissions = [ "push", "pull" ];
+        relations = { parent: Org };
+
+        "pull" if "reader";
+        "push" if "writer";
+
+        "reader" if "writer";
+
+        "reader" if "member" on "parent";
+        "writer" if "owner" on "parent";
+      }
+
+      has_relation(org: Org, "parent", repo: Repo) if
+        org = repo.org;
+
+      resource Issue {
+        permissions = [ "edit" ];
+        relations = { parent: Repo };
+
+        "edit" if "writer" on "parent";
+      }
+
+      has_relation(repo: Repo, "parent", issue: Issue) if
+        repo = issue.repo;
     """
 
     oso.load_str(policy)
-    oso.enable_roles()
     return {
         "apple": apple,
         "osohq": osohq,
