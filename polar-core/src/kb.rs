@@ -168,12 +168,16 @@ impl KnowledgeBase {
             .all(|v| v);
     }
 
+    /// Use MRO lists passed in from host library to determine if one `InstanceLiteral` pattern is
+    /// a subclass of another `InstanceLiteral` pattern. This function is used for Rule Type
+    /// validation.
     fn check_rule_instance_is_subclass_of_prototype_instance(
         &self,
         rule_instance: &InstanceLiteral,
         prototype_instance: &InstanceLiteral,
         index: usize,
     ) -> PolarResult<RuleParamMatch> {
+        // Get the unique ID of the prototype instance pattern class.
         if let Some(Value::ExternalInstance(ExternalInstance { instance_id, .. })) = self
             .constants
             .get(&prototype_instance.tag)
