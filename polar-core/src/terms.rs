@@ -455,16 +455,12 @@ impl Term {
     }
 
     // TODO(gj): what happens if the user registers a class as `Actor` or `Resource`?
-    pub fn is_union(&self) -> bool {
-        self.is_actor_union() || self.is_resource_union()
-    }
-
     pub fn is_actor_union(&self) -> bool {
-        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) if tag.0 == ACTOR_UNION_NAME)
+        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | Value::Variable(tag) if tag.0 == ACTOR_UNION_NAME)
     }
 
     pub fn is_resource_union(&self) -> bool {
-        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) if tag.0 == RESOURCE_UNION_NAME)
+        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | Value::Variable(tag) if tag.0 == RESOURCE_UNION_NAME)
     }
 }
 

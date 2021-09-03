@@ -624,6 +624,11 @@ impl KnowledgeBase {
         Ok(())
     }
 
+    pub fn is_union(&self, maybe_union: &Term) -> bool {
+        (!self.resource_blocks.actors.is_empty() && maybe_union.is_actor_union())
+            || (!self.resource_blocks.resources.is_empty() && maybe_union.is_resource_union())
+    }
+
     pub fn get_union_members(&self, union: &Term) -> &HashSet<Term> {
         if union.is_actor_union() {
             &self.resource_blocks.actors

@@ -694,6 +694,7 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
+    use crate::events::QueryEvent;
     use crate::parser::{parse_lines, Line};
     use crate::polar::Polar;
 
@@ -1217,5 +1218,42 @@ mod tests {
             _ => panic!("succeeded when I should've failed"),
         };
         assert_eq!(msg, "hi");
+    }
+
+    #[test]
+    fn test_union_type_matches() {
+        // When no unions exist, `Actor` is a regular variable.
+        let polar = Polar::new();
+        polar.register_constant(sym!(ACTOR_UNION_NAME), term!(1));
+        let query = polar.new_query(
+            &format!("{} matches {}", ACTOR_UNION_NAME, ACTOR_UNION_NAME),
+            false,
+        );
+        let next_event = query.unwrap().next_event().unwrap();
+        assert!(matches!(next_event, QueryEvent::ExternalIsa { .. }));
+
+        // When unions exist, `Actor matches Actor` because a union matches itself.
+        let polar = Polar::new();
+        polar.register_constant(sym!("User"), term!("unimportant"));
+        polar.load_str("actor User {}").unwrap();
+        let query = polar.new_query(
+            &format!("{} matches {}", ACTOR_UNION_NAME, ACTOR_UNION_NAME),
+            false,
+        );
+        let next_event = query.unwrap().next_event().unwrap();
+        assert!(matches!(next_event, QueryEvent::Result { .. }));
+
+        // When unions exist, `not Actor matches Resource` because a union doesn't match a
+        // different union.
+        let polar = Polar::new();
+        polar.register_constant(sym!("User"), term!("unimportant"));
+        polar.register_constant(sym!("Repo"), term!("unimportant"));
+        polar.load_str("actor User {} resource Repo {}").unwrap();
+        let query = polar.new_query(
+            &format!("not {} matches {}", ACTOR_UNION_NAME, RESOURCE_UNION_NAME),
+            false,
+        );
+        let next_event = query.unwrap().next_event().unwrap();
+        assert!(matches!(next_event, QueryEvent::Result { .. }));
     }
 }
