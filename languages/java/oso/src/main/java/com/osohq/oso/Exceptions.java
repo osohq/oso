@@ -101,10 +101,10 @@ public class Exceptions {
     }
   }
 
-  private static ValidationError validationError(String kind, String msg, Map<String, Object> details) {
+  private static ValidationError validationError(
+      String kind, String msg, Map<String, Object> details) {
     return new ValidationError(msg, details);
   }
-
 
   public static class OsoException extends RuntimeException {
     private Map<String, Object> details;
@@ -383,6 +383,4 @@ public class Exceptions {
       super(operation + " are unimplemented in the oso Java library");
     }
   }
-
-
 }
