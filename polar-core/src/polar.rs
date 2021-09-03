@@ -153,13 +153,14 @@ impl Polar {
         }
     }
 
-    pub fn load(&self, src: &str, filename: Option<String>) -> PolarResult<()> {
-        let source = Source {
-            filename,
-            src: src.to_owned(),
-        };
-        let mut kb = self.kb.write().unwrap();
-        let source_id = kb.add_source(source.clone())?;
+    /// Load `Source`s into the KB.
+    pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
+        if self.kb.read().unwrap().has_rules() {
+            let msg =
+                "Cannot load additional Polar code -- all Polar code must be loaded at the same time."
+                    .to_owned();
+            return Err(error::RuntimeError::FileLoading { msg }.into());
+        }
 
         // we extract this into a separate function
         // so that any errors returned with `?` are captured
@@ -211,35 +212,42 @@ impl Polar {
                     }
                 }
             }
-            // Rewrite shorthand rules in resource blocks before validating rule prototypes.
-            kb.rewrite_shorthand_rules()?;
-            // check rules are valid against rule prototypes
-            kb.validate_rules()?;
             Ok(warnings)
         }
 
-        // if any of the lines fail to load, we need to remove the source from
-        // the knowledge base
-        match load_source(source_id, &source, &mut kb) {
-            Ok(warnings) => {
-                self.messages.extend(warnings.iter().map(|m| Message {
-                    kind: MessageKind::Warning,
-                    msg: m.to_owned(),
-                }));
-                Ok(())
-            }
-            Err(e) => {
-                kb.remove_source(source_id);
-                Err(e)
+        let mut kb = self.kb.write().unwrap();
+        for source in &sources {
+            let source_id = kb.add_source(source.clone())?;
+            match load_source(source_id, source, &mut kb) {
+                Ok(warnings) => self
+                    .messages
+                    .extend(warnings.into_iter().map(|msg| Message {
+                        kind: MessageKind::Warning,
+                        msg,
+                    })),
+                Err(e) => {
+                    // If any source fails to load, clear the KB.
+                    kb.clear_rules();
+                    return Err(e);
+                }
             }
         }
+
+        // Rewrite shorthand rules in resource blocks before validating rule prototypes.
+        kb.rewrite_shorthand_rules()?;
+        // check rules are valid against rule prototypes
+        kb.validate_rules()
     }
 
     // Used in integration tests
     pub fn load_str(&self, src: &str) -> PolarResult<()> {
-        self.load(src, None)
+        self.load(vec![Source {
+            src: src.to_owned(),
+            filename: None,
+        }])
     }
 
+    // TODO(gj): ask Sam if we still need this.
     pub fn remove_file(&self, filename: &str) -> Option<String> {
         let mut kb = self.kb.write().unwrap();
         kb.remove_file(filename)
@@ -326,24 +334,25 @@ mod tests {
     #[test]
     fn load_remove_files() {
         let polar = Polar::new();
-        polar
-            .load("f(x) if x = 1;", Some("test.polar".to_string()))
-            .unwrap();
+        let valid = Source {
+            src: "f(x) if x = 1;".to_owned(),
+            filename: Some("test.polar".to_string()),
+        };
+        polar.load(vec![valid.clone()]).unwrap();
         polar.remove_file("test.polar");
+
         // loading works after removing
-        polar
-            .load("f(x) if x = 1;", Some("test.polar".to_string()))
-            .unwrap();
+        polar.load(vec![valid.clone()]).unwrap();
         polar.remove_file("test.polar");
 
         // load a broken file
-        polar
-            .load("f(x) if x", Some("test.polar".to_string()))
-            .unwrap_err();
+        let invalid = Source {
+            src: "f(x) if x".to_owned(),
+            filename: Some("test.polar".to_string()),
+        };
+        polar.load(vec![invalid]).unwrap_err();
 
         // can still load files again
-        polar
-            .load("f(x) if x = 1;", Some("test.polar".to_string()))
-            .unwrap();
+        polar.load(vec![valid]).unwrap();
     }
 }

@@ -693,6 +693,10 @@ impl KnowledgeBase {
             unreachable!()
         }
     }
+
+    pub fn has_rules(&self) -> bool {
+        !self.rules.is_empty() || !self.rule_prototypes.is_empty()
+    }
 }
 
 #[cfg(test)]

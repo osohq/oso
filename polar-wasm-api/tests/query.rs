@@ -2,6 +2,8 @@ use js_sys::{Error, JsString, Map, Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_test::*;
 
+use polar_core::sources::Source;
+
 #[wasm_bindgen_test]
 #[allow(clippy::float_cmp)]
 fn call_result_succeeds() {
@@ -12,7 +14,12 @@ fn call_result_succeeds() {
             r#"{"value":{"ExternalInstance":{"instance_id":1,"literal":null,"repr":null}}}"#,
         )
         .unwrap();
-    polar.wasm_load("x() if y.z;", None).unwrap();
+    let source = Source {
+        src: "x() if y.z;".to_owned(),
+        filename: None,
+    };
+    let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
+    polar.wasm_load(sources).unwrap();
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
     let event_kind: JsValue = "ExternalCall".into();
@@ -49,7 +56,12 @@ fn app_error_succeeds() {
             r#"{"value":{"ExternalInstance":{"instance_id":1,"literal":null,"repr":null}}}"#,
         )
         .unwrap();
-    polar.wasm_load("x() if y.z;", None).unwrap();
+    let source = Source {
+        src: "x() if y.z;".to_owned(),
+        filename: None,
+    };
+    let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
+    polar.wasm_load(sources).unwrap();
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
     let event_kind: JsValue = "ExternalCall".into();

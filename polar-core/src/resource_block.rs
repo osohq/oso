@@ -724,7 +724,7 @@ mod tests {
                 kind: error::ErrorKind::Parse(error::ParseError::ResourceBlock { msg, .. }),
                 ..
             } => msg,
-            _ => panic!(),
+            e => panic!("{}", e),
         };
 
         assert!(msg.contains(expected));

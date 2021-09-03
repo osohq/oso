@@ -2,6 +2,8 @@ use js_sys::{Error, Map, Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_test::*;
 
+use polar_core::sources::Source;
+
 fn is_done_event(event: Object) -> bool {
     let event_kind: JsValue = "Done".into();
     Reflect::get(&event, &event_kind).is_ok()
@@ -10,14 +12,24 @@ fn is_done_event(event: Object) -> bool {
 #[wasm_bindgen_test]
 fn load_file_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let res = polar.wasm_load("x() if 1 == 1;\n", Some("foo.polar".to_owned()));
+    let source = Source {
+        src: "x() if 1 == 1;\n".to_owned(),
+        filename: Some("foo.polar".to_owned()),
+    };
+    let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
+    let res = polar.wasm_load(sources);
     assert!(matches!(res, Ok(())));
 }
 
 #[wasm_bindgen_test]
 fn load_file_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let err = polar.wasm_load(";", None).unwrap_err();
+    let source = Source {
+        src: ";".to_owned(),
+        filename: None,
+    };
+    let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
+    let err = polar.wasm_load(sources).unwrap_err();
     let err: Error = err.dyn_into().unwrap();
     assert_eq!(err.name(), "ParseError::UnrecognizedToken");
     assert_eq!(
@@ -29,7 +41,12 @@ fn load_file_errors() {
 #[wasm_bindgen_test]
 fn next_inline_query_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let res = polar.wasm_load("?= 1 = 1;", None);
+    let source = Source {
+        src: "?= 1 = 1;".to_owned(),
+        filename: None,
+    };
+    let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
+    let res = polar.wasm_load(sources);
     assert!(matches!(res, Ok(())));
 
     let mut query = polar.wasm_next_inline_query().unwrap();
@@ -49,7 +66,12 @@ fn next_inline_query_succeeds() {
 #[wasm_bindgen_test]
 fn next_inline_query_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let res = polar.wasm_load("?= 1 = 2;", None);
+    let source = Source {
+        src: "?= 1 = 2;".to_owned(),
+        filename: None,
+    };
+    let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
+    let res = polar.wasm_load(sources);
     assert!(matches!(res, Ok(())));
     let mut query = polar.wasm_next_inline_query().unwrap();
 

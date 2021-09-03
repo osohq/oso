@@ -1,4 +1,5 @@
 //! Communicate with the Polar virtual machine: load rules, make queries, etc/
+use polar_core::sources::Source;
 use polar_core::terms::{Call, Symbol, Term, Value};
 
 use std::collections::HashSet;
@@ -149,23 +150,37 @@ impl Oso {
         Ok(())
     }
 
-    fn inner_load(&mut self, pol: &str, filename: Option<String>) -> crate::Result<()> {
-        self.inner.load(pol, filename)?;
+    fn inner_load(&mut self, sources: Vec<Source>) -> crate::Result<()> {
+        self.inner.load(sources)?;
         self.check_inline_queries()
     }
 
-    /// Load a file containing polar rules. All polar files must end in `.polar`
+    /// Load a file containing Polar rules. All Polar files must end in `.polar`.
     pub fn load_file<P: AsRef<std::path::Path>>(&mut self, file: P) -> crate::Result<()> {
-        let file = file.as_ref();
-        if !file.extension().map(|ext| ext == "polar").unwrap_or(false) {
-            return Err(crate::OsoError::IncorrectFileType {
-                filename: file.to_string_lossy().into_owned(),
+        // TODO(gj): emit deprecation warning.
+        self.load_files(vec![file])
+    }
+
+    /// Load files containing Polar rules. All polar files must end in `.polar`.
+    pub fn load_files<P: AsRef<std::path::Path>>(&mut self, files: Vec<P>) -> crate::Result<()> {
+        let mut sources = Vec::with_capacity(files.len());
+
+        for file in files {
+            let file = file.as_ref();
+            let filename = file.to_string_lossy().into_owned();
+            if !file.extension().map_or(false, |ext| ext == "polar") {
+                return Err(crate::OsoError::IncorrectFileType { filename });
+            }
+            let mut f = File::open(&file)?;
+            let mut src = String::new();
+            f.read_to_string(&mut src)?;
+            sources.push(Source {
+                src,
+                filename: Some(filename),
             });
         }
-        let mut f = File::open(&file)?;
-        let mut policy = String::new();
-        f.read_to_string(&mut policy)?;
-        self.inner_load(&policy, Some(file.to_string_lossy().into_owned()))
+
+        self.inner_load(sources)
     }
 
     /// Load a string of polar source directly.
@@ -173,8 +188,12 @@ impl Oso {
     /// ```ignore
     /// oso.load_str("allow(a, b, c) if true;");
     /// ```
-    pub fn load_str(&mut self, s: &str) -> crate::Result<()> {
-        self.inner_load(s, None)
+    pub fn load_str(&mut self, src: &str) -> crate::Result<()> {
+        // TODO(gj): emit... some sort of warning?
+        self.inner_load(vec![Source {
+            src: src.to_owned(),
+            filename: None,
+        }])
     }
 
     /// Query the knowledge base. This can be an allow query or any other polar expression.
