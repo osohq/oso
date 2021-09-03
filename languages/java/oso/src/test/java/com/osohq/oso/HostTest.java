@@ -18,7 +18,8 @@ public class HostTest {
   @Test
   public void isSubclass() {
 
-    Host host = new Host(null);
+    Polar polar = new Polar();
+    Host host = polar.host;
     host.cacheClass(User.class, "User");
     host.cacheClass(UserSubclass.class, "UserSubclass");
     host.cacheClass(NotSubclass.class, "NotSubclass");

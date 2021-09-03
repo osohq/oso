@@ -40,6 +40,8 @@ public class Exceptions {
         return operationalError(subkind, msg, details);
       case "Parameter":
         return apiError(subkind, msg, details);
+      case "Validation":
+        return validationError(subkind, msg, details);
       default:
         return new OsoException(msg, details);
     }
@@ -98,6 +100,11 @@ public class Exceptions {
         return new ApiError(msg, details);
     }
   }
+
+  private static ValidationError validationError(String kind, String msg, Map<String, Object> details) {
+    return new ValidationError(msg, details);
+  }
+
 
   public static class OsoException extends RuntimeException {
     private Map<String, Object> details;
@@ -364,9 +371,18 @@ public class Exceptions {
     }
   }
 
+  /** Generic Polar Validation exception. */
+  public static class ValidationError extends OsoException {
+    public ValidationError(String msg, Map<String, Object> details) {
+      super(msg, details);
+    }
+  }
+
   public static class UnimplementedOperation extends PolarRuntimeException {
     public UnimplementedOperation(String operation) {
       super(operation + " are unimplemented in the oso Java library");
     }
   }
+
+
 }
