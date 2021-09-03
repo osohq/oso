@@ -174,6 +174,7 @@ impl Oso {
     /// oso.load_str("allow(a, b, c) if true;");
     /// ```
     pub fn load_str(&mut self, s: &str) -> crate::Result<()> {
+        self.host.register_mros()?;
         self.inner_load(s, None)
     }
 
