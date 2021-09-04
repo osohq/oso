@@ -234,9 +234,19 @@ impl Polar {
         }
 
         // Rewrite shorthand rules in resource blocks before validating rule prototypes.
-        kb.rewrite_shorthand_rules()?;
+        if let Err(e) = kb.rewrite_shorthand_rules() {
+            // If rewriting shorthand rules fails, clear the KB.
+            kb.clear_rules();
+            return Err(e);
+        }
+
         // check rules are valid against rule prototypes
-        kb.validate_rules()
+        if let Err(e) = kb.validate_rules() {
+            // If rule type validation fails, clear the KB.
+            kb.clear_rules();
+            return Err(e);
+        }
+        Ok(())
     }
 
     // Used in integration tests

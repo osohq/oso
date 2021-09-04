@@ -546,6 +546,7 @@ impl KnowledgeBase {
         self.inline_queries.clear();
         self.loaded_content.clear();
         self.loaded_files.clear();
+        self.resource_blocks.clear();
     }
 
     /// Removes a file from the knowledge base by finding the associated
@@ -651,7 +652,6 @@ impl KnowledgeBase {
 
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {
-            self.resource_blocks.clear();
             return Err(errors[0].clone());
         }
 
@@ -667,7 +667,6 @@ impl KnowledgeBase {
 
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {
-            self.resource_blocks.clear();
             return Err(errors[0].clone());
         }
 
