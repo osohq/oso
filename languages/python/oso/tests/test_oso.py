@@ -13,9 +13,11 @@ actors = {"guest": "1", "president": "1"}
 
 class Actor:
     name: str = ""
+    verified: bool = False
 
     def __init__(self, name=""):
         self.name = name
+        self.verified = False
 
     def companies(self):
         yield Company(id="0")  # fake, will fail
