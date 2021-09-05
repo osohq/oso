@@ -702,6 +702,72 @@ impl KnowledgeBase {
 mod tests {
     use super::*;
     use crate::error::*;
+
+    #[test]
+    fn test_add_source_file_validation() {
+        let mut kb = KnowledgeBase::new();
+        let src = "f();";
+        let filename1 = "f";
+        let source1 = Source {
+            src: src.to_owned(),
+            filename: Some(filename1.to_owned()),
+        };
+
+        // Load source1.
+        kb.add_source(source1.clone()).unwrap();
+
+        // Cannot load source1 a second time.
+        let msg = match kb.add_source(source1).unwrap_err() {
+            error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            } => msg,
+            e => panic!("{}", e),
+        };
+        assert_eq!(msg, format!("File {} has already been loaded.", filename1));
+
+        // Cannot load source2 with the same name as source1 but different contents.
+        let source2 = Source {
+            src: "g();".to_owned(),
+            filename: Some(filename1.to_owned()),
+        };
+        let msg = match kb.add_source(source2).unwrap_err() {
+            error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            } => msg,
+            e => panic!("{}", e),
+        };
+        assert_eq!(
+            msg,
+            format!(
+                "A file with the name {}, but different contents has already been loaded.",
+                filename1
+            ),
+        );
+
+        // Cannot load source3 with the same contents as source1 but a different name.
+        let filename2 = "g";
+        let source3 = Source {
+            src: src.to_owned(),
+            filename: Some(filename2.to_owned()),
+        };
+        let msg = match kb.add_source(source3).unwrap_err() {
+            error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            } => msg,
+            e => panic!("{}", e),
+        };
+        assert_eq!(
+            msg,
+            format!(
+                "A file with the same contents as {} named {} has already been loaded.",
+                filename2, filename1
+            ),
+        );
+    }
+
     #[test]
     fn test_rule_params_match() {
         let mut kb = KnowledgeBase::new();
