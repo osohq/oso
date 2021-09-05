@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import sys
-from typing import Dict
+from typing import Dict, List, Union
 
 try:
     # importing readline on compatible platforms
@@ -21,7 +21,7 @@ from .exceptions import (
     PolarFileNotFoundError,
     InvalidQueryTypeError,
 )
-from .ffi import Polar as FfiPolar
+from .ffi import Polar as FfiPolar, PolarSource as Source
 from .host import Host
 from .query import Query
 from .predicate import Predicate
@@ -90,31 +90,48 @@ class Polar:
         del self.host
         del self.ffi_polar
 
-    def load_file(self, policy_file):
+    def load_files(self, files: List[Union[Path, str]]):
+        """Load Polar policy from ".polar" files."""
+        self.host.register_mros()
+        sources: List[Source] = []
+
+        for file in files:
+            file = Path(file)
+            extension = file.suffix
+            filename = str(file)
+            if not extension == ".polar":
+                raise PolarFileExtensionError(filename)
+
+            try:
+                with open(filename, "rb") as f:
+                    src = f.read().decode("utf-8")
+                    sources.append(Source(src, filename))
+            except FileNotFoundError:
+                raise PolarFileNotFoundError(filename)
+
+        self.ffi_polar.load(sources)
+        self.check_inline_queries()
+
+    # NOTE(gj): Ah, maybe this is why `registerMros` is only called in
+    # `LoadString` in the Go library? We were mistaken in thinking that
+    # `LoadFile` calls `LoadString`.
+
+    # TODO(gj): emit deprecation warning
+    def load_file(self, file: Union[Path, str]):
         """Load Polar policy from a ".polar" file."""
-        policy_file = Path(policy_file)
-        extension = policy_file.suffix
-        fname = str(policy_file)
-        if not extension == ".polar":
-            raise PolarFileExtensionError(fname)
+        self.load_files([file])
 
-        try:
-            with open(fname, "rb") as f:
-                file_data = f.read()
-        except FileNotFoundError:
-            raise PolarFileNotFoundError(fname)
-
-        self.load_str(file_data.decode("utf-8"), policy_file)
-
-    def load_str(self, string, filename=None):
+    # TODO(gj): emit some sort of warning?
+    def load_str(self, string: str):
         """Load a Polar string, checking that all inline queries succeed."""
         # NOTE: not ideal that the MRO gets updated each time load_str is
         # called, but since we are planning to move to only calling load once
         # with the include feature, I think it's okay for now.
         self.host.register_mros()
-        self.ffi_polar.load(string, filename)
+        self.ffi_polar.load([Source(string)])
+        self.check_inline_queries()
 
-        # check inline queries
+    def check_inline_queries(self):
         while True:
             query = self.ffi_polar.next_inline_query()
             if query is None:  # Load is done

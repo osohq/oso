@@ -1,9 +1,16 @@
 import json
-from typing import Callable
+from typing import Callable, List, Optional
+from dataclasses import dataclass
 
 from _polar_lib import ffi, lib
 
 from .errors import get_python_error
+
+
+@dataclass(frozen=True)
+class PolarSource:
+    src: str
+    filename: Optional[str] = None
 
 
 class Polar:
@@ -39,11 +46,9 @@ class Polar:
         # @TODO(Steve): Decode Filter Plan to not just json?
         return filter_plan
 
-    def load(self, string, filename=None):
-        """Load a Polar string, checking that all inline queries succeed."""
-        string = to_c_str(string)
-        filename = to_c_str(str(filename)) if filename else ffi.NULL
-        result = lib.polar_load(self.ptr, string, filename)
+    def load(self, sources: List[PolarSource]):
+        """Load Polar policies."""
+        result = lib.polar_load(self.ptr, ffi_serialize([s.__dict__ for s in sources]))
         self.process_messages()
         self.check_result(result)
 
