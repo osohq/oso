@@ -273,10 +273,12 @@ fn test_wrong_argument_types() {
     oso.oso.register_class(foo_class).unwrap();
     oso.oso.register_class(Bar::get_polar_class()).unwrap();
 
-    oso.load_str("a(f, v) if v = f.a();");
-    oso.load_str("bar(f, arg) if _v = f.bar(arg);");
-    oso.load_str("bar_x(f, arg, arg1) if _v = f.bar_x(arg, arg1);");
-    oso.load_str("int(f, arg) if _v = f.int(arg);");
+    oso.load_str(
+        r#"a(f, v) if v = f.a();
+           bar(f, arg) if _v = f.bar(arg);
+           bar_x(f, arg, arg1) if _v = f.bar_x(arg, arg1);
+           int(f, arg) if _v = f.int(arg);"#,
+    );
 
     let mut query = oso.oso.query_rule("a", (Foo, 1)).unwrap();
     assert_eq!(query.next().unwrap().unwrap().keys().count(), 0);
@@ -416,8 +418,10 @@ fn test_match_attribute_does_not_exist() {
 
     oso.oso.register_class(foo_class).unwrap();
 
-    oso.load_str("foo(d) if d matches Foo{x: 1};");
-    oso.load_str("no_match_foo(d) if not d matches Foo{not_an_attr: 1};");
+    oso.load_str(
+        r#"foo(d) if d matches Foo{x: 1};
+           no_match_foo(d) if not d matches Foo{not_an_attr: 1};"#,
+    );
     oso.qeval("foo(new Foo())");
     oso.qeval("no_match_foo(new Foo())");
 }
@@ -475,9 +479,11 @@ fn test_wrong_argument_arity() -> oso::Result<()> {
 
     oso.oso.register_class(foo_class)?;
 
-    oso.load_str("getmethod_a1(x, val) if val = x.a(val);");
-    oso.load_str("getmethod_a2(x, val, val2) if val = x.a(val, val2);");
-    oso.load_str("getmethod_a0(x) if x.a();");
+    oso.load_str(
+        r#"getmethod_a1(x, val) if val = x.a(val);
+           getmethod_a2(x, val, val2) if val = x.a(val, val2);
+           getmethod_a0(x) if x.a();"#,
+    );
 
     // Correct number of arguments
     let mut query = oso.oso.query_rule("getmethod_a1", (Foo, 1))?;

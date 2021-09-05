@@ -16,6 +16,11 @@ impl OsoTest {
     }
 
     #[track_caller]
+    pub fn clear_rules(&mut self) {
+        self.oso.clear_rules().unwrap();
+    }
+
+    #[track_caller]
     pub fn load_file(&mut self, here: &str, name: &str) -> oso::Result<()> {
         // hack because `file!()` starts from workspace root
         // https://github.com/rust-lang/cargo/issues/3946

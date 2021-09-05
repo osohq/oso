@@ -234,8 +234,7 @@ fn test_already_loaded_file_error() -> oso::Result<()> {
     let mut oso = test_oso();
     let path = test_file_path();
 
-    oso.oso.load_file(&path)?;
-    let err = oso.oso.load_file(&path).unwrap_err();
+    let err = oso.oso.load_files(vec![&path, &path]).unwrap_err();
 
     assert!(
         matches!(&err,
@@ -260,8 +259,7 @@ fn test_load_multiple_files() -> oso::Result<()> {
     let path = test_file_path();
     let path_gx = test_file_gx_path();
 
-    oso.oso.load_file(path)?;
-    oso.oso.load_file(path_gx)?;
+    oso.oso.load_files(vec![path, path_gx])?;
 
     assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
     assert_eq!(oso.qvar::<i64>("g(x)", "x"), vec![1, 2, 3]);
@@ -561,6 +559,7 @@ fn test_animals() -> oso::Result<()> {
     oso.qeval("yup()");
     oso.qnull("nope()");
 
+    oso.clear_rules();
     oso.load_str(
         r#"
       what_is(_: {genus: "canis"}, r) if r = "canine";
@@ -582,6 +581,7 @@ fn test_animals() -> oso::Result<()> {
         vec!["canine".to_owned()]
     );
 
+    oso.clear_rules();
     oso.load_str(
         r#"
           what_is_class(_: Animal{}, r) if r = "animal";
@@ -635,6 +635,7 @@ fn test_animals() -> oso::Result<()> {
         vec!["animal".to_owned()]
     );
 
+    oso.clear_rules();
     oso.load_str(
         r#"
       what_is_mix(_: Animal{}, r) if r = "animal_class";

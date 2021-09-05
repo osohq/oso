@@ -193,6 +193,8 @@ fn test_get_allowed_actions() -> oso::Result<()> {
     assert!(actions.contains("CREATE"));
     assert!(actions.contains("READ"));
 
+    oso.clear_rules().unwrap();
+
     oso.load_str(
         r#"allow(_actor: Actor{name: "fred"}, action, _resource: Widget{id: 2}) if
            action in [1, 2, 3, 4];"#,
