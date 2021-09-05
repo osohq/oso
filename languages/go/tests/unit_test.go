@@ -57,7 +57,27 @@ func TestLoadString(t *testing.T) {
 }
 
 func TestClearRules(t *testing.T) {
+	var o oso.Oso
+	var err error
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
 
+	o.LoadString("f(1);")
+	o.ClearRules()
+	results, errors := o.QueryStr("f(x)")
+
+	if err = <-errors; err != nil {
+		t.Error(err.Error())
+	} else {
+		var got []map[string]interface{}
+		for elem := range results {
+			got = append(got, elem)
+		}
+		if len(got) > 0 {
+			t.Errorf("Received too many results: %v", got)
+		}
+	}
 }
 
 func TestQueryStr(t *testing.T) {
