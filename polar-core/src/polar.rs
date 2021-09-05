@@ -145,6 +145,9 @@ impl Default for Polar {
     }
 }
 
+const MULTIPLE_LOAD_ERROR_MSG: &str =
+    "Cannot load additional Polar code -- all Polar code must be loaded at the same time.";
+
 impl Polar {
     pub fn new() -> Self {
         Self {
@@ -156,9 +159,7 @@ impl Polar {
     /// Load `Source`s into the KB.
     pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
         if self.kb.read().unwrap().has_rules() {
-            let msg =
-                "Cannot load additional Polar code -- all Polar code must be loaded at the same time."
-                    .to_owned();
+            let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
             return Err(error::RuntimeError::FileLoading { msg }.into());
         }
 
@@ -364,5 +365,38 @@ mod tests {
 
         // can still load files again
         polar.load(vec![valid]).unwrap();
+    }
+
+    #[test]
+    fn loading_a_second_time_fails() {
+        let polar = Polar::new();
+        let src = "f();";
+        let source = Source {
+            src: src.to_owned(),
+            filename: None,
+        };
+
+        // Loading once is fine.
+        polar.load(vec![source.clone()]).unwrap();
+
+        // Loading twice is not.
+        let msg = match polar.load(vec![source]).unwrap_err() {
+            error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            } => msg,
+            e => panic!("{}", e),
+        };
+        assert_eq!(msg, MULTIPLE_LOAD_ERROR_MSG);
+
+        // Even with load_str().
+        let msg = match polar.load_str(src).unwrap_err() {
+            error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            } => msg,
+            e => panic!("{}", e),
+        };
+        assert_eq!(msg, MULTIPLE_LOAD_ERROR_MSG);
     }
 }
