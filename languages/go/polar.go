@@ -79,28 +79,38 @@ func (p Polar) checkInlineQueries() error {
 	}
 }
 
-func (p Polar) loadFile(f string) error {
-	if filepath.Ext(f) != ".polar" {
-		return errors.NewPolarFileExtensionError(f)
+func (p Polar) loadFiles(files []string) error {
+	sources := []Source{}
+
+	for _, file := range files {
+		if filepath.Ext(file) != ".polar" {
+			return errors.NewPolarFileExtensionError(file)
+		}
+
+		data, err := ioutil.ReadFile(file)
+		if err != nil {
+			return err
+		}
+		sources = append(sources, Source{Src: string(data), Filename: &file})
 	}
 
-	data, err := ioutil.ReadFile(f)
-	if err != nil {
-		return err
-	}
-	err = p.ffiPolar.Load(string(data), &f)
+	err := p.ffiPolar.Load(sources)
 	if err != nil {
 		return err
 	}
 	return p.checkInlineQueries()
 }
 
-func (p Polar) loadString(s string) error {
-	err := p.host.RegisterMros()
+func (p Polar) loadFile(file string) error {
+	return p.loadFiles([]string{file})
+}
+
+func (p Polar) loadString(str string) error {
+	err := p.host.RegisterMros() // TODO(gj): why is this only in `loadString`?
 	if err != nil {
 		return err
 	}
-	err = p.ffiPolar.Load(s, nil)
+	err = p.ffiPolar.Load([]Source{{Src: str, Filename: nil}})
 	if err != nil {
 		return err
 	}

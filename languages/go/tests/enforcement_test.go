@@ -163,6 +163,8 @@ func TestAuthorizedActions(t *testing.T) {
 	}
 	assertSetEqual(t, res, []string{"CREATE", "READ"})
 
+	o.ClearRules()
+
 	o.LoadString("allow(_actor: Actor{Name: \"John\"}, _action, _resource: Widget{Id: 1});")
 
 	actor = Actor{Name: "John"}

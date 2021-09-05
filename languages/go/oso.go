@@ -71,9 +71,17 @@ func (o *Oso) SetNotFoundError(notFoundError func() error) {
 }
 
 /*
+Load Polar policy from ".polar" files, checking that all inline queries succeed.
+*/
+func (o Oso) LoadFiles(files []string) error {
+	return (*o.p).loadFiles(files)
+}
+
+/*
 Load Polar policy from a ".polar" file, checking that all inline queries succeed.
 */
 func (o Oso) LoadFile(f string) error {
+	// TODO(gj): throw deprecation warning
 	return (*o.p).loadFile(f)
 }
 
@@ -81,6 +89,7 @@ func (o Oso) LoadFile(f string) error {
 Load Polar policy from a string, checking that all inline queries succeed.
 */
 func (o Oso) LoadString(s string) error {
+	// TODO(gj): throw some other sort of warning?
 	return (*o.p).loadString(s)
 }
 

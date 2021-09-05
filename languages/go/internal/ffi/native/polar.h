@@ -15,7 +15,7 @@ const char *polar_get_error(void);
 
 polar_Polar *polar_new(void);
 
-int32_t polar_load(polar_Polar *polar_ptr, const char *src, const char *filename);
+int32_t polar_load(polar_Polar *polar_ptr, const char *sources);
 
 int32_t polar_clear_rules(polar_Polar *polar_ptr);
 
