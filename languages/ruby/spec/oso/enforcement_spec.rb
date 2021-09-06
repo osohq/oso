@@ -87,7 +87,12 @@ RSpec.describe Oso::Oso do
     end
 
     it 'throws an Oso::Error if there is a wildcard action' do
+      oso.clear_rules
       oso.load_str(%|
+        allow(_actor: Actor, "read", _widget: Widget);
+        allow(_actor: Actor, "update", _widget: Widget{id: "0"});
+        allow(actor: Actor, "update", _widget: Widget) if
+          actor.name = "admin";
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       |)
       superadmin = Actor.new('superadmin')
@@ -95,7 +100,12 @@ RSpec.describe Oso::Oso do
     end
 
     it 'returns a wildcard * if wildcard is explicitly allowed' do
+      oso.clear_rules
       oso.load_str(%|
+        allow(_actor: Actor, "read", _widget: Widget);
+        allow(_actor: Actor, "update", _widget: Widget{id: "0"});
+        allow(actor: Actor, "update", _widget: Widget) if
+          actor.name = "admin";
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       |)
       superadmin = Actor.new('superadmin')
