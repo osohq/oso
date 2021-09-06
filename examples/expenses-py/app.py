@@ -125,12 +125,16 @@ def load_oso():
     """Loads and returns the Oso policy"""
     oso = Oso()
     policy_path = Path(__file__).resolve().parent.parent / "expenses"
-    ## Policy Data
-    oso.load_file(policy_path / "data.polar")
-    ## Role definitions
-    oso.load_file(policy_path / "roles.polar")
-    ## ABAC policy
-    oso.load_file(policy_path / "abac.polar")
+    oso.load_files(
+        [
+            # Policy Data
+            policy_path / "data.polar",
+            # Role definitions
+            policy_path / "roles.polar",
+            # ABAC policy
+            policy_path / "abac.polar",
+        ]
+    )
     return oso
 
 
