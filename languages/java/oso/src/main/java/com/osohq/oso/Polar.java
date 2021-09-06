@@ -3,6 +3,7 @@ package com.osohq.oso;
 import com.osohq.oso.Exceptions.OsoException;
 import com.osohq.oso.Exceptions.ParseError;
 import com.osohq.oso.Exceptions.PolarRuntimeException;
+import org.json.JSONArray;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -45,29 +46,58 @@ public class Polar {
   }
 
   /**
-   * Enqueue a polar policy file to be loaded. File contents are loaded into a String and saved
-   * here, so changes to the file made after calls to loadFile will not be recognized. If the
-   * filename already exists in the load queue, replace it.
+   * Load Polar policy files. File contents are loaded into a String and saved
+   * here, so changes to a file made after a call to loadFiles will not be
+   * recognized.
    *
    * @throws Exceptions.PolarFileExtensionError On incorrect file extension.
+   * @throws Exceptions.PolarFileNotFoundError On nonexistent file.
+   * @throws Exceptions.InlineQueryFailedError On a failed inline query.
    * @throws IOException If unable to open or read the file.
    */
+  public void loadFiles(List<String> filenames) throws IOException, OsoException {
+    JSONArray sources = new JSONArray();
+
+    for (int i = 0; i < filenames.size(); i++) {
+      String filename = filenames.get(i);
+      Optional<String> ext =
+          Optional.ofNullable(filename)
+              .filter(f -> f.contains("."))
+              .map(f -> f.substring(filename.lastIndexOf(".") + 1));
+
+      // check file extension
+      if (!ext.isPresent() || !ext.get().equals("polar")) {
+        throw new Exceptions.PolarFileExtensionError(filename);
+      }
+
+      try {
+        String contents = new String(Files.readAllBytes(Paths.get(filename)));
+        Source source = new Source(contents, filename);
+        sources.put(source.toJSON());
+      } catch (FileNotFoundException e) {
+        throw new Exceptions.PolarFileNotFoundError(filename);
+      }
+    }
+
+    host.registerMros();
+
+    ffiPolar.load(sources);
+    checkInlineQueries();
+  }
+
+  /**
+   * Load a Polar policy file. File contents are loaded into a String and saved
+   * here, so changes to the file made after a call to loadFile will not be
+   * recognized.
+   *
+   * @throws Exceptions.PolarFileExtensionError On incorrect file extension.
+   * @throws Exceptions.PolarFileNotFoundError On nonexistent file.
+   * @throws Exceptions.InlineQueryFailedError On a failed inline query.
+   * @throws IOException If unable to open or read the file.
+   */
+  // TODO(gj): emit deprecation warning.
   public void loadFile(String filename) throws IOException, OsoException {
-    Optional<String> ext =
-        Optional.ofNullable(filename)
-            .filter(f -> f.contains("."))
-            .map(f -> f.substring(filename.lastIndexOf(".") + 1));
-
-    // check file extension
-    if (!ext.isPresent() || !ext.get().equals("polar")) {
-      throw new Exceptions.PolarFileExtensionError(filename);
-    }
-
-    try {
-      loadStr(new String(Files.readAllBytes(Paths.get(filename))), filename);
-    } catch (FileNotFoundException e) {
-      throw new Exceptions.PolarFileNotFoundError(filename);
-    }
+    loadFiles(List.of(filename));
   }
 
   /**
@@ -75,10 +105,17 @@ public class Polar {
    *
    * @param str Polar string to be loaded.
    * @param filename Name of the source file.
+   * @throws Exceptions.InlineQueryFailedError On a failed inline query.
    */
+  // TODO(gj): emit deprecation warning for loadStr w/ filename.
   public void loadStr(String str, String filename) throws Exceptions.OsoException {
     host.registerMros();
-    ffiPolar.load(str, filename);
+
+    JSONArray sources = new JSONArray();
+    Source source = new Source(str, filename);
+    sources.put(source.toJSON());
+
+    ffiPolar.load(sources);
     checkInlineQueries();
   }
 
@@ -86,10 +123,17 @@ public class Polar {
    * Load a Polar string into the KB (without filename).
    *
    * @param str Polar string to be loaded.
+   * @throws Exceptions.InlineQueryFailedError On a failed inline query.
    */
+  // TODO(gj): emit... some sort of warning for folks using loadStr?
   public void loadStr(String str) throws Exceptions.OsoException {
     host.registerMros();
-    ffiPolar.load(str, null);
+
+    JSONArray sources = new JSONArray();
+    Source source = new Source(str, null);
+    sources.put(source.toJSON());
+
+    ffiPolar.load(sources);
     checkInlineQueries();
   }
 

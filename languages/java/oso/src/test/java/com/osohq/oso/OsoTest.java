@@ -136,6 +136,8 @@ public class OsoTest {
     assertTrue(actions.contains("CREATE"));
     assertTrue(actions.contains("READ"));
 
+    o.clearRules();
+
     o.loadStr(
         "allow(_actor: Actor{name: \"fred\"}, action, _resource: Widget{id: 2})"
             + " if action in [1, 2, 3, 4];");

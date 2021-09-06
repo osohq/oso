@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Pointer;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -31,8 +32,8 @@ public class Ffi {
       return checkResult(polarLib.polar_get_external_id(ptr));
     }
 
-    protected int load(String src, String filename) throws Exceptions.OsoException {
-      int result = polarLib.polar_load(ptr, src, filename);
+    protected int load(JSONArray sources) throws Exceptions.OsoException {
+      int result = polarLib.polar_load(ptr, sources.toString());
       processMessages();
       return checkResult(result);
     }
@@ -205,7 +206,7 @@ public class Ffi {
 
     long polar_get_external_id(Pointer polar_ptr);
 
-    int polar_load(Pointer polar_ptr, String src, String filename);
+    int polar_load(Pointer polar_ptr, String sources);
 
     int polar_clear_rules(Pointer polar_ptr);
 
