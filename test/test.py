@@ -46,24 +46,37 @@ class E:
 
 oso.register_class(E)
 
-polar_file = os.path.dirname(os.path.realpath(__file__)) + "/test.polar"
-oso.load_file(polar_file)
-
-assert oso.is_allowed("a", "b", "c")
-
-# Test that a built in string method can be called.
-oso.load_str("""?= x = "hello world!" and x.endswith("world!");""")
-
 # Test that a custom error type is thrown.
 exception_thrown = False
 try:
     oso.load_str("missingSemicolon()")
 except UnrecognizedEOF as e:
     exception_thrown = True
-    assert (
-        str(e).startswith("hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19")
+    assert str(e).startswith(
+        "hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19"
     )
 assert exception_thrown
+
+# Test that a built in string method can be called.
+oso.load_str("""?= x = "hello world!" and x.endswith("world!");""")
+
+oso.clear_rules()
+
+# Test that a constant can be called.
+oso.register_constant(math, "MyMath")
+oso.load_str("?= MyMath.factorial(5) == 120;")
+
+oso.clear_rules()
+
+# Test deref works
+oso.load_str("?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;")
+
+oso.clear_rules()
+
+polar_file = os.path.dirname(os.path.realpath(__file__)) + "/test.polar"
+oso.load_file(polar_file)
+
+assert oso.is_allowed("a", "b", "c")
 
 assert list(oso.query_rule("specializers", D("hello"), B.C("hello")))
 assert list(oso.query_rule("floatLists"))
@@ -78,10 +91,6 @@ assert list(oso.query_rule("testUnifyClass", A))
 
 # Test that cut doesn't return anything.
 assert not list(oso.query_rule("testCut"))
-
-# Test that a constant can be called.
-oso.register_constant(math, "MyMath")
-oso.load_str("?= MyMath.factorial(5) == 120;")
 
 # Test built-in type specializers.
 assert list(oso.query('builtinSpecializers(true, "Boolean")'))
@@ -107,10 +116,6 @@ assert list(oso.query_rule("builtinSpecializers", {"y": 1}, "DictionaryWithField
 
 # test iterables work
 assert list(oso.query_rule("testIterables"))
-
-
-# Test deref works
-oso.load_str("?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;")
 
 # Test unspecialized rule ordering
 result = oso.query_rule("testUnspecializedRuleOrder", "foo", "bar", Variable("z"))
