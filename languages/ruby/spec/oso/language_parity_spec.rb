@@ -4,6 +4,29 @@ require 'oso'
 
 oso = Oso.new
 
+# Test that a custom error type is thrown.
+exception_thrown = false
+begin
+  oso.load_str 'missingSemicolon()'
+rescue Oso::Polar::ParseError::UnrecognizedEOF => e
+  exception_thrown = true
+  raise unless e.message == 'hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19'
+end
+raise unless exception_thrown
+
+# Test that a built in string method can be called.
+oso.load_str <<~POLAR
+  ?= x = "hello world!" and x.end_with?("world!");
+POLAR
+
+oso.clear_rules
+
+# Test that a constant can be called.
+oso.register_constant Math, name: 'MyMath'
+oso.load_str '?= MyMath.acos(1.0) = 0.0;'
+
+oso.clear_rules
+
 # Application class with default constructor.
 class A
   attr_reader :x
@@ -45,24 +68,14 @@ end
 
 oso.register_class(E)
 
+# Test deref behaviour
+oso.load_str '?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;'
+
+oso.clear_rules
+
 oso.load_file File.expand_path(File.join(__dir__, '../../../../test/test.polar'))
 
 raise unless oso.allowed?(actor: 'a', action: 'b', resource: 'c')
-
-# Test that a built in string method can be called.
-oso.load_str <<~POLAR
-  ?= x = "hello world!" and x.end_with?("world!");
-POLAR
-
-# Test that a custom error type is thrown.
-exception_thrown = false
-begin
-  oso.load_str 'missingSemicolon()'
-rescue Oso::Polar::ParseError::UnrecognizedEOF => e
-  exception_thrown = true
-  raise unless e.message == 'hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19'
-end
-raise unless exception_thrown
 
 raise if oso.query_rule('specializers', D.new('hello'), B::C.new('hello')).first.nil?
 raise if oso.query_rule('floatLists').first.nil?
@@ -77,10 +90,6 @@ raise if oso.query_rule('testUnifyClass', A).first.nil?
 
 # Test that cut doesn't return anything.
 raise unless oso.query_rule('testCut').first.nil?
-
-# Test that a constant can be called.
-oso.register_constant Math, name: 'MyMath'
-oso.load_str '?= MyMath.acos(1.0) = 0.0;'
 
 # Test built-in type specializers.
 raise if oso.query('builtinSpecializers(true, "Boolean")').first.nil?
@@ -107,9 +116,6 @@ raise if oso.query('builtinSpecializers({y: 1}, "DictionaryWithFields")').first.
 
 # test iterables work
 raise if oso.query_rule('testIterables').first.nil?
-
-# Test deref behaviour
-oso.load_str '?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;'
 
 # Test unspecialized rule ordering
 result = oso.query_rule('testUnspecializedRuleOrder', 'foo', 'bar', Oso::Polar::Variable.new('z'))
