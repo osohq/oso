@@ -379,14 +379,14 @@ def test_parser_errors(polar):
         "'\\n' is not a valid character. Found in this is not at line 2, column 29"
     )
 
+    # TODO(gj): figure out what changed.
     rules = """
-    f(a) if a = "this is not allowed\0
-    """
+    f(a) if a = "this is not allowed\0"""
 
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar.load_str(rules)
     assert str(e.value).startswith(
-        "'\\u{0}' is not a valid character. Found in this is not allowed at line 2, column 17"
+        "'\\u{0}' is not a valid character. Found in this is not allowed\\u{0} at line 2, column 17"
     )
 
     # InvalidToken -- not sure what causes this
