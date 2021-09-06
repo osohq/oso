@@ -45,15 +45,15 @@ class Source
 end
 
 def filename_to_source(filename)
-  raise PolarFileExtensionError, filename unless File.extname(filename) == '.polar'
+  raise Oso::Polar::PolarFileExtensionError, filename unless File.extname(filename) == '.polar'
 
   src = File.open(filename, &:read)
 
-  raise NullByteInPolarFileError if src.chomp("\0").include?("\0")
+  raise Oso::Polar::NullByteInPolarFileError if src.chomp("\0").include?("\0")
 
   Source.new(src, filename: filename)
 rescue Errno::ENOENT
-  raise PolarFileNotFoundError, filename
+  raise Oso::Polar::PolarFileNotFoundError, filename
 end
 
 module Oso
