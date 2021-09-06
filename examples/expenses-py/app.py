@@ -1,5 +1,5 @@
 """
-Example application integrated with oso.
+Example application integrated with Oso.
 
 The application does not currently do much except define application
 data structures that might already exist in, for example, a database.
@@ -114,7 +114,7 @@ class Organization:
 
 @polar_class
 class Env:
-    """Helper class for oso, looks up environment variables"""
+    """Helper class for Oso, looks up environment variables"""
 
     @classmethod
     def var(cls, variable):
@@ -122,7 +122,7 @@ class Env:
 
 
 def load_oso():
-    """Loads and returns the oso policy"""
+    """Loads and returns the Oso policy"""
     oso = Oso()
     policy_path = Path(__file__).resolve().parent.parent / "expenses"
     ## Policy Data
