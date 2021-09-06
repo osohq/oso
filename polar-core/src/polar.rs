@@ -218,14 +218,16 @@ impl Polar {
 
         let mut kb = self.kb.write().unwrap();
         for source in &sources {
-            let source_id = kb.add_source(source.clone())?;
-            match load_source(source_id, source, &mut kb) {
-                Ok(warnings) => self
-                    .messages
-                    .extend(warnings.into_iter().map(|msg| Message {
+            let result = kb.add_source(source.clone());
+            let result = result.and_then(|source_id| load_source(source_id, source, &mut kb));
+            match result {
+                Ok(warnings) => {
+                    let warnings = warnings.into_iter().map(|msg| Message {
                         kind: MessageKind::Warning,
                         msg,
-                    })),
+                    });
+                    self.messages.extend(warnings);
+                }
                 Err(e) => {
                     // If any source fails to load, clear the KB.
                     kb.clear_rules();
@@ -398,5 +400,25 @@ mod tests {
             e => panic!("{}", e),
         };
         assert_eq!(msg, MULTIPLE_LOAD_ERROR_MSG);
+    }
+
+    #[test]
+    fn loading_duplicate_files_clears_the_kb() {
+        let polar = Polar::new();
+        let source = Source {
+            src: "f();".to_owned(),
+            filename: Some("file".to_owned()),
+        };
+
+        let msg = match polar.load(vec![source.clone(), source]).unwrap_err() {
+            error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            } => msg,
+            e => panic!("{}", e),
+        };
+        assert_eq!(msg, "File file has already been loaded.");
+
+        assert!(!polar.kb.read().unwrap().has_rules());
     }
 }
