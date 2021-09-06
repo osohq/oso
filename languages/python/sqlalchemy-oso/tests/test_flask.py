@@ -83,7 +83,8 @@ def test_flask_model(ctx, oso, sqlalchemy):
 
     oso.register_class(TestModel)
 
-    oso.load_str("allow(_, _, tm: TestModel) if tm.id = 1;")
+    policy = "allow(_, _, tm: TestModel) if tm.id = 1;"
+    oso.load_str(policy)
 
     authorized = sqlalchemy.session.query(TestModel).all()
     assert len(authorized) == 1
@@ -93,7 +94,10 @@ def test_flask_model(ctx, oso, sqlalchemy):
     assert len(authorized) == 1
     assert authorized[0].id == 1
 
-    oso.load_str("allow(_, _, tm: TestModel) if tm.id = 2;")
+    oso.clear_rules()
+
+    policy += "allow(_, _, tm: TestModel) if tm.id = 2;"
+    oso.load_str(policy)
 
     authorized = TestModel.query.all()
     assert len(authorized) == 2
