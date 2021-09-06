@@ -498,7 +498,7 @@ def test_enable_roles(
     test_db_session, oso_with_session, john, ringo, abbey_road, beatles
 ):
     oso = oso_with_session
-    enable_roles(oso)
+    policy = enable_roles(oso)
 
     # Get test data
     read_repo_role = (
@@ -512,6 +512,8 @@ def test_enable_roles(
         .first()
     )
 
+    oso.load_str(policy)
+
     # test base `resource_role_applies_to`
     results = list(
         oso.query_rule(
@@ -521,12 +523,15 @@ def test_enable_roles(
     assert len(results) == 1
     assert results[0].get("bindings").get("role_resource") == abbey_road
 
+    oso.clear_rules()
+
     # test custom `resource_role_applies_to` rules (for nested resources)
     resource_role_applies_to_str = """resource_role_applies_to(repo: Repository, parent_org) if
         parent_org = repo.organization and
         parent_org matches Organization;
         """
-    oso.load_str(resource_role_applies_to_str)
+    policy += resource_role_applies_to_str
+    oso.load_str(policy)
     results = list(
         oso.query_rule(
             "resource_role_applies_to", abbey_road, Variable("role_resource")
@@ -554,9 +559,12 @@ def test_enable_roles(
     )
     assert len(results) == 0
 
+    oso.clear_rules()
+
     # test role_order rule
     role_order_str = 'organization_role_order(["OWNER", "MEMBER", "BILLING"]);'
-    oso.load_str(role_order_str)
+    policy += role_order_str
+    oso.load_str(policy)
 
     results = list(
         oso.query_rule("inherits_role", org_owner_role, Variable("inherited_role"))
@@ -570,20 +578,26 @@ def test_enable_roles(
     results = list(oso.query_rule("role_allow", john, "READ", abbey_road))
     assert len(results) == 0
 
+    oso.clear_rules()
+
     # test basic `role_allow` rule
     role_allow_str = (
         'role_allow(_: RepositoryRole{name: "READ"}, "READ", _: Repository);'
     )
 
-    oso.load_str(role_allow_str)
+    policy += role_allow_str
+    oso.load_str(policy)
     results = list(oso.query_rule("role_allow", read_repo_role, "READ", abbey_road))
     assert len(results) == 1
+
+    oso.clear_rules()
 
     # test `role_allow` rule using nested resource
     nested_role_allow_str = (
         'role_allow(_: OrganizationRole{name: "MEMBER"}, "READ", _: Repository);'
     )
-    oso.load_str(nested_role_allow_str)
+    policy += nested_role_allow_str
+    oso.load_str(policy)
     results = list(oso.query_rule("role_allow", org_owner_role, "READ", abbey_road))
     assert len(results) == 1
 

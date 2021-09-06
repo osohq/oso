@@ -269,7 +269,7 @@ def enable_roles(oso):
             inherits_role_helper(role.name, inherited_role_name, role_order) and
             inherited_role = new {role}(name: inherited_role_name, {resource.lower()}: role.{resource.lower()});
         """
-    oso.load_str(policy)
+    return policy
 
 
 # ROLE HELPERS
