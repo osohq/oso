@@ -27,6 +27,35 @@ def print_error(error)
   warn error.message
 end
 
+# Polar source string with optional filename.
+class Source
+  # @return [String]
+  attr_reader :src, :filename
+
+  # @param src [String]
+  # @param filename [String]
+  def initialize(src, filename: nil)
+    @src = src
+    @filename = filename
+  end
+
+  def to_json(*_args)
+    { src: src, filename: filename }.to_json
+  end
+end
+
+def filename_to_source(filename)
+  raise PolarFileExtensionError, filename unless File.extname(filename) == '.polar'
+
+  src = File.open(filename, &:read)
+
+  raise NullByteInPolarFileError if src.chomp("\0").include?("\0")
+
+  Source.new(src, filename: filename)
+rescue Errno::ENOENT
+  raise PolarFileNotFoundError, filename
+end
+
 module Oso
   module Polar
     # Create and manage an instance of the Polar runtime.
@@ -112,42 +141,50 @@ module Oso
         self
       end
 
+      # Load Polar policy files.
+      #
+      # @param filenames [Array<String>]
+      # @raise [PolarFileExtensionError] if any filename has an invalid extension.
+      # @raise [PolarFileNotFoundError] if any filename does not exist.
+      # @raise [NullByteInPolarFileError] if any file contains a non-terminating null byte.
+      # @raise [Error] if any of the FFI calls raise one.
+      # @raise [InlineQueryFailedError] on the first failed inline query.
+      # @return [self] for chaining.
+      def load_files(filenames)
+        host.register_mros
+        sources = filenames.map { |f| filename_to_source f }
+        ffi_polar.load(sources)
+        check_inline_queries
+        self
+      end
+
       # Load a Polar policy file.
       #
-      # @param name [String]
-      # @raise [PolarFileExtensionError] if provided filename has invalid extension.
-      # @raise [PolarFileNotFoundError] if provided filename does not exist.
+      # @param filename [String]
+      # @raise [PolarFileExtensionError] if filename has an invalid extension.
+      # @raise [PolarFileNotFoundError] if filename does not exist.
+      # @raise [NullByteInPolarFileError] if file contains a non-terminating null byte.
+      # @raise [Error] if any of the FFI calls raise one.
+      # @raise [InlineQueryFailedError] on the first failed inline query.
       # @return [self] for chaining.
-      def load_file(name)
-        raise PolarFileExtensionError, name unless File.extname(name) == '.polar'
-
-        file_data = File.open(name, &:read)
-        load_str(file_data, filename: name)
-      rescue Errno::ENOENT
-        raise PolarFileNotFoundError, name
+      def load_file(filename)
+        # TODO(gj): emit deprecation warning.
+        load_files([filename])
       end
 
       # Load a Polar string into the KB.
       #
       # @param str [String] Polar string to load.
-      # @param filename [String] Name of Polar source file.
       # @raise [NullByteInPolarFileError] if str includes a non-terminating null byte.
-      # @raise [InlineQueryFailedError] on the first failed inline query.
       # @raise [Error] if any of the FFI calls raise one.
+      # @raise [InlineQueryFailedError] on the first failed inline query.
       # @return [self] for chaining.
-      def load_str(str, filename: nil) # rubocop:disable Metrics/AbcSize
+      def load_str(str)
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
         host.register_mros
-
-        ffi_polar.load(str, filename: filename)
-        loop do
-          next_query = ffi_polar.next_inline_query
-          break if next_query.nil?
-
-          raise InlineQueryFailedError, next_query.source if Query.new(next_query, host: host).first.nil?
-        end
-
+        ffi_polar.load([Source.new(str)])
+        check_inline_queries
         self
       end
 
@@ -238,6 +275,15 @@ module Oso
 
       # @return [FFI::Polar]
       attr_reader :ffi_polar
+
+      def check_inline_queries
+        loop do
+          next_query = ffi_polar.next_inline_query
+          break if next_query.nil?
+
+          raise InlineQueryFailedError, next_query.source if Query.new(next_query, host: host).none?
+        end
+      end
 
       # The R and L in REPL for systems where readline is available.
       def repl_readline(prompt)

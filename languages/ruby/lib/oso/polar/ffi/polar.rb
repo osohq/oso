@@ -14,7 +14,7 @@ module Oso
           ffi_lib FFI::LIB_PATH
 
           attach_function :new, :polar_new, [], FFI::Polar
-          attach_function :load, :polar_load, [FFI::Polar, :string, :string], :int32
+          attach_function :load, :polar_load, [FFI::Polar, :string], :int32
           attach_function :clear_rules, :polar_clear_rules, [FFI::Polar], :int32
           attach_function :next_inline_query, :polar_next_inline_query, [FFI::Polar, :uint32], FFI::Query
           attach_function :new_id, :polar_get_external_id, [FFI::Polar], :uint64
@@ -52,11 +52,10 @@ module Oso
           JSON.parse plan
         end
 
-        # @param src [String]
-        # @param filename [String]
+        # @param sources [Array<Source>]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def load(src, filename: nil)
-          loaded = Rust.load(self, src, filename)
+        def load(sources)
+          loaded = Rust.load(self, JSON.dump(sources))
           process_messages
           handle_error if loaded.zero?
         end
