@@ -150,22 +150,31 @@ impl Oso {
         Ok(())
     }
 
-    fn inner_load(&mut self, sources: Vec<Source>) -> crate::Result<()> {
+    // Register MROs, load Polar code, and check inline queries.
+    fn load_sources(&mut self, sources: Vec<Source>) -> crate::Result<()> {
+        // TODO(gj): Register MROs.
         self.inner.load(sources)?;
         self.check_inline_queries()
     }
 
     /// Load a file containing Polar rules. All Polar files must end in `.polar`.
-    pub fn load_file<P: AsRef<std::path::Path>>(&mut self, file: P) -> crate::Result<()> {
+    pub fn load_file<P: AsRef<std::path::Path>>(&mut self, filename: P) -> crate::Result<()> {
         // TODO(gj): emit deprecation warning.
-        self.load_files(vec![file])
+        self.load_files(vec![filename])
     }
 
-    /// Load files containing Polar rules. All polar files must end in `.polar`.
-    pub fn load_files<P: AsRef<std::path::Path>>(&mut self, files: Vec<P>) -> crate::Result<()> {
-        let mut sources = Vec::with_capacity(files.len());
+    /// Load files containing Polar rules. All Polar files must end in `.polar`.
+    pub fn load_files<P: AsRef<std::path::Path>>(
+        &mut self,
+        filenames: Vec<P>,
+    ) -> crate::Result<()> {
+        if filenames.is_empty() {
+            return Ok(());
+        }
 
-        for file in files {
+        let mut sources = Vec::with_capacity(filenames.len());
+
+        for file in filenames {
             let file = file.as_ref();
             let filename = file.to_string_lossy().into_owned();
             if !file.extension().map_or(false, |ext| ext == "polar") {
@@ -180,7 +189,7 @@ impl Oso {
             });
         }
 
-        self.inner_load(sources)
+        self.load_sources(sources)
     }
 
     /// Load a string of polar source directly.
@@ -190,7 +199,7 @@ impl Oso {
     /// ```
     pub fn load_str(&mut self, src: &str) -> crate::Result<()> {
         // TODO(gj): emit... some sort of warning?
-        self.inner_load(vec![Source {
+        self.load_sources(vec![Source {
             src: src.to_owned(),
             filename: None,
         }])

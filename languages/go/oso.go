@@ -89,7 +89,6 @@ func (o Oso) LoadFile(f string) error {
 Load Polar policy from a string, checking that all inline queries succeed.
 */
 func (o Oso) LoadString(s string) error {
-	// TODO(gj): throw some other sort of warning?
 	return (*o.p).loadString(s)
 }
 
@@ -394,7 +393,6 @@ func (o Oso) AuthorizedFields(actor interface{}, action interface{}, resource in
 /*
 Start the oso repl where you can make queries and see results printed out.
 */
-// TODO(gj): does the Go REPL not accept any files for loading?
 func (o Oso) Repl() error {
 	return (*o.p).repl()
 }

@@ -79,39 +79,43 @@ func (p Polar) checkInlineQueries() error {
 	}
 }
 
-func (p Polar) loadFiles(files []string) error {
+func (p Polar) loadFiles(filenames []string) error {
+	if len(filenames) == 0 {
+		return nil
+	}
+
 	sources := []Source{}
 
-	for _, file := range files {
-		if filepath.Ext(file) != ".polar" {
-			return errors.NewPolarFileExtensionError(file)
+	for _, filename := range filenames {
+		if filepath.Ext(filename) != ".polar" {
+			return errors.NewPolarFileExtensionError(filename)
 		}
 
-		data, err := ioutil.ReadFile(file)
+		data, err := ioutil.ReadFile(filename)
 		if err != nil {
 			return err
 		}
-		sources = append(sources, Source{Src: string(data), Filename: &file})
+		sources = append(sources, Source{Src: string(data), Filename: &filename})
 	}
 
-	err := p.ffiPolar.Load(sources)
-	if err != nil {
-		return err
-	}
-	return p.checkInlineQueries()
+	return p.loadSources(sources)
 }
 
 func (p Polar) loadFile(file string) error {
 	return p.loadFiles([]string{file})
 }
 
-// TODO(gj): inconsistent naming of this method across languages (`loadStr` vs. `loadString`).
 func (p Polar) loadString(str string) error {
-	err := p.host.RegisterMros() // TODO(gj): why is this only in `loadString`?
+	return p.loadSources([]Source{{Src: str, Filename: nil}})
+}
+
+// Register MROs, load Polar code, and check inline queries.
+func (p Polar) loadSources(sources []Source) error {
+	err := p.host.RegisterMros()
 	if err != nil {
 		return err
 	}
-	err = p.ffiPolar.Load([]Source{{Src: str, Filename: nil}})
+	err = p.ffiPolar.Load(sources)
 	if err != nil {
 		return err
 	}
@@ -154,7 +158,6 @@ func (p Polar) queryRule(name string, args ...interface{}) (*Query, error) {
 	return &newQuery, nil
 }
 
-// TODO(gj): Does anything actually happen to these files?
 func (p Polar) repl(files ...string) error {
 	reader := bufio.NewReader(os.Stdin)
 	for {

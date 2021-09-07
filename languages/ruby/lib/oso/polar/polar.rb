@@ -150,11 +150,11 @@ module Oso
       # @raise [Error] if any of the FFI calls raise one.
       # @raise [InlineQueryFailedError] on the first failed inline query.
       # @return [self] for chaining.
-      def load_files(filenames)
-        host.register_mros
+      def load_files(filenames = [])
+        return if filenames.empty?
+
         sources = filenames.map { |f| filename_to_source f }
-        ffi_polar.load(sources)
-        check_inline_queries
+        load_sources(sources)
         self
       end
 
@@ -182,9 +182,7 @@ module Oso
       def load_str(str)
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
-        host.register_mros
-        ffi_polar.load([Source.new(str)])
-        check_inline_queries
+        load_sources([Source.new(str)])
         self
       end
 
@@ -275,6 +273,14 @@ module Oso
 
       # @return [FFI::Polar]
       attr_reader :ffi_polar
+
+      # Register MROs, load Polar code, and check inline queries.
+      # @param sources [Array<Source>] Polar sources to load.
+      def load_sources(sources)
+        host.register_mros
+        ffi_polar.load(sources)
+        check_inline_queries
+      end
 
       def check_inline_queries
         loop do

@@ -135,6 +135,8 @@ export class Polar {
    * Load Polar policy files.
    */
   async loadFiles(filenames: string[]): Promise<void> {
+    if (filenames.length === 0) return;
+
     if (!extname) {
       throw new PolarError('loadFiles is not supported in the browser');
     }
@@ -153,9 +155,7 @@ export class Polar {
       })
     );
 
-    this.#ffiPolar.load(sources);
-    this.processMessages();
-    return this.checkInlineQueries();
+    return this.loadSources(sources);
   }
 
   /**
@@ -169,10 +169,14 @@ export class Polar {
   /**
    * Load a Polar policy string.
    */
-  // TODO(gj): emit deprecation warning when `name` arg is provided.
   async loadStr(contents: string, filename?: string): Promise<void> {
-    const source = new Source(contents, filename);
-    this.#ffiPolar.load([source]);
+    return this.loadSources([new Source(contents, filename)]);
+  }
+
+  // Register MROs, load Polar code, and check inline queries.
+  private async loadSources(sources: Source[]): Promise<void> {
+    // TODO(gj): Register MROs.
+    this.#ffiPolar.load(sources);
     this.processMessages();
     return this.checkInlineQueries();
   }

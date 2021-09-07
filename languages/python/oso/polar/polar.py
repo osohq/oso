@@ -90,15 +90,17 @@ class Polar:
         del self.host
         del self.ffi_polar
 
-    def load_files(self, files: List[Union[Path, str]]):
+    def load_files(self, filenames: List[Union[Path, str]] = []):
         """Load Polar policy from ".polar" files."""
-        self.host.register_mros()
+        if not filenames:
+            return
+
         sources: List[Source] = []
 
-        for file in files:
-            file = Path(file)
-            extension = file.suffix
-            filename = str(file)
+        for filename in filenames:
+            path = Path(filename)
+            extension = path.suffix
+            filename = str(path)
             if not extension == ".polar":
                 raise PolarFileExtensionError(filename)
 
@@ -109,26 +111,24 @@ class Polar:
             except FileNotFoundError:
                 raise PolarFileNotFoundError(filename)
 
-        self.ffi_polar.load(sources)
-        self.check_inline_queries()
-
-    # NOTE(gj): Ah, maybe this is why `registerMros` is only called in
-    # `LoadString` in the Go library? We were mistaken in thinking that
-    # `LoadFile` calls `LoadString`.
+        self.load_sources(sources)
 
     # TODO(gj): emit deprecation warning
-    def load_file(self, file: Union[Path, str]):
+    def load_file(self, filename: Union[Path, str]):
         """Load Polar policy from a ".polar" file."""
-        self.load_files([file])
+        self.load_files([filename])
 
-    # TODO(gj): emit some sort of warning?
     def load_str(self, string: str):
         """Load a Polar string, checking that all inline queries succeed."""
         # NOTE: not ideal that the MRO gets updated each time load_str is
         # called, but since we are planning to move to only calling load once
         # with the include feature, I think it's okay for now.
+        self.load_sources([Source(string)])
+
+    # Register MROs, load Polar code, and check inline queries.
+    def load_sources(self, sources: List[Source]):
         self.host.register_mros()
-        self.ffi_polar.load([Source(string)])
+        self.ffi_polar.load(sources)
         self.check_inline_queries()
 
     def check_inline_queries(self):

@@ -55,6 +55,10 @@ public class Polar {
    * @throws IOException If unable to open or read the file.
    */
   public void loadFiles(String[] filenames) throws IOException, OsoException {
+    if (filenames.length == 0) {
+      return;
+    }
+
     JSONArray sources = new JSONArray();
 
     for (String filename : filenames) {
@@ -77,7 +81,7 @@ public class Polar {
       }
     }
 
-    load(sources);
+    loadSources(sources);
   }
 
   /**
@@ -105,7 +109,7 @@ public class Polar {
     JSONArray sources = new JSONArray();
     Source source = new Source(str, filename);
     sources.put(source.toJSON());
-    load(sources);
+    loadSources(sources);
   }
 
   /**
@@ -269,7 +273,7 @@ public class Polar {
   }
 
   /** Register MROs, load Polar code, and check inline queries. */
-  private void load(JSONArray sources) throws OsoException {
+  private void loadSources(JSONArray sources) throws OsoException {
     host.registerMros();
     ffiPolar.load(sources);
     checkInlineQueries();
