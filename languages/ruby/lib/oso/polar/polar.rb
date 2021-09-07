@@ -175,14 +175,15 @@ module Oso
       # Load a Polar string into the KB.
       #
       # @param str [String] Polar string to load.
+      # @param filename [String] Name of Polar source file.
       # @raise [NullByteInPolarFileError] if str includes a non-terminating null byte.
       # @raise [Error] if any of the FFI calls raise one.
       # @raise [InlineQueryFailedError] on the first failed inline query.
       # @return [self] for chaining.
-      def load_str(str)
+      def load_str(str, filename: nil)
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
-        load_sources([Source.new(str)])
+        load_sources([Source.new(str, filename: filename)])
         self
       end
 
