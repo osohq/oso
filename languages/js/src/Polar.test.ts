@@ -868,7 +868,8 @@ describe('Oso Roles', () => {
         has_permission(actor, action, resource);
 
       has_role(user: User, name, resource) if
-        { name: name, resource: resource } in user.roles;
+        role in user.roles and
+        role matches { name: name, resource: resource };
 
       actor User {}
 
@@ -919,26 +920,26 @@ describe('Oso Roles', () => {
       return result.length !== 0;
     };
 
-    expect(await isAllowed(leina, 'invite', osohq));
-    expect(await isAllowed(leina, 'create_repo', osohq));
-    expect(await isAllowed(leina, 'push', oso));
-    expect(await isAllowed(leina, 'pull', oso));
-    expect(await isAllowed(leina, 'edit', bug));
+    expect(await isAllowed(leina, 'invite', osohq)).toBe(true);
+    expect(await isAllowed(leina, 'create_repo', osohq)).toBe(true);
+    expect(await isAllowed(leina, 'push', oso)).toBe(true);
+    expect(await isAllowed(leina, 'pull', oso)).toBe(true);
+    expect(await isAllowed(leina, 'edit', bug)).toBe(true);
 
-    expect(!(await isAllowed(steve, 'invite', osohq)));
-    expect(await isAllowed(steve, 'create_repo', osohq));
-    expect(!(await isAllowed(steve, 'push', oso)));
-    expect(await isAllowed(steve, 'pull', oso));
-    expect(!(await isAllowed(steve, 'edit', bug)));
+    expect(await isAllowed(steve, 'invite', osohq)).toBe(false);
+    expect(await isAllowed(steve, 'create_repo', osohq)).toBe(true);
+    expect(await isAllowed(steve, 'push', oso)).toBe(false);
+    expect(await isAllowed(steve, 'pull', oso)).toBe(true);
+    expect(await isAllowed(steve, 'edit', bug)).toBe(false);
 
-    expect(!(await isAllowed(leina, 'edit', laggy)));
-    expect(!(await isAllowed(steve, 'edit', laggy)));
+    expect(await isAllowed(leina, 'edit', laggy)).toBe(false);
+    expect(await isAllowed(steve, 'edit', laggy)).toBe(false);
 
     let gabe = new User('gabe', []);
-    expect(!(await isAllowed(gabe, 'edit', bug)));
+    expect(await isAllowed(gabe, 'edit', bug)).toBe(false);
     gabe = new User('gabe', [osohqMember]);
-    expect(!(await isAllowed(gabe, 'edit', bug)));
+    expect(await isAllowed(gabe, 'edit', bug)).toBe(false);
     gabe = new User('gabe', [osohqOwner]);
-    expect(await isAllowed(gabe, 'edit', bug));
+    expect(await isAllowed(gabe, 'edit', bug)).toBe(true);
   });
 });
