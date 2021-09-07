@@ -184,11 +184,11 @@ impl Polar {
                     parser::Line::Query(term) => {
                         kb.inline_queries.push(term);
                     }
-                    parser::Line::RulePrototype(prototype) => {
-                        // make sure prototype doesn't have anything that needs to be rewritten in the head
-                        let prototype = rewrite_rule(prototype, kb);
+                    parser::Line::RuleType(rule_type) => {
+                        // make sure rule_type doesn't have anything that needs to be rewritten in the head
+                        let rule_type = rewrite_rule(rule_type, kb);
                         if !matches!(
-                            prototype.body.value(),
+                            rule_type.body.value(),
                             Value::Expression(
                                 Operation {
                                     operator: Operator::And,
@@ -197,23 +197,23 @@ impl Polar {
                             ) if args.is_empty()
                         ) {
                             return Err(kb.set_error_context(
-                                &prototype.body,
-                                error::ValidationError::InvalidPrototype {
-                                    prototype: prototype.to_polar(),
-                                    msg: "\nPrototypes cannot contain dot lookups.".to_owned(),
+                                &rule_type.body,
+                                error::ValidationError::InvalidRuleType {
+                                    rule_type: rule_type.to_polar(),
+                                    msg: "\nRuleTypes cannot contain dot lookups.".to_owned(),
                                 },
                             ));
                         }
-                        kb.add_rule_prototype(prototype);
+                        kb.add_rule_type(rule_type);
                     }
                     parser::Line::ResourceBlock(block) => {
                         block.add_to_kb(kb)?;
                     }
                 }
             }
-            // Rewrite shorthand rules in resource blocks before validating rule prototypes.
+            // Rewrite shorthand rules in resource blocks before validating rule rule_types.
             kb.rewrite_shorthand_rules()?;
-            // check rules are valid against rule prototypes
+            // check rules are valid against rule rule_types
             kb.validate_rules()?;
             Ok(warnings)
         }

@@ -115,7 +115,7 @@ class Host:
         return name
 
     def register_mros(self):
-        """Register the MRO of each registered class to be used for rule prototype validation."""
+        """Register the MRO of each registered class to be used for rule type validation."""
         # Get MRO of all registered classes
         for rec in self.distinct_user_types():
             mro = [self.types[c].id for c in inspect.getmro(rec.cls) if c in self.types]

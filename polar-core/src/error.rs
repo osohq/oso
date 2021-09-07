@@ -426,7 +426,7 @@ impl fmt::Display for ParameterError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
     InvalidRule { rule: String, msg: String },
-    InvalidPrototype { prototype: String, msg: String },
+    InvalidRuleType { rule_type: String, msg: String },
     // TODO(lm|gj): add ResourceBlock and SingletonVariable.
 }
 
@@ -436,8 +436,8 @@ impl fmt::Display for ValidationError {
             Self::InvalidRule { rule, msg } => {
                 write!(f, "Invalid rule: {} {}", rule, msg)
             }
-            Self::InvalidPrototype { prototype, msg } => {
-                write!(f, "Invalid prototype: {} {}", prototype, msg)
+            Self::InvalidRuleType { rule_type, msg } => {
+                write!(f, "Invalid rule_type: {} {}", rule_type, msg)
             }
         }
     }
