@@ -34,11 +34,10 @@ module Oso
       # @return [Host]
       attr_reader :host
 
-      def initialize # rubocop:disable Metrics/MethodLength
+      def initialize
         @ffi_polar = FFI::Polar.create
         @host = Host.new(ffi_polar)
         @ffi_polar.enrich_message = @host.method(:enrich_message)
-        @polar_roles_enabled = false
 
         # Register global constants.
         register_constant nil, name: 'nil'
@@ -54,42 +53,6 @@ module Oso
 
       def ffi
         @ffi_polar
-      end
-
-      def enable_roles # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-        return if polar_roles_enabled
-
-        roles_helper = Class.new do
-          def self.join(separator, left, right)
-            [left, right].join(separator)
-          end
-        end
-        register_constant(roles_helper, name: '__oso_internal_roles_helpers__')
-        ffi_polar.enable_roles
-        self.polar_roles_enabled = true
-
-        # validate config
-        validation_query_results = []
-        loop do
-          query = ffi_polar.next_inline_query
-          break if query.nil?
-
-          new_host = host.dup
-          new_host.accept_expression = true
-          results = Query.new(query, host: new_host).to_a
-          raise InlineQueryFailedError, query.source if results.empty?
-
-          validation_query_results.push results
-        end
-
-        # turn bindings back into polar
-        validation_query_results = validation_query_results.map do |results|
-          results.map do |result|
-            { 'bindings' => result.transform_values { |v| host.to_polar(v) } }
-          end
-        end
-
-        ffi_polar.validate_roles_config(validation_query_results)
       end
 
       # get the (maybe user-supplied) name of a class.
@@ -146,7 +109,6 @@ module Oso
       # @return [self] for chaining.
       def clear_rules
         ffi_polar.clear_rules
-        ffi_polar.enable_roles if polar_roles_enabled
         self
       end
 
@@ -173,8 +135,10 @@ module Oso
       # @raise [InlineQueryFailedError] on the first failed inline query.
       # @raise [Error] if any of the FFI calls raise one.
       # @return [self] for chaining.
-      def load_str(str, filename: nil) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+      def load_str(str, filename: nil) # rubocop:disable Metrics/AbcSize
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
+
+        host.register_mros
 
         ffi_polar.load(str, filename: filename)
         loop do
@@ -182,12 +146,6 @@ module Oso
           break if next_query.nil?
 
           raise InlineQueryFailedError, next_query.source if Query.new(next_query, host: host).first.nil?
-        end
-
-        # If roles are enabled, re-validate config when new rules are loaded.
-        if polar_roles_enabled
-          self.polar_roles_enabled = false
-          enable_roles
         end
 
         self
@@ -225,6 +183,16 @@ module Oso
         host = self.host.dup
         host.accept_expression = accept_expression
         query(Predicate.new(name, args: args), host: host, bindings: bindings)
+      end
+
+      # Query for a rule, returning true if it has any results.
+      #
+      # @param name [String]
+      # @param args [Array<Object>]
+      # @return [Boolean] indicating whether the query found at least one result.
+      # @raise [Error] if the FFI call raises one.
+      def query_rule_once(name, *args)
+        query_rule(name, *args).any?
       end
 
       # Register a Ruby class with Polar.
@@ -270,7 +238,6 @@ module Oso
 
       # @return [FFI::Polar]
       attr_reader :ffi_polar
-      attr_accessor :polar_roles_enabled
 
       # The R and L in REPL for systems where readline is available.
       def repl_readline(prompt)

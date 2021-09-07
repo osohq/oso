@@ -3,7 +3,6 @@ import pytest
 
 from sqlalchemy.orm import aliased
 
-from polar.exceptions import UnsupportedError
 from sqlalchemy_oso.session import (
     authorized_sessionmaker,
     scoped_session,
@@ -20,15 +19,6 @@ def log_queries():
 
     logging.basicConfig()
     logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
-
-
-def test_cannot_use_data_filtering_if_polar_roles_enabled(engine, oso):
-    oso.load_str(
-        'resource(_: String, "string", ["get"], _roles); actor_has_role_for_resource(_, _, _);'
-    )
-    oso.enable_roles()
-    with pytest.raises(UnsupportedError, match="Polar roles"):
-        AuthorizedSession(oso, "user", {}, bind=engine)
 
 
 def test_authorize_query_no_access(engine, oso, fixture_data):

@@ -198,10 +198,6 @@ class ParameterError(PolarApiError):
     pass
 
 
-class RolesValidationError(PolarApiError):
-    pass
-
-
 class ValidationError(PolarApiError):
     pass
 

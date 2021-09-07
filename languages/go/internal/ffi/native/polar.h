@@ -82,10 +82,6 @@ int32_t polar_free(polar_Polar *polar);
  */
 int32_t query_free(polar_Query *query);
 
-int32_t polar_enable_roles(polar_Polar *polar_ptr);
-
-int32_t polar_validate_roles_config(polar_Polar *polar_ptr, const char *validation_query_results);
-
 const char *polar_build_filter_plan(polar_Polar *polar_ptr,
                                     const char *types,
                                     const char *results,

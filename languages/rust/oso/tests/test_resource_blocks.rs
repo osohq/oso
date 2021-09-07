@@ -1,8 +1,6 @@
 use oso::{PolarClass, PolarValue, Query, ResultSet, ToPolar};
 mod common;
 use common::OsoTest;
-use oso::errors::polar::{ErrorKind, PolarError, RolesValidationError};
-use oso::errors::OsoError;
 
 #[derive(Clone, PolarClass, Eq)]
 struct Org {
@@ -73,63 +71,59 @@ fn roles_test_oso() -> OsoTest {
 }
 
 #[test]
-fn test_polar_roles() {
+fn test_resource_blocks() {
     common::setup();
     let mut test = roles_test_oso();
     let pol = r#"
-        resource(_type: Org, "org", actions, roles) if
-            actions = [
-                "invite",
-                "create_repo"
-            ] and
-            roles = {
-                member: {
-                    permissions: ["create_repo"],
-                    implies: ["repo:reader"]
-                },
-                owner: {
-                    permissions: ["invite"],
-                    implies: ["member", "repo:writer"]
-                }
-            };
+      allow(actor, action, resource) if
+        has_permission(actor, action, resource);
 
-        resource(_type: Repo, "repo", actions, roles) if
-            actions = [
-                "push",
-                "pull"
-            ] and
-            roles = {
-                writer: {
-                    permissions: ["push", "issue:edit"],
-                    implies: ["reader"]
-                },
-                reader: {
-                    permissions: ["pull"]
-                }
-            };
+      has_role(user: User, name, resource) if
+        role in user.roles and
+        role.name = name and
+        role.resource = resource;
 
-        resource(_type: Issue, "issue", actions, {}) if
-            actions = [
-                "edit"
-            ];
+      actor User {}
 
-        parent_child(parent_org: Org, repo: Repo) if
-            repo.org = parent_org;
+      resource Org {
+        roles = [ "owner", "member" ];
+        permissions = [ "invite", "create_repo" ];
 
-        parent_child(parent_repo: Repo, issue: Issue) if
-            issue.repo = parent_repo;
+        "create_repo" if "member";
+        "invite" if "owner";
 
-        actor_has_role_for_resource(actor, role_name, role_resource) if
-            role in actor.roles and
-            role matches {name: role_name, resource: role_resource};
+        "member" if "owner";
+      }
 
-        allow(actor, action, resource) if
-            role_allows(actor, action, resource);
+      resource Repo {
+        roles = [ "writer", "reader" ];
+        permissions = [ "push", "pull" ];
+        relations = { parent: Org };
 
+        "pull" if "reader";
+        "push" if "writer";
+
+        "reader" if "writer";
+
+        "reader" if "member" on "parent";
+        "writer" if "owner" on "parent";
+      }
+
+      has_relation(org: Org, "parent", repo: Repo) if
+        org = repo.org;
+
+      resource Issue {
+        permissions = [ "edit" ];
+        relations = { parent: Repo };
+
+        "edit" if "writer" on "parent";
+      }
+
+      has_relation(repo: Repo, "parent", issue: Issue) if
+        repo = issue.repo;
     "#;
 
     test.load_str(pol);
-    test.enable_roles();
 
     let osohq = Org {
         name: "oso".to_string(),
@@ -244,42 +238,4 @@ fn test_polar_roles() {
         roles: vec![osohq_owner],
     };
     assert!(!empty(test.oso.query_rule("allow", (gabe, "edit", bug))));
-}
-
-fn check_empty_roles_error(err: OsoError) {
-    let msg = String::from("Must define actions or roles.");
-    assert!(matches!(
-        err,
-        OsoError::Polar(PolarError {
-            kind: ErrorKind::RolesValidation(RolesValidationError(x)),
-            context: None
-        }) if x == msg
-    ));
-}
-static VALID_POL: &str = r#"
-    resource(_: Repo, "repo", ["read"], {});
-    actor_has_role_for_resource(_,_,_);"#;
-
-#[test]
-fn test_roles_revalidation_str() {
-    common::setup();
-
-    let mut test = roles_test_oso();
-    test.load_str(VALID_POL);
-    test.enable_roles();
-
-    let invalid_pol = r#"
-        resource(_: Org, "org", [], {});
-        actor_has_role_for_resource(_,_,_);"#;
-    check_empty_roles_error(test.oso.load_str(invalid_pol).unwrap_err());
-}
-
-#[test]
-fn test_roles_revalidation_file() {
-    common::setup();
-    let mut test = roles_test_oso();
-    test.load_str(VALID_POL);
-    test.enable_roles();
-
-    check_empty_roles_error(test.load_file(file!(), "invalid_roles.polar").unwrap_err());
 }

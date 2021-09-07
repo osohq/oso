@@ -348,8 +348,8 @@ pub mod display {
 
 pub mod to_polar {
     use crate::formatting::{format_args, format_params, to_polar_parens};
+    use crate::resource_block::{BlockType, ResourceBlock, ShorthandRule};
     use crate::rules::*;
-    use crate::sugar::{Implication, Namespace};
     use crate::terms::*;
 
     /// Effectively works as a reverse-parser. Allows types to be turned
@@ -618,7 +618,7 @@ pub mod to_polar {
         }
     }
 
-    impl ToPolarString for Implication {
+    impl ToPolarString for ShorthandRule {
         fn to_polar(&self) -> String {
             let Self {
                 head,
@@ -637,9 +637,22 @@ pub mod to_polar {
         }
     }
 
-    impl ToPolarString for Namespace {
+    impl ToPolarString for BlockType {
         fn to_polar(&self) -> String {
-            let mut s = format!("{} {{\n", self.resource.to_polar());
+            match self {
+                Self::Actor => "actor".to_owned(),
+                Self::Resource => "resource".to_owned(),
+            }
+        }
+    }
+
+    impl ToPolarString for ResourceBlock {
+        fn to_polar(&self) -> String {
+            let mut s = format!(
+                "{} {} {{\n",
+                self.block_type.to_polar(),
+                self.resource.to_polar()
+            );
             if let Some(ref roles) = self.roles {
                 s += &format!("  roles = {};\n", roles.to_polar());
             }
@@ -649,8 +662,8 @@ pub mod to_polar {
             if let Some(ref relations) = self.relations {
                 s += &format!("  relations = {};\n", relations.to_polar());
             }
-            for implication in &self.implications {
-                s += &format!("  {}\n", implication.to_polar());
+            for rule in &self.shorthand_rules {
+                s += &format!("  {}\n", rule.to_polar());
             }
             s += "}";
             s
