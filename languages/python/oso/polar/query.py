@@ -7,7 +7,7 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
-from .data_filtering import Relationship, Constraint
+from .data_filtering import Relation, Constraint
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -103,7 +103,7 @@ class Query:
                 typ = cls_rec.fields
                 if attribute in typ:
                     attr_typ = typ[attribute]
-                    if isinstance(attr_typ, Relationship):
+                    if isinstance(attr_typ, Relation):
                         rel = attr_typ
                         # Use the fetcher for the other type to traverse the relationship
                         build_query = self.host.types[rel.other_type].build_query
@@ -118,10 +118,10 @@ class Query:
                         constraints = [constraint]
                         query = build_query(constraints)
                         results = exec_query(query)
-                        if rel.kind == "parent":
+                        if rel.kind == "one":
                             assert len(results) == 1
                             attr = results[0]
-                        elif rel.kind == "children":
+                        elif rel.kind == "many":
                             attr = results
             if attr is None:
                 attr = getattr(instance, attribute)

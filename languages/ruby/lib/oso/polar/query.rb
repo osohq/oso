@@ -110,12 +110,12 @@ module Oso
         raise unless cls.fields.key? tag
 
         ref = cls.fields[tag]
-        return host.types[ref] unless ref.is_a? ::Oso::Polar::DataFiltering::Relationship
+        return host.types[ref] unless ref.is_a? ::Oso::Polar::DataFiltering::Relation
 
         case ref.kind
-        when 'parent'
+        when 'one'
           host.types[ref.other_type]
-        when 'children'
+        when 'many'
           host.types[Array]
         end
       end
@@ -237,7 +237,7 @@ module Oso
         return unless typ
 
         rel = typ.fields[attr]
-        return unless rel.is_a? ::Oso::Polar::DataFiltering::Relationship
+        return unless rel.is_a? ::Oso::Polar::DataFiltering::Relation
 
         rel
       end
@@ -251,7 +251,7 @@ module Oso
         )
         res = fetcher[[constraint]].uniq
 
-        if rel.kind == 'parent'
+        if rel.kind == 'one'
           raise "multiple parents: #{res}" unless res.length == 1
 
           res = res[0]

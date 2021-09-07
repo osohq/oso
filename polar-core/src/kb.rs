@@ -564,11 +564,8 @@ impl KnowledgeBase {
         // remove from rules
         self.rules.retain(|_, gr| {
             let to_remove: Vec<u64> = gr.rules.iter().filter_map(|(idx, rule)| {
-                if matches!(rule.source_info, SourceInfo::Parser { src_id, ..} if src_id == source_id) {
-                    Some(*idx)
-                } else {
-                    None
-                }
+                matches!(rule.source_info, SourceInfo::Parser { src_id, ..} if src_id == source_id)
+                    .then(||*idx)
             }).collect();
 
             for idx in to_remove {
@@ -695,6 +692,25 @@ impl KnowledgeBase {
 mod tests {
     use super::*;
     use crate::error::*;
+
+    #[test]
+    fn test_load_duplicate_file_contents() -> PolarResult<()> {
+        let mut kb = KnowledgeBase::new();
+        let count = Counter::default();
+        let mut load = |content: &str| {
+            let source = Source {
+                filename: Some(format!("{}.polar", count.next())),
+                src: content.to_owned(),
+            };
+            kb.add_source(source)
+        };
+
+        load("f(1);")?;
+        load("f(1);").expect_err("shouldn't load duplicate non-empty file contents");
+
+        Ok(())
+    }
+
     #[test]
     fn test_rule_params_match() {
         let mut kb = KnowledgeBase::new();

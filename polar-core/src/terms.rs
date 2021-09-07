@@ -301,6 +301,51 @@ impl From<TermList> for Value {
     }
 }
 
+impl From<String> for Value {
+    fn from(other: String) -> Self {
+        Self::String(other)
+    }
+}
+
+impl From<ExternalInstance> for Value {
+    fn from(other: ExternalInstance) -> Self {
+        Self::ExternalInstance(other)
+    }
+}
+
+impl From<Pattern> for Value {
+    fn from(other: Pattern) -> Self {
+        Self::Pattern(other)
+    }
+}
+
+impl From<InstanceLiteral> for Pattern {
+    fn from(lit: InstanceLiteral) -> Self {
+        Pattern::Instance(lit)
+    }
+}
+
+impl From<Dictionary> for Pattern {
+    fn from(dict: Dictionary) -> Self {
+        Pattern::Dictionary(dict)
+    }
+}
+
+impl<N> From<N> for Value
+where
+    N: Into<Numeric>,
+{
+    fn from(other: N) -> Self {
+        Self::Number(other.into())
+    }
+}
+
+impl From<Call> for Value {
+    fn from(other: Call) -> Self {
+        Self::Call(other)
+    }
+}
+
 impl Term {
     /// Creates a new term for a temporary variable
     pub fn new_temporary(value: Value) -> Self {
