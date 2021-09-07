@@ -32,6 +32,12 @@ import {
 } from './types';
 import { map } from '../test/helpers';
 
+type UserType = {
+  name: string;
+  id: number;
+  cls: Class;
+};
+
 /**
  * Translator between Polar and JavaScript.
  *
@@ -92,20 +98,19 @@ export class Host {
   /**
    * Get user type for `cls`.
    */
-  getType(cls: Class):
-    | {
-        name: string;
-        id: number;
-        cls: Class;
-      }
-    | undefined {
+  getType(cls: Class): UserType | undefined {
     // TODO: Update when adding user type.
     const name = this.clsNames.get(cls);
     if (name === undefined) return undefined;
 
+    const id = this.#classIds.get(name);
+    if (id === undefined) {
+      throw new Error('invariant: class must be in names and ids.');
+    }
+
     return {
       name: name,
-      id: this.#classIds.get(name)!,
+      id,
       cls,
     };
   }
@@ -113,25 +118,15 @@ export class Host {
   /**
    * Return user types that are registered with Host.
    */
-  *distinctUserTypes(): IterableIterator<{
-    name: string;
-    id: number;
-    cls: Class;
-  }> {
+  *distinctUserTypes(): IterableIterator<UserType> {
     // TODO: Use UserType object once this is brought in line with Python.
-    for (const entry of this.#classIds.entries()) {
-      const cls = this.#classes.get(entry[0]);
+    for (const [name, id] of this.#classIds.entries()) {
+      const cls = this.#classes.get(name);
       if (typeof cls === 'undefined') {
         throw new Error('cls should not be undefined.');
       }
 
-      const entryWithClass = {
-        name: entry[0],
-        id: entry[1],
-        cls,
-      };
-
-      yield entryWithClass;
+      yield { name, id, cls };
     }
   }
 
@@ -213,12 +208,12 @@ export class Host {
     // NOTE: not ideal that the MRO gets updated each time loadStr is
     // called, but since we are planning to move to only calling load once
     // with the include feature, I think it's okay for now.
-    for (const typ of this.distinctUserTypes()) {
+    for (const typ of this.#classes.values()) {
       // Get MRO for type.
-      const mro = ancestors(typ.cls)
+      const mro = ancestors(typ)
         // TODO: as conversion ok?
         .map(c => this.getType(c as Class)?.id)
-        .filter(id => !!id);
+        .filter(id => id !== undefined);
 
       // Register with core.
       this.#ffiPolar.registerMro(typ.name, mro);
