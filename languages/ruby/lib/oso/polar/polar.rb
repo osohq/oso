@@ -71,37 +71,43 @@ module Oso
         end
       end
 
-      def get_allowed_resources(actor, action, klass) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-        resource = Variable.new 'resource'
-        class_name = get_class_name klass
-        constraint = Expression.new(
+      def type_constraint(var, cls)
+        Expression.new(
           'And',
-          [Expression.new('Isa', [resource, Pattern.new(class_name, {})])]
+          [Expression.new('Isa', [var, Pattern.new(get_class_name(cls), {})])]
         )
+      end
+
+      # Returns a query for the resources belonging to +cls+ that +actor+
+      # is allowed to perform +action+ on.
+      def authorized_query(actr, actn, cls) # rubocop:disable Metrics/MethodLength
+        rsrc = Variable.new 'resource'
 
         results = query_rule(
           'allow',
-          actor,
-          action,
-          resource,
-          bindings: { 'resource' => constraint },
+          actr,
+          actn,
+          rsrc,
+          bindings: { 'resource' => type_constraint(rsrc, cls) },
           accept_expression: true
         )
 
-        complete = []
-        partial = []
-
-        results.to_a.each do |result|
-          result.to_a.each do |key, val|
-            if val.is_a? Expression
-              partial.push({ 'bindings' => { key => host.to_polar(val) } })
-            else
-              complete.push val
-            end
+        results = results.each_with_object([]) do |result, out|
+          result.each do |key, val|
+            out.push({ 'bindings' => { key => host.to_polar(val) } })
           end
         end
-        filter = ::Oso::Polar::DataFiltering::FilterPlan.new(self, partial, class_name)
-        complete + filter.resolve
+
+        ::Oso::Polar::DataFiltering::FilterPlan
+          .parse(self, results, get_class_name(cls))
+          .build_query
+      end
+
+      def authorized_resources(actr, actn, cls)
+        q = authorized_query actr, actn, cls
+        return [] if q.nil?
+
+        host.types[get_class_name cls].exec_query[q]
       end
 
       # Clear all rules and rule sources from the current Polar instance
@@ -203,8 +209,15 @@ module Oso
       # under a previously-registered name.
       # @raise [FFI::Error] if the FFI call returns an error.
       # @return [self] for chaining.
-      def register_class(cls, name: nil, fields: {}, fetcher: nil)
-        name = host.cache_class(cls, name: name || cls.name, fields: fields, fetcher: fetcher)
+      def register_class(cls, name: nil, fields: nil, combine_query: nil, build_query: nil, exec_query: nil) # rubocop:disable Metrics/ParameterLists
+        name = host.cache_class(
+          cls,
+          name: name || cls.name,
+          fields: fields,
+          build_query: build_query || maybe_mtd(cls, :build_query),
+          combine_query: combine_query || maybe_mtd(cls, :combine_query),
+          exec_query: exec_query || maybe_mtd(cls, :exec_query)
+        )
         register_constant(cls, name: name)
       end
 
@@ -235,6 +248,10 @@ module Oso
       end
 
       private
+
+      def maybe_mtd(cls, mtd)
+        cls.respond_to?(mtd) && cls.method(mtd) || nil
+      end
 
       # @return [FFI::Polar]
       attr_reader :ffi_polar

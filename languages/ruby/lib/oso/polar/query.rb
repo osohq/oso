@@ -243,13 +243,13 @@ module Oso
       end
 
       def handle_relationship(call_id, instance, rel) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-        fetcher = host.types[rel.other_type].fetcher
+        typ = host.types[rel.other_type]
         constraint = ::Oso::Polar::DataFiltering::Constraint.new(
           kind: 'Eq',
           field: rel.other_field,
           value: instance.send(rel.my_field)
         )
-        res = fetcher[[constraint]].uniq
+        res = typ.exec_query[typ.build_query[[constraint]]]
 
         if rel.kind == 'one'
           raise "multiple parents: #{res}" unless res.length == 1

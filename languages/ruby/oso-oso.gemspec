@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency 'ffi', '~> 1.0'
 
   # Development dependencies
-  spec.add_development_dependency 'activerecord'
+  spec.add_development_dependency 'activerecord', '~> 6.1.4'
   spec.add_development_dependency 'pry-byebug', '~> 3.9.0'
   spec.add_development_dependency 'rake', '~> 12.0'
   spec.add_development_dependency 'rspec', '~> 3.0'
