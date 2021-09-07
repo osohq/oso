@@ -26,7 +26,7 @@ import type {
 } from './types';
 import { processMessage } from './messages';
 import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
-import { Constraint, Relationship } from './dataFiltering';
+import { Constraint, Relation } from './dataFiltering';
 
 function getLogLevelsFromEnv() {
   if (typeof process?.env === 'undefined') return [undefined, undefined];
@@ -142,7 +142,7 @@ export class Query {
           if (typedef != null) {
             const fieldType = typedef.get(attr);
             if (fieldType != null) {
-              if (fieldType instanceof Relationship) {
+              if (fieldType instanceof Relation) {
                 // Use the fetcher for the other type to traverse
                 // the relationship.
                 const otherClsFetcher = this.#host.fetchers.get(
@@ -156,7 +156,7 @@ export class Query {
                 const constraints = [constraint];
                 let results = otherClsFetcher(constraints);
                 results = await Promise.resolve(results);
-                if (fieldType.kind == 'parent') {
+                if (fieldType.kind == 'one') {
                   if (results.length != 1)
                     throw new Error(
                       'Wrong number of parents: ' + results.length

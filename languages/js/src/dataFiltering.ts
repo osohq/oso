@@ -2,7 +2,7 @@ import { resolve } from 'path/posix';
 import { resourceUsage } from 'process';
 import { Host } from './Host';
 
-export class Relationship {
+export class Relation {
   kind: string;
   otherType: string;
   myField: string;
@@ -59,9 +59,9 @@ export function serializeTypes(
   for (let [tag, fields] of types.entries()) {
     let fieldTypes: any = {};
     for (let [k, v] of fields.entries()) {
-      if (v instanceof Relationship) {
+      if (v instanceof Relation) {
         fieldTypes[k] = {
-          Relationship: {
+          Relation: {
             kind: v.kind,
             other_class_tag: v.otherType,
             my_field: v.myField,

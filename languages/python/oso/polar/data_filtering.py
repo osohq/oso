@@ -1,12 +1,10 @@
 from typing import Any, Optional
 from dataclasses import dataclass
 
-VALID_KINDS = ["parent", "children"]
-
 
 # Used so we know what fetchers to call and how to match up constraints.
 @dataclass
-class Relationship:
+class Relation:
     kind: str
     other_type: str
     my_field: str
@@ -25,9 +23,9 @@ def serialize_types(types, tmap):
         tag, fields = typ.name, typ.fields
         field_types = {}
         for k, v in fields.items():
-            if isinstance(v, Relationship):
+            if isinstance(v, Relation):
                 field_types[k] = {
-                    "Relationship": {
+                    "Relation": {
                         "kind": v.kind,
                         "other_class_tag": v.other_type,
                         "my_field": v.my_field,
