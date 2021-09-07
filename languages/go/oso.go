@@ -394,6 +394,7 @@ func (o Oso) AuthorizedFields(actor interface{}, action interface{}, resource in
 /*
 Start the oso repl where you can make queries and see results printed out.
 */
+// TODO(gj): does the Go REPL not accept any files for loading?
 func (o Oso) Repl() error {
 	return (*o.p).repl()
 }

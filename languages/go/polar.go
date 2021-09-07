@@ -105,6 +105,7 @@ func (p Polar) loadFile(file string) error {
 	return p.loadFiles([]string{file})
 }
 
+// TODO(gj): inconsistent naming of this method across languages (`loadStr` vs. `loadString`).
 func (p Polar) loadString(str string) error {
 	err := p.host.RegisterMros() // TODO(gj): why is this only in `loadString`?
 	if err != nil {
@@ -153,6 +154,7 @@ func (p Polar) queryRule(name string, args ...interface{}) (*Query, error) {
 	return &newQuery, nil
 }
 
+// TODO(gj): Does anything actually happen to these files?
 func (p Polar) repl(files ...string) error {
 	reader := bufio.NewReader(os.Stdin)
 	for {
