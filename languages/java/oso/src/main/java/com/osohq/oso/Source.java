@@ -18,4 +18,3 @@ public class Source {
     return source;
   }
 }
-

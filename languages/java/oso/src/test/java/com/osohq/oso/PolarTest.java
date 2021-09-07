@@ -382,8 +382,7 @@ public class PolarTest {
 
   @Test
   public void testExternalIsSubSpecializer() throws Exception {
-    String policy = "f(_: MySubClass, x) if x = 1;\n"
-      + "f(_: MyClass, x) if x = 2;";
+    String policy = "f(_: MySubClass, x) if x = 1;\n" + "f(_: MyClass, x) if x = 2;";
     p.loadStr(policy);
     List<HashMap<String, Object>> result =
         p.queryRule("f", new MySubClass("test", 1), new Variable("x")).results();
@@ -501,7 +500,10 @@ public class PolarTest {
 
   @Test
   public void testLoadMultipleFiles() throws Exception {
-    p.loadFiles(new String[]{"src/test/java/com/osohq/oso/test.polar", "src/test/java/com/osohq/oso/test2.polar"});
+    p.loadFiles(
+        new String[] {
+          "src/test/java/com/osohq/oso/test.polar", "src/test/java/com/osohq/oso/test2.polar"
+        });
     assertTrue(
         p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
     assertTrue(
@@ -733,12 +735,13 @@ public class PolarTest {
     p.registerClass(Foo.class, "Foo");
     p.registerClass(Bad.class, "Bad");
 
-    final String policy1 = "type f(_x: Integer);"
-      + "f(1);"
-      + "type f(_x: Foo);"
-      + "type f(_x: Foo, _y: Bar);"
-      + "f(_x: Bar);"
-      + "f(_x: Baz);";
+    final String policy1 =
+        "type f(_x: Integer);"
+            + "f(1);"
+            + "type f(_x: Foo);"
+            + "type f(_x: Foo, _y: Bar);"
+            + "f(_x: Bar);"
+            + "f(_x: Baz);";
 
     p.loadStr(policy1);
 
@@ -750,9 +753,7 @@ public class PolarTest {
         "Expected rule type validation error.");
 
     //  Test with fields
-    final String policy2 = "type f(_x: Foo{id: 1});"
-      + "f(_x: Bar{id: 1});"
-      + "f(_x: Baz{id: 1});";
+    final String policy2 = "type f(_x: Foo{id: 1});" + "f(_x: Bar{id: 1});" + "f(_x: Baz{id: 1});";
 
     p.loadStr(policy2);
 

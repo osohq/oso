@@ -3,7 +3,6 @@ package com.osohq.oso;
 import com.osohq.oso.Exceptions.OsoException;
 import com.osohq.oso.Exceptions.ParseError;
 import com.osohq.oso.Exceptions.PolarRuntimeException;
-import org.json.JSONArray;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -15,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.json.JSONArray;
 
 public class Polar {
   private Ffi.Polar ffiPolar;
@@ -46,9 +46,8 @@ public class Polar {
   }
 
   /**
-   * Load Polar policy files. File contents are loaded into a String and saved
-   * here, so changes to a file made after a call to loadFiles will not be
-   * recognized.
+   * Load Polar policy files. File contents are loaded into a String and saved here, so changes to a
+   * file made after a call to loadFiles will not be recognized.
    *
    * @throws Exceptions.PolarFileExtensionError On incorrect file extension.
    * @throws Exceptions.PolarFileNotFoundError On nonexistent file.
@@ -85,9 +84,8 @@ public class Polar {
   }
 
   /**
-   * Load a Polar policy file. File contents are loaded into a String and saved
-   * here, so changes to the file made after a call to loadFile will not be
-   * recognized.
+   * Load a Polar policy file. File contents are loaded into a String and saved here, so changes to
+   * the file made after a call to loadFile will not be recognized.
    *
    * @throws Exceptions.PolarFileExtensionError On incorrect file extension.
    * @throws Exceptions.PolarFileNotFoundError On nonexistent file.
@@ -96,7 +94,7 @@ public class Polar {
    */
   // TODO(gj): emit deprecation warning.
   public void loadFile(String filename) throws IOException, OsoException {
-    loadFiles(new String[]{filename});
+    loadFiles(new String[] {filename});
   }
 
   /**
