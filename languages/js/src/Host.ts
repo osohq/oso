@@ -207,9 +207,9 @@ export class Host {
     // NOTE: not ideal that the MRO gets updated each time loadStr is
     // called, but since we are planning to move to only calling load once
     // with the include feature, I think it's okay for now.
-    for (const typ of this.#classes.values()) {
+    for (const typ of this.distinctUserTypes()) {
       // Get MRO for type.
-      const mro = ancestors(typ)
+      const mro = ancestors(typ.cls)
         .map(c => this.getType(c as Class)?.id)
         .filter(id => id !== undefined);
 
