@@ -1,7 +1,6 @@
 from typing import Any, Optional
 from dataclasses import dataclass
 
-
 # Used so we know what fetchers to call and how to match up constraints.
 @dataclass
 class Relation:
@@ -59,6 +58,18 @@ class Constraint:
     field: str
     value: Any
 
+    def Eq(a, b):
+        return a == b
+
+    def Neq(a, b):
+        return a != b
+
+    def In(a, b):
+        return a in b
+
+    def Contains(a, b):
+        return b in a
+
     def __post_init__(self):
         if isinstance(self.value, Field):
             self.getter = lambda x: getattr(x, self.value.field)
@@ -70,22 +81,22 @@ class Constraint:
         else:
             self.iget = lambda x: getattr(x, self.field)
 
-        if self.kind == "Eq":
-            self.checker = lambda a, b: a == b
-        elif self.kind == "In":
-            self.checker = lambda a, b: a in b
-        elif self.kind == "Contains":
-            self.checker = lambda a, b: b in a
-        else:
-            assert False, "unknown constraint kind"
+        self.checker = getattr(Constraint, self.kind)
 
     def check(self, item):
         return self.checker(self.iget(item), self.getter(item))
 
+    def ground(self, polar, results):
+        if isinstance(self.value, Ref):
+            ref = self.value
+            self.value = results[ref.result_id]
+            if ref.field is not None:
+                self.value = [getattr(v, ref.field) for v in self.value]
+
 
 def parse_constraint(polar, constraint):
     kind = constraint["kind"]
-    assert kind in ["Eq", "In", "Contains"]
+    assert kind in ["Eq", "Neq", "In", "Contains"]
     field = constraint["field"]
     value = constraint["value"]
 
@@ -106,19 +117,8 @@ def parse_constraint(polar, constraint):
     return Constraint(kind=kind, field=field, value=value)
 
 
-def ground_constraints(polar, results, filter_plan, constraints):
-    for constraint in constraints:
-        if isinstance(constraint.value, Ref):
-            ref = constraint.value
-            constraint.value = results[ref.result_id]
-            if ref.field is not None:
-                constraint.value = [getattr(v, ref.field) for v in constraint.value]
-
-
 # @NOTE(Steve): This is just operating on the json. Could still have a step to parse this into a python data structure
 # first. Probably more important later when make implementing a resolver nice.
-
-
 def builtin_filter_plan_resolver(polar, filter_plan):
     result_sets = filter_plan["result_sets"]
     queries = []
@@ -137,9 +137,9 @@ def builtin_filter_plan_resolver(polar, filter_plan):
             constraints = req["constraints"]
 
             constraints = [parse_constraint(polar, c) for c in constraints]
-
             # Substitute in results from previous requests.
-            ground_constraints(polar, set_results, filter_plan, constraints)
+            for constraint in constraints:
+                constraint.ground(polar, set_results)
             cls_type = polar.host.types[class_name]
             query = cls_type.build_query(constraints)
             if i != result_id:

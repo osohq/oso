@@ -27,7 +27,7 @@ from .query import Query
 from .predicate import Predicate
 from .variable import Variable
 from .expression import Expression, Pattern
-from .data_filtering import serialize_types, filter_data, Relation
+from .data_filtering import serialize_types, filter_data
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
@@ -261,61 +261,24 @@ class Polar:
         constraint = Expression(
             "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
         )
-        results = list(
-            self.query_rule(
-                "allow",
-                actor,
-                action,
-                resource,
-                bindings={"resource": constraint},
-                accept_expression=True,
-            )
+
+        query = self.query_rule(
+            "allow",
+            actor,
+            action,
+            resource,
+            bindings={"resource": constraint},
+            accept_expression=True,
         )
 
-        # @TODO: How do you deal with value results in the query case?
-        # Do we get them into the filter plan as constraints somehow?
-        complete, partial = [], []
-
-        for result in results:
-            for k, v in result["bindings"].items():
-                if isinstance(v, Expression):
-                    partial.append({"bindings": {k: self.host.to_polar(v)}})
-                else:
-                    complete.append(v)
+        results = [
+            {"bindings": {k: self.host.to_polar(v)}}
+            for result in query
+            for k, v in result["bindings"].items()
+        ]
 
         types = serialize_types(self.host.distinct_user_types(), self.host.types)
-        plan = self.ffi_polar.build_filter_plan(types, partial, "resource", class_name)
-
-        # A little tbd if this should happen here or in build_filter_plan.
-        # Would have to wrap them in bindings probably to pass into build_filter_plan
-        if len(complete) > 0:
-            new_result_sets = []
-            for c in complete:
-                constraints = []
-                typ = self.host.types[class_name]
-                if not typ.build_query:
-                    # Maybe a way around this if we make builtins for our builtin
-                    # classes but it'd be a hack just for this case and not worth it right now.
-                    assert False, "Can only filter registered classes"
-
-                for k, t in typ.fields.items():
-                    if not isinstance(t, Relation):
-                        constraint = {
-                            "kind": "Eq",
-                            "field": k,
-                            "value": {"Term": self.host.to_polar(getattr(c, k))},
-                        }
-                        constraints.append(constraint)
-
-                result_set = {
-                    "requests": {
-                        "0": {"class_tag": class_name, "constraints": constraints}
-                    },
-                    "resolve_order": [0],
-                    "result_id": 0,
-                }
-                new_result_sets.append(result_set)
-            plan["result_sets"] += new_result_sets
+        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
 
         return filter_data(self, plan)
 

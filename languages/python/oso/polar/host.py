@@ -63,9 +63,9 @@ class Host:
             raise PolarRuntimeError(f"No field {field} on {obj.__name__}")
         field_type = rec.fields[field]
 
-        if field_type.kind == "parent":
+        if field_type.kind == "one":
             return self.types[field_type.other_type].cls
-        elif field_type.kind == "children":
+        elif field_type.kind == "many":
             return list
 
     def copy(self):

@@ -18,16 +18,12 @@ def oso():
     return oso
 
 
-def fold_constraints(constraints):
-    return reduce(
+def filter_array(array, constraints):
+    check = reduce(
         lambda f, g: lambda x: f(x) and g(x),
         [c.check for c in constraints],
         lambda _: True,
     )
-
-
-def filter_array(array, constraints):
-    check = fold_constraints(constraints)
     return [x for x in array if check(x)]
 
 
@@ -154,6 +150,7 @@ def t(oso):
         "FooLogRecord": FooLogRecord,
         "another_foo": another_foo,
         "third_foo": third_foo,
+        "something_foo": something_foo,
         "fourth_foo": fourth_foo,
         "fourth_log_a": fourth_log_a,
         "third_log_b": third_log_b,
@@ -204,6 +201,8 @@ def sqlalchemy_t(oso):
             field = getattr(Bar, constraint.field)
             if constraint.kind == "Eq":
                 query = query.filter(field == constraint.value)
+            elif constraint.kind == "Neq":
+                query = query.filter(field != constraint.value)
             elif constraint.kind == "In":
                 query = query.filter(field.in_(constraint.value))
             # ...
@@ -223,6 +222,8 @@ def sqlalchemy_t(oso):
             field = getattr(Foo, constraint.field)
             if constraint.kind == "Eq":
                 query = query.filter(field == constraint.value)
+            elif constraint.kind == "Neq":
+                query = query.filter(field != constraint.value)
             elif constraint.kind == "In":
                 query = query.filter(field.in_(constraint.value))
             # ...
@@ -263,7 +264,15 @@ def sqlalchemy_t(oso):
         session.add(obj)
         session.commit()
 
-    return {"session": Session, "Bar": Bar, "Foo": Foo, "another_foo": another_foo}
+    return {
+        "session": Session,
+        "Bar": Bar,
+        "Foo": Foo,
+        "another_foo": another_foo,
+        "fourth_foo": fourth_foo,
+        "something_foo": something_foo,
+        "third_foo": third_foo,
+    }
 
 
 def test_sqlalchemy_relationship(oso, sqlalchemy_t):
@@ -280,6 +289,23 @@ def test_sqlalchemy_relationship(oso, sqlalchemy_t):
     assert len(results) == 2
 
 
+def test_sqlalchemy_neq(oso, sqlalchemy_t):
+    policy = """
+    allow("steve", "get", foo: Foo) if foo.bar.id != "hello";
+    allow("steve", "put", foo: Foo) if foo.bar.id != "goodbye";
+    """
+    oso.load_str(policy)
+    t = sqlalchemy_t
+    check_authz(oso, "steve", "get", t["Foo"], [t["fourth_foo"]])
+    check_authz(
+        oso,
+        "steve",
+        "put",
+        t["Foo"],
+        [t["another_foo"], t["third_foo"], t["something_foo"]],
+    )
+
+
 def test_no_relationships(oso, t):
     # Write a policy
     policy = """
@@ -291,6 +317,22 @@ def test_no_relationships(oso, t):
 
     results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert len(results) == 3
+
+
+def test_neq(oso, t):
+    policy = """
+    allow("steve", "get", foo: Foo) if foo.bar.id != "hello";
+    allow("steve", "put", foo: Foo) if foo.bar.id != "goodbye";
+    """
+    oso.load_str(policy)
+    check_authz(oso, "steve", "get", t["Foo"], [t["fourth_foo"]])
+    check_authz(
+        oso,
+        "steve",
+        "put",
+        t["Foo"],
+        [t["another_foo"], t["third_foo"], t["something_foo"]],
+    )
 
 
 def test_relationship(oso, t):
@@ -428,12 +470,17 @@ def test_or(oso, t):
 
 def test_field_cmp_field(oso, t):
     policy = """
-    allow(_, _, bar: Bar) if
+    allow("gwen", "eat", bar: Bar) if
         bar.is_cool = bar.is_still_cool;
+    allow("gwen", "nom", bar: Bar) if
+        bar.is_cool != bar.is_still_cool;
     """
     oso.load_str(policy)
     expected = [b for b in t["bars"] if b.is_cool == b.is_still_cool]
     check_authz(oso, "gwen", "eat", t["Bar"], expected)
+
+    expected = [b for b in t["bars"] if b.is_cool != b.is_still_cool]
+    check_authz(oso, "gwen", "nom", t["Bar"], expected)
 
 
 @pytest.mark.xfail(reason="doesn't work yet!")
