@@ -437,7 +437,7 @@ impl fmt::Display for ValidationError {
                 write!(f, "Invalid rule: {} {}", rule, msg)
             }
             Self::InvalidRuleType { rule_type, msg } => {
-                write!(f, "Invalid rule_type: {} {}", rule_type, msg)
+                write!(f, "Invalid rule type: {} {}", rule_type, msg)
             }
         }
     }
