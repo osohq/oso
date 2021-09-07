@@ -182,7 +182,7 @@ impl KnowledgeBase {
             if let Some(rule_mro) = self.mro.get(&rule_instance.tag) {
                 if !rule_mro.contains(instance_id) {
                     Ok(RuleParamMatch::False(format!(
-                        "Rule specializer {} on parameter {} must match rule_type specializer {}",
+                        "Rule specializer {} on parameter {} must match rule type specializer {}",
                         rule_instance.tag, index, rule_type_instance.tag
                     )))
                 } else if !self
