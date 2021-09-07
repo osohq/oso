@@ -181,7 +181,10 @@ impl KnowledgeBase {
         {
             if let Some(rule_mro) = self.mro.get(&rule_instance.tag) {
                 if !rule_mro.contains(instance_id) {
-                    Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} must be a subclass of prototype specializer {}", rule_instance.tag,index, prototype_instance.tag)))
+                    Ok(RuleParamMatch::False(format!(
+                        "Rule specializer {} on parameter {} must match prototype specializer {}",
+                        rule_instance.tag, index, prototype_instance.tag
+                    )))
                 } else if !self
                     .param_fields_match(&prototype_instance.fields, &rule_instance.fields)
                 {
