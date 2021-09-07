@@ -1,6 +1,7 @@
 from typing import Any, Optional
 from dataclasses import dataclass
 
+
 # Used so we know what fetchers to call and how to match up constraints.
 @dataclass
 class Relation:
