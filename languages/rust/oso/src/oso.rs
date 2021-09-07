@@ -163,6 +163,7 @@ impl Oso {
             });
         }
         let mut f = File::open(&file)?;
+        self.host.register_mros()?;
         let mut policy = String::new();
         f.read_to_string(&mut policy)?;
         self.inner_load(&policy, Some(file.to_string_lossy().into_owned()))
