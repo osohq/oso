@@ -30,7 +30,6 @@ import {
   isPolarStr,
   isPolarVariable,
 } from './types';
-import { map } from '../test/helpers';
 
 type UserType = {
   name: string;
@@ -122,7 +121,7 @@ export class Host {
     // TODO: Use UserType object once this is brought in line with Python.
     for (const [name, id] of this.#classIds.entries()) {
       const cls = this.#classes.get(name);
-      if (typeof cls === 'undefined') {
+      if (cls === undefined) {
         throw new Error('cls should not be undefined.');
       }
 
