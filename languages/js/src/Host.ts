@@ -206,7 +206,7 @@ export class Host {
   }
 
   /**
-   * Register the MROs of all classes that are registered on `this`.
+   * Register the MROs of all registered classes.
    */
   registerMros() {
     // Get MRO of all registered classes
