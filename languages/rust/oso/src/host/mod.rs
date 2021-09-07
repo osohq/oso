@@ -115,7 +115,7 @@ impl Host {
     /// Register an MRO list for every registered class.
     /// Since inheritance is not supported, all lists are empty.
     pub fn register_mros(&self) -> crate::Result<()> {
-        for (name, _) in &self.classes {
+        for name in self.classes.keys() {
             if name != "oso::host::Class" {
                 self.polar.register_mro(Symbol(name.clone()), vec![])?;
             }
