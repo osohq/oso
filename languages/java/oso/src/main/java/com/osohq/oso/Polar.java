@@ -168,6 +168,17 @@ public class Polar {
     return new Query(ffiPolar.newQueryFromTerm(pred), new_host, bindings);
   }
 
+  /**
+   * Query for a rule, and check if it has any results. Returns true if there are results, and false
+   * if not.
+   *
+   * @param rule Rule name, e.g. "f" for rule "f(x)".
+   * @param args Variable list of rule arguments.
+   */
+  public boolean queryRuleOnce(String rule, Object... args) throws OsoException {
+    return queryRule(rule, Map.of(), args).hasMoreElements();
+  }
+
   /** Start the Polar REPL. */
   public void repl() throws Exceptions.OsoException, IOException {
     repl(new String[0]);

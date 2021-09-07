@@ -27,7 +27,7 @@ from .query import Query
 from .predicate import Predicate
 from .variable import Variable
 from .expression import Expression, Pattern
-from .data_filtering import serialize_types, filter_data, Relationship
+from .data_filtering import serialize_types, filter_data, Relation
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
@@ -299,7 +299,7 @@ class Polar:
                     assert False, "Can only filter registered classes"
 
                 for k, t in typ.fields.items():
-                    if not isinstance(t, Relationship):
+                    if not isinstance(t, Relation):
                         constraint = {
                             "kind": "Eq",
                             "field": k,

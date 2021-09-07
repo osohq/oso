@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::PolarResult;
+use crate::error::{OperationalError, PolarResult};
 use crate::events::ResultEvent;
 
 use crate::counter::*;
@@ -14,7 +14,7 @@ pub enum Type {
     Base {
         class_tag: String,
     },
-    Relationship {
+    Relation {
         kind: String,
         other_class_tag: String,
         my_field: String,
@@ -45,6 +45,7 @@ pub enum ConstraintKind {
     Eq,       // The field is equal to a value.
     In,       // The field is equal to one of the values.
     Contains, // The field is a collection that contains the value.
+    Neq,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
@@ -72,6 +73,13 @@ pub struct ResultSet {
     result_id: Id,
 }
 
+struct ResultSetBuilder<'a> {
+    result_set: ResultSet,
+    types: &'a Types,
+    vars: &'a Vars,
+    seen: HashSet<Id>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Default)]
 pub struct FilterPlan {
     result_sets: Vec<ResultSet>,
@@ -83,8 +91,10 @@ pub type PartialResults = Vec<ResultEvent>;
 #[derive(Debug, Default)]
 struct VarInfo {
     cycles: Vec<(Symbol, Symbol)>,                      // x = y
+    uncycles: Vec<(Symbol, Symbol)>,                    // x != y
     types: Vec<(Symbol, String)>,                       // x matches XClass
-    eq_values: Vec<(Symbol, Term)>,                     // x = 1;
+    eq_values: Vec<(Symbol, Term)>,                     // x = 1
+    neq_values: Vec<(Symbol, Term)>,                    // x != 1
     contained_values: Vec<(Term, Symbol)>,              // 1 in x
     field_relationships: Vec<(Symbol, String, Symbol)>, // x.a = y
     in_relationships: Vec<(Symbol, Symbol)>,            // x in y
@@ -95,8 +105,10 @@ struct VarInfo {
 struct Vars {
     variables: HashMap<Id, HashSet<Symbol>>,
     field_relationships: HashSet<(Id, String, Id)>,
+    uncycles: HashSet<(Id, Id)>,
     in_relationships: HashSet<(Id, Id)>,
     eq_values: HashMap<Id, Term>,
+    neq_values: HashSet<(Id, Term)>,
     contained_values: HashMap<Id, HashSet<Term>>,
     types: HashMap<Id, String>,
     this_id: Id,
@@ -108,155 +120,66 @@ pub fn build_filter_plan(
     variable: &str,
     class_tag: &str,
 ) -> PolarResult<FilterPlan> {
-    Ok(FilterPlan::new(types, partial_results, variable, class_tag))
+    FilterPlan::build(types, partial_results, variable, class_tag)
 }
 
-impl From<&Operation> for VarInfo {
-    fn from(op: &Operation) -> Self {
-        let mut info = Self::default();
-        info.process_exp(op);
-        info
-    }
-}
-
-impl From<&Operation> for Vars {
-    fn from(op: &Operation) -> Self {
-        VarInfo::from(op).into()
-    }
-}
-
-impl From<VarInfo> for Vars {
-    /// Collapses the var info that we obtained from walking the expressions.
-    /// Track equivalence classes of variables and assign each one an id.
-    fn from(info: VarInfo) -> Self {
-        /// try to find an existing id for this variable.
-        fn seek_var_id(vars: &HashMap<Id, HashSet<Symbol>>, var: &Symbol) -> Option<Id> {
-            vars.iter()
-                .find_map(|(id, set)| set.contains(var).then(|| *id))
-        }
-
-        /// get the id for this variable, or create one if the variable is new.
-        fn get_var_id(
-            vars: &mut HashMap<Id, HashSet<Symbol>>,
-            var: Symbol,
-            counter: &Counter,
-        ) -> Id {
-            seek_var_id(vars, &var).unwrap_or_else(|| {
-                let new_id = counter.next();
-                let mut new_set = HashSet::new();
-                new_set.insert(var);
-                vars.insert(new_id, new_set);
-                new_id
-            })
-        }
-
-        fn resolve<'a, A>(map: &'a HashMap<A, A>, key: &'a A) -> &'a A
-        where
-            A: Hash + Eq,
-        {
-            map.get(key).map_or(key, |key| resolve(map, key))
-        }
-
-        let counter = info.counter;
-
-        // group the variables into equivalence classes.
-        let mut variables = partition_equivs(info.cycles)
-            // Give each cycle an id
-            .into_iter()
-            .map(|c| (counter.next(), c))
-            .collect::<HashMap<_, _>>();
-
-        let fields = info.field_relationships;
-        let triples = {
-            let mut assign_id = |item: &Symbol| get_var_id(&mut variables, item.clone(), &counter);
-            fields
-                .iter()
-                .map(|(p, f, c)| (assign_id(p), f, assign_id(c)))
-                .collect::<Vec<_>>()
-        };
-
-        // if x.y=a and x.y=b then a=b, so add a cycle.
-        triples
-            .iter()
-            .flat_map(|(p1, f1, c1)| {
-                triples.iter().filter_map(move |(p2, f2, c2)| {
-                    (c1 != c2 && f1 == f2 && p1 == p2).then(|| (c1, c2))
-                })
-            })
-            .fold(HashMap::new(), |mut maps, (x, y)| {
-                let (x, y) = (*resolve(&maps, x), *resolve(&maps, y));
-                if x != y {
-                    let mut vars = variables.remove(&y).unwrap();
-                    vars.extend(variables.remove(&x).unwrap());
-                    maps.insert(x, y);
-                    variables.insert(y, vars);
-                }
-                maps
-            });
-
-        let mut assign_id = |item| get_var_id(&mut variables, item, &counter);
-
-        // now convert the remaining VarInfo fields into equivalent Vars fields.
-
-        let in_relationships = info
-            .in_relationships
-            .into_iter()
-            .map(|(lhs, rhs)| (assign_id(lhs), assign_id(rhs)))
-            .collect::<HashSet<_>>();
-
-        // I think a var can only have one value since we make sure there's a var for the dot lookup,
-        // and if they had aliases they'd be collapsed by now, so it should be an error
-        // if foo.name = "steve" and foo.name = "gabe".
-        let eq_values = info
-            .eq_values
-            .into_iter()
-            .map(|(var, val)| (assign_id(var), val))
-            .collect::<HashMap<_, _>>();
-
-        let types = info
-            .types
-            .into_iter()
-            .map(|(var, typ)| (assign_id(var), typ))
-            .collect::<HashMap<_, _>>();
-
-        let contained_values =
-            info.contained_values
-                .into_iter()
-                .fold(HashMap::new(), |mut map, (val, var)| {
-                    map.entry(assign_id(var))
-                        .or_insert_with(HashSet::new)
-                        .insert(val);
-                    map
-                });
-
-        let field_relationships = fields
-            .into_iter()
-            .map(|(p, f, c)| (assign_id(p), f, assign_id(c)))
-            .collect::<HashSet<_>>();
-
-        let this_id =
-            seek_var_id(&variables, &Symbol::new("_this")).expect("nothing to filter for!");
-
-        Vars {
-            variables,
-            field_relationships,
-            in_relationships,
-            eq_values,
-            contained_values,
-            types,
-            this_id,
+impl From<Term> for Constraint {
+    fn from(term: Term) -> Self {
+        Self {
+            kind: ConstraintKind::Eq,
+            field: None,
+            value: ConstraintValue::Term(term),
         }
     }
 }
 
 impl VarInfo {
+    fn from_op(op: &Operation) -> PolarResult<Self> {
+        let mut info = Self::default();
+        info.process_exp(op)?;
+        Ok(info)
+    }
+
+    /// for when you absolutely, definitely need a symbol.
+    fn symbolize(&mut self, val: &Term) -> Symbol {
+        match val.value() {
+            Value::Variable(var) | Value::RestVariable(var) => return var.clone(),
+            Value::Expression(Operation {
+                operator: Operator::Dot,
+                args,
+            }) => return self.dot_var(&args[0], &args[1]),
+            _ => (),
+        }
+
+        if let Some(var) = self
+            .eq_values
+            .iter()
+            .find_map(|(x, y)| (y == val).then(|| x))
+        {
+            return var.clone();
+        }
+
+        let new_var = sym!(&format!("_sym_{}", self.counter.next()));
+        self.eq_values.push((new_var.clone(), val.clone()));
+        new_var
+    }
+
+    /// convert a binary dot expression into a symbol.
     fn dot_var(&mut self, var: &Term, field: &Term) -> Symbol {
         // handle nested dot ops.
-        let var = self.eval(var);
+        let sym = self.symbolize(var);
 
-        let sym = var.as_symbol().unwrap();
         let field_str = field.value().as_string().unwrap();
-        let new_var = Symbol::new(&format!(
+
+        if let Some(var) = self
+            .field_relationships
+            .iter()
+            .find_map(|(p, f, c)| (*p == sym && f == field_str).then(|| c))
+        {
+            return var.clone();
+        }
+
+        let new_var = sym!(&format!(
             "_{}_dot_{}_{}",
             sym.0,
             field_str,
@@ -265,118 +188,136 @@ impl VarInfo {
 
         // Record the relationship between the vars.
         self.field_relationships
-            .push((sym.clone(), field_str.to_string(), new_var.clone()));
+            .push((sym, field_str.to_string(), new_var.clone()));
 
         new_var
     }
 
-    fn eval(&mut self, term: &Term) -> Value {
-        match term.value() {
-            Value::Expression(Operation {
+    /// turn dot expressions into symbols but leave other things unchanged.
+    fn undot(&mut self, term: &Term) -> Value {
+        let val = term.value();
+        match val.as_expression() {
+            Ok(Operation {
                 operator: Operator::Dot,
                 args,
-            }) if args.len() == 2 => self.dot_var(&args[0], &args[1]).into(),
-            v => v.clone(),
+            }) if args.len() == 2 => Value::from(self.dot_var(&args[0], &args[1])),
+            _ => val.clone(),
         }
     }
 
-    /// Process an expression in the context of this VarInfo. Mostly about the side effects.
-    fn process_exp(&mut self, exp: &Operation) {
+    fn do_and(&mut self, args: &[Term]) -> PolarResult<()> {
+        for arg in args {
+            let inner_exp = arg.value().as_expression().unwrap();
+            self.process_exp(inner_exp)?;
+        }
+        Ok(())
+    }
+
+    fn do_dot(&mut self, lhs: &Term, rhs: &Term) -> PolarResult<()> {
+        self.dot_var(lhs, rhs);
+        Ok(())
+    }
+
+    fn do_isa(&mut self, lhs: &Term, rhs: &Term) -> PolarResult<()> {
+        match rhs.value().as_pattern() {
+            Ok(Pattern::Instance(i)) if i.fields.fields.is_empty() => {
+                let var = self.symbolize(lhs);
+                self.types.push((var, i.tag.0.clone()))
+            }
+            _ => return err_unimplemented(format!("Unsupported specializer: {}", rhs.to_polar())),
+        }
+        Ok(())
+    }
+
+    fn do_unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
+        match (self.undot(left), self.undot(right)) {
+            (Value::Variable(l), Value::Variable(r)) => self.cycles.push((l, r)),
+            (Value::Variable(var), val) | (val, Value::Variable(var)) => {
+                self.eq_values.push((var, Term::from(val)))
+            }
+            // Unifying something else.
+            // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
+            // @NOTE(steve): Going with the same not yet supported message but if this is
+            // coming through it's probably a bug in the simplifier.
+            _ => {
+                return err_unimplemented(format!(
+                    "Unsupported unification: {} = {}",
+                    left.to_polar(),
+                    right.to_polar()
+                ))
+            }
+        };
+        Ok(())
+    }
+
+    fn do_neq(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
+        match (self.undot(left), self.undot(right)) {
+            (Value::Variable(l), Value::Variable(r)) => self.uncycles.push((l, r)),
+            (Value::Variable(var), val) | (val, Value::Variable(var)) => {
+                self.neq_values.push((var, Term::from(val)))
+            }
+            _ => {
+                return err_unimplemented(format!(
+                    "Unsupported comparison: {} != {}",
+                    left.to_polar(),
+                    right.to_polar()
+                ))
+            }
+        };
+        Ok(())
+    }
+
+    fn do_in(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
+        match (self.undot(left), self.undot(right)) {
+            (Value::Variable(l), Value::Variable(r)) => self.in_relationships.push((l, r)),
+            (val, Value::Variable(var)) => self.contained_values.push((Term::from(val), var)),
+            _ => {
+                return err_unimplemented(format!(
+                    "Unsupported `in` check: {} in {}",
+                    left.to_polar(),
+                    right.to_polar()
+                ))
+            }
+        };
+        Ok(())
+    }
+
+    /// Process an expression in the context of this VarInfo. Just does side effects.
+    fn process_exp(&mut self, exp: &Operation) -> PolarResult<()> {
+        let args = &exp.args;
         match exp.operator {
-            Operator::And => {
-                for arg in &exp.args {
-                    let inner_exp = arg.value().as_expression().unwrap();
-                    self.process_exp(inner_exp);
-                }
-            }
-            Operator::Dot => {
-                // Dot operations return a var that can be unified with.
-                // We create a new var to represent the result of the operation.
-                self.dot_var(&exp.args[0], &exp.args[1]);
-            }
-            Operator::Isa => {
-                assert_eq!(exp.args.len(), 2);
-                let (lhs, rhs) = (&exp.args[0], &exp.args[1]);
-                if let Ok(Pattern::Instance(InstanceLiteral { tag, fields })) =
-                    rhs.value().as_pattern()
-                {
-                    if !fields.fields.is_empty() {
-                        unimplemented!(
-                            "Specializer fields are not yet supported for data filtering."
-                        )
-                    }
-                    let var = match self.eval(lhs) {
-                        Value::Variable(var) | Value::RestVariable(var) => var,
-                        _ => todo!(),
-                    };
-                    self.types.push((var, tag.0.clone()))
-                } else {
-                    unimplemented!(
-                        "Non pattern specializers are not yet supported for data filtering."
-                    )
-                }
-            }
-            Operator::Unify | Operator::Eq | Operator::Assign => {
-                assert_eq!(exp.args.len(), 2);
-
-                match (self.eval(&exp.args[0]), self.eval(&exp.args[1])) {
-                    // Unifying two variables
-                    (Value::Variable(l), Value::Variable(r)) => self.cycles.push((l, r)),
-                    // Unifying a variable with a value
-                    (Value::Variable(var), val) | (val, Value::Variable(var)) => {
-                        self.eq_values.push((var, Term::from(val)))
-                    }
-                    // Unifying something else.
-                    // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
-                    // @NOTE(steve): Going with the same not yet supported message but if this is
-                    // coming through it's probably a bug in the simplifier.
-                    _ => unimplemented!(
-                        "Unification of values is not yet supported for data filtering."
-                    ),
-                };
-            }
-            Operator::In => {
-                assert_eq!(exp.args.len(), 2);
-
-                match (self.eval(&exp.args[0]), self.eval(&exp.args[1])) {
-                    // l in r
-                    (Value::Variable(l), Value::Variable(r)) =>
-                        self.in_relationships.push((l, r)),
-                    // var in [1, 2, 3]
-                    (Value::Variable(_var), _val) =>
-                        // @Q(steve): Does this ever actually come through the simplifier?
-                        // @Note(steve): MikeD wishes this came through as an in instead of or-expanded.
-                        // That way we could turn it into an `in` in sql.
-                        unimplemented!("var in list of values constraints are not yet supported for data filtering."),
-                        // self.in_values.push((var.clone(), Term::from(val.clone())));
-                    // 123 in var
-                    (val, Value::Variable(var)) =>
-                        self.contained_values
-                            .push((Term::from(val), var)),
-                    _ =>
-                        // @NOTE: This is probably just a bug if we hit it. Shouldn't get any other `in` cases.
-                        unimplemented!(
-                            "Unknown `in` constraint that is not yet supported for data filtering."
-                        ),
-                };
+            Operator::And => self.do_and(args),
+            Operator::Dot if args.len() == 2 => self.do_dot(&args[0], &args[1]),
+            Operator::Isa if args.len() == 2 => self.do_isa(&args[0], &args[1]),
+            Operator::Neq if args.len() == 2 => self.do_neq(&args[0], &args[1]),
+            Operator::In if args.len() == 2 => self.do_in(&args[0], &args[1]),
+            Operator::Unify | Operator::Eq | Operator::Assign if args.len() == 2 => {
+                self.do_unify(&args[0], &args[1])
             }
 
-            Operator::Print => (),
-            x => unimplemented!(
+            x => err_unimplemented(format!(
                 "`{}` is not yet supported for data filtering.",
                 x.to_polar()
-            ),
+            )),
         }
     }
 }
 
+fn err_invalid<A>(msg: String) -> PolarResult<A> {
+    Err(OperationalError::InvalidState { msg }.into())
+}
+
+fn err_unimplemented<A>(msg: String) -> PolarResult<A> {
+    Err(OperationalError::Unimplemented { msg }.into())
+}
+
 impl FilterPlan {
-    fn new(
+    fn build(
         types: Types,
         partial_results: PartialResults,
         var: &str,
         class_tag: &str,
-    ) -> FilterPlan {
+    ) -> PolarResult<FilterPlan> {
         // @NOTE(steve): Just reading an env var here sucks (see all the stuff we had to do
         // to get POLAR_LOG to work in all libs, wasm etc...) but that's what I'm doing today.
         // At some point surface this info better.
@@ -393,22 +334,24 @@ impl FilterPlan {
             // if the result doesn't include a binding for this variable,
             // or if the binding isn't an expression, then just ignore it.
             .filter_map(|(i, result)| {
-                result.bindings.get(&Symbol::new(var)).and_then(|term| {
-                    term.value().as_expression().ok().map(|exp| {
-                        assert_eq!(exp.operator, Operator::And);
-                        let vars = Vars::from(exp);
-                        if explain {
-                            eprintln!("  {}: {}", i, term.to_polar());
-                            vars.explain()
-                        }
+                result.bindings.get(&Symbol::new(var)).map(|term| {
+                    match term.value().as_expression() {
+                        Ok(exp) if exp.operator == Operator::And => {
+                            let vars = Vars::from_op(exp)?;
+                            if explain {
+                                eprintln!("  {}: {}", i, term.to_polar());
+                                vars.explain()
+                            }
 
-                        ResultSet::new(&types, &vars, class_tag)
-                    })
+                            ResultSet::build(&types, &vars, class_tag)
+                        }
+                        _ => Ok(ResultSet::from((term.clone(), class_tag))),
+                    }
                 })
             })
-            .collect();
+            .collect::<PolarResult<Vec<ResultSet>>>()?;
 
-        FilterPlan { result_sets }.optimize(explain)
+        Ok(FilterPlan { result_sets }.optimize(explain))
     }
 
     fn opt_pass(&mut self, explain: bool) -> bool {
@@ -468,6 +411,7 @@ impl FilterPlan {
                     let op = match constraint.kind {
                         ConstraintKind::Eq => "=",
                         ConstraintKind::In => "in",
+                        ConstraintKind::Neq => "!=",
                         ConstraintKind::Contains => "contains",
                     };
                     let field = &constraint.field;
@@ -489,153 +433,415 @@ impl FilterPlan {
     }
 }
 
+impl From<(Term, &str)> for ResultSet {
+    fn from(pair: (Term, &str)) -> Self {
+        let (term, tag) = pair;
+        let fetch = FetchRequest {
+            class_tag: tag.to_owned(),
+            constraints: vec![term.into()],
+        };
+        let id: Id = 0;
+
+        let mut requests = HashMap::new();
+        requests.insert(id, fetch);
+
+        Self {
+            resolve_order: vec![id],
+            result_id: id,
+            requests,
+        }
+    }
+}
+
 impl ResultSet {
-    fn new(types: &Types, vars: &Vars, this_type: &str) -> ResultSet {
-        let mut result_set = ResultSet {
+    fn build(types: &Types, vars: &Vars, this_type: &str) -> PolarResult<Self> {
+        let result_set = ResultSet {
             requests: HashMap::new(),
             resolve_order: vec![],
             result_id: vars.this_id,
         };
-        let mut seen = HashSet::new();
-        result_set.constrain(types, vars, vars.this_id, this_type, &mut seen);
-        result_set
+        let mut result_set_builder = ResultSetBuilder {
+            result_set,
+            types,
+            vars,
+            seen: HashSet::new(),
+        };
+
+        result_set_builder.constrain_var(vars.this_id, this_type)?;
+        Ok(result_set_builder.result_set)
+    }
+}
+
+impl<'a> ResultSetBuilder<'a> {
+    fn constrain_var(&mut self, var_id: Id, var_type: &str) -> PolarResult<()> {
+        if !self.seen.insert(var_id) {
+            return Ok(());
+        }
+
+        let mut request =
+            self.result_set
+                .requests
+                .remove(&var_id)
+                .unwrap_or_else(|| FetchRequest {
+                    class_tag: var_type.to_string(),
+                    constraints: vec![],
+                });
+
+        self.constrain_fields(var_id, var_type, &mut request)?;
+        self.constrain_in_vars(var_id, var_type, &mut request)?;
+        self.constrain_eq_vars(var_id, &mut request)?;
+
+        self.result_set.requests.insert(var_id, request);
+        self.result_set.resolve_order.push(var_id);
+        Ok(())
     }
 
-    fn constrain(
-        &mut self,
-        types: &Types,
-        vars: &Vars,
-        var_id: Id,
-        var_type: &str,
-        seen: &mut HashSet<Id>,
-    ) {
-        if seen.contains(&var_id) {
-            return;
-        }
-        seen.insert(var_id);
-        // @TODO(steve): Probably should check the type against the var types. I think???
-        let type_def = types
+    fn constrain_eq_vars(&mut self, var_id: Id, request: &mut FetchRequest) -> PolarResult<()> {
+        self.vars
+            .uncycles
             .iter()
-            .find_map(|(l, r)| (l == var_type).then(|| r.clone()))
-            .unwrap_or_else(HashMap::new);
-
-        let mut request = self
-            .requests
-            .remove(&var_id)
-            .unwrap_or_else(|| FetchRequest {
-                class_tag: var_type.to_string(),
-                constraints: vec![],
+            .filter_map(|(a, b)| {
+                (*a == var_id)
+                    .then(|| b)
+                    .or_else(|| (*b == var_id).then(|| a))
+            })
+            .for_each(|v| {
+                request.constraints.push(Constraint {
+                    kind: ConstraintKind::Neq,
+                    field: None,
+                    value: ConstraintValue::Ref(Ref {
+                        field: None,
+                        result_id: *v,
+                    }),
+                })
             });
 
-        for (parent, field, child) in &vars.field_relationships {
-            if *parent == var_id {
-                if let Some(Type::Relationship {
-                    other_class_tag,
-                    my_field,
-                    other_field,
-                    ..
-                }) = type_def.get(field)
-                {
-                    self.constrain(types, vars, *child, other_class_tag, seen);
+        self.vars
+            .neq_values
+            .iter()
+            .filter_map(|(k, v)| (k == &var_id).then(|| v))
+            .for_each(|v| {
+                request.constraints.push(Constraint {
+                    kind: ConstraintKind::Neq,
+                    field: None,
+                    value: ConstraintValue::Term(v.clone()),
+                });
+            });
 
-                    // If the constrained child var doesn't have any constraints on it, we don't need to
-                    // constrain this var. Otherwise we're just saying field foo in all Foos which
-                    // would fetch all Foos and not be good.
-                    if let Some(child_result) = self.requests.remove(child) {
-                        if child_result.constraints.is_empty() {
-                            // Remove the id from the resolve_order too.
-                            self.resolve_order.pop();
-                        } else {
-                            self.requests.insert(child.to_owned(), child_result);
-                            request.constraints.push(Constraint {
-                                kind: ConstraintKind::In,
-                                field: Some(my_field.clone()),
-                                value: ConstraintValue::Ref(Ref {
-                                    field: Some(other_field.clone()),
-                                    result_id: *child,
-                                }),
-                            });
-                        }
-                    }
-
-                    continue;
-                }
-                // Non relationship or unknown type info.
-                let mut contributed_constraints = false;
-                if let Some(value) = vars.eq_values.get(child) {
-                    request.constraints.push(Constraint {
-                        kind: ConstraintKind::Eq,
-                        field: Some(field.clone()),
-                        value: ConstraintValue::Term(value.clone()),
-                    });
-                    contributed_constraints = true;
-                }
-                if let Some(values) = vars.contained_values.get(child) {
-                    for value in values {
-                        request.constraints.push(Constraint {
-                            kind: ConstraintKind::Contains,
-                            field: Some(field.clone()),
-                            value: ConstraintValue::Term(value.clone()),
-                        });
-                    }
-                    contributed_constraints = true;
-                }
-                for (_, f, _) in vars
-                    .field_relationships
-                    .iter()
-                    .filter(|(p, f, c)| p == parent && f != field && c == child)
-                {
-                    request.constraints.push(Constraint {
-                        kind: ConstraintKind::Eq,
-                        field: Some(field.clone()),
-                        value: ConstraintValue::Field(f.clone()),
-                    });
-                    contributed_constraints = true;
-                }
-                assert!(contributed_constraints);
-            }
+        if let Some(l) = self.vars.eq_values.get(&var_id) {
+            request.constraints.push(Constraint {
+                kind: ConstraintKind::Eq,
+                field: None,
+                value: ConstraintValue::Term(l.clone()),
+            });
         }
+        Ok(())
+    }
 
+    fn constrain_in_vars(
+        &mut self,
+        var_id: Id,
+        var_type: &str,
+        request: &mut FetchRequest,
+    ) -> PolarResult<()> {
         // Constrain any vars that are `in` this var.
         // Add their constraints to this one.
         // @NOTE(steve): I think this is right, but I'm not totally sure.
-        // This might assume that the current var is a relationship of kind "children".
-        for l in vars
+        // This might assume that the current var is a relationship of kind "many".
+        for l in self
+            .vars
             .in_relationships
             .iter()
             .filter_map(|(l, r)| (*r == var_id).then(|| l))
         {
-            self.constrain(types, vars, *l, var_type, seen);
-            if let Some(in_result_set) = self.requests.remove(l) {
-                assert_eq!(self.resolve_order.pop().unwrap(), *l);
+            self.constrain_var(*l, var_type)?;
+            if let Some(in_result_set) = self.result_set.requests.remove(l) {
+                self.result_set.resolve_order.retain(|x| x != l);
                 request.constraints.extend(in_result_set.constraints);
             }
         }
 
-        if let Some(vs) = vars.contained_values.get(&var_id) {
+        if let Some(vs) = self.vars.contained_values.get(&var_id) {
             for l in vs {
                 request.constraints.push(Constraint {
                     kind: ConstraintKind::Eq,
                     field: None,
                     value: ConstraintValue::Term(l.clone()),
-                })
+                });
             }
         }
 
-        if let Some(l) = vars.eq_values.get(&var_id) {
+        Ok(())
+    }
+
+    fn constrain_relation(
+        &mut self,
+        child: Id,
+        request: &mut FetchRequest,
+        other_class_tag: &str,
+        my_field: &str,
+        other_field: &str,
+    ) -> PolarResult<()> {
+        self.constrain_var(child, other_class_tag)?;
+
+        // If the constrained child var doesn't have any constraints on it, we don't need to
+        // constrain this var. Otherwise we're just saying field foo in all Foos which
+        // would fetch all Foos and not be good.
+        if let Some(child_result) = self.result_set.requests.remove(&child) {
+            if child_result.constraints.is_empty() {
+                // Remove the id from the resolve_order too.
+                self.result_set.resolve_order.pop();
+            } else {
+                self.result_set.requests.insert(child, child_result);
+                request.constraints.push(Constraint {
+                    kind: ConstraintKind::In,
+                    field: Some(my_field.to_string()),
+                    value: ConstraintValue::Ref(Ref {
+                        field: Some(other_field.to_string()),
+                        result_id: child,
+                    }),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    fn constrain_field(
+        &mut self,
+        var_id: Id,
+        request: &mut FetchRequest,
+        field: &str,
+        child: Id,
+    ) -> PolarResult<()> {
+        // FIXME(gw) this function is too big!
+        // some kind of explanatory comment about why we need this would be nice ...
+        let mut contributed_constraints = false;
+
+        if let Some(value) = self.vars.eq_values.get(&child) {
             request.constraints.push(Constraint {
                 kind: ConstraintKind::Eq,
-                field: None,
-                value: ConstraintValue::Term(l.clone()),
-            })
+                field: Some(field.to_string()),
+                value: ConstraintValue::Term(value.clone()),
+            });
+            contributed_constraints = true;
         }
 
-        self.requests.insert(var_id, request);
-        self.resolve_order.push(var_id);
+        self.vars
+            .neq_values
+            .iter()
+            .filter_map(|(k, v)| (*k == child).then(|| v))
+            .for_each(|v| {
+                request.constraints.push(Constraint {
+                    kind: ConstraintKind::Neq,
+                    field: Some(field.to_string()),
+                    value: ConstraintValue::Term(v.clone()),
+                });
+                contributed_constraints = true;
+            });
+
+        if let Some(values) = self.vars.contained_values.get(&child) {
+            for value in values {
+                request.constraints.push(Constraint {
+                    kind: ConstraintKind::Contains,
+                    field: Some(field.to_string()),
+                    value: ConstraintValue::Term(value.clone()),
+                });
+            }
+            contributed_constraints = true;
+        }
+
+        for (p, f, c) in self.vars.field_relationships.iter() {
+            if *p != var_id || f != field {
+                let field = Some(field.to_string());
+                let value = if *p == var_id {
+                    ConstraintValue::Field(f.clone())
+                } else {
+                    ConstraintValue::Ref(Ref {
+                        field: Some(f.clone()),
+                        result_id: *p,
+                    })
+                };
+
+                if *c == child {
+                    if let Some(class_tag) = self.vars.type_of(p) {
+                        self.constrain_var(*p, class_tag)?;
+                    }
+                    request.constraints.push(Constraint {
+                        kind: ConstraintKind::Eq,
+                        field,
+                        value,
+                    });
+                    contributed_constraints = true;
+                } else {
+                    let pair = canonical_pair(*c, child);
+                    if self.vars.uncycles.iter().any(|u| *u == pair) {
+                        if let Some(class_tag) = self.vars.type_of(p) {
+                            self.constrain_var(*p, class_tag)?;
+                        }
+                        request.constraints.push(Constraint {
+                            kind: ConstraintKind::Neq,
+                            field,
+                            value,
+                        });
+                        contributed_constraints = true;
+                    }
+                }
+            }
+        }
+
+        if contributed_constraints {
+            return Ok(());
+        }
+
+        let msg = format!("no constraint: {}.{}={}", var_id, field, child);
+        err_invalid(msg)
+    }
+
+    fn constrain_fields(
+        &mut self,
+        var_id: Id,
+        var_type: &str,
+        request: &mut FetchRequest,
+    ) -> PolarResult<()> {
+        // @TODO(steve): Probably should check the type against the var types. I think???
+        fn get_type<'a>(types: &'a Types, tag1: &str, tag2: &str) -> Option<&'a Type> {
+            types.get(tag1).and_then(|m| m.get(tag2))
+        }
+        for (_, field, child) in self
+            .vars
+            .field_relationships
+            .iter()
+            .filter(|p| p.0 == var_id)
+        {
+            if let Some(Type::Relation {
+                other_class_tag,
+                my_field,
+                other_field,
+                ..
+            }) = get_type(self.types, var_type, field)
+            {
+                self.constrain_relation(*child, request, other_class_tag, my_field, other_field)?;
+            } else {
+                self.constrain_field(var_id, request, field, *child)?;
+            }
+        }
+        Ok(())
     }
 }
 
 impl Vars {
+    fn from_op(op: &Operation) -> PolarResult<Self> {
+        Self::from_info(VarInfo::from_op(op)?)
+    }
+
+    /// Collapses the var info that we obtained from walking the expressions.
+    /// Track equivalence classes of variables and assign each one an id.
+    fn from_info(info: VarInfo) -> PolarResult<Self> {
+        /// try to find an existing id for this variable.
+        fn seek_var_id(vars: &HashMap<Id, HashSet<Symbol>>, var: &Symbol) -> Option<Id> {
+            vars.iter()
+                .find_map(|(id, set)| set.contains(var).then(|| *id))
+        }
+
+        /// get the id for this variable, or create one if the variable is new.
+        fn get_var_id(
+            vars: &mut HashMap<Id, HashSet<Symbol>>,
+            var: Symbol,
+            counter: &Counter,
+        ) -> Id {
+            seek_var_id(vars, &var).unwrap_or_else(|| {
+                let new_id = counter.next();
+                let mut new_set = HashSet::new();
+                new_set.insert(var);
+                vars.insert(new_id, new_set);
+                new_id
+            })
+        }
+
+        let counter = info.counter;
+
+        // group the variables into equivalence classes.
+        let mut variables = partition_equivs(info.cycles)
+            // Give each cycle an id
+            .into_iter()
+            .map(|c| (counter.next(), c))
+            .collect::<HashMap<_, _>>();
+
+        let fields = info.field_relationships;
+        let mut assign_id = |item| get_var_id(&mut variables, item, &counter);
+
+        let uncycles = info
+            .uncycles
+            .into_iter()
+            .map(|(a, b)| canonical_pair(assign_id(a), assign_id(b)))
+            .collect();
+
+        // now convert the remaining VarInfo fields into equivalent Vars fields.
+
+        let in_relationships = info
+            .in_relationships
+            .into_iter()
+            .map(|(lhs, rhs)| (assign_id(lhs), assign_id(rhs)))
+            .collect::<HashSet<_>>();
+
+        // I think a var can only have one value since we make sure there's a var for the dot lookup,
+        // and if they had aliases they'd be collapsed by now, so it should be an error
+        // if foo.name = "steve" and foo.name = "gabe".
+        let eq_values = info
+            .eq_values
+            .into_iter()
+            .map(|(var, val)| (assign_id(var), val))
+            .collect::<HashMap<_, _>>();
+
+        let neq_values = info
+            .neq_values
+            .into_iter()
+            .map(|(var, val)| (assign_id(var), val))
+            .collect::<HashSet<_>>();
+
+        let types = info
+            .types
+            .into_iter()
+            .map(|(var, typ)| (assign_id(var), typ))
+            .collect::<HashMap<_, _>>();
+
+        let contained_values =
+            info.contained_values
+                .into_iter()
+                .fold(HashMap::new(), |mut map, (val, var)| {
+                    map.entry(assign_id(var))
+                        .or_insert_with(HashSet::new)
+                        .insert(val);
+                    map
+                });
+
+        let field_relationships = fields
+            .into_iter()
+            .map(|(p, f, c)| (assign_id(p), f, assign_id(c)))
+            .collect::<HashSet<_>>();
+
+        let this_id = match seek_var_id(&variables, &sym!("_this")) {
+            Some(id) => id,
+            None => return err_invalid("No `_this` variable".to_string()),
+        };
+
+        Ok(Vars {
+            variables,
+            uncycles,
+            field_relationships,
+            in_relationships,
+            eq_values,
+            neq_values,
+            contained_values,
+            types,
+            this_id,
+        })
+    }
+
+    fn type_of(&self, id: &Id) -> Option<&String> {
+        self.types.get(id)
+    }
+
     fn explain(&self) {
         eprintln!("    variables");
         for (id, set) in &self.variables {
@@ -654,7 +860,12 @@ impl Vars {
                     Value::Number(_) => "Number",
                     Value::List(_) => "List",
                     Value::Dictionary(_) => "Dictionary",
-                    _ => todo!(),
+                    Value::ExternalInstance(_) => "ExternalInstance",
+                    Value::Call(_) => "Call",
+                    Value::Variable(_) => "Variable",
+                    Value::RestVariable(_) => "RestVariable",
+                    Value::Expression(_) => "Expression",
+                    Value::Pattern(_) => "Pattern",
                 }
             } else {
                 "unknown"
@@ -677,6 +888,17 @@ impl Vars {
         for (x, y) in &self.in_relationships {
             eprintln!("      {} in {}", x, y);
         }
+    }
+}
+
+fn canonical_pair<A>(a: A, b: A) -> (A, A)
+where
+    A: Ord,
+{
+    if a < b {
+        (a, b)
+    } else {
+        (b, a)
     }
 }
 
@@ -705,6 +927,15 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::bindings::Bindings;
+    type TestResult = PolarResult<()>;
+
+    impl From<Bindings> for ResultEvent {
+        fn from(bindings: Bindings) -> Self {
+            ResultEvent { bindings }
+        }
+    }
+
     fn unord_eq<A>(a: Vec<A>, mut b: Vec<A>) -> bool
     where
         A: Eq,
@@ -718,10 +949,118 @@ mod test {
         b.is_empty()
     }
 
+    fn check_result_set(rset: ResultSet) -> TestResult {
+        fn index_of<A>(v: &[A], x: &A) -> Option<usize>
+        where
+            A: PartialEq<A>,
+        {
+            v.iter().enumerate().find_map(|(i, y)| (y == x).then(|| i))
+        }
+
+        let order = &rset.resolve_order;
+        for (k, v) in rset.requests.iter() {
+            if let Some(j) = index_of(order, k) {
+                for c in v.constraints.iter() {
+                    if let ConstraintValue::Ref(Ref { result_id: id, .. }) = c.value {
+                        if let Some(i) = index_of(order, &id) {
+                            if i >= j {
+                                return err_invalid(format!(
+                                    "Request {} resolved after dependency {} in {:?}",
+                                    id, k, rset
+                                ));
+                            }
+                        } else {
+                            return err_invalid(format!(
+                                "Request {} missing from resolve order {:?}",
+                                id, order
+                            ));
+                        }
+                    }
+                }
+            } else {
+                return err_invalid(format!(
+                    "Request {} missing from resolve order {:?}",
+                    k, order
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_dot_plan() -> TestResult {
+        let ins0: Term = ExternalInstance::from(0).into();
+        let ins1: Term = ExternalInstance::from(1).into();
+        let pat_a = term!(pattern!(instance!("A")));
+        let pat_b = term!(pattern!(instance!("B")));
+        let partial = term!(op!(
+            And,
+            term!(op!(Isa, var!("_this"), pat_a)),
+            term!(op!(Isa, ins0.clone(), pat_b.clone())),
+            term!(op!(Isa, ins1.clone(), pat_b)),
+            term!(op!(
+                Unify,
+                term!(op!(Dot, ins0, str!("field"))),
+                var!("_this")
+            )),
+            term!(op!(
+                Unify,
+                term!(op!(Dot, var!("_this"), str!("field"))),
+                ins1
+            ))
+        ));
+
+        let bindings = ResultEvent::from(hashmap! {
+            sym!("resource") => partial
+        });
+
+        let types = hashmap! {
+            "A".to_owned() => hashmap! {
+                "field".to_owned() => Type::Base {
+                    class_tag: "B".to_owned()
+                }
+            },
+            "B".to_owned() => hashmap! {
+                "field".to_owned() => Type::Base {
+                    class_tag: "A".to_owned()
+                }
+            }
+        };
+        let plan = build_filter_plan(types, vec![bindings], "resource", "something")?;
+        for rs in plan.result_sets {
+            check_result_set(rs)?
+        }
+        Ok(())
+    }
+
     #[test]
     fn test_partition_equivs() {
         let pairs = vec![(1, 2), (2, 3), (4, 3), (5, 6), (8, 8), (6, 7)];
         let classes = vec![hashset! {1, 2, 3, 4}, hashset! {5, 6, 7}, hashset! {8}];
         assert!(unord_eq(partition_equivs(pairs), classes));
+    }
+
+    #[test]
+    fn test_canonical_pair() {
+        assert_eq!((1, 2), canonical_pair(1, 2));
+        assert_eq!((1, 2), canonical_pair(2, 1));
+    }
+
+    #[test]
+    fn test_dot_var_cycles() -> PolarResult<()> {
+        let dot_op: Term = term!(op!(Dot, var!("x"), str!("y")));
+        let op = op!(
+            And,
+            term!(op!(Unify, dot_op.clone(), 1.into())),
+            term!(op!(Unify, dot_op, var!("_this")))
+        );
+
+        // `x` and `_this` appear in the expn and a temporary will be
+        // created for the output of the dot operation. check that
+        // because the temporary is unified with `_this` the total
+        // number of distinct variables in the output is 2.
+        let vars = Vars::from_op(&op)?;
+        assert_eq!(vars.variables.len(), 2);
+        Ok(())
     }
 }
