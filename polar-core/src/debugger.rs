@@ -330,7 +330,7 @@ impl Debugger {
                                         i.parse::<i64>().map_or(None, |i| Some((k, i)))))
                                     .max_by(|a, b| a.1.cmp(&b.1))
                                     .map_or_else(
-                                        || Binding(sym!(name), sym!("<unbound>").into()),
+                                        || Binding(sym!(name), Term::from(sym!("<unbound>"))),
                                         |b| Binding(sym!(format!("{}@{}", name, b.0.0).as_str()), bindings.get(b.0).unwrap().clone()))
                             },
                             |val| Binding(var, val))

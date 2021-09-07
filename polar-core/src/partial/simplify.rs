@@ -691,19 +691,23 @@ mod test {
 
     #[test]
     fn test_simplify_circular_dot_with_isa() {
-        let op = opn!(Dot, var!("x"), str!("x"));
-        let op = opn!(Unify, var!("x"), op);
-        let op = opn!(And, op, opn!(Isa, var!("x"), ptn!(instance!("X"))));
+        let op = term!(op!(Dot, var!("x"), str!("x")));
+        let op = term!(op!(Unify, var!("x"), op));
+        let op = term!(op!(
+            And,
+            op,
+            term!(op!(Isa, var!("x"), term!(pattern!(instance!("X")))))
+        ));
         let mut vs: HashSet<Symbol> = HashSet::new();
         vs.insert(sym!("x"));
         let (x, _) = simplify_partial(&sym!("x"), op, vs, false);
         assert_eq!(
             x,
-            opn!(
+            term!(op!(
                 And,
-                opn!(Unify, var!("x"), opn!(Dot, var!("x"), str!("x"))),
-                opn!(Isa, var!("x"), ptn!(instance!("X")))
-            )
+                term!(op!(Unify, var!("x"), term!(op!(Dot, var!("x"), str!("x"))))),
+                term!(op!(Isa, var!("x"), term!(pattern!(instance!("X")))))
+            ))
         );
     }
 }

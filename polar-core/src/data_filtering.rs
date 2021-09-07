@@ -304,11 +304,11 @@ impl VarInfo {
 }
 
 fn err_invalid<A>(msg: String) -> PolarResult<A> {
-    Err(OperationalError::InvalidState {msg}.into())
+    Err(OperationalError::InvalidState { msg }.into())
 }
 
 fn err_unimplemented<A>(msg: String) -> PolarResult<A> {
-    Err(OperationalError::Unimplemented {msg}.into())
+    Err(OperationalError::Unimplemented { msg }.into())
 }
 
 impl FilterPlan {
@@ -991,16 +991,24 @@ mod test {
     fn test_dot_plan() -> TestResult {
         let ins0: Term = ExternalInstance::from(0).into();
         let ins1: Term = ExternalInstance::from(1).into();
-        let pat_a = ptn!(instance!("A"));
-        let pat_b = ptn!(instance!("B"));
-        let partial = opn!(
+        let pat_a = term!(pattern!(instance!("A")));
+        let pat_b = term!(pattern!(instance!("B")));
+        let partial = term!(op!(
             And,
-            opn!(Isa, var!("_this"), pat_a),
-            opn!(Isa, ins0.clone(), pat_b.clone()),
-            opn!(Isa, ins1.clone(), pat_b),
-            opn!(Unify, opn!(Dot, ins0, str!("field")), var!("_this")),
-            opn!(Unify, opn!(Dot, var!("_this"), str!("field")), ins1)
-        );
+            term!(op!(Isa, var!("_this"), pat_a)),
+            term!(op!(Isa, ins0.clone(), pat_b.clone())),
+            term!(op!(Isa, ins1.clone(), pat_b)),
+            term!(op!(
+                Unify,
+                term!(op!(Dot, ins0, str!("field"))),
+                var!("_this")
+            )),
+            term!(op!(
+                Unify,
+                term!(op!(Dot, var!("_this"), str!("field"))),
+                ins1
+            ))
+        ));
 
         let bindings = ResultEvent::from(hashmap! {
             sym!("resource") => partial
@@ -1040,11 +1048,11 @@ mod test {
 
     #[test]
     fn test_dot_var_cycles() -> PolarResult<()> {
-        let dot_op: Term = opn!(Dot, var!("x"), str!("y"));
+        let dot_op: Term = term!(op!(Dot, var!("x"), str!("y")));
         let op = op!(
             And,
-            opn!(Unify, dot_op.clone(), 1.into()),
-            opn!(Unify, dot_op, var!("_this"))
+            term!(op!(Unify, dot_op.clone(), 1.into())),
+            term!(op!(Unify, dot_op, var!("_this")))
         );
 
         // `x` and `_this` appear in the expn and a temporary will be

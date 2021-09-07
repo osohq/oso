@@ -108,7 +108,7 @@ impl PolarError {
     }
 
     pub fn unimplemented(msg: String) -> Self {
-        OperationalError::Unimplemented {msg}.into()
+        OperationalError::Unimplemented { msg }.into()
     }
 }
 
