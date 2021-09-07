@@ -277,7 +277,6 @@ func TestRulePrototypes(t *testing.T) {
 
 	o.RegisterClass(reflect.TypeOf(Actor{}), nil)
 	o.RegisterClass(reflect.TypeOf(Widget{}), nil)
-	o.RegisterClass(reflect.TypeOf(Company{}), nil) // TODO(gj): this doesn't seem to be used.
 
 	policy := "type is_actor(_actor: Actor); is_actor(_actor: Actor);"
 
