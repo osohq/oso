@@ -7,9 +7,10 @@ import {
   PolarError,
   PolarFileExtensionError,
   PolarFileNotFoundError,
+  DuplicateClassAliasError,
 } from './errors';
 import { Query } from './Query';
-import { Host } from './Host';
+import { Host, UserType } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
@@ -70,11 +71,11 @@ export class Polar {
 
     // Register built-in classes.
     this.registerClass(Boolean);
-    this.registerClass(Number, 'Integer');
-    this.registerClass(Number, 'Float');
+    this.registerClass(Number, { name: 'Integer' });
+    this.registerClass(Number, { name: 'Float' });
     this.registerClass(String);
-    this.registerClass(Array, 'List');
-    this.registerClass(Object, 'Dictionary');
+    this.registerClass(Array, { name: 'List' });
+    this.registerClass(Object, { name: 'Dictionary' });
   }
 
   /**
@@ -194,6 +195,12 @@ export class Polar {
     return this.query(new Predicate(name, args));
   }
 
+  configureDataFiltering({ buildQuery, execQuery, combineQuery }: any) {
+    if (buildQuery) this.#host.buildQuery = buildQuery;
+    if (execQuery) this.#host.execQuery = execQuery;
+    if (combineQuery) this.#host.combineQuery = combineQuery;
+  }
+
   /**
    * Query for a Polar rule, returning true if there are any results.
    */
@@ -207,22 +214,30 @@ export class Polar {
   /**
    * Register a JavaScript class for use in Polar policies.
    */
-  registerClass<T>(
-    cls: Class<T>,
-    alias?: string,
-    types?: Map<string, any>,
-    fetcher?: any
-  ): void {
+  registerClass<T>(cls: Class<T>, params?: any): void {
+    params = params ? params : {};
+    const { name, types, buildQuery, execQuery, combineQuery } = params;
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
-    const clsName = this.#host.cacheClass(cls, alias);
+    const clsName = name ? name : cls.name;
+    const existing = this.#host.types.get(clsName);
+    if (existing) {
+      throw new DuplicateClassAliasError({
+        name: clsName,
+        cls,
+        existing,
+      });
+    }
+    const userType = new UserType({
+      name: clsName,
+      class: cls,
+      buildQuery: buildQuery || this.#host.buildQuery,
+      execQuery: execQuery || this.#host.execQuery,
+      combineQuery: combineQuery || this.#host.combineQuery,
+      fields: types || new Map(),
+    });
+    this.#host.types.set(cls, userType);
+    this.#host.types.set(clsName, userType);
     this.registerConstant(cls, clsName);
-    this.#host.clsNames.set(cls, clsName);
-    if (types != null) {
-      this.#host.types.set(clsName, types);
-    }
-    if (fetcher != null) {
-      this.#host.fetchers.set(clsName, fetcher);
-    }
   }
 
   /**
@@ -236,9 +251,9 @@ export class Polar {
   /**
    * Returns all the resources the actor is allowed to perform some action on.
    */
-  async getAllowedResources(actor: any, action: any, cls: any): Promise<any> {
+  async authorizedQuery(actor: any, action: any, cls: any): Promise<any> {
     const resource = new Variable('resource');
-    const clsName = this.#host.clsNames.get(cls)!;
+    const clsName = this.#host.types.get(cls)!.name;
     const constraint = new Expression('And', [
       new Expression('Isa', [
         resource,
@@ -269,14 +284,19 @@ export class Polar {
       }, {}),
     }));
     let resultsStr = JSON.stringify(jsonResults);
-    let typesStr = serializeTypes(this.#host.types, this.#host.clsNames);
+    let typesStr = serializeTypes(this.#host.types);
     let plan = this.#ffiPolar.buildFilterPlan(
       typesStr,
       resultsStr,
       'resource',
       clsName
     );
-    return await filterData(this.#host, plan);
+    return filterData(this.#host, plan);
+  }
+
+  async authorizedResources(actr: any, actn: any, cls: any): Promise<any> {
+    const query = await this.authorizedQuery(actr, actn, cls);
+    return !query ? [] : this.#host.types.get(cls)!.execQuery!(query);
   }
 
   /** Start a REPL session. */

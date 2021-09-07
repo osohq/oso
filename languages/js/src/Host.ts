@@ -1,5 +1,4 @@
 import {
-  DuplicateClassAliasError,
   PolarError,
   UnregisteredClassError,
   UnregisteredInstanceError,
@@ -13,6 +12,8 @@ import { Variable } from './Variable';
 import type {
   Class,
   EqualityFn,
+  UnaryFn,
+  BinaryFn,
   PolarComparisonOperator,
   PolarTerm,
   PolarDictPattern,
@@ -32,6 +33,31 @@ import {
 } from './types';
 import { map } from '../test/helpers';
 
+export class UserType {
+  name: string;
+  class: any;
+  fields: Map<string, any>;
+  buildQuery?: UnaryFn;
+  execQuery?: UnaryFn;
+  combineQuery?: BinaryFn;
+
+  constructor({
+    name,
+    class: cls,
+    fields,
+    buildQuery,
+    execQuery,
+    combineQuery,
+  }: any) {
+    this.name = name;
+    this.class = cls;
+    this.fields = fields;
+    this.buildQuery = buildQuery;
+    this.execQuery = execQuery;
+    this.combineQuery = combineQuery;
+  }
+}
+
 /**
  * Translator between Polar and JavaScript.
  *
@@ -39,13 +65,14 @@ import { map } from '../test/helpers';
  */
 export class Host {
   #ffiPolar: FfiPolar;
-  #classes: Map<string, Class>;
-  #classIds: Map<string, number>;
-  clsNames: Map<Class, string>;
   #instances: Map<number, any>;
-  types: Map<string, Map<string, any>>;
-  fetchers: Map<string, any>;
+  types: Map<any, UserType>;
   #equalityFn: EqualityFn;
+
+  // global data filtering config
+  buildQuery?: UnaryFn;
+  execQuery?: UnaryFn;
+  combineQuery?: BinaryFn;
 
   /**
    * Shallow clone a host to extend its state for the duration of a particular
@@ -55,25 +82,20 @@ export class Host {
    */
   static clone(host: Host): Host {
     const clone = new Host(host.#ffiPolar, host.#equalityFn);
-    clone.#classes = new Map(host.#classes);
     clone.#instances = new Map(host.#instances);
-    clone.#classIds = new Map(host.#classIds);
-    clone.clsNames = new Map(host.clsNames);
     clone.types = new Map(host.types);
-    clone.fetchers = new Map(host.fetchers);
+    clone.buildQuery = host.buildQuery;
+    clone.execQuery = host.execQuery;
+    clone.combineQuery = host.combineQuery;
     return clone;
   }
 
   /** @internal */
   constructor(ffiPolar: FfiPolar, equalityFn: EqualityFn) {
     this.#ffiPolar = ffiPolar;
-    this.#classes = new Map();
     this.#instances = new Map();
-    this.#classIds = new Map();
-    this.clsNames = new Map();
-    this.types = new Map();
-    this.fetchers = new Map();
     this.#equalityFn = equalityFn;
+    this.types = new Map();
   }
 
   /**
@@ -84,31 +106,9 @@ export class Host {
    * @internal
    */
   private getClass(name: string): Class {
-    const cls = this.#classes.get(name);
+    const cls = this.types.get(name)!.class;
     if (cls === undefined) throw new UnregisteredClassError(name);
     return cls;
-  }
-
-  /**
-   * Store a JavaScript class in the class cache.
-   *
-   * @param cls Class to cache.
-   * @param name Optional alias under which to cache the class. Defaults to the
-   * class's `name` property.
-   *
-   * @internal
-   */
-  cacheClass<T>(cls: Class<T>, name?: string): string {
-    const clsName = name === undefined ? cls.name : name;
-    const existing = this.#classes.get(clsName);
-    if (existing !== undefined)
-      throw new DuplicateClassAliasError({
-        name: clsName,
-        cls,
-        existing,
-      });
-    this.#classes.set(clsName, cls);
-    return clsName;
   }
 
   /**
@@ -237,12 +237,9 @@ export class Host {
     return (
       classTag ==
       path.reduce((k: string | undefined, field: string) => {
-        if (k != undefined) {
-          const l = this.types.get(k);
-          if (l != undefined) k = this.clsNames.get(l.get(field));
-          else k = l;
-        }
-        return k;
+        let l = this.types.get(k);
+        if (l) l = this.types.get(l.fields.get(field));
+        return l ? l.name : l;
       }, baseTag)
     );
   }

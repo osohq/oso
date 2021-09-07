@@ -1,6 +1,6 @@
 import { resolve } from 'path/posix';
 import { resourceUsage } from 'process';
-import { Host } from './Host';
+import { Host, UserType } from './Host';
 
 export class Relation {
   kind: string;
@@ -21,7 +21,7 @@ export class Relation {
   }
 }
 
-class Field {
+export class Field {
   field: string;
 
   constructor(field: string) {
@@ -51,33 +51,32 @@ export class Constraint {
   }
 }
 
-export function serializeTypes(
-  types: Map<string, any>,
-  clsNames: Map<any, string>
-): string {
+export function serializeTypes(userTypes: Map<any, UserType>): string {
   let polarTypes: any = {};
-  for (let [tag, fields] of types.entries()) {
-    let fieldTypes: any = {};
-    for (let [k, v] of fields.entries()) {
-      if (v instanceof Relation) {
-        fieldTypes[k] = {
-          Relation: {
-            kind: v.kind,
-            other_class_tag: v.otherType,
-            my_field: v.myField,
-            other_field: v.otherField,
-          },
-        };
-      } else {
-        fieldTypes[k] = {
-          Base: {
-            class_tag: clsNames.get(v),
-          },
-        };
+  for (let [tag, userType] of userTypes.entries())
+    if (typeof tag === 'string') {
+      let fields = userType.fields;
+      let fieldTypes: any = {};
+      for (let [k, v] of fields.entries()) {
+        if (v instanceof Relation) {
+          fieldTypes[k] = {
+            Relation: {
+              kind: v.kind,
+              other_class_tag: v.otherType,
+              my_field: v.myField,
+              other_field: v.otherField,
+            },
+          };
+        } else {
+          fieldTypes[k] = {
+            Base: {
+              class_tag: userTypes.get(v)?.name,
+            },
+          };
+        }
       }
+      polarTypes[tag] = fieldTypes;
     }
-    polarTypes[tag] = fieldTypes;
-  }
   return JSON.stringify(polarTypes);
 }
 
@@ -104,55 +103,49 @@ async function parseConstraint(
   return new Constraint(kind, field, value);
 }
 
-function groundConstraints(
-  host: Host,
-  results: any,
-  plan: any,
-  constraints: any
-): any {
-  for (let i in constraints) {
-    if (constraints[i].value instanceof Ref) {
-      let ref = constraints[i].value;
-      constraints[i].value = results.get(ref.resultId)!;
-      if (ref.field != null) {
-        for (let j in constraints[i].value) {
-          constraints[i].value[j] = constraints[i].value[j][ref.field];
-        }
-      }
-    }
-  }
+function groundConstraint(results: any, con: Constraint) {
+  let ref = con.value;
+  if (!(ref instanceof Ref)) return;
+  con.value = results.get(ref.resultId);
+  if (ref.field != null) con.value = con.value.map((v: any) => v[ref.field]);
+}
+
+function groundConstraints(results: any, constraints: any): any {
+  for (let c of constraints) groundConstraint(results, c);
   return constraints;
 }
 
 // @TODO: type for filter plan
 
 export async function filterData(host: Host, plan: any): Promise<any> {
-  let resultSets = plan['result_sets'];
-  let results: any = [];
-  for (let rs of resultSets) {
+  let queries: any = [];
+  let combine: any;
+  for (let rs of plan.result_sets) {
     let setResults = new Map();
-    let requests = rs['requests'];
-    let resolveOrder = rs['resolve_order'];
-    let resultId = rs['result_id'];
 
-    for (let i of resolveOrder) {
-      let req = requests.get(i);
-      let className = req['class_tag'];
-      let constraints = req['constraints'];
+    for (let i of rs.resolve_order) {
+      let req = rs.requests.get(i);
+      let constraints = req.constraints;
 
       for (let i in constraints) {
-        constraints[i] = await parseConstraint(host, constraints[i]);
+        let con = await parseConstraint(host, constraints[i]);
+        // Substitute in results from previous requests.
+        groundConstraint(setResults, con);
+        constraints[i] = con;
       }
 
-      // Substitute in results from previous requests.
-      constraints = groundConstraints(host, setResults, plan, constraints);
-      let fetcher = host.fetchers.get(className);
-      let fetched = fetcher(constraints);
-      fetched = await Promise.resolve(fetched);
-      setResults.set(i, fetched);
+      let typ = host.types.get(req.class_tag)!;
+      let query = await Promise.resolve(typ.buildQuery!(constraints));
+      if (i != rs.result_id) {
+        setResults.set(i, await Promise.resolve(typ.execQuery!(query)));
+      } else {
+        queries.push(query);
+        combine = typ.combineQuery!;
+      }
     }
-    results = results.concat(setResults.get(resultId)!);
   }
+
+  if (queries.length == 0) return null;
   // @TODO remove duplicates
-  return results;
+  return queries.reduce(combine);
 }
