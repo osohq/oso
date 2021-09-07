@@ -111,7 +111,7 @@ class Polar:
             except FileNotFoundError:
                 raise PolarFileNotFoundError(filename)
 
-        self.load_sources(sources)
+        self._load_sources(sources)
 
     # TODO(gj): emit deprecation warning
     def load_file(self, filename: Union[Path, str]):
@@ -123,10 +123,10 @@ class Polar:
         # NOTE: not ideal that the MRO gets updated each time load_str is
         # called, but since we are planning to move to only calling load once
         # with the include feature, I think it's okay for now.
-        self.load_sources([Source(string)])
+        self._load_sources([Source(string)])
 
     # Register MROs, load Polar code, and check inline queries.
-    def load_sources(self, sources: List[Source]):
+    def _load_sources(self, sources: List[Source]):
         self.host.register_mros()
         self.ffi_polar.load(sources)
         self.check_inline_queries()
