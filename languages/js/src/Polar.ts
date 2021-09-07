@@ -13,14 +13,22 @@ import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
-import { Class, Dict, obj, Options, QueryResult } from './types';
+import type { Class, obj, Options, QueryResult } from './types';
 import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
 import { Variable } from './Variable';
 import { Expression } from './Expression';
-import type { PolarOperator } from './types';
 import { Pattern } from './Pattern';
 import { serializeTypes, filterData } from './dataFiltering';
-import { assert } from 'console';
+
+class Source {
+  readonly src: string;
+  readonly filename?: string;
+
+  constructor(src: string, filename?: string) {
+    this.src = src;
+    this.filename = filename;
+  }
+}
 
 /** Create and manage an instance of the Polar runtime. */
 export class Polar {
@@ -124,30 +132,52 @@ export class Polar {
   }
 
   /**
+   * Load Polar policy files.
+   */
+  async loadFiles(filenames: string[]): Promise<void> {
+    if (!extname) {
+      throw new PolarError('loadFiles is not supported in the browser');
+    }
+    const sources = await Promise.all(
+      filenames.map(async filename => {
+        if (extname(filename) !== '.polar')
+          throw new PolarFileExtensionError(filename);
+
+        try {
+          const contents = await readFile(filename);
+          return new Source(contents, filename);
+        } catch (e) {
+          if (e.code === 'ENOENT') throw new PolarFileNotFoundError(filename);
+          throw e;
+        }
+      })
+    );
+
+    this.#ffiPolar.load(sources);
+    this.processMessages();
+    return this.checkInlineQueries();
+  }
+
+  /**
    * Load a Polar policy file.
    */
-  async loadFile(file: string): Promise<void> {
-    if (!extname) {
-      throw new PolarError('loadFile is not supported in the browser');
-    }
-    if (extname(file) !== '.polar') throw new PolarFileExtensionError(file);
-    let contents;
-    try {
-      contents = await readFile(file);
-    } catch (e) {
-      if (e.code === 'ENOENT') throw new PolarFileNotFoundError(file);
-      throw e;
-    }
-    await this.loadStr(contents, file);
+  // TODO(gj): emit deprecation warning
+  async loadFile(filename: string): Promise<void> {
+    return this.loadFiles([filename]);
   }
 
   /**
    * Load a Polar policy string.
    */
-  async loadStr(contents: string, name?: string): Promise<void> {
-    this.#ffiPolar.load(contents, name);
+  // TODO(gj): emit deprecation warning when `name` arg is provided.
+  async loadStr(contents: string, filename?: string): Promise<void> {
+    const source = new Source(contents, filename);
+    this.#ffiPolar.load([source]);
     this.processMessages();
+    return this.checkInlineQueries();
+  }
 
+  private async checkInlineQueries(): Promise<void> {
     while (true) {
       const query = this.#ffiPolar.nextInlineQuery();
       this.processMessages();
@@ -285,7 +315,7 @@ export class Polar {
       throw new PolarError('REPL is not supported in the browser');
     }
     try {
-      if (files?.length) await Promise.all(files.map(f => this.loadFile(f)));
+      if (files?.length) await this.loadFiles(files);
     } catch (e) {
       printError(e);
     }

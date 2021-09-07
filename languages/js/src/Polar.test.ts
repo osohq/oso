@@ -397,19 +397,21 @@ describe('#loadFile', () => {
   test('throws if two files with the same contents are loaded', async () => {
     const p = new Polar();
     await expect(
-      p.loadFile(await tempFile('', 'a.polar'))
-    ).resolves.not.toThrow();
-    await expect(p.loadFile(await tempFile('', 'b.polar'))).rejects.toThrow(
+      p.loadFiles([
+        await tempFile('', 'a.polar'),
+        await tempFile('', 'b.polar'),
+      ])
+    ).rejects.toThrow(
       /Problem loading file: A file with the same contents as .*b.polar named .*a.polar has already been loaded./
     );
   });
 
-  test('throws if two files with the same name are loaded', async () => {
+  // TODO(gj): I don't think this is possible anymore.
+  xtest('throws if two files with the same name are loaded', async () => {
     const p = new Polar();
-    const file = await tempFile('f();', 'a.polar');
-    await expect(p.loadFile(file)).resolves.not.toThrow();
-    await truncate(file);
-    await expect(p.loadFile(file)).rejects.toThrow(
+    const filename1 = await tempFile('f();', 'a.polar');
+    const filename2 = await tempFile('g();', 'a.polar');
+    await expect(p.loadFiles([filename1, filename2])).rejects.toThrow(
       /Problem loading file: A file with the name .*a.polar, but different contents has already been loaded./
     );
   });
@@ -417,16 +419,14 @@ describe('#loadFile', () => {
   test('throws if the same file is loaded twice', async () => {
     const p = new Polar();
     const file = await tempFileFx();
-    await expect(p.loadFile(file)).resolves.not.toThrow();
-    await expect(p.loadFile(file)).rejects.toThrow(
+    await expect(p.loadFiles([file, file])).rejects.toThrow(
       /Problem loading file: File .*f.polar has already been loaded./
     );
   });
 
   test('can load multiple files', async () => {
     const p = new Polar();
-    await p.loadFile(await tempFileFx());
-    await p.loadFile(await tempFileGx());
+    await p.loadFiles([await tempFileFx(), await tempFileGx()]);
     expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
     expect(await qvar(p, 'g(x)', 'x')).toStrictEqual([1, 2, 3]);
   });

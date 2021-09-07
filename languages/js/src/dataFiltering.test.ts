@@ -168,7 +168,7 @@ test('data filtering', async () => {
     );
   };
 
-  oso.loadStr(`
+  await oso.loadStr(`
         allow("steve", "get", resource: Foo) if
             resource.bar = bar and
             bar.isCool = true and
@@ -176,13 +176,17 @@ test('data filtering', async () => {
     `);
   await checkAuthz('steve', 'get', Foo, [anotherFoo, thirdFoo]);
 
-  oso.loadStr(`
+  oso.clearRules();
+
+  await oso.loadStr(`
         allow("steve", "patch", foo: Foo) if
           foo in foo.bar.foos;
     `);
   await checkAuthz('steve', 'patch', Foo, [aFoo, anotherFoo, thirdFoo]);
 
-  oso.loadStr(`
+  oso.clearRules();
+
+  await oso.loadStr(`
         allow(num: Integer, "count", foo: Foo) if
           rec in foo.numbers and
           rec.number = num;
@@ -196,7 +200,8 @@ test('data filtering', async () => {
   await checkAuthz('gwen', 'eat', Foo, [aFoo, anotherFoo]);
 
   oso.clearRules();
-  oso.loadStr(`
+
+  await oso.loadStr(`
     allow(actor, action, resource) if
       has_permission(actor, action, resource);
 
