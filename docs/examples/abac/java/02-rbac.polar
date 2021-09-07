@@ -43,4 +43,3 @@ role(actor: User, role: String, project: Project) if
 
 # As an admin of ACME, Bhavik can view expenses in the org
 ?= allow(new User("bhavik"), "view", Expense.id(0));
-?= not allow(new User("cora"), "view", Expense.id(0));
