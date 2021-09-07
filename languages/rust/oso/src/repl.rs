@@ -1,4 +1,4 @@
-//! Code for making interactive oso queries from a REPL
+//! Code for making interactive Oso queries from a REPL.
 
 use clap::{App, Arg};
 use rustyline::error::ReadlineError;
@@ -129,6 +129,7 @@ pub fn main() -> anyhow::Result<()> {
             }
         };
 
+        // TODO(gj): this is going to fail now. Never seen it before; is it documented / useful?
         if let Some(define) = input.strip_prefix("%def") {
             if let Err(e) = oso.load_str(define) {
                 println!("{}", e);
