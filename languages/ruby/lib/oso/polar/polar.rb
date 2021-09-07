@@ -261,7 +261,7 @@ module Oso
       # @param files [Array<String>]
       # @raise [Error] if the FFI call raises one.
       def repl(files = [])
-        files.map { |f| load_file(f) }
+        load_files(files)
         prompt = "#{FG_BLUE}query>#{RESET} "
         # Try loading the readline module from the Ruby stdlib. If we get a
         # LoadError, fall back to the standard REPL with no readline support.

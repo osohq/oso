@@ -192,8 +192,7 @@ class Polar:
 
     def repl(self, files=[]):
         """Start an interactive REPL session."""
-        for f in files:
-            self.load_file(f)
+        self.load_files(files)
 
         while True:
             try:
