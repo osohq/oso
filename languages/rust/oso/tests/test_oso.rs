@@ -77,7 +77,7 @@ fn test_oso() -> Oso {
     .unwrap();
 
     let path = test_file_path();
-    oso.load_file(path).unwrap();
+    oso.load_files(vec![path]).unwrap();
 
     oso
 }

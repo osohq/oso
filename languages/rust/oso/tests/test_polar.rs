@@ -191,7 +191,7 @@ fn test_load_file_error_contains_filename() {
     writeln!(file, ";").unwrap();
     file.sync_all().unwrap();
 
-    let err = oso.oso.load_file(tempfile.path()).unwrap_err();
+    let err = oso.oso.load_files(vec![tempfile.path()]).unwrap_err();
     if let OsoError::Polar(err) = err {
         assert_eq!(
             err.to_string(),
@@ -211,7 +211,7 @@ fn test_load_file_extension_check() {
 
     let mut oso = test_oso();
 
-    let err = oso.oso.load_file("not_polar_file.txt").unwrap_err();
+    let err = oso.oso.load_files(vec!["not_polar_file.txt"]).unwrap_err();
     assert!(
         matches!(err, OsoError::IncorrectFileType { filename } if filename == "not_polar_file.txt")
     );
@@ -223,7 +223,7 @@ fn test_load_file_nonexistent_file() {
 
     let mut oso = test_oso();
 
-    let err = oso.oso.load_file("not_a_file.polar").unwrap_err();
+    let err = oso.oso.load_files(vec!["not_a_file.polar"]).unwrap_err();
     assert!(matches!(err, OsoError::Io(_)));
 }
 
@@ -272,7 +272,7 @@ fn test_clear_rules() -> oso::Result<()> {
     common::setup();
 
     let mut oso = test_oso();
-    oso.oso.load_file(test_file_path())?;
+    oso.oso.load_files(vec![test_file_path()])?;
     assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
 
     #[derive(PolarClass, Default, Debug, Clone)]
@@ -767,7 +767,7 @@ fn test_variables_as_arguments() -> oso::Result<()> {
 
     let mut oso = test_oso();
 
-    oso.oso.load_file(test_file_path())?;
+    oso.oso.load_files(vec![test_file_path()])?;
 
     let query = oso
         .oso
