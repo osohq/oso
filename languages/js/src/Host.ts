@@ -210,7 +210,6 @@ export class Host {
     for (const typ of this.#classes.values()) {
       // Get MRO for type.
       const mro = ancestors(typ)
-        // TODO: as conversion ok?
         .map(c => this.getType(c as Class)?.id)
         .filter(id => id !== undefined);
 
@@ -404,7 +403,6 @@ export class Host {
         );
         return { value: { Dictionary: { fields } } };
       default:
-        // TODO (dhatch): Reliable check that this is a class?
         let instanceId = undefined;
         if (v instanceof Function) {
           instanceId = this.#classIds.get(v.name);
