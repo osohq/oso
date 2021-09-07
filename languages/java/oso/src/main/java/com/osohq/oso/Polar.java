@@ -114,12 +114,8 @@ public class Polar {
    * @param str Polar string to be loaded.
    * @throws Exceptions.InlineQueryFailedError On a failed inline query.
    */
-  // TODO(gj): emit... some sort of warning for folks using loadStr?
   public void loadStr(String str) throws OsoException {
-    JSONArray sources = new JSONArray();
-    Source source = new Source(str, null);
-    sources.put(source.toJSON());
-    load(sources);
+    loadStr(str, null);
   }
 
   /** Query for a predicate, parsing it first. */
