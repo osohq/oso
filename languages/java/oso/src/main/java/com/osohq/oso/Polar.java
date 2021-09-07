@@ -92,7 +92,11 @@ public class Polar {
    * @throws Exceptions.PolarFileNotFoundError On nonexistent file.
    * @throws Exceptions.InlineQueryFailedError On a failed inline query.
    * @throws IOException If unable to open or read the file.
+   * @deprecated {@link #loadFile(String)} has been deprecated in favor of {@link
+   *     #loadFiles(String[])} as of the 0.20.0 release. Please see changelog for migration
+   *     instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html
    */
+  @Deprecated
   public void loadFile(String filename) throws IOException, OsoException {
     System.err.println(
         "`Oso.loadFile` has been deprecated in favor of `Oso.loadFiles` as of the 0.20.0"

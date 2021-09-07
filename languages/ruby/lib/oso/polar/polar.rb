@@ -167,6 +167,11 @@ module Oso
       # @raise [Error] if any of the FFI calls raise one.
       # @raise [InlineQueryFailedError] on the first failed inline query.
       # @return [self] for chaining.
+      #
+      # @deprecated {#load_file} has been deprecated in favor of {#load_files}
+      #   as of the 0.20.0 release. Please see changelog for migration
+      #   instructions:
+      #   https://docs.osohq.com/project/changelogs/2021-09-15.html
       def load_file(filename)
         warn <<~WARNING
           `Oso#load_file` has been deprecated in favor of `Oso#load_files` as of the 0.20.0 release.

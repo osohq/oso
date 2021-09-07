@@ -158,11 +158,11 @@ impl Oso {
     }
 
     /// Load a file containing Polar rules. All Polar files must end in `.polar`.
+    #[deprecated(
+        since = "0.20.0",
+        note = "`Oso::load_file` has been deprecated in favor of `Oso::load_files` as of the 0.20.0 release.\n\nPlease see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html"
+    )]
     pub fn load_file<P: AsRef<std::path::Path>>(&mut self, filename: P) -> crate::Result<()> {
-        eprintln!("{}\n\n{}",
-            "`Oso.load_file` has been deprecated in favor of `Oso.load_files` as of the 0.20.0 release.",
-            "Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html"
-        );
         self.load_files(vec![filename])
     }
 
