@@ -501,7 +501,7 @@ public class PolarTest {
 
   @Test
   public void testLoadMultipleFiles() throws Exception {
-    p.loadFiles(List.of("src/test/java/com/osohq/oso/test.polar", "src/test/java/com/osohq/oso/test2.polar"));
+    p.loadFiles(new String[]{"src/test/java/com/osohq/oso/test.polar", "src/test/java/com/osohq/oso/test2.polar"});
     assertTrue(
         p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
     assertTrue(

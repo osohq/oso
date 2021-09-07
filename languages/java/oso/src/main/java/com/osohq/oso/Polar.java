@@ -55,11 +55,10 @@ public class Polar {
    * @throws Exceptions.InlineQueryFailedError On a failed inline query.
    * @throws IOException If unable to open or read the file.
    */
-  public void loadFiles(List<String> filenames) throws IOException, OsoException {
+  public void loadFiles(String[] filenames) throws IOException, OsoException {
     JSONArray sources = new JSONArray();
 
-    for (int i = 0; i < filenames.size(); i++) {
-      String filename = filenames.get(i);
+    for (String filename : filenames) {
       Optional<String> ext =
           Optional.ofNullable(filename)
               .filter(f -> f.contains("."))
@@ -97,7 +96,7 @@ public class Polar {
    */
   // TODO(gj): emit deprecation warning.
   public void loadFile(String filename) throws IOException, OsoException {
-    loadFiles(List.of(filename));
+    loadFiles(new String[]{filename});
   }
 
   /**
@@ -219,9 +218,7 @@ public class Polar {
 
   /** Load the given files and start the Polar REPL. */
   public void repl(String[] files) throws Exceptions.OsoException, IOException {
-    for (String file : files) {
-      loadFile(file);
-    }
+    loadFiles(files);
 
     BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
     Ffi.Query ffiQuery;
