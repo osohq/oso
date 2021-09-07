@@ -569,11 +569,8 @@ impl KnowledgeBase {
         // remove from rules
         self.rules.retain(|_, gr| {
             let to_remove: Vec<u64> = gr.rules.iter().filter_map(|(idx, rule)| {
-                if matches!(rule.source_info, SourceInfo::Parser { src_id, ..} if src_id == source_id) {
-                    Some(*idx)
-                } else {
-                    None
-                }
+                matches!(rule.source_info, SourceInfo::Parser { src_id, ..} if src_id == source_id)
+                    .then(||*idx)
             }).collect();
 
             for idx in to_remove {

@@ -244,9 +244,9 @@ module Oso
           field_types = {}
           fields.each do |k, v|
             field_types[k] =
-              if v.is_a? ::Oso::Polar::DataFiltering::Relationship
+              if v.is_a? ::Oso::Polar::DataFiltering::Relation
                 {
-                  'Relationship' => {
+                  'Relation' => {
                     'kind' => v.kind,
                     'other_class_tag' => v.other_type,
                     'my_field' => v.my_field,

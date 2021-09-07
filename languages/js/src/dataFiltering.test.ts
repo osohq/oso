@@ -1,5 +1,5 @@
 import { Oso } from './Oso';
-import { Relationship } from './dataFiltering';
+import { Relation } from './dataFiltering';
 import 'reflect-metadata';
 import { Entity, PrimaryColumn, Column, createConnection } from 'typeorm';
 
@@ -132,21 +132,21 @@ test('data filtering', async () => {
   barType.set('id', String);
   barType.set('isCool', Boolean);
   barType.set('isStillCool', Boolean);
-  barType.set('foos', new Relationship('children', 'Foo', 'id', 'barId'));
+  barType.set('foos', new Relation('many', 'Foo', 'id', 'barId'));
   oso.registerClass(Bar, 'Bar', barType, getBars);
 
   const fooType = new Map();
   fooType.set('id', String);
   fooType.set('barId', String);
   fooType.set('isFooey', Boolean);
-  fooType.set('bar', new Relationship('parent', 'Bar', 'barId', 'id'));
-  fooType.set('numbers', new Relationship('children', 'Num', 'id', 'fooId'));
+  fooType.set('bar', new Relation('one', 'Bar', 'barId', 'id'));
+  fooType.set('numbers', new Relation('many', 'Num', 'id', 'fooId'));
   oso.registerClass(Foo, 'Foo', fooType, getFoos);
 
   const numType = new Map();
   numType.set('number', Number);
   numType.set('fooId', String);
-  numType.set('foo', new Relationship('parent', 'Foo', 'fooId', 'id'));
+  numType.set('foo', new Relation('one', 'Foo', 'fooId', 'id'));
   oso.registerClass(Num, 'Num', numType, getNums);
 
   const expectSameResults = (a: any[], b: any[]) => {

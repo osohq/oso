@@ -123,6 +123,30 @@ public class Exceptions {
     }
   }
 
+  public static class AuthorizationException extends OsoException {
+    public AuthorizationException(String msg) {
+      super(msg);
+    }
+  }
+
+  public static class ForbiddenException extends AuthorizationException {
+    public ForbiddenException() {
+      super(
+          "Oso ForbiddenException -- The requested action was not allowed for the "
+              + "given resource. You should handle this error by returning a 403 error "
+              + "to the client.");
+    }
+  }
+
+  public static class NotFoundException extends AuthorizationException {
+    public NotFoundException() {
+      super(
+          "Oso NotFoundException -- The current user does not have permission to "
+              + "read the given resource. You should handle this error by returning a "
+              + "404 error to the client.");
+    }
+  }
+
   /** Expected to find an FFI error to convert into a Java error but found none. */
   public static class FFIErrorNotFound extends OsoException {
     public FFIErrorNotFound(String msg, Map<String, Object> details) {
