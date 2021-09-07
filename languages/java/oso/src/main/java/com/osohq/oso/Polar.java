@@ -93,8 +93,12 @@ public class Polar {
    * @throws Exceptions.InlineQueryFailedError On a failed inline query.
    * @throws IOException If unable to open or read the file.
    */
-  // TODO(gj): emit deprecation warning.
   public void loadFile(String filename) throws IOException, OsoException {
+    System.err.println(
+        "`Oso.loadFile` has been deprecated in favor of `Oso.loadFiles` as of the 0.20.0"
+            + " release.\n\n"
+            + "Please see changelog for migration instructions:"
+            + " https://docs.osohq.com/project/changelogs/2021-09-15.html");
     loadFiles(new String[] {filename});
   }
 

@@ -168,7 +168,11 @@ module Oso
       # @raise [InlineQueryFailedError] on the first failed inline query.
       # @return [self] for chaining.
       def load_file(filename)
-        # TODO(gj): emit deprecation warning.
+        warn <<~WARNING
+          `Oso#load_file` has been deprecated in favor of `Oso#load_files` as of the 0.20.0 release.
+
+          Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html
+        WARNING
         load_files([filename])
       end
 
