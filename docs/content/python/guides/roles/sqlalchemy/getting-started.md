@@ -133,7 +133,7 @@ each argument:
 - `_: Org`: the `resource` argument must have the `Org` type.
 
 Notice that `User` and `Org` are SQLAlchemy models. We can reference
-these in our policy because we registered them with `register_models`!
+these in our policy because we registered all models with `SQLAlchemyOso(Base)`!
 
 For more on policy basics see our [writing policies
 guide](/getting-started/policies).
@@ -397,7 +397,7 @@ access, we must assign them to roles.
     hlTo="docs: end-role-assignment-highlight"
     >}}
 
-The `assign_role` method assigns a particular role on a resource.
+The `assign_role` method assigns a particular role to a user on a resource.
 Often, you'll make this available in a route so that end users can
 configure role assignments for their organization. More on this in [end
 user configuration](end_user_configuration).

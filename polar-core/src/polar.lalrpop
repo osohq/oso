@@ -3,13 +3,13 @@ use std::collections::BTreeMap;
 use std::iter::FromIterator;
 
 use crate::lexer::{self, Token};
-use crate::parser::{Line, Namespace};
+use crate::parser::{Line, ResourceBlock};
 use crate::error;
 use crate::terms::*;
 use crate::rules::*;
 use crate::terms::*;
 use crate::numerics::*;
-use crate::sugar;
+use crate::resource_block;
 use super::ValueOrLogical;
 
 use lalrpop_util::ParseError;
@@ -707,36 +707,36 @@ StringList: Value = {
     "[" <StringListTerms> "]" => Value::List(<>),
 }
 RelationsDict: Value = <Object<Spanned<Variable>>> => Value::Dictionary(<>);
-Declaration: sugar::Production = {
+Declaration: resource_block::Production = {
     <start:@L> <keyword:Name> "=" <value:StringList> <end:@R> ";" =>? {
         let term = Term::new_from_parser(src_id, start, end, value);
-        return sugar::validate_parsed_declaration((keyword, term));
+        return resource_block::validate_parsed_declaration((keyword, term));
     },
     <start:@L> <keyword:Name> "=" <value:RelationsDict> <end:@R> ";" =>? {
         let term = Term::new_from_parser(src_id, start, end, value);
-        return sugar::validate_parsed_declaration((keyword, term));
+        return resource_block::validate_parsed_declaration((keyword, term));
     },
 }
 
-OnRelation: Term = <Spanned<Variable>> <Spanned<PolarString>> =>? sugar::validate_relation_keyword((<>));
-ImplicationBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
-Implication: sugar::Production = <head:Spanned<PolarString>> Define <body:ImplicationBody> => sugar::Production::Implication(<>);
+OnRelation: Term = <Spanned<Variable>> <Spanned<PolarString>> =>? resource_block::validate_relation_keyword((<>));
+ShorthandRuleBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
+ShorthandRule: resource_block::Production = <head:Spanned<PolarString>> Define <body:ShorthandRuleBody> => resource_block::Production::ShorthandRule(<>);
 
-NamespaceProduction: sugar::Production = {
+ResourceBlockProduction: resource_block::Production = {
     <Declaration> => <>,
-    <Implication> => <>,
+    <ShorthandRule> => <>,
 };
 
-NamespaceProductions: Vec<sugar::Production> = <NamespaceProduction*>;
+ResourceBlockProductions: Vec<resource_block::Production> = <ResourceBlockProduction*>;
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
     <RulePrototype> => Line::RulePrototype(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
 
-    <start:@L> <keyword:Spanned<Variable>> <resource:Variable> "{" <productions:NamespaceProductions> "}" <end:@R> =>? {
+    <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> =>? {
         let resource = Term::new_from_parser(src_id, start, end, resource);
-        sugar::turn_productions_into_namespace(keyword, resource, productions).map(|ns| Line::Namespace(ns))
+        resource_block::turn_productions_into_resource_block(keyword, resource, productions).map(|ns| Line::ResourceBlock(ns))
     }
 }
 

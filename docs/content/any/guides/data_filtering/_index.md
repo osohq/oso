@@ -545,8 +545,7 @@ oso.register_class(
 {{< ifLang "node" >}}
 
 ```js
-  import { Oso } from './Oso';
-  import { Relationship } from './dataFiltering';
+  import { Oso, Relationship } from 'oso';
 
   const oso = new Oso();
 

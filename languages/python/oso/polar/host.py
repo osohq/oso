@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from math import inf, isnan, nan
 import re
+import inspect
 from typing import Any, Dict, Optional, Callable
 
 
@@ -43,6 +44,7 @@ class Host:
     ):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
+        # TODO: add comment explaining what is stored in `types`
         self.types = (types or {}).copy()
         self.instances = (instances or {}).copy()
         self._accept_expression = False  # default, see set_accept_expression
@@ -111,6 +113,13 @@ class Host:
             combine_query=combine_query,
         )
         return name
+
+    def register_mros(self):
+        """Register the MRO of each registered class to be used for rule prototype validation."""
+        # Get MRO of all registered classes
+        for rec in self.distinct_user_types():
+            mro = [self.types[c].id for c in inspect.getmro(rec.cls) if c in self.types]
+            self.ffi_polar.register_mro(rec.name, mro)
 
     def get_instance(self, id):
         """Look up Python instance by id."""

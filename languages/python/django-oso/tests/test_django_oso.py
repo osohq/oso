@@ -9,7 +9,6 @@ from django_oso.oso import Oso, reset_oso
 from django_oso.auth import authorize, authorize_model
 from polar import Variable, Expression
 
-from polar.exceptions import UnsupportedError
 from oso import OsoError
 from .conftest import negated_condition
 
@@ -29,21 +28,6 @@ def simple_policy():
 def partial_policy():
     """Load partial authorization policy."""
     Oso.load_file(Path(__file__).parent / "partial.polar")
-
-
-@pytest.fixture
-def oso_with_polar_roles_enabled():
-    Oso.load_str(
-        'resource(_: String, "string", ["get"], _roles); actor_has_role_for_resource(_,_,_);'
-    )
-    Oso.enable_roles()
-    yield Oso
-    Oso.clear_rules()
-
-
-def test_cannot_use_data_filtering_if_polar_roles_enabled(oso_with_polar_roles_enabled):
-    with pytest.raises(UnsupportedError, match="Polar roles"):
-        authorize_model(None, None)
 
 
 def test_policy_autoload():

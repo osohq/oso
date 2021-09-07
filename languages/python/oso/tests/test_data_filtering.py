@@ -8,7 +8,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from dataclasses import dataclass
 from oso import Oso
-from polar import Relationship
+from polar import Relation
 from functools import reduce
 
 
@@ -104,8 +104,8 @@ def t(oso):
             "id": str,
             "is_cool": bool,
             "is_still_cool": bool,
-            "foos": Relationship(
-                kind="children", other_type="Foo", my_field="id", other_field="bar_id"
+            "foos": Relation(
+                kind="many", other_type="Foo", my_field="id", other_field="bar_id"
             ),
         },
         build_query=get_bars,
@@ -119,11 +119,11 @@ def t(oso):
             "bar_id": str,
             "is_fooey": bool,
             "numbers": list,
-            "bar": Relationship(
-                kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
+            "bar": Relation(
+                kind="one", other_type="Bar", my_field="bar_id", other_field="id"
             ),
-            "logs": Relationship(
-                kind="children",
+            "logs": Relation(
+                kind="many",
                 other_type="FooLogRecord",
                 my_field="id",
                 other_field="foo_id",
@@ -139,8 +139,8 @@ def t(oso):
             "id": str,
             "foo_id": str,
             "data": str,
-            "foo": Relationship(
-                kind="parent", other_type="Foo", my_field="foo_id", other_field="id"
+            "foo": Relation(
+                kind="one", other_type="Foo", my_field="foo_id", other_field="id"
             ),
         },
         build_query=get_foo_logs,
@@ -234,8 +234,8 @@ def sqlalchemy_t(oso):
             "id": str,
             "bar_id": str,
             "is_fooey": bool,
-            "bar": Relationship(
-                kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
+            "bar": Relation(
+                kind="one", other_type="Bar", my_field="bar_id", other_field="id"
             ),
         },
         build_query=get_foos,
@@ -568,8 +568,8 @@ def roles(oso):
         types={
             "name": str,
             "org_name": str,
-            "org": Relationship(
-                kind="parent", other_type="Org", my_field="org_name", other_field="name"
+            "org": Relation(
+                kind="one", other_type="Org", my_field="org_name", other_field="name"
             ),
         },
         build_query=get_repos,
@@ -581,8 +581,8 @@ def roles(oso):
         types={
             "name": str,
             "repo_name": str,
-            "repo": Relationship(
-                kind="parent",
+            "repo": Relation(
+                kind="one",
                 other_type="Repo",
                 my_field="repo_name",
                 other_field="name",
@@ -607,8 +607,8 @@ def roles(oso):
         User,
         types={
             "name": str,
-            "roles": Relationship(
-                kind="children",
+            "roles": Relation(
+                kind="many",
                 other_type="Role",
                 my_field="name",
                 other_field="user_name",
@@ -620,59 +620,55 @@ def roles(oso):
     )
 
     policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = [
-            "invite",
-            "create_repo"
-        ] and
-        roles = {
-            member: {
-                permissions: ["create_repo"],
-                implies: ["repo:reader"]
-            },
-            owner: {
-                permissions: ["invite"],
-                implies: ["repo:writer", "member"]
-            }
-        };
+      allow(actor, action, resource) if
+        has_permission(actor, action, resource);
 
-    resource(_type: Repo, "repo", actions, roles) if
-        actions = [
-            "push",
-            "pull"
-        ] and
-        roles = {
-            writer: {
-                permissions: ["push", "issue:edit"],
-                implies: ["reader"]
-            },
-            reader: {
-                permissions: ["pull"]
-            }
-        };
+      has_role(user: User, name, resource) if
+        role in user.roles and
+        role.role = name and
+        role.resource_name = resource.name;
 
-    resource(_type: Issue, "issue", actions, {}) if
-        actions = [
-            "edit"
-        ];
+      actor User {}
 
-    parent_child(parent_org: Org, repo: Repo) if
-        repo.org = parent_org;
+      resource Org {
+        roles = [ "owner", "member" ];
+        permissions = [ "invite", "create_repo" ];
 
-    parent_child(parent_repo: Repo, issue: Issue) if
-        issue.repo = parent_repo;
+        "create_repo" if "member";
+        "invite" if "owner";
 
-    actor_has_role_for_resource(actor, role_name: String, resource) if
-        role in actor.roles and
-        role.resource_name = resource.name and
-        role.role = role_name;
+        "member" if "owner";
+      }
 
-    allow(actor, action, resource) if
-        role_allows(actor, action, resource);
+      resource Repo {
+        roles = [ "writer", "reader" ];
+        permissions = [ "push", "pull" ];
+        relations = { parent: Org };
+
+        "pull" if "reader";
+        "push" if "writer";
+
+        "reader" if "writer";
+
+        "reader" if "member" on "parent";
+        "writer" if "owner" on "parent";
+      }
+
+      has_relation(org: Org, "parent", repo: Repo) if
+        org = repo.org;
+
+      resource Issue {
+        permissions = [ "edit" ];
+        relations = { parent: Repo };
+
+        "edit" if "writer" on "parent";
+      }
+
+      has_relation(repo: Repo, "parent", issue: Issue) if
+        repo = issue.repo;
     """
 
     oso.load_str(policy)
-    oso.enable_roles()
     return {
         "apple": apple,
         "osohq": osohq,

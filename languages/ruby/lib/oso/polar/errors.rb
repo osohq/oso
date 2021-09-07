@@ -3,7 +3,7 @@
 module Oso
   module Polar
     # Base error type for Oso::Polar.
-    class Error < ::RuntimeError
+    class Error < ::Oso::Error
       attr_reader :stack_trace
 
       # @param message [String]
@@ -101,7 +101,6 @@ module Oso
     class ParameterError < ApiError; end
 
     class ValidationError < Error; end
-    class RolesValidationError < Error; end
 
     UNEXPECTED_EXPRESSION_MESSAGE = <<~MSG
       Received Expression from Polar VM. The Expression type is not yet supported in this language.

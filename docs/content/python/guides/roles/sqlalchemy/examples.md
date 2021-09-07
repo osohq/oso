@@ -21,7 +21,7 @@ resource type (`Org`). However, many apps will have multiple levels of roles. It
 is common to have roles associated with an organization object, like
 "owner" and "member", and more granular roles associated with resources within an organization/tenant (we'll refer to these as "child resources"). In
 the GitClub example application, the Organization model has "member" and
-"owner" roles. The Repository model has "reader" and "writer" roles.
+"owner" roles. The Repository model has "reader", "writer" and "admin" roles.
 
 To define a role for another resource type, we add another `resource`
 rule to our policy.
@@ -34,7 +34,7 @@ rule to our policy.
     linenos=true
 >}}
 
-This defines two roles on repository, `"reader"` and `"writer"`.
+This defines three roles on repository, `"reader"`, `"writer"` and `"admin"`.
 This allows us to assign users directly to repositories without
 giving them a role in the entire organization.
 

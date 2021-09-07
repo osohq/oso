@@ -18,6 +18,16 @@ module Oso
         bindings.each { |k, v| ffi_query.bind k, host.to_polar(v) }
       end
 
+      # Create an enumerator that can be polled to advance the query loop. Yields
+      # results one by one.
+      #
+      # @yieldparam [Hash<String, Object>]
+      # @return [Enumerator]
+      # @raise [Error] if any of the FFI calls raise one.
+      def each(&block)
+        run(&block)
+      end
+
       private
 
       # @return [Hash<Integer, Enumerator>]
@@ -100,12 +110,12 @@ module Oso
         raise unless cls.fields.key? tag
 
         ref = cls.fields[tag]
-        return host.types[ref] unless ref.is_a? ::Oso::Polar::DataFiltering::Relationship
+        return host.types[ref] unless ref.is_a? ::Oso::Polar::DataFiltering::Relation
 
         case ref.kind
-        when 'parent'
+        when 'one'
           host.types[ref.other_type]
-        when 'children'
+        when 'many'
           host.types[Array]
         end
       end
@@ -152,12 +162,12 @@ module Oso
         host.make_instance(cls_name, args: args, kwargs: kwargs, id: id)
       end
 
-      # Create a generator that can be polled to advance the query loop.
+      # Run the main Polar loop, yielding results as they are emitted from the VM.
       #
       # @yieldparam [Hash<String, Object>]
       # @return [Enumerator]
       # @raise [Error] if any of the FFI calls raise one.
-      def each # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+      def run # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         loop do # rubocop:disable Metrics/BlockLength
           event = ffi_query.next_event
           case event.kind
@@ -227,7 +237,7 @@ module Oso
         return unless typ
 
         rel = typ.fields[attr]
-        return unless rel.is_a? ::Oso::Polar::DataFiltering::Relationship
+        return unless rel.is_a? ::Oso::Polar::DataFiltering::Relation
 
         rel
       end
@@ -241,7 +251,7 @@ module Oso
         )
         res = fetcher[[constraint]].uniq
 
-        if rel.kind == 'parent'
+        if rel.kind == 'one'
           raise "multiple parents: #{res}" unless res.length == 1
 
           res = res[0]

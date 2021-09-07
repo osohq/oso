@@ -1,14 +1,16 @@
-use super::sources::SourceInfo;
-pub use super::{error, formatting::ToPolarString};
-use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use serde::{Deserialize, Serialize};
+
 pub use super::numerics::Numeric;
+use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
+use super::sources::SourceInfo;
 use super::visitor::{walk_operation, walk_term, Visitor};
+pub use super::{error, formatting::ToPolarString};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -299,6 +301,51 @@ impl From<TermList> for Value {
     }
 }
 
+impl From<String> for Value {
+    fn from(other: String) -> Self {
+        Self::String(other)
+    }
+}
+
+impl From<ExternalInstance> for Value {
+    fn from(other: ExternalInstance) -> Self {
+        Self::ExternalInstance(other)
+    }
+}
+
+impl From<Pattern> for Value {
+    fn from(other: Pattern) -> Self {
+        Self::Pattern(other)
+    }
+}
+
+impl From<InstanceLiteral> for Pattern {
+    fn from(lit: InstanceLiteral) -> Self {
+        Pattern::Instance(lit)
+    }
+}
+
+impl From<Dictionary> for Pattern {
+    fn from(dict: Dictionary) -> Self {
+        Pattern::Dictionary(dict)
+    }
+}
+
+impl<N> From<N> for Value
+where
+    N: Into<Numeric>,
+{
+    fn from(other: N) -> Self {
+        Self::Number(other.into())
+    }
+}
+
+impl From<Call> for Value {
+    fn from(other: Call) -> Self {
+        Self::Call(other)
+    }
+}
+
 impl Term {
     /// Creates a new term for a temporary variable
     pub fn new_temporary(value: Value) -> Self {
@@ -450,6 +497,14 @@ impl Term {
         } else {
             None
         }
+    }
+
+    pub fn is_actor_union(&self) -> bool {
+        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | Value::Variable(tag) if tag.0 == ACTOR_UNION_NAME)
+    }
+
+    pub fn is_resource_union(&self) -> bool {
+        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | Value::Variable(tag) if tag.0 == RESOURCE_UNION_NAME)
     }
 }
 

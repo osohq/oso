@@ -40,3 +40,19 @@ Link to [relevant documentation section]().
 - Bulleted list
 - Of smaller improvements
 - Potentially with doc [links]().
+
+### Rust
+
+#### Other bugs & improvements
+
+- The rust library now prints messages and warnings directly to stdout and
+  stderr respectively. This means that you can predictably enable Polar tracing
+  by running with `POLAR_LOG=1`. Fixes issue
+  [#824](https://github.com/osohq/oso/issues/824)
+
+### Node.js
+
+#### Other bugs & improvements
+
+- Fixed an issue where the data filtering `Relationship` class wasn't exported
+  from the top-level package.

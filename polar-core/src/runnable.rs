@@ -15,15 +15,24 @@ pub trait Runnable {
     fn run(&mut self, _counter: Option<&mut Counter>) -> PolarResult<QueryEvent>;
 
     fn external_question_result(&mut self, _call_id: u64, _answer: bool) -> PolarResult<()> {
-        Err(OperationalError::InvalidState("Unexpected query answer".to_string()).into())
+        Err(OperationalError::InvalidState {
+            msg: "Unexpected query answer".to_string(),
+        }
+        .into())
     }
 
     fn external_call_result(&mut self, _call_id: u64, _term: Option<Term>) -> PolarResult<()> {
-        Err(OperationalError::InvalidState("Unexpected external call".to_string()).into())
+        Err(OperationalError::InvalidState {
+            msg: "Unexpected external call".to_string(),
+        }
+        .into())
     }
 
     fn debug_command(&mut self, _command: &str) -> PolarResult<()> {
-        Err(OperationalError::InvalidState("Unexpected debug command".to_string()).into())
+        Err(OperationalError::InvalidState {
+            msg: "Unexpected debug command".to_string(),
+        }
+        .into())
     }
 
     fn handle_error(&mut self, err: PolarError) -> PolarResult<QueryEvent> {

@@ -527,7 +527,7 @@ export interface QueryEvent {
  *
  * If you don't need access to the bindings and only wish to know whether a
  * query succeeded or failed, you may check the `done` property of the yielded
- * value (and then optionally "complete" the generator by calling its
+ * value (and then optionally "complete" the generator by calling and awaiting its
  * `return()` method). If `done` is `true`, the query failed. If `done` is
  * `false`, the query yielded at least one result and therefore succeeded.
  */
@@ -554,11 +554,28 @@ export type obj = { [key: string]: any };
  */
 export type EqualityFn = (x: any, y: any) => boolean;
 
+export type CustomError = new (...args: any[]) => Error;
+
 /**
  * Optional configuration for the [[`Oso.constructor`]].
  */
 export interface Options {
   equalityFn?: EqualityFn;
+  /**
+   * Optionally override the "not found" error class thrown by `authorize`.
+   * Defaults to {@link NotFoundError}.
+   */
+  notFoundError?: CustomError;
+  /**
+   * Optionally override the "forbidden" error class thrown by the `authorize*`
+   * methods. Defaults to {@link ForbiddenError}.
+   */
+  forbiddenError?: CustomError;
+  /**
+   * The action used by the `authorize` method to determine whether an
+   * authorization failure should raise a `NotFoundError` or a `ForbiddenError`.
+   */
+  readAction?: unknown;
 }
 
 /**

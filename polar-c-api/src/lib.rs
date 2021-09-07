@@ -428,33 +428,6 @@ pub extern "C" fn query_free(query: *mut Query) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn polar_enable_roles(polar_ptr: *mut Polar) -> i32 {
-    ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
-        match polar.enable_roles() {
-            Err(err) => set_error(err),
-            Ok(_) => POLAR_SUCCESS,
-        }
-    })
-}
-
-#[no_mangle]
-pub extern "C" fn polar_validate_roles_config(
-    polar_ptr: *mut Polar,
-    validation_query_results: *const c_char,
-) -> i32 {
-    ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
-        let validation_query_results = unsafe { ffi_string!(validation_query_results) };
-        serde_json::from_str(&validation_query_results)
-            .map_err(|_| error::RolesValidationError("Invalid config query result".into()).into())
-            .and_then(|results| polar.validate_roles_config(results))
-            .err()
-            .map_or(POLAR_SUCCESS, set_error)
-    })
-}
-
-#[no_mangle]
 pub extern "C" fn polar_build_filter_plan(
     polar_ptr: *mut Polar,
     types: *const c_char,

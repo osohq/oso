@@ -23,19 +23,6 @@ class Polar:
         """Request a unique ID from the canonical external ID tracker."""
         return self.check_result(lib.polar_get_external_id(self.ptr))
 
-    def enable_roles(self):
-        """Load the built-in roles policy."""
-        result = lib.polar_enable_roles(self.ptr)
-        self.process_messages()
-        self.check_result(result)
-
-    def validate_roles_config(self, config_data):
-        """Validate the user's Oso Roles config."""
-        string = ffi_serialize(config_data)
-        result = lib.polar_validate_roles_config(self.ptr, string)
-        self.process_messages()
-        self.check_result(result)
-
     def build_filter_plan(self, types, partial_results, variable, class_tag):
         """Get a filterplan for data filtering."""
         # @TODO(Steve): Pass types.

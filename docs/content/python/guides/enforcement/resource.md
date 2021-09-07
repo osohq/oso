@@ -5,6 +5,7 @@ any: true
 description: >
   Learn about enforcing request-level authorization, controlling who can perform
   which actions on which resources.
+
 # draft: true
 ---
 
@@ -23,6 +24,10 @@ description: >
 Is the current user allowed to perform a certain action on a certain resource?
 This is the central question of **"resource-level" enforcement.**
 
+- Can a user update settings for this organization?
+- Can a user read this repository?
+- Can an admin resend a password reset email for this user?
+
 Resource-level enforcement is the bread-and-butter of application authorization.
 If you only perform one type of authorization in your app, it should be
 this. **Just about every endpoint in your application should perform some kind
@@ -30,11 +35,13 @@ of resource-level enforcement.**
 
 ## Use the `authorize` method
 
-The method to use for resource-level authorization is called `authorize`, and
-is exposed by an Oso enforcer. The {{% apiDeepLink class="Enforcer"
-%}}authorize{{% /apiDeepLink %}} method takes three arguments, `user`, `action`,
-and `resource`. It doesn't return anything, but potentially throws an error. To
-handle this error, see [Authorization Failure](#authorization-failure).
+The method to use for resource-level authorization is called {{% apiDeepLink
+class="Oso" %}}authorize{{% /apiDeepLink %}}. You use this method to ensure that
+a user has permission to perform a particular _action_ on a particular _resource._
+The `authorize` method takes three arguments, `user`, `action`, and `resource`.
+It doesn't return anything when the action is allowed, but throws an error when
+it is not. To handle this error, see [Authorization
+Failure](#authorization-failure).
 
 <!-- You'll see this method in a lot of our guides and examples, because it's the
 simplest way to use Oso in your app. -->
@@ -45,7 +52,7 @@ oso.authorize(user, "approve", expense)
 
 The `authorize` method checks all of the `allow` rules in your policy, and
 ensures that there is an `allow` rule for that applies to the given user,
-action, and resource:
+action, and resource, like this:
 
 ```polar
 allow(user: User, "approve", expense: Expense) if
@@ -72,7 +79,7 @@ normally need to have the resource loaded!
 
 What happens when the authorization fails? That is, what if there is not an
 `allow` rule that gives the user permission to perform the action on the
-resource? In that case, the {{% apiDeepLink class="Enforcer" %}}authorize{{%
+resource? In that case, the {{% apiDeepLink class="Oso" %}}authorize{{%
 /apiDeepLink %}} method will raise an {{% apiDeepLink module="oso.exceptions"
 class="AuthorizationError" /%}}. There are actually two types of authorization
 errors, depending on the situation.
@@ -83,7 +90,7 @@ errors, depending on the situation.
   **You should handle these errors by showing the user a 404 "Not Found"
   error**.
 - {{< apiDeepLink module="oso.exceptions" class="ForbiddenError" />}} errors are
-  raised when the  user knows that a resource exists (i.e. when they have
+  raised when the user knows that a resource exists (i.e. when they have
   permission to `"read"` the resource), but they are not allowed to perform the
   given action. **You should handle these errors by showing the user a 403
   "Forbidden" error.**

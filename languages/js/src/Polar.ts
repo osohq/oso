@@ -37,12 +37,6 @@ export class Polar {
    * @internal
    */
   #host: Host;
-  /**
-   * Flag that tracks if the roles feature is enabled.
-   *
-   * @internal
-   */
-  #rolesEnabled: boolean;
 
   constructor(opts: Options = {}) {
     function defaultEqual(a: any, b: any) {
@@ -70,7 +64,6 @@ export class Polar {
     this.#ffiPolar = new FfiPolar();
     const equalityFn = opts.equalityFn || defaultEqual;
     this.#host = new Host(this.#ffiPolar, equalityFn);
-    this.#rolesEnabled = false;
 
     // Register global constants.
     this.registerConstant(null, 'nil');
@@ -122,63 +115,12 @@ export class Polar {
   }
 
   /**
-   * Enable Oso's built-in roles feature.
-   */
-  async enableRoles() {
-    if (!this.#rolesEnabled) {
-      const helpers = {
-        join: (sep: string, l: string, r: string) => [l, r].join(sep),
-      };
-      this.registerConstant(helpers, '__oso_internal_roles_helpers__');
-      this.#ffiPolar.enableRoles();
-      this.processMessages();
-      await this.validateRolesConfig();
-      this.#rolesEnabled = true;
-    }
-  }
-
-  /**
-   * Validate roles config.
-   *
-   * @internal
-   */
-  private async validateRolesConfig() {
-    const validationQueryResults = [];
-    while (true) {
-      const query = this.#ffiPolar.nextInlineQuery();
-      this.processMessages();
-      if (query === undefined) break;
-      const { results } = new Query(query, this.#host);
-      const queryResults = [];
-      for await (const result of results) {
-        queryResults.push(result);
-      }
-      validationQueryResults.push(queryResults);
-    }
-
-    const results = validationQueryResults.map(results =>
-      results.map(result => ({
-        // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
-        // trivially `JSON.stringify()`-able.
-        bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
-          obj[k] = this.#host.toPolar(v);
-          return obj;
-        }, {}),
-      }))
-    );
-
-    this.#ffiPolar.validateRolesConfig(JSON.stringify(results));
-    this.processMessages();
-  }
-
-  /**
    * Clear rules from the Polar KB, but
    * retain all registered classes and constants.
    */
   clearRules() {
     this.#ffiPolar.clearRules();
     this.processMessages();
-    this.#rolesEnabled = false;
   }
 
   /**
@@ -213,13 +155,8 @@ export class Polar {
       const source = query.source();
       const { results } = new Query(query, this.#host);
       const { done } = await results.next();
-      results.return();
+      await results.return();
       if (done) throw new InlineQueryFailedError(source);
-    }
-
-    if (this.#rolesEnabled) {
-      this.#rolesEnabled = false;
-      await this.enableRoles();
     }
   }
 
@@ -255,6 +192,16 @@ export class Polar {
    */
   queryRule(name: string, ...args: unknown[]): QueryResult {
     return this.query(new Predicate(name, args));
+  }
+
+  /**
+   * Query for a Polar rule, returning true if there are any results.
+   */
+  async queryRuleOnce(name: string, ...args: unknown[]): Promise<boolean> {
+    const results = this.query(new Predicate(name, args));
+    const { done } = await results.next();
+    await results.return();
+    return !done;
   }
 
   /**

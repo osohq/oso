@@ -863,107 +863,83 @@ describe('Oso Roles', () => {
     const leina = new User('leina', [osohqOwner]);
     const steve = new User('steve', [osohqMember]);
 
-    // TODO: had to change specializers in `parent_child` rules back to
-    // `matches` in the body in order to get tests passing--revisit
     const policy = `
-      resource(_type: Org, "org", actions, roles) if
-          actions = [
-              "invite",
-              "create_repo"
-          ] and
-          roles = {
-              member: {
-                  permissions: ["create_repo"],
-                  implies: ["repo:reader"]
-              },
-              owner: {
-                  permissions: ["invite"],
-                  implies: ["member", "repo:writer"]
-              }
-          };
-
-      resource(_type: Repo, "repo", actions, roles) if
-          actions = [
-              "push",
-              "pull"
-          ] and
-          roles = {
-              writer: {
-                  permissions: ["push", "issue:edit"],
-                  implies: ["reader"]
-              },
-              reader: {
-                  permissions: ["pull"]
-              }
-          };
-
-      resource(_type: Issue, "issue", actions, {}) if
-          actions = [
-              "edit"
-          ];
-
-      parent_child(parent_org, repo: Repo) if
-          repo.org = parent_org
-          and parent_org matches Org;
-
-      parent_child(parent_repo, issue: Issue) if
-          issue.repo = parent_repo and
-          parent_repo matches Repo;
-
-      actor_has_role_for_resource(actor, role_name, role_resource) if
-          role in actor.roles and
-          role matches {name: role_name, resource: role_resource};
-
       allow(actor, action, resource) if
-          role_allows(actor, action, resource);
+        has_permission(actor, action, resource);
+
+      has_role(user: User, name, resource) if
+        role in user.roles and
+        role matches { name: name, resource: resource };
+
+      actor User {}
+
+      resource Org {
+        roles = [ "owner", "member" ];
+        permissions = [ "invite", "create_repo" ];
+
+        "create_repo" if "member";
+        "invite" if "owner";
+
+        "member" if "owner";
+      }
+
+      resource Repo {
+        roles = [ "writer", "reader" ];
+        permissions = [ "push", "pull" ];
+        relations = { parent: Org };
+
+        "pull" if "reader";
+        "push" if "writer";
+
+        "reader" if "writer";
+
+        "reader" if "member" on "parent";
+        "writer" if "owner" on "parent";
+      }
+
+      has_relation(org: Org, "parent", repo: Repo) if
+        org = repo.org;
+
+      resource Issue {
+        permissions = [ "edit" ];
+        relations = { parent: Repo };
+
+        "edit" if "writer" on "parent";
+      }
+
+      has_relation(repo: Repo, "parent", issue: Issue) if
+        repo = issue.repo;
     `;
 
     const p = new Polar();
     [Org, Repo, Issue, User].forEach(c => p.registerClass(c));
     await p.loadStr(policy);
-    await p.enableRoles();
 
     const isAllowed = async (...args: unknown[]) => {
       const result = await query(p, pred('allow', ...args));
       return result.length !== 0;
     };
 
-    expect(await isAllowed(leina, 'invite', osohq));
-    expect(await isAllowed(leina, 'create_repo', osohq));
-    expect(await isAllowed(leina, 'push', oso));
-    expect(await isAllowed(leina, 'pull', oso));
-    expect(await isAllowed(leina, 'edit', bug));
+    expect(await isAllowed(leina, 'invite', osohq)).toBe(true);
+    expect(await isAllowed(leina, 'create_repo', osohq)).toBe(true);
+    expect(await isAllowed(leina, 'push', oso)).toBe(true);
+    expect(await isAllowed(leina, 'pull', oso)).toBe(true);
+    expect(await isAllowed(leina, 'edit', bug)).toBe(true);
 
-    expect(!(await isAllowed(steve, 'invite', osohq)));
-    expect(await isAllowed(steve, 'create_repo', osohq));
-    expect(!(await isAllowed(steve, 'push', oso)));
-    expect(await isAllowed(steve, 'pull', oso));
-    expect(!(await isAllowed(steve, 'edit', bug)));
+    expect(await isAllowed(steve, 'invite', osohq)).toBe(false);
+    expect(await isAllowed(steve, 'create_repo', osohq)).toBe(true);
+    expect(await isAllowed(steve, 'push', oso)).toBe(false);
+    expect(await isAllowed(steve, 'pull', oso)).toBe(true);
+    expect(await isAllowed(steve, 'edit', bug)).toBe(false);
 
-    expect(!(await isAllowed(leina, 'edit', laggy)));
-    expect(!(await isAllowed(steve, 'edit', laggy)));
+    expect(await isAllowed(leina, 'edit', laggy)).toBe(false);
+    expect(await isAllowed(steve, 'edit', laggy)).toBe(false);
 
     let gabe = new User('gabe', []);
-    expect(!(await isAllowed(gabe, 'edit', bug)));
+    expect(await isAllowed(gabe, 'edit', bug)).toBe(false);
     gabe = new User('gabe', [osohqMember]);
-    expect(!(await isAllowed(gabe, 'edit', bug)));
+    expect(await isAllowed(gabe, 'edit', bug)).toBe(false);
     gabe = new User('gabe', [osohqOwner]);
-    expect(await isAllowed(gabe, 'edit', bug));
-  });
-
-  test('roles config is revalidated when loading additional rules after enabling roles', async () => {
-    const { Org, Repo } = rolesHelpers;
-    const p = new Polar();
-    p.registerClass(Org);
-    p.registerClass(Repo);
-    const validPolicy = `resource(_: Repo, "repo", ["read"], {});
-                         actor_has_role_for_resource(_, _, _);`;
-    const invalidPolicy = `resource(_: Org, "org", [], {});
-                           actor_has_role_for_resource(_, _, _);`;
-    await p.loadStr(validPolicy);
-    await p.enableRoles();
-    await expect(p.loadStr(invalidPolicy)).rejects.toThrow(
-      'Oso Roles Validation Error:'
-    );
+    expect(await isAllowed(gabe, 'edit', bug)).toBe(true);
   });
 });

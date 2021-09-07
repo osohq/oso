@@ -31,12 +31,7 @@ to create access tokens with particular scopes that limit which endpoints are
 accessible.
 
 To implement "request-level" enforcement, you can use the `authorize_request`
-method provided by the Oso enforcer.
-
-{{% minicallout %}}
-**Note**: You'll need an Oso enforcer to use the `authorize_request` method. Check out
-[how to build one](enforcer.html).
-{{% /minicallout %}}
+method provided by your Oso instance.
 
 In your request middleware, after you've loaded the user, but not executed any
 endpoint-specific code, you should call Oso to determine whether the action is

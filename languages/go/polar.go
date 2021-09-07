@@ -88,6 +88,10 @@ func (p Polar) loadFile(f string) error {
 	if err != nil {
 		return err
 	}
+	err = p.host.RegisterMros()
+	if err != nil {
+		return err
+	}
 	err = p.ffiPolar.Load(string(data), &f)
 	if err != nil {
 		return err
@@ -96,7 +100,11 @@ func (p Polar) loadFile(f string) error {
 }
 
 func (p Polar) loadString(s string) error {
-	err := p.ffiPolar.Load(s, nil)
+	err := p.host.RegisterMros()
+	if err != nil {
+		return err
+	}
+	err = p.ffiPolar.Load(s, nil)
 	if err != nil {
 		return err
 	}

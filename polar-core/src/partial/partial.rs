@@ -661,19 +661,23 @@ mod test {
         assert_partial_binding!(
             next,
             "x",
-            opn!(Isa, var!("y"), ptn!(instance!("Y"))),
-            opn!(Isa, opn!(Dot, var!("y"), str!("x")), ptn!(instance!("X")))
+            term!(op!(Isa, var!("y"), term!(pattern!(instance!("Y"))))),
+            term!(op!(
+                Isa,
+                term!(op!(Dot, var!("y"), str!("x"))),
+                term!(pattern!(instance!("X")))
+            ))
         );
 
         assert_partial_binding!(
             next,
             "y",
-            opn!(Isa, var!("_this"), ptn!(instance!("Y"))),
-            opn!(
+            term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Y"))))),
+            term!(op!(
                 Isa,
-                opn!(Dot, var!("_this"), str!("x")),
-                ptn!(instance!("X"))
-            )
+                term!(op!(Dot, var!("_this"), str!("x"))),
+                term!(pattern!(instance!("X")))
+            ))
         );
 
         assert_query_done!(q);
@@ -1466,24 +1470,32 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_eq!(
             next_binding(&mut q)?.get(&sym!("x")).unwrap(),
-            &opn!(
+            &term!(op!(
                 And,
-                opn!(Neq, var!("__y_9"), opn!(Dot, var!("_this"), str!("foo")))
-            )
+                term!(op!(
+                    Neq,
+                    var!("__y_9"),
+                    term!(op!(Dot, var!("_this"), str!("foo")))
+                ))
+            ))
         );
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
         assert_eq!(
             next_binding(&mut q)?.get(&sym!("x")).unwrap(),
-            &opn!(
+            &term!(op!(
                 And,
-                opn!(
+                term!(op!(
                     Neq,
                     var!("__y_17"),
-                    opn!(Dot, opn!(Dot, var!("_this"), str!("foo")), str!("bar"))
-                )
-            )
+                    term!(op!(
+                        Dot,
+                        term!(op!(Dot, var!("_this"), str!("foo"))),
+                        str!("bar")
+                    ))
+                ))
+            ))
         );
         assert_query_done!(q);
         Ok(())

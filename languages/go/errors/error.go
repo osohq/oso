@@ -194,3 +194,19 @@ type ErrorWithAdditionalInfo struct {
 func (e *ErrorWithAdditionalInfo) Error() string {
 	return fmt.Sprintf("%s\n%s", e.Info, e.Inner)
 }
+
+type NotFoundError struct{}
+
+func (e *NotFoundError) Error() string {
+	return "Oso Not Found Error -- the current user does not have permission to " +
+		"read the given resource. You should handle this error by returning a 404 " +
+		"error to the client."
+}
+
+type ForbiddenError struct{}
+
+func (e *ForbiddenError) Error() string {
+	return "Oso Forbidden Error -- the requested action was not allowed for the " +
+		"given resource. Most often, you should handle this error by returning a " +
+		"403 error to the client."
+}

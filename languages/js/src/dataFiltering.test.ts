@@ -1,5 +1,5 @@
 import { Oso } from './Oso';
-import { Relationship } from './dataFiltering';
+import { Relation } from './dataFiltering';
 import 'reflect-metadata';
 import { Entity, PrimaryColumn, Column, createConnection } from 'typeorm';
 
@@ -132,21 +132,21 @@ test('data filtering', async () => {
   barType.set('id', String);
   barType.set('isCool', Boolean);
   barType.set('isStillCool', Boolean);
-  barType.set('foos', new Relationship('children', 'Foo', 'id', 'barId'));
+  barType.set('foos', new Relation('many', 'Foo', 'id', 'barId'));
   oso.registerClass(Bar, 'Bar', barType, getBars);
 
   const fooType = new Map();
   fooType.set('id', String);
   fooType.set('barId', String);
   fooType.set('isFooey', Boolean);
-  fooType.set('bar', new Relationship('parent', 'Bar', 'barId', 'id'));
-  fooType.set('numbers', new Relationship('children', 'Num', 'id', 'fooId'));
+  fooType.set('bar', new Relation('one', 'Bar', 'barId', 'id'));
+  fooType.set('numbers', new Relation('many', 'Num', 'id', 'fooId'));
   oso.registerClass(Foo, 'Foo', fooType, getFoos);
 
   const numType = new Map();
   numType.set('number', Number);
   numType.set('fooId', String);
-  numType.set('foo', new Relationship('parent', 'Foo', 'fooId', 'id'));
+  numType.set('foo', new Relation('one', 'Foo', 'fooId', 'id'));
   oso.registerClass(Num, 'Num', numType, getNums);
 
   const expectSameResults = (a: any[], b: any[]) => {
@@ -197,31 +197,34 @@ test('data filtering', async () => {
 
   oso.clearRules();
   oso.loadStr(`
-        resource(_type: Bar, "bar", actions, roles) if
-            actions = ["get"] and
-            roles = {
-                owner: {
-                    permissions: ["get"],
-                    implies: ["foo:reader"]
-                }
-            };
+    allow(actor, action, resource) if
+      has_permission(actor, action, resource);
 
-        resource(_type: Foo, "foo", actions, roles) if
-            actions = ["read"] and
-            roles = {
-                reader: {
-                    permissions: ["read"]
-                }
-            };
+    has_role("steve", "owner", bar: Bar) if
+      bar.id = "hello";
 
-        parent_child(parent_bar: Bar, foo: Foo) if
-            foo.bar = parent_bar;
+    actor String {}
 
-        actor_has_role_for_resource("steve", "owner", bar: Bar) if bar.id = "hello";
+    resource Bar {
+      roles = [ "owner" ];
+      permissions = [ "get" ];
 
-        allow(actor, action, resource) if role_allows(actor, action, resource);
+      "get" if "owner";
+    }
+
+    resource Foo {
+      roles = [ "reader" ];
+      permissions = [ "read" ];
+      relations = { parent: Bar };
+
+      "read" if "reader";
+
+      "reader" if "owner" on "parent";
+    }
+
+    has_relation(bar: Bar, "parent", foo: Foo) if
+      bar = foo.bar;
     `);
-  oso.enableRoles();
   await checkAuthz('steve', 'get', Bar, [helloBar]);
   await checkAuthz('steve', 'read', Foo, [aFoo, anotherFoo]);
 });

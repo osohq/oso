@@ -42,12 +42,7 @@ takes an additional argument: the field name.
 ## The `authorize_field` method
 
 To enforce field-level authorization in your app, you use the {{% apiDeepLink
-class="Enforcer" %}}authorize_field{{% /apiDeepLink %}} method.
-
-{{% minicallout %}}
-**Note**: You'll need an Oso enforcer to use the `authorize_field` method. Check
-out [how to build one](enforcer.html).
-{{% /minicallout %}}
+class="Oso" %}}authorize_field{{% /apiDeepLink %}} method.
 
 ```python
 def get_last_check_in_location(profile, current_user):
@@ -63,7 +58,7 @@ should handle globally in your app. You can read more details about this in the
 ## Get all authorized fields
 
 Sometimes it is helpful to get _all_ fields that a user can access, and for this
-there is a separate method called {{% apiDeepLink class="Enforcer"
+there is a separate method called {{% apiDeepLink class="Oso"
 %}}authorized_fields{{%/apiDeepLink %}}:
 
 ```python

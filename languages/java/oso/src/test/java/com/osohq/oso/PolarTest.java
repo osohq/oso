@@ -712,4 +712,53 @@ public class PolarTest {
         () -> p.query("f(x)"),
         "Expected inline query to fail but it didn't.");
   }
+
+  public static class Bar extends Foo {}
+
+  public static class Baz extends Bar {}
+
+  public static class Bad {}
+
+  @Test
+  public void testRuleTypes() {
+    // NOTE: keep this order of registering classes--confirms that MROs are added at the correct
+    // time
+    p.registerClass(Baz.class, "Baz");
+    p.registerClass(Bar.class, "Bar");
+    p.registerClass(Foo.class, "Foo");
+    p.registerClass(Bad.class, "Bad");
+
+    String policy = "type f(_x: Integer);" + "f(1);";
+
+    p.loadStr(policy);
+
+    policy = "type f(_x: Foo);" + "type f(_x: Foo, _y: Bar);" + "f(_x: Bar);" + "f(_x: Baz);";
+
+    p.loadStr(policy);
+
+    assertThrows(
+        Exceptions.ValidationError.class,
+        () -> p.loadStr("f(_x: Bad);"),
+        "Expected rule type validation error.");
+
+    p.clearRules();
+
+    //  Test with fields
+    policy = "type f(_x: Foo{id: 1});" + "f(_x: Bar{id: 1});" + "f(_x: Baz{id: 1});";
+
+    p.loadStr(policy);
+
+    assertThrows(
+        Exceptions.ValidationError.class,
+        () -> p.loadStr("f(_x: Baz);"),
+        "Expected rule type validation error.");
+
+    // Test invalid rule prototype
+    policy = "type f(x: Foo, x.baz);";
+
+    assertThrows(
+        Exceptions.ValidationError.class,
+        () -> p.loadStr("type f(x: Foo, x.baz);"),
+        "Expected rule type validation error.");
+  }
 }

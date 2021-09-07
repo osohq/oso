@@ -180,6 +180,22 @@ func (p PolarFfi) RegisterConstant(term types.Term, name string) error {
 	return nil
 }
 
+func (p PolarFfi) RegisterMro(name string, mro []uint64) error {
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+	cMro, err := ffiSerialize(mro)
+	defer C.free(unsafe.Pointer(cMro))
+	if err != nil {
+		return err
+	}
+	result := C.polar_register_mro(p.ptr, cName, cMro)
+	processMessages(p)
+	if result == 0 {
+		return getError()
+	}
+	return nil
+}
+
 type QueryFfi struct {
 	ptr *C.polar_Query
 }

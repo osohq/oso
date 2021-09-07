@@ -951,7 +951,7 @@ def test_lookup_in_head(polar, is_allowed):
     assert is_allowed("leina", "read", r)
 
 
-def test_rule_prototypes_with_subclass_check(polar):
+def test_rule_types_with_subclass_check(polar):
     class Foo:
         pass
 

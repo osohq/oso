@@ -1,13 +1,13 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::error::ParameterError;
 use crate::error::{PolarError, PolarResult};
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
+use super::resource_block::ResourceBlocks;
 use super::rules::*;
 use super::sources::*;
-use super::sugar::Namespaces;
 use super::terms::*;
 use std::sync::Arc;
 
@@ -45,8 +45,8 @@ pub struct KnowledgeBase {
     id_counter: Counter,
     pub inline_queries: Vec<Term>,
 
-    /// Namespace Bookkeeping
-    pub namespaces: Namespaces,
+    /// Resource block bookkeeping.
+    pub resource_blocks: ResourceBlocks,
 }
 
 impl KnowledgeBase {
@@ -62,7 +62,7 @@ impl KnowledgeBase {
             id_counter: Counter::default(),
             gensym_counter: Counter::default(),
             inline_queries: vec![],
-            namespaces: Namespaces::new(),
+            resource_blocks: ResourceBlocks::new(),
         }
     }
 
@@ -168,6 +168,38 @@ impl KnowledgeBase {
             .all(|v| v);
     }
 
+    fn check_rule_instance_is_subclass_of_prototype_instance(
+        &self,
+        rule_instance: &InstanceLiteral,
+        prototype_instance: &InstanceLiteral,
+        index: usize,
+    ) -> PolarResult<RuleParamMatch> {
+        if let Some(Value::ExternalInstance(ExternalInstance { instance_id, .. })) = self
+            .constants
+            .get(&prototype_instance.tag)
+            .map(|t| t.value())
+        {
+            if let Some(rule_mro) = self.mro.get(&rule_instance.tag) {
+                if !rule_mro.contains(instance_id) {
+                    Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} must be a subclass of prototype specializer {}", rule_instance.tag,index, prototype_instance.tag)))
+                } else if !self
+                    .param_fields_match(&prototype_instance.fields, &rule_instance.fields)
+                {
+                    Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match prototype specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, prototype_instance.to_polar())))
+                } else {
+                    Ok(RuleParamMatch::True)
+                }
+            } else {
+                Err(error::OperationalError::InvalidState{msg: format!(
+                    "All registered classes must have a registered MRO. Class {} does not have a registered MRO.",
+                    &rule_instance.tag
+                )}.into())
+            }
+        } else {
+            unreachable!("Unregistered specializer classes should be caught before this point.");
+        }
+    }
+
     /// Check that a rule parameter that has a pattern specializer matches a prototype parameter that has a pattern specializer.
     fn check_pattern_param(
         &self,
@@ -187,36 +219,55 @@ impl KnowledgeBase {
                     } else {
                         RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match prototype specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, prototype_instance.to_polar()))
                     }
-                // If tags don't match, then rule specializer must be a subclass of prototype specializer
-                } else if let Some(Value::ExternalInstance(ExternalInstance {
-                    instance_id,
-                    ..
-                })) = self
-                    .constants
-                    .get(&prototype_instance.tag)
-                    .map(|t| t.value())
-                {
-                    if let Some(rule_mro) = self.mro.get(&rule_instance.tag) {
-                        if !rule_mro.contains(instance_id) {
-                            RuleParamMatch::False(format!("Rule specializer {} on parameter {} must be a subclass of prototype specializer {}", rule_instance.tag,index, prototype_instance.tag))
-
-                        } else if !self.param_fields_match(
+                } else if self.is_union(&term!(sym!(&prototype_instance.tag.0))) {
+                    if self.is_union(&term!(sym!(&rule_instance.tag.0))) {
+                        // If both specializers are the same union, check fields.
+                        if rule_instance.tag == prototype_instance.tag {
+                            if self.param_fields_match(
                                 &prototype_instance.fields,
                                 &rule_instance.fields,
-                            )
-                        {
-                            RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match prototype specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, prototype_instance.to_polar()))
+                            ) {
+                                return Ok(RuleParamMatch::True);
+                            } else {
+                                return Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match prototype specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, prototype_instance.to_polar())));
+                            }
                         } else {
-                            RuleParamMatch::True
+                            // TODO(gj): revisit when we have unions beyond Actor & Resource. Union
+                            // A matches union B if union A is a member of union B.
+                            return Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} does not match prototype specializer {}", rule_instance.tag, index, prototype_instance.tag)));
                         }
-                    } else {
-                        return Err(error::OperationalError::InvalidState(format!(
-                                "All registered classes must have a registered MRO. Class {} does not have a registered MRO.",
-                                &rule_instance.tag
-                            )).into());
                     }
+
+                    let members = self.get_union_members(&term!(sym!(&prototype_instance.tag.0)));
+                    // If the rule specializer is not a direct member of the union, we still need
+                    // to check if it's a subclass of any member of the union.
+                    if !members.contains(&term!(sym!(&rule_instance.tag.0))) {
+                        let mut success = false;
+                        for member in members {
+                            // Turn `member` into an `InstanceLiteral` by copying fields from
+                            // `prototype_instance`.
+                            let prototype_instance = InstanceLiteral {
+                                tag: member.value().as_symbol()?.clone(),
+                                fields: prototype_instance.fields.clone()
+                            };
+                            match self.check_rule_instance_is_subclass_of_prototype_instance(rule_instance, &prototype_instance, index) {
+                                Ok(RuleParamMatch::True) if !success => success = true,
+                                Err(e) => return Err(e),
+                                _ => (),
+                            }
+                        }
+                        if !success {
+                            return Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} must be a member of prototype specializer {}", rule_instance.tag,index, prototype_instance.tag)));
+                        }
+                    }
+                    if !self.param_fields_match(&prototype_instance.fields, &rule_instance.fields) {
+                        RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match prototype specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, prototype_instance.to_polar()))
+                    } else {
+                        RuleParamMatch::True
+                    }
+                // If tags don't match, then rule specializer must be a subclass of prototype specializer
                 } else {
-                    unreachable!("Unregistered specializer classes should be caught before this point.");
+                    self.check_rule_instance_is_subclass_of_prototype_instance(rule_instance, prototype_instance, index)?
                 }
             }
             (Pattern::Dictionary(prototype_fields), Pattern::Dictionary(rule_fields))
@@ -513,11 +564,8 @@ impl KnowledgeBase {
         // remove from rules
         self.rules.retain(|_, gr| {
             let to_remove: Vec<u64> = gr.rules.iter().filter_map(|(idx, rule)| {
-                if matches!(rule.source_info, SourceInfo::Parser { src_id, ..} if src_id == source_id) {
-                    Some(*idx)
-                } else {
-                    None
-                }
+                matches!(rule.source_info, SourceInfo::Parser { src_id, ..} if src_id == source_id)
+                    .then(||*idx)
             }).collect();
 
             for idx in to_remove {
@@ -587,32 +635,32 @@ impl KnowledgeBase {
         error.set_context(source.as_ref(), Some(term))
     }
 
-    pub fn rewrite_implications(&mut self) -> PolarResult<()> {
+    pub fn rewrite_shorthand_rules(&mut self) -> PolarResult<()> {
         let mut errors = vec![];
 
-        errors.append(&mut super::sugar::check_all_relation_types_have_been_registered(self));
+        errors.append(
+            &mut super::resource_block::check_all_relation_types_have_been_registered(self),
+        );
 
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {
-            self.namespaces.clear();
+            self.resource_blocks.clear();
             return Err(errors[0].clone());
         }
 
         let mut rules = vec![];
-        for (namespace, implications) in &self.namespaces.implications {
-            for implication in implications {
-                match implication.as_rule(namespace, &self.namespaces) {
+        for (resource_block, shorthand_rules) in &self.resource_blocks.shorthand_rules {
+            for shorthand_rule in shorthand_rules {
+                match shorthand_rule.as_rule(resource_block, &self.resource_blocks) {
                     Ok(rule) => rules.push(rule),
                     Err(error) => errors.push(error),
                 }
             }
         }
 
-        // If we've reached this point, we're all done with the namespaces.
-        self.namespaces.clear();
-
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {
+            self.resource_blocks.clear();
             return Err(errors[0].clone());
         }
 
@@ -623,12 +671,46 @@ impl KnowledgeBase {
 
         Ok(())
     }
+
+    pub fn is_union(&self, maybe_union: &Term) -> bool {
+        (!self.resource_blocks.actors.is_empty() && maybe_union.is_actor_union())
+            || (!self.resource_blocks.resources.is_empty() && maybe_union.is_resource_union())
+    }
+
+    pub fn get_union_members(&self, union: &Term) -> &HashSet<Term> {
+        if union.is_actor_union() {
+            &self.resource_blocks.actors
+        } else if union.is_resource_union() {
+            &self.resource_blocks.resources
+        } else {
+            unreachable!()
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::error::*;
+
+    #[test]
+    fn test_load_duplicate_file_contents() -> PolarResult<()> {
+        let mut kb = KnowledgeBase::new();
+        let count = Counter::default();
+        let mut load = |content: &str| {
+            let source = Source {
+                filename: Some(format!("{}.polar", count.next())),
+                src: content.to_owned(),
+            };
+            kb.add_source(source)
+        };
+
+        load("f(1);")?;
+        load("f(1);").expect_err("shouldn't load duplicate non-empty file contents");
+
+        Ok(())
+    }
+
     #[test]
     fn test_rule_params_match() {
         let mut kb = KnowledgeBase::new();
