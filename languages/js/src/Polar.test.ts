@@ -406,7 +406,10 @@ describe('#loadFile', () => {
     );
   });
 
-  // TODO(gj): I don't think this is possible anymore.
+  // TODO(gj): This is no longer possible but might again become possible if we
+  // add a `loadStrings()` method that accepts `{contents, filename}` tuples
+  // from the user. However, we could also have this hypothetical
+  // `loadStrings()` method only accept `contents` and avoid the issue.
   xtest('throws if two files with the same name are loaded', async () => {
     const p = new Polar();
     const filename1 = await tempFile('f();', 'a.polar');
