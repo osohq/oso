@@ -77,10 +77,7 @@ public class Polar {
       }
     }
 
-    host.registerMros();
-
-    ffiPolar.load(sources);
-    checkInlineQueries();
+    load(sources);
   }
 
   /**
@@ -104,16 +101,11 @@ public class Polar {
    * @param filename Name of the source file.
    * @throws Exceptions.InlineQueryFailedError On a failed inline query.
    */
-  // TODO(gj): emit deprecation warning for loadStr w/ filename.
-  public void loadStr(String str, String filename) throws Exceptions.OsoException {
-    host.registerMros();
-
+  public void loadStr(String str, String filename) throws OsoException {
     JSONArray sources = new JSONArray();
     Source source = new Source(str, filename);
     sources.put(source.toJSON());
-
-    ffiPolar.load(sources);
-    checkInlineQueries();
+    load(sources);
   }
 
   /**
@@ -123,15 +115,11 @@ public class Polar {
    * @throws Exceptions.InlineQueryFailedError On a failed inline query.
    */
   // TODO(gj): emit... some sort of warning for folks using loadStr?
-  public void loadStr(String str) throws Exceptions.OsoException {
-    host.registerMros();
-
+  public void loadStr(String str) throws OsoException {
     JSONArray sources = new JSONArray();
     Source source = new Source(str, null);
     sources.put(source.toJSON());
-
-    ffiPolar.load(sources);
-    checkInlineQueries();
+    load(sources);
   }
 
   /** Query for a predicate, parsing it first. */
@@ -282,6 +270,13 @@ public class Polar {
   /** Registers `value` as a Polar constant variable called `name`. */
   public void registerConstant(Object value, String name) throws Exceptions.OsoException {
     ffiPolar.registerConstant(host.toPolarTerm(value).toString(), name);
+  }
+
+  /** Register MROs, load Polar code, and check inline queries. */
+  private void load(JSONArray sources) throws OsoException {
+    host.registerMros();
+    ffiPolar.load(sources);
+    checkInlineQueries();
   }
 
   /** Confirm that all queued inline queries succeed. */
