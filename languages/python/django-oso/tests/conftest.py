@@ -48,6 +48,7 @@ def is_true():
     else:
         return " = True"
 
+
 @pytest.fixture
 def load_additional_str(request):
     def _load_additional_str(string: str):
@@ -56,7 +57,7 @@ def load_additional_str(request):
 
         policy_dir = Path(__file__).parent / "test_app/policy"
         fd, path = mkstemp(suffix=".polar", dir=policy_dir)
-        with fdopen(fd, 'w') as tmp:
+        with fdopen(fd, "w") as tmp:
             tmp.write(string)
         request.addfinalizer(lambda: remove(path))
         reset_oso()

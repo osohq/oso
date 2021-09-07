@@ -30,7 +30,7 @@ def test_authorize_model_basic(session, oso, fixture_data):
            allow("moderator", "read", post: Post) if
              (post.access_level = "private" or post.access_level = "public") and
              post.needs_moderation = true;"""
-     )
+    )
 
     posts = session.query(Post).filter(
         authorize_model(oso, "user", "read", session, Post)

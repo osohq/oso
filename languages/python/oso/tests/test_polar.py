@@ -64,10 +64,12 @@ def test_load_function(polar, query, qvar):
     assert qvar("f(x)", "x") == [1, 2, 3]
 
     polar.clear_rules()
-    polar.load_files([
-        Path(__file__).parent / "test_file.polar",
-        Path(__file__).parent / "test_file_gx.polar"
-    ])
+    polar.load_files(
+        [
+            Path(__file__).parent / "test_file.polar",
+            Path(__file__).parent / "test_file_gx.polar",
+        ]
+    )
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert query("g(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
@@ -556,8 +558,10 @@ def test_instance_cache(polar, query):
 
 
 def test_in(polar, qeval):
-    polar.load_str("""g(x, y) if not x in y;
-                      f(x) if not (x=1 or x=2);""")
+    polar.load_str(
+        """g(x, y) if not x in y;
+                      f(x) if not (x=1 or x=2);"""
+    )
     assert not qeval("f(1)")
     assert qeval("g(4, [1,2,3])")
     assert not qeval("g(1, [1,1,1])")
@@ -598,8 +602,10 @@ def test_external_op(polar, query):
     a1 = A(1)
     a2 = A(2)
 
-    polar.load_str("""lt(a, b) if a < b;
-                      gt(a, b) if a > b;""")
+    polar.load_str(
+        """lt(a, b) if a < b;
+                      gt(a, b) if a > b;"""
+    )
     assert query(Predicate("lt", [a1, a2]))
     assert not query(Predicate("lt", [a2, a1]))
     assert query(Predicate("gt", [a2, a1]))
@@ -684,8 +690,10 @@ def test_register_constants_with_decorator():
         x = 1
 
     p = Polar()
-    p.load_str("""foo_rule(_: RegisterDecoratorTest, y) if y = 1;
-                  foo_class_attr(y) if y = RegisterDecoratorTest.x;""")
+    p.load_str(
+        """foo_rule(_: RegisterDecoratorTest, y) if y = 1;
+                  foo_class_attr(y) if y = RegisterDecoratorTest.x;"""
+    )
     assert (
         next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
             "bindings"
@@ -697,8 +705,10 @@ def test_register_constants_with_decorator():
     p.clear_rules()
 
     p = Polar()
-    p.load_str("""foo_rule(_: RegisterDecoratorTest, y) if y = 1;
-                  foo_class_attr(y) if y = RegisterDecoratorTest.x;""")
+    p.load_str(
+        """foo_rule(_: RegisterDecoratorTest, y) if y = 1;
+                  foo_class_attr(y) if y = RegisterDecoratorTest.x;"""
+    )
     assert (
         next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
             "bindings"
@@ -812,8 +822,10 @@ def test_partial_unification(polar):
 
 
 def test_partial(polar):
-    polar.load_str("""f(1);
-                      f(x) if x = 1 and x = 2;""")
+    polar.load_str(
+        """f(1);
+                      f(x) if x = 1 and x = 2;"""
+    )
 
     results = polar.query_rule("f", Variable("x"), accept_expression=True)
     first = next(results)
@@ -852,8 +864,10 @@ def test_partial_constraint(polar):
     polar.register_class(User)
     polar.register_class(Post)
 
-    polar.load_str("""f(x: User) if x.user = 1;
-                      f(x: Post) if x.post = 1;""")
+    polar.load_str(
+        """f(x: User) if x.user = 1;
+                      f(x: Post) if x.post = 1;"""
+    )
 
     x = Variable("x")
     results = polar.query_rule(

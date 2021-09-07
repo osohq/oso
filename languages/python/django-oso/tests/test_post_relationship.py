@@ -7,7 +7,7 @@ import pytest
 from django.core.exceptions import PermissionDenied
 
 from django_oso.models import authorize_model
-from django_oso.oso import Oso, reset_oso
+from django_oso.oso import reset_oso
 from test_app2.models import Post, Tag, User
 
 from .conftest import is_true, parenthesize
@@ -434,7 +434,9 @@ def tag_nested_many_many_fixtures():
 
 
 @pytest.mark.django_db
-def test_nested_relationship_many_many(tag_nested_many_many_fixtures, load_additional_str):
+def test_nested_relationship_many_many(
+    tag_nested_many_many_fixtures, load_additional_str
+):
     """Test that nested relationships work.
     post - (many) -> tags - (many) -> User
     A user can read a post with a tag if the tag's creator is the user.
@@ -495,7 +497,9 @@ def test_partial_in_collection(tag_nested_many_many_fixtures, load_additional_st
 
 
 @pytest.mark.django_db
-def test_many_many_with_other_condition(tag_nested_many_many_fixtures, load_additional_str):
+def test_many_many_with_other_condition(
+    tag_nested_many_many_fixtures, load_additional_str
+):
     """Test that using a many-to-many condition OR any other condition does not
     result in duplicate results."""
     load_additional_str(
@@ -565,7 +569,9 @@ def test_empty_constraints_in(tag_nested_many_many_fixtures, load_additional_str
 
 
 @pytest.mark.django_db
-def test_in_with_constraints_but_no_matching_objects(tag_nested_many_many_fixtures, load_additional_str):
+def test_in_with_constraints_but_no_matching_objects(
+    tag_nested_many_many_fixtures, load_additional_str
+):
     load_additional_str(
         """
             allow(_: test_app2::User, "read", post: test_app2::Post) if
