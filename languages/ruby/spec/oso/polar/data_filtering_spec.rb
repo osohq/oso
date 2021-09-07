@@ -523,7 +523,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
               my_field: 'name',
               other_field: 'org_name'
             ),
-            'repos' => Relation.new(
+            repos: Relation.new(
               kind: 'many',
               other_type: 'Repo',
               my_field: 'name',
@@ -542,6 +542,12 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
               other_type: 'Org',
               my_field: 'org_name',
               other_field: 'name'
+            ),
+            roles: Relation.new(
+              kind: 'many',
+              other_type: 'Role',
+              my_field: 'name',
+              other_field: 'user_name'
             )
           }
         )
