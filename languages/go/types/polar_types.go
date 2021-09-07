@@ -557,17 +557,9 @@ type Operation struct {
 }
 
 // OperationalErrorUnimplemented newtype
-type OperationalErrorUnimplemented string
-
-func (variant OperationalErrorUnimplemented) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(variant))
-}
-
-func (variant *OperationalErrorUnimplemented) UnmarshalJSON(b []byte) error {
-	inner := string(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = OperationalErrorUnimplemented(inner)
-	return err
+type OperationalErrorUnimplemented struct {
+	// Msg
+	Msg string `json:"msg"`
 }
 
 func (OperationalErrorUnimplemented) isOperationalError() {}
@@ -577,17 +569,9 @@ type OperationalErrorUnknown struct{}
 func (OperationalErrorUnknown) isOperationalError() {}
 
 // OperationalErrorInvalidState newtype
-type OperationalErrorInvalidState string
-
-func (variant OperationalErrorInvalidState) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(variant))
-}
-
-func (variant *OperationalErrorInvalidState) UnmarshalJSON(b []byte) error {
-	inner := string(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = OperationalErrorInvalidState(inner)
-	return err
+type OperationalErrorInvalidState struct {
+	// Msg
+	Msg string `json:"msg"`
 }
 
 func (OperationalErrorInvalidState) isOperationalError() {}

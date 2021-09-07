@@ -190,10 +190,10 @@ impl KnowledgeBase {
                     Ok(RuleParamMatch::True)
                 }
             } else {
-                Err(error::OperationalError::InvalidState(format!(
+                Err(error::OperationalError::InvalidState{msg: format!(
                     "All registered classes must have a registered MRO. Class {} does not have a registered MRO.",
                     &rule_instance.tag
-                )).into())
+                )}.into())
             }
         } else {
             unreachable!("Unregistered specializer classes should be caught before this point.");

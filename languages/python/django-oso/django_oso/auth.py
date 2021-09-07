@@ -1,6 +1,5 @@
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Model
-from polar.exceptions import UnsupportedError
 
 from .oso import Oso, polar_model_name
 from polar.partial import TypeConstraint
@@ -71,11 +70,6 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
     :raises django.core.exceptions.PermissionDenied: If the request is not authorized.
     :returns: A django ``Q`` object representing the authorization filter.
     """
-    if Oso._polar_roles_enabled:
-        raise UnsupportedError(
-            "Data filtering not yet supported with Polar roles enabled."
-        )
-
     if actor is None:
         actor = request.user
 

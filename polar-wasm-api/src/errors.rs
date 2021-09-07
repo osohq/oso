@@ -2,7 +2,7 @@ use wasm_bindgen::JsValue;
 
 use polar_core::error::{
     ErrorKind, FormattedPolarError, OperationalError, ParameterError, ParseError, PolarError,
-    RolesValidationError, RuntimeError, ValidationError,
+    RuntimeError, ValidationError,
 };
 
 pub struct Error {
@@ -48,11 +48,10 @@ fn kind(err: &PolarError) -> String {
         Runtime(TypeError { .. }) => "RuntimeError::TypeError",
         Runtime(UnboundVariable { .. }) => "RuntimeError::UnboundVariable",
         Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
-        Operational(Unimplemented(..)) => "OperationalError::Unimplemented",
+        Operational(Unimplemented { .. }) => "OperationalError::Unimplemented",
         Operational(Unknown) => "OperationalError::Unknown",
-        Operational(InvalidState(..)) => "OperationalError::InvalidState",
+        Operational(InvalidState { .. }) => "OperationalError::InvalidState",
         Parameter(ParameterError(..)) => "ParameterError::ParameterError",
-        RolesValidation(RolesValidationError(..)) => "RolesValidationError::RolesValidationError",
         Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
         Validation(InvalidPrototype { .. }) => "ValidationError::InvalidPrototype",
     }

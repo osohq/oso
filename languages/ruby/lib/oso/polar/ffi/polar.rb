@@ -14,8 +14,6 @@ module Oso
           ffi_lib FFI::LIB_PATH
 
           attach_function :new, :polar_new, [], FFI::Polar
-          attach_function :enable_roles, :polar_enable_roles, [FFI::Polar], :int32
-          attach_function :validate_roles_config, :polar_validate_roles_config, [FFI::Polar, :string], :int32
           attach_function :load, :polar_load, [FFI::Polar, :string, :string], :int32
           attach_function :clear_rules, :polar_clear_rules, [FFI::Polar], :int32
           attach_function :next_inline_query, :polar_next_inline_query, [FFI::Polar, :uint32], FFI::Query
@@ -23,6 +21,7 @@ module Oso
           attach_function :new_query_from_str, :polar_new_query, [FFI::Polar, :string, :uint32], FFI::Query
           attach_function :new_query_from_term, :polar_new_query_from_term, [FFI::Polar, :string, :uint32], FFI::Query
           attach_function :register_constant, :polar_register_constant, [FFI::Polar, :string, :string], :int32
+          attach_function :register_mro, :polar_register_mro, [FFI::Polar, :string, :string], :int32
           attach_function :next_message, :polar_next_polar_message, [FFI::Polar], FFI::Message
           attach_function :free, :polar_free, [FFI::Polar], :int32
           attach_function(
@@ -41,20 +40,6 @@ module Oso
           handle_error if polar.null?
 
           polar
-        end
-
-        # @raise [FFI::Error] if the FFI call returns an error.
-        def enable_roles
-          result = Rust.enable_roles(self)
-          process_messages
-          handle_error if result.zero?
-        end
-
-        # @raise [FFI::Error] if the FFI call returns an error.
-        def validate_roles_config(config)
-          result = Rust.validate_roles_config(self, JSON.dump(config))
-          process_messages
-          handle_error if result.zero?
         end
 
         def build_filter_plan(types, partials, variable, class_tag)
@@ -130,6 +115,14 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def register_constant(value, name:)
           registered = Rust.register_constant(self, name, JSON.dump(value))
+          handle_error if registered.zero?
+        end
+
+        # @param name [String]
+        # @param mro [Array<Integer>]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def register_mro(name, mro)
+          registered = Rust.register_mro(self, name, JSON.dump(mro))
           handle_error if registered.zero?
         end
 
