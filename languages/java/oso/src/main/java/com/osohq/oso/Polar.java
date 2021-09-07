@@ -9,24 +9,19 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import org.json.JSONArray;
 
 public class Polar {
   private Ffi.Polar ffiPolar;
   protected Host host; // visible for tests only
-  private boolean polarRolesEnabled;
 
   public Polar() throws Exceptions.OsoException {
     ffiPolar = Ffi.get().polarNew();
     host = new Host(ffiPolar);
-    polarRolesEnabled = false;
 
     // Register global constants.
     registerConstant(null, "nil");
@@ -38,7 +33,6 @@ public class Polar {
     registerClass(List.class, "List");
     registerClass(Map.class, "Dictionary");
     registerClass(String.class, "String");
-    registerClass(RolesHelper.class, "__oso_internal_roles_helpers__");
   }
 
   /**
@@ -48,7 +42,6 @@ public class Polar {
    */
   public void clearRules() throws Exceptions.OsoException {
     ffiPolar.clearRules();
-    reinitializeRoles();
   }
 
   /**
@@ -84,9 +77,9 @@ public class Polar {
    * @param filename Name of the source file.
    */
   public void loadStr(String str, String filename) throws Exceptions.OsoException {
+    host.registerMros();
     ffiPolar.load(str, filename);
     checkInlineQueries();
-    reinitializeRoles();
   }
 
   /**
@@ -95,6 +88,7 @@ public class Polar {
    * @param str Polar string to be loaded.
    */
   public void loadStr(String str) throws Exceptions.OsoException {
+    host.registerMros();
     ffiPolar.load(str, null);
     checkInlineQueries();
   }
@@ -262,49 +256,5 @@ public class Polar {
       }
       nextQuery = ffiPolar.nextInlineQuery();
     }
-  }
-
-  private void reinitializeRoles() {
-    if (!polarRolesEnabled) return;
-    polarRolesEnabled = false;
-    enableRoles();
-  }
-
-  public void enableRoles() throws Exceptions.OsoException {
-    if (polarRolesEnabled) return;
-    ffiPolar.enableRoles();
-
-    List<List<HashMap<String, Object>>> allResults = new ArrayList<List<HashMap<String, Object>>>();
-
-    Ffi.Query nextQuery = ffiPolar.nextInlineQuery();
-    for (; nextQuery != null; nextQuery = ffiPolar.nextInlineQuery()) {
-      Host dupHost = host.clone();
-      dupHost.acceptExpression = true;
-      Query query = new Query(nextQuery, dupHost, Map.of());
-      if (!query.hasMoreElements()) {
-        throw new Exceptions.InlineQueryFailedError(nextQuery.source());
-      } else {
-        allResults.add(query.results());
-      }
-    }
-
-    allResults =
-        allResults.stream()
-            .map(
-                (results) ->
-                    results.stream()
-                        .map(
-                            (result) -> {
-                              HashMap<String, Object> inner = new HashMap<String, Object>(),
-                                  outer = new HashMap<String, Object>();
-                              result.forEach((k, v) -> inner.put(k, host.toPolarTerm(v)));
-                              outer.put("bindings", inner);
-                              return outer;
-                            })
-                        .collect(Collectors.toList()))
-            .collect(Collectors.toList());
-
-    ffiPolar.validateRolesConfig(new JSONArray(allResults).toString());
-    this.polarRolesEnabled = true;
   }
 }

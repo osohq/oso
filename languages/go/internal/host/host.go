@@ -78,6 +78,18 @@ func (h Host) CacheClass(cls reflect.Type, name string, constructor reflect.Valu
 	return nil
 }
 
+func (h Host) RegisterMros() error {
+	// Go does not support inheritance, so all MROs are empty
+	var err error
+	for name, _ := range h.classes {
+		err = h.ffiPolar.RegisterMro(name, []uint64{})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (h Host) getInstance(id uint64) (*reflect.Value, error) {
 	if v, ok := h.instances[id]; ok {
 		return &v, nil

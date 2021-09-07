@@ -197,31 +197,34 @@ test('data filtering', async () => {
 
   oso.clearRules();
   oso.loadStr(`
-        resource(_type: Bar, "bar", actions, roles) if
-            actions = ["get"] and
-            roles = {
-                owner: {
-                    permissions: ["get"],
-                    implies: ["foo:reader"]
-                }
-            };
+    allow(actor, action, resource) if
+      has_permission(actor, action, resource);
 
-        resource(_type: Foo, "foo", actions, roles) if
-            actions = ["read"] and
-            roles = {
-                reader: {
-                    permissions: ["read"]
-                }
-            };
+    has_role("steve", "owner", bar: Bar) if
+      bar.id = "hello";
 
-        parent_child(parent_bar: Bar, foo: Foo) if
-            foo.bar = parent_bar;
+    actor String {}
 
-        actor_has_role_for_resource("steve", "owner", bar: Bar) if bar.id = "hello";
+    resource Bar {
+      roles = [ "owner" ];
+      permissions = [ "get" ];
 
-        allow(actor, action, resource) if role_allows(actor, action, resource);
+      "get" if "owner";
+    }
+
+    resource Foo {
+      roles = [ "reader" ];
+      permissions = [ "read" ];
+      relations = { parent: Bar };
+
+      "read" if "reader";
+
+      "reader" if "owner" on "parent";
+    }
+
+    has_relation(bar: Bar, "parent", foo: Foo) if
+      bar = foo.bar;
     `);
-  oso.enableRoles();
   await checkAuthz('steve', 'get', Bar, [helloBar]);
   await checkAuthz('steve', 'read', Foo, [aFoo, anotherFoo]);
 });

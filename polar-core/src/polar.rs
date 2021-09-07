@@ -5,7 +5,6 @@ use super::kb::*;
 use super::messages::*;
 use super::parser;
 use super::rewrites::*;
-use super::roles_validation::{validate_roles_config, VALIDATE_ROLES_CONFIG_RESOURCES};
 use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
@@ -135,8 +134,6 @@ impl Iterator for Query {
     }
 }
 
-const ROLES_POLICY: &str = include_str!("roles.polar");
-
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
     messages: MessageQueue,
@@ -209,13 +206,13 @@ impl Polar {
                         }
                         kb.add_rule_prototype(prototype);
                     }
-                    parser::Line::Namespace(namespace) => {
-                        namespace.add_to_kb(kb)?;
+                    parser::Line::ResourceBlock(block) => {
+                        block.add_to_kb(kb)?;
                     }
                 }
             }
-            // Rewrite namespace implications _before_ validating rule prototypes.
-            kb.rewrite_implications()?;
+            // Rewrite shorthand rules in resource blocks before validating rule prototypes.
+            kb.rewrite_shorthand_rules()?;
             // check rules are valid against rule prototypes
             kb.validate_rules()?;
             Ok(warnings)
@@ -304,28 +301,6 @@ impl Polar {
         self.messages.next()
     }
 
-    /// Load the Polar roles policy idempotently.
-    pub fn enable_roles(&self) -> PolarResult<()> {
-        let result = match self.load(ROLES_POLICY, Some("Built-in Polar Roles Policy".to_owned())) {
-            Err(error::PolarError {
-                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { .. }),
-                ..
-            }) => Ok(()),
-            result => result,
-        };
-
-        // Push inline queries to validate config.
-        let src_id = self.kb.read().unwrap().new_id();
-        let term = parser::parse_query(src_id, VALIDATE_ROLES_CONFIG_RESOURCES)?;
-        self.kb.write().unwrap().inline_queries.push(term);
-
-        result
-    }
-
-    pub fn validate_roles_config(&self, results: Vec<Vec<ResultEvent>>) -> PolarResult<()> {
-        validate_roles_config(self.kb.read().unwrap().get_rules(), results)
-    }
-
     pub fn build_filter_plan(
         &self,
         types: Types,
@@ -346,23 +321,6 @@ mod tests {
         let polar = Polar::new();
         let _query = polar.new_query("1 = 1", false);
         let _ = polar.load_str("f(_);");
-    }
-
-    #[test]
-    fn roles_policy_loads_idempotently() {
-        let polar = Polar::new();
-        assert!(polar.enable_roles().is_ok());
-        {
-            let kb = polar.kb.read().unwrap();
-            assert_eq!(kb.loaded_files.len(), 1);
-            assert_eq!(kb.loaded_content.len(), 1);
-        }
-        assert!(polar.enable_roles().is_ok());
-        {
-            let kb = polar.kb.read().unwrap();
-            assert_eq!(kb.loaded_files.len(), 1);
-            assert_eq!(kb.loaded_content.len(), 1);
-        }
     }
 
     #[test]

@@ -975,6 +975,20 @@ impl PolarVirtualMachine {
                 unreachable!("encountered bare expression")
             }
 
+            _ if self.kb.read().unwrap().is_union(left) => {
+                // A union (currently) only matches itself.
+                //
+                // TODO(gj): when we have unions beyond `Actor` and `Resource`, we'll need to be
+                // smarter about this check since UnionA is more specific than UnionB if UnionA is
+                // a member of UnionB.
+                let unions_match = (left.is_actor_union() && right.is_actor_union())
+                    || (left.is_resource_union() && right.is_resource_union());
+                if !unions_match {
+                    return self.push_goal(Goal::Backtrack);
+                }
+            }
+            _ if self.kb.read().unwrap().is_union(right) => self.isa_union(left, right),
+
             // TODO(gj): (Var, Rest) + (Rest, Var) cases might be unreachable.
             (Value::Variable(l), Value::Variable(r))
             | (Value::Variable(l), Value::RestVariable(r))
@@ -1214,6 +1228,28 @@ impl PolarVirtualMachine {
             _ => self.add_constraint(&op!(Unify, left.clone(), right.clone()).into())?,
         }
         Ok(())
+    }
+
+    /// To evaluate `left matches Union`, look up `Union`'s member classes and create a choicepoint
+    /// to check if `left` matches any of them.
+    fn isa_union(&mut self, left: &Term, union: &Term) {
+        let member_isas = {
+            let kb = self.kb.read().unwrap();
+            let members = kb.get_union_members(union).iter();
+            members
+                .map(|member| {
+                    let tag = member.value().as_symbol().unwrap().0.as_str();
+                    member.clone_with_value(value!(pattern!(instance!(tag))))
+                })
+                .map(|pattern| {
+                    vec![Goal::Isa {
+                        left: left.clone(),
+                        right: pattern,
+                    }]
+                })
+                .collect::<Vec<Goals>>()
+        };
+        self.push_choice(member_isas);
     }
 
     pub fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<()> {
@@ -2651,6 +2687,25 @@ impl PolarVirtualMachine {
         let zipped = left.params.iter().zip(right.params.iter()).zip(args.iter());
         for ((left_param, right_param), arg) in zipped {
             match (&left_param.specializer, &right_param.specializer) {
+                // If both specs are unions, they have the same specificity regardless of whether
+                // they're the same or different unions.
+                //
+                // TODO(gj): when we have unions beyond `Actor` and `Resource`, we'll need to be
+                // smarter about this check since UnionA is more specific than UnionB if UnionA is
+                // a member of UnionB.
+                (Some(left_spec), Some(right_spec))
+                    if self.kb.read().unwrap().is_union(left_spec)
+                        && self.kb.read().unwrap().is_union(right_spec) => {}
+                // If left is a union and right is not, left cannot be more specific, so we
+                // backtrack.
+                (Some(left_spec), Some(_)) if self.kb.read().unwrap().is_union(left_spec) => {
+                    return self.push_goal(Goal::Backtrack)
+                }
+                // If right is a union and left is not, left IS more specific, so we return.
+                (Some(_), Some(right_spec)) if self.kb.read().unwrap().is_union(right_spec) => {
+                    return Ok(())
+                }
+
                 (Some(left_spec), Some(right_spec)) => {
                     // If you find two non-equal specializers, that comparison determines the relative
                     // specificity of the two rules completely. As soon as you have two specializers

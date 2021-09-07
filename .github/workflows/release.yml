@@ -71,6 +71,10 @@ jobs:
           path: target/release/libpolar.so
       - uses: actions/upload-artifact@v2
         with:
+          name: oso_library
+          path: polar-c-api/polar.h
+      - uses: actions/upload-artifact@v2
+        with:
           name: oso_static_library
           path: target/release/libpolar-${{runner.os}}.a
       - uses: actions/upload-artifact@v2

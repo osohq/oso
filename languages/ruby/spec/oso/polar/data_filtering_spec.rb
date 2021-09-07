@@ -370,7 +370,6 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         )
 
         subject.load_file(roles_file)
-        subject.enable_roles
       end
 
       context 'org owners' do

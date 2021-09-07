@@ -1,7 +1,6 @@
 """Communicate with the Polar virtual machine: load rules, make queries, etc."""
 
 from datetime import datetime, timedelta
-import inspect
 import os
 from pathlib import Path
 import sys
@@ -69,8 +68,6 @@ class Polar:
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
         self.ffi_polar.set_message_enricher(self.host.enrich_message)
-        # TODO(gj): rename to _oso_roles_enabled
-        self._polar_roles_enabled = False
 
         # Register global constants.
         self.register_constant(None, name="nil")
@@ -85,13 +82,6 @@ class Polar:
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
 
-        class InternalRolesHelpers:
-            @staticmethod
-            def join(separator, left, right):
-                return separator.join([left, right])
-
-        self.register_class(InternalRolesHelpers, name="__oso_internal_roles_helpers__")
-
         # Pre-registered classes.
         for name, cls in classes.items():
             self.register_class(cls, name=name)
@@ -99,34 +89,6 @@ class Polar:
     def __del__(self):
         del self.host
         del self.ffi_polar
-
-    def enable_roles(self):
-        if not self._polar_roles_enabled:
-
-            self.ffi_polar.enable_roles()
-            self._polar_roles_enabled = True
-
-            # validate config
-            validation_query_results = []
-            while True:
-                query = self.ffi_polar.next_inline_query()
-                if query is None:  # Load is done
-                    break
-                try:
-                    host = self.host.copy()
-                    host.set_accept_expression(True)
-                    validation_query_results.append(list(Query(query, host=host).run()))
-                except StopIteration:
-                    source = query.source()
-                    raise InlineQueryFailedError(source.get())
-
-            # turn bindings back into polar
-            for results in validation_query_results:
-                for result in results:
-                    for k, v in result["bindings"].items():
-                        result["bindings"][k] = host.to_polar(v)
-
-            self.ffi_polar.validate_roles_config(validation_query_results)
 
     def load_file(self, policy_file):
         """Load Polar policy from a ".polar" file."""
@@ -146,18 +108,10 @@ class Polar:
 
     def load_str(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
-        # Get MRO of all registered classes
         # NOTE: not ideal that the MRO gets updated each time load_str is
         # called, but since we are planning to move to only calling load once
         # with the include feature, I think it's okay for now.
-        for rec in self.host.distinct_user_types():
-            mro = [
-                self.host.types[c].id
-                for c in inspect.getmro(rec.cls)
-                if c in self.host.types
-            ]
-            self.ffi_polar.register_mro(rec.name, mro)
-
+        self.host.register_mros()
         self.ffi_polar.load(string, filename)
 
         # check inline queries
@@ -172,14 +126,8 @@ class Polar:
                     source = query.source()
                     raise InlineQueryFailedError(source.get())
 
-        # If roles are enabled, re-validate config when new rules are loaded.
-        if self._polar_roles_enabled:
-            self._polar_roles_enabled = False
-            self.enable_roles()
-
     def clear_rules(self):
         self.ffi_polar.clear_rules()
-        self._polar_roles_enabled = False
 
     def query(self, query, *, bindings=None, accept_expression=False):
         """Query for a predicate, parsing it if necessary.
@@ -271,6 +219,7 @@ class Polar:
         combine_query=None
     ):
         """Register `cls` as a class accessible by Polar."""
+        # TODO: let's add example usage here or at least a proper docstring for the arguments
         cls_name = self.host.cache_class(
             cls,
             name=name,
