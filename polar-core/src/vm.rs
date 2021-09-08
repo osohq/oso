@@ -2689,28 +2689,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn rule_source(&self, rule: &Rule) -> String {
-        let head = format!(
-            "{}({})",
-            rule.name,
-            rule.params.iter().fold(String::new(), |mut acc, p| {
-                if !acc.is_empty() {
-                    acc += ", ";
-                }
-                acc += &self.term_source(&p.parameter, false);
-                if let Some(spec) = &p.specializer {
-                    acc += ": ";
-                    acc += &self.term_source(spec, false);
-                }
-                acc
-            })
-        );
-        match rule.body.value() {
-            Value::Expression(Operation {
-                operator: Operator::And,
-                args,
-            }) if !args.is_empty() => head + " if " + &self.term_source(&rule.body, false) + ";",
-            _ => head + ";",
-        }
+        rule.to_polar()
     }
 
     fn set_error_context(
