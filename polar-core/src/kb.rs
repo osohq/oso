@@ -708,6 +708,7 @@ mod tests {
     use crate::error::*;
 
     #[test]
+    /// Test validation implemented in `check_file()`.
     fn test_add_source_file_validation() {
         let mut kb = KnowledgeBase::new();
         let src = "f();";
