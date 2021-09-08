@@ -30,8 +30,10 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
 
       it 'handles queries that return known results' do
-        subject.load_str('allow(_, _, i) if i in [1, 2];')
-        subject.load_str('allow(_, _, i) if i = {};')
+        subject.load_str <<~POLAR
+          allow(_, _, i) if i in [1, 2];
+          allow(_, _, i) if i = {};
+        POLAR
         expect(subject.get_allowed_resources('gwen', 'get', Integer)).to eq([1, 2])
         expect(subject.get_allowed_resources('gwen', 'get', Hash)).to eq([{}])
       end

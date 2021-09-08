@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import sys
-from typing import Dict
+from typing import Dict, List, Union
 
 try:
     # importing readline on compatible platforms
@@ -21,7 +21,7 @@ from .exceptions import (
     PolarFileNotFoundError,
     InvalidQueryTypeError,
 )
-from .ffi import Polar as FfiPolar
+from .ffi import Polar as FfiPolar, PolarSource as Source
 from .host import Host
 from .query import Query
 from .predicate import Predicate
@@ -90,31 +90,52 @@ class Polar:
         del self.host
         del self.ffi_polar
 
-    def load_file(self, policy_file):
+    def load_files(self, filenames: List[Union[Path, str]] = []):
+        """Load Polar policy from ".polar" files."""
+        if not filenames:
+            return
+
+        sources: List[Source] = []
+
+        for filename in filenames:
+            path = Path(filename)
+            extension = path.suffix
+            filename = str(path)
+            if not extension == ".polar":
+                raise PolarFileExtensionError(filename)
+
+            try:
+                with open(filename, "rb") as f:
+                    src = f.read().decode("utf-8")
+                    sources.append(Source(src, filename))
+            except FileNotFoundError:
+                raise PolarFileNotFoundError(filename)
+
+        self._load_sources(sources)
+
+    def load_file(self, filename: Union[Path, str]):
         """Load Polar policy from a ".polar" file."""
-        policy_file = Path(policy_file)
-        extension = policy_file.suffix
-        fname = str(policy_file)
-        if not extension == ".polar":
-            raise PolarFileExtensionError(fname)
+        print(
+            "`Oso.load_file` has been deprecated in favor of `Oso.load_files` as of the 0.20.0 release.\n\n"
+            + "Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html",
+            file=sys.stderr,
+        )
+        self.load_files([filename])
 
-        try:
-            with open(fname, "rb") as f:
-                file_data = f.read()
-        except FileNotFoundError:
-            raise PolarFileNotFoundError(fname)
-
-        self.load_str(file_data.decode("utf-8"), policy_file)
-
-    def load_str(self, string, filename=None):
+    def load_str(self, string: str):
         """Load a Polar string, checking that all inline queries succeed."""
         # NOTE: not ideal that the MRO gets updated each time load_str is
         # called, but since we are planning to move to only calling load once
         # with the include feature, I think it's okay for now.
-        self.host.register_mros()
-        self.ffi_polar.load(string, filename)
+        self._load_sources([Source(string)])
 
-        # check inline queries
+    # Register MROs, load Polar code, and check inline queries.
+    def _load_sources(self, sources: List[Source]):
+        self.host.register_mros()
+        self.ffi_polar.load(sources)
+        self.check_inline_queries()
+
+    def check_inline_queries(self):
         while True:
             query = self.ffi_polar.next_inline_query()
             if query is None:  # Load is done
@@ -175,8 +196,7 @@ class Polar:
 
     def repl(self, files=[]):
         """Start an interactive REPL session."""
-        for f in files:
-            self.load_file(f)
+        self.load_files(files)
 
         while True:
             try:
