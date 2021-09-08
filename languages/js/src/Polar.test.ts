@@ -942,4 +942,55 @@ describe('Oso Roles', () => {
     gabe = new User('gabe', [osohqOwner]);
     expect(await isAllowed(gabe, 'edit', bug)).toBe(true);
   });
+
+  test('rule prototypes correctly check subclasses', async () => {
+    class Foo {}
+    class Bar extends Foo {}
+    class Baz extends Bar {}
+    class Bad {}
+
+    // NOTE: keep this order of registering classes--confirms that MROs are added at the correct time
+    const p = new Polar();
+    p.registerClass(Baz);
+    p.registerClass(Bar);
+    p.registerClass(Foo);
+    p.registerClass(Bad);
+
+    const policy = `
+    type f(_x: Integer);
+    f(1);
+    `;
+
+    await p.loadStr(policy);
+
+    const policy2 = `
+    type f(_x: Foo);
+    type f(_x: Foo, _y: Bar);
+    f(_x: Bar);
+    f(_x: Baz);
+    `;
+
+    await p.loadStr(policy2);
+
+    await expect(p.loadStr('f(_x: Bad);')).rejects.toThrow('Invalid rule');
+
+    p.clearRules();
+
+    // Test with fields
+    const policy3 = `
+    type f(_x: Foo{id: 1});
+    f(_x: Bar{id: 1});
+    f(_x: Baz{id: 1});
+    `;
+
+    await p.loadStr(policy3);
+    await expect(p.loadStr('f(_x: Baz);')).rejects.toThrow('Invalid rule');
+
+    // Test invalid rule prototype
+    const policy4 = `
+    type f(x: Foo, x.baz);
+    `;
+
+    await expect(p.loadStr(policy4)).rejects.toThrow('Invalid prototype');
+  });
 });

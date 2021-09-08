@@ -14,7 +14,14 @@ import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
 import { Class, Dict, obj, Options, QueryResult } from './types';
-import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
+import {
+  ancestors,
+  isConstructor,
+  printError,
+  PROMPT,
+  readFile,
+  repr,
+} from './helpers';
 import { Variable } from './Variable';
 import { Expression } from './Expression';
 import type { PolarOperator } from './types';
@@ -145,6 +152,8 @@ export class Polar {
    * Load a Polar policy string.
    */
   async loadStr(contents: string, name?: string): Promise<void> {
+    this.#host.registerMros();
+
     this.#ffiPolar.load(contents, name);
     this.processMessages();
 
