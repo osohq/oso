@@ -976,7 +976,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
       subject.clear_rules
 
-      # Test invalid rule prototype
+      # Test invalid rule type
       p = <<~POLAR
         type f(x: Foo, x.baz);
       POLAR

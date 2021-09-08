@@ -698,7 +698,7 @@ impl KnowledgeBase {
     }
 
     pub fn has_rules(&self) -> bool {
-        !self.rules.is_empty() || !self.rule_prototypes.is_empty()
+        !self.rules.is_empty() || !self.rule_types.is_empty()
     }
 }
 

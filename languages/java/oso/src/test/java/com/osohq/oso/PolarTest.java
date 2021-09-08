@@ -764,7 +764,7 @@ public class PolarTest {
         () -> p.loadStr(policy2 + "f(_x: Baz);"),
         "Expected rule type validation error.");
 
-    // Test invalid rule prototype
+    // Test invalid rule type
     assertThrows(
         Exceptions.ValidationError.class,
         () -> p.loadStr("type f(x: Foo, x.baz);"),
