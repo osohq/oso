@@ -78,7 +78,7 @@ class Team(Actor):
 
 
 def test_resource_blocks(polar, is_allowed):
-    [polar.register_class(c) for c in [User, Org, Repo, Issue]]
+    [polar.register_class(c) for c in [User, Team, Org, Repo, Issue]]
     polar.load_file("tests/resource_blocks.polar")
 
     annie, dave, gabe, graham, leina, lito, sam, shraddha, stephie, steve, tim = [
