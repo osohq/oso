@@ -457,7 +457,7 @@ impl KnowledgeBase {
         )
     }
 
-    /// Determine whether a rule matches a rule rule_type based on its parameters.
+    /// Determine whether a `rule` matches a `rule_type` based on its parameters.
     fn rule_params_match(&self, rule: &Rule, rule_type: &Rule) -> PolarResult<RuleParamMatch> {
         if rule.params.len() != rule_type.params.len() {
             return Ok(RuleParamMatch::False(format!(
@@ -504,7 +504,7 @@ impl KnowledgeBase {
 
     pub fn add_rule_type(&mut self, rule_type: Rule) {
         let name = rule_type.name.clone();
-        // get rule rule_types
+        // get rule types
         let rule_types = self.rule_types.entry(name).or_insert_with(Vec::new);
         rule_types.push(rule_type);
     }
