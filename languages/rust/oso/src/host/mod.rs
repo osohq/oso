@@ -13,7 +13,7 @@ mod value;
 
 pub use class::{Class, ClassBuilder, Instance};
 pub use from_polar::{FromPolar, FromPolarList};
-use polar_core::terms::Operator;
+use polar_core::terms::{Operator, Symbol};
 pub use to_polar::{PolarIterator, ToPolar, ToPolarList};
 pub use value::PolarValue;
 
@@ -110,6 +110,17 @@ impl Host {
             self.classes.insert(name.clone(), class);
             Ok(name)
         }
+    }
+
+    /// Register an MRO list for every registered class.
+    /// Since inheritance is not supported, all lists are empty.
+    pub fn register_mros(&self) -> crate::Result<()> {
+        for name in self.classes.keys() {
+            if name != "oso::host::Class" {
+                self.polar.register_mro(Symbol(name.clone()), vec![])?;
+            }
+        }
+        Ok(())
     }
 
     pub fn get_instance(&self, id: u64) -> crate::Result<&class::Instance> {
