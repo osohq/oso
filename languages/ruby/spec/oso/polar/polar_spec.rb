@@ -59,8 +59,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     it 'returns Ruby instances from external calls' do
       actor = Actor.new('sam')
       widget = Widget.new(1)
-      subject.load_str('allow(actor, resource) if actor.widget.id = resource.id;')
-      expect(subject.query_rule('allow', actor, widget).to_a.length).to eq 1
+      subject.load_str('allow(actor, _action, resource) if actor.widget.id = resource.id;')
+      expect(subject.query_rule('allow', actor, 'read', widget).to_a.length).to eq 1
     end
 
     it 'handles enumerator external call results' do

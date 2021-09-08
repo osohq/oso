@@ -32,20 +32,20 @@ def torch_oso(oso):
     for i in range(ITERS):
         x = X(r())
         y = X(r())
-        exhaust(oso.query_rule("allow", x, y))
+        exhaust(oso.query_rule("equal", x, y))
         time.sleep(random.random() * 0.01)
 
-        exhaust(oso.query_rule("allow", r(), r()))
+        exhaust(oso.query_rule("equal", r(), r()))
 
-        exhaust(oso.query_rule("allow", 1))
+        exhaust(oso.query_rule("equal", 1))
         time.sleep(random.random() * 0.01)
 
-        exhaust(oso.query_rule("allow", r(), str(r())))
+        exhaust(oso.query_rule("equal", r(), str(r())))
 
 
 def test_multi():
     oso = Oso()
-    oso.load_str("allow(x, y) if x == y;")
+    oso.load_str("equal(x, y) if x == y;")
 
     tp = ThreadPoolExecutor(max_workers=8)
 

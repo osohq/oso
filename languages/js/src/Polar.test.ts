@@ -320,9 +320,9 @@ describe('conversions between JS + Polar values', () => {
     const widget = new Widget('1');
     const p = new Polar();
     await p.loadStr(
-      'allow(actor, resource) if actor.widget().id = resource.id;'
+      'allow(actor, _action, resource) if actor.widget().id = resource.id;'
     );
-    const result = await queryRule(p, 'allow', actor, widget);
+    const result = await queryRule(p, 'allow', 'read', actor, widget);
     expect(result).toStrictEqual([map()]);
   });
 
@@ -870,7 +870,7 @@ describe('Oso Roles', () => {
       allow(actor, action, resource) if
         has_permission(actor, action, resource);
 
-      has_role(user: User, name, resource) if
+      has_role(user: User, name: String, resource: Resource) if
         role in user.roles and
         role matches { name: name, resource: resource };
 

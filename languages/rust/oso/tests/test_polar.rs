@@ -156,8 +156,11 @@ fn test_data_conversions_externals() -> oso::Result<()> {
     let actor = Actor::new(String::from("sam"));
     let widget = Widget::new(1);
 
-    oso.load_str("allow(actor, resource) if actor.widget().id = resource.id;");
-    let query_results = oso.oso.query_rule("allow", (actor, widget))?.count();
+    oso.load_str("allow(actor, _action, resource) if actor.widget().id = resource.id;");
+    let query_results = oso
+        .oso
+        .query_rule("allow", (actor, "read", widget))?
+        .count();
 
     assert_eq!(query_results, 1);
 
