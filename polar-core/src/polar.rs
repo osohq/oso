@@ -200,7 +200,7 @@ impl Polar {
                                 &rule_type.body,
                                 error::ValidationError::InvalidRuleType {
                                     rule_type: rule_type.to_polar(),
-                                    msg: "\nRuleTypes cannot contain dot lookups.".to_owned(),
+                                    msg: "\nRule types cannot contain dot lookups.".to_owned(),
                                 },
                             ));
                         }
@@ -211,9 +211,9 @@ impl Polar {
                     }
                 }
             }
-            // Rewrite shorthand rules in resource blocks before validating rule rule_types.
+            // Rewrite shorthand rules in resource blocks before validating rule types.
             kb.rewrite_shorthand_rules()?;
-            // check rules are valid against rule rule_types
+            // check rules are valid against rule types
             kb.validate_rules()?;
             Ok(warnings)
         }

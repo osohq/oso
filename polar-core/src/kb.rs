@@ -203,7 +203,7 @@ impl KnowledgeBase {
         }
     }
 
-    /// Check that a rule parameter that has a pattern specializer matches a rule_type parameter that has a pattern specializer.
+    /// Check that a rule parameter that has a pattern specializer matches a rule type parameter that has a pattern specializer.
     fn check_pattern_param(
         &self,
         index: usize,
@@ -212,7 +212,7 @@ impl KnowledgeBase {
     ) -> PolarResult<RuleParamMatch> {
         Ok(match (rule_type_pattern, rule_pattern) {
             (Pattern::Instance(rule_type_instance), Pattern::Instance(rule_instance)) => {
-                // if tags match, all rule_type fields must match those in rule fields, otherwise false
+                // if tags match, all rule type fields must match those in rule fields, otherwise false
                 if rule_type_instance.tag == rule_instance.tag {
                     if self.param_fields_match(
                         &rule_type_instance.fields,
@@ -268,7 +268,7 @@ impl KnowledgeBase {
                     } else {
                         RuleParamMatch::True
                     }
-                // If tags don't match, then rule specializer must be a subclass of rule_type specializer
+                // If tags don't match, then rule specializer must be a subclass of rule type specializer
                 } else {
                     self.check_rule_instance_is_subclass_of_rule_type_instance(rule_instance, rule_type_instance, index)?
                 }
@@ -306,7 +306,7 @@ impl KnowledgeBase {
         })
     }
 
-    /// Check that a rule parameter that is a value matches a rule_type parameter that is a value
+    /// Check that a rule parameter that is a value matches a rule type parameter that is a value
     fn check_value_param(
         &self,
         index: usize,
@@ -344,7 +344,7 @@ impl KnowledgeBase {
             }
         })
     }
-    /// Check a single rule parameter against a rule_type parameter.
+    /// Check a single rule parameter against a rule type parameter.
     fn check_param(
         &self,
         index: usize,
@@ -358,7 +358,7 @@ impl KnowledgeBase {
                 rule_param.parameter.value(),
                 rule_param.specializer.as_ref().map(Term::value),
             ) {
-                // Rule and rule_type both have pattern specializers
+                // Rule and rule type both have pattern specializers
                 (
                     Value::Variable(_),
                     Some(Value::Pattern(rule_type_spec)),
@@ -373,7 +373,7 @@ impl KnowledgeBase {
                         rule_type_spec.to_polar()
                     ))
                 }
-                // Rule has value or value specializer, rule_type has pattern specializer
+                // Rule has value or value specializer, rule type has pattern specializer
                 (
                     Value::Variable(_),
                     Some(Value::Pattern(rule_type_spec)),
@@ -435,8 +435,8 @@ impl KnowledgeBase {
 
                 // Rule type has no specializer
                 (Value::Variable(_), None, _, _) => RuleParamMatch::True,
-                // Rule has value or value specializer, rule_type has value specializer |
-                // rule has value, rule_type has value
+                // Rule has value or value specializer, rule type has value specializer |
+                // rule has value, rule type has value
                 (
                     Value::Variable(_),
                     Some(rule_type_value),

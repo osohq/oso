@@ -12,7 +12,7 @@ use super::terms::*;
 pub const ACTOR_UNION_NAME: &str = "Actor";
 pub const RESOURCE_UNION_NAME: &str = "Resource";
 
-// TODO(gj): if a user imports the built-in rule type, we should emit an error if the user
+// TODO(gj): if a user imports the built-in rule types, we should emit an error if the user
 // hasn't registered at least a single Actor and Resource type by the time loading is complete.
 // Maybe only if they've defined at least one rule matching one of the rule types? Otherwise,
 // the rule types will always trigger. But maybe their error message will be descriptive
