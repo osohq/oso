@@ -294,6 +294,3 @@ class Oso(Polar):
                 "Polar tracing enabled. Get help with "
                 + "traces from our engineering team: https://help.osohq.com/trace"
             )
-
-
-Policy = Oso

@@ -4,9 +4,7 @@
 
 Add this line to your application's Gemfile:
 
-```ruby
-gem 'oso-oso'
-```
+    gem 'oso-oso'
 
 And then execute:
 

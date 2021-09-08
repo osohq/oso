@@ -422,7 +422,7 @@ func String(s string) *string {
 	return &s
 }
 
-func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
+func (tc TestCase) setupTest(o oso.Oso, t *testing.T) (error, []string) {
 	var CONSTRUCTORS = map[string]interface{}{
 		"UnitClass":    NewUnitClass,
 		"ValueFactory": NewValueFactory,
@@ -444,6 +444,8 @@ func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
 		policies_folder = "../../../test/policies/"
 	}
 
+	policies := []string{}
+
 	err := filepath.Walk(policies_folder, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -453,17 +455,14 @@ func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
 		}
 
 		if contains(tc.Policies, strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))) {
-			err = o.LoadFile(path)
-			if err != nil {
-				return err
-			}
+			policies = append(policies, path)
 		}
 		return nil
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return nil
+	return nil, policies
 }
 
 func (tc TestCase) RunTest(t *testing.T) {
@@ -482,7 +481,7 @@ func (tc TestCase) RunTest(t *testing.T) {
 			if o, err = oso.NewOso(); err != nil {
 				t.Fatalf("Failed to setup Oso: %s", err.Error())
 			}
-			err = tc.setupTest(o, t)
+			err, policies := tc.setupTest(o, t)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -508,9 +507,21 @@ func (tc TestCase) RunTest(t *testing.T) {
 				}
 			}
 
-			if c.Load != nil {
-				queryErr = o.LoadString(*c.Load)
+			policyContents := []string{}
+
+			for _, policy := range policies {
+				data, err := ioutil.ReadFile(policy)
+				if err != nil {
+					t.Fatal(err)
+				}
+				policyContents = append(policyContents, string(data))
 			}
+
+			if c.Load != nil {
+				policyContents = append(policyContents, *c.Load)
+			}
+
+			queryErr = o.LoadString(strings.Join(policyContents, "\n"))
 
 			var results []map[string]interface{}
 			if queryErr == nil {
