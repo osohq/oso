@@ -926,12 +926,16 @@ fn test_expression_error() {
 fn test_rule_types() {
     common::setup();
     let mut oso = test_oso();
-    oso.load_str("type is_actor(_actor: Actor);");
-    oso.load_str("is_actor(_actor: Actor);");
+    let mut policy = r#"type is_actor(_actor: Actor);
+                        is_actor(_actor: Actor);"#
+        .to_owned();
+    oso.load_str(&policy);
+    oso.clear_rules();
 
+    policy += "is_actor(_actor: Widget);";
     let err = oso
         .oso
-        .load_str("is_actor(_actor: Widget);")
+        .load_str(&policy)
         .expect_err("Expected validation error");
 
     assert!(matches!(
