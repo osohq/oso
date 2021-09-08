@@ -9,7 +9,7 @@ RSpec.configure do |c|
   c.include DataFilteringHelpers
 end
 
-RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
+RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
   DFH = DataFilteringHelpers
   Relation = ::Oso::Polar::DataFiltering::Relation
   Bar = DFH.record(:id, :is_cool, :is_still_cool)

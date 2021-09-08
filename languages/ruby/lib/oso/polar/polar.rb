@@ -71,45 +71,6 @@ module Oso
         end
       end
 
-      def type_constraint(var, cls)
-        Expression.new(
-          'And',
-          [Expression.new('Isa', [var, Pattern.new(get_class_name(cls), {})])]
-        )
-      end
-
-      # Returns a query for the resources belonging to +cls+ that +actor+
-      # is allowed to perform +action+ on.
-      def authorized_query(actr, actn, cls) # rubocop:disable Metrics/MethodLength
-        rsrc = Variable.new 'resource'
-
-        results = query_rule(
-          'allow',
-          actr,
-          actn,
-          rsrc,
-          bindings: { 'resource' => type_constraint(rsrc, cls) },
-          accept_expression: true
-        )
-
-        results = results.each_with_object([]) do |result, out|
-          result.each do |key, val|
-            out.push({ 'bindings' => { key => host.to_polar(val) } })
-          end
-        end
-
-        ::Oso::Polar::DataFiltering::FilterPlan
-          .parse(self, results, get_class_name(cls))
-          .build_query
-      end
-
-      def authorized_resources(actr, actn, cls)
-        q = authorized_query actr, actn, cls
-        return [] if q.nil?
-
-        host.types[get_class_name cls].exec_query[q]
-      end
-
       # Clear all rules and rule sources from the current Polar instance
       #
       # @return [self] for chaining.
@@ -248,6 +209,13 @@ module Oso
       end
 
       private
+
+      def type_constraint(var, cls)
+        Expression.new(
+          'And',
+          [Expression.new('Isa', [var, Pattern.new(get_class_name(cls), {})])]
+        )
+      end
 
       def maybe_mtd(cls, mtd)
         cls.respond_to?(mtd) && cls.method(mtd) || nil
