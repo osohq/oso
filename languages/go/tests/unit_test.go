@@ -240,7 +240,7 @@ func TestExpressionError(t *testing.T) {
 	}
 }
 
-func TestRulePrototypes(t *testing.T) {
+func TestRuleTypes(t *testing.T) {
 	var o oso.Oso
 	var err error
 	var msg string

@@ -999,7 +999,7 @@ def test_rule_types_with_subclass_check(polar):
     with pytest.raises(ValidationError):
         polar.load_str("f(_x: Baz);")
 
-    # Test invalid rule prototype
+    # Test invalid rule type
     p = """
     type f(x: Foo, x.baz);
     """

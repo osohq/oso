@@ -53,7 +53,7 @@ fn kind(err: &PolarError) -> String {
         Operational(InvalidState { .. }) => "OperationalError::InvalidState",
         Parameter(ParameterError(..)) => "ParameterError::ParameterError",
         Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
-        Validation(InvalidPrototype { .. }) => "ValidationError::InvalidPrototype",
+        Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
     }
     .to_owned()
 }

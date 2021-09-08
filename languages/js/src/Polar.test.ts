@@ -943,7 +943,7 @@ describe('Oso Roles', () => {
     expect(await isAllowed(gabe, 'edit', bug)).toBe(true);
   });
 
-  test('rule prototypes correctly check subclasses', async () => {
+  test('rule types correctly check subclasses', async () => {
     class Foo {}
     class Bar extends Foo {}
     class Baz extends Bar {}
@@ -986,11 +986,9 @@ describe('Oso Roles', () => {
     await p.loadStr(policy3);
     await expect(p.loadStr('f(_x: Baz);')).rejects.toThrow('Invalid rule');
 
-    // Test invalid rule prototype
-    const policy4 = `
-    type f(x: Foo, x.baz);
-    `;
+    // Test invalid rule type
+    const policy4 = 'type f(x: Foo, x.baz);';
 
-    await expect(p.loadStr(policy4)).rejects.toThrow('Invalid prototype');
+    await expect(p.loadStr(policy4)).rejects.toThrow('Invalid rule type');
   });
 });

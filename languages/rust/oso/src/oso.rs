@@ -163,6 +163,7 @@ impl Oso {
             });
         }
         let mut f = File::open(&file)?;
+        self.host.register_mros()?;
         let mut policy = String::new();
         f.read_to_string(&mut policy)?;
         self.inner_load(&policy, Some(file.to_string_lossy().into_owned()))
@@ -174,6 +175,7 @@ impl Oso {
     /// oso.load_str("allow(a, b, c) if true;");
     /// ```
     pub fn load_str(&mut self, s: &str) -> crate::Result<()> {
+        self.host.register_mros()?;
         self.inner_load(s, None)
     }
 
