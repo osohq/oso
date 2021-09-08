@@ -25,9 +25,6 @@ from .ffi import Polar as FfiPolar
 from .host import Host
 from .query import Query
 from .predicate import Predicate
-from .variable import Variable
-from .expression import Expression, Pattern
-from .data_filtering import serialize_types, filter_data
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
@@ -240,55 +237,6 @@ class Polar:
         :raises UnregisteredClassError: If the class is not registered.
         """
         return self.host.get_class(name)
-
-    def authorized_query(self, actor, action, cls):
-        """
-        Returns a query for the resources the actor is allowed to perform action on.
-        The query is built by using the build_query and combine_query methods registered for the type.
-
-        :param actor: The actor for whom to collect allowed resources.
-
-        :param action: The action that user wants to perform.
-
-        :param cls: The type of the resources.
-
-        :return: A query to fetch the resources,
-        """
-        # Data filtering.
-        resource = Variable("resource")
-        # Get registered class name somehow
-        class_name = self.host.types[cls].name
-        constraint = Expression(
-            "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
-        )
-
-        query = self.query_rule(
-            "allow",
-            actor,
-            action,
-            resource,
-            bindings={"resource": constraint},
-            accept_expression=True,
-        )
-
-        results = [
-            {"bindings": {k: self.host.to_polar(v)}}
-            for result in query
-            for k, v in result["bindings"].items()
-        ]
-
-        types = serialize_types(self.host.distinct_user_types(), self.host.types)
-        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
-
-        return filter_data(self, plan)
-
-    def authorized_resources(self, actor, action, cls):
-        query = self.authorized_query(actor, action, cls)
-        if query is None:
-            return []
-
-        results = self.host.types[cls].exec_query(query)
-        return results
 
 
 def polar_class(_cls=None, *, name=None):
