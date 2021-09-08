@@ -27,9 +27,3 @@ class SQLAlchemyOso(Oso):
         register_models(self, sqlalchemy_base)
 
         self.base = sqlalchemy_base
-
-
-"""
-NOTE: ``SQLAlchemyPolicy`` is a preview API.
-"""
-SQLAlchemyPolicy = SQLAlchemyOso
