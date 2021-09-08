@@ -90,7 +90,7 @@ func (o Oso) LoadFile(f string) error {
 	fmt.Fprintln(os.Stderr,
 		"`Oso.LoadFile` has been deprecated in favor of `Oso.LoadFiles` as of the 0.20.0 release.\n\n"+
 			"Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html")
-	return (*o.p).loadFile(f)
+	return (*o.p).loadFiles([]string{f})
 }
 
 /*

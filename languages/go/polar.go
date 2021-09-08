@@ -101,10 +101,6 @@ func (p Polar) loadFiles(filenames []string) error {
 	return p.loadSources(sources)
 }
 
-func (p Polar) loadFile(file string) error {
-	return p.loadFiles([]string{file})
-}
-
 func (p Polar) loadString(str string) error {
 	return p.loadSources([]Source{{Src: str, Filename: nil}})
 }
