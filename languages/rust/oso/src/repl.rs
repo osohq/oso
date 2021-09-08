@@ -129,13 +129,6 @@ pub fn main() -> anyhow::Result<()> {
             }
         };
 
-        // TODO(gj): this is going to fail now. Never seen it before; is it documented / useful?
-        if let Some(define) = input.strip_prefix("%def") {
-            if let Err(e) = oso.load_str(define) {
-                println!("{}", e);
-            }
-            continue;
-        }
         let query = match oso.query(&input) {
             Err(e) => {
                 println!("{}", e);
