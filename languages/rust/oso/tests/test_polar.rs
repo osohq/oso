@@ -921,3 +921,26 @@ fn test_expression_error() {
     let err = oso.query_err("f(x)");
     assert!(err.contains("unbound"));
 }
+
+#[test]
+fn test_rule_types() {
+    common::setup();
+    let mut oso = test_oso();
+    oso.load_str("type is_actor(_actor: Actor);");
+    oso.load_str("is_actor(_actor: Actor);");
+
+    let err = oso
+        .oso
+        .load_str("is_actor(_actor: Widget);")
+        .expect_err("Expected validation error");
+
+    assert!(matches!(
+        &err,
+        OsoError::Polar(polar_error::PolarError {
+            kind: polar_error::ErrorKind::Validation(
+                polar_error::ValidationError::InvalidRule { .. }
+            ),
+            ..
+        })
+    ));
+}

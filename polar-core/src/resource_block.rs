@@ -12,10 +12,10 @@ use super::terms::*;
 pub const ACTOR_UNION_NAME: &str = "Actor";
 pub const RESOURCE_UNION_NAME: &str = "Resource";
 
-// TODO(gj): if a user imports the built-in rule prototypes, we should emit an error if the user
+// TODO(gj): if a user imports the built-in rule types, we should emit an error if the user
 // hasn't registered at least a single Actor and Resource type by the time loading is complete.
-// Maybe only if they've defined at least one rule matching one of the rule prototypes? Otherwise,
-// the rule prototypes will always trigger. But maybe their error message will be descriptive
+// Maybe only if they've defined at least one rule matching one of the rule types? Otherwise,
+// the rule types will always trigger. But maybe their error message will be descriptive
 // enough as-is?
 
 // TODO(gj): round up longhand `has_permission/3` and `has_role/3` rules to incorporate their
@@ -1332,7 +1332,7 @@ mod tests {
         kb.resource_blocks.actors.insert(term!(sym!("User")));
 
         // Union matches union.
-        kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         assert!(kb.validate_rules().is_ok());
 
@@ -1344,7 +1344,7 @@ mod tests {
         // union B if union A is a member of union B.
         //
         // Union A does not match union B.
-        kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
         assert!(matches!(
             kb.validate_rules().unwrap_err(),
@@ -1359,7 +1359,7 @@ mod tests {
         kb.resource_blocks.actors.insert(term!(sym!("User")));
 
         // Member of union matches union.
-        kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Citrus"))]));
         assert!(kb.validate_rules().is_ok());
 
@@ -1371,7 +1371,7 @@ mod tests {
         // union B if union A is a member of union B.
         //
         // Member of union A does not match union B.
-        kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
+        kb.add_rule_type(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Citrus"))]));
         assert!(matches!(
             kb.validate_rules().unwrap_err(),
@@ -1386,7 +1386,7 @@ mod tests {
         kb.resource_blocks.actors.insert(term!(sym!("User")));
 
         // Subclass of member of union matches union.
-        kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
         assert!(kb.validate_rules().is_ok());
 
@@ -1395,7 +1395,7 @@ mod tests {
         kb.resource_blocks.actors.insert(term!(sym!("User")));
 
         // Superclass of member of union does not match union.
-        kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
         assert!(matches!(
             kb.validate_rules().unwrap_err(),
@@ -1414,7 +1414,7 @@ mod tests {
         // we could define, e.g., `type MyUnion = Integer;`
         //
         // Instance of member of union matches union.
-        // kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        // kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         // kb.add_rule(rule!("f", ["x"; 1]));
         // assert!(kb.validate_rules().is_ok());
 
@@ -1427,7 +1427,7 @@ mod tests {
         // we could define, e.g., `type MyUnion = Integer;`
         //
         // Instance of subclass of member of union matches union.
-        // kb.add_rule_prototype(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
+        // kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         // kb.add_rule(rule!("f", ["x"; 1]));
         // assert!(kb.validate_rules().is_ok());
     }

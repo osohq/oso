@@ -1036,7 +1036,7 @@ def test_rule_types_with_subclass_check(polar):
         p += "f(_x: Baz);"
         polar.load_str(p)
 
-    # Test invalid rule prototype
+    # Test invalid rule type
     p = """
     type f(x: Foo, x.baz);
     """

@@ -152,7 +152,7 @@ impl Oso {
 
     // Register MROs, load Polar code, and check inline queries.
     fn load_sources(&mut self, sources: Vec<Source>) -> crate::Result<()> {
-        // TODO(gj): Register MROs.
+        self.host.register_mros()?;
         self.inner.load(sources)?;
         self.check_inline_queries()
     }
