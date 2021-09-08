@@ -248,55 +248,12 @@ export class Polar {
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
   }
 
-  /**
-   * Returns all the resources the actor is allowed to perform some action on.
-   */
-  async authorizedQuery(actor: any, action: any, cls: any): Promise<any> {
-    const resource = new Variable('resource');
-    const clsName = this.#host.types.get(cls)!.name;
-    const constraint = new Expression('And', [
-      new Expression('Isa', [
-        resource,
-        new Pattern({ tag: clsName, fields: {} }),
-      ]),
-    ]);
-    let bindings = new Map();
-    bindings.set('resource', constraint);
-    let results = this.queryRuleWithBindings(
-      'allow',
-      bindings,
-      actor,
-      action,
-      resource
-    );
-
-    const queryResults = [];
-    for await (const result of results) {
-      queryResults.push(result);
-    }
-
-    let jsonResults = queryResults.map(result => ({
-      // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
-      // trivially `JSON.stringify()`-able.
-      bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
-        obj[k] = this.#host.toPolar(v);
-        return obj;
-      }, {}),
-    }));
-    let resultsStr = JSON.stringify(jsonResults);
-    let typesStr = serializeTypes(this.#host.types);
-    let plan = this.#ffiPolar.buildFilterPlan(
-      typesStr,
-      resultsStr,
-      'resource',
-      clsName
-    );
-    return filterData(this.#host, plan);
+  getHost(): Host {
+    return this.#host;
   }
 
-  async authorizedResources(actr: any, actn: any, cls: any): Promise<any> {
-    const query = await this.authorizedQuery(actr, actn, cls);
-    return !query ? [] : this.#host.types.get(cls)!.execQuery!(query);
+  getFfi(): FfiPolar {
+    return this.#ffiPolar;
   }
 
   /** Start a REPL session. */
