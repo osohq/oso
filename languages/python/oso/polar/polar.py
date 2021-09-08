@@ -258,7 +258,7 @@ class Polar:
         """
         return self.host.get_class(name)
 
-    def configure_data_filtering(
+    def set_data_filtering_query_defaults(
         self, build_query=None, exec_query=None, combine_query=None
     ):
         if build_query is not None:

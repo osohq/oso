@@ -89,7 +89,7 @@ def t(oso):
         results = q1 + q2
         return [i for n, i in enumerate(results) if i not in results[:n]]
 
-    oso.configure_data_filtering(
+    oso.set_data_filtering_query_defaults(
         exec_query=lambda results: results, combine_query=combine_query
     )
 
@@ -180,7 +180,7 @@ def sqlalchemy_t(oso):
 
     Base.metadata.create_all(engine)
 
-    oso.configure_data_filtering(
+    oso.set_data_filtering_query_defaults(
         exec_query=lambda query: query.all(), combine_query=lambda q1, q2: q1.union(q2)
     )
 
