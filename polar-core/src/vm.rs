@@ -1243,8 +1243,7 @@ impl PolarVirtualMachine {
                 })
                 .collect::<Vec<Goals>>()
         };
-        self.choose(member_isas)?;
-        Ok(())
+        self.choose(member_isas)
     }
 
     pub fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<()> {
