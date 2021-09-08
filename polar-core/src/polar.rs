@@ -314,6 +314,12 @@ impl Polar {
         self.kb.write().unwrap().constant(name, value)
     }
 
+    /// Register MRO for `name` with `mro`.
+    ///
+    /// Params:
+    ///
+    /// - `mro`: Should go from `name`, `name`'s next superclass, `name's furthest away superclass.
+    ///          `mro` is a list of class ids.
     pub fn register_mro(&self, name: Symbol, mro: Vec<u64>) -> PolarResult<()> {
         self.kb.write().unwrap().add_mro(name, mro)
     }

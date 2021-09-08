@@ -71,6 +71,15 @@ impl Polar {
         serde_wasm_bindgen::to_value(&message).map_err(|e| serialization_error(e.to_string()))
     }
 
+    #[wasm_bindgen(js_class = Polar, js_name = registerMro)]
+    pub fn wasm_register_mro(&self, name: &str, mro: JsValue) -> JsResult<()> {
+        let mro = serde_wasm_bindgen::from_value(mro)?;
+        self.0
+            .register_mro(Symbol::new(name), mro)
+            .map_err(Error::from)
+            .map_err(Error::into)
+    }
+
     #[wasm_bindgen(js_class = Polar, js_name = buildFilterPlan)]
     pub fn wasm_build_filter_plan(
         &self,

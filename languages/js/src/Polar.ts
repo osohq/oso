@@ -13,8 +13,9 @@ import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
-import type { Class, obj, Options, QueryResult } from './types';
+import { Class, obj, Options, QueryResult } from './types';
 import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
+
 import { Variable } from './Variable';
 import { Expression } from './Expression';
 import { Pattern } from './Pattern';
@@ -182,7 +183,7 @@ export class Polar {
 
   // Register MROs, load Polar code, and check inline queries.
   private async loadSources(sources: Source[]): Promise<void> {
-    // TODO(gj): Register MROs.
+    this.#host.registerMros();
     this.#ffiPolar.load(sources);
     this.processMessages();
     return this.checkInlineQueries();
