@@ -129,7 +129,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     # TODO: (dhatch) This test isn't really needed any more since the error is handled
     # in the core. We should test this once in the core.
     it 'errors if file is already loaded' do
-      expect { 2.times { subject.load_file(test_file) } }.to raise_error do |e|
+      expect { subject.load_files([test_file, test_file]) }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::FileLoadingError
         expect(e.message).to eq("Problem loading file: File #{test_file} has already been loaded.")
       end
@@ -137,8 +137,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
     # test_load_multiple_files
     it 'can load multiple files' do
-      subject.load_file(test_file)
-      subject.load_file(test_file_gx)
+      subject.load_files([test_file, test_file_gx])
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
       expect(qvar(subject, 'g(x)', 'x')).to eq([1, 2, 3])
     end
@@ -301,6 +300,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.register_class(Foo)
       subject.load_str 'f(x) if x.this_is_nil = nil;'
       expect(subject.query_rule('f', Foo.new).to_a).to eq([{}])
+
+      subject.clear_rules
 
       subject.load_str 'g(x) if x.this_is_nil.bad_call = 1;'
       expect { subject.query_rule('g', Foo.new).to_a }.to raise_error Oso::Polar::PolarRuntimeError
@@ -943,11 +944,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       p = <<~POLAR
         type f(_x: Integer);
         f(1);
-      POLAR
 
-      subject.load_str(p)
-
-      p = <<~POLAR
         type f(_x: Foo);
         type f(_x: Foo, _y: Bar);
         f(_x: Bar);
@@ -956,8 +953,10 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
       subject.load_str(p)
 
+      subject.clear_rules
+
       # Should raise error
-      expect { subject.load_str('f(_x: Bad);') }.to raise_error Oso::Polar::ValidationError
+      expect { subject.load_str("#{p}f(_x: Bad);") }.to raise_error Oso::Polar::ValidationError
 
       subject.clear_rules
 
@@ -970,12 +969,14 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
       subject.load_str(p)
 
+      subject.clear_rules
+
       # Should raise error
-      expect { subject.load_str('f(_x: Baz);') }.to raise_error Oso::Polar::ValidationError
+      expect { subject.load_str("#{p}f(_x: Baz);") }.to raise_error Oso::Polar::ValidationError
 
       subject.clear_rules
 
-      # Test invalid rule prototype
+      # Test invalid rule type
       p = <<~POLAR
         type f(x: Foo, x.baz);
       POLAR

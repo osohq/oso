@@ -27,6 +27,35 @@ def print_error(error)
   warn error.message
 end
 
+# Polar source string with optional filename.
+class Source
+  # @return [String]
+  attr_reader :src, :filename
+
+  # @param src [String]
+  # @param filename [String]
+  def initialize(src, filename: nil)
+    @src = src
+    @filename = filename
+  end
+
+  def to_json(*_args)
+    { src: src, filename: filename }.to_json
+  end
+end
+
+def filename_to_source(filename)
+  raise Oso::Polar::PolarFileExtensionError, filename unless File.extname(filename) == '.polar'
+
+  src = File.open(filename, &:read)
+
+  raise Oso::Polar::NullByteInPolarFileError if src.chomp("\0").include?("\0")
+
+  Source.new(src, filename: filename)
+rescue Errno::ENOENT
+  raise Oso::Polar::PolarFileNotFoundError, filename
+end
+
 module Oso
   module Polar
     # Create and manage an instance of the Polar runtime.
@@ -112,19 +141,44 @@ module Oso
         self
       end
 
+      # Load Polar policy files.
+      #
+      # @param filenames [Array<String>]
+      # @raise [PolarFileExtensionError] if any filename has an invalid extension.
+      # @raise [PolarFileNotFoundError] if any filename does not exist.
+      # @raise [NullByteInPolarFileError] if any file contains a non-terminating null byte.
+      # @raise [Error] if any of the FFI calls raise one.
+      # @raise [InlineQueryFailedError] on the first failed inline query.
+      # @return [self] for chaining.
+      def load_files(filenames = [])
+        return if filenames.empty?
+
+        sources = filenames.map { |f| filename_to_source f }
+        load_sources(sources)
+        self
+      end
+
       # Load a Polar policy file.
       #
-      # @param name [String]
-      # @raise [PolarFileExtensionError] if provided filename has invalid extension.
-      # @raise [PolarFileNotFoundError] if provided filename does not exist.
+      # @param filename [String]
+      # @raise [PolarFileExtensionError] if filename has an invalid extension.
+      # @raise [PolarFileNotFoundError] if filename does not exist.
+      # @raise [NullByteInPolarFileError] if file contains a non-terminating null byte.
+      # @raise [Error] if any of the FFI calls raise one.
+      # @raise [InlineQueryFailedError] on the first failed inline query.
       # @return [self] for chaining.
-      def load_file(name)
-        raise PolarFileExtensionError, name unless File.extname(name) == '.polar'
+      #
+      # @deprecated {#load_file} has been deprecated in favor of {#load_files}
+      #   as of the 0.20.0 release. Please see changelog for migration
+      #   instructions:
+      #   https://docs.osohq.com/project/changelogs/2021-09-15.html
+      def load_file(filename)
+        warn <<~WARNING
+          `Oso#load_file` has been deprecated in favor of `Oso#load_files` as of the 0.20.0 release.
 
-        file_data = File.open(name, &:read)
-        load_str(file_data, filename: name)
-      rescue Errno::ENOENT
-        raise PolarFileNotFoundError, name
+          Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html
+        WARNING
+        load_files([filename])
       end
 
       # Load a Polar string into the KB.
@@ -132,22 +186,13 @@ module Oso
       # @param str [String] Polar string to load.
       # @param filename [String] Name of Polar source file.
       # @raise [NullByteInPolarFileError] if str includes a non-terminating null byte.
-      # @raise [InlineQueryFailedError] on the first failed inline query.
       # @raise [Error] if any of the FFI calls raise one.
+      # @raise [InlineQueryFailedError] on the first failed inline query.
       # @return [self] for chaining.
-      def load_str(str, filename: nil) # rubocop:disable Metrics/AbcSize
+      def load_str(str, filename: nil)
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
-        host.register_mros
-
-        ffi_polar.load(str, filename: filename)
-        loop do
-          next_query = ffi_polar.next_inline_query
-          break if next_query.nil?
-
-          raise InlineQueryFailedError, next_query.source if Query.new(next_query, host: host).first.nil?
-        end
-
+        load_sources([Source.new(str, filename: filename)])
         self
       end
 
@@ -224,7 +269,7 @@ module Oso
       # @param files [Array<String>]
       # @raise [Error] if the FFI call raises one.
       def repl(files = [])
-        files.map { |f| load_file(f) }
+        load_files(files)
         prompt = "#{FG_BLUE}query>#{RESET} "
         # Try loading the readline module from the Ruby stdlib. If we get a
         # LoadError, fall back to the standard REPL with no readline support.
@@ -238,6 +283,23 @@ module Oso
 
       # @return [FFI::Polar]
       attr_reader :ffi_polar
+
+      # Register MROs, load Polar code, and check inline queries.
+      # @param sources [Array<Source>] Polar sources to load.
+      def load_sources(sources)
+        host.register_mros
+        ffi_polar.load(sources)
+        check_inline_queries
+      end
+
+      def check_inline_queries
+        loop do
+          next_query = ffi_polar.next_inline_query
+          break if next_query.nil?
+
+          raise InlineQueryFailedError, next_query.source if Query.new(next_query, host: host).none?
+        end
+      end
 
       # The R and L in REPL for systems where readline is available.
       def repl_readline(prompt)

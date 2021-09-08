@@ -68,7 +68,7 @@ module Oso
       end
     end
     class DuplicateClassAliasError < PolarRuntimeError # rubocop:disable Style/Documentation
-      # @param as [String]
+      # @param name [String]
       # @param old [Class]
       # @param new [Class]
       def initialize(name:, old:, new:)

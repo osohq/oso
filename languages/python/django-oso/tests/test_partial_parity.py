@@ -15,7 +15,7 @@ def reset():
 
 @pytest.mark.xfail(reason="Not supported yet.")
 @pytest.mark.django_db
-def test_field_comparison():
+def test_field_comparison(load_additional_str):
     post0 = Post(id=0, contents="private post", title="not private post")
     post1 = Post(id=1, contents="private post", title="private post")
     post2 = Post(id=2, contents="post", title="post")
@@ -24,7 +24,7 @@ def test_field_comparison():
     post1.save()
     post2.save()
 
-    Oso.load_str(
+    load_additional_str(
         """
         allow(_, _, post: test_app2::Post) if
             post.title = post.contents;
@@ -38,7 +38,7 @@ def test_field_comparison():
 
 
 @pytest.mark.django_db
-def test_scalar_in_list():
+def test_scalar_in_list(load_additional_str):
     post0 = Post(id=0, contents="private post", title="not private post")
     post1 = Post(id=1, contents="allowed posts", title="private post")
     post2 = Post(id=2, contents="post", title="post")
@@ -47,7 +47,7 @@ def test_scalar_in_list():
     post1.save()
     post2.save()
 
-    Oso.load_str(
+    load_additional_str(
         """
         allow(_, _, post: test_app2::Post) if
             post.contents in ["post", "allowed posts"];
@@ -61,7 +61,7 @@ def test_scalar_in_list():
 
 
 @pytest.mark.django_db
-def test_ground_object_in_collection():
+def test_ground_object_in_collection(load_additional_str):
     tag = Tag(name="tag")
     post0 = Post(id=0, contents="tag post")
     post1 = Post(id=1, contents="no tag post")
@@ -76,7 +76,7 @@ def test_ground_object_in_collection():
     post2.tags.set([tag])
 
     Oso.register_constant(tag, "allowed_tag")
-    Oso.load_str(
+    load_additional_str(
         """
         allow(_, _, post: test_app2::Post) if
             allowed_tag in post.tags;
@@ -91,7 +91,7 @@ def test_ground_object_in_collection():
 
 @pytest.mark.xfail(reason="Negate in not supported yet.")
 @pytest.mark.django_db
-def test_all_objects_collection_condition(oso, engine):
+def test_all_objects_collection_condition(oso, engine, load_additional_str):
     public_tag = Tag(name="public", is_public=True)
     private_tag = Tag(name="private", is_public=False)
 
@@ -114,7 +114,7 @@ def test_all_objects_collection_condition(oso, engine):
     post3.tags.set([public_tag])
     post4.tags.set([private_tag])
 
-    oso.load_str(
+    load_additional_str(
         """
         allow(_, _, post: test_app2::Post) if
             forall(tag in post.tags, tag.is_public = true);
@@ -129,7 +129,7 @@ def test_all_objects_collection_condition(oso, engine):
 
 @pytest.mark.xfail(reason="Negate in not supported yet.")
 @pytest.mark.django_db
-def test_no_objects_collection_condition():
+def test_no_objects_collection_condition(load_additional_str):
     public_tag = Tag(name="public", is_public=True)
     private_tag = Tag(name="private", is_public=False)
 
@@ -152,7 +152,7 @@ def test_no_objects_collection_condition():
     post3.tags.set([public_tag])
     post4.tags.set([private_tag])
 
-    Oso.load_str(
+    load_additional_str(
         """
         allow(_, _, post: test_app2::Post) if
             not (tag in post.tags and tag.is_public = true);
