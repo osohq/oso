@@ -191,7 +191,7 @@ fn test_load_file_error_contains_filename() {
     writeln!(file, ";").unwrap();
     file.sync_all().unwrap();
 
-    let err = oso.oso.load_file(tempfile.path()).unwrap_err();
+    let err = oso.oso.load_files(vec![tempfile.path()]).unwrap_err();
     if let OsoError::Polar(err) = err {
         assert_eq!(
             err.to_string(),
@@ -211,7 +211,7 @@ fn test_load_file_extension_check() {
 
     let mut oso = test_oso();
 
-    let err = oso.oso.load_file("not_polar_file.txt").unwrap_err();
+    let err = oso.oso.load_files(vec!["not_polar_file.txt"]).unwrap_err();
     assert!(
         matches!(err, OsoError::IncorrectFileType { filename } if filename == "not_polar_file.txt")
     );
@@ -223,7 +223,7 @@ fn test_load_file_nonexistent_file() {
 
     let mut oso = test_oso();
 
-    let err = oso.oso.load_file("not_a_file.polar").unwrap_err();
+    let err = oso.oso.load_files(vec!["not_a_file.polar"]).unwrap_err();
     assert!(matches!(err, OsoError::Io(_)));
 }
 
@@ -234,8 +234,7 @@ fn test_already_loaded_file_error() -> oso::Result<()> {
     let mut oso = test_oso();
     let path = test_file_path();
 
-    oso.oso.load_file(&path)?;
-    let err = oso.oso.load_file(&path).unwrap_err();
+    let err = oso.oso.load_files(vec![&path, &path]).unwrap_err();
 
     assert!(
         matches!(&err,
@@ -260,8 +259,7 @@ fn test_load_multiple_files() -> oso::Result<()> {
     let path = test_file_path();
     let path_gx = test_file_gx_path();
 
-    oso.oso.load_file(path)?;
-    oso.oso.load_file(path_gx)?;
+    oso.oso.load_files(vec![path, path_gx])?;
 
     assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
     assert_eq!(oso.qvar::<i64>("g(x)", "x"), vec![1, 2, 3]);
@@ -274,7 +272,7 @@ fn test_clear_rules() -> oso::Result<()> {
     common::setup();
 
     let mut oso = test_oso();
-    oso.oso.load_file(test_file_path())?;
+    oso.oso.load_files(vec![test_file_path()])?;
     assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
 
     #[derive(PolarClass, Default, Debug, Clone)]
@@ -561,6 +559,7 @@ fn test_animals() -> oso::Result<()> {
     oso.qeval("yup()");
     oso.qnull("nope()");
 
+    oso.clear_rules();
     oso.load_str(
         r#"
       what_is(_: {genus: "canis"}, r) if r = "canine";
@@ -582,6 +581,7 @@ fn test_animals() -> oso::Result<()> {
         vec!["canine".to_owned()]
     );
 
+    oso.clear_rules();
     oso.load_str(
         r#"
           what_is_class(_: Animal{}, r) if r = "animal";
@@ -635,6 +635,7 @@ fn test_animals() -> oso::Result<()> {
         vec!["animal".to_owned()]
     );
 
+    oso.clear_rules();
     oso.load_str(
         r#"
       what_is_mix(_: Animal{}, r) if r = "animal_class";
@@ -766,7 +767,7 @@ fn test_variables_as_arguments() -> oso::Result<()> {
 
     let mut oso = test_oso();
 
-    oso.oso.load_file(test_file_path())?;
+    oso.oso.load_files(vec![test_file_path()])?;
 
     let query = oso
         .oso
@@ -925,12 +926,16 @@ fn test_expression_error() {
 fn test_rule_types() {
     common::setup();
     let mut oso = test_oso();
-    oso.load_str("type is_actor(_actor: Actor);");
-    oso.load_str("is_actor(_actor: Actor);");
+    let mut policy = r#"type is_actor(_actor: Actor);
+                        is_actor(_actor: Actor);"#
+        .to_owned();
+    oso.load_str(&policy);
+    oso.clear_rules();
 
+    policy += "is_actor(_actor: Widget);";
     let err = oso
         .oso
-        .load_str("is_actor(_actor: Widget);")
+        .load_str(&policy)
         .expect_err("Expected validation error");
 
     assert!(matches!(

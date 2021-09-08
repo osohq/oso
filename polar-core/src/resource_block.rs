@@ -724,7 +724,7 @@ mod tests {
                 kind: error::ErrorKind::Parse(error::ParseError::ResourceBlock { msg, .. }),
                 ..
             } => msg,
-            _ => panic!(),
+            e => panic!("{}", e),
         };
 
         assert!(msg.contains(expected));
@@ -1336,11 +1336,14 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         assert!(kb.validate_rules().is_ok());
 
+        kb.clear_rules();
+        kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
+        kb.resource_blocks.actors.insert(term!(sym!("User")));
+
         // TODO(gj): revisit when we have unions beyond Actor & Resource. Union A matches
         // union B if union A is a member of union B.
         //
         // Union A does not match union B.
-        kb.clear_rules();
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
         assert!(matches!(
@@ -1351,17 +1354,23 @@ mod tests {
             }
         ));
 
-        // Member of union matches union.
         kb.clear_rules();
+        kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
+        kb.resource_blocks.actors.insert(term!(sym!("User")));
+
+        // Member of union matches union.
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Citrus"))]));
         assert!(kb.validate_rules().is_ok());
+
+        kb.clear_rules();
+        kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
+        kb.resource_blocks.actors.insert(term!(sym!("User")));
 
         // TODO(gj): revisit when we have unions beyond Actor & Resource. Member of union A matches
         // union B if union A is a member of union B.
         //
         // Member of union A does not match union B.
-        kb.clear_rules();
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Citrus"))]));
         assert!(matches!(
@@ -1372,14 +1381,20 @@ mod tests {
             }
         ));
 
-        // Subclass of member of union matches union.
         kb.clear_rules();
+        kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
+        kb.resource_blocks.actors.insert(term!(sym!("User")));
+
+        // Subclass of member of union matches union.
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
         assert!(kb.validate_rules().is_ok());
 
-        // Superclass of member of union does not match union.
         kb.clear_rules();
+        kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
+        kb.resource_blocks.actors.insert(term!(sym!("User")));
+
+        // Superclass of member of union does not match union.
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
         assert!(matches!(
@@ -1390,22 +1405,28 @@ mod tests {
             }
         ));
 
+        // kb.clear_rules();
+        // kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
+        // kb.resource_blocks.actors.insert(term!(sym!("User")));
+        //
         // TODO(gj): revisit when we have unions beyond Actor & Resource. Not currently possible to
         // have an instance of a member of a union as a specializer until we have true unions where
         // we could define, e.g., `type MyUnion = Integer;`
         //
         // Instance of member of union matches union.
-        // kb.clear_rules();
         // kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         // kb.add_rule(rule!("f", ["x"; 1]));
         // assert!(kb.validate_rules().is_ok());
 
+        // kb.clear_rules();
+        // kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
+        // kb.resource_blocks.actors.insert(term!(sym!("User")));
+        //
         // TODO(gj): revisit when we have unions beyond Actor & Resource. Not currently possible to
         // have an instance of a member of a union as a specializer until we have true unions where
         // we could define, e.g., `type MyUnion = Integer;`
         //
         // Instance of subclass of member of union matches union.
-        // kb.clear_rules();
         // kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         // kb.add_rule(rule!("f", ["x"; 1]));
         // assert!(kb.validate_rules().is_ok());

@@ -24,31 +24,6 @@ def polar():
 
 
 @pytest.fixture
-def tell(polar):
-    """Define a fact or rule in the polar database"""
-
-    def _tell(f):
-        # TODO (dhatch): Temporary until rewritten parser supports optional
-        # semicolon.
-        if not f.endswith(";"):
-            f += ";"
-
-        polar.load_str(f)
-
-    return _tell
-
-
-@pytest.fixture
-def load_file(polar):
-    """Load a source file"""
-
-    def _load_file(f):
-        polar.load_file(f)
-
-    return _load_file
-
-
-@pytest.fixture
 def query(polar):
     """Query something and return the results as a list"""
 

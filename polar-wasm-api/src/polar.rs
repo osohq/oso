@@ -1,4 +1,4 @@
-use polar_core::{polar, terms::Symbol};
+use polar_core::{polar, sources::Source, terms::Symbol};
 use wasm_bindgen::prelude::*;
 
 use crate::errors::{serde_serialization_error, serialization_error, Error};
@@ -17,9 +17,10 @@ impl Polar {
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = load)]
-    pub fn wasm_load(&self, src: &str, filename: Option<String>) -> JsResult<()> {
+    pub fn wasm_load(&self, sources: JsValue) -> JsResult<()> {
+        let sources: Vec<Source> = serde_wasm_bindgen::from_value(sources)?;
         self.0
-            .load(src, filename)
+            .load(sources)
             .map_err(Error::from)
             .map_err(Error::into)
     }

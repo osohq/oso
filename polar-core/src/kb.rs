@@ -168,12 +168,16 @@ impl KnowledgeBase {
             .all(|v| v);
     }
 
+    /// Use MRO lists passed in from host library to determine if one `InstanceLiteral` pattern is
+    /// a subclass of another `InstanceLiteral` pattern. This function is used for Rule Type
+    /// validation.
     fn check_rule_instance_is_subclass_of_rule_type_instance(
         &self,
         rule_instance: &InstanceLiteral,
         rule_type_instance: &InstanceLiteral,
         index: usize,
     ) -> PolarResult<RuleParamMatch> {
+        // Get the unique ID of the prototype instance pattern class.
         if let Some(Value::ExternalInstance(ExternalInstance { instance_id, .. })) = self
             .constants
             .get(&rule_type_instance.tag)
@@ -549,6 +553,7 @@ impl KnowledgeBase {
         self.inline_queries.clear();
         self.loaded_content.clear();
         self.loaded_files.clear();
+        self.resource_blocks.clear();
     }
 
     /// Removes a file from the knowledge base by finding the associated
@@ -651,7 +656,6 @@ impl KnowledgeBase {
 
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {
-            self.resource_blocks.clear();
             return Err(errors[0].clone());
         }
 
@@ -667,7 +671,6 @@ impl KnowledgeBase {
 
         // TODO(gj): Emit all errors instead of just the first.
         if !errors.is_empty() {
-            self.resource_blocks.clear();
             return Err(errors[0].clone());
         }
 
@@ -693,6 +696,10 @@ impl KnowledgeBase {
             unreachable!()
         }
     }
+
+    pub fn has_rules(&self) -> bool {
+        !self.rules.is_empty() || !self.rule_types.is_empty()
+    }
 }
 
 #[cfg(test)]
@@ -701,21 +708,69 @@ mod tests {
     use crate::error::*;
 
     #[test]
-    fn test_load_duplicate_file_contents() -> PolarResult<()> {
+    /// Test validation implemented in `check_file()`.
+    fn test_add_source_file_validation() {
         let mut kb = KnowledgeBase::new();
-        let count = Counter::default();
-        let mut load = |content: &str| {
-            let source = Source {
-                filename: Some(format!("{}.polar", count.next())),
-                src: content.to_owned(),
-            };
-            kb.add_source(source)
+        let src = "f();";
+        let filename1 = "f";
+        let source1 = Source {
+            src: src.to_owned(),
+            filename: Some(filename1.to_owned()),
         };
 
-        load("f(1);")?;
-        load("f(1);").expect_err("shouldn't load duplicate non-empty file contents");
+        // Load source1.
+        kb.add_source(source1.clone()).unwrap();
 
-        Ok(())
+        // Cannot load source1 a second time.
+        let msg = match kb.add_source(source1).unwrap_err() {
+            error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            } => msg,
+            e => panic!("{}", e),
+        };
+        assert_eq!(msg, format!("File {} has already been loaded.", filename1));
+
+        // Cannot load source2 with the same name as source1 but different contents.
+        let source2 = Source {
+            src: "g();".to_owned(),
+            filename: Some(filename1.to_owned()),
+        };
+        let msg = match kb.add_source(source2).unwrap_err() {
+            error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            } => msg,
+            e => panic!("{}", e),
+        };
+        assert_eq!(
+            msg,
+            format!(
+                "A file with the name {}, but different contents has already been loaded.",
+                filename1
+            ),
+        );
+
+        // Cannot load source3 with the same contents as source1 but a different name.
+        let filename2 = "g";
+        let source3 = Source {
+            src: src.to_owned(),
+            filename: Some(filename2.to_owned()),
+        };
+        let msg = match kb.add_source(source3).unwrap_err() {
+            error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            } => msg,
+            e => panic!("{}", e),
+        };
+        assert_eq!(
+            msg,
+            format!(
+                "A file with the same contents as {} named {} has already been loaded.",
+                filename2, filename1
+            ),
+        );
     }
 
     #[test]

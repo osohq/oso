@@ -1,5 +1,6 @@
 import com.osohq.oso.*;
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class TestAbac {
 
@@ -20,12 +21,11 @@ public class TestAbac {
   }
 
   public static void testParses() throws Exception {
-    List<String> policies = List.of("01-simple.polar", "02-rbac.polar", "03-hierarchy.polar");
+    String[] policies = {"01-simple.polar", "02-rbac.polar", "03-hierarchy.polar"};
     Oso oso = setupOso();
-    for (String policy : policies) {
-      oso.loadFile(policy);
-      oso.queryRule("test"); // just to force the load
-    }
+    oso.loadFiles(policies);
+    // TODO(gj): can probably remove this now that files aren't loaded lazily.
+    oso.queryRule("test"); // just to force the load
   }
 
   public static void testSimple01() throws Exception {
@@ -43,8 +43,9 @@ public class TestAbac {
 
   public static void testRbac02() throws Exception {
     Oso oso = setupOso();
-    oso.loadFile("02-rbac.polar");
-    oso.loadStr("role(_: User { name: \"sam\" }, \"admin\", _: Project { id: 2 });");
+    String policy = new String(Files.readAllBytes(Paths.get("02-rbac.polar")));
+    policy += "role(_: User { name: \"sam\" }, \"admin\", _: Project { id: 2 });";
+    oso.loadStr(policy);
 
     Expense expense = new Expense(50, "steve", "NYC", 0);
     if (oso.isAllowed(new User("sam"), "view", expense)) {

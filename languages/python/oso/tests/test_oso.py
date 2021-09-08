@@ -13,9 +13,11 @@ actors = {"guest": "1", "president": "1"}
 
 class Actor:
     name: str = ""
+    verified: bool = False
 
     def __init__(self, name=""):
         self.name = name
+        self.verified = False
 
     def companies(self):
         yield Company(id="0")  # fake, will fail
@@ -54,13 +56,16 @@ class Company:
         return self.id == other.id
 
 
+test_oso_file = Path(__file__).parent / "test_oso.polar"
+
+
 @pytest.fixture
 def test_oso():
     oso = Oso()
     oso.register_class(Actor, name="test_oso::Actor")
     oso.register_class(Widget, name="test_oso::Widget")
     oso.register_class(Company, name="test_oso::Company")
-    oso.load_file(Path(__file__).parent / "test_oso.polar")
+    oso.load_file(test_oso_file)
 
     return oso
 
@@ -131,24 +136,36 @@ def test_allow_model(test_oso):
 
 
 def test_get_allowed_actions(test_oso):
-    rule = """allow(_actor: test_oso::Actor{name: "Sally"}, action, _resource: test_oso::Widget{id: "1"}) if
+    test_oso.clear_rules()
+
+    with open(test_oso_file, "rb") as f:
+        policy = f.read().decode("utf-8")
+
+        policy1 = (
+            policy
+            + """allow(_actor: test_oso::Actor{name: "Sally"}, action, _resource: test_oso::Widget{id: "1"}) if
         action in ["CREATE", "UPDATE"];"""
+        )
+        test_oso.load_str(policy1)
+        user = Actor(name="Sally")
+        resource = Widget(id="1")
+        assert set(test_oso.get_allowed_actions(user, resource)) == set(
+            ["read", "CREATE", "UPDATE"]
+        )
 
-    test_oso.load_str(rule)
-    user = Actor(name="Sally")
-    resource = Widget(id="1")
-    assert set(test_oso.get_allowed_actions(user, resource)) == set(
-        ["read", "CREATE", "UPDATE"]
-    )
+        test_oso.clear_rules()
 
-    rule = """allow(_actor: test_oso::Actor{name: "John"}, _action, _resource: test_oso::Widget{id: "1"});"""
-    test_oso.load_str(rule)
-    user = Actor(name="John")
-    with pytest.raises(exceptions.OsoError):
-        test_oso.get_allowed_actions(user, resource)
-    assert set(
-        test_oso.get_allowed_actions(user, resource, allow_wildcard=True)
-    ) == set(["*"])
+        policy2 = (
+            policy
+            + """allow(_actor: test_oso::Actor{name: "John"}, _action, _resource: test_oso::Widget{id: "1"});"""
+        )
+        test_oso.load_str(policy2)
+        user = Actor(name="John")
+        with pytest.raises(exceptions.OsoError):
+            test_oso.get_allowed_actions(user, resource)
+        assert set(
+            test_oso.get_allowed_actions(user, resource, allow_wildcard=True)
+        ) == set(["*"])
 
 
 if __name__ == "__main__":

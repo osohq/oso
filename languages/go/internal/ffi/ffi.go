@@ -104,15 +104,13 @@ func (p PolarFfi) NewId() (uint64, error) {
 	return uint64(id), nil
 }
 
-func (p PolarFfi) Load(s string, filename *string) error {
-	cString := C.CString(s)
-	defer C.free(unsafe.Pointer(cString))
-	var cFilename *C.char
-	if filename != nil {
-		cFilename = C.CString(*filename)
-		defer C.free(unsafe.Pointer(cFilename))
+func (p PolarFfi) Load(sources []types.Source) error {
+	json, err := ffiSerialize(sources)
+	defer C.free(unsafe.Pointer(json))
+	if err != nil {
+		return err
 	}
-	result := C.polar_load(p.ptr, cString, cFilename)
+	result := C.polar_load(p.ptr, json)
 	processMessages(p)
 	if result == 0 {
 		return getError()

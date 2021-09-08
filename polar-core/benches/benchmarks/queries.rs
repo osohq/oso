@@ -132,10 +132,11 @@ pub fn prime(c: &mut Criterion) {
 pub fn indexed_rules(c: &mut Criterion) {
     fn make_runner(n: usize) -> Runner {
         let mut runner = runner_from_query(&format!("f({})", n / 2));
-        runner.load_str("f(0);").unwrap();
+        let mut policy = "f(0);".to_owned();
         for i in 1..=n {
-            runner.load_str(&format!("f({});", i)).unwrap();
+            policy += &format!("f({});", i);
         }
+        runner.load_str(&policy).unwrap();
         runner.expected_result(Bindings::new());
         runner
     }
@@ -165,12 +166,11 @@ pub fn many_rules(c: &mut Criterion) {
     const TARGET: usize = 10;
     fn make_runner() -> Runner {
         let mut runner = runner_from_query(&format!("f({})", TARGET));
-        runner.load_str("f(0);").unwrap();
+        let mut policy = "f(0);".to_owned();
         for i in 1..=TARGET {
-            runner
-                .load_str(&format!("f({}) if f({});", i, i - 1))
-                .unwrap();
+            policy += &format!("f({}) if f({});", i, i - 1);
         }
+        runner.load_str(&policy).unwrap();
         runner.expected_result(Bindings::new());
         runner
     }

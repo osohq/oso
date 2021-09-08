@@ -57,7 +57,27 @@ func TestLoadString(t *testing.T) {
 }
 
 func TestClearRules(t *testing.T) {
+	var o oso.Oso
+	var err error
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
 
+	o.LoadString("f(1);")
+	o.ClearRules()
+	results, errors := o.QueryStr("f(x)")
+
+	if err = <-errors; err != nil {
+		t.Error(err.Error())
+	} else {
+		var got []map[string]interface{}
+		for elem := range results {
+			got = append(got, elem)
+		}
+		if len(got) > 0 {
+			t.Errorf("Received too many results: %v", got)
+		}
+	}
 }
 
 func TestQueryStr(t *testing.T) {
@@ -84,6 +104,8 @@ func TestQueryStr(t *testing.T) {
 			t.Errorf("Expected: %v, got: %v", expected, got[0])
 		}
 	}
+
+	o.ClearRules()
 
 	o.LoadString("g(x) if x.Fake();")
 	results, errors = o.QueryStr("g(1)")
@@ -118,12 +140,16 @@ func TestQueryRule(t *testing.T) {
 		}
 	}
 
+	o.ClearRules()
+
 	o.LoadString("g(x) if x.Fake();")
 	results, errors = o.QueryRule("g", 1)
 
 	if err = <-errors; err == nil {
 		t.Error("Expected Polar runtime error, got none")
 	}
+
+	o.ClearRules()
 
 	o.LoadString("h(x) if x = 1; h(x) if x.Fake();")
 	results, errors = o.QueryRule("h", 1)
@@ -251,15 +277,19 @@ func TestRuleTypes(t *testing.T) {
 
 	o.RegisterClass(reflect.TypeOf(Actor{}), nil)
 	o.RegisterClass(reflect.TypeOf(Widget{}), nil)
-	o.RegisterClass(reflect.TypeOf(Company{}), nil)
 
-	o.LoadString("type is_actor(_actor: Actor);")
+	policy := "type is_actor(_actor: Actor); is_actor(_actor: Actor);"
 
-	if err = o.LoadString("is_actor(_actor: Actor);"); err != nil {
+	if err = o.LoadString(policy); err != nil {
 		t.Fatalf("Load string failed: %v", err)
 	}
+	if err = o.ClearRules(); err != nil {
+		t.Fatalf("Clear rules failed: %v", err)
+	}
 
-	if err = o.LoadString("is_actor(_actor: Widget);"); err == nil {
+	policy = "type is_actor(_actor: Actor); is_actor(_actor: Widget);"
+
+	if err = o.LoadString(policy); err == nil {
 		t.Fatalf("Failed to raise validation error.")
 	} else if msg = err.Error(); !strings.Contains(msg, "Invalid rule") {
 		t.Fatalf("Incorrect error message: %v", msg)

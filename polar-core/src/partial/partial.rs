@@ -454,6 +454,8 @@ mod test {
         );
         assert_query_done!(q);
 
+        p.clear_rules();
+
         // Test permutations of variable states in isa.
         p.load_str(
             r#"h(_x: (_y));
@@ -1185,6 +1187,8 @@ mod test {
         let next = next_binding(&mut q)?;
         assert_partial_expressions!(next, "x" => "_this > y", "y" => "x > _this");
 
+        p.clear_rules();
+
         p.load_str("g(x, y) if y = 1 and x > y;")?;
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
@@ -1199,6 +1203,8 @@ mod test {
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), value!(2)])), false);
         assert_query_done!(q);
+
+        p.clear_rules();
 
         p.load_str("h(x, y) if x > y and y = 1;")?;
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x"), sym!("y")])), false);

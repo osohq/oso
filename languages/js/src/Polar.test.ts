@@ -397,19 +397,24 @@ describe('#loadFile', () => {
   test('throws if two files with the same contents are loaded', async () => {
     const p = new Polar();
     await expect(
-      p.loadFile(await tempFile('', 'a.polar'))
-    ).resolves.not.toThrow();
-    await expect(p.loadFile(await tempFile('', 'b.polar'))).rejects.toThrow(
+      p.loadFiles([
+        await tempFile('', 'a.polar'),
+        await tempFile('', 'b.polar'),
+      ])
+    ).rejects.toThrow(
       /Problem loading file: A file with the same contents as .*b.polar named .*a.polar has already been loaded./
     );
   });
 
-  test('throws if two files with the same name are loaded', async () => {
+  // TODO(gj): This is no longer possible but might again become possible if we
+  // add a `loadStrings()` method that accepts `{contents, filename}` tuples
+  // from the user. However, we could also have this hypothetical
+  // `loadStrings()` method only accept `contents` and avoid the issue.
+  xtest('throws if two files with the same name are loaded', async () => {
     const p = new Polar();
-    const file = await tempFile('f();', 'a.polar');
-    await expect(p.loadFile(file)).resolves.not.toThrow();
-    await truncate(file);
-    await expect(p.loadFile(file)).rejects.toThrow(
+    const filename1 = await tempFile('f();', 'a.polar');
+    const filename2 = await tempFile('g();', 'a.polar');
+    await expect(p.loadFiles([filename1, filename2])).rejects.toThrow(
       /Problem loading file: A file with the name .*a.polar, but different contents has already been loaded./
     );
   });
@@ -417,16 +422,14 @@ describe('#loadFile', () => {
   test('throws if the same file is loaded twice', async () => {
     const p = new Polar();
     const file = await tempFileFx();
-    await expect(p.loadFile(file)).resolves.not.toThrow();
-    await expect(p.loadFile(file)).rejects.toThrow(
+    await expect(p.loadFiles([file, file])).rejects.toThrow(
       /Problem loading file: File .*f.polar has already been loaded./
     );
   });
 
   test('can load multiple files', async () => {
     const p = new Polar();
-    await p.loadFile(await tempFileFx());
-    await p.loadFile(await tempFileGx());
+    await p.loadFiles([await tempFileFx(), await tempFileGx()]);
     expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
     expect(await qvar(p, 'g(x)', 'x')).toStrictEqual([1, 2, 3]);
   });
@@ -956,39 +959,36 @@ describe('Oso Roles', () => {
     p.registerClass(Foo);
     p.registerClass(Bad);
 
-    const policy = `
-    type f(_x: Integer);
-    f(1);
-    `;
-
+    const policy = `type f(_x: Integer);
+                    f(1);`;
     await p.loadStr(policy);
-
-    const policy2 = `
-    type f(_x: Foo);
-    type f(_x: Foo, _y: Bar);
-    f(_x: Bar);
-    f(_x: Baz);
-    `;
-
-    await p.loadStr(policy2);
-
-    await expect(p.loadStr('f(_x: Bad);')).rejects.toThrow('Invalid rule');
-
     p.clearRules();
 
-    // Test with fields
-    const policy3 = `
-    type f(_x: Foo{id: 1});
-    f(_x: Bar{id: 1});
-    f(_x: Baz{id: 1});
-    `;
+    const policy2 =
+      policy +
+      `type f(_x: Foo);
+       type f(_x: Foo, _y: Bar);
+       f(_x: Bar);
+       f(_x: Baz);`;
+    await p.loadStr(policy2);
+    p.clearRules();
 
-    await p.loadStr(policy3);
-    await expect(p.loadStr('f(_x: Baz);')).rejects.toThrow('Invalid rule');
+    const policy3 = policy2 + 'f(_x: Bad);';
+    await expect(p.loadStr(policy3)).rejects.toThrow('Invalid rule');
+
+    // Test with fields
+    const policy4 = `type f(_x: Foo{id: 1});
+                     f(_x: Bar{id: 1});
+                     f(_x: Baz{id: 1});`;
+    await p.loadStr(policy4);
+    p.clearRules();
+
+    await expect(p.loadStr(policy4 + 'f(_x: Baz);')).rejects.toThrow(
+      'Invalid rule'
+    );
 
     // Test invalid rule type
-    const policy4 = 'type f(x: Foo, x.baz);';
-
-    await expect(p.loadStr(policy4)).rejects.toThrow('Invalid rule type');
+    const policy5 = policy4 + 'type f(x: Foo, x.baz);';
+    await expect(p.loadStr(policy5)).rejects.toThrow('Invalid rule type');
   });
 });
