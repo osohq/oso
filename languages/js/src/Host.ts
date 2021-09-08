@@ -30,7 +30,12 @@ import {
   isPolarStr,
   isPolarVariable,
 } from './types';
-import { map } from '../test/helpers';
+
+type UserType = {
+  name: string;
+  id: number;
+  cls: Class;
+};
 
 /**
  * Translator between Polar and JavaScript.
@@ -90,6 +95,41 @@ export class Host {
   }
 
   /**
+   * Get user type for `cls`.
+   */
+  getType(cls: Class): UserType | undefined {
+    // TODO: Update when adding user type.
+    const name = this.clsNames.get(cls);
+    if (name === undefined) return undefined;
+
+    const id = this.#classIds.get(name);
+    if (id === undefined) {
+      throw new Error('invariant: class must be in names and ids.');
+    }
+
+    return {
+      name: name,
+      id,
+      cls,
+    };
+  }
+
+  /**
+   * Return user types that are registered with Host.
+   */
+  *distinctUserTypes(): IterableIterator<UserType> {
+    // TODO: Use UserType object once this is brought in line with Python.
+    for (const [name, id] of this.#classIds.entries()) {
+      const cls = this.#classes.get(name);
+      if (cls === undefined) {
+        throw new Error('cls should not be undefined.');
+      }
+
+      yield { name, id, cls };
+    }
+  }
+
+  /**
    * Store a JavaScript class in the class cache.
    *
    * @param cls Class to cache.
@@ -108,6 +148,7 @@ export class Host {
         existing,
       });
     this.#classes.set(clsName, cls);
+    this.#classIds.set(clsName, this.cacheInstance(cls, undefined));
     return clsName;
   }
 
@@ -156,6 +197,25 @@ export class Host {
     }
     this.#instances.set(instanceId, instance);
     return instanceId;
+  }
+
+  /**
+   * Register the MROs of all registered classes.
+   */
+  registerMros() {
+    // Get MRO of all registered classes
+    // NOTE: not ideal that the MRO gets updated each time loadStr is
+    // called, but since we are planning to move to only calling load once
+    // with the include feature, I think it's okay for now.
+    for (const typ of this.distinctUserTypes()) {
+      // Get MRO for type.
+      const mro = ancestors(typ.cls)
+        .map(c => this.getType(c as Class)?.id)
+        .filter(id => id !== undefined);
+
+      // Register with core.
+      this.#ffiPolar.registerMro(typ.name, mro);
+    }
   }
 
   /**
@@ -343,7 +403,12 @@ export class Host {
         );
         return { value: { Dictionary: { fields } } };
       default:
-        const instance_id = this.cacheInstance(v);
+        let instanceId = undefined;
+        if (v instanceof Function) {
+          instanceId = this.#classIds.get(v.name);
+        }
+
+        const instance_id = this.cacheInstance(v, instanceId);
         return {
           value: {
             ExternalInstance: {

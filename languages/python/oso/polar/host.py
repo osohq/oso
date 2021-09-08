@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from math import inf, isnan, nan
 import re
 import inspect
-from typing import Any, Dict, Optional, Callable
+from typing import Any, Dict, Optional, Callable, Union
 
 
 from .exceptions import (
@@ -35,6 +35,8 @@ class UserType:
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
+    types: Dict[Union[str, type], UserType]
+
     def __init__(
         self,
         polar,
@@ -44,7 +46,7 @@ class Host:
     ):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
-        # TODO: add comment explaining what is stored in `types`
+        # types maps class names (as string) and class objects to UserType.
         self.types = (types or {}).copy()
         self.instances = (instances or {}).copy()
         self._accept_expression = False  # default, see set_accept_expression
@@ -52,7 +54,7 @@ class Host:
         self.get_field = get_field or self.types_get_field
 
     # @Q: I'm not really sure what I'm returning here.
-    def types_get_field(self, obj, field):
+    def types_get_field(self, obj, field) -> type:
         if obj not in self.types:
             raise PolarRuntimeError(
                 f"No type information for Python class {obj.__name__}"
@@ -67,6 +69,8 @@ class Host:
             return self.types[field_type.other_type].cls
         elif field_type.kind == "children":
             return list
+        else:
+            raise PolarRuntimeError(f"Invalid kind {field_type.kind}")
 
     def copy(self):
         """Copy an existing cache."""
@@ -86,7 +90,8 @@ class Host:
 
     def distinct_user_types(self):
         return map(
-            lambda k: self.types[k], filter(lambda k: type(k) is str, self.types.keys())
+            lambda k: self.types[k],
+            filter(lambda k: isinstance(k, str), self.types.keys()),
         )
 
     def cache_class(
@@ -115,7 +120,7 @@ class Host:
         return name
 
     def register_mros(self):
-        """Register the MRO of each registered class to be used for rule prototype validation."""
+        """Register the MRO of each registered class to be used for rule type validation."""
         # Get MRO of all registered classes
         for rec in self.distinct_user_types():
             mro = [self.types[c].id for c in inspect.getmro(rec.cls) if c in self.types]
@@ -275,28 +280,15 @@ class Host:
                 }
         else:
             instance_id = None
-            repr_str = None
             import inspect
 
             if inspect.isclass(v):
                 if v in self.types:
                     instance_id = self.types[v].id
-                # BEGIN HACK:
-                # The polar core uses the .repr property to determine whether or not
-                # to allow Roles.role_allows to be called with unbound variables as
-                # arguments (only for sqlalchemy_oso)
-                # Because of this, we need to continue to send the repr for
-                # sqlalchemy_oso.roles.OsoRoles.Roles ONLY
-                if (
-                    "OsoRoles" in v.__qualname__
-                    and v.__module__ == "sqlalchemy_oso.roles"
-                ):
-                    repr_str = repr(v)
-                # END HACK
             val = {
                 "ExternalInstance": {
                     "instance_id": self.cache_instance(v, instance_id),
-                    "repr": repr_str,
+                    "repr": None,
                 }
             }
         term = {"value": val}

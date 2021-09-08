@@ -15,6 +15,7 @@ def iterate_model_classes(base_or_registry):
     """Return an iterator of model classes that descend from a declarative base
     (SQLAlchemy 1.3 or 1.4) or exist in a registry (SQLAlchemy 1.4)."""
     try:  # 1.3 declarative base.
+        # TODO (dhatch): Not sure this is legit b/c it uses an internal interface?
         models = base_or_registry._decl_class_registry.items()
         yield from {model for name, model in models if name != "_sa_module_registry"}
     except AttributeError:

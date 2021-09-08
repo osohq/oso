@@ -2,6 +2,8 @@ package oso
 
 import (
 	"errors"
+	"fmt"
+	"os"
 
 	osoErrors "github.com/osohq/go-oso/errors"
 	"github.com/osohq/go-oso/types"
@@ -71,10 +73,24 @@ func (o *Oso) SetNotFoundError(notFoundError func() error) {
 }
 
 /*
+Load Polar policy from ".polar" files, checking that all inline queries succeed.
+*/
+func (o Oso) LoadFiles(files []string) error {
+	return (*o.p).loadFiles(files)
+}
+
+/*
 Load Polar policy from a ".polar" file, checking that all inline queries succeed.
+
+Deprecated: `Oso.LoadFile` has been deprecated in favor of `Oso.LoadFiles` as
+of the 0.20.0 release. Please see changelog for migration instructions:
+https://docs.osohq.com/project/changelogs/2021-09-15.html
 */
 func (o Oso) LoadFile(f string) error {
-	return (*o.p).loadFile(f)
+	fmt.Fprintln(os.Stderr,
+		"`Oso.LoadFile` has been deprecated in favor of `Oso.LoadFiles` as of the 0.20.0 release.\n\n"+
+			"Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html")
+	return (*o.p).loadFiles([]string{f})
 }
 
 /*
