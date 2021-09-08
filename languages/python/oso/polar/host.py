@@ -48,6 +48,9 @@ class Host:
         self.types = (types or {}).copy()
         self.instances = (instances or {}).copy()
         self._accept_expression = False  # default, see set_accept_expression
+        self.build_query = None
+        self.exec_query = None
+        self.combine_query = None
 
         self.get_field = get_field or self.types_get_field
 
@@ -108,9 +111,9 @@ class Host:
             cls=cls,
             id=self.cache_instance(cls),
             fields=fields or {},
-            build_query=build_query,
-            exec_query=exec_query,
-            combine_query=combine_query,
+            build_query=build_query or self.build_query,
+            exec_query=exec_query or self.exec_query,
+            combine_query=combine_query or self.combine_query,
         )
         return name
 

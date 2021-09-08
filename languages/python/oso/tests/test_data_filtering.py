@@ -84,15 +84,14 @@ def t(oso):
     def get_foo_logs(constraints):
         return filter_array(foo_logs, constraints)
 
-    # When dealing with just data, the query is really already the results of the query.
-    # so exec is just returning.
-    def exec_query(results):
-        return results
-
     # Combining is combining but filtering out duplicates.
     def combine_query(q1, q2):
         results = q1 + q2
         return [i for n, i in enumerate(results) if i not in results[:n]]
+
+    oso.configure_data_filtering(
+        exec_query=lambda results: results, combine_query=combine_query
+    )
 
     oso.register_class(
         Bar,
@@ -105,8 +104,6 @@ def t(oso):
             ),
         },
         build_query=get_bars,
-        exec_query=exec_query,
-        combine_query=combine_query,
     )
     oso.register_class(
         Foo,
@@ -126,8 +123,6 @@ def t(oso):
             ),
         },
         build_query=get_foos,
-        exec_query=exec_query,
-        combine_query=combine_query,
     )
     oso.register_class(
         FooLogRecord,
@@ -140,8 +135,6 @@ def t(oso):
             ),
         },
         build_query=get_foo_logs,
-        exec_query=exec_query,
-        combine_query=combine_query,
     )
     # Sorta hacky, just return anything you want to use in a test.
     return {
@@ -187,11 +180,9 @@ def sqlalchemy_t(oso):
 
     Base.metadata.create_all(engine)
 
-    def exec_query(query):
-        return query.all()
-
-    def combine_query(q1, q2):
-        return q1.union(q2)
+    oso.configure_data_filtering(
+        exec_query=lambda query: query.all(), combine_query=lambda q1, q2: q1.union(q2)
+    )
 
     # @TODO: Somehow the session needs to get in here, didn't think about that yet... Just hack for now and use a global
     # one.
@@ -212,8 +203,6 @@ def sqlalchemy_t(oso):
         Bar,
         types={"id": str, "is_cool": bool, "is_still_cool": bool},
         build_query=get_bars,
-        exec_query=exec_query,
-        combine_query=combine_query,
     )
 
     def get_foos(constraints):
@@ -240,8 +229,6 @@ def sqlalchemy_t(oso):
             ),
         },
         build_query=get_foos,
-        exec_query=exec_query,
-        combine_query=combine_query,
     )
 
     hello_bar = Bar(id="hello", is_cool=True, is_still_cool=True)
