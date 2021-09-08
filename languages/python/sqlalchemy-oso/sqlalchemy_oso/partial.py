@@ -180,13 +180,6 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "Isa"
     left, right = expression.args
     left_path = dot_path(left)
-    # # WOWHACK(gj): this fixes the data filtering test at the bottom of
-    # # tests/test_roles3.py
-    # if not left_path:
-    #     left_cls = inspect(left, raiseerr=True).class_
-    #     assert not right.fields, "Unexpected fields in isa expression"
-    #     constraint_type = get_model(right.tag)
-    #     return sql.true() if issubclass(left_cls, constraint_type) else sql.false()
 
     assert left_path[0] == Variable("_this")
     left_path = left_path[1:]  # Drop _this.
