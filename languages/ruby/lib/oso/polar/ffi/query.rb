@@ -50,8 +50,7 @@ module Oso
           handle_error if res.zero?
         end
 
-        # @param result [Boolean]
-        # @param call_id [Integer]
+        # @param message [String]
         # @raise [FFI::Error] if the FFI call returns an error.
         def application_error(message)
           res = Rust.application_error(self, message)
