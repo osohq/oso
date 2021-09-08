@@ -195,7 +195,7 @@ module Oso
 
       # Compare two values
       #
-      # @param op [String] operation to perform.
+      # @param operation [String] operation to perform.
       # @param args [Array<Object>] left and right args to operation.
       # @raise [PolarRuntimeError] if operation fails or is unsupported.
       # @return [Boolean]

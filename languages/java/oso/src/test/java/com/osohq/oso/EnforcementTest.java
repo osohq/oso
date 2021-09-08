@@ -117,6 +117,8 @@ public class EnforcementTest {
     assertTrue(actions.contains("CREATE"));
     assertTrue(actions.contains("READ"));
 
+    oso.clearRules();
+
     oso.loadStr(
         "allow(_actor: Actor{name: \"fred\"}, action, _resource: Widget{id: 2})"
             + " if action in [1, 2, 3, 4];");

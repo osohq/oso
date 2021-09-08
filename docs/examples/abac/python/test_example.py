@@ -46,10 +46,13 @@ def test_simple_01(oso, load):
     )
 
 
-def test_rbac_02(oso, load):
-    load("02-rbac.polar")
+def test_rbac_02(oso):
+    with open(Path(__file__).parent.parent / "02-rbac.polar", "rb") as f:
+        contents = f.read().decode("utf-8")
 
-    oso.load_str('role(_: User { name: "sam" }, "admin", __: Project { id: 2 });')
+    oso.load_str(
+        contents + 'role(_: User { name: "sam" }, "admin", __: Project { id: 2 });'
+    )
     expense = Expense(location="NYC", amount=50, project_id=0, submitted_by="steve")
     assert not oso.is_allowed(User("sam"), "view", expense)
     expense = Expense(location="NYC", amount=50, project_id=2, submitted_by="steve")

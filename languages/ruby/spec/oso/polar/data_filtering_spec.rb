@@ -256,7 +256,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         }
       )
 
-      subject.load_file policy_file
+      subject.load_files [policy_file]
     end
 
     context 'wizards' do
@@ -370,7 +370,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         }
       )
 
-      subject.load_file(roles_file)
+      subject.load_files [roles_file]
     end
 
     context 'org owners' do

@@ -79,20 +79,22 @@ fn test() {
     )
     .unwrap();
 
-    let polar_file = std::env::var("CARGO_MANIFEST_DIR").unwrap() + "/../../../test/test.polar";
-    println!("Loading: {}", polar_file);
-    oso.load_file(&polar_file).unwrap();
-
-    assert!(oso.is_allowed("a", "b", "c").unwrap());
+    assert_eq!(
+        oso.load_str("missingSemicolon()").unwrap_err().to_string(),
+        "hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19"
+    );
 
     // Test that a built in string method can be called.
     oso.load_str(r#"?= x = "hello world!" and x.ends_with("world!");"#)
         .unwrap();
 
-    assert_eq!(
-        oso.load_str("missingSemicolon()").unwrap_err().to_string(),
-        "hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19"
-    );
+    oso.clear_rules().unwrap();
+
+    let polar_file = std::env::var("CARGO_MANIFEST_DIR").unwrap() + "/../../../test/test.polar";
+    println!("Loading: {}", polar_file);
+    oso.load_files(vec![&polar_file]).unwrap();
+
+    assert!(oso.is_allowed("a", "b", "c").unwrap());
 
     // let d = D("")
     // let args: Vec<&ToPolar> = vec![]

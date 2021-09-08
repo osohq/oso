@@ -18,13 +18,18 @@ def assert_query_equals(query, expected_str):
 
 def test_authorize_model_basic(session, oso, fixture_data):
     """Test that a simple policy with checks on non-relationship attributes is correct."""
-    oso.load_str('allow("user", "read", post: Post) if post.access_level = "public";')
-    oso.load_str('allow("user", "write", post: Post) if post.access_level = "private";')
-    oso.load_str('allow("admin", "read", _: Post);')
     oso.load_str(
-        'allow("moderator", "read", post: Post) if '
-        '(post.access_level = "private" or post.access_level = "public") and '
-        "post.needs_moderation = true;"
+        """allow("user", "read", post: Post) if
+             post.access_level = "public";
+
+           allow("user", "write", post: Post) if
+             post.access_level = "private";
+
+           allow("admin", "read", _: Post);
+
+           allow("moderator", "read", post: Post) if
+             (post.access_level = "private" or post.access_level = "public") and
+             post.needs_moderation = true;"""
     )
 
     posts = session.query(Post).filter(
@@ -65,15 +70,15 @@ def test_authorize_scalar_attribute_eq(session, oso, fixture_data):
     """Test authorization rules on a relationship with one object equaling another."""
     # Object equals another object
     oso.load_str(
-        'allow(actor: User, "read", post: Post) if post.created_by = actor and '
-        'post.access_level = "private";'
-    )
-    oso.load_str(
-        'allow(_: User, "read", post: Post) if ' 'post.access_level = "public";'
-    )
-    oso.load_str(
-        'allow(_: User{is_moderator: true}, "read", post: Post) if '
-        'post.access_level = "public";'
+        """allow(actor: User, "read", post: Post) if
+             post.created_by = actor and
+             post.access_level = "private";
+
+           allow(_: User, "read", post: Post) if
+             post.access_level = "public";
+
+           allow(_: User{is_moderator: true}, "read", post: Post) if
+             post.access_level = "public";"""
     )
 
     foo = session.query(User).filter(User.username == "foo").first()
@@ -97,20 +102,19 @@ def test_authorize_scalar_attribute_condition(session, oso, fixture_data):
     # Object equals another object
 
     oso.load_str(
-        'allow(actor: User, "read", post: Post) if post.created_by.is_banned = false and '
-        'post.created_by.username = actor.username and post.access_level = "private";'
-    )
-
-    oso.load_str(
-        'allow(_: User, "read", post: Post) if post.created_by.is_banned = false and '
-        'post.access_level = "public";'
-    )
-
-    # moderator can see posts made by banned users.
-    oso.load_str(
         """allow(actor: User, "read", post: Post) if
-                actor.is_moderator = true
-                and post.created_by.is_banned = true;"""
+             post.created_by.is_banned = false and
+             post.created_by.username = actor.username and
+             post.access_level = "private";
+
+           allow(_: User, "read", post: Post) if
+             post.created_by.is_banned = false and
+             post.access_level = "public";
+
+           # moderator can see posts made by banned users.
+           allow(actor: User, "read", post: Post) if
+             actor.is_moderator = true and
+             post.created_by.is_banned = true;"""
     )
 
     foo = session.query(User).filter(User.username == "foo").first()
@@ -488,15 +492,12 @@ def test_nested_relationship_many_many_many_constrained(session, engine, oso):
     session.commit()
 
     # A user can read a post that they are the moderator of the category of.
-    oso.load_str(
-        """
-        allow(user, "read", post: Post) if
-            tag in post.tags and
-            category in tag.categories and
-            moderator in category.users
-            and moderator = user;
-    """
-    )
+    policy = """allow(user, "read", post: Post) if
+                  tag in post.tags and
+                  category in tag.categories and
+                  moderator in category.users
+                  and moderator = user;"""
+    oso.load_str(policy)
 
     posts = session.query(Post).filter(authorize_model(oso, foo, "read", session, Post))
     posts = posts.all()
@@ -518,18 +519,17 @@ def test_nested_relationship_many_many_many_constrained(session, engine, oso):
     assert foo_post_2 not in posts
     assert len(posts) == 3
 
+    oso.clear_rules()
+
     # A user can read a post that they are the moderator of the category of if the
     # tag is public.
-    oso.load_str(
-        """
-        allow(user, "read_2", post: Post) if
-            tag in post.tags and
-            tag.is_public = true and
-            category in tag.categories and
-            moderator in category.users
-            and moderator = user;
-    """
-    )
+    policy += """allow(user, "read_2", post: Post) if
+                   tag in post.tags and
+                   tag.is_public = true and
+                   category in tag.categories and
+                   moderator in category.users
+                   and moderator = user;"""
+    oso.load_str(policy)
 
     posts = session.query(Post).filter(
         authorize_model(oso, bar, "read_2", session, Post)
@@ -545,20 +545,19 @@ def test_nested_relationship_many_many_many_constrained(session, engine, oso):
     assert foo_post_2 not in posts
     assert len(posts) == 2
 
+    oso.clear_rules()
+
     # A user can read a post that they are the moderator of the category of if the
     # tag is public and the category name is public.
-    oso.load_str(
-        """
-        allow(user, "read_3", post: Post) if
-            post.access_level = "public" and
-            tag in post.tags and
-            tag.is_public = true and
-            category in tag.categories and
-            category.name = "public" and
-            moderator in category.users and
-            moderator = user;
-    """
-    )
+    policy += """allow(user, "read_3", post: Post) if
+                   post.access_level = "public" and
+                   tag in post.tags and
+                   tag.is_public = true and
+                   category in tag.categories and
+                   category.name = "public" and
+                   moderator in category.users and
+                   moderator = user;"""
+    oso.load_str(policy)
 
     posts = session.query(Post).filter(
         authorize_model(oso, bar, "read_3", session, Post)

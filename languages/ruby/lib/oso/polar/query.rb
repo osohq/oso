@@ -75,10 +75,11 @@ module Oso
       # Fetch the next result from calling a Ruby method and prepare it for
       # transmission across the FFI boundary.
       #
-      # @param method [#to_sym]
-      # @param args [Array<Hash>]
+      # @param attribute [#to_sym]
       # @param call_id [Integer]
       # @param instance [Hash<String, Object>]
+      # @param args [Array<Hash>]
+      # @param kwargs [Hash<String, Object>]
       # @raise [Error] if the FFI call raises one.
       def handle_call(attribute, call_id:, instance:, args:, kwargs:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         instance = host.to_ruby(instance)

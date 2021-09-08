@@ -27,7 +27,7 @@ mod resource_block;
 mod rewrites;
 pub mod rules;
 mod runnable;
-mod sources;
+pub mod sources;
 pub mod terms;
 pub mod traces;
 mod visitor;

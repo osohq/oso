@@ -681,7 +681,7 @@ Rule: Rule = {
     }
 }
 
-RulePrototype: Rule = {
+RuleType: Rule = {
     "type" <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
         let (name, params) = head;
         let op = Operation{operator: Operator::And, args: vec![]};
@@ -731,7 +731,7 @@ ResourceBlockProductions: Vec<resource_block::Production> = <ResourceBlockProduc
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
-    <RulePrototype> => Line::RulePrototype(<>),
+    <RuleType> => Line::RuleType(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
 
     <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> =>? {

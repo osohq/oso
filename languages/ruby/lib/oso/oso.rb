@@ -152,7 +152,7 @@ module Oso
     #   +allow_field(_actor, _action, _resource, _field)+. If +true+, the \
     #   method will return +Set["*"]+, if +false+, the method will raise an \
     #   exception.
-    # @returns A set of the unique allowed fields.
+    # @return A set of the unique allowed fields.
     def authorized_fields(actor, action, resource, allow_wildcard: false) # rubocop:disable Metrics/MethodLength
       results = query_rule('allow_field', actor, action, resource, Polar::Variable.new('field'))
       fields = Set.new
