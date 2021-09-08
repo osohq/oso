@@ -2248,3 +2248,53 @@ fn test_lookup_in_rule_head() -> TestResult {
     assert_eq!(results.len(), 0);
     Ok(())
 }
+
+#[test]
+fn test_default_rule_types() -> TestResult {
+    let p = Polar::new();
+    // This should fail
+    let e = p
+        .load_str(r#"has_permission("leina", "eat", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    let e = p
+        .load_str(r#"has_role("leina", "eater", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    let e = p
+        .load_str(r#"has_relation("leina", "eater", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    let e = p
+        .load_str(r#"allow("leina", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    let e = p
+        .load_str(r#"allow_field("leina", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    let e = p
+        .load_str(r#"allow_request("leina", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+
+    // This should succeed
+    // TODO: should we emit warnings if rules with union specializers are loaded
+    // but no union types have been declared?
+    p.load_str(
+        r#"has_permission(_actor: Actor, "eat", _resource: Resource);
+    has_role(_actor: Actor, "member", _resource: Resource);
+    has_relation(_actor: Actor, "any", _other: Actor);
+    has_relation(_actor: Resource, "any", _other: Actor);
+    has_relation(_actor: Resource, "any", _other: Resource);
+    has_relation(_actor: Actor, "any", _other: Resource);
+    allow("a", "b", "c");
+    allow_field("a", "b", "c", "d");
+    allow_request("a", "b", "c");
+    "#,
+    )?;
+    // Make sure there are no warnings
+    assert!(p.next_message().is_none());
+
+    Ok(())
+}

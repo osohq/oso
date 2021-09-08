@@ -42,9 +42,8 @@ resource Repo {
   "pull" if "reader";
 }
 
-has_relation(org, "parent", repo: Repo) if
-  org = repo.org and
-  org matches Org;
+has_relation(org: Org, "parent", repo: Repo) if
+  org = repo.org;
 
 has_permission(_: User, "pull", repo: Repo) if
   repo.is_public;

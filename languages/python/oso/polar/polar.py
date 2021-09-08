@@ -340,6 +340,7 @@ class Polar:
         return filter_data(self, plan)
 
     def authorized_resources(self, actor, action, cls):
+        # TODO: can we move this into oso.py with the other `authorized_` methods?
         query = self.authorized_query(actor, action, cls)
         if query is None:
             return []

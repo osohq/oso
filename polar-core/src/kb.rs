@@ -37,7 +37,7 @@ pub struct KnowledgeBase {
     pub loaded_content: HashMap<String, String>,
 
     rules: HashMap<Symbol, GenericRule>,
-    rule_types: HashMap<Symbol, Vec<Rule>>,
+    rule_types: RuleTypes,
     pub sources: Sources,
     /// For symbols returned from gensym.
     gensym_counter: Counter,
@@ -57,7 +57,7 @@ impl KnowledgeBase {
             loaded_files: Default::default(),
             loaded_content: Default::default(),
             rules: HashMap::new(),
-            rule_types: HashMap::new(),
+            rule_types: RuleTypes::default(),
             sources: Sources::default(),
             id_counter: Counter::default(),
             gensym_counter: Counter::default(),
@@ -507,10 +507,7 @@ impl KnowledgeBase {
     }
 
     pub fn add_rule_type(&mut self, rule_type: Rule) {
-        let name = rule_type.name.clone();
-        // get rule types
-        let rule_types = self.rule_types.entry(name).or_insert_with(Vec::new);
-        rule_types.push(rule_type);
+        self.rule_types.add(rule_type);
     }
 
     /// Define a constant variable.
@@ -548,7 +545,7 @@ impl KnowledgeBase {
 
     pub fn clear_rules(&mut self) {
         self.rules.clear();
-        self.rule_types.clear();
+        self.rule_types.reset();
         self.sources = Sources::default();
         self.inline_queries.clear();
         self.loaded_content.clear();
@@ -683,8 +680,7 @@ impl KnowledgeBase {
     }
 
     pub fn is_union(&self, maybe_union: &Term) -> bool {
-        (!self.resource_blocks.actors.is_empty() && maybe_union.is_actor_union())
-            || (!self.resource_blocks.resources.is_empty() && maybe_union.is_resource_union())
+        (maybe_union.is_actor_union()) || (maybe_union.is_resource_union())
     }
 
     pub fn get_union_members(&self, union: &Term) -> &HashSet<Term> {
@@ -698,7 +694,7 @@ impl KnowledgeBase {
     }
 
     pub fn has_rules(&self) -> bool {
-        !self.rules.is_empty() || !self.rule_types.is_empty()
+        !self.rules.is_empty()
     }
 }
 
