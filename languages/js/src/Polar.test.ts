@@ -959,39 +959,36 @@ describe('Oso Roles', () => {
     p.registerClass(Foo);
     p.registerClass(Bad);
 
-    const policy = `
-    type f(_x: Integer);
-    f(1);
-    `;
-
+    const policy = `type f(_x: Integer);
+                    f(1);`;
     await p.loadStr(policy);
-
-    const policy2 = `
-    type f(_x: Foo);
-    type f(_x: Foo, _y: Bar);
-    f(_x: Bar);
-    f(_x: Baz);
-    `;
-
-    await p.loadStr(policy2);
-
-    await expect(p.loadStr('f(_x: Bad);')).rejects.toThrow('Invalid rule');
-
     p.clearRules();
 
-    // Test with fields
-    const policy3 = `
-    type f(_x: Foo{id: 1});
-    f(_x: Bar{id: 1});
-    f(_x: Baz{id: 1});
-    `;
+    const policy2 =
+      policy +
+      `type f(_x: Foo);
+       type f(_x: Foo, _y: Bar);
+       f(_x: Bar);
+       f(_x: Baz);`;
+    await p.loadStr(policy2);
+    p.clearRules();
 
-    await p.loadStr(policy3);
-    await expect(p.loadStr('f(_x: Baz);')).rejects.toThrow('Invalid rule');
+    const policy3 = policy2 + 'f(_x: Bad);';
+    await expect(p.loadStr(policy3)).rejects.toThrow('Invalid rule');
+
+    // Test with fields
+    const policy4 = `type f(_x: Foo{id: 1});
+                     f(_x: Bar{id: 1});
+                     f(_x: Baz{id: 1});`;
+    await p.loadStr(policy4);
+    p.clearRules();
+
+    await expect(p.loadStr(policy4 + 'f(_x: Baz);')).rejects.toThrow(
+      'Invalid rule'
+    );
 
     // Test invalid rule type
-    const policy4 = 'type f(x: Foo, x.baz);';
-
-    await expect(p.loadStr(policy4)).rejects.toThrow('Invalid rule type');
+    const policy5 = policy4 + 'type f(x: Foo, x.baz);';
+    await expect(p.loadStr(policy5)).rejects.toThrow('Invalid rule type');
   });
 });
