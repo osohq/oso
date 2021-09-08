@@ -983,7 +983,7 @@ impl PolarVirtualMachine {
                     return self.push_goal(Goal::Backtrack);
                 }
             }
-            _ if self.kb.read().unwrap().is_union(right) => self.isa_union(left, right),
+            _ if self.kb.read().unwrap().is_union(right) => self.isa_union(left, right)?,
 
             // TODO(gj): (Var, Rest) + (Rest, Var) cases might be unreachable.
             (Value::Variable(l), Value::Variable(r))
@@ -1226,7 +1226,7 @@ impl PolarVirtualMachine {
 
     /// To evaluate `left matches Union`, look up `Union`'s member classes and create a choicepoint
     /// to check if `left` matches any of them.
-    fn isa_union(&mut self, left: &Term, union: &Term) {
+    fn isa_union(&mut self, left: &Term, union: &Term) -> PolarResult<()> {
         let member_isas = {
             let kb = self.kb.read().unwrap();
             let members = kb.get_union_members(union).iter();
@@ -1243,7 +1243,7 @@ impl PolarVirtualMachine {
                 })
                 .collect::<Vec<Goals>>()
         };
-        self.push_choice(member_isas);
+        self.choose(member_isas)
     }
 
     pub fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<()> {
@@ -2689,28 +2689,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn rule_source(&self, rule: &Rule) -> String {
-        let head = format!(
-            "{}({})",
-            rule.name,
-            rule.params.iter().fold(String::new(), |mut acc, p| {
-                if !acc.is_empty() {
-                    acc += ", ";
-                }
-                acc += &self.term_source(&p.parameter, false);
-                if let Some(spec) = &p.specializer {
-                    acc += ": ";
-                    acc += &self.term_source(spec, false);
-                }
-                acc
-            })
-        );
-        match rule.body.value() {
-            Value::Expression(Operation {
-                operator: Operator::And,
-                args,
-            }) if !args.is_empty() => head + " if " + &self.term_source(&rule.body, false) + ";",
-            _ => head + ";",
-        }
+        rule.to_polar()
     }
 
     fn set_error_context(
