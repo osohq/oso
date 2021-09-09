@@ -1,27 +1,28 @@
 allow(actor, action, resource) if
   has_permission(actor, action, resource);
 
-resource Repo {
-  roles = [ "writer", "reader" ];
-  permissions = [ "push", "pull" ];
-  relations = { parent: Org };
-
-  "push" if "writer";
-  "pull" if "reader";
-
-  "reader" if "writer";
-
-  "writer" if "owner" on "parent";
-}
-
-has_role(user: User, role_name, resource) if
+has_role(user: User, name: String, resource: Resource) if
   role in user.roles and
-  role.name = role_name and
-  role.resource = resource;
+  role matches { name: name, resource: resource };
 
-has_relation(org: Org, "parent", repo: Repo) if
-  org = repo.org;
+actor User {}
 
-resource Org {
+resource Organization {
   roles = [ "owner" ];
 }
+
+resource Repository {
+  permissions = [ "read", "push" ];
+  roles = [ "contributor", "maintainer" ];
+  relations = { parent: Organization };
+
+  "read" if "contributor";
+  "push" if "maintainer";
+
+  "contributor" if "maintainer";
+
+  "maintainer" if "owner" on "parent";
+}
+
+has_relation(organization: Organization, "parent", repository: Repository) if
+  organization = repository.organization;
