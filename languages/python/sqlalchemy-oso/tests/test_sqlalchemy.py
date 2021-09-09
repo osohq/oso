@@ -1,7 +1,7 @@
 """Test hooks & SQLAlchemy API integrations."""
 import pytest
 
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, joinedload
 
 from sqlalchemy_oso.session import (
     authorized_sessionmaker,
@@ -120,6 +120,21 @@ def test_authorize_query_multiple_types(engine, oso, fixture_data):
     assert authorized.count() == 2
 
     # TODO (dhatch): What happens for aggregations?
+
+
+def test_authorize_query_joined_load(engine, oso, fixture_data):
+    """Test a query involving multiple models."""
+    oso.load_str(
+        """allow("user", "read", post: Post) if post.id = 1;
+           allow("user", "read", user: User) if user.id = 0;
+           allow("user", "read", user: User) if user.id = 1;
+           allow("all_posts", "read", _: Post);"""
+    )
+
+    session = AuthorizedSession(oso, "user", {Post: "read", User: "read"}, bind=engine)
+    authorized = session.query(User).options(joinedload(User.posts))
+    print_query(authorized)
+    assert len(authorized[0].posts) == 1  # Test will fail, len will be all posts
 
 
 def test_alias(engine, oso, fixture_data):
