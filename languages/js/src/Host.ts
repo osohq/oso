@@ -159,13 +159,18 @@ export class Host {
         existing,
       });
     }
+
+    // TODO(gw) maybe we only want to support plain objects?
+    let fields = types || {};
+    if (!(fields instanceof Map)) fields = new Map(Object.entries(fields));
+
     const userType = new UserType({
       name: clsName,
-      cls: cls,
+      cls,
+      fields,
       buildQuery: buildQuery || this.buildQuery,
       execQuery: execQuery || this.execQuery,
       combineQuery: combineQuery || this.combineQuery,
-      fields: types || new Map(),
       id: id || this.cacheInstance(cls, undefined),
     });
     this.types.set(cls, userType);
