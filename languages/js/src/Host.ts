@@ -133,7 +133,6 @@ export class Host {
    * Return user types that are registered with Host.
    */
   *distinctUserTypes(): IterableIterator<UserType> {
-    // TODO: Use UserType object once this is brought in line with Python.
     for (const [name, typ] of this.types.entries())
       if (typeof name === 'string') yield typ;
   }
