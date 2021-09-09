@@ -166,11 +166,11 @@ export class Host {
 
     const userType = new UserType({
       name: clsName,
-      cls: cls,
+      cls,
+      fields,
       buildQuery: buildQuery || this.buildQuery,
       execQuery: execQuery || this.execQuery,
       combineQuery: combineQuery || this.combineQuery,
-      fields: fields,
       id: id || this.cacheInstance(cls, undefined),
     });
     this.types.set(cls, userType);

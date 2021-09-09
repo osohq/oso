@@ -254,6 +254,14 @@ export class Polar {
 
   /**
    * Register a JavaScript class for use in Polar policies.
+   *
+   * @param cls The class to register.
+   * @param params An optional object with extra parameters.
+   *
+   * Accepted extra parameters are:
+   * - name: Explicit name to use for the class in Polar.
+   * - types: A map or object of string keys to type values, used for data filtering.
+   * - {build,combine,exec}Query: Query generating/executing callbacks for data filtering.
    */
   registerClass<T>(cls: Class<T>, params?: any): void {
     const clsName = this.#host.cacheClass(cls, params);
