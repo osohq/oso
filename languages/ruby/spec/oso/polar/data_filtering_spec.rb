@@ -125,7 +125,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         )
       end
 
-      context 'for collection membership' do
+      context 'for collection membership' do # rubocop:disable Metrics/BlockLength
         it 'can check if a value is in a field' do
           policy = 'allow("gwen", "get", foo: Foo) if 1 in foo.numbers and 2 in foo.numbers;'
           subject.load_str(policy)
@@ -166,7 +166,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         end
       end
 
-      context 'for equality' do
+      context 'for equality' do # rubocop:disable Metrics/BlockLength
         it 'can compare a field with a known value' do
           policy = 'allow("gwen", "get", foo: Foo) if foo.is_fooey = true;'
           subject.load_str(policy)
@@ -208,13 +208,41 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           POL
 
           results = subject.authorized_resources('gwen', 'put', FooLog)
-          expected = FooLog.all.select { |log| log.data == 'world' and log.foo.bar.is_still_cool == log.foo.bar.is_cool }
+          expected = FooLog.all.select do |log|
+            log.data == 'world' and log.foo.bar.is_still_cool == log.foo.bar.is_cool
+          end
           expect(expected).not_to be_empty
           expect(results).to contain_exactly(*expected)
         end
+
+        it 'returns empty results for an impossible query' do
+          subject.load_str <<~POL
+            allow("gwen", "gwt", foo: Foo) if
+              foo.is_fooey = true and
+              foo.is_fooey = false;
+          POL
+
+          results = subject.authorized_resources('gwen', 'get', Foo)
+          expect(results).to be_empty
+        end
+
+        it 'correctly applies constraints from other rules' do
+          subject.load_str <<~POL
+            f(bar: Bar) if bar.is_cool = true;
+            g(bar: Bar) if bar.is_still_cool = true;
+            h(bar: Bar) if foo in bar.foos and log in foo.logs and i(log);
+            i(log: FooLog) if log.data = "world";
+            allow("gwen", "get", bar: Bar) if
+              f(bar) and g(bar) and h(bar);
+          POL
+
+          results = subject.authorized_resources('gwen', 'get', Bar)
+          expected = Bar.all.find { |bar| bar.id == 'hello' }
+          expect(results).to contain_exactly(expected)
+        end
       end
 
-      context 'for inequality' do
+      context 'for inequality' do # rubocop:disable Metrics/BlockLength
         it 'can compare two fields on the same object' do
           subject.load_str <<~POL
             allow("gwen", "get", bar: Bar) if
@@ -247,7 +275,9 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           subject.load_str(policy)
 
           results = subject.authorized_resources('gwen', 'put', FooLog)
-          expected = FooLog.all.select { |log| log.data == 'hello' and log.foo.bar.is_still_cool != log.foo.bar.is_cool }
+          expected = FooLog.all.select do |log|
+            log.data == 'hello' and log.foo.bar.is_still_cool != log.foo.bar.is_cool
+          end
           expect(expected).not_to be_empty
           expect(results).to contain_exactly(*expected)
         end
@@ -284,7 +314,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         subject.load_str(policy)
 
         results = subject.authorized_resources('gwen', 'put', FooLog)
-        expected = FooLog.all.select { |log| log.data == 'hello' and log.foo.is_fooey and not log.foo.bar.is_cool }
+        expected = FooLog.all.select { |log| log.data == 'hello' and log.foo.is_fooey and !log.foo.bar.is_cool }
         expect(expected).not_to be_empty
         expect(results).to contain_exactly(*expected)
       end
