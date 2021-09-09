@@ -775,7 +775,6 @@ mod tests {
 
     #[test]
     fn test_rule_params_match() {
-        // TODO: test for union types in rule type specializers
         let mut kb = KnowledgeBase::new();
 
         let mut constant = |name: &str, instance_id: u64| {
