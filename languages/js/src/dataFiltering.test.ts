@@ -132,34 +132,34 @@ async function fixtures() {
     combineQuery: combineQuery,
   });
 
-  const barType = new Map();
-  barType.set('id', String);
-  barType.set('isCool', Boolean);
-  barType.set('isStillCool', Boolean);
-  barType.set('foos', new Relation('many', 'Foo', 'id', 'barId'));
   oso.registerClass(Bar, {
-    types: barType,
     buildQuery: fromRepo(bars, 'bar'),
+    types: {
+      id: String,
+      isCool: Boolean,
+      isStillCool: Boolean,
+      foos: new Relation('many', 'Foo', 'id', 'barId'),
+    },
   });
 
-  const fooType = new Map();
-  fooType.set('id', String);
-  fooType.set('barId', String);
-  fooType.set('isFooey', Boolean);
-  fooType.set('bar', new Relation('one', 'Bar', 'barId', 'id'));
-  fooType.set('numbers', new Relation('many', 'Num', 'id', 'fooId'));
   oso.registerClass(Foo, {
-    types: fooType,
     buildQuery: fromRepo(foos, 'foo'),
+    types: {
+      id: String,
+      barId: String,
+      isFooey: Boolean,
+      bar: new Relation('one', 'Bar', 'barId', 'id'),
+      numbers: new Relation('many', 'Num', 'id', 'fooId'),
+    },
   });
 
-  const numType = new Map();
-  numType.set('number', Number);
-  numType.set('fooId', String);
-  numType.set('foo', new Relation('one', 'Foo', 'fooId', 'id'));
   oso.registerClass(Num, {
-    types: numType,
     buildQuery: fromRepo(nums, 'num'),
+    types: {
+      number: Number,
+      fooId: String,
+      foo: new Relation('one', 'Foo', 'fooId', 'id'),
+    },
   });
 
   const checkAuthz = async (
