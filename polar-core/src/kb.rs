@@ -6,6 +6,7 @@ use crate::error::{PolarError, PolarResult};
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::resource_block::ResourceBlocks;
+use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
@@ -511,8 +512,19 @@ impl KnowledgeBase {
     }
 
     /// Define a constant variable.
-    pub fn constant(&mut self, name: Symbol, value: Term) {
+    pub fn constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
+        if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
+            return Err(error::RuntimeError::TypeError {
+                msg: format!(
+                    "Invalid call to `register_constant`. Name {} is a reserved keyword.",
+                    name.0
+                ),
+                stack_trace: None,
+            }
+            .into());
+        }
         self.constants.insert(name, value);
+        Ok(())
     }
 
     /// Add the Method Resolution Order (MRO) list for a registered class.
@@ -779,7 +791,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.constant(
             sym!("Citrus"),
             term!(Value::ExternalInstance(ExternalInstance {
@@ -787,7 +800,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.constant(
             sym!("Orange"),
             term!(Value::ExternalInstance(ExternalInstance {
@@ -795,7 +809,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.add_mro(sym!("Fruit"), vec![1]).unwrap();
         // Citrus is a subclass of Fruit
         kb.add_mro(sym!("Citrus"), vec![2, 1]).unwrap();
@@ -1129,7 +1144,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.constant(
             sym!("Citrus"),
             term!(Value::ExternalInstance(ExternalInstance {
@@ -1137,7 +1153,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.constant(
             sym!("Orange"),
             term!(Value::ExternalInstance(ExternalInstance {
@@ -1145,7 +1162,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.add_mro(sym!("Fruit"), vec![1]).unwrap();
         // Citrus is a subclass of Fruit
         kb.add_mro(sym!("Citrus"), vec![2, 1]).unwrap();

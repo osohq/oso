@@ -124,10 +124,7 @@ impl RuleTypes {
             ]
         ));
         // type allow_request(_actor, _action, _request);"#;
-        self.add(rule!(
-            "allow_request",
-            [sym!("_actor"), sym!("_action"), sym!("_request")]
-        ));
+        self.add(rule!("allow_request", [sym!("_actor"), sym!("_request")]));
     }
 
     pub fn get(&self, name: &Symbol) -> Option<&Vec<Rule>> {
