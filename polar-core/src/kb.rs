@@ -805,7 +805,7 @@ mod tests {
         constant("String", 7);
         constant("Boolean", 8);
         constant("List", 9);
-        // constant("Dictionary", 10);
+        constant("Dictionary", 10);
 
         kb.add_mro(sym!("Fruit"), vec![1]).unwrap();
         // Citrus is a subclass of Fruit
@@ -818,7 +818,7 @@ mod tests {
         kb.add_mro(sym!("String"), vec![]).unwrap();
         kb.add_mro(sym!("Boolean"), vec![]).unwrap();
         kb.add_mro(sym!("List"), vec![]).unwrap();
-        // kb.add_mro(sym!("Dictionary"), vec![]).unwrap();
+        kb.add_mro(sym!("Dictionary"), vec![]).unwrap();
 
         // BOTH PATTERN SPEC
         // rule: f(x: Foo), rule_type: f(x: Foo) => PASS
@@ -988,6 +988,14 @@ mod tests {
         assert!(!kb
             .rule_params_match(
                 &rule!("f", ["x"; btreemap! {sym!("id") => term!(1)}]),
+                &rule!("f", ["x"; instance!(sym!("Foo"))])
+            )
+            .unwrap()
+            .is_true());
+        // rule: f({id: 1}), rule_type: f(x: Foo) => FAIL
+        assert!(!kb
+            .rule_params_match(
+                &rule!("f", [btreemap! {sym!("id") => term!(1)}]),
                 &rule!("f", ["x"; instance!(sym!("Foo"))])
             )
             .unwrap()
