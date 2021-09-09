@@ -69,7 +69,7 @@ module Oso
 
           def self.parse(polar, parsed_json)
             constraints = parsed_json['constraints'].map do |con|
-              Constraint.parse polar, con
+              Filter.parse polar, con
             end
             class_tag = parsed_json['class_tag']
 
@@ -115,7 +115,7 @@ module Oso
       end
 
       # Represents a condition that must hold on a resource.
-      class Constraint
+      class Filter
         attr_reader :kind, :field, :value
 
         CHECKS = {

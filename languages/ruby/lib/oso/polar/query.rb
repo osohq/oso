@@ -245,7 +245,7 @@ module Oso
 
       def handle_relationship(call_id, instance, rel) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         typ = host.types[rel.other_type]
-        constraint = ::Oso::Polar::DataFiltering::Constraint.new(
+        constraint = ::Oso::Polar::DataFiltering::Filter.new(
           kind: 'Eq',
           field: rel.other_field,
           value: instance.send(rel.my_field)
