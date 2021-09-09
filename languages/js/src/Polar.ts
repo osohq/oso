@@ -3,18 +3,18 @@ const createInterface = require('readline')?.createInterface;
 
 import {
   InlineQueryFailedError,
-  InvalidConstructorError,
   PolarError,
   PolarFileExtensionError,
   PolarFileNotFoundError,
+  DuplicateClassAliasError,
 } from './errors';
 import { Query } from './Query';
-import { Host } from './Host';
+import { Host, UserType } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
 import { Class, obj, Options, QueryResult } from './types';
-import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
+import { printError, PROMPT, readFile, repr } from './helpers';
 
 import { Variable } from './Variable';
 import { Expression } from './Expression';
@@ -79,11 +79,11 @@ export class Polar {
 
     // Register built-in classes.
     this.registerClass(Boolean);
-    this.registerClass(Number, 'Integer');
-    this.registerClass(Number, 'Float');
+    this.registerClass(Number, { name: 'Integer' });
+    this.registerClass(Number, { name: 'Float' });
     this.registerClass(String);
-    this.registerClass(Array, 'List');
-    this.registerClass(Object, 'Dictionary');
+    this.registerClass(Array, { name: 'List' });
+    this.registerClass(Object, { name: 'Dictionary' });
   }
 
   /**
@@ -236,6 +236,12 @@ export class Polar {
     return this.query(new Predicate(name, args));
   }
 
+  setDataFilteringQueryDefaults({ buildQuery, execQuery, combineQuery }: any) {
+    if (buildQuery) this.#host.buildQuery = buildQuery;
+    if (execQuery) this.#host.execQuery = execQuery;
+    if (combineQuery) this.#host.combineQuery = combineQuery;
+  }
+
   /**
    * Query for a Polar rule, returning true if there are any results.
    */
@@ -249,22 +255,9 @@ export class Polar {
   /**
    * Register a JavaScript class for use in Polar policies.
    */
-  registerClass<T>(
-    cls: Class<T>,
-    alias?: string,
-    types?: Map<string, any>,
-    fetcher?: any
-  ): void {
-    if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
-    const clsName = this.#host.cacheClass(cls, alias);
+  registerClass<T>(cls: Class<T>, params?: any): void {
+    const clsName = this.#host.cacheClass(cls, params);
     this.registerConstant(cls, clsName);
-    this.#host.clsNames.set(cls, clsName);
-    if (types != null) {
-      this.#host.types.set(clsName, types);
-    }
-    if (fetcher != null) {
-      this.#host.fetchers.set(clsName, fetcher);
-    }
   }
 
   /**
@@ -275,50 +268,12 @@ export class Polar {
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
   }
 
-  /**
-   * Returns all the resources the actor is allowed to perform some action on.
-   */
-  async getAllowedResources(actor: any, action: any, cls: any): Promise<any> {
-    const resource = new Variable('resource');
-    const clsName = this.#host.clsNames.get(cls)!;
-    const constraint = new Expression('And', [
-      new Expression('Isa', [
-        resource,
-        new Pattern({ tag: clsName, fields: {} }),
-      ]),
-    ]);
-    let bindings = new Map();
-    bindings.set('resource', constraint);
-    let results = this.queryRuleWithBindings(
-      'allow',
-      bindings,
-      actor,
-      action,
-      resource
-    );
+  getHost(): Host {
+    return this.#host;
+  }
 
-    const queryResults = [];
-    for await (const result of results) {
-      queryResults.push(result);
-    }
-
-    let jsonResults = queryResults.map(result => ({
-      // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
-      // trivially `JSON.stringify()`-able.
-      bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
-        obj[k] = this.#host.toPolar(v);
-        return obj;
-      }, {}),
-    }));
-    let resultsStr = JSON.stringify(jsonResults);
-    let typesStr = serializeTypes(this.#host.types, this.#host.clsNames);
-    let plan = this.#ffiPolar.buildFilterPlan(
-      typesStr,
-      resultsStr,
-      'resource',
-      clsName
-    );
-    return await filterData(this.#host, plan);
+  getFfi(): FfiPolar {
+    return this.#ffiPolar;
   }
 
   /** Start a REPL session. */

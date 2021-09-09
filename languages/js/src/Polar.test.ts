@@ -66,15 +66,15 @@ describe('#registerClass', () => {
   test('errors when registering the same alias twice', () => {
     const p = new Polar();
     expect(() => p.registerClass(Actor)).not.toThrow();
-    expect(() => p.registerClass(User, 'Actor')).toThrow(
+    expect(() => p.registerClass(User, { name: 'Actor' })).toThrow(
       DuplicateClassAliasError
     );
   });
 
   test('can register the same class under different aliases', async () => {
     const p = new Polar();
-    p.registerClass(A, 'A');
-    p.registerClass(A, 'B');
+    p.registerClass(A, { name: 'A' });
+    p.registerClass(A, { name: 'B' });
     expect(await query(p, 'new A().a() = new B().a()')).toStrictEqual([map()]);
   });
 
@@ -438,7 +438,7 @@ describe('#loadFile', () => {
 describe('#clearRules', () => {
   test('clears the KB', async () => {
     const p = new Polar();
-    await p.loadFile(await tempFileFx());
+    await p.loadFiles([await tempFileFx()]);
     expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
     p.clearRules();
     expect(await query(p, 'f(x)')).toStrictEqual([]);
@@ -446,7 +446,7 @@ describe('#clearRules', () => {
 
   test('does not clear registered classes', async () => {
     const p = new Polar();
-    p.registerClass(Belonger, 'Actor');
+    p.registerClass(Belonger, { name: 'Actor' });
     p.clearRules();
     expect(await query(p, 'x = new Actor()')).toHaveLength(1);
   });
@@ -470,7 +470,7 @@ describe('#queryRule', () => {
   describe('querying for a predicate', () => {
     test('can return a list', async () => {
       const p = new Polar();
-      p.registerClass(Belonger, 'Actor');
+      p.registerClass(Belonger, { name: 'Actor' });
       await p.loadStr(
         'allow(actor: Actor, "join", "party") if "social" in actor.groups();'
       );
@@ -481,7 +481,7 @@ describe('#queryRule', () => {
 
     test('can handle variables as arguments', async () => {
       const p = new Polar();
-      await p.loadFile(await tempFileFx());
+      await p.loadFiles([await tempFileFx()]);
       expect(await queryRule(p, 'f', new Variable('a'))).toStrictEqual([
         map({ a: 1 }),
         map({ a: 2 }),
@@ -817,7 +817,7 @@ describe('iterators', () => {
 
   test('fails for non iterables', async () => {
     const p = new Polar();
-    p.registerClass(NonIterable, 'NonIterable');
+    p.registerClass(NonIterable);
     await expect(query(p, 'x in new NonIterable()')).rejects.toThrow(
       InvalidIteratorError
     );
@@ -825,7 +825,7 @@ describe('iterators', () => {
 
   test('work for custom classes', async () => {
     const p = new Polar();
-    p.registerClass(BarIterator, 'BarIterator');
+    p.registerClass(BarIterator);
     expect(await qvar(p, 'x in new BarIterator([1, 2, 3])', 'x')).toStrictEqual(
       [1, 2, 3]
     );

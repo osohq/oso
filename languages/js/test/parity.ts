@@ -32,7 +32,7 @@ namespace B {
   }
 }
 
-oso.registerClass(B.C, 'C');
+oso.registerClass(B.C, { name: 'C' });
 
 class E {
   static sum(args: number[]) {
