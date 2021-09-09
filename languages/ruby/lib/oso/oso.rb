@@ -178,10 +178,10 @@ module Oso
     #
     # @param actor The actor whose permissions to check.
     # @param action The action being taken on the resource.
-    # @param cls The resource being accessed.
+    # @param resource_cls The resource being accessed.
     #
     # @returns A query for resources accessible to the actor.
-    def authorized_query(actor, action, cls) # rubocop:disable Metrics/MethodLength
+    def authorized_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength
       resource = Polar::Variable.new 'resource'
 
       results = query_rule(
@@ -189,7 +189,7 @@ module Oso
         actor,
         action,
         resource,
-        bindings: { 'resource' => type_constraint(resource, cls) },
+        bindings: { 'resource' => type_constraint(resource, resource_cls) },
         accept_expression: true
       )
 
@@ -200,23 +200,23 @@ module Oso
       end
 
       ::Oso::Polar::DataFiltering::FilterPlan
-        .parse(self, results, get_class_name(cls))
+        .parse(self, results, get_class_name(resource_cls))
         .build_query
     end
 
-    # Returns the resources of type +cls+ that +actor+  is allowed
+    # Returns the resources of type +resource_cls+ that +actor+  is allowed
     # to perform +action+ on.
     #
     # @param actor The actor whose permissions to check.
     # @param action The action being taken on the resource.
-    # @param cls The resource being accessed.
+    # @param resource_cls The resource being accessed.
     #
     # @returns A list of resources accessible to the actor.
-    def authorized_resources(actor, action, cls)
-      q = authorized_query actor, action, cls
+    def authorized_resources(actor, action, resource_cls)
+      q = authorized_query actor, action, resource_cls
       return [] if q.nil?
 
-      host.types[get_class_name cls].exec_query[q]
+      host.types[get_class_name resource_cls].exec_query[q]
     end
   end
 end
