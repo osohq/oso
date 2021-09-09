@@ -1161,8 +1161,7 @@ mod test {
         assert_query_done!(q);
 
         // Register `y` as a partial.
-        p.register_constant(sym!("y"), term!(value!(op!(And))))
-            .unwrap();
+        p.register_constant(sym!("y"), term!(value!(op!(And))))?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expressions!(next, "x" => "_this = y", "y" => "x = _this");
@@ -1231,8 +1230,7 @@ mod test {
     fn test_dot_lookup_with_partial_as_field() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x, y) if {a: y, b: y}.(x) > 0;")?;
-        p.register_constant(sym!("x"), term!(value!(op!(And))))
-            .unwrap();
+        p.register_constant(sym!("x"), term!(value!(op!(And))))?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
         assert_eq!(next[&sym!("x")], term!("a"));
@@ -1677,7 +1675,7 @@ mod test {
     fn test_that_cut_with_partial_errors() -> TestResult {
         let p = Polar::new();
         p.load_str("f(_) if cut;")?;
-        p.register_constant(sym!("x"), op!(And).into()).unwrap();
+        p.register_constant(sym!("x"), op!(And).into())?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(
