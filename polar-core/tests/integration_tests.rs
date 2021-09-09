@@ -2282,8 +2282,11 @@ fn test_default_rule_types() -> TestResult {
     // TODO: should we emit warnings if rules with union specializers are loaded
     // but no union types have been declared?
     p.load_str(
-        r#"has_permission(_actor: Actor, "eat", _resource: Resource);
+        r#"
+    has_permission(_actor: Actor, "eat", _resource: Resource);
+    has_permission(_actor: Actor, "eat", _resource: Actor);
     has_role(_actor: Actor, "member", _resource: Resource);
+    has_role(_actor: Actor, "member", _resource: Actor);
     has_relation(_actor: Actor, "any", _other: Actor);
     has_relation(_actor: Resource, "any", _other: Actor);
     has_relation(_actor: Resource, "any", _other: Resource);
