@@ -893,6 +893,17 @@ mod tests {
             )
             .unwrap()
             .is_true());
+
+        kb.constant(
+            sym!("Foo"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 4,
+                constructor: None,
+                repr: None
+            })),
+        )
+        .unwrap();
+
         // rule: f(x: 6), rule_type: f(x: Foo) => FAIL
         assert!(!kb
             .rule_params_match(
