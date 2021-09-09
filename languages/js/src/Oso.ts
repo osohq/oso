@@ -243,7 +243,11 @@ export class Oso<
    * @param resourceCls Object type.
    * @returns A query object that selects authorized resources of type resourceCls
    */
-  async authorizedQuery(actor: any, action: any, resourceCls: any): Promise<any> {
+  async authorizedQuery(
+    actor: any,
+    action: any,
+    resourceCls: any
+  ): Promise<any> {
     const resource = new Variable('resource');
     const host = this.getHost();
     const clsName = host.types.get(resourceCls)!.name;
@@ -295,8 +299,14 @@ export class Oso<
    * @param resourceCls Object type.
    * @returns An array of authorized resources.
    */
-  async authorizedResources(actr: any, actn: any, resourceCls: any): Promise<any> {
+  async authorizedResources(
+    actr: any,
+    actn: any,
+    resourceCls: any
+  ): Promise<any> {
     const query = await this.authorizedQuery(actr, actn, resourceCls);
-    return !query ? [] : this.getHost().types.get(resourceCls)!.execQuery!(query);
+    return !query
+      ? []
+      : this.getHost().types.get(resourceCls)!.execQuery!(query);
   }
 }
