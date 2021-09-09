@@ -509,7 +509,7 @@ impl KnowledgeBase {
             return Err(error::RuntimeError::TypeError {
                 msg: format!(
                     "Invalid attempt to register '{}'. '{}' is a built-in specializer.",
-                    name.0
+                    name.0, name.0
                 ),
                 stack_trace: None,
             }
