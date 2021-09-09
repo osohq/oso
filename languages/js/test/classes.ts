@@ -8,7 +8,7 @@ export class A {
   }
 }
 
-export class Actor {
+export class BaseActor {
   name: string;
 
   constructor(name: string) {

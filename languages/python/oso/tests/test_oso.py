@@ -11,7 +11,7 @@ from polar import exceptions
 actors = {"guest": "1", "president": "1"}
 
 
-class Actor:
+class User:
     name: str = ""
     verified: bool = False
 
@@ -46,7 +46,7 @@ class Company:
         self.id = id
         self.default_role = default_role
 
-    def role(self, actor: Actor):
+    def role(self, actor: User):
         if actor.name == "president":
             return "admin"
         else:
@@ -62,7 +62,7 @@ test_oso_file = Path(__file__).parent / "test_oso.polar"
 @pytest.fixture
 def test_oso():
     oso = Oso()
-    oso.register_class(Actor, name="test_oso::Actor")
+    oso.register_class(User, name="test_oso::User")
     oso.register_class(Widget, name="test_oso::Widget")
     oso.register_class(Company, name="test_oso::Company")
     oso.load_file(test_oso_file)
@@ -92,14 +92,14 @@ class BarDecorated(FooDecorated):
 
 
 def test_is_allowed(test_oso):
-    actor = Actor(name="guest")
+    actor = User(name="guest")
     resource = Widget(id="1")
     action = "read"
     assert test_oso.is_allowed(actor, action, resource)
     assert test_oso.is_allowed({"username": "guest"}, action, resource)
     assert test_oso.is_allowed("guest", action, resource)
 
-    actor = Actor(name="president")
+    actor = User(name="president")
     action = "create"
     resource = Company(id="1")
     assert test_oso.is_allowed(actor, action, resource)
@@ -107,14 +107,14 @@ def test_is_allowed(test_oso):
 
 
 def test_query_rule(test_oso):
-    actor = Actor(name="guest")
+    actor = User(name="guest")
     resource = Widget(id="1")
     action = "read"
     assert list(test_oso.query_rule("allow", actor, action, resource))
 
 
 def test_fail(test_oso):
-    actor = Actor(name="guest")
+    actor = User(name="guest")
     resource = Widget(id="1")
     action = "not_allowed"
     assert not test_oso.is_allowed(actor, action, resource)
@@ -122,7 +122,7 @@ def test_fail(test_oso):
 
 
 def test_instance_from_external_call(test_oso):
-    user = Actor(name="guest")
+    user = User(name="guest")
     resource = Company(id="1")
     assert test_oso.is_allowed(user, "frob", resource)
     assert test_oso.is_allowed({"username": "guest"}, "frob", resource)
@@ -130,7 +130,7 @@ def test_instance_from_external_call(test_oso):
 
 def test_allow_model(test_oso):
     """Test user auditor can list companies but not widgets"""
-    user = Actor(name="auditor")
+    user = User(name="auditor")
     assert not test_oso.is_allowed(user, "list", Widget)
     assert test_oso.is_allowed(user, "list", Company)
 
@@ -143,11 +143,11 @@ def test_get_allowed_actions(test_oso):
 
         policy1 = (
             policy
-            + """allow(_actor: test_oso::Actor{name: "Sally"}, action, _resource: test_oso::Widget{id: "1"}) if
+            + """allow(_actor: test_oso::User{name: "Sally"}, action, _resource: test_oso::Widget{id: "1"}) if
         action in ["CREATE", "UPDATE"];"""
         )
         test_oso.load_str(policy1)
-        user = Actor(name="Sally")
+        user = User(name="Sally")
         resource = Widget(id="1")
         assert set(test_oso.get_allowed_actions(user, resource)) == set(
             ["read", "CREATE", "UPDATE"]
@@ -157,10 +157,10 @@ def test_get_allowed_actions(test_oso):
 
         policy2 = (
             policy
-            + """allow(_actor: test_oso::Actor{name: "John"}, _action, _resource: test_oso::Widget{id: "1"});"""
+            + """allow(_actor: test_oso::User{name: "John"}, _action, _resource: test_oso::Widget{id: "1"});"""
         )
         test_oso.load_str(policy2)
-        user = Actor(name="John")
+        user = User(name="John")
         with pytest.raises(exceptions.OsoError):
             test_oso.get_allowed_actions(user, resource)
         assert set(

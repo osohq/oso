@@ -6,6 +6,7 @@ use crate::error::{PolarError, PolarResult};
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::resource_block::ResourceBlocks;
+use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
@@ -37,7 +38,7 @@ pub struct KnowledgeBase {
     pub loaded_content: HashMap<String, String>,
 
     rules: HashMap<Symbol, GenericRule>,
-    rule_types: HashMap<Symbol, Vec<Rule>>,
+    rule_types: RuleTypes,
     pub sources: Sources,
     /// For symbols returned from gensym.
     gensym_counter: Counter,
@@ -57,7 +58,7 @@ impl KnowledgeBase {
             loaded_files: Default::default(),
             loaded_content: Default::default(),
             rules: HashMap::new(),
-            rule_types: HashMap::new(),
+            rule_types: RuleTypes::default(),
             sources: Sources::default(),
             id_counter: Counter::default(),
             gensym_counter: Counter::default(),
@@ -387,19 +388,15 @@ impl KnowledgeBase {
                 | (Value::Variable(_), Some(Value::Pattern(rule_type_spec)), rule_value, None) => {
                     match rule_type_spec {
                         // Rule type specializer is an instance pattern
-                        Pattern::Instance(InstanceLiteral {
-                            tag,
-                            fields: rule_type_fields,
-                        }) => {
-                            if match rule_value {
-                                Value::String(_) => tag == &sym!("String"),
-                                Value::Number(Numeric::Integer(_)) => tag == &sym!("Integer"),
-                                Value::Number(Numeric::Float(_)) => tag == &sym!("Float"),
-                                Value::Boolean(_) => tag == &sym!("Boolean"),
-                                Value::List(_) => tag == &sym!("List"),
+                        Pattern::Instance(InstanceLiteral { .. }) => {
+                            let rule_spec = match rule_value {
+                                Value::String(_) => instance!(sym!("String")),
+                                Value::Number(Numeric::Integer(_)) => instance!(sym!("Integer")),
+                                Value::Number(Numeric::Float(_)) => instance!(sym!("Float")),
+                                Value::Boolean(_) => instance!(sym!("Boolean")),
+                                Value::List(_) => instance!(sym!("List")),
                                 Value::Dictionary(rule_fields) => {
-                                    tag == &sym!("Dictionary")
-                                        && self.param_fields_match(rule_type_fields, rule_fields)
+                                    instance!(sym!("Dictionary"), rule_fields.clone().fields)
                                 }
                                 _ => {
                                     unreachable!(
@@ -407,16 +404,12 @@ impl KnowledgeBase {
                                         rule_value
                                     )
                                 }
-                            } {
-                                RuleParamMatch::True
-                            } else {
-                                RuleParamMatch::False(format!(
-                                    "Invalid parameter {}. Rule type expected {}, got {}. ",
-                                    index,
-                                    tag.to_polar(),
-                                    rule_value.to_polar()
-                                ))
-                            }
+                            };
+                            self.check_pattern_param(
+                                index,
+                                &Pattern::Instance(rule_spec),
+                                rule_type_spec,
+                            )?
                         }
                         // Rule type specializer is a dictionary pattern
                         Pattern::Dictionary(rule_type_fields) => {
@@ -507,15 +500,23 @@ impl KnowledgeBase {
     }
 
     pub fn add_rule_type(&mut self, rule_type: Rule) {
-        let name = rule_type.name.clone();
-        // get rule types
-        let rule_types = self.rule_types.entry(name).or_insert_with(Vec::new);
-        rule_types.push(rule_type);
+        self.rule_types.add(rule_type);
     }
 
     /// Define a constant variable.
-    pub fn constant(&mut self, name: Symbol, value: Term) {
+    pub fn constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
+        if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
+            return Err(error::RuntimeError::TypeError {
+                msg: format!(
+                    "Invalid attempt to register '{}'. '{}' is a built-in specializer.",
+                    name.0, name.0
+                ),
+                stack_trace: None,
+            }
+            .into());
+        }
         self.constants.insert(name, value);
+        Ok(())
     }
 
     /// Add the Method Resolution Order (MRO) list for a registered class.
@@ -548,7 +549,7 @@ impl KnowledgeBase {
 
     pub fn clear_rules(&mut self) {
         self.rules.clear();
-        self.rule_types.clear();
+        self.rule_types.reset();
         self.sources = Sources::default();
         self.inline_queries.clear();
         self.loaded_content.clear();
@@ -683,8 +684,7 @@ impl KnowledgeBase {
     }
 
     pub fn is_union(&self, maybe_union: &Term) -> bool {
-        (!self.resource_blocks.actors.is_empty() && maybe_union.is_actor_union())
-            || (!self.resource_blocks.resources.is_empty() && maybe_union.is_resource_union())
+        (maybe_union.is_actor_union()) || (maybe_union.is_resource_union())
     }
 
     pub fn get_union_members(&self, union: &Term) -> &HashSet<Term> {
@@ -698,7 +698,7 @@ impl KnowledgeBase {
     }
 
     pub fn has_rules(&self) -> bool {
-        !self.rules.is_empty() || !self.rule_types.is_empty()
+        !self.rules.is_empty()
     }
 }
 
@@ -776,35 +776,48 @@ mod tests {
     #[test]
     fn test_rule_params_match() {
         let mut kb = KnowledgeBase::new();
-        kb.constant(
-            sym!("Fruit"),
-            term!(Value::ExternalInstance(ExternalInstance {
-                instance_id: 1,
-                constructor: None,
-                repr: None
-            })),
-        );
-        kb.constant(
-            sym!("Citrus"),
-            term!(Value::ExternalInstance(ExternalInstance {
-                instance_id: 2,
-                constructor: None,
-                repr: None
-            })),
-        );
-        kb.constant(
-            sym!("Orange"),
-            term!(Value::ExternalInstance(ExternalInstance {
-                instance_id: 3,
-                constructor: None,
-                repr: None
-            })),
-        );
+
+        let mut constant = |name: &str, instance_id: u64| {
+            kb.constant(
+                sym!(name),
+                term!(Value::ExternalInstance(ExternalInstance {
+                    instance_id,
+                    constructor: None,
+                    repr: None
+                })),
+            )
+            .unwrap();
+        };
+
+        constant("Fruit", 1);
+        constant("Citrus", 2);
+        constant("Orange", 3);
+        // NOTE: Foo doesn't need an MRO b/c it only appears as a rule type specializer; not a rule
+        // specializer.
+        constant("Foo", 4);
+
+        // NOTE: this is only required for these tests b/c we're bypassing the normal load process,
+        // where MROs are registered via FFI calls in the host language libraries.
+        // process.
+        constant("Integer", 5);
+        constant("Float", 6);
+        constant("String", 7);
+        constant("Boolean", 8);
+        constant("List", 9);
+        constant("Dictionary", 10);
+
         kb.add_mro(sym!("Fruit"), vec![1]).unwrap();
         // Citrus is a subclass of Fruit
         kb.add_mro(sym!("Citrus"), vec![2, 1]).unwrap();
         // Orange is a subclass of Citrus
         kb.add_mro(sym!("Orange"), vec![3, 2, 1]).unwrap();
+
+        kb.add_mro(sym!("Integer"), vec![]).unwrap();
+        kb.add_mro(sym!("Float"), vec![]).unwrap();
+        kb.add_mro(sym!("String"), vec![]).unwrap();
+        kb.add_mro(sym!("Boolean"), vec![]).unwrap();
+        kb.add_mro(sym!("List"), vec![]).unwrap();
+        kb.add_mro(sym!("Dictionary"), vec![]).unwrap();
 
         // BOTH PATTERN SPEC
         // rule: f(x: Foo), rule_type: f(x: Foo) => PASS
@@ -889,6 +902,7 @@ mod tests {
             )
             .unwrap()
             .is_true());
+
         // rule: f(x: 6), rule_type: f(x: Foo) => FAIL
         assert!(!kb
             .rule_params_match(
@@ -973,6 +987,14 @@ mod tests {
         assert!(!kb
             .rule_params_match(
                 &rule!("f", ["x"; btreemap! {sym!("id") => term!(1)}]),
+                &rule!("f", ["x"; instance!(sym!("Foo"))])
+            )
+            .unwrap()
+            .is_true());
+        // rule: f({id: 1}), rule_type: f(x: Foo) => FAIL
+        assert!(!kb
+            .rule_params_match(
+                &rule!("f", [btreemap! {sym!("id") => term!(1)}]),
                 &rule!("f", ["x"; instance!(sym!("Foo"))])
             )
             .unwrap()
@@ -1133,7 +1155,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.constant(
             sym!("Citrus"),
             term!(Value::ExternalInstance(ExternalInstance {
@@ -1141,7 +1164,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.constant(
             sym!("Orange"),
             term!(Value::ExternalInstance(ExternalInstance {
@@ -1149,7 +1173,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.add_mro(sym!("Fruit"), vec![1]).unwrap();
         // Citrus is a subclass of Fruit
         kb.add_mro(sym!("Citrus"), vec![2, 1]).unwrap();

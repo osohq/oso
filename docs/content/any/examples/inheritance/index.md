@@ -48,7 +48,7 @@ actor to perform the `"read"` action on an `Order` if:
 
 Note the head of the rule. Each argument uses a type specializer to ensure this
 rule only applies to certain types of resources and actors. This rule indicates
-that the `actor` argument must be an instance of the `Actor` class and the
+that the `actor` argument must be an instance of the `User` class and the
 `resource` argument must be an instance of the `Order` class.
 
 This policy meets our goal above. We have expressed the same rule for the three

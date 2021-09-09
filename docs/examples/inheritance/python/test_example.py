@@ -19,17 +19,17 @@ def patient():
 
 @pytest.fixture
 def med_staff(patient):
-    return inheritance_external.Actor(role="medical_staff", treated=[patient])
+    return inheritance_external.User(role="medical_staff", treated=[patient])
 
 
 @pytest.fixture
 def med_staff_bad_patient():
-    return inheritance_external.Actor(role="medical_staff", treated=["Not Bob"])
+    return inheritance_external.User(role="medical_staff", treated=["Not Bob"])
 
 
 @pytest.fixture
 def reg_staff(patient):
-    return inheritance_external.Actor(role="reg_staff", treated=[patient])
+    return inheritance_external.User(role="reg_staff", treated=[patient])
 
 
 @pytest.fixture

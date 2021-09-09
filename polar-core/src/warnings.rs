@@ -113,7 +113,10 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
             Value::Variable(v)
             | Value::RestVariable(v)
             | Value::Pattern(Pattern::Instance(InstanceLiteral { tag: v, .. }))
-                if !v.is_temporary_var() && !v.is_namespaced_var() && !self.kb.is_constant(v) =>
+                if !v.is_temporary_var()
+                    && !v.is_namespaced_var()
+                    && !self.kb.is_constant(v)
+                    && !self.kb.is_union(t) =>
             {
                 match self.singletons.entry(v.clone()) {
                     Entry::Occupied(mut o) => {
