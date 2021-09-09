@@ -95,8 +95,12 @@ impl RuleTypes {
     fn add_default_rule_types(&mut self) {
         // type has_permission(_actor: Actor, _perm: String, _resource: Resource);
         self.add(rule!("has_permission", ["_actor"; instance!(sym!("Actor")), "_perm"; instance!(sym!("String")), "_resource"; instance!(sym!("Resource"))]));
+        // type has_permission(_actor: Actor, _perm: String, _resource: Actor);
+        self.add(rule!("has_permission", ["_actor"; instance!(sym!("Actor")), "_perm"; instance!(sym!("String")), "_resource"; instance!(sym!("Actor"))]));
         // type has_role(_actor: Actor, _role: String, _resource: Resource);
         self.add(rule!("has_role", ["_actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "_resource"; instance!(sym!("Resource"))]));
+        // type has_role(_actor: Actor, _role: String, _resource: Actor);
+        self.add(rule!("has_role", ["_actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "_resource"; instance!(sym!("Actor"))]));
 
         // TODO: revisit this when working on extension guides. This rule currently lets users define any relation they would like, but we may want to restrict that a bit more.
         // type has_relation(_subject: Resource, _relation: String, _object: Resource);
