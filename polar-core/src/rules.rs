@@ -93,10 +93,10 @@ impl Default for RuleTypes {
 
 impl RuleTypes {
     fn add_default_rule_types(&mut self) {
-        // type has_permission(_actor: Actor, _perm: String, _resource: Resource);
-        self.add(rule!("has_permission", ["_actor"; instance!(sym!("Actor")), "_perm"; instance!(sym!("String")), "_resource"; instance!(sym!("Resource"))]));
-        // type has_permission(_actor: Actor, _perm: String, _resource: Actor);
-        self.add(rule!("has_permission", ["_actor"; instance!(sym!("Actor")), "_perm"; instance!(sym!("String")), "_resource"; instance!(sym!("Actor"))]));
+        // type has_permission(_actor: Actor, _permission: String, _resource: Resource);
+        self.add(rule!("has_permission", ["_actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "_resource"; instance!(sym!("Resource"))]));
+        // type has_permission(_actor: Actor, _permission: String, _resource: Actor);
+        self.add(rule!("has_permission", ["_actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "_resource"; instance!(sym!("Actor"))]));
         // type has_role(_actor: Actor, _role: String, _resource: Resource);
         self.add(rule!("has_role", ["_actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "_resource"; instance!(sym!("Resource"))]));
         // type has_role(_actor: Actor, _role: String, _resource: Actor);
