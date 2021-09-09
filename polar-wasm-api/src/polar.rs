@@ -33,10 +33,12 @@ impl Polar {
     #[wasm_bindgen(js_class = Polar, js_name = registerConstant)]
     pub fn wasm_register_constant(&mut self, name: &str, value: &str) -> JsResult<()> {
         match serde_json::from_str(value) {
-            Ok(term) => self.0.register_constant(Symbol::new(name), term),
-            Err(e) => return Err(serde_serialization_error(e)),
+            Ok(term) => Ok(self
+                .0
+                .register_constant(Symbol::new(name), term)
+                .map_err(Error::from)?),
+            Err(e) => Err(serde_serialization_error(e)),
         }
-        Ok(())
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = nextInlineQuery)]

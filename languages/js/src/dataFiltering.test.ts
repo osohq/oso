@@ -225,7 +225,7 @@ describe('Data filtering using typeorm/sqlite', () => {
   });
 
   test('returning, modifying and executing a query', async () => {
-    const { oso, checkAuthz, aFoo, anotherFoo } = await fixtures();
+    const { oso, aFoo, anotherFoo } = await fixtures();
     oso.loadStr(`
       allow("gwen", "put", foo: Foo) if
         rec in foo.numbers and

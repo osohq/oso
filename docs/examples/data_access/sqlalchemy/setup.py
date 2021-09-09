@@ -25,11 +25,17 @@ def get_version(rel_path):
         raise RuntimeError("Unable to find version string.")
 
 
+def install_requires():
+    requirements = []
+    with open("requirements.txt") as f:
+        requirements.extend([l.strip("\n") for l in f.readlines()])
+    return requirements
+
 setup(
     name="sqlalchemy-example",
     version=get_version("sqlalchemy_example/__init__.py"),
     description="oso sqlalchemy integration example app",
-    long_description=long_description,
+    long_description="oso sqlalchemy integration example app",
     long_description_content_type="text/markdown",
     author="Oso Security, Inc.",
     classifiers=[
@@ -39,7 +45,7 @@ setup(
     ],
     packages=find_packages(),
     python_requires=">=3.6",
-    install_requires=install_requires,
+    install_requires=install_requires(),
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
     # syntax, for example:

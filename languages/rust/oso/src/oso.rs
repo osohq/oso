@@ -255,9 +255,7 @@ impl Oso {
         for hook in &class.register_hooks {
             hook.call(self)?;
         }
-        self.register_constant(class, &class_name)?;
-
-        Ok(())
+        self.register_constant(class, &class_name)
     }
 
     /// Register a rust type as a Polar constant.
@@ -270,7 +268,7 @@ impl Oso {
         self.inner.register_constant(
             Symbol(name.to_string()),
             value.to_polar().to_term(&mut self.host),
-        );
+        )?;
         Ok(())
     }
 }

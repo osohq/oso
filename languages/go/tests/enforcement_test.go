@@ -20,7 +20,7 @@ func getOso(t *testing.T) oso.Oso {
 		t.Fatalf("Failed to set up Oso: %v", err)
 	}
 
-	o.RegisterClass(reflect.TypeOf(Actor{}), nil)
+	o.RegisterClass(reflect.TypeOf(User{}), nil)
 	o.RegisterClass(reflect.TypeOf(Widget{}), nil)
 	o.RegisterClass(reflect.TypeOf(Company{}), nil)
 	o.RegisterClass(reflect.TypeOf(Request{}), nil)
@@ -61,15 +61,18 @@ func TestAuthorize(t *testing.T) {
 	o := getOso(t)
 	var err error
 
-	guest := Actor{Name: "guest"}
-	admin := Actor{Name: "admin"}
+	guest := User{Name: "guest"}
+	admin := User{Name: "admin"}
 	widget0 := Widget{Id: 0}
 	widget1 := Widget{Id: 1}
 
-	o.LoadString("allow(_actor: Actor, \"read\", widget: Widget) if " +
+	if err = o.LoadString("allow(_actor: User, \"read\", widget: Widget) if " +
 		"widget.Id = 0; " +
-		"allow(actor: Actor, \"update\", _widget: Widget) if " +
-		"actor.Name = \"admin\";")
+		"allow(actor: User, \"update\", _widget: Widget) if " +
+		"actor.Name = \"admin\";"); err != nil {
+
+		t.Errorf("LoadString returned error: %v", err)
+	}
 
 	if err = o.Authorize(guest, "read", widget0); err != nil {
 		t.Errorf("Authorize returned error for allowed action: %v", err)
@@ -93,13 +96,16 @@ func TestAuthorizeRequest(t *testing.T) {
 	o := getOso(t)
 	var err error
 
-	guest := Actor{Name: "guest"}
-	verified := Actor{Name: "verified"}
+	guest := User{Name: "guest"}
+	verified := User{Name: "verified"}
 
-	o.LoadString("allow_request(_: Actor{Name: \"guest\"}, request: Request) if " +
+	if err = o.LoadString("allow_request(_: User{Name: \"guest\"}, request: Request) if " +
 		"  request.Path = \"/repos\"; " +
-		"allow_request(_: Actor{Name: \"verified\"}, request: Request) if " +
-		"  request.Path = \"/account\"; ")
+		"allow_request(_: User{Name: \"verified\"}, request: Request) if " +
+		"  request.Path = \"/account\"; "); err != nil {
+
+		t.Errorf("LoadString returned error: %v", err)
+	}
 
 	if err = o.AuthorizeRequest(guest, Request{"GET", "/repos"}); err != nil {
 		t.Errorf("Authorize returned error for allowed action: %v", err)
@@ -119,7 +125,7 @@ func TestAuthorizeField(t *testing.T) {
 	var err error
 
 	o.LoadString( // Admins can update all fields
-		"allow_field(actor: Actor, \"update\", _widget: Widget, field) if " +
+		"allow_field(actor: User, \"update\", _widget: Widget, field) if " +
 			"  actor.Name = \"admin\" and " +
 			"  field in [\"name\", \"purpose\", \"private_field\"]; " +
 
@@ -128,11 +134,11 @@ func TestAuthorizeField(t *testing.T) {
 			"  allow_field(actor, \"update\", widget, field); " +
 
 			// Anybody can read public fields
-			"allow_field(_: Actor, \"read\", _: Widget, field) if " +
+			"allow_field(_: User, \"read\", _: Widget, field) if " +
 			"  field in [\"name\", \"purpose\"];")
 
-	admin := Actor{"admin"}
-	guest := Actor{"guest"}
+	admin := User{"admin"}
+	guest := User{"guest"}
 	widget := Widget{0}
 
 	if err = o.AuthorizeField(admin, "update", widget, "purpose"); err != nil {
@@ -152,9 +158,9 @@ func TestAuthorizedActions(t *testing.T) {
 	o := getOso(t)
 	var err error
 
-	o.LoadString("allow(_actor: Actor{Name: \"Sally\"}, action, _resource: Widget{Id: 1}) if action in [\"CREATE\", \"READ\"];")
+	o.LoadString("allow(_actor: User{Name: \"Sally\"}, action, _resource: Widget{Id: 1}) if action in [\"CREATE\", \"READ\"];")
 
-	actor := Actor{Name: "Sally"}
+	actor := User{Name: "Sally"}
 	resource := Widget{Id: 1}
 
 	res, err := o.AuthorizedActions(actor, resource, false)
@@ -165,9 +171,9 @@ func TestAuthorizedActions(t *testing.T) {
 
 	o.ClearRules()
 
-	o.LoadString("allow(_actor: Actor{Name: \"John\"}, _action, _resource: Widget{Id: 1});")
+	o.LoadString("allow(_actor: User{Name: \"John\"}, _action, _resource: Widget{Id: 1});")
 
-	actor = Actor{Name: "John"}
+	actor = User{Name: "John"}
 	res, err = o.AuthorizedActions(actor, resource, true)
 	if err != nil {
 		t.Fatalf("Failed to get allowed actions: %v", err)
@@ -195,7 +201,7 @@ func TestAuthorizedFields(t *testing.T) {
 	var res map[interface{}]struct{}
 
 	o.LoadString( // Admins can update all fields
-		"allow_field(actor: Actor, \"update\", _widget: Widget, field) if " +
+		"allow_field(actor: User, \"update\", _widget: Widget, field) if " +
 			"  actor.Name = \"admin\" and " +
 			"  field in [\"name\", \"purpose\", \"private_field\"]; " +
 
@@ -204,11 +210,11 @@ func TestAuthorizedFields(t *testing.T) {
 			"  allow_field(actor, \"update\", widget, field); " +
 
 			// Anybody can read public fields
-			"allow_field(_: Actor, \"read\", _: Widget, field) if " +
+			"allow_field(_: User, \"read\", _: Widget, field) if " +
 			"  field in [\"name\", \"purpose\"];")
 
-	admin := Actor{"admin"}
-	guest := Actor{"guest"}
+	admin := User{"admin"}
+	guest := User{"guest"}
 	widget := Widget{0}
 
 	// Admins should be able to update all fields

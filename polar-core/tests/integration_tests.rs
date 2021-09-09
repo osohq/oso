@@ -570,9 +570,9 @@ fn test_constants() -> TestResult {
     let mut p = Polar::new();
     {
         let mut kb = p.kb.write().unwrap();
-        kb.constant(sym!("one"), term!(1));
-        kb.constant(sym!("two"), term!(2));
-        kb.constant(sym!("three"), term!(3));
+        kb.constant(sym!("one"), term!(1))?;
+        kb.constant(sym!("two"), term!(2))?;
+        kb.constant(sym!("three"), term!(3))?;
     }
     p.load_str(
         r#"one(x) if one = one and one = x and x < two;
@@ -1003,7 +1003,7 @@ fn test_make_external() -> TestResult {
 #[test]
 fn test_external_call() -> TestResult {
     let p = Polar::new();
-    p.register_constant(sym!("Foo"), term!(true));
+    p.register_constant(sym!("Foo"), term!(true))?;
     let mut foo_lookups = vec![term!(1)];
 
     let q = p.new_query("(new Foo()).bar(1, a: 2, b: 3) = 1", false)?;
@@ -1793,7 +1793,7 @@ fn test_unify_rule_head() -> TestResult {
     );
 
     let p = Polar::new();
-    p.register_constant(sym!("Foo"), term!(true));
+    p.register_constant(sym!("Foo"), term!(true))?;
     p.load_str(
         r#"f(_: Foo{a: 1}, x) if x = 1;
            g(_: Foo{a: Foo{a: 1}}, x) if x = 1;"#,
@@ -1895,13 +1895,13 @@ fn test_forall() -> TestResult {
     p.clear_rules();
 
     p.load_str(
-        r#"allow(_: {x: 1}, y) if y = 1;
-           allow(_: {y: 1}, y) if y = 2;
-           allow(_: {z: 1}, y) if y = 3;"#,
+        r#"test(_: {x: 1}, y) if y = 1;
+           test(_: {y: 1}, y) if y = 2;
+           test(_: {z: 1}, y) if y = 3;"#,
     )?;
     qeval(
         &mut p,
-        "forall(allow({x: 1, y: 1, z: 1}, y), y in [1, 2, 3])",
+        "forall(test({x: 1, y: 1, z: 1}, y), y in [1, 2, 3])",
     );
     Ok(())
 }
@@ -2022,9 +2022,9 @@ fn test_numeric_applicability() -> TestResult {
     let nan1 = f64::NAN;
     let nan2 = f64::from_bits(f64::NAN.to_bits() | 1);
     assert!(eps.is_normal() && nan1.is_nan() && nan2.is_nan());
-    p.register_constant(sym!("eps"), term!(eps));
-    p.register_constant(sym!("nan1"), term!(nan1));
-    p.register_constant(sym!("nan2"), term!(nan2));
+    p.register_constant(sym!("eps"), term!(eps))?;
+    p.register_constant(sym!("nan1"), term!(nan1))?;
+    p.register_constant(sym!("nan2"), term!(nan2))?;
     p.load_str(
         r#"f(0);
            f(1);
@@ -2233,7 +2233,7 @@ fn test_builtin_iterables() {
 /// despite argument not matching lookup result
 fn test_lookup_in_rule_head() -> TestResult {
     let p = Polar::new();
-    p.register_constant(sym!("Foo"), term!(true));
+    p.register_constant(sym!("Foo"), term!(true))?;
     p.load_str(r#"test(foo: Foo, foo.bar());"#)?;
 
     let good_q = p.new_query("test(new Foo(), 1)", false)?;
@@ -2246,5 +2246,54 @@ fn test_lookup_in_rule_head() -> TestResult {
     let bad_q = p.new_query("test(new Foo(), 2)", false)?;
     let results = query_results!(bad_q, mock_foo_lookup);
     assert_eq!(results.len(), 0);
+    Ok(())
+}
+
+#[test]
+fn test_default_rule_types() -> TestResult {
+    let p = Polar::new();
+    // This should fail
+    let e = p
+        .load_str(r#"has_permission("leina", "eat", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    let e = p
+        .load_str(r#"has_role("leina", "eater", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    let e = p
+        .load_str(r#"has_relation("leina", "eater", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    let e = p
+        .load_str(r#"allow("leina", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    let e = p
+        .load_str(r#"allow_field("leina", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    let e = p
+        .load_str(r#"allow_request("leina", "eat", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+
+    // This should succeed
+    // TODO: should we emit warnings if rules with union specializers are loaded
+    // but no union types have been declared?
+    p.load_str(
+        r#"has_permission(_actor: Actor, "eat", _resource: Resource);
+    has_role(_actor: Actor, "member", _resource: Resource);
+    has_relation(_actor: Actor, "any", _other: Actor);
+    has_relation(_actor: Resource, "any", _other: Actor);
+    has_relation(_actor: Resource, "any", _other: Resource);
+    has_relation(_actor: Actor, "any", _other: Resource);
+    allow("a", "b", "c");
+    allow_field("a", "b", "c", "d");
+    allow_request("a", "b");
+    "#,
+    )?;
+    // Make sure there are no warnings
+    assert!(p.next_message().is_none());
     Ok(())
 }

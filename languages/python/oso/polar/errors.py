@@ -40,7 +40,7 @@ def get_python_error(err_str, enrich_message=None):
         details = None
 
     if details:
-        if "stack_trace" in details:
+        if details.get("stack_trace"):
             details["stack_trace"] = enrich_message(details["stack_trace"])
         if "msg" in details:
             details["msg"] = enrich_message(details["msg"])

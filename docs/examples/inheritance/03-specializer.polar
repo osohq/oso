@@ -3,11 +3,11 @@ can_read_patient_data(actor, "read", resource) if
     actor.treated(resource.patient);
 
 ## START MARKER ##
-allow(actor: Actor, "read", resource: Order) if
+allow(actor: User, "read", resource: Order) if
     can_read_patient_data(actor, "read", resource);
 
-allow(actor: Actor, "read", resource: Test) if
+allow(actor: User, "read", resource: Test) if
     can_read_patient_data(actor, "read", resource);
 
-allow(actor: Actor, "read", resource: Lab) if
+allow(actor: User, "read", resource: Lab) if
     can_read_patient_data(actor, "read", resource);
