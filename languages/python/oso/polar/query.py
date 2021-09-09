@@ -7,7 +7,7 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
-from .data_filtering import Relation, Constraint
+from .data_filtering import Relation, Filter
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -110,7 +110,7 @@ class Query:
                         exec_query = self.host.types[rel.other_type].exec_query
                         assert build_query is not None
                         assert exec_query is not None
-                        constraint = Constraint(
+                        constraint = Filter(
                             kind="Eq",
                             field=rel.other_field,
                             value=getattr(instance, rel.my_field),

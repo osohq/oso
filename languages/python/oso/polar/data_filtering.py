@@ -54,7 +54,7 @@ class Ref:
 
 
 @dataclass
-class Constraint:
+class Filter:
     kind: str  # ["Eq", "In", "Contains"]
     field: str
     value: Any
@@ -82,7 +82,7 @@ class Constraint:
         else:
             self.iget = lambda x: getattr(x, self.field)
 
-        self.checker = getattr(Constraint, self.kind)
+        self.checker = getattr(Filter, self.kind)
 
     def check(self, item):
         return self.checker(self.iget(item), self.getter(item))
@@ -115,7 +115,7 @@ def parse_constraint(polar, constraint):
     else:
         assert False, "Unknown value kind"
 
-    return Constraint(kind=kind, field=field, value=value)
+    return Filter(kind=kind, field=field, value=value)
 
 
 # @NOTE(Steve): This is just operating on the json. Could still have a step to parse this into a python data structure
