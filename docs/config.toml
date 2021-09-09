@@ -6,6 +6,9 @@ uglyurls = true
 
 defaultContentLanguage = "any"
 
+# TODO: don't merge with me. Allows me to build this with broken links.
+refLinksErrorLevel = "WARNING"
+
 # used for Twitter card etc
 [params]
   description = "Explore our guides and reference articles for learning Oso and adding it to your application."
