@@ -39,7 +39,7 @@ class Ref {
   }
 }
 
-export class Constraint {
+export class Filter {
   kind: string;
   field: string;
   value: any;
@@ -80,10 +80,7 @@ export function serializeTypes(userTypes: Map<any, UserType>): string {
   return JSON.stringify(polarTypes);
 }
 
-async function parseConstraint(
-  host: Host,
-  constraint: any
-): Promise<Constraint> {
+async function parseFilter(host: Host, constraint: any): Promise<Filter> {
   let kind = constraint['kind'];
   let field = constraint['field'];
   let value = constraint['value'];
@@ -100,18 +97,18 @@ async function parseConstraint(
     value = new Field(value);
   }
 
-  return new Constraint(kind, field, value);
+  return new Filter(kind, field, value);
 }
 
-function groundConstraint(results: any, con: Constraint) {
+function groundFilter(results: any, con: Filter) {
   let ref = con.value;
   if (!(ref instanceof Ref)) return;
   con.value = results.get(ref.resultId);
   if (ref.field != null) con.value = con.value.map((v: any) => v[ref.field]);
 }
 
-function groundConstraints(results: any, constraints: any): any {
-  for (let c of constraints) groundConstraint(results, c);
+function groundFilters(results: any, constraints: any): any {
+  for (let c of constraints) groundFilter(results, c);
   return constraints;
 }
 
@@ -128,9 +125,9 @@ export async function filterData(host: Host, plan: any): Promise<any> {
       let constraints = req.constraints;
 
       for (let i in constraints) {
-        let con = await parseConstraint(host, constraints[i]);
+        let con = await parseFilter(host, constraints[i]);
         // Substitute in results from previous requests.
-        groundConstraint(setResults, con);
+        groundFilter(setResults, con);
         constraints[i] = con;
       }
 

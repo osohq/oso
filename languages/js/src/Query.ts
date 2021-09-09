@@ -26,7 +26,7 @@ import type {
 } from './types';
 import { processMessage } from './messages';
 import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
-import { Constraint, Relation } from './dataFiltering';
+import { Filter, Relation } from './dataFiltering';
 
 function getLogLevelsFromEnv() {
   if (typeof process?.env === 'undefined') return [undefined, undefined];
@@ -146,7 +146,7 @@ export class Query {
             const typ = userTypes.get(fieldType.otherType)!;
             // Use the fetcher for the other type to traverse
             // the relationship.
-            const constraint = new Constraint(
+            const constraint = new Filter(
               'Eq',
               fieldType.otherField,
               receiver[fieldType.myField]
