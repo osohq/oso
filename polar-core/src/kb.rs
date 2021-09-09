@@ -775,6 +775,7 @@ mod tests {
 
     #[test]
     fn test_rule_params_match() {
+        // TODO: test for union types in rule type specializers
         let mut kb = KnowledgeBase::new();
         kb.constant(
             sym!("Fruit"),
