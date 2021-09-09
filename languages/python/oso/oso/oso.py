@@ -228,7 +228,7 @@ class Oso(Polar):
 
         return fields
 
-    def authorized_query(self, actor, action, cls):
+    def authorized_query(self, actor, action, resource_cls):
         """
         Returns a query for the resources the actor is allowed to perform action on.
         The query is built by using the build_query and combine_query methods registered for the type.
@@ -237,14 +237,14 @@ class Oso(Polar):
 
         :param action: The action that user wants to perform.
 
-        :param cls: The type of the resources.
+        :param resource_cls: The type of the resources.
 
         :return: A query to fetch the resources,
         """
         # Data filtering.
         resource = Variable("resource")
         # Get registered class name somehow
-        class_name = self.host.types[cls].name
+        class_name = self.host.types[resource_cls].name
         constraint = Expression(
             "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
         )
@@ -269,7 +269,7 @@ class Oso(Polar):
 
         return filter_data(self, plan)
 
-    def authorized_resources(self, actor, action, cls):
+    def authorized_resources(self, actor, action, resource_cls):
         """
         Returns the resources the actor is allowed to perform action on.
 
@@ -277,15 +277,15 @@ class Oso(Polar):
 
         :param action: The action that user wants to perform.
 
-        :param cls: The type of the resources.
+        :param resource_cls: The type of the resources.
 
         :return: The requested resources.
         """
-        query = self.authorized_query(actor, action, cls)
+        query = self.authorized_query(actor, action, resource_cls)
         if query is None:
             return []
 
-        results = self.host.types[cls].exec_query(query)
+        results = self.host.types[resource_cls].exec_query(query)
         return results
 
     def _print_polar_log_message(self):

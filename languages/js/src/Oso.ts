@@ -235,12 +235,22 @@ export class Oso<
   }
 
   /**
-   * Returns all the resources the actor is allowed to perform some action on.
+   * Returns a query for all the resources of the supplied type that the actor is
+   * allowed to perform some action on.
+   *
+   * @param actor Subject.
+   * @param action Verb.
+   * @param resourceCls Object type.
+   * @returns A query object that selects authorized resources of type resourceCls
    */
-  async authorizedQuery(actor: any, action: any, cls: any): Promise<any> {
+  async authorizedQuery(
+    actor: any,
+    action: any,
+    resourceCls: any
+  ): Promise<any> {
     const resource = new Variable('resource');
     const host = this.getHost();
-    const clsName = host.types.get(cls)!.name;
+    const clsName = host.types.get(resourceCls)!.name;
     const constraint = new Expression('And', [
       new Expression('Isa', [
         resource,
@@ -281,8 +291,22 @@ export class Oso<
     return filterData(host, plan);
   }
 
-  async authorizedResources(actr: any, actn: any, cls: any): Promise<any> {
-    const query = await this.authorizedQuery(actr, actn, cls);
-    return !query ? [] : this.getHost().types.get(cls)!.execQuery!(query);
+  /**
+   * Returns all the resources of some type the actor is allowed to perform some action on.
+   *
+   * @param actor Subject.
+   * @param action Verb.
+   * @param resourceCls Object type.
+   * @returns An array of authorized resources.
+   */
+  async authorizedResources(
+    actr: any,
+    actn: any,
+    resourceCls: any
+  ): Promise<any> {
+    const query = await this.authorizedQuery(actr, actn, resourceCls);
+    return !query
+      ? []
+      : this.getHost().types.get(resourceCls)!.execQuery!(query);
   }
 }
