@@ -103,7 +103,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  activerecord (~> 6.1.4)
+  activerecord
   oso-oso!
   pry-byebug (~> 3.9.0)
   rake (~> 12.0)
