@@ -388,19 +388,15 @@ impl KnowledgeBase {
                 | (Value::Variable(_), Some(Value::Pattern(rule_type_spec)), rule_value, None) => {
                     match rule_type_spec {
                         // Rule type specializer is an instance pattern
-                        Pattern::Instance(InstanceLiteral {
-                            tag,
-                            fields: rule_type_fields,
-                        }) => {
-                            if match rule_value {
-                                Value::String(_) => tag == &sym!("String"),
-                                Value::Number(Numeric::Integer(_)) => tag == &sym!("Integer"),
-                                Value::Number(Numeric::Float(_)) => tag == &sym!("Float"),
-                                Value::Boolean(_) => tag == &sym!("Boolean"),
-                                Value::List(_) => tag == &sym!("List"),
+                        Pattern::Instance(InstanceLiteral { .. }) => {
+                            let rule_spec = match rule_value {
+                                Value::String(_) => instance!(sym!("String")),
+                                Value::Number(Numeric::Integer(_)) => instance!(sym!("Integer")),
+                                Value::Number(Numeric::Float(_)) => instance!(sym!("Float")),
+                                Value::Boolean(_) => instance!(sym!("Boolean")),
+                                Value::List(_) => instance!(sym!("List")),
                                 Value::Dictionary(rule_fields) => {
-                                    tag == &sym!("Dictionary")
-                                        && self.param_fields_match(rule_type_fields, rule_fields)
+                                    instance!(sym!("Dictionary"), rule_fields.clone().fields)
                                 }
                                 _ => {
                                     unreachable!(
@@ -408,16 +404,12 @@ impl KnowledgeBase {
                                         rule_value
                                     )
                                 }
-                            } {
-                                RuleParamMatch::True
-                            } else {
-                                RuleParamMatch::False(format!(
-                                    "Invalid parameter {}. Rule type expected {}, got {}. ",
-                                    index,
-                                    tag.to_polar(),
-                                    rule_value.to_polar()
-                                ))
-                            }
+                            };
+                            self.check_pattern_param(
+                                index,
+                                &Pattern::Instance(rule_spec),
+                                &rule_type_spec,
+                            )?
                         }
                         // Rule type specializer is a dictionary pattern
                         Pattern::Dictionary(rule_type_fields) => {
