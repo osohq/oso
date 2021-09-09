@@ -167,7 +167,7 @@ has_role(user: User, role_name, repo: Repository) if
 
 {{% minicallout %}}
 This is an example of a full Polar rule. We'll go more into writing
-rules in the **Write your own policy** guide. __TODO LINK__
+rules in the [Write Polar rules](write-rules).
 {{% /minicallout %}}
 
 The `has_role` rule uses the user object passed into Oso by your
