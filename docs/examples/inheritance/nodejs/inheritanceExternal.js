@@ -2,7 +2,7 @@ const { Oso } = require('oso');
 
 const oso = new Oso();
 
-class Actor {
+class User {
   constructor(role, treated) {
     this.role = role;
     this._treated = treated;
@@ -13,7 +13,7 @@ class Actor {
   }
 }
 
-oso.registerClass(Actor);
+oso.registerClass(User);
 
 // start-patient-data
 class PatientData {
@@ -23,14 +23,14 @@ class PatientData {
 }
 oso.registerClass(PatientData);
 
-class Lab extends PatientData {}
+class Lab extends PatientData { }
 oso.registerClass(Lab);
 
-class Order extends PatientData {}
+class Order extends PatientData { }
 oso.registerClass(Order);
 
-class Test extends PatientData {}
+class Test extends PatientData { }
 oso.registerClass(Test);
 // end-patient-data
 
-module.exports = { Actor, Lab, Order, oso, PatientData, Test };
+module.exports = { User, Lab, Order, oso, PatientData, Test };

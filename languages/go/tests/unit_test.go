@@ -192,7 +192,7 @@ func TestIsAllowed(t *testing.T) {
 
 }
 
-type Actor struct {
+type User struct {
 	Name string
 }
 
@@ -275,8 +275,12 @@ func TestRuleTypes(t *testing.T) {
 		t.Fatalf("Failed to set up Oso: %v", err)
 	}
 
-	o.RegisterClass(reflect.TypeOf(Actor{}), nil)
-	o.RegisterClass(reflect.TypeOf(Widget{}), nil)
+	if err = o.RegisterClass(reflect.TypeOf(User{}), nil); err != nil {
+		t.Fatalf("Register class failed: %v", err)
+	}
+	if err = o.RegisterClass(reflect.TypeOf(Widget{}), nil); err != nil {
+		t.Fatalf("Register class failed: %v", err)
+	}
 
 	policy := "type is_actor(_actor: Actor); is_actor(_actor: Actor);"
 

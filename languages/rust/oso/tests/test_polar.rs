@@ -44,12 +44,12 @@ impl Widget {
 }
 
 #[derive(PolarClass, Debug, Clone, PartialEq)]
-struct Actor {
+struct User {
     #[polar(attribute)]
     name: String,
 }
 
-impl Actor {
+impl User {
     pub fn new(name: String) -> Self {
         Self { name }
     }
@@ -64,9 +64,9 @@ impl Actor {
     }
 
     fn polar_class() -> Class {
-        Actor::get_polar_class_builder()
-            .name("Actor")
-            .add_method("widget", Actor::widget)
+        User::get_polar_class_builder()
+            .name("User")
+            .add_method("widget", User::widget)
             .build()
     }
 }
@@ -74,7 +74,7 @@ impl Actor {
 fn test_oso() -> OsoTest {
     let mut test = OsoTest::new();
     test.oso.register_class(Widget::polar_class()).unwrap();
-    test.oso.register_class(Actor::polar_class()).unwrap();
+    test.oso.register_class(User::polar_class()).unwrap();
 
     test
 }
@@ -153,11 +153,14 @@ fn test_data_conversions_externals() -> oso::Result<()> {
     common::setup();
     let mut oso = test_oso();
 
-    let actor = Actor::new(String::from("sam"));
+    let actor = User::new(String::from("sam"));
     let widget = Widget::new(1);
 
-    oso.load_str("allow(actor, resource) if actor.widget().id = resource.id;");
-    let query_results = oso.oso.query_rule("allow", (actor, widget))?.count();
+    oso.load_str("allow(actor, _action, resource) if actor.widget().id = resource.id;");
+    let query_results = oso
+        .oso
+        .query_rule("allow", (actor, "read", widget))?
+        .count();
 
     assert_eq!(query_results, 1);
 
@@ -725,9 +728,9 @@ fn test_predicate_return_list() {
     common::setup();
 
     #[derive(PolarClass, Debug, Clone)]
-    struct Actor;
+    struct User;
 
-    impl Actor {
+    impl User {
         pub fn new() -> Self {
             Self
         }
@@ -741,18 +744,18 @@ fn test_predicate_return_list() {
         }
     }
 
-    let actor_class = Actor::get_polar_class_builder()
-        .name("ActorTwo")
-        .add_method("groups", Actor::groups)
+    let actor_class = User::get_polar_class_builder()
+        .name("UserTwo")
+        .add_method("groups", User::groups)
         .build();
 
     let mut oso = test_oso();
-    oso.load_str(r#"allow(actor: ActorTwo, "join", "party") if "social" in actor.groups();"#);
+    oso.load_str(r#"allow(actor: UserTwo, "join", "party") if "social" in actor.groups();"#);
     oso.oso.register_class(actor_class).unwrap();
 
     let mut query = oso
         .oso
-        .query_rule("allow", (Actor::new(), "join", "party"))
+        .query_rule("allow", (User::new(), "join", "party"))
         .unwrap();
 
     let result = query.next().unwrap().unwrap();
@@ -926,8 +929,8 @@ fn test_expression_error() {
 fn test_rule_types() {
     common::setup();
     let mut oso = test_oso();
-    let mut policy = r#"type is_actor(_actor: Actor);
-                        is_actor(_actor: Actor);"#
+    let mut policy = r#"type is_actor(_actor: User);
+                        is_actor(_actor: User);"#
         .to_owned();
     oso.load_str(&policy);
     oso.clear_rules();

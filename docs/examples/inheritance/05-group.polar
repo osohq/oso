@@ -1,5 +1,5 @@
 group PatientData(Lab, Order, Test);
 
-allow(actor: Actor, "read", resource: PatientData) if
-    actor.role = "medical_staff" and
-    actor.treated(resource.patient);
+allow(user: User, "read", resource: PatientData) if
+    user.role = "medical_staff" and
+    user.treated(resource.patient);
