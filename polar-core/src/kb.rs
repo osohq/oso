@@ -777,38 +777,48 @@ mod tests {
     fn test_rule_params_match() {
         // TODO: test for union types in rule type specializers
         let mut kb = KnowledgeBase::new();
-        kb.constant(
-            sym!("Fruit"),
-            term!(Value::ExternalInstance(ExternalInstance {
-                instance_id: 1,
-                constructor: None,
-                repr: None
-            })),
-        )
-        .unwrap();
-        kb.constant(
-            sym!("Citrus"),
-            term!(Value::ExternalInstance(ExternalInstance {
-                instance_id: 2,
-                constructor: None,
-                repr: None
-            })),
-        )
-        .unwrap();
-        kb.constant(
-            sym!("Orange"),
-            term!(Value::ExternalInstance(ExternalInstance {
-                instance_id: 3,
-                constructor: None,
-                repr: None
-            })),
-        )
-        .unwrap();
+
+        let mut constant = |name: &str, instance_id: u64| {
+            kb.constant(
+                sym!(name),
+                term!(Value::ExternalInstance(ExternalInstance {
+                    instance_id,
+                    constructor: None,
+                    repr: None
+                })),
+            )
+            .unwrap();
+        };
+
+        constant("Fruit", 1);
+        constant("Citrus", 2);
+        constant("Orange", 3);
+        // NOTE: Foo doesn't need an MRO b/c it only appears as a rule type specializer; not a rule
+        // specializer.
+        constant("Foo", 4);
+
+        // NOTE: this is only required for these tests b/c we're bypassing the normal load process,
+        // where MROs are registered via FFI calls in the host language libraries.
+        // process.
+        constant("Integer", 5);
+        constant("Float", 6);
+        constant("String", 7);
+        constant("Boolean", 8);
+        constant("List", 9);
+        // constant("Dictionary", 10);
+
         kb.add_mro(sym!("Fruit"), vec![1]).unwrap();
         // Citrus is a subclass of Fruit
         kb.add_mro(sym!("Citrus"), vec![2, 1]).unwrap();
         // Orange is a subclass of Citrus
         kb.add_mro(sym!("Orange"), vec![3, 2, 1]).unwrap();
+
+        kb.add_mro(sym!("Integer"), vec![]).unwrap();
+        kb.add_mro(sym!("Float"), vec![]).unwrap();
+        kb.add_mro(sym!("String"), vec![]).unwrap();
+        kb.add_mro(sym!("Boolean"), vec![]).unwrap();
+        kb.add_mro(sym!("List"), vec![]).unwrap();
+        // kb.add_mro(sym!("Dictionary"), vec![]).unwrap();
 
         // BOTH PATTERN SPEC
         // rule: f(x: Foo), rule_type: f(x: Foo) => PASS
@@ -893,16 +903,6 @@ mod tests {
             )
             .unwrap()
             .is_true());
-
-        kb.constant(
-            sym!("Foo"),
-            term!(Value::ExternalInstance(ExternalInstance {
-                instance_id: 4,
-                constructor: None,
-                repr: None
-            })),
-        )
-        .unwrap();
 
         // rule: f(x: 6), rule_type: f(x: Foo) => FAIL
         assert!(!kb
