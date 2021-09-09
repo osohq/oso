@@ -408,7 +408,7 @@ impl KnowledgeBase {
                             self.check_pattern_param(
                                 index,
                                 &Pattern::Instance(rule_spec),
-                                &rule_type_spec,
+                                rule_type_spec,
                             )?
                         }
                         // Rule type specializer is a dictionary pattern

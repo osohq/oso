@@ -37,7 +37,7 @@ impl Polar {
                 .0
                 .register_constant(Symbol::new(name), term)
                 .map_err(Error::from)?),
-            Err(e) => return Err(serde_serialization_error(e)),
+            Err(e) => Err(serde_serialization_error(e)),
         }
     }
 
