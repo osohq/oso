@@ -53,19 +53,19 @@ application runs. Now that you've installed Oso, create a policy:
 ```python
 from oso import Oso
 
-from gitclub.models import User, Repository
+from .models import User, Repository
 
-# Initialize the Oso object. This object is usually used globally throughout
-# an application, and it is thread-safe.
+# Initialize the Oso object. This object is usually
+# used globally throughout an application.
 oso = Oso()
 
-# Tell Oso about the data that you will authorize. These types can be referenced
-# in the policy.
+# Tell Oso about the data that you will authorize.
+# These types can be referenced in the policy.
 oso.register_class(User)
 oso.register_class(Repository)
 
 # Load your policy file.
-oso.load_files(["policies/main.polar"])
+oso.load_files(["main.polar"])
 ```
 
 To setup Oso in your app, you must...
@@ -89,75 +89,80 @@ models in Oso.
 
 To start with, you need to define resource blocks in your policy. Let's
 say we have an application like GitHub that includes a `Repository`
-resource. Define the `Repository` resource in `policy.polar`:
-
-TODO actor definition
+resource. Define the `Repository` resource in `main.polar`:
 
 ```polar
+actor User {}
+
 resource Repository {
-	permissions = ["read", "pull"];
-	roles = ["member"];
+    permissions = ["read", "push"];
+    roles = ["contributor", "maintainer"];
 
-	# A user has the "read" permission if they have
-	# the "member" role.
-	"read" if "member";
+    # A user has the "read" permission if they have the
+    # "contributor" role.
+    "read" if "contributor";
 
-	# A user has the "pull" permission if they have the
-	# "member" role.
-	"pull" if "member";
+    # A user has the "push" permission if they have the
+    # "maintainer" role.
+    "push" if "maintainer";
 }
 ```
 
-This policy declares `"read"` and `"pull"` as permissions for the
-`Repository` resource and gives users the `"read"` and `"pull"`
-permissions if the user has the `"member"` role.
+This policy declares `"read"` and `"push"` as permissions for the
+`Repository` resource and assigns them to roles. We also tell Oso
+that our `User` class is an `actor` with the `actor User {}`
+declaration.
 
-The `"read" if "member";` statement is an example of a *shorthand rule.*
-Add a `"maintainer"` role and give it its own permissions by adding some
+The `"read" if "contributor";` statement is an example of a *shorthand rule.*
+Add an `"admin"` role and give it its own permissions by adding some
 more shorthand rules:
 
 ```polar
 resource Repository {
-	permissions = ["read", "pull", "push"];
-	roles = ["member", "maintainer"];
+    permissions = ["read", "push", "delete"];
+    roles = ["contributor", "maintainer", "admin"];
 
-	"read" if "member";
-	"pull" if "member";
+    "read" if "contributor";
+    "push" if "maintainer";
 
-	# A user has the "push" permission if they have the
-	# "maintainer" role.
-	"push" if "maintainer";
+	# A user has the "delete" permission if they have the
+	# "admin" role.
+	"delete" if "admin";
 
-	# A user has the member role if they have
-	# the maintainer role.
-	"member" if "maintainer";
+	# A user has the "maintainer" role if they have
+	# the "admin" role.
+    "maintainer" if "admin";
+
+	# A user has the "contributor" role if they have
+	# the "maintainer" role.
+    "contributor" if "maintainer";
 }
 ```
 
-The last rule we added is between two roles: A user has the "member"
-role and all permissions associated with it if they have the
-"maintainer" role.
+The last rules we added are between two roles: A user has the
+`"maintainer"` role and all permissions associated with it if they have the
+`"admin"` role, and the same for `"contributor"` and `"maintainer"`.
 
 ### Giving your users roles
 
 Now that we've finished our policy, we must associate users with roles
 in our application. Oso doesn't manage authorization data. The data
-stays in your application's data store.
+stays in your application's existing data store.
 
 All the data we've defined so far in the policy is static: it isn't
-changed by end users of the application. Only the development team
+changed by end users of the application. The development team
 modifies permission associations with roles, and the list of roles for
-each resource. But, some parts of this policy must be dynamic: the
-association of users with a role.
+each resource by updating the policy. But, some parts of this policy
+must be dynamic: the association of users with a role.
 
 Write a `has_role` rule to tell Oso whether your users have a particular
-role.
+role:
 
 ```polar
-has_role(user: User, role_name, repo: Repo) if
-  role in user.repo_roles and
+has_role(user: User, role_name, repo: Repository) if
+  role in actor.roles and
   role_name = role.name and
-  role.repo_id = repo.id;
+  repository = role.repository;
 ```
 
 {{% minicallout %}}
@@ -165,13 +170,28 @@ This is an example of a full Polar rule. We'll go more into writing
 rules in the **Write your own policy** guide. __TODO LINK__
 {{% /minicallout %}}
 
-The `has_role` rule uses the user object passed into Polar by your
+The `has_role` rule uses the user object passed into Oso by your
 application to lookup roles. In this example, Polar will access the
-`repo_roles` field on the `user` object and look up the role names that
-the user has.
+`roles` field on the `user` object and look up the role names that
+the user has. Here's an example {{% lang %}} data model implemented using
+dataclasses that could be used by this rule. In your application, you'll
+likely use your existing User model to maintain this information.
 
 ```python
-<python implementation of data model>
+@dataclass
+class Role:
+    name: str
+    repository: Repository
+
+@dataclass
+class User:
+    roles: List[Role]
+
+users_db = {
+    "larry": User([Role(name="admin",
+                        repository=repos_db["gmail"])]),
+    ...
+}
 ```
 
 ### Allowing access
@@ -180,7 +200,7 @@ Oso policies have a special rule: the `allow` rule. The `allow` rule is
 the entrypoint to the policy, and is used by the Oso library to enforce
 authorization.
 
-The resource blocks you define grant users permissions using
+The resource blocks you defined grant users permissions using
 `has_permission` rule. To use permissions for authorization, you must
 define an `allow` rule:
 
@@ -192,29 +212,27 @@ allow(actor, action, resource) if
 ### The complete policy
 
 ```polar
+actor User {}
+
 resource Repository {
-	permissions = ["read", "pull", "push"];
-	roles = ["member", "maintainer"];
+    permissions = ["read", "push", "delete"];
+    roles = ["contributor", "maintainer", "admin"];
 
-	"read" if "member";
-	"pull" if "member";
+    "read" if "contributor";
+    "push" if "maintainer";
+    "delete" if "admin";
 
-	# A user has the "push" permission if they have the
-	# "maintainer" role.
-	"push" if "maintainer";
-
-	# A user is given the member role if they have
-	# the maintainer role.
-	"member" if "maintainer";
+    "maintainer" if "admin";
+    "contributor" if "maintainer";
 }
 
-has_role(user: User, role_name, repo: Repository) if
-	role in user.repo_roles and
-  role_name = role.name and
-  role.repo_id = repo.id;
+has_role(actor, role_name, repository: Repository) if
+    role in actor.roles and
+    role_name = role.name and
+    repository = role.repository;
 
-allow(user: User, action, resource) if
-	has_permission(actor, action, resource);
+allow(actor, action, resource) if
+    has_permission(actor, action, resource);
 ```
 
 ### What's next
