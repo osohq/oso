@@ -508,7 +508,7 @@ impl KnowledgeBase {
         if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
             return Err(error::RuntimeError::TypeError {
                 msg: format!(
-                    "Invalid call to `register_constant`. Name {} is a reserved keyword.",
+                    "Invalid attempt to register '{}'. '{}' is a built-in specializer.",
                     name.0
                 ),
                 stack_trace: None,
