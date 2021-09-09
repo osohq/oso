@@ -32,7 +32,7 @@ namespace B {
   }
 }
 
-oso.registerClass(B.C, 'C');
+oso.registerClass(B.C, { name: 'C' });
 
 class E {
   static sum(args: number[]) {
@@ -45,18 +45,6 @@ class E {
 oso.registerClass(E);
 
 (async function () {
-  // This path has the same nesting for development and the parity test jobs by sheer coincidence.
-  // In tests it's `languages/js/test/parity.ts`
-  // In parity tests it's `js_package/dist/test/parity.js`
-  // In both these cases the relative path to the test.polar file is the same.
-  const { join } = require('path');
-  await oso.loadFile(join(__dirname, '../../../test/test.polar'));
-
-  if (!(await oso.isAllowed('a', 'b', 'c'))) throw new Error();
-
-  // Test that a built in string method can be called.
-  await oso.loadStr('?= x = "hello world!" and x.endsWith("world!");');
-
   // Test that a custom error type is thrown.
   let exceptionThrown = false;
   try {
@@ -70,6 +58,33 @@ oso.registerClass(E);
   } finally {
     if (!exceptionThrown) throw new Error();
   }
+
+  // Test that a built in string method can be called.
+  await oso.loadStr('?= x = "hello world!" and x.endsWith("world!");');
+
+  oso.clearRules();
+
+  // Test that a constant can be called.
+  oso.registerConstant(Math, 'MyMath');
+  await oso.loadStr('?= MyMath.acos(1.0) = 0;');
+
+  oso.clearRules();
+
+  // Test deref behaviour
+  await oso.loadStr(
+    '?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].indexOf(1) = 2;'
+  );
+
+  oso.clearRules();
+
+  // This path has the same nesting for development and the parity test jobs by sheer coincidence.
+  // In tests it's `languages/js/test/parity.ts`
+  // In parity tests it's `js_package/dist/test/parity.js`
+  // In both these cases the relative path to the test.polar file is the same.
+  const { join } = require('path');
+  await oso.loadFile(join(__dirname, '../../../test/test.polar'));
+
+  if (!(await oso.isAllowed('a', 'b', 'c'))) throw new Error();
 
   if (
     [
@@ -97,10 +112,6 @@ oso.registerClass(E);
 
   // Test that cut doesn't return anything.
   if (!(await oso.queryRule('testCut').next()).done) throw new Error();
-
-  // Test that a constant can be called.
-  oso.registerConstant(Math, 'MyMath');
-  await oso.loadStr('?= MyMath.acos(1.0) = 0;');
 
   // test iterables work
   // if ((await oso.queryRule('testIterables').next()).done) throw new Error();
@@ -165,11 +176,6 @@ oso.registerClass(E);
     ].some(v => v)
   )
     throw new Error();
-
-  // Test deref behaviour
-  await oso.loadStr(
-    '?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].indexOf(1) = 2;'
-  );
 
   // Test unspecialized rule ordering
   const result = oso.queryRule(

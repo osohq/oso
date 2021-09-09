@@ -602,6 +602,8 @@ fn test_not() -> TestResult {
     qnull(&mut p, "even(3)");
     qeval(&mut p, "not even(3)");
 
+    p.clear_rules();
+
     p.load_str(
         r#"f(x) if not a(x);
            a(1);
@@ -618,6 +620,8 @@ fn test_not() -> TestResult {
     qeval(&mut p, "g(x) and x=3");
     qeval(&mut p, "x=3 and g(x)");
 
+    p.clear_rules();
+
     p.load_str("h(x) if not (not (x = 1 or x = 3) or x = 3);")?;
     qeval(&mut p, "h(1)");
     qnull(&mut p, "h(2)");
@@ -625,9 +629,13 @@ fn test_not() -> TestResult {
 
     qeval(&mut p, "d = {x: 1} and not d.x = 2");
 
+    p.clear_rules();
+
     // Negate And with unbound variable.
     p.load_str("i(x,y) if not (y = 2 and x = 1);")?;
     qvar(&mut p, "i(2,y)", "y", values![sym!("y")]);
+
+    p.clear_rules();
 
     // Negate Or with unbound variable.
     p.load_str("j(x,y) if not (y = 2 or x = 1);")?;
@@ -753,8 +761,12 @@ fn test_or() -> TestResult {
     qnull(&mut p, "f(2)");
     qeval(&mut p, "f(3)");
 
+    p.clear_rules();
+
     p.load_str(
         r#"g(x) if a(x) or b(x) or c(x);
+           a(1);
+           b(3);
            c(5);"#,
     )?;
     qvar(&mut p, "g(x)", "x", values![1, 3, 5]);
@@ -804,9 +816,13 @@ fn test_non_instance_specializers() -> TestResult {
     qeval(&mut p, "f(1)");
     qnull(&mut p, "f(2)");
 
+    p.clear_rules();
+
     p.load_str("g(x: 1, y: [x]) if y = [1];")?;
     qeval(&mut p, "g(1, [1])");
     qnull(&mut p, "g(1, [2])");
+
+    p.clear_rules();
 
     p.load_str("h(x: {y: y}, x.y) if y = 1;")?;
     qeval(&mut p, "h({y: 1}, 1)");
@@ -1037,6 +1053,8 @@ fn test_comparisons() -> TestResult {
     qeval(&mut p, "lt(\"aa\",\"ab\")");
     qnull(&mut p, "lt(\"aa\",\"aa\")");
 
+    p.clear_rules();
+
     // <=
     p.load_str("leq(x, y) if x <= y;")?;
     qeval(&mut p, "leq(1,1)");
@@ -1050,6 +1068,8 @@ fn test_comparisons() -> TestResult {
     qeval(&mut p, "leq(\"aa\",\"ab\")");
     qnull(&mut p, "leq(\"ab\",\"aa\")");
 
+    p.clear_rules();
+
     // >
     p.load_str("gt(x, y) if x > y;")?;
     qnull(&mut p, "gt(1,1)");
@@ -1061,6 +1081,8 @@ fn test_comparisons() -> TestResult {
     qeval(&mut p, "gt(-1,-2)");
     qeval(&mut p, "gt(\"ab\",\"aa\")");
     qnull(&mut p, "gt(\"aa\",\"aa\")");
+
+    p.clear_rules();
 
     // >=
     p.load_str("geq(x, y) if x >= y;")?;
@@ -1074,6 +1096,8 @@ fn test_comparisons() -> TestResult {
     qeval(&mut p, "geq(-1,-1.0)");
     qeval(&mut p, "geq(\"ab\",\"aa\")");
     qeval(&mut p, "geq(\"aa\",\"aa\")");
+
+    p.clear_rules();
 
     // ==
     p.load_str("eq(x, y) if x == y;")?;
@@ -1091,6 +1115,9 @@ fn test_comparisons() -> TestResult {
     qnull(&mut p, "eq(9007199254740992,9007199254740994.0)"); // distinguishable
     qeval(&mut p, "eq(\"aa\", \"aa\")");
     qnull(&mut p, "eq(\"ab\", \"aa\")");
+    qeval(&mut p, "eq(bob, bob)");
+
+    p.clear_rules();
 
     // !=
     p.load_str("neq(x, y) if x != y;")?;
@@ -1102,8 +1129,6 @@ fn test_comparisons() -> TestResult {
     qnull(&mut p, "neq(-1,-1.0)");
     qnull(&mut p, "neq(\"aa\", \"aa\")");
     qeval(&mut p, "neq(\"ab\", \"aa\")");
-
-    qeval(&mut p, "eq(bob, bob)");
 
     qeval(&mut p, "1.0 == 1");
     qeval(&mut p, "0.99 < 1");
@@ -1519,14 +1544,22 @@ fn test_and_or_warning() -> TestResult {
     // free-standing OR is fine
     p.load_str("f(x) if x > 1 or x < 3;")?;
 
+    p.clear_rules();
+
     // OR with explicit parenthesis is fine (old behaviour)
     p.load_str("f(x) if x = 1 and (x > 1 or x < 3);")?;
+
+    p.clear_rules();
 
     // OR with parenthesized AND is fine (new default)
     p.load_str("f(x) if (x = 1 and x > 1) or x < 3;")?;
 
+    p.clear_rules();
+
     // Add whitespace to make sure it can find parentheses wherever they are
     p.load_str("f(x) if (\n\t    x = 1 and  x > 1) or x < 3;")?;
+
+    p.clear_rules();
 
     // This is ambiguous between 0.16 and 0.20
     assert!(matches!(
@@ -1603,6 +1636,8 @@ fn test_rest_vars() -> TestResult {
     qeval(&mut p, "member(3, [1,2,3])");
     qeval(&mut p, "not member(4, [1,2,3])");
     qvar(&mut p, "member(x, [1,2,3])", "x", values![1, 2, 3]);
+
+    p.clear_rules();
 
     p.load_str(
         r#"append([], x, x);
@@ -1730,8 +1765,12 @@ fn test_keyword_call() {
 fn test_keyword_dot() -> TestResult {
     // field accesses of reserved words are allowed
     let mut p = Polar::new();
-    p.load_str("f(a, b) if a.in(b);")?;
-    p.load_str("g(a, b) if a.new(b);")?;
+    p.load_str(
+        r#"
+        f(a, b) if a.in(b);
+        g(a, b) if a.new(b);
+    "#,
+    )?;
     qeval(
         &mut p,
         "x = {debug: 1, new: 2, type: 3} and x.debug + x.new = x.type",
@@ -1812,6 +1851,8 @@ fn test_cut() -> TestResult {
         values![[1, 3], [1, 4]],
     );
 
+    p.clear_rules();
+
     p.load_str("f(x) if (x = 1 and cut) or x = 2;")?;
     qvar(&mut p, "f(x)", "x", values![1]);
     qeval(&mut p, "f(1)");
@@ -1830,6 +1871,8 @@ fn test_forall() -> TestResult {
     qeval(&mut p, "all_ones([1, 1, 1])");
     qnull(&mut p, "all_ones([1, 2, 1])");
 
+    p.clear_rules();
+
     p.load_str("not_ones(l) if forall(item in l, item != 1);")?;
     qnull(&mut p, "not_ones([1])");
     qeval(&mut p, "not_ones([2, 3, 4])");
@@ -1840,12 +1883,16 @@ fn test_forall() -> TestResult {
     qeval(&mut p, "forall(x = 1, x = 1)");
     qeval(&mut p, "forall(x in [2, 3, 4], x > 1)");
 
+    p.clear_rules();
+
     p.load_str(
         r#"g(1);
            g(2);
            g(3);"#,
     )?;
     qeval(&mut p, "forall(g(x), x in [1, 2, 3])");
+
+    p.clear_rules();
 
     p.load_str(
         r#"allow(_: {x: 1}, y) if y = 1;

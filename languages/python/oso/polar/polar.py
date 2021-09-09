@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import sys
-from typing import Dict
+from typing import Dict, List, Union
 
 try:
     # importing readline on compatible platforms
@@ -21,13 +21,10 @@ from .exceptions import (
     PolarFileNotFoundError,
     InvalidQueryTypeError,
 )
-from .ffi import Polar as FfiPolar
+from .ffi import Polar as FfiPolar, PolarSource as Source
 from .host import Host
 from .query import Query
 from .predicate import Predicate
-from .variable import Variable
-from .expression import Expression, Pattern
-from .data_filtering import serialize_types, filter_data, Relationship
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
@@ -90,31 +87,52 @@ class Polar:
         del self.host
         del self.ffi_polar
 
-    def load_file(self, policy_file):
+    def load_files(self, filenames: List[Union[Path, str]] = []):
+        """Load Polar policy from ".polar" files."""
+        if not filenames:
+            return
+
+        sources: List[Source] = []
+
+        for filename in filenames:
+            path = Path(filename)
+            extension = path.suffix
+            filename = str(path)
+            if not extension == ".polar":
+                raise PolarFileExtensionError(filename)
+
+            try:
+                with open(filename, "rb") as f:
+                    src = f.read().decode("utf-8")
+                    sources.append(Source(src, filename))
+            except FileNotFoundError:
+                raise PolarFileNotFoundError(filename)
+
+        self._load_sources(sources)
+
+    def load_file(self, filename: Union[Path, str]):
         """Load Polar policy from a ".polar" file."""
-        policy_file = Path(policy_file)
-        extension = policy_file.suffix
-        fname = str(policy_file)
-        if not extension == ".polar":
-            raise PolarFileExtensionError(fname)
+        print(
+            "`Oso.load_file` has been deprecated in favor of `Oso.load_files` as of the 0.20.0 release.\n\n"
+            + "Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html",
+            file=sys.stderr,
+        )
+        self.load_files([filename])
 
-        try:
-            with open(fname, "rb") as f:
-                file_data = f.read()
-        except FileNotFoundError:
-            raise PolarFileNotFoundError(fname)
-
-        self.load_str(file_data.decode("utf-8"), policy_file)
-
-    def load_str(self, string, filename=None):
+    def load_str(self, string: str):
         """Load a Polar string, checking that all inline queries succeed."""
         # NOTE: not ideal that the MRO gets updated each time load_str is
         # called, but since we are planning to move to only calling load once
         # with the include feature, I think it's okay for now.
-        self.host.register_mros()
-        self.ffi_polar.load(string, filename)
+        self._load_sources([Source(string)])
 
-        # check inline queries
+    # Register MROs, load Polar code, and check inline queries.
+    def _load_sources(self, sources: List[Source]):
+        self.host.register_mros()
+        self.ffi_polar.load(sources)
+        self.check_inline_queries()
+
+    def check_inline_queries(self):
         while True:
             query = self.ffi_polar.next_inline_query()
             if query is None:  # Load is done
@@ -175,8 +193,7 @@ class Polar:
 
     def repl(self, files=[]):
         """Start an interactive REPL session."""
-        for f in files:
-            self.load_file(f)
+        self.load_files(files)
 
         while True:
             try:
@@ -241,91 +258,15 @@ class Polar:
         """
         return self.host.get_class(name)
 
-    def authorized_query(self, actor, action, cls):
-        """
-        Returns a query for the resources the actor is allowed to perform action on.
-        The query is built by using the build_query and combine_query methods registered for the type.
-
-        :param actor: The actor for whom to collect allowed resources.
-
-        :param action: The action that user wants to perform.
-
-        :param cls: The type of the resources.
-
-        :return: A query to fetch the resources,
-        """
-        # Data filtering.
-        resource = Variable("resource")
-        # Get registered class name somehow
-        class_name = self.host.types[cls].name
-        constraint = Expression(
-            "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
-        )
-        results = list(
-            self.query_rule(
-                "allow",
-                actor,
-                action,
-                resource,
-                bindings={"resource": constraint},
-                accept_expression=True,
-            )
-        )
-
-        # @TODO: How do you deal with value results in the query case?
-        # Do we get them into the filter plan as constraints somehow?
-        complete, partial = [], []
-
-        for result in results:
-            for k, v in result["bindings"].items():
-                if isinstance(v, Expression):
-                    partial.append({"bindings": {k: self.host.to_polar(v)}})
-                else:
-                    complete.append(v)
-
-        types = serialize_types(self.host.distinct_user_types(), self.host.types)
-        plan = self.ffi_polar.build_filter_plan(types, partial, "resource", class_name)
-
-        # A little tbd if this should happen here or in build_filter_plan.
-        # Would have to wrap them in bindings probably to pass into build_filter_plan
-        if len(complete) > 0:
-            new_result_sets = []
-            for c in complete:
-                constraints = []
-                typ = self.host.types[class_name]
-                if not typ.build_query:
-                    # Maybe a way around this if we make builtins for our builtin
-                    # classes but it'd be a hack just for this case and not worth it right now.
-                    assert False, "Can only filter registered classes"
-
-                for k, t in typ.fields.items():
-                    if not isinstance(t, Relationship):
-                        constraint = {
-                            "kind": "Eq",
-                            "field": k,
-                            "value": {"Term": self.host.to_polar(getattr(c, k))},
-                        }
-                        constraints.append(constraint)
-
-                result_set = {
-                    "requests": {
-                        "0": {"class_tag": class_name, "constraints": constraints}
-                    },
-                    "resolve_order": [0],
-                    "result_id": 0,
-                }
-                new_result_sets.append(result_set)
-            plan["result_sets"] += new_result_sets
-
-        return filter_data(self, plan)
-
-    def authorized_resources(self, actor, action, cls):
-        query = self.authorized_query(actor, action, cls)
-        if query is None:
-            return []
-
-        results = self.host.types[cls].exec_query(query)
-        return results
+    def set_data_filtering_query_defaults(
+        self, build_query=None, exec_query=None, combine_query=None
+    ):
+        if build_query is not None:
+            self.host.build_query = build_query
+        if exec_query is not None:
+            self.host.exec_query = exec_query
+        if combine_query is not None:
+            self.host.combine_query = combine_query
 
 
 def polar_class(_cls=None, *, name=None):

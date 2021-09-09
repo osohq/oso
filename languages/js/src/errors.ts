@@ -1,5 +1,4 @@
 import { repr } from './helpers';
-
 /**
  * Base class for all Oso errors.
  */

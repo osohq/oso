@@ -26,7 +26,7 @@ import type {
 } from './types';
 import { processMessage } from './messages';
 import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
-import { Constraint, Relationship } from './dataFiltering';
+import { Filter, Relation } from './dataFiltering';
 
 function getLogLevelsFromEnv() {
   if (typeof process?.env === 'undefined') return [undefined, undefined];
@@ -133,39 +133,32 @@ export class Query {
     let value;
     try {
       const receiver = await this.#host.toJs(instance);
+      const userTypes = this.#host.types;
 
       // Check if it's a relationship
       if (receiver != undefined) {
-        const clsName = this.#host.clsNames.get(receiver.constructor);
-        if (clsName != null) {
-          const typedef = this.#host.types.get(clsName);
-          if (typedef != null) {
-            const fieldType = typedef.get(attr);
-            if (fieldType != null) {
-              if (fieldType instanceof Relationship) {
-                // Use the fetcher for the other type to traverse
-                // the relationship.
-                const otherClsFetcher = this.#host.fetchers.get(
-                  fieldType.otherType
-                );
-                const constraint = new Constraint(
-                  'Eq',
-                  fieldType.otherField,
-                  receiver[fieldType.myField]
-                );
-                const constraints = [constraint];
-                let results = otherClsFetcher(constraints);
-                results = await Promise.resolve(results);
-                if (fieldType.kind == 'parent') {
-                  if (results.length != 1)
-                    throw new Error(
-                      'Wrong number of parents: ' + results.length
-                    );
-                  value = results[0];
-                } else {
-                  value = results;
-                }
-              }
+        const userType = userTypes.get(receiver.constructor);
+        const clsName = userType?.name;
+        const typedef = userType?.fields;
+        const fieldType = typedef?.get(attr);
+        if (fieldType != null) {
+          if (fieldType instanceof Relation) {
+            const typ = userTypes.get(fieldType.otherType)!;
+            // Use the fetcher for the other type to traverse
+            // the relationship.
+            const constraint = new Filter(
+              'Eq',
+              fieldType.otherField,
+              receiver[fieldType.myField]
+            );
+            let query = await Promise.resolve(typ.buildQuery!([constraint]));
+            let results = await Promise.resolve(typ.execQuery!(query));
+            if (fieldType.kind == 'one') {
+              if (results.length != 1)
+                throw new Error('Wrong number of parents: ' + results.length);
+              value = results[0];
+            } else {
+              value = results;
             }
           }
         }

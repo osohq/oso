@@ -66,15 +66,15 @@ describe('#registerClass', () => {
   test('errors when registering the same alias twice', () => {
     const p = new Polar();
     expect(() => p.registerClass(Actor)).not.toThrow();
-    expect(() => p.registerClass(User, 'Actor')).toThrow(
+    expect(() => p.registerClass(User, { name: 'Actor' })).toThrow(
       DuplicateClassAliasError
     );
   });
 
   test('can register the same class under different aliases', async () => {
     const p = new Polar();
-    p.registerClass(A, 'A');
-    p.registerClass(A, 'B');
+    p.registerClass(A, { name: 'A' });
+    p.registerClass(A, { name: 'B' });
     expect(await query(p, 'new A().a() = new B().a()')).toStrictEqual([map()]);
   });
 
@@ -397,19 +397,24 @@ describe('#loadFile', () => {
   test('throws if two files with the same contents are loaded', async () => {
     const p = new Polar();
     await expect(
-      p.loadFile(await tempFile('', 'a.polar'))
-    ).resolves.not.toThrow();
-    await expect(p.loadFile(await tempFile('', 'b.polar'))).rejects.toThrow(
+      p.loadFiles([
+        await tempFile('', 'a.polar'),
+        await tempFile('', 'b.polar'),
+      ])
+    ).rejects.toThrow(
       /Problem loading file: A file with the same contents as .*b.polar named .*a.polar has already been loaded./
     );
   });
 
-  test('throws if two files with the same name are loaded', async () => {
+  // TODO(gj): This is no longer possible but might again become possible if we
+  // add a `loadStrings()` method that accepts `{contents, filename}` tuples
+  // from the user. However, we could also have this hypothetical
+  // `loadStrings()` method only accept `contents` and avoid the issue.
+  xtest('throws if two files with the same name are loaded', async () => {
     const p = new Polar();
-    const file = await tempFile('f();', 'a.polar');
-    await expect(p.loadFile(file)).resolves.not.toThrow();
-    await truncate(file);
-    await expect(p.loadFile(file)).rejects.toThrow(
+    const filename1 = await tempFile('f();', 'a.polar');
+    const filename2 = await tempFile('g();', 'a.polar');
+    await expect(p.loadFiles([filename1, filename2])).rejects.toThrow(
       /Problem loading file: A file with the name .*a.polar, but different contents has already been loaded./
     );
   });
@@ -417,16 +422,14 @@ describe('#loadFile', () => {
   test('throws if the same file is loaded twice', async () => {
     const p = new Polar();
     const file = await tempFileFx();
-    await expect(p.loadFile(file)).resolves.not.toThrow();
-    await expect(p.loadFile(file)).rejects.toThrow(
+    await expect(p.loadFiles([file, file])).rejects.toThrow(
       /Problem loading file: File .*f.polar has already been loaded./
     );
   });
 
   test('can load multiple files', async () => {
     const p = new Polar();
-    await p.loadFile(await tempFileFx());
-    await p.loadFile(await tempFileGx());
+    await p.loadFiles([await tempFileFx(), await tempFileGx()]);
     expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
     expect(await qvar(p, 'g(x)', 'x')).toStrictEqual([1, 2, 3]);
   });
@@ -435,7 +438,7 @@ describe('#loadFile', () => {
 describe('#clearRules', () => {
   test('clears the KB', async () => {
     const p = new Polar();
-    await p.loadFile(await tempFileFx());
+    await p.loadFiles([await tempFileFx()]);
     expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
     p.clearRules();
     expect(await query(p, 'f(x)')).toStrictEqual([]);
@@ -443,7 +446,7 @@ describe('#clearRules', () => {
 
   test('does not clear registered classes', async () => {
     const p = new Polar();
-    p.registerClass(Belonger, 'Actor');
+    p.registerClass(Belonger, { name: 'Actor' });
     p.clearRules();
     expect(await query(p, 'x = new Actor()')).toHaveLength(1);
   });
@@ -467,7 +470,7 @@ describe('#queryRule', () => {
   describe('querying for a predicate', () => {
     test('can return a list', async () => {
       const p = new Polar();
-      p.registerClass(Belonger, 'Actor');
+      p.registerClass(Belonger, { name: 'Actor' });
       await p.loadStr(
         'allow(actor: Actor, "join", "party") if "social" in actor.groups();'
       );
@@ -478,7 +481,7 @@ describe('#queryRule', () => {
 
     test('can handle variables as arguments', async () => {
       const p = new Polar();
-      await p.loadFile(await tempFileFx());
+      await p.loadFiles([await tempFileFx()]);
       expect(await queryRule(p, 'f', new Variable('a'))).toStrictEqual([
         map({ a: 1 }),
         map({ a: 2 }),
@@ -814,7 +817,7 @@ describe('iterators', () => {
 
   test('fails for non iterables', async () => {
     const p = new Polar();
-    p.registerClass(NonIterable, 'NonIterable');
+    p.registerClass(NonIterable);
     await expect(query(p, 'x in new NonIterable()')).rejects.toThrow(
       InvalidIteratorError
     );
@@ -822,7 +825,7 @@ describe('iterators', () => {
 
   test('work for custom classes', async () => {
     const p = new Polar();
-    p.registerClass(BarIterator, 'BarIterator');
+    p.registerClass(BarIterator);
     expect(await qvar(p, 'x in new BarIterator([1, 2, 3])', 'x')).toStrictEqual(
       [1, 2, 3]
     );
@@ -868,7 +871,8 @@ describe('Oso Roles', () => {
         has_permission(actor, action, resource);
 
       has_role(user: User, name, resource) if
-        { name: name, resource: resource } in user.roles;
+        role in user.roles and
+        role matches { name: name, resource: resource };
 
       actor User {}
 
@@ -919,26 +923,72 @@ describe('Oso Roles', () => {
       return result.length !== 0;
     };
 
-    expect(await isAllowed(leina, 'invite', osohq));
-    expect(await isAllowed(leina, 'create_repo', osohq));
-    expect(await isAllowed(leina, 'push', oso));
-    expect(await isAllowed(leina, 'pull', oso));
-    expect(await isAllowed(leina, 'edit', bug));
+    expect(await isAllowed(leina, 'invite', osohq)).toBe(true);
+    expect(await isAllowed(leina, 'create_repo', osohq)).toBe(true);
+    expect(await isAllowed(leina, 'push', oso)).toBe(true);
+    expect(await isAllowed(leina, 'pull', oso)).toBe(true);
+    expect(await isAllowed(leina, 'edit', bug)).toBe(true);
 
-    expect(!(await isAllowed(steve, 'invite', osohq)));
-    expect(await isAllowed(steve, 'create_repo', osohq));
-    expect(!(await isAllowed(steve, 'push', oso)));
-    expect(await isAllowed(steve, 'pull', oso));
-    expect(!(await isAllowed(steve, 'edit', bug)));
+    expect(await isAllowed(steve, 'invite', osohq)).toBe(false);
+    expect(await isAllowed(steve, 'create_repo', osohq)).toBe(true);
+    expect(await isAllowed(steve, 'push', oso)).toBe(false);
+    expect(await isAllowed(steve, 'pull', oso)).toBe(true);
+    expect(await isAllowed(steve, 'edit', bug)).toBe(false);
 
-    expect(!(await isAllowed(leina, 'edit', laggy)));
-    expect(!(await isAllowed(steve, 'edit', laggy)));
+    expect(await isAllowed(leina, 'edit', laggy)).toBe(false);
+    expect(await isAllowed(steve, 'edit', laggy)).toBe(false);
 
     let gabe = new User('gabe', []);
-    expect(!(await isAllowed(gabe, 'edit', bug)));
+    expect(await isAllowed(gabe, 'edit', bug)).toBe(false);
     gabe = new User('gabe', [osohqMember]);
-    expect(!(await isAllowed(gabe, 'edit', bug)));
+    expect(await isAllowed(gabe, 'edit', bug)).toBe(false);
     gabe = new User('gabe', [osohqOwner]);
-    expect(await isAllowed(gabe, 'edit', bug));
+    expect(await isAllowed(gabe, 'edit', bug)).toBe(true);
+  });
+
+  test('rule types correctly check subclasses', async () => {
+    class Foo {}
+    class Bar extends Foo {}
+    class Baz extends Bar {}
+    class Bad {}
+
+    // NOTE: keep this order of registering classes--confirms that MROs are added at the correct time
+    const p = new Polar();
+    p.registerClass(Baz);
+    p.registerClass(Bar);
+    p.registerClass(Foo);
+    p.registerClass(Bad);
+
+    const policy = `type f(_x: Integer);
+                    f(1);`;
+    await p.loadStr(policy);
+    p.clearRules();
+
+    const policy2 =
+      policy +
+      `type f(_x: Foo);
+       type f(_x: Foo, _y: Bar);
+       f(_x: Bar);
+       f(_x: Baz);`;
+    await p.loadStr(policy2);
+    p.clearRules();
+
+    const policy3 = policy2 + 'f(_x: Bad);';
+    await expect(p.loadStr(policy3)).rejects.toThrow('Invalid rule');
+
+    // Test with fields
+    const policy4 = `type f(_x: Foo{id: 1});
+                     f(_x: Bar{id: 1});
+                     f(_x: Baz{id: 1});`;
+    await p.loadStr(policy4);
+    p.clearRules();
+
+    await expect(p.loadStr(policy4 + 'f(_x: Baz);')).rejects.toThrow(
+      'Invalid rule'
+    );
+
+    // Test invalid rule type
+    const policy5 = policy4 + 'type f(x: Foo, x.baz);';
+    await expect(p.loadStr(policy5)).rejects.toThrow('Invalid rule type');
   });
 });

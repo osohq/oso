@@ -48,12 +48,6 @@ macro_rules! pattern {
         $crate::macros::TestHelper::<Pattern>::from($arg).0
     };
 }
-#[macro_export]
-macro_rules! ptn {
-    ($arg:expr) => {
-        $crate::macros::TestHelper::<Term>::from(pattern!($arg)).0
-    };
-}
 
 #[macro_export]
 macro_rules! param {
@@ -156,16 +150,6 @@ macro_rules! op {
 }
 
 #[macro_export]
-macro_rules! opn {
-    ($op_type:ident, $($args:expr),+) => {
-        op!($op_type, $($args),+).into()
-    };
-    ($op_type:ident) => {
-        op!($op_type).into()
-    };
-}
-
-#[macro_export]
 macro_rules! dict {
     ($arg:expr) => {
         $crate::macros::TestHelper::<Dictionary>::from($arg).0
@@ -232,6 +216,16 @@ impl<T> From<T> for TestHelper<T> {
 impl From<Value> for TestHelper<Term> {
     fn from(other: Value) -> Self {
         Self(Term::from(other))
+    }
+}
+
+impl From<u64> for ExternalInstance {
+    fn from(instance_id: u64) -> Self {
+        ExternalInstance {
+            instance_id,
+            constructor: None,
+            repr: None,
+        }
     }
 }
 

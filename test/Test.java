@@ -49,11 +49,6 @@ class Test {
     o.registerClass(A.class, "A");
     o.registerClass(BC.class, "C");
     o.registerClass(E.class, "E");
-    o.loadFile("test.polar");
-    assert o.isAllowed("a", "b", "c");
-
-    // Test that a built in string method can be called.
-    o.loadStr("?= x = \"hello world!\" and x.endsWith(\"world!\");");
 
     // Test that a custom error type is thrown.
     boolean throwsException = false;
@@ -67,6 +62,25 @@ class Test {
                   + " 19");
     }
     assert throwsException;
+
+    // Test that a built in string method can be called.
+    o.loadStr("?= x = \"hello world!\" and x.endsWith(\"world!\");");
+
+    o.clearRules();
+
+    // Test that a constant can be called.
+    o.registerConstant(Math.class, "MyMath");
+    o.loadStr("?= MyMath.PI == 3.141592653589793;");
+
+    o.clearRules();
+
+    // Test deref behaviour
+    o.loadStr("?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].indexOf(1) = 2;");
+
+    o.clearRules();
+
+    o.loadFile("test.polar");
+    assert o.isAllowed("a", "b", "c");
 
     assert !o.queryRule("specializers", new D("hello"), new BC("hello")).results().isEmpty();
     assert !o.queryRule("floatLists").results().isEmpty()
@@ -83,10 +97,6 @@ class Test {
 
     // Test we can unify against a class
     assert !o.queryRule("testUnifyClass", A.class).results().isEmpty();
-
-    // Test that a constant can be called.
-    o.registerConstant(Math.class, "MyMath");
-    o.loadStr("?= MyMath.PI == 3.141592653589793;");
 
     // Test built-in type specializers.
     assert !o.query("builtinSpecializers(true, \"Boolean\")").results().isEmpty();
@@ -116,9 +126,6 @@ class Test {
     assert o.query("builtinSpecializers({}, \"DictionaryWithFields\")").results().isEmpty();
     assert o.query("builtinSpecializers({z: 1}, \"DictionaryWithFields\")").results().isEmpty();
     assert !o.query("builtinSpecializers({y: 1}, \"DictionaryWithFields\")").results().isEmpty();
-
-    // Test deref behaviour
-    o.loadStr("?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].indexOf(1) = 2;");
 
     // Test unspecialized rule ordering
     assert o.queryRule("testUnspecializedRuleOrder", "foo", "bar", new Variable("z"))

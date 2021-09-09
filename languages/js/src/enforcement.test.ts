@@ -59,16 +59,14 @@ describe(Oso, () => {
     const admin = new Actor('admin');
     const widget0 = new Widget('0');
     const widget1 = new Widget('1');
-    beforeEach(async () => {
+
+    test('returns a list of actions the user is allowed to take', async () => {
       await oso.loadStr(`
         allow(_actor: Actor, "read", _widget: Widget);
         allow(_actor: Actor, "update", _widget: Widget{id: "0"});
         allow(actor: Actor, "update", _widget: Widget) if
           actor.name = "admin";
       `);
-    });
-
-    test('returns a list of actions the user is allowed to take', async () => {
       expect(await oso.authorizedActions(guest, widget0)).toEqual(
         new Set(['read', 'update'])
       );
@@ -82,6 +80,11 @@ describe(Oso, () => {
 
     test('throws an OsoError if there is a wildcard action', async () => {
       await oso.loadStr(`
+        allow(_actor: Actor, "read", _widget: Widget);
+        allow(_actor: Actor, "update", _widget: Widget{id: "0"});
+        allow(actor: Actor, "update", _widget: Widget) if
+          actor.name = "admin";
+
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       `);
       const superadmin = new Actor('superadmin');
@@ -92,6 +95,11 @@ describe(Oso, () => {
 
     test('returns a wildcard * if wildcard is explicitly allowed', async () => {
       await oso.loadStr(`
+        allow(_actor: Actor, "read", _widget: Widget);
+        allow(_actor: Actor, "update", _widget: Widget{id: "0"});
+        allow(actor: Actor, "update", _widget: Widget) if
+          actor.name = "admin";
+
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       `);
       const superadmin = new Actor('superadmin');

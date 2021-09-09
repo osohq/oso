@@ -75,10 +75,11 @@ module Oso
       # Fetch the next result from calling a Ruby method and prepare it for
       # transmission across the FFI boundary.
       #
-      # @param method [#to_sym]
-      # @param args [Array<Hash>]
+      # @param attribute [#to_sym]
       # @param call_id [Integer]
       # @param instance [Hash<String, Object>]
+      # @param args [Array<Hash>]
+      # @param kwargs [Hash<String, Object>]
       # @raise [Error] if the FFI call raises one.
       def handle_call(attribute, call_id:, instance:, args:, kwargs:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         instance = host.to_ruby(instance)
@@ -110,12 +111,12 @@ module Oso
         raise unless cls.fields.key? tag
 
         ref = cls.fields[tag]
-        return host.types[ref] unless ref.is_a? ::Oso::Polar::DataFiltering::Relationship
+        return host.types[ref] unless ref.is_a? ::Oso::Polar::DataFiltering::Relation
 
         case ref.kind
-        when 'parent'
+        when 'one'
           host.types[ref.other_type]
-        when 'children'
+        when 'many'
           host.types[Array]
         end
       end
@@ -237,7 +238,7 @@ module Oso
         return unless typ
 
         rel = typ.fields[attr]
-        return unless rel.is_a? ::Oso::Polar::DataFiltering::Relationship
+        return unless rel.is_a? ::Oso::Polar::DataFiltering::Relation
 
         rel
       end
@@ -251,7 +252,7 @@ module Oso
         )
         res = fetcher[[constraint]].uniq
 
-        if rel.kind == 'parent'
+        if rel.kind == 'one'
           raise "multiple parents: #{res}" unless res.length == 1
 
           res = res[0]

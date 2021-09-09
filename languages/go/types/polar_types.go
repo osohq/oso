@@ -2398,6 +2398,12 @@ func (variant *Symbol) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// Source struct
+type Source struct {
+	Src      string  `json:"src"`
+	Filename *string `json:"filename"`
+}
+
 // Term struct
 type Term struct {
 	// Value

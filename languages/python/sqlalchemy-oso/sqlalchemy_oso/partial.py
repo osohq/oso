@@ -77,8 +77,7 @@ from sqlalchemy.sql.elements import True_
 from polar.partial import dot_path
 from polar.expression import Expression
 from polar.variable import Variable
-from polar.exceptions import UnsupportedError, OsoError
-from polar.predicate import Predicate
+from polar.exceptions import UnsupportedError
 
 from sqlalchemy_oso.preprocess import preprocess
 
@@ -120,58 +119,7 @@ def and_filter(current, new):
 def partial_to_filter(expression: Expression, session: Session, model, get_model):
     """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
     expression = preprocess(expression)
-    roles_method = check_for_roles_method(expression)
-
-    return (translate_expr(expression, session, model, get_model), roles_method)
-
-
-def check_for_roles_method(expression: Expression):
-    def _is_roles_method(op, left, right):
-        is_roles_method = (
-            isinstance(right, Expression)
-            and right.operator == "Dot"
-            and type(right.args[1]) == Predicate
-            and (
-                right.args[1].name == "role_allows"
-                or right.args[1].name == "actor_can_assume_role"
-            )
-        )
-
-        method = None
-        if is_roles_method:
-            assert left is True
-            if op == "Neq":
-                raise OsoError("Roles don't currently work with the `not` operator.")
-            elif op != "Unify":
-                raise OsoError(f"Roles don't work with the `{op}` operator.")
-            method = right.args[1]
-
-        return is_roles_method, method
-
-    assert expression.operator == "And"
-    methods = []
-    to_remove = []
-    for expr in expression.args:
-        # Try with method call on right
-        is_roles, method = _is_roles_method(expr.operator, expr.args[0], expr.args[1])
-        if is_roles:
-            methods.append(method)
-            to_remove.append(expr)
-        # Try with method call on left
-        is_roles, method = _is_roles_method(expr.operator, expr.args[1], expr.args[0])
-        if is_roles:
-            to_remove.append(expr)
-            methods.append(method)
-
-    for expr in to_remove:
-        expression.args.remove(expr)
-    if len(methods) > 1:
-        raise OsoError("Cannot call multiple role methods within the same query.")
-
-    try:
-        return methods[0]
-    except IndexError:
-        return None
+    return translate_expr(expression, session, model, get_model)
 
 
 def translate_expr(expression: Expression, session: Session, model, get_model):
@@ -232,13 +180,6 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "Isa"
     left, right = expression.args
     left_path = dot_path(left)
-    # # WOWHACK(gj): this fixes the data filtering test at the bottom of
-    # # tests/test_roles3.py
-    # if not left_path:
-    #     left_cls = inspect(left, raiseerr=True).class_
-    #     assert not right.fields, "Unexpected fields in isa expression"
-    #     constraint_type = get_model(right.tag)
-    #     return sql.true() if issubclass(left_cls, constraint_type) else sql.false()
 
     assert left_path[0] == Variable("_this")
     left_path = left_path[1:]  # Drop _this.

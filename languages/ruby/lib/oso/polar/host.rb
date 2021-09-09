@@ -191,7 +191,7 @@ module Oso
 
       # Compare two values
       #
-      # @param op [String] operation to perform.
+      # @param operation [String] operation to perform.
       # @param args [Array<Object>] left and right args to operation.
       # @raise [PolarRuntimeError] if operation fails or is unsupported.
       # @return [Boolean]
@@ -244,9 +244,9 @@ module Oso
           field_types = {}
           fields.each do |k, v|
             field_types[k] =
-              if v.is_a? ::Oso::Polar::DataFiltering::Relationship
+              if v.is_a? ::Oso::Polar::DataFiltering::Relation
                 {
-                  'Relationship' => {
+                  'Relation' => {
                     'kind' => v.kind,
                     'other_class_tag' => v.other_type,
                     'my_field' => v.my_field,

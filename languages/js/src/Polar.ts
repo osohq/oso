@@ -3,24 +3,33 @@ const createInterface = require('readline')?.createInterface;
 
 import {
   InlineQueryFailedError,
-  InvalidConstructorError,
   PolarError,
   PolarFileExtensionError,
   PolarFileNotFoundError,
+  DuplicateClassAliasError,
 } from './errors';
 import { Query } from './Query';
-import { Host } from './Host';
+import { Host, UserType } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
-import { Class, Dict, obj, Options, QueryResult } from './types';
-import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
+import { Class, obj, Options, QueryResult } from './types';
+import { printError, PROMPT, readFile, repr } from './helpers';
+
 import { Variable } from './Variable';
 import { Expression } from './Expression';
-import type { PolarOperator } from './types';
 import { Pattern } from './Pattern';
 import { serializeTypes, filterData } from './dataFiltering';
-import { assert } from 'console';
+
+class Source {
+  readonly src: string;
+  readonly filename?: string;
+
+  constructor(src: string, filename?: string) {
+    this.src = src;
+    this.filename = filename;
+  }
+}
 
 /** Create and manage an instance of the Polar runtime. */
 export class Polar {
@@ -70,11 +79,11 @@ export class Polar {
 
     // Register built-in classes.
     this.registerClass(Boolean);
-    this.registerClass(Number, 'Integer');
-    this.registerClass(Number, 'Float');
+    this.registerClass(Number, { name: 'Integer' });
+    this.registerClass(Number, { name: 'Float' });
     this.registerClass(String);
-    this.registerClass(Array, 'List');
-    this.registerClass(Object, 'Dictionary');
+    this.registerClass(Array, { name: 'List' });
+    this.registerClass(Object, { name: 'Dictionary' });
   }
 
   /**
@@ -124,30 +133,63 @@ export class Polar {
   }
 
   /**
-   * Load a Polar policy file.
+   * Load Polar policy files.
    */
-  async loadFile(file: string): Promise<void> {
+  async loadFiles(filenames: string[]): Promise<void> {
+    if (filenames.length === 0) return;
+
     if (!extname) {
-      throw new PolarError('loadFile is not supported in the browser');
+      throw new PolarError('loadFiles is not supported in the browser');
     }
-    if (extname(file) !== '.polar') throw new PolarFileExtensionError(file);
-    let contents;
-    try {
-      contents = await readFile(file);
-    } catch (e) {
-      if (e.code === 'ENOENT') throw new PolarFileNotFoundError(file);
-      throw e;
-    }
-    await this.loadStr(contents, file);
+    const sources = await Promise.all(
+      filenames.map(async filename => {
+        if (extname(filename) !== '.polar')
+          throw new PolarFileExtensionError(filename);
+
+        try {
+          const contents = await readFile(filename);
+          return new Source(contents, filename);
+        } catch (e) {
+          if (e.code === 'ENOENT') throw new PolarFileNotFoundError(filename);
+          throw e;
+        }
+      })
+    );
+
+    return this.loadSources(sources);
+  }
+
+  /**
+   * Load a Polar policy file.
+   *
+   * @deprecated `Oso.loadFile` has been deprecated in favor of `Oso.loadFiles`
+   * as of the 0.20.0 release. Please see changelog for migration instructions:
+   * https://docs.osohq.com/project/changelogs/2021-09-15.html
+   */
+  async loadFile(filename: string): Promise<void> {
+    console.error(
+      '`Oso.loadFile` has been deprecated in favor of `Oso.loadFiles` as of the 0.20.0 release.\n\n' +
+        'Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html'
+    );
+    return this.loadFiles([filename]);
   }
 
   /**
    * Load a Polar policy string.
    */
-  async loadStr(contents: string, name?: string): Promise<void> {
-    this.#ffiPolar.load(contents, name);
-    this.processMessages();
+  async loadStr(contents: string, filename?: string): Promise<void> {
+    return this.loadSources([new Source(contents, filename)]);
+  }
 
+  // Register MROs, load Polar code, and check inline queries.
+  private async loadSources(sources: Source[]): Promise<void> {
+    this.#host.registerMros();
+    this.#ffiPolar.load(sources);
+    this.processMessages();
+    return this.checkInlineQueries();
+  }
+
+  private async checkInlineQueries(): Promise<void> {
     while (true) {
       const query = this.#ffiPolar.nextInlineQuery();
       this.processMessages();
@@ -194,6 +236,12 @@ export class Polar {
     return this.query(new Predicate(name, args));
   }
 
+  setDataFilteringQueryDefaults({ buildQuery, execQuery, combineQuery }: any) {
+    if (buildQuery) this.#host.buildQuery = buildQuery;
+    if (execQuery) this.#host.execQuery = execQuery;
+    if (combineQuery) this.#host.combineQuery = combineQuery;
+  }
+
   /**
    * Query for a Polar rule, returning true if there are any results.
    */
@@ -207,22 +255,9 @@ export class Polar {
   /**
    * Register a JavaScript class for use in Polar policies.
    */
-  registerClass<T>(
-    cls: Class<T>,
-    alias?: string,
-    types?: Map<string, any>,
-    fetcher?: any
-  ): void {
-    if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
-    const clsName = this.#host.cacheClass(cls, alias);
+  registerClass<T>(cls: Class<T>, params?: any): void {
+    const clsName = this.#host.cacheClass(cls, params);
     this.registerConstant(cls, clsName);
-    this.#host.clsNames.set(cls, clsName);
-    if (types != null) {
-      this.#host.types.set(clsName, types);
-    }
-    if (fetcher != null) {
-      this.#host.fetchers.set(clsName, fetcher);
-    }
   }
 
   /**
@@ -233,50 +268,12 @@ export class Polar {
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
   }
 
-  /**
-   * Returns all the resources the actor is allowed to perform some action on.
-   */
-  async getAllowedResources(actor: any, action: any, cls: any): Promise<any> {
-    const resource = new Variable('resource');
-    const clsName = this.#host.clsNames.get(cls)!;
-    const constraint = new Expression('And', [
-      new Expression('Isa', [
-        resource,
-        new Pattern({ tag: clsName, fields: {} }),
-      ]),
-    ]);
-    let bindings = new Map();
-    bindings.set('resource', constraint);
-    let results = this.queryRuleWithBindings(
-      'allow',
-      bindings,
-      actor,
-      action,
-      resource
-    );
+  getHost(): Host {
+    return this.#host;
+  }
 
-    const queryResults = [];
-    for await (const result of results) {
-      queryResults.push(result);
-    }
-
-    let jsonResults = queryResults.map(result => ({
-      // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
-      // trivially `JSON.stringify()`-able.
-      bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
-        obj[k] = this.#host.toPolar(v);
-        return obj;
-      }, {}),
-    }));
-    let resultsStr = JSON.stringify(jsonResults);
-    let typesStr = serializeTypes(this.#host.types, this.#host.clsNames);
-    let plan = this.#ffiPolar.buildFilterPlan(
-      typesStr,
-      resultsStr,
-      'resource',
-      clsName
-    );
-    return await filterData(this.#host, plan);
+  getFfi(): FfiPolar {
+    return this.#ffiPolar;
   }
 
   /** Start a REPL session. */
@@ -285,7 +282,7 @@ export class Polar {
       throw new PolarError('REPL is not supported in the browser');
     }
     try {
-      if (files?.length) await Promise.all(files.map(f => this.loadFile(f)));
+      if (files?.length) await this.loadFiles(files);
     } catch (e) {
       printError(e);
     }

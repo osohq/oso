@@ -77,7 +77,7 @@ fn test_oso() -> Oso {
     .unwrap();
 
     let path = test_file_path();
-    oso.load_file(path).unwrap();
+    oso.load_files(vec![path]).unwrap();
 
     oso
 }
@@ -192,6 +192,8 @@ fn test_get_allowed_actions() -> oso::Result<()> {
     assert!(actions.len() == 2);
     assert!(actions.contains("CREATE"));
     assert!(actions.contains("READ"));
+
+    oso.clear_rules().unwrap();
 
     oso.load_str(
         r#"allow(_actor: Actor{name: "fred"}, action, _resource: Widget{id: 2}) if

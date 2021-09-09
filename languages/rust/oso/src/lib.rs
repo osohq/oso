@@ -26,7 +26,7 @@
 //! # use oso::Oso;
 //! # fn main() -> anyhow::Result<()> {
 //! let mut oso = Oso::new();
-//! oso.load_str(r#"allow(actor, action, resource) if actor.username = "alice";"#)?;
+//! oso.load_str(r#"allow(actor, _action, _resource) if actor.username = "alice";"#)?;
 //! # Ok(())
 //! # }
 //! ```
@@ -58,7 +58,7 @@
 //!         .build()
 //! )?;
 //!
-//! oso.load_str(r#"allow(actor: User, action, resource) if
+//! oso.load_str(r#"allow(actor: User, _action, _resource) if
 //!                     actor.username.ends_with("example.com");"#)?;
 //!
 //! let user = User {
