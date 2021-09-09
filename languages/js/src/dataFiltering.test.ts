@@ -127,7 +127,7 @@ async function fixtures() {
   };
 
   // set global exec/combine query functions
-  oso.configureDataFiltering({
+  oso.setDataFilteringQueryDefaults({
     execQuery: execQuery,
     combineQuery: combineQuery,
   });

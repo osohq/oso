@@ -236,7 +236,7 @@ export class Polar {
     return this.query(new Predicate(name, args));
   }
 
-  configureDataFiltering({ buildQuery, execQuery, combineQuery }: any) {
+  setDataFilteringQueryDefaults({ buildQuery, execQuery, combineQuery }: any) {
     if (buildQuery) this.#host.buildQuery = buildQuery;
     if (execQuery) this.#host.execQuery = execQuery;
     if (combineQuery) this.#host.combineQuery = combineQuery;
