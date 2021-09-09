@@ -1,8 +1,8 @@
-public class Actor {
+public class User {
   public String role;
-  public List<Actor> treated;
+  public List<User> treated;
 
-  public Actor(String role, List<Actor> treated) {
+  public User(String role, List<User> treated) {
     this.role = role;
     this.treated = treated;
   }

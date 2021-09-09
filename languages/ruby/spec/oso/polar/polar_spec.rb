@@ -29,7 +29,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end)
       subject.register_class(Widget)
 
-      stub_const('Actor', Class.new do
+      stub_const('User', Class.new do
         def initialize(name)
           @name = name
         end
@@ -42,7 +42,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           [Widget.new(2), Widget.new(3)].to_enum
         end
       end)
-      subject.register_class(Actor)
+      subject.register_class(User)
     end
 
     it 'converts Polar values into Ruby values' do
@@ -52,19 +52,19 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
     ## NOTE This is not an integration test - it uses the private API (host should be private).
     it 'converts Ruby instances in both directions' do
-      actor = Actor.new('sam')
+      actor = User.new('sam')
       expect(subject.host.to_ruby(subject.host.to_polar(actor))).to eq(actor)
     end
 
     it 'returns Ruby instances from external calls' do
-      actor = Actor.new('sam')
+      actor = User.new('sam')
       widget = Widget.new(1)
       subject.load_str('allow(actor, _action, resource) if actor.widget.id = resource.id;')
       expect(subject.query_rule('allow', actor, 'read', widget).to_a.length).to eq 1
     end
 
     it 'handles enumerator external call results' do
-      actor = Actor.new('sam')
+      actor = User.new('sam')
       subject.load_str('widgets(actor, x) if widget in actor.widgets and x = widget.id;')
       result = subject.query_rule('widgets', actor, Oso::Polar::Variable.new('x')).to_a
       expect(result).to eq([{ 'x' => 2 }, { 'x' => 3 }])
@@ -671,18 +671,18 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
   context 'querying for a predicate' do
     before do
-      stub_const('Actor', Class.new do
+      stub_const('User', Class.new do
         def groups
           %w[engineering social admin]
         end
       end)
-      subject.register_class(Actor)
+      subject.register_class(User)
     end
 
     # test_predicate_return_list
     it 'can return a list' do
-      subject.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups;')
-      expect(subject.query_rule('allow', Actor.new, 'join', 'party').to_a).to eq([{}])
+      subject.load_str('allow(actor: User, "join", "party") if "social" in actor.groups;')
+      expect(subject.query_rule('allow', User.new, 'join', 'party').to_a).to eq([{}])
     end
 
     # test_variables_as_arguments

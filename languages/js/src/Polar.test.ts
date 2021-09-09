@@ -14,7 +14,7 @@ import {
 } from '../test/helpers';
 import {
   A,
-  Actor,
+  BaseActor,
   Animal,
   B,
   Bar,
@@ -59,14 +59,14 @@ describe('#registerClass', () => {
 
   test('errors when registering the same class twice', () => {
     const p = new Polar();
-    expect(() => p.registerClass(Actor)).not.toThrow();
-    expect(() => p.registerClass(Actor)).toThrow(DuplicateClassAliasError);
+    expect(() => p.registerClass(BaseActor)).not.toThrow();
+    expect(() => p.registerClass(BaseActor)).toThrow(DuplicateClassAliasError);
   });
 
   test('errors when registering the same alias twice', () => {
     const p = new Polar();
-    expect(() => p.registerClass(Actor)).not.toThrow();
-    expect(() => p.registerClass(User, 'Actor')).toThrow(
+    expect(() => p.registerClass(BaseActor)).not.toThrow();
+    expect(() => p.registerClass(User, 'BaseActor')).toThrow(
       DuplicateClassAliasError
     );
   });
@@ -86,11 +86,11 @@ describe('#registerClass', () => {
     await expect(qvar(p, 'new Foo("A").a() = x', 'x', true)).rejects.toThrow(
       `trace (most recent evaluation last):
   in query at line 1, column 1
-    new Foo(\"A\").a() = x
+    new Foo("A").a() = x
   in query at line 1, column 1
-    new Foo(\"A\").a() = x
+    new Foo("A").a() = x
   in query at line 1, column 1
-    new Foo(\"A\").a()
+    new Foo("A").a()
 Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     );
     await expect(qvar(p, 'x in new Foo("A").b', 'x', true)).rejects.toThrow(
@@ -316,13 +316,13 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
 
 describe('conversions between JS + Polar values', () => {
   test('returns JS instances from external calls', async () => {
-    const actor = new Actor('sam');
+    const actor = new BaseActor('sam');
     const widget = new Widget('1');
     const p = new Polar();
     await p.loadStr(
       'allow(actor, _action, resource) if actor.widget().id = resource.id;'
     );
-    const result = await queryRule(p, 'allow', 'read', actor, widget);
+    const result = await queryRule(p, 'allow', actor, 'read', widget);
     expect(result).toStrictEqual([map()]);
   });
 
@@ -335,7 +335,7 @@ describe('conversions between JS + Polar values', () => {
   });
 
   test('handles Generator external call results', async () => {
-    const actor = new Actor('sam');
+    const actor = new BaseActor('sam');
     const p = new Polar();
     await p.loadStr('widgets(actor, x) if w in actor.widgets() and x = w.id;');
     const result = await queryRule(p, 'widgets', actor, new Variable('x'));
@@ -446,9 +446,9 @@ describe('#clearRules', () => {
 
   test('does not clear registered classes', async () => {
     const p = new Polar();
-    p.registerClass(Belonger, 'Actor');
+    p.registerClass(Belonger, 'BaseActor');
     p.clearRules();
-    expect(await query(p, 'x = new Actor()')).toHaveLength(1);
+    expect(await query(p, 'x = new BaseActor()')).toHaveLength(1);
   });
 });
 
@@ -470,9 +470,9 @@ describe('#queryRule', () => {
   describe('querying for a predicate', () => {
     test('can return a list', async () => {
       const p = new Polar();
-      p.registerClass(Belonger, 'Actor');
+      p.registerClass(Belonger, 'BaseActor');
       await p.loadStr(
-        'allow(actor: Actor, "join", "party") if "social" in actor.groups();'
+        'allow(actor: BaseActor, "join", "party") if "social" in actor.groups();'
       );
       expect(
         await queryRule(p, 'allow', new Belonger(), 'join', 'party')

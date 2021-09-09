@@ -270,7 +270,7 @@ impl Oso {
         self.inner.register_constant(
             Symbol(name.to_string()),
             value.to_polar().to_term(&mut self.host),
-        );
+        )?;
         Ok(())
     }
 }

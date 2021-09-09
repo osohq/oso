@@ -205,10 +205,11 @@ test('data filtering', async () => {
     allow(actor, action, resource) if
       has_permission(actor, action, resource);
 
+    actor String {}
+
     has_role("steve", "owner", bar: Bar) if
       bar.id = "hello";
 
-    actor String {}
 
     resource Bar {
       roles = [ "owner" ];

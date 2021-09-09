@@ -1,28 +1,28 @@
 import { Oso } from './Oso';
-import { Actor, User, Widget } from '../test/classes';
+import { BaseActor, User, Widget } from '../test/classes';
 import { ForbiddenError, NotFoundError, OsoError } from './errors';
 
 describe(Oso, () => {
-  let oso: Oso<Actor, String>;
+  let oso: Oso<BaseActor, String>;
 
   beforeEach(() => {
     oso = new Oso();
-    oso.registerClass(Actor);
+    oso.registerClass(BaseActor);
     oso.registerClass(User);
     oso.registerClass(Widget);
   });
 
   describe('#authorize', () => {
-    const guest = new Actor('guest');
-    const admin = new Actor('admin');
+    const guest = new BaseActor('guest');
+    const admin = new BaseActor('admin');
     const widget0 = new Widget('0');
     const widget1 = new Widget('1');
     beforeEach(async () => {
       await oso.loadStr(`
-        allow(_actor: Actor, "read", widget: Widget) if
+        allow(_actor: BaseActor, "read", widget: Widget) if
           widget.id = "0";
 
-        allow(actor: Actor, "update", _widget: Widget) if
+        allow(actor: BaseActor, "update", _widget: Widget) if
           actor.name = "admin";
       `);
     });
@@ -55,16 +55,16 @@ describe(Oso, () => {
   });
 
   describe('#authorizedActions', () => {
-    const guest = new Actor('guest');
-    const admin = new Actor('admin');
+    const guest = new BaseActor('guest');
+    const admin = new BaseActor('admin');
     const widget0 = new Widget('0');
     const widget1 = new Widget('1');
 
     test('returns a list of actions the user is allowed to take', async () => {
       await oso.loadStr(`
-        allow(_actor: Actor, "read", _widget: Widget);
-        allow(_actor: Actor, "update", _widget: Widget{id: "0"});
-        allow(actor: Actor, "update", _widget: Widget) if
+        allow(_actor: BaseActor, "read", _widget: Widget);
+        allow(_actor: BaseActor, "update", _widget: Widget{id: "0"});
+        allow(actor: BaseActor, "update", _widget: Widget) if
           actor.name = "admin";
       `);
       expect(await oso.authorizedActions(guest, widget0)).toEqual(
@@ -80,14 +80,14 @@ describe(Oso, () => {
 
     test('throws an OsoError if there is a wildcard action', async () => {
       await oso.loadStr(`
-        allow(_actor: Actor, "read", _widget: Widget);
-        allow(_actor: Actor, "update", _widget: Widget{id: "0"});
-        allow(actor: Actor, "update", _widget: Widget) if
+        allow(_actor: BaseActor, "read", _widget: Widget);
+        allow(_actor: BaseActor, "update", _widget: Widget{id: "0"});
+        allow(actor: BaseActor, "update", _widget: Widget) if
           actor.name = "admin";
 
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       `);
-      const superadmin = new Actor('superadmin');
+      const superadmin = new BaseActor('superadmin');
       await expect(oso.authorizedActions(superadmin, widget0)).rejects.toThrow(
         OsoError
       );
@@ -95,14 +95,14 @@ describe(Oso, () => {
 
     test('returns a wildcard * if wildcard is explicitly allowed', async () => {
       await oso.loadStr(`
-        allow(_actor: Actor, "read", _widget: Widget);
-        allow(_actor: Actor, "update", _widget: Widget{id: "0"});
-        allow(actor: Actor, "update", _widget: Widget) if
+        allow(_actor: BaseActor, "read", _widget: Widget);
+        allow(_actor: BaseActor, "update", _widget: Widget{id: "0"});
+        allow(actor: BaseActor, "update", _widget: Widget) if
           actor.name = "admin";
 
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       `);
-      const superadmin = new Actor('superadmin');
+      const superadmin = new BaseActor('superadmin');
       expect(
         await oso.authorizedActions(superadmin, widget0, {
           allowWildcard: true,
@@ -115,16 +115,16 @@ describe(Oso, () => {
     class Request {
       constructor(public method: string, public path: string) {}
     }
-    const guest = new Actor('guest');
-    const verified = new Actor('verified');
+    const guest = new BaseActor('guest');
+    const verified = new BaseActor('verified');
 
     beforeEach(async () => {
       oso.registerClass(Request);
       await oso.loadStr(`
-        allow_request(_: Actor{name: "guest"}, request: Request) if
+        allow_request(_: BaseActor{name: "guest"}, request: Request) if
             request.path.startsWith("/repos");
 
-        allow_request(_: Actor{name: "verified"}, request: Request) if
+        allow_request(_: BaseActor{name: "verified"}, request: Request) if
             request.path.startsWith("/account");
       `);
     });
@@ -143,14 +143,14 @@ describe(Oso, () => {
   });
 
   describe('field-level authorization', () => {
-    const admin = new Actor('admin');
-    const guest = new Actor('guest');
+    const admin = new BaseActor('admin');
+    const guest = new BaseActor('guest');
     const widget = new Widget('0');
 
     beforeEach(async () => {
       await oso.loadStr(`
         # Admins can update all fields
-        allow_field(actor: Actor, "update", _widget: Widget, field) if
+        allow_field(actor: BaseActor, "update", _widget: Widget, field) if
             actor.name = "admin" and
             field in ["name", "purpose", "private_field"];
 
@@ -159,7 +159,7 @@ describe(Oso, () => {
             allow_field(actor, "update", widget, field);
 
         # Anybody can read public fields
-        allow_field(_: Actor, "read", _: Widget, field) if
+        allow_field(_: BaseActor, "read", _: Widget, field) if
             field in ["name", "purpose"];
       `);
     });
