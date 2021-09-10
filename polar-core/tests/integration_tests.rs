@@ -1560,20 +1560,22 @@ fn test_and_or_warning() -> TestResult {
     p.load_str("f(x) if (\n\t    x = 1 and  x > 1) or x < 3;")?;
 
     p.clear_rules();
+    p.load_str("f(x) if x = 1 and x > 1 or x < 3;")?;
+    let msg = p.next_message().unwrap();
+    assert!(matches!(&msg.kind, MessageKind::Warning));
+    assert_eq!(
+        &msg.msg,
+        "Expression without parentheses could be ambiguous. \nPrior to 0.20, `x and y or z` would parse as `x and (y or z)`. \nThis was changed in 0.20 to match other languages. \n\n\n001: f(x) if x = 1 and x > 1 or x < 3;\n             ^"
+    );
 
-    // This is ambiguous between 0.16 and 0.20
-    assert!(matches!(
-        p.load_str("f(x) if x = 1 and x > 1 or x < 3;")
-            .unwrap_err()
-            .kind,
-        ErrorKind::Parse(ParseError::AmbiguousAndOr { .. })
-    ));
-    assert!(matches!(
-        p.load_str("f(x) if x = 1 or x > 1 and x < 3;")
-            .unwrap_err()
-            .kind,
-        ErrorKind::Parse(ParseError::AmbiguousAndOr { .. })
-    ));
+    p.clear_rules();
+    p.load_str("f(x) if x = 1 or x > 1 and x < 3;")?;
+    let msg = p.next_message().unwrap();
+    assert!(matches!(&msg.kind, MessageKind::Warning));
+    assert_eq!(
+        &msg.msg,
+        "Expression without parentheses could be ambiguous. \nPrior to 0.20, `x and y or z` would parse as `x and (y or z)`. \nThis was changed in 0.20 to match other languages. \n\n\n001: f(x) if x = 1 or x > 1 and x < 3;\n                      ^"
+    );
     Ok(())
 }
 

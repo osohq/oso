@@ -166,12 +166,6 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
                 msg
             })
             .collect();
-        if let Some(msg) = msgs.get(0) {
-            return Err(ParseError::AmbiguousAndOr {
-                msg: msg.to_string(),
-            }
-            .into());
-        }
         Ok(msgs)
     }
 }
