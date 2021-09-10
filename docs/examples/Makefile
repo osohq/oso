@@ -68,3 +68,4 @@ test:
 	$(MAKE) ruby-test
 	$(MAKE) java-test
 	$(MAKE) nodejs-test
+	$(MAKE) -C add-to-your-application test
