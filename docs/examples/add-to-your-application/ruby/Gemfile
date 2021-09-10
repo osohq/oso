@@ -10,3 +10,7 @@ gem "test-unit"
 gem "rack-test"
 gem "sequel"
 gem "sqlite3"
+
+gem "thin", "~> 1.8"
+
+gem "pry-byebug"

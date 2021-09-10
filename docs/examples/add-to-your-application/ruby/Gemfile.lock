@@ -7,10 +7,21 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
+    byebug (11.1.3)
+    coderay (1.1.3)
+    daemons (1.4.1)
+    eventmachine (1.2.7)
     ffi (1.15.4)
+    method_source (1.0.0)
     mustermann (1.1.1)
       ruby2_keywords (~> 0.0.1)
     power_assert (2.0.1)
+    pry (0.13.1)
+      coderay (~> 1.1)
+      method_source (~> 1.0)
+    pry-byebug (3.9.0)
+      byebug (~> 11.0)
+      pry (~> 0.13.0)
     rack (2.2.3)
     rack-protection (2.1.0)
       rack
@@ -26,6 +37,10 @@ GEM
     sqlite3 (1.4.2)
     test-unit (3.4.5)
       power_assert
+    thin (1.8.1)
+      daemons (~> 1.0, >= 1.0.9)
+      eventmachine (~> 1.0, >= 1.0.4)
+      rack (>= 1, < 3)
     tilt (2.0.10)
 
 PLATFORMS
@@ -33,11 +48,13 @@ PLATFORMS
 
 DEPENDENCIES
   oso-oso!
+  pry-byebug
   rack-test
   sequel
   sinatra
   sqlite3
   test-unit
+  thin (~> 1.8)
 
 BUNDLED WITH
    2.2.27

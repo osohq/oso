@@ -19,7 +19,6 @@ def test_data_filtering_works():
     session.commit()
 
     with app.test_client() as c:
-        breakpoint()
         response = c.get("/repos")
         assert response.status_code == 200
         # Ensure response contains at least some repo
