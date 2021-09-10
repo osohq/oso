@@ -103,9 +103,12 @@ resource Repository {
   permissions = ["read", "push"];
   roles = ["contributor", "maintainer"];
 
-  "push" if "maintainer";
-  "read" if "maintainer";
+  # An actor has the "read" permission if they have the "contributor" role.
   "read" if "contributor";
+  # An actor has the "read" permission if they have the "maintainer" role.
+  "read" if "maintainer";
+  # An actor has the "push" permission if they have the "maintainer" role.
+  "push" if "maintainer";
 }
 ```
 
@@ -141,9 +144,12 @@ resource Repository {
   permissions = ["read", "push"];
   roles = ["contributor", "maintainer"];
 
-  "push" if "maintainer";
+  # An actor has the "read" permission if they have the "contributor" role.
   "read" if "contributor";
+  # An actor has the "push" permission if they have the "maintainer" role.
+  "push" if "maintainer";
 
+  # An actor has the "contributor" role if they have the "maintainer" role.
   "contributor" if "maintainer";
 }
 ```
@@ -243,6 +249,7 @@ resource Repository {
 
   relations = { parent: Organization };
 
+  # An actor has the "maintainer" role if they have the "owner" role on the "parent" Organization.
   "maintainer" if "owner" on "parent";
 }
 
@@ -327,11 +334,15 @@ resource Repository {
   roles = ["contributor", "maintainer"];
   relations = { parent: Organization };
 
+  # An actor has the "read" permission if they have the "contributor" role.
   "read" if "contributor";
+  # An actor has the "push" permission if they have the "maintainer" role.
   "push" if "maintainer";
 
+  # An actor has the "contributor" role if they have the "maintainer" role.
   "contributor" if "maintainer";
 
+  # An actor has the "maintainer" role if they have the "owner" role on the "parent" Organization.
   "maintainer" if "owner" on "parent";
 }
 
