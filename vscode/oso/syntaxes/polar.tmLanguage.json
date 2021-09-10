@@ -48,6 +48,21 @@
         }
       ]
     },
+    "rule-type": {
+      "name": "meta.rule-type",
+      "begin": "\\btype\\b",
+      "beginCaptures": {
+        "0": {
+          "name": "keyword.other.type-decl"
+        }
+      },
+      "end": ";",
+      "patterns": [
+        {
+          "include": "#rule-functor"
+        }
+      ]
+    },
     "inline-query": {
       "name": "meta.inline-query",
       "begin": "\\?=",
