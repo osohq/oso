@@ -257,8 +257,8 @@ has_relation(organization: Organization, "parent", repository: Repository) if
   organization = repository.organization;
 {{< /code >}}
 
-First, we declare that the `"parent"` relation for a `Repository` is an
-`Organization`:
+First, we declare that every `Repository` has a `"parent"` relation that
+references an `Organization`:
 
 ```polar
 relations = { parent: Organization };
