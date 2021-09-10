@@ -78,12 +78,12 @@ permissions for that resource:
 
 ```polar
 resource Organization {
-  roles = [ "owner" ];
+  roles = ["owner"];
 }
 
 resource Repository {
-  permissions = [ "read", "push" ];
-  roles = [ "contributor", "maintainer" ];
+  permissions = ["read", "push"];
+  roles = ["contributor", "maintainer"];
 }
 ```
 
@@ -100,8 +100,8 @@ added:
 
 ```polar
 resource Repository {
-  permissions = [ "read", "push" ];
-  roles = [ "contributor", "maintainer" ];
+  permissions = ["read", "push"];
+  roles = ["contributor", "maintainer"];
 
   "push" if "maintainer";
   "read" if "maintainer";
@@ -140,8 +140,8 @@ the `"maintainer"` role still grants the `"read"` permission:
 
 ```polar
 resource Repository {
-  permissions = [ "read", "push" ];
-  roles = [ "contributor", "maintainer" ];
+  permissions = ["read", "push"];
+  roles = ["contributor", "maintainer"];
 
   "push" if "maintainer";
   "read" if "contributor";
@@ -317,12 +317,12 @@ has_role(user: User, name: String, resource: Resource) if
 actor User {}
 
 resource Organization {
-  roles = [ "owner" ];
+  roles = ["owner"];
 }
 
 resource Repository {
-  permissions = [ "read", "push" ];
-  roles = [ "contributor", "maintainer" ];
+  permissions = ["read", "push"];
+  roles = ["contributor", "maintainer"];
   relations = { parent: Organization };
 
   "read" if "contributor";
