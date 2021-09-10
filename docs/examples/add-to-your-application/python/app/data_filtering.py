@@ -29,23 +29,28 @@ Base.metadata.create_all()
 # docs: begin-data-filtering
 # This is an example implementation for the SQLAlchemy ORM, but you can
 # use any ORM with this API.
-def get_repositories(constraints):
+def get_repositories(filters):
     query = Session().query(Repository)
-    for constraint in constraints:
-        value = constraint.value
-        # If the field is None, this constraint is comparing against
-        # a repository object.
-        if constraint.field is None:
+    for filter in filters:
+        value = filter.value
+
+        if filter.field is None:
+            # If the field is None, this filter is comparing against
+            # the repository object, so we construct a query that makes sure
+            # the primary key (name) matches.
             value = value.name
             field = Repository.name
         else:
-            field = getattr(Repository, constraint.field)
+            # Otherwise, we get the field to compare against.
+            field = getattr(Repository, filter.field)
 
-        if constraint.kind == "Eq":
+        # Build SQLAlchemy query based on filters.
+        if filter.kind == "Eq":
             query = query.filter(field == value)
-        elif constraint.kind == "In":
+        elif filter.kind == "In":
             query = query.filter(field.in_(value))
         else:
+            # See full guide to handle other constraint types.
             raise NotImplementedError("unsupported constraint type")
 
     return query

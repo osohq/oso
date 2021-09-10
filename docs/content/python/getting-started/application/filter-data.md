@@ -36,7 +36,7 @@ has access to:
     >}}
 
 To use this API, you must pass some additional information to
-register_class so that Oso knows how to query for your application's
+`register_class` so that Oso knows how to query for your application's
 objects.
 
 TODO make sure this matches data filtering guides
