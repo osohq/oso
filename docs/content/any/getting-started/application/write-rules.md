@@ -108,7 +108,7 @@ has_permission(user: User, "delete", repository: Repository) if
 
 This rule succeeds if the user has an `"admin"` role, and the
 `has_sudo_mode()` method on the `auth_token` field of `user` returns
-`true`. That's right! You can call Python methods directly from Polar,
+`true`. That's right! You can call {{% lang %}} methods directly from Polar,
 and access their return values. This can help you share business logic
 between the policy and your application, for example whether a user has
 elevated their privileges sufficiently to perform dangerous actions.

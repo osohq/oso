@@ -34,12 +34,10 @@ team.
 
 The Oso library evaluates authorization policies.
 
-The Python version of Oso is available on [PyPI](https://pypi.org/project/oso/)
-and can be installed using `pip`:
+The {{% lang %}} version of Oso is available on {{% exampleGet "installLink" %}}
+and can be installed using {{% exampleGet "installer" %}}:
 
-```console
-$ pip install oso=={{< version >}}
-```
+{{% exampleGet "installInstruction" %}}
 
 For more detailed installation instructions, see
 [installation](/reference/installation).
@@ -51,12 +49,12 @@ code. The Oso library loads and evaluates policy files when your
 application runs. Now that you've installed Oso, create a policy file
 called `main.polar` and use it in your app:
 
-{{< literalInclude path="examples/add-to-your-application/python/app/oso.py" >}}
+{{< literalInclude dynPath="pathOso" fallback="garbo" >}}
 
 To setup Oso in your app, you must...
 
 - initialize `Oso`: Usually Oso will be initialized globally and used
-during every request to enforce authorization.
+  during every request to enforce authorization.
 - tell Oso what data types you will authorize: With Oso, you express
   authorization logic over the data types used in your application. Often
   these will be model classes, but they could be any type of data or
@@ -163,7 +161,8 @@ dataclasses that could be used by this rule. In your application, you'll
 likely use your existing User model to maintain this information.
 
 {{< literalInclude
-    path="examples/add-to-your-application/python/app/models.py"
+    dynPath="pathModels"
+    fallback="garbo"
     from="# docs: start"
     to="# docs: end" >}}
 
