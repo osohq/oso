@@ -163,8 +163,8 @@ likely use your existing User model to maintain this information.
 {{< literalInclude
     dynPath="pathModels"
     fallback="garbo"
-    from="# docs: start"
-    to="# docs: end" >}}
+    from="docs: start"
+    to="docs: end" >}}
 
 ### Allowing access
 
