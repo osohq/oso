@@ -14,6 +14,7 @@ REPOS_DB = {
   "gmail" => Repository.new("gmail")
 }
 
+# docs: start
 class Role
   attr_reader :name, :repository
 
@@ -34,3 +35,4 @@ end
 USERS_DB = {
   "larry" => User.new([Role.new("admin", REPOS_DB["gmail"])])
 }
+# docs: end
