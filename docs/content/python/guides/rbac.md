@@ -279,6 +279,25 @@ has_relation(organization: Organization, "parent", repository: Repository) if
 In this case, an organization is the `"parent"` of a repository if the
 repository's `organization` field points to it.
 
+{{% callout "Note" "blue" %}}
+  Note that the resource where we declared the relationship, `Repository`, is
+  the *third* parameter and the related resource, `Organization`, is the
+  *first*.
+
+  This ordering was chosen to mirror the ordering of the expanded forms for
+  `has_role()` and `has_permission()`, where the resource for which the actor
+  has the role or permission is the third argument:
+
+  ```polar
+  has_role(actor: Actor, name: String, resource: Resource) if ...
+
+  has_permission(actor: Actor, name: String, resource: Resource) if ...
+
+  has_relation(related_resource: Resource, name: String, resource: Resource) if ...
+  ```
+
+{{% /callout %}}
+
 Finally, we add a shorthand rule that involves the `"maintainer"` repository
 role, the `"owner"` organization role, and the `"parent"` relation between the
 two resource types:
