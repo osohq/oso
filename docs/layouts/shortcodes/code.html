@@ -1,0 +1,42 @@
+{{/*
+  Options
+
+  - syntax: the language to use
+  - highlight:
+  - lines: specify this if you want to display noncontiguous segments of a
+      file. E.g., `lines="2,5-7,10-15"`. Segments should be comma-separated and
+      can be either a single line number or a range of lines (represented as a
+      pair of numbers separated by a hyphen). In the resulting code snippet,
+      segments will be separated by an ellipsis to indicate elided code.
+  - gitHub: specify GitHub link to generate a link to example. E.g
+    ``https://github.com/osohq/gitclub/``
+*/}}
+
+{{ $content := trim .Inner "\n" }}
+{{ $file := $.Params.file }}
+{{ $syntax := $.Params.syntax }}
+{{ if not $syntax }}
+  {{ $syntax = (index (split $file "." | last 1) 0) }}
+{{ end }}
+{{ $highlight := $.Params.highlight }}
+
+{{ $id := md5 $content }}
+{{ if (not $syntax) }}
+  {{ $syntax = $.Page.Language.Lang }}
+{{ end }}
+<div class="code" id="{{ $id | urlize }}">
+  <div class="filename rounded-t-md bg-gray-200 text-gray-700 text-sm py-2">
+    {{- with $syntax -}}
+      <span class="px-2{{ if eq . "go" }} block w-10{{end}}">
+        {{- partialCached "fontawesome.html" . . -}}
+      </span>
+    {{- end -}}
+    {{ $file }}
+  </div>
+  {{ $syntax  = $syntax | default "plaintext" }}
+  {{- $hlOpts := "linenos=false" -}}
+  {{ if $highlight }}
+    {{- $hlOpts = (printf "%s,hl_lines=%s" $hlOpts $highlight) -}}
+  {{ end }}
+  {{- highlight $content $syntax $hlOpts -}}
+</div>
