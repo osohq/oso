@@ -93,14 +93,14 @@ Each *shorthand rule* expands to a rule when the *resource block* is
 parsed. For example, `"read" if "contributor"` expands to:
 
 ```polar
-has_permission(user, "read", repository: Repository) if
+has_permission(user: User, "read", repository: Repository) if
 	has_role(user, "contributor", repository: Repository);
 ```
 
 We can grant users permissions based on roles by writing our own rules:
 
 ```polar
-has_permission(user, "delete", repository: Repository) if
+has_permission(user: User, "delete", repository: Repository) if
 	# User has the "admin" role.
 	has_role(user, "admin", repository: Repository) and
 	user.auth_token.has_sudo_mode() = true;

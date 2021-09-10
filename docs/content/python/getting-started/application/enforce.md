@@ -55,19 +55,11 @@ perform an action—-like "read" or "delete"-—on a resource.
 Here's an example of using `authorize` to check if a user can `"read"` a
 repository.
 
-```python
-@app.route("/repo/<name>")
-def repo_show(name):
-    repo = Repository.get_by_name(name)
-
-    try:
-        oso.authorize(actor=User.get_current_user(),
-                      action="read",
-                      resource=repo)
-        return f"<h1>A Repo</h1><p>Welcome to repo {repo.name}</p>", 200
-    except NotFoundError:
-        return f"<h1>Whoops!</h1><p>Repo named {name} was not found</p>", 404
-```
+{{< literalInclude
+    path="examples/add-to-your-application/python/app/routes.py"
+    from="docs: begin-show-route"
+    to="docs: end-show-route"
+    >}}
 
 The user and repository parameters are {{% lang %}} objects. Oso knows about
 fields & methods on Python objects, and their types, so you can access this data

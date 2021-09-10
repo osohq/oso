@@ -50,23 +50,7 @@ Policies are files that are packaged with the rest of your application
 code. The Oso library loads and evaluates policy files when your
 application runs. Now that you've installed Oso, create a policy:
 
-```python
-from oso import Oso
-
-from .models import User, Repository
-
-# Initialize the Oso object. This object is usually
-# used globally throughout an application.
-oso = Oso()
-
-# Tell Oso about the data that you will authorize.
-# These types can be referenced in the policy.
-oso.register_class(User)
-oso.register_class(Repository)
-
-# Load your policy file.
-oso.load_files(["main.polar"])
-```
+{{< literalInclude path="examples/add-to-your-application/python/app/oso.py" >}}
 
 To setup Oso in your app, you must...
 
@@ -159,7 +143,7 @@ Write a `has_role` rule to tell Oso whether your users have a particular
 role:
 
 ```polar
-has_role(user: User, role_name, repo: Repository) if
+has_role(user: User, role_name: String, repo: Repository) if
   role in actor.roles and
   role_name = role.name and
   repository = role.repository;
@@ -194,6 +178,11 @@ users_db = {
 }
 ```
 
+{{< literalInclude
+    path="examples/add-to-your-application/python/app/models.py"
+    from="# docs: start"
+    end="# docs: end " >}}
+
 ### Allowing access
 
 Oso policies have a special rule: the `allow` rule. The `allow` rule is
@@ -226,7 +215,7 @@ resource Repository {
     "contributor" if "maintainer";
 }
 
-has_role(actor, role_name, repository: Repository) if
+has_role(actor: User, role_name: String, repository: Repository) if
     role in actor.roles and
     role_name = role.name and
     repository = role.repository;
@@ -234,7 +223,7 @@ has_role(actor, role_name, repository: Repository) if
 allow(actor, action, resource) if
     has_permission(actor, action, resource);
 ```
-
+    
 ### What's next
 
 Now, we've setup our policy. Let's see how to enforce authorization

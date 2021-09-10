@@ -29,16 +29,11 @@ authorized for a particular user and action. Let's go back to our
 repository example, but this time we are listing repositories the user
 has access to:
 
-```python
-@app.route("/repo")
-def repo_list(name):
-    repositories = oso.authorized_resources(
-        User.get_current_user(),
-        "read",
-        Repository)
-
-    return serialize(repositories)
-```
+{{< literalInclude
+    path="examples/add-to-your-application/python/app/data_filtering.py"
+    from="docs: begin-list-route"
+    to="docs: end-list-route"
+    >}}
 
 To use this API, you must pass some additional information to
 register_class so that Oso knows how to query for your application's
@@ -60,31 +55,11 @@ application. You implement three functions:
   that the new query returns the UNION of `q1` and `q2` (all results
   from each).
 
-```python
-# This is an example implementation for the SQLAlchemy ORM, but you can
-# use any ORM with this API.
-def get_repositories(constraints):
-    query = Session().query(Repository)
-    for constraint in constraints:
-        field = getattr(Repository, constraint.field)
-        if constraint.kind == "Eq":
-            query = query.filter(field == constraint.value)
-        elif constraint.kind == "In":
-            query = query.filter(field.in_(constraint.value))
-
-    return query
-
-oso.register_class(
-    Repository,
-    types={
-		# Tell Oso the types of fields you will use in your policy.
-		"is_public": bool
-	},
-    build_query=get_repositories,
-    exec_query=lambda q: q.all(),
-    combine_query=lambda q1, q2: q1.union(q2),
-)
-```
+{{< literalInclude
+    path="examples/add-to-your-application/python/app/data_filtering.py"
+    from="docs: begin-data-filtering"
+    to="docs: end-data-filtering"
+    >}}
 
 When you call authorized_resources, Oso will create a query using the
 `build_query` function with filters obtained by running the policy. For
@@ -95,9 +70,7 @@ has_permission(_user: User, "read", repository: Repository) if
 	repository.is_public = true;
 ```
 
-TODO filters lang!
-
-This rule would produce the constraints: `[Constraint(kind=Eq,
+This rule would produce the filters: `[Filter(kind=Eq,
 field="is_public", value=true)]`. Oso then uses SQLAlchemy in our
 example to create a query and retrieve repositories that have the
 `is_public` field as `true` from the database. This pushes down filters
@@ -112,9 +85,11 @@ say we want to order queries by name.
 
 To do this, we can use the `authorized_query` API:
 
+<!-- manually test this snippet -->
+
 ```python
-@app.route("/repo")
-def repo_list(name):
+@app.route("/repos")
+def repo_list():
     query = oso.authorized_query(
         User.get_current_user(),
         "read",
