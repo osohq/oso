@@ -230,9 +230,6 @@ pub enum ParseError {
         loc: usize,
         name: String,
     },
-    AmbiguousAndOr {
-        msg: String,
-    },
     ResourceBlock {
         loc: usize,
         msg: String,
@@ -302,7 +299,7 @@ impl fmt::Display for ParseError {
                     name, name
                 )
             }
-            Self::AmbiguousAndOr { msg, .. } | Self::ResourceBlock { msg, .. } => {
+            Self::ResourceBlock { msg, .. } => {
                 write!(f, "{}", msg)
             }
         }
