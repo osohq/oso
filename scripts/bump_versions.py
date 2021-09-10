@@ -18,7 +18,7 @@ import tomlkit
 BASE = pathlib.Path(__file__).parent.parent
 
 """Regular expression for capturing version."""
-VERSION_RE = r"[\w.]+"
+VERSION_RE = r"[\w.]+(-beta)?"
 
 
 def log(*args):
@@ -144,8 +144,11 @@ def oso_python_dependency_version(version):
 
     0.14.5 => 0.14.0
     """
-    parsed = parse_version(version)
-    return ".".join((str(parsed.major), str(parsed.minor), str(0)))
+    if version.endswith("-beta"):
+        return version
+    else:
+        parsed = parse_version(version)
+        return ".".join((str(parsed.major), str(parsed.minor), str(0)))
 
 
 def bump_sqlalchemy_version(version, oso_version):
@@ -154,7 +157,7 @@ def bump_sqlalchemy_version(version, oso_version):
                     fr'__version__ = "({VERSION_RE})"')
     replace_version(oso_python_dependency_version(oso_version),
                     BASE / "languages/python/sqlalchemy-oso/requirements.txt",
-                    fr'oso~=({VERSION_RE})')
+                    fr'oso[~=]+({VERSION_RE})')
     replace_version(version,
                     BASE / ".github/workflows/publish-docs.yml",
                     fr'default: "({VERSION_RE})" # sqlalchemy_oso_version')
@@ -166,7 +169,7 @@ def bump_flask_version(version, oso_version):
                     fr'__version__ = "({VERSION_RE})"')
     replace_version(oso_python_dependency_version(oso_version),
                     BASE / "languages/python/flask-oso/requirements.txt",
-                    fr'oso~=({VERSION_RE})')
+                    fr'oso[~=]+({VERSION_RE})')
     replace_version(version,
                     BASE / ".github/workflows/publish-docs.yml",
                     fr'default: "({VERSION_RE})" # flask_oso_version')
@@ -178,7 +181,7 @@ def bump_django_version(version, oso_version):
                     fr'__version__ = "({VERSION_RE})"')
     replace_version(oso_python_dependency_version(oso_version),
                     BASE / "languages/python/django-oso/requirements.txt",
-                    fr'oso~=({VERSION_RE})')
+                    fr'oso[~=]+({VERSION_RE})')
     replace_version(version,
                     BASE / ".github/workflows/publish-docs.yml",
                     fr'default: "({VERSION_RE})" # django_oso_version')

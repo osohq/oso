@@ -6,16 +6,16 @@ on:
         description: "docs s3 path (docs.oso.dev or docs-preview.oso.dev)"
       oso_version:
         description: "oso release to build docs for"
-        default: "0.20.0-beta" # oso_version
+        default: "0.20.1-beta" # oso_version
       flask_oso_version:
         description: "flask oso release to build docs for"
-        default: "0.20.0-beta" # flask_oso_version
+        default: "0.20.1-beta" # flask_oso_version
       django_oso_version:
         description: "django oso release to build docs for"
-        default: "0.20.0-beta" # django_oso_version
+        default: "0.20.1-beta" # django_oso_version
       sqlalchemy_oso_version:
         description: "sqlalchemy oso release to build docs for"
-        default: "0.20.0-beta" # sqlalchemy_oso_version
+        default: "0.20.1-beta" # sqlalchemy_oso_version
 jobs:
   publish:
     name: Publish docs

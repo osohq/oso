@@ -7,7 +7,7 @@ JS_DIR := $(OSO_ROOT)/languages/js
 RUBY_DIR := $(OSO_ROOT)/languages/ruby
 
 # Needed for tests
-JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/oso/target/oso-0.20.0-beta.jar
+JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/oso/target/oso-0.20.1-beta.jar
 
 export BUNDLE_GEMFILE := $(RUBY_DIR)/Gemfile
 

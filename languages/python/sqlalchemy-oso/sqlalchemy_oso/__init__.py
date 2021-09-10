@@ -1,4 +1,4 @@
-__version__ = "0.20.0-beta"
+__version__ = "0.20.1-beta"
 
 
 from .auth import register_models
