@@ -168,7 +168,8 @@ implement a `has_role()` rule in the policy:
 ```polar
 has_role(user: User, name: String, resource: Resource) if
   role in user.roles and
-  role matches { name: name, resource: resource };
+  role.name = name and
+  role.resource = resource;
 ```
 
 `role in user.roles` iterates over a user's assigned roles and `role matches {
@@ -210,11 +211,13 @@ name: name, resource: resource }` succeeds if the user has been assigned the
   ```polar
   has_role(user: User, name: String, repository: Repository) if
     role in user.repository_roles and
-    role matches { name: name, resource: resource };
+    role.name = name and
+    role.repository = repository;
 
   has_role(user: User, name: String, organization: Organization) if
     role in user.organization_roles and
-    role matches { name: name, resource: resource };
+    role.name = name and
+    role.organization = organization;
   ```
 
 {{% /callout %}}
@@ -310,7 +313,8 @@ allow(actor, action, resource) if
 
 has_role(user: User, name: String, resource: Resource) if
   role in user.roles and
-  role matches { name: name, resource: resource };
+  role.name = name and
+  role.resource = resource;
 
 actor User {}
 

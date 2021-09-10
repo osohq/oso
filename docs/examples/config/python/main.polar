@@ -3,7 +3,8 @@ allow(actor, action, resource) if
 
 has_role(user: User, name: String, resource: Resource) if
   role in user.roles and
-  role matches { name: name, resource: resource };
+  role.name = name and
+  role.resource = resource;
 
 actor User {}
 
