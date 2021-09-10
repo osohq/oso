@@ -82,7 +82,7 @@ repository if that repository is marked as "public".
    role_name = role.name and
    repository = role.repository;
 
-+allow(_actor, "read", repository: Repository) if
++has_permission(_actor, "read", repository: Repository) if
 +  repository.public;
 
  allow(actor, action, resource) if
@@ -99,8 +99,15 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); border-radius: 6px;" alt="A
 
 ## What just happened?
 
+The quickstart server is using an Oso policy to make sure users are allowed to
+view repos. To see where, check out the `oso.authorize` call in the `repo_show`
+method in `server.py`.
 
+In this case, the `react` repo is marked as public in the `models.py` file, so
+it should be accessible to everyone. By adding the rule that checks
+`repository.public`, you told Oso how to check that a repository is public.
 
+Check out the full code below:
 
 {{< literalInclude dynPath="serverFile" tabGroup="quickstart" >}}
 
@@ -112,10 +119,6 @@ If you have any questions, are getting stuck, or just want to talk something
 through, jump into [Slack](https://join-slack.osohq.com/) and an engineer from
 the core team (or one of the hundreds of developers in the growing community)
 will help you out.
-
-```console
-git clone {{% exampleGet "githubURL" %}}
-```
 
 {{% callout "What's next" "blue" %}}
 
