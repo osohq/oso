@@ -303,7 +303,14 @@ role, the `"owner"` organization role, and the `"parent"` relation between the
 two resource types:
 
 ```polar
-"maintainer" if "owner" on "parent";
+resource Repository {
+  # ...
+
+  relations = { parent: Organization };
+
+  # An actor has the "maintainer" role if they have the "owner" role on the "parent" Organization.
+  "maintainer" if "owner" on "parent";
+}
 ```
 
 ## Add an `allow()` rule
