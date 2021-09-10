@@ -21,9 +21,9 @@ class NotFoundError(AuthorizationError):
 
     def __init__(self):
         super().__init__(
-            "Oso ForbiddenError -- The requested action was not allowed for the "
-            "given resource. You should handle this error by returning a 403 error "
-            "to the client."
+            "Oso NotFoundError -- The current user does not have permission to read "
+            "the given resource. You should handle this error by returning a 404 "
+            "error to the client."
         )
 
 
@@ -38,7 +38,7 @@ class ForbiddenError(AuthorizationError):
 
     def __init__(self):
         super().__init__(
-            "Oso NotFoundError -- The current user does not have permission to read "
-            "the given resource. You should handle this error by returning a 404 "
-            "error to the client."
+            "Oso ForbiddenError -- The requested action was not allowed for the "
+            "given resource. You should handle this error by returning a 403 error "
+            "to the client."
         )
