@@ -32,7 +32,7 @@ class User:
 
 oso = Oso()
 [oso.register_class(cls) for cls in [Organization, Repository, User]]
-oso.load_files(["./policy.polar"])
+oso.load_files(["main.polar"])
 
 ariana = User("ariana", set())
 bhavik = User("bhavik", set())

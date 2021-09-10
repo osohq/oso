@@ -61,7 +61,7 @@ particular type.
   oso.register_class(Repository)
   oso.register_class(User)
 
-  oso.load_files(["rbac.polar"])
+  oso.load_files(["main.polar"])
   ```
 
 {{% /callout %}}
@@ -236,7 +236,7 @@ repositories. For example, a user is granted the `"maintainer"` role on a
 repository if they're assigned the `"owner"` role on the repository's parent
 organization. This is how you write that rule with Oso:
 
-{{< code file="rbac.polar" >}}
+{{< code file="main.polar" >}}
 resource Repository {
   # ...
 
@@ -306,7 +306,7 @@ oso.authorize(User(id=1), "push", Repository(id=2))
 
 Our complete policy looks like this:
 
-{{< code file="rbac.polar" >}}
+{{< code file="main.polar" >}}
 allow(actor, action, resource) if
   has_permission(actor, action, resource);
 
