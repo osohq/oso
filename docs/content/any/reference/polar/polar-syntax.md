@@ -103,8 +103,7 @@ An instance literal can only be used with [the `new` operator](#new) or as a
 
 ## Rules
 
-Every statement in a Polar file is part of a rule. Rules allow us to express
-conditional statements ("**if** this **then** that").
+Rules allow you to express conditional statements ("**if** this **then** that").
 
 A rule in Polar takes the form `HEAD if BODY;` where `HEAD` must be a _fact_
 and `BODY` any number of _terms_. The meaning of a rule is that `HEAD` is true
@@ -573,6 +572,25 @@ pattern matching. This operator can be used anywhere within a rule body to
 perform a match. The same operation is used by the engine to test whether a
 rule argument matches the specializer.
 
+#### Actor and Resource Specializers
+
+Oso provides built-in specializers that will match any
+application type that has been declared in an [actor or resource block](#actor-and-resource-blocks).
+
+The `Actor` specializer will match any application type that has been declared in an `actor` block,
+and `Resource` will match types declared in `resource` blocks.
+
+E.g.,
+
+```polar
+allow(actor: Actor, action, resource: Resource) if ...
+```
+
+Because of this, attempts to register application types named `Actor` or
+`Resource` will result in an error.
+
+Actor and resource specializers are used by Oso's built-in [rule types](#rule-types) to validate policies.
+
 ### Inline Queries (`?=`)
 
 Queries can also be added to Polar files and will run when the file is loaded.
@@ -586,3 +604,253 @@ To add an inline query to a Polar file, use the `?=` operator:
 ```
 
 An inline query is only valid at the beginning of a line.
+
+### Rule Types
+
+TODO
+
+## Actor and Resource Blocks
+
+Oso 0.20.0 introduced Actor and Resource Blocks, which provide a way to organize policies by actor and resource types.
+These blocks are especially useful for expressing role-based access control logic.
+
+
+The simplest form of a block looks like this:
+
+```polar
+# Actor block
+actor User {}
+
+# Resource block
+resource Repository {}
+```
+
+In the above example, `User` and `Repository` must be registered application types.
+
+Inside of a block, you can declare [permissions](#permission-declarations), [roles](#role-declarations), and [relations](#relation-declarations) and write [shorthand rules](#shorthand-rules).
+
+A more complete block looks like this:
+
+```polar
+resource Repository {
+  ### Permission, role, and relation declarations ###
+  permissions = ["read", "push"];  # permissions that can be granted for the actor or resource
+  roles = ["contributor", "maintainer", "admin"];  # roles that can be assigned for the actor or resource
+  relations = { parent: Organization };  # relations to other actors/resources
+
+  ### Shorthand rules ###
+  "read" if "contributor"  # "contributor" role grants the "read" permission
+  "push" if "maintainer"  # "member" role grants the "read" permission
+  "maintainer" if "admin"  # "admin" role grants the "maintainer" role
+}
+```
+<!--
+TODO: should we add the data-linking rules here too? I'm thinking in case
+someone just copies and pastes this whole thing
+-->
+
+Once you have declared a block, you can use the built-in [Actor and Resource
+specializers](#actor-and-resource-specializers) to match all declared actor and
+resource types.
+
+### Permission Declarations
+
+You can specify the permissions that are available for an actor or resource type using the following syntax:
+
+```polar
+resource Repository {
+  permissions = ["read", "push"];
+}
+```
+
+Permissions are always Strings. You must declare permissions in order to use them in [shorthand rules](#shorthand-rules).
+
+### Role Declarations
+
+You can specify the roles that are available for an actor or resource type using the following syntax:
+
+```polar
+resource Repository {
+  roles = ["contributor", "maintainer", "admin"];
+}
+```
+
+Roles are always Strings. You must declare roles in order to use them in [shorthand rules](#shorthand-rules).
+
+In order to use roles, you must write at least one `has_role` rule that gets
+user-role assignments stored in your application. This rule takes the following
+form:
+
+```polar
+has_role(actor: Actor, name: String, resource: Resource) if ...
+```
+
+For example,
+
+```polar
+# User-role assignment hook - required when using roles
+has_role(user: User, name: String, repo: Repository) if
+  # Look up user-role assignments from application, e.g.
+  role in user.roles and
+  role.repo_id = repo.id;
+```
+
+The `name` argument corresponds to the role names in the declaration list. The
+`has_role` rule must handle every declared role name.
+
+### Relation Declarations
+
+You can specify relations from one actor/resource type to another using the following syntax:
+
+```polar
+resource Repository {
+  relations = {parent: Organization};
+}
+```
+
+Relations are `{key: value}` pairs where the key is the relation name, and the value is the type of the related object.
+Related object types must also be declared in resource or actor blocks.
+
+In order to use relations, you must write a `has_relation` rule that gets relationship data from your application. This rule takes the following form:
+
+```polar
+has_relation(subject: Resource/Actor, name: String, object: Resource/Actor) if ...
+```
+
+The `object` argument is the resource or actor type on which the relation was declared.
+In the example above, the object type is `Repository` and the subject type is `Organization`.
+
+For example,
+
+```polar
+# Relation hook - required when using relations
+has_relation(parent_org: Organization, "parent", repo: Repository) if
+  # Look up parent-child relation from application, e.g.
+  parent_org = repo.org;
+```
+
+`has_relation` rules must be defined for every declared relation.
+
+### Shorthand rules
+
+Shorthand rules are shortened rules that you can define inside actor and
+resource blocks using declared permissions, roles, and relations.
+
+For example,
+
+```polar
+resource Repository {
+  permissions = ["read", "push"];
+  roles = ["contributor", "maintainer"];
+  relations = { parent: Organization };
+
+  # Shorthand rules without relations
+  "read" if "contributor";  # "contributor" role grants "read" permission
+  "push" if "maintainer";  # "maintainer" role grants "push" permission
+  "contributor" if "maintainer";  # "maintainer" role grants "contributor" role
+
+  # Shorthand rules with relations
+  "admin" if "owner" on "parent"  # "owner" role on parent Organization grants the "admin" role
+  "contributor" if "member" on "parent"  # "member" role on parent Organization grants "contributor" role
+}
+```
+
+For shorthand rules to be evaluated by the Oso library, you must add the following rule to your policy:
+
+```polar
+allow(actor, action, resource) if has_permission(actor, action, resource);
+```
+
+This rule tells Oso to look for permissions that were granted through shorthand rules.
+
+#### Shorthand rules without relations
+
+A shorthand rule has the basic form:
+
+```polar
+[result] if [condition];
+```
+
+Where `"result"` and `"condition"` can be [permissions](#permission-declarations) or [roles](#role-declarations) that were declared inside the same block.
+
+For example,
+
+```polar
+resource Repository {
+  permissions = ["read", "push"];
+  roles = ["contributor", "maintainer"];
+
+  "read" if "contributor";  # "contributor" role grants "read" permission
+  "push" if "maintainer";  # "maintainer" role grants "push" permission
+  "contributor" if "maintainer";  # "maintainer" role grants "contributor" role
+}
+```
+
+#### Shorthand rules with relations
+
+If you have [declared relations](#relation-declarations) inside a block, you can also write shorthand rules of this form:
+
+```polar
+[result] if [condition] on [relation];
+```
+
+where `result` and `condition` can be permissions or roles, and `relation` can be a relation.
+
+This form is used to grant results based on conditions on a related resource or
+actor. This form is commonly used with `"parent"` relations.
+
+For example,
+
+```polar
+resource Repository {
+  roles = ["contributor", "maintainer"];
+  relations = { parent: Organization };
+
+  "admin" if "owner" on "parent"  # "owner" role on parent Organization grants the "admin" role
+  "contributor" if "member" on "parent"  # "member" role on parent Organization grants "contributor" role
+}
+```
+
+
+
+
+<!-- There are three kinds of shorthand rules:
+OLD
+---
+### Built-in `Actor` and `Resource` specializers
+
+Once you have declared a block, you can use the built-in `Actor` and `Resource` specializers
+to match all declared actor and resource types.
+
+E.g., `allow(actor: Actor, action, resource: Resource) if ...` will only match
+when called with instances of `MyActor` and `MyResource` in the above example.
+
+1. Grant a permission with a role.
+
+```polar
+[permission] if [role];
+```
+This rule says that an actor has `permission` on the resource if they have `role` for the same resource, e.g.
+```polar
+resource Repository {
+  permissions = ["read"];
+  roles = ["contributor"];
+
+  "read" if "contributor";
+}
+```
+
+2. Grant a role with another role.
+
+```polar
+[roleA] if [roleB];
+```
+This rule says that an actor has `roleA` on the resource if they have `roleB` for the same resource, e.g.
+
+```polar
+resource Repository {
+  roles = ["contributor", "maintainer"];
+
+  "contributor" if "maintainer";
+}
+``` -->
