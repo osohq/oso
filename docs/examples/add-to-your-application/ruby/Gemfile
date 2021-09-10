@@ -1,0 +1,16 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+git_source(:github) { |repo_name| "https://github.com/#{repo_name}" }
+
+gem "oso-oso", path: "../../../../languages/ruby/"
+gem "sinatra"
+gem "test-unit"
+gem "rack-test"
+gem "sequel"
+gem "sqlite3"
+
+gem "thin", "~> 1.8"
+
+gem "pry-byebug"

@@ -56,13 +56,14 @@ Here's an example of using `authorize` to check if a user can `"read"` a
 repository.
 
 {{< literalInclude
-    path="examples/add-to-your-application/python/app/routes.py"
+    dynPath="routePath"
+    fallback="garbo"
     from="docs: begin-show-route"
     to="docs: end-show-route"
     >}}
 
 The user and repository parameters are {{% lang %}} objects. Oso knows about
-fields & methods on Python objects, and their types, so you can access this data
+fields & methods on {{% lang %}} objects, and their types, so you can access this data
 directly from your policy. You used the roles property of the user object
 in the [`has_role` implementation]({{< ref "model#giving-your-users-roles" >}}).
 

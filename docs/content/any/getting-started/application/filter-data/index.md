@@ -30,7 +30,8 @@ repository example, but this time we are listing repositories the user
 has access to:
 
 {{< literalInclude
-    path="examples/add-to-your-application/python/app/data_filtering.py"
+    dynPath="dataFilteringPath"
+    fallback="garbo"
     from="docs: begin-list-route"
     to="docs: end-list-route"
     >}}
@@ -56,7 +57,8 @@ application. You implement three functions:
   from each).
 
 {{< literalInclude
-    path="examples/add-to-your-application/python/app/data_filtering.py"
+    dynPath="dataFilteringPath"
+    fallback="garbo"
     from="docs: begin-data-filtering"
     to="docs: end-data-filtering"
     >}}
@@ -65,7 +67,7 @@ When you call authorized_resources, Oso will create a query using the
 `build_query` function with filters obtained by running the policy. For
 example, in [Write Polar Rules](write-rules) we wrote the rule:
 
-```python
+```polar
 has_permission(_user: User, "read", repository: Repository) if
 	repository.is_public = true;
 ```
@@ -87,20 +89,7 @@ To do this, we can use the `authorized_query` API:
 
 <!-- manually test this snippet -->
 
-```python
-@app.route("/repos")
-def repo_list():
-    query = oso.authorized_query(
-        User.get_current_user(),
-        "read",
-        Repository)
-
-    # Use the ORM's Query API to alter the query before it is
-    # executed by the database with .all().
-    repositories = query.order_by(Repository.name).all()
-
-    return serialize(repositories)
-```
+{{% exampleGet "repoListQuerySnippet" %}}
 
 `authorized_query` returns the query object used by our ORM with
 authorization filters applied so that we can add additional filters,
