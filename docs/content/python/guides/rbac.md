@@ -323,7 +323,7 @@ allow(actor, action, resource) if
   has_permission(actor, action, resource);
 ```
 
-This is a typical `allow()` rule for an RBAC policy: an actor is allowed to
+This is a typical `allow()` rule for a policy using resource blocks: an actor is allowed to
 perform an action on a resource if the actor *has permission* to perform the
 action on the resource. <!-- And an actor has permission to perform an action
 on a resource if the actor is assigned a role that grants that permission. -->
