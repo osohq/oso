@@ -7,7 +7,7 @@ require 'oso/version'
 
 # Top-level namespace for Oso authorization library.
 module Oso
-  def self.new
-    ::Oso::Oso.new
+  def self.new(*args, **kwargs, &blk)
+    ::Oso::Oso.new(*args, **kwargs, &blk)
   end
 end
