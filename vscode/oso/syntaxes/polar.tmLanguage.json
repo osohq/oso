@@ -6,9 +6,6 @@
       "include": "#comment"
     },
     {
-      "include": "#fact"
-    },
-    {
       "include": "#rule"
     },
     {
