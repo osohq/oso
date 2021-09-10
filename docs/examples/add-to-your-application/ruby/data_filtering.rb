@@ -7,17 +7,87 @@ require_relative './models'
 DB = Sequel.sqlite
 
 DB.create_table :repositories do
-  primary_key :name
   String :name
   TrueClass :is_public
 end
 
 repositories = DB[:repositories]
 
+module DF
 class Repository < Sequel::Model(:repositories)
 end
 
-oso = Oso.new
-oso.register_class(User)
-oso.register_class(
-  Repository
+r = Repository.new(name: "gmail", is_public: false)
+r.save
+
+OSO = Oso.new
+
+# docs: begin-data-filtering
+def get_repositories(filters)
+  query = Repository
+  filters.each do |filter|
+    value = filter.value
+
+    if filter.field.nil?
+      value = value.name
+      field = :name
+    else
+      field = filter.field.to_sym
+    end
+
+    if filter.kind == "Eq"
+      query = query.where(field => value)
+    else
+      raise "unimplemeneted constraint kind"
+    end
+  end
+
+  query
+end
+
+def combine_query(q1, q2)
+  q1.union(q2)
+end
+
+def exec_query(q)
+  q.all
+end
+
+OSO.register_class(User)
+OSO.register_class(
+  Repository,
+  name: "Repository",
+  fields: {
+    "is_public" => PolarBoolean
+  },
+  build_query: @get_repositories,
+  combine_query: @combine_query,
+  exec_query: @exec_query
+)
+
+OSO.load_files(["main.polar"])
+# docs: end-data-filtering
+
+
+end
+
+def get_current_user
+  User.new([{name: "admin", repository: DF::Repository.new(name: "gmail")}])
+end
+
+def serialize(repositories)
+  repositories.to_s
+end
+
+oso = DF::OSO
+
+# docs: begin-list-route
+get "/repos" do
+  repositories = oso.authorized_resources(
+    get_current_user(),
+    "read",
+    Repository)
+
+  serialize(repositories)
+end
+# docs: end-list-route

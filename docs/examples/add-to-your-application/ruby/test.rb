@@ -3,6 +3,7 @@ require 'rack/test'
 
 require_relative './oso'
 require_relative './routes'
+require_relative './data_filtering'
 
 
 class TestEverything < Test::Unit::TestCase
@@ -18,6 +19,13 @@ class TestEverything < Test::Unit::TestCase
 
   def test_route_works
     get "/repo/gmail"
+    assert last_response.ok?
+  end
+
+  def test_data_filtering_works
+    get "/repos"
+    puts last_response.body
+    assert last_response.body.length > 2
     assert last_response.ok?
   end
 end
