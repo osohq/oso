@@ -370,3 +370,85 @@ window.recordFeedback = (isUp) => {
     }
   });
 }
+
+// Support for code tab groups -- hacks ahead!
+window.addEventListener("load", () => {
+  const unique = (array) =>
+    array.filter((value, index, self) => self.indexOf(value) === index);
+
+  const tabGroupDivs = Array.from(
+    document.querySelectorAll("div[data-tabgroup]")
+  );
+
+  let tabGroups = tabGroupDivs.map(
+    (div) => div.attributes["data-tabgroup"].value
+  );
+  tabGroups = unique(tabGroups);
+
+  for (const tabGroup of tabGroups) {
+    console.log(tabGroup);
+    const codeBlocks = document.querySelectorAll(
+      `div.code[data-tabgroup='${tabGroup}'`
+    );
+    const first = codeBlocks[0];
+    // tabGroupContainer is the full containing div, and replaces the first code
+    // block in the tabGroup
+    const tabGroupContainer = document.createElement("div");
+    tabGroupContainer.className = "code";
+    first.parentNode.insertBefore(tabGroupContainer, first);
+    // tabContainer contains the clickable tabs
+    const tabContainer = document.createElement("div");
+    // codeContainer contains the, well, code
+    const codeContainer = document.createElement("div");
+    tabGroupContainer.appendChild(tabContainer);
+    tabGroupContainer.appendChild(codeContainer);
+    tabContainer.className =
+      "filename rounded-t-md bg-gray-200 text-gray-700 text-sm flex";
+
+    const pres = Array.from(codeBlocks).map((div) => div.querySelector("pre"));
+    const filenames = Array.from(codeBlocks).map((div) => {
+      const newDiv = document.createElement("div");
+      newDiv.replaceChildren(...div.querySelector(".filename").childNodes);
+      return newDiv;
+    });
+
+    codeBlocks.forEach((block) => block.remove());
+    tabContainer.replaceChildren(...filenames);
+
+    const unselectedTabStyle = {
+      padding: "0.6rem 0.4rem 0.4rem",
+      display: "flex",
+      alignItems: "center",
+      cursor: "pointer",
+      fontWeight: "normal",
+      boxShadow: "none",
+    };
+
+    const selectedTabStyle = {
+      ...unselectedTabStyle,
+      fontWeight: "bold",
+      boxShadow: "inset 0 -2px 0 #666",
+    };
+
+    function unselectFilename(filename) {
+      Object.assign(filename.style, unselectedTabStyle);
+    }
+
+    function selectFilename(filename) {
+      Object.assign(filename.style, selectedTabStyle);
+    }
+
+    function select(selectedIndex) {
+      filenames.forEach(unselectFilename);
+      selectFilename(filenames[selectedIndex]);
+      codeContainer.replaceChildren(pres[selectedIndex]);
+    }
+
+    filenames.forEach((filename, i) => {
+      filename.addEventListener("click", () => select(i));
+    });
+
+
+    select(0);
+  }
+});
