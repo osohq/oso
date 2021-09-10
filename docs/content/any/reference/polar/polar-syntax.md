@@ -105,6 +105,7 @@ An instance literal can only be used with [the `new` operator](#new) or as a
 
 Rules allow you to express conditional statements ("**if** this **then** that").
 
+<!-- TODO: this is not a great explanation as it uses the term "fact" which we don't explain. -->
 A rule in Polar takes the form `HEAD if BODY;` where `HEAD` must be a _fact_
 and `BODY` any number of _terms_. The meaning of a rule is that `HEAD` is true
 **if** each of the `BODY` terms is true. If there are be multiple rules with
@@ -607,11 +608,26 @@ An inline query is only valid at the beginning of a line.
 
 ### Rule Types
 
-TODO
+A rule type is simply the declaration of a rule that specifies the rule's name, arguments and argument types or values.
+Rule types have the same syntax as rule head, and are preceded by the keyword `type`.
+
+For example,
+
+```polar
+type has_permission(actor: Actor, action: String, resource: Resource);
+```
+
+The above rule type specifies that any rule with the name `has_permission` must have three arguments, where the first argument matches `Actor`, the second argument matches `String`, and the third argument matches `Resource`.
+
+Argument matching is determined in the same way that matching is determined for rule evaluation. See [Patterns and Matching](#patterns-and-matching).
+
+Rule types are optional. If a rule type exists with the same name as a rule, then the rule must match that type or else an error will be thrown at policy load-time.
+
+You can find a reference for built-in rule types [here](TODO: link).
 
 ## Actor and Resource Blocks
 
-Oso 0.20.0 introduced Actor and Resource Blocks, which provide a way to organize policies by actor and resource types.
+Actor and Resource Blocks provide a way to organize policies by actor and resource types.
 These blocks are especially useful for expressing role-based access control logic.
 
 
