@@ -94,7 +94,7 @@ parsed. For example, `"read" if "contributor"` expands to:
 
 ```polar
 has_permission(user: User, "read", repository: Repository) if
-	has_role(user, "contributor", repository: Repository);
+	has_role(user, "contributor", repository);
 ```
 
 We can grant users permissions based on roles by writing our own rules:
@@ -102,7 +102,7 @@ We can grant users permissions based on roles by writing our own rules:
 ```polar
 has_permission(user: User, "delete", repository: Repository) if
 	# User has the "admin" role.
-	has_role(user, "admin", repository: Repository) and
+	has_role(user, "admin", repository) and
 	user.auth_token.has_sudo_mode() = true;
 ```
 

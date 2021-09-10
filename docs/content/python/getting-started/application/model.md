@@ -48,7 +48,8 @@ For more detailed installation instructions, see
 
 Policies are files that are packaged with the rest of your application
 code. The Oso library loads and evaluates policy files when your
-application runs. Now that you've installed Oso, create a policy:
+application runs. Now that you've installed Oso, create a policy file
+called `main.polar` and use it in your app:
 
 {{< literalInclude path="examples/add-to-your-application/python/app/oso.py" >}}
 
@@ -161,27 +162,10 @@ the user has. Here's an example {{% lang %}} data model implemented using
 dataclasses that could be used by this rule. In your application, you'll
 likely use your existing User model to maintain this information.
 
-```python
-@dataclass
-class Role:
-    name: str
-    repository: Repository
-
-@dataclass
-class User:
-    roles: List[Role]
-
-users_db = {
-    "larry": User([Role(name="admin",
-                        repository=repos_db["gmail"])]),
-    ...
-}
-```
-
 {{< literalInclude
     path="examples/add-to-your-application/python/app/models.py"
     from="# docs: start"
-    end="# docs: end " >}}
+    to="# docs: end" >}}
 
 ### Allowing access
 
