@@ -51,6 +51,21 @@ functions: it identifies the type as an **actor** or a **resource**, and it
 provides a centralized place to declare roles and permissions for that
 particular type.
 
+{{% callout "Note" "blue" %}}
+  For every resource block, we also need to register the class with Oso:
+
+  ```py {hl_lines=[3,4,5]}
+  oso = Oso()
+
+  oso.register_class(Organization)
+  oso.register_class(Repository)
+  oso.register_class(User)
+
+  oso.load_files(["rbac.polar"])
+  ```
+
+{{% /callout %}}
+
 ## Declare roles and permissions
 
 In GitClub, users can perform actions such as `"delete"`-ing an organization or
