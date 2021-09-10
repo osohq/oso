@@ -173,7 +173,7 @@ Oso policies have a special rule: the `allow` rule. The `allow` rule is
 the entrypoint to the policy, and is used by the Oso library to enforce
 authorization.
 
-The resource blocks you defined grant users permissions using
+The resource blocks you defined grant users permissions using the
 `has_permission` rule. To use permissions for authorization, you must
 define an `allow` rule:
 
