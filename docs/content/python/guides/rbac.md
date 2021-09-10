@@ -10,7 +10,7 @@ aliases:
 
 # Build Role-Based Access Control (RBAC)
 
-Role-based access control (RBAC) is so ubiquitous that Oso provides special
+Role-based access control (RBAC) is so ubiquitous that Oso provides
 syntax for modeling RBAC. This syntax makes it easy to create a role-based
 authorization policy with roles and permissions -- for example, declaring that
 the `"maintainer"` role on a repository allows a user to `"push"` to that
