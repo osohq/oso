@@ -124,8 +124,6 @@ has_permission(actor: Actor, "push", repository: Repository) if
   resource block declaration.
 {{% /callout %}}
 
-<!-- TODO(gj): transition -->
-
 ## Grant roles to other roles
 
 All of the shorthand rules we've written so far have been in the `<permission>
