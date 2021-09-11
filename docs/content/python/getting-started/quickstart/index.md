@@ -28,9 +28,11 @@ are three steps:
 
 ## 1. Clone the repo and install dependencies
 
+First, clone [the {{< lang >}} quickstart repo]({{< exampleGet "githubUrl" >}}),
+and install the dependencies:
 
 ```sh
-git clone {{< exampleGet "githubUrl" >}}
+git clone {{< exampleGet "githubCloneUrl" >}}
 cd {{< exampleGet "repoName" >}}
 {{< exampleGet "installDependencies" >}}
 ```

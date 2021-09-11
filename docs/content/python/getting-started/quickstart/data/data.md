@@ -1,6 +1,6 @@
 ---
-githubApp: "[Python sample app](https://github.com/osohq/oso-python-quickstart)"
-githubURL: "https://github.com/osohq/oso-python-quickstart.git"
+githubUrl: "https://github.com/osohq/oso-python-quickstart"
+githubCloneUrl: "https://github.com/osohq/oso-python-quickstart.git"
 repoName: oso-python-quickstart
 mainPolarFile: "examples/quickstart/python/app/main.polar"
 serverFile: "examples/quickstart/python/app/server.py"

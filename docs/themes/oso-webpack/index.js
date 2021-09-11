@@ -416,7 +416,7 @@ window.addEventListener("load", () => {
     tabContainer.replaceChildren(...filenames);
 
     const unselectedTabStyle = {
-      padding: "0.6rem 0.4rem 0.4rem",
+      padding: "0.6rem 0.4rem",
       display: "flex",
       alignItems: "center",
       cursor: "pointer",
