@@ -16,6 +16,7 @@ import (
 
 	"github.com/osohq/go-oso/errors"
 	"github.com/osohq/go-oso/types"
+	_ "github.com/osohq/go-oso/internal/ffi/native"
 )
 
 /*
