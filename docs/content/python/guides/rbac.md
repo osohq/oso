@@ -54,16 +54,13 @@ particular type.
 {{% callout "Note" "blue" %}}
   For every resource block, we also need to register the class with Oso:
 
-  ```py {hl_lines=[3,4,5]}
-  oso = Oso()
-
-  oso.register_class(Organization)
-  oso.register_class(Repository)
-  oso.register_class(User)
-
-  oso.load_files(["main.polar"])
-  ```
-
+  {{< literalInclude
+    path="examples/rbac/python/app.py"
+    from="docs: begin-setup"
+    to="docs: end-setup"
+    hlFrom="docs: begin-register_class"
+    hlTo="docs: end-register_class"
+  >}}
 {{% /callout %}}
 
 ## Declare roles and permissions
@@ -171,61 +168,46 @@ The main question Oso asks is: does `User(id=1)` have the `"maintainer"` role
 on `Repository(id=2)`? For Oso to be able to ask this question, we need to
 implement a `has_role()` rule in the policy:
 
-```polar
-has_role(user: User, name: String, resource: Resource) if
-  role in user.roles and
-  role.name = name and
-  role.resource = resource;
-```
+{{< literalInclude
+  path="examples/rbac/python/main.polar"
+  from="docs: begin-has_role"
+  to="docs: end-has_role"
+>}}
 
 `role in user.roles` iterates over a user's assigned roles and `role matches {
 name: name, resource: resource }` succeeds if the user has been assigned the
 `name` role for `resource`.
 
-{{% callout "Note" "blue" %}}
+{{< callout "Note" "blue" >}}
+  <!-- TODO(gj): spacing seems off in these callouts -->
+  <div class="pb-4"></div>
   The body of this rule will vary according to the way roles are stored in your
   application. The data model for our GitClub example is as follows:
 
-  ```py
-  @dataclass(frozen=True)
-  class Organization:
-      name: str
+  <div class="pb-4"></div>
 
-  @dataclass(frozen=True)
-  class Repository:
-      name: str
-      organization: Organization
-
-  @dataclass(frozen=True)
-  class Role:
-      name: str
-      resource: Union[Repository, Organization]
-
-  @dataclass
-  class User:
-      name: str
-      roles: Set[Role]
-
-      def assign_role_for_resource(self, name, resource):
-          self.roles.add(Role(name, resource))
-  ```
+  {{% literalInclude
+    path="examples/rbac/python/app.py"
+    from="docs: begin-classes"
+    to="docs: end-classes"
+  %}}
 
   If, for example, repository roles and organization roles were stored
   separately instead of in a heterogeneous set, we might define a pair of
   `has_role()` rules, one for each role type:
 
-  ```polar
-  has_role(user: User, name: String, repository: Repository) if
-    role in user.repository_roles and
-    role.name = name and
-    role.repository = repository;
+  <!-- TODO(gj): why do I need to dedent this? -->
+  {{< code codeLang="polar" >}}
+has_role(user: User, name: String, repository: Repository) if
+  role in user.repository_roles and
+  role.name = name and
+  role.repository = repository;
 
-  has_role(user: User, name: String, organization: Organization) if
-    role in user.organization_roles and
-    role.name = name and
-    role.organization = organization;
-  ```
-
+has_role(user: User, name: String, organization: Organization) if
+  role in user.organization_roles and
+  role.name = name and
+  role.organization = organization;
+  {{< /code >}}
 {{% /callout %}}
 
 Our `has_role()` rule can check role assignments on repositories and
@@ -237,7 +219,7 @@ to a role on the parent.
 <!-- TODO(gj): better heading -->
 ## Grant a role on a child resource to a role on the child's parent
 
-If you've used ~GitHub~ *GitClub* before, you know that having a role on an
+If you've used ~~GitHub~~ *GitClub* before, you know that having a role on an
 organization grants certain roles and permissions on that organization's
 repositories. For example, a user is granted the `"maintainer"` role on a
 repository if they're assigned the `"owner"` role on the repository's parent

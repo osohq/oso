@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import Set, Union
-from pathlib import Path
 
 from oso import Oso
 
 
+# docs: begin-classes
 @dataclass(frozen=True)
 class Organization:
     name: str
@@ -29,10 +29,17 @@ class User:
 
     def assign_role_for_resource(self, name, resource):
         self.roles.add(Role(name, resource))
+        # docs: end-classes
 
 
+# docs: begin-setup
 oso = Oso()
+
+# docs: begin-register_class
 oso.register_class(Organization)
 oso.register_class(Repository)
 oso.register_class(User)
-oso.load_files([Path(__file__).parent / "main.polar"])
+# docs: end-register_class
+
+oso.load_files(["main.polar"])
+# docs: end-setup

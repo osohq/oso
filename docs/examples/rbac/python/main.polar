@@ -1,10 +1,12 @@
 allow(actor, action, resource) if
   has_permission(actor, action, resource);
 
+# docs: begin-has_role
 has_role(user: User, name: String, resource: Resource) if
   role in user.roles and
   role.name = name and
   role.resource = resource;
+# docs: end-has_role
 
 actor User {}
 
