@@ -43,8 +43,10 @@
       segments will be separated by an ellipsis to indicate elided code.
   - gitHub: specify GitHub link to generate a link to example. E.g
     ``https://github.com/osohq/gitclub/``
+  - ellipsis: override the default marker for elided code ("...").
 */}}
 
+{{ $ellipsis := $.Params.ellipsis | default "..." }}
 {{ $dynPath := $.Params.dynPath }}
 {{ $path := $.Params.path }}
 {{ $content := $.Params.fallback }}
@@ -205,7 +207,7 @@
               {{ with first $count (after (sub (int $start) 1) $bounded) }}
                 {{ $temp = $temp | append . }}
                 {{ if ne $index $last }}
-                  {{ $temp = $temp | append "" "..." "" }}
+                  {{ $temp = $temp | append "" $ellipsis "" }}
                 {{ end }}
               {{ end }}
             {{ end }}

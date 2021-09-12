@@ -225,19 +225,11 @@ repositories. For example, a user is granted the `"maintainer"` role on a
 repository if they're assigned the `"owner"` role on the repository's parent
 organization. This is how you write that rule with Oso:
 
-{{< code file="main.polar" >}}
-resource Repository {
-  # ...
-
-  relations = { parent: Organization };
-
-  # An actor has the "maintainer" role if they have the "owner" role on the "parent" Organization.
-  "maintainer" if "owner" on "parent";
-}
-
-has_relation(organization: Organization, "parent", repository: Repository) if
-  organization = repository.organization;
-{{< /code >}}
+{{< literalInclude
+  path="examples/rbac/python/main.polar"
+  lines="17,30-35"
+  ellipsis="  # ..."
+>}}
 
 First, we declare that every `Repository` has a `"parent"` relation that
 references an `Organization`:
