@@ -1,0 +1,10 @@
+{
+  "name": "osohq-oso-docs-examples-rbac",
+  "version": "0",
+  "main": "app.js",
+  "repository": "https://github.com/osohq/oso/tree/main/docs/examples/rbac/nodejs",
+  "dependencies": {
+    "jest": "^27.1.1",
+    "oso": "../../../../languages/js"
+  }
+}
