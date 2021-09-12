@@ -221,7 +221,7 @@ one between `Repository` and `Organization` to grant a role on a child resource
 to a role on the parent.
 
 <!-- TODO(gj): better heading -->
-## Grant a role on a child resource to a role on the child's parent
+## Grant a role on a child resource to a role on the parent
 
 If you've used ~~GitHub~~ *GitClub* before, you know that having a role on an
 organization grants certain roles and permissions on that organization's
@@ -271,9 +271,9 @@ repository's `organization` field points to it.
   has the role or permission is the third argument:
 
   ```polar
-  has_role(actor: Actor, name: String, resource: Resource) if ...
+  has_role(actor: Actor,                   name: String, resource: Resource) if ...
 
-  has_permission(actor: Actor, name: String, resource: Resource) if ...
+  has_permission(actor: Actor,             name: String, resource: Resource) if ...
 
   has_relation(related_resource: Resource, name: String, resource: Resource) if ...
   ```
