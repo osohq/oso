@@ -136,7 +136,7 @@ a superset of those granted to the `"contributor"` role. If we replace the
 existing `"read" if "maintainer"` rule with `"contributor" if "maintainer"`,
 the `"maintainer"` role still grants the `"read"` permission:
 
-```polar
+{{< code file="main.polar" hl_lines="10-11" >}}
 resource Repository {
   permissions = ["read", "push"];
   roles = ["contributor", "maintainer"];
@@ -149,7 +149,7 @@ resource Repository {
   # An actor has the "contributor" role if they have the "maintainer" role.
   "contributor" if "maintainer";
 }
-```
+{{< /code >}}
 
 In addition, any permissions we grant the `"contributor"` role in the future
 will automatically propagate to the `"maintainer"` role.

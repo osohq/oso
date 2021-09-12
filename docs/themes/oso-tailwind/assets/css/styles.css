@@ -184,3 +184,7 @@ pre code {
   pointer-events: none;
   background-color: rgb(167, 243, 208);
 }
+
+.highlight-me-pls {
+  background-color: #333;
+}
