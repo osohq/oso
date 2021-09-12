@@ -1,5 +1,7 @@
+# docs: begin-allow
 allow(actor, action, resource) if
   has_permission(actor, action, resource);
+# docs: end-allow
 
 # docs: begin-has_role
 has_role(user: User, name: String, resource: Resource) if
@@ -8,7 +10,9 @@ has_role(user: User, name: String, resource: Resource) if
   role.resource = resource;
 # docs: end-has_role
 
+# docs: begin-actor
 actor User {}
+# docs: end-actor
 
 resource Organization {
   roles = [ "owner" ];
@@ -17,7 +21,9 @@ resource Organization {
 resource Repository {
   permissions = [ "read", "push" ];
   roles = [ "contributor", "maintainer" ];
+  # docs: begin-relations
   relations = { parent: Organization };
+  # docs: end-relations
 
   # An actor has the "read" permission if they have the "contributor" role.
   "read" if "contributor";
@@ -31,5 +37,7 @@ resource Repository {
   "maintainer" if "owner" on "parent";
 }
 
+# docs: begin-has_relation
 has_relation(organization: Organization, "parent", repository: Repository) if
   organization = repository.organization;
+# docs: end-has_relation

@@ -34,17 +34,21 @@ classes are **actors** and which are **resources**. Our example app has a pair
 of **resource** types that we want to control access to, `Organization` and
 `Repository`. We declare both as resources as follows:
 
-```polar
+<!-- TODO(gj): I guess these only need to be dedented when you use angle
+bracket handlebars. -->
+{{< code file="main.polar" >}}
 resource Organization {}
 
 resource Repository {}
-```
+{{< /code >}}
 
 Our app also has a `User` class that will be our lone **actor** type:
 
-```polar
-actor User {}
-```
+{{% literalInclude
+  path="examples/rbac/python/main.polar"
+  from="docs: begin-actor"
+  to="docs: end-actor"
+%}}
 
 This piece of syntax is called a *resource block*, and it performs two
 functions: it identifies the type as an **actor** or a **resource**, and it
@@ -73,7 +77,7 @@ of resource, such as the `"owner"` role for an `Organization` or the
 Inside the curly braces of each `resource` block, we declare the roles and
 permissions for that resource:
 
-```polar
+{{< code file="main.polar" >}}
 resource Organization {
   roles = ["owner"];
 }
@@ -82,7 +86,7 @@ resource Repository {
   permissions = ["read", "push"];
   roles = ["contributor", "maintainer"];
 }
-```
+{{< /code >}}
 
 <!-- TODO(gj): transition -->
 
@@ -95,7 +99,7 @@ the `Repository` resource block, then a user who's been assigned the
 repository. Here's our `Repository` resource block with a few shorthand rules
 added:
 
-```polar
+{{< code file="main.polar" hl_lines="5-10" >}}
 resource Repository {
   permissions = ["read", "push"];
   roles = ["contributor", "maintainer"];
@@ -107,7 +111,7 @@ resource Repository {
   # An actor has the "push" permission if they have the "maintainer" role.
   "push" if "maintainer";
 }
-```
+{{< /code >}}
 
 Shorthand rules expand to regular [Polar rules](polar-syntax#rules) when a
 policy is loaded. The `"push" if "maintainer"` shorthand rule above expands
@@ -227,16 +231,19 @@ organization. This is how you write that rule with Oso:
 
 {{< literalInclude
   path="examples/rbac/python/main.polar"
-  lines="17,30-35"
+  lines="21-25,36-43"
+  hl_lines="4,8-9,12-13"
   ellipsis="  # ..."
 >}}
 
 First, we declare that every `Repository` has a `"parent"` relation that
 references an `Organization`:
 
-```polar
-relations = { parent: Organization };
-```
+{{< literalInclude
+  path="examples/rbac/python/main.polar"
+  from="docs: begin-relations"
+  to="docs: end-relations"
+>}}
 
 This is a dictionary where each key is the name of the relation and each value
 is the relation's type.
@@ -244,10 +251,11 @@ is the relation's type.
 Next, we write a `has_relation()` rule that tells Oso how to check if an
 organization has the `"parent"` relation with a repository:
 
-```polar
-has_relation(organization: Organization, "parent", repository: Repository) if
-  organization = repository.organization;
-```
+{{< literalInclude
+  path="examples/rbac/python/main.polar"
+  from="docs: begin-has_relation"
+  to="docs: end-has_relation"
+>}}
 
 <!-- TODO(gj): better phrasing for the next sentence -->
 In this case, an organization is the `"parent"` of a repository if the
@@ -276,26 +284,23 @@ Finally, we add a shorthand rule that involves the `"maintainer"` repository
 role, the `"owner"` organization role, and the `"parent"` relation between the
 two resource types:
 
-```polar
-resource Repository {
-  # ...
-
-  relations = { parent: Organization };
-
-  # An actor has the "maintainer" role if they have the "owner" role on the "parent" Organization.
-  "maintainer" if "owner" on "parent";
-}
-```
+{{< literalInclude
+  path="examples/rbac/python/main.polar"
+  lines="21-25,36-38"
+  hl_lines="4,8-9"
+  ellipsis="  # ..."
+>}}
 
 ## Add an `allow()` rule
 
 At this point, the policy is almost fully functional. All that's left is adding
 an `allow()` rule:
 
-```polar
-allow(actor, action, resource) if
-  has_permission(actor, action, resource);
-```
+{{< literalInclude
+  path="examples/rbac/python/main.polar"
+  from="docs: begin-allow"
+  to="docs: end-allow"
+>}}
 
 This is a typical `allow()` rule for a policy using resource blocks: an actor is allowed to
 perform an action on a resource if the actor *has permission* to perform the
@@ -314,41 +319,7 @@ oso.authorize(User(id=1), "push", Repository(id=2))
 
 Our complete policy looks like this:
 
-{{< code file="main.polar" >}}
-allow(actor, action, resource) if
-  has_permission(actor, action, resource);
-
-has_role(user: User, name: String, resource: Resource) if
-  role in user.roles and
-  role.name = name and
-  role.resource = resource;
-
-actor User {}
-
-resource Organization {
-  roles = ["owner"];
-}
-
-resource Repository {
-  permissions = ["read", "push"];
-  roles = ["contributor", "maintainer"];
-  relations = { parent: Organization };
-
-  # An actor has the "read" permission if they have the "contributor" role.
-  "read" if "contributor";
-  # An actor has the "push" permission if they have the "maintainer" role.
-  "push" if "maintainer";
-
-  # An actor has the "contributor" role if they have the "maintainer" role.
-  "contributor" if "maintainer";
-
-  # An actor has the "maintainer" role if they have the "owner" role on the "parent" Organization.
-  "maintainer" if "owner" on "parent";
-}
-
-has_relation(organization: Organization, "parent", repository: Repository) if
-  organization = repository.organization;
-{{< /code >}}
+{{< literalInclude path="examples/rbac/python/main.polar" >}}
 
 If you'd like to play around with a more fully-featured version of this policy
 and application, check out the GitClub repository on [GitHub][GitClub].
