@@ -45,7 +45,7 @@ resource Repository {}
 Our app also has a `User` class that will be our lone **actor** type:
 
 {{% literalInclude
-  path="examples/rbac/python/main.polar"
+  path="examples/rbac/main.polar"
   from="docs: begin-actor"
   to="docs: end-actor"
 %}}
@@ -173,7 +173,7 @@ on `Repository(id=2)`? For Oso to be able to ask this question, we need to
 implement a `has_role()` rule in the policy:
 
 {{< literalInclude
-  path="examples/rbac/python/main.polar"
+  path="examples/rbac/main.polar"
   from="docs: begin-has_role"
   to="docs: end-has_role"
 >}}
@@ -230,7 +230,7 @@ repository if they're assigned the `"owner"` role on the repository's parent
 organization. This is how you write that rule with Oso:
 
 {{< literalInclude
-  path="examples/rbac/python/main.polar"
+  path="examples/rbac/main.polar"
   lines="21-25,36-43"
   hl_lines="4,8-9,12-13"
   ellipsis="  # ..."
@@ -240,7 +240,7 @@ First, we declare that every `Repository` has a `"parent"` relation that
 references an `Organization`:
 
 {{< literalInclude
-  path="examples/rbac/python/main.polar"
+  path="examples/rbac/main.polar"
   from="docs: begin-relations"
   to="docs: end-relations"
 >}}
@@ -252,7 +252,7 @@ Next, we write a `has_relation()` rule that tells Oso how to check if an
 organization has the `"parent"` relation with a repository:
 
 {{< literalInclude
-  path="examples/rbac/python/main.polar"
+  path="examples/rbac/main.polar"
   from="docs: begin-has_relation"
   to="docs: end-has_relation"
 >}}
@@ -285,7 +285,7 @@ role, the `"owner"` organization role, and the `"parent"` relation between the
 two resource types:
 
 {{< literalInclude
-  path="examples/rbac/python/main.polar"
+  path="examples/rbac/main.polar"
   lines="21-25,36-38"
   hl_lines="4,8-9"
   ellipsis="  # ..."
@@ -297,7 +297,7 @@ At this point, the policy is almost fully functional. All that's left is adding
 an `allow()` rule:
 
 {{< literalInclude
-  path="examples/rbac/python/main.polar"
+  path="examples/rbac/main.polar"
   from="docs: begin-allow"
   to="docs: end-allow"
 >}}
@@ -319,7 +319,7 @@ oso.authorize(User(id=1), "push", Repository(id=2))
 
 Our complete policy looks like this:
 
-{{< literalInclude path="examples/rbac/python/main.polar" >}}
+{{< literalInclude path="examples/rbac/main.polar" >}}
 
 If you'd like to play around with a more fully-featured version of this policy
 and application, check out the GitClub repository on [GitHub][GitClub].
