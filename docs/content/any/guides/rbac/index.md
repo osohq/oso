@@ -25,9 +25,9 @@ In this guide, we'll walk through building an RBAC policy for [GitClub][].
 Oso makes authorization decisions by determining if an **actor** can perform an
 **action** on a **resource**:
 
-- **Actor**: who is performing the action? `User(id=1)`
+- **Actor**: who is performing the action? `User("Ariana")`
 - **Action**: what are they trying to do? `"push"`
-- **Resource**: what are they doing it to? `Repository(id=2)`
+- **Resource**: what are they doing it to? `Repository("Acme App")`
 
 The first step of building an RBAC policy is telling Oso which application
 classes are **actors** and which are **resources**. Our example app has a pair
@@ -58,8 +58,10 @@ particular type.
 {{% callout "Note" "blue" %}}
   For every resource block, we also need to register the class with Oso:
 
+  <!-- TODO(gj): remove fallback when all example apps complete -->
   {{< literalInclude
-    path="examples/rbac/python/app.py"
+    dynPath="app_path"
+    fallback="register_class"
     from="docs: begin-setup"
     to="docs: end-setup"
     hlFrom="docs: begin-register_class"
@@ -165,11 +167,11 @@ An Oso policy contains authorization *logic*, but the application remains in
 control of all authorization *data*. For example, the logic that the
 `"maintainer"` role on a repository grants the `"push"` permission lives in the
 policy, but Oso doesn't manage the data of which users have been assigned the
-`"maintainer"` role for `Repository(id=2)`. That data stays in the application,
+`"maintainer"` role for `Repository("Acme App")`. That data stays in the application,
 and Oso asks the application for it as needed.
 
-The main question Oso asks is: does `User(id=1)` have the `"maintainer"` role
-on `Repository(id=2)`? For Oso to be able to ask this question, we need to
+The main question Oso asks is: does `User("Ariana")` have the `"maintainer"` role
+on `Repository("Acme App")`? For Oso to be able to ask this question, we need to
 implement a `has_role()` rule in the policy:
 
 {{< literalInclude
@@ -190,11 +192,13 @@ name: name, resource: resource }` succeeds if the user has been assigned the
 
   <div class="pb-4"></div>
 
-  {{% literalInclude
-    path="examples/rbac/python/app.py"
+  <!-- TODO(gj): remove fallback when all example apps complete -->
+  {{< literalInclude
+    dynPath="app_path"
+    fallback="register_class"
     from="docs: begin-classes"
     to="docs: end-classes"
-  %}}
+  >}}
 
   If, for example, repository roles and organization roles were stored
   separately instead of in a heterogeneous set, we might define a pair of
@@ -311,9 +315,7 @@ This `allow()` rule serves as the entrypoint when we query our policy via Oso's
 enforcement methods like {{% apiDeepLink class="Oso" %}}authorize{{%
 /apiDeepLink %}}:
 
-```py
-oso.authorize(User(id=1), "push", Repository(id=2))
-```
+{{% exampleGet "authorize" %}}
 
 ## Baby Got RBAC
 
