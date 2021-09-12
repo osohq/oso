@@ -1,8 +1,8 @@
 <!--  -->
-{{ $link :=  .Destination}}
-{{ if or (strings.HasPrefix .Destination "http") (strings.HasPrefix .Destination "HAHAHUGOSHORTCODE") }}
+{{ $link :=  .Destination }}
+{{ if or (strings.HasPrefix $link "http") (strings.HasPrefix $link "HAHAHUGOSHORTCODE") }}
 {{ else }}
-    {{ $link = ref .Page .Destination }}
+    {{ $link = ref .Page $link }}
 {{ end }}
 
-<a href="{{ $link | safeURL }}"{{ with .Title}} title="{{ . }}"{{ end }}{{ if strings.HasPrefix .Destination "http" }} target="_blank" rel="noopener"{{ end }}>{{ .Text | safeHTML }}</a>
+<a href="{{ $link | safeURL }}"{{ with .Title}} title="{{ . }}"{{ end }}{{ if strings.HasPrefix $link "http" }} target="_blank" rel="noopener"{{ end }}>{{ .Text | safeHTML }}</a>

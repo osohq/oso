@@ -1,5 +1,5 @@
 // Basic navigation functionality
-document.querySelector('button > svg').addEventListener('click', function(e) {
+document.querySelector('button > svg').addEventListener('click', function (e) {
   e.stopPropagation();
   e.preventDefault();
 });
@@ -27,15 +27,23 @@ if (sideBarButton) {
 }
 
 const langButton = document.getElementById('language-selector-toggle');
-const langsideBar = document.getElementById('language-selector-content');
+const langContent = document.getElementById('language-selector-content');
 if (langButton) {
   langButton.addEventListener('click', () =>
-    langsideBar.classList.toggle('hidden')
+    langContent.classList.toggle('hidden')
+  );
+}
+
+const versionButton = document.getElementById('version-selector-toggle');
+const versionContent = document.getElementById('version-selector-content');
+if (versionButton) {
+  versionButton.addEventListener('click', () =>
+    versionContent.classList.toggle('hidden')
   );
 }
 
 // Close dropdown sideBars if the user clicks outside of them
-window.onclick = function(event) {
+window.onclick = function (event) {
   const searchModal = document.getElementById('search-modal');
   const searchInput = document.getElementById('search-input');
   const searchBackground = document.getElementById('search-background');
@@ -49,6 +57,8 @@ window.onclick = function(event) {
       break;
     case langButton:
       break;
+    case versionButton:
+      break;
     case searchInput:
       break;
     case searchModal:
@@ -59,7 +69,7 @@ window.onclick = function(event) {
       break;
     default:
       // default to hidden
-      var contents = [navContent, langsideBar, sideBarContent, navToggleOpen];
+      var contents = [navContent, langContent, sideBarContent, navToggleOpen, versionContent];
 
       for (content of contents) {
         if (content && !content.classList.contains('hidden')) {

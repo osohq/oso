@@ -1,5 +1,6 @@
 import { postIntegrationRequest, postFeedback } from './backend';
 import { get, set } from './localStorage';
+import { setVersionList } from './getVersions';
 
 import('monaco-editor-core').then(monaco => {
   // Monokai colors
@@ -193,7 +194,7 @@ import('monaco-editor-core').then(monaco => {
 });
 
 // hide the search box
-window.hideSearch = function(_e) {
+window.hideSearch = function (_e) {
   const searchModal = document.getElementById('search-modal');
   if (searchModal.style.display == '') {
     searchModal.style.display = 'none';
@@ -208,7 +209,7 @@ window.addEventListener('load', () => {
 });
 
 // this handles when the button on the left nav is clicked and it toggles the search box
-window.searchButtonClick = function(e) {
+window.searchButtonClick = function (e) {
   e.preventDefault();
   const searchModal = document.getElementById('search-modal');
   const searchInput = document.getElementById('search-input');
@@ -256,7 +257,7 @@ import('algoliasearch').then(algolia => {
   const client = algolia.default(algoliaAccount, algoliaReadOnlySearchKey);
   const index = client.initIndex(algoliaIndex);
 
-  const processHits = function(hits) {
+  const processHits = function (hits) {
     var results = '';
     var count = 0;
 
@@ -277,7 +278,7 @@ import('algoliasearch').then(algolia => {
   };
 
   // this searches for a term without a facet
-  const searchTerm = function(term) {
+  const searchTerm = function (term) {
     index
       .search(term, {
         analytics: true,
@@ -291,7 +292,7 @@ import('algoliasearch').then(algolia => {
   };
 
   // this search for a term WITH a facet
-  const searchTermWithFacet = function(term, language) {
+  const searchTermWithFacet = function (term, language) {
     index
       .search(term, {
         analytics: true,
@@ -308,7 +309,7 @@ import('algoliasearch').then(algolia => {
       });
   };
 
-  window.searchInputKeyUp = function(event) {
+  window.searchInputKeyUp = function (event) {
     const searchInput = document.getElementById('search-input');
 
     event.preventDefault();
@@ -458,4 +459,8 @@ window.addEventListener("load", () => {
 
     select(0);
   }
+});
+
+window.addEventListener('load', async () => {
+  await setVersionList()
 });

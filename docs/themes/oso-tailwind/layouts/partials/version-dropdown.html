@@ -1,0 +1,26 @@
+<!-- This example requires Tailwind CSS v2.0+ -->
+<nav id="version-selector" class="relative">
+    <button id="version-selector-toggle" class="
+               px-4 sm:px-6 py-3 
+               text-white inline-flex items-center text-base font-medium
+               hover:text-yellow hover:font-bold tooltip">
+        <span class="tooltip-text" aria-hidden="true">
+            Pick a version
+        </span>
+        {{ .Site.Params.Version }} (dev)
+        <div class="h-2 w-2 ml-2">
+            {{ partialCached "fontawesome.html" (dict "icon" "chevron-down" "size" "fa") "chevron-down-small" }}
+        </div>
+    </button>
+    <div id="version-selector-content"
+        class="hidden absolute z-50 -ml-4 mt-3 transform px-2 w-full sm:px-0 lg:ml-0 lg:left-1/2 lg:-translate-x-1/2">
+        <div class="rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 overflow-hidden">
+            <div id="version-list" class="relative grid gap-6 bg-white py-2 sm:gap-1">
+                <a href="https://docs-preview.oso.dev/v/${v}/index.html"
+                    class="m-2 flex items-start rounded-lg hover:bg-gray-50">
+                    <p class="text-red">Could not get versions</p>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>

@@ -1,19 +1,31 @@
-{{- if eq . "go" -}}
+{{- $icon := "" -}}
+{{- $size := "" -}}
+
+{{ if reflect.IsMap . }}
+{{- $icon = index . "icon" -}}
+{{- $size = index . "size" -}}
+{{ else }}
+{{- $icon = . }}
+{{- $size = "fa-lg" }}
+{{- end -}}
+
+{{- if eq $icon "go" -}}
 {{- readFile "fontawesome/go.svg" | safeHTML -}}
 {{- else -}}
-{{- $icon := . }}
 
 {{- $solidIcons := slice "blog" "download" "gem" "chevron-down" "home" "search" -}}
 {{- $brandIcons := slice "linkedin-in" "twitter" "github" "slack" "python" "java" "node-js" "rust" -}}
-{{- $map := dict "js" "node-js"   "rs" "rust"   "rb" "gem"    "py" "python"}}
+{{- $map := dict "js" "node-js" "rs" "rust" "rb" "gem" "py" "python"}}
 
 {{- with index $map $icon -}}
 {{- $icon = index $map $icon}}
 {{- end -}}
 
-{{- $class := printf "fa-lg fas fa-%s" $icon -}}
+
+
+{{- $class := printf "%s fas fa-%s" $size $icon -}}
 {{- if in $brandIcons $icon -}}
-{{- $class = printf "fa-lg fab fa-%s" $icon -}}
+{{- $class = printf "%s fab fa-%s" $size $icon -}}
 {{- end -}}
 
 <i class="{{ $class }}"></i>

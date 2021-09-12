@@ -59,6 +59,7 @@
                     </span>
                 </button>
             </a>
+            {{ partial "version-dropdown.html" . }}
             {{ $quickstartUrl := $.Site.GetPage "/getting-started/quickstart" }}
             <a href="{{ $quickstartUrl.RelPermalink }}">
                 <button class=" nav-btn bg-yellow text-black tooltip">

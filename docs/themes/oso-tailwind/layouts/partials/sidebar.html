@@ -91,8 +91,17 @@
     {{ end }}
 </li>
 {{ else if isset .Params "href" }}
+
+{{/* Check if link is external */}}
+{{ $link :=  .Params.href }}
+{{ $external := strings.HasPrefix $link "http" }}
+{{ if not $external }}
+    {{ $link = $link | relURL }}
+{{ end }}
+
 <li data-nav-id="{{.Params.href}}" title="{{.Title}}" class="font-normal text-black pl-2">
-    <a class=" flex items-center px-3 transition-colors duration-200 mb-2" href="{{ .Params.href }}">
+    <a class=" flex items-center px-3 transition-colors duration-200 mb-2"
+    href="{{ $link | safeURL }}"{{ if $external  }} target="_blank" rel="noopener"{{ end }}>
         {{or .Params.menuTitle .LinkTitle .Title}}
     </a>
 </li>
