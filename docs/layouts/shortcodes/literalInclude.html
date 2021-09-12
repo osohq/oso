@@ -244,6 +244,15 @@
         {{ end }}
       {{ end }}
 
+      {{/* Strip any remaining lines containing the 'docs:' magic string. */}}
+      {{ $withoutDocsTags := slice }}
+      {{ range $index, $line := $contentLines }}
+        {{ if not (in $line "docs:") }}
+          {{ $withoutDocsTags = $withoutDocsTags | append $line }}
+        {{ end }}
+      {{ end }}
+      {{ $contentLines = $withoutDocsTags }}
+
       {{ $content = delimit $contentLines "\n" }}
     {{ end }}
   {{ end }}
