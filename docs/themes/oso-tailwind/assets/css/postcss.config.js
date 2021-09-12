@@ -6,7 +6,7 @@ const purgecss = require('@fullhuman/postcss-purgecss')({
     './hugo_stats.json',
     './themes/oso-webpack/search-result.handlebars'
   ],
-  whitelist: ['polar-code-in-here'],
+  whitelist: ['polar-code-in-here', 'highlight-me-pls'],
   extractors: [
     {
       extensions: ['json'],

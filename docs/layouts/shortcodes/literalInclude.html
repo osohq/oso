@@ -65,6 +65,7 @@
 {{ $lastLine := 0 }}
 {{ $linenos := $.Params.linenos | default false }}
 {{ $ellipsis := $.Params.ellipsis | default "..." }}
+{{ $hl_lines := $.Params.hl_lines | default "" }}
 
 {{/* Turn "1,3-5,11-17" into a slice of maps consisting of a single key-value
      pair where the key is the starting line and the value is the length of the
@@ -281,7 +282,7 @@
     {{ $gitHubRef = (printf "%s/blob/main/%s#L%d-L%d" $gitHub $pathTrim $gFirstLine $gLastLine) }}
 {{ end }}
 
-<div class="code" id="{{ $id | urlize }}">
+<div class="code" id="{{ $file | urlize}}" data-hl_lines="{{ $hl_lines }}">
   <div class="filename rounded-t-md bg-gray-200 text-gray-700 text-sm py-2">
     {{- with $syntax -}}
       <span class="px-2{{ if eq . "go" }} block w-10{{end}}">
