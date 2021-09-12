@@ -1,5 +1,5 @@
 ---
-register_class: |
+register: |
     ```go
     // doo bee doo
     ```

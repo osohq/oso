@@ -1,5 +1,5 @@
 ---
-register_class: |
+register: |
     ```js
     // doo bee doo
     ```

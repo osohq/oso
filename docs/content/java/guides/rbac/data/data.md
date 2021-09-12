@@ -1,5 +1,5 @@
 ---
-register_class: |
+register: |
     ```java
     // doo bee doo
     ```

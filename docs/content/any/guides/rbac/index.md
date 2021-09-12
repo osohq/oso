@@ -30,8 +30,8 @@ Oso makes authorization decisions by determining if an **actor** can perform an
 - **Resource**: what are they doing it to? `Repository("Acme App")`
 
 The first step of building an RBAC policy is telling Oso which application
-classes are **actors** and which are **resources**. Our example app has a pair
-of **resource** types that we want to control access to, `Organization` and
+types are **actors** and which are **resources**. Our example app has a pair of
+**resource** types that we want to control access to, `Organization` and
 `Repository`. We declare both as resources as follows:
 
 <!-- TODO(gj): I guess these only need to be dedented when you use angle
@@ -42,7 +42,7 @@ resource Organization {}
 resource Repository {}
 {{< /code >}}
 
-Our app also has a `User` class that will be our lone **actor** type:
+Our app also has a `User` type that will be our lone type of **actor**:
 
 {{% literalInclude
   path="examples/rbac/main.polar"
@@ -56,16 +56,16 @@ provides a centralized place to declare roles and permissions for that
 particular type.
 
 {{% callout "Note" "blue" %}}
-  For every resource block, we also need to register the class with Oso:
+  For every resource block, we also need to register the type with Oso:
 
   <!-- TODO(gj): remove fallback when all example apps complete -->
   {{< literalInclude
     dynPath="app_path"
-    fallback="register_class"
+    fallback="register"
     from="docs: begin-setup"
     to="docs: end-setup"
-    hlFrom="docs: begin-register_class"
-    hlTo="docs: end-register_class"
+    hlFrom="docs: begin-register"
+    hlTo="docs: end-register"
   >}}
 {{% /callout %}}
 
@@ -125,7 +125,7 @@ has_permission(actor: Actor, "push", repository: Repository) if
 ```
 
 {{% callout "Note" "blue" %}}
-  Instances of our application's `User` class will match the `Actor`
+  Instances of our application's `User` type will match the `Actor`
   [specializer](polar-syntax#specialization) because of our `actor User {}`
   resource block declaration.
 {{% /callout %}}
@@ -195,9 +195,9 @@ name: name, resource: resource }` succeeds if the user has been assigned the
   <!-- TODO(gj): remove fallback when all example apps complete -->
   {{< literalInclude
     dynPath="app_path"
-    fallback="register_class"
-    from="docs: begin-classes"
-    to="docs: end-classes"
+    fallback="register"
+    from="docs: begin-types"
+    to="docs: end-types"
   >}}
 
   If, for example, repository roles and organization roles were stored

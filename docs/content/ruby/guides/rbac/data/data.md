@@ -1,5 +1,5 @@
 ---
-register_class: |
+register: |
     ```rb
     # doo bee doo
     ```

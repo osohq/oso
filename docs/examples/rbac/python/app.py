@@ -4,7 +4,7 @@ from typing import Set, Union
 from oso import Oso
 
 
-# docs: begin-classes
+# docs: begin-types
 @dataclass(frozen=True)
 class Organization:
     name: str
@@ -29,17 +29,17 @@ class User:
 
     def assign_role_for_resource(self, name, resource):
         self.roles.add(Role(name, resource))
-        # docs: end-classes
+        # docs: end-types
 
 
 # docs: begin-setup
 oso = Oso()
 
-# docs: begin-register_class
+# docs: begin-register
 oso.register_class(Organization)
 oso.register_class(Repository)
 oso.register_class(User)
-# docs: end-register_class
+# docs: end-register
 
 oso.load_files(["main.polar"])
 # docs: end-setup
