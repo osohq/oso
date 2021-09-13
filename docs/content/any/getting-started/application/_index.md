@@ -1,5 +1,5 @@
 ---
-title: Add Oso to Your Python App
+title: Add Oso to Your App
 weight: 2
 description: |
     In this guide, we'll cover the basics of adding Oso to a Python application
@@ -10,7 +10,7 @@ aliases:
   - /getting-started/application/index.html
 ---
 
-# Add Oso to Your Python App
+# Add Oso to Your {{% lang %}} App
 
 In this guide, we'll cover the basics of adding Oso to your Python application
 to enforce authorization. Start here to understand the basics of using
