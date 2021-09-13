@@ -647,7 +647,7 @@ Inside of a block, you can declare [permissions](#permission-declarations), [rol
 
 A more complete block looks like this:
 
-```polar
+{{< code codeLang="polar">}}
 resource Repository {
   ### Permission, role, and relation declarations ###
   permissions = ["read", "push"];  # permissions that can be granted for the actor or resource
@@ -659,7 +659,7 @@ resource Repository {
   "push" if "maintainer"  # "member" role grants the "read" permission
   "maintainer" if "admin"  # "admin" role grants the "maintainer" role
 }
-```
+{{< /code >}}
 <!--
 TODO: should we add the data-linking rules here too? I'm thinking in case
 someone just copies and pastes this whole thing
@@ -673,11 +673,11 @@ resource types.
 
 You can specify the permissions that are available for an actor or resource type using the following syntax:
 
-```polar
+{{< code codeLang="polar" hl_lines="2">}}
 resource Repository {
   permissions = ["read", "push"];
 }
-```
+{{< /code >}}
 
 Permissions are always Strings. You must declare permissions in order to use them in [shorthand rules](#shorthand-rules).
 
@@ -685,11 +685,11 @@ Permissions are always Strings. You must declare permissions in order to use the
 
 You can specify the roles that are available for an actor or resource type using the following syntax:
 
-```polar
+{{< code codeLang="polar" hl_lines="2">}}
 resource Repository {
   roles = ["contributor", "maintainer", "admin"];
 }
-```
+{{< /code >}}
 
 Roles are always Strings. You must declare roles in order to use them in [shorthand rules](#shorthand-rules).
 
@@ -718,11 +718,11 @@ The `name` argument corresponds to the role names in the declaration list. The
 
 You can specify relations from one actor/resource type to another using the following syntax:
 
-```polar
+{{< code codeLang="polar" hl_lines="2">}}
 resource Repository {
   relations = {parent: Organization};
 }
-```
+{{< /code >}}
 
 Relations are `{key: value}` pairs where the key is the relation name, and the value is the type of the related object.
 Related object types must also be declared in resource or actor blocks.
