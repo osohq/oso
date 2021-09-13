@@ -49,6 +49,7 @@ RBAC
 REPL
 RESTful
 ReBAC
+RepoId
 RubyGems
 Rubying
 SLA
@@ -151,10 +152,12 @@ prefetch
 pseudocode
 py
 quickstart
+rb
 registerClass
 repl
 repo
 roadmap
+roleName
 runtime
 specializer
 specializers
