@@ -187,4 +187,8 @@ Relation fields also work when you are not using data filtering methods and are 
 
 # Limitations
 
-TODO
+There are a few limitations to what you can do while using data filtering. You can not call any methods on the passed in resource and you can not pass the resource as an argument to any methods. Many cases where you would want to do this are better handled by Relation fields.
+
+Some Polar expressions are not supported. `not`, `cut` and `forall` are not allowed in policies that want to use data filtering. Numberic comparisons with the `<` `>` `<=` and `>=` are not currently supported either.
+
+Relations only support matching on a single field.
