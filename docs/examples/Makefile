@@ -40,12 +40,11 @@ java-test-context: $(JAVA_PACKAGE_JAR_PATH)
 	cd context/java && (ENV="production" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext && exit 1 || exit 0)
 	@echo "Ignore that failure it actually worked!"
 
-java-test: java-test-abac java-test-context java-test-rbac
+java-test: java-test-abac java-test-context
 
 python-test:
 	cd inheritance/python && pytest .
 	cd abac/python && pytest .
-	cd rbac/python && pytest .
 	cd context/python && pytest .
 	cd user_types/python && pytest .
 	cd roles/sqlalchemy/basic && pip install -r requirements.txt && pytest .
@@ -54,14 +53,12 @@ python-test:
 
 ruby-test:
 	cd abac/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
-	cd rbac/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
 	cd context/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
 	cd inheritance/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
 	cd user_types/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
 
 nodejs-test:
 	$(MAKE) -C $(JS_DIR) build
-	cd rbac/nodejs && yarn && yarn jest
 	cd abac/nodejs && yarn && yarn jest
 	cd context/nodejs && yarn && yarn jest
 	cd inheritance/nodejs && yarn && yarn jest
@@ -71,6 +68,7 @@ test-quickstarts: submodules
 	$(MAKE) -C quickstart test
 
 test:
+	$(MAKE) -C rbac test
 	$(MAKE) python-test
 	$(MAKE) ruby-test
 	$(MAKE) java-test
