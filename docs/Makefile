@@ -76,6 +76,20 @@ build-prod: install api_docs
 	cd themes/oso-webpack && npm run-script build-prod
 	HUGO_ENV=production hugo -b https://docs.osohq.com/
 
+# Look for the s3deploy binary: https://github.com/bep/s3deploy
+S3DEPLOY := $(shell command -v s3deploy 2> /dev/null)
+
+deploy-ci: install api_docs clean
+ifndef S3DEPLOY
+	$(error "you need to install s3deploy to deploy the docs")
+endif
+ifndef DOCS_TAG
+	$(error "you must set the DOCS_TAG environment variable")
+endif
+	cd themes/oso-webpack && npm run-script build-prod
+	HUGO_ENV=production hugo -b https://docs-preview.oso.dev/v/$(DOCS_TAG)/
+	s3deploy -bucket docs-preview.oso.dev -distribution-id E2KU2V8C9KJNU7 -path v/$(DOCS_TAG) -source public -region us-east-1
+
 test: install
 	### TODO: Add Hugo tests
 	$(MAKE) -C examples test
