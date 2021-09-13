@@ -15,12 +15,12 @@ actor User {}
 # docs: end-actor
 
 resource Organization {
-  roles = [ "owner" ];
+  roles = ["owner"];
 }
 
 resource Repository {
-  permissions = [ "read", "push" ];
-  roles = [ "contributor", "maintainer" ];
+  permissions = ["read", "push"];
+  roles = ["contributor", "maintainer"];
   # docs: begin-relations
   relations = { parent: Organization };
   # docs: end-relations
