@@ -44,6 +44,9 @@
   - gitHub: specify GitHub link to generate a link to example. E.g
     ``https://github.com/osohq/gitclub/``
   - ellipsis: override the default marker for elided code ("...").
+  - hl_lines: specify lines of Polar code that you want to highlight. *This is
+    only for Polar code -- for all other code use the hlOpts property that
+    leverages Hugo's highlighting instead.*
 */}}
 
 {{ $dynPath := $.Params.dynPath }}
