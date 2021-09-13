@@ -1,18 +1,20 @@
 ---
-title: Add authorization enforcement
+title: Enforce authorization
 description: |
-    Oso policies define rules for who can perform actions on resources
-    in your application. The Oso library queries the policy to obtain an
-    authorization decision — a yes or no answer. You enforce that
-    decision by rejecting or accepting requests that users make.
+    Add authorization enforcement throughout your application using the
+    authorize API to reject or accept requests that users make.
 weight: 2
 ---
 
-# Add authorization enforcement
+# Enforce authorization
+
+In [Model your authorization logic](model) you defined an authorization
+policy. In this guide, we will cover using Oso's enforcement API to
+accept or reject requests based on the policy.
 
 ## The allow rule
 
-At the end of [Model your authorization policy](model) we defined an `allow`
+At the end of [Model your authorization logic](model) we defined an `allow`
 rule. The `allow` rule is used for resource-level enforcement. It
 accepts three arguments: an `actor` (who is making the request), an
 `action` (what the actor wants to do), and a `resource` (the object that the
@@ -32,13 +34,11 @@ are provided when you query the policy.
 ## Querying the policy
 
 The Oso library queries the policy with inputs from your application. To
-construct a query, you give a rule name to query with a given list of
-parameters. The query returns a result for every rule that succeeds for
-the parameters specified. If there are multiple rules that succeed,
-multiple results will be returned. If no rules succeed, no results are
-returned from the query.
-
-TODO image of query
+construct a query, you give a rule name and a list of parameters. The
+query returns a result for every rule that succeeds for the parameters
+specified. If there are multiple rules that succeed, multiple results
+will be returned. If no rules succeed, no results are returned from the
+query.
 
 To enforce authorization, we query for the `allow` rule with a specific `actor`,
 `action`, and `resource`.
@@ -49,7 +49,7 @@ The `authorize` method queries the `allow` rule. If the query doesn't have any
 results (no rules succeed), it throws an `AuthorizationError`. You should handle
 this exception and [return an error response to the user]({{< ref "/guides/enforcement/resource#authorization-failure" >}}).
 
-The `authorize` method should be called any time you want to check if a uier can
+The `authorize` method should be called any time you want to check if a user can
 perform an action—-like "read" or "delete"-—on a resource.
 
 Here's an example of using `authorize` to check if a user can `"read"` a
@@ -74,7 +74,7 @@ read or write data on behalf of a user.
 
 We only covered one type of enforcement in this guide: resource-level
 enforcement. Oso can also enforce access to fields on an object,
-requests, or queries from an external data source. See [Enforce
+requests, or queries from an external data source. See [How to: Enforce
 authorization](/guides/enforcement) for more.
 
 This is all you need have Oso setup in your application and authorizing requests. Next, you may want to:

@@ -2,39 +2,38 @@
 title: Add Oso to Your App
 weight: 2
 description: |
-    In this guide, we'll cover the basics of adding Oso to a Python application
-    to enforce authorization. Start here to understand the basics of using
-    Oso. Then, jump into our more detailed how to section on topics that are
-    important to you.
+    In this guide, we'll cover how to add Oso to your application.
+    Start here to understand how to use Oso.
 aliases:
   - /getting-started/application/index.html
 ---
 
 # Add Oso to Your {{% lang %}} App
 
-In this guide, we'll cover the basics of adding Oso to your Python application
-to enforce authorization. Start here to understand the basics of using
-Oso. Then, jump into our more detailed how to section on topics that are
+In this guide, we'll cover how to add Oso to your {{% lang %}} application.
+Start here to understand how to use Oso. Then, jump into our
+more detailed how to section on topics that are
 important to you.
 
 To use Oso, you'll:
 
-- [Model your authorization policy](model) in Polar using *resources*.
+- [Model your authorization logic](model) by writing a _policy_ with _resources_.
   Resources allow you to declaratively specify the permissions and roles
   you want your users to have.
-- [Add authorization enforcement](enforce) throughout your app. Call Oso in
+- [Enforce authorization](enforce) throughout your app. Call Oso in
   your request handlers to reject or accept requests based on your
   authorization policy.
 
-Depending upon your use case, you may want to:
+Once you've added policies and enforcement, you'll have Oso setup and
+enforcing authorization in your application. To go futher with Oso:
 
-- [Write Polar rules:](write-rules) Oso can support any authorization model. To
-  extend your policy to meet your application's needs you can write Polar
-  rules. A Polar rule specifies when a user is allowed to perform a
-  specific action on a resource. For example, you may deny access by
+- [Write Polar rules](write-rules) to extend your authorization model with
+  custom logic. A Polar rule specifies when a user is allowed to perform a
+  specific action on a resource. For example, you may deny access from
   banned users or allow any user to access a public resource.
-- [Filter collections of data:](filter-data) Many applications perform
-  authorization over large collections of data that cannot be loaded into
-  memory. Often index pages showing users a number of resources, like the
-  repositories they can access, will need to use data filtering. The *data
-  filtering API* provides support for these use cases.
+- [Filter collections of data:](filter-data) by applying enforcement at
+  the data access layer. Many applications perform authorization over
+  large collections of data that cannot be loaded into memory. Often index
+  pages showing users a number of resources, like the repositories they
+  can access, will need to use data filtering. The *data filtering API*
+  provides support for these use cases.

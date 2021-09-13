@@ -1,5 +1,5 @@
 ---
-title: Model your authorization policy
+title: Model your authorization logic
 description: |
     Authorization in Oso starts with the policy. Authorization policies
     define the resources that you want to control access to, and rules that
@@ -10,14 +10,12 @@ description: |
 weight: 1
 ---
 
-# Model your authorization policy
+# Model your authorization logic
 
-Authorization in Oso starts with the policy. Authorization *policies*
-define the *resources* that you want to control access to, and rules
-that specify when an *actor* (the user making the request) can perform
-an *action* on a *resource*. Because Oso is a library, you can write
-authorization policies directly over the same data types that are
-already used in your application.
+Authorization in Oso starts with the policy. To model authorization with
+Oso, you write a policy in Polar - Oso's declarative policy language.
+The policy defines the *resources* that you want to control access to
+and includes rules governing access to them.
 
 In this guide, we'll cover how to express your authorization logic using
 Oso. We'll use GitClub (our example application) as an example, but you
@@ -45,22 +43,11 @@ For more detailed installation instructions, see
 ## Write a policy
 
 Policies are files that are packaged with the rest of your application
-code. The Oso library loads and evaluates policy files when your
+code. Oso loads and evaluates policy files when your
 application runs. Now that you've installed Oso, create a policy file
 called `main.polar` and use it in your app:
 
 {{< literalInclude dynPath="pathOso" fallback="garbo" >}}
-
-To setup Oso in your app, you must...
-
-- initialize `Oso`: Usually Oso will be initialized globally and used
-  during every request to enforce authorization.
-- tell Oso what data types you will authorize: With Oso, you express
-  authorization logic over the data types used in your application. Often
-  these will be model classes, but they could be any type of data or
-  resource you want to control access to.
-- load your policy: Oso policies are written in policy files. Call
-  `load_files` with the paths to your policy files.
 
 ## Define your resources, permissions and roles
 
@@ -128,15 +115,17 @@ The last rules we added are between two roles: A user has the
 
 ### Giving your users roles
 
-Now that we've finished our policy, we must associate users with roles
+Now that we've written the core of our policy, we must associate users with roles
 in our application. Oso doesn't manage authorization data. The data
 stays in your application's existing data store.
 
-All the data we've defined so far in the policy is static: it isn't
-changed by end users of the application. The development team
-modifies permission associations with roles, and the list of roles for
-each resource by updating the policy. But, some parts of this policy
-must be dynamic: the association of users with a role.
+{{% minicallout %}}
+**Static and dynamic data**: All the data we've defined so far in the
+policy is static: it isn't changed by end users of the application. The
+development team modifies permission associations with roles and the
+list of roles for each resource by updating the policy. But, some parts
+of this policy must be dynamic: the association of users with a role.
+{{% /minicallout %}}
 
 Write a `has_role` rule to tell Oso whether your users have a particular
 role:
@@ -169,14 +158,22 @@ likely use your existing User model to maintain this information.
 ### Allowing access
 
 Oso policies have a special rule: the `allow` rule. The `allow` rule is
-the entrypoint to the policy, and is used by the Oso library to enforce
-authorization.
+the entrypoint to the policy, and is used by the Oso library to check if an
+*actor* (the user making a request) can perform an *action* on a *resource*.
 
-The resource blocks you defined grant users permissions using the
-`has_permission` rule. To use permissions for authorization, you must
-define an `allow` rule:
+The resource blocks you wrote define your authorization model. For
+example, `"read" if "contributor"` says a user has the `"read`"
+permission if they have the `"contributor"` role.
+
+You can check for this condition by calling the `has_permission` rule:
+`has_permission(user, "read", repository)`.
+
+To connect this with the `allow` entrypoint, you must write the
+following:
 
 ```polar
+# Allow access if users have the required permission,
+# as defined by resource blocks.
 allow(actor, action, resource) if
 	has_permission(actor, action, resource);
 ```
@@ -209,5 +206,4 @@ allow(actor, action, resource) if
     
 ### What's next
 
-Now, we've setup our policy. Let's see how to enforce authorization
-decisions using it.
+Now that we've setup our policy, let's see how we can enforce it!

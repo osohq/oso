@@ -1,4 +1,5 @@
 ---
+queryObjectExampleLink: "http://sequel.jeremyevans.net/rdoc/files/README_rdoc.html#label-Filtering+Records"
 dataFilteringPath: "examples/add-to-your-application/ruby/data_filtering.rb"
 
 repoListQuerySnippet: |
