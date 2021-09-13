@@ -97,13 +97,18 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); border-radius: 6px;" alt="A
 
 The quickstart server uses an Oso policy to make sure users are allowed to
 view repos. The call to `{{< exampleGet "osoAuthorize" >}}` in `{{< exampleGet
-"serverFileRelative" >}}` performs this check in the {{% exampleGet "endpoint" %}}.
+"serverFileRelative" >}}` performs this check in {{% exampleGet "endpoint" %}}.
+If the user does not have access to a repository, an error response is returned
+to them.
 
 In this case, the repo with the name `react` is public because of its definition
 in the `{{< exampleGet "modelFileRelative" >}}` file, so it should be accessible
-to everyone. By making the change to {{< exampleGet "polarFileRelative" >}}, you
+to everyone. By making the change to `{{< exampleGet "polarFileRelative" >}}`, you
 told Oso to allow users to `"read"` repositories that have the `{{< exampleGet
 "isPublic" >}}` field set to true.
+
+That way, when you visited the `react` repo in your browser, Oso determined that
+the action was permitted!
 
 Check out the full code for the example below:
 

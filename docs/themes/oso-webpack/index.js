@@ -388,8 +388,7 @@ window.recordFeedback = (isUp) => {
 
 // Support for code tab groups -- hacks ahead!
 window.addEventListener("load", () => {
-  const unique = (array) =>
-    array.filter((value, index, self) => self.indexOf(value) === index);
+  const unique = (array) => [...new Set(array)];
 
   const tabGroupDivs = Array.from(
     document.querySelectorAll("div[data-tabgroup]")
@@ -401,7 +400,6 @@ window.addEventListener("load", () => {
   tabGroups = unique(tabGroups);
 
   for (const tabGroup of tabGroups) {
-    console.log(tabGroup);
     const codeBlocks = document.querySelectorAll(
       `div.code[data-tabgroup='${tabGroup}'`
     );
