@@ -11,6 +11,8 @@
   "dependencies": {
     "express": "^4.17.1",
     "oso": "file:../../../../languages/js",
+    "sequelize": "^6.6.5",
+    "sqlite3": "^5.0.2",
     "supertest": "^6.1.6"
   }
 }
