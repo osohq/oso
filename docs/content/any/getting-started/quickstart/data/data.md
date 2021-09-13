@@ -1,6 +1,8 @@
 ---
 # This is copied from python so that the build doesn't break.
-githubUrl: "https://github.com/osohq/oso-python-quickstart"
+# githubUrl: "https://github.com/osohq/oso-python-quickstart"
+headless: true
+githubUrl: FUCK
 githubCloneUrl: "https://github.com/osohq/oso-python-quickstart.git"
 repoName: oso-python-quickstart
 mainPolarFile: "examples/quickstart/python/app/main.polar"
