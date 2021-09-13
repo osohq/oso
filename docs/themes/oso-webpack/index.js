@@ -161,16 +161,31 @@ import('monaco-editor-core').then(monaco => {
 
   monaco.editor.setTheme('polarTheme');
 
-  window.addEventListener('load', () => {
-    let polarCode = document.getElementsByClassName('language-polar');
-    for (let i = 0; i < polarCode.length; i++) {
-      let el = polarCode[i];
-      monaco.editor
-        .colorize(el.innerText, 'polar', { theme: 'polarTheme' })
-        .then(colored => {
-          el.innerHTML = colored;
-          el.parentNode.classList.add('polar-code-in-here');
-        });
+  function highlightPolarCode(el) {
+    let { hl_lines: numbers } = el.parentNode.parentNode.dataset;
+    if (typeof numbers !== 'string' || numbers.length === 0) return;
+    numbers = numbers.replace(/ /g, '').split(',').flatMap(parseRange);
+    const lines = Array.from(el.children).filter(child => child.matches('span'));
+    for (const number of numbers) {
+      lines[number].classList.add('highlight-me-pls');
+    }
+  }
+
+  function parseRange(maybeRange) {
+    const range = maybeRange.split('-');
+    const start = Number.parseInt(range[0], 10) - 1;
+    if (range.length === 1) return [start];
+    const end = Number.parseInt(range[1], 10);
+    return Array(end - start).fill(null).map((_, i) => start + i);
+  }
+
+  window.addEventListener('load', async () => {
+    const els = document.getElementsByClassName('language-polar');
+    for (const el of els) {
+      const colorized = await monaco.editor.colorize(el.innerText, 'polar', { theme: 'polarTheme' });
+      el.innerHTML = colorized;
+      el.parentNode.classList.add('polar-code-in-here');
+      highlightPolarCode(el);
     }
   });
 });
