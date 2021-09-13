@@ -21,19 +21,26 @@ update-submodules:
 	git submodule update --checkout --init --recursive --remote
 	cd roles/sqlalchemy/basic && git checkout basic_roles_complete && git pull
 
-.PHONY: submodules update-submodules
+.PHONY: submodules update-submodules java-test java-test-abac java-test-context java-test-rbac
 
 $(JAVA_PACKAGE_JAR_PATH):
 	$(MAKE) -C $(JAVA_DIR) package
 
-java-test: $(JAVA_PACKAGE_JAR_PATH)
+java-test-rbac: $(JAVA_PACKAGE_JAR_PATH)
+	cd rbac/java && javac -cp $(JAVA_PACKAGE_JAR_PATH):. TestApp.java && java -cp $(JAVA_PACKAGE_JAR_PATH):. TestApp
+
+java-test-abac: $(JAVA_PACKAGE_JAR_PATH)
 	cd abac/java && javac -cp $(JAVA_PACKAGE_JAR_PATH):. TestAbac.java && java -cp $(JAVA_PACKAGE_JAR_PATH):. TestAbac
+
+java-test-context: $(JAVA_PACKAGE_JAR_PATH)
 	# The way this test works for context is pretty sketchy.
 	# We can't set environment variables from within Java like the Python & Ruby
 	# tests, so instead we call the test twice, expecting it to fail for production.
 	cd context/java && javac -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext.java && ENV="development" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext
 	cd context/java && (ENV="production" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext && exit 1 || exit 0)
 	@echo "Ignore that failure it actually worked!"
+
+java-test: java-test-abac java-test-context java-test-rbac
 
 python-test:
 	cd inheritance/python && pytest .
