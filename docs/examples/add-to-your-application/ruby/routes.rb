@@ -20,8 +20,8 @@ get '/repo/:name' do
                   repo)
     "<h1>A Repo</h1><p>Welcome to repo #{repo.name}</p>"
   rescue Oso::NotFoundError
-    # TODO can i have a message here
-    404
+    status 404
+    "<h1>Whoops!</h1><p>Repo named #{params['name']} was not found</p>"
   end
 end
 # docs: end-show-route
