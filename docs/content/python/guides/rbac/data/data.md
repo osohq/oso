@@ -5,4 +5,9 @@ authorize: |
     ```py
     oso.authorize(User("Ariana"), "push", Repository("Acme App"))
     ```
+repository_roles: repository_roles
+organization_roles: organization_roles
+role_name: name
+role_organization: organization
+role_repository: repository
 ---

@@ -5,4 +5,9 @@ authorize: |
     ```go
     oso.Authorize(User{Name: "Ariana"}, "push", Repository{Name: "Acme App"})
     ```
+repository_roles: RepositoryRoles
+organization_roles: OrganizationRoles
+role_name: Name
+role_organization: Organization
+role_repository: Repository
 ---

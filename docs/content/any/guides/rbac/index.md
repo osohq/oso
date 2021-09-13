@@ -209,14 +209,14 @@ name: name, resource: resource }` succeeds if the user has been assigned the
   <!-- TODO(gj): why do I need to dedent this? -->
   {{< code codeLang="polar" >}}
 has_role(user: User, name: String, repository: Repository) if
-  role in user.repository_roles and
-  role.name = name and
-  role.repository = repository;
+  role in user.{{% exampleGet "repository_roles" %}} and
+  role.{{% exampleGet "role_name" %}} = name and
+  role.{{% exampleGet "role_repository" %}} = repository;
 
 has_role(user: User, name: String, organization: Organization) if
-  role in user.organization_roles and
-  role.name = name and
-  role.organization = organization;
+  role in user.{{% exampleGet "organization_roles" %}} and
+  role.{{% exampleGet "role_name" %}} = name and
+  role.{{% exampleGet "role_organization" %}} = organization;
   {{< /code >}}
 {{% /callout %}}
 
