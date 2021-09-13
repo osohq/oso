@@ -144,6 +144,7 @@ natively
 nbsp
 nodejs
 npm
+organizationRoles
 oso
 osohq
 performant
@@ -156,6 +157,7 @@ rb
 registerClass
 repl
 repo
+repositoryRoles
 roadmap
 roleName
 runtime
@@ -169,6 +171,7 @@ structs
 subclasses
 submittedBy
 superclasses
+superset
 toolchain
 traceback
 transactional

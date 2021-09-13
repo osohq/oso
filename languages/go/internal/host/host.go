@@ -310,6 +310,10 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		fields := make(map[types.Symbol]types.Term)
 		iter := rt.MapRange()
 		for iter.Next() {
+			// TODO(gj): error on maps w/o string keys since we're just gonna
+			// stringify 'em here and something will blow up way later (probably in
+			// query.go where we call
+			// `reflect.ValueOf(instance).FieldByName(string(event.Attribute)`).
 			k := iter.Key().String()
 			v := iter.Value().Interface()
 			converted, err := h.ToPolar(v)
