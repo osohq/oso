@@ -654,7 +654,7 @@ resource Repository {
   roles = ["contributor", "maintainer", "admin"];  # roles that can be assigned for the actor or resource
   relations = { parent: Organization };  # relations to other actors/resources
 
-  ### Shorthand rules ###
+  ### Shorthand Rules ###
   "read" if "contributor"  # "contributor" role grants the "read" permission
   "push" if "maintainer"  # "member" role grants the "read" permission
   "maintainer" if "admin"  # "admin" role grants the "maintainer" role
@@ -747,7 +747,7 @@ has_relation(parent_org: Organization, "parent", repo: Repository) if
 
 `has_relation` rules must be defined for every declared relation.
 
-### Shorthand rules
+### Shorthand Rules
 
 Shorthand rules are shortened rules that you can define inside actor and
 resource blocks using declared permissions, roles, and relations.
@@ -779,7 +779,7 @@ allow(actor, action, resource) if has_permission(actor, action, resource);
 
 This rule tells Oso to look for permissions that were granted through shorthand rules.
 
-#### Shorthand rules without relations
+#### Shorthand Rules Without Relations
 
 A shorthand rule has the basic form:
 
@@ -802,7 +802,7 @@ resource Repository {
 }
 ```
 
-#### Shorthand rules with relations
+#### Shorthand Rules With Relations
 
 If you have [declared relations](#relation-declarations) inside a block, you can also write shorthand rules of this form:
 
@@ -826,6 +826,75 @@ resource Repository {
   "contributor" if "member" on "parent"  # "member" role on parent Organization grants "contributor" role
 }
 ```
+
+### Shorthand Rule Expansion
+
+Shorthand rules are expanded to full Polar rules when they are loaded. The semantics of this expansion are as follows.
+
+#### Expansion without relation
+
+```polar
+$x if $y;
+=> rule1(actor: Actor, $x, resource: $Type) if rule2(actor, $y, resource);
+```
+
+where `rule1` and `rule2` are the expansions of `$x` and `$y` respectively.
+
+If `$x` is a [permission](#permission-declarations), then `rule1` will be
+`has_permission`. If `$x` is a [role](#role-declarations), then `rule1` will be
+`has_role`. The same semantics apply for `$y` and `$rule2`.
+
+The resource argument specializer `$Type` is determined by the enclosing [block definition](#actor-and-resource-blocks).
+E.g., if the rule is defined inside of `resource Repository {}`, then `$Type` will be `Repository`.
+
+For example,
+
+```polar
+# Shorthand rule
+resource Repository {
+  permissions = ["read"];
+  roles = ["contributor"];
+
+  "read" if "contributor";
+}
+
+# Expanded rule
+#                            "read"                        if                 "contributor"           ;
+#                              \/                                                  \/
+has_permission(actor: Actor, "read", resource: Repository) if has_role(actor, "contributor", resource);
+```
+
+
+# Expansion with relation
+
+```polar
+$x if $y on $z;
+=> rule1(actor: Actor, $x, resource: $Type) if rule2(actor, $y, related) and has_relation(related, $z, resource);
+```
+
+where `rule1`, `rule2`, and `relation` are the expansions of `$x`, `$y`, and `$z` respectively.
+
+The expansion of `$x` to `rule1` and `$y` to `rule2` follow the same semantics as expansion without relation above.
+`$z` must always be a [declared relation](#relation-declarations) in the enclosing block.
+The `has_relation` rule is necessary in order to access the `related` object that `rule2` references.
+This expansion shows why it is necessary to define `has_relation` rules for every declared relation.
+
+
+For example,
+
+```polar
+resource Repository {
+  roles = ["admin"];
+  relations = {parent: Organization};
+
+  "admin" if "owner" on "parent";
+}
+
+#                      "admin"                        if                 "owner"            on                        "parent"          ;
+#                        \/                                                \/        /------|-----------------\         \/
+has_role(actor: Actor, "admin", resource: Repository) if has_role(actor, "owner", related) and has_relation(related, "parent", resource);
+```
+
 
 
 
