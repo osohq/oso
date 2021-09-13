@@ -1,8 +1,8 @@
 ---
 title: Quickstart (5 min)
 description: |
-  Ready to get started? See Oso in action, and walk through our quick
-  tutorial for adding authorization to a simple web server.
+  Ready to get started? See Oso in action, and walk through a quick
+  change to an Oso policy in a simple web server.
 weight: 1
 ---
 
