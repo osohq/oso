@@ -14,59 +14,59 @@ end
 repositories = DB[:repositories]
 
 module DF
-class Repository < Sequel::Model(:repositories)
-end
-
-r = Repository.new(name: "gmail", is_public: false)
-r.save
-
-OSO = Oso.new
-
-# docs: begin-data-filtering
-def self.get_repositories(filters)
-  query = Repository
-  filters.each do |filter|
-    value = filter.value
-
-    if filter.field.nil?
-      value = value.name
-      field = :name
-    else
-      field = filter.field.to_sym
-    end
-
-    if filter.kind == "Eq"
-      query = query.where(field => value)
-    else
-      raise "unimplemeneted constraint kind"
-    end
+  class Repository < Sequel::Model(:repositories)
   end
 
-  query
-end
+  r = Repository.new(name: "gmail", is_public: false)
+  r.save
 
-def self.combine_query(q1, q2)
-  q1.union(q2)
-end
+  OSO = Oso.new
 
-def self.exec_query(q)
-  q.all
-end
+  # docs: begin-data-filtering
+  def self.get_repositories(filters)
+    query = Repository
+    filters.each do |filter|
+      value = filter.value
 
-OSO.register_class(User)
-OSO.register_class(
-  Repository,
-  name: "Repository",
-  fields: {
-    "is_public" => PolarBoolean
-  },
-  build_query: method(:get_repositories),
-  combine_query: method(:combine_query),
-  exec_query: method(:exec_query)
-)
+      if filter.field.nil?
+        value = value.name
+        field = :name
+      else
+        field = filter.field.to_sym
+      end
 
-OSO.load_files(["main.polar"])
-# docs: end-data-filtering
+      if filter.kind == "Eq"
+        query = query.where(field => value)
+      else
+        raise "unimplemented constraint kind #{filter.kind}"
+      end
+    end
+
+    query
+  end
+
+  def self.combine_query(q1, q2)
+    q1.union(q2)
+  end
+
+  def self.exec_query(q)
+    q.all
+  end
+
+  OSO.register_class(User)
+  OSO.register_class(
+    Repository,
+    name: "Repository",
+    fields: {
+      is_public: PolarBoolean
+    },
+    build_query: method(:get_repositories),
+    combine_query: method(:combine_query),
+    exec_query: method(:exec_query)
+  )
+
+  OSO.load_files(["main.polar"])
+  # docs: end-data-filtering
 
 
 end
