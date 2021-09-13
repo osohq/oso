@@ -4,6 +4,7 @@ test-policy-extensions:
 	pytest test_policy_extensions.py
 
 test-python:
+	pip install flask
 	pytest python/app/test.py
 
 test-node:
