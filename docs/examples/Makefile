@@ -64,8 +64,8 @@ test-quickstarts: submodules
 	$(MAKE) -C quickstart test
 
 test:
+	$(MAKE) -C add-to-your-application test
 	$(MAKE) python-test
 	$(MAKE) ruby-test
 	$(MAKE) java-test
 	$(MAKE) nodejs-test
-	$(MAKE) -C add-to-your-application test
