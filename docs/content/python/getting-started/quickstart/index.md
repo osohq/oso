@@ -6,15 +6,6 @@ description: |
 weight: 1
 ---
 
-<!--
-
-This guide is not setup to use literalInclude. As a result the
-examples are manually maintained to match the quickstart repository.
-
-This needs to be updated.
-
--->
-
 # Quickstart
 
 This guide will walk you through your first change to an Oso policy file. There
