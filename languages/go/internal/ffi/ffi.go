@@ -15,6 +15,7 @@ import (
 	"unsafe"
 
 	"github.com/osohq/go-oso/errors"
+	_ "github.com/osohq/go-oso/internal/ffi/native"
 	"github.com/osohq/go-oso/types"
 )
 
