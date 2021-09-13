@@ -13,7 +13,7 @@ are three steps:
 
 1. [Download](#1-clone-the-repo-and-install-dependencies) a minimal {{< lang >}}
    starter project that's already integrated with Oso.
-2. [Run the server](#2-run-the-server) and verify that it works.
+2. [Run the server](#2-run-the-server) and visit the app in your browser.
 3. [Make a small change](#3-update-the-policy) to the policy to allow a new type
    of access.
 
@@ -52,12 +52,12 @@ to it. Let's fix that now.
 
 In `{{< exampleGet "polarFileRelative" >}}`, add the following two lines to define a new "rule." This
 rule will allow any "actor" (or user) to perform the `"read"` action on a
-repository if that repository is marked as "public".
+repository if that repository is marked as `{{< exampleGet "isPublic" >}}`.
 
 <!-- NOTE: this doesn't use literalInclude only because we need to highlight the
 addition of two lines.
 This code should be kept in sync with examples/quickstart/**/*.polar. -->
-{{< code file="main.polar" highlight="21-22" syntax=diff >}}
+{{< code file="main.polar" hl_lines="21-22" >}}
  actor User {}
 
  resource Repository {
@@ -72,14 +72,14 @@ This code should be kept in sync with examples/quickstart/**/*.polar. -->
    "contributor" if "maintainer";
  }
 
- # This rule tells Oso how to fetch roles for a user
+ # This rule tells Oso how to fetch roles for a repository
  has_role(actor, role_name, repository: Repository) if
    role in actor.roles and
    role_name = role.name and
    repository = role.repository;
 
-+has_permission(_actor, "read", repository: Repository) if
-+  repository.public;
+ has_permission(_actor, "read", repository: Repository) if
+   repository.{{< exampleGet "isPublic" >}};
 
  allow(actor, action, resource) if
    has_permission(actor, action, resource);
@@ -100,9 +100,10 @@ view repos. The call to `{{< exampleGet "osoAuthorize" >}}` in `{{< exampleGet
 "serverFileRelative" >}}` performs this check in the {{% exampleGet "endpoint" %}}.
 
 In this case, the repo with the name `react` is public because of its definition
-in the {{< exampleGet "modelFileRelative" >}} file, so it should be accessible
-to everyone. By adding the rule that checks `repository.public`, you told Oso
-how to check that a repository is public.
+in the `{{< exampleGet "modelFileRelative" >}}` file, so it should be accessible
+to everyone. By making the change to {{< exampleGet "polarFileRelative" >}}, you
+told Oso to allow users to `"read"` repositories that have the `{{< exampleGet
+"isPublic" >}}` field set to true.
 
 Check out the full code for the example below:
 

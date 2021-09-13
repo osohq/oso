@@ -415,10 +415,10 @@ window.addEventListener("load", () => {
     const tabContainer = document.createElement("div");
     // codeContainer contains the, well, code
     const codeContainer = document.createElement("div");
+    codeContainer.className = "tab-group-code";
     tabGroupContainer.appendChild(tabContainer);
     tabGroupContainer.appendChild(codeContainer);
-    tabContainer.className =
-      "filename rounded-t-md bg-gray-200 text-gray-700 text-sm flex";
+    tabContainer.className = "filename tab-group-tabs";
 
     const pres = Array.from(codeBlocks).map((div) => div.querySelector("pre"));
     const filenames = Array.from(codeBlocks).map((div) => {

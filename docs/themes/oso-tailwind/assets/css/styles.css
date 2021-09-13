@@ -188,3 +188,16 @@ pre code {
 .highlight-me-pls {
   background-color: #333;
 }
+
+.tab-group-tabs {
+  @apply text-gray-700;
+  @apply bg-gray-200;
+  @apply text-sm;
+  @apply flex;
+  @apply rounded-t-md;
+}
+
+.tab-group-code pre {
+  @apply rounded-t-none;
+  margin-top: 0
+}
