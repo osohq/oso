@@ -10,4 +10,7 @@ organization_roles: OrganizationRoles
 role_name: Name
 role_organization: Organization
 role_repository: Repository
+roles: Roles
+role_resource: Resource
+authorize_method_name: Authorize
 ---
