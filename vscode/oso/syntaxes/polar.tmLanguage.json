@@ -2,48 +2,170 @@
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "polar",
   "patterns": [
-    { "include": "#inline-query" },
-    { "include": "#rule-def-head" },
-    { "include": "#rule-def-body" },
-    { "include": "#comment" }
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#rule"
+    },
+    {
+      "include": "#rule-type"
+    },
+    {
+      "include": "#inline-query"
+    },
+    {
+      "include": "#resource-block"
+    }
   ],
   "repository": {
-    "inline-query": {
-      "begin": "(\\?=)",
-      "end": "(;)",
-      "beginCaptures": {
-        "1": { "name": "keyword.control" }
-      },
-      "patterns": [{ "include": "#expression" }]
-    },
-    "rule-def-head": {
-      "begin": "[\\s]*([\\w][\\w-]*)(\\()",
-      "end": "(\\))",
-      "beginCaptures": {
-        "1": { "name": "support.function" }
-      },
-      "patterns": [{ "include": "#string" }, { "include": "#number" }]
-    },
-    "rule-def-body": {
-      "begin": "(if)",
-      "end": "(;)",
-      "beginCaptures": {
-        "1": { "name": "keyword.control" }
-      },
-      "patterns": [{ "include": "#expression" }]
-    },
-    "expression": {
-      "patterns": [
-        { "include": "#comment" },
-        { "include": "#string" },
-        { "include": "#number" },
-        { "include": "#keyword" },
-        { "include": "#operator" }
-      ]
-    },
     "comment": {
       "name": "comment.line.number-sign",
       "match": "#.*"
+    },
+    "rule": {
+      "name": "meta.rule",
+      "patterns": [
+        {
+          "include": "#rule-functor"
+        },
+        {
+          "begin": "\\bif\\b",
+          "beginCaptures": {
+            "0": {
+              "name": "keyword.control.if"
+            }
+          },
+          "end": ";",
+          "patterns": [
+            {
+              "include": "#term"
+            }
+          ]
+        },
+        {
+          "match": ";"
+        }
+      ]
+    },
+    "rule-type": {
+      "name": "meta.rule-type",
+      "begin": "\\btype\\b",
+      "beginCaptures": {
+        "0": {
+          "name": "keyword.other.type-decl"
+        }
+      },
+      "end": ";",
+      "patterns": [
+        {
+          "include": "#rule-functor"
+        }
+      ]
+    },
+    "inline-query": {
+      "name": "meta.inline-query",
+      "begin": "\\?=",
+      "end": ";",
+      "beginCaptures": {
+        "0": {
+          "name": "keyword.control"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#term"
+        }
+      ]
+    },
+    "resource-block": {
+      "name": "meta.resource-block",
+      "begin": "(resource|actor)\\s*([a-zA-Z][a-zA-Z0-9:]*)\\s*\\{",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control"
+        },
+        "2": {
+          "name": "entity.name.type"
+        }
+      },
+      "end": "\\}",
+      "patterns": [
+        {
+          "name": "punctuation.separator.sequence.declarations",
+          "match": ";"
+        },
+        {
+          "name": "meta.relation-declaration",
+          "begin": "\\{",
+          "end": "\\}",
+          "patterns": [
+            {
+              "include": "#specializer"
+            }
+          ]
+        },
+        {
+          "include": "#term"
+        }
+      ]
+    },
+    "term": {
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#string"
+        },
+        {
+          "include": "#number"
+        },
+        {
+          "include": "#keyword"
+        },
+        {
+          "include": "#operator"
+        },
+        {
+          "name": "meta.bracket.list",
+          "begin": "\\[",
+          "end": "\\]",
+          "patterns": [
+            {
+              "include": "#term"
+            },
+            {
+              "name": "punctuation.separator.sequence.list",
+              "match": ","
+            }
+          ]
+        },
+        {
+          "name": "meta.bracket.dict",
+          "begin": "\\{",
+          "end": "\\}",
+          "patterns": [
+            {
+              "include": "#term"
+            },
+            {
+              "name": "punctuation.separator.sequence.dict",
+              "match": ","
+            }
+          ]
+        },
+        {
+          "name": "meta.parens",
+          "begin": "\\(",
+          "end": "\\)",
+          "patterns": [
+            {
+              "include": "#term"
+            }
+          ]
+        }
+      ]
     },
     "string": {
       "name": "string.quoted.double",
@@ -57,94 +179,64 @@
       ]
     },
     "number": {
-      "name": "constant.numeric",
-      "match": "-?[0-9]*.?[0-9]+([eE][-+]?[0-9]+)?"
+      "patterns": [
+        {
+          "name": "constant.numeric.float",
+          "match": "\\b[+-]?\\d+(?:(\\.)\\d+(?:e[+-]?\\d+)?|(?:e[+-]?\\d+))\\b"
+        },
+        {
+          "name": "constant.numeric.integer",
+          "match": "\\b(\\+|\\-)[\\d]+\\b"
+        },
+        {
+          "name": "constant.numeric.natural",
+          "match": "\\b[\\d]+\\b"
+        }
+      ]
     },
     "keyword": {
       "patterns": [
-        { "include": "#and" },
-        { "include": "#or" },
-        { "include": "#not" },
-        { "include": "#new" },
-        { "include": "#unify" },
-        { "include": "#in" },
-        { "include": "#matches" },
-        { "include": "#forall" },
-        { "include": "#debug" },
-        { "include": "#print" },
-        { "include": "#cut" }
+        {
+          "match": "\\b(cut|or|debug|print|in|forall|if|and|of|not|matches|type|on)\\b",
+          "name": "constant.character"
+        }
       ]
-    },
-    "and": {
-      "match": "(\\s?)(and)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
-    },
-    "or": {
-      "match": "(\\s?)(or)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
-    },
-    "not": {
-      "match": "(\\s?)(not)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
-    },
-    "new": {
-      "match": "(\\s?)(new)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
-    },
-    "unify": {
-      "match": "(\\s?)(unify)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
-    },
-    "in": {
-      "match": "(\\s?)(in)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
-    },
-    "matches": {
-      "match": "(\\s?)(matches)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
-    },
-    "forall": {
-      "match": "(\\s?)(forall)(\\s|\\()",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
-    },
-    "debug": {
-      "match": "(\\s?)(debug)(\\s|\\()",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
-    },
-    "print": {
-      "match": "(\\s?)(print)(\\s|\\()",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
-    },
-    "cut": {
-      "match": "(\\s?)(cut)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
     },
     "operator": {
       "match": "(\\+|-|\\*|\\/|<|>|=|!)",
       "captures": {
-        "1": { "name": "keyword.control" }
+        "1": {
+          "name": "keyword.control"
+        }
+      }
+    },
+    "rule-functor": {
+      "begin": "([a-zA-Z][a-zA-Z0-9-_]*)\\(",
+      "beginCaptures": {
+        "1": {
+          "name": "support.function.rule"
+        }
+      },
+      "end": "\\)",
+      "patterns": [
+        {
+          "include": "#specializer"
+        },
+        {
+          "name": "punctuation.separator.sequence.list",
+          "match": ","
+        },
+        {
+          "include": "#term"
+        }
+      ]
+    },
+    "specializer": {
+      "match": "[a-zA-Z_][a-zA-Z0-9-_]*\\s*:\\s*([a-zA-Z][a-zA-Z0-9:-_]*)",
+      "captures": {
+        "1": {
+          "name": "entity.name.type.resource"
+        }
       }
     }
   },
