@@ -12,6 +12,11 @@ installDependencies: pip install -r requirements.txt
 startServer: FLASK_APP=app.server python -m flask run
 osoAuthorize: oso.authorize()
 isPublic: is_public
+hasRole: |-
+  has_role(actor: User, role_name: String, repository: Repository) if
+    role in actor.roles and
+    role_name = role.name and
+    repository = role.repository;
 endpoint: the `repo_show` route
 port: 5000
 ---

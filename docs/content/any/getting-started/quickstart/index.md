@@ -69,31 +69,28 @@ repository if that repository is marked as `{{< exampleGet "isPublic" >}}`.
 addition of two lines.
 This code should be kept in sync with examples/quickstart/**/*.polar. -->
 {{< code file="main.polar" hl_lines="21-22" >}}
- actor User {}
+actor User {}
 
- resource Repository {
-   permissions = ["read", "push", "delete"];
-   roles = ["contributor", "maintainer", "admin"];
+resource Repository {
+  permissions = ["read", "push", "delete"];
+  roles = ["contributor", "maintainer", "admin"];
 
-   "read" if "contributor";
-   "push" if "maintainer";
-   "delete" if "admin";
+  "read" if "contributor";
+  "push" if "maintainer";
+  "delete" if "admin";
 
-   "maintainer" if "admin";
-   "contributor" if "maintainer";
- }
+  "maintainer" if "admin";
+  "contributor" if "maintainer";
+}
 
- # This rule tells Oso how to fetch roles for a repository
- has_role(actor, role_name, repository: Repository) if
-   role in actor.roles and
-   role_name = role.name and
-   repository = role.repository;
+# This rule tells Oso how to fetch roles for a repository
+{{< exampleGet "hasRole" >}}
 
- has_permission(_actor, "read", repository: Repository) if
-   repository.{{< exampleGet "isPublic" >}};
+has_permission(_actor: User, "read", repository: Repository) if
+  repository.{{< exampleGet "isPublic" >}};
 
- allow(actor, action, resource) if
-   has_permission(actor, action, resource);
+allow(actor, action, resource) if
+  has_permission(actor, action, resource);
 
 {{< /code >}}
 

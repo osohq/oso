@@ -12,6 +12,11 @@ installDependencies: npm install
 startServer: npm run dev
 osoAuthorize: oso.authorize()
 isPublic: isPublic
+hasRole: |-
+  has_role(actor: User, role_name: String, repository: Repository) if
+    role in actor.roles and
+    role_name = role.name and
+    repository = role.repository;
 endpoint: the `/repo/:name` route
 port: 5000
 ---
