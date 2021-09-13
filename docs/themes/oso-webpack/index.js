@@ -418,7 +418,7 @@ window.addEventListener("load", () => {
     codeContainer.className = "tab-group-code";
     tabGroupContainer.appendChild(tabContainer);
     tabGroupContainer.appendChild(codeContainer);
-    tabContainer.className = "filename tab-group-tabs";
+    tabContainer.className = "tab-group-tabs";
 
     const pres = Array.from(codeBlocks).map((div) => div.querySelector("pre"));
     const filenames = Array.from(codeBlocks).map((div) => {
@@ -430,27 +430,12 @@ window.addEventListener("load", () => {
     codeBlocks.forEach((block) => block.remove());
     tabContainer.replaceChildren(...filenames);
 
-    const unselectedTabStyle = {
-      padding: "0.6rem 0.4rem",
-      display: "flex",
-      alignItems: "center",
-      cursor: "pointer",
-      fontWeight: "normal",
-      boxShadow: "none",
-    };
-
-    const selectedTabStyle = {
-      ...unselectedTabStyle,
-      fontWeight: "bold",
-      boxShadow: "inset 0 -2px 0 #666",
-    };
-
     function unselectFilename(filename) {
-      Object.assign(filename.style, unselectedTabStyle);
+      filename.className = "tab-group-tab";
     }
 
     function selectFilename(filename) {
-      Object.assign(filename.style, selectedTabStyle);
+      filename.className = "tab-group-tab selected";
     }
 
     function select(selectedIndex) {

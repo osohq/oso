@@ -185,12 +185,14 @@ pre code {
   background-color: rgb(167, 243, 208);
 }
 
+/* purgecss ignore */
 .highlight-me-pls {
-  background-color: #333;
+  background-color: #573992;
   display: inline-block;
   width: 100%;
 }
 
+/* purgecss ignore */
 .tab-group-tabs {
   @apply text-gray-700;
   @apply bg-gray-200;
@@ -199,6 +201,23 @@ pre code {
   @apply rounded-t-md;
 }
 
+/* purgecss ignore */
+.tab-group-tab {
+  padding: 0.6rem 0.4rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: normal;
+  box-shadow: none;
+}
+
+/* purgecss ignore */
+.tab-group-tab.selected {
+  font-weight: bold;
+  box-shadow: inset 0 -2px 0 #666;
+}
+
+/* purgecss ignore */
 .tab-group-code pre {
   @apply rounded-t-none;
   margin-top: 0
