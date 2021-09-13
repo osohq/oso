@@ -623,7 +623,7 @@ Argument matching is determined in the same way that matching is determined for 
 
 Rule types are optional. If a rule type exists with the same name as a rule, then the rule must match that type or else an error will be thrown at policy load-time.
 
-You can find a reference for built-in rule types [here](TODO: link).
+You can find a reference for built-in rule types [here](reference/polar/builtin_rule_types).
 
 ## Actor and Resource Blocks
 
