@@ -39,17 +39,17 @@ TODO make sure this matches data filtering guides
 
 ## Implementing data filtering query functions
 
-To use data filtering, you tell Oso how to query your data store for the
-resources used in your policy. Oso uses **query objects** to query your
-data store. A **query object** represents a set of filters to apply to a
-collection of data.
+To use data filtering, you tell Oso how to make queries to your data
+store for the resources used in your policy. Oso uses `Query` objects
+to query your data store. A `Query` represents a set of filters
+to apply to a collection of data.
 
-You can use any type as a **query object**. Many ORMs have [these built
+You can use any type as a `Query`. Many ORMs have [these built
 in]({{% exampleGet "queryObjectExampleLink" %}}), but you may have your
 own representation if your resources are retrieved from an external
 service, or with a lower-level database API.
 
-You implement three functions to tell Oso how to work with your **query objects**:
+You implement three functions to tell Oso how to work with your `Query`:
 
 - `build_query(filters) -> Query`: Creates a query from a list of authorization filters
   produced by evaluting the Oso policy.
