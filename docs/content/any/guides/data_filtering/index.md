@@ -153,7 +153,32 @@ The my_field / other_field relationship is similar to a foreign key. It lets oso
 
 # Example
 
-TODO
+{{< literalInclude
+      dynPath="exampleBPath"
+      from="docs: begin-b1"
+      to="docs: end-b1"
+      fallback="no" >}}
+
+We now have two sets of query functions. Our `{{% exampleGet "buildQuery" %}}`
+function depends on the class but our `{{% exampleGet "execQuery" %}}` and
+`{{% exampleGet "combineQuery" %}}` functions are the same for all types so we
+can set them with `{{% exampleGet "setDataFilteringQueryDefaults" %}}`.
+
+{{< literalInclude
+      dynPath="exampleBPath"
+      from="docs: begin-b2"
+      to="docs: end-b2"
+      fallback="no" >}}
+
+{{< literalInclude
+      dynPath="policyBPath"
+      fallback="no" >}}
+
+{{< literalInclude
+      dynPath="exampleBPath"
+      from="docs: begin-b3"
+      to="docs: end-b3"
+      fallback="no" >}}
 
 # Evaluation
 When oso is evaluating data filtering methods it uses queries to fetch objects. If there are multiple types involved it will make multiple queries and substitute in the results when needed.

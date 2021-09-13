@@ -10,4 +10,6 @@ map: dictionary
 
 exampleAPath: examples/data_filtering/python/data_filtering_example_a.py
 policyAPath: examples/data_filtering/policy_a.polar
+exampleBPath: examples/data_filtering/python/data_filtering_example_b.py
+policyBPath: examples/data_filtering/policy_b.polar
 ---
