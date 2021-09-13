@@ -49,6 +49,7 @@ RBAC
 REPL
 RESTful
 ReBAC
+RepoId
 RubyGems
 Rubying
 SLA
@@ -108,11 +109,13 @@ enums
 filesystem
 frontend
 glibc
+gmail
 hardcoded
 hardcoding
 hoc
 hotfixes
 href
+http
 ing
 instantiation
 integrations
@@ -122,6 +125,7 @@ iterables
 js
 latencies
 lifecycle
+localhost
 lookups
 macOS
 mailto
@@ -138,6 +142,7 @@ namespaced
 namespaces
 natively
 nbsp
+nodejs
 npm
 oso
 osohq
@@ -145,10 +150,14 @@ performant
 precompiled
 prefetch
 pseudocode
+py
 quickstart
+rb
 registerClass
 repl
+repo
 roadmap
+roleName
 runtime
 specializer
 specializers
@@ -163,6 +172,7 @@ superclasses
 toolchain
 traceback
 transactional
+txt
 un
 unary
 unifications

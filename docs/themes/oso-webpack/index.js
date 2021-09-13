@@ -385,3 +385,67 @@ window.recordFeedback = (isUp) => {
     }
   });
 }
+
+// Support for code tab groups -- hacks ahead!
+window.addEventListener("load", () => {
+  const unique = (array) => [...new Set(array)];
+
+  const tabGroupDivs = Array.from(
+    document.querySelectorAll("div[data-tabgroup]")
+  );
+
+  let tabGroups = tabGroupDivs.map(
+    (div) => div.attributes["data-tabgroup"].value
+  );
+  tabGroups = unique(tabGroups);
+
+  for (const tabGroup of tabGroups) {
+    const codeBlocks = document.querySelectorAll(
+      `div.code[data-tabgroup='${tabGroup}'`
+    );
+    const first = codeBlocks[0];
+    // tabGroupContainer is the full containing div, and replaces the first code
+    // block in the tabGroup
+    const tabGroupContainer = document.createElement("div");
+    tabGroupContainer.className = "code";
+    first.parentNode.insertBefore(tabGroupContainer, first);
+    // tabContainer contains the clickable tabs
+    const tabContainer = document.createElement("div");
+    // codeContainer contains the, well, code
+    const codeContainer = document.createElement("div");
+    codeContainer.className = "tab-group-code";
+    tabGroupContainer.appendChild(tabContainer);
+    tabGroupContainer.appendChild(codeContainer);
+    tabContainer.className = "tab-group-tabs";
+
+    const pres = Array.from(codeBlocks).map((div) => div.querySelector("pre"));
+    const filenames = Array.from(codeBlocks).map((div) => {
+      const newDiv = document.createElement("div");
+      newDiv.replaceChildren(...div.querySelector(".filename").childNodes);
+      return newDiv;
+    });
+
+    codeBlocks.forEach((block) => block.remove());
+    tabContainer.replaceChildren(...filenames);
+
+    function unselectFilename(filename) {
+      filename.className = "tab-group-tab";
+    }
+
+    function selectFilename(filename) {
+      filename.className = "tab-group-tab selected";
+    }
+
+    function select(selectedIndex) {
+      filenames.forEach(unselectFilename);
+      selectFilename(filenames[selectedIndex]);
+      codeContainer.replaceChildren(pres[selectedIndex]);
+    }
+
+    filenames.forEach((filename, i) => {
+      filename.addEventListener("click", () => select(i));
+    });
+
+    select(0);
+  }
+});

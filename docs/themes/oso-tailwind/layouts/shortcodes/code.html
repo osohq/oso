@@ -1,10 +1,14 @@
-{{ $contents := trim .Inner " \n" }}
+{{ $contents := trim .Inner "\n" }}
 {{ $file := .Get "file" }}
+{{ $syntax := .Get "syntax" }}
 {{ $codeLang := "" }}
 {{ $suffix := findRE "(\\.[^.]+)$" $file 1 }}
 {{ $hl_lines := $.Params.hl_lines | default "" }}
 {{ with  $suffix }}
 {{ $codeLang = (index . 0 | strings.TrimPrefix ".") }}
+{{ with $syntax }}
+  {{ $codeLang = . }}
+{{ end}}
 {{ end }}
 {{ with .Get "codeLang" }}{{ $codeLang = . }}{{ end }}
 <div class="code" id="{{ $file | urlize}}" data-hl_lines="{{ $hl_lines }}">
