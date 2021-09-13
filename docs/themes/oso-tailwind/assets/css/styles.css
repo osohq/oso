@@ -187,4 +187,6 @@ pre code {
 
 .highlight-me-pls {
   background-color: #333;
+  display: inline-block;
+  width: 100%;
 }
