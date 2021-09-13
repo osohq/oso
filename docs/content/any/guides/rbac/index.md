@@ -44,8 +44,10 @@ resource Repository {}
 
 Our app also has a `User` type that will be our lone type of **actor**:
 
+<!-- TODO(gj): remove fallback when all example apps complete -->
 {{% literalInclude
-  path="examples/rbac/main.polar"
+  dynPath="policy_path"
+  fallback="register"
   from="docs: begin-actor"
   to="docs: end-actor"
 %}}
