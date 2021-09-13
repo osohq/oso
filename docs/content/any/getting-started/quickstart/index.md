@@ -7,6 +7,9 @@ weight: 1
 ---
 
 {{< ifLang not="python" >}}
+{{< ifLang not="node" >}}
+{{< ifLang not="ruby" >}}
+{{< ifLang not="go" >}}
 {{% callout "Python-only guide" %}}
 
 Right now, this is a Python-only guide. The {{< lang >}} version of this page is
@@ -14,6 +17,9 @@ coming soon.
 
 {{% /callout %}}
 <div class="pb-10"></div>
+{{< /ifLang >}}
+{{< /ifLang >}}
+{{< /ifLang >}}
 {{< /ifLang >}}
 
 
