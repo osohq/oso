@@ -3,25 +3,6 @@ title: "Filter Data"
 weight: 1
 showContentForAnyLanguage: true
 ---
-{{% ifLangExists %}}
-
-{{% ifLang not="node" %}}
-{{% ifLang not="python" %}}
-{{% ifLang not="ruby" %}}
-Data filtering is coming soon for {{< lang >}}!
-
-If you want to get data filtering in your app now or just want to
-register your interest for Data Filtering in {{< lang >}}, [drop into our Slack](https://join-slack.osohq.com) or
-<a href="mailto:engineering@osohq.com?subject=Data%20filtering%20support%20for%20{{< currentLanguage >}}&body=I%27m%20interested%20in%20data%20filtering%20support%20for%20{{< currentLanguage >}}">send an email</a>
-to our engineering team and we'll unblock you.
-{{% /ifLang %}}
-{{% /ifLang %}}
-{{% /ifLang %}}
-
-{{< ifLang not="rust" >}}
-{{< ifLang not="go" >}}
-{{< ifLang not="java" >}}
-
 # Data filtering
 
 When you call `authorize(actor, action, resource)` , Oso evaluates the allow
@@ -182,9 +163,3 @@ Relation fields also work when you are not using data filtering methods and are 
 # Limitations
 
 TODO
-
-{{< /ifLang >}}
-{{< /ifLang >}}
-{{< /ifLang >}}
-
-{{% /ifLangExists %}}
