@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.17.1",
-    "oso": "file:../../../../languages/js"
+    "oso": "file:../../../../languages/js",
+    "supertest": "^6.1.6"
   }
 }

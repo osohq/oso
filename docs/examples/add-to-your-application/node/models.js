@@ -4,6 +4,10 @@ class Repository {
   }
 }
 
+Repository.getByName = name => {
+  return repos_db[name];
+};
+
 const repos_db = {
   gmail: new Repository('gmail')
 };
@@ -21,6 +25,10 @@ class User {
     this.roles = roles;
   }
 }
+
+User.getCurrentUser = () => {
+  return users_db['larry'];
+};
 
 const users_db = {
   larry: new User([new Role('admin', repos_db['gmail'])])
