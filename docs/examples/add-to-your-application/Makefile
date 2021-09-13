@@ -12,5 +12,5 @@ test-node:
 	cd node; node test.js
 
 test-ruby:
-	cd ruby; bundle install
+	cd ruby; pwd; bundle install
 	cd ruby; bundle exec ruby test.rb
