@@ -13,11 +13,11 @@
 [submodule "docs/examples/quickstart/nodejs"]
 	path = docs/examples/quickstart/nodejs
 	url = https://github.com/osohq/oso-nodejs-quickstart.git
-	branch = main
+	branch = beta
 [submodule "docs/examples/quickstart/python"]
 	path = docs/examples/quickstart/python
 	url = https://github.com/osohq/oso-python-quickstart.git
-	branch = main
+	branch = beta
 [submodule "docs/examples/quickstart/ruby"]
 	path = docs/examples/quickstart/ruby
 	url = https://github.com/osohq/oso-ruby-quickstart.git
