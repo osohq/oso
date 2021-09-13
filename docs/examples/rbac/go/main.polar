@@ -6,8 +6,8 @@ allow(actor, action, resource) if
 # docs: begin-has_role
 has_role(user: User, name: String, resource: Resource) if
   role in user.Roles and
-  role.name = name and
-  role.resource = resource;
+  role.Name = name and
+  role.Resource = resource;
 # docs: end-has_role
 
 # docs: begin-actor
@@ -39,5 +39,5 @@ resource Repository {
 
 # docs: begin-has_relation
 has_relation(organization: Organization, "parent", repository: Repository) if
-  organization = repository.organization;
+  organization = repository.Organization;
 # docs: end-has_relation

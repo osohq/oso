@@ -1,12 +1,12 @@
 package main
 
 import (
-	"log"
 	"reflect"
 
 	oso "github.com/osohq/go-oso"
 )
 
+// docs: begin-types
 type Organization struct {
 	Name string
 }
@@ -23,28 +23,33 @@ type Role struct {
 
 type User struct {
 	Name  string
-	Roles map[Role]struct{}
+	Roles []Role
 }
 
 func NewUser(name string) User {
-	return User{Name: name, Roles: make(map[Role]struct{})}
+	return User{Name: name, Roles: []Role{}}
 }
 
 func (u *User) AssignRoleForResource(name string, resource interface{}) {
-	u.Roles[Role{Name: name, Resource: resource}] = struct{}{}
-	log.Printf("alsdjkflaksjdfklasjdf: %v", u)
+	u.Roles = append(u.Roles, Role{Name: name, Resource: resource})
 }
 
+// docs: end-types
+
 func SetupOso() oso.Oso {
-	o, _ := oso.NewOso()
+// docs: begin-setup
+o, _ := oso.NewOso()
 
-	o.RegisterClass(reflect.TypeOf(Organization{}), nil)
-	o.RegisterClass(reflect.TypeOf(Repository{}), nil)
-	o.RegisterClass(reflect.TypeOf(User{}), NewUser)
+// docs: begin-register
+o.RegisterClass(reflect.TypeOf(Organization{}), nil)
+o.RegisterClass(reflect.TypeOf(Repository{}), nil)
+o.RegisterClass(reflect.TypeOf(User{}), NewUser)
+// docs: end-register
 
-	o.LoadFiles([]string{"main.polar"})
+o.LoadFiles([]string{"main.polar"})
+// docs: end-setup
 
-	return o
+return o
 }
 
 func main() {
