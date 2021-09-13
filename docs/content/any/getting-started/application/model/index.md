@@ -54,7 +54,7 @@ called `main.polar` and use it in your app:
 Authorization controls access to *resources* in your application. In
 this guide, we're going to show how to implement the most common
 authorization model, role-based access control, with Oso. See [How to:
-modeling](TODO) **TODO** to see how to implement other authorization
+modeling](/guides) **TODO** to see how to implement other authorization
 models in Oso.
 
 To start with, you need to define resource blocks in your policy. Let's

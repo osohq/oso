@@ -42,7 +42,7 @@ natural way.
 Authorization policies in Oso are expressed in a declarative,
 logic-based programming language called Polar. You've probably
 already seen some Polar policies in the [Quickstart](quickstart)
-and [Add to an App]({{< ref path="/getting-started/application/index.md" lang="python" >}})
+and [Add to an App]({{< ref path="/getting-started/application" >}})
 guides, and the [Polar Syntax guide](polar-syntax) has a detailed
 description of the language syntax and features.
 

@@ -103,7 +103,8 @@ pagination, or ordering to it.
 
 In this brief example we covered what the *data filtering API* does. For
 a more detailed how to of using data filtering and implementing query
-builder functions, see: [How to: Filter data](/guides/data_access).
+<!-- todo remove lang -->
+builder functions, see: [How to: Filter data]({{< ref href="/guides/data_access" lang="python" >}}).
 
 TODO update title as needed here
 
