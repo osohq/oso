@@ -47,7 +47,7 @@ code. Oso loads and evaluates policy files when your
 application runs. Now that you've installed Oso, create a policy file
 called `main.polar` and use it in your app:
 
-{{< literalInclude dynPath="pathOso" fallback="garbo" >}}
+{{< literalInclude dynPath="pathOso" fallback="todo" >}}
 
 ## Define your resources, permissions and roles
 
@@ -151,7 +151,7 @@ likely use your existing User model to maintain this information.
 
 {{< literalInclude
     dynPath="pathModels"
-    fallback="garbo"
+    fallback="todo"
     from="docs: start"
     to="docs: end" >}}
 

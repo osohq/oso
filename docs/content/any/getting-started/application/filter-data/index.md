@@ -26,7 +26,7 @@ need to use `authorized_resources` instead:
 
 {{< literalInclude
     dynPath="dataFilteringPath"
-    fallback="garbo"
+    fallback="todo"
     from="docs: begin-list-route"
     to="docs: end-list-route"
     >}}
@@ -61,7 +61,7 @@ You implement three functions to tell Oso how to work with your **query objects*
 
 {{< literalInclude
     dynPath="dataFilteringPath"
-    fallback="garbo"
+    fallback="todo"
     from="docs: begin-data-filtering"
     to="docs: end-data-filtering"
     >}}
