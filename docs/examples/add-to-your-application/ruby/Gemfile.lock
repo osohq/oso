@@ -35,7 +35,7 @@ GEM
       rack-protection (= 2.1.0)
       tilt (~> 2.0)
     sqlite3 (1.4.2)
-    test-unit (3.4.5)
+    test-unit (3.4.6)
       power_assert
     thin (1.8.1)
       daemons (~> 1.0, >= 1.0.9)
@@ -53,7 +53,7 @@ DEPENDENCIES
   sequel
   sinatra
   sqlite3
-  test-unit
+  test-unit (~> 3.4)
   thin (~> 1.8)
 
 BUNDLED WITH
