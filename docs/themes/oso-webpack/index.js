@@ -448,7 +448,6 @@ window.addEventListener("load", () => {
       filename.addEventListener("click", () => select(i));
     });
 
-
     select(0);
   }
 });

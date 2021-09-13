@@ -54,15 +54,18 @@ access to the `gmail` repo.
 
 To see an unsuccessful response, visit [http://localhost:{{< exampleGet "port" >}}/repo/react](http://localhost:{{<
 exampleGet "port" >}}/repo/react). You'll see an error: `Repo named react was
-not found`. There _is_ actually a repo named `react`, but you don't have access
+not found`. There actually _is_ a repo named `react`, but you don't have access
 to it. Let's fix that now.
 
 ## 3. Update the policy
 
-In `app/main.polar`, add the following two lines to define a new "rule." This
+In `{{< exampleGet "polarFileRelative" >}}`, add the following two lines to define a new "rule." This
 rule will allow any "actor" (or user) to perform the `"read"` action on a
 repository if that repository is marked as "public".
 
+<!-- NOTE: this doesn't use literalInclude only because we need to highlight the
+addition of two lines.
+This code should be kept in sync with examples/quickstart/**/*.polar. -->
 {{< code file="main.polar" highlight="21-22" syntax=diff >}}
  actor User {}
 
@@ -101,26 +104,20 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); border-radius: 6px;" alt="A
 
 ## What just happened?
 
-The quickstart server is using an Oso policy to make sure users are allowed to
-view repos. To see where, check out the `oso.authorize` call in the `repo_show`
-method in `server.py`.
+The quickstart server uses an Oso policy to make sure users are allowed to
+view repos. The call to `{{< exampleGet "osoAuthorize" >}}` in `{{< exampleGet
+"serverFileRelative" >}}` performs this check in the {{% exampleGet "endpoint" %}}.
 
-In this case, the `react` repo is marked as public in the `models.py` file, so
-it should be accessible to everyone. By adding the rule that checks
-`repository.public`, you told Oso how to check that a repository is public.
+In this case, the repo with the name `react` is public because of its definition
+in the {{< exampleGet "modelFileRelative" >}} file, so it should be accessible
+to everyone. By adding the rule that checks `repository.public`, you told Oso
+how to check that a repository is public.
 
-Check out the full code below:
+Check out the full code for the example below:
 
 {{< literalInclude dynPath="serverFile" tabGroup="quickstart" >}}
 
 {{< literalInclude dynPath="modelFile" tabGroup="quickstart" >}}
-
-## Want to talk it through?
-
-If you have any questions, are getting stuck, or just want to talk something
-through, jump into [Slack](https://join-slack.osohq.com/) and an engineer from
-the core team (or one of the hundreds of developers in the growing community)
-will help you out.
 
 {{% callout "What's next" "blue" %}}
 
@@ -128,3 +125,10 @@ will help you out.
 - Dive into [writing policies](policies) in detail.
 
 {{% /callout %}}
+
+## Want to talk it through?
+
+If you have any questions, are getting stuck, or just want to talk something
+through, jump into [Slack](https://join-slack.osohq.com/) and an engineer from
+the core team (or one of the hundreds of developers in the growing community)
+will help you out.
