@@ -1,3 +1,3 @@
 ---
-routePath: "examples/add-to-your-application/python/app/routes.py"
+routePath: examples/add-to-your-application/python/app/routes.py
 ---

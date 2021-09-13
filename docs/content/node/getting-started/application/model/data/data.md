@@ -6,6 +6,6 @@ installInstruction: |
     $ npm install oso
     ```
 
-pathOso: "examples/add-to-your-application/node/oso.js"
-pathModels: "examples/add-to-your-application/node/models.js"
+pathOso: examples/add-to-your-application/node/oso.js
+pathModels: examples/add-to-your-application/node/models.js
 ---

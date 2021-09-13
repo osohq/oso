@@ -1,3 +1,3 @@
 ---
-routePath: "examples/add-to-your-application/ruby/routes.rb"
+routePath: examples/add-to-your-application/ruby/routes.rb
 ---

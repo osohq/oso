@@ -1,5 +1,5 @@
 ---
 # rm
-queryObjectExampleLink: "http://TODO"
+queryObjectExampleLink: http://TODO
 todo: TODO
 ---

@@ -1,3 +1,3 @@
 ---
-routePath: "examples/add-to-your-application/node/routes.js"
+routePath: examples/add-to-your-application/node/routes.js
 ---

@@ -1,6 +1,6 @@
 ---
 queryObjectExampleLink: "https://sequelize.org/master/manual/model-querying-basics.html#applying-where-clauses"
-dataFilteringPath: "examples/add-to-your-application/node/dataFiltering.js"
+dataFilteringPath: examples/add-to-your-application/node/dataFiltering.js
 
 repoListQuerySnippet: |
     ```javascript

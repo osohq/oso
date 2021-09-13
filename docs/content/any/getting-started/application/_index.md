@@ -25,7 +25,7 @@ To use Oso, you'll:
   authorization policy.
 
 Once you've added policies and enforcement, you'll have Oso setup and
-enforcing authorization in your application. To go futher with Oso:
+enforcing authorization in your application. To go further with Oso:
 
 - [Write Polar rules](write-rules) to extend your authorization model with
   custom logic. A Polar rule specifies when a user is allowed to perform a

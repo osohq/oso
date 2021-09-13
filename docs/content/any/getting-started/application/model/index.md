@@ -145,8 +145,8 @@ rules in the [Write Polar rules](write-rules).
 The `has_role` rule uses the user object passed into Oso by your
 application to lookup roles. In this example, Polar will access the
 `roles` field on the `user` object and look up the role names that
-the user has. Here's an example {{% lang %}} data model implemented using
-dataclasses that could be used by this rule. In your application, you'll
+the user has. Here's an example {{% lang %}} data model
+that could be used by this rule. In your application, you'll
 likely use your existing User model to maintain this information.
 
 {{< literalInclude

@@ -52,7 +52,7 @@ service, or with a lower-level database API.
 You implement three functions to tell Oso how to work with your `Query`:
 
 - `build_query(filters) -> Query`: Creates a query from a list of authorization filters
-  produced by evaluting the Oso policy.
+  produced by evaluating the Oso policy.
 - `exec_query(query) -> List[Object]`: Executes the query, returning
   the list of objects retrieved by the query.
 - `combine_query(q1, q2) -> Query`: Combines two queries `q1` and `q2` together such

@@ -1,6 +1,6 @@
 ---
 queryObjectExampleLink: https://docs.sqlalchemy.org/en/14/orm/query.html#sqlalchemy.orm.Query
-dataFilteringPath: "examples/add-to-your-application/python/app/data_filtering.py"
+dataFilteringPath: examples/add-to-your-application/python/app/data_filtering.py
 
 repoListQuerySnippet: |
     ```python
