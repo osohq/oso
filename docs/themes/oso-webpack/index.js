@@ -159,12 +159,9 @@ import('monaco-editor-core').then(monaco => {
 
   function highlightPolarCode(el) {
     let { hl_lines: numbers } = el.parentNode.parentNode.dataset;
-    console.log(numbers);
     if (typeof numbers !== 'string' || numbers.length === 0) return;
     numbers = numbers.replace(/ /g, '').split(',').flatMap(parseRange);
     const lines = Array.from(el.children).filter(child => child.matches('span'));
-    console.log(numbers);
-    console.log(lines);
     for (const number of numbers) {
       lines[number].classList.add('highlight-me-pls');
     }
