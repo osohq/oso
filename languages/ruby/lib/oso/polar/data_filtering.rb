@@ -7,56 +7,78 @@ module Oso
       # Represents a set of filter sequences that should allow the host
       # to obtain the records satisfying a query.
       class FilterPlan
-        include Enumerable
         attr_reader :result_sets
 
-        def initialize(polar, partials, class_name)
+        def self.parse(polar, partials, class_name)
           types = polar.host.serialize_types
           parsed_json = polar.ffi.build_filter_plan(types, partials, 'resource', class_name)
-          @polar = polar
-          @result_sets = parsed_json['result_sets'].map do |rset|
-            ResultSet.new polar, rset
+          result_sets = parsed_json['result_sets'].map do |rset|
+            ResultSet.parse polar, rset
           end
+
+          new polar: polar, result_sets: result_sets
         end
 
-        def each(&blk)
-          result_sets.each(&blk)
+        def initialize(polar:, result_sets:)
+          @polar = polar
+          @result_sets = result_sets
         end
 
-        def resolve # rubocop:disable Metrics/AbcSize
-          reduce([]) do |acc, rs|
-            requests = rs.requests
-            acc + rs.resolve_order.each_with_object({}) do |i, set_results|
-              req = requests[i]
-              constraints = req.constraints
-              constraints.each { |c| c.ground set_results }
-              set_results[i] = @polar.host.types[req.class_tag].fetcher[constraints]
-            end[rs.result_id]
-          end.uniq
+        def build_query # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
+          combine = nil
+          result_sets.each_with_object([]) do |rs, qb|
+            rs.resolve_order.each_with_object({}) do |i, set_results|
+              req = rs.requests[i]
+              cs = req.constraints.each { |c| c.ground set_results }
+              typ = @polar.host.types[req.class_tag]
+              q = typ.build_query[cs]
+              if i != rs.result_id
+                set_results[i] = typ.exec_query[q]
+              else
+                combine = typ.combine_query
+                qb.push q
+              end
+            end
+          end.reduce(&combine)
         end
 
         # Represents a sequence of filters for one set of results
         class ResultSet
           attr_reader :requests, :resolve_order, :result_id
 
-          def initialize(polar, parsed_json)
-            @resolve_order = parsed_json['resolve_order']
-            @result_id = parsed_json['result_id']
-            @requests = parsed_json['requests'].each_with_object({}) do |req, reqs|
-              reqs[req[0].to_i] = Request.new(polar, req[1])
+          def self.parse(polar, parsed_json)
+            resolve_order = parsed_json['resolve_order']
+            result_id = parsed_json['result_id']
+            requests = parsed_json['requests'].each_with_object({}) do |req, reqs|
+              reqs[req[0].to_i] = Request.parse(polar, req[1])
             end
+
+            new resolve_order: resolve_order, result_id: result_id, requests: requests
           end
 
-          # Represents a filter for a result set
-          class Request
-            attr_reader :constraints, :class_tag
+          def initialize(requests:, resolve_order:, result_id:)
+            @resolve_order = resolve_order
+            @requests = requests
+            @result_id = result_id
+          end
+        end
 
-            def initialize(polar, parsed_json)
-              @constraints = parsed_json['constraints'].map do |con|
-                Constraint.parse polar, con
-              end
-              @class_tag = parsed_json['class_tag']
+        # Represents a filter for a result set
+        class Request
+          attr_reader :constraints, :class_tag
+
+          def self.parse(polar, parsed_json)
+            constraints = parsed_json['constraints'].map do |con|
+              Filter.parse polar, con
             end
+            class_tag = parsed_json['class_tag']
+
+            new(constraints: constraints, class_tag: class_tag)
+          end
+
+          def initialize(constraints:, class_tag:)
+            @constraints = constraints
+            @class_tag = class_tag
           end
         end
       end
@@ -93,12 +115,13 @@ module Oso
       end
 
       # Represents a condition that must hold on a resource.
-      class Constraint
+      class Filter
         attr_reader :kind, :field, :value
 
         CHECKS = {
           'Eq' => ->(a, b) { a == b },
           'In' => ->(a, b) { b.include? a },
+          'Neq' => ->(a, b) { a != b },
           'Contains' => ->(a, b) { a.include? b }
         }.freeze
 
@@ -126,8 +149,6 @@ module Oso
 
         def self.parse(polar, constraint) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
           kind = constraint['kind']
-          raise unless %w[Eq In Contains].include? kind
-
           field = constraint['field']
           value = constraint['value']
 

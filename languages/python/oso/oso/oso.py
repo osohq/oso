@@ -5,7 +5,8 @@ __version__ = "0.20.0-beta"
 import os
 from typing import List, Any, Set
 
-from polar import Polar, Variable, exceptions
+from polar import Polar, Variable, exceptions, Expression, Pattern
+from polar.data_filtering import serialize_types, filter_data
 from .exceptions import NotFoundError, ForbiddenError
 
 
@@ -226,6 +227,66 @@ class Oso(Polar):
             fields.add(field)
 
         return fields
+
+    def authorized_query(self, actor, action, resource_cls):
+        """
+        Returns a query for the resources the actor is allowed to perform action on.
+        The query is built by using the build_query and combine_query methods registered for the type.
+
+        :param actor: The actor for whom to collect allowed resources.
+
+        :param action: The action that user wants to perform.
+
+        :param resource_cls: The type of the resources.
+
+        :return: A query to fetch the resources,
+        """
+        # Data filtering.
+        resource = Variable("resource")
+        # Get registered class name somehow
+        class_name = self.host.types[resource_cls].name
+        constraint = Expression(
+            "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
+        )
+
+        query = self.query_rule(
+            "allow",
+            actor,
+            action,
+            resource,
+            bindings={"resource": constraint},
+            accept_expression=True,
+        )
+
+        results = [
+            {"bindings": {k: self.host.to_polar(v)}}
+            for result in query
+            for k, v in result["bindings"].items()
+        ]
+
+        types = serialize_types(self.host.distinct_user_types(), self.host.types)
+        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
+
+        return filter_data(self, plan)
+
+    def authorized_resources(self, actor, action, resource_cls):
+        """
+        Returns the resources the actor is allowed to perform action on.
+
+        :param actor: The actor for whom to collect allowed resources.
+
+        :param action: The action that user wants to perform.
+
+        :param resource_cls: The type of the resources.
+
+        :return: The requested resources.
+        """
+        query = self.authorized_query(actor, action, resource_cls)
+        if query is None:
+            return []
+
+        results = self.host.types[resource_cls].exec_query(query)
+        return results
 
     def _print_polar_log_message(self):
         if os.environ.get("POLAR_LOG", None):

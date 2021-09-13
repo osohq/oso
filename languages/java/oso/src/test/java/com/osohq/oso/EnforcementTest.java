@@ -13,10 +13,10 @@ import org.junit.jupiter.api.Test;
 public class EnforcementTest {
   protected Oso oso;
 
-  public static class Actor {
+  public static class User {
     public String name;
 
-    public Actor(String name) {
+    public User(String name) {
       this.name = name;
     }
   }
@@ -43,7 +43,7 @@ public class EnforcementTest {
   public void setUp() throws Exception {
     try {
       oso = new Oso();
-      oso.registerClass(Actor.class, "Actor");
+      oso.registerClass(User.class, "User");
       oso.registerClass(Widget.class, "Widget");
     } catch (Exception e) {
       throw new Error(e);
@@ -52,15 +52,15 @@ public class EnforcementTest {
 
   @Test
   public void testAuthorize() throws Exception {
-    Actor guest = new Actor("guest");
-    Actor admin = new Actor("admin");
+    User guest = new User("guest");
+    User admin = new User("admin");
     Widget widget0 = new Widget(0);
     Widget widget1 = new Widget(1);
 
     oso.loadStr(
-        "allow(_actor: Actor, \"read\", widget: Widget) if "
+        "allow(_actor: User, \"read\", widget: Widget) if "
             + "widget.id = 0; "
-            + "allow(actor: Actor, \"update\", _widget: Widget) if "
+            + "allow(actor: User, \"update\", _widget: Widget) if "
             + "actor.name = \"admin\";");
 
     oso.authorize(guest, "read", widget0);
@@ -85,12 +85,12 @@ public class EnforcementTest {
   public void testAuthorizeRequest() throws Exception {
     oso.registerClass(Request.class, "Request");
     oso.loadStr(
-        "allow_request(_: Actor{name: \"guest\"}, request: Request) if "
+        "allow_request(_: User{name: \"guest\"}, request: Request) if "
             + "request.path.startsWith(\"/repos\"); "
-            + "allow_request(_: Actor{name: \"verified\"}, request: Request) if "
+            + "allow_request(_: User{name: \"verified\"}, request: Request) if "
             + "request.path.startsWith(\"/account\"); ");
-    Actor guest = new Actor("guest");
-    Actor verified = new Actor("verified");
+    User guest = new User("guest");
+    User verified = new User("verified");
 
     oso.authorizeRequest(guest, new Request("GET", "/repos/1"));
     assertThrows(
@@ -106,10 +106,10 @@ public class EnforcementTest {
   @Test
   public void testAuthorizedActions() throws Exception {
     oso.loadStr(
-        "allow(_actor: Actor{name: \"sally\"}, action, _resource: Widget{id: 1})"
+        "allow(_actor: User{name: \"sally\"}, action, _resource: Widget{id: 1})"
             + " if action in [\"CREATE\", \"READ\"];");
 
-    Actor actor = new Actor("sally");
+    User actor = new User("sally");
     Widget widget = new Widget(1);
     HashSet<Object> actions = oso.authorizedActions(actor, widget);
 
@@ -120,10 +120,10 @@ public class EnforcementTest {
     oso.clearRules();
 
     oso.loadStr(
-        "allow(_actor: Actor{name: \"fred\"}, action, _resource: Widget{id: 2})"
+        "allow(_actor: User{name: \"fred\"}, action, _resource: Widget{id: 2})"
             + " if action in [1, 2, 3, 4];");
 
-    Actor actor2 = new Actor("fred");
+    User actor2 = new User("fred");
     Widget widget2 = new Widget(2);
     HashSet<Object> actions2 = oso.authorizedActions(actor2, widget2);
 
@@ -133,16 +133,16 @@ public class EnforcementTest {
     assertTrue(actions2.contains(3));
     assertTrue(actions2.contains(4));
 
-    Actor actor3 = new Actor("doug");
+    User actor3 = new User("doug");
     Widget widget3 = new Widget(4);
     assertTrue(oso.authorizedActions(actor3, widget3).isEmpty());
   }
 
   @Test
   public void testAuthorizedActionsWildcard() throws Exception {
-    oso.loadStr("allow(_actor: Actor{name: \"John\"}, _action, _resource: Widget{id: 1});");
+    oso.loadStr("allow(_actor: User{name: \"John\"}, _action, _resource: Widget{id: 1});");
 
-    Actor actor = new Actor("John");
+    User actor = new User("John");
     Widget widget = new Widget(1);
 
     assertEquals(Set.of("*"), oso.authorizedActions(actor, widget, true));
@@ -153,7 +153,7 @@ public class EnforcementTest {
   public void testAuthorizeField() throws Exception {
     oso.loadStr(
         // Admins can update all fields
-        "allow_field(actor: Actor, \"update\", _widget: Widget, field) if "
+        "allow_field(actor: User, \"update\", _widget: Widget, field) if "
             + "actor.name = \"admin\" and "
             + "field in [\"name\", \"purpose\", \"private_field\"]; "
             +
@@ -162,10 +162,10 @@ public class EnforcementTest {
             + "allow_field(actor, \"update\", widget, field); "
             +
             // Anybody can read public fields
-            "allow_field(_: Actor, \"read\", _: Widget, field) if "
+            "allow_field(_: User, \"read\", _: Widget, field) if "
             + "field in [\"name\", \"purpose\"];");
-    Actor admin = new Actor("admin");
-    Actor guest = new Actor("guest");
+    User admin = new User("admin");
+    User guest = new User("guest");
     Widget widget = new Widget(0);
 
     oso.authorizeField(admin, "update", widget, "purpose");
@@ -183,7 +183,7 @@ public class EnforcementTest {
   public void testAuthorizedFields() throws Exception {
     oso.loadStr(
         // Admins can update all fields
-        "allow_field(actor: Actor, \"update\", _widget: Widget, field) if "
+        "allow_field(actor: User, \"update\", _widget: Widget, field) if "
             + "actor.name = \"admin\" and "
             + "field in [\"name\", \"purpose\", \"private_field\"]; "
             +
@@ -192,10 +192,10 @@ public class EnforcementTest {
             + "allow_field(actor, \"update\", widget, field); "
             +
             // Anybody can read public fields
-            "allow_field(_: Actor, \"read\", _: Widget, field) if "
+            "allow_field(_: User, \"read\", _: Widget, field) if "
             + "field in [\"name\", \"purpose\"];");
-    Actor admin = new Actor("admin");
-    Actor guest = new Actor("guest");
+    User admin = new User("admin");
+    User guest = new User("guest");
     Widget widget = new Widget(0);
 
     // Admins should be able to update all fields

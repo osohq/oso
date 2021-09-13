@@ -1,6 +1,6 @@
 OSO ||= Oso.new
 
-class Actor
+class User
   attr_accessor :role
 
   def initialize(role:, treated:)
@@ -13,7 +13,7 @@ class Actor
   end
 end
 
-OSO.register_class(Actor)
+OSO.register_class(User)
 
 # start-patient-data
 class PatientData

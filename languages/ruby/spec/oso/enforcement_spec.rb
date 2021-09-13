@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 module EnforcementSpec
-  class Actor
+  class User
     attr_reader :name
 
     def initialize(name)
@@ -22,26 +22,26 @@ end
 RSpec.describe Oso::Oso do
   let(:oso) do
     oso = Oso::Oso.new
-    oso.register_class(Actor, name: 'Actor')
+    oso.register_class(User, name: 'User')
     oso.register_class(Widget, name: 'Widget')
     oso
   end
 
   before(:each) do
-    stub_const('Actor', EnforcementSpec::Actor)
+    stub_const('User', EnforcementSpec::User)
     stub_const('Widget', EnforcementSpec::Widget)
   end
 
   context '#authorize' do
-    let(:guest) { Actor.new('guest') }
-    let(:admin) { Actor.new('admin') }
+    let(:guest) { User.new('guest') }
+    let(:admin) { User.new('admin') }
     let(:widget0) { Widget.new('0') }
     let(:widget1) { Widget.new('1') }
     before(:each) do
       oso.load_str(%|
-        allow(_actor: Actor, "read", widget: Widget) if
+        allow(_actor: User, "read", widget: Widget) if
           widget.id = "0";
-        allow(actor: Actor, "update", _widget: Widget) if
+        allow(actor: User, "update", _widget: Widget) if
           actor.name = "admin";
       |)
     end
@@ -67,15 +67,15 @@ RSpec.describe Oso::Oso do
   end
 
   context '#authorized_actions' do
-    let(:guest) { Actor.new('guest') }
-    let(:admin) { Actor.new('admin') }
+    let(:guest) { User.new('guest') }
+    let(:admin) { User.new('admin') }
     let(:widget0) { Widget.new('0') }
     let(:widget1) { Widget.new('1') }
     before(:each) do
       oso.load_str(%|
-        allow(_actor: Actor, "read", _widget: Widget);
-        allow(_actor: Actor, "update", _widget: Widget{id: "0"});
-        allow(actor: Actor, "update", _widget: Widget) if
+        allow(_actor: User, "read", _widget: Widget);
+        allow(_actor: User, "update", _widget: Widget{id: "0"});
+        allow(actor: User, "update", _widget: Widget) if
           actor.name = "admin";
       |)
     end
@@ -89,26 +89,26 @@ RSpec.describe Oso::Oso do
     it 'throws an Oso::Error if there is a wildcard action' do
       oso.clear_rules
       oso.load_str(%|
-        allow(_actor: Actor, "read", _widget: Widget);
-        allow(_actor: Actor, "update", _widget: Widget{id: "0"});
-        allow(actor: Actor, "update", _widget: Widget) if
+        allow(_actor: User, "read", _widget: Widget);
+        allow(_actor: User, "update", _widget: Widget{id: "0"});
+        allow(actor: User, "update", _widget: Widget) if
           actor.name = "admin";
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       |)
-      superadmin = Actor.new('superadmin')
+      superadmin = User.new('superadmin')
       expect { oso.authorized_actions(superadmin, widget0) }.to raise_error(Oso::Error)
     end
 
     it 'returns a wildcard * if wildcard is explicitly allowed' do
       oso.clear_rules
       oso.load_str(%|
-        allow(_actor: Actor, "read", _widget: Widget);
-        allow(_actor: Actor, "update", _widget: Widget{id: "0"});
-        allow(actor: Actor, "update", _widget: Widget) if
+        allow(_actor: User, "read", _widget: Widget);
+        allow(_actor: User, "update", _widget: Widget{id: "0"});
+        allow(actor: User, "update", _widget: Widget) if
           actor.name = "admin";
         allow(actor, _action, _widget: Widget) if actor.name = "superadmin";
       |)
-      superadmin = Actor.new('superadmin')
+      superadmin = User.new('superadmin')
       expect(oso.authorized_actions(superadmin, widget0, allow_wildcard: true).to_a).to eq(['*'])
     end
   end
@@ -123,15 +123,15 @@ RSpec.describe Oso::Oso do
       end
     end
 
-    let(:guest) { Actor.new('guest') }
-    let(:verified) { Actor.new('verified') }
+    let(:guest) { User.new('guest') }
+    let(:verified) { User.new('verified') }
 
     before(:each) do
       oso.register_class(Request)
       oso.load_str(%|
-        allow_request(_: Actor{name: "guest"}, request: Request) if
+        allow_request(_: User{name: "guest"}, request: Request) if
             request.path.start_with?("/repos");
-        allow_request(_: Actor{name: "verified"}, request: Request) if
+        allow_request(_: User{name: "verified"}, request: Request) if
             request.path.start_with?("/account");
       |)
     end
@@ -150,21 +150,21 @@ RSpec.describe Oso::Oso do
   end
 
   context 'field-level authorization' do
-    let(:admin) { Actor.new('admin') }
-    let(:guest) { Actor.new('guest') }
+    let(:admin) { User.new('admin') }
+    let(:guest) { User.new('guest') }
     let(:widget) { Widget.new('0') }
 
     before(:each) do
       oso.load_str(%|
         # Admins can update all fields
-        allow_field(actor: Actor, "update", _widget: Widget, field) if
+        allow_field(actor: User, "update", _widget: Widget, field) if
             actor.name = "admin" and
             field in ["name", "purpose", "private_field"];
         # Anybody who can update a field can also read it
         allow_field(actor, "read", widget: Widget, field) if
             allow_field(actor, "update", widget, field);
         # Anybody can read public fields
-        allow_field(_: Actor, "read", _: Widget, field) if
+        allow_field(_: User, "read", _: Widget, field) if
             field in ["name", "purpose"];
       |)
     end

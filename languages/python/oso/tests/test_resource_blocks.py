@@ -41,7 +41,7 @@ class Issue:
 Resource = Union[Org, Repo, Issue]
 
 
-class Actor:
+class BaseActor:
     name: str
     roles: Dict[Resource, str]
 
@@ -55,7 +55,7 @@ class Actor:
         return self.roles.get(resource) == name
 
 
-class User(Actor):
+class User(BaseActor):
     teams: List["Team"]
 
     def __init__(self, **kwargs):
@@ -63,7 +63,7 @@ class User(Actor):
         super().__init__(**kwargs)
 
 
-class Team(Actor):
+class Team(BaseActor):
     users: List[User]
 
     def __init__(self, **kwargs):
@@ -78,7 +78,7 @@ class Team(Actor):
 
 
 def test_resource_blocks(polar, is_allowed):
-    [polar.register_class(c) for c in [User, Org, Repo, Issue]]
+    [polar.register_class(c) for c in [User, Team, Org, Repo, Issue]]
     polar.load_file("tests/resource_blocks.polar")
 
     annie, dave, gabe, graham, leina, lito, sam, shraddha, stephie, steve, tim = [

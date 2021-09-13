@@ -84,7 +84,12 @@ button > * {
       @apply bg-primary-800 !important
     }
 
-    .code pre {
+    .code > pre {
+      @apply rounded-t-md
+    }
+
+    .code > .filename + pre,
+    .code > .filename + .highlight > pre {
       @apply rounded-t-none mt-0
     }
 }
@@ -178,4 +183,8 @@ pre code {
   pointer: default;
   pointer-events: none;
   background-color: rgb(167, 243, 208);
+}
+
+.highlight-me-pls {
+  background-color: #333;
 }

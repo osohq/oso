@@ -9,7 +9,7 @@ class NotFoundError(AuthorizationError):
     """
     Thrown by the ``authorize`` method of an ``Oso`` instance. This error
     indicates that the actor is not only not allowed to perform the given
-    action, but also is not allowed to ``"read"`` the given resource.
+    action but also is not allowed to ``"read"`` the given resource.
 
     Most of the time, your app should handle this error by returning a 404 HTTP
     error to the client.
@@ -21,9 +21,9 @@ class NotFoundError(AuthorizationError):
 
     def __init__(self):
         super().__init__(
-            "Oso ForbiddenError -- The requested action was not allowed for the "
-            "given resource. You should handle this error by returning a 403 error "
-            "to the client."
+            "Oso NotFoundError -- The current user does not have permission to read "
+            "the given resource. You should handle this error by returning a 404 "
+            "error to the client."
         )
 
 
@@ -38,7 +38,7 @@ class ForbiddenError(AuthorizationError):
 
     def __init__(self):
         super().__init__(
-            "Oso NotFoundError -- The current user does not have permission to read "
-            "the given resource. You should handle this error by returning a 404 "
-            "error to the client."
+            "Oso ForbiddenError -- The requested action was not allowed for the "
+            "given resource. You should handle this error by returning a 403 error "
+            "to the client."
         )

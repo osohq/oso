@@ -2,11 +2,12 @@ allow(actor, action, resource) if
   has_permission(actor, action, resource);
 
 actor User {}
+actor Team {}
 
-has_role(actor, role, resource) if
+has_role(actor: Actor, role: String, resource: Resource) if
   actor.has_role_for_resource(name: role, resource: resource);
 
-has_role(user: User, role, resource) if
+has_role(user: User, role: String, resource: Resource) if
   team in user.teams and
   has_role(team, role, resource);
 
@@ -42,9 +43,8 @@ resource Repo {
   "pull" if "reader";
 }
 
-has_relation(org, "parent", repo: Repo) if
-  org = repo.org and
-  org matches Org;
+has_relation(org: Org, "parent", repo: Repo) if
+  org = repo.org;
 
 has_permission(_: User, "pull", repo: Repo) if
   repo.is_public;
@@ -61,9 +61,8 @@ resource Issue {
   "delete" if "creator";
 }
 
-has_relation(repo, "parent", issue: Issue) if
-  repo = issue.repo and
-  repo matches Repo;
+has_relation(repo: Repo, "parent", issue: Issue) if
+  repo = issue.repo;
 
 has_relation(user: User, "creator", issue: Issue) if
   user = issue.creator;

@@ -1,7 +1,10 @@
 import { Polar } from './Polar';
 import { Variable } from './Variable';
-import type { Options, CustomError } from './types';
+import { Expression } from './Expression';
+import { Pattern } from './Pattern';
+import type { Options, CustomError, obj } from './types';
 import { NotFoundError, ForbiddenError, OsoError } from './errors';
+import { serializeTypes, filterData } from './dataFiltering';
 
 /** The Oso authorization API. */
 export class Oso<
@@ -229,5 +232,81 @@ export class Oso<
       fields.add(field);
     }
     return fields;
+  }
+
+  /**
+   * Returns a query for all the resources of the supplied type that the actor is
+   * allowed to perform some action on.
+   *
+   * @param actor Subject.
+   * @param action Verb.
+   * @param resourceCls Object type.
+   * @returns A query object that selects authorized resources of type resourceCls
+   */
+  async authorizedQuery(
+    actor: any,
+    action: any,
+    resourceCls: any
+  ): Promise<any> {
+    const resource = new Variable('resource');
+    const host = this.getHost();
+    const clsName = host.types.get(resourceCls)!.name;
+    const constraint = new Expression('And', [
+      new Expression('Isa', [
+        resource,
+        new Pattern({ tag: clsName, fields: {} }),
+      ]),
+    ]);
+    let bindings = new Map();
+    bindings.set('resource', constraint);
+    let results = this.queryRuleWithBindings(
+      'allow',
+      bindings,
+      actor,
+      action,
+      resource
+    );
+
+    const queryResults = [];
+    for await (const result of results) {
+      queryResults.push(result);
+    }
+
+    let jsonResults = queryResults.map(result => ({
+      // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
+      // trivially `JSON.stringify()`-able.
+      bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
+        obj[k] = host.toPolar(v);
+        return obj;
+      }, {}),
+    }));
+    let resultsStr = JSON.stringify(jsonResults);
+    let typesStr = serializeTypes(host.types);
+    let plan = this.getFfi().buildFilterPlan(
+      typesStr,
+      resultsStr,
+      'resource',
+      clsName
+    );
+    return filterData(host, plan);
+  }
+
+  /**
+   * Returns all the resources of some type the actor is allowed to perform some action on.
+   *
+   * @param actor Subject.
+   * @param action Verb.
+   * @param resourceCls Object type.
+   * @returns An array of authorized resources.
+   */
+  async authorizedResources(
+    actr: any,
+    actn: any,
+    resourceCls: any
+  ): Promise<any> {
+    const query = await this.authorizedQuery(actr, actn, resourceCls);
+    return !query
+      ? []
+      : this.getHost().types.get(resourceCls)!.execQuery!(query);
   }
 }

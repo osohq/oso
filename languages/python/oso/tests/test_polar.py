@@ -975,8 +975,8 @@ def test_lookup_in_head(polar, is_allowed):
         def __init__(self, action):
             self.action = action
 
-    polar.register_class(Resource, name="Resource")
-    polar.load_str('allow("leina", resource.action, resource: Resource);')
+    polar.register_class(Resource, name="MyResource")
+    polar.load_str('allow("leina", resource.action, resource: MyResource);')
 
     r = Resource("read")
 

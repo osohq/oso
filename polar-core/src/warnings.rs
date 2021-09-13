@@ -113,7 +113,10 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
             Value::Variable(v)
             | Value::RestVariable(v)
             | Value::Pattern(Pattern::Instance(InstanceLiteral { tag: v, .. }))
-                if !v.is_temporary_var() && !v.is_namespaced_var() && !self.kb.is_constant(v) =>
+                if !v.is_temporary_var()
+                    && !v.is_namespaced_var()
+                    && !self.kb.is_constant(v)
+                    && !self.kb.is_union(t) =>
             {
                 match self.singletons.entry(v.clone()) {
                     Entry::Occupied(mut o) => {
@@ -156,19 +159,13 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
             .map(|(source, or_term)| {
                 let mut msg = "Expression without parentheses could be ambiguous. \n\
                     Prior to 0.20, `x and y or z` would parse as `x and (y or z)`. \n\
-                    This was changed in 0.20 to match other languages. \n\
+                    As of 0.20, it parses as `(x and y) or z`, matching other languages. \n\
                 \n\n"
                     .to_string();
                 msg.push_str(&source_lines(source, or_term.offset(), 0));
                 msg
             })
             .collect();
-        if let Some(msg) = msgs.get(0) {
-            return Err(ParseError::AmbiguousAndOr {
-                msg: msg.to_string(),
-            }
-            .into());
-        }
         Ok(msgs)
     }
 }
