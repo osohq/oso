@@ -8,8 +8,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 
-# please forgive this nightmare -dave
 
+# This example uses a separate Oso instance so that I can re-register classes
+# with data filtering query builders but use the same `main.polar` policy.
 
 oso = Oso()
 
