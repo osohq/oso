@@ -139,6 +139,7 @@ namespaces
 natively
 nbsp
 npm
+organizationRoles
 oso
 osohq
 performant
@@ -148,6 +149,7 @@ pseudocode
 quickstart
 registerClass
 repl
+repositoryRoles
 roadmap
 runtime
 specializer
