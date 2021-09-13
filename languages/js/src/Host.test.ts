@@ -4,7 +4,7 @@ import { Pattern } from './Pattern';
 import { Dict } from './types';
 import { Host } from './Host';
 import { pred } from '../test/helpers';
-import { Actor, User, Widget } from '../test/classes';
+import { BaseActor, User, Widget } from '../test/classes';
 import { Variable } from './Variable';
 
 describe('conversions between JS + Polar values', () => {
@@ -42,7 +42,7 @@ describe('conversions between JS + Polar values', () => {
       list,
       obj,
       map,
-      pred('a', new Actor('b'), new User('c'), new Widget(str)),
+      pred('a', new BaseActor('b'), new User('c'), new Widget(str)),
       new Variable('x'),
       promises,
       functions,

@@ -2,7 +2,7 @@ import oso
 
 
 @oso.polar_class
-class Actor:
+class User:
     def __init__(self, role, treated):
         self.role = role
         self._treated = treated

@@ -5,18 +5,9 @@ module DataFilteringHelpers
     coll.reduce(Hash.new(0)) { |c, x| c.tap { c[x] += 1 } }
   end
 
-  def unord_eq(left, right)
-    count(left) == count(right)
-  end
-
-  def generic_fetcher(coll)
-    ->(cons) { coll.select { |x| cons.all? { |c| c.check x } } }
-  end
-
   def check_authz(actor, action, resource, expected)
-    results = subject.get_allowed_resources(actor, action, resource)
-    res = unord_eq(results, expected)
-    expect(res).to be true
+    results = subject.authorized_resources(actor, action, resource)
+    expect(results).to contain_exactly(*expected)
     expected.each do |it|
       answer = subject.query_rule 'allow', actor, action, it
       expect(answer.to_a).not_to be_empty
@@ -35,11 +26,17 @@ module DataFilteringHelpers
         @instances
       end
 
-      base.const_set(:FETCHER, lambda do |cons|
-        base.instance_variable_get(:@instances).select do |x|
-          cons.all? { |c| c.check x }
-        end
-      end)
+      def base.combine_query(one, two)
+        one + two
+      end
+
+      def base.exec_query(query)
+        query.uniq
+      end
+
+      def base.build_query(cons)
+        all.select { |x| cons.all? { |c| c.check x } }
+      end
 
       class << base
         alias_method :_new, :new
@@ -53,20 +50,33 @@ module DataFilteringHelpers
   module ActiveRecordFetcher
     def self.included(base) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
       base.class_eval do
-        kinds = Hash.new { |k| raise "Unsupported constraint kind: #{k}" }
-        kinds['Eq'] = kinds['In'] = lambda do |q, c|
-          q.where(
-            if c.field.nil?
-              { primary_key => c.value.send(primary_key) }
-            else
-              { c.field => c.value }
-            end
-          )
+        it = {}
+        param = lambda do |c|
+          if c.field.nil?
+            { primary_key => c.value.send(primary_key) }
+          else
+            { c.field => c.value }
+          end
         end
 
-        const_set(:FETCHER, lambda do |cons|
-          cons.reduce(self) { |q, con| kinds[con.kind][q, con] }
-        end)
+        it['Eq'] = it['In'] = ->(q, c) { q.where param[c] }
+        it['Neq'] = ->(q, c) { q.where.not param[c] }
+        it.default_proc = proc { |k| raise "Unsupported constraint kind: #{k}" }
+        it.freeze
+
+        instance_variable_set :@constrain, it
+
+        def self.build_query(cons)
+          cons.reduce(all) { |q, c| @constrain[c.kind][q, c] }
+        end
+
+        def self.exec_query(query)
+          query.distinct.to_a
+        end
+
+        def self.combine_query(one, two)
+          one.or(two)
+        end
       end
     end
   end

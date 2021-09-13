@@ -858,7 +858,8 @@ mod tests {
             valid_policy,
             "Invalid resource block 'Org' -- 'Org' must be a registered class.",
         );
-        p.register_constant(sym!("Org"), term!("unimportant"));
+        p.register_constant(sym!("Org"), term!("unimportant"))
+            .unwrap();
         assert!(p.load_str(valid_policy).is_ok());
     }
 
@@ -866,7 +867,8 @@ mod tests {
     fn test_resource_block_duplicates() {
         let p = Polar::new();
         let invalid_policy = "resource Org{}resource Org{}";
-        p.register_constant(sym!("Org"), term!("unimportant"));
+        p.register_constant(sym!("Org"), term!("unimportant"))
+            .unwrap();
         expect_error(
             &p,
             invalid_policy,
@@ -877,7 +879,8 @@ mod tests {
     #[test]
     fn test_resource_block_with_undeclared_local_shorthand_rule_head() {
         let p = Polar::new();
-        p.register_constant(sym!("Org"), term!("unimportant"));
+        p.register_constant(sym!("Org"), term!("unimportant"))
+            .unwrap();
         expect_error(
             &p,
             r#"resource Org{"member" if "owner";}"#,
@@ -888,7 +891,8 @@ mod tests {
     #[test]
     fn test_resource_block_with_undeclared_local_shorthand_rule_body() {
         let p = Polar::new();
-        p.register_constant(sym!("Org"), term!("unimportant"));
+        p.register_constant(sym!("Org"), term!("unimportant"))
+            .unwrap();
         expect_error(
             &p,
             r#"resource Org {
@@ -902,8 +906,10 @@ mod tests {
     #[test]
     fn test_resource_block_with_undeclared_nonlocal_shorthand_rule_body() {
         let p = Polar::new();
-        p.register_constant(sym!("Repo"), term!("unimportant"));
-        p.register_constant(sym!("Org"), term!("unimportant"));
+        p.register_constant(sym!("Repo"), term!("unimportant"))
+            .unwrap();
+        p.register_constant(sym!("Org"), term!("unimportant"))
+            .unwrap();
 
         expect_error(
             &p,
@@ -931,7 +937,8 @@ mod tests {
     #[ignore = "probably easier after the entity PR goes in"]
     fn test_resource_block_resource_relations_can_only_appear_after_on() {
         let p = Polar::new();
-        p.register_constant(sym!("Repo"), term!("unimportant"));
+        p.register_constant(sym!("Repo"), term!("unimportant"))
+            .unwrap();
         expect_error(
             &p,
             r#"resource Repo {
@@ -947,7 +954,8 @@ mod tests {
     #[ignore = "not yet implemented"]
     fn test_resource_block_with_circular_shorthand_rules() {
         let p = Polar::new();
-        p.register_constant(sym!("Repo"), term!("unimportant"));
+        p.register_constant(sym!("Repo"), term!("unimportant"))
+            .unwrap();
         let policy = r#"resource Repo {
             roles = [ "writer" ];
             "writer" if "writer";
@@ -973,21 +981,24 @@ mod tests {
     #[test]
     fn test_resource_block_with_unregistered_relation_type() {
         let p = Polar::new();
-        p.register_constant(sym!("Repo"), term!("unimportant"));
+        p.register_constant(sym!("Repo"), term!("unimportant"))
+            .unwrap();
         let policy = r#"resource Repo { relations = { parent: Org }; }"#;
         expect_error(
             &p,
             policy,
             "Type 'Org' in relation 'parent: Org' must be registered as a class.",
         );
-        p.register_constant(sym!("Org"), term!("unimportant"));
+        p.register_constant(sym!("Org"), term!("unimportant"))
+            .unwrap();
         p.load_str(policy).unwrap();
     }
 
     #[test]
     fn test_resource_block_with_clashing_declarations() {
         let p = Polar::new();
-        p.register_constant(sym!("Org"), term!("unimportant"));
+        p.register_constant(sym!("Org"), term!("unimportant"))
+            .unwrap();
 
         expect_error(
             &p,
@@ -1241,19 +1252,11 @@ mod tests {
 
     #[test]
     fn test_union_type_matches() {
-        // When no unions exist, `Actor` is a regular variable.
-        let polar = Polar::new();
-        polar.register_constant(sym!(ACTOR_UNION_NAME), term!(1));
-        let query = polar.new_query(
-            &format!("{} matches {}", ACTOR_UNION_NAME, ACTOR_UNION_NAME),
-            false,
-        );
-        let next_event = query.unwrap().next_event().unwrap();
-        assert!(matches!(next_event, QueryEvent::ExternalIsa { .. }));
-
         // When unions exist, `Actor matches Actor` because a union matches itself.
         let polar = Polar::new();
-        polar.register_constant(sym!("User"), term!("unimportant"));
+        polar
+            .register_constant(sym!("User"), term!("unimportant"))
+            .unwrap();
         polar.load_str("actor User {}").unwrap();
         let query = polar.new_query(
             &format!("{} matches {}", ACTOR_UNION_NAME, ACTOR_UNION_NAME),
@@ -1265,8 +1268,12 @@ mod tests {
         // When unions exist, `not Actor matches Resource` because a union doesn't match a
         // different union.
         let polar = Polar::new();
-        polar.register_constant(sym!("User"), term!("unimportant"));
-        polar.register_constant(sym!("Repo"), term!("unimportant"));
+        polar
+            .register_constant(sym!("User"), term!("unimportant"))
+            .unwrap();
+        polar
+            .register_constant(sym!("Repo"), term!("unimportant"))
+            .unwrap();
         polar.load_str("actor User {} resource Repo {}").unwrap();
         let query = polar.new_query(
             &format!("not {} matches {}", ACTOR_UNION_NAME, RESOURCE_UNION_NAME),
@@ -1277,10 +1284,15 @@ mod tests {
     }
 
     #[test]
-    fn test_union_type_cannot_be_registered() {
+    fn test_union_type_names_are_reserved() {
         let polar = Polar::new();
-        polar.register_constant(sym!(ACTOR_UNION_NAME), term!("unimportant"));
-        expect_error(&polar, "actor User {}", "Cannot declare 'actor User { ... }'; 'Actor' already registered as a constant. To resolve this conflict, please register 'Actor' under a different name.")
+        let err = polar
+            .register_constant(sym!(ACTOR_UNION_NAME), term!("unimportant"))
+            .expect_err("Expected register_constant to throw error.");
+        assert!(matches!(
+            err.kind,
+            error::ErrorKind::Runtime(error::RuntimeError::TypeError { .. })
+        ));
     }
 
     #[test]
@@ -1293,7 +1305,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.constant(
             sym!("Citrus"),
             term!(Value::ExternalInstance(ExternalInstance {
@@ -1301,7 +1314,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.constant(
             sym!("Orange"),
             term!(Value::ExternalInstance(ExternalInstance {
@@ -1309,7 +1323,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.add_mro(sym!("Fruit"), vec![1]).unwrap();
         // Citrus is a subclass of Fruit
         kb.add_mro(sym!("Citrus"), vec![2, 1]).unwrap();
@@ -1323,7 +1338,8 @@ mod tests {
                 constructor: None,
                 repr: None
             })),
-        );
+        )
+        .unwrap();
         kb.add_mro(sym!("User"), vec![4]).unwrap();
 
         // Add member to 'Resource' union.

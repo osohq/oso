@@ -1,6 +1,6 @@
 const { Oso } = require('oso');
 const {
-  Actor,
+  User,
   Lab,
   Order,
   PatientData,
@@ -16,16 +16,16 @@ const files = [
 
 describe('inheritance', () => {
   const patient = 'Bob';
-  const medStaff = new Actor('medical_staff', [patient]);
-  const medStaffBadPatient = new Actor('medical_staff', ['Not Bob']);
-  const regStaff = new Actor('reg_staff', [patient]);
+  const medStaff = new User('medical_staff', [patient]);
+  const medStaffBadPatient = new User('medical_staff', ['Not Bob']);
+  const regStaff = new User('reg_staff', [patient]);
   const order = new Order(patient);
   const lab = new Lab(patient);
   const diagnostic = new Test(patient);
 
   async function loadFile(example) {
     const oso = new Oso();
-    oso.registerClass(Actor);
+    oso.registerClass(User);
     oso.registerClass(Lab);
     oso.registerClass(Order);
     oso.registerClass(PatientData);

@@ -80,6 +80,74 @@ impl Rule {
     }
 }
 
+// TODO: should this be a Set of Rules? Do we currently check for duplicate rules?
+pub struct RuleTypes(HashMap<Symbol, Vec<Rule>>);
+
+impl Default for RuleTypes {
+    fn default() -> Self {
+        let mut rule_types = Self(HashMap::new());
+        rule_types.add_default_rule_types();
+        rule_types
+    }
+}
+
+impl RuleTypes {
+    fn add_default_rule_types(&mut self) {
+        // type has_permission(_actor: Actor, _permission: String, _resource: Resource);
+        self.add(rule!("has_permission", ["_actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "_resource"; instance!(sym!("Resource"))]));
+        // type has_permission(_actor: Actor, _permission: String, _resource: Actor);
+        self.add(rule!("has_permission", ["_actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "_resource"; instance!(sym!("Actor"))]));
+        // type has_role(_actor: Actor, _role: String, _resource: Resource);
+        self.add(rule!("has_role", ["_actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "_resource"; instance!(sym!("Resource"))]));
+        // type has_role(_actor: Actor, _role: String, _resource: Actor);
+        self.add(rule!("has_role", ["_actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "_resource"; instance!(sym!("Actor"))]));
+
+        // TODO: revisit this when working on extension guides. This rule currently lets users define any relation they would like, but we may want to restrict that a bit more.
+        // type has_relation(_subject: Resource, _relation: String, _object: Resource);
+        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Resource")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Resource"))]));
+        // type has_relation(_subject: Resource, _relation: String, _object: Actor);
+        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Resource")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Actor"))]));
+        // type has_relation(_subject: Actor, _relation: String, _object: Actor);
+        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Actor")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Actor"))]));
+        // type has_relation(_subject: Actor, _relation: String, _object: Resource);
+        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Actor")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Resource"))]));
+
+        // type allow(_actor, _action, _resource);
+        self.add(rule!(
+            "allow",
+            [sym!("_actor"), sym!("_action"), sym!("_resource")]
+        ));
+        // type allow_field(_actor, _action, _resource, _field);
+        self.add(rule!(
+            "allow_field",
+            [
+                sym!("_actor"),
+                sym!("_action"),
+                sym!("_resource"),
+                sym!("field")
+            ]
+        ));
+        // type allow_request(_actor, _request);"#;
+        self.add(rule!("allow_request", [sym!("_actor"), sym!("_request")]));
+    }
+
+    pub fn get(&self, name: &Symbol) -> Option<&Vec<Rule>> {
+        self.0.get(name)
+    }
+
+    pub fn add(&mut self, rule_type: Rule) {
+        let name = rule_type.name.clone();
+        // get rule types with this rule name
+        let rule_types = self.0.entry(name).or_insert_with(Vec::new);
+        rule_types.push(rule_type);
+    }
+
+    pub fn reset(&mut self) {
+        self.0.clear();
+        self.add_default_rule_types()
+    }
+}
+
 pub type Rules = Vec<Arc<Rule>>;
 
 type RuleSet = BTreeSet<u64>;

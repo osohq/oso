@@ -114,10 +114,13 @@ pub extern "C" fn polar_register_constant(
         let value = unsafe { ffi_string!(value) };
         let value = serde_json::from_str(&value);
         match value {
-            Ok(value) => {
-                polar.register_constant(terms::Symbol::new(name.as_ref()), value);
-                POLAR_SUCCESS
-            }
+            Ok(value) => match polar.register_constant(terms::Symbol::new(name.as_ref()), value) {
+                Err(e) => {
+                    set_error(e);
+                    POLAR_FAILURE
+                }
+                Ok(()) => POLAR_SUCCESS,
+            },
             Err(e) => set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into()),
         }
     })

@@ -1,11 +1,11 @@
-allow(actor: Actor, "read", resource: Order) if
+allow(actor: User, "read", resource: Order) if
     actor.role = "medical_staff" and
     actor.treated(resource.patient);
 
-allow(actor: Actor, "read", resource: Test) if
+allow(actor: User, "read", resource: Test) if
     actor.role = "medical_staff" and
     actor.treated(resource.patient);
 
-allow(actor: Actor, "read", resource: Lab) if
+allow(actor: User, "read", resource: Lab) if
     actor.role = "medical_staff" and
     actor.treated(resource.patient);
