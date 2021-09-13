@@ -1,10 +1,14 @@
-test: test-python test-policy-extensions test-ruby
+test: test-python test-policy-extensions test-ruby test-node
 
 test-policy-extensions:
 	pytest test_policy_extensions.py
 
 test-python:
 	pytest python/app/test.py
+
+test-node:
+	cd node && npm install
+	cd node && node test.js
 
 test-ruby:
 	cd ruby && bundle install
