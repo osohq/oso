@@ -1,9 +1,9 @@
 ---
-title: "Build Attribute-based Access Control (ABAC)"
+title: "Build Attribute-Based Access Control (ABAC)"
 weight: 1
 ---
 
-# How to Build Attribute-based Access Control
+# Build Attribute-Based Access Control (ABAC)
 
 While role-based access control emphasizes granting permissions based on roles, you may also wish to grant permissions or roles based on user or resource attributes. **With Oso, you can use attribute-based logic alongside roles.**
 
