@@ -229,14 +229,13 @@ class Oso(Polar):
         return fields
 
     def authorized_query(self, actor, action, resource_cls):
-        """
-        Returns a query for the resources the actor is allowed to perform action on.
-        The query is built by using the build_query and combine_query methods registered for the type.
+        """Create a query for resources of type ``resource_cls``
+        that ``actor`` is allowed to perform ``action`` on. The
+        query is built by using the ``build_query`` and ``combine_query``
+        functions registered for the ``resource_cls``.
 
         :param actor: The actor for whom to collect allowed resources.
-
         :param action: The action that user wants to perform.
-
         :param resource_cls: The type of the resources.
 
         :return: A query to fetch the resources,
@@ -269,14 +268,12 @@ class Oso(Polar):
 
         return filter_data(self, plan)
 
-    def authorized_resources(self, actor, action, resource_cls):
-        """
-        Returns the resources the actor is allowed to perform action on.
+    def authorized_resources(self, actor, action, resource_cls) -> List[Any]:
+        """Determine the resources of type ``resource_cls`` that ``actor``
+        is allowed to perform ``action`` on.
 
         :param actor: The actor for whom to collect allowed resources.
-
         :param action: The action that user wants to perform.
-
         :param resource_cls: The type of the resources.
 
         :return: The requested resources.
@@ -287,6 +284,20 @@ class Oso(Polar):
 
         results = self.host.types[resource_cls].exec_query(query)
         return results
+
+    def set_data_filtering_query_defaults(
+        self, build_query=None, exec_query=None, combine_query=None
+    ):
+        """Register default values for data filtering query functions.
+        These can be overridden by passing specific implementations to
+        `register_class`"""
+
+        if build_query is not None:
+            self.host.build_query = build_query
+        if exec_query is not None:
+            self.host.exec_query = exec_query
+        if combine_query is not None:
+            self.host.combine_query = combine_query
 
     def _print_polar_log_message(self):
         if os.environ.get("POLAR_LOG", None):
