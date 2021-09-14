@@ -38,7 +38,9 @@ After registering your resource types, you can define a [resource block](referen
 Inside each block, you should declare the permissions and roles that are available on that resource type.
 **For child resource types, also [declare relations](reference/polar/polar-syntax#relation-declarations) to parent resources.**
 
-{{< code file="main.polar" hl_lines="9, 14" >}}
+{{< code file="main.polar" hl_lines="11, 16" >}}
+allow(actor, action, resource) if has_permission(actor, action, resource);
+
 resource Organization {
     permissions = ["read", "add_member"];
     roles = ["member", "owner"];
@@ -68,7 +70,9 @@ You now have all the plumbing you need in place to write rules that use `parent`
 
 If you need to grant a role on a child resource based on a parent resource role, you can define a [shorthand rule](reference/polar/polar-syntax#shorthand-rules) in the child resource block. For example, in GitClub the `"owner"` role on `Organization` resources grants a user the `"admin"` role on every `Repository` within the organization:
 
-{{< code file="main.polar" hl_lines="11" >}}
+{{< code file="main.polar" hl_lines="13" >}}
+allow(actor, action, resource) if has_permission(actor, action, resource);
+
 resource Organization {
     permissions = ["read", "add_member"];
     roles = ["member", "owner"];
@@ -87,7 +91,8 @@ You can also use shorthand rules to grant permissions based on parent resource r
 For example, we could add that users with the Organization `"member"` role can `"read"` every repository in the organization:
 
 
-{{< code file="main.polar" hl_lines="12" >}}
+{{< code file="main.polar" hl_lines="13" >}}
+# ...
 resource Repository {
     # ...
     "admin" if "owner" on "parent";
@@ -97,7 +102,8 @@ resource Repository {
 
 We could also modify that rule to say that users who have the Organization `"read"` permission have the `"read"` permission on every repository in the organization.
 
-{{< code file="main.polar" hl_lines="12" >}}
+{{< code file="main.polar" hl_lines="13" >}}
+# ...
 resource Repository {
     # ...
     "admin" if "owner" on "parent";
