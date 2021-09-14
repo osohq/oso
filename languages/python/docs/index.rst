@@ -1,5 +1,5 @@
 .. meta::
-  :description: oso Python library API reference.
+  :description: Oso Python library API reference.
 
 ==========
 Python API
