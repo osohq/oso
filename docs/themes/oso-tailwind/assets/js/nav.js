@@ -26,15 +26,13 @@ if (sideBarButton) {
   sideBarButton.addEventListener('click', toggleSideBar);
 }
 
-window.addEventListener('load', () => {
-  const langButton = document.getElementById('language-selector-toggle');
-  const langsideBar = document.getElementById('language-selector-content');
-  if (langButton) {
-    langButton.addEventListener('click', () =>
-      langsideBar.classList.toggle('hidden')
-    );
-  }
-});
+const langButton = document.getElementById('language-selector-toggle');
+const langsideBar = document.getElementById('language-selector-content');
+if (langButton) {
+  langButton.addEventListener('click', () =>
+    langsideBar.classList.toggle('hidden')
+  );
+}
 
 // Close dropdown sideBars if the user clicks outside of them
 window.onclick = function(event) {
