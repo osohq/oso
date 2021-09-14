@@ -1,10 +1,10 @@
 ---
-title: "Getting Started"
+title: "Get Started"
 weight: 1
-any: false
+any: true
 ---
 
-# Getting Started
+# Get Started
 
 Let's get started with Oso! Oso is a framework for application
 authorization with built-in primitives for modeling authorization. Oso
