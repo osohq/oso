@@ -93,42 +93,42 @@ impl Default for RuleTypes {
 
 impl RuleTypes {
     fn add_default_rule_types(&mut self) {
-        // type has_permission(_actor: Actor, _permission: String, _resource: Resource);
-        self.add(rule!("has_permission", ["_actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "_resource"; instance!(sym!("Resource"))]));
-        // type has_permission(_actor: Actor, _permission: String, _resource: Actor);
-        self.add(rule!("has_permission", ["_actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "_resource"; instance!(sym!("Actor"))]));
-        // type has_role(_actor: Actor, _role: String, _resource: Resource);
-        self.add(rule!("has_role", ["_actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "_resource"; instance!(sym!("Resource"))]));
-        // type has_role(_actor: Actor, _role: String, _resource: Actor);
-        self.add(rule!("has_role", ["_actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "_resource"; instance!(sym!("Actor"))]));
+        // type has_permission(actor: Actor, permission: String, resource: Resource);
+        self.add(rule!("has_permission", ["actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "resource"; instance!(sym!("Resource"))]));
+        // type has_permission(actor: Actor, permission: String, resource: Actor);
+        self.add(rule!("has_permission", ["actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "resource"; instance!(sym!("Actor"))]));
+        // type has_role(actor: Actor, role: String, resource: Resource);
+        self.add(rule!("has_role", ["actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "resource"; instance!(sym!("Resource"))]));
+        // type has_role(actor: Actor, role: String, resource: Actor);
+        self.add(rule!("has_role", ["actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "resource"; instance!(sym!("Actor"))]));
 
         // TODO: revisit this when working on extension guides. This rule currently lets users define any relation they would like, but we may want to restrict that a bit more.
-        // type has_relation(_subject: Resource, _relation: String, _object: Resource);
+        // type has_relation(_subject: Resource, relation: String, _object: Resource);
         self.add(rule!("has_relation", ["_subject"; instance!(sym!("Resource")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Resource"))]));
-        // type has_relation(_subject: Resource, _relation: String, _object: Actor);
+        // type has_relation(_subject: Resource, relation: String, _object: Actor);
         self.add(rule!("has_relation", ["_subject"; instance!(sym!("Resource")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Actor"))]));
-        // type has_relation(_subject: Actor, _relation: String, _object: Actor);
+        // type has_relation(_subject: Actor, relation: String, _object: Actor);
         self.add(rule!("has_relation", ["_subject"; instance!(sym!("Actor")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Actor"))]));
-        // type has_relation(_subject: Actor, _relation: String, _object: Resource);
+        // type has_relation(_subject: Actor, relation: String, _object: Resource);
         self.add(rule!("has_relation", ["_subject"; instance!(sym!("Actor")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Resource"))]));
 
-        // type allow(_actor, _action, _resource);
+        // type allow(actor, action, resource);
         self.add(rule!(
             "allow",
-            [sym!("_actor"), sym!("_action"), sym!("_resource")]
+            [sym!("actor"), sym!("_action"), sym!("resource")]
         ));
-        // type allow_field(_actor, _action, _resource, _field);
+        // type allow_field(actor, action, resource, field);
         self.add(rule!(
             "allow_field",
             [
-                sym!("_actor"),
-                sym!("_action"),
-                sym!("_resource"),
+                sym!("actor"),
+                sym!("action"),
+                sym!("resource"),
                 sym!("field")
             ]
         ));
-        // type allow_request(_actor, _request);"#;
-        self.add(rule!("allow_request", [sym!("_actor"), sym!("_request")]));
+        // type allow_request(actor, request);"#;
+        self.add(rule!("allow_request", [sym!("actor"), sym!("request")]));
     }
 
     pub fn get(&self, name: &Symbol) -> Option<&Vec<Rule>> {
