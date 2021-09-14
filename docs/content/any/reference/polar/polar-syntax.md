@@ -724,7 +724,7 @@ resource Repository {
 }
 {{< /code >}}
 
-Relations are `{key: value}` pairs where the key is the relation name, and the value is the type of the related object.
+Relations are `key: value` pairs where the key is the relation name and the value is the type of the related object.
 Related object types must also be declared in resource or actor blocks.
 
 In order to use relations, you must write a `has_relation` rule that gets relationship data from your application. This rule takes the following form:
