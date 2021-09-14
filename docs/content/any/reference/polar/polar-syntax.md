@@ -654,9 +654,9 @@ resource Repository {
   relations = { parent: Organization };  # relations to other actors/resources
 
   ### Shorthand Rules ###
-  "read" if "contributor"  # "contributor" role grants the "read" permission
-  "push" if "maintainer"  # "maintainer" role grants the "push" permission
-  "maintainer" if "admin"  # "admin" role grants the "maintainer" role
+  "read" if "contributor"  # An actor has the "read" permission if they have the "contributor" role.
+  "push" if "maintainer"  # An actor has the "push" permission if they have the "maintainer" role.
+  "maintainer" if "admin"  # An actor has the "maintainer" role if they have the "admin" role
 }
 {{< /code >}}
 <!--
@@ -711,8 +711,7 @@ has_role(user: User, name: String, repo: Repository) if
 ```
 
 The `name` argument corresponds to the role names in the declaration list. The
-`has_role` rule must handle every declared role name.
-
+`has_role` rule must handle every declared role name, otherwise you may encounter application errors or unexpected policy behavior.
 ### Relation Declarations
 
 You can specify relations between actor/resource types using the following syntax:
