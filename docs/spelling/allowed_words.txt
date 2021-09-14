@@ -11,6 +11,7 @@ CLI
 CTO
 Cloudflare
 DFA
+Dexec
 EMR
 EOF
 EndsWith
@@ -129,6 +130,7 @@ localhost
 lookups
 macOS
 mailto
+mainClass
 metacharacter
 metacharacters
 middleware
@@ -137,6 +139,7 @@ moduli
 multitenant
 musl
 mutex
+mvn
 namespace
 namespaced
 namespaces
@@ -163,6 +166,7 @@ roleName
 runtime
 specializer
 specializers
+src
 stderr
 stdout
 stringified

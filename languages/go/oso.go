@@ -83,12 +83,12 @@ func (o Oso) LoadFiles(files []string) error {
 Load Polar policy from a ".polar" file, checking that all inline queries succeed.
 
 Deprecated: `Oso.LoadFile` has been deprecated in favor of `Oso.LoadFiles` as
-of the 0.20.0 release. Please see changelog for migration instructions:
+of the 0.20 release. Please see changelog for migration instructions:
 https://docs.osohq.com/project/changelogs/2021-09-15.html
 */
 func (o Oso) LoadFile(f string) error {
 	fmt.Fprintln(os.Stderr,
-		"`Oso.LoadFile` has been deprecated in favor of `Oso.LoadFiles` as of the 0.20.0 release.\n\n"+
+		"`Oso.LoadFile` has been deprecated in favor of `Oso.LoadFiles` as of the 0.20 release.\n\n"+
 			"Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html")
 	return (*o.p).loadFiles([]string{f})
 }
