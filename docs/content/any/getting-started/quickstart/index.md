@@ -133,8 +133,7 @@ Check out the full code for the example below:
 
 {{% callout "What's next" "blue" %}}
 
-- Explore how to [add Oso to an application](application).
-- Dive into [writing policies](policies) in detail.
+- [Add Oso to Your Application](application)
 
 {{% /callout %}}
 
