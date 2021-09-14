@@ -69,6 +69,7 @@ URIs
 VM
 VPN
 WASM
+Wayfair
 alice
 amongst
 anonymized
@@ -163,6 +164,7 @@ repo
 repositoryRoles
 roadmap
 roleName
+runnable
 runtime
 specializer
 specializers
