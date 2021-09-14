@@ -9,7 +9,8 @@ members = [
 ]
 
 exclude = [
-    "docs/examples/quickstart/rust"
+    "docs/examples/quickstart/rust",
+    "docs/examples/rbac/rust",
 ]
 
 [profile.release]
