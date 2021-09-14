@@ -316,9 +316,14 @@ export class Oso<
    * These can be overridden by passing specific implementations to
    * `registerClass`.
    */
-  setDataFilteringQueryDefaults({ buildQuery, execQuery, combineQuery }: any) {
-    if (buildQuery) this.getHost().buildQuery = buildQuery;
-    if (execQuery) this.getHost().execQuery = execQuery;
-    if (combineQuery) this.getHost().combineQuery = combineQuery;
+  setDataFilteringQueryDefaults(options: {
+    buildQuery?: any;
+    execQuery?: any;
+    combineQuery?: any;
+  }) {
+    if (options.buildQuery) this.getHost().buildQuery = options.buildQuery;
+    if (options.execQuery) this.getHost().execQuery = options.execQuery;
+    if (options.combineQuery)
+      this.getHost().combineQuery = options.combineQuery;
   }
 }
