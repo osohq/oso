@@ -51,7 +51,7 @@ resource Organization {
 resource Repository {
     permissions = ["read", "push"];
     roles = ["contributor", "maintainer", "admin"];
-    relations = {parent: Organization};
+    relations = { parent: Organization };
 }
 {{< /code >}}
 
@@ -83,7 +83,7 @@ resource Organization {
 resource Repository {
     permissions = ["read", "push"];
     roles = ["contributor", "maintainer", "admin"];
-    relations = {parent: Organization};
+    relations = { parent: Organization };
 
     "admin" if "owner" on "parent";
 }
