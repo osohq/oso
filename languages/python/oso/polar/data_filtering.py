@@ -5,6 +5,8 @@ from dataclasses import dataclass
 # Used so we know what fetchers to call and how to match up constraints.
 @dataclass
 class Relation:
+    """An object representing a relation between two types registered with Oso."""
+
     kind: str
     other_type: str
     my_field: str
@@ -55,7 +57,9 @@ class Ref:
 
 @dataclass
 class Filter:
-    kind: str  # ["Eq", "In", "Contains"]
+    """An object representing a predicate on a type registered with Oso."""
+
+    kind: str
     field: str
     value: Any
 

@@ -235,13 +235,13 @@ export class Oso<
   }
 
   /**
-   * Returns a query for all the resources of the supplied type that the actor is
-   * allowed to perform some action on.
+   * Create a query for all the resources of type `resourceCls` that `actor` is
+   * allowed to perform `action` on.
    *
    * @param actor Subject.
    * @param action Verb.
    * @param resourceCls Object type.
-   * @returns A query object that selects authorized resources of type resourceCls
+   * @returns A query that selects authorized resources of type `resourceCls`
    */
   async authorizedQuery(
     actor: any,
@@ -292,7 +292,8 @@ export class Oso<
   }
 
   /**
-   * Returns all the resources of some type the actor is allowed to perform some action on.
+   * Determine the resources of type `resourceCls` that `actor`
+   * is allowed to perform `action` on.
    *
    * @param actor Subject.
    * @param action Verb.
@@ -303,10 +304,26 @@ export class Oso<
     actr: any,
     actn: any,
     resourceCls: any
-  ): Promise<any> {
+  ): Promise<any[]> {
     const query = await this.authorizedQuery(actr, actn, resourceCls);
     return !query
       ? []
       : this.getHost().types.get(resourceCls)!.execQuery!(query);
+  }
+
+  /**
+   * Register default values for data filtering query functions.
+   * These can be overridden by passing specific implementations to
+   * `registerClass`.
+   */
+  setDataFilteringQueryDefaults(options: {
+    buildQuery?: any;
+    execQuery?: any;
+    combineQuery?: any;
+  }) {
+    if (options.buildQuery) this.getHost().buildQuery = options.buildQuery;
+    if (options.execQuery) this.getHost().execQuery = options.execQuery;
+    if (options.combineQuery)
+      this.getHost().combineQuery = options.combineQuery;
   }
 }

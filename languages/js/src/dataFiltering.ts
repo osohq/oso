@@ -2,6 +2,7 @@ import { resolve } from 'path/posix';
 import { resourceUsage } from 'process';
 import { Host, UserType } from './Host';
 
+/** Represents relationships between two resources, eg. one-one or one-many. */
 export class Relation {
   kind: string;
   otherType: string;
@@ -39,6 +40,7 @@ class Ref {
   }
 }
 
+/** Represents a condition that must hold on a resource. */
 export class Filter {
   kind: string;
   field: string;

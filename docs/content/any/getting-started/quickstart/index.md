@@ -3,6 +3,7 @@ title: Quickstart (5 min)
 description: |
   Ready to get started? See Oso in action, and walk through a quick
   change to an Oso policy in a simple web server.
+any: false
 weight: 1
 ---
 
@@ -132,8 +133,7 @@ Check out the full code for the example below:
 
 {{% callout "What's next" "blue" %}}
 
-- Explore how to [add Oso to an application](application).
-- Dive into [writing policies](policies) in detail.
+- [Add Oso to Your Application](application)
 
 {{% /callout %}}
 
