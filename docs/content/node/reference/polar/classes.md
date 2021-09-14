@@ -25,7 +25,7 @@ More detailed examples of working with application objects can be found in our
 ### Objects
 
 You can pass any JavaScript object into Oso and access its properties from your
-policy (see [Application Types](getting-started/policies#application-types)).
+policy (see [Application Types](guides/policies#application-types)).
 
 ### Class Instances
 
@@ -34,7 +34,7 @@ constructed from inside an Oso policy using Polar's [`new`
 operator](polar-syntax#new) if the constructor (a `class` or `function` that
 responds to JavaScript's [`new` operator][mdn-new]) has been **registered**
 using the `oso.registerClass()` method. An example of this can be found
-[here](getting-started/policies#application-types).
+[here](guides/policies#application-types).
 
 ### Numbers and Booleans
 

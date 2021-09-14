@@ -3,7 +3,7 @@
 
 ## What is Oso?
 
-Oso is a batteries-included library for building authorization in your application. 
+Oso is a batteries-included framework for building authorization in your application. 
 
 Oso gives you a mental model and an authorization system – a set of APIs built on top of a declarative policy language called Polar, plus a debugger and REPL – to define who can do what in your application. You can express common concepts from “users can see their own data” and role-based access control, to others like multi-tenancy, organizations and teams, hierarchies and relationships.
 
