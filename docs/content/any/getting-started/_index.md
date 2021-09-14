@@ -12,7 +12,7 @@ consists of the following components:
 
 - **Oso Library**: Oso is a library that you include in your application to
 enforce authorization. The library supports multiple languages,
-currently Python, Node, Ruby, Go, Java, and Rust.
+currently Python, Node.js, Ruby, Go, Java, and Rust.
 - **Polar Policy Language**: With Oso, you express authorization logic
 declaratively using Polar, our policy language. The Oso library
 evaluates policies to make authorization decisions. Polar policies are
