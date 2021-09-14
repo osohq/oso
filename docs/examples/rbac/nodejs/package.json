@@ -1,11 +1,10 @@
 {
-  "name": "oso-docs-rbac",
+  "name": "osohq-oso-docs-examples-rbac",
   "version": "0",
-  "main": "n/a",
-  "license": "Apache-2.0",
-  "private": true,
+  "main": "app.js",
+  "repository": "https://github.com/osohq/oso/tree/main/docs/examples/rbac/nodejs",
   "dependencies": {
-    "jest": "^26.4.2",
+    "jest": "^27.1.1",
     "oso": "../../../../languages/js"
   }
 }

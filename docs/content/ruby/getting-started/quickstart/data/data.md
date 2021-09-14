@@ -1,24 +1,22 @@
 ---
-githubApp: "[Ruby sample app](https://github.com/osohq/oso-ruby-quickstart)"
-githubURL: "https://github.com/osohq/oso-ruby-quickstart.git"
-installation: |
-    Install the project dependencies with Bundler, then run the server:
-    ```bash
-    $ bundle install
-    installing requirements
-    
-    $ bundle exec ruby server.rb
-    [2020-10-06 12:22:26] INFO  WEBrick 1.6.0
-    [2020-10-06 12:22:26] INFO  ruby 2.7.0 (2019-12-25) [x86_64-darwin19]
-    [2020-10-06 12:22:26] INFO  WEBrick::HTTPServer#start: pid=47366 port=5050
-    ```
-submitted_by: submitted_by
-amount: amount
-manager: manager
-endswith: end_with?
-endswithURL: >
-   [the `String#end_with?` method](https://ruby-doc.org/core/String.html#method-i-end_with-3F)
-expensesPath1: examples/quickstart/polar/expenses-01-ruby.polar
-expensesPath2: examples/quickstart/polar/expenses-02-ruby.polar
-isAllowed: allowed?
+githubUrl: "https://github.com/osohq/oso-ruby-quickstart"
+githubCloneUrl: "https://github.com/osohq/oso-ruby-quickstart.git"
+repoName: oso-ruby-quickstart
+mainPolarFile: "examples/quickstart/ruby/main.polar"
+serverFile: "examples/quickstart/ruby/server.rb"
+modelFile: "examples/quickstart/ruby/models.rb"
+polarFileRelative: "main.polar"
+serverFileRelative: "server.rb"
+modelFileRelative: "models.rb"
+installDependencies: bundle install
+startServer: bundle exec ruby server.rb
+osoAuthorize: OSO.authorize()
+isPublic: is_public
+hasRole: |-
+  has_role(actor: User, role_name: String, repository: Repository) if
+    role in actor.roles and
+    role_name = role.name and
+    repository = role.repository;
+endpoint: the `/repo/:name` route
+port: 5000
 ---

@@ -1,22 +1,22 @@
 ---
-githubApp: "[Go sample app](https://github.com/osohq/oso-go-quickstart)"
-githubURL: "https://github.com/osohq/oso-go-quickstart.git"
-installation: |
-    Install the project dependencies, then run the server:
-    ```console
-    $ go get github.com/osohq/go-oso
-    installing requirements
-
-    $ go run quickstart.go
-    server running on port 5050
-    ```
-submitted_by: SubmittedBy
-endswith: EndsWith
-amount: Amount
-manager: Manager
-endswithURL: >
-   [the `EndsWith` method](https://github.com/osohq/oso-go-quickstart/blob/main/quickstart.go#L16-L18)
-expensesPath1: examples/quickstart/polar/expenses-01-go.polar
-expensesPath2: examples/quickstart/polar/expenses-02-go.polar
-isAllowed: IsAllowed
+githubUrl: "https://github.com/osohq/oso-go-quickstart"
+githubCloneUrl: "https://github.com/osohq/oso-go-quickstart.git"
+repoName: oso-go-quickstart
+mainPolarFile: "examples/quickstart/go/main.polar"
+serverFile: "examples/quickstart/go/server.go"
+modelFile: "examples/quickstart/go/models.go"
+polarFileRelative: "main.polar"
+serverFileRelative: "server.go"
+modelFileRelative: "models.go"
+installDependencies: go mod download
+startServer: go run .
+osoAuthorize: oso.Authorize()
+isPublic: IsPublic
+hasRole: |-
+  has_role(user: User, roleName: String, repository: Repository) if
+    role in user.Roles and
+    role.Role = roleName and
+    role.RepoId = repository.Id;
+endpoint: the `/repo/:repoName` route
+port: 5000
 ---
