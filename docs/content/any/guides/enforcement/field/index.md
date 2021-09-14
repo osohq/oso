@@ -39,7 +39,7 @@ allow_field(user, "read", profile: Profile, "email") if
 Notice that an `allow_field` rule is just like an `allow` rule, except that it
 takes an additional argument: the field name.
 
-## The `{{< exampleGet "authorizeField" >}}` method
+## Authorize one field at a time
 
 To enforce field-level authorization in your app, you use the {{% apiDeepLink
 class="Oso" %}}{{< exampleGet "authorizeField" >}}{{% /apiDeepLink %}} method.
