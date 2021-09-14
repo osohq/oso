@@ -73,6 +73,10 @@ Value will be a list.
 - `Contains` means that the field must contain the value. This only applies
 if the field is a list.
 
+The condition described by a `Filter` applies to the data stored in the attribute
+`field` of a resource.  The `field` of a `Filter` may be `{{< exampleGet "none" >}}`,
+in which case the condition applies to the resource directly.
+
 #### Execute a Query
 
 `{{% exampleGet "execQuery" %}}` takes a query and returns a list of the results.
