@@ -18,6 +18,10 @@ Classes
 
 .. autoclass:: oso.Predicate
 
+.. autoclass:: polar.Relation
+
+.. autoclass:: polar.Filter
+
 Decorator Functions
 ^^^^^^^^^^^^^^^^^^^
 .. autofunction:: oso.polar_class

@@ -255,7 +255,9 @@ export class Polar {
    * Accepted extra parameters are:
    * - name: Explicit name to use for the class in Polar.
    * - types: A map or object of string keys to type values, used for data filtering.
-   * - {build,combine,exec}Query: Query generating/executing callbacks for data filtering.
+   * - buildQuery: A function to produce a query for `cls` objects
+   * - execQuery: A function to execute a query produced by `buildQuery`
+   * - combineQuery: A function to merge two queries produced by `buildQuery`
    */
   registerClass<T>(cls: Class<T>, params?: any): void {
     const clsName = this.#host.cacheClass(cls, params);

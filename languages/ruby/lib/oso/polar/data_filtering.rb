@@ -87,6 +87,11 @@ module Oso
       class Relation
         attr_reader :kind, :other_type, :my_field, :other_field
 
+        # Describe a Relation from one type to another.
+        # @param kind [String] The type of relation, either "one" or "many"
+        # @param other_type The name or class object of the related type
+        # @param my_field The field on this type that matches +other_type+
+        # @param other_field The field on +other_type+ that matches this type
         def initialize(kind:, other_type:, my_field:, other_field:)
           @kind = kind
           @other_type = other_type
@@ -125,6 +130,10 @@ module Oso
           'Contains' => ->(a, b) { a.include? b }
         }.freeze
 
+        # Create a new predicate for data filtering.
+        # @param kind [String] Represents a condition. One of "Eq", "Neq", "In", "Contains".
+        # @param field The field the condition applies to.
+        # @param value The value with which to compare the field according to the condition.
         def initialize(kind:, field:, value:)
           @kind = kind
           @field = field
