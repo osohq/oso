@@ -23,9 +23,9 @@ cases:
 
 
   # runtime errors
-  - description: invalid in
-    query: 1 in false
-    err: "Type error: can only use `in` on an iterable value"
+  # - description: invalid in
+  #   query: 1 in false
+  #   err: "Type error: can only use `in` on an iterable value"
 
   # lookup errors
   - description: invalid lookup
