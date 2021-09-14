@@ -136,7 +136,7 @@ Notice that `User` and `Org` are SQLAlchemy models. We can reference
 these in our policy because we registered all models with `SQLAlchemyOso(Base)`!
 
 For more on policy basics see our [writing policies
-guide](/getting-started/policies).
+guide](/guides/policies).
 
 ## Enforcing authorization in our routes
 
@@ -156,7 +156,7 @@ access for the `actor`, `action` and `resource` arguments passed to
 `is_allowed`. We can access types and attributes of the objects passed
 into our rules from within the policy, just like we can in Python!
 More on this [here]({{< ref
-"/getting-started/policies.md#instances-and-fields" >}}).
+"/guides/policies.md#instances-and-fields" >}}).
 
 ## SQLAlchemy session setup
 

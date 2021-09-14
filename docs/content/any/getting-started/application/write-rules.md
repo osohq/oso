@@ -115,7 +115,7 @@ elevated their privileges sufficiently to perform dangerous actions.
 
 ## What's next
 
-- For more detail on writing policies, see the [Write Oso Policies](/getting-started/policies) guide.
+- For more detail on writing policies, see the [Write Oso Policies](/guides/policies) guide.
 - To go deeper on any of the concepts from this getting started section,
   see our [How to guides](/guides).
 - To see how to apply authorization to large collections of data that
