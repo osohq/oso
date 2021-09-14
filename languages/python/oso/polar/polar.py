@@ -258,16 +258,6 @@ class Polar:
         """
         return self.host.get_class(name)
 
-    def set_data_filtering_query_defaults(
-        self, build_query=None, exec_query=None, combine_query=None
-    ):
-        if build_query is not None:
-            self.host.build_query = build_query
-        if exec_query is not None:
-            self.host.exec_query = exec_query
-        if combine_query is not None:
-            self.host.combine_query = combine_query
-
 
 def polar_class(_cls=None, *, name=None):
     """Decorator to register a Python class with Polar.

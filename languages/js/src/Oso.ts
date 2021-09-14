@@ -310,4 +310,15 @@ export class Oso<
       ? []
       : this.getHost().types.get(resourceCls)!.execQuery!(query);
   }
+
+  /**
+   * Register default values for data filtering query functions.
+   * These can be overridden by passing specific implementations to
+   * `registerClass`.
+   */
+  setDataFilteringQueryDefaults({ buildQuery, execQuery, combineQuery }: any) {
+    if (buildQuery) this.getHost().buildQuery = buildQuery;
+    if (execQuery) this.getHost().execQuery = execQuery;
+    if (combineQuery) this.getHost().combineQuery = combineQuery;
+  }
 }
