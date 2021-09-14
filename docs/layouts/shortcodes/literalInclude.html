@@ -67,6 +67,7 @@
 {{ $firstLine := 0 }}
 {{ $lastLine := 0 }}
 {{ $linenos := $.Params.linenos | default false }}
+{{ $tabGroup := $.Params.tabGroup }}
 {{ $ellipsis := $.Params.ellipsis | default "..." }}
 {{ $hl_lines := $.Params.hl_lines | default "" }}
 
@@ -294,7 +295,7 @@
     {{ $gitHubRef = (printf "%s/blob/main/%s#L%d-L%d" $gitHub $pathTrim $gFirstLine $gLastLine) }}
 {{ end }}
 
-<div class="code" id="{{ $file | urlize}}" data-hl_lines="{{ $hl_lines }}">
+<div class="code" id="{{ $file | urlize}}" data-hl_lines="{{ $hl_lines }}" {{ if $tabGroup }}data-tabgroup="{{ $tabGroup }}"{{ end }}>
   <div class="filename rounded-t-md bg-gray-200 text-gray-700 text-sm py-2">
     {{- with $syntax -}}
       <span class="px-2{{ if eq . "go" }} block w-10{{end}}">
