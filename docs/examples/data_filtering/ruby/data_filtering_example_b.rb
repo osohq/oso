@@ -82,6 +82,45 @@ end
 # docs: end-b1
 
 # docs: begin-b2
+def init_oso
+  oso = Oso.new
+
+  oso.register_class(
+    Organization,
+    fields: { id: String }
+  )
+
+  oso.register_class(
+    Repository,
+    fields: {
+      id: String,
+      organization: Relation.new(
+        kind: 'one',
+        other_type: Organization,
+        my_field: 'org_id',
+        other_field: 'id'
+      )
+    }
+  )
+
+  oso.register_class(
+    User,
+    fields: { id: String, }
+  )
+
+  oso.register_class(
+    RepoRole,
+    fields: { name: String, }
+  )
+
+  oso.register_class(
+    OrgRole,
+    fields: { name: String, }
+  )
+
+  oso
+end
+
 module QueryConfig
   def self.included(base)
     base.instance_eval do
@@ -128,50 +167,9 @@ module QueryConfig
     end
   end
 end
-
-def init_oso
-  oso = Oso.new
-
-  oso.register_class(
-    Organization,
-    fields: { id: String }
-  )
-
-  oso.register_class(
-    Repository,
-    fields: {
-      id: String,
-      organization: Relation.new(
-        kind: 'one',
-        other_type: Organization,
-        my_field: 'org_id',
-        other_field: 'id'
-      )
-    }
-  )
-
-  oso.register_class(
-    User,
-    fields: { id: String, }
-  )
-
-  oso.register_class(
-    RepoRole,
-    fields: { name: String, }
-  )
-
-  oso.register_class(
-    OrgRole,
-    fields: { name: String, }
-  )
-
-  oso
-end
-
 # docs: end-b2
 
 # docs: begin-b3
-
 def example
   init_db
   oso = init_oso
@@ -192,7 +190,6 @@ def example
 
   results = oso.authorized_resources(leina, 'read', Repository)
   raise unless results == [oso_repo, demo_repo]
-  puts "ok"
 end
 
 example

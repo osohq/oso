@@ -70,11 +70,13 @@ const constrain = (query, filter) => {
   return query;
 };
 
+// Create a query from a list of filters
 const buildQuery = filters => {
   if (!filters.length) return { id: Not(null) };
   return filters.reduce(constrain, {});
 };
 
+// Combine two queries into one
 const lift = x => x instanceof Array ? x : [x];
 const combineQuery = (a, b) => lift(a).concat(lift(b));
 
@@ -85,6 +87,7 @@ createConnection({
   synchronize: true,
 }).then(async connection => {
 
+  // Produce an exec_query function for a class
   const execFromRepo = repo => q =>
     connection.getRepository(repo).find({ where: q });
 
@@ -150,14 +153,18 @@ createConnection({
   await repos.save({ id: 'demo', org_id: 'osohq' });
   await users.save({ id: 'leina' });
   await users.save({ id: 'steve' });
-  await roles.save({ user_id: 'leina', org_id: 'osohq', name: 'owner' });
+  await roles.save({
+    user_id: 'leina',
+    org_id: 'osohq',
+    name: 'owner'
+  });
 
+  // for sorting results
   const compare = (a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 
   repos.findByIds(['oso', 'demo']).then(repos =>
     users.findOne({ id: 'leina' }).then(leina =>
       oso.authorizedResources(leina, 'read', Repository).then(result =>
-        assert.deepEqual(result.sort(compare),
-          repos.sort(compare)))));
+        assert.deepEqual(result.sort(compare), repos.sort(compare)))));
 });
 // docs: end-b3

@@ -1,6 +1,15 @@
 // docs: begin-a1
+// We're using TypeORM in this example, but you can use any ORM with data filtering.
 import { Relation, Oso, ForbiddenError, NotFoundError } from "oso";
-import { createConnection, In, Not, Entity, PrimaryGeneratedColumn, Column, PrimaryColumn, JoinColumn, ManyToOne } from "typeorm";
+import {
+  createConnection,
+  In,
+  Not,
+  Entity,
+  Column,
+  PrimaryColumn,
+  PrimaryGeneratedColumn,
+} from "typeorm";
 import { readFileSync } from "fs";
 import * as assert from 'assert';
 
@@ -31,6 +40,7 @@ class RepoRole {
 // docs: end-a1
 
 // docs: begin-a2
+// This function applies a filter to an existing query.
 const constrain = (query, filter) => {
   if (filter.field === undefined) {
     filter.field = "id";
@@ -50,11 +60,14 @@ const constrain = (query, filter) => {
   return query;
 };
 
+// Create a query from a list of filters
 const buildQuery = filters => {
+  // TypeORM dislikes empty queries, so give it this instead.
   if (!filters.length) return { id: Not(null) };
   return filters.reduce(constrain, {});
 };
 
+// Combine two queries into one
 const lift = x => x instanceof Array ? x : [x];
 const combineQuery = (a, b) => lift(a).concat(lift(b));
 
@@ -65,11 +78,14 @@ createConnection({
   synchronize: true,
 }).then(async connection => {
 
+  // Produce an exec_query function for a class
   const execFromRepo = repo => q =>
     connection.getRepository(repo).find({ where: q });
 
   const oso = new Oso();
 
+  // The build and combine query implementations are shared in this case,
+  // so register them as defaults.
   oso.setDataFilteringQueryDefaults({ combineQuery, buildQuery });
 
   oso.registerClass(Repository, {
@@ -107,15 +123,23 @@ createConnection({
   await repos.save({ id: 'demo' });
   await users.save({ id: 'leina' });
   await users.save({ id: 'steve' });
-  await roles.save({ user_id: 'leina', repo_id: 'oso', name: 'contributor' }),
-    await roles.save({ user_id: 'leina', repo_id: 'demo', name: 'maintainer' });
+  await roles.save({
+    user_id: 'leina',
+    repo_id: 'oso',
+    name: 'contributor'
+  });
+  await roles.save({
+    user_id: 'leina',
+    repo_id: 'demo',
+    name: 'maintainer'
+  });
 
+  // for sorting results
   const compare = (a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 
   repos.findByIds(['oso', 'demo']).then(repos =>
     users.findOne({ id: 'leina' }).then(leina =>
       oso.authorizedResources(leina, 'read', Repository).then(result =>
-        assert.deepEqual(result.sort(compare),
-          repos.sort(compare)))));
+        assert.deepEqual(result.sort(compare), repos.sort(compare)))));
 });
 // docs: end-a3

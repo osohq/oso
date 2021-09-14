@@ -1,4 +1,5 @@
 # docs: begin-a1
+# We'll use ActiveRecord in this example, but data filtering can be used with any ORM
 require 'active_record'
 require 'sqlite3'
 require 'oso'
@@ -7,7 +8,7 @@ DB_FILE = '/tmp/test.db'
 Relation = Oso::Polar::DataFiltering::Relation
 
 class Repository < ActiveRecord::Base
-  include QueryConfig
+  include QueryConfig # This module adds build/exec/combine query functions for the class
 end
 
 class User < ActiveRecord::Base
@@ -53,6 +54,29 @@ end
 # docs: end-a1
 
 # docs: begin-a2
+def init_oso
+  oso = Oso.new
+
+  oso.register_class(
+    Repository,
+    fields: { id: String, }
+  )
+
+  oso.register_class(
+    User,
+    fields: { id: String, }
+  )
+
+  oso.register_class(
+    RepoRole,
+    fields: { name: String, }
+  )
+
+  oso
+end
+
+# We'll use this mixin to automatically supply query functions
+# for register_class.
 module QueryConfig
   def self.included(base)
     base.instance_eval do
@@ -100,27 +124,6 @@ module QueryConfig
   end
 end
 
-def init_oso
-  oso = Oso.new
-
-  oso.register_class(
-    Repository,
-    fields: { id: String, }
-  )
-
-  oso.register_class(
-    User,
-    fields: { id: String, }
-  )
-
-  oso.register_class(
-    RepoRole,
-    fields: { name: String, }
-  )
-
-  oso
-end
-
 # docs: end-a2
 
 # docs: begin-a3
@@ -141,10 +144,8 @@ def example
   oso.load_files(['policy_a.polar'])
 
   results = oso.authorized_resources(leina, 'read', Repository)
-  raise "#{results}" unless results == [demo_repo, oso_repo]
-  puts "ok"
+  raise unless results == [demo_repo, oso_repo]
 end
 
 example
-
 # docs: end-a3
