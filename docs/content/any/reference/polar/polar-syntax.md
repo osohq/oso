@@ -576,7 +576,7 @@ rule argument matches the specializer.
 #### Actor and Resource Specializers
 
 Oso provides built-in specializers that will match any
-application type that has been declared in an [actor or resource block](#actor-and-resource-blocks).
+application type that has been declared via an [actor or resource block](#actor-and-resource-blocks).
 
 The `Actor` specializer will match any application type that has been declared in an `actor` block,
 and `Resource` will match types declared in `resource` blocks.
