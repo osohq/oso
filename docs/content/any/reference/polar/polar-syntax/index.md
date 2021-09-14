@@ -608,7 +608,7 @@ An inline query is only valid at the beginning of a line.
 
 ### Rule Types
 
-A rule type specifies the _shape_ of a rule — its arity and, optionally, the type of each of its arguments. If a rule type exists for `has_permission()`, then all `has_permission()` rules must conform to the rule type.
+A rule type specifies the _shape_ of a rule — its number of arguments and, optionally, the type of each argument. If a rule type exists for `has_permission()`, then all `has_permission()` rules must conform to the rule type.
 Rule types have the same syntax as rule heads and are preceded by the keyword `type`:
 
 ```polar
