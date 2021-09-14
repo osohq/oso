@@ -35,7 +35,7 @@ To quickly have a runnable example of using Oso, check out our
 
 To use Oso for authorization in an existing application, check out our
 [Add Oso to Your App guide](application), where you'll be introduced to
-enforcing authorization, setting up role based authorization, writing
+enforcing authorization, setting up role-based authorization, writing
 rules, and filtering data by authorization.
 
 For more on the design principles behind Oso and why it makes
