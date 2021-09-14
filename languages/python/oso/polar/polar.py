@@ -111,7 +111,12 @@ class Polar:
         self._load_sources(sources)
 
     def load_file(self, filename: Union[Path, str]):
-        """Load Polar policy from a ".polar" file."""
+        """Load Polar policy from a ".polar" file.
+
+        `Oso.load_file` has been deprecated in favor of `Oso.load_files` as of
+        the 0.20 release. Please see changelog for migration instructions:
+        https://docs.osohq.com/project/changelogs/2021-09-15.html
+        """
         print(
             "`Oso.load_file` has been deprecated in favor of `Oso.load_files` as of the 0.20.0 release.\n\n"
             + "Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html",
