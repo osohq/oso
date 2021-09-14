@@ -3,6 +3,7 @@ title: Quickstart (5 min)
 description: |
   Ready to get started? See Oso in action, and walk through a quick
   change to an Oso policy in a simple web server.
+any: false
 weight: 1
 ---
 
