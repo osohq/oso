@@ -1,9 +1,9 @@
 package main
 
 import (
-    "testing"
+	"testing"
 )
 
 func TestPolicyWorks(t *testing.T) {
-    _ = initOso()
+	_ = initOso()
 }

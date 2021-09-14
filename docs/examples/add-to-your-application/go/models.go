@@ -18,7 +18,7 @@ func GetRepositoryByName(name string) Repository {
 
 // docs: start
 type Role struct {
-	Name   string
+	Name       string
 	Repository Repository
 }
 
@@ -27,8 +27,9 @@ type User struct {
 }
 
 var usersDb = map[string]User{
-    "larry":  {Roles: []Role{{Name: "admin", Repository: reposDb["gmail"]}}},
+	"larry": {Roles: []Role{{Name: "admin", Repository: reposDb["gmail"]}}},
 }
+
 // docs: end
 
 func GetCurrentUser() User {
