@@ -1,11 +1,10 @@
 require 'oso'
+
 Relation = Oso::Polar::DataFiltering::Relation
 
 oso = Oso.new
 
 # Register the Organization class
-oso = Oso.new
-
 oso.register_class(
   Organization,
   fields: { id: String }
