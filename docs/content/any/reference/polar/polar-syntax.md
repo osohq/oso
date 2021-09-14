@@ -716,7 +716,7 @@ The `name` argument corresponds to the role names in the declaration list. The
 
 ### Relation Declarations
 
-You can specify relations from one actor/resource type to another using the following syntax:
+You can specify relations between actor/resource types using the following syntax:
 
 {{< code codeLang="polar" hl_lines="2">}}
 resource Repository {
