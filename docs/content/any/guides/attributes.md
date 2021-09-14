@@ -13,11 +13,12 @@ Granting users permissions based on attributes is simple with Oso. Let's say you
 
 {{< code file="main.polar" hl_lines="10, 15" >}}
 # ...
-resource Repository {
-	permissions = ["read", "push", "delete"];
-	roles = ["contributor", "maintainer", "admin"];
 
-    "read" if "contributor";
+resource Repository {
+  permissions = ["read", "push", "delete"];
+  roles = ["contributor", "maintainer", "admin"];
+
+  "read" if "contributor";
 }
 {{< /code >}}
 
@@ -27,12 +28,14 @@ You can add an attribute-based rule that grants all users the `"read"` permissio
 
 {{< code file="main.polar" hl_lines="8" >}}
 # ...
-resource Repository {
-	permissions = ["read", "push", "delete"];
-	roles = ["contributor", "maintainer", "admin"];
 
-    "read" if "contributor";
+resource Repository {
+  permissions = ["read", "push", "delete"];
+  roles = ["contributor", "maintainer", "admin"];
+
+  "read" if "contributor";
 }
+
 has_permission(_: User, "read", repo: Repository) if repo.is_public;
 {{< /code >}}
 
@@ -48,12 +51,10 @@ For example, you could add a `has_role` rule to the policy above that grants the
 {{< code file="main.polar" hl_lines="8" >}}
 # ...
 resource Repository {
-	permissions = ["read", "push", "delete"];
-	roles = ["contributor", "maintainer", "admin"];
+  permissions = ["read", "push", "delete"];
+  roles = ["contributor", "maintainer", "admin"];
 
-    "read" if "contributor";
+  "read" if "contributor";
 }
 has_role(user: User, "read", repo: Repository) if user = repo.created_by;
 {{< /code >}}
-
-
