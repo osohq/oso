@@ -42,7 +42,7 @@ type has_relation(subject: Actor, relation: String, object: Actor);
 type has_relation(subject: Actor, relation: String, object: Resource);
 ```
 
-`has_relation` rules are used to look up relations between application objects. The first and third arguments can be any combination of `Resource` and `Actor` types defined using [actor and resource blocks](reference/polar/polar-syntax#actor-and-resource-blocks). The second argument must be a String, and should be a [declared relation](reference/polar/polar-syntax#relation-declarations) inside the block for the `object` argument type.
+`has_relation` rules are used to look up relations between application objects. The first and third arguments can be any combination of `Resource` and `Actor` types declared as [actor or resource blocks](reference/polar/polar-syntax#actor-and-resource-blocks). The second argument must be a String and should be [declared as a relation](reference/polar/polar-syntax#relation-declarations) in the block for the third (`object`) argument type.
 
 
 ## `allow`
