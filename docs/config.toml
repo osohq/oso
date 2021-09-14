@@ -4,7 +4,7 @@ title = "Oso Documentation"
 theme = ["oso-tailwind", "oso-webpack"]
 uglyurls = true
 
-defaultContentLanguage = "any"
+defaultContentLanguage = "python"
 
 # used for Twitter card etc
 [params]
