@@ -3,15 +3,11 @@
 async function getVersions() {
     const cacheName = `oso-data`;
     const url = 'https://s3.amazonaws.com/data.oso.dev/versions.json';
-    console.log(`get cached data: ${url}`)
     let cachedData = await getCachedData(cacheName, url);
 
     if (cachedData) {
-        console.log('Retrieved cached data');
         return cachedData;
     }
-
-    console.log('Fetching fresh data');
 
     const cacheStorage = await caches.open(cacheName);
     await cacheStorage.add(url);
@@ -33,9 +29,7 @@ async function getCachedData(cacheName, url) {
 
 export async function setVersionList() {
     try {
-        console.log("done");
         const data = await getVersions();
-        console.log({ data });
         document.getElementById('version-list').innerHTML = data.versions.reduce((html, v) => {
             return html + `
           <a href="https://docs-preview.oso.dev/v/${v}/index.html"
