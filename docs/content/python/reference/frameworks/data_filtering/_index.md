@@ -1,5 +1,5 @@
 ---
-title: Filter Data
+title: Data Filtering Integrations
 weight: 2
 description: Learn how to filter data collections based on authorization logic with Oso.
 ---
