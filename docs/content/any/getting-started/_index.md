@@ -6,9 +6,9 @@ any: true
 
 # Get Started
 
-Let's get started with Oso! Oso is a framework for application
-authorization with built-in primitives for modeling authorization. Oso
-consists of the following components:
+Oso is a framework for application authorization with built-in
+primitives for modeling authorization. Oso consists of the following
+components:
 
 - **Oso Library**: Oso is a library that you include in your application to
 enforce authorization. The library supports multiple languages,
@@ -36,7 +36,7 @@ To quickly have a runnable example of using Oso, check out our
 To use Oso for authorization in an existing application, check out our
 [Add Oso to Your App guide](application), where you'll be introduced to
 enforcing authorization, setting up role-based authorization, writing
-rules, and filtering data by authorization.
+rules, and filtering collections by authorization.
 
 For more on the design principles behind Oso and why it makes
 authorization easy for development teams, see the **TODO** What is Oso
