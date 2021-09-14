@@ -724,10 +724,10 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Use Go 1.12
+      - name: Use Go 1.13
         uses: actions/setup-go@v2
         with:
-          go-version: "1.12"
+          go-version: "1.13"
       - name: Run quickstart tests
         run: make -C docs test-quickstarts
 
