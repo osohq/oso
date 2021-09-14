@@ -126,32 +126,32 @@ module QueryConfig
     base.instance_eval do
 
       # Turn a constraint into a param hash for #where
-      query_clause = lambda do |c|
-        if c.field.nil?
-          { primary_key => c.value.send(primary_key) }
+      query_clause = lambda do |f|
+        if f.field.nil?
+          { primary_key => f.value.send(primary_key) }
         else
-          { c.field => c.value }
+          { f.field => f.value }
         end
       end
 
       # ActiveRecord automatically turns array values in where clauses into
       # IN conditions, so Eq and In can share the same code.
-      @constraint_handlers = {
-        'Eq'  => ->(query, constraint) { query.where     query_clause[constraint] },
-        'In'  => ->(query, constraint) { query.where     query_clause[constraint] },
-        'Neq' => ->(query, constraint) { query.where.not query_clause[constraint] }
+      @filter_handlers = {
+        'Eq'  => ->(query, filter) { query.where     query_clause[filter] },
+        'In'  => ->(query, filter) { query.where     query_clause[filter] },
+        'Neq' => ->(query, filter) { query.where.not query_clause[filter] }
       }
 
-      @constraint_handlers.default_proc = proc do |k|
-        raise "Unsupported constraint kind: #{k}"
+      @filter_handlers.default_proc = proc do |k|
+        raise "Unsupported filter kind: #{k}"
       end
 
-      @constraint_handlers.freeze
+      @filter_handlers.freeze
 
-      # Create a query from an array of constraints
-      def self.build_query(constraints)
-        constraints.reduce(all) do |query, constraint|
-          @constraint_handlers[constraint.kind][query, constraint]
+      # Create a query from an array of filters
+      def self.build_query(filters)
+        filters.reduce(all) do |query, filter|
+          @filter_handlers[filter.kind][query, filter]
         end
       end
 
