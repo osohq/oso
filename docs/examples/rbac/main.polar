@@ -18,6 +18,7 @@ resource Organization {
   roles = ["owner"];
 }
 
+# docs: blocks-start
 resource Repository {
   permissions = ["read", "push"];
   roles = ["contributor", "maintainer"];
@@ -36,6 +37,7 @@ resource Repository {
   # An actor has the "maintainer" role if they have the "owner" role on the "parent" Organization.
   "maintainer" if "owner" on "parent";
 }
+# docs: blocks-end
 
 # docs: begin-has_relation
 has_relation(organization: Organization, "parent", repository: Repository) if
