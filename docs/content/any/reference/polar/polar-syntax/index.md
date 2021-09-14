@@ -646,19 +646,10 @@ Inside of a block, you can declare [permissions](#permission-declarations), [rol
 
 A more complete block looks like this:
 
-{{< code codeLang="polar">}}
-resource Repository {
-  ### Permission, role, and relation declarations ###
-  permissions = ["read", "push"];  # permissions that can be granted for the resource
-  roles = ["contributor", "maintainer", "admin"];  # roles that can be assigned for the resource
-  relations = { parent: Organization };  # relations to other actors/resources
+{{< literalInclude dynPath="rolesPolicyPath"
+                   from="docs: blocks-start"
+                   to="docs: blocks-end" >}}
 
-  ### Shorthand Rules ###
-  "read" if "contributor"  # An actor has the "read" permission if they have the "contributor" role.
-  "push" if "maintainer"  # An actor has the "push" permission if they have the "maintainer" role.
-  "maintainer" if "admin"  # An actor has the "maintainer" role if they have the "admin" role
-}
-{{< /code >}}
 <!--
 TODO: should we add the data-linking rules here too? I'm thinking in case
 someone just copies and pastes this whole thing
@@ -671,6 +662,7 @@ resources, respectively.
 ### Permission Declarations
 
 You can specify the permissions that are available for an actor or resource type using the following syntax:
+
 
 {{< code codeLang="polar" hl_lines="2">}}
 resource Repository {
@@ -752,22 +744,9 @@ resource blocks using declared permissions, roles, and relations.
 
 For example,
 
-```polar
-resource Repository {
-  permissions = ["read", "push"];
-  roles = ["contributor", "maintainer"];
-  relations = { parent: Organization };
-
-  # Shorthand rules without relations
-  "read" if "contributor";  # "contributor" role grants "read" permission
-  "push" if "maintainer";  # "maintainer" role grants "push" permission
-  "contributor" if "maintainer";  # "maintainer" role grants "contributor" role
-
-  # Shorthand rules with relations
-  "admin" if "owner" on "parent"  # "owner" role on parent Organization grants the "admin" role
-  "contributor" if "member" on "parent"  # "member" role on parent Organization grants "contributor" role
-}
-```
+{{< literalInclude dynPath="rolesPolicyPath"
+                   from="docs: blocks-start"
+                   to="docs: blocks-end" >}}
 
 For shorthand rules to be evaluated by the Oso library, you must add the following rule to your policy:
 
@@ -888,6 +867,7 @@ resource Repository {
   "admin" if "owner" on "parent";
 }
 
+# Expanded rule
 #                      "admin"                        if                 "owner"            on                        "parent"          ;
 #                        \/                                                \/        /------|-----------------\         \/
 has_role(actor: Actor, "admin", resource: Repository) if has_role(actor, "owner", related) and has_relation(related, "parent", resource);
