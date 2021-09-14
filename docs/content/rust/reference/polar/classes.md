@@ -3,6 +3,8 @@ title: Rust Types in Polar
 weight: 2
 aliases:
   - /using/libraries/rust/index.html
+description: |
+    Reference for using Rust types in Polar.
 ---
 
 [rust-string]: https://doc.rust-lang.org/std/string/struct.String.html

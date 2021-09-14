@@ -3,6 +3,8 @@ title: Python Types in Polar
 weight: 2
 aliases:
   - /using/libraries/python/index.html
+description: |
+   Reference for working with Python types in Polar.
 ---
 
 # Working with Python Types

@@ -3,6 +3,8 @@ title: Ruby Types in Polar
 weight: 2
 aliases:
   - /using/libraries/ruby/index.html
+description: |
+  Reference for using Ruby types in Polar.
 ---
 
 [rb-array]: https://ruby-doc.org/core/Array.html

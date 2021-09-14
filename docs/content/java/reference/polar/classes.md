@@ -3,6 +3,8 @@ title: Java Types in Polar
 weight: 2
 aliases:
   - /using/libraries/java/index.html
+description: |
+    Reference for using Java types in Polar.
 ---
 
 ## Working with Java Types
