@@ -1,5 +1,4 @@
 ---
-foo: this is python
 authorizedResources: authorized_resources
 authorizedQuery: authorized_query
 buildQuery: build_query

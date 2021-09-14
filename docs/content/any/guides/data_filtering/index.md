@@ -33,7 +33,7 @@ store, based on the logic in your policy is what we call “Data Filtering”.
 
 {{% ifLang "python" %}}
 {{% callout "ORM Integrations" "blue" %}}
-If you are using one of our ORM adaptor libraries like `sqlalchemy-oso` or
+If you are using one of our ORM adapter libraries like `sqlalchemy-oso` or
 `django-oso` data filtering is already built in and you won't have to worry
 about integrating it yourself. See docs for the ORM library instead.
 {{% /callout %}}
@@ -88,7 +88,7 @@ if the field is a list.
 
 `{{% exampleGet "combineQuery" %}}` takes two queries and returns a new
 query that returns the union of the other two. For example if the two
-queries are sql queries combine could `UNION` them. If they were http
+queries are SQL queries combine could `UNION` them. If they were HTTP
 requests `{{% exampleGet "combineQuery" %}}` could put them in an array and 
 `` could handle executing an array of queries
 and combining the results.

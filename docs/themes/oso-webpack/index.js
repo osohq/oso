@@ -157,16 +157,31 @@ import('monaco-editor-core').then(monaco => {
 
   monaco.editor.setTheme('polarTheme');
 
-  window.addEventListener('load', () => {
-    let polarCode = document.getElementsByClassName('language-polar');
-    for (let i = 0; i < polarCode.length; i++) {
-      let el = polarCode[i];
-      monaco.editor
-        .colorize(el.innerText, 'polar', { theme: 'polarTheme' })
-        .then(colored => {
-          el.innerHTML = colored;
-          el.parentNode.classList.add('polar-code-in-here');
-        });
+  function highlightPolarCode(el) {
+    let { hl_lines: numbers } = el.parentNode.parentNode.dataset;
+    if (typeof numbers !== 'string' || numbers.length === 0) return;
+    numbers = numbers.replace(/ /g, '').split(',').flatMap(parseRange);
+    const lines = Array.from(el.children).filter(child => child.matches('span'));
+    for (const number of numbers) {
+      lines[number].classList.add('highlight-me-pls');
+    }
+  }
+
+  function parseRange(maybeRange) {
+    const range = maybeRange.split('-');
+    const start = Number.parseInt(range[0], 10) - 1;
+    if (range.length === 1) return [start];
+    const end = Number.parseInt(range[1], 10);
+    return Array(end - start).fill(null).map((_, i) => start + i);
+  }
+
+  window.addEventListener('load', async () => {
+    const els = document.getElementsByClassName('language-polar');
+    for (const el of els) {
+      const colorized = await monaco.editor.colorize(el.innerText, 'polar', { theme: 'polarTheme' });
+      el.innerHTML = colorized;
+      el.parentNode.classList.add('polar-code-in-here');
+      highlightPolarCode(el);
     }
   });
 });
@@ -370,3 +385,67 @@ window.recordFeedback = (isUp) => {
     }
   });
 }
+
+// Support for code tab groups -- hacks ahead!
+window.addEventListener("load", () => {
+  const unique = (array) => [...new Set(array)];
+
+  const tabGroupDivs = Array.from(
+    document.querySelectorAll("div[data-tabgroup]")
+  );
+
+  let tabGroups = tabGroupDivs.map(
+    (div) => div.attributes["data-tabgroup"].value
+  );
+  tabGroups = unique(tabGroups);
+
+  for (const tabGroup of tabGroups) {
+    const codeBlocks = document.querySelectorAll(
+      `div.code[data-tabgroup='${tabGroup}'`
+    );
+    const first = codeBlocks[0];
+    // tabGroupContainer is the full containing div, and replaces the first code
+    // block in the tabGroup
+    const tabGroupContainer = document.createElement("div");
+    tabGroupContainer.className = "code";
+    first.parentNode.insertBefore(tabGroupContainer, first);
+    // tabContainer contains the clickable tabs
+    const tabContainer = document.createElement("div");
+    // codeContainer contains the, well, code
+    const codeContainer = document.createElement("div");
+    codeContainer.className = "tab-group-code";
+    tabGroupContainer.appendChild(tabContainer);
+    tabGroupContainer.appendChild(codeContainer);
+    tabContainer.className = "tab-group-tabs";
+
+    const pres = Array.from(codeBlocks).map((div) => div.querySelector("pre"));
+    const filenames = Array.from(codeBlocks).map((div) => {
+      const newDiv = document.createElement("div");
+      newDiv.replaceChildren(...div.querySelector(".filename").childNodes);
+      return newDiv;
+    });
+
+    codeBlocks.forEach((block) => block.remove());
+    tabContainer.replaceChildren(...filenames);
+
+    function unselectFilename(filename) {
+      filename.className = "tab-group-tab";
+    }
+
+    function selectFilename(filename) {
+      filename.className = "tab-group-tab selected";
+    }
+
+    function select(selectedIndex) {
+      filenames.forEach(unselectFilename);
+      selectFilename(filenames[selectedIndex]);
+      codeContainer.replaceChildren(pres[selectedIndex]);
+    }
+
+    filenames.forEach((filename, i) => {
+      filename.addEventListener("click", () => select(i));
+    });
+
+    select(0);
+  }
+});

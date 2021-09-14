@@ -1,16 +1,22 @@
 {
   "name": "oso",
+  "author": "Oso Security Inc.",
   "publisher": "osohq",
-  "displayName": "oso",
-  "description": "Syntax highlighting for .polar files as used by oso.",
+  "license": "Apache-2.0",
+  "displayName": "Oso",
+  "description": "Support for Oso policies written in Polar.",
   "icon": "oso_logo.png",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "engines": {
     "vscode": "^1.43.0"
   },
   "categories": [
     "Programming Languages"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/osohq/oso"
+  },
   "contributes": {
     "languages": [
       {
