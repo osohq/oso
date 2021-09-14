@@ -40,7 +40,6 @@ window.onclick = function(event) {
   const searchInput = document.getElementById('search-input');
   const searchBackground = document.getElementById('search-background');
 
-  console.log(event.target);
   switch (event.target) {
     case navButton:
       break;
