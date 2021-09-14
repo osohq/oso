@@ -343,9 +343,7 @@ jobs:
       - name: Install Ruby + gems
         uses: ruby/setup-ruby@v1
         with:
-          bundler-cache: true
-          ruby-version: 2.4
-          working-directory: "languages/ruby"
+          ruby-version: 3.0
       - name: Use Node.js 12.20.0
         uses: actions/setup-node@v1
         with:
