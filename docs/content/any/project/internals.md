@@ -89,8 +89,8 @@ _this.access_level = "public" or _this.creator.id = 1
 Partial evaluation is a generic capability of the Oso engine, but making use
 of it requires an adapter that translates the emitted constraint expressions
 into ORM filters. Our first two supported adapters are for the [Django]({{<
-relref path="guides/data_access/django" lang="python" >}}) and
-[SQLAlchemy]({{< relref path="guides/data_access/sqlalchemy" lang="python"
+relref path="reference/frameworks/data_filtering/django" lang="python" >}}) and
+[SQLAlchemy]({{< relref path="reference/frameworks/data_filtering/sqlalchemy" lang="python"
 >}}) ORMs, with more on the way.
 
 These adapters allow Oso to effectively translate policy logic into SQL `WHERE`
@@ -125,8 +125,8 @@ abstraction.
 To learn more about this feature and see usage examples, see our ORM specific
 documentation:
 
-- [Filter Collections with Django]({{< relref path="guides/data_access/django" lang="python" >}})
-- [Filter Collections with SQLAlchemy]({{< relref path="guides/data_access/sqlalchemy" lang="python" >}})
+- [Filter Collections with Django]({{< relref path="reference/frameworks/data_filtering/django" lang="python" >}})
+- [Filter Collections with SQLAlchemy]({{< relref path="reference/frameworks/data_filtering/sqlalchemy" lang="python" >}})
 
 More framework integrations are coming soon — join us on
 [Slack](https://join-slack.osohq.com/) to discuss your use case or open an

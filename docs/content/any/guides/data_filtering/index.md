@@ -23,8 +23,8 @@ store based on the logic in your policy is what we call “Data Filtering”.
 {{< ifLang "python" >}}
 {{% callout "ORM Integrations" "blue" %}}
 If you are using one of our ORM adapter libraries like
-[`sqlalchemy-oso`]({{< ref path="guides/data_access/sqlalchemy" lang="python" >}})
-or [`django-oso`]({{< ref path="guides/data_access/django" lang="python" >}}) then
+[`sqlalchemy-oso`]({{< ref path="reference/frameworks/data_filtering/sqlalchemy" lang="python" >}})
+or [`django-oso`]({{< ref path="reference/frameworks/data_filtering/django" lang="python" >}}) then
 data filtering is already built in and you won't have to worry about integrating
 it yourself. See docs for the ORM library instead.
 {{% /callout %}}
