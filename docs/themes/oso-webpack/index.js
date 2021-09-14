@@ -167,15 +167,17 @@ import('monaco-editor-core').then(monaco => {
     numbers = numbers.replace(/ /g, '').split(',').flatMap(parseRange);
     const lines = Array.from(el.children).filter(child => child.matches('span'));
     for (const number of numbers) {
-      lines[number].classList.add('highlight-me-pls');
+      lines[number] && lines[number].classList.add('highlight-me-pls');
     }
   }
 
   function parseRange(maybeRange) {
     const range = maybeRange.split('-');
     const start = Number.parseInt(range[0], 10) - 1;
+    if (!Number.isSafeInteger(start)) return [];
     if (range.length === 1) return [start];
     const end = Number.parseInt(range[1], 10);
+    if (!Number.isSafeInteger(end)) return [];
     return Array(end - start).fill(null).map((_, i) => start + i);
   }
 
