@@ -25,7 +25,7 @@ Users have roles at both the organization and repository level. A user's organiz
 
 The first step to modeling a resource hierarchy is to register the application types that represent the resources you are protecting.
 
-To make your implementation compatible with [data filtering](guides/data_filtering), you need to specify resource relations by creating `Relation` objects and passing them to `register_class()`. For more information on registering classes for data filtering, see the [data filtering guide](link TODO).
+To make your implementation compatible with [data filtering](guides/data_filtering), you need to specify resource relations by creating `Relation` objects and passing them to `register_class()`. For more information on registering classes and relations for data filtering, see the [data filtering guide](guides/data_filtering#relations).
 
 <!-- GitClub has three resource types (`Organization`, `Repository`, and `Issue`), which  -->
 {{< literalInclude dynPath=registerClassExample
